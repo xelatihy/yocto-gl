@@ -3021,6 +3021,32 @@ void save_shape(const string& filename, const vector<int>& points,
   }
 }
 
+// A file holder that closes a file when destructed. Useful for RIIA
+struct file_holder {
+  FILE*  fs       = nullptr;
+  string filename = "";
+
+  file_holder(const file_holder&) = delete;
+  file_holder& operator=(const file_holder&) = delete;
+  ~file_holder() {
+    if (fs) fclose(fs);
+  }
+};
+
+// Opens a file returing a handle with RIIA
+static inline file_holder open_input_file(
+    const string& filename, bool binary = false) {
+  auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
+  if (!fs) throw std::runtime_error("could not open file " + filename);
+  return {fs, filename};
+}
+static inline file_holder open_output_file(
+    const string& filename, bool binary = false) {
+  auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
+  if (!fs) throw std::runtime_error("could not open file " + filename);
+  return {fs, filename};
+}
+
 #if YOCTO_PLY_INTERNAL
 
 static void load_ply_shape(const string& filename, vector<int>& points,
@@ -3031,12 +3057,14 @@ static void load_ply_shape(const string& filename, vector<int>& points,
     vector<float>& radius, bool flip_texcoord) {
   try {
     // open ply
-    auto ply = ply_file(filename);
+    auto fs_ = open_input_file(filename, true);
+    auto fs = fs_.fs;
 
     // load elements
+    auto format = ply_format{};
     auto elements = vector<ply_element>{};
     auto comments = vector<string>{};
-    read_ply_header(ply, elements, comments);
+    read_ply_header(fs, format, elements, comments);
 
     // read values
     auto values = vector<float>{};
@@ -3050,7 +3078,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
         auto col = find_ply_property(element, "red", "green", "blue", "alpha");
         auto rad = find_ply_property(element, "radius");
         for (auto idx = 0; idx < element.count; idx++) {
-          read_ply_value(ply, element, values, lists);
+          read_ply_value(fs, format, element, values, lists);
           if (pos.x >= 0)
             positions.push_back({values[pos.x], values[pos.y], values[pos.z]});
           if (norm.x >= 0)
@@ -3064,7 +3092,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
       } else if (element.name == "face") {
         auto indices = find_ply_property(element, "vertex_indices");
         for (auto idx = 0; idx < element.count; idx++) {
-          read_ply_value(ply, element, values, lists);
+          read_ply_value(fs, format, element, values, lists);
           if (indices < 0) continue;
           auto& face = lists[indices];
           if (face.size() == 4) {
@@ -3077,7 +3105,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
       } else if (element.name == "line") {
         auto indices = find_ply_property(element, "vertex_indices");
         for (auto idx = 0; idx < element.count; idx++) {
-          read_ply_value(ply, element, values, lists);
+          read_ply_value(fs, format, element, values, lists);
           if (indices < 0) continue;
           auto line = lists[indices];
           for (auto i = 1; i < line.size(); i++)
@@ -3085,7 +3113,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
         }
       } else {
         for (auto idx = 0; idx < element.count; idx++)
-          read_ply_value(ply, element, values, lists);
+          read_ply_value(fs, format, element, values, lists);
       }
     }
 
@@ -3255,7 +3283,11 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
         flip_texcoord);
   }
 
-  auto ply = ply_file(filename, true);
+  auto fs_ = open_output_file(filename, true);
+  auto fs = fs_.fs;
+
+  // format
+  auto format = ply_format::binary_little_endian;
 
   // comment
   auto comments = vector<string>{
@@ -3315,7 +3347,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
   }
 
   // write header
-  write_ply_header(ply, elements, comments);
+  write_ply_header(fs, format, elements, comments);
 
   // write values
   for (auto& element : elements) {
@@ -3348,7 +3380,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
         if (!radius.empty()) {
           values[cur++] = radius[idx];
         }
-        write_ply_value(ply, element, values, lists);
+        write_ply_value(fs, format, element, values, lists);
       }
     } else if (element.name == "face") {
       auto values = vector<float>(element.properties.size());
@@ -3359,7 +3391,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
         lists[0][0] = t.x;
         lists[0][1] = t.y;
         lists[0][2] = t.z;
-        write_ply_value(ply, element, values, lists);
+        write_ply_value(fs, format, element, values, lists);
       }
       values[0] = (float)4;
       lists[0].resize(4);
@@ -3378,7 +3410,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
           lists[0][2] = q.z;
           lists[0][3] = q.w;
         }
-        write_ply_value(ply, element, values, lists);
+        write_ply_value(fs, format, element, values, lists);
       }
     } else if (element.name == "line") {
       auto values = vector<float>(element.properties.size());
@@ -3388,7 +3420,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
       for (auto& l : lines) {
         lists[0][0] = l.x;
         lists[0][1] = l.y;
-        write_ply_value(ply, element, values, lists);
+        write_ply_value(fs, format, element, values, lists);
       }
     } else if (element.name == "point") {
       auto values = vector<float>(element.properties.size());
@@ -3397,7 +3429,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
       lists[0].resize(1);
       for (auto& p : points) {
         lists[0][0] = p;
-        write_ply_value(ply, element, values, lists);
+        write_ply_value(fs, format, element, values, lists);
       }
     } else {
       throw std::runtime_error("should not have gotten here");
@@ -3729,32 +3761,6 @@ static void load_obj_shape(const string& filename, vector<int>& points,
   } catch (const std::exception& e) {
     throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
   }
-}
-
-// A file holder that closes a file when destructed. Useful for RIIA
-struct file_holder {
-  FILE*  fs       = nullptr;
-  string filename = "";
-
-  file_holder(const file_holder&) = delete;
-  file_holder& operator=(const file_holder&) = delete;
-  ~file_holder() {
-    if (fs) fclose(fs);
-  }
-};
-
-// Opens a file returing a handle with RIIA
-static inline file_holder open_input_file(
-    const string& filename, bool binary = false) {
-  auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
-  if (!fs) throw std::runtime_error("could not open file " + filename);
-  return {fs, filename};
-}
-static inline file_holder open_output_file(
-    const string& filename, bool binary = false) {
-  auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
-  if (!fs) throw std::runtime_error("could not open file " + filename);
-  return {fs, filename};
 }
 
 // Load ply mesh

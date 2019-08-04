@@ -186,7 +186,7 @@ static inline void parse_ply_prop(string_view& str, ply_type type, VT& value) {
 
 // Load ply data
 void read_ply_header(
-    ply_file& ply, vector<ply_element>& elements, vector<string>& comments) {
+    FILE* fs, ply_format& format, vector<ply_element>& elements, vector<string>& comments) {
   // ply type names
   static auto type_map = unordered_map<string, ply_type>{
       {"char", ply_type::i8},
@@ -210,7 +210,7 @@ void read_ply_header(
 
   // read the file header line by line
   char buffer[4096];
-  while (read_ply_line(ply.fs, buffer, sizeof(buffer))) {
+  while (read_ply_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_ply_comment(line);
@@ -236,13 +236,11 @@ void read_ply_header(
       auto fmt = ""sv;
       parse_ply_value(line, fmt);
       if (fmt == "ascii") {
-        ply.ascii = true;
+        format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
-        ply.ascii      = false;
-        ply.big_endian = false;
+        format      = ply_format::binary_little_endian;
       } else if (fmt == "binary_big_endian") {
-        ply.ascii      = false;
-        ply.big_endian = true;
+        format      = ply_format::binary_big_endian;
       } else {
         throw std::runtime_error{"unknown ply format"};
       }
@@ -297,7 +295,7 @@ void read_ply_header(
 }
 
 template <typename VT, typename LT>
-void read_ply_value_impl(ply_file& ply, const ply_element& element,
+void read_ply_value_impl(FILE* fs, ply_format format, const ply_element& element,
     vector<VT>& values, vector<vector<LT>>& lists) {
   // prepare properties
   if (values.size() != element.properties.size()) {
@@ -309,10 +307,10 @@ void read_ply_value_impl(ply_file& ply, const ply_element& element,
   for (auto& list : lists) list.clear();
 
   // read property values
-  if (ply.ascii) {
+  if (format == ply_format::ascii) {
     char buffer[4096];
-    if (!read_ply_line(ply.fs, buffer, sizeof(buffer)))
-      throw std::runtime_error("cannot read ply " + ply.filename);
+    if (!read_ply_line(fs, buffer, sizeof(buffer)))
+      throw std::runtime_error("cannot read ply");
     auto line = string_view{buffer};
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop  = element.properties[pidx];
@@ -330,11 +328,11 @@ void read_ply_value_impl(ply_file& ply, const ply_element& element,
       auto& prop  = element.properties[pidx];
       auto& value = values[pidx];
       auto& list  = lists[pidx];
-      read_ply_prop(ply.fs, ply.big_endian, prop.value_type, value);
+      read_ply_prop(fs, format == ply_format::binary_big_endian, prop.value_type, value);
       if (prop.is_list) {
         list.resize((int)value);
         for (auto i = 0; i < (int)value; i++)
-          read_ply_prop(ply.fs, ply.big_endian, prop.list_type, list[i]);
+          read_ply_prop(fs, format == ply_format::binary_big_endian, prop.list_type, list[i]);
       }
     }
   }
@@ -406,7 +404,7 @@ static inline void write_ply_binprop(
 }
 
 // Write Ply functions
-void write_ply_header(ply_file& ply, const vector<ply_element>& elements,
+void write_ply_header(FILE* fs, ply_format format, const vector<ply_element>& elements,
     const vector<string>& comments) {
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{
@@ -422,78 +420,76 @@ void write_ply_header(ply_file& ply, const vector<ply_element>& elements,
       {ply_type::f64, "double"},
   };
 
-  write_ply_text(ply.fs, "ply\n");
-  if (ply.ascii) {
-    write_ply_text(ply.fs, "format ascii 1.0\n");
-  } else if (ply.big_endian) {
-    write_ply_text(ply.fs, "format binary_big_endian 1.0\n");
-  } else {
-    write_ply_text(ply.fs, "format binary_little_endian 1.0\n");
+  write_ply_text(fs, "ply\n");
+  switch(format) {
+    case ply_format::ascii: write_ply_text(fs, "format ascii 1.0\n"); break;
+    case ply_format::binary_little_endian: write_ply_text(fs, "format binary_little_endian 1.0\n"); break;
+    case ply_format::binary_big_endian: write_ply_text(fs, "format binary_big_endian 1.0\n"); break;
   }
   for (auto& comment : comments)
-    write_ply_text(ply.fs, "comment " + comment + "\n");
+    write_ply_text(fs, "comment " + comment + "\n");
   for (auto& elem : elements) {
-    write_ply_text(ply.fs,
+    write_ply_text(fs,
         "element " + elem.name + " " + std::to_string(elem.count) + "\n");
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        write_ply_text(ply.fs, "property list " + type_map[prop.value_type] +
+        write_ply_text(fs, "property list " + type_map[prop.value_type] +
                                     " " + type_map[prop.list_type] + " " +
                                     prop.name + "\n");
       } else {
-        write_ply_text(ply.fs,
+        write_ply_text(fs,
             "property " + type_map[prop.value_type] + " " + prop.name + "\n");
       }
     }
   }
-  write_ply_text(ply.fs, "end_header\n");
+  write_ply_text(fs, "end_header\n");
 }
 
 template <typename VT, typename LT>
-void write_ply_value_impl(ply_file& ply, const ply_element& element,
+void write_ply_value_impl(FILE* fs, ply_format format, const ply_element& element,
     vector<VT>& values, vector<vector<LT>>& lists) {
-  if (ply.ascii) {
+  if (format == ply_format::ascii) {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
-      if (pidx) write_ply_text(ply.fs, " ");
-      write_ply_prop(ply.fs, prop.value_type, values[pidx]);
+      if (pidx) write_ply_text(fs, " ");
+      write_ply_prop(fs, prop.value_type, values[pidx]);
       if (prop.is_list) {
         for (auto i = 0; i < (int)lists[pidx].size(); i++) {
-          if (i) write_ply_text(ply.fs, " ");
-          write_ply_prop(ply.fs, prop.list_type, lists[pidx][i]);
+          if (i) write_ply_text(fs, " ");
+          write_ply_prop(fs, prop.list_type, lists[pidx][i]);
         }
       }
-      write_ply_text(ply.fs, "\n");
+      write_ply_text(fs, "\n");
     }
   } else {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
-      write_ply_binprop(ply.fs, ply.big_endian, prop.value_type, values[pidx]);
+      write_ply_binprop(fs, format == ply_format::binary_big_endian, prop.value_type, values[pidx]);
       if (prop.is_list) {
         for (auto i = 0; i < (int)lists[pidx].size(); i++)
           write_ply_binprop(
-              ply.fs, ply.big_endian, prop.list_type, lists[pidx][i]);
+              fs, format == ply_format::binary_big_endian, prop.list_type, lists[pidx][i]);
       }
     }
   }
 }
 
-void write_ply_value(ply_file& ply, const ply_element& element,
+void write_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists) {
-  write_ply_value_impl(ply, element, values, lists);
+  write_ply_value_impl(fs, format, element, values, lists);
 }
-void write_ply_value(ply_file& ply, const ply_element& element,
+void write_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<float>& values, vector<vector<int>>& lists) {
-  write_ply_value_impl(ply, element, values, lists);
+  write_ply_value_impl(fs, format, element, values, lists);
 }
 
-void read_ply_value(ply_file& ply, const ply_element& element,
+void read_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists) {
-  read_ply_value_impl(ply, element, values, lists);
+  read_ply_value_impl(fs, format, element, values, lists);
 }
-void read_ply_value(ply_file& ply, const ply_element& element,
+void read_ply_value(FILE* fs, ply_format format, const ply_element& element,
     vector<float>& values, vector<vector<int>>& lists) {
-  read_ply_value_impl(ply, element, values, lists);
+  read_ply_value_impl(fs, format, element, values, lists);
 }
 
 int find_ply_element(const vector<ply_element>& elements, const string& name) {
