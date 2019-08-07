@@ -898,15 +898,16 @@ struct pbrt_element_data {
 
 // Pbrt parser state. Used only internally.
 struct pbrt_parser_state {
-  unordered_map<string, pair<frame3f, frame3f>> coordsys = {};
-  unordered_map<string, pbrt_spectrum3f> constant_values = {};
-  string object   = "";
-  string line = "";
+  unordered_map<string, pair<frame3f, frame3f>> coordsys        = {};
+  unordered_map<string, pbrt_spectrum3f>        constant_values = {};
+  string                                        object          = "";
+  string                                        line            = "";
 };
 
 // Read a pbrt element
-bool read_pbrt_element(FILE* fs, pbrt_element& element, string& name, 
-  pbrt_element_data& data, vector<pbrt_context>& stack, pbrt_parser_state& state);
+bool read_pbrt_element(FILE* fs, pbrt_element& element, string& name,
+    pbrt_element_data& data, vector<pbrt_context>& stack,
+    pbrt_parser_state& state);
 
 }  // namespace yocto
 

@@ -4148,7 +4148,8 @@ static void load_pbrt(
   auto stack   = vector<pbrt_context>{};
   auto state   = pbrt_parser_state{};
   while (!files.empty()) {
-    if (!read_pbrt_element(files.back().fs, element, name, data, stack, state)) {
+    if (!read_pbrt_element(
+            files.back().fs, element, name, data, stack, state)) {
       files.pop_back();
       continue;
     }
