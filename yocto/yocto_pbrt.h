@@ -822,6 +822,11 @@ struct pbrt_object {
   string name = "";
 };
 
+// pbrt include
+struct pbrt_include {
+  string path = "";
+};
+
 // pbrt stack ctm
 struct pbrt_context {
   frame3f transform_start        = identity3x4f;
@@ -865,6 +870,44 @@ struct pbrt_callbacks {
 
 // Load pbrt scene
 void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv = true);
+
+// Pbrt element
+enum struct pbrt_element {
+  // clang-format off
+  sampler, integrator, accelerator, film, filter, camera, shape, light, // value
+  texture, material, medium, arealight, // name and value
+  object_instance, begin_object, end_object, include // name
+  // clang-format on
+};
+
+// Pbrt element data
+struct pbrt_element_data {
+  pbrt_sampler     sampler;
+  pbrt_integrator  intergrator;
+  pbrt_accelerator accelerator;
+  pbrt_film        film;
+  pbrt_filter      filter;
+  pbrt_camera      camera;
+  pbrt_texture     texture;
+  pbrt_material    material;
+  pbrt_medium      medium;
+  pbrt_shape       shape;
+  pbrt_light       light;
+  pbrt_arealight   arealight;
+};
+
+// Pbrt parser state. Used only internally.
+struct pbrt_parser_state {
+  unordered_map<string, pair<frame3f, frame3f>> coordsys        = {};
+  unordered_map<string, pbrt_spectrum3f>        constant_values = {};
+  string                                        object          = "";
+  string                                        line            = "";
+};
+
+// Read a pbrt element
+bool read_pbrt_element(FILE* fs, pbrt_element& element, string& name,
+    pbrt_element_data& data, vector<pbrt_context>& stack,
+    pbrt_parser_state& state);
 
 }  // namespace yocto
 
