@@ -229,7 +229,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
     skip_obj_whitespace(line);
     if (line.empty()) continue;
 
-    // get element
+    // get command
     auto cmd = ""s;
     parse_obj_value(line, cmd);
     if (cmd == "") continue;
@@ -340,7 +340,7 @@ void load_objx(const string& filename, obj_callbacks& cb) {
     skip_obj_whitespace(line);
     if (line.empty()) continue;
 
-    // get element
+    // get command
     auto cmd = ""s;
     parse_obj_value(line, cmd);
     if (cmd == "") continue;
@@ -410,7 +410,7 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
     skip_obj_whitespace(line);
     if (line.empty()) continue;
 
-    // get element
+    // get command
     auto cmd = ""s;
     parse_obj_value(line, cmd);
     if (cmd == "") continue;
@@ -492,7 +492,7 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
 }
 
 // Read obj
-bool read_obj_element(FILE* fs, obj_element& element, vec3f& value,
+bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
     string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // read the file line by line
   char buffer[4096];
@@ -503,24 +503,24 @@ bool read_obj_element(FILE* fs, obj_element& element, vec3f& value,
     skip_obj_whitespace(line);
     if (line.empty()) continue;
 
-    // get element
+    // get command
     auto cmd = ""s;
     parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "v") {
-      element = obj_element::vertex;
+      command = obj_command::vertex;
       parse_obj_value(line, value);
       vert_size.position += 1;
       return true;
     } else if (cmd == "vn") {
-      element = obj_element::normal;
+      command = obj_command::normal;
       parse_obj_value(line, value);
       vert_size.normal += 1;
       return true;
     } else if (cmd == "vt") {
-      element = obj_element::texcoord;
+      command = obj_command::texcoord;
       parse_obj_value(line, (vec2f&)value);
       vert_size.texcoord += 1;
       return true;
@@ -539,28 +539,28 @@ bool read_obj_element(FILE* fs, obj_element& element, vec3f& value,
         vertices.push_back(vert);
         skip_obj_whitespace(line);
       }
-      if (cmd == "f") element = obj_element::face;
-      if (cmd == "l") element = obj_element::line;
-      if (cmd == "p") element = obj_element::point;
+      if (cmd == "f") command = obj_command::face;
+      if (cmd == "l") command = obj_command::line;
+      if (cmd == "p") command = obj_command::point;
       return true;
     } else if (cmd == "o") {
-      element = obj_element::object;
+      command = obj_command::object;
       parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "usemtl") {
-      element = obj_element::usemtl;
+      command = obj_command::usemtl;
       parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "g") {
-      element = obj_element::group;
+      command = obj_command::group;
       parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "s") {
-      element = obj_element::smoothing;
+      command = obj_command::smoothing;
       parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "mtllib") {
-      element = obj_element::mtllib;
+      command = obj_command::mtllib;
       parse_obj_value(line, name);
       return true;
     } else {
@@ -571,8 +571,8 @@ bool read_obj_element(FILE* fs, obj_element& element, vec3f& value,
 }
 
 // Read mtl
-bool read_mtl_element(
-    FILE* fs, mtl_element& element, mtl_material& material, bool fliptr) {
+bool read_mtl_command(
+    FILE* fs, mtl_command& command, mtl_material& material, bool fliptr) {
   // currently parsed material
   material   = mtl_material{};
   auto found = false;
@@ -587,7 +587,7 @@ bool read_mtl_element(
     skip_obj_whitespace(line);
     if (line.empty()) continue;
 
-    // get element
+    // get command
     auto cmd = ""s;
     parse_obj_value(line, cmd);
     if (cmd == "") continue;
@@ -596,7 +596,7 @@ bool read_mtl_element(
     if (cmd == "newmtl") {
       if (found) {
         fseek(fs, fpos, SEEK_SET);
-        element = mtl_element::material;
+        command = mtl_command::material;
         return true;
       }
       found = true;
@@ -687,7 +687,7 @@ bool read_mtl_element(
 
   // return found value
   if (found) {
-    element = mtl_element::material;
+    command = mtl_command::material;
     return true;
   } else {
     return false;
@@ -695,7 +695,7 @@ bool read_mtl_element(
 }
 
 // Read objx
-bool read_objx_element(FILE* fs, objx_element& element, objx_camera& camera,
+bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
     objx_environment& environment, objx_instance& instance,
     objx_procedural& procedural) {
   // read the file line by line
@@ -707,14 +707,14 @@ bool read_objx_element(FILE* fs, objx_element& element, objx_camera& camera,
     skip_obj_whitespace(line);
     if (line.empty()) continue;
 
-    // get element
+    // get command
     auto cmd = ""s;
     parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "c") {
-      element = objx_element::camera;
+      command = objx_command::camera;
       camera  = objx_camera();
       parse_obj_value(line, camera.name);
       parse_obj_value(line, camera.ortho);
@@ -726,7 +726,7 @@ bool read_objx_element(FILE* fs, objx_element& element, objx_camera& camera,
       parse_obj_value(line, camera.frame);
       return true;
     } else if (cmd == "e") {
-      element     = objx_element::environment;
+      command     = objx_command::environment;
       environment = objx_environment();
       parse_obj_value(line, environment.name);
       parse_obj_value(line, environment.ke);
@@ -735,7 +735,7 @@ bool read_objx_element(FILE* fs, objx_element& element, objx_camera& camera,
       if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
       return true;
     } else if (cmd == "i") {
-      element  = objx_element::instance;
+      command  = objx_command::instance;
       instance = objx_instance();
       parse_obj_value(line, instance.name);
       parse_obj_value(line, instance.object);
@@ -743,7 +743,7 @@ bool read_objx_element(FILE* fs, objx_element& element, objx_camera& camera,
       parse_obj_value(line, instance.frame);
       return true;
     } else if (cmd == "po") {
-      element    = objx_element::procedural;
+      command    = objx_command::procedural;
       procedural = objx_procedural();
       parse_obj_value(line, procedural.name);
       parse_obj_value(line, procedural.type);
@@ -857,29 +857,29 @@ void write_obj_comment(FILE* fs, const string& comment) {
   write_obj_text(fs, "\n");
 }
 
-void write_obj_element(FILE* fs, obj_element element, const vec3f& value,
+void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
     const string& name, const vector<obj_vertex>& vertices) {
-  switch (element) {
-    case obj_element::vertex: write_obj_line_(fs, "v", value); break;
-    case obj_element::normal: write_obj_line_(fs, "vn", value); break;
-    case obj_element::texcoord:
+  switch (command) {
+    case obj_command::vertex: write_obj_line_(fs, "v", value); break;
+    case obj_command::normal: write_obj_line_(fs, "vn", value); break;
+    case obj_command::texcoord:
       write_obj_line_(fs, "vt", vec2f{value.x, value.y});
       break;
-    case obj_element::face: write_obj_line_(fs, "f", vertices); break;
-    case obj_element::line: write_obj_line_(fs, "l", vertices); break;
-    case obj_element::point: write_obj_line_(fs, "p", vertices); break;
-    case obj_element::object: write_obj_line_(fs, "o", name); break;
-    case obj_element::group: write_obj_line_(fs, "g", name); break;
-    case obj_element::usemtl: write_obj_line_(fs, "usemtl", name); break;
-    case obj_element::smoothing: write_obj_line_(fs, "s", name); break;
-    case obj_element::mtllib: write_obj_line_(fs, "mtllib", name); break;
-    case obj_element::objxlib: break;
+    case obj_command::face: write_obj_line_(fs, "f", vertices); break;
+    case obj_command::line: write_obj_line_(fs, "l", vertices); break;
+    case obj_command::point: write_obj_line_(fs, "p", vertices); break;
+    case obj_command::object: write_obj_line_(fs, "o", name); break;
+    case obj_command::group: write_obj_line_(fs, "g", name); break;
+    case obj_command::usemtl: write_obj_line_(fs, "usemtl", name); break;
+    case obj_command::smoothing: write_obj_line_(fs, "s", name); break;
+    case obj_command::mtllib: write_obj_line_(fs, "mtllib", name); break;
+    case obj_command::objxlib: break;
   }
 }
-void write_mtl_element(
-    FILE* fs, mtl_element element, const mtl_material& material) {
-  switch (element) {
-    case mtl_element::material: {
+void write_mtl_command(
+    FILE* fs, mtl_command command, const mtl_material& material) {
+  switch (command) {
+    case mtl_command::material: {
       static auto def    = mtl_material{};
       auto write_obj_opt = [](FILE* fs, const char* name, const auto& val,
                                const auto& def) {
@@ -934,25 +934,25 @@ void write_mtl_element(
     } break;
   }
 }
-void write_objx_element(FILE* fs, objx_element element,
+void write_objx_command(FILE* fs, objx_command command,
     const objx_camera& camera, const objx_environment& environment,
     const objx_instance& instance, const objx_procedural& procedural) {
-  switch (element) {
-    case objx_element::camera: {
+  switch (command) {
+    case objx_command::camera: {
       write_obj_line_(fs, "c", camera.name, (int)camera.ortho, camera.width,
           camera.height, camera.lens, camera.focus, camera.aperture,
           camera.frame);
     } break;
-    case objx_element::environment: {
+    case objx_command::environment: {
       write_obj_line_(fs, "e", environment.name, environment.ke,
           environment.ke_txt.path != "" ? environment.ke_txt.path : "\"\" "s,
           environment.frame);
     } break;
-    case objx_element::instance: {
+    case objx_command::instance: {
       write_obj_line_(fs, "i", instance.name, instance.object,
           instance.material, instance.frame);
     } break;
-    case objx_element::procedural: {
+    case objx_command::procedural: {
       write_obj_line_(fs, "po", procedural.name, procedural.type,
           procedural.material, procedural.size, procedural.level,
           procedural.frame);
