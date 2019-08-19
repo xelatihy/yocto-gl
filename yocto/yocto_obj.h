@@ -184,8 +184,8 @@ struct objx_instance {
   string  material = "";            // material name
 };
 
-// Obj element
-enum struct obj_element {
+// Obj command
+enum struct obj_command {
   // clang-format off
   vertex, normal, texcoord,         // data in value
   face, line, point,                // data in vertices
@@ -193,14 +193,14 @@ enum struct obj_element {
   mtllib, objxlib,                  // data in name
   // clang-format on
 };
-// Mtl element
-enum struct mtl_element {
+// Mtl command
+enum struct mtl_command {
   // clang-format off
   material,         // data in material
   // clang-format on
 };
-// Objx element
-enum struct objx_element {
+// Objx command
+enum struct objx_command {
   // clang-format off
   camera,       // data in camera
   environment,  // data in environment
@@ -210,21 +210,21 @@ enum struct objx_element {
 };
 
 // Read obj elements
-bool read_obj_element(FILE* fs, obj_element& element, vec3f& value,
+bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
     string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_element(
-    FILE* fs, mtl_element& element, mtl_material& material, bool fliptr = true);
-bool read_objx_element(FILE* fs, objx_element& element, objx_camera& camera,
+bool read_mtl_command(
+    FILE* fs, mtl_command& command, mtl_material& material, bool fliptr = true);
+bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
     objx_environment& environment, objx_instance& instance,
     objx_procedural& procedural);
 
 // Write obj elements
 void write_obj_comment(FILE* fs, const string& comment);
-void write_obj_element(FILE* fs, obj_element element, const vec3f& value,
+void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
     const string& name, const vector<obj_vertex>& vertices);
-void write_mtl_element(
-    FILE* fs, mtl_element element, const mtl_material& material);
-void write_objx_element(FILE* fs, objx_element element,
+void write_mtl_command(
+    FILE* fs, mtl_command command, const mtl_material& material);
+void write_objx_command(FILE* fs, objx_command command,
     const objx_camera& camera, const objx_environment& environment,
     const objx_instance& instance, const objx_procedural& procedural);
 
