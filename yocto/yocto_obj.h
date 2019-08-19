@@ -238,6 +238,21 @@ enum struct objx_command_ {
   // clang-format on
 };
 
+// Objx command
+enum struct objx_command {
+  // clang-format off
+  // camera values
+  camera, cam_frame, cam_ortho, cam_width, cam_height, cam_lens, cam_aperture, 
+  cam_focus,
+  // environment color and texture
+  environment, env_frame, env_emission, env_map,
+  // instance values
+  instance, ist_frame, ist_object, ist_material,
+  // procedural values
+  procedural, proc_frame, proc_type, proc_material, proc_size, proc_level,
+  // clang-format on
+};
+
 // Read obj elements
 bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
     string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size);
@@ -248,6 +263,8 @@ bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
 bool read_objx_command(FILE* fs, objx_command_& command, objx_camera& camera,
     objx_environment& environment, objx_instance& instance,
     objx_procedural& procedural);
+bool read_objx_command(FILE* fs, objx_command& command, 
+  float& value, vec3f& color, string& name);
 
 // Write obj elements
 void write_obj_comment(FILE* fs, const string& comment);

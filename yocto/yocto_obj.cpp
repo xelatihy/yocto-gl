@@ -822,9 +822,9 @@ bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
       command = mtl_command::vol_scattering_map;
       parse_obj_value(line, texture);
     } else {
-        continue;
+      continue;
     }
-      
+
     return true;
   }
 
@@ -888,6 +888,132 @@ bool read_objx_command(FILE* fs, objx_command_& command, objx_camera& camera,
       parse_obj_value(line, procedural.size);
       parse_obj_value(line, procedural.level);
       parse_obj_value(line, procedural.frame);
+      return true;
+    } else {
+      // unused
+    }
+  }
+
+  return false;
+}
+
+// Read objx
+bool read_objx_command(
+    FILE* fs, objx_command& command, float& value, vec3f& color, string& name, frame3f& frame, mtl_texture_info& texture) {
+  // read the file line by line
+  char buffer[4096];
+  auto pos = ftell(fs);
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
+
+    // get command
+    auto cmd = ""s;
+    parse_obj_value(line, cmd);
+    if (cmd == "") continue;
+
+    // possible token values
+    if (cmd == "c") {
+      bool  ortho    = false;    // orthographic
+      float width    = 0.036f;   // film size (default to 35mm)
+      float height   = 0.024f;   // film size (default to 35mm)
+      float lens     = 0.050f;   // focal length
+      float aperture = 0;        // lens aperture
+      float focus    = flt_max;  // focus distance
+      parse_obj_value(line, name);
+      parse_obj_value(line, ortho);
+      parse_obj_value(line, width);
+      parse_obj_value(line, height);
+      parse_obj_value(line, lens);
+      parse_obj_value(line, focus);
+      parse_obj_value(line, aperture);
+      parse_obj_value(line, frame);
+      if (command == objx_command::camera) {
+        command = objx_command::cam_ortho;
+        value = ortho ? 1 : 0;
+      } else if (command == objx_command::cam_ortho) {
+        command = objx_command::cam_width;
+        value = width;
+      } else if (command == objx_command::cam_width) {
+        command = objx_command::cam_height;
+        value = height;
+      } else if (command == objx_command::cam_height) {
+        command = objx_command::cam_lens;
+        value = lens;
+      } else if (command == objx_command::cam_lens) {
+        command = objx_command::cam_focus;
+        value = focus;
+      } else if (command == objx_command::cam_focus) {
+        command = objx_command::cam_aperture;
+        value = aperture;
+      } else if (command == objx_command::cam_aperture) {
+        command = objx_command::cam_frame;
+      } else {
+        command = objx_command::camera;
+      }
+      if(command != objx_command::cam_frame) fseek(fs, pos, SEEK_SET);
+      return true;
+    } else if (cmd == "e") {
+      parse_obj_value(line, name);
+      parse_obj_value(line, color);
+      parse_obj_value(line, texture.path);
+      parse_obj_value(line, frame);
+      if (texture.path == "\"\"") texture.path = "";
+      if (command == objx_command::environment) {
+        command = objx_command::env_emission;
+      } else if (command == objx_command::env_emission) {
+        command = objx_command::env_map;
+      } else if (command == objx_command::env_map) {
+        command = objx_command::env_frame;
+      } else {
+        command = objx_command::environment;
+      }
+      if(command != objx_command::env_frame) fseek(fs, pos, SEEK_SET);
+      return true;
+    } else if (cmd == "i") {
+      auto object = ""s, material = ""s;
+      parse_obj_value(line, name);
+      parse_obj_value(line, object);
+      parse_obj_value(line, material);
+      parse_obj_value(line, frame);
+      if (command == objx_command::instance) {
+        command = objx_command::ist_object;
+      } else if (command == objx_command::ist_object) {
+        command = objx_command::ist_material;
+      } else if (command == objx_command::ist_material) {
+        command = objx_command::ist_frame;
+      } else {
+        command = objx_command::instance;
+      }
+      if(command != objx_command::ist_frame) fseek(fs, pos, SEEK_SET);
+      return true;
+    } else if (cmd == "po") {
+      auto type = ""s, material = ""s;
+      auto level = 0;
+      parse_obj_value(line, name);
+      parse_obj_value(line, type);
+      parse_obj_value(line, material);
+      parse_obj_value(line, value);
+      parse_obj_value(line, level);
+      parse_obj_value(line, frame);
+      if (command == objx_command::procedural) {
+        command = objx_command::proc_type;
+        name = type;
+      } else if (command == objx_command::proc_type) {
+        command = objx_command::proc_material;
+        name = material;
+      } else if (command == objx_command::proc_material) {
+        command = objx_command::proc_size;
+      } else if (command == objx_command::proc_size) {
+        command = objx_command::proc_level;
+      } else if (command == objx_command::proc_level) {
+        command = objx_command::procedural;
+        value = level;
+      }
+      if(command != objx_command::proc_frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else {
       // unused

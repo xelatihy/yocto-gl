@@ -1392,6 +1392,7 @@ static void load_mtl(const string& filename, yocto_scene& scene,
 
   // parsing type
   enum struct parsing_type { none, material };
+  auto ptype = parsing_type::none;
 
   // Parse texture params and name
   auto add_texture = [&scene, &tmap](const mtl_texture_info& info,
@@ -1422,63 +1423,67 @@ static void load_mtl(const string& filename, yocto_scene& scene,
   while (read_mtl_command(fs, command, value, color, name, texture)) {
     if (command == mtl_command::material) {
       auto& material     = scene.materials.emplace_back();
-      material.uri      = name;
+      material.uri       = name;
       mmap[material.uri] = (int)scene.materials.size() - 1;
+      ptype              = parsing_type::material;
       continue;
     }
-    if (scene.materials.empty()) throw std::runtime_error("bad mtl");
-    auto& material = scene.materials.back();
-    switch (command) {
-      case mtl_command::emission: material.emission = color; break;
-      case mtl_command::diffuse: material.diffuse = color; break;
-      case mtl_command::specular: material.specular = color; break;
-      case mtl_command::transmission: material.transmission = color; break;
-      case mtl_command::exponent:
-        material.roughness = pow(2 / (value + 2), 1 / 4.0f);
-        if (material.roughness < 0.01f) material.roughness = 0;
-        if (material.roughness > 0.99f) material.roughness = 1;
-        break;
-      case mtl_command::opacity: material.opacity = value; break;
-      case mtl_command::emission_map:
-        material.emission_tex = add_texture(texture, false);
-        break;
-      case mtl_command::diffuse_map:
-        material.diffuse_tex = add_texture(texture, false);
-        break;
-      case mtl_command::specular_map:
-        material.specular_tex = add_texture(texture, false);
-        break;
-      case mtl_command::transmission_map:
-        material.transmission_tex = add_texture(texture, false);
-        break;
-      case mtl_command::opacity_map:
-        material.opacity_tex = add_texture(texture, true);
-        break;
-      case mtl_command::normal_map:
-        material.normal_tex = add_texture(texture, true);
-        break;
-      case mtl_command::pbr_roughness: material.roughness = value; break;
-      case mtl_command::pbr_metallic: material.metallic = value; break;
-      case mtl_command::pbr_roughness_map:
-        material.roughness_tex = add_texture(texture, true);
-        break;
-      case mtl_command::pbr_metallic_map:
-        material.metallic_tex = add_texture(texture, true);
-        break;
-      case mtl_command::vol_transmission:
-        material.voltransmission = color;
-        break;
-      case mtl_command::vol_meanfreepath:
-        material.volmeanfreepath = color;
-        break;
-      case mtl_command::vol_scattering: material.volscatter = color; break;
-      case mtl_command::vol_emission: material.volemission = color; break;
-      case mtl_command::vol_anisotropy: material.volanisotropy = value; break;
-      case mtl_command::vol_scale: material.volscale = value; break;
-      case mtl_command::vol_scattering_map:
-        material.subsurface_tex = add_texture(texture, false);
-        break;
-      default: break;  // ignore other values
+    if (ptype == parsing_type::none) {
+      throw std::runtime_error("bad mtl");
+    } else {
+      auto& material = scene.materials.back();
+      switch (command) {
+        case mtl_command::emission: material.emission = color; break;
+        case mtl_command::diffuse: material.diffuse = color; break;
+        case mtl_command::specular: material.specular = color; break;
+        case mtl_command::transmission: material.transmission = color; break;
+        case mtl_command::exponent:
+          material.roughness = pow(2 / (value + 2), 1 / 4.0f);
+          if (material.roughness < 0.01f) material.roughness = 0;
+          if (material.roughness > 0.99f) material.roughness = 1;
+          break;
+        case mtl_command::opacity: material.opacity = value; break;
+        case mtl_command::emission_map:
+          material.emission_tex = add_texture(texture, false);
+          break;
+        case mtl_command::diffuse_map:
+          material.diffuse_tex = add_texture(texture, false);
+          break;
+        case mtl_command::specular_map:
+          material.specular_tex = add_texture(texture, false);
+          break;
+        case mtl_command::transmission_map:
+          material.transmission_tex = add_texture(texture, false);
+          break;
+        case mtl_command::opacity_map:
+          material.opacity_tex = add_texture(texture, true);
+          break;
+        case mtl_command::normal_map:
+          material.normal_tex = add_texture(texture, true);
+          break;
+        case mtl_command::pbr_roughness: material.roughness = value; break;
+        case mtl_command::pbr_metallic: material.metallic = value; break;
+        case mtl_command::pbr_roughness_map:
+          material.roughness_tex = add_texture(texture, true);
+          break;
+        case mtl_command::pbr_metallic_map:
+          material.metallic_tex = add_texture(texture, true);
+          break;
+        case mtl_command::vol_transmission:
+          material.voltransmission = color;
+          break;
+        case mtl_command::vol_meanfreepath:
+          material.volmeanfreepath = color;
+          break;
+        case mtl_command::vol_scattering: material.volscatter = color; break;
+        case mtl_command::vol_emission: material.volemission = color; break;
+        case mtl_command::vol_anisotropy: material.volanisotropy = value; break;
+        case mtl_command::vol_scale: material.volscale = value; break;
+        case mtl_command::vol_scattering_map:
+          material.subsurface_tex = add_texture(texture, false);
+          break;
+        default: break;  // ignore other values
+      }
     }
   }
 }
