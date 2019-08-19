@@ -2216,32 +2216,42 @@ static void save_objx(
   // cameras
   for (auto& camera : scene.cameras) {
     write_objx_command(fs, objx_command::camera, camera.uri, {}, {}, {}, {});
-    if(camera.orthographic)
-    write_objx_command(fs, objx_command::ortho, {}, (float)camera.orthographic, {}, {}, {});
+    if (camera.orthographic)
+      write_objx_command(
+          fs, objx_command::ortho, {}, (float)camera.orthographic, {}, {}, {});
     write_objx_command(fs, objx_command::width, {}, camera.film.x, {}, {}, {});
     write_objx_command(fs, objx_command::height, {}, camera.film.y, {}, {}, {});
     write_objx_command(fs, objx_command::lens, {}, camera.lens, {}, {}, {});
     write_objx_command(fs, objx_command::focus, {}, camera.focus, {}, {}, {});
-    write_objx_command(fs, objx_command::aperture, {}, camera.aperture, {}, {}, {});
+    write_objx_command(
+        fs, objx_command::aperture, {}, camera.aperture, {}, {}, {});
     write_objx_command(fs, objx_command::frame, {}, {}, {}, camera.frame, {});
   }
 
   // environments
   for (auto& environment : scene.environments) {
-    write_objx_command(fs, objx_command::environment, environment.uri, {}, {}, {}, {});
-    write_objx_command(fs, objx_command::emission, {}, {}, environment.emission, {}, {});
-    if(environment.emission_tex >= 0)
-    write_objx_command(fs, objx_command::emission_map, {}, {}, {}, {}, scene.textures[environment.emission_tex].uri);
-    write_objx_command(fs, objx_command::frame, {}, {}, {}, environment.frame, {});
+    write_objx_command(
+        fs, objx_command::environment, environment.uri, {}, {}, {}, {});
+    write_objx_command(
+        fs, objx_command::emission, {}, {}, environment.emission, {}, {});
+    if (environment.emission_tex >= 0)
+      write_objx_command(fs, objx_command::emission_map, {}, {}, {}, {},
+          scene.textures[environment.emission_tex].uri);
+    write_objx_command(
+        fs, objx_command::frame, {}, {}, {}, environment.frame, {});
   }
 
   // instances
   if (preserve_instances) {
     for (auto& instance : scene.instances) {
-    write_objx_command(fs, objx_command::instance, instance.uri, {}, {}, {}, {});
-    write_objx_command(fs, objx_command::object, scene.shapes[instance.shape].uri, {}, {}, {}, {});
-    write_objx_command(fs, objx_command::material, scene.materials[instance.material].uri, {}, {}, {}, {});
-    write_objx_command(fs, objx_command::frame, {}, {}, {}, instance.frame, {});
+      write_objx_command(
+          fs, objx_command::instance, instance.uri, {}, {}, {}, {});
+      write_objx_command(fs, objx_command::object,
+          scene.shapes[instance.shape].uri, {}, {}, {}, {});
+      write_objx_command(fs, objx_command::material,
+          scene.materials[instance.material].uri, {}, {}, {}, {});
+      write_objx_command(
+          fs, objx_command::frame, {}, {}, {}, instance.frame, {});
     }
   }
 }

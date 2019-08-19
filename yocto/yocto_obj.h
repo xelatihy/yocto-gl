@@ -264,19 +264,18 @@ bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
 bool read_objx_command(FILE* fs, objx_command_& command, objx_camera& camera,
     objx_environment& environment, objx_instance& instance,
     objx_procedural& procedural);
-bool read_objx_command(
-    FILE* fs, objx_command& command, float& value, vec3f& color, string& name, frame3f& frame, mtl_texture_info& texture);
+bool read_objx_command(FILE* fs, objx_command& command, float& value,
+    vec3f& color, string& name, frame3f& frame, mtl_texture_info& texture);
 
 // Write obj elements
 void write_obj_comment(FILE* fs, const string& comment);
 void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
     const string& name, const vector<obj_vertex>& vertices);
-void write_mtl_command(
-    FILE* fs, mtl_command command, const string& name, float value, 
-    const vec3f& color, const mtl_texture_info& texture);
-void write_objx_command(
-    FILE* fs, objx_command command, const string& name, float value, 
-    const vec3f& color, const frame3f& frame, const mtl_texture_info& texture);
+void write_mtl_command(FILE* fs, mtl_command command, const string& name,
+    float value, const vec3f& color, const mtl_texture_info& texture);
+void write_objx_command(FILE* fs, objx_command command, const string& name,
+    float value, const vec3f& color, const frame3f& frame,
+    const mtl_texture_info& texture);
 
 void write_mtl_command(
     FILE* fs, mtl_command_ command, const mtl_material& material);

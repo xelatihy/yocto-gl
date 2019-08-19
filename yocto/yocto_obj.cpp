@@ -916,80 +916,66 @@ bool read_objx_command(FILE* fs, objx_command& command, float& value,
     if (cmd == "") continue;
 
     // read values
-    if(cmd == "newcam") {
+    if (cmd == "newcam") {
       command = objx_command::camera;
       parse_obj_value(line, name);
-        return true;
-    }
-    else if(cmd == "newenv") {
+      return true;
+    } else if (cmd == "newenv") {
       command = objx_command::environment;
       parse_obj_value(line, name);
-        return true;
-    }
-    else if(cmd == "newist") {
+      return true;
+    } else if (cmd == "newist") {
       command = objx_command::instance;
       parse_obj_value(line, name);
-        return true;
-    }
-    else if(cmd == "newproc") {
+      return true;
+    } else if (cmd == "newproc") {
       command = objx_command::procedural;
       parse_obj_value(line, name);
-        return true;
-    }
-    else if(cmd == "frame") {
+      return true;
+    } else if (cmd == "frame") {
       command = objx_command::frame;
       parse_obj_value(line, frame);
-        return true;
-    }
-    else if(cmd == "obj") {
+      return true;
+    } else if (cmd == "obj") {
       command = objx_command::object;
       parse_obj_value(line, name);
-        return true;
-    }
-    else if(cmd == "mat") {
+      return true;
+    } else if (cmd == "mat") {
       command = objx_command::material;
       parse_obj_value(line, name);
-        return true;
-    }
-    else if(cmd == "ortho") {
+      return true;
+    } else if (cmd == "ortho") {
       command = objx_command::ortho;
       parse_obj_value(line, value);
-        return true;
-    }
-    else if(cmd == "width") {
+      return true;
+    } else if (cmd == "width") {
       command = objx_command::width;
       parse_obj_value(line, value);
-        return true;
-    }
-    else if(cmd == "height") {
+      return true;
+    } else if (cmd == "height") {
       command = objx_command::height;
       parse_obj_value(line, value);
-        return true;
-    }
-    else if(cmd == "lens") {
+      return true;
+    } else if (cmd == "lens") {
       command = objx_command::lens;
       parse_obj_value(line, value);
-        return true;
-    }
-    else if(cmd == "aperture") {
+      return true;
+    } else if (cmd == "aperture") {
       command = objx_command::aperture;
       parse_obj_value(line, value);
-        return true;
-    }
-    else if(cmd == "focus") {
+      return true;
+    } else if (cmd == "focus") {
       command = objx_command::focus;
       parse_obj_value(line, value);
-        return true;
-    }
-    else if(cmd == "Ke") {
+      return true;
+    } else if (cmd == "Ke") {
       command = objx_command::emission;
       parse_obj_value(line, color);
-        return true;
-    }
-    else if(cmd == "map_Ke") {
+      return true;
+    } else if (cmd == "map_Ke") {
       command = objx_command::emission_map;
       parse_obj_value(line, texture);
-        return true;
+      return true;
     }
     // backward compatibility
     else if (cmd == "c") {
@@ -1316,24 +1302,16 @@ void write_objx_command(FILE* fs, objx_command command, const string& name,
     case objx_command::material:
       checked_fprintf(fs, "  mat %s\n", name.c_str());
       break;
-    case objx_command::ortho:
-      checked_fprintf(fs, "  ortho %g\n", value);
-      break;
-    case objx_command::width:
-      checked_fprintf(fs, "  width %g\n", value);
-      break;
+    case objx_command::ortho: checked_fprintf(fs, "  ortho %g\n", value); break;
+    case objx_command::width: checked_fprintf(fs, "  width %g\n", value); break;
     case objx_command::height:
       checked_fprintf(fs, "  height %g\n", value);
       break;
-    case objx_command::lens:
-      checked_fprintf(fs, "  lens %g\n", value);
-      break;
+    case objx_command::lens: checked_fprintf(fs, "  lens %g\n", value); break;
     case objx_command::aperture:
       checked_fprintf(fs, "  aperture %g\n", value);
       break;
-    case objx_command::focus:
-      checked_fprintf(fs, "  focus %g\n", value);
-      break;
+    case objx_command::focus: checked_fprintf(fs, "  focus %g\n", value); break;
     case objx_command::emission:
       checked_fprintf(fs, "  Ke %g %g %g\n", color.x, color.y, color.z);
       break;
