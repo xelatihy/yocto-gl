@@ -672,8 +672,6 @@ void parse_yaml_value(string_view& str, vector<string>& svalues,
         parse_yaml_value(str, nvalues.emplace_back());
       } else {
         parse_yaml_value(str, svalues.emplace_back());
-        if (svalues.back() == "true") bvalues.push_back(true);
-        if (svalues.back() == "false") bvalues.push_back(false);
       }
       skip_yaml_whitespace(str);
       if (str.front() == ',') {
@@ -686,17 +684,24 @@ void parse_yaml_value(string_view& str, vector<string>& svalues,
         throw std::runtime_error("bad yaml");
       }
     }
+    if (!svalues.empty() && !nvalues.empty())
+      throw std::runtime_error("bad yaml");
   } else if (is_yaml_digit(str.front()) || str.front() == '-' ||
              str.front() == '+') {
     parse_yaml_value(str, nvalues.emplace_back());
   } else {
     parse_yaml_value(str, svalues.emplace_back());
-    if (svalues.back() == "true") bvalues.push_back(true);
-    if (svalues.back() == "false") bvalues.push_back(false);
   }
   skip_yaml_whitespace(str);
   if (!str.empty() && !is_yaml_whitespace(str))
     throw std::runtime_error("bad yaml");
+  if (!svalues.empty()) {
+    for (auto& svalue : svalues) {
+      if (svalue == "true" || svalue == "false")
+        bvalues.push_back(svalue == "true");
+    }
+    if (bvalues.size() != svalues.size()) bvalues.clear();
+  }
 }
 
 bool read_yaml_element(FILE* fs, yaml_element& element, string& group,
