@@ -1848,60 +1848,6 @@ static void load_yaml_scene(
 
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
-
-// Write text to file
-static inline void write_yaml_value(FILE* fs, int value) {
-  if (fprintf(fs, "%d", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_yaml_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_yaml_value(FILE* fs, bool value) {
-  if (fprintf(fs, "%s", value ? "true" : "false") < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_yaml_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_yaml_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_yaml_text(FILE* fs, const string& value) {
-  if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_yaml_value(FILE* fs, const string& value) {
-  if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_yaml_value(FILE* fs, const vec2f& value) {
-  if (fprintf(fs, "[%g,%g]", value.x, value.y) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_yaml_value(FILE* fs, const vec3f& value) {
-  if (fprintf(fs, "[%g,%g,%g]", value.x, value.y, value.z) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_yaml_value(FILE* fs, const frame3f& value) {
-  if (fprintf(fs, "[") < 0) throw std::runtime_error("cannot print value");
-  for (auto i = 0; i < 12; i++)
-    if (fprintf(fs, i ? ",%g" : "%g", (&value.x.x)[i]) < 0)
-      throw std::runtime_error("cannot print value");
-  if (fprintf(fs, "]") < 0) throw std::runtime_error("cannot print value");
-}
-
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
 static inline void checked_fprintf(FILE* fs, const char* fmt, ...) {
   va_list args1;
   va_start(args1, fmt);
@@ -1942,9 +1888,31 @@ void write_yaml_property(FILE* fs, const string& object, const string& key,
     checked_fprintf(fs, "\n", key.c_str());
   }
 }
+
 void write_yaml_object(FILE* fs, const string& object) {
   checked_fprintf(fs, "\n%s:\n", object.c_str());
 }
+
+static inline vector<string> split_string(
+    const string& str, const string& delim) {
+  auto tokens = vector<string>{};
+  auto last = (size_t)0, next = (size_t)0;
+  while ((next = str.find(delim, last)) != string::npos) {
+    tokens.push_back(str.substr(last, next - last));
+    last = next + delim.size();
+  }
+  if (last < str.size()) tokens.push_back(str.substr(last));
+  return tokens;
+}
+
+void write_yaml_comment(FILE* fs, const string& comment) {
+  auto lines = split_string(comment, "\n");
+  for (auto& line : lines) {
+    checked_fprintf(fs, "# %s\n", line.c_str());
+  }
+  checked_fprintf(fs, "\n");
+}
+
 
 // Save yaml
 static void save_yaml(const string& filename, const yocto_scene& scene,
@@ -1953,7 +1921,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   auto fs_ = open_output_file(filename);
   auto fs  = fs_.fs;
 
-  write_yaml_text(fs, get_save_scene_message(scene, "# "));
+  write_yaml_comment(fs, get_save_scene_message(scene, ""));
 
   static const auto def_camera      = yocto_camera{};
   static const auto def_texture     = yocto_texture{};
