@@ -702,7 +702,7 @@ void parse_yaml_value(string_view& str, vector<string>& svalues,
   }
 }
 
-bool read_yaml_element(FILE* fs, string& group, string& key, bool& newobj,
+bool read_yaml_property(FILE* fs, string& group, string& key, bool& newobj,
     vector<string>& svalues, vector<double>& nvalues, vector<bool>& bvalues) {
   // read the file line by line
   char buffer[4096];
@@ -984,7 +984,7 @@ void load_yaml(
   auto nvalues = vector<double>{};
   auto bvalues = vector<bool>{};
   while (
-      read_yaml_element(fs, group, key, newobj, svalues, nvalues, bvalues)) {
+      read_yaml_property(fs, group, key, newobj, svalues, nvalues, bvalues)) {
     if (group.empty()) {
       throw std::runtime_error("bad yaml");
     }
