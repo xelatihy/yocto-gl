@@ -549,8 +549,6 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-enum struct yaml_element { group, object, property };
-
 static inline bool is_yaml_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
@@ -704,12 +702,10 @@ void parse_yaml_value(string_view& str, vector<string>& svalues,
   }
 }
 
-bool read_yaml_element(FILE* fs, yaml_element& element, string& group,
-    string& key, vector<string>& svalues, vector<double>& nvalues,
-    vector<bool>& bvalues) {
+bool read_yaml_element(FILE* fs, string& group, string& key, bool& newobj,
+    vector<string>& svalues, vector<double>& nvalues, vector<bool>& bvalues) {
   // read the file line by line
   char buffer[4096];
-  auto pos = ftell(fs);
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
@@ -724,14 +720,11 @@ bool read_yaml_element(FILE* fs, yaml_element& element, string& group,
       skip_yaml_whitespace(line);
       if (line.empty()) throw std::runtime_error("bad yaml");
       if (line.front() == '-') {
-        if (element == yaml_element::object) {
-          line.remove_prefix(1);
-          skip_yaml_whitespace(line);
-        } else {
-          fseek(fs, pos, SEEK_SET);
-          element = yaml_element::object;
-          return true;
-        }
+        newobj = true;
+        line.remove_prefix(1);
+        skip_yaml_whitespace(line);
+      } else {
+        newobj = false;
       }
       parse_yaml_varname(line, key);
       skip_yaml_whitespace(line);
@@ -739,7 +732,6 @@ bool read_yaml_element(FILE* fs, yaml_element& element, string& group,
         throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       parse_yaml_value(line, svalues, nvalues, bvalues);
-      element = yaml_element::property;
       return true;
     } else if (is_yaml_alpha(line.front())) {
       // new group
@@ -751,11 +743,10 @@ bool read_yaml_element(FILE* fs, yaml_element& element, string& group,
       if (!line.empty() && !is_yaml_whitespace(line)) {
         group = "";
         parse_yaml_value(line, svalues, nvalues, bvalues);
-        element = yaml_element::property;
         return true;
       } else {
-        group   = key;
-        element = yaml_element::group;
+        group = key;
+        key   = "";
         return true;
       }
     } else {
@@ -986,17 +977,22 @@ void load_yaml(
   };
 
   // load yaml
-  auto element = yaml_element::group;
   auto group   = ""s;
   auto key     = ""s;
+  auto newobj = false;
   auto svalues = vector<string>{};
   auto nvalues = vector<double>{};
   auto bvalues = vector<bool>{};
   while (
-      read_yaml_element(fs, element, group, key, svalues, nvalues, bvalues)) {
-    if (element == yaml_element::group) {
-      // do nothing here
-    } else if (element == yaml_element::object) {
+      read_yaml_element(fs, group, key, newobj, svalues, nvalues, bvalues)) {
+    if (group.empty()) {
+      throw std::runtime_error("bad yaml");
+    }
+    if (key.empty()) {
+      type = parsing_type::none;
+      continue;
+    }
+    if (newobj) {
       if (group == "cameras") {
         type = parsing_type::camera;
         scene.cameras.push_back({});
@@ -1025,8 +1021,10 @@ void load_yaml(
         type = parsing_type::none;
         throw std::runtime_error("unknown object type " + string(group));
       }
-    } else if (element == yaml_element::property &&
-               type == parsing_type::camera) {
+    }
+    if (type == parsing_type::none) {
+      throw std::runtime_error("bad yaml");
+    } else if (type == parsing_type::camera) {
       auto& camera = scene.cameras.back();
       if (key == "uri") {
         parse_yaml_value(svalues, nvalues, bvalues, camera.uri);
@@ -1050,8 +1048,7 @@ void load_yaml(
       } else {
         throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (element == yaml_element::property &&
-               type == parsing_type::texture) {
+    } else if (type == parsing_type::texture) {
       auto& texture = scene.textures.back();
       if (key == "uri") {
         parse_yaml_value(svalues, nvalues, bvalues, texture.uri);
@@ -1065,8 +1062,7 @@ void load_yaml(
       } else {
         throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (element == yaml_element::property &&
-               type == parsing_type::voltexture) {
+    } else if (type == parsing_type::voltexture) {
       auto& texture = scene.voltextures.back();
       if (key == "uri") {
         parse_yaml_value(svalues, nvalues, bvalues, texture.uri);
@@ -1078,8 +1074,7 @@ void load_yaml(
       } else {
         throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (element == yaml_element::property &&
-               type == parsing_type::material) {
+    } else if (type == parsing_type::material) {
       auto& material = scene.materials.back();
       if (key == "uri") {
         parse_yaml_value(svalues, nvalues, bvalues, material.uri);
@@ -1143,8 +1138,7 @@ void load_yaml(
       } else {
         throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (element == yaml_element::property &&
-               type == parsing_type::shape) {
+    } else if (type == parsing_type::shape) {
       auto& shape = scene.shapes.back();
       if (key == "uri") {
         parse_yaml_value(svalues, nvalues, bvalues, shape.uri);
@@ -1156,8 +1150,7 @@ void load_yaml(
       } else {
         throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (element == yaml_element::property &&
-               type == parsing_type::subdiv) {
+    } else if (type == parsing_type::subdiv) {
       auto& subdiv = scene.subdivs.back();
       if (key == "uri") {
         parse_yaml_value(svalues, nvalues, bvalues, subdiv.uri);
@@ -1178,8 +1171,7 @@ void load_yaml(
       } else {
         throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (element == yaml_element::property &&
-               type == parsing_type::instance) {
+    } else if (type == parsing_type::instance) {
       auto& instance = scene.instances.back();
       if (key == "uri") {
         parse_yaml_value(svalues, nvalues, bvalues, instance.uri);
@@ -1196,8 +1188,7 @@ void load_yaml(
       } else {
         throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (element == yaml_element::property &&
-               type == parsing_type::environment) {
+    } else if (type == parsing_type::environment) {
       auto& environment = scene.environments.back();
       if (key == "uri") {
         parse_yaml_value(svalues, nvalues, bvalues, environment.uri);
