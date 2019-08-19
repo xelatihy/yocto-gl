@@ -193,12 +193,15 @@ enum struct obj_command {
   mtllib, objxlib,                  // data in name
   // clang-format on
 };
+
 // Mtl command
 enum struct mtl_command_ {
   // clang-format off
   material,         // data in material
   // clang-format on
 };
+
+// Mtl command
 enum struct mtl_command {
   // clang-format off
   // material name and type (value)
@@ -224,8 +227,9 @@ enum struct mtl_command {
   vol_scattering_map
   // clang-format on
 };
+
 // Objx command
-enum struct objx_command {
+enum struct objx_command_ {
   // clang-format off
   camera,       // data in camera
   environment,  // data in environment
@@ -241,7 +245,7 @@ bool read_mtl_command(FILE* fs, mtl_command_& command, mtl_material& material,
     bool fliptr = true);
 bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
     vec3f& color, string& name, mtl_texture_info& texture, bool fliptr = true);
-bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
+bool read_objx_command(FILE* fs, objx_command_& command, objx_camera& camera,
     objx_environment& environment, objx_instance& instance,
     objx_procedural& procedural);
 
@@ -251,7 +255,7 @@ void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
     const string& name, const vector<obj_vertex>& vertices);
 void write_mtl_command(
     FILE* fs, mtl_command_ command, const mtl_material& material);
-void write_objx_command(FILE* fs, objx_command command,
+void write_objx_command(FILE* fs, objx_command_ command,
     const objx_camera& camera, const objx_environment& environment,
     const objx_instance& instance, const objx_procedural& procedural);
 

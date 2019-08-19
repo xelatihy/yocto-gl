@@ -1581,13 +1581,13 @@ static void load_objx(const string& filename, yocto_scene& scene,
   bool first_instance = true;
 
   // read mtl elements
-  auto element = objx_command{};
+  auto element = objx_command_{};
   auto ocam    = objx_camera{};
   auto oenv    = objx_environment{};
   auto oist    = objx_instance{};
   auto oproc   = objx_procedural{};
   while (read_objx_command(fs, element, ocam, oenv, oist, oproc)) {
-    if (element == objx_command::camera) {
+    if (element == objx_command_::camera) {
       auto camera         = yocto_camera();
       camera.uri          = ocam.name;
       camera.frame        = ocam.frame;
@@ -1597,14 +1597,14 @@ static void load_objx(const string& filename, yocto_scene& scene,
       camera.focus        = ocam.focus;
       camera.aperture     = ocam.aperture;
       scene.cameras.push_back(camera);
-    } else if (element == objx_command::environment) {
+    } else if (element == objx_command_::environment) {
       auto environment         = yocto_environment();
       environment.uri          = oenv.name;
       environment.frame        = oenv.frame;
       environment.emission     = oenv.ke;
       environment.emission_tex = add_texture(oenv.ke_txt, true);
       scene.environments.push_back(environment);
-    } else if (element == objx_command::instance) {
+    } else if (element == objx_command_::instance) {
       if (first_instance) {
         scene.instances.clear();
         first_instance = false;
@@ -1617,7 +1617,7 @@ static void load_objx(const string& filename, yocto_scene& scene,
         instance.material = mmap.at(oist.material);
         scene.instances.push_back(instance);
       }
-    } else if (element == objx_command::procedural) {
+    } else if (element == objx_command_::procedural) {
       auto shape = yocto_shape();
       shape.uri  = oproc.name;
       if (oproc.type == "floor") {
@@ -2118,7 +2118,7 @@ static void save_objx(
     ocam.focus    = camera.focus;
     ocam.aperture = camera.aperture;
     ocam.frame    = camera.frame;
-    write_objx_command(fs, objx_command::camera, ocam, {}, {}, {});
+    write_objx_command(fs, objx_command_::camera, ocam, {}, {}, {});
   }
 
   // environments
@@ -2130,7 +2130,7 @@ static void save_objx(
                            ? scene.textures[environment.emission_tex].uri
                            : ""s;
     oenv.frame = environment.frame;
-    write_objx_command(fs, objx_command::environment, {}, oenv, {}, {});
+    write_objx_command(fs, objx_command_::environment, {}, oenv, {}, {});
   }
 
   // instances
@@ -2142,7 +2142,7 @@ static void save_objx(
       oist.material =
           fs::path(scene.materials[instance.material].uri).stem().string();
       oist.frame = instance.frame;
-      write_objx_command(fs, objx_command::instance, {}, {}, oist, {});
+      write_objx_command(fs, objx_command_::instance, {}, {}, oist, {});
     }
   }
 }

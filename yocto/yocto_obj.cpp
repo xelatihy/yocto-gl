@@ -832,7 +832,7 @@ bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
 }
 
 // Read objx
-bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
+bool read_objx_command(FILE* fs, objx_command_& command, objx_camera& camera,
     objx_environment& environment, objx_instance& instance,
     objx_procedural& procedural) {
   // read the file line by line
@@ -851,7 +851,7 @@ bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
 
     // possible token values
     if (cmd == "c") {
-      command = objx_command::camera;
+      command = objx_command_::camera;
       camera  = objx_camera();
       parse_obj_value(line, camera.name);
       parse_obj_value(line, camera.ortho);
@@ -863,7 +863,7 @@ bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
       parse_obj_value(line, camera.frame);
       return true;
     } else if (cmd == "e") {
-      command     = objx_command::environment;
+      command     = objx_command_::environment;
       environment = objx_environment();
       parse_obj_value(line, environment.name);
       parse_obj_value(line, environment.ke);
@@ -872,7 +872,7 @@ bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
       if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
       return true;
     } else if (cmd == "i") {
-      command  = objx_command::instance;
+      command  = objx_command_::instance;
       instance = objx_instance();
       parse_obj_value(line, instance.name);
       parse_obj_value(line, instance.object);
@@ -880,7 +880,7 @@ bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
       parse_obj_value(line, instance.frame);
       return true;
     } else if (cmd == "po") {
-      command    = objx_command::procedural;
+      command    = objx_command_::procedural;
       procedural = objx_procedural();
       parse_obj_value(line, procedural.name);
       parse_obj_value(line, procedural.type);
@@ -1058,11 +1058,11 @@ void write_mtl_command(
     } break;
   }
 }
-void write_objx_command(FILE* fs, objx_command command,
+void write_objx_command(FILE* fs, objx_command_ command,
     const objx_camera& camera, const objx_environment& environment,
     const objx_instance& instance, const objx_procedural& procedural) {
   switch (command) {
-    case objx_command::camera: {
+    case objx_command_::camera: {
       checked_fprintf(fs,
           "c %s %d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
           camera.name.c_str(), (int)camera.ortho, camera.width, camera.height,
@@ -1072,7 +1072,7 @@ void write_objx_command(FILE* fs, objx_command command,
           camera.frame.z.y, camera.frame.z.z, camera.frame.o.x,
           camera.frame.o.y, camera.frame.o.z);
     } break;
-    case objx_command::environment: {
+    case objx_command_::environment: {
       checked_fprintf(fs,
           "e %s %g %g %g %s %g %g %g %g %g %g %g %g %g %g %g %g\n",
           environment.name.c_str(), environment.ke.x, environment.ke.y,
@@ -1084,7 +1084,7 @@ void write_objx_command(FILE* fs, objx_command command,
           environment.frame.z.x, environment.frame.z.y, environment.frame.z.z,
           environment.frame.o.x, environment.frame.o.y, environment.frame.o.z);
     } break;
-    case objx_command::instance: {
+    case objx_command_::instance: {
       checked_fprintf(fs, "i %s %s %s %g %g %g %g %g %g %g %g %g %g %g %g\n",
           instance.name.c_str(), instance.object.c_str(),
           instance.material.c_str(), instance.frame.x.x, instance.frame.x.y,
@@ -1093,7 +1093,7 @@ void write_objx_command(FILE* fs, objx_command command,
           instance.frame.z.z, instance.frame.o.x, instance.frame.o.y,
           instance.frame.o.z);
     } break;
-    case objx_command::procedural: {
+    case objx_command_::procedural: {
       checked_fprintf(fs,
           "po %s %s %s %f %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
           procedural.name.c_str(), procedural.type.c_str(),
