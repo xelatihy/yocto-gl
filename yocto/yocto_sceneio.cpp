@@ -756,7 +756,6 @@ bool read_yaml_property(
   return false;
 }
 
-
 void load_yaml(
     const string& filename, yocto_scene& scene, const load_params& params) {
   // open file
@@ -1150,7 +1149,6 @@ void write_yaml_comment(FILE* fs, const string& comment) {
   checked_fprintf(fs, "\n");
 }
 
-
 // Save yaml
 static void save_yaml(const string& filename, const yocto_scene& scene,
     bool ply_instances = false, const string& instances_name = "") {
@@ -1200,20 +1198,20 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
       yvalue.number = value;
       write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, vec2f>) {
-      yvalue.type   = yaml_value_type::array;
+      yvalue.type = yaml_value_type::array;
       yvalue.array.resize(2);
       yvalue.array[0] = value.x;
       yvalue.array[1] = value.y;
       write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, vec3f>) {
-      yvalue.type   = yaml_value_type::array;
+      yvalue.type = yaml_value_type::array;
       yvalue.array.resize(3);
       yvalue.array[0] = value.x;
       yvalue.array[1] = value.y;
       yvalue.array[2] = value.z;
       write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, frame3f>) {
-      yvalue.type   = yaml_value_type::array;
+      yvalue.type = yaml_value_type::array;
       yvalue.array.resize(12);
       for (auto i = 0; i < 12; i++) yvalue.array[i] = (&value.x.x)[i];
       write_yaml_property(fs, object, name, false, yvalue);
@@ -1224,7 +1222,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   auto write_yaml_ref = [&](FILE* fs, const char* object, const char* name,
                             int value, auto& refs) {
     if (value < 0) return;
-    yvalue.type = yaml_value_type::string;
+    yvalue.type   = yaml_value_type::string;
     yvalue.string = refs[value].uri;
     write_yaml_property(fs, object, name, false, yvalue);
   };
