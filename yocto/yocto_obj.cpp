@@ -938,7 +938,8 @@ void write_objx_command(FILE* fs, objx_command command,
     case objx_command::environment: {
       checked_fprintf(fs,
           "e %s %g %g %g %s %g %g %g %g %g %g %g %g %g %g %g %g\n",
-          environment.name.c_str(), environment.ke.x, environment.ke.y, environment.ke.z,
+          environment.name.c_str(), environment.ke.x, environment.ke.y,
+          environment.ke.z,
           environment.ke_txt.path != "" ? environment.ke_txt.path.c_str()
                                         : "\"\" ",
           environment.frame.x.x, environment.frame.x.y, environment.frame.x.z,
