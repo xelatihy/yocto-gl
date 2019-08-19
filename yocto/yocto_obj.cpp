@@ -915,8 +915,69 @@ bool read_objx_command(FILE* fs, objx_command& command, float& value,
     parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
-    // possible token values
-    if (cmd == "c") {
+    // read values
+    if(cmd == "newcam") {
+      command = objx_command::camera;
+      parse_obj_value(line, name);
+    }
+    else if(cmd == "newenv") {
+      command = objx_command::environment;
+      parse_obj_value(line, name);
+    }
+    else if(cmd == "newist") {
+      command = objx_command::instance;
+      parse_obj_value(line, name);
+    }
+    else if(cmd == "newproc") {
+      command = objx_command::procedural;
+      parse_obj_value(line, name);
+    }
+    else if(cmd == "frame") {
+      command = objx_command::frame;
+      parse_obj_value(line, frame);
+    }
+    else if(cmd == "obj") {
+      command = objx_command::object;
+      parse_obj_value(line, name);
+    }
+    else if(cmd == "mat") {
+      command = objx_command::material;
+      parse_obj_value(line, name);
+    }
+    else if(cmd == "ortho") {
+      command = objx_command::ortho;
+      parse_obj_value(line, value);
+    }
+    else if(cmd == "width") {
+      command = objx_command::width;
+      parse_obj_value(line, value);
+    }
+    else if(cmd == "height") {
+      command = objx_command::height;
+      parse_obj_value(line, value);
+    }
+    else if(cmd == "lens") {
+      command = objx_command::lens;
+      parse_obj_value(line, value);
+    }
+    else if(cmd == "aperture") {
+      command = objx_command::aperture;
+      parse_obj_value(line, value);
+    }
+    else if(cmd == "focus") {
+      command = objx_command::focus;
+      parse_obj_value(line, value);
+    }
+    else if(cmd == "Ke") {
+      command = objx_command::emission;
+      parse_obj_value(line, color);
+    }
+    else if(cmd == "map_Ke") {
+      command = objx_command::emission_map;
+      parse_obj_value(line, texture);
+    }
+    // backward compatibility
+    else if (cmd == "c") {
       auto  oname    = name;
       bool  ortho    = false;    // orthographic
       float width    = 0.036f;   // film size (default to 35mm)
