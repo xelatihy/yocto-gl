@@ -927,7 +927,7 @@ void write_objx_command(FILE* fs, objx_command command,
   switch (command) {
     case objx_command::camera: {
       checked_fprintf(fs,
-          "c %s %d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
+          "c %s %d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
           camera.name.c_str(), (int)camera.ortho, camera.width, camera.height,
           camera.lens, camera.focus, camera.aperture, camera.frame.x.x,
           camera.frame.x.y, camera.frame.x.z, camera.frame.y.x,
