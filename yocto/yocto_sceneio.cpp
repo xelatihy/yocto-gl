@@ -945,7 +945,8 @@ void load_yaml(
     } else if constexpr (std::is_same<T, vec3f>::value) {
       if (yaml.type != yaml_value_type::array || yaml.array.size() != 3)
         throw std::runtime_error("error parsing yaml value");
-      value = {(float)yaml.array[0], (float)yaml.array[1], (float)yaml.array[2]};
+      value = {
+          (float)yaml.array[0], (float)yaml.array[1], (float)yaml.array[2]};
     } else if constexpr (std::is_same<T, mat3f>::value) {
       if (yaml.type != yaml_value_type::array || yaml.array.size() != 9)
         throw std::runtime_error("error parsing yaml value");
@@ -1901,18 +1902,17 @@ static inline void write_yaml_value(FILE* fs, const frame3f& value) {
 #pragma GCC diagnostic pop
 #endif
 
+static inline void checked_fprintf(FILE* fs, const char* fmt, ...) {
+  va_list args1;
+  va_start(args1, fmt);
+  if (vfprintf(fs, fmt, args1) < 0)
+    throw std::runtime_error("cannot write to file");
+  va_end(args1);
+}
+
 // Save yaml property
 void write_yaml_property(FILE* fs, const string& object, const string& key,
-    bool newobj, const vector<double>& nvalues, const vector<string>& svalues,
-    const vector<bool>& bvalues) {
-  auto checked_fprintf = [](FILE* fs, const char* fmt, ...) {
-    va_list args1;
-    va_start(args1, fmt);
-    if (vfprintf(fs, fmt, args1) < 0)
-      throw std::runtime_error("cannot write to file");
-    va_end(args1);
-  };
-
+    bool newobj, const yaml_value& value) {
   if (key.empty()) {
     checked_fprintf(fs, "\n%s:\n", object.c_str());
   } else {
@@ -1920,35 +1920,30 @@ void write_yaml_property(FILE* fs, const string& object, const string& key,
       checked_fprintf(fs, (newobj ? "  - " : "    "));
     }
     checked_fprintf(fs, "%s: ", key.c_str());
-    if (!nvalues.empty()) {
-      if (nvalues.size() > 1) checked_fprintf(fs, "[ ");
-      for (auto i = 0; i < nvalues.size(); i++) {
-        if (i) checked_fprintf(fs, ", ");
-        checked_fprintf(fs, "%g", nvalues[i]);
-      }
-      if (nvalues.size() > 1) checked_fprintf(fs, " ]");
-    } else if (!bvalues.empty()) {
-      if (bvalues.size() > 1) checked_fprintf(fs, "[ ");
-      for (auto i = 0; i < bvalues.size(); i++) {
-        if (i) checked_fprintf(fs, ", ");
-        checked_fprintf(fs, "%s", bvalues[i] ? "true" : "false");
-      }
-      if (bvalues.size() > 1) checked_fprintf(fs, " ]");
-    } else if (!svalues.empty()) {
-      if (svalues.size() > 1) checked_fprintf(fs, "[ ");
-      for (auto i = 0; i < svalues.size(); i++) {
-        if (i) checked_fprintf(fs, ", ");
-        checked_fprintf(fs, "%s", svalues[i].c_str());
-      }
-      if (svalues.size() > 1) checked_fprintf(fs, " ]");
-    } else {
-      throw std::runtime_error("should not have gotten here");
+    switch (value.type) {
+      case yaml_value_type::number:
+        checked_fprintf(fs, "%g", value.number);
+        break;
+      case yaml_value_type::boolean:
+        checked_fprintf(fs, "%s", value.boolean ? "true" : "false");
+        break;
+      case yaml_value_type::string:
+        checked_fprintf(fs, "%s", value.string.c_str());
+        break;
+      case yaml_value_type::array:
+        checked_fprintf(fs, "[ ");
+        for (auto i = 0; i < value.array.size(); i++) {
+          if (i) checked_fprintf(fs, ", ");
+          checked_fprintf(fs, "%g", value.array[i]);
+        }
+        checked_fprintf(fs, " ]");
+        break;
     }
     checked_fprintf(fs, "\n", key.c_str());
   }
 }
 void write_yaml_object(FILE* fs, const string& object) {
-  write_yaml_property(fs, object, "", false, {}, {}, {});
+  checked_fprintf(fs, "\n%s:\n", object.c_str());
 }
 
 // Save yaml
@@ -1969,16 +1964,14 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   static const auto def_instance    = yocto_instance{};
   static const auto def_environment = yocto_environment{};
 
-  auto svalues = vector<string>{};
-  auto nvalues = vector<double>{};
-  auto bvalues = vector<bool>{};
+  auto yvalue = yaml_value{};
 
   auto write_yaml_uri = [&](FILE* fs, const char* object, const char* name,
                             const string& value) {
     if (value == "") throw std::runtime_error("bad uri");
-    svalues.resize(1);
-    svalues[0] = value;
-    write_yaml_property(fs, object, name, true, {}, svalues, {});
+    yvalue.type   = yaml_value_type::string;
+    yvalue.string = value;
+    write_yaml_property(fs, object, name, true, yvalue);
   };
   auto write_yaml_opt = [&](FILE* fs, const char* object, const char* name,
                             const auto& value, const auto& def) {
@@ -1986,36 +1979,39 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     using T =
         typename std::remove_const_t<std::remove_reference_t<decltype(value)>>;
     if constexpr (std::is_same_v<T, string>) {
-      svalues.resize(1);
-      svalues[0] = value;
-      write_yaml_property(fs, object, name, false, {}, svalues, {});
+      yvalue.type   = yaml_value_type::string;
+      yvalue.string = value;
+      write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, bool>) {
-      bvalues.resize(1);
-      bvalues[0] = value;
-      write_yaml_property(fs, object, name, false, {}, {}, bvalues);
+      yvalue.type    = yaml_value_type::boolean;
+      yvalue.boolean = value;
+      write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, int>) {
-      nvalues.resize(1);
-      nvalues[0] = value;
-      write_yaml_property(fs, object, name, false, nvalues, {}, {});
+      yvalue.type   = yaml_value_type::number;
+      yvalue.number = value;
+      write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, float>) {
-      nvalues.resize(1);
-      nvalues[0] = value;
-      write_yaml_property(fs, object, name, false, nvalues, {}, {});
+      yvalue.type   = yaml_value_type::number;
+      yvalue.number = value;
+      write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, vec2f>) {
-      nvalues.resize(2);
-      nvalues[0] = value.x;
-      nvalues[1] = value.y;
-      write_yaml_property(fs, object, name, false, nvalues, {}, {});
+      yvalue.type   = yaml_value_type::array;
+      yvalue.array.resize(2);
+      yvalue.array[0] = value.x;
+      yvalue.array[1] = value.y;
+      write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, vec3f>) {
-      nvalues.resize(3);
-      nvalues[0] = value.x;
-      nvalues[1] = value.y;
-      nvalues[2] = value.z;
-      write_yaml_property(fs, object, name, false, nvalues, {}, {});
+      yvalue.type   = yaml_value_type::array;
+      yvalue.array.resize(3);
+      yvalue.array[0] = value.x;
+      yvalue.array[1] = value.y;
+      yvalue.array[2] = value.z;
+      write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, frame3f>) {
-      nvalues.resize(12);
-      for (auto i = 0; i < 12; i++) nvalues[i] = (&value.x.x)[i];
-      write_yaml_property(fs, object, name, false, nvalues, {}, {});
+      yvalue.type   = yaml_value_type::array;
+      yvalue.array.resize(12);
+      for (auto i = 0; i < 12; i++) yvalue.array[i] = (&value.x.x)[i];
+      write_yaml_property(fs, object, name, false, yvalue);
     } else {
       throw std::runtime_error("should not have gotten here");
     }
@@ -2023,9 +2019,9 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   auto write_yaml_ref = [&](FILE* fs, const char* object, const char* name,
                             int value, auto& refs) {
     if (value < 0) return;
-    svalues.resize(1);
-    svalues[0] = refs[value].uri;
-    write_yaml_property(fs, object, name, false, {}, svalues, {});
+    yvalue.type = yaml_value_type::string;
+    yvalue.string = refs[value].uri;
+    write_yaml_property(fs, object, name, false, yvalue);
   };
 
   if (!scene.cameras.empty()) write_yaml_object(fs, "cameras");
