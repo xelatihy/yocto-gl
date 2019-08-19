@@ -363,7 +363,8 @@ void load_textures(
       load_texture(texture, dirname);
     }
   } else {
-    parallel_foreach(scene.textures,
+    parallel_foreach(
+        scene.textures,
         [&dirname](yocto_texture& texture) {
           if (!texture.hdr.empty() || !texture.ldr.empty()) return;
           load_texture(texture, dirname);
@@ -379,7 +380,8 @@ void load_textures(
       load_voltexture(texture, dirname);
     }
   } else {
-    parallel_foreach(scene.voltextures,
+    parallel_foreach(
+        scene.voltextures,
         [&dirname](yocto_voltexture& texture) {
           if (!texture.vol.empty()) return;
           load_voltexture(texture, dirname);
@@ -412,7 +414,8 @@ void save_textures(const yocto_scene& scene, const string& dirname,
       save_texture(texture, dirname);
     }
   } else {
-    parallel_foreach(scene.textures,
+    parallel_foreach(
+        scene.textures,
         [&dirname](
             const yocto_texture& texture) { save_texture(texture, dirname); },
         params.cancel);
@@ -425,7 +428,8 @@ void save_textures(const yocto_scene& scene, const string& dirname,
       save_voltexture(texture, dirname);
     }
   } else {
-    parallel_foreach(scene.voltextures,
+    parallel_foreach(
+        scene.voltextures,
         [&dirname](const yocto_voltexture& texture) {
           save_voltexture(texture, dirname);
         },
@@ -488,7 +492,8 @@ void load_shapes(
       load_shape(shape, dirname);
     }
   } else {
-    parallel_foreach(scene.shapes,
+    parallel_foreach(
+        scene.shapes,
         [&dirname](yocto_shape& shape) { load_shape(shape, dirname); },
         params.cancel);
   }
@@ -500,7 +505,8 @@ void load_shapes(
       load_subdiv(subdiv, dirname);
     }
   } else {
-    parallel_foreach(scene.subdivs,
+    parallel_foreach(
+        scene.subdivs,
         [&dirname](yocto_subdiv& subdiv) { load_subdiv(subdiv, dirname); },
         params.cancel);
   }
@@ -516,7 +522,8 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
       save_shape(shape, dirname);
     }
   } else {
-    parallel_foreach(scene.shapes,
+    parallel_foreach(
+        scene.shapes,
         [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); },
         params.cancel);
   }
@@ -527,7 +534,8 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
       save_subdiv(subdiv, dirname);
     }
   } else {
-    parallel_foreach(scene.subdivs,
+    parallel_foreach(
+        scene.subdivs,
         [&dirname](
             const yocto_subdiv& subdiv) { save_subdiv(subdiv, dirname); },
         params.cancel);
@@ -589,11 +597,11 @@ static inline void parse_yaml_varname(string_view& str, string_view& value) {
   str.remove_prefix(pos);
 }
 static inline void parse_yaml_varname(string_view& str, string& value) {
-    auto view = ""sv;
-    parse_yaml_varname(str, view);
-    value = string{view};
+  auto view = ""sv;
+  parse_yaml_varname(str, view);
+  value = string{view};
 }
-    
+
 inline void parse_yaml_value(string_view& str, string_view& value) {
   skip_yaml_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
@@ -655,10 +663,10 @@ void parse_yaml_value(string_view& str, vector<string>& svalues,
     while (!str.empty()) {
       skip_yaml_whitespace(str);
       if (str.empty()) throw std::runtime_error("bad yaml");
-        if (str.front() == ']') {
-            str.remove_prefix(1);
-            break;
-        }
+      if (str.front() == ']') {
+        str.remove_prefix(1);
+        break;
+      }
       if (is_yaml_digit(str.front()) || str.front() == '-' ||
           str.front() == '+') {
         parse_yaml_value(str, nvalues.emplace_back());
@@ -925,9 +933,9 @@ void load_yaml(
         throw std::runtime_error("error parsing yaml value");
       value = svalues.at(0);
     } else if constexpr (std::is_same<T, bool>::value) {
-        if (bvalues.size() != 1)
-            throw std::runtime_error("error parsing yaml value");
-        value = bvalues.at(0);
+      if (bvalues.size() != 1)
+        throw std::runtime_error("error parsing yaml value");
+      value = bvalues.at(0);
     } else if constexpr (std::is_same<T, int>::value) {
       if (nvalues.size() != 1)
         throw std::runtime_error("error parsing yaml value");
@@ -946,13 +954,13 @@ void load_yaml(
       value = {
           (float)nvalues.at(0), (float)nvalues.at(1), (float)nvalues.at(2)};
     } else if constexpr (std::is_same<T, mat3f>::value) {
-        if (nvalues.size() != 9)
-            throw std::runtime_error("error parsing yaml value");
-        for(auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)nvalues[i];
+      if (nvalues.size() != 9)
+        throw std::runtime_error("error parsing yaml value");
+      for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)nvalues[i];
     } else if constexpr (std::is_same<T, frame3f>::value) {
-        if (nvalues.size() != 12)
-            throw std::runtime_error("error parsing yaml value");
-        for(auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)nvalues[i];
+      if (nvalues.size() != 12)
+        throw std::runtime_error("error parsing yaml value");
+      for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)nvalues[i];
     } else {
       throw std::runtime_error("bad yaml type");
     }
@@ -3679,7 +3687,9 @@ static void gltf_to_scene(const string& filename, yocto_scene& scene) {
                     }
 #endif
           } break;
-          default: { throw std::runtime_error("bad gltf animation"); }
+          default: {
+            throw std::runtime_error("bad gltf animation");
+          }
         }
         sampler_map[{gchannel->sampler, path}] = (int)scene.animations.size();
         scene.animations.push_back(animation);
