@@ -919,62 +919,77 @@ bool read_objx_command(FILE* fs, objx_command& command, float& value,
     if(cmd == "newcam") {
       command = objx_command::camera;
       parse_obj_value(line, name);
+        return true;
     }
     else if(cmd == "newenv") {
       command = objx_command::environment;
       parse_obj_value(line, name);
+        return true;
     }
     else if(cmd == "newist") {
       command = objx_command::instance;
       parse_obj_value(line, name);
+        return true;
     }
     else if(cmd == "newproc") {
       command = objx_command::procedural;
       parse_obj_value(line, name);
+        return true;
     }
     else if(cmd == "frame") {
       command = objx_command::frame;
       parse_obj_value(line, frame);
+        return true;
     }
     else if(cmd == "obj") {
       command = objx_command::object;
       parse_obj_value(line, name);
+        return true;
     }
     else if(cmd == "mat") {
       command = objx_command::material;
       parse_obj_value(line, name);
+        return true;
     }
     else if(cmd == "ortho") {
       command = objx_command::ortho;
       parse_obj_value(line, value);
+        return true;
     }
     else if(cmd == "width") {
       command = objx_command::width;
       parse_obj_value(line, value);
+        return true;
     }
     else if(cmd == "height") {
       command = objx_command::height;
       parse_obj_value(line, value);
+        return true;
     }
     else if(cmd == "lens") {
       command = objx_command::lens;
       parse_obj_value(line, value);
+        return true;
     }
     else if(cmd == "aperture") {
       command = objx_command::aperture;
       parse_obj_value(line, value);
+        return true;
     }
     else if(cmd == "focus") {
       command = objx_command::focus;
       parse_obj_value(line, value);
+        return true;
     }
     else if(cmd == "Ke") {
       command = objx_command::emission;
       parse_obj_value(line, color);
+        return true;
     }
     else if(cmd == "map_Ke") {
       command = objx_command::emission_map;
       parse_obj_value(line, texture);
+        return true;
     }
     // backward compatibility
     else if (cmd == "c") {
@@ -1279,16 +1294,16 @@ void write_objx_command(FILE* fs, objx_command command, const string& name,
     const mtl_texture_info& texture) {
   switch (command) {
     case objx_command::camera:
-      checked_fprintf(fs, "newcam %s\n", name.c_str());
+      checked_fprintf(fs, "\nnewcam %s\n", name.c_str());
       break;
     case objx_command::environment:
-      checked_fprintf(fs, "newenv %s\n", name.c_str());
+      checked_fprintf(fs, "\nnewenv %s\n", name.c_str());
       break;
     case objx_command::instance:
-      checked_fprintf(fs, "newist %s\n", name.c_str());
+      checked_fprintf(fs, "\nnewist %s\n", name.c_str());
       break;
     case objx_command::procedural:
-      checked_fprintf(fs, "newproc %s\n", name.c_str());
+      checked_fprintf(fs, "\nnewproc %s\n", name.c_str());
       break;
     case objx_command::frame:
       checked_fprintf(fs, "  frame %g %g %g %g %g %g %g %g %g %g %g %g\n",

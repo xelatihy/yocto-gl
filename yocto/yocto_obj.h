@@ -276,7 +276,7 @@ void write_mtl_command(
     const vec3f& color, const mtl_texture_info& texture);
 void write_objx_command(
     FILE* fs, objx_command command, const string& name, float value, 
-    const vec3f& color, const mtl_texture_info& texture);
+    const vec3f& color, const frame3f& frame, const mtl_texture_info& texture);
 
 void write_mtl_command(
     FILE* fs, mtl_command_ command, const mtl_material& material);

@@ -2215,40 +2215,33 @@ static void save_objx(
 
   // cameras
   for (auto& camera : scene.cameras) {
-    auto ocam     = objx_camera{};
-    ocam.name     = fs::path(camera.uri).stem().string();
-    ocam.ortho    = camera.orthographic;
-    ocam.width    = camera.film.x;
-    ocam.height   = camera.film.y;
-    ocam.lens     = camera.lens;
-    ocam.focus    = camera.focus;
-    ocam.aperture = camera.aperture;
-    ocam.frame    = camera.frame;
-    write_objx_command(fs, objx_command_::camera, ocam, {}, {}, {});
+    write_objx_command(fs, objx_command::camera, camera.uri, {}, {}, {}, {});
+    if(camera.orthographic)
+    write_objx_command(fs, objx_command::ortho, {}, (float)camera.orthographic, {}, {}, {});
+    write_objx_command(fs, objx_command::width, {}, camera.film.x, {}, {}, {});
+    write_objx_command(fs, objx_command::height, {}, camera.film.y, {}, {}, {});
+    write_objx_command(fs, objx_command::lens, {}, camera.lens, {}, {}, {});
+    write_objx_command(fs, objx_command::focus, {}, camera.focus, {}, {}, {});
+    write_objx_command(fs, objx_command::aperture, {}, camera.aperture, {}, {}, {});
+    write_objx_command(fs, objx_command::frame, {}, {}, {}, camera.frame, {});
   }
 
   // environments
   for (auto& environment : scene.environments) {
-    auto oenv        = objx_environment{};
-    oenv.name        = fs::path(environment.uri).stem().string();
-    oenv.ke          = environment.emission;
-    oenv.ke_txt.path = environment.emission_tex >= 0
-                           ? scene.textures[environment.emission_tex].uri
-                           : ""s;
-    oenv.frame = environment.frame;
-    write_objx_command(fs, objx_command_::environment, {}, oenv, {}, {});
+    write_objx_command(fs, objx_command::environment, environment.uri, {}, {}, {}, {});
+    write_objx_command(fs, objx_command::emission, {}, {}, environment.emission, {}, {});
+    if(environment.emission_tex >= 0)
+    write_objx_command(fs, objx_command::emission_map, {}, {}, {}, {}, scene.textures[environment.emission_tex].uri);
+    write_objx_command(fs, objx_command::frame, {}, {}, {}, environment.frame, {});
   }
 
   // instances
   if (preserve_instances) {
     for (auto& instance : scene.instances) {
-      auto oist   = objx_instance{};
-      oist.name   = fs::path(instance.uri).stem().string();
-      oist.object = fs::path(scene.shapes[instance.shape].uri).stem().string();
-      oist.material =
-          fs::path(scene.materials[instance.material].uri).stem().string();
-      oist.frame = instance.frame;
-      write_objx_command(fs, objx_command_::instance, {}, {}, oist, {});
+    write_objx_command(fs, objx_command::instance, instance.uri, {}, {}, {}, {});
+    write_objx_command(fs, objx_command::object, scene.shapes[instance.shape].uri, {}, {}, {}, {});
+    write_objx_command(fs, objx_command::material, scene.materials[instance.material].uri, {}, {}, {}, {});
+    write_objx_command(fs, objx_command::frame, {}, {}, {}, instance.frame, {});
     }
   }
 }
