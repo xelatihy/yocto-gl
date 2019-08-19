@@ -760,82 +760,6 @@ bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
   return false;
 }
 
-// Write text to file
-static inline void write_obj_value(FILE* fs, int value) {
-  if (fprintf(fs, "%d", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_obj_value(FILE* fs, float value) {
-  if (fprintf(fs, "%g", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_obj_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_obj_text(FILE* fs, const string& value) {
-  if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_obj_value(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_obj_value(FILE* fs, const string& value) {
-  if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_obj_value(FILE* fs, const vec2f& value) {
-  if (fprintf(fs, "%g %g", value.x, value.y) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_obj_value(FILE* fs, const vec3f& value) {
-  if (fprintf(fs, "%g %g %g", value.x, value.y, value.z) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_obj_value(FILE* fs, const frame3f& value) {
-  for (auto i = 0; i < 12; i++)
-    if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
-      throw std::runtime_error("cannot print value");
-}
-static void write_obj_value(FILE* fs, const obj_vertex& value) {
-  if (fprintf(fs, "%d", value.position) < 0)
-    throw std::runtime_error("cannot write value");
-  if (value.texcoord) {
-    if (fprintf(fs, "/%d", value.texcoord) < 0)
-      throw std::runtime_error("cannot write value");
-    if (value.normal) {
-      if (fprintf(fs, "/%d", value.normal) < 0)
-        throw std::runtime_error("cannot write value");
-    }
-  } else if (value.normal) {
-    if (fprintf(fs, "//%d", value.normal) < 0)
-      throw std::runtime_error("cannot write value");
-  }
-}
-
-template <typename T, typename... Ts>
-static inline void write_obj_line_(
-    FILE* fs, const T& value, const Ts... values) {
-  write_obj_value(fs, value);
-  if constexpr (sizeof...(values) == 0) {
-    write_obj_text(fs, "\n");
-  } else {
-    write_obj_text(fs, " ");
-    write_obj_line_(fs, values...);
-  }
-}
-template <typename T, typename Ts>
-static inline void write_obj_line_(
-    FILE* fs, const T& value, const vector<Ts>& values) {
-  write_obj_value(fs, value);
-  for (auto& value : values) {
-    write_obj_text(fs, " ");
-    write_obj_value(fs, value);
-  }
-  write_obj_text(fs, "\n");
-}
-
 static inline vector<string> split_string(
     const string& str, const string& delim) {
   auto tokens = vector<string>{};
@@ -848,31 +772,68 @@ static inline vector<string> split_string(
   return tokens;
 }
 
+static inline void checked_fprintf(FILE* fs, const char* fmt, ...) {
+  va_list args1;
+  va_start(args1, fmt);
+  if (vfprintf(fs, fmt, args1) < 0)
+    throw std::runtime_error("cannot write to file");
+  va_end(args1);
+}
+
 // Write obj elements
 void write_obj_comment(FILE* fs, const string& comment) {
   auto lines = split_string(comment, "\n");
   for (auto& line : lines) {
-    write_obj_text(fs, "# " + line + "\n");
+    checked_fprintf(fs, "# %s\n", line.c_str());
   }
-  write_obj_text(fs, "\n");
+  checked_fprintf(fs, "\n");
 }
 
 void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
     const string& name, const vector<obj_vertex>& vertices) {
   switch (command) {
-    case obj_command::vertex: write_obj_line_(fs, "v", value); break;
-    case obj_command::normal: write_obj_line_(fs, "vn", value); break;
-    case obj_command::texcoord:
-      write_obj_line_(fs, "vt", vec2f{value.x, value.y});
+    case obj_command::vertex:
+      checked_fprintf(fs, "v %g %g %g\n", value.x, value.y, value.z);
       break;
-    case obj_command::face: write_obj_line_(fs, "f", vertices); break;
-    case obj_command::line: write_obj_line_(fs, "l", vertices); break;
-    case obj_command::point: write_obj_line_(fs, "p", vertices); break;
-    case obj_command::object: write_obj_line_(fs, "o", name); break;
-    case obj_command::group: write_obj_line_(fs, "g", name); break;
-    case obj_command::usemtl: write_obj_line_(fs, "usemtl", name); break;
-    case obj_command::smoothing: write_obj_line_(fs, "s", name); break;
-    case obj_command::mtllib: write_obj_line_(fs, "mtllib", name); break;
+    case obj_command::normal:
+      checked_fprintf(fs, "vn %g  %g %g\n", value.x, value.y, value.z);
+      break;
+    case obj_command::texcoord:
+      checked_fprintf(fs, "vt %g %g\n", value.x, value.y);
+      break;
+    case obj_command::face:
+    case obj_command::line:
+    case obj_command::point:
+      if (command == obj_command::face) checked_fprintf(fs, "f ");
+      if (command == obj_command::line) checked_fprintf(fs, "l ");
+      if (command == obj_command::point) checked_fprintf(fs, "p ");
+      for (auto& vert : vertices) {
+        checked_fprintf(fs, " ");
+        checked_fprintf(fs, "%d", vert.position);
+        if (vert.texcoord) {
+          checked_fprintf(fs, "/%d", vert.texcoord);
+          if (vert.normal) {
+            checked_fprintf(fs, "/%d", vert.normal);
+          }
+        } else if (vert.normal) {
+          checked_fprintf(fs, "//%d", vert.normal);
+        }
+      }
+      checked_fprintf(fs, "\n");
+      break;
+    case obj_command::object:
+      checked_fprintf(fs, "o %s\n", name.c_str());
+      break;
+    case obj_command::group: checked_fprintf(fs, "g %s\n", name.c_str()); break;
+    case obj_command::usemtl:
+      checked_fprintf(fs, "usemtl %s\n", name.c_str());
+      break;
+    case obj_command::smoothing:
+      checked_fprintf(fs, "s %s\n", name.c_str());
+      break;
+    case obj_command::mtllib:
+      checked_fprintf(fs, "mtllib %s\n", name.c_str());
+      break;
     case obj_command::objxlib: break;
   }
 }
@@ -880,57 +841,83 @@ void write_mtl_command(
     FILE* fs, mtl_command command, const mtl_material& material) {
   switch (command) {
     case mtl_command::material: {
-      static auto def    = mtl_material{};
-      auto write_obj_opt = [](FILE* fs, const char* name, const auto& val,
-                               const auto& def) {
-        if (val == def) return;
-        write_obj_line_(fs, name, val);
-      };
-      auto write_obj_txt = [](FILE* fs, const char* name,
-                               const mtl_texture_info& info) {
-        if (info.path.empty()) return;
-        write_obj_line_(fs, name, info.path);
-      };
-      write_obj_line_(fs, "newmtl", material.name);
-      write_obj_opt(fs, "  illum", material.illum, def.illum);
-      write_obj_opt(fs, "  Ke", material.ke, def.ke);
-      write_obj_opt(fs, "  Ka", material.ka, def.ka);
-      write_obj_opt(fs, "  Kd", material.kd, vec3f{-1, -1, -1});
-      write_obj_opt(fs, "  Ks", material.ks, vec3f{-1, -1, -1});
-      write_obj_opt(fs, "  Kr", material.kr, def.kr);
-      write_obj_opt(fs, "  Kt", material.kt, def.kt);
-      write_obj_opt(fs, "  Ns", (int)material.ns, -1);
-      write_obj_opt(fs, "  d", material.op, def.op);
-      write_obj_opt(fs, "  Ni", material.ior, def.ior);
-      write_obj_txt(fs, "  map_Ke", material.ke_map);
-      write_obj_txt(fs, "  map_Ka", material.ka_map);
-      write_obj_txt(fs, "  map_Kd", material.kd_map);
-      write_obj_txt(fs, "  map_Ks", material.ks_map);
-      write_obj_txt(fs, "  map_Kr", material.kr_map);
-      write_obj_txt(fs, "  map_Kt", material.kt_map);
-      write_obj_txt(fs, "  map_d", material.op_map);
-      write_obj_txt(fs, "  map_Ni", material.ior_map);
-      write_obj_txt(fs, "  map_bump", material.bump_map);
-      write_obj_txt(fs, "  map_norm", material.norm_map);
-      write_obj_txt(fs, "  map_disp", material.disp_map);
-      write_obj_txt(fs, "  map_occ", material.occ_map);
-      write_obj_opt(fs, "  Pr", material.pr, def.pr);
-      write_obj_opt(fs, "  Pm", material.pm, def.pm);
-      write_obj_opt(fs, "  Ps", material.ps, def.ps);
-      write_obj_opt(fs, "  Pc", material.pc, def.pc);
-      write_obj_opt(fs, "  Pcr", material.pcr, def.pcr);
-      write_obj_txt(fs, "  Pr_map", material.pr_map);
-      write_obj_txt(fs, "  Pm_map", material.pm_map);
-      write_obj_txt(fs, "  Ps_map", material.ps_map);
-      write_obj_txt(fs, "  Pc_map", material.pc_map);
-      write_obj_txt(fs, "  Pcr_map", material.pcr_map);
-      write_obj_opt(fs, "  Vt", material.vt, def.vt);
-      write_obj_opt(fs, "  Ve", material.ve, def.ve);
-      write_obj_opt(fs, "  Vs", material.vs, def.vs);
-      write_obj_opt(fs, "  Vg", material.vg, def.vg);
-      write_obj_opt(fs, "  Vr", material.vr, def.vr);
-      write_obj_txt(fs, "  Vs_map", material.vs_map);
-      write_obj_text(fs, "\n");
+      static auto def = mtl_material{};
+      checked_fprintf(fs, "newmtl %s\n", material.name.c_str());
+      checked_fprintf(fs, "  illum %d\n", material.illum);
+      if (material.ke != def.ke)
+        checked_fprintf(
+            fs, "  Ke %g %g %g\n", material.ke.x, material.ke.y, material.ke.z);
+      if (material.ka != def.ka)
+        checked_fprintf(
+            fs, "  Ka %g %g %g\n", material.ka.x, material.ka.y, material.ka.z);
+      checked_fprintf(
+          fs, "  Kd %g %g %g\n", material.kd.x, material.kd.y, material.kd.z);
+      checked_fprintf(
+          fs, "  Ks %g %g %g\n", material.ks.x, material.ks.y, material.ks.z);
+      if (material.kr != def.kr)
+        checked_fprintf(
+            fs, "  Kr %g %g %g\n", material.kr.x, material.kr.y, material.kr.z);
+      if (material.kt != def.kt)
+        checked_fprintf(
+            fs, "  Kt %g %g %g\n", material.kt.x, material.kt.y, material.kt.z);
+      checked_fprintf(fs, "  Ns %d\n", (int)material.ns, -1);
+      if (material.op != def.op) checked_fprintf(fs, "  d %g\n", material.op);
+      if (material.ior != def.ior)
+        checked_fprintf(fs, "  Ni %g\n", material.ior);
+      if (!material.ke_map.path.empty())
+        checked_fprintf(fs, "  map_Ke %s\n", material.ke_map.path.c_str());
+      if (!material.ka_map.path.empty())
+        checked_fprintf(fs, "  map_Ka %s\n", material.ka_map.path.c_str());
+      if (!material.kd_map.path.empty())
+        checked_fprintf(fs, "  map_Kd %s\n", material.kd_map.path.c_str());
+      if (!material.ks_map.path.empty())
+        checked_fprintf(fs, "  map_Ks %s\n", material.ks_map.path.c_str());
+      if (!material.kr_map.path.empty())
+        checked_fprintf(fs, "  map_Kr %s\n", material.kr_map.path.c_str());
+      if (!material.kt_map.path.empty())
+        checked_fprintf(fs, "  map_Kt %s\n", material.kt_map.path.c_str());
+      if (!material.op_map.path.empty())
+        checked_fprintf(fs, "  map_d %s\n", material.op_map.path.c_str());
+      if (!material.ior_map.path.empty())
+        checked_fprintf(fs, "  map_Ni %s\n", material.ior_map.path.c_str());
+      if (!material.bump_map.path.empty())
+        checked_fprintf(fs, "  map_bump %s\n", material.bump_map.path.c_str());
+      if (!material.norm_map.path.empty())
+        checked_fprintf(fs, "  map_norm %s\n", material.norm_map.path.c_str());
+      if (!material.disp_map.path.empty())
+        checked_fprintf(fs, "  map_disp %s\n", material.disp_map.path.c_str());
+      if (!material.occ_map.path.empty())
+        checked_fprintf(fs, "  map_occ %s\n", material.occ_map.path.c_str());
+      if (material.pr != def.pr) checked_fprintf(fs, "  Pr %g\n", material.pr);
+      if (material.pm != def.pm) checked_fprintf(fs, "  Pm %g\n", material.pm);
+      if (material.ps != def.ps) checked_fprintf(fs, "  Ps %g\n", material.ps);
+      if (material.pc != def.pc) checked_fprintf(fs, "  Pc %g\n", material.pc);
+      if (material.pcr != def.pcr)
+        checked_fprintf(fs, "  Pcr %g\n", material.pcr);
+      if (!material.pr_map.path.empty())
+        checked_fprintf(fs, "  Pr_map %s\n", material.pr_map.path.c_str());
+      if (!material.pm_map.path.empty())
+        checked_fprintf(fs, "  Pm_map %s\n", material.pm_map.path.c_str());
+      if (!material.ps_map.path.empty())
+        checked_fprintf(fs, "  Ps_map %s\n", material.ps_map.path.c_str());
+      if (!material.pc_map.path.empty())
+        checked_fprintf(fs, "  Pc_map %s\n", material.pc_map.path.c_str());
+      if (!material.pcr_map.path.empty())
+        checked_fprintf(fs, "  Pcr_map %s\n", material.pcr_map.path.c_str());
+      if (material.vt != def.vt)
+        checked_fprintf(
+            fs, "  Vt %g %g %g\n", material.vt.x, material.vt.y, material.vt.z);
+      if (material.ve != def.ve)
+        checked_fprintf(
+            fs, "  Ve %g %g %g\n", material.ve.x, material.ve.y, material.ve.z);
+      if (material.vs != def.vs)
+        checked_fprintf(
+            fs, "  Vs %g %g %g\n", material.vs.x, material.vs.y, material.vs.z);
+      if (material.vg != def.vg) checked_fprintf(fs, "  Vg %g\n", material.vg);
+      if (material.vr != def.vr) checked_fprintf(fs, "  Vr %g\n", material.vr);
+      if (!material.vs_map.path.empty())
+        checked_fprintf(fs, "  Vs_map %s\n", material.vs_map.path.c_str());
+      checked_fprintf(fs, "\n");
     } break;
   }
 }
@@ -939,23 +926,44 @@ void write_objx_command(FILE* fs, objx_command command,
     const objx_instance& instance, const objx_procedural& procedural) {
   switch (command) {
     case objx_command::camera: {
-      write_obj_line_(fs, "c", camera.name, (int)camera.ortho, camera.width,
-          camera.height, camera.lens, camera.focus, camera.aperture,
-          camera.frame);
+      checked_fprintf(fs,
+          "c %s %d %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
+          camera.name.c_str(), (int)camera.ortho, camera.width, camera.height,
+          camera.lens, camera.focus, camera.aperture, camera.frame.x.x,
+          camera.frame.x.y, camera.frame.x.z, camera.frame.y.x,
+          camera.frame.y.y, camera.frame.y.z, camera.frame.z.x,
+          camera.frame.z.y, camera.frame.z.z, camera.frame.o.x,
+          camera.frame.o.y, camera.frame.o.z);
     } break;
     case objx_command::environment: {
-      write_obj_line_(fs, "e", environment.name, environment.ke,
-          environment.ke_txt.path != "" ? environment.ke_txt.path : "\"\" "s,
-          environment.frame);
+      checked_fprintf(fs,
+          "e %s %g %g %g %s %g %g %g %g %g %g %g %g %g %g %g %g\n",
+          environment.name.c_str(), environment.ke.x, environment.ke.y, environment.ke.z,
+          environment.ke_txt.path != "" ? environment.ke_txt.path.c_str()
+                                        : "\"\" ",
+          environment.frame.x.x, environment.frame.x.y, environment.frame.x.z,
+          environment.frame.y.x, environment.frame.y.y, environment.frame.y.z,
+          environment.frame.z.x, environment.frame.z.y, environment.frame.z.z,
+          environment.frame.o.x, environment.frame.o.y, environment.frame.o.z);
     } break;
     case objx_command::instance: {
-      write_obj_line_(fs, "i", instance.name, instance.object,
-          instance.material, instance.frame);
+      checked_fprintf(fs, "i %s %s %s %g %g %g %g %g %g %g %g %g %g %g %g\n",
+          instance.name.c_str(), instance.object.c_str(),
+          instance.material.c_str(), instance.frame.x.x, instance.frame.x.y,
+          instance.frame.x.z, instance.frame.y.x, instance.frame.y.y,
+          instance.frame.y.z, instance.frame.z.x, instance.frame.z.y,
+          instance.frame.z.z, instance.frame.o.x, instance.frame.o.y,
+          instance.frame.o.z);
     } break;
     case objx_command::procedural: {
-      write_obj_line_(fs, "po", procedural.name, procedural.type,
-          procedural.material, procedural.size, procedural.level,
-          procedural.frame);
+      checked_fprintf(fs,
+          "po %s %s %s %f %d %g %g %g %g %g %g %g %g %g %g %g %g\n",
+          procedural.name.c_str(), procedural.type.c_str(),
+          procedural.material.c_str(), procedural.size, procedural.level,
+          procedural.frame.x.x, procedural.frame.x.y, procedural.frame.x.z,
+          procedural.frame.y.x, procedural.frame.y.y, procedural.frame.y.z,
+          procedural.frame.z.x, procedural.frame.z.y, procedural.frame.z.z,
+          procedural.frame.o.x, procedural.frame.o.y, procedural.frame.o.z);
     } break;
   }
 }
