@@ -1386,6 +1386,107 @@ namespace yocto {
 static void load_mtl(const string& filename, yocto_scene& scene,
     unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
     const load_params& params) {
+  // open file
+  auto fs_ = open_input_file(filename);
+  auto fs  = fs_.fs;
+
+  // parsing type
+  enum struct parsing_type { none, material };
+
+  // Parse texture params and name
+  auto add_texture = [&scene, &tmap](const mtl_texture_info& info,
+                         bool force_linear) -> int {
+    if (info.path == "") return -1;
+    if (tmap.find(info.path) != tmap.end()) {
+      return tmap.at(info.path);
+    }
+
+    // create texture
+    auto texture = yocto_texture{};
+    texture.uri  = info.path;
+    for (auto& c : texture.uri)
+      if (c == '\\') c = '/';
+    scene.textures.push_back(texture);
+    auto index      = (int)scene.textures.size() - 1;
+    tmap[info.path] = index;
+
+    return index;
+  };
+
+  // read mtl elements
+  auto command = mtl_command{};
+  auto value   = 0.0f;
+  auto color   = zero3f;
+  auto name    = ""s;
+  auto texture = mtl_texture_info{};
+  while (read_mtl_command(fs, command, value, color, name, texture)) {
+    if (command == mtl_command::material) {
+      auto& material     = scene.materials.emplace_back();
+      material.uri      = name;
+      mmap[material.uri] = (int)scene.materials.size() - 1;
+      continue;
+    }
+    if (scene.materials.empty()) throw std::runtime_error("bad mtl");
+    auto& material = scene.materials.back();
+    switch (command) {
+      case mtl_command::emission: material.emission = color; break;
+      case mtl_command::diffuse: material.diffuse = color; break;
+      case mtl_command::specular: material.specular = color; break;
+      case mtl_command::transmission: material.transmission = color; break;
+      case mtl_command::exponent:
+        material.roughness = pow(2 / (value + 2), 1 / 4.0f);
+        if (material.roughness < 0.01f) material.roughness = 0;
+        if (material.roughness > 0.99f) material.roughness = 1;
+        break;
+      case mtl_command::opacity: material.opacity = value; break;
+      case mtl_command::emission_map:
+        material.emission_tex = add_texture(texture, false);
+        break;
+      case mtl_command::diffuse_map:
+        material.diffuse_tex = add_texture(texture, false);
+        break;
+      case mtl_command::specular_map:
+        material.specular_tex = add_texture(texture, false);
+        break;
+      case mtl_command::transmission_map:
+        material.transmission_tex = add_texture(texture, false);
+        break;
+      case mtl_command::opacity_map:
+        material.opacity_tex = add_texture(texture, true);
+        break;
+      case mtl_command::normal_map:
+        material.normal_tex = add_texture(texture, true);
+        break;
+      case mtl_command::pbr_roughness: material.roughness = value; break;
+      case mtl_command::pbr_metallic: material.metallic = value; break;
+      case mtl_command::pbr_roughness_map:
+        material.roughness_tex = add_texture(texture, true);
+        break;
+      case mtl_command::pbr_metallic_map:
+        material.metallic_tex = add_texture(texture, true);
+        break;
+      case mtl_command::vol_transmission:
+        material.voltransmission = color;
+        break;
+      case mtl_command::vol_meanfreepath:
+        material.volmeanfreepath = color;
+        break;
+      case mtl_command::vol_scattering: material.volscatter = color; break;
+      case mtl_command::vol_emission: material.volemission = color; break;
+      case mtl_command::vol_anisotropy: material.volanisotropy = value; break;
+      case mtl_command::vol_scale: material.volscale = value; break;
+      case mtl_command::vol_scattering_map:
+        material.subsurface_tex = add_texture(texture, false);
+        break;
+      default: break;  // ignore other values
+    }
+  }
+}
+
+// Loads an MTL
+static void load_mtl_old(const string& filename, yocto_scene& scene,
+    unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
+    const load_params& params) {
   // Parse texture params and name
   auto add_texture = [&scene, &tmap](const mtl_texture_info& info,
                          bool force_linear) -> int {
@@ -1411,10 +1512,10 @@ static void load_mtl(const string& filename, yocto_scene& scene,
   auto fs  = fs_.fs;
 
   // read mtl elements
-  auto element = mtl_command{};
+  auto element = mtl_command_{};
   auto omat    = mtl_material{};
   while (read_mtl_command(fs, element, omat)) {
-    if (element == mtl_command::material) {
+    if (element == mtl_command_::material) {
       auto material             = yocto_material{};
       material.uri              = omat.name;
       material.emission         = omat.ke;
@@ -1993,7 +2094,7 @@ static void save_mtl(const string& filename, const yocto_scene& scene) {
       omat.vg = material.volanisotropy;
       omat.vr = material.volscale;
     }
-    write_mtl_command(fs, mtl_command::material, omat);
+    write_mtl_command(fs, mtl_command_::material, omat);
   }
 }
 

@@ -194,9 +194,35 @@ enum struct obj_command {
   // clang-format on
 };
 // Mtl command
-enum struct mtl_command {
+enum struct mtl_command_ {
   // clang-format off
   material,         // data in material
+  // clang-format on
+};
+enum struct mtl_command {
+  // clang-format off
+  material,                                                // data in name
+  illum,                                                   // data in value
+  emission,                                                // data in color
+  ambient, diffuse, specular, reflection, transmission,    // data in color
+  exponent, ior, opacity,                                  // data in value
+  // textures
+  emission_map,                                            // data in texture
+  ambient_map, diffuse_map, specular_map, reflection_map,  // data in texture
+  transmission_map, exponent_map, opacity_map,             // data in texture
+  bump_map, normal_map, displacement_map,                  // data in texture
+  // pbrt extension
+  pbr_roughness, pbr_metallic, pbr_sheen, pbr_clearcoat,   // data in value
+  pbr_coatroughness,                                       // data in value
+  // pbr textures
+  pbr_roughness_map, pbr_metallic_map, pbr_sheen_map,      // data in texture
+  pbr_clearcoat_map, pbr_coatroughness_map,                // data in texture
+  // volume extension
+  vol_transmission, vol_meanfreepath, vol_scattering,      // data in color
+  vol_emission,                                            // data in color
+  vol_anisotropy, vol_scale,                               // data in value
+  // volument textures
+  vol_scattering_map                                       // data in texture
   // clang-format on
 };
 // Objx command
@@ -212,8 +238,10 @@ enum struct objx_command {
 // Read obj elements
 bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
     string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(
-    FILE* fs, mtl_command& command, mtl_material& material, bool fliptr = true);
+bool read_mtl_command(FILE* fs, mtl_command_& command, mtl_material& material,
+    bool fliptr = true);
+bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
+    vec3f& color, string& name, mtl_texture_info& texture, bool fliptr = true);
 bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
     objx_environment& environment, objx_instance& instance,
     objx_procedural& procedural);
@@ -223,7 +251,7 @@ void write_obj_comment(FILE* fs, const string& comment);
 void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
     const string& name, const vector<obj_vertex>& vertices);
 void write_mtl_command(
-    FILE* fs, mtl_command command, const mtl_material& material);
+    FILE* fs, mtl_command_ command, const mtl_material& material);
 void write_objx_command(FILE* fs, objx_command command,
     const objx_camera& camera, const objx_environment& environment,
     const objx_instance& instance, const objx_procedural& procedural);

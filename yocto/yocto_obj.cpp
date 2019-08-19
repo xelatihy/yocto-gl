@@ -572,7 +572,7 @@ bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
 
 // Read mtl
 bool read_mtl_command(
-    FILE* fs, mtl_command& command, mtl_material& material, bool fliptr) {
+    FILE* fs, mtl_command_& command, mtl_material& material, bool fliptr) {
   // currently parsed material
   material   = mtl_material{};
   auto found = false;
@@ -596,7 +596,7 @@ bool read_mtl_command(
     if (cmd == "newmtl") {
       if (found) {
         fseek(fs, fpos, SEEK_SET);
-        command = mtl_command::material;
+        command = mtl_command_::material;
         return true;
       }
       found = true;
@@ -687,11 +687,148 @@ bool read_mtl_command(
 
   // return found value
   if (found) {
-    command = mtl_command::material;
+    command = mtl_command_::material;
     return true;
   } else {
     return false;
   }
+}
+
+// Read mtl
+bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
+    vec3f& color, string& name, mtl_texture_info& texture, bool fliptr) {
+  // read the file line by line
+  char buffer[4096];
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
+
+    // get command
+    auto cmd = ""s;
+    parse_obj_value(line, cmd);
+    if (cmd == "") continue;
+
+    // possible token values
+    if (cmd == "newmtl") {
+      command = mtl_command::material;
+      parse_obj_value(line, name);
+    } else if (cmd == "illum") {
+      command = mtl_command::illum;
+      parse_obj_value(line, value);
+    } else if (cmd == "Ke") {
+      command = mtl_command::emission;
+      parse_obj_value(line, color);
+    } else if (cmd == "Kd") {
+      command = mtl_command::diffuse;
+      parse_obj_value(line, color);
+    } else if (cmd == "Ks") {
+      command = mtl_command::specular;
+      parse_obj_value(line, color);
+    } else if (cmd == "Kt") {
+      command = mtl_command::transmission;
+      parse_obj_value(line, color);
+    } else if (cmd == "Tf") {
+      command = mtl_command::transmission;
+      color   = {-1, -1, -1};
+      parse_obj_value(line, color);
+      if (color.y < 0) color = {color.x, color.x, color.x};
+      if (fliptr) color = 1 - color;
+    } else if (cmd == "Tr") {
+      command = mtl_command::opacity;
+      parse_obj_value(line, value);
+      if (fliptr) value = 1 - value;
+    } else if (cmd == "Ns") {
+      command = mtl_command::exponent;
+      parse_obj_value(line, value);
+    } else if (cmd == "d") {
+      command = mtl_command::opacity;
+      parse_obj_value(line, value);
+    } else if (cmd == "map_Ke") {
+      command = mtl_command::emission_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_Kd") {
+      command = mtl_command::diffuse_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_Ks") {
+      command = mtl_command::specular_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_Tr") {
+      command = mtl_command::transmission_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_d" || cmd == "map_Tr") {
+      command = mtl_command::opacity_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_bump" || cmd == "bump") {
+      command = mtl_command::bump_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_disp" || cmd == "disp") {
+      command = mtl_command::displacement_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_norm" || cmd == "norm") {
+      command = mtl_command::normal_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "Pm") {
+      command = mtl_command::pbr_metallic;
+      parse_obj_value(line, value);
+    } else if (cmd == "Pr") {
+      command = mtl_command::pbr_roughness;
+      parse_obj_value(line, value);
+    } else if (cmd == "Ps") {
+      command = mtl_command::pbr_sheen;
+      parse_obj_value(line, value);
+    } else if (cmd == "Pc") {
+      command = mtl_command::pbr_clearcoat;
+      parse_obj_value(line, value);
+    } else if (cmd == "Pcr") {
+      command = mtl_command::pbr_coatroughness;
+      parse_obj_value(line, value);
+    } else if (cmd == "map_Pm") {
+      command = mtl_command::pbr_metallic_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_Pr") {
+      command = mtl_command::pbr_roughness_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_Ps") {
+      command = mtl_command::pbr_sheen_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_Pc") {
+      command = mtl_command::pbr_clearcoat_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "map_Pcr") {
+      command = mtl_command::pbr_coatroughness_map;
+      parse_obj_value(line, texture);
+    } else if (cmd == "Vt") {
+      command = mtl_command::vol_transmission;
+      parse_obj_value(line, color);
+    } else if (cmd == "Vp") {
+      command = mtl_command::vol_meanfreepath;
+      parse_obj_value(line, color);
+    } else if (cmd == "Ve") {
+      command = mtl_command::vol_emission;
+      parse_obj_value(line, color);
+    } else if (cmd == "Vs") {
+      command = mtl_command::vol_scattering;
+      parse_obj_value(line, color);
+    } else if (cmd == "Vg") {
+      command = mtl_command::vol_anisotropy;
+      parse_obj_value(line, value);
+    } else if (cmd == "Vr") {
+      command = mtl_command::vol_scale;
+      parse_obj_value(line, value);
+    } else if (cmd == "map_Vs") {
+      command = mtl_command::vol_scattering_map;
+      parse_obj_value(line, texture);
+    } else {
+        continue;
+    }
+      
+    return true;
+  }
+
+  return false;
 }
 
 // Read objx
@@ -838,9 +975,9 @@ void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
   }
 }
 void write_mtl_command(
-    FILE* fs, mtl_command command, const mtl_material& material) {
+    FILE* fs, mtl_command_ command, const mtl_material& material) {
   switch (command) {
-    case mtl_command::material: {
+    case mtl_command_::material: {
       static auto def = mtl_material{};
       checked_fprintf(fs, "newmtl %s\n", material.name.c_str());
       checked_fprintf(fs, "  illum %d\n", material.illum);
