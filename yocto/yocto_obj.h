@@ -263,8 +263,8 @@ bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
 bool read_objx_command(FILE* fs, objx_command_& command, objx_camera& camera,
     objx_environment& environment, objx_instance& instance,
     objx_procedural& procedural);
-bool read_objx_command(FILE* fs, objx_command& command, 
-  float& value, vec3f& color, string& name);
+bool read_objx_command(
+    FILE* fs, objx_command& command, float& value, vec3f& color, string& name, frame3f& frame, mtl_texture_info& texture);
 
 // Write obj elements
 void write_obj_comment(FILE* fs, const string& comment);

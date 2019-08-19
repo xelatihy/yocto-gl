@@ -1488,10 +1488,19 @@ static void load_mtl(const string& filename, yocto_scene& scene,
   }
 }
 
-// Loads an MTL
-static void load_mtl_old(const string& filename, yocto_scene& scene,
-    unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
-    const load_params& params) {
+// Loads an OBJX
+static void load_objx(const string& filename, yocto_scene& scene,
+    const unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
+    const unordered_map<string, vector<int>>& object_shapes,
+    const load_params&                        params) {
+  // open file
+  auto fs_ = open_input_file(filename);
+  auto fs  = fs_.fs;
+
+  // parsing types
+  enum struct parsing_type { none, camera, environment, instance, procedural };
+  auto ptype = parsing_type::none;
+
   // Parse texture params and name
   auto add_texture = [&scene, &tmap](const mtl_texture_info& info,
                          bool force_linear) -> int {
@@ -1512,49 +1521,162 @@ static void load_mtl_old(const string& filename, yocto_scene& scene,
     return index;
   };
 
-  // open file
-  auto fs_ = open_input_file(filename);
-  auto fs  = fs_.fs;
+  // procedural
+  auto make_proc = [](yocto_shape& shape, const string& type, float size,
+                       int level) {
+    if (type == "floor") {
+      auto params         = proc_shape_params{};
+      params.type         = proc_shape_params::type_t::floor;
+      params.subdivisions = level < 0 ? 0 : level;
+      params.scale        = size / 2;
+      params.uvscale      = size;
+      make_proc_shape(shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, params);
+    } else {
+      throw std::runtime_error("unknown obj procedural");
+    }
+  };
+  auto proc_type  = ""s;
+  auto proc_size  = 1;
+  auto proc_level = 0;
+
+  // parsed geometry and materials
+  bool first_instance = true;
+  auto instances_idx  = vector<int>{};
 
   // read mtl elements
-  auto element = mtl_command_{};
-  auto omat    = mtl_material{};
-  while (read_mtl_command(fs, element, omat)) {
-    if (element == mtl_command_::material) {
-      auto material             = yocto_material{};
-      material.uri              = omat.name;
-      material.emission         = omat.ke;
-      material.diffuse          = omat.kd;
-      material.specular         = omat.ks;
-      material.metallic         = omat.pm;
-      material.transmission     = omat.kt;
-      material.roughness        = omat.pr;
-      material.opacity          = omat.op;
-      material.emission_tex     = add_texture(omat.ke_map, false);
-      material.diffuse_tex      = add_texture(omat.kd_map, false);
-      material.metallic_tex     = add_texture(omat.pm_map, false);
-      material.specular_tex     = add_texture(omat.ks_map, false);
-      material.transmission_tex = add_texture(omat.kt_map, false);
-      material.roughness_tex    = add_texture(omat.pr_map, true);
-      material.opacity_tex      = add_texture(omat.op_map, true);
-      material.normal_tex       = add_texture(omat.norm_map, true);
-      material.voltransmission  = omat.vt;
-      material.volmeanfreepath  = omat.vp;
-      material.volemission      = omat.ve;
-      material.volscatter       = omat.vs;
-      material.volanisotropy    = omat.vg;
-      material.volscale         = omat.vr;
-      material.subsurface_tex   = add_texture(omat.vs_map, false);
-      scene.materials.push_back(material);
-      mmap[material.uri] = (int)scene.materials.size() - 1;
+  auto command = objx_command{};
+  auto name    = ""s;
+  auto value   = 0.0f;
+  auto color   = zero3f;
+  auto texture = mtl_texture_info{};
+  auto frame   = frame3f{};
+  while (read_objx_command(fs, command, value, color, name, frame, texture)) {
+    if (command == objx_command::camera) {
+      auto& camera = scene.cameras.emplace_back();
+      camera.uri   = name;
+      ptype        = parsing_type::camera;
+      continue;
+    }
+    if (command == objx_command::environment) {
+      auto& environment = scene.environments.emplace_back();
+      environment.uri   = name;
+      ptype             = parsing_type::environment;
+      continue;
+    }
+    if (command == objx_command::instance) {
+      if (first_instance) {
+        scene.instances.clear();
+        first_instance = false;
+      }
+      auto& instance = scene.instances.emplace_back();
+      instance.uri   = name;
+      ptype          = parsing_type::instance;
+      instances_idx  = {(int)scene.instances.size() - 1};
+      continue;
+    }
+    if (command == objx_command::procedural) {
+      auto& shape    = scene.shapes.emplace_back();
+      shape.uri      = name;
+      auto& instance = scene.instances.emplace_back();
+      instance.uri   = shape.uri;
+      instance.shape = (int)scene.shapes.size() - 1;
+      ptype          = parsing_type::procedural;
+      proc_type      = "";
+      proc_size      = 1;
+      proc_level     = 0;
+      continue;
+    }
+
+    if (ptype == parsing_type::none) {
+      throw std::runtime_error("bad objx");
+    } else if (ptype == parsing_type::camera) {
+      auto& camera = scene.cameras.back();
+      switch (command) {
+        case objx_command::cam_frame: camera.frame = frame; break;
+        case objx_command::cam_ortho: camera.orthographic = (bool)value; break;
+        case objx_command::cam_width: camera.film.x = value; break;
+        case objx_command::cam_height: camera.film.y = value; break;
+        case objx_command::cam_lens: camera.lens = value; break;
+        case objx_command::cam_aperture: camera.aperture = value; break;
+        case objx_command::cam_focus: camera.focus = value; break;
+        default: throw std::runtime_error("bad objx"); break;
+      }
+    } else if (ptype == parsing_type::environment) {
+      auto& environment = scene.environments.back();
+      switch (command) {
+        case objx_command::env_frame: environment.frame = frame; break;
+        case objx_command::env_emission: environment.emission = color; break;
+        case objx_command::env_map:
+          environment.emission_tex = add_texture(texture, false);
+          break;
+        default: throw std::runtime_error("bad objx"); break;
+      }
+    } else if (ptype == parsing_type::instance) {
+      switch (command) {
+        case objx_command::ist_frame: {
+          for (auto& ist : instances_idx) {
+            scene.instances[ist].frame = frame;
+          }
+        } break;
+        case objx_command::ist_material: {
+          auto ist_material = mmap.at(name);
+          for (auto& ist : instances_idx) {
+            scene.instances[ist].material = ist_material;
+          }
+        } break;
+        case objx_command::ist_object: {
+          auto& shapes = object_shapes.at(name);
+          if (instances_idx.size() != shapes.size()) {
+            auto to_add = shapes.size() - instances_idx.size();
+            auto name   = scene.instances.back().uri;
+            for (auto i = 0; i < to_add; i++) {
+              auto& instance = scene.instances.emplace_back();
+              instance.uri   = name;
+              instances_idx.push_back((int)scene.instances.size() - 1);
+            }
+          }
+          for (auto i = 0; i < shapes.size(); i++) {
+            scene.instances[instances_idx[i]].shape = shapes[i];
+          }
+        } break;
+        default: throw std::runtime_error("bad objx"); break;
+      }
+    } else if (ptype == parsing_type::procedural) {
+      auto& shape    = scene.shapes.back();
+      auto& instance = scene.instances.back();
+      switch (command) {
+        case objx_command::proc_frame: instance.frame = frame; break;
+        case objx_command::proc_material:
+          if (mmap.find(name) == mmap.end()) {
+            throw std::runtime_error("missing material " + name);
+          } else {
+            instance.material = mmap.find(name)->second;
+          }
+          break;
+        case objx_command::proc_type:
+          proc_type = name;
+          make_proc(shape, proc_type, proc_size, proc_level);
+          break;
+        case objx_command::proc_size:
+          proc_size = value;
+          make_proc(shape, proc_type, proc_size, proc_level);
+          break;
+        case objx_command::proc_level:
+          proc_level = (int)value;
+          make_proc(shape, proc_type, proc_size, proc_level);
+          break;
+        default: throw std::runtime_error("bad objx"); break;
+      }
     } else {
       // skip other
+      throw std::runtime_error("bad objx");
     }
   }
 }
 
 // Loads an OBJX
-static void load_objx(const string& filename, yocto_scene& scene,
+static void load_objx_old(const string& filename, yocto_scene& scene,
     const unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
     const unordered_map<string, vector<int>>& object_shapes,
     const load_params&                        params) {

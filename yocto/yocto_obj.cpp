@@ -898,8 +898,8 @@ bool read_objx_command(FILE* fs, objx_command_& command, objx_camera& camera,
 }
 
 // Read objx
-bool read_objx_command(
-    FILE* fs, objx_command& command, float& value, vec3f& color, string& name, frame3f& frame, mtl_texture_info& texture) {
+bool read_objx_command(FILE* fs, objx_command& command, float& value,
+    vec3f& color, string& name, frame3f& frame, mtl_texture_info& texture) {
   // read the file line by line
   char buffer[4096];
   auto pos = ftell(fs);
@@ -917,6 +917,7 @@ bool read_objx_command(
 
     // possible token values
     if (cmd == "c") {
+      auto oname = name;
       bool  ortho    = false;    // orthographic
       float width    = 0.036f;   // film size (default to 35mm)
       float height   = 0.024f;   // film size (default to 35mm)
@@ -931,30 +932,30 @@ bool read_objx_command(
       parse_obj_value(line, focus);
       parse_obj_value(line, aperture);
       parse_obj_value(line, frame);
-      if (command == objx_command::camera) {
+      if (command == objx_command::camera && oname != "") {
         command = objx_command::cam_ortho;
-        value = ortho ? 1 : 0;
+        value   = ortho ? 1 : 0;
       } else if (command == objx_command::cam_ortho) {
         command = objx_command::cam_width;
-        value = width;
+        value   = width;
       } else if (command == objx_command::cam_width) {
         command = objx_command::cam_height;
-        value = height;
+        value   = height;
       } else if (command == objx_command::cam_height) {
         command = objx_command::cam_lens;
-        value = lens;
+        value   = lens;
       } else if (command == objx_command::cam_lens) {
         command = objx_command::cam_focus;
-        value = focus;
+        value   = focus;
       } else if (command == objx_command::cam_focus) {
         command = objx_command::cam_aperture;
-        value = aperture;
+        value   = aperture;
       } else if (command == objx_command::cam_aperture) {
         command = objx_command::cam_frame;
       } else {
         command = objx_command::camera;
       }
-      if(command != objx_command::cam_frame) fseek(fs, pos, SEEK_SET);
+      if (command != objx_command::cam_frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "e") {
       parse_obj_value(line, name);
@@ -971,7 +972,7 @@ bool read_objx_command(
       } else {
         command = objx_command::environment;
       }
-      if(command != objx_command::env_frame) fseek(fs, pos, SEEK_SET);
+      if (command != objx_command::env_frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "i") {
       auto object = ""s, material = ""s;
@@ -988,7 +989,7 @@ bool read_objx_command(
       } else {
         command = objx_command::instance;
       }
-      if(command != objx_command::ist_frame) fseek(fs, pos, SEEK_SET);
+      if (command != objx_command::ist_frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "po") {
       auto type = ""s, material = ""s;
@@ -1001,19 +1002,19 @@ bool read_objx_command(
       parse_obj_value(line, frame);
       if (command == objx_command::procedural) {
         command = objx_command::proc_type;
-        name = type;
+        name    = type;
       } else if (command == objx_command::proc_type) {
         command = objx_command::proc_material;
-        name = material;
+        name    = material;
       } else if (command == objx_command::proc_material) {
         command = objx_command::proc_size;
       } else if (command == objx_command::proc_size) {
         command = objx_command::proc_level;
       } else if (command == objx_command::proc_level) {
         command = objx_command::procedural;
-        value = level;
+        value   = level;
       }
-      if(command != objx_command::proc_frame) fseek(fs, pos, SEEK_SET);
+      if (command != objx_command::proc_frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else {
       // unused
