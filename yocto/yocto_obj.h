@@ -241,15 +241,16 @@ enum struct objx_command_ {
 // Objx command
 enum struct objx_command {
   // clang-format off
+  // object names
+  camera, environment, instance, procedural,
+  // object frames
+  frame,
   // camera values
-  camera, cam_frame, cam_ortho, cam_width, cam_height, cam_lens, cam_aperture, 
-  cam_focus,
-  // environment color and texture
-  environment, env_frame, env_emission, env_map,
-  // instance values
-  instance, ist_frame, ist_object, ist_material,
-  // procedural values
-  procedural, proc_frame, proc_type, proc_material, proc_size, proc_level,
+  ortho, width, height, lens, aperture, focus,
+  // environment values
+  emission, emission_map,
+  // instance/procedural values
+  object, material
   // clang-format on
 };
 
@@ -270,6 +271,13 @@ bool read_objx_command(
 void write_obj_comment(FILE* fs, const string& comment);
 void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
     const string& name, const vector<obj_vertex>& vertices);
+void write_mtl_command(
+    FILE* fs, mtl_command command, const string& name, float value, 
+    const vec3f& color, const mtl_texture_info& texture);
+void write_objx_command(
+    FILE* fs, objx_command command, const string& name, float value, 
+    const vec3f& color, const mtl_texture_info& texture);
+
 void write_mtl_command(
     FILE* fs, mtl_command_ command, const mtl_material& material);
 void write_objx_command(FILE* fs, objx_command_ command,

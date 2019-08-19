@@ -1521,25 +1521,6 @@ static void load_objx(const string& filename, yocto_scene& scene,
     return index;
   };
 
-  // procedural
-  auto make_proc = [](yocto_shape& shape, const string& type, float size,
-                       int level) {
-    if (type == "floor") {
-      auto params         = proc_shape_params{};
-      params.type         = proc_shape_params::type_t::floor;
-      params.subdivisions = level < 0 ? 0 : level;
-      params.scale        = size / 2;
-      params.uvscale      = size;
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
-    } else {
-      throw std::runtime_error("unknown obj procedural");
-    }
-  };
-  auto proc_type  = ""s;
-  auto proc_size  = 1;
-  auto proc_level = 0;
-
   // parsed geometry and materials
   bool first_instance = true;
   auto instances_idx  = vector<int>{};
@@ -1582,9 +1563,6 @@ static void load_objx(const string& filename, yocto_scene& scene,
       instance.uri   = shape.uri;
       instance.shape = (int)scene.shapes.size() - 1;
       ptype          = parsing_type::procedural;
-      proc_type      = "";
-      proc_size      = 1;
-      proc_level     = 0;
       continue;
     }
 
@@ -1593,39 +1571,39 @@ static void load_objx(const string& filename, yocto_scene& scene,
     } else if (ptype == parsing_type::camera) {
       auto& camera = scene.cameras.back();
       switch (command) {
-        case objx_command::cam_frame: camera.frame = frame; break;
-        case objx_command::cam_ortho: camera.orthographic = (bool)value; break;
-        case objx_command::cam_width: camera.film.x = value; break;
-        case objx_command::cam_height: camera.film.y = value; break;
-        case objx_command::cam_lens: camera.lens = value; break;
-        case objx_command::cam_aperture: camera.aperture = value; break;
-        case objx_command::cam_focus: camera.focus = value; break;
+        case objx_command::frame: camera.frame = frame; break;
+        case objx_command::ortho: camera.orthographic = (bool)value; break;
+        case objx_command::width: camera.film.x = value; break;
+        case objx_command::height: camera.film.y = value; break;
+        case objx_command::lens: camera.lens = value; break;
+        case objx_command::aperture: camera.aperture = value; break;
+        case objx_command::focus: camera.focus = value; break;
         default: throw std::runtime_error("bad objx"); break;
       }
     } else if (ptype == parsing_type::environment) {
       auto& environment = scene.environments.back();
       switch (command) {
-        case objx_command::env_frame: environment.frame = frame; break;
-        case objx_command::env_emission: environment.emission = color; break;
-        case objx_command::env_map:
+        case objx_command::frame: environment.frame = frame; break;
+        case objx_command::emission: environment.emission = color; break;
+        case objx_command::emission_map:
           environment.emission_tex = add_texture(texture, false);
           break;
         default: throw std::runtime_error("bad objx"); break;
       }
     } else if (ptype == parsing_type::instance) {
       switch (command) {
-        case objx_command::ist_frame: {
+        case objx_command::frame: {
           for (auto& ist : instances_idx) {
             scene.instances[ist].frame = frame;
           }
         } break;
-        case objx_command::ist_material: {
+        case objx_command::material: {
           auto ist_material = mmap.at(name);
           for (auto& ist : instances_idx) {
             scene.instances[ist].material = ist_material;
           }
         } break;
-        case objx_command::ist_object: {
+        case objx_command::object: {
           auto& shapes = object_shapes.at(name);
           if (instances_idx.size() != shapes.size()) {
             auto to_add = shapes.size() - instances_idx.size();
@@ -1646,25 +1624,26 @@ static void load_objx(const string& filename, yocto_scene& scene,
       auto& shape    = scene.shapes.back();
       auto& instance = scene.instances.back();
       switch (command) {
-        case objx_command::proc_frame: instance.frame = frame; break;
-        case objx_command::proc_material:
+        case objx_command::frame: instance.frame = frame; break;
+        case objx_command::material:
           if (mmap.find(name) == mmap.end()) {
             throw std::runtime_error("missing material " + name);
           } else {
             instance.material = mmap.find(name)->second;
           }
           break;
-        case objx_command::proc_type:
-          proc_type = name;
-          make_proc(shape, proc_type, proc_size, proc_level);
-          break;
-        case objx_command::proc_size:
-          proc_size = value;
-          make_proc(shape, proc_type, proc_size, proc_level);
-          break;
-        case objx_command::proc_level:
-          proc_level = (int)value;
-          make_proc(shape, proc_type, proc_size, proc_level);
+        case objx_command::object:
+          if (name == "floor") {
+            auto params         = proc_shape_params{};
+            params.type         = proc_shape_params::type_t::floor;
+            params.subdivisions = 0;
+            params.scale        = 40 / 2;
+            params.uvscale      = 40;
+            make_proc_shape(shape.triangles, shape.quads, shape.positions,
+                shape.normals, shape.texcoords, params);
+          } else {
+            throw std::runtime_error("unknown obj procedural");
+          }
           break;
         default: throw std::runtime_error("bad objx"); break;
       }
