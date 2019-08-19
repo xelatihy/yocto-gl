@@ -201,28 +201,27 @@ enum struct mtl_command_ {
 };
 enum struct mtl_command {
   // clang-format off
-  material,                                                // data in name
-  illum,                                                   // data in value
-  emission,                                                // data in color
-  ambient, diffuse, specular, reflection, transmission,    // data in color
-  exponent, ior, opacity,                                  // data in value
-  // textures
-  emission_map,                                            // data in texture
-  ambient_map, diffuse_map, specular_map, reflection_map,  // data in texture
-  transmission_map, exponent_map, opacity_map,             // data in texture
-  bump_map, normal_map, displacement_map,                  // data in texture
-  // pbrt extension
-  pbr_roughness, pbr_metallic, pbr_sheen, pbr_clearcoat,   // data in value
-  pbr_coatroughness,                                       // data in value
-  // pbr textures
-  pbr_roughness_map, pbr_metallic_map, pbr_sheen_map,      // data in texture
-  pbr_clearcoat_map, pbr_coatroughness_map,                // data in texture
-  // volume extension
-  vol_transmission, vol_meanfreepath, vol_scattering,      // data in color
-  vol_emission,                                            // data in color
-  vol_anisotropy, vol_scale,                               // data in value
+  // material name and type (value)
+  material, illum,
+  // material colors
+  emission, ambient, diffuse, specular, reflection, transmission,
+  // material values
+  exponent, ior, opacity,
+  // material textures
+  emission_map, ambient_map, diffuse_map, specular_map, reflection_map,  
+  transmission_map, exponent_map, opacity_map, bump_map, normal_map, 
+  displacement_map,                  
+  // pbrt extension values
+  pbr_roughness, pbr_metallic, pbr_sheen, pbr_clearcoat, pbr_coatroughness,
+  // pbr extension textures
+  pbr_roughness_map, pbr_metallic_map, pbr_sheen_map,
+  pbr_clearcoat_map, pbr_coatroughness_map,
+  // volume extension colors
+  vol_transmission, vol_meanfreepath, vol_scattering, vol_emission,
+  // volume extension values
+  vol_anisotropy, vol_scale,
   // volument textures
-  vol_scattering_map                                       // data in texture
+  vol_scattering_map
   // clang-format on
 };
 // Objx command
