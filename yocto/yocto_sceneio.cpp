@@ -649,6 +649,7 @@ inline void parse_yaml_value(string_view& str, double& value) {
   str.remove_prefix(end - str.data());
 }
 
+
 enum struct yaml_value_type { number, boolean, string, array };
 
 struct yaml_value {
@@ -656,7 +657,7 @@ struct yaml_value {
   double          number  = 0;
   bool            boolean = false;
   string          string  = "";
-  vector<double>  array   = {};
+  array<double, 16>   array_   = {};
 };
 
 void parse_yaml_value(string_view& str, yaml_value& value) {
@@ -665,7 +666,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
   if (str.front() == '[') {
     str.remove_prefix(1);
     value.type = yaml_value_type::array;
-    value.array.clear();
+    value.number = 0;
     while (!str.empty()) {
       skip_yaml_whitespace(str);
       if (str.empty()) throw std::runtime_error("bad yaml");
@@ -673,7 +674,9 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
         str.remove_prefix(1);
         break;
       }
-      parse_yaml_value(str, value.array.emplace_back());
+      if(value.number >= 16) throw std::runtime_error("array too large");
+      parse_yaml_value(str, value.array_[(int)value.number]);
+      value.number += 1;
       skip_yaml_whitespace(str);
       if (str.front() == ',') {
         str.remove_prefix(1);
@@ -795,22 +798,22 @@ void load_yaml(
         throw std::runtime_error("error parsing yaml value");
       value = (float)yaml.number;
     } else if constexpr (std::is_same<T, vec2f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.array.size() != 2)
+      if (yaml.type != yaml_value_type::array || yaml.number != 2)
         throw std::runtime_error("error parsing yaml value");
-      value = {(float)yaml.array[0], (float)yaml.array[1]};
+      value = {(float)yaml.array_[0], (float)yaml.array_[1]};
     } else if constexpr (std::is_same<T, vec3f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.array.size() != 3)
+      if (yaml.type != yaml_value_type::array || yaml.number != 3)
         throw std::runtime_error("error parsing yaml value");
       value = {
-          (float)yaml.array[0], (float)yaml.array[1], (float)yaml.array[2]};
+          (float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
     } else if constexpr (std::is_same<T, mat3f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.array.size() != 9)
+      if (yaml.type != yaml_value_type::array || yaml.number != 9)
         throw std::runtime_error("error parsing yaml value");
-      for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array[i];
+      for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
     } else if constexpr (std::is_same<T, frame3f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.array.size() != 12)
+      if (yaml.type != yaml_value_type::array || yaml.number != 12)
         throw std::runtime_error("error parsing yaml value");
-      for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array[i];
+      for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
     } else {
       throw std::runtime_error("bad yaml type");
     }
@@ -1114,9 +1117,9 @@ void write_yaml_property(FILE* fs, const string& object, const string& key,
         break;
       case yaml_value_type::array:
         checked_fprintf(fs, "[ ");
-        for (auto i = 0; i < value.array.size(); i++) {
+        for (auto i = 0; i < value.number; i++) {
           if (i) checked_fprintf(fs, ", ");
-          checked_fprintf(fs, "%g", value.array[i]);
+          checked_fprintf(fs, "%g", value.array_[i]);
         }
         checked_fprintf(fs, " ]");
         break;
@@ -1199,21 +1202,21 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
       write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, vec2f>) {
       yvalue.type = yaml_value_type::array;
-      yvalue.array.resize(2);
-      yvalue.array[0] = value.x;
-      yvalue.array[1] = value.y;
+      yvalue.number = 2;
+      yvalue.array_[0] = value.x;
+      yvalue.array_[1] = value.y;
       write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, vec3f>) {
       yvalue.type = yaml_value_type::array;
-      yvalue.array.resize(3);
-      yvalue.array[0] = value.x;
-      yvalue.array[1] = value.y;
-      yvalue.array[2] = value.z;
+      yvalue.number = 3;
+      yvalue.array_[0] = value.x;
+      yvalue.array_[1] = value.y;
+      yvalue.array_[2] = value.z;
       write_yaml_property(fs, object, name, false, yvalue);
     } else if constexpr (std::is_same_v<T, frame3f>) {
       yvalue.type = yaml_value_type::array;
-      yvalue.array.resize(12);
-      for (auto i = 0; i < 12; i++) yvalue.array[i] = (&value.x.x)[i];
+      yvalue.number = 12;
+      for (auto i = 0; i < 12; i++) yvalue.array_[i] = (&value.x.x)[i];
       write_yaml_property(fs, object, name, false, yvalue);
     } else {
       throw std::runtime_error("should not have gotten here");
