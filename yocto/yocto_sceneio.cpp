@@ -1386,8 +1386,16 @@ namespace yocto {
 static void load_mtl(const string& filename, yocto_scene& scene,
     unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
     const load_params& params) {
+  // open file
+  auto fs_ = open_input_file(filename);
+  auto fs  = fs_.fs;
+
+  // parsing type
+  enum struct parsing_type { none, material };
+  auto ptype = parsing_type::none;
+
   // Parse texture params and name
-  auto add_texture = [&scene, &tmap](const mtl_texture_info& info,
+  auto add_texture = [&scene, &tmap](const obj_texture_info& info,
                          bool force_linear) -> int {
     if (info.path == "") return -1;
     if (tmap.find(info.path) != tmap.end()) {
@@ -1406,43 +1414,76 @@ static void load_mtl(const string& filename, yocto_scene& scene,
     return index;
   };
 
-  // open file
-  auto fs_ = open_input_file(filename);
-  auto fs  = fs_.fs;
-
   // read mtl elements
-  auto element = mtl_command{};
-  auto omat    = mtl_material{};
-  while (read_mtl_command(fs, element, omat)) {
-    if (element == mtl_command::material) {
-      auto material             = yocto_material{};
-      material.uri              = omat.name;
-      material.emission         = omat.ke;
-      material.diffuse          = omat.kd;
-      material.specular         = omat.ks;
-      material.metallic         = omat.pm;
-      material.transmission     = omat.kt;
-      material.roughness        = omat.pr;
-      material.opacity          = omat.op;
-      material.emission_tex     = add_texture(omat.ke_map, false);
-      material.diffuse_tex      = add_texture(omat.kd_map, false);
-      material.metallic_tex     = add_texture(omat.pm_map, false);
-      material.specular_tex     = add_texture(omat.ks_map, false);
-      material.transmission_tex = add_texture(omat.kt_map, false);
-      material.roughness_tex    = add_texture(omat.pr_map, true);
-      material.opacity_tex      = add_texture(omat.op_map, true);
-      material.normal_tex       = add_texture(omat.norm_map, true);
-      material.voltransmission  = omat.vt;
-      material.volmeanfreepath  = omat.vp;
-      material.volemission      = omat.ve;
-      material.volscatter       = omat.vs;
-      material.volanisotropy    = omat.vg;
-      material.volscale         = omat.vr;
-      material.subsurface_tex   = add_texture(omat.vs_map, false);
-      scene.materials.push_back(material);
+  auto command = mtl_command{};
+  auto value   = 0.0f;
+  auto color   = zero3f;
+  auto name    = ""s;
+  auto texture = obj_texture_info{};
+  while (read_mtl_command(fs, command, value, color, name, texture)) {
+    if (command == mtl_command::material) {
+      auto& material     = scene.materials.emplace_back();
+      material.uri       = name;
       mmap[material.uri] = (int)scene.materials.size() - 1;
+      ptype              = parsing_type::material;
+      continue;
+    }
+    if (ptype == parsing_type::none) {
+      throw std::runtime_error("bad mtl");
     } else {
-      // skip other
+      auto& material = scene.materials.back();
+      switch (command) {
+        case mtl_command::emission: material.emission = color; break;
+        case mtl_command::diffuse: material.diffuse = color; break;
+        case mtl_command::specular: material.specular = color; break;
+        case mtl_command::transmission: material.transmission = color; break;
+        case mtl_command::exponent:
+          material.roughness = pow(2 / (value + 2), 1 / 4.0f);
+          if (material.roughness < 0.01f) material.roughness = 0;
+          if (material.roughness > 0.99f) material.roughness = 1;
+          break;
+        case mtl_command::opacity: material.opacity = value; break;
+        case mtl_command::emission_map:
+          material.emission_tex = add_texture(texture, false);
+          break;
+        case mtl_command::diffuse_map:
+          material.diffuse_tex = add_texture(texture, false);
+          break;
+        case mtl_command::specular_map:
+          material.specular_tex = add_texture(texture, false);
+          break;
+        case mtl_command::transmission_map:
+          material.transmission_tex = add_texture(texture, false);
+          break;
+        case mtl_command::opacity_map:
+          material.opacity_tex = add_texture(texture, true);
+          break;
+        case mtl_command::normal_map:
+          material.normal_tex = add_texture(texture, true);
+          break;
+        case mtl_command::pbr_roughness: material.roughness = value; break;
+        case mtl_command::pbr_metallic: material.metallic = value; break;
+        case mtl_command::pbr_roughness_map:
+          material.roughness_tex = add_texture(texture, true);
+          break;
+        case mtl_command::pbr_metallic_map:
+          material.metallic_tex = add_texture(texture, true);
+          break;
+        case mtl_command::vol_transmission:
+          material.voltransmission = color;
+          break;
+        case mtl_command::vol_meanfreepath:
+          material.volmeanfreepath = color;
+          break;
+        case mtl_command::vol_scattering: material.volscatter = color; break;
+        case mtl_command::vol_emission: material.volemission = color; break;
+        case mtl_command::vol_anisotropy: material.volanisotropy = value; break;
+        case mtl_command::vol_scale: material.volscale = value; break;
+        case mtl_command::vol_scattering_map:
+          material.subsurface_tex = add_texture(texture, false);
+          break;
+        default: break;  // ignore other values
+      }
     }
   }
 }
@@ -1452,8 +1493,16 @@ static void load_objx(const string& filename, yocto_scene& scene,
     const unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
     const unordered_map<string, vector<int>>& object_shapes,
     const load_params&                        params) {
+  // open file
+  auto fs_ = open_input_file(filename);
+  auto fs  = fs_.fs;
+
+  // parsing types
+  enum struct parsing_type { none, camera, environment, instance, procedural };
+  auto ptype = parsing_type::none;
+
   // Parse texture params and name
-  auto add_texture = [&scene, &tmap](const mtl_texture_info& info,
+  auto add_texture = [&scene, &tmap](const obj_texture_info& info,
                          bool force_linear) -> int {
     if (info.path == "") return -1;
     if (tmap.find(info.path) != tmap.end()) {
@@ -1472,76 +1521,135 @@ static void load_objx(const string& filename, yocto_scene& scene,
     return index;
   };
 
-  // open file
-  auto fs_ = open_input_file(filename);
-  auto fs  = fs_.fs;
-
   // parsed geometry and materials
   bool first_instance = true;
+  auto instances_idx  = vector<int>{};
 
   // read mtl elements
-  auto element = objx_command{};
-  auto ocam    = objx_camera{};
-  auto oenv    = objx_environment{};
-  auto oist    = objx_instance{};
-  auto oproc   = objx_procedural{};
-  while (read_objx_command(fs, element, ocam, oenv, oist, oproc)) {
-    if (element == objx_command::camera) {
-      auto camera         = yocto_camera();
-      camera.uri          = ocam.name;
-      camera.frame        = ocam.frame;
-      camera.orthographic = ocam.ortho;
-      camera.lens         = ocam.lens;
-      camera.film         = {ocam.width, ocam.height};
-      camera.focus        = ocam.focus;
-      camera.aperture     = ocam.aperture;
-      scene.cameras.push_back(camera);
-    } else if (element == objx_command::environment) {
-      auto environment         = yocto_environment();
-      environment.uri          = oenv.name;
-      environment.frame        = oenv.frame;
-      environment.emission     = oenv.ke;
-      environment.emission_tex = add_texture(oenv.ke_txt, true);
-      scene.environments.push_back(environment);
-    } else if (element == objx_command::instance) {
+  auto command = objx_command{};
+  auto name    = ""s;
+  auto value   = 0.0f;
+  auto color   = zero3f;
+  auto texture = obj_texture_info{};
+  auto frame   = frame3f{};
+  while (read_objx_command(fs, command, value, color, name, frame, texture)) {
+    if (command == objx_command::camera) {
+      auto& camera = scene.cameras.emplace_back();
+      camera.uri   = name;
+      ptype        = parsing_type::camera;
+      continue;
+    }
+    if (command == objx_command::environment) {
+      auto& environment = scene.environments.emplace_back();
+      environment.uri   = name;
+      ptype             = parsing_type::environment;
+      continue;
+    }
+    if (command == objx_command::instance) {
       if (first_instance) {
         scene.instances.clear();
         first_instance = false;
       }
-      for (auto& shape : object_shapes.at(oist.object)) {
-        auto instance     = yocto_instance{};
-        instance.uri      = oist.name;
-        instance.frame    = oist.frame;
-        instance.shape    = shape;
-        instance.material = mmap.at(oist.material);
-        scene.instances.push_back(instance);
-      }
-    } else if (element == objx_command::procedural) {
-      auto shape = yocto_shape();
-      shape.uri  = oproc.name;
-      if (oproc.type == "floor") {
-        auto params         = proc_shape_params{};
-        params.type         = proc_shape_params::type_t::floor;
-        params.subdivisions = oproc.level < 0 ? 0 : oproc.level;
-        params.scale        = oproc.size / 2;
-        params.uvscale      = oproc.size;
-        make_proc_shape(shape.triangles, shape.quads, shape.positions,
-            shape.normals, shape.texcoords, params);
-      } else {
-        throw std::runtime_error("unknown obj procedural");
-      }
-      scene.shapes.push_back(shape);
-      auto instance  = yocto_instance{};
+      auto& instance = scene.instances.emplace_back();
+      instance.uri   = name;
+      ptype          = parsing_type::instance;
+      instances_idx  = {(int)scene.instances.size() - 1};
+      continue;
+    }
+    if (command == objx_command::procedural) {
+      auto& shape    = scene.shapes.emplace_back();
+      shape.uri      = name;
+      auto& instance = scene.instances.emplace_back();
       instance.uri   = shape.uri;
       instance.shape = (int)scene.shapes.size() - 1;
-      if (mmap.find(oproc.material) == mmap.end()) {
-        throw std::runtime_error("missing material " + oproc.material);
-      } else {
-        instance.material = mmap.find(oproc.material)->second;
+      ptype          = parsing_type::procedural;
+      continue;
+    }
+
+    if (ptype == parsing_type::none) {
+      throw std::runtime_error("bad objx");
+    } else if (ptype == parsing_type::camera) {
+      auto& camera = scene.cameras.back();
+      switch (command) {
+        case objx_command::frame: camera.frame = frame; break;
+        case objx_command::ortho: camera.orthographic = (bool)value; break;
+        case objx_command::width: camera.film.x = value; break;
+        case objx_command::height: camera.film.y = value; break;
+        case objx_command::lens: camera.lens = value; break;
+        case objx_command::aperture: camera.aperture = value; break;
+        case objx_command::focus: camera.focus = value; break;
+        default: throw std::runtime_error("bad objx"); break;
       }
-      scene.instances.push_back(instance);
+    } else if (ptype == parsing_type::environment) {
+      auto& environment = scene.environments.back();
+      switch (command) {
+        case objx_command::frame: environment.frame = frame; break;
+        case objx_command::emission: environment.emission = color; break;
+        case objx_command::emission_map:
+          environment.emission_tex = add_texture(texture, false);
+          break;
+        default: throw std::runtime_error("bad objx"); break;
+      }
+    } else if (ptype == parsing_type::instance) {
+      switch (command) {
+        case objx_command::frame: {
+          for (auto& ist : instances_idx) {
+            scene.instances[ist].frame = frame;
+          }
+        } break;
+        case objx_command::material: {
+          auto ist_material = mmap.at(name);
+          for (auto& ist : instances_idx) {
+            scene.instances[ist].material = ist_material;
+          }
+        } break;
+        case objx_command::object: {
+          auto& shapes = object_shapes.at(name);
+          if (instances_idx.size() != shapes.size()) {
+            auto to_add = shapes.size() - instances_idx.size();
+            auto name   = scene.instances.back().uri;
+            for (auto i = 0; i < to_add; i++) {
+              auto& instance = scene.instances.emplace_back();
+              instance.uri   = name;
+              instances_idx.push_back((int)scene.instances.size() - 1);
+            }
+          }
+          for (auto i = 0; i < shapes.size(); i++) {
+            scene.instances[instances_idx[i]].shape = shapes[i];
+          }
+        } break;
+        default: throw std::runtime_error("bad objx"); break;
+      }
+    } else if (ptype == parsing_type::procedural) {
+      auto& shape    = scene.shapes.back();
+      auto& instance = scene.instances.back();
+      switch (command) {
+        case objx_command::frame: instance.frame = frame; break;
+        case objx_command::material:
+          if (mmap.find(name) == mmap.end()) {
+            throw std::runtime_error("missing material " + name);
+          } else {
+            instance.material = mmap.find(name)->second;
+          }
+          break;
+        case objx_command::object:
+          if (name == "floor") {
+            auto params         = proc_shape_params{};
+            params.type         = proc_shape_params::type_t::floor;
+            params.subdivisions = 0;
+            params.scale        = 40 / 2;
+            params.uvscale      = 40;
+            make_proc_shape(shape.triangles, shape.quads, shape.positions,
+                shape.normals, shape.texcoords, params);
+          } else {
+            throw std::runtime_error("unknown obj procedural");
+          }
+          break;
+        default: throw std::runtime_error("bad objx"); break;
+      }
     } else {
       // skip other
+      throw std::runtime_error("bad objx");
     }
   }
 }
@@ -1962,38 +2070,56 @@ static void save_mtl(const string& filename, const yocto_scene& scene) {
 
   // materials
   for (auto& material : scene.materials) {
-    auto omat  = mtl_material{};
-    omat.name  = fs::path(material.uri).stem().string();
-    omat.illum = 2;
-    omat.ke    = material.emission;
-    omat.kd    = material.diffuse * (1 - material.metallic);
-    omat.ks    = material.specular * (1 - material.metallic) +
+    write_mtl_command(fs, mtl_command::material,
+        fs::path(material.uri).stem().string(), {}, {}, {});
+    write_mtl_command(fs, mtl_command::illum, {}, 2, {}, {});
+    if (material.emission != zero3f)
+      write_mtl_command(
+          fs, mtl_command::emission, {}, {}, material.emission, {});
+    auto kd = material.diffuse * (1 - material.metallic);
+    auto ks = material.specular * (1 - material.metallic) +
               material.metallic * material.diffuse;
-    omat.kt = material.transmission;
-    omat.ns = (int)clamp(
+    write_mtl_command(fs, mtl_command::diffuse, {}, {}, kd, {});
+    write_mtl_command(fs, mtl_command::specular, {}, {}, ks, {});
+    if (material.transmission != zero3f)
+      write_mtl_command(
+          fs, mtl_command::transmission, {}, {}, material.transmission, {});
+    auto ns = (int)clamp(
         2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2,
         0.0f, 1.0e9f);
-    omat.op = material.opacity;
+    write_mtl_command(fs, mtl_command::exponent, {}, ns, {}, {});
+    if (material.opacity != 1)
+      write_mtl_command(fs, mtl_command::opacity, {}, material.opacity, {}, {});
     if (material.emission_tex >= 0)
-      omat.ke_map.path = scene.textures[material.emission_tex].uri;
+      write_mtl_command(fs, mtl_command::emission_map, {}, {}, {},
+          scene.textures[material.emission_tex].uri);
     if (material.diffuse_tex >= 0)
-      omat.kd_map.path = scene.textures[material.diffuse_tex].uri;
+      write_mtl_command(fs, mtl_command::diffuse_map, {}, {}, {},
+          scene.textures[material.diffuse_tex].uri);
     if (material.specular_tex >= 0)
-      omat.ks_map.path = scene.textures[material.specular_tex].uri;
+      write_mtl_command(fs, mtl_command::specular_map, {}, {}, {},
+          scene.textures[material.specular_tex].uri);
     if (material.transmission_tex >= 0)
-      omat.kt_map.path = scene.textures[material.transmission_tex].uri;
+      write_mtl_command(fs, mtl_command::transmission_map, {}, {}, {},
+          scene.textures[material.transmission_tex].uri);
     if (material.normal_tex >= 0)
-      omat.norm_map.path = scene.textures[material.normal_tex].uri;
+      write_mtl_command(fs, mtl_command::normal_map, {}, {}, {},
+          scene.textures[material.normal_tex].uri);
     if (material.voltransmission != zero3f ||
         material.volmeanfreepath != zero3f) {
-      omat.vt = material.voltransmission;
-      omat.vp = material.volmeanfreepath;
-      omat.ve = material.volemission;
-      omat.vs = material.volscatter;
-      omat.vg = material.volanisotropy;
-      omat.vr = material.volscale;
+      write_mtl_command(fs, mtl_command::vol_transmission, {}, {},
+          material.voltransmission, {});
+      write_mtl_command(fs, mtl_command::vol_meanfreepath, {}, {},
+          material.volmeanfreepath, {});
+      write_mtl_command(
+          fs, mtl_command::vol_emission, {}, {}, material.volemission, {});
+      write_mtl_command(
+          fs, mtl_command::vol_scattering, {}, {}, material.volscatter, {});
+      write_mtl_command(
+          fs, mtl_command::vol_anisotropy, {}, material.volanisotropy, {}, {});
+      write_mtl_command(
+          fs, mtl_command::vol_scale, {}, material.volscale, {}, {});
     }
-    write_mtl_command(fs, mtl_command::material, omat);
   }
 }
 
@@ -2008,40 +2134,43 @@ static void save_objx(
 
   // cameras
   for (auto& camera : scene.cameras) {
-    auto ocam     = objx_camera{};
-    ocam.name     = fs::path(camera.uri).stem().string();
-    ocam.ortho    = camera.orthographic;
-    ocam.width    = camera.film.x;
-    ocam.height   = camera.film.y;
-    ocam.lens     = camera.lens;
-    ocam.focus    = camera.focus;
-    ocam.aperture = camera.aperture;
-    ocam.frame    = camera.frame;
-    write_objx_command(fs, objx_command::camera, ocam, {}, {}, {});
+    write_objx_command(fs, objx_command::camera, camera.uri, {}, {}, {}, {});
+    if (camera.orthographic)
+      write_objx_command(
+          fs, objx_command::ortho, {}, (float)camera.orthographic, {}, {}, {});
+    write_objx_command(fs, objx_command::width, {}, camera.film.x, {}, {}, {});
+    write_objx_command(fs, objx_command::height, {}, camera.film.y, {}, {}, {});
+    write_objx_command(fs, objx_command::lens, {}, camera.lens, {}, {}, {});
+    write_objx_command(fs, objx_command::focus, {}, camera.focus, {}, {}, {});
+    write_objx_command(
+        fs, objx_command::aperture, {}, camera.aperture, {}, {}, {});
+    write_objx_command(fs, objx_command::frame, {}, {}, {}, camera.frame, {});
   }
 
   // environments
   for (auto& environment : scene.environments) {
-    auto oenv        = objx_environment{};
-    oenv.name        = fs::path(environment.uri).stem().string();
-    oenv.ke          = environment.emission;
-    oenv.ke_txt.path = environment.emission_tex >= 0
-                           ? scene.textures[environment.emission_tex].uri
-                           : ""s;
-    oenv.frame = environment.frame;
-    write_objx_command(fs, objx_command::environment, {}, oenv, {}, {});
+    write_objx_command(
+        fs, objx_command::environment, environment.uri, {}, {}, {}, {});
+    write_objx_command(
+        fs, objx_command::emission, {}, {}, environment.emission, {}, {});
+    if (environment.emission_tex >= 0)
+      write_objx_command(fs, objx_command::emission_map, {}, {}, {}, {},
+          scene.textures[environment.emission_tex].uri);
+    write_objx_command(
+        fs, objx_command::frame, {}, {}, {}, environment.frame, {});
   }
 
   // instances
   if (preserve_instances) {
     for (auto& instance : scene.instances) {
-      auto oist   = objx_instance{};
-      oist.name   = fs::path(instance.uri).stem().string();
-      oist.object = fs::path(scene.shapes[instance.shape].uri).stem().string();
-      oist.material =
-          fs::path(scene.materials[instance.material].uri).stem().string();
-      oist.frame = instance.frame;
-      write_objx_command(fs, objx_command::instance, {}, {}, oist, {});
+      write_objx_command(
+          fs, objx_command::instance, instance.uri, {}, {}, {}, {});
+      write_objx_command(fs, objx_command::object,
+          scene.shapes[instance.shape].uri, {}, {}, {}, {});
+      write_objx_command(fs, objx_command::material,
+          scene.materials[instance.material].uri, {}, {}, {}, {});
+      write_objx_command(
+          fs, objx_command::frame, {}, {}, {}, instance.frame, {});
     }
   }
 }

@@ -73,7 +73,7 @@ inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
 }
 
 // Obj texture information.
-struct mtl_texture_info {
+struct obj_texture_info {
   string path  = "";     // file path
   bool   clamp = false;  // clamp to edge
   float  scale = 1;      // scale for bump/displacement
@@ -81,13 +81,91 @@ struct mtl_texture_info {
   // Properties not explicitly handled.
   unordered_map<string, vector<float>> props;
 
-  mtl_texture_info() {}
-  mtl_texture_info(const char* path) : path{path} {}
-  mtl_texture_info(const string& path) : path{path} {}
+  obj_texture_info() {}
+  obj_texture_info(const char* path) : path{path} {}
+  obj_texture_info(const string& path) : path{path} {}
 };
 
+// Obj command
+enum struct obj_command {
+  // clang-format off
+  vertex, normal, texcoord,         // data in value
+  face, line, point,                // data in vertices
+  object, group, usemtl, smoothing, // data in name
+  mtllib, objxlib,                  // data in name
+  // clang-format on
+};
+
+// Mtl command
+enum struct mtl_command {
+  // clang-format off
+  // material name and type (value)
+  material, illum,
+  // material colors
+  emission, ambient, diffuse, specular, reflection, transmission,
+  // material values
+  exponent, ior, opacity,
+  // material textures
+  emission_map, ambient_map, diffuse_map, specular_map, reflection_map,  
+  transmission_map, exponent_map, opacity_map, bump_map, normal_map, 
+  displacement_map,                  
+  // pbrt extension values
+  pbr_roughness, pbr_metallic, pbr_sheen, pbr_clearcoat, pbr_coatroughness,
+  // pbr extension textures
+  pbr_roughness_map, pbr_metallic_map, pbr_sheen_map,
+  pbr_clearcoat_map, pbr_coatroughness_map,
+  // volume extension colors
+  vol_transmission, vol_meanfreepath, vol_scattering, vol_emission,
+  // volume extension values
+  vol_anisotropy, vol_scale,
+  // volument textures
+  vol_scattering_map
+  // clang-format on
+};
+
+// Objx command
+enum struct objx_command {
+  // clang-format off
+  // object names
+  camera, environment, instance, procedural,
+  // object frames
+  frame,
+  // camera values
+  ortho, width, height, lens, aperture, focus,
+  // environment values
+  emission, emission_map,
+  // instance/procedural values
+  object, material
+  // clang-format on
+};
+
+// Read obj elements
+bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
+    string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size);
+bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
+    vec3f& color, string& name, obj_texture_info& texture, bool fliptr = true);
+bool read_objx_command(FILE* fs, objx_command& command, float& value,
+    vec3f& color, string& name, frame3f& frame, obj_texture_info& texture);
+
+// Write obj elements
+void write_obj_comment(FILE* fs, const string& comment);
+void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
+    const string& name, const vector<obj_vertex>& vertices);
+void write_mtl_command(FILE* fs, mtl_command command, const string& name,
+    float value, const vec3f& color, const obj_texture_info& texture);
+void write_objx_command(FILE* fs, objx_command command, const string& name,
+    float value, const vec3f& color, const frame3f& frame,
+    const obj_texture_info& texture);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// OLD INTERFACE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // Obj material.
-struct mtl_material {
+struct obj_material {
   string name  = "";  // name
   int    illum = 0;   // MTL illum mode
 
@@ -103,19 +181,19 @@ struct mtl_material {
   float op  = 1;          // opacity
 
   // textures
-  mtl_texture_info ke_map   = "";  // emission texture
-  mtl_texture_info ka_map   = "";  // ambient texture
-  mtl_texture_info kd_map   = "";  // diffuse texture
-  mtl_texture_info ks_map   = "";  // specular texture
-  mtl_texture_info kr_map   = "";  // reflection texture
-  mtl_texture_info kt_map   = "";  // transmission texture
-  mtl_texture_info ns_map   = "";  // Phong exponent texture
-  mtl_texture_info op_map   = "";  // opacity texture
-  mtl_texture_info ior_map  = "";  // ior texture
-  mtl_texture_info bump_map = "";  // bump map
-  mtl_texture_info norm_map = "";  // normal map
-  mtl_texture_info disp_map = "";  // displacement map
-  mtl_texture_info occ_map  = "";  // occlusion map
+  obj_texture_info ke_map   = "";  // emission texture
+  obj_texture_info ka_map   = "";  // ambient texture
+  obj_texture_info kd_map   = "";  // diffuse texture
+  obj_texture_info ks_map   = "";  // specular texture
+  obj_texture_info kr_map   = "";  // reflection texture
+  obj_texture_info kt_map   = "";  // transmission texture
+  obj_texture_info ns_map   = "";  // Phong exponent texture
+  obj_texture_info op_map   = "";  // opacity texture
+  obj_texture_info ior_map  = "";  // ior texture
+  obj_texture_info bump_map = "";  // bump map
+  obj_texture_info norm_map = "";  // normal map
+  obj_texture_info disp_map = "";  // displacement map
+  obj_texture_info occ_map  = "";  // occlusion map
 
   // pbr values
   float pr  = 0;  // roughness
@@ -125,11 +203,11 @@ struct mtl_material {
   float pcr = 0;  // coat roughness
 
   // textures
-  mtl_texture_info pr_map  = "";  // roughness texture
-  mtl_texture_info pm_map  = "";  // metallic texture
-  mtl_texture_info ps_map  = "";  // sheen texture
-  mtl_texture_info pc_map  = "";  // coat texture
-  mtl_texture_info pcr_map = "";  // coat roughness texture
+  obj_texture_info pr_map  = "";  // roughness texture
+  obj_texture_info pm_map  = "";  // metallic texture
+  obj_texture_info ps_map  = "";  // sheen texture
+  obj_texture_info pc_map  = "";  // coat texture
+  obj_texture_info pcr_map = "";  // coat roughness texture
 
   // volume values
   vec3f vt = {0, 0, 0};  // volumetric transmission
@@ -140,14 +218,14 @@ struct mtl_material {
   float vr = 0.01;       // volumetric scale
 
   // textures
-  mtl_texture_info vs_map = "";  // scattering texture
+  obj_texture_info vs_map = "";  // scattering texture
 
   // Properties not explicitly handled.
   unordered_map<string, vector<string>> props;
 };
 
 // Obj camera [extension].
-struct objx_camera {
+struct obj_camera {
   string  name     = "";            // name
   frame3f frame    = identity3x4f;  // transform
   bool    ortho    = false;         // orthographic
@@ -159,15 +237,15 @@ struct objx_camera {
 };
 
 // Obj environment [extension].
-struct objx_environment {
+struct obj_environment {
   string           name  = "";            // name
   frame3f          frame = identity3x4f;  // transform
   vec3f            ke    = zero3f;        // emission color
-  mtl_texture_info ke_txt;                // emission texture
+  obj_texture_info ke_txt;                // emission texture
 };
 
 // Obj procedural object [extension].
-struct objx_procedural {
+struct obj_procedural {
   string  name     = "";            // name
   frame3f frame    = identity3x4f;  // transform
   string  type     = "";            // type
@@ -177,63 +255,12 @@ struct objx_procedural {
 };
 
 // Obj instance [extension]
-struct objx_instance {
+struct obj_instance {
   string  name     = "";            // name
   frame3f frame    = identity3x4f;  // transform
   string  object   = "";            // object name
   string  material = "";            // material name
 };
-
-// Obj command
-enum struct obj_command {
-  // clang-format off
-  vertex, normal, texcoord,         // data in value
-  face, line, point,                // data in vertices
-  object, group, usemtl, smoothing, // data in name
-  mtllib, objxlib,                  // data in name
-  // clang-format on
-};
-// Mtl command
-enum struct mtl_command {
-  // clang-format off
-  material,         // data in material
-  // clang-format on
-};
-// Objx command
-enum struct objx_command {
-  // clang-format off
-  camera,       // data in camera
-  environment,  // data in environment
-  instance,     // data in instance
-  procedural,   // data in procedural
-  // clang-format on
-};
-
-// Read obj elements
-bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
-    string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(
-    FILE* fs, mtl_command& command, mtl_material& material, bool fliptr = true);
-bool read_objx_command(FILE* fs, objx_command& command, objx_camera& camera,
-    objx_environment& environment, objx_instance& instance,
-    objx_procedural& procedural);
-
-// Write obj elements
-void write_obj_comment(FILE* fs, const string& comment);
-void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
-    const string& name, const vector<obj_vertex>& vertices);
-void write_mtl_command(
-    FILE* fs, mtl_command command, const mtl_material& material);
-void write_objx_command(FILE* fs, objx_command command,
-    const objx_camera& camera, const objx_environment& environment,
-    const objx_instance& instance, const objx_procedural& procedural);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// OLD INTERFACE
-// -----------------------------------------------------------------------------
-namespace yocto {
 
 // Obj callbacks
 struct obj_callbacks {
@@ -248,23 +275,16 @@ struct obj_callbacks {
   virtual void usemtl(const string&) {}
   virtual void smoothing(const string&) {}
   virtual void mtllib(const string&) {}
-  virtual void material(const mtl_material&) {}
-  virtual void camera(const objx_camera&) {}
-  virtual void environmnet(const objx_environment&) {}
-  virtual void instance(const objx_instance&) {}
-  virtual void procedural(const objx_procedural&) {}
+  virtual void material(const obj_material&) {}
+  virtual void camera(const obj_camera&) {}
+  virtual void environmnet(const obj_environment&) {}
+  virtual void instance(const obj_instance&) {}
+  virtual void procedural(const obj_procedural&) {}
 };
 
 // Load obj scene
 void load_obj(const string& filename, obj_callbacks& cb,
     bool nomaterials = false, bool flipv = true, bool fliptr = true);
-
-// Typedefs for backward compatibility
-using obj_material    = mtl_material;
-using obj_camera      = objx_camera;
-using obj_environment = objx_environment;
-using obj_instance    = objx_instance;
-using obj_procedural  = objx_procedural;
 
 }  // namespace yocto
 
