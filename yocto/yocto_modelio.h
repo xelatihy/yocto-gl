@@ -239,8 +239,10 @@ enum struct objx_command {
   // clang-format on
 };
 
+// Obj value type
 enum struct obj_value_type { number, boolean, string, array };
 
+// Obj value
 struct obj_value {
   obj_value_type    type    = obj_value_type::number;
   double            number  = 0;
@@ -248,80 +250,6 @@ struct obj_value {
   string            string  = "";
   array<double, 16> array_  = {};
 };
-
-// parse yaml value
-inline void get_obj_value(const obj_value& yaml, string& value) {
-  if (yaml.type != obj_value_type::string)
-    throw std::runtime_error("error parsing yaml value");
-  value = yaml.string;
-}
-inline void get_obj_value(const obj_value& yaml, bool& value) {
-  if (yaml.type != obj_value_type::boolean)
-    throw std::runtime_error("error parsing yaml value");
-  value = yaml.boolean;
-}
-inline void get_obj_value(const obj_value& yaml, int& value) {
-  if (yaml.type != obj_value_type::number)
-    throw std::runtime_error("error parsing yaml value");
-  value = (int)yaml.number;
-}
-inline void get_obj_value(const obj_value& yaml, float& value) {
-  if (yaml.type != obj_value_type::number)
-    throw std::runtime_error("error parsing yaml value");
-  value = (float)yaml.number;
-}
-inline void get_obj_value(const obj_value& yaml, vec2f& value) {
-  if (yaml.type != obj_value_type::array || yaml.number != 2)
-    throw std::runtime_error("error parsing yaml value");
-  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
-}
-inline void get_obj_value(const obj_value& yaml, vec3f& value) {
-  if (yaml.type != obj_value_type::array || yaml.number != 3)
-    throw std::runtime_error("error parsing yaml value");
-  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
-}
-inline void get_obj_value(const obj_value& yaml, mat3f& value) {
-  if (yaml.type != obj_value_type::array || yaml.number != 9)
-    throw std::runtime_error("error parsing yaml value");
-  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-}
-inline void get_obj_value(const obj_value& yaml, frame3f& value) {
-  if (yaml.type != obj_value_type::array || yaml.number != 12)
-    throw std::runtime_error("error parsing yaml value");
-  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-}
-
-// construction
-inline obj_value make_obj_value(const string& value) {
-  return {obj_value_type::string, 0, false, value};
-}
-inline obj_value make_obj_value(bool value) {
-  return {obj_value_type::boolean, 0, value};
-}
-inline obj_value make_obj_value(int value) {
-  return {obj_value_type::number, (double)value};
-}
-inline obj_value make_obj_value(float value) {
-  return {obj_value_type::number, (double)value};
-}
-inline obj_value make_obj_value(const vec2f& value) {
-  return {
-      obj_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
-}
-inline obj_value make_obj_value(const vec3f& value) {
-  return {obj_value_type::array, 3, false, "",
-      {(double)value.x, (double)value.y, (double)value.z}};
-}
-inline obj_value make_obj_value(const mat3f& value) {
-  auto yaml = obj_value{obj_value_type::array, 9};
-  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
-  return yaml;
-}
-inline obj_value make_obj_value(const frame3f& value) {
-  auto yaml = obj_value{obj_value_type::array, 12};
-  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
-  return yaml;
-}
 
 // Read obj elements
 bool read_obj_command(FILE* fs, obj_command& command, obj_value& value,
@@ -339,6 +267,26 @@ void write_mtl_command(FILE* fs, mtl_command command, const obj_value& value,
     const obj_texture_info& texture = {});
 void write_objx_command(FILE* fs, objx_command command, const obj_value& value,
     const obj_texture_info& texture = {});
+
+// typesafe access of obj value
+void get_obj_value(const obj_value& yaml, string& value);
+void get_obj_value(const obj_value& yaml, bool& value);
+void get_obj_value(const obj_value& yaml, int& value);
+void get_obj_value(const obj_value& yaml, float& value);
+void get_obj_value(const obj_value& yaml, vec2f& value);
+void get_obj_value(const obj_value& yaml, vec3f& value);
+void get_obj_value(const obj_value& yaml, mat3f& value);
+void get_obj_value(const obj_value& yaml, frame3f& value);
+
+// typesafe access of obj value
+obj_value make_obj_value(const string& value);
+obj_value make_obj_value(bool value);
+obj_value make_obj_value(int value);
+obj_value make_obj_value(float value);
+obj_value make_obj_value(const vec2f& value);
+obj_value make_obj_value(const vec3f& value);
+obj_value make_obj_value(const mat3f& value);
+obj_value make_obj_value(const frame3f& value);
 
 }  // namespace yocto
 

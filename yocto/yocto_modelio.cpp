@@ -1720,6 +1720,80 @@ void write_objx_command(FILE* fs, objx_command command, const obj_value& value_,
   }
 }
 
+// typesafe access of obj value
+void get_obj_value(const obj_value& yaml, string& value) {
+  if (yaml.type != obj_value_type::string)
+    throw std::runtime_error("error parsing yaml value");
+  value = yaml.string;
+}
+void get_obj_value(const obj_value& yaml, bool& value) {
+  if (yaml.type != obj_value_type::boolean)
+    throw std::runtime_error("error parsing yaml value");
+  value = yaml.boolean;
+}
+void get_obj_value(const obj_value& yaml, int& value) {
+  if (yaml.type != obj_value_type::number)
+    throw std::runtime_error("error parsing yaml value");
+  value = (int)yaml.number;
+}
+void get_obj_value(const obj_value& yaml, float& value) {
+  if (yaml.type != obj_value_type::number)
+    throw std::runtime_error("error parsing yaml value");
+  value = (float)yaml.number;
+}
+void get_obj_value(const obj_value& yaml, vec2f& value) {
+  if (yaml.type != obj_value_type::array || yaml.number != 2)
+    throw std::runtime_error("error parsing yaml value");
+  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
+}
+void get_obj_value(const obj_value& yaml, vec3f& value) {
+  if (yaml.type != obj_value_type::array || yaml.number != 3)
+    throw std::runtime_error("error parsing yaml value");
+  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
+}
+void get_obj_value(const obj_value& yaml, mat3f& value) {
+  if (yaml.type != obj_value_type::array || yaml.number != 9)
+    throw std::runtime_error("error parsing yaml value");
+  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+}
+void get_obj_value(const obj_value& yaml, frame3f& value) {
+  if (yaml.type != obj_value_type::array || yaml.number != 12)
+    throw std::runtime_error("error parsing yaml value");
+  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+}
+
+// typesafe access of obj value
+obj_value make_obj_value(const string& value) {
+  return {obj_value_type::string, 0, false, value};
+}
+obj_value make_obj_value(bool value) {
+  return {obj_value_type::boolean, 0, value};
+}
+obj_value make_obj_value(int value) {
+  return {obj_value_type::number, (double)value};
+}
+obj_value make_obj_value(float value) {
+  return {obj_value_type::number, (double)value};
+}
+obj_value make_obj_value(const vec2f& value) {
+  return {
+      obj_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
+}
+obj_value make_obj_value(const vec3f& value) {
+  return {obj_value_type::array, 3, false, "",
+      {(double)value.x, (double)value.y, (double)value.z}};
+}
+obj_value make_obj_value(const mat3f& value) {
+  auto yaml = obj_value{obj_value_type::array, 9};
+  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+obj_value make_obj_value(const frame3f& value) {
+  auto yaml = obj_value{obj_value_type::array, 12};
+  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
