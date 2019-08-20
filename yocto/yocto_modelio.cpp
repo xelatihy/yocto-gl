@@ -44,7 +44,7 @@
 namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
-// PLY CONVERSION
+// LOW-LEVEL UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -65,22 +65,74 @@ static inline T swap_endian(T value) {
   return dest.value;
 }
 
+// Check if a file can be opened for reading.
+static inline bool exists_file(const string& filename) {
+  auto f = fopen(filename.c_str(), "r");
+  if (!f) return false;
+  fclose(f);
+  return true;
+}
+
 // Read a line
-static inline bool read_ply_line(FILE* fs, char* buffer, size_t size) {
+static inline bool read_line(FILE* fs, char* buffer, size_t size) {
   return fgets(buffer, size, fs) != nullptr;
 }
 
-static inline bool is_ply_space(char c) {
+static inline bool is_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-static inline bool is_ply_newline(char c) { return c == '\r' || c == '\n'; }
-
-static inline void skip_ply_whitespace(string_view& str) {
-  while (!str.empty() && is_ply_space(str.front())) str.remove_prefix(1);
+static inline bool is_newline(char c) { return c == '\r' || c == '\n'; }
+static inline bool is_digit(char c) { return c >= '0' && c <= '9'; }
+static inline bool is_alpha(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
+
+static inline void skip_whitespace(string_view& str) {
+  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
+}
+static inline void trim_whitespace(string_view& str) {
+  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
+  while (!str.empty() && is_space(str.back())) str.remove_suffix(1);
+}
+
+static inline bool is_whitespace(string_view str) {
+  while (!str.empty()) {
+    if (!is_space(str.front())) return false;
+    str.remove_prefix(1);
+  }
+  return true;
+}
+
+static inline vector<string> split_string(
+    const string& str, const string& delim) {
+  auto tokens = vector<string>{};
+  auto last = (size_t)0, next = (size_t)0;
+  while ((next = str.find(delim, last)) != string::npos) {
+    tokens.push_back(str.substr(last, next - last));
+    last = next + delim.size();
+  }
+  if (last < str.size()) tokens.push_back(str.substr(last));
+  return tokens;
+}
+
+static inline void checked_fprintf(FILE* fs, const char* fmt, ...) {
+  va_list args1;
+  va_start(args1, fmt);
+  if (vfprintf(fs, fmt, args1) < 0)
+    throw std::runtime_error("cannot write to file");
+  va_end(args1);
+}
+
+}
+
+// -----------------------------------------------------------------------------
+// PLY CONVERSION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 static inline void remove_ply_comment(
     string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_ply_newline(str.back())) str.remove_suffix(1);
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
@@ -88,11 +140,11 @@ static inline void remove_ply_comment(
 
 // Parse values from a string
 static inline void parse_ply_value(string_view& str, string_view& value) {
-  skip_ply_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
   if (str.front() != '"') {
     auto cpy = str;
-    while (!cpy.empty() && !is_ply_space(cpy.front())) cpy.remove_prefix(1);
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -222,11 +274,11 @@ void read_ply_header(FILE* fs, ply_format& format,
 
   // read the file header line by line
   char buffer[4096];
-  while (read_ply_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_ply_comment(line);
-    skip_ply_whitespace(line);
+    skip_whitespace(line);
     if (line.empty()) continue;
 
     // get command
@@ -257,10 +309,10 @@ void read_ply_header(FILE* fs, ply_format& format,
         throw std::runtime_error{"unknown ply format"};
       }
     } else if (cmd == "comment") {
-      skip_ply_whitespace(line);
+      skip_whitespace(line);
       comments.push_back(string{line});
     } else if (cmd == "obj_info") {
-      skip_ply_whitespace(line);
+      skip_whitespace(line);
       // comment is the rest of the line
     } else if (cmd == "element") {
       auto& elem = elements.emplace_back();
@@ -321,7 +373,7 @@ void read_ply_value_impl(FILE* fs, ply_format format,
   // read property values
   if (format == ply_format::ascii) {
     char buffer[4096];
-    if (!read_ply_line(fs, buffer, sizeof(buffer)))
+    if (!read_line(fs, buffer, sizeof(buffer)))
       throw std::runtime_error("cannot read ply");
     auto line = string_view{buffer};
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -561,17 +613,6 @@ vec4i find_ply_property(const ply_element& element, const string& name1,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::string_view;
-using namespace std::literals::string_view_literals;
-
-// Check if a file can be opened for reading.
-static inline bool exists_file(const string& filename) {
-  auto f = fopen(filename.c_str(), "r");
-  if (!f) return false;
-  fclose(f);
-  return true;
-}
-
 // A file holder that closes a file when destructed. Useful for RIIA
 struct obj_file {
   FILE*  fs       = nullptr;
@@ -592,22 +633,9 @@ static inline obj_file open_obj_file(
   return {fs, filename};
 }
 
-// Read a line
-static inline bool read_obj_line(FILE* fs, char* buffer, size_t size) {
-  return fgets(buffer, size, fs) != nullptr;
-}
-
-static inline bool is_obj_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-static inline bool is_obj_newline(char c) { return c == '\r' || c == '\n'; }
-
-static inline void skip_obj_whitespace(string_view& str) {
-  while (!str.empty() && is_obj_space(str.front())) str.remove_prefix(1);
-}
 static inline void remove_obj_comment(
     string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_obj_newline(str.back())) str.remove_suffix(1);
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
@@ -615,11 +643,11 @@ static inline void remove_obj_comment(
 
 // Parse values from a string
 static inline void parse_obj_value(string_view& str, string_view& value) {
-  skip_obj_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
   if (str.front() != '"') {
     auto cpy = str;
-    while (!cpy.empty() && !is_obj_space(cpy.front())) cpy.remove_prefix(1);
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -675,7 +703,7 @@ static inline void parse_obj_value(string_view& str, frame3f& value) {
 
 template <typename T>
 static inline void parse_obj_value_or_empty(string_view& str, T& value) {
-  skip_obj_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) {
     value = T{};
   } else {
@@ -708,12 +736,12 @@ static inline void parse_obj_value(string_view& str, obj_texture_info& info) {
 
   // get tokens
   auto tokens = vector<string>();
-  skip_obj_whitespace(str);
+  skip_whitespace(str);
   while (!str.empty()) {
     auto token = ""s;
     parse_obj_value(str, token);
     tokens.push_back(token);
-    skip_obj_whitespace(str);
+    skip_whitespace(str);
   }
   if (tokens.empty()) throw std::runtime_error("cannot parse value");
 
@@ -740,11 +768,11 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
 
   // read the file line by line
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_obj_comment(line);
-    skip_obj_whitespace(line);
+    skip_whitespace(line);
     if (line.empty()) continue;
 
     // get command
@@ -851,11 +879,11 @@ void load_objx(const string& filename, obj_callbacks& cb) {
 
   // read the file line by line
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_obj_comment(line);
-    skip_obj_whitespace(line);
+    skip_whitespace(line);
     if (line.empty()) continue;
 
     // get command
@@ -921,11 +949,11 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
 
   // read the file line by line
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_obj_comment(line);
-    skip_obj_whitespace(line);
+    skip_whitespace(line);
     if (line.empty()) continue;
 
     // get command
@@ -952,7 +980,7 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       verts.clear();
-      skip_obj_whitespace(line);
+      skip_whitespace(line);
       while (!line.empty()) {
         auto vert = obj_vertex{};
         parse_obj_value(line, vert);
@@ -963,7 +991,7 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
           vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
         verts.push_back(vert);
-        skip_obj_whitespace(line);
+        skip_whitespace(line);
       }
       if (cmd == "f") cb.face(verts);
       if (cmd == "l") cb.line(verts);
@@ -1049,7 +1077,7 @@ void parse_obj_value(string_view& str, obj_value& value, obj_value_type type,
 
 static inline void parse_obj_value_or_empty(
     string_view& str, obj_value& value) {
-  skip_obj_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) {
     value = make_obj_value(""s);
   } else {
@@ -1062,11 +1090,11 @@ bool read_obj_command(FILE* fs, obj_command& command, obj_value& value,
     vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // read the file line by line
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_obj_comment(line);
-    skip_obj_whitespace(line);
+    skip_whitespace(line);
     if (line.empty()) continue;
 
     // get command
@@ -1092,7 +1120,7 @@ bool read_obj_command(FILE* fs, obj_command& command, obj_value& value,
       return true;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       vertices.clear();
-      skip_obj_whitespace(line);
+      skip_whitespace(line);
       while (!line.empty()) {
         auto vert = obj_vertex{};
         parse_obj_value(line, vert);
@@ -1103,7 +1131,7 @@ bool read_obj_command(FILE* fs, obj_command& command, obj_value& value,
           vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
         vertices.push_back(vert);
-        skip_obj_whitespace(line);
+        skip_whitespace(line);
       }
       if (cmd == "f") command = obj_command::face;
       if (cmd == "l") command = obj_command::line;
@@ -1141,11 +1169,11 @@ bool read_mtl_command(FILE* fs, mtl_command& command, obj_value& value,
     obj_texture_info& texture, bool fliptr) {
   // read the file line by line
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_obj_comment(line);
-    skip_obj_whitespace(line);
+    skip_whitespace(line);
     if (line.empty()) continue;
 
     // get command
@@ -1282,11 +1310,11 @@ bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
   // read the file line by line
   char buffer[4096];
   auto pos = ftell(fs);
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_obj_comment(line);
-    skip_obj_whitespace(line);
+    skip_whitespace(line);
     if (line.empty()) continue;
 
     // get command
@@ -1472,26 +1500,6 @@ bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
   }
 
   return false;
-}
-
-static inline vector<string> split_string(
-    const string& str, const string& delim) {
-  auto tokens = vector<string>{};
-  auto last = (size_t)0, next = (size_t)0;
-  while ((next = str.find(delim, last)) != string::npos) {
-    tokens.push_back(str.substr(last, next - last));
-    last = next + delim.size();
-  }
-  if (last < str.size()) tokens.push_back(str.substr(last));
-  return tokens;
-}
-
-static inline void checked_fprintf(FILE* fs, const char* fmt, ...) {
-  va_list args1;
-  va_start(args1, fmt);
-  if (vfprintf(fs, fmt, args1) < 0)
-    throw std::runtime_error("cannot write to file");
-  va_end(args1);
 }
 
 // Write obj elements
@@ -1801,10 +1809,6 @@ obj_value make_obj_value(const frame3f& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Type aliases for readability
-using string_view = std::string_view;
-using namespace std::literals::string_view_literals;
-
 // A file holder that closes a file when destructed. Useful for RIIA
 struct pbrt_file {
   FILE*  fs       = nullptr;
@@ -1830,22 +1834,9 @@ static inline void open_pbrt_file(
   if (!fs) throw std::runtime_error("could not open file " + filename);
 }
 
-// Read a line
-static inline bool read_pbrt_line(FILE* fs, char* buffer, size_t size) {
-  return fgets(buffer, size, fs) != nullptr;
-}
-
-static inline bool is_pbrt_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-static inline bool is_pbrt_newline(char c) { return c == '\r' || c == '\n'; }
-
-static inline void skip_pbrt_whitespace(string_view& str) {
-  while (!str.empty() && is_pbrt_space(str.front())) str.remove_prefix(1);
-}
 static inline void remove_pbrt_comment(
     string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_pbrt_newline(str.back())) str.remove_suffix(1);
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy       = str;
   auto in_string = false;
   while (!cpy.empty()) {
@@ -1857,16 +1848,16 @@ static inline void remove_pbrt_comment(
 }
 
 // Read a pbrt command from file
-bool read_pbrt_line(FILE* fs, string& cmd) {
+bool read_pbrt_cmdline(FILE* fs, string& cmd) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
   auto pos   = ftell(fs);
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_pbrt_comment(line);
-    skip_pbrt_whitespace(line);
+    skip_whitespace(line);
     if (line.empty()) continue;
 
     // check if command
@@ -1890,7 +1881,7 @@ bool read_pbrt_line(FILE* fs, string& cmd) {
 
 // parse a quoted string
 static inline void parse_pbrt_value(string_view& str, string_view& value) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   if (str.front() != '"') throw std::runtime_error("cannot parse value");
   str.remove_prefix(1);
   if (str.empty()) throw std::runtime_error("cannot parse value");
@@ -1911,7 +1902,7 @@ static inline void parse_pbrt_value(string_view& str, string& value) {
 
 // parse a quoted string
 static inline void parse_pbrt_command(string_view& str, string& value) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   if (!isalpha((int)str.front())) {
     throw std::runtime_error("bad command");
   }
@@ -1928,7 +1919,7 @@ static inline void parse_pbrt_command(string_view& str, string& value) {
 
 // parse a number
 static inline void parse_pbrt_value(string_view& str, float& value) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) throw std::runtime_error("number expected");
   auto next = (char*)nullptr;
   value     = strtof(str.data(), &next);
@@ -1938,7 +1929,7 @@ static inline void parse_pbrt_value(string_view& str, float& value) {
 
 // parse a number
 static inline void parse_pbrt_value(string_view& str, int& value) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) throw std::runtime_error("number expected");
   auto next = (char*)nullptr;
   value     = strtol(str.data(), &next, 10);
@@ -2097,19 +2088,19 @@ static inline void parse_pbrt_value(string_view& str, pbrt_spectrum3f& value) {
 
 // Check next
 static inline bool is_pbrt_string(string_view& str) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   return !str.empty() && str.front() == '"';
 }
 static inline bool is_open_bracket(string_view& str) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   return !str.empty() && str.front() == '[';
 }
 static inline bool is_close_bracket(string_view& str) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   return !str.empty() && str.front() == ']';
 }
 static inline bool is_pbrt_param(string_view& str) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   return is_pbrt_string(str);
 }
 
@@ -2136,12 +2127,12 @@ static inline void parse_pbrt_nametype(
 static inline void skip_pbrt_open_bracket(string_view& str) {
   if (!is_open_bracket(str)) throw std::runtime_error("expected bracket");
   str.remove_prefix(1);
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
 }
 static inline void skip_pbrt_close_bracket(string_view& str) {
   if (!is_close_bracket(str)) throw std::runtime_error("expected bracket");
   str.remove_prefix(1);
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
 }
 
 template <typename T>
@@ -2365,14 +2356,14 @@ static inline void parse_pbrt_param(
 }
 
 static inline void skip_pbrt_value(string_view& str) {
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   if (str.front() == '"') {
     str.remove_prefix(1);
     str.remove_prefix(str.find('"') + 1);
   } else {
     str.remove_prefix(str.find_first_of(" \n\t\r],\""));
   }
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
 }
 
 static inline void skip_pbrt_param(string_view& str) {
@@ -2392,50 +2383,22 @@ static inline void skip_pbrt_param(string_view& str) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Read a line
-static inline bool read_yaml_line(FILE* fs, char* buffer, size_t size) {
-  return fgets(buffer, size, fs) != nullptr;
-}
-
-static inline bool is_yaml_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-static inline bool is_yaml_newline(char c) { return c == '\r' || c == '\n'; }
-static inline bool is_yaml_alpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-static inline bool is_yaml_digit(char c) { return c >= '0' && c <= '9'; }
-static inline bool is_yaml_whitespace(string_view str) {
-  while (!str.empty()) {
-    if (!is_yaml_space(str.front())) return false;
-    str.remove_prefix(1);
-  }
-  return true;
-}
-
-static inline void skip_yaml_whitespace(string_view& str) {
-  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
-}
-static inline void trim_yaml_whitespace(string_view& str) {
-  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
-  while (!str.empty() && is_yaml_space(str.back())) str.remove_suffix(1);
-}
 static inline void remove_yaml_comment(
     string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_yaml_newline(str.back())) str.remove_suffix(1);
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
 }
 
 static inline void parse_yaml_varname(string_view& str, string_view& value) {
-  skip_yaml_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
-  if (!is_yaml_alpha(str.front()))
+  if (!is_alpha(str.front()))
     throw std::runtime_error("cannot parse value");
   auto pos = 0;
   while (
-      is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
+      is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
     pos += 1;
     if (pos >= str.size()) break;
   }
@@ -2449,11 +2412,11 @@ static inline void parse_yaml_varname(string_view& str, string& value) {
 }
 
 inline void parse_yaml_value(string_view& str, string_view& value) {
-  skip_yaml_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
   if (str.front() != '"') {
     auto cpy = str;
-    while (!cpy.empty() && !is_yaml_space(cpy.front())) cpy.remove_prefix(1);
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -2476,21 +2439,21 @@ inline void parse_yaml_value(string_view& str, string& value) {
   value = string{valuev};
 }
 inline void parse_yaml_value(string_view& str, int& value) {
-  skip_yaml_whitespace(str);
+  skip_whitespace(str);
   char* end = nullptr;
   value     = (int)strtol(str.data(), &end, 10);
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
 inline void parse_yaml_value(string_view& str, float& value) {
-  skip_yaml_whitespace(str);
+  skip_whitespace(str);
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
 inline void parse_yaml_value(string_view& str, double& value) {
-  skip_yaml_whitespace(str);
+  skip_whitespace(str);
   char* end = nullptr;
   value     = strtod(str.data(), &end);
   if (str == end) throw std::runtime_error("cannot parse value");
@@ -2572,14 +2535,14 @@ yaml_value make_yaml_value(const frame3f& value) {
 }
 
 void parse_yaml_value(string_view& str, yaml_value& value) {
-  trim_yaml_whitespace(str);
+  trim_whitespace(str);
   if (str.empty()) throw std::runtime_error("bad yaml");
   if (str.front() == '[') {
     str.remove_prefix(1);
     value.type   = yaml_value_type::array;
     value.number = 0;
     while (!str.empty()) {
-      skip_yaml_whitespace(str);
+      skip_whitespace(str);
       if (str.empty()) throw std::runtime_error("bad yaml");
       if (str.front() == ']') {
         str.remove_prefix(1);
@@ -2588,7 +2551,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
       if (value.number >= 16) throw std::runtime_error("array too large");
       parse_yaml_value(str, value.array_[(int)value.number]);
       value.number += 1;
-      skip_yaml_whitespace(str);
+      skip_whitespace(str);
       if (str.front() == ',') {
         str.remove_prefix(1);
         continue;
@@ -2599,7 +2562,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
         throw std::runtime_error("bad yaml");
       }
     }
-  } else if (is_yaml_digit(str.front()) || str.front() == '-' ||
+  } else if (is_digit(str.front()) || str.front() == '-' ||
              str.front() == '+') {
     value.type = yaml_value_type::number;
     parse_yaml_value(str, value.number);
@@ -2611,8 +2574,8 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
       value.boolean = value.string == "true";
     }
   }
-  skip_yaml_whitespace(str);
-  if (!str.empty() && !is_yaml_whitespace(str))
+  skip_whitespace(str);
+  if (!str.empty() && !is_whitespace(str))
     throw std::runtime_error("bad yaml");
 }
 
@@ -2620,41 +2583,41 @@ bool read_yaml_property(
     FILE* fs, string& group, string& key, bool& newobj, yaml_value& value) {
   // read the file line by line
   char buffer[4096];
-  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_yaml_comment(line);
     if (line.empty()) continue;
-    if (is_yaml_whitespace(line)) continue;
+    if (is_whitespace(line)) continue;
 
     // peek commands
-    if (is_yaml_space(line.front())) {
+    if (is_space(line.front())) {
       // indented property
       if (group == "") throw std::runtime_error("bad yaml");
-      skip_yaml_whitespace(line);
+      skip_whitespace(line);
       if (line.empty()) throw std::runtime_error("bad yaml");
       if (line.front() == '-') {
         newobj = true;
         line.remove_prefix(1);
-        skip_yaml_whitespace(line);
+        skip_whitespace(line);
       } else {
         newobj = false;
       }
       parse_yaml_varname(line, key);
-      skip_yaml_whitespace(line);
+      skip_whitespace(line);
       if (line.empty() || line.front() != ':')
         throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       parse_yaml_value(line, value);
       return true;
-    } else if (is_yaml_alpha(line.front())) {
+    } else if (is_alpha(line.front())) {
       // new group
       parse_yaml_varname(line, key);
-      skip_yaml_whitespace(line);
+      skip_whitespace(line);
       if (line.empty() || line.front() != ':')
         throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
-      if (!line.empty() && !is_yaml_whitespace(line)) {
+      if (!line.empty() && !is_whitespace(line)) {
         group = "";
         parse_yaml_value(line, value);
         return true;
@@ -4656,7 +4619,7 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
     auto fs   = files.back().fs;
     auto line = ""s;
     auto cmd  = ""s;
-    while (read_pbrt_line(fs, line)) {
+    while (read_pbrt_cmdline(fs, line)) {
       auto str = string_view{line};
       // get command
       parse_pbrt_command(str, cmd);
@@ -4885,7 +4848,7 @@ bool read_pbrt_element(FILE* fs, pbrt_element& element, string& name,
   if (stack.empty()) stack.emplace_back();
 
   // parse command by command
-  while (read_pbrt_line(fs, state.line)) {
+  while (read_pbrt_cmdline(fs, state.line)) {
     auto str = string_view{state.line};
     // get command
     auto cmd = ""s;
