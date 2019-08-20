@@ -101,6 +101,30 @@
 #include <algorithm>
 
 // -----------------------------------------------------------------------------
+// FILE AND PROPERTY HANDLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// A class that wraps a C file ti handle safe opening/closgin with RIIA.
+struct file_wrapper {
+  file_wrapper(const file_wrapper&) = delete;
+  file_wrapper& operator=(const file_wrapper&) = delete;
+  ~file_wrapper() {
+    if (fs) fclose(fs);
+  }
+
+  FILE*  fs       = nullptr;
+  string filename = "";
+  string mode = "";
+};
+
+// open a file
+file_wrapper open_file(
+    const string& filename, const string& mode = "rt");
+
+}
+
+// -----------------------------------------------------------------------------
 // SIMPLE PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {

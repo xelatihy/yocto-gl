@@ -44,6 +44,21 @@
 namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
+// FILE AND PROPERTY HANDLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Opens a file returing a handle with RIIA
+file_wrapper open_file(
+    const string& filename, const string& mode) {
+  auto fs = fopen(filename.c_str(), mode.c_str());
+  if (!fs) throw std::runtime_error("could not open file " + filename);
+  return {fs, filename, mode};
+}
+
+}
+
+// -----------------------------------------------------------------------------
 // LOW-LEVEL UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -613,26 +628,6 @@ vec4i find_ply_property(const ply_element& element, const string& name1,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// A file holder that closes a file when destructed. Useful for RIIA
-struct obj_file {
-  FILE*  fs       = nullptr;
-  string filename = "";
-
-  obj_file(const obj_file&) = delete;
-  obj_file& operator=(const obj_file&) = delete;
-  ~obj_file() {
-    if (fs) fclose(fs);
-  }
-};
-
-// Opens a file returing a handle with RIIA
-static inline obj_file open_obj_file(
-    const string& filename, bool binary = false) {
-  auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
-  if (!fs) throw std::runtime_error("could not open file " + filename);
-  return {fs, filename};
-}
-
 static inline void remove_obj_comment(
     string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
@@ -759,7 +754,7 @@ static inline void parse_obj_value(string_view& str, obj_texture_info& info) {
 // Load obj materials
 void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
   // open file
-  auto fs_ = open_obj_file(filename);
+  auto fs_ = open_file(filename);
   auto fs  = fs_.fs;
 
   // currently parsed material
@@ -874,7 +869,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
 // Load obj extensions
 void load_objx(const string& filename, obj_callbacks& cb) {
   // open file
-  auto fs_ = open_obj_file(filename);
+  auto fs_ = open_file(filename);
   auto fs  = fs_.fs;
 
   // read the file line by line
@@ -937,7 +932,7 @@ void load_objx(const string& filename, obj_callbacks& cb) {
 void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
     bool flipv, bool fliptr) {
   // open file
-  auto fs_ = open_obj_file(filename);
+  auto fs_ = open_file(filename);
   auto fs  = fs_.fs;
 
   // track vertex size
