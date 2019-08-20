@@ -1395,7 +1395,7 @@ static void load_mtl(const string& filename, yocto_scene& scene,
   auto ptype = parsing_type::none;
 
   // Parse texture params and name
-  auto add_texture = [&scene, &tmap](const mtl_texture_info& info,
+  auto add_texture = [&scene, &tmap](const obj_texture_info& info,
                          bool force_linear) -> int {
     if (info.path == "") return -1;
     if (tmap.find(info.path) != tmap.end()) {
@@ -1419,7 +1419,7 @@ static void load_mtl(const string& filename, yocto_scene& scene,
   auto value   = 0.0f;
   auto color   = zero3f;
   auto name    = ""s;
-  auto texture = mtl_texture_info{};
+  auto texture = obj_texture_info{};
   while (read_mtl_command(fs, command, value, color, name, texture)) {
     if (command == mtl_command::material) {
       auto& material     = scene.materials.emplace_back();
@@ -1502,7 +1502,7 @@ static void load_objx(const string& filename, yocto_scene& scene,
   auto ptype = parsing_type::none;
 
   // Parse texture params and name
-  auto add_texture = [&scene, &tmap](const mtl_texture_info& info,
+  auto add_texture = [&scene, &tmap](const obj_texture_info& info,
                          bool force_linear) -> int {
     if (info.path == "") return -1;
     if (tmap.find(info.path) != tmap.end()) {
@@ -1530,7 +1530,7 @@ static void load_objx(const string& filename, yocto_scene& scene,
   auto name    = ""s;
   auto value   = 0.0f;
   auto color   = zero3f;
-  auto texture = mtl_texture_info{};
+  auto texture = obj_texture_info{};
   auto frame   = frame3f{};
   while (read_objx_command(fs, command, value, color, name, frame, texture)) {
     if (command == objx_command::camera) {

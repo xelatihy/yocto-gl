@@ -184,9 +184,9 @@ static inline void parse_obj_value(string_view& str, obj_vertex& value) {
 }
 
 // Input for OBJ textures
-static inline void parse_obj_value(string_view& str, mtl_texture_info& info) {
+static inline void parse_obj_value(string_view& str, obj_texture_info& info) {
   // initialize
-  info = mtl_texture_info();
+  info = obj_texture_info();
 
   // get tokens
   auto tokens = vector<string>();
@@ -217,7 +217,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
   auto fs  = fs_.fs;
 
   // currently parsed material
-  auto material = mtl_material{};
+  auto material = obj_material{};
   auto first    = true;
 
   // read the file line by line
@@ -238,7 +238,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
     if (cmd == "newmtl") {
       if (!first) cb.material(material);
       first    = false;
-      material = mtl_material{};
+      material = obj_material{};
       parse_obj_value(line, material.name);
     } else if (cmd == "illum") {
       parse_obj_value(line, material.illum);
@@ -347,7 +347,7 @@ void load_objx(const string& filename, obj_callbacks& cb) {
 
     // possible token values
     if (cmd == "c") {
-      auto camera = objx_camera();
+      auto camera = obj_camera();
       parse_obj_value(line, camera.name);
       parse_obj_value(line, camera.ortho);
       parse_obj_value(line, camera.width);
@@ -358,7 +358,7 @@ void load_objx(const string& filename, obj_callbacks& cb) {
       parse_obj_value(line, camera.frame);
       cb.camera(camera);
     } else if (cmd == "e") {
-      auto environment = objx_environment();
+      auto environment = obj_environment();
       parse_obj_value(line, environment.name);
       parse_obj_value(line, environment.ke);
       parse_obj_value(line, environment.ke_txt.path);
@@ -366,14 +366,14 @@ void load_objx(const string& filename, obj_callbacks& cb) {
       if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
       cb.environmnet(environment);
     } else if (cmd == "i") {
-      auto instance = objx_instance();
+      auto instance = obj_instance();
       parse_obj_value(line, instance.name);
       parse_obj_value(line, instance.object);
       parse_obj_value(line, instance.material);
       parse_obj_value(line, instance.frame);
       cb.instance(instance);
     } else if (cmd == "po") {
-      auto procedural = objx_procedural();
+      auto procedural = obj_procedural();
       parse_obj_value(line, procedural.name);
       parse_obj_value(line, procedural.type);
       parse_obj_value(line, procedural.material);
@@ -572,7 +572,7 @@ bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
 
 // Read mtl
 bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
-    vec3f& color, string& name, mtl_texture_info& texture, bool fliptr) {
+    vec3f& color, string& name, obj_texture_info& texture, bool fliptr) {
   // read the file line by line
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -709,7 +709,7 @@ bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
 
 // Read objx
 bool read_objx_command(FILE* fs, objx_command& command, float& value,
-    vec3f& color, string& name, frame3f& frame, mtl_texture_info& texture) {
+    vec3f& color, string& name, frame3f& frame, obj_texture_info& texture) {
   // read the file line by line
   char buffer[4096];
   auto pos = ftell(fs);
@@ -972,7 +972,7 @@ void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
 }
 
 void write_mtl_command(FILE* fs, mtl_command command, const string& name,
-    float value, const vec3f& color, const mtl_texture_info& texture) {
+    float value, const vec3f& color, const obj_texture_info& texture) {
   switch (command) {
     case mtl_command::material:
       checked_fprintf(fs, "\nnewmtl %s\n", name.c_str());
@@ -1087,7 +1087,7 @@ void write_mtl_command(FILE* fs, mtl_command command, const string& name,
 
 void write_objx_command(FILE* fs, objx_command command, const string& name,
     float value, const vec3f& color, const frame3f& frame,
-    const mtl_texture_info& texture) {
+    const obj_texture_info& texture) {
   switch (command) {
     case objx_command::camera:
       checked_fprintf(fs, "\nnewcam %s\n", name.c_str());
