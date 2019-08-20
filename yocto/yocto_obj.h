@@ -195,13 +195,6 @@ enum struct obj_command {
 };
 
 // Mtl command
-enum struct mtl_command_ {
-  // clang-format off
-  material,         // data in material
-  // clang-format on
-};
-
-// Mtl command
 enum struct mtl_command {
   // clang-format off
   // material name and type (value)
@@ -225,16 +218,6 @@ enum struct mtl_command {
   vol_anisotropy, vol_scale,
   // volument textures
   vol_scattering_map
-  // clang-format on
-};
-
-// Objx command
-enum struct objx_command_ {
-  // clang-format off
-  camera,       // data in camera
-  environment,  // data in environment
-  instance,     // data in instance
-  procedural,   // data in procedural
   // clang-format on
 };
 
