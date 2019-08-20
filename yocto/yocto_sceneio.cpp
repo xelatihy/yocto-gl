@@ -851,47 +851,6 @@ void load_yaml(
   auto mmap = unordered_map<string, int>{{"", -1}};
   auto smap = unordered_map<string, int>{{"", -1}};
 
-  // parse yaml value
-  auto get_yaml_value = [](const yaml_value& yaml, auto& value) {
-    using T = typename std::remove_reference<decltype(value)>::type;
-    if constexpr (std::is_same<T, string>::value) {
-      if (yaml.type != yaml_value_type::string)
-        throw std::runtime_error("error parsing yaml value");
-      value = yaml.string;
-    } else if constexpr (std::is_same<T, bool>::value) {
-      if (yaml.type != yaml_value_type::boolean)
-        throw std::runtime_error("error parsing yaml value");
-      value = yaml.boolean;
-    } else if constexpr (std::is_same<T, int>::value) {
-      if (yaml.type != yaml_value_type::number)
-        throw std::runtime_error("error parsing yaml value");
-      value = (int)yaml.number;
-    } else if constexpr (std::is_same<T, float>::value) {
-      if (yaml.type != yaml_value_type::number)
-        throw std::runtime_error("error parsing yaml value");
-      value = (float)yaml.number;
-    } else if constexpr (std::is_same<T, vec2f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.number != 2)
-        throw std::runtime_error("error parsing yaml value");
-      value = {(float)yaml.array_[0], (float)yaml.array_[1]};
-    } else if constexpr (std::is_same<T, vec3f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.number != 3)
-        throw std::runtime_error("error parsing yaml value");
-      value = {
-          (float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
-    } else if constexpr (std::is_same<T, mat3f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.number != 9)
-        throw std::runtime_error("error parsing yaml value");
-      for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-    } else if constexpr (std::is_same<T, frame3f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.number != 12)
-        throw std::runtime_error("error parsing yaml value");
-      for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-    } else {
-      throw std::runtime_error("bad yaml type");
-    }
-  };
-
   // parse yaml reference
   auto get_yaml_ref = [](const yaml_value& yaml, int& value,
                           const unordered_map<string, int>& refs) {
