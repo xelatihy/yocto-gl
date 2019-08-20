@@ -48,15 +48,37 @@ namespace fs = ghc::filesystem;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Opens a file returing a handle with RIIA
-file_wrapper open_file(
-    const string& filename, const string& mode) {
-  auto fs = fopen(filename.c_str(), mode.c_str());
-  if (!fs) throw std::runtime_error("could not open file " + filename);
-  return {fs, filename, mode};
+// copnstrucyor and destructors
+file_wrapper::file_wrapper(file_wrapper&& other) {
+  this->fs       = other.fs;
+  this->filename = other.filename;
+  other.fs       = nullptr;
+}
+file_wrapper::~file_wrapper() {
+  if (fs) fclose(fs);
+  fs = nullptr;
 }
 
+// Opens a file returing a handle with RIIA
+void open_file(
+    file_wrapper& fs, const string& filename, const string& mode) {
+  close_file(fs);
+  fs.filename = filename;
+  fs.mode     = mode;
+  fs.fs       = fopen(filename.c_str(), mode.c_str());
+  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
 }
+file_wrapper open_file(const string& filename, const string& mode) {
+  auto fs = file_wrapper{};
+  open_file(fs, filename, mode);
+  return fs;
+}
+void close_file(file_wrapper& fs) {
+  if (fs.fs) fclose(fs.fs);
+  fs.fs = nullptr;
+}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL UTILITIES
@@ -138,7 +160,7 @@ static inline void checked_fprintf(FILE* fs, const char* fmt, ...) {
   va_end(args1);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PLY CONVERSION
@@ -1804,31 +1826,6 @@ obj_value make_obj_value(const frame3f& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// A file holder that closes a file when destructed. Useful for RIIA
-struct pbrt_file {
-  FILE*  fs       = nullptr;
-  string filename = "";
-
-  pbrt_file() {}
-  pbrt_file(pbrt_file&& other) {
-    this->fs       = other.fs;
-    this->filename = other.filename;
-    other.fs       = nullptr;
-  }
-  pbrt_file(const pbrt_file&) = delete;
-  pbrt_file& operator=(const pbrt_file&) = delete;
-  ~pbrt_file() {
-    if (fs) fclose(fs);
-  }
-};
-
-static inline void open_pbrt_file(
-    pbrt_file& file, const string& filename, bool binary = false) {
-  auto& fs = file.fs;
-  fs       = fopen(filename.c_str(), !binary ? "rt" : "rb");
-  if (!fs) throw std::runtime_error("could not open file " + filename);
-}
-
 static inline void remove_pbrt_comment(
     string_view& str, char comment_char = '#') {
   while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
@@ -2389,11 +2386,9 @@ static inline void remove_yaml_comment(
 static inline void parse_yaml_varname(string_view& str, string_view& value) {
   skip_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
-  if (!is_alpha(str.front()))
-    throw std::runtime_error("cannot parse value");
+  if (!is_alpha(str.front())) throw std::runtime_error("cannot parse value");
   auto pos = 0;
-  while (
-      is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
+  while (is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
     pos += 1;
     if (pos >= str.size()) break;
   }
@@ -2570,8 +2565,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
     }
   }
   skip_whitespace(str);
-  if (!str.empty() && !is_whitespace(str))
-    throw std::runtime_error("bad yaml");
+  if (!str.empty() && !is_whitespace(str)) throw std::runtime_error("bad yaml");
 }
 
 bool read_yaml_property(
@@ -4587,9 +4581,8 @@ static inline void parse_pbrt_medium(
 // Load pbrt scene
 void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
   // start laoding files
-  auto  files = vector<pbrt_file>{};
-  auto& file  = files.emplace_back();
-  open_pbrt_file(file, filename);
+  auto files = vector<file_wrapper>{};
+  open_file(files.emplace_back(), filename);
 
   // parsing stack
   auto stack    = vector<pbrt_context>{{}};
@@ -4815,8 +4808,8 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
       } else if (cmd == "Include") {
         auto inputname = ""s;
         parse_pbrt_value(str, inputname);
-        auto& file = files.emplace_back();
-        open_pbrt_file(file, fs::path(filename).parent_path() / inputname);
+        open_file(
+            files.emplace_back(), fs::path(filename).parent_path() / inputname);
       } else {
         throw std::runtime_error("unknown command " + cmd);
       }

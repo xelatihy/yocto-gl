@@ -107,21 +107,23 @@ namespace yocto {
 
 // A class that wraps a C file ti handle safe opening/closgin with RIIA.
 struct file_wrapper {
+  file_wrapper() { }
+  file_wrapper(file_wrapper&& other);
   file_wrapper(const file_wrapper&) = delete;
   file_wrapper& operator=(const file_wrapper&) = delete;
-  ~file_wrapper() {
-    if (fs) fclose(fs);
-  }
+  ~file_wrapper();
 
   FILE*  fs       = nullptr;
   string filename = "";
-  string mode = "";
+  string mode = "rt";
 };
 
 // open a file
 file_wrapper open_file(
     const string& filename, const string& mode = "rt");
-
+void open_file(file_wrapper& fs,
+    const string& filename, const string& mode = "rt");
+void close_file(file_wrapper& fs);
 }
 
 // -----------------------------------------------------------------------------

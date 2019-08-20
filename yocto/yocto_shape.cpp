@@ -3020,32 +3020,6 @@ void save_shape(const string& filename, const vector<int>& points,
   }
 }
 
-// A file holder that closes a file when destructed. Useful for RIIA
-struct file_holder {
-  FILE*  fs       = nullptr;
-  string filename = "";
-
-  file_holder(const file_holder&) = delete;
-  file_holder& operator=(const file_holder&) = delete;
-  ~file_holder() {
-    if (fs) fclose(fs);
-  }
-};
-
-// Opens a file returing a handle with RIIA
-static inline file_holder open_input_file(
-    const string& filename, bool binary = false) {
-  auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
-  if (!fs) throw std::runtime_error("could not open file " + filename);
-  return {fs, filename};
-}
-static inline file_holder open_output_file(
-    const string& filename, bool binary = false) {
-  auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
-  if (!fs) throw std::runtime_error("could not open file " + filename);
-  return {fs, filename};
-}
-
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
@@ -3053,7 +3027,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, bool flip_texcoord) {
   // open ply
-  auto fs_ = open_input_file(filename, true);
+  auto fs_ = open_file(filename, "rb");
   auto fs  = fs_.fs;
 
   // load elements
@@ -3145,7 +3119,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
         flip_texcoord);
   }
 
-  auto fs_ = open_output_file(filename, true);
+  auto fs_ = open_file(filename, "wb");
   auto fs  = fs_.fs;
 
   // format
@@ -3307,7 +3281,7 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
     bool flip_texcoord) {
   // open obj
-  auto fs_ = open_input_file(filename, true);
+  auto fs_ = open_file(filename);
   auto fs  = fs_.fs;
 
   // obj vertices
@@ -3471,7 +3445,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, bool flip_texcoord) {
-  auto fs_ = open_output_file(filename);
+  auto fs_ = open_file(filename, "w");
   auto fs  = fs_.fs;
 
   write_obj_comment(
@@ -3577,7 +3551,7 @@ struct cyhair_data {
 static void load_cyhair(const string& filename, cyhair_data& hair) {
   // open file
   hair     = {};
-  auto fs_ = open_input_file(filename, true);
+  auto fs_ = open_file(filename, "b");
   auto fs  = fs_.fs;
 
   // Bytes 0-3    Must be "HAIR" in ascii code (48 41 49 52)

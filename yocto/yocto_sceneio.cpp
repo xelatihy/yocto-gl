@@ -169,60 +169,6 @@ inline void save_binary(const string& filename, const vector<byte>& data) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// FILE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// A file holder that closes a file when destructed. Useful for RIIA
-struct file_holder {
-  FILE*  fs       = nullptr;
-  string filename = "";
-
-  file_holder() {}
-  file_holder(file_holder&& other) {
-    this->fs       = other.fs;
-    this->filename = other.filename;
-    other.fs       = nullptr;
-  }
-  file_holder(const file_holder&) = delete;
-  file_holder& operator=(const file_holder&) = delete;
-  ~file_holder() {
-    if (fs) fclose(fs);
-  }
-};
-
-// Opens a file returing a handle with RIIA
-static inline void open_file(
-    file_holder& file, const string& filename, const char* mode = "rt") {
-  file.filename = filename;
-  file.fs       = fopen(filename.c_str(), mode);
-  if (!file.fs) throw std::runtime_error("could not open file " + filename);
-}
-static inline file_holder open_input_file(
-    const string& filename, bool binary = false) {
-  auto fs     = file_holder{};
-  fs.filename = filename;
-  fs.fs       = fopen(filename.c_str(), !binary ? "rt" : "rb");
-  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
-  return fs;
-}
-static inline file_holder open_output_file(
-    const string& filename, bool binary = false) {
-  auto fs     = file_holder{};
-  fs.filename = filename;
-  fs.fs       = fopen(filename.c_str(), !binary ? "wt" : "wb");
-  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
-  return fs;
-}
-
-// Read a line
-static inline bool read_line(FILE* fs, char* buffer, size_t size) {
-  return fgets(buffer, size, fs) != nullptr;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -551,7 +497,7 @@ namespace yocto {
 void load_yaml(
     const string& filename, yocto_scene& scene, const load_params& params) {
   // open file
-  auto fs_ = open_input_file(filename);
+  auto fs_ = open_file(filename);
   auto fs  = fs_.fs;
 
   // parse state
@@ -839,7 +785,7 @@ static void load_yaml_scene(
 static void save_yaml(const string& filename, const yocto_scene& scene,
     bool ply_instances = false, const string& instances_name = "") {
   // open file
-  auto fs_ = open_output_file(filename);
+  auto fs_ = open_file(filename, "w");
   auto fs  = fs_.fs;
 
   write_yaml_comment(fs, get_save_scene_message(scene, ""));
@@ -1071,7 +1017,7 @@ static void load_mtl(const string& filename, yocto_scene& scene,
     unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
     const load_params& params) {
   // open file
-  auto fs_ = open_input_file(filename);
+  auto fs_ = open_file(filename);
   auto fs  = fs_.fs;
 
   // parsing type
@@ -1199,7 +1145,7 @@ static void load_objx(const string& filename, yocto_scene& scene,
     const unordered_map<string, vector<int>>& object_shapes,
     const load_params&                        params) {
   // open file
-  auto fs_ = open_input_file(filename);
+  auto fs_ = open_file(filename);
   auto fs  = fs_.fs;
 
   // parsing types
@@ -1478,7 +1424,7 @@ static void load_obj(
   };
 
   // open file
-  auto fs_ = open_input_file(filename);
+  auto fs_ = open_file(filename);
   auto fs  = fs_.fs;
 
   // load obj elements
@@ -1664,7 +1610,7 @@ static void load_obj_scene(
 static void save_obj(const string& filename, const yocto_scene& scene,
     bool preserve_instances, bool flip_texcoord = true) {
   // open writer
-  auto fs_ = open_output_file(filename);
+  auto fs_ = open_file(filename, "w");
   auto fs  = fs_.fs;
 
   // stats
@@ -1785,7 +1731,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 
 static void save_mtl(const string& filename, const yocto_scene& scene) {
   // open writer
-  auto fs_ = open_output_file(filename);
+  auto fs_ = open_file(filename, "w");
   auto fs  = fs_.fs;
 
   // stats
@@ -1850,7 +1796,7 @@ static void save_mtl(const string& filename, const yocto_scene& scene) {
 static void save_objx(
     const string& filename, const yocto_scene& scene, bool preserve_instances) {
   // open writer
-  auto fs_ = open_output_file(filename);
+  auto fs_ = open_file(filename, "w");
   auto fs  = fs_.fs;
 
   // stats
@@ -2640,7 +2586,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
   };
 
   // json writer
-  auto fs_   = open_output_file(filename);
+  auto fs_   = open_file(filename, "w");
   auto fs    = fs_.fs;
   auto state = write_json_state{fs};
 
@@ -2937,7 +2883,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
   };
   auto dirname = fs::path(filename).parent_path();
   for (auto& shape : shapes) {
-    auto fs_ = open_output_file(dirname / shape.uri);
+    auto fs_ = open_file(dirname / shape.uri, "w");
     auto fs  = fs_.fs;
     write_values(fs, shape.indices);
     write_values(fs, shape.positions);
@@ -3643,7 +3589,7 @@ static void add_pbrt_light(
 // load pbrt
 static void load_pbrt(
     const string& filename, yocto_scene& scene, const load_params& params) {
-  auto files = vector<file_holder>{};
+  auto files = vector<file_wrapper>{};
   open_file(files.emplace_back(), filename);
 
   // parse state
@@ -3846,7 +3792,7 @@ static inline void write_pbrt_command(
 // Convert a scene to pbrt format
 static void save_pbrt(const string& filename, const yocto_scene& scene) {
   // open file
-  auto fs_ = open_output_file(filename);
+  auto fs_ = open_file(filename, "w");
   auto fs  = fs_.fs;
 
   // embed data
