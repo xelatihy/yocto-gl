@@ -1420,7 +1420,7 @@ static void load_mtl(const string& filename, yocto_scene& scene,
   auto color   = zero3f;
   auto name    = ""s;
   auto texture = obj_texture_info{};
-  while (read_mtl_command(fs, command, value, color, name, texture)) {
+  while (read_mtl_command(fs, command, name, value, color, texture)) {
     if (command == mtl_command::material) {
       auto& material     = scene.materials.emplace_back();
       material.uri       = name;
@@ -1532,7 +1532,7 @@ static void load_objx(const string& filename, yocto_scene& scene,
   auto color   = zero3f;
   auto texture = obj_texture_info{};
   auto frame   = frame3f{};
-  while (read_objx_command(fs, command, value, color, name, frame, texture)) {
+  while (read_objx_command(fs, command, name, value, color, frame, texture)) {
     if (command == objx_command::camera) {
       auto& camera = scene.cameras.emplace_back();
       camera.uri   = name;
@@ -1769,7 +1769,7 @@ static void load_obj(
   auto name      = ""s;
   auto vertices  = vector<obj_vertex>{};
   auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, element, value, name, vertices, vert_size)) {
+  while (read_obj_command(fs, element, name, value, vertices, vert_size)) {
     if (element == obj_command::vertex) {
       opos.push_back(value);
     } else if (element == obj_command::normal) {
@@ -1952,8 +1952,8 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 
   // material library
   if (!scene.materials.empty())
-    write_obj_command(fs, obj_command::mtllib, zero3f,
-        fs::path(filename).replace_extension(".mtl").filename(), {});
+    write_obj_command(fs, obj_command::mtllib,
+        fs::path(filename).replace_extension(".mtl").filename(), {}, {});
 
   // shapes
   auto offset    = obj_vertex{0, 0, 0};
@@ -1966,31 +1966,31 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   }
   for (auto& instance : preserve_instances ? instances : scene.instances) {
     auto& shape = scene.shapes[instance.shape];
-    write_obj_command(fs, obj_command::object, zero3f,
-        fs::path(instance.uri).stem().string(), {});
+    write_obj_command(fs, obj_command::object, 
+        fs::path(instance.uri).stem().string(), {}, {});
     if (instance.material >= 0)
-      write_obj_command(fs, obj_command::usemtl, zero3f,
-          fs::path(scene.materials[instance.material].uri).stem().string(), {});
+      write_obj_command(fs, obj_command::usemtl, 
+          fs::path(scene.materials[instance.material].uri).stem().string(), {}, {});
     if (instance.frame == identity3x4f) {
       for (auto& p : shape.positions)
-        write_obj_command(fs, obj_command::vertex, p, ""s, {});
+        write_obj_command(fs, obj_command::vertex, {}, p, {});
       for (auto& n : shape.normals)
-        write_obj_command(fs, obj_command::normal, n, ""s, {});
+        write_obj_command(fs, obj_command::normal, {}, n, {});
       for (auto& t : shape.texcoords)
-        write_obj_command(fs, obj_command::texcoord,
-            vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, ""s, {});
+        write_obj_command(fs, obj_command::texcoord, {}, 
+            vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, {});
     } else {
       for (auto& p : shape.positions) {
-        write_obj_command(fs, obj_command::vertex,
-            transform_point(instance.frame, p), ""s, {});
+        write_obj_command(fs, obj_command::vertex, {}, 
+            transform_point(instance.frame, p), {});
       }
       for (auto& n : shape.normals) {
-        write_obj_command(fs, obj_command::normal,
-            transform_direction(instance.frame, n), ""s, {});
+        write_obj_command(fs, obj_command::normal, {},
+            transform_direction(instance.frame, n), {});
       }
       for (auto& t : shape.texcoords)
-        write_obj_command(fs, obj_command::texcoord,
-            vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, ""s, {});
+        write_obj_command(fs, obj_command::texcoord, {},
+            vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0},  {});
     }
     auto mask = obj_vertex{
         1, shape.texcoords.empty() ? 0 : 1, shape.normals.empty() ? 0 : 1};
@@ -2008,20 +2008,20 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     elems.resize(1);
     for (auto& p : shape.points) {
       elems[0] = vert(p);
-      write_obj_command(fs, obj_command::point, zero3f, ""s, elems);
+      write_obj_command(fs, obj_command::point, {}, zero3f, elems);
     }
     elems.resize(2);
     for (auto& l : shape.lines) {
       elems[0] = vert(l.x);
       elems[1] = vert(l.y);
-      write_obj_command(fs, obj_command::line, zero3f, ""s, elems);
+      write_obj_command(fs, obj_command::line, {}, zero3f, elems);
     }
     elems.resize(3);
     for (auto& t : shape.triangles) {
       elems[0] = vert(t.x);
       elems[1] = vert(t.y);
       elems[2] = vert(t.z);
-      write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
+      write_obj_command(fs, obj_command::face, {}, zero3f, elems);
     }
     elems.resize(4);
     for (auto& q : shape.quads) {
@@ -2034,7 +2034,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         elems.resize(4);
         elems[3] = vert(q.w);
       }
-      write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
+      write_obj_command(fs, obj_command::face, {}, zero3f,  elems);
     }
     elems.resize(4);
     for (auto i = 0; i < shape.quadspos.size(); i++) {
@@ -2052,7 +2052,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         elems.resize(4);
         elems[3] = fvvert(qp.w, qt.w, qn.w);
       }
-      write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
+      write_obj_command(fs, obj_command::face, {}, zero3f, elems);
     }
     offset.position += shape.positions.size();
     offset.texcoord += shape.texcoords.size();

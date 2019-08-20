@@ -140,17 +140,17 @@ enum struct objx_command {
 };
 
 // Read obj elements
-bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
-    string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
-    vec3f& color, string& name, obj_texture_info& texture, bool fliptr = true);
-bool read_objx_command(FILE* fs, objx_command& command, float& value,
-    vec3f& color, string& name, frame3f& frame, obj_texture_info& texture);
+bool read_obj_command(FILE* fs, obj_command& command, string& name, vec3f& value,
+    vector<obj_vertex>& vertices, obj_vertex& vert_size);
+bool read_mtl_command(FILE* fs, mtl_command& command, string& name, float& value,
+    vec3f& color, obj_texture_info& texture, bool fliptr = true);
+bool read_objx_command(FILE* fs, objx_command& command, string& name, float& value,
+    vec3f& color, frame3f& frame, obj_texture_info& texture);
 
 // Write obj elements
 void write_obj_comment(FILE* fs, const string& comment);
-void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
-    const string& name, const vector<obj_vertex>& vertices);
+void write_obj_command(FILE* fs, obj_command command, const string& name, const vec3f& value,
+    const vector<obj_vertex>& vertices);
 void write_mtl_command(FILE* fs, mtl_command command, const string& name,
     float value, const vec3f& color, const obj_texture_info& texture);
 void write_objx_command(FILE* fs, objx_command command, const string& name,

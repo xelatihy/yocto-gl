@@ -3336,7 +3336,7 @@ static void load_obj_shape(const string& filename, vector<int>& points,
   auto name      = ""s;
   auto vertices  = vector<obj_vertex>{};
   auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, element, value, name, vertices, vert_size)) {
+  while (read_obj_command(fs, element, name, value, vertices, vert_size)) {
     if (element == obj_command::vertex) {
       opos.push_back(value);
     } else if (element == obj_command::normal) {
@@ -3681,12 +3681,12 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
       fs, "Written by Yocto/GL\nhttps://github.com/xelatihy/yocto-gl\n");
 
   for (auto& p : positions)
-    write_obj_command(fs, obj_command::vertex, p, ""s, {});
+    write_obj_command(fs, obj_command::vertex, "", p, {});
   for (auto& n : normals)
-    write_obj_command(fs, obj_command::normal, n, ""s, {});
+    write_obj_command(fs, obj_command::normal, "", n, {});
   for (auto& t : texcoords)
-    write_obj_command(fs, obj_command::texcoord,
-        vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, ""s, {});
+    write_obj_command(fs, obj_command::texcoord, "",
+        vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, {});
 
   auto elems = vector<obj_vertex>{};
   auto mask = obj_vertex{1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
@@ -3702,20 +3702,20 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   elems.resize(1);
   for (auto& p : points) {
     elems[0] = vert(p);
-    write_obj_command(fs, obj_command::point, zero3f, ""s, elems);
+    write_obj_command(fs, obj_command::point, "", zero3f, elems);
   }
   elems.resize(2);
   for (auto& l : lines) {
     elems[0] = vert(l.x);
     elems[1] = vert(l.y);
-    write_obj_command(fs, obj_command::line, zero3f, ""s, elems);
+    write_obj_command(fs, obj_command::line, "", zero3f, elems);
   }
   elems.resize(3);
   for (auto& t : triangles) {
     elems[0] = vert(t.x);
     elems[1] = vert(t.y);
     elems[2] = vert(t.z);
-    write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
+    write_obj_command(fs, obj_command::face, "", zero3f, elems);
   }
   elems.resize(4);
   for (auto& q : quads) {
@@ -3728,7 +3728,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
       elems.resize(4);
       elems[3] = vert(q.w);
     }
-    write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
+    write_obj_command(fs, obj_command::face, "", zero3f, elems);
   }
   // auto last_material_id = -1;
   elems.resize(4);
@@ -3752,7 +3752,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
       elems.resize(4);
       elems[3] = fvvert(qp.w, qt.w, qn.w);
     }
-    write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
+    write_obj_command(fs, obj_command::face, "", zero3f, elems);
   }
 }
 
