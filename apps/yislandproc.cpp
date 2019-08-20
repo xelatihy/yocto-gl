@@ -36,7 +36,7 @@
 // =============================================================================
 //
 
-#include "../yocto/yocto_obj.h"
+#include "../yocto/yocto_modelio.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
