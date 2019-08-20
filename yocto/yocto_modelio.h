@@ -1,15 +1,18 @@
 //
-// # Yocto/Ply: L<ow-level library for PLY parsing and writing
+// # Yocto/ModelIO: L<ow-level library for PLY/OBJ/Pbrt/Yaml parsing and writing
 //
-// Yocto/Ply is a simple Stanford PLY parser that works with callbacks.
-// The praser is designed for large files and does keep a copy of the model.
-// Yocto/Ply also support writing PLY files again without keeping a copy of the
-// model but instead writing elements directly after each call.
+// Yocto/ModelIO is a collection of simple parsers for Stanford Ply, 
+// Wavefront Obj, Pbrt, and Yaml formats. The prasers are designed for large 
+// files and do keep a copy of the model in memory.
+// Yocto/ModelIO provides fast/low-level access to model data and requires some
+// familiarity with the formats to use effectively. For a higher level
+// interface, consider using Yocto/Shape's `load_shape()` and `save_shape()`,
+// or Yocto/SceneIO's `load_scene()` and `save_scene()`
+//
+// Yocto/ModelIO also support writing Ply/Obj/Yaml files again without keeping 
+// a copy of the model but instead writing elements directly after each call.
 // Error reporting is done by throwing `std::runtime_error` exceptions.
 //
-// Yocto/Ply provides fast/low-level access to PLY data and requires some
-// familiarity with the PLY format to use effectively. For a higher level
-// interface, consider using Yocto/Shape `load_shape()` and `save_shape()`.
 //
 //
 // ## Load PLY
@@ -86,8 +89,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YOCTO_PLY_H_
-#define _YOCTO_PLY_H_
+#ifndef _YOCTO_MODELIO_H_
+#define _YOCTO_MODELIO_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES

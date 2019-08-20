@@ -1,5 +1,5 @@
 //
-// Implementation for Yocto/Ply.
+// Implementation for Yocto/ModelIO.
 //
 
 //
@@ -30,7 +30,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_ply.h"
+#include "yocto_modelio.h"
 
 #include <algorithm>
 #include <cinttypes>
