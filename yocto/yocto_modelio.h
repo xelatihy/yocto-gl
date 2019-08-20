@@ -156,7 +156,7 @@ vec4i find_ply_property(const ply_element& element, const string& name1,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SIMPLE OBJ LOADER
+// SIMPLE OBJ LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -341,7 +341,7 @@ void write_objx_command(FILE* fs, objx_command command, const obj_value& value,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// OLD INTERFACE
+// OLD OBJ INTERFACE
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -488,6 +488,55 @@ struct hash<yocto::obj_vertex> {
 };
 
 }  // namespace std
+
+// -----------------------------------------------------------------------------
+// SIMPLE YAML LOADER AND WRITER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Yaml value type
+enum struct yaml_value_type { number, boolean, string, array };
+
+// Yaml value
+struct yaml_value {
+  yaml_value_type   type    = yaml_value_type::number;
+  double            number  = 0;
+  bool              boolean = false;
+  string            string  = "";
+  array<double, 16> array_  = {};
+};
+
+// Load Yaml properties
+bool read_yaml_property(
+    FILE* fs, string& group, string& key, bool& newobj, yaml_value& value);
+
+// Write Yaml properties
+void write_yaml_comment(FILE* fs, const string& comment);
+void write_yaml_property(FILE* fs, const string& object, const string& key,
+    bool newobj, const yaml_value& value);
+void write_yaml_object(FILE* fs, const string& object);
+
+// type-cheked yaml value access
+ void get_yaml_value(const yaml_value& yaml, string& value);
+ void get_yaml_value(const yaml_value& yaml, bool& value);
+ void get_yaml_value(const yaml_value& yaml, int& value);
+ void get_yaml_value(const yaml_value& yaml, float& value);
+ void get_yaml_value(const yaml_value& yaml, vec2f& value);
+ void get_yaml_value(const yaml_value& yaml, vec3f& value);
+ void get_yaml_value(const yaml_value& yaml, mat3f& value);
+ void get_yaml_value(const yaml_value& yaml, frame3f& value);
+
+// yaml value construction
+ yaml_value make_yaml_value(const string& value);
+ yaml_value make_yaml_value(bool value);
+ yaml_value make_yaml_value(int value);
+ yaml_value make_yaml_value(float value);
+ yaml_value make_yaml_value(const vec2f& value);
+ yaml_value make_yaml_value(const vec3f& value);
+ yaml_value make_yaml_value(const mat3f& value) ;
+ yaml_value make_yaml_value(const frame3f& value);
+
+}
 
 // -----------------------------------------------------------------------------
 // SIMPLE PBRT LOADER
