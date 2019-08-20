@@ -2169,38 +2169,56 @@ static void save_mtl(const string& filename, const yocto_scene& scene) {
 
   // materials
   for (auto& material : scene.materials) {
-    auto omat  = mtl_material{};
-    omat.name  = fs::path(material.uri).stem().string();
-    omat.illum = 2;
-    omat.ke    = material.emission;
-    omat.kd    = material.diffuse * (1 - material.metallic);
-    omat.ks    = material.specular * (1 - material.metallic) +
+    write_mtl_command(fs, mtl_command::material,
+        fs::path(material.uri).stem().string(), {}, {}, {});
+    write_mtl_command(fs, mtl_command::illum, {}, 2, {}, {});
+    if (material.emission != zero3f)
+      write_mtl_command(
+          fs, mtl_command::emission, {}, {}, material.emission, {});
+    auto kd = material.diffuse * (1 - material.metallic);
+    auto ks = material.specular * (1 - material.metallic) +
               material.metallic * material.diffuse;
-    omat.kt = material.transmission;
-    omat.ns = (int)clamp(
+    write_mtl_command(fs, mtl_command::diffuse, {}, {}, kd, {});
+    write_mtl_command(fs, mtl_command::specular, {}, {}, ks, {});
+    if (material.transmission != zero3f)
+      write_mtl_command(
+          fs, mtl_command::transmission, {}, {}, material.transmission, {});
+    auto ns = (int)clamp(
         2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2,
         0.0f, 1.0e9f);
-    omat.op = material.opacity;
+    write_mtl_command(fs, mtl_command::exponent, {}, ns, {}, {});
+    if (material.opacity != 1)
+      write_mtl_command(fs, mtl_command::opacity, {}, material.opacity, {}, {});
     if (material.emission_tex >= 0)
-      omat.ke_map.path = scene.textures[material.emission_tex].uri;
+      write_mtl_command(fs, mtl_command::emission_map, {}, {}, {},
+          scene.textures[material.emission_tex].uri);
     if (material.diffuse_tex >= 0)
-      omat.kd_map.path = scene.textures[material.diffuse_tex].uri;
+      write_mtl_command(fs, mtl_command::diffuse_map, {}, {}, {},
+          scene.textures[material.diffuse_tex].uri);
     if (material.specular_tex >= 0)
-      omat.ks_map.path = scene.textures[material.specular_tex].uri;
+      write_mtl_command(fs, mtl_command::specular_map, {}, {}, {},
+          scene.textures[material.specular_tex].uri);
     if (material.transmission_tex >= 0)
-      omat.kt_map.path = scene.textures[material.transmission_tex].uri;
+      write_mtl_command(fs, mtl_command::transmission_map, {}, {}, {},
+          scene.textures[material.transmission_tex].uri);
     if (material.normal_tex >= 0)
-      omat.norm_map.path = scene.textures[material.normal_tex].uri;
+      write_mtl_command(fs, mtl_command::normal_map, {}, {}, {},
+          scene.textures[material.normal_tex].uri);
     if (material.voltransmission != zero3f ||
         material.volmeanfreepath != zero3f) {
-      omat.vt = material.voltransmission;
-      omat.vp = material.volmeanfreepath;
-      omat.ve = material.volemission;
-      omat.vs = material.volscatter;
-      omat.vg = material.volanisotropy;
-      omat.vr = material.volscale;
+      write_mtl_command(fs, mtl_command::vol_transmission, {}, {},
+          material.voltransmission, {});
+      write_mtl_command(fs, mtl_command::vol_meanfreepath, {}, {},
+          material.volmeanfreepath, {});
+      write_mtl_command(
+          fs, mtl_command::vol_emission, {}, {}, material.volemission, {});
+      write_mtl_command(
+          fs, mtl_command::vol_scattering, {}, {}, material.volscatter, {});
+      write_mtl_command(
+          fs, mtl_command::vol_anisotropy, {}, material.volanisotropy, {}, {});
+      write_mtl_command(
+          fs, mtl_command::vol_scale, {}, material.volscale, {}, {});
     }
-    write_mtl_command(fs, mtl_command_::material, omat);
   }
 }
 
