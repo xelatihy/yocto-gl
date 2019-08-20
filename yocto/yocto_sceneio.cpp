@@ -652,20 +652,94 @@ inline void parse_yaml_value(string_view& str, double& value) {
 enum struct yaml_value_type { number, boolean, string, array };
 
 struct yaml_value {
-  yaml_value_type type    = yaml_value_type::number;
-  double          number  = 0;
-  bool            boolean = false;
-  string          string  = "";
-  vector<double>  array   = {};
+  yaml_value_type   type    = yaml_value_type::number;
+  double            number  = 0;
+  bool              boolean = false;
+  string            string  = "";
+  array<double, 16> array_  = {};
 };
+
+// parse yaml value
+inline void get_yaml_value(const yaml_value& yaml, string& value) {
+  if (yaml.type != yaml_value_type::string)
+    throw std::runtime_error("error parsing yaml value");
+  value = yaml.string;
+}
+inline void get_yaml_value(const yaml_value& yaml, bool& value) {
+  if (yaml.type != yaml_value_type::boolean)
+    throw std::runtime_error("error parsing yaml value");
+  value = yaml.boolean;
+}
+inline void get_yaml_value(const yaml_value& yaml, int& value) {
+  if (yaml.type != yaml_value_type::number)
+    throw std::runtime_error("error parsing yaml value");
+  value = (int)yaml.number;
+}
+inline void get_yaml_value(const yaml_value& yaml, float& value) {
+  if (yaml.type != yaml_value_type::number)
+    throw std::runtime_error("error parsing yaml value");
+  value = (float)yaml.number;
+}
+inline void get_yaml_value(const yaml_value& yaml, vec2f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 2)
+    throw std::runtime_error("error parsing yaml value");
+  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
+}
+inline void get_yaml_value(const yaml_value& yaml, vec3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 3)
+    throw std::runtime_error("error parsing yaml value");
+  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
+}
+inline void get_yaml_value(const yaml_value& yaml, mat3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 9)
+    throw std::runtime_error("error parsing yaml value");
+  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+}
+inline void get_yaml_value(const yaml_value& yaml, frame3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 12)
+    throw std::runtime_error("error parsing yaml value");
+  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+}
+
+// construction
+inline yaml_value make_yaml_value(const string& value) {
+  return {yaml_value_type::string, 0, false, value};
+}
+inline yaml_value make_yaml_value(bool value) {
+  return {yaml_value_type::boolean, 0, value};
+}
+inline yaml_value make_yaml_value(int value) {
+  return {yaml_value_type::number, (double)value};
+}
+inline yaml_value make_yaml_value(float value) {
+  return {yaml_value_type::number, (double)value};
+}
+inline yaml_value make_yaml_value(const vec2f& value) {
+  return {
+      yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
+}
+inline yaml_value make_yaml_value(const vec3f& value) {
+  return {yaml_value_type::array, 3, false, "",
+      {(double)value.x, (double)value.y, (double)value.z}};
+}
+inline yaml_value make_yaml_value(const mat3f& value) {
+  auto yaml = yaml_value{yaml_value_type::array, 9};
+  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+inline yaml_value make_yaml_value(const frame3f& value) {
+  auto yaml = yaml_value{yaml_value_type::array, 12};
+  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
 
 void parse_yaml_value(string_view& str, yaml_value& value) {
   trim_yaml_whitespace(str);
   if (str.empty()) throw std::runtime_error("bad yaml");
   if (str.front() == '[') {
     str.remove_prefix(1);
-    value.type = yaml_value_type::array;
-    value.array.clear();
+    value.type   = yaml_value_type::array;
+    value.number = 0;
     while (!str.empty()) {
       skip_yaml_whitespace(str);
       if (str.empty()) throw std::runtime_error("bad yaml");
@@ -673,7 +747,9 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
         str.remove_prefix(1);
         break;
       }
-      parse_yaml_value(str, value.array.emplace_back());
+      if (value.number >= 16) throw std::runtime_error("array too large");
+      parse_yaml_value(str, value.array_[(int)value.number]);
+      value.number += 1;
       skip_yaml_whitespace(str);
       if (str.front() == ',') {
         str.remove_prefix(1);
@@ -774,47 +850,6 @@ void load_yaml(
   auto vmap = unordered_map<string, int>{{"", -1}};
   auto mmap = unordered_map<string, int>{{"", -1}};
   auto smap = unordered_map<string, int>{{"", -1}};
-
-  // parse yaml value
-  auto get_yaml_value = [](const yaml_value& yaml, auto& value) {
-    using T = typename std::remove_reference<decltype(value)>::type;
-    if constexpr (std::is_same<T, string>::value) {
-      if (yaml.type != yaml_value_type::string)
-        throw std::runtime_error("error parsing yaml value");
-      value = yaml.string;
-    } else if constexpr (std::is_same<T, bool>::value) {
-      if (yaml.type != yaml_value_type::boolean)
-        throw std::runtime_error("error parsing yaml value");
-      value = yaml.boolean;
-    } else if constexpr (std::is_same<T, int>::value) {
-      if (yaml.type != yaml_value_type::number)
-        throw std::runtime_error("error parsing yaml value");
-      value = (int)yaml.number;
-    } else if constexpr (std::is_same<T, float>::value) {
-      if (yaml.type != yaml_value_type::number)
-        throw std::runtime_error("error parsing yaml value");
-      value = (float)yaml.number;
-    } else if constexpr (std::is_same<T, vec2f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.array.size() != 2)
-        throw std::runtime_error("error parsing yaml value");
-      value = {(float)yaml.array[0], (float)yaml.array[1]};
-    } else if constexpr (std::is_same<T, vec3f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.array.size() != 3)
-        throw std::runtime_error("error parsing yaml value");
-      value = {
-          (float)yaml.array[0], (float)yaml.array[1], (float)yaml.array[2]};
-    } else if constexpr (std::is_same<T, mat3f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.array.size() != 9)
-        throw std::runtime_error("error parsing yaml value");
-      for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array[i];
-    } else if constexpr (std::is_same<T, frame3f>::value) {
-      if (yaml.type != yaml_value_type::array || yaml.array.size() != 12)
-        throw std::runtime_error("error parsing yaml value");
-      for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array[i];
-    } else {
-      throw std::runtime_error("bad yaml type");
-    }
-  };
 
   // parse yaml reference
   auto get_yaml_ref = [](const yaml_value& yaml, int& value,
@@ -1114,9 +1149,9 @@ void write_yaml_property(FILE* fs, const string& object, const string& key,
         break;
       case yaml_value_type::array:
         checked_fprintf(fs, "[ ");
-        for (auto i = 0; i < value.array.size(); i++) {
+        for (auto i = 0; i < value.number; i++) {
           if (i) checked_fprintf(fs, ", ");
-          checked_fprintf(fs, "%g", value.array[i]);
+          checked_fprintf(fs, "%g", value.array_[i]);
         }
         checked_fprintf(fs, " ]");
         break;
@@ -1169,193 +1204,191 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
 
   auto yvalue = yaml_value{};
 
-  auto write_yaml_uri = [&](FILE* fs, const char* object, const char* name,
-                            const string& value) {
-    if (value == "") throw std::runtime_error("bad uri");
-    yvalue.type   = yaml_value_type::string;
-    yvalue.string = value;
-    write_yaml_property(fs, object, name, true, yvalue);
-  };
-  auto write_yaml_opt = [&](FILE* fs, const char* object, const char* name,
-                            const auto& value, const auto& def) {
-    if (value == def) return;
-    using T =
-        typename std::remove_const_t<std::remove_reference_t<decltype(value)>>;
-    if constexpr (std::is_same_v<T, string>) {
-      yvalue.type   = yaml_value_type::string;
-      yvalue.string = value;
-      write_yaml_property(fs, object, name, false, yvalue);
-    } else if constexpr (std::is_same_v<T, bool>) {
-      yvalue.type    = yaml_value_type::boolean;
-      yvalue.boolean = value;
-      write_yaml_property(fs, object, name, false, yvalue);
-    } else if constexpr (std::is_same_v<T, int>) {
-      yvalue.type   = yaml_value_type::number;
-      yvalue.number = value;
-      write_yaml_property(fs, object, name, false, yvalue);
-    } else if constexpr (std::is_same_v<T, float>) {
-      yvalue.type   = yaml_value_type::number;
-      yvalue.number = value;
-      write_yaml_property(fs, object, name, false, yvalue);
-    } else if constexpr (std::is_same_v<T, vec2f>) {
-      yvalue.type = yaml_value_type::array;
-      yvalue.array.resize(2);
-      yvalue.array[0] = value.x;
-      yvalue.array[1] = value.y;
-      write_yaml_property(fs, object, name, false, yvalue);
-    } else if constexpr (std::is_same_v<T, vec3f>) {
-      yvalue.type = yaml_value_type::array;
-      yvalue.array.resize(3);
-      yvalue.array[0] = value.x;
-      yvalue.array[1] = value.y;
-      yvalue.array[2] = value.z;
-      write_yaml_property(fs, object, name, false, yvalue);
-    } else if constexpr (std::is_same_v<T, frame3f>) {
-      yvalue.type = yaml_value_type::array;
-      yvalue.array.resize(12);
-      for (auto i = 0; i < 12; i++) yvalue.array[i] = (&value.x.x)[i];
-      write_yaml_property(fs, object, name, false, yvalue);
-    } else {
-      throw std::runtime_error("should not have gotten here");
-    }
-  };
-  auto write_yaml_ref = [&](FILE* fs, const char* object, const char* name,
-                            int value, auto& refs) {
-    if (value < 0) return;
-    yvalue.type   = yaml_value_type::string;
-    yvalue.string = refs[value].uri;
-    write_yaml_property(fs, object, name, false, yvalue);
-  };
-
   if (!scene.cameras.empty()) write_yaml_object(fs, "cameras");
   for (auto& camera : scene.cameras) {
-    write_yaml_uri(fs, "cameras", "uri", camera.uri);
-    write_yaml_opt(fs, "cameras", "frame", camera.frame, def_camera.frame);
-    write_yaml_opt(fs, "cameras", "orthographic", camera.orthographic,
-        def_camera.orthographic);
-    write_yaml_opt(fs, "cameras", "lens", camera.lens, def_camera.lens);
-    write_yaml_opt(fs, "cameras", "film", camera.film, def_camera.film);
-    write_yaml_opt(fs, "cameras", "focus", camera.focus, def_camera.focus);
-    write_yaml_opt(
-        fs, "cameras", "aperture", camera.aperture, def_camera.aperture);
+    write_yaml_property(
+        fs, "cameras", "uri", true, make_yaml_value(camera.uri));
+    if (camera.frame != identity3x4f)
+      write_yaml_property(
+          fs, "cameras", "frame", false, make_yaml_value(camera.frame));
+    if (camera.orthographic)
+      write_yaml_property(fs, "cameras", "orthographic", false,
+          make_yaml_value(camera.orthographic));
+    write_yaml_property(
+        fs, "cameras", "lens", false, make_yaml_value(camera.lens));
+    write_yaml_property(
+        fs, "cameras", "film", false, make_yaml_value(camera.film));
+    write_yaml_property(
+        fs, "cameras", "focus", false, make_yaml_value(camera.focus));
+    if (camera.aperture)
+      write_yaml_property(
+          fs, "cameras", "aperture", false, make_yaml_value(camera.aperture));
   }
 
   if (!scene.textures.empty()) write_yaml_object(fs, "textures");
   for (auto& texture : scene.textures) {
-    write_yaml_uri(fs, "textures", "uri", texture.uri);
+    write_yaml_property(
+        fs, "textures", "uri", true, make_yaml_value(texture.uri));
   }
 
   if (!scene.voltextures.empty()) write_yaml_object(fs, "voltextures");
   for (auto& texture : scene.voltextures) {
-    write_yaml_uri(fs, "voltextures", "uri", texture.uri);
+    write_yaml_property(
+        fs, "voltextures", "uri", true, make_yaml_value(texture.uri));
   }
 
   if (!scene.materials.empty()) write_yaml_object(fs, "materials");
   for (auto& material : scene.materials) {
-    write_yaml_uri(fs, "materials", "uri", material.uri);
-    write_yaml_opt(
-        fs, "materials", "emission", material.emission, def_material.emission);
-    write_yaml_opt(
-        fs, "materials", "diffuse", material.diffuse, def_material.diffuse);
-    write_yaml_opt(
-        fs, "materials", "specular", material.specular, def_material.specular);
-    write_yaml_opt(
-        fs, "materials", "metallic", material.metallic, def_material.metallic);
-    write_yaml_opt(fs, "materials", "transmission", material.transmission,
-        def_material.transmission);
-    write_yaml_opt(fs, "materials", "refraction", material.refraction,
-        def_material.refraction);
-    write_yaml_opt(fs, "materials", "roughness", material.roughness,
-        def_material.roughness);
-    write_yaml_opt(fs, "materials", "voltransmission", material.voltransmission,
-        def_material.voltransmission);
-    write_yaml_opt(fs, "materials", "volmeanfreepath", material.volmeanfreepath,
-        def_material.volmeanfreepath);
-    write_yaml_opt(fs, "materials", "volscatter", material.volscatter,
-        def_material.volscatter);
-    write_yaml_opt(fs, "materials", "volemission", material.volemission,
-        def_material.volemission);
-    write_yaml_opt(fs, "materials", "volanisotropy", material.volanisotropy,
-        def_material.volanisotropy);
-    write_yaml_opt(
-        fs, "materials", "volscale", material.volscale, def_material.volscale);
-    write_yaml_opt(fs, "materials", "coat", material.coat, def_material.coat);
-    write_yaml_opt(
-        fs, "materials", "opacity", material.opacity, def_material.opacity);
-    write_yaml_ref(
-        fs, "materials", "emission_tex", material.emission_tex, scene.textures);
-    write_yaml_ref(
-        fs, "materials", "diffuse_tex", material.diffuse_tex, scene.textures);
-    write_yaml_ref(
-        fs, "materials", "metallic_tex", material.metallic_tex, scene.textures);
-    write_yaml_ref(
-        fs, "materials", "specular_tex", material.specular_tex, scene.textures);
-    write_yaml_ref(fs, "materials", "roughness_tex", material.roughness_tex,
-        scene.textures);
-    write_yaml_ref(fs, "materials", "transmission_tex",
-        material.transmission_tex, scene.textures);
-    write_yaml_ref(fs, "materials", "refraction_tex", material.refraction_tex,
-        scene.textures);
-    write_yaml_ref(fs, "materials", "subsurface_tex", material.subsurface_tex,
-        scene.textures);
-    write_yaml_ref(
-        fs, "materials", "coat_tex", material.coat_tex, scene.textures);
-    write_yaml_ref(
-        fs, "materials", "opacity_tex", material.opacity_tex, scene.textures);
-    write_yaml_ref(
-        fs, "materials", "normal_tex", material.normal_tex, scene.textures);
-    write_yaml_opt(fs, "materials", "gltf_textures", material.gltf_textures,
-        def_material.gltf_textures);
-    write_yaml_ref(fs, "materials", "voldensity_tex", material.voldensity_tex,
-        scene.voltextures);
+    write_yaml_property(
+        fs, "materials", "uri", true, make_yaml_value(material.uri));
+    if (material.emission != zero3f)
+      write_yaml_property(fs, "materials", "emission", false,
+          make_yaml_value(material.emission));
+    if (material.diffuse != zero3f)
+      write_yaml_property(
+          fs, "materials", "diffuse", false, make_yaml_value(material.diffuse));
+    if (material.specular != zero3f)
+      write_yaml_property(fs, "materials", "specular", false,
+          make_yaml_value(material.specular));
+    if (material.metallic)
+      write_yaml_property(fs, "materials", "metallic", false,
+          make_yaml_value(material.metallic));
+    if (material.transmission != zero3f)
+      write_yaml_property(fs, "materials", "transmission", false,
+          make_yaml_value(material.transmission));
+    if (material.refraction != zero3f)
+      write_yaml_property(fs, "materials", "refraction", false,
+          make_yaml_value(material.refraction));
+    write_yaml_property(fs, "materials", "roughness", false,
+        make_yaml_value(material.roughness));
+    if (material.voltransmission != zero3f)
+      write_yaml_property(fs, "materials", "voltransmission", false,
+          make_yaml_value(material.voltransmission));
+    if (material.volmeanfreepath != zero3f)
+      write_yaml_property(fs, "materials", "volmeanfreepath", false,
+          make_yaml_value(material.volmeanfreepath));
+    if (material.volscatter != zero3f)
+      write_yaml_property(fs, "materials", "volscatter", false,
+          make_yaml_value(material.volscatter));
+    if (material.volemission != zero3f)
+      write_yaml_property(fs, "materials", "volemission", false,
+          make_yaml_value(material.volemission));
+    if (material.volanisotropy)
+      write_yaml_property(fs, "materials", "volanisotropy", false,
+          make_yaml_value(material.volanisotropy));
+    if (material.voltransmission != zero3f ||
+        material.volmeanfreepath != zero3f)
+      write_yaml_property(fs, "materials", "volscale", false,
+          make_yaml_value(material.volscale));
+    if (material.coat != zero3f)
+      write_yaml_property(
+          fs, "materials", "coat", false, make_yaml_value(material.coat));
+    if (material.opacity != 1)
+      write_yaml_property(
+          fs, "materials", "opacity", false, make_yaml_value(material.opacity));
+    if (material.emission_tex >= 0)
+      write_yaml_property(fs, "materials", "emission_tex", false,
+          make_yaml_value(scene.textures[material.emission_tex].uri));
+    if (material.diffuse_tex >= 0)
+      write_yaml_property(fs, "materials", "diffuse_tex", false,
+          make_yaml_value(scene.textures[material.diffuse_tex].uri));
+    if (material.metallic_tex >= 0)
+      write_yaml_property(fs, "materials", "metallic_tex", false,
+          make_yaml_value(scene.textures[material.metallic_tex].uri));
+    if (material.specular_tex >= 0)
+      write_yaml_property(fs, "materials", "specular_tex", false,
+          make_yaml_value(scene.textures[material.specular_tex].uri));
+    if (material.roughness_tex >= 0)
+      write_yaml_property(fs, "materials", "roughness_tex", false,
+          make_yaml_value(scene.textures[material.roughness_tex].uri));
+    if (material.transmission_tex >= 0)
+      write_yaml_property(fs, "materials", "transmission_tex", false,
+          make_yaml_value(scene.textures[material.transmission_tex].uri));
+    if (material.refraction_tex >= 0)
+      write_yaml_property(fs, "materials", "refraction_tex", false,
+          make_yaml_value(scene.textures[material.refraction_tex].uri));
+    if (material.subsurface_tex >= 0)
+      write_yaml_property(fs, "materials", "subsurface_tex", false,
+          make_yaml_value(scene.textures[material.subsurface_tex].uri));
+    if (material.coat_tex >= 0)
+      write_yaml_property(fs, "materials", "coat_tex", false,
+          make_yaml_value(scene.textures[material.coat_tex].uri));
+    if (material.opacity_tex >= 0)
+      write_yaml_property(fs, "materials", "opacity_tex", false,
+          make_yaml_value(scene.textures[material.opacity_tex].uri));
+    if (material.normal_tex >= 0)
+      write_yaml_property(fs, "materials", "normal_tex", false,
+          make_yaml_value(scene.textures[material.normal_tex].uri));
+    if (material.gltf_textures)
+      write_yaml_property(fs, "materials", "gltf_textures", false,
+          make_yaml_value(material.gltf_textures));
+    if (material.voldensity_tex >= 0)
+      write_yaml_property(fs, "materials", "voldensity_tex", false,
+          make_yaml_value(scene.voltextures[material.voldensity_tex].uri));
   }
 
   if (!scene.shapes.empty()) write_yaml_object(fs, "shapes");
   for (auto& shape : scene.shapes) {
-    write_yaml_uri(fs, "shapes", "uri", shape.uri);
+    write_yaml_property(fs, "shapes", "uri", true, make_yaml_value(shape.uri));
   }
 
   if (!scene.subdivs.empty()) write_yaml_object(fs, "subdivs");
   for (auto& subdiv : scene.subdivs) {
-    write_yaml_uri(fs, "subdivs", "uri", subdiv.uri);
-    write_yaml_ref(fs, "subdivs", "shape", subdiv.shape, scene.shapes);
-    write_yaml_opt(fs, "subdivs", "subdivisions", subdiv.subdivisions,
-        def_subdiv.subdivisions);
-    write_yaml_opt(fs, "subdivs", "catmullclark", subdiv.catmullclark,
-        def_subdiv.catmullclark);
-    write_yaml_opt(fs, "subdivs", "smooth", subdiv.smooth, def_subdiv.smooth);
-    write_yaml_opt(fs, "subdivs", "facevarying", subdiv.facevarying,
-        def_subdiv.facevarying);
-    write_yaml_ref(fs, "subdivs", "displacement_tex", subdiv.displacement_tex,
-        scene.textures);
-    write_yaml_opt(fs, "subdivs", "displacement", subdiv.displacement,
-        def_subdiv.displacement);
+    write_yaml_property(
+        fs, "subdivs", "uri", true, make_yaml_value(subdiv.uri));
+    if (subdiv.shape >= 0)
+      write_yaml_property(fs, "subdivs", "shape", false,
+          make_yaml_value(scene.shapes[subdiv.shape].uri));
+    write_yaml_property(fs, "subdivs", "subdivisions", false,
+        make_yaml_value(subdiv.subdivisions));
+    write_yaml_property(fs, "subdivs", "catmullclark", false,
+        make_yaml_value(subdiv.catmullclark));
+    write_yaml_property(
+        fs, "subdivs", "smooth", false, make_yaml_value(subdiv.smooth));
+    if (subdiv.facevarying)
+      write_yaml_property(fs, "subdivs", "facevarying", false,
+          make_yaml_value(subdiv.facevarying));
+    if (subdiv.displacement_tex >= 0)
+      write_yaml_property(fs, "subdivs", "displacement_tex", false,
+          make_yaml_value(scene.textures[subdiv.displacement_tex].uri));
+    if (subdiv.displacement_tex >= 0)
+      write_yaml_property(fs, "subdivs", "displacement", false,
+          make_yaml_value(subdiv.displacement));
   }
 
   if (!ply_instances) {
     if (!scene.instances.empty()) write_yaml_object(fs, "instances");
     for (auto& instance : scene.instances) {
-      write_yaml_uri(fs, "instances", "uri", instance.uri);
-      write_yaml_opt(
-          fs, "instances", "frame", instance.frame, def_instance.frame);
-      write_yaml_ref(fs, "instances", "shape", instance.shape, scene.shapes);
-      write_yaml_ref(
-          fs, "instances", "material", instance.material, scene.materials);
+      write_yaml_property(
+          fs, "instances", "uri", true, make_yaml_value(instance.uri));
+      if (instance.frame != identity3x4f)
+        write_yaml_property(
+            fs, "instances", "frame", false, make_yaml_value(instance.frame));
+      if (instance.shape >= 0)
+        write_yaml_property(fs, "instances", "shape", false,
+            make_yaml_value(scene.shapes[instance.shape].uri));
+      if (instance.material >= 0)
+        write_yaml_property(fs, "instances", "material", false,
+            make_yaml_value(scene.materials[instance.material].uri));
     }
   } else {
     if (!scene.instances.empty()) write_yaml_object(fs, "ply_instances");
-    write_yaml_uri(fs, "ply_instances", "uri", instances_name);
+    write_yaml_property(
+        fs, "ply_instances", "uri", true, make_yaml_value(instances_name));
   }
 
   if (!scene.environments.empty()) write_yaml_object(fs, "environments");
   for (auto& environment : scene.environments) {
-    write_yaml_uri(fs, "environments", "uri", environment.uri);
-    write_yaml_opt(
-        fs, "environments", "frame", environment.frame, def_environment.frame);
-    write_yaml_opt(fs, "environments", "emission", environment.emission,
-        def_environment.emission);
-    write_yaml_ref(fs, "environments", "emission_tex", environment.emission_tex,
-        scene.textures);
+    write_yaml_property(
+        fs, "environments", "uri", true, make_yaml_value(environment.uri));
+    if (environment.frame != identity3x4f)
+      write_yaml_property(fs, "environments", "frame", false,
+          make_yaml_value(environment.frame));
+    write_yaml_property(fs, "environments", "emission", false,
+        make_yaml_value(environment.emission));
+    if (environment.emission_tex >= 0)
+      write_yaml_property(fs, "environments", "emission_tex", false,
+          make_yaml_value(scene.textures[environment.emission_tex].uri));
   }
 }
 
@@ -1416,14 +1449,12 @@ static void load_mtl(const string& filename, yocto_scene& scene,
 
   // read mtl elements
   auto command = mtl_command{};
-  auto value   = 0.0f;
-  auto color   = zero3f;
-  auto name    = ""s;
+  auto value   = obj_value{};
   auto texture = obj_texture_info{};
-  while (read_mtl_command(fs, command, value, color, name, texture)) {
+  while (read_mtl_command(fs, command, value, texture)) {
     if (command == mtl_command::material) {
       auto& material     = scene.materials.emplace_back();
-      material.uri       = name;
+      get_obj_value(value, material.uri);
       mmap[material.uri] = (int)scene.materials.size() - 1;
       ptype              = parsing_type::material;
       continue;
@@ -1433,16 +1464,17 @@ static void load_mtl(const string& filename, yocto_scene& scene,
     } else {
       auto& material = scene.materials.back();
       switch (command) {
-        case mtl_command::emission: material.emission = color; break;
-        case mtl_command::diffuse: material.diffuse = color; break;
-        case mtl_command::specular: material.specular = color; break;
-        case mtl_command::transmission: material.transmission = color; break;
+        case mtl_command::emission: get_obj_value(value, material.emission); break;
+        case mtl_command::diffuse: get_obj_value(value, material.diffuse); break;
+        case mtl_command::specular: get_obj_value(value, material.specular); break;
+        case mtl_command::transmission: get_obj_value(value, material.transmission); break;
         case mtl_command::exponent:
-          material.roughness = pow(2 / (value + 2), 1 / 4.0f);
+          get_obj_value(value, material.roughness);
+          material.roughness = pow(2 / (material.roughness + 2), 1 / 4.0f);
           if (material.roughness < 0.01f) material.roughness = 0;
           if (material.roughness > 0.99f) material.roughness = 1;
           break;
-        case mtl_command::opacity: material.opacity = value; break;
+        case mtl_command::opacity: get_obj_value(value, material.opacity); break;
         case mtl_command::emission_map:
           material.emission_tex = add_texture(texture, false);
           break;
@@ -1461,8 +1493,8 @@ static void load_mtl(const string& filename, yocto_scene& scene,
         case mtl_command::normal_map:
           material.normal_tex = add_texture(texture, true);
           break;
-        case mtl_command::pbr_roughness: material.roughness = value; break;
-        case mtl_command::pbr_metallic: material.metallic = value; break;
+        case mtl_command::pbr_roughness: get_obj_value(value, material.roughness); break;
+        case mtl_command::pbr_metallic: get_obj_value(value, material.metallic); break;
         case mtl_command::pbr_roughness_map:
           material.roughness_tex = add_texture(texture, true);
           break;
@@ -1470,15 +1502,15 @@ static void load_mtl(const string& filename, yocto_scene& scene,
           material.metallic_tex = add_texture(texture, true);
           break;
         case mtl_command::vol_transmission:
-          material.voltransmission = color;
+          get_obj_value(value, material.voltransmission);
           break;
         case mtl_command::vol_meanfreepath:
-          material.volmeanfreepath = color;
+          get_obj_value(value, material.volmeanfreepath);
           break;
-        case mtl_command::vol_scattering: material.volscatter = color; break;
-        case mtl_command::vol_emission: material.volemission = color; break;
-        case mtl_command::vol_anisotropy: material.volanisotropy = value; break;
-        case mtl_command::vol_scale: material.volscale = value; break;
+        case mtl_command::vol_scattering: get_obj_value(value, material.volscatter); break;
+        case mtl_command::vol_emission: get_obj_value(value, material.volemission); break;
+        case mtl_command::vol_anisotropy: get_obj_value(value, material.volanisotropy); break;
+        case mtl_command::vol_scale: get_obj_value(value, material.volscale); break;
         case mtl_command::vol_scattering_map:
           material.subsurface_tex = add_texture(texture, false);
           break;
@@ -1527,21 +1559,18 @@ static void load_objx(const string& filename, yocto_scene& scene,
 
   // read mtl elements
   auto command = objx_command{};
-  auto name    = ""s;
-  auto value   = 0.0f;
-  auto color   = zero3f;
+  auto value   = obj_value{};
   auto texture = obj_texture_info{};
-  auto frame   = frame3f{};
-  while (read_objx_command(fs, command, value, color, name, frame, texture)) {
+  while (read_objx_command(fs, command, value, texture)) {
     if (command == objx_command::camera) {
       auto& camera = scene.cameras.emplace_back();
-      camera.uri   = name;
+      get_obj_value(value, camera.uri);
       ptype        = parsing_type::camera;
       continue;
     }
     if (command == objx_command::environment) {
       auto& environment = scene.environments.emplace_back();
-      environment.uri   = name;
+      get_obj_value(value, environment.uri);
       ptype             = parsing_type::environment;
       continue;
     }
@@ -1551,14 +1580,14 @@ static void load_objx(const string& filename, yocto_scene& scene,
         first_instance = false;
       }
       auto& instance = scene.instances.emplace_back();
-      instance.uri   = name;
+      get_obj_value(value, instance.uri);
       ptype          = parsing_type::instance;
       instances_idx  = {(int)scene.instances.size() - 1};
       continue;
     }
     if (command == objx_command::procedural) {
       auto& shape    = scene.shapes.emplace_back();
-      shape.uri      = name;
+      get_obj_value(value, shape.uri);
       auto& instance = scene.instances.emplace_back();
       instance.uri   = shape.uri;
       instance.shape = (int)scene.shapes.size() - 1;
@@ -1571,20 +1600,20 @@ static void load_objx(const string& filename, yocto_scene& scene,
     } else if (ptype == parsing_type::camera) {
       auto& camera = scene.cameras.back();
       switch (command) {
-        case objx_command::frame: camera.frame = frame; break;
-        case objx_command::ortho: camera.orthographic = (bool)value; break;
-        case objx_command::width: camera.film.x = value; break;
-        case objx_command::height: camera.film.y = value; break;
-        case objx_command::lens: camera.lens = value; break;
-        case objx_command::aperture: camera.aperture = value; break;
-        case objx_command::focus: camera.focus = value; break;
+        case objx_command::frame: get_obj_value(value, camera.frame); break;
+        case objx_command::ortho: get_obj_value(value, camera.orthographic); break;
+        case objx_command::width: get_obj_value(value, camera.film.x); break;
+        case objx_command::height: get_obj_value(value, camera.film.y); break;
+        case objx_command::lens: get_obj_value(value, camera.lens); break;
+        case objx_command::aperture: get_obj_value(value, camera.aperture); break;
+        case objx_command::focus: get_obj_value(value, camera.focus); break;
         default: throw std::runtime_error("bad objx"); break;
       }
     } else if (ptype == parsing_type::environment) {
       auto& environment = scene.environments.back();
       switch (command) {
-        case objx_command::frame: environment.frame = frame; break;
-        case objx_command::emission: environment.emission = color; break;
+        case objx_command::frame: get_obj_value(value, environment.frame); break;
+        case objx_command::emission: get_obj_value(value, environment.emission); break;
         case objx_command::emission_map:
           environment.emission_tex = add_texture(texture, false);
           break;
@@ -1594,16 +1623,20 @@ static void load_objx(const string& filename, yocto_scene& scene,
       switch (command) {
         case objx_command::frame: {
           for (auto& ist : instances_idx) {
-            scene.instances[ist].frame = frame;
+            get_obj_value(value, scene.instances[ist].frame);
           }
         } break;
         case objx_command::material: {
+            auto name = ""s;
+            get_obj_value(value, name);
           auto ist_material = mmap.at(name);
           for (auto& ist : instances_idx) {
             scene.instances[ist].material = ist_material;
           }
         } break;
         case objx_command::object: {
+            auto name = ""s;
+            get_obj_value(value, name);
           auto& shapes = object_shapes.at(name);
           if (instances_idx.size() != shapes.size()) {
             auto to_add = shapes.size() - instances_idx.size();
@@ -1624,15 +1657,19 @@ static void load_objx(const string& filename, yocto_scene& scene,
       auto& shape    = scene.shapes.back();
       auto& instance = scene.instances.back();
       switch (command) {
-        case objx_command::frame: instance.frame = frame; break;
-        case objx_command::material:
+        case objx_command::frame: get_obj_value(value, instance.frame); break;
+          case objx_command::material: {
+              auto name = ""s;
+              get_obj_value(value, name);
           if (mmap.find(name) == mmap.end()) {
             throw std::runtime_error("missing material " + name);
           } else {
             instance.material = mmap.find(name)->second;
-          }
+          }}
           break;
-        case objx_command::object:
+          case objx_command::object:{
+              auto name = ""s;
+              get_obj_value(value, name);
           if (name == "floor") {
             auto params         = proc_shape_params{};
             params.type         = proc_shape_params::type_t::floor;
@@ -1643,7 +1680,7 @@ static void load_objx(const string& filename, yocto_scene& scene,
                 shape.normals, shape.texcoords, params);
           } else {
             throw std::runtime_error("unknown obj procedural");
-          }
+          }}
           break;
         default: throw std::runtime_error("bad objx"); break;
       }
@@ -1765,17 +1802,17 @@ static void load_obj(
 
   // load obj elements
   auto element   = obj_command{};
-  auto value     = zero3f;
-  auto name      = ""s;
+  auto value     = obj_value{};
   auto vertices  = vector<obj_vertex>{};
   auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, element, value, name, vertices, vert_size)) {
+  while (read_obj_command(fs, element, value, vertices, vert_size)) {
     if (element == obj_command::vertex) {
-      opos.push_back(value);
+      get_obj_value(value, opos.emplace_back());
     } else if (element == obj_command::normal) {
-      onorm.push_back(value);
+      get_obj_value(value, onorm.emplace_back());
     } else if (element == obj_command::texcoord) {
-      otexcoord.push_back({value.x, 1 - value.y});
+      get_obj_value(value, otexcoord.emplace_back());
+        otexcoord.back().y = 1 - otexcoord.back().y;
     } else if (element == obj_command::face) {
       if (scene.shapes.empty()) add_shape();
       if (!scene.shapes.back().positions.empty() &&
@@ -1864,17 +1901,19 @@ static void load_obj(
       for (auto i = 0; i < vertices.size(); i++)
         shape.points.push_back(vertex_map.at(vertices[i]));
     } else if (element == obj_command::object) {
-      oname = name;
+      get_obj_value(value, oname);
       gname = "";
       mname = "";
       add_shape();
     } else if (element == obj_command::group) {
-      gname = name;
+      get_obj_value(value, gname);
       add_shape();
     } else if (element == obj_command::usemtl) {
-      mname = name;
+      get_obj_value(value, mname);
       add_shape();
     } else if (element == obj_command::mtllib) {
+        auto name = ""s;
+        get_obj_value(value, name);
       if (std::find(mlibs.begin(), mlibs.end(), name) != mlibs.end()) continue;
       mlibs.push_back(name);
       auto mtlpath = fs::path(filename).parent_path() / name;
@@ -1952,8 +1991,8 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 
   // material library
   if (!scene.materials.empty())
-    write_obj_command(fs, obj_command::mtllib, zero3f,
-        fs::path(filename).replace_extension(".mtl").filename(), {});
+    write_obj_command(fs, obj_command::mtllib,
+        make_obj_value(fs::path(filename).replace_extension(".mtl").filename().string()));
 
   // shapes
   auto offset    = obj_vertex{0, 0, 0};
@@ -1966,31 +2005,31 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   }
   for (auto& instance : preserve_instances ? instances : scene.instances) {
     auto& shape = scene.shapes[instance.shape];
-    write_obj_command(fs, obj_command::object, zero3f,
-        fs::path(instance.uri).stem().string(), {});
+    write_obj_command(fs, obj_command::object,
+        make_obj_value(fs::path(instance.uri).stem().string()));
     if (instance.material >= 0)
-      write_obj_command(fs, obj_command::usemtl, zero3f,
-          fs::path(scene.materials[instance.material].uri).stem().string(), {});
+      write_obj_command(fs, obj_command::usemtl,
+          make_obj_value(fs::path(scene.materials[instance.material].uri).stem().string()));
     if (instance.frame == identity3x4f) {
       for (auto& p : shape.positions)
-        write_obj_command(fs, obj_command::vertex, p, ""s, {});
+        write_obj_command(fs, obj_command::vertex, make_obj_value(p));
       for (auto& n : shape.normals)
-        write_obj_command(fs, obj_command::normal, n, ""s, {});
+        write_obj_command(fs, obj_command::normal, make_obj_value(n));
       for (auto& t : shape.texcoords)
         write_obj_command(fs, obj_command::texcoord,
-            vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, ""s, {});
+            make_obj_value(vec2f{t.x, flip_texcoord ? 1 - t.y : t.y}));
     } else {
       for (auto& p : shape.positions) {
         write_obj_command(fs, obj_command::vertex,
-            transform_point(instance.frame, p), ""s, {});
+                          make_obj_value(transform_point(instance.frame, p)));
       }
       for (auto& n : shape.normals) {
         write_obj_command(fs, obj_command::normal,
-            transform_direction(instance.frame, n), ""s, {});
+                          make_obj_value(transform_direction(instance.frame, n)));
       }
       for (auto& t : shape.texcoords)
         write_obj_command(fs, obj_command::texcoord,
-            vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, ""s, {});
+            make_obj_value(vec2f{t.x, flip_texcoord ? 1 - t.y : t.y}));
     }
     auto mask = obj_vertex{
         1, shape.texcoords.empty() ? 0 : 1, shape.normals.empty() ? 0 : 1};
@@ -2008,20 +2047,20 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     elems.resize(1);
     for (auto& p : shape.points) {
       elems[0] = vert(p);
-      write_obj_command(fs, obj_command::point, zero3f, ""s, elems);
+      write_obj_command(fs, obj_command::point, {}, elems);
     }
     elems.resize(2);
     for (auto& l : shape.lines) {
       elems[0] = vert(l.x);
       elems[1] = vert(l.y);
-      write_obj_command(fs, obj_command::line, zero3f, ""s, elems);
+      write_obj_command(fs, obj_command::line, {}, elems);
     }
     elems.resize(3);
     for (auto& t : shape.triangles) {
       elems[0] = vert(t.x);
       elems[1] = vert(t.y);
       elems[2] = vert(t.z);
-      write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
+      write_obj_command(fs, obj_command::face, {}, elems);
     }
     elems.resize(4);
     for (auto& q : shape.quads) {
@@ -2034,7 +2073,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         elems.resize(4);
         elems[3] = vert(q.w);
       }
-      write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
+      write_obj_command(fs, obj_command::face, {}, elems);
     }
     elems.resize(4);
     for (auto i = 0; i < shape.quadspos.size(); i++) {
@@ -2052,7 +2091,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         elems.resize(4);
         elems[3] = fvvert(qp.w, qt.w, qn.w);
       }
-      write_obj_command(fs, obj_command::face, zero3f, ""s, elems);
+      write_obj_command(fs, obj_command::face, {}, elems);
     }
     offset.position += shape.positions.size();
     offset.texcoord += shape.texcoords.size();
@@ -2071,54 +2110,54 @@ static void save_mtl(const string& filename, const yocto_scene& scene) {
   // materials
   for (auto& material : scene.materials) {
     write_mtl_command(fs, mtl_command::material,
-        fs::path(material.uri).stem().string(), {}, {}, {});
-    write_mtl_command(fs, mtl_command::illum, {}, 2, {}, {});
+        make_obj_value(fs::path(material.uri).stem()));
+    write_mtl_command(fs, mtl_command::illum, make_obj_value(2));
     if (material.emission != zero3f)
       write_mtl_command(
-          fs, mtl_command::emission, {}, {}, material.emission, {});
+          fs, mtl_command::emission, make_obj_value(material.emission));
     auto kd = material.diffuse * (1 - material.metallic);
     auto ks = material.specular * (1 - material.metallic) +
               material.metallic * material.diffuse;
-    write_mtl_command(fs, mtl_command::diffuse, {}, {}, kd, {});
-    write_mtl_command(fs, mtl_command::specular, {}, {}, ks, {});
+    write_mtl_command(fs, mtl_command::diffuse, make_obj_value(kd));
+    write_mtl_command(fs, mtl_command::specular, make_obj_value(ks));
     if (material.transmission != zero3f)
       write_mtl_command(
-          fs, mtl_command::transmission, {}, {}, material.transmission, {});
+          fs, mtl_command::transmission, make_obj_value(material.transmission));
     auto ns = (int)clamp(
         2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2,
         0.0f, 1.0e9f);
-    write_mtl_command(fs, mtl_command::exponent, {}, ns, {}, {});
+    write_mtl_command(fs, mtl_command::exponent, make_obj_value(ns));
     if (material.opacity != 1)
-      write_mtl_command(fs, mtl_command::opacity, {}, material.opacity, {}, {});
+      write_mtl_command(fs, mtl_command::opacity,make_obj_value(material.opacity));
     if (material.emission_tex >= 0)
-      write_mtl_command(fs, mtl_command::emission_map, {}, {}, {},
+        write_mtl_command(fs, mtl_command::emission_map, {},
           scene.textures[material.emission_tex].uri);
     if (material.diffuse_tex >= 0)
-      write_mtl_command(fs, mtl_command::diffuse_map, {}, {}, {},
+      write_mtl_command(fs, mtl_command::diffuse_map, {},
           scene.textures[material.diffuse_tex].uri);
     if (material.specular_tex >= 0)
-      write_mtl_command(fs, mtl_command::specular_map, {}, {}, {},
+      write_mtl_command(fs, mtl_command::specular_map, {},
           scene.textures[material.specular_tex].uri);
     if (material.transmission_tex >= 0)
-      write_mtl_command(fs, mtl_command::transmission_map, {}, {}, {},
+      write_mtl_command(fs, mtl_command::transmission_map, {},
           scene.textures[material.transmission_tex].uri);
     if (material.normal_tex >= 0)
-      write_mtl_command(fs, mtl_command::normal_map, {}, {}, {},
+      write_mtl_command(fs, mtl_command::normal_map, {},
           scene.textures[material.normal_tex].uri);
     if (material.voltransmission != zero3f ||
         material.volmeanfreepath != zero3f) {
-      write_mtl_command(fs, mtl_command::vol_transmission, {}, {},
-          material.voltransmission, {});
-      write_mtl_command(fs, mtl_command::vol_meanfreepath, {}, {},
-          material.volmeanfreepath, {});
+      write_mtl_command(fs, mtl_command::vol_transmission,
+          make_obj_value(material.voltransmission));
+      write_mtl_command(fs, mtl_command::vol_meanfreepath,
+          make_obj_value(material.volmeanfreepath));
       write_mtl_command(
-          fs, mtl_command::vol_emission, {}, {}, material.volemission, {});
+          fs, mtl_command::vol_emission, make_obj_value(material.volemission));
       write_mtl_command(
-          fs, mtl_command::vol_scattering, {}, {}, material.volscatter, {});
+          fs, mtl_command::vol_scattering, make_obj_value(material.volscatter));
       write_mtl_command(
-          fs, mtl_command::vol_anisotropy, {}, material.volanisotropy, {}, {});
+          fs, mtl_command::vol_anisotropy, make_obj_value(material.volanisotropy));
       write_mtl_command(
-          fs, mtl_command::vol_scale, {}, material.volscale, {}, {});
+          fs, mtl_command::vol_scale, make_obj_value(material.volscale));
     }
   }
 }
@@ -2134,43 +2173,43 @@ static void save_objx(
 
   // cameras
   for (auto& camera : scene.cameras) {
-    write_objx_command(fs, objx_command::camera, camera.uri, {}, {}, {}, {});
+    write_objx_command(fs, objx_command::camera, make_obj_value(camera.uri));
     if (camera.orthographic)
       write_objx_command(
-          fs, objx_command::ortho, {}, (float)camera.orthographic, {}, {}, {});
-    write_objx_command(fs, objx_command::width, {}, camera.film.x, {}, {}, {});
-    write_objx_command(fs, objx_command::height, {}, camera.film.y, {}, {}, {});
-    write_objx_command(fs, objx_command::lens, {}, camera.lens, {}, {}, {});
-    write_objx_command(fs, objx_command::focus, {}, camera.focus, {}, {}, {});
+          fs, objx_command::ortho, make_obj_value((float)camera.orthographic));
+    write_objx_command(fs, objx_command::width, make_obj_value(camera.film.x));
+    write_objx_command(fs, objx_command::height, make_obj_value(camera.film.y));
+    write_objx_command(fs, objx_command::lens, make_obj_value(camera.lens));
+    write_objx_command(fs, objx_command::focus,make_obj_value(camera.focus));
     write_objx_command(
-        fs, objx_command::aperture, {}, camera.aperture, {}, {}, {});
-    write_objx_command(fs, objx_command::frame, {}, {}, {}, camera.frame, {});
+        fs, objx_command::aperture, make_obj_value(camera.aperture));
+    write_objx_command(fs, objx_command::frame, make_obj_value(camera.frame));
   }
 
   // environments
   for (auto& environment : scene.environments) {
     write_objx_command(
-        fs, objx_command::environment, environment.uri, {}, {}, {}, {});
+        fs, objx_command::environment, make_obj_value(environment.uri));
     write_objx_command(
-        fs, objx_command::emission, {}, {}, environment.emission, {}, {});
+        fs, objx_command::emission, make_obj_value(environment.emission));
     if (environment.emission_tex >= 0)
-      write_objx_command(fs, objx_command::emission_map, {}, {}, {}, {},
+      write_objx_command(fs, objx_command::emission_map, {},
           scene.textures[environment.emission_tex].uri);
     write_objx_command(
-        fs, objx_command::frame, {}, {}, {}, environment.frame, {});
+        fs, objx_command::frame, make_obj_value(environment.frame));
   }
 
   // instances
   if (preserve_instances) {
     for (auto& instance : scene.instances) {
       write_objx_command(
-          fs, objx_command::instance, instance.uri, {}, {}, {}, {});
+          fs, objx_command::instance, make_obj_value(instance.uri));
       write_objx_command(fs, objx_command::object,
-          scene.shapes[instance.shape].uri, {}, {}, {}, {});
+          make_obj_value(scene.shapes[instance.shape].uri));
       write_objx_command(fs, objx_command::material,
-          scene.materials[instance.material].uri, {}, {}, {}, {});
+          make_obj_value(scene.materials[instance.material].uri));
       write_objx_command(
-          fs, objx_command::frame, {}, {}, {}, instance.frame, {});
+          fs, objx_command::frame, make_obj_value(instance.frame));
     }
   }
 }

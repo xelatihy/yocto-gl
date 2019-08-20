@@ -77,6 +77,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <array>
 #include <chrono>
 #include <string>
 #include <unordered_map>
@@ -88,6 +89,7 @@
 namespace yocto {
 
 // Aliased typenames for readability
+using std::array;
 using std::pair;
 using std::string;
 using std::unordered_map;

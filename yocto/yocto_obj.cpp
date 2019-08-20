@@ -490,10 +490,58 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
     }
   }
 }
+    
+void parse_obj_value(string_view& str, obj_value& value, obj_value_type type, int array_size = 3) {
+    switch(type) {
+        case obj_value_type::number: {
+            auto value_ = 0.0f;
+            parse_obj_value(str, value_);
+            value = make_obj_value(value_);
+        } break;
+        case obj_value_type::string: {
+            auto value_ = ""s;
+            parse_obj_value(str, value_);
+            value = make_obj_value(value_);
+        } break;
+        case obj_value_type::array: {
+            if(array_size == 2) {
+                auto value_ = zero2f;
+                parse_obj_value(str, value_);
+                value = make_obj_value(value_);
+            } else
+            if(array_size == 3) {
+                auto value_ = zero3f;
+                parse_obj_value(str, value_);
+                value = make_obj_value(value_);
+            } else
+            if(array_size == 12) {
+                auto value_ = identity3x4f;
+                parse_obj_value(str, value_);
+                value = make_obj_value(value_);
+            } else {
+                throw std::runtime_error("should not have gotten here");
+            }
+            } break;
+        case obj_value_type::boolean: {
+            auto value_ = 0;
+            parse_obj_value(str, value_);
+            value = make_obj_value((bool)value_);
+        } break;
+    }
+}
+
+static inline void parse_obj_value_or_empty(string_view& str, obj_value& value) {
+    skip_obj_whitespace(str);
+    if (str.empty()) {
+        value = make_obj_value(""s);
+    } else {
+        parse_obj_value(str, value, obj_value_type::string);
+    }
+}
 
 // Read obj
-bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
-    string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size) {
+bool read_obj_command(FILE* fs, obj_command& command, obj_value& value,
+    vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // read the file line by line
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -511,17 +559,17 @@ bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
     // possible token values
     if (cmd == "v") {
       command = obj_command::vertex;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::array);
       vert_size.position += 1;
       return true;
     } else if (cmd == "vn") {
       command = obj_command::normal;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::array);
       vert_size.normal += 1;
       return true;
     } else if (cmd == "vt") {
       command = obj_command::texcoord;
-      parse_obj_value(line, (vec2f&)value);
+        parse_obj_value(line, value, obj_value_type::array, 2);
       vert_size.texcoord += 1;
       return true;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -545,23 +593,23 @@ bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
       return true;
     } else if (cmd == "o") {
       command = obj_command::object;
-      parse_obj_value_or_empty(line, name);
+      parse_obj_value_or_empty(line, value);
       return true;
     } else if (cmd == "usemtl") {
       command = obj_command::usemtl;
-      parse_obj_value_or_empty(line, name);
+      parse_obj_value_or_empty(line, value);
       return true;
     } else if (cmd == "g") {
       command = obj_command::group;
-      parse_obj_value_or_empty(line, name);
+      parse_obj_value_or_empty(line, value);
       return true;
     } else if (cmd == "s") {
       command = obj_command::smoothing;
-      parse_obj_value_or_empty(line, name);
+      parse_obj_value_or_empty(line, value);
       return true;
     } else if (cmd == "mtllib") {
       command = obj_command::mtllib;
-      parse_obj_value(line, name);
+      parse_obj_value(line, value, obj_value_type::string);
       return true;
     } else {
       // unused
@@ -571,8 +619,8 @@ bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
 }
 
 // Read mtl
-bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
-    vec3f& color, string& name, obj_texture_info& texture, bool fliptr) {
+bool read_mtl_command(FILE* fs, mtl_command& command, obj_value& value,
+    obj_texture_info& texture, bool fliptr) {
   // read the file line by line
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -590,38 +638,41 @@ bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
     // possible token values
     if (cmd == "newmtl") {
       command = mtl_command::material;
-      parse_obj_value(line, name);
+      parse_obj_value(line, value, obj_value_type::string);
     } else if (cmd == "illum") {
       command = mtl_command::illum;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "Ke") {
       command = mtl_command::emission;
-      parse_obj_value(line, color);
+      parse_obj_value(line, value, obj_value_type::array);
     } else if (cmd == "Kd") {
       command = mtl_command::diffuse;
-      parse_obj_value(line, color);
+      parse_obj_value(line, value, obj_value_type::array);
     } else if (cmd == "Ks") {
       command = mtl_command::specular;
-      parse_obj_value(line, color);
+      parse_obj_value(line, value, obj_value_type::array);
     } else if (cmd == "Kt") {
       command = mtl_command::transmission;
-      parse_obj_value(line, color);
+      parse_obj_value(line, value, obj_value_type::array);
     } else if (cmd == "Tf") {
       command = mtl_command::transmission;
-      color   = {-1, -1, -1};
-      parse_obj_value(line, color);
-      if (color.y < 0) color = {color.x, color.x, color.x};
-      if (fliptr) color = 1 - color;
+        auto color = vec3f{-1};
+      value   = make_obj_value(color);
+      parse_obj_value(line, value, obj_value_type::array);
+        get_obj_value(value, color);
+      if (color.y < 0) color = vec3f{color.x};
+        if (fliptr) color = 1 - color;
+        value   = make_obj_value(color);
     } else if (cmd == "Tr") {
       command = mtl_command::opacity;
-      parse_obj_value(line, value);
-      if (fliptr) value = 1 - value;
+      parse_obj_value(line, value, obj_value_type::number);
+      if (fliptr) value.number = 1 - value.number;
     } else if (cmd == "Ns") {
       command = mtl_command::exponent;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "d") {
       command = mtl_command::opacity;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "map_Ke") {
       command = mtl_command::emission_map;
       parse_obj_value(line, texture);
@@ -648,19 +699,19 @@ bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
       parse_obj_value(line, texture);
     } else if (cmd == "Pm") {
       command = mtl_command::pbr_metallic;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "Pr") {
       command = mtl_command::pbr_roughness;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "Ps") {
       command = mtl_command::pbr_sheen;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "Pc") {
       command = mtl_command::pbr_clearcoat;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "Pcr") {
       command = mtl_command::pbr_coatroughness;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "map_Pm") {
       command = mtl_command::pbr_metallic_map;
       parse_obj_value(line, texture);
@@ -678,22 +729,22 @@ bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
       parse_obj_value(line, texture);
     } else if (cmd == "Vt") {
       command = mtl_command::vol_transmission;
-      parse_obj_value(line, color);
+      parse_obj_value(line, value, obj_value_type::array);
     } else if (cmd == "Vp") {
       command = mtl_command::vol_meanfreepath;
-      parse_obj_value(line, color);
+      parse_obj_value(line, value, obj_value_type::array);
     } else if (cmd == "Ve") {
       command = mtl_command::vol_emission;
-      parse_obj_value(line, color);
+      parse_obj_value(line, value, obj_value_type::array);
     } else if (cmd == "Vs") {
       command = mtl_command::vol_scattering;
-      parse_obj_value(line, color);
+      parse_obj_value(line, value, obj_value_type::array);
     } else if (cmd == "Vg") {
       command = mtl_command::vol_anisotropy;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "Vr") {
       command = mtl_command::vol_scale;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "map_Vs") {
       command = mtl_command::vol_scattering_map;
       parse_obj_value(line, texture);
@@ -708,8 +759,8 @@ bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
 }
 
 // Read objx
-bool read_objx_command(FILE* fs, objx_command& command, float& value,
-    vec3f& color, string& name, frame3f& frame, obj_texture_info& texture) {
+bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
+    obj_texture_info& texture) {
   // read the file line by line
   char buffer[4096];
   auto pos = ftell(fs);
@@ -728,59 +779,59 @@ bool read_objx_command(FILE* fs, objx_command& command, float& value,
     // read values
     if (cmd == "newcam") {
       command = objx_command::camera;
-      parse_obj_value(line, name);
+      parse_obj_value(line, value, obj_value_type::string);
       return true;
     } else if (cmd == "newenv") {
       command = objx_command::environment;
-      parse_obj_value(line, name);
+      parse_obj_value(line, value, obj_value_type::string);
       return true;
     } else if (cmd == "newist") {
       command = objx_command::instance;
-      parse_obj_value(line, name);
+      parse_obj_value(line, value, obj_value_type::string);
       return true;
     } else if (cmd == "newproc") {
       command = objx_command::procedural;
-      parse_obj_value(line, name);
+      parse_obj_value(line, value, obj_value_type::string);
       return true;
     } else if (cmd == "frame") {
       command = objx_command::frame;
-      parse_obj_value(line, frame);
+      parse_obj_value(line, value, obj_value_type::array, 12);
       return true;
     } else if (cmd == "obj") {
       command = objx_command::object;
-      parse_obj_value(line, name);
+      parse_obj_value(line, value, obj_value_type::string);
       return true;
     } else if (cmd == "mat") {
       command = objx_command::material;
-      parse_obj_value(line, name);
+      parse_obj_value(line, value, obj_value_type::string);
       return true;
     } else if (cmd == "ortho") {
       command = objx_command::ortho;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::boolean);
       return true;
     } else if (cmd == "width") {
       command = objx_command::width;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
       return true;
     } else if (cmd == "height") {
       command = objx_command::height;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
       return true;
     } else if (cmd == "lens") {
       command = objx_command::lens;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
       return true;
     } else if (cmd == "aperture") {
       command = objx_command::aperture;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
       return true;
     } else if (cmd == "focus") {
       command = objx_command::focus;
-      parse_obj_value(line, value);
+      parse_obj_value(line, value, obj_value_type::number);
       return true;
     } else if (cmd == "Ke") {
       command = objx_command::emission;
-      parse_obj_value(line, color);
+      parse_obj_value(line, value, obj_value_type::array);
       return true;
     } else if (cmd == "map_Ke") {
       command = objx_command::emission_map;
@@ -789,24 +840,19 @@ bool read_objx_command(FILE* fs, objx_command& command, float& value,
     }
     // backward compatibility
     else if (cmd == "c") {
-      auto  oname    = name;
-      bool  ortho    = false;    // orthographic
-      float width    = 0.036f;   // film size (default to 35mm)
-      float height   = 0.024f;   // film size (default to 35mm)
-      float lens     = 0.050f;   // focal length
-      float aperture = 0;        // lens aperture
-      float focus    = flt_max;  // focus distance
-      parse_obj_value(line, name);
-      parse_obj_value(line, ortho);
-      parse_obj_value(line, width);
-      parse_obj_value(line, height);
-      parse_obj_value(line, lens);
-      parse_obj_value(line, focus);
-      parse_obj_value(line, aperture);
-      parse_obj_value(line, frame);
+      auto oname    = value.string;
+      auto name    =  obj_value{}, ortho    = obj_value{}, width    = obj_value{}, height   = obj_value{}, lens     = obj_value{}, aperture = obj_value{}, focus    = obj_value{}, frame    = obj_value{};
+        parse_obj_value(line, name, obj_value_type::string);
+      parse_obj_value(line, ortho, obj_value_type::boolean);
+      parse_obj_value(line, width, obj_value_type::number);
+      parse_obj_value(line, height, obj_value_type::number);
+      parse_obj_value(line, lens, obj_value_type::number);
+      parse_obj_value(line, focus, obj_value_type::number);
+      parse_obj_value(line, aperture, obj_value_type::number);
+      parse_obj_value(line, frame, obj_value_type::array, 12);
       if (command == objx_command::camera && oname != "") {
         command = objx_command::ortho;
-        value   = ortho ? 1 : 0;
+        value   = ortho;
       } else if (command == objx_command::ortho) {
         command = objx_command::width;
         value   = width;
@@ -824,64 +870,76 @@ bool read_objx_command(FILE* fs, objx_command& command, float& value,
         value   = aperture;
       } else if (command == objx_command::aperture) {
         command = objx_command::frame;
+          value   = frame;
       } else {
         command = objx_command::camera;
+          value   = name;
       }
       if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "e") {
-      parse_obj_value(line, name);
-      parse_obj_value(line, color);
-      parse_obj_value(line, texture.path);
-      parse_obj_value(line, frame);
-      if (texture.path == "\"\"") texture.path = "";
+        auto name = obj_value{}, frame = obj_value{}, emission = obj_value{}, emission_map = obj_value{};
+        parse_obj_value(line, name, obj_value_type::string);
+      parse_obj_value(line, emission, obj_value_type::array);
+      parse_obj_value(line, emission_map, obj_value_type::string);
+      parse_obj_value(line, frame, obj_value_type::array, 12);
+      if (emission_map.string == "\"\"") emission_map.string = "";
       if (command == objx_command::environment) {
         command = objx_command::emission;
+          value   = emission;
       } else if (command == objx_command::emission) {
         command = objx_command::emission_map;
+          get_obj_value(emission_map, texture.path);
       } else if (command == objx_command::emission_map) {
         command = objx_command::frame;
+          value   = frame;
       } else {
         command = objx_command::environment;
+          value   = name;
       }
       if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "i") {
-      auto object = ""s, material = ""s;
-      parse_obj_value(line, name);
-      parse_obj_value(line, object);
-      parse_obj_value(line, material);
-      parse_obj_value(line, frame);
+        auto name = obj_value{}, frame = obj_value{}, object = obj_value{}, material = obj_value{};
+      parse_obj_value(line, name, obj_value_type::string);
+      parse_obj_value(line, object, obj_value_type::string);
+      parse_obj_value(line, material, obj_value_type::string);
+      parse_obj_value(line, frame, obj_value_type::array, 12);
       if (command == objx_command::instance) {
         command = objx_command::object;
+          value   = object;
       } else if (command == objx_command::object) {
         command = objx_command::material;
+          value   = material;
       } else if (command == objx_command::material) {
         command = objx_command::frame;
+          value   = frame;
       } else {
         command = objx_command::instance;
+          value   = name;
       }
       if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "po") {
-      auto type = ""s, material = ""s;
-      auto level = 0;
-      parse_obj_value(line, name);
-      parse_obj_value(line, type);
-      parse_obj_value(line, material);
-      parse_obj_value(line, value);
-      parse_obj_value(line, level);
-      parse_obj_value(line, frame);
+        auto name = obj_value{}, frame = obj_value{}, type = obj_value{}, material = obj_value{}, size = obj_value{}, level = obj_value{};
+      parse_obj_value(line, name, obj_value_type::string);
+      parse_obj_value(line, type, obj_value_type::string);
+      parse_obj_value(line, material, obj_value_type::string);
+      parse_obj_value(line, size, obj_value_type::number);
+      parse_obj_value(line, level, obj_value_type::number);
+      parse_obj_value(line, frame, obj_value_type::array, 12);
       if (command == objx_command::procedural) {
         command = objx_command::object;
-        name    = type;
+        value    = type;
       } else if (command == objx_command::object) {
         command = objx_command::material;
-        name    = material;
+        value    = material;
       } else if (command == objx_command::material) {
         command = objx_command::frame;
+          value = frame;
       } else {
         command = objx_command::procedural;
+          value = name;
       }
       if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
       return true;
@@ -922,17 +980,19 @@ void write_obj_comment(FILE* fs, const string& comment) {
   checked_fprintf(fs, "\n");
 }
 
-void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
-    const string& name, const vector<obj_vertex>& vertices) {
+void write_obj_command(FILE* fs, obj_command command, const obj_value& value_,
+    const vector<obj_vertex>& vertices) {
+    auto& name = value_.string;
+    auto& value = value_.array_;
   switch (command) {
     case obj_command::vertex:
-      checked_fprintf(fs, "v %g %g %g\n", value.x, value.y, value.z);
+      checked_fprintf(fs, "v %g %g %g\n", value[0], value[1], value[2]);
       break;
     case obj_command::normal:
-      checked_fprintf(fs, "vn %g  %g %g\n", value.x, value.y, value.z);
+      checked_fprintf(fs, "vn %g  %g %g\n", value[0], value[1], value[2]);
       break;
     case obj_command::texcoord:
-      checked_fprintf(fs, "vt %g %g\n", value.x, value.y);
+      checked_fprintf(fs, "vt %g %g\n", value[0], value[1]);
       break;
     case obj_command::face:
     case obj_command::line:
@@ -971,8 +1031,11 @@ void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
   }
 }
 
-void write_mtl_command(FILE* fs, mtl_command command, const string& name,
-    float value, const vec3f& color, const obj_texture_info& texture) {
+void write_mtl_command(FILE* fs, mtl_command command, const obj_value& value_,
+    const obj_texture_info& texture) {
+    auto& name = value_.string;
+    auto value = value_.number;
+    auto& color = value_.array_;
   switch (command) {
     case mtl_command::material:
       checked_fprintf(fs, "\nnewmtl %s\n", name.c_str());
@@ -981,22 +1044,22 @@ void write_mtl_command(FILE* fs, mtl_command command, const string& name,
       checked_fprintf(fs, "  illum %d\n", (int)value);
       break;
     case mtl_command::emission:
-      checked_fprintf(fs, "  Ke %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Ke %g %g %g\n", color[0], color[1], color[2]);
       break;
     case mtl_command::ambient:
-      checked_fprintf(fs, "  Ka %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Ka %g %g %g\n", color[0], color[1], color[2]);
       break;
     case mtl_command::diffuse:
-      checked_fprintf(fs, "  Kd %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Kd %g %g %g\n", color[0], color[1], color[2]);
       break;
     case mtl_command::specular:
-      checked_fprintf(fs, "  Ks %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Ks %g %g %g\n", color[0], color[1], color[2]);
       break;
     case mtl_command::reflection:
-      checked_fprintf(fs, "  Kr %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Kr %g %g %g\n", color[0], color[1], color[2]);
       break;
     case mtl_command::transmission:
-      checked_fprintf(fs, "  Kt %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Kt %g %g %g\n", color[0], color[1], color[2]);
       break;
     case mtl_command::exponent:
       checked_fprintf(fs, "  Ns %d\n", (int)value);
@@ -1065,16 +1128,16 @@ void write_mtl_command(FILE* fs, mtl_command command, const string& name,
       checked_fprintf(fs, "  Pcr_map %s\n", texture.path.c_str());
       break;
     case mtl_command::vol_transmission:
-      checked_fprintf(fs, "  Vt %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Vt %g %g %g\n", color[0], color[1], color[2]);
       break;
     case mtl_command::vol_meanfreepath:
-      checked_fprintf(fs, "  Vp %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Vp %g %g %g\n", color[0], color[1], color[2]);
       break;
     case mtl_command::vol_emission:
-      checked_fprintf(fs, "  Ve %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Ve %g %g %g\n", color[0], color[1], color[2]);
       break;
     case mtl_command::vol_scattering:
-      checked_fprintf(fs, "  Vs %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Vs %g %g %g\n", color[0], color[1], color[2]);
       break;
     case mtl_command::vol_anisotropy:
       checked_fprintf(fs, "  Vg %g\n", value);
@@ -1085,9 +1148,12 @@ void write_mtl_command(FILE* fs, mtl_command command, const string& name,
   }
 }
 
-void write_objx_command(FILE* fs, objx_command command, const string& name,
-    float value, const vec3f& color, const frame3f& frame,
+void write_objx_command(FILE* fs, objx_command command, const obj_value& value_,
     const obj_texture_info& texture) {
+    auto& name = value_.string;
+    auto value = value_.number;
+    auto& color = value_.array_;
+    auto& frame = value_.array_;
   switch (command) {
     case objx_command::camera:
       checked_fprintf(fs, "\nnewcam %s\n", name.c_str());
@@ -1103,8 +1169,8 @@ void write_objx_command(FILE* fs, objx_command command, const string& name,
       break;
     case objx_command::frame:
       checked_fprintf(fs, "  frame %g %g %g %g %g %g %g %g %g %g %g %g\n",
-          frame.x.x, frame.x.y, frame.x.z, frame.y.x, frame.y.y, frame.y.z,
-          frame.z.x, frame.z.y, frame.z.z, frame.o.x, frame.o.y, frame.o.z);
+          frame[0], frame[1], frame[2], frame[3], frame[4], frame[5],
+          frame[6], frame[7], frame[8], frame[9], frame[10], frame[11]);
       break;
     case objx_command::object:
       checked_fprintf(fs, "  obj %s\n", name.c_str());
@@ -1123,7 +1189,7 @@ void write_objx_command(FILE* fs, objx_command command, const string& name,
       break;
     case objx_command::focus: checked_fprintf(fs, "  focus %g\n", value); break;
     case objx_command::emission:
-      checked_fprintf(fs, "  Ke %g %g %g\n", color.x, color.y, color.z);
+      checked_fprintf(fs, "  Ke %g %g %g\n", color[0], color[1], color[2]);
       break;
     case objx_command::emission_map:
       checked_fprintf(fs, "  map_Ke %s\n", texture.path.c_str());
