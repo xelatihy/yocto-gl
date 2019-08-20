@@ -6,13 +6,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#ifndef YOCTO_OBJ_DIRECT
-#define YOCTO_OBJ_DIRECT 1
-#endif
-
 #include "yocto_shape.h"
-#include "yocto_obj.h"
-#include "yocto_ply.h"
+#include "yocto_modelio.h"
 #include "yocto_random.h"
 
 #include <deque>
@@ -3025,32 +3020,6 @@ void save_shape(const string& filename, const vector<int>& points,
   }
 }
 
-// A file holder that closes a file when destructed. Useful for RIIA
-struct file_holder {
-  FILE*  fs       = nullptr;
-  string filename = "";
-
-  file_holder(const file_holder&) = delete;
-  file_holder& operator=(const file_holder&) = delete;
-  ~file_holder() {
-    if (fs) fclose(fs);
-  }
-};
-
-// Opens a file returing a handle with RIIA
-static inline file_holder open_input_file(
-    const string& filename, bool binary = false) {
-  auto fs = fopen(filename.c_str(), !binary ? "rt" : "rb");
-  if (!fs) throw std::runtime_error("could not open file " + filename);
-  return {fs, filename};
-}
-static inline file_holder open_output_file(
-    const string& filename, bool binary = false) {
-  auto fs = fopen(filename.c_str(), !binary ? "wt" : "wb");
-  if (!fs) throw std::runtime_error("could not open file " + filename);
-  return {fs, filename};
-}
-
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
@@ -3058,8 +3027,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, bool flip_texcoord) {
   // open ply
-  auto fs_ = open_input_file(filename, true);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "rb");
 
   // load elements
   auto format   = ply_format{};
@@ -3150,8 +3118,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
         flip_texcoord);
   }
 
-  auto fs_ = open_output_file(filename, true);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "wb");
 
   // format
   auto format = ply_format::binary_little_endian;
@@ -3304,8 +3271,6 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
   }
 }
 
-#if YOCTO_OBJ_DIRECT
-
 // Load obj mesh
 static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
@@ -3314,8 +3279,7 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
     bool flip_texcoord) {
   // open obj
-  auto fs_ = open_input_file(filename, true);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // obj vertices
   std::deque<vec3f> opos      = std::deque<vec3f>();
@@ -3471,201 +3435,6 @@ static void load_obj_shape(const string& filename, vector<int>& points,
   }
 }
 
-#else
-
-struct load_obj_shape_cb : obj_callbacks {
-  vector<int>&   points;
-  vector<vec2i>& lines;
-  vector<vec3i>& triangles;
-  vector<vec4i>& quads;
-  vector<vec4i>& quadspos;
-  vector<vec4i>& quadsnorm;
-  vector<vec4i>& quadstexcoord;
-  vector<vec3f>& positions;
-  vector<vec3f>& normals;
-  vector<vec2f>& texcoords;
-  bool           facevarying = false;
-
-  // obj vertices
-  std::deque<vec3f> opos      = std::deque<vec3f>();
-  std::deque<vec3f> onorm     = std::deque<vec3f>();
-  std::deque<vec2f> otexcoord = std::deque<vec2f>();
-
-  // vertex maps
-  unordered_map<obj_vertex, int> vertex_map = unordered_map<obj_vertex, int>();
-
-  // vertex maps
-  unordered_map<int, int> pos_map      = unordered_map<int, int>();
-  unordered_map<int, int> texcoord_map = unordered_map<int, int>();
-  unordered_map<int, int> norm_map     = unordered_map<int, int>();
-
-  load_obj_shape_cb(vector<int>& points, vector<vec2i>& lines,
-      vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
-      vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-      vector<vec3f>& positions, vector<vec3f>& normals,
-      vector<vec2f>& texcoords, bool facevarying)
-      : points{points}
-      , lines{lines}
-      , triangles{triangles}
-      , quads{quads}
-      , quadspos{quadspos}
-      , quadsnorm{quadsnorm}
-      , quadstexcoord{quadstexcoord}
-      , positions{positions}
-      , normals{normals}
-      , texcoords{texcoords}
-      , facevarying{facevarying} {}
-
-  // Add  vertices to the current shape
-  void add_verts(const vector<obj_vertex>& verts) {
-    for (auto& vert : verts) {
-      auto it = vertex_map.find(vert);
-      if (it != vertex_map.end()) continue;
-      auto nverts = (int)positions.size();
-      vertex_map.insert(it, {vert, nverts});
-      if (vert.position) positions.push_back(opos.at(vert.position - 1));
-      if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-      if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
-    }
-  }
-
-  // add vertex
-  void add_fvverts(const vector<obj_vertex>& verts) {
-    for (auto& vert : verts) {
-      if (!vert.position) continue;
-      auto pos_it = pos_map.find(vert.position);
-      if (pos_it != pos_map.end()) continue;
-      auto nverts = (int)positions.size();
-      pos_map.insert(pos_it, {vert.position, nverts});
-      positions.push_back(opos.at(vert.position - 1));
-    }
-    for (auto& vert : verts) {
-      if (!vert.texcoord) continue;
-      auto texcoord_it = texcoord_map.find(vert.texcoord);
-      if (texcoord_it != texcoord_map.end()) continue;
-      auto nverts = (int)texcoords.size();
-      texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
-      texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-    }
-    for (auto& vert : verts) {
-      if (!vert.normal) continue;
-      auto norm_it = norm_map.find(vert.normal);
-      if (norm_it != norm_map.end()) continue;
-      auto nverts = (int)normals.size();
-      norm_map.insert(norm_it, {vert.normal, nverts});
-      normals.push_back(onorm.at(vert.normal - 1));
-    }
-  }
-
-  void vert(const vec3f& v) override { opos.push_back(v); }
-  void norm(const vec3f& v) override { onorm.push_back(v); }
-  void texcoord(const vec2f& v) override { otexcoord.push_back(v); }
-  void face(const vector<obj_vertex>& verts) override {
-    if (!facevarying) {
-      add_verts(verts);
-      if (verts.size() == 4) {
-        quads.push_back({vertex_map.at(verts[0]), vertex_map.at(verts[1]),
-            vertex_map.at(verts[2]), vertex_map.at(verts[3])});
-      } else {
-        for (auto i = 2; i < verts.size(); i++)
-          triangles.push_back({vertex_map.at(verts[0]),
-              vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
-      }
-    } else {
-      add_fvverts(verts);
-      if (verts.size() == 4) {
-        if (verts[0].position) {
-          quadspos.push_back({pos_map.at(verts[0].position),
-              pos_map.at(verts[1].position), pos_map.at(verts[2].position),
-              pos_map.at(verts[3].position)});
-        }
-        if (verts[0].texcoord) {
-          quadstexcoord.push_back({texcoord_map.at(verts[0].texcoord),
-              texcoord_map.at(verts[1].texcoord),
-              texcoord_map.at(verts[2].texcoord),
-              texcoord_map.at(verts[3].texcoord)});
-        }
-        if (verts[0].normal) {
-          quadsnorm.push_back(
-              {norm_map.at(verts[0].normal), norm_map.at(verts[1].normal),
-                  norm_map.at(verts[2].normal), norm_map.at(verts[3].normal)});
-        }
-        // quads_materials.push_back(current_material_id);
-      } else {
-        if (verts[0].position) {
-          for (auto i = 2; i < verts.size(); i++)
-            quadspos.push_back({pos_map.at(verts[0].position),
-                pos_map.at(verts[1].position), pos_map.at(verts[i].position),
-                pos_map.at(verts[i].position)});
-        }
-        if (verts[0].texcoord) {
-          for (auto i = 2; i < verts.size(); i++)
-            quadstexcoord.push_back({texcoord_map.at(verts[0].texcoord),
-                texcoord_map.at(verts[1].texcoord),
-                texcoord_map.at(verts[i].texcoord),
-                texcoord_map.at(verts[i].texcoord)});
-        }
-        if (verts[0].normal) {
-          for (auto i = 2; i < verts.size(); i++)
-            quadsnorm.push_back({norm_map.at(verts[0].normal),
-                norm_map.at(verts[1].normal), norm_map.at(verts[i].normal),
-                norm_map.at(verts[i].normal)});
-        }
-        //                    for (auto i = 2; i < verts.size();
-        //                    i++)
-        //                        quads_materials.push_back(current_material_id);
-      }
-    }
-  }
-  void line(const vector<obj_vertex>& verts) override {
-    add_verts(verts);
-    for (auto i = 1; i < verts.size(); i++)
-      lines.push_back({vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
-  }
-  void point(const vector<obj_vertex>& verts) override {
-    add_verts(verts);
-    for (auto i = 0; i < verts.size(); i++)
-      points.push_back(vertex_map.at(verts[i]));
-  }
-  //        void usemtl(const string& name) {
-  //            auto pos = std::find(
-  //                                 material_group.begin(),
-  //                                 material_group.end(), name);
-  //            if (pos == material_group.end()) {
-  //                material_group.push_back(name);
-  //                current_material_id = (int)material_group.size() - 1;
-  //            } else {
-  //                current_material_id = (int)(pos -
-  //                material_group.begin());
-  //            }
-  //        }
-};
-
-// Load obj mesh
-static void load_obj_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
-    bool flip_texcoord) {
-  try {
-    // load obj
-    auto cb = load_obj_shape_cb{points, lines, triangles, quads, quadspos,
-        quadsnorm, quadstexcoord, positions, normals, texcoords, facevarying};
-    load_obj(filename, cb, true, flip_texcoord);
-
-    // merging quads and triangles
-    if (!facevarying) {
-      merge_triangles_and_quads(triangles, quads, false);
-    }
-
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
-  }
-}
-
-#endif
-
 // Load ply mesh
 static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -3673,17 +3442,18 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, bool flip_texcoord) {
-  auto fs_ = open_output_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   write_obj_comment(
       fs, "Written by Yocto/GL\nhttps://github.com/xelatihy/yocto-gl\n");
 
   for (auto& p : positions)
     write_obj_command(fs, obj_command::vertex, make_obj_value(p));
-  for (auto& n : normals) write_obj_command(fs, obj_command::normal, make_obj_value(n));
+  for (auto& n : normals)
+    write_obj_command(fs, obj_command::normal, make_obj_value(n));
   for (auto& t : texcoords)
-    write_obj_command(fs, obj_command::texcoord, make_obj_value(vec2f{t.x, flip_texcoord ? 1 - t.y : t.y}));
+    write_obj_command(fs, obj_command::texcoord,
+        make_obj_value(vec2f{t.x, flip_texcoord ? 1 - t.y : t.y}));
 
   auto elems = vector<obj_vertex>{};
   auto mask = obj_vertex{1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
@@ -3699,20 +3469,20 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   elems.resize(1);
   for (auto& p : points) {
     elems[0] = vert(p);
-      write_obj_command(fs, obj_command::point, {}, elems);
+    write_obj_command(fs, obj_command::point, {}, elems);
   }
   elems.resize(2);
   for (auto& l : lines) {
     elems[0] = vert(l.x);
     elems[1] = vert(l.y);
-      write_obj_command(fs, obj_command::line, {}, elems);
+    write_obj_command(fs, obj_command::line, {}, elems);
   }
   elems.resize(3);
   for (auto& t : triangles) {
     elems[0] = vert(t.x);
     elems[1] = vert(t.y);
     elems[2] = vert(t.z);
-      write_obj_command(fs, obj_command::face, {}, elems);
+    write_obj_command(fs, obj_command::face, {}, elems);
   }
   elems.resize(4);
   for (auto& q : quads) {
@@ -3725,7 +3495,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
       elems.resize(4);
       elems[3] = vert(q.w);
     }
-      write_obj_command(fs, obj_command::face, {}, elems);
+    write_obj_command(fs, obj_command::face, {}, elems);
   }
   // auto last_material_id = -1;
   elems.resize(4);
@@ -3749,7 +3519,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
       elems.resize(4);
       elems[3] = fvvert(qp.w, qt.w, qn.w);
     }
-      write_obj_command(fs, obj_command::face, {}, elems);
+    write_obj_command(fs, obj_command::face, {}, elems);
   }
 }
 
@@ -3777,7 +3547,7 @@ struct cyhair_data {
 static void load_cyhair(const string& filename, cyhair_data& hair) {
   // open file
   hair     = {};
-  auto fs_ = open_input_file(filename, true);
+  auto fs_ = open_file(filename, "b");
   auto fs  = fs_.fs;
 
   // Bytes 0-3    Must be "HAIR" in ascii code (48 41 49 52)

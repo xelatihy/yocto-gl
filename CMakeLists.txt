@@ -51,9 +51,7 @@ add_library(yocto
     yocto/yocto_image.h yocto/yocto_image.cpp
     yocto/yocto_scene.h yocto/yocto_scene.cpp
     yocto/yocto_trace.h yocto/yocto_trace.cpp
-    yocto/yocto_obj.h yocto/yocto_obj.cpp 
-    yocto/yocto_pbrt.h yocto/yocto_pbrt.cpp 
-    yocto/yocto_ply.h yocto/yocto_ply.cpp 
+    yocto/yocto_modelio.h yocto/yocto_modelio.cpp 
     yocto/yocto_sceneio.h yocto/yocto_sceneio.cpp
 )
 

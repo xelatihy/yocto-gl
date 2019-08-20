@@ -27,8 +27,7 @@
 //
 
 #include "yocto_sceneio.h"
-#include "yocto_obj.h"
-#include "yocto_pbrt.h"
+#include "yocto_modelio.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
 
@@ -165,60 +164,6 @@ inline void save_binary(const string& filename, const vector<byte>& data) {
     throw std::runtime_error("cannot write file " + filename);
   }
   fclose(fs);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// A file holder that closes a file when destructed. Useful for RIIA
-struct file_holder {
-  FILE*  fs       = nullptr;
-  string filename = "";
-
-  file_holder() {}
-  file_holder(file_holder&& other) {
-    this->fs       = other.fs;
-    this->filename = other.filename;
-    other.fs       = nullptr;
-  }
-  file_holder(const file_holder&) = delete;
-  file_holder& operator=(const file_holder&) = delete;
-  ~file_holder() {
-    if (fs) fclose(fs);
-  }
-};
-
-// Opens a file returing a handle with RIIA
-static inline void open_file(
-    file_holder& file, const string& filename, const char* mode = "rt") {
-  file.filename = filename;
-  file.fs       = fopen(filename.c_str(), mode);
-  if (!file.fs) throw std::runtime_error("could not open file " + filename);
-}
-static inline file_holder open_input_file(
-    const string& filename, bool binary = false) {
-  auto fs     = file_holder{};
-  fs.filename = filename;
-  fs.fs       = fopen(filename.c_str(), !binary ? "rt" : "rb");
-  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
-  return fs;
-}
-static inline file_holder open_output_file(
-    const string& filename, bool binary = false) {
-  auto fs     = file_holder{};
-  fs.filename = filename;
-  fs.fs       = fopen(filename.c_str(), !binary ? "wt" : "wb");
-  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
-  return fs;
-}
-
-// Read a line
-static inline bool read_line(FILE* fs, char* buffer, size_t size) {
-  return fgets(buffer, size, fs) != nullptr;
 }
 
 }  // namespace yocto
@@ -549,294 +494,10 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static inline bool is_yaml_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-static inline bool is_yaml_newline(char c) { return c == '\r' || c == '\n'; }
-static inline bool is_yaml_alpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-static inline bool is_yaml_digit(char c) { return c >= '0' && c <= '9'; }
-static inline bool is_yaml_whitespace(string_view str) {
-  while (!str.empty()) {
-    if (!is_yaml_space(str.front())) return false;
-    str.remove_prefix(1);
-  }
-  return true;
-}
-
-static inline void skip_yaml_whitespace(string_view& str) {
-  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
-}
-static inline void trim_yaml_whitespace(string_view& str) {
-  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
-  while (!str.empty() && is_yaml_space(str.back())) str.remove_suffix(1);
-}
-static inline void remove_yaml_comment(
-    string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_yaml_newline(str.back())) str.remove_suffix(1);
-  auto cpy = str;
-  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
-  str.remove_suffix(cpy.size());
-}
-
-static inline void parse_yaml_varname(string_view& str, string_view& value) {
-  skip_yaml_whitespace(str);
-  if (str.empty()) throw std::runtime_error("cannot parse value");
-  if (!is_yaml_alpha(str.front()))
-    throw std::runtime_error("cannot parse value");
-  auto pos = 0;
-  while (
-      is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
-    pos += 1;
-    if (pos >= str.size()) break;
-  }
-  value = str.substr(0, pos);
-  str.remove_prefix(pos);
-}
-static inline void parse_yaml_varname(string_view& str, string& value) {
-  auto view = ""sv;
-  parse_yaml_varname(str, view);
-  value = string{view};
-}
-
-inline void parse_yaml_value(string_view& str, string_view& value) {
-  skip_yaml_whitespace(str);
-  if (str.empty()) throw std::runtime_error("cannot parse value");
-  if (str.front() != '"') {
-    auto cpy = str;
-    while (!cpy.empty() && !is_yaml_space(cpy.front())) cpy.remove_prefix(1);
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-  } else {
-    if (str.front() != '"') throw std::runtime_error("cannot parse value");
-    str.remove_prefix(1);
-    if (str.empty()) throw std::runtime_error("cannot parse value");
-    auto cpy = str;
-    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
-    if (cpy.empty()) throw std::runtime_error("cannot parse value");
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-    str.remove_prefix(1);
-  }
-}
-inline void parse_yaml_value(string_view& str, string& value) {
-  auto valuev = ""sv;
-  parse_yaml_value(str, valuev);
-  value = string{valuev};
-}
-inline void parse_yaml_value(string_view& str, int& value) {
-  skip_yaml_whitespace(str);
-  char* end = nullptr;
-  value     = (int)strtol(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_yaml_value(string_view& str, float& value) {
-  skip_yaml_whitespace(str);
-  char* end = nullptr;
-  value     = strtof(str.data(), &end);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_yaml_value(string_view& str, double& value) {
-  skip_yaml_whitespace(str);
-  char* end = nullptr;
-  value     = strtod(str.data(), &end);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-
-enum struct yaml_value_type { number, boolean, string, array };
-
-struct yaml_value {
-  yaml_value_type   type    = yaml_value_type::number;
-  double            number  = 0;
-  bool              boolean = false;
-  string            string  = "";
-  array<double, 16> array_  = {};
-};
-
-// parse yaml value
-inline void get_yaml_value(const yaml_value& yaml, string& value) {
-  if (yaml.type != yaml_value_type::string)
-    throw std::runtime_error("error parsing yaml value");
-  value = yaml.string;
-}
-inline void get_yaml_value(const yaml_value& yaml, bool& value) {
-  if (yaml.type != yaml_value_type::boolean)
-    throw std::runtime_error("error parsing yaml value");
-  value = yaml.boolean;
-}
-inline void get_yaml_value(const yaml_value& yaml, int& value) {
-  if (yaml.type != yaml_value_type::number)
-    throw std::runtime_error("error parsing yaml value");
-  value = (int)yaml.number;
-}
-inline void get_yaml_value(const yaml_value& yaml, float& value) {
-  if (yaml.type != yaml_value_type::number)
-    throw std::runtime_error("error parsing yaml value");
-  value = (float)yaml.number;
-}
-inline void get_yaml_value(const yaml_value& yaml, vec2f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 2)
-    throw std::runtime_error("error parsing yaml value");
-  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
-}
-inline void get_yaml_value(const yaml_value& yaml, vec3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 3)
-    throw std::runtime_error("error parsing yaml value");
-  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
-}
-inline void get_yaml_value(const yaml_value& yaml, mat3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 9)
-    throw std::runtime_error("error parsing yaml value");
-  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-}
-inline void get_yaml_value(const yaml_value& yaml, frame3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 12)
-    throw std::runtime_error("error parsing yaml value");
-  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-}
-
-// construction
-inline yaml_value make_yaml_value(const string& value) {
-  return {yaml_value_type::string, 0, false, value};
-}
-inline yaml_value make_yaml_value(bool value) {
-  return {yaml_value_type::boolean, 0, value};
-}
-inline yaml_value make_yaml_value(int value) {
-  return {yaml_value_type::number, (double)value};
-}
-inline yaml_value make_yaml_value(float value) {
-  return {yaml_value_type::number, (double)value};
-}
-inline yaml_value make_yaml_value(const vec2f& value) {
-  return {
-      yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
-}
-inline yaml_value make_yaml_value(const vec3f& value) {
-  return {yaml_value_type::array, 3, false, "",
-      {(double)value.x, (double)value.y, (double)value.z}};
-}
-inline yaml_value make_yaml_value(const mat3f& value) {
-  auto yaml = yaml_value{yaml_value_type::array, 9};
-  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
-  return yaml;
-}
-inline yaml_value make_yaml_value(const frame3f& value) {
-  auto yaml = yaml_value{yaml_value_type::array, 12};
-  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
-  return yaml;
-}
-
-void parse_yaml_value(string_view& str, yaml_value& value) {
-  trim_yaml_whitespace(str);
-  if (str.empty()) throw std::runtime_error("bad yaml");
-  if (str.front() == '[') {
-    str.remove_prefix(1);
-    value.type   = yaml_value_type::array;
-    value.number = 0;
-    while (!str.empty()) {
-      skip_yaml_whitespace(str);
-      if (str.empty()) throw std::runtime_error("bad yaml");
-      if (str.front() == ']') {
-        str.remove_prefix(1);
-        break;
-      }
-      if (value.number >= 16) throw std::runtime_error("array too large");
-      parse_yaml_value(str, value.array_[(int)value.number]);
-      value.number += 1;
-      skip_yaml_whitespace(str);
-      if (str.front() == ',') {
-        str.remove_prefix(1);
-        continue;
-      } else if (str.front() == ']') {
-        str.remove_prefix(1);
-        break;
-      } else {
-        throw std::runtime_error("bad yaml");
-      }
-    }
-  } else if (is_yaml_digit(str.front()) || str.front() == '-' ||
-             str.front() == '+') {
-    value.type = yaml_value_type::number;
-    parse_yaml_value(str, value.number);
-  } else {
-    value.type = yaml_value_type::string;
-    parse_yaml_value(str, value.string);
-    if (value.string == "true" || value.string == "false") {
-      value.type    = yaml_value_type::boolean;
-      value.boolean = value.string == "true";
-    }
-  }
-  skip_yaml_whitespace(str);
-  if (!str.empty() && !is_yaml_whitespace(str))
-    throw std::runtime_error("bad yaml");
-}
-
-bool read_yaml_property(
-    FILE* fs, string& group, string& key, bool& newobj, yaml_value& value) {
-  // read the file line by line
-  char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
-    // line
-    auto line = string_view{buffer};
-    remove_yaml_comment(line);
-    if (line.empty()) continue;
-    if (is_yaml_whitespace(line)) continue;
-
-    // peek commands
-    if (is_yaml_space(line.front())) {
-      // indented property
-      if (group == "") throw std::runtime_error("bad yaml");
-      skip_yaml_whitespace(line);
-      if (line.empty()) throw std::runtime_error("bad yaml");
-      if (line.front() == '-') {
-        newobj = true;
-        line.remove_prefix(1);
-        skip_yaml_whitespace(line);
-      } else {
-        newobj = false;
-      }
-      parse_yaml_varname(line, key);
-      skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':')
-        throw std::runtime_error("bad yaml");
-      line.remove_prefix(1);
-      parse_yaml_value(line, value);
-      return true;
-    } else if (is_yaml_alpha(line.front())) {
-      // new group
-      parse_yaml_varname(line, key);
-      skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':')
-        throw std::runtime_error("bad yaml");
-      line.remove_prefix(1);
-      if (!line.empty() && !is_yaml_whitespace(line)) {
-        group = "";
-        parse_yaml_value(line, value);
-        return true;
-      } else {
-        group = key;
-        key   = "";
-        return true;
-      }
-    } else {
-      throw std::runtime_error("bad yaml");
-    }
-  }
-  return false;
-}
-
 void load_yaml(
     const string& filename, yocto_scene& scene, const load_params& params) {
   // open file
-  auto fs_ = open_input_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // parse state
   enum struct parsing_type {
@@ -1119,77 +780,11 @@ static void load_yaml_scene(
   update_transforms(scene);
 }
 
-static inline void checked_fprintf(FILE* fs, const char* fmt, ...) {
-  va_list args1;
-  va_start(args1, fmt);
-  if (vfprintf(fs, fmt, args1) < 0)
-    throw std::runtime_error("cannot write to file");
-  va_end(args1);
-}
-
-// Save yaml property
-void write_yaml_property(FILE* fs, const string& object, const string& key,
-    bool newobj, const yaml_value& value) {
-  if (key.empty()) {
-    checked_fprintf(fs, "\n%s:\n", object.c_str());
-  } else {
-    if (!object.empty()) {
-      checked_fprintf(fs, (newobj ? "  - " : "    "));
-    }
-    checked_fprintf(fs, "%s: ", key.c_str());
-    switch (value.type) {
-      case yaml_value_type::number:
-        checked_fprintf(fs, "%g", value.number);
-        break;
-      case yaml_value_type::boolean:
-        checked_fprintf(fs, "%s", value.boolean ? "true" : "false");
-        break;
-      case yaml_value_type::string:
-        checked_fprintf(fs, "%s", value.string.c_str());
-        break;
-      case yaml_value_type::array:
-        checked_fprintf(fs, "[ ");
-        for (auto i = 0; i < value.number; i++) {
-          if (i) checked_fprintf(fs, ", ");
-          checked_fprintf(fs, "%g", value.array_[i]);
-        }
-        checked_fprintf(fs, " ]");
-        break;
-    }
-    checked_fprintf(fs, "\n", key.c_str());
-  }
-}
-
-void write_yaml_object(FILE* fs, const string& object) {
-  checked_fprintf(fs, "\n%s:\n", object.c_str());
-}
-
-static inline vector<string> split_string(
-    const string& str, const string& delim) {
-  auto tokens = vector<string>{};
-  auto last = (size_t)0, next = (size_t)0;
-  while ((next = str.find(delim, last)) != string::npos) {
-    tokens.push_back(str.substr(last, next - last));
-    last = next + delim.size();
-  }
-  if (last < str.size()) tokens.push_back(str.substr(last));
-  return tokens;
-}
-
-void write_yaml_comment(FILE* fs, const string& comment) {
-  auto lines = split_string(comment, "\n");
-  for (auto& line : lines) {
-    checked_fprintf(fs, "# %s\n", line.c_str());
-  }
-  checked_fprintf(fs, "\n");
-}
-
 // Save yaml
 static void save_yaml(const string& filename, const yocto_scene& scene,
     bool ply_instances = false, const string& instances_name = "") {
   // open file
-  auto fs_ = open_output_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   write_yaml_comment(fs, get_save_scene_message(scene, ""));
 
@@ -1420,8 +1015,7 @@ static void load_mtl(const string& filename, yocto_scene& scene,
     unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
     const load_params& params) {
   // open file
-  auto fs_ = open_input_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // parsing type
   enum struct parsing_type { none, material };
@@ -1453,7 +1047,7 @@ static void load_mtl(const string& filename, yocto_scene& scene,
   auto texture = obj_texture_info{};
   while (read_mtl_command(fs, command, value, texture)) {
     if (command == mtl_command::material) {
-      auto& material     = scene.materials.emplace_back();
+      auto& material = scene.materials.emplace_back();
       get_obj_value(value, material.uri);
       mmap[material.uri] = (int)scene.materials.size() - 1;
       ptype              = parsing_type::material;
@@ -1464,17 +1058,27 @@ static void load_mtl(const string& filename, yocto_scene& scene,
     } else {
       auto& material = scene.materials.back();
       switch (command) {
-        case mtl_command::emission: get_obj_value(value, material.emission); break;
-        case mtl_command::diffuse: get_obj_value(value, material.diffuse); break;
-        case mtl_command::specular: get_obj_value(value, material.specular); break;
-        case mtl_command::transmission: get_obj_value(value, material.transmission); break;
+        case mtl_command::emission:
+          get_obj_value(value, material.emission);
+          break;
+        case mtl_command::diffuse:
+          get_obj_value(value, material.diffuse);
+          break;
+        case mtl_command::specular:
+          get_obj_value(value, material.specular);
+          break;
+        case mtl_command::transmission:
+          get_obj_value(value, material.transmission);
+          break;
         case mtl_command::exponent:
           get_obj_value(value, material.roughness);
           material.roughness = pow(2 / (material.roughness + 2), 1 / 4.0f);
           if (material.roughness < 0.01f) material.roughness = 0;
           if (material.roughness > 0.99f) material.roughness = 1;
           break;
-        case mtl_command::opacity: get_obj_value(value, material.opacity); break;
+        case mtl_command::opacity:
+          get_obj_value(value, material.opacity);
+          break;
         case mtl_command::emission_map:
           material.emission_tex = add_texture(texture, false);
           break;
@@ -1493,8 +1097,12 @@ static void load_mtl(const string& filename, yocto_scene& scene,
         case mtl_command::normal_map:
           material.normal_tex = add_texture(texture, true);
           break;
-        case mtl_command::pbr_roughness: get_obj_value(value, material.roughness); break;
-        case mtl_command::pbr_metallic: get_obj_value(value, material.metallic); break;
+        case mtl_command::pbr_roughness:
+          get_obj_value(value, material.roughness);
+          break;
+        case mtl_command::pbr_metallic:
+          get_obj_value(value, material.metallic);
+          break;
         case mtl_command::pbr_roughness_map:
           material.roughness_tex = add_texture(texture, true);
           break;
@@ -1507,10 +1115,18 @@ static void load_mtl(const string& filename, yocto_scene& scene,
         case mtl_command::vol_meanfreepath:
           get_obj_value(value, material.volmeanfreepath);
           break;
-        case mtl_command::vol_scattering: get_obj_value(value, material.volscatter); break;
-        case mtl_command::vol_emission: get_obj_value(value, material.volemission); break;
-        case mtl_command::vol_anisotropy: get_obj_value(value, material.volanisotropy); break;
-        case mtl_command::vol_scale: get_obj_value(value, material.volscale); break;
+        case mtl_command::vol_scattering:
+          get_obj_value(value, material.volscatter);
+          break;
+        case mtl_command::vol_emission:
+          get_obj_value(value, material.volemission);
+          break;
+        case mtl_command::vol_anisotropy:
+          get_obj_value(value, material.volanisotropy);
+          break;
+        case mtl_command::vol_scale:
+          get_obj_value(value, material.volscale);
+          break;
         case mtl_command::vol_scattering_map:
           material.subsurface_tex = add_texture(texture, false);
           break;
@@ -1526,8 +1142,7 @@ static void load_objx(const string& filename, yocto_scene& scene,
     const unordered_map<string, vector<int>>& object_shapes,
     const load_params&                        params) {
   // open file
-  auto fs_ = open_input_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // parsing types
   enum struct parsing_type { none, camera, environment, instance, procedural };
@@ -1565,13 +1180,13 @@ static void load_objx(const string& filename, yocto_scene& scene,
     if (command == objx_command::camera) {
       auto& camera = scene.cameras.emplace_back();
       get_obj_value(value, camera.uri);
-      ptype        = parsing_type::camera;
+      ptype = parsing_type::camera;
       continue;
     }
     if (command == objx_command::environment) {
       auto& environment = scene.environments.emplace_back();
       get_obj_value(value, environment.uri);
-      ptype             = parsing_type::environment;
+      ptype = parsing_type::environment;
       continue;
     }
     if (command == objx_command::instance) {
@@ -1581,12 +1196,12 @@ static void load_objx(const string& filename, yocto_scene& scene,
       }
       auto& instance = scene.instances.emplace_back();
       get_obj_value(value, instance.uri);
-      ptype          = parsing_type::instance;
-      instances_idx  = {(int)scene.instances.size() - 1};
+      ptype         = parsing_type::instance;
+      instances_idx = {(int)scene.instances.size() - 1};
       continue;
     }
     if (command == objx_command::procedural) {
-      auto& shape    = scene.shapes.emplace_back();
+      auto& shape = scene.shapes.emplace_back();
       get_obj_value(value, shape.uri);
       auto& instance = scene.instances.emplace_back();
       instance.uri   = shape.uri;
@@ -1601,19 +1216,27 @@ static void load_objx(const string& filename, yocto_scene& scene,
       auto& camera = scene.cameras.back();
       switch (command) {
         case objx_command::frame: get_obj_value(value, camera.frame); break;
-        case objx_command::ortho: get_obj_value(value, camera.orthographic); break;
+        case objx_command::ortho:
+          get_obj_value(value, camera.orthographic);
+          break;
         case objx_command::width: get_obj_value(value, camera.film.x); break;
         case objx_command::height: get_obj_value(value, camera.film.y); break;
         case objx_command::lens: get_obj_value(value, camera.lens); break;
-        case objx_command::aperture: get_obj_value(value, camera.aperture); break;
+        case objx_command::aperture:
+          get_obj_value(value, camera.aperture);
+          break;
         case objx_command::focus: get_obj_value(value, camera.focus); break;
         default: throw std::runtime_error("bad objx"); break;
       }
     } else if (ptype == parsing_type::environment) {
       auto& environment = scene.environments.back();
       switch (command) {
-        case objx_command::frame: get_obj_value(value, environment.frame); break;
-        case objx_command::emission: get_obj_value(value, environment.emission); break;
+        case objx_command::frame:
+          get_obj_value(value, environment.frame);
+          break;
+        case objx_command::emission:
+          get_obj_value(value, environment.emission);
+          break;
         case objx_command::emission_map:
           environment.emission_tex = add_texture(texture, false);
           break;
@@ -1627,16 +1250,16 @@ static void load_objx(const string& filename, yocto_scene& scene,
           }
         } break;
         case objx_command::material: {
-            auto name = ""s;
-            get_obj_value(value, name);
+          auto name = ""s;
+          get_obj_value(value, name);
           auto ist_material = mmap.at(name);
           for (auto& ist : instances_idx) {
             scene.instances[ist].material = ist_material;
           }
         } break;
         case objx_command::object: {
-            auto name = ""s;
-            get_obj_value(value, name);
+          auto name = ""s;
+          get_obj_value(value, name);
           auto& shapes = object_shapes.at(name);
           if (instances_idx.size() != shapes.size()) {
             auto to_add = shapes.size() - instances_idx.size();
@@ -1658,18 +1281,18 @@ static void load_objx(const string& filename, yocto_scene& scene,
       auto& instance = scene.instances.back();
       switch (command) {
         case objx_command::frame: get_obj_value(value, instance.frame); break;
-          case objx_command::material: {
-              auto name = ""s;
-              get_obj_value(value, name);
+        case objx_command::material: {
+          auto name = ""s;
+          get_obj_value(value, name);
           if (mmap.find(name) == mmap.end()) {
             throw std::runtime_error("missing material " + name);
           } else {
             instance.material = mmap.find(name)->second;
-          }}
-          break;
-          case objx_command::object:{
-              auto name = ""s;
-              get_obj_value(value, name);
+          }
+        } break;
+        case objx_command::object: {
+          auto name = ""s;
+          get_obj_value(value, name);
           if (name == "floor") {
             auto params         = proc_shape_params{};
             params.type         = proc_shape_params::type_t::floor;
@@ -1680,8 +1303,8 @@ static void load_objx(const string& filename, yocto_scene& scene,
                 shape.normals, shape.texcoords, params);
           } else {
             throw std::runtime_error("unknown obj procedural");
-          }}
-          break;
+          }
+        } break;
         default: throw std::runtime_error("bad objx"); break;
       }
     } else {
@@ -1797,8 +1420,7 @@ static void load_obj(
   };
 
   // open file
-  auto fs_ = open_input_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // load obj elements
   auto element   = obj_command{};
@@ -1812,7 +1434,7 @@ static void load_obj(
       get_obj_value(value, onorm.emplace_back());
     } else if (element == obj_command::texcoord) {
       get_obj_value(value, otexcoord.emplace_back());
-        otexcoord.back().y = 1 - otexcoord.back().y;
+      otexcoord.back().y = 1 - otexcoord.back().y;
     } else if (element == obj_command::face) {
       if (scene.shapes.empty()) add_shape();
       if (!scene.shapes.back().positions.empty() &&
@@ -1912,8 +1534,8 @@ static void load_obj(
       get_obj_value(value, mname);
       add_shape();
     } else if (element == obj_command::mtllib) {
-        auto name = ""s;
-        get_obj_value(value, name);
+      auto name = ""s;
+      get_obj_value(value, name);
       if (std::find(mlibs.begin(), mlibs.end(), name) != mlibs.end()) continue;
       mlibs.push_back(name);
       auto mtlpath = fs::path(filename).parent_path() / name;
@@ -1983,8 +1605,7 @@ static void load_obj_scene(
 static void save_obj(const string& filename, const yocto_scene& scene,
     bool preserve_instances, bool flip_texcoord = true) {
   // open writer
-  auto fs_ = open_output_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   // stats
   write_obj_comment(fs, get_save_scene_message(scene, ""));
@@ -1992,7 +1613,8 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   // material library
   if (!scene.materials.empty())
     write_obj_command(fs, obj_command::mtllib,
-        make_obj_value(fs::path(filename).replace_extension(".mtl").filename().string()));
+        make_obj_value(
+            fs::path(filename).replace_extension(".mtl").filename().string()));
 
   // shapes
   auto offset    = obj_vertex{0, 0, 0};
@@ -2009,7 +1631,9 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         make_obj_value(fs::path(instance.uri).stem().string()));
     if (instance.material >= 0)
       write_obj_command(fs, obj_command::usemtl,
-          make_obj_value(fs::path(scene.materials[instance.material].uri).stem().string()));
+          make_obj_value(fs::path(scene.materials[instance.material].uri)
+                             .stem()
+                             .string()));
     if (instance.frame == identity3x4f) {
       for (auto& p : shape.positions)
         write_obj_command(fs, obj_command::vertex, make_obj_value(p));
@@ -2021,11 +1645,11 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     } else {
       for (auto& p : shape.positions) {
         write_obj_command(fs, obj_command::vertex,
-                          make_obj_value(transform_point(instance.frame, p)));
+            make_obj_value(transform_point(instance.frame, p)));
       }
       for (auto& n : shape.normals) {
         write_obj_command(fs, obj_command::normal,
-                          make_obj_value(transform_direction(instance.frame, n)));
+            make_obj_value(transform_direction(instance.frame, n)));
       }
       for (auto& t : shape.texcoords)
         write_obj_command(fs, obj_command::texcoord,
@@ -2101,8 +1725,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 
 static void save_mtl(const string& filename, const yocto_scene& scene) {
   // open writer
-  auto fs_ = open_output_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   // stats
   write_obj_comment(fs, get_save_scene_message(scene, ""));
@@ -2128,9 +1751,10 @@ static void save_mtl(const string& filename, const yocto_scene& scene) {
         0.0f, 1.0e9f);
     write_mtl_command(fs, mtl_command::exponent, make_obj_value(ns));
     if (material.opacity != 1)
-      write_mtl_command(fs, mtl_command::opacity,make_obj_value(material.opacity));
+      write_mtl_command(
+          fs, mtl_command::opacity, make_obj_value(material.opacity));
     if (material.emission_tex >= 0)
-        write_mtl_command(fs, mtl_command::emission_map, {},
+      write_mtl_command(fs, mtl_command::emission_map, {},
           scene.textures[material.emission_tex].uri);
     if (material.diffuse_tex >= 0)
       write_mtl_command(fs, mtl_command::diffuse_map, {},
@@ -2154,8 +1778,8 @@ static void save_mtl(const string& filename, const yocto_scene& scene) {
           fs, mtl_command::vol_emission, make_obj_value(material.volemission));
       write_mtl_command(
           fs, mtl_command::vol_scattering, make_obj_value(material.volscatter));
-      write_mtl_command(
-          fs, mtl_command::vol_anisotropy, make_obj_value(material.volanisotropy));
+      write_mtl_command(fs, mtl_command::vol_anisotropy,
+          make_obj_value(material.volanisotropy));
       write_mtl_command(
           fs, mtl_command::vol_scale, make_obj_value(material.volscale));
     }
@@ -2165,8 +1789,7 @@ static void save_mtl(const string& filename, const yocto_scene& scene) {
 static void save_objx(
     const string& filename, const yocto_scene& scene, bool preserve_instances) {
   // open writer
-  auto fs_ = open_output_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   // stats
   write_obj_comment(fs, get_save_scene_message(scene, ""));
@@ -2180,7 +1803,7 @@ static void save_objx(
     write_objx_command(fs, objx_command::width, make_obj_value(camera.film.x));
     write_objx_command(fs, objx_command::height, make_obj_value(camera.film.y));
     write_objx_command(fs, objx_command::lens, make_obj_value(camera.lens));
-    write_objx_command(fs, objx_command::focus,make_obj_value(camera.focus));
+    write_objx_command(fs, objx_command::focus, make_obj_value(camera.focus));
     write_objx_command(
         fs, objx_command::aperture, make_obj_value(camera.aperture));
     write_objx_command(fs, objx_command::frame, make_obj_value(camera.frame));
@@ -2955,7 +2578,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
   };
 
   // json writer
-  auto fs_   = open_output_file(filename);
+  auto fs_   = open_file(filename, "w");
   auto fs    = fs_.fs;
   auto state = write_json_state{fs};
 
@@ -3252,7 +2875,7 @@ static void save_gltf(const string& filename, const yocto_scene& scene) {
   };
   auto dirname = fs::path(filename).parent_path();
   for (auto& shape : shapes) {
-    auto fs_ = open_output_file(dirname / shape.uri);
+    auto fs_ = open_file(dirname / shape.uri, "w");
     auto fs  = fs_.fs;
     write_values(fs, shape.indices);
     write_values(fs, shape.positions);
@@ -3958,7 +3581,7 @@ static void add_pbrt_light(
 // load pbrt
 static void load_pbrt(
     const string& filename, yocto_scene& scene, const load_params& params) {
-  auto files = vector<file_holder>{};
+  auto files = vector<file_wrapper>{};
   open_file(files.emplace_back(), filename);
 
   // parse state
@@ -3981,7 +3604,7 @@ static void load_pbrt(
   auto state   = pbrt_parser_state{};
   while (!files.empty()) {
     if (!read_pbrt_element(
-            files.back().fs, element, name, data, stack, state)) {
+            files.back(), element, name, data, stack, state)) {
       files.pop_back();
       continue;
     }
@@ -4161,7 +3784,7 @@ static inline void write_pbrt_command(
 // Convert a scene to pbrt format
 static void save_pbrt(const string& filename, const yocto_scene& scene) {
   // open file
-  auto fs_ = open_output_file(filename);
+  auto fs_ = open_file(filename, "w");
   auto fs  = fs_.fs;
 
   // embed data
