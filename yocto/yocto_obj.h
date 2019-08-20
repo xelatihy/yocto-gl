@@ -86,6 +86,84 @@ struct mtl_texture_info {
   mtl_texture_info(const string& path) : path{path} {}
 };
 
+// Obj command
+enum struct obj_command {
+  // clang-format off
+  vertex, normal, texcoord,         // data in value
+  face, line, point,                // data in vertices
+  object, group, usemtl, smoothing, // data in name
+  mtllib, objxlib,                  // data in name
+  // clang-format on
+};
+
+// Mtl command
+enum struct mtl_command {
+  // clang-format off
+  // material name and type (value)
+  material, illum,
+  // material colors
+  emission, ambient, diffuse, specular, reflection, transmission,
+  // material values
+  exponent, ior, opacity,
+  // material textures
+  emission_map, ambient_map, diffuse_map, specular_map, reflection_map,  
+  transmission_map, exponent_map, opacity_map, bump_map, normal_map, 
+  displacement_map,                  
+  // pbrt extension values
+  pbr_roughness, pbr_metallic, pbr_sheen, pbr_clearcoat, pbr_coatroughness,
+  // pbr extension textures
+  pbr_roughness_map, pbr_metallic_map, pbr_sheen_map,
+  pbr_clearcoat_map, pbr_coatroughness_map,
+  // volume extension colors
+  vol_transmission, vol_meanfreepath, vol_scattering, vol_emission,
+  // volume extension values
+  vol_anisotropy, vol_scale,
+  // volument textures
+  vol_scattering_map
+  // clang-format on
+};
+
+// Objx command
+enum struct objx_command {
+  // clang-format off
+  // object names
+  camera, environment, instance, procedural,
+  // object frames
+  frame,
+  // camera values
+  ortho, width, height, lens, aperture, focus,
+  // environment values
+  emission, emission_map,
+  // instance/procedural values
+  object, material
+  // clang-format on
+};
+
+// Read obj elements
+bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
+    string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size);
+bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
+    vec3f& color, string& name, mtl_texture_info& texture, bool fliptr = true);
+bool read_objx_command(FILE* fs, objx_command& command, float& value,
+    vec3f& color, string& name, frame3f& frame, mtl_texture_info& texture);
+
+// Write obj elements
+void write_obj_comment(FILE* fs, const string& comment);
+void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
+    const string& name, const vector<obj_vertex>& vertices);
+void write_mtl_command(FILE* fs, mtl_command command, const string& name,
+    float value, const vec3f& color, const mtl_texture_info& texture);
+void write_objx_command(FILE* fs, objx_command command, const string& name,
+    float value, const vec3f& color, const frame3f& frame,
+    const mtl_texture_info& texture);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// OLD INTERFACE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // Obj material.
 struct mtl_material {
   string name  = "";  // name
@@ -183,84 +261,6 @@ struct objx_instance {
   string  object   = "";            // object name
   string  material = "";            // material name
 };
-
-// Obj command
-enum struct obj_command {
-  // clang-format off
-  vertex, normal, texcoord,         // data in value
-  face, line, point,                // data in vertices
-  object, group, usemtl, smoothing, // data in name
-  mtllib, objxlib,                  // data in name
-  // clang-format on
-};
-
-// Mtl command
-enum struct mtl_command {
-  // clang-format off
-  // material name and type (value)
-  material, illum,
-  // material colors
-  emission, ambient, diffuse, specular, reflection, transmission,
-  // material values
-  exponent, ior, opacity,
-  // material textures
-  emission_map, ambient_map, diffuse_map, specular_map, reflection_map,  
-  transmission_map, exponent_map, opacity_map, bump_map, normal_map, 
-  displacement_map,                  
-  // pbrt extension values
-  pbr_roughness, pbr_metallic, pbr_sheen, pbr_clearcoat, pbr_coatroughness,
-  // pbr extension textures
-  pbr_roughness_map, pbr_metallic_map, pbr_sheen_map,
-  pbr_clearcoat_map, pbr_coatroughness_map,
-  // volume extension colors
-  vol_transmission, vol_meanfreepath, vol_scattering, vol_emission,
-  // volume extension values
-  vol_anisotropy, vol_scale,
-  // volument textures
-  vol_scattering_map
-  // clang-format on
-};
-
-// Objx command
-enum struct objx_command {
-  // clang-format off
-  // object names
-  camera, environment, instance, procedural,
-  // object frames
-  frame,
-  // camera values
-  ortho, width, height, lens, aperture, focus,
-  // environment values
-  emission, emission_map,
-  // instance/procedural values
-  object, material
-  // clang-format on
-};
-
-// Read obj elements
-bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
-    string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
-    vec3f& color, string& name, mtl_texture_info& texture, bool fliptr = true);
-bool read_objx_command(FILE* fs, objx_command& command, float& value,
-    vec3f& color, string& name, frame3f& frame, mtl_texture_info& texture);
-
-// Write obj elements
-void write_obj_comment(FILE* fs, const string& comment);
-void write_obj_command(FILE* fs, obj_command command, const vec3f& value,
-    const string& name, const vector<obj_vertex>& vertices);
-void write_mtl_command(FILE* fs, mtl_command command, const string& name,
-    float value, const vec3f& color, const mtl_texture_info& texture);
-void write_objx_command(FILE* fs, objx_command command, const string& name,
-    float value, const vec3f& color, const frame3f& frame,
-    const mtl_texture_info& texture);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// OLD INTERFACE
-// -----------------------------------------------------------------------------
-namespace yocto {
 
 // Obj callbacks
 struct obj_callbacks {
