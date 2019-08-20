@@ -68,10 +68,10 @@ See each header file for documentation.
    multiple importance sampling
 - `yocto/yocto_scene.{h,cpp}`: simple scene storage, evaluation of scene 
    properties
-- `yocto/yocto_obj.{h,cpp}`: OBJ parser based on callbacks (SAX-like)
-- `yocto/yocto_pbrt.{h,cpp}`: pbrt parser based on callbacks (SAX-like)
-- `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of OBJ, pbrt, glTF,
-   and a custom, hackable, YAML format
+- `yocto/yocto_modelio.{h,cpp}`: low level parsing and wiring for 
+   Ply, Obj, Pbrt and Yaml 3d formats
+- `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Obj, pbrt, glTF,
+   and a custom, hackable, Yaml format
 
 You can see Yocto/GL in action in the following applications written to
 test the library:
