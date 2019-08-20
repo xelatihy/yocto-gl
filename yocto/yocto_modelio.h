@@ -1,15 +1,15 @@
 //
 // # Yocto/ModelIO: L<ow-level library for PLY/OBJ/Pbrt/Yaml parsing and writing
 //
-// Yocto/ModelIO is a collection of simple parsers for Stanford Ply, 
-// Wavefront Obj, Pbrt, and Yaml formats. The prasers are designed for large 
+// Yocto/ModelIO is a collection of simple parsers for Stanford Ply,
+// Wavefront Obj, Pbrt, and Yaml formats. The prasers are designed for large
 // files and do keep a copy of the model in memory.
 // Yocto/ModelIO provides fast/low-level access to model data and requires some
 // familiarity with the formats to use effectively. For a higher level
 // interface, consider using Yocto/Shape's `load_shape()` and `save_shape()`,
 // or Yocto/SceneIO's `load_scene()` and `save_scene()`
 //
-// Yocto/ModelIO also support writing Ply/Obj/Yaml files again without keeping 
+// Yocto/ModelIO also support writing Ply/Obj/Yaml files again without keeping
 // a copy of the model but instead writing elements directly after each call.
 // Error reporting is done by throwing `std::runtime_error` exceptions.
 //
@@ -242,7 +242,7 @@ enum struct objx_command {
 enum struct obj_value_type { number, boolean, string, array };
 
 struct obj_value {
-  obj_value_type   type    = obj_value_type::number;
+  obj_value_type    type    = obj_value_type::number;
   double            number  = 0;
   bool              boolean = false;
   string            string  = "";
@@ -324,19 +324,21 @@ inline obj_value make_obj_value(const frame3f& value) {
 }
 
 // Read obj elements
-bool read_obj_command(FILE* fs, obj_command& command, 
-    obj_value& value, vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(FILE* fs, mtl_command& command, obj_value& value, obj_texture_info& texture, bool fliptr = true);
-bool read_objx_command(FILE* fs, objx_command& command, obj_value& value, obj_texture_info& texture);
+bool read_obj_command(FILE* fs, obj_command& command, obj_value& value,
+    vector<obj_vertex>& vertices, obj_vertex& vert_size);
+bool read_mtl_command(FILE* fs, mtl_command& command, obj_value& value,
+    obj_texture_info& texture, bool fliptr = true);
+bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
+    obj_texture_info& texture);
 
 // Write obj elements
 void write_obj_comment(FILE* fs, const string& comment);
-void write_obj_command(FILE* fs, obj_command command, const obj_value& value, 
-                       const vector<obj_vertex>& vertices = {});
+void write_obj_command(FILE* fs, obj_command command, const obj_value& value,
+    const vector<obj_vertex>& vertices = {});
 void write_mtl_command(FILE* fs, mtl_command command, const obj_value& value,
-                       const obj_texture_info& texture = {});
+    const obj_texture_info& texture = {});
 void write_objx_command(FILE* fs, objx_command command, const obj_value& value,
-                        const obj_texture_info& texture = {});
+    const obj_texture_info& texture = {});
 
 }  // namespace yocto
 
@@ -517,26 +519,26 @@ void write_yaml_property(FILE* fs, const string& object, const string& key,
 void write_yaml_object(FILE* fs, const string& object);
 
 // type-cheked yaml value access
- void get_yaml_value(const yaml_value& yaml, string& value);
- void get_yaml_value(const yaml_value& yaml, bool& value);
- void get_yaml_value(const yaml_value& yaml, int& value);
- void get_yaml_value(const yaml_value& yaml, float& value);
- void get_yaml_value(const yaml_value& yaml, vec2f& value);
- void get_yaml_value(const yaml_value& yaml, vec3f& value);
- void get_yaml_value(const yaml_value& yaml, mat3f& value);
- void get_yaml_value(const yaml_value& yaml, frame3f& value);
+void get_yaml_value(const yaml_value& yaml, string& value);
+void get_yaml_value(const yaml_value& yaml, bool& value);
+void get_yaml_value(const yaml_value& yaml, int& value);
+void get_yaml_value(const yaml_value& yaml, float& value);
+void get_yaml_value(const yaml_value& yaml, vec2f& value);
+void get_yaml_value(const yaml_value& yaml, vec3f& value);
+void get_yaml_value(const yaml_value& yaml, mat3f& value);
+void get_yaml_value(const yaml_value& yaml, frame3f& value);
 
 // yaml value construction
- yaml_value make_yaml_value(const string& value);
- yaml_value make_yaml_value(bool value);
- yaml_value make_yaml_value(int value);
- yaml_value make_yaml_value(float value);
- yaml_value make_yaml_value(const vec2f& value);
- yaml_value make_yaml_value(const vec3f& value);
- yaml_value make_yaml_value(const mat3f& value) ;
- yaml_value make_yaml_value(const frame3f& value);
+yaml_value make_yaml_value(const string& value);
+yaml_value make_yaml_value(bool value);
+yaml_value make_yaml_value(int value);
+yaml_value make_yaml_value(float value);
+yaml_value make_yaml_value(const vec2f& value);
+yaml_value make_yaml_value(const vec3f& value);
+yaml_value make_yaml_value(const mat3f& value);
+yaml_value make_yaml_value(const frame3f& value);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SIMPLE PBRT LOADER

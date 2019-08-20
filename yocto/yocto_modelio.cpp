@@ -1008,53 +1008,53 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
     }
   }
 }
-    
-void parse_obj_value(string_view& str, obj_value& value, obj_value_type type, int array_size = 3) {
-    switch(type) {
-        case obj_value_type::number: {
-            auto value_ = 0.0f;
-            parse_obj_value(str, value_);
-            value = make_obj_value(value_);
-        } break;
-        case obj_value_type::string: {
-            auto value_ = ""s;
-            parse_obj_value(str, value_);
-            value = make_obj_value(value_);
-        } break;
-        case obj_value_type::array: {
-            if(array_size == 2) {
-                auto value_ = zero2f;
-                parse_obj_value(str, value_);
-                value = make_obj_value(value_);
-            } else
-            if(array_size == 3) {
-                auto value_ = zero3f;
-                parse_obj_value(str, value_);
-                value = make_obj_value(value_);
-            } else
-            if(array_size == 12) {
-                auto value_ = identity3x4f;
-                parse_obj_value(str, value_);
-                value = make_obj_value(value_);
-            } else {
-                throw std::runtime_error("should not have gotten here");
-            }
-            } break;
-        case obj_value_type::boolean: {
-            auto value_ = 0;
-            parse_obj_value(str, value_);
-            value = make_obj_value((bool)value_);
-        } break;
-    }
+
+void parse_obj_value(string_view& str, obj_value& value, obj_value_type type,
+    int array_size = 3) {
+  switch (type) {
+    case obj_value_type::number: {
+      auto value_ = 0.0f;
+      parse_obj_value(str, value_);
+      value = make_obj_value(value_);
+    } break;
+    case obj_value_type::string: {
+      auto value_ = ""s;
+      parse_obj_value(str, value_);
+      value = make_obj_value(value_);
+    } break;
+    case obj_value_type::array: {
+      if (array_size == 2) {
+        auto value_ = zero2f;
+        parse_obj_value(str, value_);
+        value = make_obj_value(value_);
+      } else if (array_size == 3) {
+        auto value_ = zero3f;
+        parse_obj_value(str, value_);
+        value = make_obj_value(value_);
+      } else if (array_size == 12) {
+        auto value_ = identity3x4f;
+        parse_obj_value(str, value_);
+        value = make_obj_value(value_);
+      } else {
+        throw std::runtime_error("should not have gotten here");
+      }
+    } break;
+    case obj_value_type::boolean: {
+      auto value_ = 0;
+      parse_obj_value(str, value_);
+      value = make_obj_value((bool)value_);
+    } break;
+  }
 }
 
-static inline void parse_obj_value_or_empty(string_view& str, obj_value& value) {
-    skip_obj_whitespace(str);
-    if (str.empty()) {
-        value = make_obj_value(""s);
-    } else {
-        parse_obj_value(str, value, obj_value_type::string);
-    }
+static inline void parse_obj_value_or_empty(
+    string_view& str, obj_value& value) {
+  skip_obj_whitespace(str);
+  if (str.empty()) {
+    value = make_obj_value(""s);
+  } else {
+    parse_obj_value(str, value, obj_value_type::string);
+  }
 }
 
 // Read obj
@@ -1087,7 +1087,7 @@ bool read_obj_command(FILE* fs, obj_command& command, obj_value& value,
       return true;
     } else if (cmd == "vt") {
       command = obj_command::texcoord;
-        parse_obj_value(line, value, obj_value_type::array, 2);
+      parse_obj_value(line, value, obj_value_type::array, 2);
       vert_size.texcoord += 1;
       return true;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -1173,14 +1173,14 @@ bool read_mtl_command(FILE* fs, mtl_command& command, obj_value& value,
       command = mtl_command::transmission;
       parse_obj_value(line, value, obj_value_type::array);
     } else if (cmd == "Tf") {
-      command = mtl_command::transmission;
-        auto color = vec3f{-1};
-      value   = make_obj_value(color);
+      command    = mtl_command::transmission;
+      auto color = vec3f{-1};
+      value      = make_obj_value(color);
       parse_obj_value(line, value, obj_value_type::array);
-        get_obj_value(value, color);
+      get_obj_value(value, color);
       if (color.y < 0) color = vec3f{color.x};
-        if (fliptr) color = 1 - color;
-        value   = make_obj_value(color);
+      if (fliptr) color = 1 - color;
+      value = make_obj_value(color);
     } else if (cmd == "Tr") {
       command = mtl_command::opacity;
       parse_obj_value(line, value, obj_value_type::number);
@@ -1358,9 +1358,11 @@ bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
     }
     // backward compatibility
     else if (cmd == "c") {
-      auto oname    = value.string;
-      auto name    =  obj_value{}, ortho    = obj_value{}, width    = obj_value{}, height   = obj_value{}, lens     = obj_value{}, aperture = obj_value{}, focus    = obj_value{}, frame    = obj_value{};
-        parse_obj_value(line, name, obj_value_type::string);
+      auto oname = value.string;
+      auto name = obj_value{}, ortho = obj_value{}, width = obj_value{},
+           height = obj_value{}, lens = obj_value{}, aperture = obj_value{},
+           focus = obj_value{}, frame = obj_value{};
+      parse_obj_value(line, name, obj_value_type::string);
       parse_obj_value(line, ortho, obj_value_type::boolean);
       parse_obj_value(line, width, obj_value_type::number);
       parse_obj_value(line, height, obj_value_type::number);
@@ -1388,58 +1390,61 @@ bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
         value   = aperture;
       } else if (command == objx_command::aperture) {
         command = objx_command::frame;
-          value   = frame;
+        value   = frame;
       } else {
         command = objx_command::camera;
-          value   = name;
+        value   = name;
       }
       if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "e") {
-        auto name = obj_value{}, frame = obj_value{}, emission = obj_value{}, emission_map = obj_value{};
-        parse_obj_value(line, name, obj_value_type::string);
+      auto name = obj_value{}, frame = obj_value{}, emission = obj_value{},
+           emission_map = obj_value{};
+      parse_obj_value(line, name, obj_value_type::string);
       parse_obj_value(line, emission, obj_value_type::array);
       parse_obj_value(line, emission_map, obj_value_type::string);
       parse_obj_value(line, frame, obj_value_type::array, 12);
       if (emission_map.string == "\"\"") emission_map.string = "";
       if (command == objx_command::environment) {
         command = objx_command::emission;
-          value   = emission;
+        value   = emission;
       } else if (command == objx_command::emission) {
         command = objx_command::emission_map;
-          get_obj_value(emission_map, texture.path);
+        get_obj_value(emission_map, texture.path);
       } else if (command == objx_command::emission_map) {
         command = objx_command::frame;
-          value   = frame;
+        value   = frame;
       } else {
         command = objx_command::environment;
-          value   = name;
+        value   = name;
       }
       if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "i") {
-        auto name = obj_value{}, frame = obj_value{}, object = obj_value{}, material = obj_value{};
+      auto name = obj_value{}, frame = obj_value{}, object = obj_value{},
+           material = obj_value{};
       parse_obj_value(line, name, obj_value_type::string);
       parse_obj_value(line, object, obj_value_type::string);
       parse_obj_value(line, material, obj_value_type::string);
       parse_obj_value(line, frame, obj_value_type::array, 12);
       if (command == objx_command::instance) {
         command = objx_command::object;
-          value   = object;
+        value   = object;
       } else if (command == objx_command::object) {
         command = objx_command::material;
-          value   = material;
+        value   = material;
       } else if (command == objx_command::material) {
         command = objx_command::frame;
-          value   = frame;
+        value   = frame;
       } else {
         command = objx_command::instance;
-          value   = name;
+        value   = name;
       }
       if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "po") {
-        auto name = obj_value{}, frame = obj_value{}, type = obj_value{}, material = obj_value{}, size = obj_value{}, level = obj_value{};
+      auto name = obj_value{}, frame = obj_value{}, type = obj_value{},
+           material = obj_value{}, size = obj_value{}, level = obj_value{};
       parse_obj_value(line, name, obj_value_type::string);
       parse_obj_value(line, type, obj_value_type::string);
       parse_obj_value(line, material, obj_value_type::string);
@@ -1448,16 +1453,16 @@ bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
       parse_obj_value(line, frame, obj_value_type::array, 12);
       if (command == objx_command::procedural) {
         command = objx_command::object;
-        value    = type;
+        value   = type;
       } else if (command == objx_command::object) {
         command = objx_command::material;
-        value    = material;
+        value   = material;
       } else if (command == objx_command::material) {
         command = objx_command::frame;
-          value = frame;
+        value   = frame;
       } else {
         command = objx_command::procedural;
-          value = name;
+        value   = name;
       }
       if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
       return true;
@@ -1500,8 +1505,8 @@ void write_obj_comment(FILE* fs, const string& comment) {
 
 void write_obj_command(FILE* fs, obj_command command, const obj_value& value_,
     const vector<obj_vertex>& vertices) {
-    auto& name = value_.string;
-    auto& value = value_.array_;
+  auto& name  = value_.string;
+  auto& value = value_.array_;
   switch (command) {
     case obj_command::vertex:
       checked_fprintf(fs, "v %g %g %g\n", value[0], value[1], value[2]);
@@ -1551,9 +1556,9 @@ void write_obj_command(FILE* fs, obj_command command, const obj_value& value_,
 
 void write_mtl_command(FILE* fs, mtl_command command, const obj_value& value_,
     const obj_texture_info& texture) {
-    auto& name = value_.string;
-    auto value = value_.number;
-    auto& color = value_.array_;
+  auto& name  = value_.string;
+  auto  value = value_.number;
+  auto& color = value_.array_;
   switch (command) {
     case mtl_command::material:
       checked_fprintf(fs, "\nnewmtl %s\n", name.c_str());
@@ -1668,10 +1673,10 @@ void write_mtl_command(FILE* fs, mtl_command command, const obj_value& value_,
 
 void write_objx_command(FILE* fs, objx_command command, const obj_value& value_,
     const obj_texture_info& texture) {
-    auto& name = value_.string;
-    auto value = value_.number;
-    auto& color = value_.array_;
-    auto& frame = value_.array_;
+  auto& name  = value_.string;
+  auto  value = value_.number;
+  auto& color = value_.array_;
+  auto& frame = value_.array_;
   switch (command) {
     case objx_command::camera:
       checked_fprintf(fs, "\nnewcam %s\n", name.c_str());
@@ -1687,8 +1692,8 @@ void write_objx_command(FILE* fs, objx_command command, const obj_value& value_,
       break;
     case objx_command::frame:
       checked_fprintf(fs, "  frame %g %g %g %g %g %g %g %g %g %g %g %g\n",
-          frame[0], frame[1], frame[2], frame[3], frame[4], frame[5],
-          frame[6], frame[7], frame[8], frame[9], frame[10], frame[11]);
+          frame[0], frame[1], frame[2], frame[3], frame[4], frame[5], frame[6],
+          frame[7], frame[8], frame[9], frame[10], frame[11]);
       break;
     case objx_command::object:
       checked_fprintf(fs, "  obj %s\n", name.c_str());
@@ -2636,7 +2641,7 @@ void write_yaml_object(FILE* fs, const string& object) {
   checked_fprintf(fs, "\n%s:\n", object.c_str());
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PBRT CONVERSION

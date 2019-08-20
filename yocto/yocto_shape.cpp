@@ -3479,9 +3479,11 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
 
   for (auto& p : positions)
     write_obj_command(fs, obj_command::vertex, make_obj_value(p));
-  for (auto& n : normals) write_obj_command(fs, obj_command::normal, make_obj_value(n));
+  for (auto& n : normals)
+    write_obj_command(fs, obj_command::normal, make_obj_value(n));
   for (auto& t : texcoords)
-    write_obj_command(fs, obj_command::texcoord, make_obj_value(vec2f{t.x, flip_texcoord ? 1 - t.y : t.y}));
+    write_obj_command(fs, obj_command::texcoord,
+        make_obj_value(vec2f{t.x, flip_texcoord ? 1 - t.y : t.y}));
 
   auto elems = vector<obj_vertex>{};
   auto mask = obj_vertex{1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
@@ -3497,20 +3499,20 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   elems.resize(1);
   for (auto& p : points) {
     elems[0] = vert(p);
-      write_obj_command(fs, obj_command::point, {}, elems);
+    write_obj_command(fs, obj_command::point, {}, elems);
   }
   elems.resize(2);
   for (auto& l : lines) {
     elems[0] = vert(l.x);
     elems[1] = vert(l.y);
-      write_obj_command(fs, obj_command::line, {}, elems);
+    write_obj_command(fs, obj_command::line, {}, elems);
   }
   elems.resize(3);
   for (auto& t : triangles) {
     elems[0] = vert(t.x);
     elems[1] = vert(t.y);
     elems[2] = vert(t.z);
-      write_obj_command(fs, obj_command::face, {}, elems);
+    write_obj_command(fs, obj_command::face, {}, elems);
   }
   elems.resize(4);
   for (auto& q : quads) {
@@ -3523,7 +3525,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
       elems.resize(4);
       elems[3] = vert(q.w);
     }
-      write_obj_command(fs, obj_command::face, {}, elems);
+    write_obj_command(fs, obj_command::face, {}, elems);
   }
   // auto last_material_id = -1;
   elems.resize(4);
@@ -3547,7 +3549,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
       elems.resize(4);
       elems[3] = fvvert(qp.w, qt.w, qn.w);
     }
-      write_obj_command(fs, obj_command::face, {}, elems);
+    write_obj_command(fs, obj_command::face, {}, elems);
   }
 }
 
