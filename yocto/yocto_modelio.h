@@ -124,6 +124,7 @@ file_wrapper open_file(
 void open_file(file_wrapper& fs,
     const string& filename, const string& mode = "rt");
 void close_file(file_wrapper& fs);
+
 }
 
 // -----------------------------------------------------------------------------
@@ -154,19 +155,19 @@ struct ply_element {
 };
 
 // Read Ply functions
-void read_ply_header(FILE* fs, ply_format& format,
+void read_ply_header(file_wrapper& fs, ply_format& format,
     vector<ply_element>& elements, vector<string>& comments);
-void read_ply_value(FILE* fs, ply_format format, const ply_element& element,
+void read_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists);
-void read_ply_value(FILE* fs, ply_format format, const ply_element& element,
+void read_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
     vector<float>& values, vector<vector<int>>& lists);
 
 // Write Ply functions
-void write_ply_header(FILE* fs, ply_format format,
+void write_ply_header(file_wrapper& fs, ply_format format,
     const vector<ply_element>& elements, const vector<string>& comments);
-void write_ply_value(FILE* fs, ply_format format, const ply_element& element,
+void write_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists);
-void write_ply_value(FILE* fs, ply_format format, const ply_element& element,
+void write_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
     vector<float>& values, vector<vector<int>>& lists);
 
 // Helpers to get element and property indices
@@ -278,20 +279,20 @@ struct obj_value {
 };
 
 // Read obj elements
-bool read_obj_command(FILE* fs, obj_command& command, obj_value& value,
+bool read_obj_command(file_wrapper& fs, obj_command& command, obj_value& value,
     vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(FILE* fs, mtl_command& command, obj_value& value,
+bool read_mtl_command(file_wrapper& fs, mtl_command& command, obj_value& value,
     obj_texture_info& texture, bool fliptr = true);
-bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
+bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value,
     obj_texture_info& texture);
 
 // Write obj elements
-void write_obj_comment(FILE* fs, const string& comment);
-void write_obj_command(FILE* fs, obj_command command, const obj_value& value,
+void write_obj_comment(file_wrapper& fs, const string& comment);
+void write_obj_command(file_wrapper& fs, obj_command command, const obj_value& value,
     const vector<obj_vertex>& vertices = {});
-void write_mtl_command(FILE* fs, mtl_command command, const obj_value& value,
+void write_mtl_command(file_wrapper& fs, mtl_command command, const obj_value& value,
     const obj_texture_info& texture = {});
-void write_objx_command(FILE* fs, objx_command command, const obj_value& value,
+void write_objx_command(file_wrapper& fs, objx_command command, const obj_value& value,
     const obj_texture_info& texture = {});
 
 // typesafe access of obj value
@@ -484,13 +485,13 @@ struct yaml_value {
 
 // Load Yaml properties
 bool read_yaml_property(
-    FILE* fs, string& group, string& key, bool& newobj, yaml_value& value);
+    file_wrapper& fs, string& group, string& key, bool& newobj, yaml_value& value);
 
 // Write Yaml properties
-void write_yaml_comment(FILE* fs, const string& comment);
-void write_yaml_property(FILE* fs, const string& object, const string& key,
+void write_yaml_comment(file_wrapper& fs, const string& comment);
+void write_yaml_property(file_wrapper& fs, const string& object, const string& key,
     bool newobj, const yaml_value& value);
-void write_yaml_object(FILE* fs, const string& object);
+void write_yaml_object(file_wrapper& fs, const string& object);
 
 // type-cheked yaml value access
 void get_yaml_value(const yaml_value& yaml, string& value);
@@ -1370,7 +1371,7 @@ struct pbrt_parser_state {
 };
 
 // Read a pbrt element
-bool read_pbrt_element(FILE* fs, pbrt_element& element, string& name,
+bool read_pbrt_element(file_wrapper& fs, pbrt_element& element, string& name,
     pbrt_element_data& data, vector<pbrt_context>& stack,
     pbrt_parser_state& state);
 

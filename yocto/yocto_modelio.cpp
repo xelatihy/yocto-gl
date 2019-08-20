@@ -111,8 +111,8 @@ static inline bool exists_file(const string& filename) {
 }
 
 // Read a line
-static inline bool read_line(FILE* fs, char* buffer, size_t size) {
-  return fgets(buffer, size, fs) != nullptr;
+static inline bool read_line(file_wrapper& fs, char* buffer, size_t size) {
+  return fgets(buffer, size, fs.fs) != nullptr;
 }
 
 static inline bool is_space(char c) {
@@ -152,10 +152,10 @@ static inline vector<string> split_string(
   return tokens;
 }
 
-static inline void checked_fprintf(FILE* fs, const char* fmt, ...) {
+static inline void checked_fprintf(file_wrapper& fs, const char* fmt, ...) {
   va_list args1;
   va_start(args1, fmt);
-  if (vfprintf(fs, fmt, args1) < 0)
+  if (vfprintf(fs.fs, fmt, args1) < 0)
     throw std::runtime_error("cannot write to file");
   va_end(args1);
 }
@@ -212,16 +212,16 @@ static inline void parse_ply_value(string_view& str, size_t& value) {
 
 // get ply value either ascii or binary
 template <typename T>
-static inline T read_ply_value(FILE* fs, bool big_endian) {
+static inline T read_ply_value(file_wrapper& fs, bool big_endian) {
   auto value = (T)0;
-  if (fread(&value, sizeof(T), 1, fs) != 1)
+  if (fread(&value, sizeof(T), 1, fs.fs) != 1)
     throw std::runtime_error("cannot read value");
   if (big_endian) value = swap_endian(value);
   return value;
 }
 template <typename VT>
 static inline void read_ply_prop(
-    FILE* fs, bool big_endian, ply_type type, VT& value) {
+    file_wrapper& fs, bool big_endian, ply_type type, VT& value) {
   switch (type) {
     case ply_type::i8:
       value = (VT)read_ply_value<int8_t>(fs, big_endian);
@@ -276,7 +276,7 @@ static inline void parse_ply_prop(string_view& str, ply_type type, VT& value) {
 }
 
 // Load ply data
-void read_ply_header(FILE* fs, ply_format& format,
+void read_ply_header(file_wrapper& fs, ply_format& format,
     vector<ply_element>& elements, vector<string>& comments) {
   // ply type names
   static auto type_map = unordered_map<string, ply_type>{
@@ -396,7 +396,7 @@ void read_ply_header(FILE* fs, ply_format& format,
 }
 
 template <typename VT, typename LT>
-void read_ply_value_impl(FILE* fs, ply_format format,
+void read_ply_value_impl(file_wrapper& fs, ply_format format,
     const ply_element& element, vector<VT>& values, vector<vector<LT>>& lists) {
   // prepare properties
   if (values.size() != element.properties.size()) {
@@ -442,46 +442,42 @@ void read_ply_value_impl(FILE* fs, ply_format format,
 }
 
 // Write text to file
-static inline void write_ply_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0)
-    throw std::runtime_error("cannot print value");
+static inline void write_ply_text(file_wrapper& fs, const char* value) {
+  checked_fprintf(fs, "%s", value);
 }
-static inline void write_ply_text(FILE* fs, const string& value) {
-  if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw std::runtime_error("cannot print value");
+static inline void write_ply_text(file_wrapper& fs, const string& value) {
+  checked_fprintf(fs, "%s", value.c_str());
 }
 
 template <typename VT>
-static inline void write_ply_prop(FILE* fs, ply_type type, VT value) {
-  auto ok = -1;
+static inline void write_ply_prop(file_wrapper& fs, ply_type type, VT value) {
   switch (type) {
-    case ply_type::i8: ok = fprintf(fs, "%d", (int)value); break;
-    case ply_type::i16: ok = fprintf(fs, "%d", (int)value); break;
-    case ply_type::i32: ok = fprintf(fs, "%d", (int)value); break;
-    case ply_type::i64: ok = fprintf(fs, "%lld", (long long)value); break;
-    case ply_type::u8: ok = fprintf(fs, "%u", (unsigned)value); break;
-    case ply_type::u16: ok = fprintf(fs, "%u", (unsigned)value); break;
-    case ply_type::u32: ok = fprintf(fs, "%u", (unsigned)value); break;
+    case ply_type::i8: checked_fprintf(fs, "%d", (int)value); break;
+    case ply_type::i16: checked_fprintf(fs, "%d", (int)value); break;
+    case ply_type::i32: checked_fprintf(fs, "%d", (int)value); break;
+    case ply_type::i64: checked_fprintf(fs, "%lld", (long long)value); break;
+    case ply_type::u8: checked_fprintf(fs, "%u", (unsigned)value); break;
+    case ply_type::u16: checked_fprintf(fs, "%u", (unsigned)value); break;
+    case ply_type::u32: checked_fprintf(fs, "%u", (unsigned)value); break;
     case ply_type::u64:
-      ok = fprintf(fs, "%llu", (unsigned long long)value);
+      checked_fprintf(fs, "%llu", (unsigned long long)value);
       break;
-    case ply_type::f32: ok = fprintf(fs, "%g", (float)value); break;
-    case ply_type::f64: ok = fprintf(fs, "%g", (double)value); break;
+    case ply_type::f32: checked_fprintf(fs, "%g", (float)value); break;
+    case ply_type::f64: checked_fprintf(fs, "%g", (double)value); break;
   }
-  if (ok < 0) throw std::runtime_error("cannot print value");
 }
 
 template <typename T, typename VT>
-static inline void write_ply_binprop(FILE* fs, bool big_endian, VT value) {
+static inline void write_ply_binprop(file_wrapper& fs, bool big_endian, VT value) {
   auto typed_value = (T)value;
   if (big_endian) typed_value = swap_endian(typed_value);
-  if (fwrite(&typed_value, sizeof(T), 1, fs) != 1)
+  if (fwrite(&typed_value, sizeof(T), 1, fs.fs) != 1)
     throw std::runtime_error("cannot write to file");
 }
 
 template <typename VT>
 static inline void write_ply_binprop(
-    FILE* fs, bool big_endian, ply_type type, VT value) {
+    file_wrapper& fs, bool big_endian, ply_type type, VT value) {
   switch (type) {
     case ply_type::i8: write_ply_binprop<int8_t>(fs, big_endian, value); break;
     case ply_type::i16:
@@ -509,7 +505,7 @@ static inline void write_ply_binprop(
 }
 
 // Write Ply functions
-void write_ply_header(FILE* fs, ply_format format,
+void write_ply_header(file_wrapper& fs, ply_format format,
     const vector<ply_element>& elements, const vector<string>& comments) {
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{
@@ -555,7 +551,7 @@ void write_ply_header(FILE* fs, ply_format format,
 }
 
 template <typename VT, typename LT>
-void write_ply_value_impl(FILE* fs, ply_format format,
+void write_ply_value_impl(file_wrapper& fs, ply_format format,
     const ply_element& element, vector<VT>& values, vector<vector<LT>>& lists) {
   if (format == ply_format::ascii) {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -584,20 +580,20 @@ void write_ply_value_impl(FILE* fs, ply_format format,
   }
 }
 
-void write_ply_value(FILE* fs, ply_format format, const ply_element& element,
+void write_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists) {
   write_ply_value_impl(fs, format, element, values, lists);
 }
-void write_ply_value(FILE* fs, ply_format format, const ply_element& element,
+void write_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
     vector<float>& values, vector<vector<int>>& lists) {
   write_ply_value_impl(fs, format, element, values, lists);
 }
 
-void read_ply_value(FILE* fs, ply_format format, const ply_element& element,
+void read_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
     vector<double>& values, vector<vector<double>>& lists) {
   read_ply_value_impl(fs, format, element, values, lists);
 }
-void read_ply_value(FILE* fs, ply_format format, const ply_element& element,
+void read_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
     vector<float>& values, vector<vector<int>>& lists) {
   read_ply_value_impl(fs, format, element, values, lists);
 }
@@ -776,8 +772,7 @@ static inline void parse_obj_value(string_view& str, obj_texture_info& info) {
 // Load obj materials
 void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
   // open file
-  auto fs_ = open_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // currently parsed material
   auto material = obj_material{};
@@ -891,8 +886,7 @@ void load_mtl(const string& filename, obj_callbacks& cb, bool fliptr) {
 // Load obj extensions
 void load_objx(const string& filename, obj_callbacks& cb) {
   // open file
-  auto fs_ = open_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // read the file line by line
   char buffer[4096];
@@ -954,8 +948,7 @@ void load_objx(const string& filename, obj_callbacks& cb) {
 void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
     bool flipv, bool fliptr) {
   // open file
-  auto fs_ = open_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // track vertex size
   auto vert_size = obj_vertex();
@@ -1103,7 +1096,7 @@ static inline void parse_obj_value_or_empty(
 }
 
 // Read obj
-bool read_obj_command(FILE* fs, obj_command& command, obj_value& value,
+bool read_obj_command(file_wrapper& fs, obj_command& command, obj_value& value,
     vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // read the file line by line
   char buffer[4096];
@@ -1182,7 +1175,7 @@ bool read_obj_command(FILE* fs, obj_command& command, obj_value& value,
 }
 
 // Read mtl
-bool read_mtl_command(FILE* fs, mtl_command& command, obj_value& value,
+bool read_mtl_command(file_wrapper& fs, mtl_command& command, obj_value& value,
     obj_texture_info& texture, bool fliptr) {
   // read the file line by line
   char buffer[4096];
@@ -1322,11 +1315,11 @@ bool read_mtl_command(FILE* fs, mtl_command& command, obj_value& value,
 }
 
 // Read objx
-bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
+bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value,
     obj_texture_info& texture) {
   // read the file line by line
   char buffer[4096];
-  auto pos = ftell(fs);
+  auto pos = ftell(fs.fs);
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
@@ -1440,7 +1433,7 @@ bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
         command = objx_command::camera;
         value   = name;
       }
-      if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
+      if (command != objx_command::frame) fseek(fs.fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "e") {
       auto name = obj_value{}, frame = obj_value{}, emission = obj_value{},
@@ -1463,7 +1456,7 @@ bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
         command = objx_command::environment;
         value   = name;
       }
-      if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
+      if (command != objx_command::frame) fseek(fs.fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "i") {
       auto name = obj_value{}, frame = obj_value{}, object = obj_value{},
@@ -1485,7 +1478,7 @@ bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
         command = objx_command::instance;
         value   = name;
       }
-      if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
+      if (command != objx_command::frame) fseek(fs.fs, pos, SEEK_SET);
       return true;
     } else if (cmd == "po") {
       auto name = obj_value{}, frame = obj_value{}, type = obj_value{},
@@ -1509,7 +1502,7 @@ bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
         command = objx_command::procedural;
         value   = name;
       }
-      if (command != objx_command::frame) fseek(fs, pos, SEEK_SET);
+      if (command != objx_command::frame) fseek(fs.fs, pos, SEEK_SET);
       return true;
     } else {
       // unused
@@ -1520,7 +1513,7 @@ bool read_objx_command(FILE* fs, objx_command& command, obj_value& value,
 }
 
 // Write obj elements
-void write_obj_comment(FILE* fs, const string& comment) {
+void write_obj_comment(file_wrapper& fs, const string& comment) {
   auto lines = split_string(comment, "\n");
   for (auto& line : lines) {
     checked_fprintf(fs, "# %s\n", line.c_str());
@@ -1528,7 +1521,7 @@ void write_obj_comment(FILE* fs, const string& comment) {
   checked_fprintf(fs, "\n");
 }
 
-void write_obj_command(FILE* fs, obj_command command, const obj_value& value_,
+void write_obj_command(file_wrapper& fs, obj_command command, const obj_value& value_,
     const vector<obj_vertex>& vertices) {
   auto& name  = value_.string;
   auto& value = value_.array_;
@@ -1579,7 +1572,7 @@ void write_obj_command(FILE* fs, obj_command command, const obj_value& value_,
   }
 }
 
-void write_mtl_command(FILE* fs, mtl_command command, const obj_value& value_,
+void write_mtl_command(file_wrapper& fs, mtl_command command, const obj_value& value_,
     const obj_texture_info& texture) {
   auto& name  = value_.string;
   auto  value = value_.number;
@@ -1696,7 +1689,7 @@ void write_mtl_command(FILE* fs, mtl_command command, const obj_value& value_,
   }
 }
 
-void write_objx_command(FILE* fs, objx_command command, const obj_value& value_,
+void write_objx_command(file_wrapper& fs, objx_command command, const obj_value& value_,
     const obj_texture_info& texture) {
   auto& name  = value_.string;
   auto  value = value_.number;
@@ -1840,11 +1833,11 @@ static inline void remove_pbrt_comment(
 }
 
 // Read a pbrt command from file
-bool read_pbrt_cmdline(FILE* fs, string& cmd) {
+bool read_pbrt_cmdline(file_wrapper& fs, string& cmd) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
-  auto pos   = ftell(fs);
+  auto pos   = ftell(fs.fs);
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
@@ -1856,7 +1849,7 @@ bool read_pbrt_cmdline(FILE* fs, string& cmd) {
     auto is_cmd = line[0] >= 'A' && line[0] <= 'Z';
     if (is_cmd) {
       if (found) {
-        fseek(fs, pos, SEEK_SET);
+        fseek(fs.fs, pos, SEEK_SET);
         return true;
       } else {
         found = true;
@@ -1866,7 +1859,7 @@ bool read_pbrt_cmdline(FILE* fs, string& cmd) {
     }
     cmd += line;
     cmd += " ";
-    pos = ftell(fs);
+    pos = ftell(fs.fs);
   }
   return found;
 }
@@ -2569,7 +2562,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
 }
 
 bool read_yaml_property(
-    FILE* fs, string& group, string& key, bool& newobj, yaml_value& value) {
+    file_wrapper& fs, string& group, string& key, bool& newobj, yaml_value& value) {
   // read the file line by line
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -2622,7 +2615,7 @@ bool read_yaml_property(
   return false;
 }
 
-void write_yaml_comment(FILE* fs, const string& comment) {
+void write_yaml_comment(file_wrapper& fs, const string& comment) {
   auto lines = split_string(comment, "\n");
   for (auto& line : lines) {
     checked_fprintf(fs, "# %s\n", line.c_str());
@@ -2631,7 +2624,7 @@ void write_yaml_comment(FILE* fs, const string& comment) {
 }
 
 // Save yaml property
-void write_yaml_property(FILE* fs, const string& object, const string& key,
+void write_yaml_property(file_wrapper& fs, const string& object, const string& key,
     bool newobj, const yaml_value& value) {
   if (key.empty()) {
     checked_fprintf(fs, "\n%s:\n", object.c_str());
@@ -2663,7 +2656,7 @@ void write_yaml_property(FILE* fs, const string& object, const string& key,
   }
 }
 
-void write_yaml_object(FILE* fs, const string& object) {
+void write_yaml_object(file_wrapper& fs, const string& object) {
   checked_fprintf(fs, "\n%s:\n", object.c_str());
 }
 
@@ -4604,7 +4597,7 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
 
   // parse command by command
   while (!files.empty()) {
-    auto fs   = files.back().fs;
+    auto& fs   = files.back();
     auto line = ""s;
     auto cmd  = ""s;
     while (read_pbrt_cmdline(fs, line)) {
@@ -4819,7 +4812,7 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
 }
 
 // Load pbrt scene
-bool read_pbrt_element(FILE* fs, pbrt_element& element, string& name,
+bool read_pbrt_element(file_wrapper& fs, pbrt_element& element, string& name,
     pbrt_element_data& data, vector<pbrt_context>& stack,
     pbrt_parser_state& state) {
   // helpders

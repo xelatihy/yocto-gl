@@ -3027,8 +3027,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, bool flip_texcoord) {
   // open ply
-  auto fs_ = open_file(filename, "rb");
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "rb");
 
   // load elements
   auto format   = ply_format{};
@@ -3119,8 +3118,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
         flip_texcoord);
   }
 
-  auto fs_ = open_file(filename, "wb");
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "wb");
 
   // format
   auto format = ply_format::binary_little_endian;
@@ -3281,8 +3279,7 @@ static void load_obj_shape(const string& filename, vector<int>& points,
     vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
     bool flip_texcoord) {
   // open obj
-  auto fs_ = open_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // obj vertices
   std::deque<vec3f> opos      = std::deque<vec3f>();
@@ -3445,8 +3442,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, bool flip_texcoord) {
-  auto fs_ = open_file(filename, "w");
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   write_obj_comment(
       fs, "Written by Yocto/GL\nhttps://github.com/xelatihy/yocto-gl\n");

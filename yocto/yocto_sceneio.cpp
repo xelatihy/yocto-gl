@@ -497,8 +497,7 @@ namespace yocto {
 void load_yaml(
     const string& filename, yocto_scene& scene, const load_params& params) {
   // open file
-  auto fs_ = open_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // parse state
   enum struct parsing_type {
@@ -785,8 +784,7 @@ static void load_yaml_scene(
 static void save_yaml(const string& filename, const yocto_scene& scene,
     bool ply_instances = false, const string& instances_name = "") {
   // open file
-  auto fs_ = open_file(filename, "w");
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   write_yaml_comment(fs, get_save_scene_message(scene, ""));
 
@@ -1017,8 +1015,7 @@ static void load_mtl(const string& filename, yocto_scene& scene,
     unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
     const load_params& params) {
   // open file
-  auto fs_ = open_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // parsing type
   enum struct parsing_type { none, material };
@@ -1145,8 +1142,7 @@ static void load_objx(const string& filename, yocto_scene& scene,
     const unordered_map<string, vector<int>>& object_shapes,
     const load_params&                        params) {
   // open file
-  auto fs_ = open_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // parsing types
   enum struct parsing_type { none, camera, environment, instance, procedural };
@@ -1424,8 +1420,7 @@ static void load_obj(
   };
 
   // open file
-  auto fs_ = open_file(filename);
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename);
 
   // load obj elements
   auto element   = obj_command{};
@@ -1610,8 +1605,7 @@ static void load_obj_scene(
 static void save_obj(const string& filename, const yocto_scene& scene,
     bool preserve_instances, bool flip_texcoord = true) {
   // open writer
-  auto fs_ = open_file(filename, "w");
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   // stats
   write_obj_comment(fs, get_save_scene_message(scene, ""));
@@ -1731,8 +1725,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
 
 static void save_mtl(const string& filename, const yocto_scene& scene) {
   // open writer
-  auto fs_ = open_file(filename, "w");
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   // stats
   write_obj_comment(fs, get_save_scene_message(scene, ""));
@@ -1796,8 +1789,7 @@ static void save_mtl(const string& filename, const yocto_scene& scene) {
 static void save_objx(
     const string& filename, const yocto_scene& scene, bool preserve_instances) {
   // open writer
-  auto fs_ = open_file(filename, "w");
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   // stats
   write_obj_comment(fs, get_save_scene_message(scene, ""));
@@ -3612,7 +3604,7 @@ static void load_pbrt(
   auto state   = pbrt_parser_state{};
   while (!files.empty()) {
     if (!read_pbrt_element(
-            files.back().fs, element, name, data, stack, state)) {
+            files.back(), element, name, data, stack, state)) {
       files.pop_back();
       continue;
     }
