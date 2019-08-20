@@ -257,13 +257,8 @@ enum struct objx_command {
 // Read obj elements
 bool read_obj_command(FILE* fs, obj_command& command, vec3f& value,
     string& name, vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(FILE* fs, mtl_command_& command, mtl_material& material,
-    bool fliptr = true);
 bool read_mtl_command(FILE* fs, mtl_command& command, float& value,
     vec3f& color, string& name, mtl_texture_info& texture, bool fliptr = true);
-bool read_objx_command(FILE* fs, objx_command_& command, objx_camera& camera,
-    objx_environment& environment, objx_instance& instance,
-    objx_procedural& procedural);
 bool read_objx_command(FILE* fs, objx_command& command, float& value,
     vec3f& color, string& name, frame3f& frame, mtl_texture_info& texture);
 
@@ -276,12 +271,6 @@ void write_mtl_command(FILE* fs, mtl_command command, const string& name,
 void write_objx_command(FILE* fs, objx_command command, const string& name,
     float value, const vec3f& color, const frame3f& frame,
     const mtl_texture_info& texture);
-
-void write_mtl_command(
-    FILE* fs, mtl_command_ command, const mtl_material& material);
-void write_objx_command(FILE* fs, objx_command_ command,
-    const objx_camera& camera, const objx_environment& environment,
-    const objx_instance& instance, const objx_procedural& procedural);
 
 }  // namespace yocto
 
