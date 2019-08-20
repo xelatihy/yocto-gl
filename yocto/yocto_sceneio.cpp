@@ -1249,21 +1249,21 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   for (auto& camera : scene.cameras) {
     write_yaml_property(
         fs, "cameras", "uri", true, make_yaml_value(camera.uri));
-      if(camera.frame != identity3x4f)
-    write_yaml_property(
-        fs, "cameras", "frame", false, make_yaml_value(camera.frame));
-    if(camera.orthographic)
-    write_yaml_property(fs, "cameras", "orthographic", false,
-        make_yaml_value(camera.orthographic));
+    if (camera.frame != identity3x4f)
+      write_yaml_property(
+          fs, "cameras", "frame", false, make_yaml_value(camera.frame));
+    if (camera.orthographic)
+      write_yaml_property(fs, "cameras", "orthographic", false,
+          make_yaml_value(camera.orthographic));
     write_yaml_property(
         fs, "cameras", "lens", false, make_yaml_value(camera.lens));
     write_yaml_property(
         fs, "cameras", "film", false, make_yaml_value(camera.film));
     write_yaml_property(
         fs, "cameras", "focus", false, make_yaml_value(camera.focus));
-    if(camera.aperture)
-    write_yaml_property(
-        fs, "cameras", "aperture", false, make_yaml_value(camera.aperture));
+    if (camera.aperture)
+      write_yaml_property(
+          fs, "cameras", "aperture", false, make_yaml_value(camera.aperture));
   }
 
   if (!scene.textures.empty()) write_yaml_object(fs, "textures");
@@ -1282,50 +1282,51 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   for (auto& material : scene.materials) {
     write_yaml_property(
         fs, "materials", "uri", true, make_yaml_value(material.uri));
-    if(material.emission != zero3f)
-    write_yaml_property(
-        fs, "materials", "emission", false, make_yaml_value(material.emission));
-    if(material.diffuse != zero3f)
-    write_yaml_property(
-        fs, "materials", "diffuse", false, make_yaml_value(material.diffuse));
-    if(material.specular != zero3f)
-    write_yaml_property(
-        fs, "materials", "specular", false, make_yaml_value(material.specular));
-    if(material.metallic)
-    write_yaml_property(
-        fs, "materials", "metallic", false, make_yaml_value(material.metallic));
-    if(material.transmission != zero3f)
-    write_yaml_property(fs, "materials", "transmission", false,
-        make_yaml_value(material.transmission));
-    if(material.refraction != zero3f)
-    write_yaml_property(fs, "materials", "refraction", false,
-        make_yaml_value(material.refraction));
+    if (material.emission != zero3f)
+      write_yaml_property(fs, "materials", "emission", false,
+          make_yaml_value(material.emission));
+    if (material.diffuse != zero3f)
+      write_yaml_property(
+          fs, "materials", "diffuse", false, make_yaml_value(material.diffuse));
+    if (material.specular != zero3f)
+      write_yaml_property(fs, "materials", "specular", false,
+          make_yaml_value(material.specular));
+    if (material.metallic)
+      write_yaml_property(fs, "materials", "metallic", false,
+          make_yaml_value(material.metallic));
+    if (material.transmission != zero3f)
+      write_yaml_property(fs, "materials", "transmission", false,
+          make_yaml_value(material.transmission));
+    if (material.refraction != zero3f)
+      write_yaml_property(fs, "materials", "refraction", false,
+          make_yaml_value(material.refraction));
     write_yaml_property(fs, "materials", "roughness", false,
         make_yaml_value(material.roughness));
-    if(material.voltransmission != zero3f)
-    write_yaml_property(fs, "materials", "voltransmission", false,
-        make_yaml_value(material.voltransmission));
-    if(material.volmeanfreepath != zero3f)
-    write_yaml_property(fs, "materials", "volmeanfreepath", false,
-        make_yaml_value(material.volmeanfreepath));
-    if(material.volscatter != zero3f)
-    write_yaml_property(fs, "materials", "volscatter", false,
-        make_yaml_value(material.volscatter));
-    if(material.volemission != zero3f)
-    write_yaml_property(fs, "materials", "volemission", false,
-        make_yaml_value(material.volemission));
-    if(material.volanisotropy)
-    write_yaml_property(fs, "materials", "volanisotropy", false,
-        make_yaml_value(material.volanisotropy));
-    if(material.voltransmission != zero3f || material.volmeanfreepath != zero3f)
-    write_yaml_property(
-        fs, "materials", "volscale", false, make_yaml_value(material.volscale));
-    if(material.coat != zero3f)
-    write_yaml_property(
-        fs, "materials", "coat", false, make_yaml_value(material.coat));
-    if(material.opacity != 1)
-    write_yaml_property(
-        fs, "materials", "opacity", false, make_yaml_value(material.opacity));
+    if (material.voltransmission != zero3f)
+      write_yaml_property(fs, "materials", "voltransmission", false,
+          make_yaml_value(material.voltransmission));
+    if (material.volmeanfreepath != zero3f)
+      write_yaml_property(fs, "materials", "volmeanfreepath", false,
+          make_yaml_value(material.volmeanfreepath));
+    if (material.volscatter != zero3f)
+      write_yaml_property(fs, "materials", "volscatter", false,
+          make_yaml_value(material.volscatter));
+    if (material.volemission != zero3f)
+      write_yaml_property(fs, "materials", "volemission", false,
+          make_yaml_value(material.volemission));
+    if (material.volanisotropy)
+      write_yaml_property(fs, "materials", "volanisotropy", false,
+          make_yaml_value(material.volanisotropy));
+    if (material.voltransmission != zero3f ||
+        material.volmeanfreepath != zero3f)
+      write_yaml_property(fs, "materials", "volscale", false,
+          make_yaml_value(material.volscale));
+    if (material.coat != zero3f)
+      write_yaml_property(
+          fs, "materials", "coat", false, make_yaml_value(material.coat));
+    if (material.opacity != 1)
+      write_yaml_property(
+          fs, "materials", "opacity", false, make_yaml_value(material.opacity));
     if (material.emission_tex >= 0)
       write_yaml_property(fs, "materials", "emission_tex", false,
           make_yaml_value(scene.textures[material.emission_tex].uri));
@@ -1360,8 +1361,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
       write_yaml_property(fs, "materials", "normal_tex", false,
           make_yaml_value(scene.textures[material.normal_tex].uri));
     if (material.gltf_textures)
-    write_yaml_property(fs, "materials", "gltf_textures", false,
-        make_yaml_value(material.gltf_textures));
+      write_yaml_property(fs, "materials", "gltf_textures", false,
+          make_yaml_value(material.gltf_textures));
     if (material.voldensity_tex >= 0)
       write_yaml_property(fs, "materials", "voldensity_tex", false,
           make_yaml_value(scene.voltextures[material.voldensity_tex].uri));
@@ -1386,14 +1387,14 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     write_yaml_property(
         fs, "subdivs", "smooth", false, make_yaml_value(subdiv.smooth));
     if (subdiv.facevarying)
-    write_yaml_property(fs, "subdivs", "facevarying", false,
-        make_yaml_value(subdiv.facevarying));
+      write_yaml_property(fs, "subdivs", "facevarying", false,
+          make_yaml_value(subdiv.facevarying));
     if (subdiv.displacement_tex >= 0)
       write_yaml_property(fs, "subdivs", "displacement_tex", false,
           make_yaml_value(scene.textures[subdiv.displacement_tex].uri));
     if (subdiv.displacement_tex >= 0)
-    write_yaml_property(fs, "subdivs", "displacement", false,
-        make_yaml_value(subdiv.displacement));
+      write_yaml_property(fs, "subdivs", "displacement", false,
+          make_yaml_value(subdiv.displacement));
   }
 
   if (!ply_instances) {
@@ -1401,9 +1402,9 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     for (auto& instance : scene.instances) {
       write_yaml_property(
           fs, "instances", "uri", true, make_yaml_value(instance.uri));
-      if(instance.frame != identity3x4f)
-      write_yaml_property(
-          fs, "instances", "frame", false, make_yaml_value(instance.frame));
+      if (instance.frame != identity3x4f)
+        write_yaml_property(
+            fs, "instances", "frame", false, make_yaml_value(instance.frame));
       if (instance.shape >= 0)
         write_yaml_property(fs, "instances", "shape", false,
             make_yaml_value(scene.shapes[instance.shape].uri));
@@ -1421,9 +1422,9 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   for (auto& environment : scene.environments) {
     write_yaml_property(
         fs, "environments", "uri", true, make_yaml_value(environment.uri));
-      if(environment.frame != identity3x4f)
-    write_yaml_property(
-        fs, "environments", "frame", false, make_yaml_value(environment.frame));
+    if (environment.frame != identity3x4f)
+      write_yaml_property(fs, "environments", "frame", false,
+          make_yaml_value(environment.frame));
     write_yaml_property(fs, "environments", "emission", false,
         make_yaml_value(environment.emission));
     if (environment.emission_tex >= 0)

@@ -492,8 +492,8 @@ void load_obj(const string& filename, obj_callbacks& cb, bool nomaterials,
 }
 
 // Read obj
-bool read_obj_command(FILE* fs, obj_command& command, string& name, vec3f& value,
-    vector<obj_vertex>& vertices, obj_vertex& vert_size) {
+bool read_obj_command(FILE* fs, obj_command& command, string& name,
+    vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // read the file line by line
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -571,8 +571,8 @@ bool read_obj_command(FILE* fs, obj_command& command, string& name, vec3f& value
 }
 
 // Read mtl
-bool read_mtl_command(FILE* fs, mtl_command& command, string& name, float& value,
-    vec3f& color, obj_texture_info& texture, bool fliptr) {
+bool read_mtl_command(FILE* fs, mtl_command& command, string& name,
+    float& value, vec3f& color, obj_texture_info& texture, bool fliptr) {
   // read the file line by line
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -708,8 +708,8 @@ bool read_mtl_command(FILE* fs, mtl_command& command, string& name, float& value
 }
 
 // Read objx
-bool read_objx_command(FILE* fs, objx_command& command, string& name, float& value,
-    vec3f& color, frame3f& frame, obj_texture_info& texture) {
+bool read_objx_command(FILE* fs, objx_command& command, string& name,
+    float& value, vec3f& color, frame3f& frame, obj_texture_info& texture) {
   // read the file line by line
   char buffer[4096];
   auto pos = ftell(fs);
@@ -922,8 +922,8 @@ void write_obj_comment(FILE* fs, const string& comment) {
   checked_fprintf(fs, "\n");
 }
 
-void write_obj_command(FILE* fs, obj_command command, const string& name, const vec3f& value,
-    const vector<obj_vertex>& vertices) {
+void write_obj_command(FILE* fs, obj_command command, const string& name,
+    const vec3f& value, const vector<obj_vertex>& vertices) {
   switch (command) {
     case obj_command::vertex:
       checked_fprintf(fs, "v %g %g %g\n", value.x, value.y, value.z);

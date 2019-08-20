@@ -3682,8 +3682,7 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
 
   for (auto& p : positions)
     write_obj_command(fs, obj_command::vertex, "", p, {});
-  for (auto& n : normals)
-    write_obj_command(fs, obj_command::normal, "", n, {});
+  for (auto& n : normals) write_obj_command(fs, obj_command::normal, "", n, {});
   for (auto& t : texcoords)
     write_obj_command(fs, obj_command::texcoord, "",
         vec3f{t.x, flip_texcoord ? 1 - t.y : t.y, 0}, {});

@@ -77,11 +77,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <array>
 #include <chrono>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <array>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -89,11 +89,11 @@
 namespace yocto {
 
 // Aliased typenames for readability
+using std::array;
 using std::pair;
 using std::string;
 using std::unordered_map;
 using std::vector;
-using std::array;
 using namespace std::literals::string_literals;
 
 using byte = unsigned char;
