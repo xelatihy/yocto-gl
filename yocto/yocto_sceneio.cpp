@@ -44,6 +44,7 @@
 #include <regex>
 #include <string_view>
 #include <thread>
+#include <cassert>
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
