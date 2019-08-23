@@ -270,15 +270,15 @@ enum struct objx_command {
 };
 
 // Obj value type
-enum struct obj_value_type { number, boolean, text, numarray };
+enum struct obj_value_type { number, boolean, string, array };
 
 // Obj value
 struct obj_value {
-  obj_value_type    type     = obj_value_type::number;
-  double            number   = 0;
-  bool              boolean  = false;
-  string            text     = "";
-  array<double, 16> numarray = {};
+  obj_value_type    type    = obj_value_type::number;
+  double            number  = 0;
+  bool              boolean = false;
+  string            string_ = "";
+  array<double, 16> array_  = {};
 };
 
 // Read obj elements
@@ -475,15 +475,15 @@ struct hash<yocto::obj_vertex> {
 namespace yocto {
 
 // Yaml value type
-enum struct yaml_value_type { number, boolean, text, numarray };
+enum struct yaml_value_type { number, boolean, string, array };
 
 // Yaml value
 struct yaml_value {
-  yaml_value_type   type     = yaml_value_type::number;
-  double            number   = 0;
-  bool              boolean  = false;
-  string            text     = "";
-  array<double, 16> numarray = {};
+  yaml_value_type   type    = yaml_value_type::number;
+  double            number  = 0;
+  bool              boolean = false;
+  string            string_ = "";
+  array<double, 16> array_  = {};
 };
 
 // Load Yaml properties
