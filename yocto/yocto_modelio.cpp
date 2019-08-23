@@ -60,8 +60,7 @@ file_wrapper::~file_wrapper() {
 }
 
 // Opens a file returing a handle with RIIA
-void open_file(
-    file_wrapper& fs, const string& filename, const string& mode) {
+void open_file(file_wrapper& fs, const string& filename, const string& mode) {
   close_file(fs);
   fs.filename = filename;
   fs.mode     = mode;
@@ -468,7 +467,8 @@ static inline void write_ply_prop(file_wrapper& fs, ply_type type, VT value) {
 }
 
 template <typename T, typename VT>
-static inline void write_ply_binprop(file_wrapper& fs, bool big_endian, VT value) {
+static inline void write_ply_binprop(
+    file_wrapper& fs, bool big_endian, VT value) {
   auto typed_value = (T)value;
   if (big_endian) typed_value = swap_endian(typed_value);
   if (fwrite(&typed_value, sizeof(T), 1, fs.fs) != 1)
@@ -580,21 +580,25 @@ void write_ply_value_impl(file_wrapper& fs, ply_format format,
   }
 }
 
-void write_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<double>& values, vector<vector<double>>& lists) {
+void write_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<double>& values,
+    vector<vector<double>>& lists) {
   write_ply_value_impl(fs, format, element, values, lists);
 }
-void write_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<float>& values, vector<vector<int>>& lists) {
+void write_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<float>& values,
+    vector<vector<int>>& lists) {
   write_ply_value_impl(fs, format, element, values, lists);
 }
 
-void read_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<double>& values, vector<vector<double>>& lists) {
+void read_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<double>& values,
+    vector<vector<double>>& lists) {
   read_ply_value_impl(fs, format, element, values, lists);
 }
-void read_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<float>& values, vector<vector<int>>& lists) {
+void read_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<float>& values,
+    vector<vector<int>>& lists) {
   read_ply_value_impl(fs, format, element, values, lists);
 }
 
@@ -1055,12 +1059,12 @@ void parse_obj_value(string_view& str, obj_value& value, obj_value_type type,
       parse_obj_value(str, value_);
       value = make_obj_value(value_);
     } break;
-    case obj_value_type::string: {
+    case obj_value_type::text: {
       auto value_ = ""s;
       parse_obj_value(str, value_);
       value = make_obj_value(value_);
     } break;
-    case obj_value_type::array: {
+    case obj_value_type::numarray: {
       if (array_size == 2) {
         auto value_ = zero2f;
         parse_obj_value(str, value_);
@@ -1091,7 +1095,7 @@ static inline void parse_obj_value_or_empty(
   if (str.empty()) {
     value = make_obj_value(""s);
   } else {
-    parse_obj_value(str, value, obj_value_type::string);
+    parse_obj_value(str, value, obj_value_type::text);
   }
 }
 
@@ -1115,17 +1119,17 @@ bool read_obj_command(file_wrapper& fs, obj_command& command, obj_value& value,
     // possible token values
     if (cmd == "v") {
       command = obj_command::vertex;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
       vert_size.position += 1;
       return true;
     } else if (cmd == "vn") {
       command = obj_command::normal;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
       vert_size.normal += 1;
       return true;
     } else if (cmd == "vt") {
       command = obj_command::texcoord;
-      parse_obj_value(line, value, obj_value_type::array, 2);
+      parse_obj_value(line, value, obj_value_type::numarray, 2);
       vert_size.texcoord += 1;
       return true;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -1165,7 +1169,7 @@ bool read_obj_command(file_wrapper& fs, obj_command& command, obj_value& value,
       return true;
     } else if (cmd == "mtllib") {
       command = obj_command::mtllib;
-      parse_obj_value(line, value, obj_value_type::string);
+      parse_obj_value(line, value, obj_value_type::text);
       return true;
     } else {
       // unused
@@ -1194,27 +1198,27 @@ bool read_mtl_command(file_wrapper& fs, mtl_command& command, obj_value& value,
     // possible token values
     if (cmd == "newmtl") {
       command = mtl_command::material;
-      parse_obj_value(line, value, obj_value_type::string);
+      parse_obj_value(line, value, obj_value_type::text);
     } else if (cmd == "illum") {
       command = mtl_command::illum;
       parse_obj_value(line, value, obj_value_type::number);
     } else if (cmd == "Ke") {
       command = mtl_command::emission;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
     } else if (cmd == "Kd") {
       command = mtl_command::diffuse;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
     } else if (cmd == "Ks") {
       command = mtl_command::specular;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
     } else if (cmd == "Kt") {
       command = mtl_command::transmission;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
     } else if (cmd == "Tf") {
       command    = mtl_command::transmission;
       auto color = vec3f{-1};
       value      = make_obj_value(color);
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
       get_obj_value(value, color);
       if (color.y < 0) color = vec3f{color.x};
       if (fliptr) color = 1 - color;
@@ -1285,16 +1289,16 @@ bool read_mtl_command(file_wrapper& fs, mtl_command& command, obj_value& value,
       parse_obj_value(line, texture);
     } else if (cmd == "Vt") {
       command = mtl_command::vol_transmission;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
     } else if (cmd == "Vp") {
       command = mtl_command::vol_meanfreepath;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
     } else if (cmd == "Ve") {
       command = mtl_command::vol_emission;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
     } else if (cmd == "Vs") {
       command = mtl_command::vol_scattering;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
     } else if (cmd == "Vg") {
       command = mtl_command::vol_anisotropy;
       parse_obj_value(line, value, obj_value_type::number);
@@ -1315,8 +1319,8 @@ bool read_mtl_command(file_wrapper& fs, mtl_command& command, obj_value& value,
 }
 
 // Read objx
-bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value,
-    obj_texture_info& texture) {
+bool read_objx_command(file_wrapper& fs, objx_command& command,
+    obj_value& value, obj_texture_info& texture) {
   // read the file line by line
   char buffer[4096];
   auto pos = ftell(fs.fs);
@@ -1335,31 +1339,31 @@ bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value
     // read values
     if (cmd == "newcam") {
       command = objx_command::camera;
-      parse_obj_value(line, value, obj_value_type::string);
+      parse_obj_value(line, value, obj_value_type::text);
       return true;
     } else if (cmd == "newenv") {
       command = objx_command::environment;
-      parse_obj_value(line, value, obj_value_type::string);
+      parse_obj_value(line, value, obj_value_type::text);
       return true;
     } else if (cmd == "newist") {
       command = objx_command::instance;
-      parse_obj_value(line, value, obj_value_type::string);
+      parse_obj_value(line, value, obj_value_type::text);
       return true;
     } else if (cmd == "newproc") {
       command = objx_command::procedural;
-      parse_obj_value(line, value, obj_value_type::string);
+      parse_obj_value(line, value, obj_value_type::text);
       return true;
     } else if (cmd == "frame") {
       command = objx_command::frame;
-      parse_obj_value(line, value, obj_value_type::array, 12);
+      parse_obj_value(line, value, obj_value_type::numarray, 12);
       return true;
     } else if (cmd == "obj") {
       command = objx_command::object;
-      parse_obj_value(line, value, obj_value_type::string);
+      parse_obj_value(line, value, obj_value_type::text);
       return true;
     } else if (cmd == "mat") {
       command = objx_command::material;
-      parse_obj_value(line, value, obj_value_type::string);
+      parse_obj_value(line, value, obj_value_type::text);
       return true;
     } else if (cmd == "ortho") {
       command = objx_command::ortho;
@@ -1387,7 +1391,7 @@ bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value
       return true;
     } else if (cmd == "Ke") {
       command = objx_command::emission;
-      parse_obj_value(line, value, obj_value_type::array);
+      parse_obj_value(line, value, obj_value_type::numarray);
       return true;
     } else if (cmd == "map_Ke") {
       command = objx_command::emission_map;
@@ -1396,18 +1400,18 @@ bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value
     }
     // backward compatibility
     else if (cmd == "c") {
-      auto oname = value.string;
+      auto oname = value.text;
       auto name = obj_value{}, ortho = obj_value{}, width = obj_value{},
            height = obj_value{}, lens = obj_value{}, aperture = obj_value{},
            focus = obj_value{}, frame = obj_value{};
-      parse_obj_value(line, name, obj_value_type::string);
+      parse_obj_value(line, name, obj_value_type::text);
       parse_obj_value(line, ortho, obj_value_type::boolean);
       parse_obj_value(line, width, obj_value_type::number);
       parse_obj_value(line, height, obj_value_type::number);
       parse_obj_value(line, lens, obj_value_type::number);
       parse_obj_value(line, focus, obj_value_type::number);
       parse_obj_value(line, aperture, obj_value_type::number);
-      parse_obj_value(line, frame, obj_value_type::array, 12);
+      parse_obj_value(line, frame, obj_value_type::numarray, 12);
       if (command == objx_command::camera && oname != "") {
         command = objx_command::ortho;
         value   = ortho;
@@ -1438,11 +1442,11 @@ bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value
     } else if (cmd == "e") {
       auto name = obj_value{}, frame = obj_value{}, emission = obj_value{},
            emission_map = obj_value{};
-      parse_obj_value(line, name, obj_value_type::string);
-      parse_obj_value(line, emission, obj_value_type::array);
-      parse_obj_value(line, emission_map, obj_value_type::string);
-      parse_obj_value(line, frame, obj_value_type::array, 12);
-      if (emission_map.string == "\"\"") emission_map.string = "";
+      parse_obj_value(line, name, obj_value_type::text);
+      parse_obj_value(line, emission, obj_value_type::numarray);
+      parse_obj_value(line, emission_map, obj_value_type::text);
+      parse_obj_value(line, frame, obj_value_type::numarray, 12);
+      if (emission_map.text == "\"\"") emission_map.text = "";
       if (command == objx_command::environment) {
         command = objx_command::emission;
         value   = emission;
@@ -1461,10 +1465,10 @@ bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value
     } else if (cmd == "i") {
       auto name = obj_value{}, frame = obj_value{}, object = obj_value{},
            material = obj_value{};
-      parse_obj_value(line, name, obj_value_type::string);
-      parse_obj_value(line, object, obj_value_type::string);
-      parse_obj_value(line, material, obj_value_type::string);
-      parse_obj_value(line, frame, obj_value_type::array, 12);
+      parse_obj_value(line, name, obj_value_type::text);
+      parse_obj_value(line, object, obj_value_type::text);
+      parse_obj_value(line, material, obj_value_type::text);
+      parse_obj_value(line, frame, obj_value_type::numarray, 12);
       if (command == objx_command::instance) {
         command = objx_command::object;
         value   = object;
@@ -1483,12 +1487,12 @@ bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value
     } else if (cmd == "po") {
       auto name = obj_value{}, frame = obj_value{}, type = obj_value{},
            material = obj_value{}, size = obj_value{}, level = obj_value{};
-      parse_obj_value(line, name, obj_value_type::string);
-      parse_obj_value(line, type, obj_value_type::string);
-      parse_obj_value(line, material, obj_value_type::string);
+      parse_obj_value(line, name, obj_value_type::text);
+      parse_obj_value(line, type, obj_value_type::text);
+      parse_obj_value(line, material, obj_value_type::text);
       parse_obj_value(line, size, obj_value_type::number);
       parse_obj_value(line, level, obj_value_type::number);
-      parse_obj_value(line, frame, obj_value_type::array, 12);
+      parse_obj_value(line, frame, obj_value_type::numarray, 12);
       if (command == objx_command::procedural) {
         command = objx_command::object;
         value   = type;
@@ -1521,10 +1525,10 @@ void write_obj_comment(file_wrapper& fs, const string& comment) {
   checked_fprintf(fs, "\n");
 }
 
-void write_obj_command(file_wrapper& fs, obj_command command, const obj_value& value_,
-    const vector<obj_vertex>& vertices) {
-  auto& name  = value_.string;
-  auto& value = value_.array_;
+void write_obj_command(file_wrapper& fs, obj_command command,
+    const obj_value& value_, const vector<obj_vertex>& vertices) {
+  auto& name  = value_.text;
+  auto& value = value_.numarray;
   switch (command) {
     case obj_command::vertex:
       checked_fprintf(fs, "v %g %g %g\n", value[0], value[1], value[2]);
@@ -1572,11 +1576,11 @@ void write_obj_command(file_wrapper& fs, obj_command command, const obj_value& v
   }
 }
 
-void write_mtl_command(file_wrapper& fs, mtl_command command, const obj_value& value_,
-    const obj_texture_info& texture) {
-  auto& name  = value_.string;
+void write_mtl_command(file_wrapper& fs, mtl_command command,
+    const obj_value& value_, const obj_texture_info& texture) {
+  auto& name  = value_.text;
   auto  value = value_.number;
-  auto& color = value_.array_;
+  auto& color = value_.numarray;
   switch (command) {
     case mtl_command::material:
       checked_fprintf(fs, "\nnewmtl %s\n", name.c_str());
@@ -1689,12 +1693,12 @@ void write_mtl_command(file_wrapper& fs, mtl_command command, const obj_value& v
   }
 }
 
-void write_objx_command(file_wrapper& fs, objx_command command, const obj_value& value_,
-    const obj_texture_info& texture) {
-  auto& name  = value_.string;
+void write_objx_command(file_wrapper& fs, objx_command command,
+    const obj_value& value_, const obj_texture_info& texture) {
+  auto& name  = value_.text;
   auto  value = value_.number;
-  auto& color = value_.array_;
-  auto& frame = value_.array_;
+  auto& color = value_.numarray;
+  auto& frame = value_.numarray;
   switch (command) {
     case objx_command::camera:
       checked_fprintf(fs, "\nnewcam %s\n", name.c_str());
@@ -1740,9 +1744,9 @@ void write_objx_command(file_wrapper& fs, objx_command command, const obj_value&
 
 // typesafe access of obj value
 void get_obj_value(const obj_value& yaml, string& value) {
-  if (yaml.type != obj_value_type::string)
+  if (yaml.type != obj_value_type::text)
     throw std::runtime_error("error parsing yaml value");
-  value = yaml.string;
+  value = yaml.text;
 }
 void get_obj_value(const obj_value& yaml, bool& value) {
   if (yaml.type != obj_value_type::boolean)
@@ -1760,29 +1764,30 @@ void get_obj_value(const obj_value& yaml, float& value) {
   value = (float)yaml.number;
 }
 void get_obj_value(const obj_value& yaml, vec2f& value) {
-  if (yaml.type != obj_value_type::array || yaml.number != 2)
+  if (yaml.type != obj_value_type::numarray || yaml.number != 2)
     throw std::runtime_error("error parsing yaml value");
-  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
+  value = {(float)yaml.numarray[0], (float)yaml.numarray[1]};
 }
 void get_obj_value(const obj_value& yaml, vec3f& value) {
-  if (yaml.type != obj_value_type::array || yaml.number != 3)
+  if (yaml.type != obj_value_type::numarray || yaml.number != 3)
     throw std::runtime_error("error parsing yaml value");
-  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
+  value = {(float)yaml.numarray[0], (float)yaml.numarray[1],
+      (float)yaml.numarray[2]};
 }
 void get_obj_value(const obj_value& yaml, mat3f& value) {
-  if (yaml.type != obj_value_type::array || yaml.number != 9)
+  if (yaml.type != obj_value_type::numarray || yaml.number != 9)
     throw std::runtime_error("error parsing yaml value");
-  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.numarray[i];
 }
 void get_obj_value(const obj_value& yaml, frame3f& value) {
-  if (yaml.type != obj_value_type::array || yaml.number != 12)
+  if (yaml.type != obj_value_type::numarray || yaml.number != 12)
     throw std::runtime_error("error parsing yaml value");
-  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.numarray[i];
 }
 
 // typesafe access of obj value
 obj_value make_obj_value(const string& value) {
-  return {obj_value_type::string, 0, false, value};
+  return {obj_value_type::text, 0, false, value};
 }
 obj_value make_obj_value(bool value) {
   return {obj_value_type::boolean, 0, value};
@@ -1794,21 +1799,21 @@ obj_value make_obj_value(float value) {
   return {obj_value_type::number, (double)value};
 }
 obj_value make_obj_value(const vec2f& value) {
-  return {
-      obj_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
+  return {obj_value_type::numarray, 2, false, "",
+      {(double)value.x, (double)value.y}};
 }
 obj_value make_obj_value(const vec3f& value) {
-  return {obj_value_type::array, 3, false, "",
+  return {obj_value_type::numarray, 3, false, "",
       {(double)value.x, (double)value.y, (double)value.z}};
 }
 obj_value make_obj_value(const mat3f& value) {
-  auto yaml = obj_value{obj_value_type::array, 9};
-  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  auto yaml = obj_value{obj_value_type::numarray, 9};
+  for (auto i = 0; i < 9; i++) yaml.numarray[i] = (double)(&value.x.x)[i];
   return yaml;
 }
 obj_value make_obj_value(const frame3f& value) {
-  auto yaml = obj_value{obj_value_type::array, 12};
-  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  auto yaml = obj_value{obj_value_type::numarray, 12};
+  for (auto i = 0; i < 12; i++) yaml.numarray[i] = (double)(&value.x.x)[i];
   return yaml;
 }
 
@@ -2445,9 +2450,9 @@ inline void parse_yaml_value(string_view& str, double& value) {
 
 // parse yaml value
 void get_yaml_value(const yaml_value& yaml, string& value) {
-  if (yaml.type != yaml_value_type::string)
+  if (yaml.type != yaml_value_type::text)
     throw std::runtime_error("error parsing yaml value");
-  value = yaml.string;
+  value = yaml.text;
 }
 void get_yaml_value(const yaml_value& yaml, bool& value) {
   if (yaml.type != yaml_value_type::boolean)
@@ -2465,29 +2470,30 @@ void get_yaml_value(const yaml_value& yaml, float& value) {
   value = (float)yaml.number;
 }
 void get_yaml_value(const yaml_value& yaml, vec2f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 2)
+  if (yaml.type != yaml_value_type::numarray || yaml.number != 2)
     throw std::runtime_error("error parsing yaml value");
-  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
+  value = {(float)yaml.numarray[0], (float)yaml.numarray[1]};
 }
 void get_yaml_value(const yaml_value& yaml, vec3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 3)
+  if (yaml.type != yaml_value_type::numarray || yaml.number != 3)
     throw std::runtime_error("error parsing yaml value");
-  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
+  value = {(float)yaml.numarray[0], (float)yaml.numarray[1],
+      (float)yaml.numarray[2]};
 }
 void get_yaml_value(const yaml_value& yaml, mat3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 9)
+  if (yaml.type != yaml_value_type::numarray || yaml.number != 9)
     throw std::runtime_error("error parsing yaml value");
-  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.numarray[i];
 }
 void get_yaml_value(const yaml_value& yaml, frame3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 12)
+  if (yaml.type != yaml_value_type::numarray || yaml.number != 12)
     throw std::runtime_error("error parsing yaml value");
-  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.numarray[i];
 }
 
 // construction
 yaml_value make_yaml_value(const string& value) {
-  return {yaml_value_type::string, 0, false, value};
+  return {yaml_value_type::text, 0, false, value};
 }
 yaml_value make_yaml_value(bool value) {
   return {yaml_value_type::boolean, 0, value};
@@ -2499,21 +2505,21 @@ yaml_value make_yaml_value(float value) {
   return {yaml_value_type::number, (double)value};
 }
 yaml_value make_yaml_value(const vec2f& value) {
-  return {
-      yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
+  return {yaml_value_type::numarray, 2, false, "",
+      {(double)value.x, (double)value.y}};
 }
 yaml_value make_yaml_value(const vec3f& value) {
-  return {yaml_value_type::array, 3, false, "",
+  return {yaml_value_type::numarray, 3, false, "",
       {(double)value.x, (double)value.y, (double)value.z}};
 }
 yaml_value make_yaml_value(const mat3f& value) {
-  auto yaml = yaml_value{yaml_value_type::array, 9};
-  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  auto yaml = yaml_value{yaml_value_type::numarray, 9};
+  for (auto i = 0; i < 9; i++) yaml.numarray[i] = (double)(&value.x.x)[i];
   return yaml;
 }
 yaml_value make_yaml_value(const frame3f& value) {
-  auto yaml = yaml_value{yaml_value_type::array, 12};
-  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  auto yaml = yaml_value{yaml_value_type::numarray, 12};
+  for (auto i = 0; i < 12; i++) yaml.numarray[i] = (double)(&value.x.x)[i];
   return yaml;
 }
 
@@ -2522,7 +2528,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
   if (str.empty()) throw std::runtime_error("bad yaml");
   if (str.front() == '[') {
     str.remove_prefix(1);
-    value.type   = yaml_value_type::array;
+    value.type   = yaml_value_type::numarray;
     value.number = 0;
     while (!str.empty()) {
       skip_whitespace(str);
@@ -2532,7 +2538,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
         break;
       }
       if (value.number >= 16) throw std::runtime_error("array too large");
-      parse_yaml_value(str, value.array_[(int)value.number]);
+      parse_yaml_value(str, value.numarray[(int)value.number]);
       value.number += 1;
       skip_whitespace(str);
       if (str.front() == ',') {
@@ -2550,19 +2556,19 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
     value.type = yaml_value_type::number;
     parse_yaml_value(str, value.number);
   } else {
-    value.type = yaml_value_type::string;
-    parse_yaml_value(str, value.string);
-    if (value.string == "true" || value.string == "false") {
+    value.type = yaml_value_type::text;
+    parse_yaml_value(str, value.text);
+    if (value.text == "true" || value.text == "false") {
       value.type    = yaml_value_type::boolean;
-      value.boolean = value.string == "true";
+      value.boolean = value.text == "true";
     }
   }
   skip_whitespace(str);
   if (!str.empty() && !is_whitespace(str)) throw std::runtime_error("bad yaml");
 }
 
-bool read_yaml_property(
-    file_wrapper& fs, string& group, string& key, bool& newobj, yaml_value& value) {
+bool read_yaml_property(file_wrapper& fs, string& group, string& key,
+    bool& newobj, yaml_value& value) {
   // read the file line by line
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -2624,8 +2630,8 @@ void write_yaml_comment(file_wrapper& fs, const string& comment) {
 }
 
 // Save yaml property
-void write_yaml_property(file_wrapper& fs, const string& object, const string& key,
-    bool newobj, const yaml_value& value) {
+void write_yaml_property(file_wrapper& fs, const string& object,
+    const string& key, bool newobj, const yaml_value& value) {
   if (key.empty()) {
     checked_fprintf(fs, "\n%s:\n", object.c_str());
   } else {
@@ -2640,14 +2646,14 @@ void write_yaml_property(file_wrapper& fs, const string& object, const string& k
       case yaml_value_type::boolean:
         checked_fprintf(fs, "%s", value.boolean ? "true" : "false");
         break;
-      case yaml_value_type::string:
-        checked_fprintf(fs, "%s", value.string.c_str());
+      case yaml_value_type::text:
+        checked_fprintf(fs, "%s", value.text.c_str());
         break;
-      case yaml_value_type::array:
+      case yaml_value_type::numarray:
         checked_fprintf(fs, "[ ");
         for (auto i = 0; i < value.number; i++) {
           if (i) checked_fprintf(fs, ", ");
-          checked_fprintf(fs, "%g", value.array_[i]);
+          checked_fprintf(fs, "%g", value.numarray[i]);
         }
         checked_fprintf(fs, " ]");
         break;
@@ -4598,8 +4604,8 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
   // parse command by command
   while (!files.empty()) {
     auto& fs   = files.back();
-    auto line = ""s;
-    auto cmd  = ""s;
+    auto  line = ""s;
+    auto  cmd  = ""s;
     while (read_pbrt_cmdline(fs, line)) {
       auto str = string_view{line};
       // get command
