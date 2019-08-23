@@ -10,7 +10,7 @@ jobs:
     - name: update apt
       run: apt-get update --yes
     - name: install cmake
-      apt-get install --yes cmake
+      run: apt-get install --yes cmake
     - name: cmake
       run: cmkae .
     - name: make
