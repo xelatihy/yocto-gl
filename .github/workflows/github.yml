@@ -7,6 +7,10 @@ jobs:
 
     runs-on: ubuntu-latest
     
+    before_script:
+    - apt-get update --yes
+    - apt-get install --yes cmake
+    
     steps:
     - uses: actions/checkout@v1
     - name: cmake
