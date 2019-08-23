@@ -107,7 +107,7 @@ namespace yocto {
 
 // A class that wraps a C file ti handle safe opening/closgin with RIIA.
 struct file_wrapper {
-  file_wrapper() { }
+  file_wrapper() {}
   file_wrapper(file_wrapper&& other);
   file_wrapper(const file_wrapper&) = delete;
   file_wrapper& operator=(const file_wrapper&) = delete;
@@ -115,17 +115,16 @@ struct file_wrapper {
 
   FILE*  fs       = nullptr;
   string filename = "";
-  string mode = "rt";
+  string mode     = "rt";
 };
 
 // open a file
-file_wrapper open_file(
-    const string& filename, const string& mode = "rt");
-void open_file(file_wrapper& fs,
-    const string& filename, const string& mode = "rt");
+file_wrapper open_file(const string& filename, const string& mode = "rt");
+void         open_file(
+            file_wrapper& fs, const string& filename, const string& mode = "rt");
 void close_file(file_wrapper& fs);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SIMPLE PLY LOADER AND WRITER
@@ -157,18 +156,22 @@ struct ply_element {
 // Read Ply functions
 void read_ply_header(file_wrapper& fs, ply_format& format,
     vector<ply_element>& elements, vector<string>& comments);
-void read_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<double>& values, vector<vector<double>>& lists);
-void read_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<float>& values, vector<vector<int>>& lists);
+void read_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<double>& values,
+    vector<vector<double>>& lists);
+void read_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<float>& values,
+    vector<vector<int>>& lists);
 
 // Write Ply functions
 void write_ply_header(file_wrapper& fs, ply_format format,
     const vector<ply_element>& elements, const vector<string>& comments);
-void write_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<double>& values, vector<vector<double>>& lists);
-void write_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<float>& values, vector<vector<int>>& lists);
+void write_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<double>& values,
+    vector<vector<double>>& lists);
+void write_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<float>& values,
+    vector<vector<int>>& lists);
 
 // Helpers to get element and property indices
 int   find_ply_element(const vector<ply_element>& elements, const string& name);
@@ -274,7 +277,7 @@ struct obj_value {
   obj_value_type    type    = obj_value_type::number;
   double            number  = 0;
   bool              boolean = false;
-  string            string  = "";
+  string            string_ = "";
   array<double, 16> array_  = {};
 };
 
@@ -283,17 +286,17 @@ bool read_obj_command(file_wrapper& fs, obj_command& command, obj_value& value,
     vector<obj_vertex>& vertices, obj_vertex& vert_size);
 bool read_mtl_command(file_wrapper& fs, mtl_command& command, obj_value& value,
     obj_texture_info& texture, bool fliptr = true);
-bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value,
-    obj_texture_info& texture);
+bool read_objx_command(file_wrapper& fs, objx_command& command,
+    obj_value& value, obj_texture_info& texture);
 
 // Write obj elements
 void write_obj_comment(file_wrapper& fs, const string& comment);
-void write_obj_command(file_wrapper& fs, obj_command command, const obj_value& value,
-    const vector<obj_vertex>& vertices = {});
-void write_mtl_command(file_wrapper& fs, mtl_command command, const obj_value& value,
-    const obj_texture_info& texture = {});
-void write_objx_command(file_wrapper& fs, objx_command command, const obj_value& value,
-    const obj_texture_info& texture = {});
+void write_obj_command(file_wrapper& fs, obj_command command,
+    const obj_value& value, const vector<obj_vertex>& vertices = {});
+void write_mtl_command(file_wrapper& fs, mtl_command command,
+    const obj_value& value, const obj_texture_info& texture = {});
+void write_objx_command(file_wrapper& fs, objx_command command,
+    const obj_value& value, const obj_texture_info& texture = {});
 
 // typesafe access of obj value
 void get_obj_value(const obj_value& yaml, string& value);
@@ -479,18 +482,18 @@ struct yaml_value {
   yaml_value_type   type    = yaml_value_type::number;
   double            number  = 0;
   bool              boolean = false;
-  string            string  = "";
+  string            string_ = "";
   array<double, 16> array_  = {};
 };
 
 // Load Yaml properties
-bool read_yaml_property(
-    file_wrapper& fs, string& group, string& key, bool& newobj, yaml_value& value);
+bool read_yaml_property(file_wrapper& fs, string& group, string& key,
+    bool& newobj, yaml_value& value);
 
 // Write Yaml properties
 void write_yaml_comment(file_wrapper& fs, const string& comment);
-void write_yaml_property(file_wrapper& fs, const string& object, const string& key,
-    bool newobj, const yaml_value& value);
+void write_yaml_property(file_wrapper& fs, const string& object,
+    const string& key, bool newobj, const yaml_value& value);
 void write_yaml_object(file_wrapper& fs, const string& object);
 
 // type-cheked yaml value access

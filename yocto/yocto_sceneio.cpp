@@ -517,11 +517,11 @@ void load_yaml(
                           const unordered_map<string, int>& refs) {
     if (yaml.type != yaml_value_type::string)
       throw std::runtime_error("error parsing yaml value");
-    if (yaml.string == "") return;
+    if (yaml.string_ == "") return;
     try {
-      value = refs.at(yaml.string);
+      value = refs.at(yaml.string_);
     } catch (...) {
-      throw std::runtime_error("reference not found " + yaml.string);
+      throw std::runtime_error("reference not found " + yaml.string_);
     }
   };
 
@@ -3603,8 +3603,7 @@ static void load_pbrt(
   auto stack   = vector<pbrt_context>{};
   auto state   = pbrt_parser_state{};
   while (!files.empty()) {
-    if (!read_pbrt_element(
-            files.back(), element, name, data, stack, state)) {
+    if (!read_pbrt_element(files.back(), element, name, data, stack, state)) {
       files.pop_back();
       continue;
     }

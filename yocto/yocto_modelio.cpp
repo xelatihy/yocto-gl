@@ -60,8 +60,7 @@ file_wrapper::~file_wrapper() {
 }
 
 // Opens a file returing a handle with RIIA
-void open_file(
-    file_wrapper& fs, const string& filename, const string& mode) {
+void open_file(file_wrapper& fs, const string& filename, const string& mode) {
   close_file(fs);
   fs.filename = filename;
   fs.mode     = mode;
@@ -468,7 +467,8 @@ static inline void write_ply_prop(file_wrapper& fs, ply_type type, VT value) {
 }
 
 template <typename T, typename VT>
-static inline void write_ply_binprop(file_wrapper& fs, bool big_endian, VT value) {
+static inline void write_ply_binprop(
+    file_wrapper& fs, bool big_endian, VT value) {
   auto typed_value = (T)value;
   if (big_endian) typed_value = swap_endian(typed_value);
   if (fwrite(&typed_value, sizeof(T), 1, fs.fs) != 1)
@@ -580,21 +580,25 @@ void write_ply_value_impl(file_wrapper& fs, ply_format format,
   }
 }
 
-void write_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<double>& values, vector<vector<double>>& lists) {
+void write_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<double>& values,
+    vector<vector<double>>& lists) {
   write_ply_value_impl(fs, format, element, values, lists);
 }
-void write_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<float>& values, vector<vector<int>>& lists) {
+void write_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<float>& values,
+    vector<vector<int>>& lists) {
   write_ply_value_impl(fs, format, element, values, lists);
 }
 
-void read_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<double>& values, vector<vector<double>>& lists) {
+void read_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<double>& values,
+    vector<vector<double>>& lists) {
   read_ply_value_impl(fs, format, element, values, lists);
 }
-void read_ply_value(file_wrapper& fs, ply_format format, const ply_element& element,
-    vector<float>& values, vector<vector<int>>& lists) {
+void read_ply_value(file_wrapper& fs, ply_format format,
+    const ply_element& element, vector<float>& values,
+    vector<vector<int>>& lists) {
   read_ply_value_impl(fs, format, element, values, lists);
 }
 
@@ -1315,8 +1319,8 @@ bool read_mtl_command(file_wrapper& fs, mtl_command& command, obj_value& value,
 }
 
 // Read objx
-bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value,
-    obj_texture_info& texture) {
+bool read_objx_command(file_wrapper& fs, objx_command& command,
+    obj_value& value, obj_texture_info& texture) {
   // read the file line by line
   char buffer[4096];
   auto pos = ftell(fs.fs);
@@ -1396,7 +1400,7 @@ bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value
     }
     // backward compatibility
     else if (cmd == "c") {
-      auto oname = value.string;
+      auto oname = value.string_;
       auto name = obj_value{}, ortho = obj_value{}, width = obj_value{},
            height = obj_value{}, lens = obj_value{}, aperture = obj_value{},
            focus = obj_value{}, frame = obj_value{};
@@ -1442,7 +1446,7 @@ bool read_objx_command(file_wrapper& fs, objx_command& command, obj_value& value
       parse_obj_value(line, emission, obj_value_type::array);
       parse_obj_value(line, emission_map, obj_value_type::string);
       parse_obj_value(line, frame, obj_value_type::array, 12);
-      if (emission_map.string == "\"\"") emission_map.string = "";
+      if (emission_map.string_ == "\"\"") emission_map.string_ = "";
       if (command == objx_command::environment) {
         command = objx_command::emission;
         value   = emission;
@@ -1521,9 +1525,9 @@ void write_obj_comment(file_wrapper& fs, const string& comment) {
   checked_fprintf(fs, "\n");
 }
 
-void write_obj_command(file_wrapper& fs, obj_command command, const obj_value& value_,
-    const vector<obj_vertex>& vertices) {
-  auto& name  = value_.string;
+void write_obj_command(file_wrapper& fs, obj_command command,
+    const obj_value& value_, const vector<obj_vertex>& vertices) {
+  auto& name  = value_.string_;
   auto& value = value_.array_;
   switch (command) {
     case obj_command::vertex:
@@ -1572,9 +1576,9 @@ void write_obj_command(file_wrapper& fs, obj_command command, const obj_value& v
   }
 }
 
-void write_mtl_command(file_wrapper& fs, mtl_command command, const obj_value& value_,
-    const obj_texture_info& texture) {
-  auto& name  = value_.string;
+void write_mtl_command(file_wrapper& fs, mtl_command command,
+    const obj_value& value_, const obj_texture_info& texture) {
+  auto& name  = value_.string_;
   auto  value = value_.number;
   auto& color = value_.array_;
   switch (command) {
@@ -1689,9 +1693,9 @@ void write_mtl_command(file_wrapper& fs, mtl_command command, const obj_value& v
   }
 }
 
-void write_objx_command(file_wrapper& fs, objx_command command, const obj_value& value_,
-    const obj_texture_info& texture) {
-  auto& name  = value_.string;
+void write_objx_command(file_wrapper& fs, objx_command command,
+    const obj_value& value_, const obj_texture_info& texture) {
+  auto& name  = value_.string_;
   auto  value = value_.number;
   auto& color = value_.array_;
   auto& frame = value_.array_;
@@ -1742,7 +1746,7 @@ void write_objx_command(file_wrapper& fs, objx_command command, const obj_value&
 void get_obj_value(const obj_value& yaml, string& value) {
   if (yaml.type != obj_value_type::string)
     throw std::runtime_error("error parsing yaml value");
-  value = yaml.string;
+  value = yaml.string_;
 }
 void get_obj_value(const obj_value& yaml, bool& value) {
   if (yaml.type != obj_value_type::boolean)
@@ -2447,7 +2451,7 @@ inline void parse_yaml_value(string_view& str, double& value) {
 void get_yaml_value(const yaml_value& yaml, string& value) {
   if (yaml.type != yaml_value_type::string)
     throw std::runtime_error("error parsing yaml value");
-  value = yaml.string;
+  value = yaml.string_;
 }
 void get_yaml_value(const yaml_value& yaml, bool& value) {
   if (yaml.type != yaml_value_type::boolean)
@@ -2551,18 +2555,18 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
     parse_yaml_value(str, value.number);
   } else {
     value.type = yaml_value_type::string;
-    parse_yaml_value(str, value.string);
-    if (value.string == "true" || value.string == "false") {
+    parse_yaml_value(str, value.string_);
+    if (value.string_ == "true" || value.string_ == "false") {
       value.type    = yaml_value_type::boolean;
-      value.boolean = value.string == "true";
+      value.boolean = value.string_ == "true";
     }
   }
   skip_whitespace(str);
   if (!str.empty() && !is_whitespace(str)) throw std::runtime_error("bad yaml");
 }
 
-bool read_yaml_property(
-    file_wrapper& fs, string& group, string& key, bool& newobj, yaml_value& value) {
+bool read_yaml_property(file_wrapper& fs, string& group, string& key,
+    bool& newobj, yaml_value& value) {
   // read the file line by line
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -2624,8 +2628,8 @@ void write_yaml_comment(file_wrapper& fs, const string& comment) {
 }
 
 // Save yaml property
-void write_yaml_property(file_wrapper& fs, const string& object, const string& key,
-    bool newobj, const yaml_value& value) {
+void write_yaml_property(file_wrapper& fs, const string& object,
+    const string& key, bool newobj, const yaml_value& value) {
   if (key.empty()) {
     checked_fprintf(fs, "\n%s:\n", object.c_str());
   } else {
@@ -2641,7 +2645,7 @@ void write_yaml_property(file_wrapper& fs, const string& object, const string& k
         checked_fprintf(fs, "%s", value.boolean ? "true" : "false");
         break;
       case yaml_value_type::string:
-        checked_fprintf(fs, "%s", value.string.c_str());
+        checked_fprintf(fs, "%s", value.string_.c_str());
         break;
       case yaml_value_type::array:
         checked_fprintf(fs, "[ ");
@@ -4598,8 +4602,8 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
   // parse command by command
   while (!files.empty()) {
     auto& fs   = files.back();
-    auto line = ""s;
-    auto cmd  = ""s;
+    auto  line = ""s;
+    auto  cmd  = ""s;
     while (read_pbrt_cmdline(fs, line)) {
       auto str = string_view{line};
       // get command
