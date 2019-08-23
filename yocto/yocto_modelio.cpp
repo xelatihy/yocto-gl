@@ -39,6 +39,7 @@
 #include <climits>
 #include <limits>
 #include <string_view>
+#include <cstdarg>
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
