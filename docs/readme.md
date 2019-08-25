@@ -40,11 +40,11 @@
  <img src="images/island-thumb.png" alt="Image rendered with Yocto/GL path tracer" />
 </div>
 
-# Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
+# Yocto/GL: Tiny C++ Libraries for Data-Oriented Physically-based Graphics
 
 Yocto/GL is a collection of small C++17 libraries for building 
 physically-based graphics algorithms released under the MIT license.
-Yocto/GL is written in a deliberatly data-driven style for ease of
+Yocto/GL is written in a deliberatly data-oriented style for ease of
 development and use. 
 Yocto/GL is split into two small libraries to make code navigation easier.
 See each header file for documentation.
@@ -92,7 +92,7 @@ included in the [gallery](gallery.md).
 
 ## Design Considerations
 
-Yocto/GL follows a "data-driven programming model" that makes data explicit.
+Yocto/GL follows a "data-oriented programming model" that makes data explicit.
 Data is stored in simple structs and accessed with free functions or directly.
 All data is public, so we make no attempt at encapsulation.
 All objects is Yocto/GL have value semantic and we do not use pointers
