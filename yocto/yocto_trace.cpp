@@ -1059,22 +1059,20 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (!is_delta(material)) return zero3f;
-  auto brdfcos = zero3f;
 
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
 
   if (material.specular != zero3f &&
       same_hemisphere(normal, outgoing, incoming)) {
-    brdfcos += fresnel_dielectric(
+    return fresnel_dielectric(
         entering ? material.eta : 1 / material.eta, abs(dot(normal, outgoing)));
   }
   if (material.transmission != zero3f &&
       other_hemisphere(normal, outgoing, incoming)) {
     auto F = fresnel_dielectric(
         entering ? material.eta : 1 / material.eta, abs(dot(normal, outgoing)));
-    brdfcos += (1 - F) * material.transmission;
+    return (1 - F) * material.transmission;
   }
-  return brdfcos;
 }
 
 // Picks a direction based on the BRDF
@@ -1090,22 +1088,12 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
   weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
-  // keep a weight sum to pick a lobe
-  auto weight_sum = 0.0f;
-
-  weight_sum += weights[0];
-  if (rnl < weight_sum) {
+  if (rnl < weights[0]) {
     auto halfway = sample_microfacet(material.roughness, up_normal, rn);
     return reflect(outgoing, halfway);
-  }
-
-  weight_sum += weights[1];
-  if (rnl < weight_sum) {
+  } else if (rnl < weights[0] + weights[1]) {
     return sample_hemisphere(up_normal, rn);
-  }
-
-  weight_sum += weights[2];
-  if (rnl < weight_sum) {
+  } else if (rnl < weights[0] + weights[1] + weights[2]) {
     if (material.refract) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
       return refract_notir(outgoing, halfway,
@@ -1116,10 +1104,9 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
       auto ir      = reflect(outgoing, halfway);
       return -reflect(ir, up_normal);
     }
+  } else {
+    return zero3f;
   }
-
-  // something went wrong if we got here
-  return zero3f;
 }
 
 vec3f sample_delta(const material_point& material, const vec3f& normal,
