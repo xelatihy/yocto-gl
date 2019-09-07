@@ -1077,24 +1077,15 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
   return brdfcos;
 }
 
-using std::array;
-array<float, 3> compute_brdf_pdfs(const material_point& material,
-    const vec3f& normal, const vec3f& outgoing) {
+vec3f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing) {
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto F = fresnel_dielectric(
+  auto F        = fresnel_dielectric(
       entering ? material.eta : 1 / material.eta, abs(dot(outgoing, normal)));
 
-  auto weights = array<float, 3>{};
-  weights[0]   = max(F);
-  weights[1]   = max((1 - F) * material.diffuse);
-  weights[2]   = max((1 - F) * material.transmission);
-
-  auto sum = 0.0f;
-  for (auto w : weights) sum += w;
-  if (!sum) return weights;
-  for (auto& w : weights) w /= sum;
-
-  return weights;
+  auto weights = vec3f{max(F), max((1 - F) * material.diffuse),
+      max((1 - F) * material.transmission)};
+  return weights / sum(weights);
 }
 
 // Picks a direction based on the BRDF
