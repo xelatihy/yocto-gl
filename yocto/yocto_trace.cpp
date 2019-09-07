@@ -1080,11 +1080,9 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
 using std::array;
 array<float, 3> compute_brdf_pdfs(const material_point& material,
     const vec3f& normal, const vec3f& outgoing) {
-  auto eta = reflectivity_to_eta(material.specular);
-  if (material.refract && dot(normal, outgoing) < 0) eta = 1 / eta;
-
-  auto ndo = abs(dot(outgoing, normal));
-  auto F   = fresnel_dielectric(eta, ndo);
+  auto entering = !material.refract || dot(normal, outgoing) >= 0;
+  auto F = fresnel_dielectric(
+      entering ? material.eta : 1 / material.eta, abs(dot(outgoing, normal)));
 
   auto weights = array<float, 3>{};
   weights[0]   = max(F);
