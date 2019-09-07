@@ -428,6 +428,8 @@ struct material_point {
   vec3f emission      = {0, 0, 0};
   vec3f diffuse       = {0, 0, 0};
   vec3f specular      = {0, 0, 0};
+  vec3f reflectance   = {0, 0, 0};
+  vec3f eta           = {1, 1, 1};
   vec3f coat          = {0, 0, 0};
   vec3f transmission  = {0, 0, 0};
   float roughness     = 0;

@@ -1142,6 +1142,10 @@ material_point eval_material(const yocto_scene& scene,
     point.refract = true;
     point.transmission = refraction;
   }
+  if(point.specular != zero3f) {
+    point.reflectance = point.specular;
+    point.eta = (1 + sqrt(point.specular)) / (1 - sqrt(point.specular));
+  }
   if (point.diffuse != zero3f || point.roughness) {
     point.roughness = point.roughness * point.roughness;
     point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
