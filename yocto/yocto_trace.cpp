@@ -1129,8 +1129,7 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto F        = fresnel_dielectric(
       entering ? material.eta : 1 / material.eta, abs(dot(outgoing, normal)));
-  auto weights = vec3f{max(F), max((1 - F) * material.diffuse),
-      max((1 - F) * material.transmission)};
+  auto weights = vec2f{max(F), max((1 - F) * material.transmission)};
   weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
@@ -1202,14 +1201,13 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto F        = fresnel_dielectric(
       entering ? material.eta : 1 / material.eta, abs(dot(outgoing, normal)));
-  auto weights = vec3f{max(F), max((1 - F) * material.diffuse),
-      max((1 - F) * material.transmission)};
+  auto weights = vec2f{max(F), max((1 - F) * material.transmission)};
   weights /= sum(weights);
 
   if (same_hemisphere(normal, outgoing, incoming))
     return weights[0];
   else
-    return weights[2];
+    return weights[1];
 }
 
 #endif
