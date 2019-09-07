@@ -1077,40 +1077,34 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
   return brdfcos;
 }
 
-vec3f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing) {
-  auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto F        = fresnel_dielectric(
-      entering ? material.eta : 1 / material.eta, abs(dot(outgoing, normal)));
-
-  auto weights = vec3f{max(F), max((1 - F) * material.diffuse),
-      max((1 - F) * material.transmission)};
-  return weights / sum(weights);
-}
-
 // Picks a direction based on the BRDF
 vec3f sample_brdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
   if (is_delta(material)) return zero3f;
 
-  auto pdfs      = compute_brdf_pdfs(material, normal, outgoing);
+  auto entering = !material.refract || dot(normal, outgoing) >= 0;
+  auto F        = fresnel_dielectric(
+      entering ? material.eta : 1 / material.eta, abs(dot(outgoing, normal)));
+  auto weights = vec3f{max(F), max((1 - F) * material.diffuse),
+      max((1 - F) * material.transmission)};
+  weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
   // keep a weight sum to pick a lobe
   auto weight_sum = 0.0f;
 
-  weight_sum += pdfs[0];
+  weight_sum += weights[0];
   if (rnl < weight_sum) {
     auto halfway = sample_microfacet(material.roughness, up_normal, rn);
     return reflect(outgoing, halfway);
   }
 
-  weight_sum += pdfs[1];
+  weight_sum += weights[1];
   if (rnl < weight_sum) {
     return sample_hemisphere(up_normal, rn);
   }
 
-  weight_sum += pdfs[2];
+  weight_sum += weights[2];
   if (rnl < weight_sum) {
     if (material.refract) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
@@ -1132,11 +1126,16 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
   if (!is_delta(material)) return zero3f;
 
+  auto entering = !material.refract || dot(normal, outgoing) >= 0;
+  auto F        = fresnel_dielectric(
+      entering ? material.eta : 1 / material.eta, abs(dot(outgoing, normal)));
+  auto weights = vec3f{max(F), max((1 - F) * material.diffuse),
+      max((1 - F) * material.transmission)};
+  weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
-  auto pdfs      = compute_brdf_pdfs(material, normal, outgoing);
 
   // keep a weight sum to pick a lobe
-  if (rnl < pdfs[0]) {
+  if (rnl < weights[0]) {
     return reflect(outgoing, up_normal);
   } else {
     if (material.refract) {
@@ -1154,22 +1153,27 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (is_delta(material)) return 0;
 
+  auto entering = !material.refract || dot(normal, outgoing) >= 0;
+  auto F        = fresnel_dielectric(
+      entering ? material.eta : 1 / material.eta, abs(dot(outgoing, normal)));
+  auto weights = vec3f{max(F), max((1 - F) * material.diffuse),
+      max((1 - F) * material.transmission)};
+  weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
-  auto pdfs      = compute_brdf_pdfs(material, normal, outgoing);
   auto pdf       = 0.0f;
 
-  if (pdfs[0] && same_hemisphere(normal, outgoing, incoming)) {
+  if (weights[0] && same_hemisphere(normal, outgoing, incoming)) {
     auto halfway = normalize(incoming + outgoing);
-    pdf += pdfs[0] *
+    pdf += weights[0] *
            sample_microfacet_pdf(material.roughness, up_normal, halfway) /
            (4 * abs(dot(outgoing, halfway)));
   }
 
-  if (pdfs[1] && same_hemisphere(normal, outgoing, incoming)) {
-    pdf += pdfs[1] * sample_hemisphere_pdf(up_normal, incoming);
+  if (weights[1] && same_hemisphere(normal, outgoing, incoming)) {
+    pdf += weights[1] * sample_hemisphere_pdf(up_normal, incoming);
   }
 
-  if (pdfs[2] && other_hemisphere(normal, outgoing, incoming)) {
+  if (weights[2] && other_hemisphere(normal, outgoing, incoming)) {
     if (material.refract) {
       auto eta            = mean(reflectivity_to_eta(material.specular));
       auto halfway_vector = dot(outgoing, normal) > 0
@@ -1177,7 +1181,7 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
                                 : (eta * outgoing + incoming);
       auto halfway = normalize(halfway_vector);
       // [Walter 2007] equation 17
-      pdf += pdfs[2] *
+      pdf += weights[2] *
              sample_microfacet_pdf(material.roughness, up_normal, halfway) *
              abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
     } else {
@@ -1185,7 +1189,7 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
       auto ir        = reflect(-incoming, up_normal);
       auto halfway   = normalize(ir + outgoing);
       auto d = sample_microfacet_pdf(material.roughness, up_normal, halfway);
-      pdf += pdfs[2] * d / (4 * abs(dot(outgoing, halfway)));
+      pdf += weights[2] * d / (4 * abs(dot(outgoing, halfway)));
     }
   }
 
@@ -1195,12 +1199,17 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
 float sample_delta_pdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (!is_delta(material)) return 0;
-  auto pdfs = compute_brdf_pdfs(material, normal, outgoing);
+  auto entering = !material.refract || dot(normal, outgoing) >= 0;
+  auto F        = fresnel_dielectric(
+      entering ? material.eta : 1 / material.eta, abs(dot(outgoing, normal)));
+  auto weights = vec3f{max(F), max((1 - F) * material.diffuse),
+      max((1 - F) * material.transmission)};
+  weights /= sum(weights);
 
   if (same_hemisphere(normal, outgoing, incoming))
-    return pdfs[0];
+    return weights[0];
   else
-    return pdfs[2];
+    return weights[2];
 }
 
 #endif
