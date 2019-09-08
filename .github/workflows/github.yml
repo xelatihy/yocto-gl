@@ -18,4 +18,5 @@ jobs:
         cmake .. -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
     - name: build
       run: |
-        make -j8
+        cd build
+        cmake --build .
