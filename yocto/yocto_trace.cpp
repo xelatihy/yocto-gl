@@ -1131,8 +1131,20 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
       auto ir      = reflect(outgoing, halfway);
       return -reflect(ir, up_normal);
     }
-  } else {
   }
+
+  if (rnl < weights[0] + weights[1] + weights[2]) {
+    if (material.refract) {
+      auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+      return refract_notir(outgoing, halfway,
+          dot(normal, outgoing) > 0 ? 1 / material.eta : material.eta);
+    } else {
+      auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+      auto ir      = reflect(outgoing, halfway);
+      return -reflect(ir, up_normal);
+    }
+  }
+  
   return zero3f;
 }
 
