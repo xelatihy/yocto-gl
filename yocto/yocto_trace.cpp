@@ -1022,7 +1022,7 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
       auto D = eval_microfacetD(material.roughness, up_normal, halfway);
       auto G = eval_microfacetG(
           material.roughness, up_normal, halfway, outgoing, incoming);
-      brdfcos += F * D * G /
+      brdfcos += material.specular_ * F * D * G /
                  abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                  abs(dot(normal, incoming));
     }
@@ -1073,7 +1073,7 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
       material.reflectance, abs(dot(normal, outgoing)), entering);
 
   if (same_hemisphere(normal, outgoing, incoming)) {
-    return F;
+    return F * material.specular_;
   } else {
     return (1 - F) * material.transmission;
   }
@@ -1087,8 +1087,8 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto F        = fresnel_schlick(
       material.reflectance, abs(dot(outgoing, normal)), entering);
-  auto weights = vec3f{max(F), max((1 - F) * material.diffuse),
-      max((1 - F) * material.transmission)};
+  auto weights = vec3f{max(F * material.specular_),
+      max((1 - F) * material.diffuse), max((1 - F) * material.transmission)};
   weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
@@ -1119,7 +1119,8 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto F        = fresnel_schlick(
       material.reflectance, abs(dot(outgoing, normal)), entering);
-  auto weights = vec2f{max(F), max((1 - F) * material.transmission)};
+  auto weights = vec2f{
+      max(F * material.specular_), max((1 - F) * material.transmission)};
   weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
@@ -1144,8 +1145,8 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto F        = fresnel_schlick(
       material.reflectance, abs(dot(outgoing, normal)), entering);
-  auto weights = vec3f{max(F), max((1 - F) * material.diffuse),
-      max((1 - F) * material.transmission)};
+  auto weights = vec3f{max(F * material.specular_),
+      max((1 - F) * material.diffuse), max((1 - F) * material.transmission)};
   weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
 
@@ -1189,7 +1190,8 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto F        = fresnel_schlick(
       material.reflectance, abs(dot(outgoing, normal)), entering);
-  auto weights = vec2f{max(F), max((1 - F) * material.transmission)};
+  auto weights = vec2f{
+      max(F * material.specular_), max((1 - F) * material.transmission)};
   weights /= sum(weights);
 
   if (same_hemisphere(normal, outgoing, incoming))
