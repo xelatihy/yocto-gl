@@ -7,11 +7,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - name: update apt
-      run: sudo apt-get update --yes
-    - name: install cmake
-      run: sudo apt-get install --yes cmake
+    - name: packages
+      run: |
+        sudo apt-get update --yes
+        sudo apt-get install --yes cmake
     - name: cmake
-      run: cmkae .
+      run: |
+        mkdir build
+        cd build
+        cmake ..
     - name: make
-      run: make
+      run: |
+        make -j8
