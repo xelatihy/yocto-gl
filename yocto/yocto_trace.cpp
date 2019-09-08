@@ -48,6 +48,7 @@ vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
 vec3f fresnel_schlick(
     const vec3f& specular, float direction_cosine, bool entering) {
   if (specular == zero3f) return zero3f;
+  #if 0
   if (!entering) {
     // apply snell law to get proper angle
     // sin = sin*eta -> cos = sqrt(1 - sin^2*eta^2) ->
@@ -56,6 +57,7 @@ vec3f fresnel_schlick(
     direction_cosine = sqrt(clamp(
         1 - (1 - direction_cosine * direction_cosine) * eta * eta, 0.0, 1.0));
   }
+  #endif
   return specular + (1 - specular) *
                         pow(clamp(1 - abs(direction_cosine), 0.0f, 1.0f), 5.0f);
 }
@@ -1203,8 +1205,7 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (!is_delta(material)) return 0;
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto F        = fresnel_dielectric(
-      entering ? material.eta : 1 / material.eta, abs(dot(outgoing, normal)));
+  auto F        = fresnel_schlick(material.reflectance, abs(dot(outgoing, normal)), entering);
   auto weights = vec2f{max(F), max((1 - F) * material.transmission)};
   weights /= sum(weights);
 
