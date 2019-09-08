@@ -5140,14 +5140,17 @@ static void write_pbrt_sampler(file_wrapper& fs, const pbrt_sampler& value) {
   }
   checked_fprintf(fs, "\n");
 }
+
 static void write_pbrt_integrator(
     file_wrapper& fs, const pbrt_integrator& intergrator) {
   throw std::runtime_error("not implemented");
 }
+
 static void write_pbrt_accelerator(
     file_wrapper& fs, const pbrt_accelerator& accelerator) {
   throw std::runtime_error("not implemented");
 }
+
 static void write_pbrt_film(file_wrapper& fs, const pbrt_film& value) {
   checked_fprintf(fs, "Film");
   if (value.type == pbrt_film::type_t::image) {
@@ -5318,21 +5321,26 @@ static void write_pbrt_camera(file_wrapper& fs, const pbrt_camera& value) {
 static void write_pbrt_shape(file_wrapper& fs, const pbrt_shape& shape) {
   throw std::runtime_error("not implemented");
 }
+
 static void write_pbrt_light(file_wrapper& fs, const pbrt_light& light) {
   throw std::runtime_error("not implemented");
 }
+
 static void write_pbrt_material(
     file_wrapper& fs, const pbrt_material& material, const string& name) {
   throw std::runtime_error("not implemented");
 }
+
 static void write_pbrt_arealight(
     file_wrapper& fs, const pbrt_arealight& arealight) {
   throw std::runtime_error("not implemented");
 }
+
 static void write_pbrt_texture(
     file_wrapper& fs, const pbrt_texture& texture, const string& name) {
   throw std::runtime_error("not implemented");
 }
+
 static void write_pbrt_medium(
     file_wrapper& fs, const pbrt_medium& medium, const string& name) {
   throw std::runtime_error("not implemented");
