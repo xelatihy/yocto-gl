@@ -687,9 +687,6 @@ bool has_brdf(const material_point& material) {
   return material.coat != zero3f || material.specular != zero3f ||
          material.diffuse != zero3f || material.transmission != zero3f;
 }
-bool has_volume(const material_point& material) {
-  return material.voldensity != zero3f;
-}
 bool is_delta(const material_point& material) {
   return material.roughness == 0;
 }
@@ -1219,47 +1216,21 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
 
 vec3f eval_volscattering(const material_point& material, const vec3f& outgoing,
     const vec3f& incoming) {
-  if (!has_volume(material)) return zero3f;
-  auto scattering = zero3f;
-  if (material.voldensity != zero3f) {
-    scattering += eval_volume_scattering(
+  if (material.voldensity == zero3f) return zero3f;
+  return eval_volume_scattering(
         material.volscatter, material.volanisotropy, outgoing, incoming);
-  }
-  return scattering;
 }
 vec3f sample_volscattering(const material_point& material,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (!has_volume(material)) return zero3f;
-  auto weights = vec2f{max(material.voldensity), 0};
-  if (weights == zero2f) return zero3f;
-  weights /= sum(weights);
-
-  // keep a weight sum to pick a lobe
-  auto weight_sum = 0.0f;
-  weight_sum += weights[0];
-  if (rnl < weight_sum) {
+  if (material.voldensity == zero3f) return zero3f;
     return sample_volume_scattering(
         material.volscatter, material.volanisotropy, outgoing, rn);
-  }
-
-  // something went wrong if we got here
-  return zero3f;
 }
 float sample_volscattering_pdf(const material_point& material,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (!has_volume(material)) return 0;
-  auto weights = vec2f{max(material.voldensity), 0};
-  if (weights == zero2f) return 0;
-  weights /= sum(weights);
-
-  // commpute pdf
-  auto pdf = 0.0f;
-  if (weights[0]) {
-    pdf += weights[0] * sample_volume_scattering_pdf(material.volscatter,
+  if (material.voldensity == zero3f) return 0;
+  return sample_volume_scattering_pdf(material.volscatter,
                             material.volanisotropy, outgoing, incoming);
-  }
-
-  return pdf;
 }
 
 // Sample pdf for an environment.
