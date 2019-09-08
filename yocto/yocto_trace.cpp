@@ -449,22 +449,18 @@ static const bool trace_non_rigid_frames = true;
 // defaults
 static const auto coat_roughness = 0.03f * 0.03f;
 
-bool has_brdf(const material_point& material) {
-  return material.coat != zero3f || material.specular != zero3f ||
-         material.diffuse != zero3f || material.transmission != zero3f;
-}
-
-vec3f eval_emission(const material_point& material, const vec3f& normal,
+static vec3f eval_emission(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
   return material.emission;
 }
 
-vec3f eval_volemission(const material_point& material, const vec3f& outgoing) {
+static vec3f eval_volemission(
+    const material_point& material, const vec3f& outgoing) {
   return material.volemission;
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
+static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (!material.roughness) return zero3f;
 
@@ -544,7 +540,7 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
   return brdfcos;
 }
 
-vec3f eval_delta(const material_point& material, const vec3f& normal,
+static vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness) return zero3f;
 
@@ -570,8 +566,8 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
   return brdfcos;
 }
 
-vec4f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing) {
+static vec4f compute_brdf_pdfs(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing) {
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto coat     = fresnel_schlick(
       material.coat, abs(dot(outgoing, normal)), entering);
@@ -585,7 +581,7 @@ vec4f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_brdf(const material_point& material, const vec3f& normal,
+static vec3f sample_brdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
   if (!material.roughness) return zero3f;
 
@@ -621,7 +617,7 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
   return zero3f;
 }
 
-vec3f sample_delta(const material_point& material, const vec3f& normal,
+static vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
   if (material.roughness) return zero3f;
 
@@ -650,8 +646,8 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
 }
 
 // Compute the weight for sampling the BRDF
-float sample_brdf_pdf(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+static float sample_brdf_pdf(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (!material.roughness) return 0;
 
   auto weights   = compute_brdf_pdfs(material, normal, outgoing);
@@ -700,8 +696,8 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
   return pdf;
 }
 
-float sample_delta_pdf(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+static float sample_delta_pdf(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness) return 0;
 
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
@@ -714,28 +710,28 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
   return pdf;
 }
 
-vec3f eval_volscattering(const material_point& material, const vec3f& outgoing,
-    const vec3f& incoming) {
+static vec3f eval_volscattering(const material_point& material,
+    const vec3f& outgoing, const vec3f& incoming) {
   if (material.voldensity == zero3f) return zero3f;
   return material.volscatter *
          eval_phasefunction(dot(outgoing, incoming), material.volanisotropy);
 }
 
-vec3f sample_volscattering(const material_point& material,
+static vec3f sample_volscattering(const material_point& material,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
   if (material.voldensity == zero3f) return zero3f;
   auto direction = sample_phasefunction(material.volanisotropy, rn);
   return basis_fromz(-outgoing) * direction;
 }
 
-float sample_volscattering_pdf(const material_point& material,
+static float sample_volscattering_pdf(const material_point& material,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.voldensity == zero3f) return 0;
   return eval_phasefunction(dot(outgoing, incoming), material.volanisotropy);
 }
 
 // Sample pdf for an environment.
-float sample_environment_pdf(const yocto_scene& scene,
+static float sample_environment_pdf(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, const vec3f& incoming) {
   auto& environment = scene.environments[environment_id];
   if (environment.emission_tex >= 0) {
@@ -755,8 +751,9 @@ float sample_environment_pdf(const yocto_scene& scene,
 }
 
 // Picks a point on an environment.
-vec3f sample_environment(const yocto_scene& scene, const trace_lights& lights,
-    int environment_id, float rel, const vec2f& ruv) {
+static vec3f sample_environment(const yocto_scene& scene,
+    const trace_lights& lights, int environment_id, float rel,
+    const vec2f& ruv) {
   auto& environment = scene.environments[environment_id];
   if (environment.emission_tex >= 0) {
     auto& cdf          = lights.environment_cdfs[environment.emission_tex];
@@ -772,7 +769,7 @@ vec3f sample_environment(const yocto_scene& scene, const trace_lights& lights,
 }
 
 // Picks a point on a light.
-vec3f sample_light(const yocto_scene& scene, const trace_lights& lights,
+static vec3f sample_light(const yocto_scene& scene, const trace_lights& lights,
     int instance_id, const vec3f& p, float rel, const vec2f& ruv) {
   auto& instance = scene.instances[instance_id];
   auto& shape    = scene.shapes[instance.shape];
@@ -784,9 +781,9 @@ vec3f sample_light(const yocto_scene& scene, const trace_lights& lights,
 }
 
 // Sample pdf for a light point.
-float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
-    int instance_id, const bvh_scene& bvh, const vec3f& position,
-    const vec3f& direction) {
+static float sample_light_pdf(const yocto_scene& scene,
+    const trace_lights& lights, int instance_id, const bvh_scene& bvh,
+    const vec3f& position, const vec3f& direction) {
   auto& instance = scene.instances[instance_id];
   auto& material = scene.materials[instance.material];
   if (material.emission == zero3f) return 0;
@@ -813,7 +810,7 @@ float sample_light_pdf(const yocto_scene& scene, const trace_lights& lights,
 }
 
 // Sample lights wrt solid angle
-vec3f sample_lights(const yocto_scene& scene, const trace_lights& lights,
+static vec3f sample_lights(const yocto_scene& scene, const trace_lights& lights,
     const bvh_scene& bvh, const vec3f& position, float rl, float rel,
     const vec2f& ruv) {
   auto light_id = sample_uniform(
@@ -829,8 +826,9 @@ vec3f sample_lights(const yocto_scene& scene, const trace_lights& lights,
 }
 
 // Sample lights pdf
-float sample_lights_pdf(const yocto_scene& scene, const trace_lights& lights,
-    const bvh_scene& bvh, const vec3f& position, const vec3f& direction) {
+static float sample_lights_pdf(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
+    const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto instance : lights.instances) {
     pdf += sample_light_pdf(scene, lights, instance, bvh, position, direction);
@@ -848,12 +846,12 @@ std::atomic<uint64_t> _trace_npaths{0};
 std::atomic<uint64_t> _trace_nrays{0};
 
 // Sample camera
-ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
+static ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
   return eval_camera(camera, ij, image_size, puv, sample_disk(luv));
 }
 
-ray3f sample_camera_tent(const yocto_camera& camera, const vec2i& ij,
+static ray3f sample_camera_tent(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
   const auto width  = 2.0f;
   const auto offset = 0.5f;
@@ -868,9 +866,9 @@ ray3f sample_camera_tent(const yocto_camera& camera, const vec2i& ij,
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& origin_, const vec3f& direction_,
-    rng_state& rng, const trace_params& params) {
+static pair<vec3f, bool> trace_path(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin_,
+    const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance     = zero3f;
   auto weight       = vec3f{1, 1, 1};
@@ -1005,9 +1003,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& origin_, const vec3f& direction_,
-    rng_state& rng, const trace_params& params) {
+static pair<vec3f, bool> trace_naive(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin_,
+    const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance  = zero3f;
   auto weight    = vec3f{1, 1, 1};
@@ -1078,9 +1076,9 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Eyelight for quick previewing.
-pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& origin_, const vec3f& direction_,
-    rng_state& rng, const trace_params& params) {
+static pair<vec3f, bool> trace_eyelight(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin_,
+    const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance  = zero3f;
   auto weight    = vec3f{1, 1, 1};
@@ -1139,7 +1137,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // False color rendering
-pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
+static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin,
     const vec3f& direction, rng_state& rng, const trace_params& params) {
   // intersect next point
@@ -1243,7 +1241,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
 using trace_sampler_func = pair<vec3f, bool> (*)(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, const trace_params& params);
-trace_sampler_func get_trace_sampler_func(const trace_params& params) {
+static trace_sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
     case trace_params::sampler_type::path: return trace_path;
     case trace_params::sampler_type::naive: return trace_naive;

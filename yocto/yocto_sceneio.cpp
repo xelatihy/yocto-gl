@@ -853,8 +853,8 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     write_yaml_property(fs, "materials", "roughness", false,
         make_yaml_value(material.roughness));
     if (material.refract)
-      write_yaml_property(fs, "materials", "refract", false,
-          make_yaml_value(material.refract));
+      write_yaml_property(
+          fs, "materials", "refract", false, make_yaml_value(material.refract));
     if (material.voltransmission != zero3f)
       write_yaml_property(fs, "materials", "voltransmission", false,
           make_yaml_value(material.voltransmission));
