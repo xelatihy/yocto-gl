@@ -538,6 +538,13 @@ struct pbrt_spectrum3f {
   const float& operator[](int i) const { return (&x)[i]; }
 };
 
+inline bool operator==(const pbrt_spectrum3f& a, const pbrt_spectrum3f& b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+inline bool operator!=(const pbrt_spectrum3f& a, const pbrt_spectrum3f& b) {
+  return !(a == b);
+}
+
 // pbrt cameras
 struct pbrt_camera {
   struct perspective_t {
@@ -771,6 +778,19 @@ struct pbrt_textured3f {
   pbrt_textured3f() : value{0, 0, 0}, texture{} {}
   pbrt_textured3f(float x, float y, float z) : value{x, y, z}, texture{} {}
 };
+
+inline bool operator==(const pbrt_textured1f& a, const pbrt_textured1f& b) {
+  return a.value == b.value && a.texture == b.texture;
+}
+inline bool operator!=(const pbrt_textured1f& a, const pbrt_textured1f& b) {
+  return !(a == b);
+}
+inline bool operator==(const pbrt_textured3f& a, const pbrt_textured3f& b) {
+  return a.value == b.value && a.texture == b.texture;  
+}
+inline bool operator!=(const pbrt_textured3f& a, const pbrt_textured3f& b) {
+  return !(a == b);
+}
 
 // pbrt textures
 struct pbrt_texture {

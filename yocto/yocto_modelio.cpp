@@ -5505,8 +5505,233 @@ static void write_pbrt_camera(file_wrapper& fs, const pbrt_camera& value) {
   checked_fprintf(fs, "\n");
 }
 
-static void write_pbrt_shape(file_wrapper& fs, const pbrt_shape& shape) {
-  throw std::runtime_error("not implemented");
+static void write_pbrt_shape(file_wrapper& fs, const pbrt_shape& value) {
+  checked_fprintf(fs, "Shape");
+  if (value.type == pbrt_shape::type_t::trianglemesh) {
+    checked_fprintf(fs, " \"trianglemesh\"");
+    auto&       tvalue = value.trianglemesh;
+    static auto def    = pbrt_shape::trianglemesh_t{};
+    if (tvalue.indices != def.indices) {
+      checked_fprintf(fs, " \"integer indices\" [");
+      for (auto v : tvalue.indices) checked_fprintf(fs, " %d", v);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.P != def.P) {
+      checked_fprintf(fs, " \"point P\" [");
+      for (auto v : tvalue.P) checked_fprintf(fs, " %g %g %g", v.x, v.y, v.z);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.N != def.N) {
+      checked_fprintf(fs, " \"normal N\" [");
+      for (auto v : tvalue.N) checked_fprintf(fs, " %g %g %g", v.x, v.y, v.z);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.S != def.S) {
+      checked_fprintf(fs, " \"vector S\" [");
+      for (auto v : tvalue.S) checked_fprintf(fs, " %g %g %g", v.x, v.y, v.z);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.uv != def.uv) {
+      checked_fprintf(fs, " \"float uv\" [");
+      for (auto v : tvalue.uv) checked_fprintf(fs, " %g %g", v.x, v.y);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.alpha.texture != "")
+      checked_fprintf(
+          fs, " \"texture alpha\" [ \"%s\" ]", tvalue.alpha.texture.c_str());
+    if (tvalue.shadowalpha.texture != "")
+      checked_fprintf(fs, " \"texture shadowalpha\" [ \"%s\" ]",
+          tvalue.shadowalpha.texture.c_str());
+  } else if (value.type == pbrt_shape::type_t::plymesh) {
+    checked_fprintf(fs, " \"plymesh\"");
+    auto&       tvalue = value.plymesh;
+    static auto def    = pbrt_shape::plymesh_t{};
+    if (tvalue.filename != def.filename)
+      checked_fprintf(
+          fs, " \"string filename\" [ \"%s\" ]\n", tvalue.filename.c_str());
+    if (tvalue.alpha.texture != "")
+      checked_fprintf(
+          fs, " \"texture alpha\" [ \"%s\" ]", tvalue.alpha.texture.c_str());
+    if (tvalue.shadowalpha.texture != "")
+      checked_fprintf(fs, " \"texture shadowalpha\" [ \"%s\" ]",
+          tvalue.shadowalpha.texture.c_str());
+  } else if (value.type == pbrt_shape::type_t::curve) {
+    checked_fprintf(fs, " \"curve\"");
+    auto&       tvalue = value.curve;
+    static auto def    = pbrt_shape::curve_t{};
+    static auto basis  = unordered_map<pbrt_shape::curve_t::basis_t, string>{
+        {pbrt_shape::curve_t::basis_t::bezier, "bezier"},
+        {pbrt_shape::curve_t::basis_t::bspline, "bspline"},
+    };
+    static auto types = unordered_map<pbrt_shape::curve_t::type_t, string>{
+        {pbrt_shape::curve_t::type_t::flat, "flat"},
+        {pbrt_shape::curve_t::type_t::ribbon, "ribbon"},
+        {pbrt_shape::curve_t::type_t::cylinder, "cylinder"},
+    };
+    if (tvalue.P != def.P) {
+      checked_fprintf(fs, " \"point P\" [");
+      for (auto v : tvalue.P) checked_fprintf(fs, " %g %g %g", v.x, v.y, v.z);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.N != def.N) {
+      checked_fprintf(fs, " \"normal N\" [");
+      for (auto v : tvalue.N) checked_fprintf(fs, " %g %g %g", v.x, v.y, v.z);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.basis != def.basis)
+      checked_fprintf(
+          fs, " \"string basis\" [ \"%s\" ]\n", basis.at(tvalue.basis).c_str());
+    if (tvalue.degree != def.degree)
+      checked_fprintf(fs, " \"integer degree\" [ %d ]\n", tvalue.degree);
+    if (tvalue.type != def.type)
+      checked_fprintf(
+          fs, " \"string type\" [ \"%s\" ]\n", types.at(tvalue.type).c_str());
+    if (tvalue.width0 != def.width0)
+      checked_fprintf(fs, " \"float width0\" [ %g ]\n", tvalue.width0);
+    if (tvalue.width1 != def.width1)
+      checked_fprintf(fs, " \"float width1\" [ %g ]\n", tvalue.width1);
+    if (tvalue.splitdepth != def.splitdepth)
+      checked_fprintf(
+          fs, " \"integer splitdepth\" [ %d ]\n", tvalue.splitdepth);
+  } else if (value.type == pbrt_shape::type_t::loopsubdiv) {
+    checked_fprintf(fs, " \"loopsubdiv\"");
+    auto&       tvalue = value.loopsubdiv;
+    static auto def    = pbrt_shape::loopsubdiv_t{};
+    if (tvalue.indices != def.indices) {
+      checked_fprintf(fs, " \"integer indices\" [");
+      for (auto v : tvalue.indices) checked_fprintf(fs, " %d", v);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.P != def.P) {
+      checked_fprintf(fs, " \"point P\" [");
+      for (auto v : tvalue.P) checked_fprintf(fs, " %g %g %g", v.x, v.y, v.z);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.levels != def.levels)
+      checked_fprintf(fs, " \"integer levels\" [ %d ]\n", tvalue.levels);
+  } else if (value.type == pbrt_shape::type_t::nurbs) {
+    checked_fprintf(fs, " \"nurbs\"");
+    auto&       tvalue = value.nurbs;
+    static auto def    = pbrt_shape::nurbs_t{};
+    if (tvalue.P != def.P) {
+      checked_fprintf(fs, " \"point P\" [");
+      for (auto v : tvalue.P) checked_fprintf(fs, " %g %g %g", v.x, v.y, v.z);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.Pw != def.Pw) {
+      checked_fprintf(fs, " \"float Pw\" [");
+      for (auto v : tvalue.Pw) checked_fprintf(fs, " %g", v);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.nu != def.nu)
+      checked_fprintf(fs, " \"integer nu\" [ %d ]\n", tvalue.nu);
+    if (tvalue.nv != def.nv)
+      checked_fprintf(fs, " \"integer nv\" [ %d ]\n", tvalue.nv);
+    if (tvalue.uknots != def.uknots) {
+      checked_fprintf(fs, " \"float uknots\" [");
+      for (auto v : tvalue.uknots) checked_fprintf(fs, " %g", v);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.vknots != def.vknots) {
+      checked_fprintf(fs, " \"float vknots\" [");
+      for (auto v : tvalue.vknots) checked_fprintf(fs, " %g", v);
+      checked_fprintf(fs, " ]");
+    }
+    if (tvalue.u0 != def.u0)
+      checked_fprintf(fs, " \"float u0\" [ %g ]\n", tvalue.u0);
+    if (tvalue.v0 != def.v0)
+      checked_fprintf(fs, " \"float v0\" [ %g ]\n", tvalue.v0);
+    if (tvalue.u1 != def.u1)
+      checked_fprintf(fs, " \"float u1\" [ %g ]\n", tvalue.u1);
+    if (tvalue.v1 != def.v1)
+      checked_fprintf(fs, " \"float v1\" [ %g ]\n", tvalue.v1);
+  } else if (value.type == pbrt_shape::type_t::sphere) {
+    checked_fprintf(fs, " \"sphere\"");
+    auto&       tvalue = value.sphere;
+    static auto def    = pbrt_shape::sphere_t{};
+    if (tvalue.radius != def.radius)
+      checked_fprintf(fs, " \"float radius\" [ %g ]\n", tvalue.radius);
+    if (tvalue.zmin != def.zmin)
+      checked_fprintf(fs, " \"float zmin\" [ %g ]\n", tvalue.zmin);
+    if (tvalue.zmax != def.zmax)
+      checked_fprintf(fs, " \"float zmax\" [ %g ]\n", tvalue.zmax);
+    if (tvalue.phimax != def.phimax)
+      checked_fprintf(fs, " \"float phimax\" [ %g ]\n", tvalue.phimax);
+  } else if (value.type == pbrt_shape::type_t::disk) {
+    checked_fprintf(fs, " \"disk\"");
+    auto&       tvalue = value.disk;
+    static auto def    = pbrt_shape::disk_t{};
+    if (tvalue.radius != def.radius)
+      checked_fprintf(fs, " \"float radius\" [ %g ]\n", tvalue.radius);
+    if (tvalue.height != def.height)
+      checked_fprintf(fs, " \"float height\" [ %g ]\n", tvalue.height);
+    if (tvalue.innerradius != def.innerradius)
+      checked_fprintf(
+          fs, " \"float innerradius\" [ %g ]\n", tvalue.innerradius);
+    if (tvalue.phimax != def.phimax)
+      checked_fprintf(fs, " \"float phimax\" [ %g ]\n", tvalue.phimax);
+  } else if (value.type == pbrt_shape::type_t::cone) {
+    checked_fprintf(fs, " \"cone\"");
+    auto&       tvalue = value.cone;
+    static auto def    = pbrt_shape::cone_t{};
+    if (tvalue.radius != def.radius)
+      checked_fprintf(fs, " \"float radius\" [ %g ]\n", tvalue.radius);
+    if (tvalue.height != def.height)
+      checked_fprintf(fs, " \"float height\" [ %g ]\n", tvalue.height);
+    if (tvalue.phimax != def.phimax)
+      checked_fprintf(fs, " \"float phimax\" [ %g ]\n", tvalue.phimax);
+  } else if (value.type == pbrt_shape::type_t::cylinder) {
+    checked_fprintf(fs, " \"cylinder\"");
+    auto&       tvalue = value.cylinder;
+    static auto def    = pbrt_shape::cylinder_t{};
+    if (tvalue.radius != def.radius)
+      checked_fprintf(fs, " \"float radius\" [ %g ]\n", tvalue.radius);
+    if (tvalue.zmin != def.zmin)
+      checked_fprintf(fs, " \"float zmin\" [ %g ]\n", tvalue.zmin);
+    if (tvalue.zmax != def.zmax)
+      checked_fprintf(fs, " \"float zmax\" [ %g ]\n", tvalue.zmax);
+    if (tvalue.phimax != def.phimax)
+      checked_fprintf(fs, " \"float phimax\" [ %g ]\n", tvalue.phimax);
+  } else if (value.type == pbrt_shape::type_t::hyperboloid) {
+    checked_fprintf(fs, " \"hyperboloid\"");
+    auto&       tvalue = value.hyperboloid;
+    static auto def    = pbrt_shape::hyperboloid_t{};
+    if (tvalue.p1 != def.p1)
+      checked_fprintf(fs, " \"float p1\" [ %g ]\n", tvalue.p1);
+    if (tvalue.p2 != def.p2)
+      checked_fprintf(fs, " \"float p2\" [ %g ]\n", tvalue.p2);
+    if (tvalue.phimax != def.phimax)
+      checked_fprintf(fs, " \"float phimax\" [ %g ]\n", tvalue.phimax);
+  } else if (value.type == pbrt_shape::type_t::paraboloid) {
+    checked_fprintf(fs, " \"paraboloid\"");
+    auto&       tvalue = value.paraboloid;
+    static auto def    = pbrt_shape::paraboloid_t{};
+    if (tvalue.radius != def.radius)
+      checked_fprintf(fs, " \"float radius\" [ %g ]\n", tvalue.radius);
+    if (tvalue.zmin != def.zmin)
+      checked_fprintf(fs, " \"float zmin\" [ %g ]\n", tvalue.zmin);
+    if (tvalue.zmax != def.zmax)
+      checked_fprintf(fs, " \"float zmax\" [ %g ]\n", tvalue.zmax);
+    if (tvalue.phimax != def.phimax)
+      checked_fprintf(fs, " \"float phimax\" [ %g ]\n", tvalue.phimax);
+  } else if (value.type == pbrt_shape::type_t::paraboloid) {
+    checked_fprintf(fs, " \"heightfield\"");
+    auto&       tvalue = value.heightfield;
+    static auto def    = pbrt_shape::heightfield_t{};
+    if (tvalue.nu != def.nu)
+      checked_fprintf(fs, " \"integer nu\" [ %d ]\n", tvalue.nu);
+    if (tvalue.nv != def.nv)
+      checked_fprintf(fs, " \"integer nv\" [ %d ]\n", tvalue.nv);
+    if (tvalue.Pz != def.Pz) {
+      checked_fprintf(fs, " \"float Pz\" [");
+      for (auto v : tvalue.Pz) checked_fprintf(fs, " %g", v);
+      checked_fprintf(fs, " ]");
+    }
+  } else {
+    throw std::runtime_error(
+        "unknown Shape " + std::to_string((int)value.type));
+  }
+  checked_fprintf(fs, "\n");
 }
 
 static void write_pbrt_light(file_wrapper& fs, const pbrt_light& light) {
