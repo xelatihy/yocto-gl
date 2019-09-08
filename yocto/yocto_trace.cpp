@@ -1015,6 +1015,11 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
   auto brdfcos = zero3f;
 
+  if (material.diffuse != zero3f &&
+      same_hemisphere(normal, outgoing, incoming)) {
+    brdfcos += (1 - spec) * material.diffuse / pif * abs(dot(normal, incoming));
+  }
+
   if (material.specular != zero3f &&
       same_hemisphere(normal, outgoing, incoming)) {
     auto halfway = normalize(incoming + outgoing);
@@ -1026,11 +1031,6 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     brdfcos += F * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
-  }
-
-  if (material.diffuse != zero3f &&
-      same_hemisphere(normal, outgoing, incoming)) {
-    brdfcos += (1 - spec) * material.diffuse / pif * abs(dot(normal, incoming));
   }
 
   if (material.transmission != zero3f && material.refract &&
@@ -1097,7 +1097,7 @@ vec3f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto spec     = fresnel_schlick(material.specular,
                                       abs(dot(outgoing, normal)), entering);
-  auto weights  = vec3f{max(spec), max((1 - spec) * material.diffuse),
+  auto weights  = vec3f{max((1 - spec) * material.diffuse), max(spec),
       max((1 - spec) * material.transmission)};
   weights /= sum(weights);
   return weights;
@@ -1112,24 +1112,12 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
   if (rnl < weights[0]) {
-    auto halfway = sample_microfacet(material.roughness, up_normal, rn);
-    return reflect(outgoing, halfway);
-  }
-
-  if (rnl < weights[0] + weights[1]) {
     return sample_hemisphere(up_normal, rn);
   }
 
-  if (rnl < weights[0] + weights[1] + weights[2]) {
-    if (material.refract) {
-      auto halfway = sample_microfacet(material.roughness, up_normal, rn);
-      return refract_notir(outgoing, halfway,
-          dot(normal, outgoing) > 0 ? 1 / material.eta : material.eta);
-    } else {
-      auto halfway = sample_microfacet(material.roughness, up_normal, rn);
-      auto ir      = reflect(outgoing, halfway);
-      return -reflect(ir, up_normal);
-    }
+  if (rnl < weights[0] + weights[1]) {
+    auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+    return reflect(outgoing, halfway);
   }
 
   if (rnl < weights[0] + weights[1] + weights[2]) {
@@ -1155,7 +1143,7 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
   // keep a weight sum to pick a lobe
-  if (rnl < weights[0]) {
+  if (rnl < weights[0] + weights[1]) {
     return reflect(outgoing, up_normal);
   }
 
@@ -1180,15 +1168,16 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
 
   auto pdf = 0.0f;
+
   if (weights[0] && same_hemisphere(normal, outgoing, incoming)) {
-    auto halfway = normalize(incoming + outgoing);
-    pdf += weights[0] *
-           sample_microfacet_pdf(material.roughness, up_normal, halfway) /
-           (4 * abs(dot(outgoing, halfway)));
+    pdf += weights[0] * sample_hemisphere_pdf(up_normal, incoming);
   }
 
   if (weights[1] && same_hemisphere(normal, outgoing, incoming)) {
-    pdf += weights[1] * sample_hemisphere_pdf(up_normal, incoming);
+    auto halfway = normalize(incoming + outgoing);
+    pdf += weights[1] *
+           sample_microfacet_pdf(material.roughness, up_normal, halfway) /
+           (4 * abs(dot(outgoing, halfway)));
   }
 
   if (weights[2] && material.refract &&
@@ -1221,8 +1210,8 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
   auto weights = compute_brdf_pdfs(material, normal, outgoing);
 
   auto pdf = 0.0f;
-  if (weights[0] && same_hemisphere(normal, outgoing, incoming))
-    pdf += weights[0];
+  if (weights[1] && same_hemisphere(normal, outgoing, incoming))
+    pdf += weights[1];
   if (weights[2] && !same_hemisphere(normal, outgoing, incoming))
     pdf += weights[2];
   return pdf;
