@@ -5029,7 +5029,7 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& command, string& name,
       auto name = ""s;
       parse_pbrt_value(str, name);
       stack.back().material = name;
-      command = pbrt_command::use_material;
+      command               = pbrt_command::use_material;
       return true;
     } else if (cmd == "Shape") {
       auto type = ""s;
@@ -5079,38 +5079,156 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& command, string& name,
   return false;
 }
 
+static void write_pbrt_sampler(file_wrapper& fs, const pbrt_sampler& sampler) {
+  throw std::runtime_error("not implemented");
+}
+static void write_pbrt_integrator(
+    file_wrapper& fs, const pbrt_integrator& intergrator) {
+  throw std::runtime_error("not implemented");
+}
+static void write_pbrt_accelerator(
+    file_wrapper& fs, const pbrt_accelerator& accelerator) {
+  throw std::runtime_error("not implemented");
+}
+static void write_pbrt_film(file_wrapper& fs, const pbrt_film& value) {
+  checked_fprintf(fs, "Film");
+  if (value.type == pbrt_film::type_t::image) {
+    checked_fprintf(fs, " \"image\"");
+    auto&       tvalue = value.image;
+    static auto def    = pbrt_film::image_t{};
+    if (tvalue.xresolution != def.xresolution)
+      checked_fprintf(fs, " \"int xresolution\" [%g]", tvalue.xresolution);
+    if (tvalue.yresolution != def.yresolution)
+      checked_fprintf(fs, " \"int yresolution\" [%g]", tvalue.yresolution);
+    if (tvalue.cropwindow != def.cropwindow)
+      checked_fprintf(fs, " \"float cropwindow\" [%g %g %g %g]",
+          tvalue.cropwindow.x, tvalue.cropwindow.y, tvalue.cropwindow.z,
+          tvalue.cropwindow.w);
+    if (tvalue.scale != def.scale)
+      checked_fprintf(fs, " \"float scale\" [%g]", tvalue.scale);
+    if (tvalue.maxsampleluminance != def.maxsampleluminance)
+      checked_fprintf(
+          fs, " \"float maxsampleluminance\" [%g]", tvalue.maxsampleluminance);
+    if (tvalue.diagonal != def.diagonal)
+      checked_fprintf(fs, " \"float diagonal\" [%g]", tvalue.diagonal);
+    if (tvalue.filename != def.filename)
+      checked_fprintf(fs, " \"string filename\" [\"%s\"]", tvalue.filename.c_str());
+  } else {
+    throw std::runtime_error("unknown Film " + std::to_string((int)value.type));
+  }
+}
+
+static void write_pbrt_filter(file_wrapper& fs, const pbrt_filter& filter) {
+  throw std::runtime_error("not implemented");
+}
+static void write_pbrt_camera(file_wrapper& fs, const pbrt_camera& camera) {
+  throw std::runtime_error("not implemented");
+}
+static void write_pbrt_shape(file_wrapper& fs, const pbrt_shape& shape) {
+  throw std::runtime_error("not implemented");
+}
+static void write_pbrt_light(file_wrapper& fs, const pbrt_light& light) {
+  throw std::runtime_error("not implemented");
+}
+static void write_pbrt_material(
+    file_wrapper& fs, const pbrt_material& material, const string& name) {
+  throw std::runtime_error("not implemented");
+}
+static void write_pbrt_arealight(
+    file_wrapper& fs, const pbrt_arealight& arealight) {
+  throw std::runtime_error("not implemented");
+}
+static void write_pbrt_texture(
+    file_wrapper& fs, const pbrt_texture& texture, const string& name) {
+  throw std::runtime_error("not implemented");
+}
+static void write_pbrt_medium(
+    file_wrapper& fs, const pbrt_medium& medium, const string& name) {
+  throw std::runtime_error("not implemented");
+}
+
 void write_pbrt_command(file_wrapper& fs, pbrt_command command,
-    const string& name, const frame3f& xform, const pbrt_command_data& data) {
+    const string& name, const mat4f& xform, const pbrt_command_data& data) {
   switch (command) {
-    case pbrt_command::sampler: break;
-    case pbrt_command::integrator: break;
-    case pbrt_command::accelerator: break;
-    case pbrt_command::film: break;
-    case pbrt_command::filter: break;
-    case pbrt_command::camera: break;
-    case pbrt_command::shape: break;
-    case pbrt_command::light: break;
-    case pbrt_command::material: break;
-    case pbrt_command::arealight: break;
-    case pbrt_command::named_texture: break;
-    case pbrt_command::named_medium: break;
-    case pbrt_command::named_material: break;
-    case pbrt_command::object_instance: break;
-    case pbrt_command::object_begin: break;
-    case pbrt_command::object_end: break;
-    case pbrt_command::include: break;
-    case pbrt_command::world_begin: break;
-    case pbrt_command::world_end: break;
-    case pbrt_command::attribute_begin: break;
-    case pbrt_command::attribute_end: break;
-    case pbrt_command::transform_begin: break;
-    case pbrt_command::transform_end: break;
-    case pbrt_command::reverse_orientation: break;
-    case pbrt_command::set_transform: break;
-    case pbrt_command::concat_transform: break;
-    case pbrt_command::lookat_transform: break;
-    case pbrt_command::use_material: break;
-    case pbrt_command::medium_interface: break;
+    case pbrt_command::world_begin: checked_fprintf(fs, "WorldBegin\n"); break;
+    case pbrt_command::world_end: checked_fprintf(fs, "WorldEnd\n"); break;
+    case pbrt_command::attribute_begin:
+      checked_fprintf(fs, "AttributeBegin\n");
+      break;
+    case pbrt_command::attribute_end:
+      checked_fprintf(fs, "AttributeEnd\n");
+      break;
+    case pbrt_command::transform_begin:
+      checked_fprintf(fs, "TransformBegin\n");
+      break;
+    case pbrt_command::transform_end:
+      checked_fprintf(fs, "TransformEnd\n");
+      break;
+    case pbrt_command::object_begin:
+      checked_fprintf(fs, "ObjectBegin \"%s\"\n", name.c_str());
+      break;
+    case pbrt_command::object_end: checked_fprintf(fs, "ObjectEnd\n"); break;
+    case pbrt_command::object_instance:
+      checked_fprintf(fs, "ObjectInstance \"%s\"\n", name.c_str());
+      break;
+    case pbrt_command::sampler: write_pbrt_sampler(fs, data.sampler); break;
+    case pbrt_command::integrator:
+      write_pbrt_integrator(fs, data.intergrator);
+      break;
+    case pbrt_command::accelerator:
+      write_pbrt_accelerator(fs, data.accelerator);
+      break;
+    case pbrt_command::film: write_pbrt_film(fs, data.film); break;
+    case pbrt_command::filter: write_pbrt_filter(fs, data.filter); break;
+    case pbrt_command::camera: write_pbrt_camera(fs, data.camera); break;
+    case pbrt_command::shape: write_pbrt_shape(fs, data.shape); break;
+    case pbrt_command::light: write_pbrt_light(fs, data.light); break;
+    case pbrt_command::material:
+      write_pbrt_material(fs, data.material, "");
+      break;
+    case pbrt_command::arealight:
+      write_pbrt_arealight(fs, data.arealight);
+      break;
+    case pbrt_command::named_texture:
+      write_pbrt_texture(fs, data.texture, name);
+      break;
+    case pbrt_command::named_medium:
+      write_pbrt_medium(fs, data.medium, name);
+      break;
+    case pbrt_command::named_material:
+      write_pbrt_material(fs, data.material, name);
+      break;
+    case pbrt_command::include:
+      checked_fprintf(fs, "Include \"%s\"\n", name.c_str());
+      break;
+    case pbrt_command::reverse_orientation:
+      checked_fprintf(fs, "ReverseOrientation\n");
+      break;
+    case pbrt_command::set_transform:
+      checked_fprintf(fs,
+          "Transform %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
+          xform.x.x, xform.x.y, xform.x.z, xform.x.w, xform.y.x, xform.y.y,
+          xform.y.z, xform.y.w, xform.z.x, xform.z.y, xform.z.z, xform.z.w,
+          xform.w.x, xform.w.y, xform.w.z, xform.w.w);
+      break;
+    case pbrt_command::concat_transform:
+      checked_fprintf(fs,
+          "ConcatTransform %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g\n",
+          xform.x.x, xform.x.y, xform.x.z, xform.x.w, xform.y.x, xform.y.y,
+          xform.y.z, xform.y.w, xform.z.x, xform.z.y, xform.z.z, xform.z.w,
+          xform.w.x, xform.w.y, xform.w.z, xform.w.w);
+      break;
+    case pbrt_command::lookat_transform:
+      checked_fprintf(fs, "LookAt %g %g %g %g %g %g %g %g %g\n", xform.x.x,
+          xform.x.y, xform.x.z, xform.y.x, xform.y.y, xform.y.z, xform.z.x,
+          xform.z.y, xform.z.z);
+      break;
+    case pbrt_command::use_material:
+      checked_fprintf(fs, "NamedMaterial \"%s\"\n", name.c_str());
+      break;
+    case pbrt_command::medium_interface:
+      throw std::runtime_error("not supported yet");
+      break;
   }
 }
 

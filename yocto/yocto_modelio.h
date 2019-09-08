@@ -1384,7 +1384,7 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& command, string& name,
     pbrt_command_data& data, vector<pbrt_context>& stack,
     pbrt_parser_state& state);
 void write_pbrt_command(file_wrapper& fs, pbrt_command command, 
-    const string& name, const frame3f& xform, const pbrt_command_data& data);
+    const string& name, const mat4f& xform, const pbrt_command_data& data);
 
 }  // namespace yocto
 
