@@ -5079,8 +5079,66 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& command, string& name,
   return false;
 }
 
-static void write_pbrt_sampler(file_wrapper& fs, const pbrt_sampler& sampler) {
-  throw std::runtime_error("not implemented");
+static void write_pbrt_sampler(file_wrapper& fs, const pbrt_sampler& value) {
+  checked_fprintf(fs, "Sampler");
+  if (value.type == pbrt_sampler::type_t::random) {
+    checked_fprintf(fs, " \"random\"");
+    auto&       tvalue = value.random;
+    static auto def    = pbrt_sampler::random_t{};
+    if (tvalue.pixelsamples != def.pixelsamples)
+      checked_fprintf(
+          fs, " \"integer pixelsamples\" [ %d ]", tvalue.pixelsamples);
+  } else if (value.type == pbrt_sampler::type_t::halton) {
+    checked_fprintf(fs, " \"halton\"");
+    auto&       tvalue = value.halton;
+    static auto def    = pbrt_sampler::halton_t{};
+    if (tvalue.pixelsamples != def.pixelsamples)
+      checked_fprintf(
+          fs, " \"integer pixelsamples\" [ %d ]", tvalue.pixelsamples);
+  } else if (value.type == pbrt_sampler::type_t::sobol) {
+    checked_fprintf(fs, " \"sobol\"");
+    auto&       tvalue = value.sobol;
+    static auto def    = pbrt_sampler::sobol_t{};
+    if (tvalue.pixelsamples != def.pixelsamples)
+      checked_fprintf(
+          fs, " \"integer pixelsamples\" [ %d ]", tvalue.pixelsamples);
+  } else if (value.type == pbrt_sampler::type_t::zerotwosequence) {
+    checked_fprintf(fs, " \"02sequence\"");
+    auto&       tvalue = value.zerotwosequence;
+    static auto def    = pbrt_sampler::zerotwosequence_t{};
+    if (tvalue.pixelsamples != def.pixelsamples)
+      checked_fprintf(
+          fs, " \"integer pixelsamples\" [ %d ]", tvalue.pixelsamples);
+  } else if (value.type == pbrt_sampler::type_t::zerotwosequence) {
+    checked_fprintf(fs, " \"lowdiscrepancy\"");
+    auto&       tvalue = value.zerotwosequence;
+    static auto def    = pbrt_sampler::zerotwosequence_t{};
+    if (tvalue.pixelsamples != def.pixelsamples)
+      checked_fprintf(
+          fs, " \"integer pixelsamples\" [ %d ]", tvalue.pixelsamples);
+  } else if (value.type == pbrt_sampler::type_t::maxmindist) {
+    checked_fprintf(fs, " \"maxmindist\"");
+    auto&       tvalue = value.maxmindist;
+    static auto def    = pbrt_sampler::maxmindist_t{};
+    if (tvalue.pixelsamples != def.pixelsamples)
+      checked_fprintf(
+          fs, " \"integer pixelsamples\" [ %d ]", tvalue.pixelsamples);
+  } else if (value.type == pbrt_sampler::type_t::stratified) {
+    checked_fprintf(fs, " \"stratified\"");
+    auto&       tvalue = value.stratified;
+    static auto def    = pbrt_sampler::stratified_t{};
+    if (tvalue.xsamples != def.xsamples)
+      checked_fprintf(fs, " \"integer xsamples\" [ %d ]", tvalue.xsamples);
+    if (tvalue.ysamples != def.ysamples)
+      checked_fprintf(fs, " \"integer ysamples\" [ %d ]", tvalue.ysamples);
+    if (tvalue.jitter != def.jitter)
+      checked_fprintf(
+          fs, " \"bool jitter\" [ \"%s\" ]", tvalue.jitter ? "true" : "false");
+  } else {
+    throw std::runtime_error(
+        "unknown Sampler " + std::to_string((int)value.type));
+  }
+  checked_fprintf(fs, "\n");
 }
 static void write_pbrt_integrator(
     file_wrapper& fs, const pbrt_integrator& intergrator) {
@@ -5097,9 +5155,11 @@ static void write_pbrt_film(file_wrapper& fs, const pbrt_film& value) {
     auto&       tvalue = value.image;
     static auto def    = pbrt_film::image_t{};
     if (tvalue.xresolution != def.xresolution)
-      checked_fprintf(fs, " \"integer xresolution\" [ %d ]", tvalue.xresolution);
+      checked_fprintf(
+          fs, " \"integer xresolution\" [ %d ]", tvalue.xresolution);
     if (tvalue.yresolution != def.yresolution)
-      checked_fprintf(fs, " \"integer yresolution\" [ %d ]", tvalue.yresolution);
+      checked_fprintf(
+          fs, " \"integer yresolution\" [ %d ]", tvalue.yresolution);
     if (tvalue.cropwindow != def.cropwindow)
       checked_fprintf(fs, " \"float cropwindow\" [ %g %g %g %g ]",
           tvalue.cropwindow.x, tvalue.cropwindow.y, tvalue.cropwindow.z,
@@ -5107,12 +5167,13 @@ static void write_pbrt_film(file_wrapper& fs, const pbrt_film& value) {
     if (tvalue.scale != def.scale)
       checked_fprintf(fs, " \"float scale\" [ %g ]", tvalue.scale);
     if (tvalue.maxsampleluminance != def.maxsampleluminance)
-      checked_fprintf(
-          fs, " \"float maxsampleluminance\" [ %g ]", tvalue.maxsampleluminance);
+      checked_fprintf(fs, " \"float maxsampleluminance\" [ %g ]",
+          tvalue.maxsampleluminance);
     if (tvalue.diagonal != def.diagonal)
       checked_fprintf(fs, " \"float diagonal\" [ %g ]", tvalue.diagonal);
     if (tvalue.filename != def.filename)
-      checked_fprintf(fs, " \"string filename\" [ \"%s\" ]", tvalue.filename.c_str());
+      checked_fprintf(
+          fs, " \"string filename\" [ \"%s\" ]", tvalue.filename.c_str());
   } else {
     throw std::runtime_error("unknown Film " + std::to_string((int)value.type));
   }
@@ -5147,10 +5208,8 @@ static void write_pbrt_filter(file_wrapper& fs, const pbrt_filter& value) {
       checked_fprintf(fs, " \"float xwidth\" [ %g ]", tvalue.xwidth);
     if (tvalue.ywidth != def.ywidth)
       checked_fprintf(fs, " \"float ywidth\" [ %g ]", tvalue.ywidth);
-    if (tvalue.B != def.B)
-      checked_fprintf(fs, " \"float B\" [ %g ]", tvalue.B);
-    if (tvalue.C != def.C)
-      checked_fprintf(fs, " \"float C\" [ %g ]", tvalue.C);
+    if (tvalue.B != def.B) checked_fprintf(fs, " \"float B\" [ %g ]", tvalue.B);
+    if (tvalue.C != def.C) checked_fprintf(fs, " \"float C\" [ %g ]", tvalue.C);
   } else if (value.type == pbrt_filter::type_t::sinc) {
     checked_fprintf(fs, " \"sinc\"");
     auto&       tvalue = value.sinc;
@@ -5170,7 +5229,8 @@ static void write_pbrt_filter(file_wrapper& fs, const pbrt_filter& value) {
     if (tvalue.ywidth != def.ywidth)
       checked_fprintf(fs, " \"float ywidth\" [ %g ]", tvalue.ywidth);
   } else {
-    throw std::runtime_error("unknown Filter " + std::to_string((int)value.type));
+    throw std::runtime_error(
+        "unknown Filter " + std::to_string((int)value.type));
   }
   checked_fprintf(fs, "\n");
 }
@@ -5184,33 +5244,43 @@ static void write_pbrt_camera(file_wrapper& fs, const pbrt_camera& value) {
     if (tvalue.fov != def.fov)
       checked_fprintf(fs, " \"float fov\" [ %g ]", tvalue.fov);
     if (tvalue.frameaspectratio != def.frameaspectratio)
-      checked_fprintf(fs, " \"float frameaspectratio\" [ %g ]", tvalue.frameaspectratio);
+      checked_fprintf(
+          fs, " \"float frameaspectratio\" [ %g ]", tvalue.frameaspectratio);
     if (tvalue.lensradius != def.lensradius)
       checked_fprintf(fs, " \"float lensradius\" [ %g ]", tvalue.lensradius);
     if (tvalue.focaldistance != def.focaldistance)
-      checked_fprintf(fs, " \"float focaldistance\" [ %g ]", tvalue.focaldistance);
+      checked_fprintf(
+          fs, " \"float focaldistance\" [ %g ]", tvalue.focaldistance);
     if (tvalue.screenwindow != def.screenwindow)
-      checked_fprintf(fs, " \"float screenwindow\" [ %g %g %g %g ]", tvalue.screenwindow.x, tvalue.screenwindow.y, tvalue.screenwindow.z, tvalue.screenwindow.w);
+      checked_fprintf(fs, " \"float screenwindow\" [ %g %g %g %g ]",
+          tvalue.screenwindow.x, tvalue.screenwindow.y, tvalue.screenwindow.z,
+          tvalue.screenwindow.w);
     if (tvalue.shutteropen != def.shutteropen)
       checked_fprintf(fs, " \"float shutteropen\" [ %g ]", tvalue.shutteropen);
     if (tvalue.shutterclose != def.shutterclose)
-      checked_fprintf(fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
+      checked_fprintf(
+          fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
   } else if (value.type == pbrt_camera::type_t::orthographic) {
     checked_fprintf(fs, " \"orthographic\"");
     auto&       tvalue = value.orthographic;
     static auto def    = pbrt_camera::orthographic_t{};
     if (tvalue.frameaspectratio != def.frameaspectratio)
-      checked_fprintf(fs, " \"float frameaspectratio\" [ %g ]", tvalue.frameaspectratio);
+      checked_fprintf(
+          fs, " \"float frameaspectratio\" [ %g ]", tvalue.frameaspectratio);
     if (tvalue.lensradius != def.lensradius)
       checked_fprintf(fs, " \"float lensradius\" [ %g ]", tvalue.lensradius);
     if (tvalue.focaldistance != def.focaldistance)
-      checked_fprintf(fs, " \"float focaldistance\" [ %g ]", tvalue.focaldistance);
+      checked_fprintf(
+          fs, " \"float focaldistance\" [ %g ]", tvalue.focaldistance);
     if (tvalue.screenwindow != def.screenwindow)
-      checked_fprintf(fs, " \"float screenwindow\" [ %g %g %g %g ]", tvalue.screenwindow.x, tvalue.screenwindow.y, tvalue.screenwindow.z, tvalue.screenwindow.w);
+      checked_fprintf(fs, " \"float screenwindow\" [ %g %g %g %g ]",
+          tvalue.screenwindow.x, tvalue.screenwindow.y, tvalue.screenwindow.z,
+          tvalue.screenwindow.w);
     if (tvalue.shutteropen != def.shutteropen)
       checked_fprintf(fs, " \"float shutteropen\" [ %g ]", tvalue.shutteropen);
     if (tvalue.shutterclose != def.shutterclose)
-      checked_fprintf(fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
+      checked_fprintf(
+          fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
   } else if (value.type == pbrt_camera::type_t::environment) {
     checked_fprintf(fs, " \"environment\"");
     auto&       tvalue = value.environment;
@@ -5218,23 +5288,29 @@ static void write_pbrt_camera(file_wrapper& fs, const pbrt_camera& value) {
     if (tvalue.shutteropen != def.shutteropen)
       checked_fprintf(fs, " \"float shutteropen\" [ %g ]", tvalue.shutteropen);
     if (tvalue.shutterclose != def.shutterclose)
-      checked_fprintf(fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
+      checked_fprintf(
+          fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
   } else if (value.type == pbrt_camera::type_t::realistic) {
     checked_fprintf(fs, " \"realistic\"");
     auto&       tvalue = value.realistic;
     static auto def    = pbrt_camera::realistic_t{};
     if (tvalue.lensfile != def.lensfile)
-      checked_fprintf(fs, " \"string lensfile\" [ \"%s\" ]", tvalue.lensfile.c_str());
+      checked_fprintf(
+          fs, " \"string lensfile\" [ \"%s\" ]", tvalue.lensfile.c_str());
     if (tvalue.focusdistance != def.focusdistance)
-      checked_fprintf(fs, " \"float focusdistance\" [ %g ]", tvalue.focusdistance);
+      checked_fprintf(
+          fs, " \"float focusdistance\" [ %g ]", tvalue.focusdistance);
     if (tvalue.shutteropen != def.shutteropen)
       checked_fprintf(fs, " \"float shutteropen\" [ %g ]", tvalue.shutteropen);
     if (tvalue.shutterclose != def.shutterclose)
-      checked_fprintf(fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
+      checked_fprintf(
+          fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
     if (tvalue.simpleweighting != def.simpleweighting)
-      checked_fprintf(fs, " \"float simpleweighting\" [ %g ]", tvalue.simpleweighting);
+      checked_fprintf(
+          fs, " \"float simpleweighting\" [ %g ]", tvalue.simpleweighting);
   } else {
-    throw std::runtime_error("unknown Caemra " + std::to_string((int)value.type));
+    throw std::runtime_error(
+        "unknown Caemra " + std::to_string((int)value.type));
   }
   checked_fprintf(fs, "\n");
 }
