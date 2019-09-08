@@ -1341,17 +1341,22 @@ struct pbrt_callbacks {
 void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv = true);
 
 // Pbrt element
-enum struct pbrt_element {
+enum struct pbrt_command {
   // clang-format off
   sampler, integrator, accelerator, film, filter, camera, shape, light, // value
-  material, arealight, // name and value
-  named_texture, named_medium, named_material, // name and value
-  object_instance, object_begin, object_end, include // name
+  material, arealight,                                     // name and value
+  named_texture, named_medium, named_material,             // name and value
+  object_instance, object_begin, object_end, include,      // name
+  // commands used during writing --- for reading just use the context
+  world_begin, world_end, attribute_begin, attribute_end,  // no params
+  transform_begin, transform_end,                          // no params
+  transform,                                               // frame
+  use_material,                                            // name
   // clang-format on
 };
 
 // Pbrt element data
-struct pbrt_element_data {
+struct pbrt_command_data {
   pbrt_sampler     sampler;
   pbrt_integrator  intergrator;
   pbrt_accelerator accelerator;
@@ -1375,9 +1380,11 @@ struct pbrt_parser_state {
 };
 
 // Read a pbrt element
-bool read_pbrt_element(file_wrapper& fs, pbrt_element& element, string& name,
-    pbrt_element_data& data, vector<pbrt_context>& stack,
+bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
+    pbrt_command_data& data, vector<pbrt_context>& stack,
     pbrt_parser_state& state);
+void write_pbrt_command(file_wrapper& fs, pbrt_command element, 
+    const string& name, const frame3f& frame, const pbrt_command_data& data);
 
 }  // namespace yocto
 

@@ -3593,38 +3593,38 @@ static void load_pbrt(
   static auto shape_id         = 0;
 
   // parse command by command
-  auto element = pbrt_element{};
+  auto element = pbrt_command{};
   auto name    = ""s;
-  auto data    = pbrt_element_data{};
+  auto data    = pbrt_command_data{};
   auto stack   = vector<pbrt_context>{};
   auto state   = pbrt_parser_state{};
   while (!files.empty()) {
-    if (!read_pbrt_element(files.back(), element, name, data, stack, state)) {
+    if (!read_pbrt_command(files.back(), element, name, data, stack, state)) {
       files.pop_back();
       continue;
     }
-    if (element == pbrt_element::film) {
+    if (element == pbrt_command::film) {
       add_pbrt_film(scene, data.film, stack.back(), last_film_aspect);
-    } else if (element == pbrt_element::camera) {
+    } else if (element == pbrt_command::camera) {
       add_pbrt_camera(scene, data.camera, stack.back(), last_film_aspect);
-    } else if (element == pbrt_element::shape) {
+    } else if (element == pbrt_command::shape) {
       add_pbrt_shape(scene, data.shape, stack.back(),
           "shapes/shape__" + std::to_string(shape_id++) + ".ply", filename,
           cur_object, omap, mmap, amap, ammap);
-    } else if (element == pbrt_element::light) {
+    } else if (element == pbrt_command::light) {
       add_pbrt_light(scene, data.light, stack.back());
-    } else if (element == pbrt_element::named_texture) {
+    } else if (element == pbrt_command::named_texture) {
       add_pbrt_texture(
           scene, data.texture, stack.back(), name, tmap, ctmap, timap);
-    } else if (element == pbrt_element::material) {
+    } else if (element == pbrt_command::material) {
       add_pbrt_material(
           scene, data.material, stack.back(), name, mmap, tmap, ctmap);
-    } else if (element == pbrt_element::named_material) {
+    } else if (element == pbrt_command::named_material) {
       add_pbrt_material(
           scene, data.material, stack.back(), name, mmap, tmap, ctmap);
-    } else if (element == pbrt_element::arealight) {
+    } else if (element == pbrt_command::arealight) {
       add_pbrt_arealight(scene, data.arealight, stack.back(), name, amap);
-    } else if (element == pbrt_element::object_instance) {
+    } else if (element == pbrt_command::object_instance) {
       auto& pinstances = omap.at(name);
       for (auto& pinstance : pinstances) {
         auto instance  = yocto_instance();
@@ -3634,12 +3634,12 @@ static void load_pbrt(
         instance.material = pinstance.material;
         scene.instances.push_back(instance);
       }
-    } else if (element == pbrt_element::object_begin) {
+    } else if (element == pbrt_command::object_begin) {
       cur_object       = name;
       omap[cur_object] = {};
-    } else if (element == pbrt_element::object_end) {
+    } else if (element == pbrt_command::object_end) {
       cur_object = "";
-    } else if (element == pbrt_element::include) {
+    } else if (element == pbrt_command::include) {
       open_file(files.emplace_back(), fs::path(filename).parent_path() / name);
     } else {
       // skip other
