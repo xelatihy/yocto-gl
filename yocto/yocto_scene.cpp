@@ -736,7 +736,9 @@ vec3f eval_shading_normal(const yocto_scene& scene,
     auto normal = eval_normal(scene, instance, element, uv, non_rigid_frame);
     return orthonormalize(-direction, normal);
   } else if (material.normal_tex < 0) {
-    return eval_normal(scene, instance, element, uv, non_rigid_frame);
+    auto normal = eval_normal(scene, instance, element, uv, non_rigid_frame);
+    if (material.refraction != zero3f) return normal;
+    return dot(direction, normal) < 0 ? normal : -normal;
   } else {
     auto& normal_tex = scene.textures[material.normal_tex];
     auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex,
@@ -744,7 +746,9 @@ vec3f eval_shading_normal(const yocto_scene& scene,
     auto  basis      = eval_tangent_basis(shape, element, uv);
     normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
     auto normal = normalize(basis.first * normalmap);
-    return transform_normal(instance.frame, normal, non_rigid_frame);
+    normal      = transform_normal(instance.frame, normal, non_rigid_frame);
+    if (material.refraction != zero3f) return normal;
+    return dot(direction, normal) < 0 ? normal : -normal;
   }
 }
 // Instance element values.
