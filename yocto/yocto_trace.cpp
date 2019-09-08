@@ -1011,58 +1011,65 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
   auto entering  = !material.refract || dot(normal, outgoing) >= 0;
 
-  if (same_hemisphere(normal, outgoing, incoming)) {
-    if (material.diffuse == zero3f && material.specular == zero3f)
-      return zero3f;
+  auto brdfcos = zero3f;
+
+  if (material.specular != zero3f &&
+      same_hemisphere(normal, outgoing, incoming)) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_schlick(
         material.reflectance, abs(dot(halfway, outgoing)), entering);
-    auto brdfcos = zero3f;
-    if (material.specular != zero3f) {
-      auto D = eval_microfacetD(material.roughness, up_normal, halfway);
-      auto G = eval_microfacetG(
-          material.roughness, up_normal, halfway, outgoing, incoming);
-      brdfcos += material.specular * F * D * G /
-                 abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
-                 abs(dot(normal, incoming));
-    }
-    if (material.diffuse != zero3f) {
-      brdfcos += (1 - F) * material.diffuse / pif * abs(dot(normal, incoming));
-    }
-    return brdfcos;
-  } else {
-    if (material.transmission == zero3f) return zero3f;
-    if (material.refract) {
-      auto eta            = material.eta;
-      auto halfway_vector = dot(outgoing, normal) > 0
-                                ? -(outgoing + eta * incoming)
-                                : (eta * outgoing + incoming);
-      auto halfway = normalize(halfway_vector);
-      auto F       = fresnel_schlick(
-          material.reflectance, abs(dot(halfway, outgoing)), entering);
-      auto D = eval_microfacetD(material.roughness, up_normal, halfway);
-      auto G = eval_microfacetG(
-          material.roughness, up_normal, halfway, outgoing, incoming);
-
-      auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
-                       (dot(outgoing, normal) * dot(incoming, normal));
-
-      // [Walter 2007] equation 21
-      return material.transmission * abs(dot_terms) * (1 - F) * D * G /
-             dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
-    } else {
-      auto ir      = reflect(-incoming, up_normal);
-      auto halfway = normalize(ir + outgoing);
-      auto F       = fresnel_schlick(
-          material.reflectance, abs(dot(halfway, outgoing)), entering);
-      auto D = eval_microfacetD(material.roughness, up_normal, halfway);
-      auto G = eval_microfacetG(
-          material.roughness, up_normal, halfway, outgoing, ir);
-      return material.transmission * (1 - F) * D * G /
-             abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
-             abs(dot(normal, incoming));
-    }
+    auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+    auto G = eval_microfacetG(
+        material.roughness, up_normal, halfway, outgoing, incoming);
+    brdfcos += material.specular * F * D * G /
+               abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+               abs(dot(normal, incoming));
   }
+
+  if (material.diffuse != zero3f &&
+      same_hemisphere(normal, outgoing, incoming)) {
+    auto halfway = normalize(incoming + outgoing);
+    auto F       = fresnel_schlick(
+        material.reflectance, abs(dot(halfway, outgoing)), entering);
+    brdfcos += (1 - F) * material.diffuse / pif * abs(dot(normal, incoming));
+  }
+
+  if (material.transmission == zero3f && material.refract &&
+      !same_hemisphere(normal, outgoing, incoming)) {
+    auto eta            = material.eta;
+    auto halfway_vector = dot(outgoing, normal) > 0
+                              ? -(outgoing + eta * incoming)
+                              : (eta * outgoing + incoming);
+    auto halfway = normalize(halfway_vector);
+    auto F       = fresnel_schlick(
+        material.reflectance, abs(dot(halfway, outgoing)), entering);
+    auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+    auto G = eval_microfacetG(
+        material.roughness, up_normal, halfway, outgoing, incoming);
+
+    auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
+                     (dot(outgoing, normal) * dot(incoming, normal));
+
+    // [Walter 2007] equation 21
+    brdfcos += material.transmission * abs(dot_terms) * (1 - F) * D * G /
+               dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
+  }
+
+  if (material.transmission == zero3f && !material.refract &&
+      !same_hemisphere(normal, outgoing, incoming)) {
+    auto ir      = reflect(-incoming, up_normal);
+    auto halfway = normalize(ir + outgoing);
+    auto F       = fresnel_schlick(
+        material.reflectance, abs(dot(halfway, outgoing)), entering);
+    auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+    auto G = eval_microfacetG(
+        material.roughness, up_normal, halfway, outgoing, ir);
+    brdfcos += material.transmission * (1 - F) * D * G /
+               abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+               abs(dot(normal, incoming));
+  }
+
+  return brdfcos;
 }
 vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
@@ -1072,11 +1079,18 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
   auto F        = fresnel_schlick(
       material.reflectance, abs(dot(normal, outgoing)), entering);
 
-  if (same_hemisphere(normal, outgoing, incoming)) {
-    return F * material.specular;
-  } else {
-    return (1 - F) * material.transmission;
+  auto brdfcos = zero3f;
+
+  if (material.specular != zero3f &&
+      same_hemisphere(normal, outgoing, incoming)) {
+    brdfcos += F * material.specular;
   }
+  if (material.transmission != zero3f &&
+      !same_hemisphere(normal, outgoing, incoming)) {
+    brdfcos += (1 - F) * material.transmission;
+  }
+
+  return brdfcos;
 }
 
 // Picks a direction based on the BRDF
