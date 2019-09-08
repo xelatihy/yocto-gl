@@ -1067,11 +1067,16 @@ ray3f eval_camera(const yocto_camera& camera, int idx, const vec2i& image_size,
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texcoord,
     const vec4f& shape_color) {
+  // autoxiliary functions: delete is moving to yocto_trace
+  auto reflectivity_to_eta = [](const vec3f& reflectivity) -> vec3f {
+    return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
+  };
+
   auto point = material_point{};
   // factors
   point.emission       = material.emission * xyz(shape_color);
   point.diffuse        = material.diffuse * xyz(shape_color);
-  point.specular       = material.specular;
+  point.specular_      = material.specular;
   auto metallic        = material.metallic;
   point.roughness      = material.roughness;
   point.coat           = material.coat;
@@ -1107,7 +1112,7 @@ material_point eval_material(const yocto_scene& scene,
   if (material.specular_tex >= 0) {
     auto& specular_tex = scene.textures[material.specular_tex];
     auto  specular_txt = eval_texture(specular_tex, texcoord);
-    point.specular *= xyz(specular_txt);
+    point.specular_ *= xyz(specular_txt);
     if (material.gltf_textures) {
       auto glossiness = 1 - point.roughness;
       glossiness *= specular_txt.w;
@@ -1139,12 +1144,18 @@ material_point eval_material(const yocto_scene& scene,
     point.coat *= xyz(eval_texture(coat_tex, texcoord));
   }
   if (metallic) {
-    point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;
-    point.diffuse  = metallic * point.diffuse * (1 - metallic);
+    point.specular_ = point.specular_ * (1 - metallic) +
+                      metallic * point.diffuse;
+    point.diffuse = metallic * point.diffuse * (1 - metallic);
+  }
+  if (point.specular_ != zero3f) {
+    point.reflectance = point.specular_;
+    point.specular_   = {1, 1, 1};
   }
   if (refraction != zero3f) {
     point.refract      = true;
     point.transmission = refraction;
+    point.eta          = mean(reflectivity_to_eta(point.reflectance));
   }
   if (point.diffuse != zero3f || point.roughness) {
     point.roughness = point.roughness * point.roughness;
