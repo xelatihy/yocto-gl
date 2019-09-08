@@ -430,13 +430,13 @@ struct material_point {
   vec3f specular      = {0, 0, 0};
   vec3f coat          = {0, 0, 0};
   vec3f transmission  = {0, 0, 0};
-  vec3f refraction    = {0, 0, 0};
   float roughness     = 0;
   vec3f voldensity    = {0, 0, 0};
   vec3f volemission   = {0, 0, 0};
   vec3f volscatter    = {0, 0, 0};
   float volanisotropy = 0;
   float opacity       = 1;
+  bool  refract       = false;
 };
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texcoord,

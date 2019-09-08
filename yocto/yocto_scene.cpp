@@ -736,7 +736,9 @@ vec3f eval_shading_normal(const yocto_scene& scene,
     auto normal = eval_normal(scene, instance, element, uv, non_rigid_frame);
     return orthonormalize(-direction, normal);
   } else if (material.normal_tex < 0) {
-    return eval_normal(scene, instance, element, uv, non_rigid_frame);
+    auto normal = eval_normal(scene, instance, element, uv, non_rigid_frame);
+    if (material.refraction != zero3f) return normal;
+    return dot(direction, normal) < 0 ? normal : -normal;
   } else {
     auto& normal_tex = scene.textures[material.normal_tex];
     auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex,
@@ -744,7 +746,9 @@ vec3f eval_shading_normal(const yocto_scene& scene,
     auto  basis      = eval_tangent_basis(shape, element, uv);
     normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
     auto normal = normalize(basis.first * normalmap);
-    return transform_normal(instance.frame, normal, non_rigid_frame);
+    normal      = transform_normal(instance.frame, normal, non_rigid_frame);
+    if (material.refraction != zero3f) return normal;
+    return dot(direction, normal) < 0 ? normal : -normal;
   }
 }
 // Instance element values.
@@ -1072,7 +1076,7 @@ material_point eval_material(const yocto_scene& scene,
   point.roughness      = material.roughness;
   point.coat           = material.coat;
   point.transmission   = material.transmission;
-  point.refraction     = material.refraction;
+  auto refraction      = material.refraction;
   auto voltransmission = material.voltransmission;
   auto volmeanfreepath = material.volmeanfreepath;
   point.volemission    = material.volemission;
@@ -1120,7 +1124,7 @@ material_point eval_material(const yocto_scene& scene,
   }
   if (material.refraction_tex >= 0) {
     auto& refraction_tex = scene.textures[material.refraction_tex];
-    point.refraction *= xyz(eval_texture(refraction_tex, texcoord));
+    refraction *= xyz(eval_texture(refraction_tex, texcoord));
   }
   if (material.subsurface_tex >= 0) {
     auto& subsurface_tex = scene.textures[material.subsurface_tex];
@@ -1137,6 +1141,10 @@ material_point eval_material(const yocto_scene& scene,
   if (metallic) {
     point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;
     point.diffuse  = metallic * point.diffuse * (1 - metallic);
+  }
+  if (refraction != zero3f) {
+    point.refract      = true;
+    point.transmission = refraction;
   }
   if (point.diffuse != zero3f || point.roughness) {
     point.roughness = point.roughness * point.roughness;
