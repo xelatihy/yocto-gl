@@ -5297,8 +5297,45 @@ static void write_pbrt_integrator(
 }
 
 static void write_pbrt_accelerator(
-    file_wrapper& fs, const pbrt_accelerator& accelerator) {
-  throw std::runtime_error("not implemented");
+    file_wrapper& fs, const pbrt_accelerator& value) {
+  checked_fprintf(fs, "Accelerator");
+  if (value.type == pbrt_accelerator::type_t::bvh) {
+    checked_fprintf(fs, " \"bvh\"");
+    auto&       tvalue = value.bvh;
+    static auto def    = pbrt_accelerator::bvh_t{};
+    static auto splitmethods =
+        unordered_map<pbrt_accelerator::bvh_t::splitmethod_t, string>{
+            {pbrt_accelerator::bvh_t::splitmethod_t::sah, "sah"},
+            {pbrt_accelerator::bvh_t::splitmethod_t::equal, "equal"},
+            {pbrt_accelerator::bvh_t::splitmethod_t::hlbvh, "hlbvh"},
+            {pbrt_accelerator::bvh_t::splitmethod_t::middle, "middle"},
+        };
+    if (tvalue.maxnodeprims != def.maxnodeprims)
+      checked_fprintf(
+          fs, " \"integer maxnodeprims\" [ %d ]", tvalue.maxnodeprims);
+    if (tvalue.splitmethod != def.splitmethod)
+      checked_fprintf(fs, " \"string splitmethod\" [ \"%s\" ]",
+          splitmethods.at(tvalue.splitmethod).c_str());
+  } else if (value.type == pbrt_accelerator::type_t::kdtree) {
+    checked_fprintf(fs, " \"kdtree\"");
+    auto&       tvalue = value.kdtree;
+    static auto def    = pbrt_accelerator::kdtree_t{};
+    if (tvalue.intersectcost != def.intersectcost)
+      checked_fprintf(
+          fs, " \"integer intersectcost\" [ %d ]", tvalue.intersectcost);
+    if (tvalue.traversalcost != def.traversalcost)
+      checked_fprintf(
+          fs, " \"integer traversalcost\" [ %d ]", tvalue.traversalcost);
+    if (tvalue.emptybonus != def.emptybonus)
+      checked_fprintf(fs, " \"float emptybonus\" [ %g ]", tvalue.emptybonus);
+    if (tvalue.maxprims != def.maxprims)
+      checked_fprintf(fs, " \"integer maxprims\" [ %d ]", tvalue.maxprims);
+    if (tvalue.maxdepth != def.maxdepth)
+      checked_fprintf(fs, " \"integer maxdepth\" [ %d ]", tvalue.maxdepth);
+  } else {
+    throw std::runtime_error("unknown Film " + std::to_string((int)value.type));
+  }
+  checked_fprintf(fs, "\n");
 }
 
 static void write_pbrt_film(file_wrapper& fs, const pbrt_film& value) {
