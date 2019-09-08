@@ -3642,7 +3642,7 @@ static void load_pbrt(
     } else if (element == pbrt_command::include) {
       open_file(files.emplace_back(), fs::path(filename).parent_path() / name);
     } else {
-      // skip other
+      // skip other commands
     }
   }
 }

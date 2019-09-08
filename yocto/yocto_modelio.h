@@ -1349,9 +1349,9 @@ enum struct pbrt_command {
   object_instance, object_begin, object_end, include,      // name
   // commands used during writing --- for reading just use the context
   world_begin, world_end, attribute_begin, attribute_end,  // no params
-  transform_begin, transform_end,                          // no params
-  transform,                                               // frame
-  use_material,                                            // name
+  transform_begin, transform_end, reverse_orientation,     // no params
+  set_transform, concat_transform, lookat_transform,       // frame
+  use_material, medium_interface                           // name
   // clang-format on
 };
 
@@ -1380,11 +1380,11 @@ struct pbrt_parser_state {
 };
 
 // Read a pbrt element
-bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
+bool read_pbrt_command(file_wrapper& fs, pbrt_command& command, string& name,
     pbrt_command_data& data, vector<pbrt_context>& stack,
     pbrt_parser_state& state);
-void write_pbrt_command(file_wrapper& fs, pbrt_command element, 
-    const string& name, const frame3f& frame, const pbrt_command_data& data);
+void write_pbrt_command(file_wrapper& fs, pbrt_command command, 
+    const string& name, const frame3f& xform, const pbrt_command_data& data);
 
 }  // namespace yocto
 

@@ -4817,7 +4817,7 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv) {
 }
 
 // Load pbrt scene
-bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
+bool read_pbrt_command(file_wrapper& fs, pbrt_command& command, string& name,
     pbrt_command_data& data, vector<pbrt_context>& stack,
     pbrt_parser_state& state) {
   // helpders
@@ -4841,32 +4841,44 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
     parse_pbrt_command(str, cmd);
     if (cmd == "WorldBegin") {
       stack.push_back({});
+      command = pbrt_command::world_begin;
+      return true;
     } else if (cmd == "WorldEnd") {
       stack.pop_back();
       if (stack.size() != 1) throw std::runtime_error("bad stack");
+      command = pbrt_command::world_end;
+      return true;
     } else if (cmd == "AttributeBegin") {
       stack.push_back(stack.back());
+      command = pbrt_command::attribute_begin;
+      return true;
     } else if (cmd == "AttributeEnd") {
       stack.pop_back();
+      command = pbrt_command::attribute_end;
+      return true;
     } else if (cmd == "TransformBegin") {
       stack.push_back(stack.back());
+      command = pbrt_command::transform_end;
+      return true;
     } else if (cmd == "TransformEnd") {
       stack.pop_back();
+      command = pbrt_command::transform_end;
+      return true;
     } else if (cmd == "ObjectBegin") {
       parse_pbrt_value(str, state.object);
       stack.push_back(stack.back());
-      element = pbrt_command::object_begin;
+      command = pbrt_command::object_begin;
       name    = state.object;
       return true;
     } else if (cmd == "ObjectEnd") {
-      element = pbrt_command::object_end;
+      command = pbrt_command::object_end;
       name    = state.object;
       stack.pop_back();
       state.object = {};
       return true;
     } else if (cmd == "ObjectInstance") {
       parse_pbrt_value(str, name);
-      element = pbrt_command::object_instance;
+      command = pbrt_command::object_instance;
       return true;
     } else if (cmd == "ActiveTransform") {
       auto value = ""s;
@@ -4887,23 +4899,33 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
       auto xf = identity4x4f;
       parse_pbrt_param(str, xf);
       set_transform(stack.back(), xf);
+      command = pbrt_command::set_transform;
+      return true;
     } else if (cmd == "ConcatTransform") {
       auto xf = identity4x4f;
       parse_pbrt_param(str, xf);
       concat_transform(stack.back(), xf);
+      command = pbrt_command::concat_transform;
+      return true;
     } else if (cmd == "Scale") {
       auto v = zero3f;
       parse_pbrt_param(str, v);
       concat_transform(stack.back(), (mat4f)scaling_frame(v));
+      command = pbrt_command::concat_transform;
+      return true;
     } else if (cmd == "Translate") {
       auto v = zero3f;
       parse_pbrt_param(str, v);
       concat_transform(stack.back(), (mat4f)translation_frame(v));
+      command = pbrt_command::concat_transform;
+      return true;
     } else if (cmd == "Rotate") {
       auto v = zero4f;
       parse_pbrt_param(str, v);
       concat_transform(stack.back(),
           (mat4f)rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
+      command = pbrt_command::concat_transform;
+      return true;
     } else if (cmd == "LookAt") {
       auto from = zero3f, to = zero3f, up = zero3f;
       parse_pbrt_param(str, from);
@@ -4918,8 +4940,12 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
       concat_transform(stack.back(), (mat4f)inverse(frame));
       stack.back().last_lookat_distance = length(from - to);
       // stack.back().focus = length(m.x - m.y);
+      command = pbrt_command::lookat_transform;
+      return true;
     } else if (cmd == "ReverseOrientation") {
       stack.back().reverse = !stack.back().reverse;
+      command              = pbrt_command::reverse_orientation;
+      return true;
     } else if (cmd == "CoordinateSystem") {
       auto name = ""s;
       parse_pbrt_value(str, name);
@@ -4936,37 +4962,37 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
       auto type = ""s;
       parse_pbrt_value(str, type);
       parse_pbrt_integrator(str, type, data.intergrator);
-      element = pbrt_command::integrator;
+      command = pbrt_command::integrator;
       return true;
     } else if (cmd == "Sampler") {
       auto type = ""s;
       parse_pbrt_value(str, type);
       parse_pbrt_sampler(str, type, data.sampler);
-      element = pbrt_command::sampler;
+      command = pbrt_command::sampler;
       return true;
     } else if (cmd == "PixelFilter") {
       auto type = ""s;
       parse_pbrt_value(str, type);
       parse_pbrt_filter(str, type, data.filter);
-      element = pbrt_command::filter;
+      command = pbrt_command::filter;
       return true;
     } else if (cmd == "Film") {
       auto type = ""s;
       parse_pbrt_value(str, type);
       parse_pbrt_film(str, type, data.film);
-      element = pbrt_command::film;
+      command = pbrt_command::film;
       return true;
     } else if (cmd == "Accelerator") {
       auto type = ""s;
       parse_pbrt_value(str, type);
       parse_pbrt_accelerator(str, type, data.accelerator);
-      element = pbrt_command::accelerator;
+      command = pbrt_command::accelerator;
       return true;
     } else if (cmd == "Camera") {
       auto type = ""s;
       parse_pbrt_value(str, type);
       parse_pbrt_camera(str, type, data.camera);
-      element = pbrt_command::camera;
+      command = pbrt_command::camera;
       return true;
     } else if (cmd == "Texture") {
       auto comptype = ""s, type = ""s;
@@ -4977,7 +5003,7 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
       if (type == "constant") {
         state.constant_values[name] = data.texture.constant.value.value;
       }
-      element = pbrt_command::named_texture;
+      command = pbrt_command::named_texture;
       return true;
     } else if (cmd == "Material") {
       static auto material_id = 0;
@@ -4989,7 +5015,7 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
         name = "unnamed_material_" + std::to_string(material_id++);
         parse_pbrt_material(str, type, data.material, state.constant_values);
         stack.back().material = name;
-        element               = pbrt_command::material;
+        command               = pbrt_command::material;
         return true;
       }
     } else if (cmd == "MakeNamedMaterial") {
@@ -4997,17 +5023,19 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
       parse_pbrt_value(str, name);
       parse_pbrt_typeparam(str, type);
       parse_pbrt_material(str, type, data.material, state.constant_values);
-      element = pbrt_command::named_material;
+      command = pbrt_command::named_material;
       return true;
     } else if (cmd == "NamedMaterial") {
       auto name = ""s;
       parse_pbrt_value(str, name);
       stack.back().material = name;
+      command = pbrt_command::use_material;
+      return true;
     } else if (cmd == "Shape") {
       auto type = ""s;
       parse_pbrt_value(str, type);
       parse_pbrt_shape(str, type, data.shape);
-      element = pbrt_command::shape;
+      command = pbrt_command::shape;
       return true;
     } else if (cmd == "AreaLightSource") {
       auto type = ""s;
@@ -5016,20 +5044,20 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
       name = "unnamed_arealight_" + std::to_string(material_id++);
       parse_pbrt_arealight(str, type, data.arealight);
       stack.back().arealight = name;
-      element                = pbrt_command::arealight;
+      command                = pbrt_command::arealight;
       return true;
     } else if (cmd == "LightSource") {
       auto type = ""s;
       parse_pbrt_value(str, type);
       parse_pbrt_light(str, type, data.light);
-      element = pbrt_command::light;
+      command = pbrt_command::light;
       return true;
     } else if (cmd == "MakeNamedMedium") {
       auto type = ""s;
       parse_pbrt_value(str, name);
       parse_pbrt_typeparam(str, type);
       parse_pbrt_medium(str, type, data.medium);
-      element = pbrt_command::named_medium;
+      command = pbrt_command::named_medium;
       return true;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
@@ -5037,15 +5065,53 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& element, string& name,
       parse_pbrt_value(str, exterior);
       stack.back().medium_interior = interior;
       stack.back().medium_exterior = exterior;
+      name                         = interior + "####" + exterior;
+      command                      = pbrt_command::medium_interface;
+      return true;
     } else if (cmd == "Include") {
       parse_pbrt_value(str, name);
-      element = pbrt_command::include;
+      command = pbrt_command::include;
       return true;
     } else {
       throw std::runtime_error("unknown command " + cmd);
     }
   }
   return false;
+}
+
+void write_pbrt_command(file_wrapper& fs, pbrt_command command,
+    const string& name, const frame3f& xform, const pbrt_command_data& data) {
+  switch (command) {
+    case pbrt_command::sampler: break;
+    case pbrt_command::integrator: break;
+    case pbrt_command::accelerator: break;
+    case pbrt_command::film: break;
+    case pbrt_command::filter: break;
+    case pbrt_command::camera: break;
+    case pbrt_command::shape: break;
+    case pbrt_command::light: break;
+    case pbrt_command::material: break;
+    case pbrt_command::arealight: break;
+    case pbrt_command::named_texture: break;
+    case pbrt_command::named_medium: break;
+    case pbrt_command::named_material: break;
+    case pbrt_command::object_instance: break;
+    case pbrt_command::object_begin: break;
+    case pbrt_command::object_end: break;
+    case pbrt_command::include: break;
+    case pbrt_command::world_begin: break;
+    case pbrt_command::world_end: break;
+    case pbrt_command::attribute_begin: break;
+    case pbrt_command::attribute_end: break;
+    case pbrt_command::transform_begin: break;
+    case pbrt_command::transform_end: break;
+    case pbrt_command::reverse_orientation: break;
+    case pbrt_command::set_transform: break;
+    case pbrt_command::concat_transform: break;
+    case pbrt_command::lookat_transform: break;
+    case pbrt_command::use_material: break;
+    case pbrt_command::medium_interface: break;
+  }
 }
 
 }  // namespace yocto
