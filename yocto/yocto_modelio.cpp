@@ -5142,8 +5142,146 @@ static void write_pbrt_sampler(file_wrapper& fs, const pbrt_sampler& value) {
 }
 
 static void write_pbrt_integrator(
-    file_wrapper& fs, const pbrt_integrator& intergrator) {
-  throw std::runtime_error("not implemented");
+    file_wrapper& fs, const pbrt_integrator& value) {
+  checked_fprintf(fs, "Integrator");
+  if (value.type == pbrt_integrator::type_t::path) {
+    checked_fprintf(fs, " \"path\"");
+    auto&       tvalue = value.path;
+    static auto def    = pbrt_integrator::path_t{};
+    static auto llstrategy =
+        unordered_map<pbrt_integrator::path_t::lightsamplestrategy_t, string>{
+          {pbrt_integrator::path_t::lightsamplestrategy_t::uniform, "uniform"},
+          {pbrt_integrator::path_t::lightsamplestrategy_t::spatial, "spatial"},
+          {pbrt_integrator::path_t::lightsamplestrategy_t::power, "power"},
+        };
+    if (tvalue.maxdepth != def.maxdepth)
+      checked_fprintf(fs, " \"integer maxdepth\" [ %d ]", tvalue.maxdepth);
+    if (tvalue.pixelbounds != def.pixelbounds)
+      checked_fprintf(fs, " \"integer pixelbounds\" [ %d %d %d %d ]",
+          tvalue.pixelbounds.x, tvalue.pixelbounds.y, tvalue.pixelbounds.z,
+          tvalue.pixelbounds.w);
+    if (tvalue.rrthreshold != def.rrthreshold)
+      checked_fprintf(fs, " \"float rrthreshold\" [ %g ]", tvalue.rrthreshold);
+    if (tvalue.lightsamplestrategy != def.lightsamplestrategy)
+      checked_fprintf(fs, " \"string lightsamplestrategy\" [ \"%s\" ]",
+          llstrategy.at(tvalue.lightsamplestrategy).c_str());
+  } else if (value.type == pbrt_integrator::type_t::volpath) {
+    checked_fprintf(fs, " \"volpath\"");
+    auto&       tvalue = value.volpath;
+    static auto def    = pbrt_integrator::volpath_t{};
+    static auto llstrategy =
+        unordered_map<pbrt_integrator::volpath_t::lightsamplestrategy_t, string>{
+          {pbrt_integrator::volpath_t::lightsamplestrategy_t::uniform, "uniform"},
+          {pbrt_integrator::volpath_t::lightsamplestrategy_t::spatial, "spatial"},
+          {pbrt_integrator::volpath_t::lightsamplestrategy_t::power, "power"},
+        };
+    if (tvalue.maxdepth != def.maxdepth)
+      checked_fprintf(fs, " \"integer maxdepth\" [ %d ]", tvalue.maxdepth);
+    if (tvalue.pixelbounds != def.pixelbounds)
+      checked_fprintf(fs, " \"integer pixelbounds\" [ %d %d %d %d ]",
+          tvalue.pixelbounds.x, tvalue.pixelbounds.y, tvalue.pixelbounds.z,
+          tvalue.pixelbounds.w);
+    if (tvalue.rrthreshold != def.rrthreshold)
+      checked_fprintf(fs, " \"float rrthreshold\" [ %g ]", tvalue.rrthreshold);
+    if (tvalue.lightsamplestrategy != def.lightsamplestrategy)
+      checked_fprintf(fs, " \"string lightsamplestrategy\" [ \"%s\" ]",
+          llstrategy.at(tvalue.lightsamplestrategy).c_str());
+  } else if (value.type == pbrt_integrator::type_t::directlighting) {
+    checked_fprintf(fs, " \"directlighting\"");
+    auto&       tvalue = value.directlighting;
+    static auto def    = pbrt_integrator::directlighting_t{};
+    static auto llstrategy =
+        unordered_map<pbrt_integrator::directlighting_t::strategy_t, string>{
+          {pbrt_integrator::directlighting_t::strategy_t::all, "all"},
+          {pbrt_integrator::directlighting_t::strategy_t::one, "one"},
+        };
+    if (tvalue.maxdepth != def.maxdepth)
+      checked_fprintf(fs, " \"integer maxdepth\" [ %d ]", tvalue.maxdepth);
+    if (tvalue.pixelbounds != def.pixelbounds)
+      checked_fprintf(fs, " \"integer pixelbounds\" [ %d %d %d %d ]",
+          tvalue.pixelbounds.x, tvalue.pixelbounds.y, tvalue.pixelbounds.z,
+          tvalue.pixelbounds.w);
+    if (tvalue.strategy != def.strategy)
+      checked_fprintf(fs, " \"string strategy\" [ \"%s\" ]",
+          llstrategy.at(tvalue.strategy).c_str());
+  } else if (value.type == pbrt_integrator::type_t::bdpt) {
+    checked_fprintf(fs, " \"bdpt\"");
+    auto&       tvalue = value.bdpt;
+    static auto def    = pbrt_integrator::bdpt_t{};
+    static auto llstrategy =
+        unordered_map<pbrt_integrator::bdpt_t::lightsamplestrategy_t, string>{
+          {pbrt_integrator::bdpt_t::lightsamplestrategy_t::uniform, "uniform"},
+          {pbrt_integrator::bdpt_t::lightsamplestrategy_t::spatial, "spatial"},
+          {pbrt_integrator::bdpt_t::lightsamplestrategy_t::power, "power"},
+        };
+    if (tvalue.maxdepth != def.maxdepth)
+      checked_fprintf(fs, " \"integer maxdepth\" [ %d ]", tvalue.maxdepth);
+    if (tvalue.pixelbounds != def.pixelbounds)
+      checked_fprintf(fs, " \"integer pixelbounds\" [ %d %d %d %d ]",
+          tvalue.pixelbounds.x, tvalue.pixelbounds.y, tvalue.pixelbounds.z,
+          tvalue.pixelbounds.w);
+    if (tvalue.lightsamplestrategy != def.lightsamplestrategy)
+      checked_fprintf(fs, " \"string lightsamplestrategy\" [ \"%s\" ]",
+          llstrategy.at(tvalue.lightsamplestrategy).c_str());
+    if (tvalue.visualizestrategies != def.visualizestrategies)
+      checked_fprintf(fs, " \"string visualizestrategies\" [ \"%s\" ]", tvalue.visualizestrategies ? "true" : "false");
+    if (tvalue.visualizeweights != def.visualizeweights)
+      checked_fprintf(fs, " \"string visualizeweights\" [ \"%s\" ]", tvalue.visualizeweights ? "true" : "false");
+  } else if (value.type == pbrt_integrator::type_t::mlt) {
+    checked_fprintf(fs, " \"mlt\"");
+    auto&       tvalue = value.mlt;
+    static auto def    = pbrt_integrator::mlt_t{};
+    if (tvalue.maxdepth != def.maxdepth)
+      checked_fprintf(fs, " \"integer maxdepth\" [ %d ]", tvalue.maxdepth);
+    if (tvalue.pixelbounds != def.pixelbounds)
+      checked_fprintf(fs, " \"integer pixelbounds\" [ %d %d %d %d ]",
+          tvalue.pixelbounds.x, tvalue.pixelbounds.y, tvalue.pixelbounds.z,
+          tvalue.pixelbounds.w);
+    if (tvalue.bootstrapsamples != def.bootstrapsamples)
+      checked_fprintf(fs, " \"integer bootstrapsamples\" [ %d ]", tvalue.bootstrapsamples);
+    if (tvalue.chains != def.chains)
+      checked_fprintf(fs, " \"integer chains\" [ %d ]", tvalue.chains);
+    if (tvalue.mutationsperpixel != def.mutationsperpixel)
+      checked_fprintf(fs, " \"integer mutationsperpixel\" [ %d ]", tvalue.mutationsperpixel);
+    if (tvalue.largestepprobability != def.largestepprobability)
+      checked_fprintf(fs, " \"float largestepprobability\" [ %g ]", tvalue.largestepprobability);
+    if (tvalue.sigma != def.sigma)
+      checked_fprintf(fs, " \"float sigma\" [ %g ]", tvalue.sigma);
+  } else if (value.type == pbrt_integrator::type_t::sppm) {
+    checked_fprintf(fs, " \"sppm\"");
+    auto&       tvalue = value.sppm;
+    static auto def    = pbrt_integrator::sppm_t{};
+    if (tvalue.maxdepth != def.maxdepth)
+      checked_fprintf(fs, " \"integer maxdepth\" [ %d ]", tvalue.maxdepth);
+    if (tvalue.pixelbounds != def.pixelbounds)
+      checked_fprintf(fs, " \"integer pixelbounds\" [ %d %d %d %d ]",
+          tvalue.pixelbounds.x, tvalue.pixelbounds.y, tvalue.pixelbounds.z,
+          tvalue.pixelbounds.w);
+    if (tvalue.iterations != def.iterations)
+      checked_fprintf(fs, " \"integer iterations\" [ %d ]", tvalue.iterations);
+    if (tvalue.iterations != def.iterations)
+      checked_fprintf(fs, " \"integer numiterations\" [ %d ]", tvalue.iterations);
+    if (tvalue.photonsperiteration != def.photonsperiteration)
+      checked_fprintf(fs, " \"integer photonsperiteration\" [ %d ]", tvalue.photonsperiteration);
+    if (tvalue.imagewritefrequency != def.imagewritefrequency)
+      checked_fprintf(fs, " \"integer imagewritefrequency\" [ %d ]", tvalue.imagewritefrequency);
+    if (tvalue.radius != def.radius)
+      checked_fprintf(fs, " \"float radius\" [ %g ]", tvalue.radius);
+  } else if (value.type == pbrt_integrator::type_t::whitted) {
+    checked_fprintf(fs, " \"whitted\"");
+    auto&       tvalue = value.whitted;
+    static auto def    = pbrt_integrator::whitted_t{};
+    if (tvalue.maxdepth != def.maxdepth)
+      checked_fprintf(fs, " \"integer maxdepth\" [ %d ]", tvalue.maxdepth);
+    if (tvalue.pixelbounds != def.pixelbounds)
+      checked_fprintf(fs, " \"integer pixelbounds\" [ %d %d %d %d ]",
+          tvalue.pixelbounds.x, tvalue.pixelbounds.y, tvalue.pixelbounds.z,
+          tvalue.pixelbounds.w);
+  } else {
+    throw std::runtime_error(
+        "unknown Integrator " + std::to_string((int)value.type));
+  }
+  checked_fprintf(fs, "\n");
 }
 
 static void write_pbrt_accelerator(
