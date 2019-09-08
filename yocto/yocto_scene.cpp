@@ -1076,7 +1076,7 @@ material_point eval_material(const yocto_scene& scene,
   // factors
   point.emission       = material.emission * xyz(shape_color);
   point.diffuse        = material.diffuse * xyz(shape_color);
-  point.specular_      = material.specular;
+  point.specular      = material.specular;
   auto metallic        = material.metallic;
   point.roughness      = material.roughness;
   point.coat           = material.coat;
@@ -1112,7 +1112,7 @@ material_point eval_material(const yocto_scene& scene,
   if (material.specular_tex >= 0) {
     auto& specular_tex = scene.textures[material.specular_tex];
     auto  specular_txt = eval_texture(specular_tex, texcoord);
-    point.specular_ *= xyz(specular_txt);
+    point.specular *= xyz(specular_txt);
     if (material.gltf_textures) {
       auto glossiness = 1 - point.roughness;
       glossiness *= specular_txt.w;
@@ -1144,13 +1144,13 @@ material_point eval_material(const yocto_scene& scene,
     point.coat *= xyz(eval_texture(coat_tex, texcoord));
   }
   if (metallic) {
-    point.specular_ = point.specular_ * (1 - metallic) +
+    point.specular = point.specular * (1 - metallic) +
                       metallic * point.diffuse;
     point.diffuse = metallic * point.diffuse * (1 - metallic);
   }
-  if (point.specular_ != zero3f) {
-    point.reflectance = point.specular_;
-    point.specular_   = {1, 1, 1};
+  if (point.specular != zero3f) {
+    point.reflectance = point.specular;
+    point.specular   = {1, 1, 1};
   }
   if (refraction != zero3f) {
     point.refract      = true;

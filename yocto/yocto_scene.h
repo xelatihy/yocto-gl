@@ -427,7 +427,7 @@ ray3f eval_camera(const yocto_camera& camera, const vec2i& ij,
 struct material_point {
   vec3f emission      = {0, 0, 0};
   vec3f diffuse       = {0, 0, 0};
-  vec3f specular_     = {0, 0, 0};
+  vec3f specular     = {0, 0, 0};
   vec3f reflectance   = {0, 0, 0};
   vec3f coat          = {0, 0, 0};
   vec3f transmission  = {0, 0, 0};

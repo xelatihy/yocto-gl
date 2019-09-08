@@ -684,7 +684,7 @@ static const bool trace_non_rigid_frames = true;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 bool has_brdf(const material_point& material) {
-  return material.coat != zero3f || material.specular_ != zero3f ||
+  return material.coat != zero3f || material.specular != zero3f ||
          material.diffuse != zero3f || material.transmission != zero3f;
 }
 bool has_volume(const material_point& material) {
@@ -1012,17 +1012,17 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
   auto entering  = !material.refract || dot(normal, outgoing) >= 0;
 
   if (same_hemisphere(normal, outgoing, incoming)) {
-    if (material.diffuse == zero3f && material.specular_ == zero3f)
+    if (material.diffuse == zero3f && material.specular == zero3f)
       return zero3f;
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_schlick(
         material.reflectance, abs(dot(halfway, outgoing)), entering);
     auto brdfcos = zero3f;
-    if (material.specular_ != zero3f) {
+    if (material.specular != zero3f) {
       auto D = eval_microfacetD(material.roughness, up_normal, halfway);
       auto G = eval_microfacetG(
           material.roughness, up_normal, halfway, outgoing, incoming);
-      brdfcos += material.specular_ * F * D * G /
+      brdfcos += material.specular * F * D * G /
                  abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                  abs(dot(normal, incoming));
     }
@@ -1073,7 +1073,7 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
       material.reflectance, abs(dot(normal, outgoing)), entering);
 
   if (same_hemisphere(normal, outgoing, incoming)) {
-    return F * material.specular_;
+    return F * material.specular;
   } else {
     return (1 - F) * material.transmission;
   }
@@ -1087,7 +1087,7 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto F        = fresnel_schlick(
       material.reflectance, abs(dot(outgoing, normal)), entering);
-  auto weights = vec3f{max(F * material.specular_),
+  auto weights = vec3f{max(F * material.specular),
       max((1 - F) * material.diffuse), max((1 - F) * material.transmission)};
   weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
@@ -1120,7 +1120,7 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
   auto F        = fresnel_schlick(
       material.reflectance, abs(dot(outgoing, normal)), entering);
   auto weights = vec2f{
-      max(F * material.specular_), max((1 - F) * material.transmission)};
+      max(F * material.specular), max((1 - F) * material.transmission)};
   weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
@@ -1145,7 +1145,7 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto F        = fresnel_schlick(
       material.reflectance, abs(dot(outgoing, normal)), entering);
-  auto weights = vec3f{max(F * material.specular_),
+  auto weights = vec3f{max(F * material.specular),
       max((1 - F) * material.diffuse), max((1 - F) * material.transmission)};
   weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
@@ -1191,7 +1191,7 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
   auto F        = fresnel_schlick(
       material.reflectance, abs(dot(outgoing, normal)), entering);
   auto weights = vec2f{
-      max(F * material.specular_), max((1 - F) * material.transmission)};
+      max(F * material.specular), max((1 - F) * material.transmission)};
   weights /= sum(weights);
 
   if (same_hemisphere(normal, outgoing, incoming))
@@ -1709,7 +1709,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       return {material.diffuse, 1};
     }
     case trace_params::falsecolor_type::specular: {
-      return {material.specular_ * material.reflectance, 1};
+      return {material.specular * material.reflectance, 1};
     }
     case trace_params::falsecolor_type::transmission: {
       return {material.transmission, 1};
