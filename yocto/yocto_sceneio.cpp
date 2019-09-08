@@ -1419,19 +1419,19 @@ static void load_obj(
   auto fs = open_file(filename);
 
   // load obj elements
-  auto element   = obj_command{};
+  auto command   = obj_command{};
   auto value     = obj_value{};
   auto vertices  = vector<obj_vertex>{};
   auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, element, value, vertices, vert_size)) {
-    if (element == obj_command::vertex) {
+  while (read_obj_command(fs, command, value, vertices, vert_size)) {
+    if (command == obj_command::vertex) {
       get_obj_value(value, opos.emplace_back());
-    } else if (element == obj_command::normal) {
+    } else if (command == obj_command::normal) {
       get_obj_value(value, onorm.emplace_back());
-    } else if (element == obj_command::texcoord) {
+    } else if (command == obj_command::texcoord) {
       get_obj_value(value, otexcoord.emplace_back());
       otexcoord.back().y = 1 - otexcoord.back().y;
-    } else if (element == obj_command::face) {
+    } else if (command == obj_command::face) {
       if (scene.shapes.empty()) add_shape();
       if (!scene.shapes.back().positions.empty() &&
           (!scene.shapes.back().lines.empty() ||
@@ -1497,7 +1497,7 @@ static void load_obj(
           }
         }
       }
-    } else if (element == obj_command::line) {
+    } else if (command == obj_command::line) {
       if (scene.shapes.empty()) add_shape();
       if (!scene.shapes.back().positions.empty() &&
           scene.shapes.back().lines.empty()) {
@@ -1508,7 +1508,7 @@ static void load_obj(
       for (auto i = 1; i < vertices.size(); i++)
         shape.lines.push_back(
             {vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
-    } else if (element == obj_command::point) {
+    } else if (command == obj_command::point) {
       if (scene.shapes.empty()) add_shape();
       if (!scene.shapes.back().positions.empty() &&
           scene.shapes.back().points.empty()) {
@@ -1518,18 +1518,18 @@ static void load_obj(
       add_verts(vertices, shape);
       for (auto i = 0; i < vertices.size(); i++)
         shape.points.push_back(vertex_map.at(vertices[i]));
-    } else if (element == obj_command::object) {
+    } else if (command == obj_command::object) {
       get_obj_value(value, oname);
       gname = "";
       mname = "";
       add_shape();
-    } else if (element == obj_command::group) {
+    } else if (command == obj_command::group) {
       get_obj_value(value, gname);
       add_shape();
-    } else if (element == obj_command::usemtl) {
+    } else if (command == obj_command::usemtl) {
       get_obj_value(value, mname);
       add_shape();
-    } else if (element == obj_command::mtllib) {
+    } else if (command == obj_command::mtllib) {
       auto name = ""s;
       get_obj_value(value, name);
       if (std::find(mlibs.begin(), mlibs.end(), name) != mlibs.end()) continue;
@@ -3593,38 +3593,38 @@ static void load_pbrt(
   static auto shape_id         = 0;
 
   // parse command by command
-  auto element = pbrt_command{};
+  auto command = pbrt_command{};
   auto name    = ""s;
   auto data    = pbrt_command_data{};
   auto stack   = vector<pbrt_context>{};
   auto state   = pbrt_parser_state{};
   while (!files.empty()) {
-    if (!read_pbrt_command(files.back(), element, name, data, stack, state)) {
+    if (!read_pbrt_command(files.back(), command, name, data, stack, state)) {
       files.pop_back();
       continue;
     }
-    if (element == pbrt_command::film) {
+    if (command == pbrt_command::film) {
       add_pbrt_film(scene, data.film, stack.back(), last_film_aspect);
-    } else if (element == pbrt_command::camera) {
+    } else if (command == pbrt_command::camera) {
       add_pbrt_camera(scene, data.camera, stack.back(), last_film_aspect);
-    } else if (element == pbrt_command::shape) {
+    } else if (command == pbrt_command::shape) {
       add_pbrt_shape(scene, data.shape, stack.back(),
           "shapes/shape__" + std::to_string(shape_id++) + ".ply", filename,
           cur_object, omap, mmap, amap, ammap);
-    } else if (element == pbrt_command::light) {
+    } else if (command == pbrt_command::light) {
       add_pbrt_light(scene, data.light, stack.back());
-    } else if (element == pbrt_command::named_texture) {
+    } else if (command == pbrt_command::named_texture) {
       add_pbrt_texture(
           scene, data.texture, stack.back(), name, tmap, ctmap, timap);
-    } else if (element == pbrt_command::material) {
+    } else if (command == pbrt_command::material) {
       add_pbrt_material(
           scene, data.material, stack.back(), name, mmap, tmap, ctmap);
-    } else if (element == pbrt_command::named_material) {
+    } else if (command == pbrt_command::named_material) {
       add_pbrt_material(
           scene, data.material, stack.back(), name, mmap, tmap, ctmap);
-    } else if (element == pbrt_command::arealight) {
+    } else if (command == pbrt_command::arealight) {
       add_pbrt_arealight(scene, data.arealight, stack.back(), name, amap);
-    } else if (element == pbrt_command::object_instance) {
+    } else if (command == pbrt_command::object_instance) {
       auto& pinstances = omap.at(name);
       for (auto& pinstance : pinstances) {
         auto instance  = yocto_instance();
@@ -3634,12 +3634,12 @@ static void load_pbrt(
         instance.material = pinstance.material;
         scene.instances.push_back(instance);
       }
-    } else if (element == pbrt_command::object_begin) {
+    } else if (command == pbrt_command::object_begin) {
       cur_object       = name;
       omap[cur_object] = {};
-    } else if (element == pbrt_command::object_end) {
+    } else if (command == pbrt_command::object_end) {
       cur_object = "";
-    } else if (element == pbrt_command::include) {
+    } else if (command == pbrt_command::include) {
       open_file(files.emplace_back(), fs::path(filename).parent_path() / name);
     } else {
       // skip other commands
