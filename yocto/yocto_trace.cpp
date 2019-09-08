@@ -702,9 +702,8 @@ vec3f eval_volemission(const material_point& material, const vec3f& outgoing) {
   return material.volemission;
 }
 
-#define YOCTO_MATERIAL 1
-
-#if YOCTO_MATERIAL == 0
+// Preserve old code
+#if 0
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
@@ -1002,7 +1001,7 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
   return pdf;
 }
 
-#elif YOCTO_MATERIAL == 1
+#endif
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
@@ -1201,8 +1200,6 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
   else
     return weights[1];
 }
-
-#endif
 
 vec3f eval_volscattering(const material_point& material, const vec3f& outgoing,
     const vec3f& incoming) {
