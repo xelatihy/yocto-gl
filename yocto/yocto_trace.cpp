@@ -1093,25 +1093,35 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
   return brdfcos;
 }
 
-// Picks a direction based on the BRDF
-vec3f sample_brdf(const material_point& material, const vec3f& normal,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (is_delta(material)) return zero3f;
-
+vec3f compute_brdf_pdfs(const material_point& material,
+    const vec3f& normal, const vec3f& outgoing) {
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto F        = fresnel_schlick(
       material.reflectance, abs(dot(outgoing, normal)), entering);
   auto weights = vec3f{max(F * material.specular),
       max((1 - F) * material.diffuse), max((1 - F) * material.transmission)};
   weights /= sum(weights);
+  return weights;
+}
+
+// Picks a direction based on the BRDF
+vec3f sample_brdf(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
+  if (is_delta(material)) return zero3f;
+
+  auto weights = compute_brdf_pdfs(material, normal, outgoing);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
   if (rnl < weights[0]) {
     auto halfway = sample_microfacet(material.roughness, up_normal, rn);
     return reflect(outgoing, halfway);
-  } else if (rnl < weights[0] + weights[1]) {
+  }
+  
+  if (rnl < weights[0] + weights[1]) {
     return sample_hemisphere(up_normal, rn);
-  } else if (rnl < weights[0] + weights[1] + weights[2]) {
+  }
+  
+  if (rnl < weights[0] + weights[1] + weights[2]) {
     if (material.refract) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
       return refract_notir(outgoing, halfway,
@@ -1122,26 +1132,23 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
       return -reflect(ir, up_normal);
     }
   } else {
-    return zero3f;
   }
+  return zero3f;
 }
 
 vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
   if (!is_delta(material)) return zero3f;
 
-  auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto F        = fresnel_schlick(
-      material.reflectance, abs(dot(outgoing, normal)), entering);
-  auto weights = vec2f{
-      max(F * material.specular), max((1 - F) * material.transmission)};
-  weights /= sum(weights);
+  auto weights = compute_brdf_pdfs(material, normal, outgoing);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
   // keep a weight sum to pick a lobe
   if (rnl < weights[0]) {
     return reflect(outgoing, up_normal);
-  } else {
+  }
+
+  if(rnl < weights[0] + weights[1] + weights[2]) {
     if (material.refract) {
       return refract_notir(outgoing, up_normal,
           dot(normal, outgoing) > 0 ? 1 / material.eta : material.eta);
@@ -1149,6 +1156,8 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
       return -outgoing;
     }
   }
+
+  return zero3f;
 }
 
 // Compute the weight for sampling the BRDF
@@ -1156,12 +1165,7 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (is_delta(material)) return 0;
 
-  auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto F        = fresnel_schlick(
-      material.reflectance, abs(dot(outgoing, normal)), entering);
-  auto weights = vec3f{max(F * material.specular),
-      max((1 - F) * material.diffuse), max((1 - F) * material.transmission)};
-  weights /= sum(weights);
+  auto weights = compute_brdf_pdfs(material, normal, outgoing);
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
 
   auto pdf = 0.0f;
@@ -1203,18 +1207,13 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
 float sample_delta_pdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (!is_delta(material)) return 0;
-  auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto F        = fresnel_schlick(
-      material.reflectance, abs(dot(outgoing, normal)), entering);
-  auto weights = vec2f{
-      max(F * material.specular), max((1 - F) * material.transmission)};
-  weights /= sum(weights);
+  auto weights = compute_brdf_pdfs(material, normal, outgoing);
 
   auto pdf = 0.0f;
   if (weights[0] && same_hemisphere(normal, outgoing, incoming))
     pdf += weights[0];
-  if (weights[1] && !same_hemisphere(normal, outgoing, incoming))
-    pdf += weights[1];
+  if (weights[2] && !same_hemisphere(normal, outgoing, incoming))
+    pdf += weights[2];
   return pdf;
 }
 
