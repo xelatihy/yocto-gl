@@ -454,10 +454,6 @@ bool has_brdf(const material_point& material) {
          material.diffuse != zero3f || material.transmission != zero3f;
 }
 
-bool is_delta(const material_point& material) {
-  return material.roughness == 0;
-}
-
 vec3f eval_emission(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
   return material.emission;
@@ -470,7 +466,7 @@ vec3f eval_volemission(const material_point& material, const vec3f& outgoing) {
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (is_delta(material)) return zero3f;
+  if (!material.roughness) return zero3f;
 
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
   auto entering  = !material.refract || dot(normal, outgoing) >= 0;
@@ -550,7 +546,7 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
 vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (!is_delta(material)) return zero3f;
+  if (material.roughness) return zero3f;
 
   auto entering  = !material.refract || dot(normal, outgoing) >= 0;
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
@@ -591,7 +587,7 @@ vec4f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
 // Picks a direction based on the BRDF
 vec3f sample_brdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (is_delta(material)) return zero3f;
+  if (!material.roughness) return zero3f;
 
   auto weights   = compute_brdf_pdfs(material, normal, outgoing);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
@@ -627,7 +623,7 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
 
 vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
-  if (!is_delta(material)) return zero3f;
+  if (material.roughness) return zero3f;
 
   auto weights   = compute_brdf_pdfs(material, normal, outgoing);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
@@ -656,7 +652,7 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
 // Compute the weight for sampling the BRDF
 float sample_brdf_pdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (is_delta(material)) return 0;
+  if (!material.roughness) return 0;
 
   auto weights   = compute_brdf_pdfs(material, normal, outgoing);
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
@@ -706,7 +702,7 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
 
 float sample_delta_pdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (!is_delta(material)) return 0;
+  if (material.roughness) return 0;
 
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
   auto weights   = compute_brdf_pdfs(material, normal, outgoing);
@@ -724,12 +720,14 @@ vec3f eval_volscattering(const material_point& material, const vec3f& outgoing,
   return material.volscatter *
          eval_phasefunction(dot(outgoing, incoming), material.volanisotropy);
 }
+
 vec3f sample_volscattering(const material_point& material,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
   if (material.voldensity == zero3f) return zero3f;
   auto direction = sample_phasefunction(material.volanisotropy, rn);
   return basis_fromz(-outgoing) * direction;
 }
+
 float sample_volscattering_pdf(const material_point& material,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.voldensity == zero3f) return 0;
@@ -854,6 +852,7 @@ ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
   return eval_camera(camera, ij, image_size, puv, sample_disk(luv));
 }
+
 ray3f sample_camera_tent(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
   const auto width  = 2.0f;
@@ -928,7 +927,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
       // next direction
       auto incoming = zero3f;
-      if (!is_delta(material)) {
+      if (material.roughness) {
         if (rand1f(rng) < 0.5f) {
           incoming = sample_brdf(
               material, normal, outgoing, rand1f(rng), rand2f(rng));
@@ -1049,7 +1048,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     radiance += weight * eval_emission(material, normal, outgoing);
 
     // next direction
-    if (!is_delta(material)) {
+    if (material.roughness) {
       incoming = sample_brdf(
           material, normal, outgoing, rand1f(rng), rand2f(rng));
       weight *= eval_brdfcos(material, normal, outgoing, incoming) /
@@ -1125,7 +1124,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
                 eval_brdfcos(material, normal, outgoing, outgoing);
 
     // continue path
-    if (!is_delta(material)) break;
+    if (material.roughness) break;
     auto incoming = sample_delta(material, normal, outgoing, rand1f(rng));
     weight *= eval_delta(material, normal, outgoing, incoming) /
               sample_delta_pdf(material, normal, outgoing, incoming);
