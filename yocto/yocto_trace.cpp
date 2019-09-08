@@ -709,15 +709,12 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
   if (!is_delta(material)) return 0;
 
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
-  auto weights = compute_brdf_pdfs(material, normal, outgoing);
+  auto weights   = compute_brdf_pdfs(material, normal, outgoing);
 
   auto pdf = 0.0f;
-  if (weights[1] && same_hemi)
-    pdf += weights[1];
-  if (weights[2] && same_hemi)
-    pdf += weights[2];
-  if (weights[3] && !same_hemi)
-    pdf += weights[3];
+  if (weights[1] && same_hemi) pdf += weights[1];
+  if (weights[2] && same_hemi) pdf += weights[2];
+  if (weights[3] && !same_hemi) pdf += weights[3];
   return pdf;
 }
 
@@ -951,7 +948,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
       }
 
       // update volume stack
-      if (material.voldensity != zero3f && dot(normal, outgoing) * dot(normal, incoming) < 0) {
+      if (material.voldensity != zero3f &&
+          dot(normal, outgoing) * dot(normal, incoming) < 0) {
         if (volume_stack.empty()) {
           volume_stack.push_back({material, intersection.instance});
         } else {
