@@ -1344,8 +1344,9 @@ void load_pbrt(const string& filename, pbrt_callbacks& cb, bool flipv = true);
 enum struct pbrt_element {
   // clang-format off
   sampler, integrator, accelerator, film, filter, camera, shape, light, // value
-  texture, material, medium, arealight, // name and value
-  object_instance, begin_object, end_object, include // name
+  material, arealight, // name and value
+  named_texture, named_medium, named_material, // name and value
+  object_instance, object_begin, object_end, include // name
   // clang-format on
 };
 

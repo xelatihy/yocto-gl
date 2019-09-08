@@ -3613,10 +3613,13 @@ static void load_pbrt(
           cur_object, omap, mmap, amap, ammap);
     } else if (element == pbrt_element::light) {
       add_pbrt_light(scene, data.light, stack.back());
-    } else if (element == pbrt_element::texture) {
+    } else if (element == pbrt_element::named_texture) {
       add_pbrt_texture(
           scene, data.texture, stack.back(), name, tmap, ctmap, timap);
     } else if (element == pbrt_element::material) {
+      add_pbrt_material(
+          scene, data.material, stack.back(), name, mmap, tmap, ctmap);
+    } else if (element == pbrt_element::named_material) {
       add_pbrt_material(
           scene, data.material, stack.back(), name, mmap, tmap, ctmap);
     } else if (element == pbrt_element::arealight) {
@@ -3631,10 +3634,10 @@ static void load_pbrt(
         instance.material = pinstance.material;
         scene.instances.push_back(instance);
       }
-    } else if (element == pbrt_element::begin_object) {
+    } else if (element == pbrt_element::object_begin) {
       cur_object       = name;
       omap[cur_object] = {};
-    } else if (element == pbrt_element::end_object) {
+    } else if (element == pbrt_element::object_end) {
       cur_object = "";
     } else if (element == pbrt_element::include) {
       open_file(files.emplace_back(), fs::path(filename).parent_path() / name);

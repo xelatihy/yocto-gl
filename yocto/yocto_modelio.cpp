@@ -4855,11 +4855,11 @@ bool read_pbrt_element(file_wrapper& fs, pbrt_element& element, string& name,
     } else if (cmd == "ObjectBegin") {
       parse_pbrt_value(str, state.object);
       stack.push_back(stack.back());
-      element = pbrt_element::begin_object;
+      element = pbrt_element::object_begin;
       name    = state.object;
       return true;
     } else if (cmd == "ObjectEnd") {
-      element = pbrt_element::end_object;
+      element = pbrt_element::object_end;
       name    = state.object;
       stack.pop_back();
       state.object = {};
@@ -4977,7 +4977,7 @@ bool read_pbrt_element(file_wrapper& fs, pbrt_element& element, string& name,
       if (type == "constant") {
         state.constant_values[name] = data.texture.constant.value.value;
       }
-      element = pbrt_element::texture;
+      element = pbrt_element::named_texture;
       return true;
     } else if (cmd == "Material") {
       static auto material_id = 0;
@@ -4997,7 +4997,7 @@ bool read_pbrt_element(file_wrapper& fs, pbrt_element& element, string& name,
       parse_pbrt_value(str, name);
       parse_pbrt_typeparam(str, type);
       parse_pbrt_material(str, type, data.material, state.constant_values);
-      element = pbrt_element::material;
+      element = pbrt_element::named_material;
       return true;
     } else if (cmd == "NamedMaterial") {
       auto name = ""s;
@@ -5029,7 +5029,7 @@ bool read_pbrt_element(file_wrapper& fs, pbrt_element& element, string& name,
       parse_pbrt_value(str, name);
       parse_pbrt_typeparam(str, type);
       parse_pbrt_medium(str, type, data.medium);
-      element = pbrt_element::medium;
+      element = pbrt_element::named_medium;
       return true;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
