@@ -1034,7 +1034,7 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     brdfcos += (1 - F) * material.diffuse / pif * abs(dot(normal, incoming));
   }
 
-  if (material.transmission == zero3f && material.refract &&
+  if (material.transmission != zero3f && material.refract &&
       !same_hemisphere(normal, outgoing, incoming)) {
     auto eta            = material.eta;
     auto halfway_vector = dot(outgoing, normal) > 0
@@ -1055,7 +1055,7 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
                dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
   }
 
-  if (material.transmission == zero3f && !material.refract &&
+  if (material.transmission != zero3f && !material.refract &&
       !same_hemisphere(normal, outgoing, incoming)) {
     auto ir      = reflect(-incoming, up_normal);
     auto halfway = normalize(ir + outgoing);
@@ -1164,38 +1164,40 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
   weights /= sum(weights);
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
 
-  if (same_hemisphere(normal, outgoing, incoming)) {
-    if (!weights[0] && !weights[1]) return 0;
+  auto pdf = 0.0f;
+  if (weights[0] && same_hemisphere(normal, outgoing, incoming)) {
     auto halfway = normalize(incoming + outgoing);
-    auto pdf     = 0.0f;
-    if (weights[0]) {
-      pdf += weights[0] *
-             sample_microfacet_pdf(material.roughness, up_normal, halfway) /
-             (4 * abs(dot(outgoing, halfway)));
-    }
-    if (weights[1]) {
-      pdf += weights[1] * sample_hemisphere_pdf(up_normal, incoming);
-    }
-    return pdf;
-  } else {
-    if (!weights[2]) return 0;
-    if (material.refract) {
-      auto halfway_vector = dot(outgoing, normal) > 0
-                                ? -(outgoing + material.eta * incoming)
-                                : (material.eta * outgoing + incoming);
-      auto halfway = normalize(halfway_vector);
-      // [Walter 2007] equation 17
-      return weights[2] *
-             sample_microfacet_pdf(material.roughness, up_normal, halfway) *
-             abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
-    } else {
-      auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
-      auto ir        = reflect(-incoming, up_normal);
-      auto halfway   = normalize(ir + outgoing);
-      auto d = sample_microfacet_pdf(material.roughness, up_normal, halfway);
-      return weights[2] * d / (4 * abs(dot(outgoing, halfway)));
-    }
+    pdf += weights[0] *
+           sample_microfacet_pdf(material.roughness, up_normal, halfway) /
+           (4 * abs(dot(outgoing, halfway)));
   }
+
+  if (weights[1] && same_hemisphere(normal, outgoing, incoming)) {
+    pdf += weights[1] * sample_hemisphere_pdf(up_normal, incoming);
+  }
+
+  if (weights[2] && material.refract &&
+      !same_hemisphere(normal, outgoing, incoming)) {
+    auto halfway_vector = dot(outgoing, normal) > 0
+                              ? -(outgoing + material.eta * incoming)
+                              : (material.eta * outgoing + incoming);
+    auto halfway = normalize(halfway_vector);
+    // [Walter 2007] equation 17
+    pdf += weights[2] *
+           sample_microfacet_pdf(material.roughness, up_normal, halfway) *
+           abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
+  }
+
+  if (weights[2] && !material.refract &&
+      !same_hemisphere(normal, outgoing, incoming)) {
+    auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
+    auto ir        = reflect(-incoming, up_normal);
+    auto halfway   = normalize(ir + outgoing);
+    auto d = sample_microfacet_pdf(material.roughness, up_normal, halfway);
+    pdf += weights[2] * d / (4 * abs(dot(outgoing, halfway)));
+  }
+
+  return pdf;
 }
 
 float sample_delta_pdf(const material_point& material, const vec3f& normal,
@@ -1208,10 +1210,12 @@ float sample_delta_pdf(const material_point& material, const vec3f& normal,
       max(F * material.specular), max((1 - F) * material.transmission)};
   weights /= sum(weights);
 
-  if (same_hemisphere(normal, outgoing, incoming))
-    return weights[0];
-  else
-    return weights[1];
+  auto pdf = 0.0f;
+  if (weights[0] && same_hemisphere(normal, outgoing, incoming))
+    pdf += weights[0];
+  if (weights[1] && !same_hemisphere(normal, outgoing, incoming))
+    pdf += weights[1];
+  return pdf;
 }
 
 vec3f eval_volscattering(const material_point& material, const vec3f& outgoing,
