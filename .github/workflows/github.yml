@@ -8,9 +8,9 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: update apt
-      run: apt-get update --yes
+      run: sudo apt-get update --yes
     - name: install cmake
-      run: apt-get install --yes cmake
+      run: sudo apt-get install --yes cmake
     - name: cmake
       run: cmkae .
     - name: make
