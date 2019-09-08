@@ -5170,13 +5170,75 @@ static void write_pbrt_filter(file_wrapper& fs, const pbrt_filter& value) {
     if (tvalue.ywidth != def.ywidth)
       checked_fprintf(fs, " \"float ywidth\" [ %g ]", tvalue.ywidth);
   } else {
-    throw std::runtime_error("unknown Film " + std::to_string((int)value.type));
+    throw std::runtime_error("unknown Filter " + std::to_string((int)value.type));
   }
   checked_fprintf(fs, "\n");
 }
-static void write_pbrt_camera(file_wrapper& fs, const pbrt_camera& camera) {
-  throw std::runtime_error("not implemented");
+
+static void write_pbrt_camera(file_wrapper& fs, const pbrt_camera& value) {
+  checked_fprintf(fs, "Camera");
+  if (value.type == pbrt_camera::type_t::perspective) {
+    checked_fprintf(fs, " \"perspective\"");
+    auto&       tvalue = value.perspective;
+    static auto def    = pbrt_camera::perspective_t{};
+    if (tvalue.fov != def.fov)
+      checked_fprintf(fs, " \"float fov\" [ %g ]", tvalue.fov);
+    if (tvalue.frameaspectratio != def.frameaspectratio)
+      checked_fprintf(fs, " \"float frameaspectratio\" [ %g ]", tvalue.frameaspectratio);
+    if (tvalue.lensradius != def.lensradius)
+      checked_fprintf(fs, " \"float lensradius\" [ %g ]", tvalue.lensradius);
+    if (tvalue.focaldistance != def.focaldistance)
+      checked_fprintf(fs, " \"float focaldistance\" [ %g ]", tvalue.focaldistance);
+    if (tvalue.screenwindow != def.screenwindow)
+      checked_fprintf(fs, " \"float screenwindow\" [ %g %g %g %g ]", tvalue.screenwindow.x, tvalue.screenwindow.y, tvalue.screenwindow.z, tvalue.screenwindow.w);
+    if (tvalue.shutteropen != def.shutteropen)
+      checked_fprintf(fs, " \"float shutteropen\" [ %g ]", tvalue.shutteropen);
+    if (tvalue.shutterclose != def.shutterclose)
+      checked_fprintf(fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
+  } else if (value.type == pbrt_camera::type_t::orthographic) {
+    checked_fprintf(fs, " \"orthographic\"");
+    auto&       tvalue = value.orthographic;
+    static auto def    = pbrt_camera::orthographic_t{};
+    if (tvalue.frameaspectratio != def.frameaspectratio)
+      checked_fprintf(fs, " \"float frameaspectratio\" [ %g ]", tvalue.frameaspectratio);
+    if (tvalue.lensradius != def.lensradius)
+      checked_fprintf(fs, " \"float lensradius\" [ %g ]", tvalue.lensradius);
+    if (tvalue.focaldistance != def.focaldistance)
+      checked_fprintf(fs, " \"float focaldistance\" [ %g ]", tvalue.focaldistance);
+    if (tvalue.screenwindow != def.screenwindow)
+      checked_fprintf(fs, " \"float screenwindow\" [ %g %g %g %g ]", tvalue.screenwindow.x, tvalue.screenwindow.y, tvalue.screenwindow.z, tvalue.screenwindow.w);
+    if (tvalue.shutteropen != def.shutteropen)
+      checked_fprintf(fs, " \"float shutteropen\" [ %g ]", tvalue.shutteropen);
+    if (tvalue.shutterclose != def.shutterclose)
+      checked_fprintf(fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
+  } else if (value.type == pbrt_camera::type_t::environment) {
+    checked_fprintf(fs, " \"environment\"");
+    auto&       tvalue = value.environment;
+    static auto def    = pbrt_camera::environment_t{};
+    if (tvalue.shutteropen != def.shutteropen)
+      checked_fprintf(fs, " \"float shutteropen\" [ %g ]", tvalue.shutteropen);
+    if (tvalue.shutterclose != def.shutterclose)
+      checked_fprintf(fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
+  } else if (value.type == pbrt_camera::type_t::realistic) {
+    checked_fprintf(fs, " \"realistic\"");
+    auto&       tvalue = value.realistic;
+    static auto def    = pbrt_camera::realistic_t{};
+    if (tvalue.lensfile != def.lensfile)
+      checked_fprintf(fs, " \"string lensfile\" [ \"%s\" ]", tvalue.lensfile.c_str());
+    if (tvalue.focusdistance != def.focusdistance)
+      checked_fprintf(fs, " \"float focusdistance\" [ %g ]", tvalue.focusdistance);
+    if (tvalue.shutteropen != def.shutteropen)
+      checked_fprintf(fs, " \"float shutteropen\" [ %g ]", tvalue.shutteropen);
+    if (tvalue.shutterclose != def.shutterclose)
+      checked_fprintf(fs, " \"float shutterclose\" [ %g ]", tvalue.shutterclose);
+    if (tvalue.simpleweighting != def.simpleweighting)
+      checked_fprintf(fs, " \"float simpleweighting\" [ %g ]", tvalue.simpleweighting);
+  } else {
+    throw std::runtime_error("unknown Caemra " + std::to_string((int)value.type));
+  }
+  checked_fprintf(fs, "\n");
 }
+
 static void write_pbrt_shape(file_wrapper& fs, const pbrt_shape& shape) {
   throw std::runtime_error("not implemented");
 }
