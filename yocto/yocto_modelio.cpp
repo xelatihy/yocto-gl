@@ -5097,22 +5097,22 @@ static void write_pbrt_film(file_wrapper& fs, const pbrt_film& value) {
     auto&       tvalue = value.image;
     static auto def    = pbrt_film::image_t{};
     if (tvalue.xresolution != def.xresolution)
-      checked_fprintf(fs, " \"integer xresolution\" [%d]", tvalue.xresolution);
+      checked_fprintf(fs, " \"integer xresolution\" [ %d ]", tvalue.xresolution);
     if (tvalue.yresolution != def.yresolution)
-      checked_fprintf(fs, " \"integer yresolution\" [%d]", tvalue.yresolution);
+      checked_fprintf(fs, " \"integer yresolution\" [ %d ]", tvalue.yresolution);
     if (tvalue.cropwindow != def.cropwindow)
-      checked_fprintf(fs, " \"float cropwindow\" [%g %g %g %g]",
+      checked_fprintf(fs, " \"float cropwindow\" [ %g %g %g %g ]",
           tvalue.cropwindow.x, tvalue.cropwindow.y, tvalue.cropwindow.z,
           tvalue.cropwindow.w);
     if (tvalue.scale != def.scale)
-      checked_fprintf(fs, " \"float scale\" [%g]", tvalue.scale);
+      checked_fprintf(fs, " \"float scale\" [ %g ]", tvalue.scale);
     if (tvalue.maxsampleluminance != def.maxsampleluminance)
       checked_fprintf(
-          fs, " \"float maxsampleluminance\" [%g]", tvalue.maxsampleluminance);
+          fs, " \"float maxsampleluminance\" [ %g ]", tvalue.maxsampleluminance);
     if (tvalue.diagonal != def.diagonal)
-      checked_fprintf(fs, " \"float diagonal\" [%g]", tvalue.diagonal);
+      checked_fprintf(fs, " \"float diagonal\" [ %g ]", tvalue.diagonal);
     if (tvalue.filename != def.filename)
-      checked_fprintf(fs, " \"string filename\" [\"%s\"]", tvalue.filename.c_str());
+      checked_fprintf(fs, " \"string filename\" [ \"%s\" ]", tvalue.filename.c_str());
   } else {
     throw std::runtime_error("unknown Film " + std::to_string((int)value.type));
   }
@@ -5126,49 +5126,49 @@ static void write_pbrt_filter(file_wrapper& fs, const pbrt_filter& value) {
     auto&       tvalue = value.box;
     static auto def    = pbrt_filter::box_t{};
     if (tvalue.xwidth != def.xwidth)
-      checked_fprintf(fs, " \"float xwidth\" [%g]", tvalue.xwidth);
+      checked_fprintf(fs, " \"float xwidth\" [ %g ]", tvalue.xwidth);
     if (tvalue.ywidth != def.ywidth)
-      checked_fprintf(fs, " \"float ywidth\" [%g]", tvalue.ywidth);
+      checked_fprintf(fs, " \"float ywidth\" [ %g ]", tvalue.ywidth);
   } else if (value.type == pbrt_filter::type_t::gaussian) {
     checked_fprintf(fs, " \"gaussian\"");
     auto&       tvalue = value.gaussian;
     static auto def    = pbrt_filter::gaussian_t{};
     if (tvalue.xwidth != def.xwidth)
-      checked_fprintf(fs, " \"float xwidth\" [%g]", tvalue.xwidth);
+      checked_fprintf(fs, " \"float xwidth\" [ %g ]", tvalue.xwidth);
     if (tvalue.ywidth != def.ywidth)
-      checked_fprintf(fs, " \"float ywidth\" [%g]", tvalue.ywidth);
+      checked_fprintf(fs, " \"float ywidth\" [ %g ]", tvalue.ywidth);
     if (tvalue.alpha != def.alpha)
-      checked_fprintf(fs, " \"float alpha\" [%g]", tvalue.alpha);
+      checked_fprintf(fs, " \"float alpha\" [ %g ]", tvalue.alpha);
   } else if (value.type == pbrt_filter::type_t::mitchell) {
     checked_fprintf(fs, " \"mitchell\"");
     auto&       tvalue = value.mitchell;
     static auto def    = pbrt_filter::mitchell_t{};
     if (tvalue.xwidth != def.xwidth)
-      checked_fprintf(fs, " \"float xwidth\" [%g]", tvalue.xwidth);
+      checked_fprintf(fs, " \"float xwidth\" [ %g ]", tvalue.xwidth);
     if (tvalue.ywidth != def.ywidth)
-      checked_fprintf(fs, " \"float ywidth\" [%g]", tvalue.ywidth);
+      checked_fprintf(fs, " \"float ywidth\" [ %g ]", tvalue.ywidth);
     if (tvalue.B != def.B)
-      checked_fprintf(fs, " \"float B\" [%g]", tvalue.B);
+      checked_fprintf(fs, " \"float B\" [ %g ]", tvalue.B);
     if (tvalue.C != def.C)
-      checked_fprintf(fs, " \"float C\" [%g]", tvalue.C);
+      checked_fprintf(fs, " \"float C\" [ %g ]", tvalue.C);
   } else if (value.type == pbrt_filter::type_t::sinc) {
     checked_fprintf(fs, " \"sinc\"");
     auto&       tvalue = value.sinc;
     static auto def    = pbrt_filter::sinc_t{};
     if (tvalue.xwidth != def.xwidth)
-      checked_fprintf(fs, " \"float xwidth\" [%g]", tvalue.xwidth);
+      checked_fprintf(fs, " \"float xwidth\" [ %g ]", tvalue.xwidth);
     if (tvalue.ywidth != def.ywidth)
-      checked_fprintf(fs, " \"float ywidth\" [%g]", tvalue.ywidth);
+      checked_fprintf(fs, " \"float ywidth\" [ %g ]", tvalue.ywidth);
     if (tvalue.tau != def.tau)
-      checked_fprintf(fs, " \"float tau\" [%g]", tvalue.tau);
+      checked_fprintf(fs, " \"float tau\" [ %g ]", tvalue.tau);
   } else if (value.type == pbrt_filter::type_t::triangle) {
     checked_fprintf(fs, " \"triangle\"");
     auto&       tvalue = value.triangle;
     static auto def    = pbrt_filter::triangle_t{};
     if (tvalue.xwidth != def.xwidth)
-      checked_fprintf(fs, " \"float xwidth\" [%g]", tvalue.xwidth);
+      checked_fprintf(fs, " \"float xwidth\" [ %g ]", tvalue.xwidth);
     if (tvalue.ywidth != def.ywidth)
-      checked_fprintf(fs, " \"float ywidth\" [%g]", tvalue.ywidth);
+      checked_fprintf(fs, " \"float ywidth\" [ %g ]", tvalue.ywidth);
   } else {
     throw std::runtime_error("unknown Film " + std::to_string((int)value.type));
   }
