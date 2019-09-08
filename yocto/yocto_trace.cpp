@@ -1010,7 +1010,7 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
   auto entering  = !material.refract || dot(normal, outgoing) >= 0;
-  auto spec      = material.specular * fresnel_schlick(material.reflectance,
+  auto spec      = fresnel_schlick(material.specular,
                                       abs(dot(normal, outgoing)), entering);
 
   auto brdfcos = zero3f;
@@ -1019,11 +1019,11 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
       same_hemisphere(normal, outgoing, incoming)) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_schlick(
-        material.reflectance, abs(dot(halfway, outgoing)), entering);
+        material.specular, abs(dot(halfway, outgoing)), entering);
     auto D = eval_microfacetD(material.roughness, up_normal, halfway);
     auto G = eval_microfacetG(
         material.roughness, up_normal, halfway, outgoing, incoming);
-    brdfcos += material.specular * F * D * G /
+    brdfcos += F * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
@@ -1075,7 +1075,7 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
   if (!is_delta(material)) return zero3f;
 
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto spec     = material.specular * fresnel_schlick(material.reflectance,
+  auto spec     = fresnel_schlick(material.specular,
                                       abs(dot(normal, outgoing)), entering);
 
   auto brdfcos = zero3f;
@@ -1095,7 +1095,7 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
 vec3f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
     const vec3f& outgoing) {
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto spec     = material.specular * fresnel_schlick(material.reflectance,
+  auto spec     = fresnel_schlick(material.specular,
                                       abs(dot(outgoing, normal)), entering);
   auto weights  = vec3f{max(spec), max((1 - spec) * material.diffuse),
       max((1 - spec) * material.transmission)};
@@ -1737,7 +1737,7 @@ pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       return {material.diffuse, 1};
     }
     case trace_params::falsecolor_type::specular: {
-      return {material.specular * material.reflectance, 1};
+      return {material.specular, 1};
     }
     case trace_params::falsecolor_type::transmission: {
       return {material.transmission, 1};
