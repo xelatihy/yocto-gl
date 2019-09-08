@@ -38,13 +38,13 @@
 #include <stdlib.h>
 #include <array>
 #include <atomic>
+#include <cassert>
 #include <deque>
 #include <future>
 #include <memory>
 #include <regex>
 #include <string_view>
 #include <thread>
-#include <cassert>
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
