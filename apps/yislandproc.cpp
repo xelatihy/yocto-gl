@@ -434,9 +434,10 @@ struct load_island_shape_callbacks : obj_callbacks {
     } else if (dmaterial.refractive == 0) {
       materials.back().diffuse = dmaterial.color;
     } else {
-      materials.back().specular   = {1, 1, 1};
-      materials.back().refraction = {1, 1, 1};
-      materials.back().roughness  = 0;
+      materials.back().specular     = {1, 1, 1};
+      materials.back().transmission = {1, 1, 1};
+      materials.back().roughness    = 0;
+      materials.back().refract      = true;
     }
     shapes.push_back(yocto_shape{});
     shapes.back().uri = "shapes/" + parent_name + "/" + get_basename(filename) +

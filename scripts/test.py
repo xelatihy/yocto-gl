@@ -313,14 +313,16 @@ def make_tests():
             {
                 "uri": "materials/test-glass-sharp.yaml",
                 "specular": [0.04, 0.04, 0.04],
-                "refraction": [1, 1, 1],
-                "roughness": 0
+                "transmission": [1, 1, 1],
+                "roughness": 0,
+                "refract": True
             },
             {
                 "uri": "materials/test-glass-rough.yaml",
                 "specular": [0.04, 0.04, 0.04],
-                "refraction": [ 1, 0.7, 0.7 ],
-                "roughness": 0.1
+                "transmission": [ 1, 0.7, 0.7 ],
+                "roughness": 0.1,
+                "refract": True
             },
             {
                 "uri": "materials/test-thinglass-sharp.yaml",
@@ -343,9 +345,10 @@ def make_tests():
                 "uri": "materials/test-volume-jade.yaml",
                 "specular": [0.04, 0.04, 0.04],
                 "roughness": 0,
-                "refraction": [1, 1, 1],
+                "transmission": [1, 1, 1],
                 "voltransmission": [0.5, 0.5, 0.5],
-                "volscatter": [0.3, 0.6, 0.3]
+                "volscatter": [0.3, 0.6, 0.3],
+                "refract": True            
             },
             {
                 "uri": "materials/test-volume-cloud.yaml",
@@ -357,9 +360,10 @@ def make_tests():
                 "uri": "materials/test-volume-glass.yaml",
                 "specular": [0.04, 0.04, 0.04],
                 "roughness": 0,
-                "refraction": [1, 1, 1],
+                "transmission": [1, 1, 1],
                 "voltransmission": [1, 0.5, 0.5],
-                "volscale": 0.02
+                "volscale": 0.02,
+                "refract": True
             },
             {
                 "uri": "materials/test-volume-smoke.yaml",

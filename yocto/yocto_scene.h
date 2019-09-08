@@ -128,7 +128,6 @@ struct yocto_material {
   float metallic        = 0;
   vec3f coat            = {0, 0, 0};
   vec3f transmission    = {0, 0, 0};
-  vec3f refraction      = {0, 0, 0};
   vec3f voltransmission = {0, 0, 0};
   vec3f volmeanfreepath = {0, 0, 0};
   vec3f volemission     = {0, 0, 0};
@@ -136,6 +135,7 @@ struct yocto_material {
   float volanisotropy   = 0;
   float volscale        = 0.01;
   float opacity         = 1;
+  bool  refract         = false;
 
   // textures
   int  emission_tex     = -1;
@@ -144,7 +144,6 @@ struct yocto_material {
   int  metallic_tex     = -1;
   int  roughness_tex    = -1;
   int  transmission_tex = -1;
-  int  refraction_tex   = -1;
   int  subsurface_tex   = -1;
   int  coat_tex         = -1;
   int  opacity_tex      = -1;
@@ -427,7 +426,7 @@ ray3f eval_camera(const yocto_camera& camera, const vec2i& ij,
 struct material_point {
   vec3f emission      = {0, 0, 0};
   vec3f diffuse       = {0, 0, 0};
-  vec3f specular     = {0, 0, 0};
+  vec3f specular      = {0, 0, 0};
   vec3f coat          = {0, 0, 0};
   vec3f transmission  = {0, 0, 0};
   float roughness     = 0;

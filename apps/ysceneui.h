@@ -288,7 +288,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   if (draw_glcoloredit(win, "coat", edited.coat)) updated = true;
   if (draw_glcoloredit(win, "transmission", edited.transmission))
     updated = true;
-  if (draw_glcoloredit(win, "refraction", edited.refraction)) updated = true;
+  if (draw_glcheckbox(win, "refract", edited.refract)) updated = true;
   if (draw_glcoloredit(win, "vol transmission", edited.voltransmission))
     updated = true;
   if (draw_glcoloredit(win, "vol meanfreepath", edited.volmeanfreepath))
@@ -314,9 +314,6 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     updated = true;
   if (draw_glcombobox(win, "transmission_tex", edited.transmission_tex,
           scene.textures, true))
-    updated = true;
-  if (draw_glcombobox(
-          win, "refraction_tex", edited.refraction_tex, scene.textures, true))
     updated = true;
   if (draw_glcombobox(
           win, "subsurface_tex", edited.subsurface_tex, scene.textures, true))

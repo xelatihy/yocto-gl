@@ -640,8 +640,8 @@ void load_yaml(
         get_yaml_value(value, material.coat);
       } else if (key == "transmission") {
         get_yaml_value(value, material.transmission);
-      } else if (key == "refraction") {
-        get_yaml_value(value, material.refraction);
+      } else if (key == "refract") {
+        get_yaml_value(value, material.refract);
       } else if (key == "voltransmission") {
         get_yaml_value(value, material.voltransmission);
       } else if (key == "volmeanfreepath") {
@@ -668,8 +668,6 @@ void load_yaml(
         get_yaml_ref(value, material.specular_tex, tmap);
       } else if (key == "transmission_tex") {
         get_yaml_ref(value, material.transmission_tex, tmap);
-      } else if (key == "refraction_tex") {
-        get_yaml_ref(value, material.refraction_tex, tmap);
       } else if (key == "roughness_tex") {
         get_yaml_ref(value, material.roughness_tex, tmap);
       } else if (key == "subsurface_tex") {
@@ -852,11 +850,11 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     if (material.transmission != zero3f)
       write_yaml_property(fs, "materials", "transmission", false,
           make_yaml_value(material.transmission));
-    if (material.refraction != zero3f)
-      write_yaml_property(fs, "materials", "refraction", false,
-          make_yaml_value(material.refraction));
     write_yaml_property(fs, "materials", "roughness", false,
         make_yaml_value(material.roughness));
+    if (material.refract)
+      write_yaml_property(
+          fs, "materials", "refract", false, make_yaml_value(material.refract));
     if (material.voltransmission != zero3f)
       write_yaml_property(fs, "materials", "voltransmission", false,
           make_yaml_value(material.voltransmission));
@@ -900,9 +898,6 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
     if (material.transmission_tex >= 0)
       write_yaml_property(fs, "materials", "transmission_tex", false,
           make_yaml_value(scene.textures[material.transmission_tex].uri));
-    if (material.refraction_tex >= 0)
-      write_yaml_property(fs, "materials", "refraction_tex", false,
-          make_yaml_value(scene.textures[material.refraction_tex].uri));
     if (material.subsurface_tex >= 0)
       write_yaml_property(fs, "materials", "subsurface_tex", false,
           make_yaml_value(scene.textures[material.subsurface_tex].uri));
