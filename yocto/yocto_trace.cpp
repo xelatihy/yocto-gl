@@ -1010,11 +1010,10 @@ vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
   auto entering  = !material.refract || dot(normal, outgoing) >= 0;
-  auto spec = material.specular * fresnel_schlick(
-        material.reflectance, abs(dot(normal, outgoing)), entering);
+  auto spec      = material.specular * fresnel_schlick(material.reflectance,
+                                      abs(dot(normal, outgoing)), entering);
 
   auto brdfcos = zero3f;
-  auto stack = vec3f{1};
 
   if (material.specular != zero3f &&
       same_hemisphere(normal, outgoing, incoming)) {
@@ -1076,8 +1075,8 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
   if (!is_delta(material)) return zero3f;
 
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto spec = material.specular * fresnel_schlick(
-        material.reflectance, abs(dot(normal, outgoing)), entering);
+  auto spec     = material.specular * fresnel_schlick(material.reflectance,
+                                      abs(dot(normal, outgoing)), entering);
 
   auto brdfcos = zero3f;
 
@@ -1093,13 +1092,13 @@ vec3f eval_delta(const material_point& material, const vec3f& normal,
   return brdfcos;
 }
 
-vec3f compute_brdf_pdfs(const material_point& material,
-    const vec3f& normal, const vec3f& outgoing) {
+vec3f compute_brdf_pdfs(const material_point& material, const vec3f& normal,
+    const vec3f& outgoing) {
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto F        = fresnel_schlick(
-      material.reflectance, abs(dot(outgoing, normal)), entering);
-  auto weights = vec3f{max(F * material.specular),
-      max((1 - F) * material.diffuse), max((1 - F) * material.transmission)};
+  auto spec     = material.specular * fresnel_schlick(material.reflectance,
+                                      abs(dot(outgoing, normal)), entering);
+  auto weights  = vec3f{max(spec), max((1 - spec) * material.diffuse),
+      max((1 - spec) * material.transmission)};
   weights /= sum(weights);
   return weights;
 }
@@ -1109,18 +1108,18 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
   if (is_delta(material)) return zero3f;
 
-  auto weights = compute_brdf_pdfs(material, normal, outgoing);
+  auto weights   = compute_brdf_pdfs(material, normal, outgoing);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
   if (rnl < weights[0]) {
     auto halfway = sample_microfacet(material.roughness, up_normal, rn);
     return reflect(outgoing, halfway);
   }
-  
+
   if (rnl < weights[0] + weights[1]) {
     return sample_hemisphere(up_normal, rn);
   }
-  
+
   if (rnl < weights[0] + weights[1] + weights[2]) {
     if (material.refract) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
@@ -1144,7 +1143,7 @@ vec3f sample_brdf(const material_point& material, const vec3f& normal,
       return -reflect(ir, up_normal);
     }
   }
-  
+
   return zero3f;
 }
 
@@ -1152,7 +1151,7 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
   if (!is_delta(material)) return zero3f;
 
-  auto weights = compute_brdf_pdfs(material, normal, outgoing);
+  auto weights   = compute_brdf_pdfs(material, normal, outgoing);
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
   // keep a weight sum to pick a lobe
@@ -1160,7 +1159,7 @@ vec3f sample_delta(const material_point& material, const vec3f& normal,
     return reflect(outgoing, up_normal);
   }
 
-  if(rnl < weights[0] + weights[1] + weights[2]) {
+  if (rnl < weights[0] + weights[1] + weights[2]) {
     if (material.refract) {
       return refract_notir(outgoing, up_normal,
           dot(normal, outgoing) > 0 ? 1 / material.eta : material.eta);
@@ -1177,7 +1176,7 @@ float sample_brdf_pdf(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (is_delta(material)) return 0;
 
-  auto weights = compute_brdf_pdfs(material, normal, outgoing);
+  auto weights   = compute_brdf_pdfs(material, normal, outgoing);
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
 
   auto pdf = 0.0f;
