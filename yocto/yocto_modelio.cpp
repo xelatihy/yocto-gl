@@ -112,7 +112,9 @@ static inline bool exists_file(const string& filename) {
 
 // Read a line
 static inline bool read_line(file_wrapper& fs, char* buffer, size_t size) {
-  return fgets(buffer, size, fs.fs) != nullptr;
+  auto ok = fgets(buffer, size, fs.fs) != nullptr;
+  if(ok) fs.linenum+=1;
+  return ok;
 }
 
 static inline bool is_space(char c) {

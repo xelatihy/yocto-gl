@@ -116,6 +116,7 @@ struct file_wrapper {
   FILE*  fs       = nullptr;
   string filename = "";
   string mode     = "rt";
+  int    linenum  = 0;
 };
 
 // open a file
