@@ -3259,13 +3259,13 @@ static void add_pbrt_material(yocto_scene& scnee, const string& type,
 
   auto get_pbrt_roughness = [&](const vector<pbrt_value>& values,
                                 float                     def = 0.1) -> float {
-    auto roughness_     = get_pbrt_value(values, "roughness", def);
-    auto uroughness     = get_pbrt_value(values, "uroughness", roughness_);
-    auto vroughness     = get_pbrt_value(values, "vroughness", roughness_);
+    auto roughness_     = get_pbrt_value(values, "roughness", pair{vec3f{def}, ""s});
+    auto uroughness     = get_pbrt_value(values, "uroughness", pair{roughness_.first, roughness_.second});
+    auto vroughness     = get_pbrt_value(values, "vroughness",  pair{roughness_.first, roughness_.second});
     auto remaproughness = get_pbrt_value(values, "remaproughness", true);
 
-    if (uroughness == 0 && vroughness == 0) return 0;
-    auto roughness = (uroughness + vroughness) / 2;
+    if (uroughness.first == zero3f || vroughness.first == zero3f) return 0;
+    auto roughness = (mean(uroughness.first) + mean(vroughness.first)) / 2;
     // from pbrt code
     if (remaproughness) {
       roughness = max(roughness, 1e-3f);
