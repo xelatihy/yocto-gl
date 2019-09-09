@@ -102,14 +102,6 @@ static inline T swap_endian(T value) {
   return dest.value;
 }
 
-// Check if a file can be opened for reading.
-static inline bool exists_file(const string& filename) {
-  auto f = fopen(filename.c_str(), "r");
-  if (!f) return false;
-  fclose(f);
-  return true;
-}
-
 // Read a line
 static inline bool read_line(file_wrapper& fs, char* buffer, size_t size) {
   auto ok = fgets(buffer, size, fs.fs) != nullptr;
@@ -694,11 +686,6 @@ static inline void parse_obj_value(string_view& str, int& value) {
   value     = (int)strtol(str.data(), &end, 10);
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
-}
-static inline void parse_obj_value(string_view& str, bool& value) {
-  auto valuei = 0;
-  parse_obj_value(str, valuei);
-  value = (bool)valuei;
 }
 static inline void parse_obj_value(string_view& str, float& value) {
   char* end = nullptr;
