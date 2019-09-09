@@ -345,31 +345,12 @@ void load_island_materials(const string& filename, const string& dirname,
   }
 }
 
-struct load_island_shape_callbacks : obj_callbacks {
-  vector<yocto_shape>&                    shapes;
-  vector<yocto_material>&                 materials;
-  unordered_map<string, vector<vec2i>>&   smap;
-  unordered_map<string, disney_material>& mmap;
-  unordered_map<string, int>&             tmap;
-  yocto_scene&                            scene;
-  const string&                           filename;
-  const string&                           parent_name;
-
-  load_island_shape_callbacks(vector<yocto_shape>& shapes,
-      vector<yocto_material>&                      materials,
-      unordered_map<string, vector<vec2i>>&        smap,
-      unordered_map<string, disney_material>&      mmap,
-      unordered_map<string, int>& tmap, yocto_scene& scene,
-      const string& filename, const string& parent_name)
-      : shapes{shapes}
-      , materials{materials}
-      , smap{smap}
-      , mmap{mmap}
-      , tmap{tmap}
-      , scene{scene}
-      , filename{filename}
-      , parent_name{parent_name} {}
-
+void load_island_shape(vector<yocto_shape>& shapes,
+    vector<yocto_material>& materials, vector<disney_material>& dmaterials,
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap,
+    unordered_map<string, int>& tmap, yocto_scene& scene,
+    const string& filename, const string& parent_name) {
   // obj vertices
   std::deque<vec3f> opos  = std::deque<vec3f>();
   std::deque<vec3f> onorm = std::deque<vec3f>();
@@ -379,13 +360,12 @@ struct load_island_shape_callbacks : obj_callbacks {
   unordered_map<int, int> norm_map = unordered_map<int, int>();
 
   // last material and group name
-  string                  gname      = ""s;
-  string                  mname      = ""s;
-  bool                    split_next = false;
-  vector<disney_material> dmaterials = {};
+  string gname      = ""s;
+  string mname      = ""s;
+  bool   split_next = false;
 
   // Add  vertices to the current shape
-  void add_fvverts(const vector<obj_vertex>& verts) {
+  auto add_fvverts = [&](const vector<obj_vertex>& verts) {
     for (auto& vert : verts) {
       if (!vert.position) continue;
       auto pos_it = pos_map.find(vert.position);
@@ -402,18 +382,18 @@ struct load_island_shape_callbacks : obj_callbacks {
       norm_map.insert(norm_it, {vert.normal, nverts});
       shapes.back().normals.push_back(onorm.at(vert.normal - 1));
     }
-  }
+  };
 
-  int add_texture(const string& mapname) {
+  auto add_texture = [&](const string& mapname) -> int {
     if (tmap.find(mapname) == tmap.end()) {
       scene.textures.push_back({});
       scene.textures.back().uri = mapname;
       tmap[mapname]             = scene.textures.size() - 1;
     }
     return tmap.at(mapname);
-  }
+  };
 
-  void split_shape() {
+  auto split_shape = [&]() {
     if (!split_next) return;
     split_next     = false;
     auto dmaterial = mmap.at(mname);
@@ -446,68 +426,83 @@ struct load_island_shape_callbacks : obj_callbacks {
     pos_map.reserve(1024 * 1024);
     norm_map.clear();
     norm_map.reserve(1024 * 1024);
-  }
+  };
 
-  void vert(const vec3f& v) override { opos.push_back(v); }
-  void norm(const vec3f& v) override { onorm.push_back(v); }
-  void texcoord(const vec2f& v) override {
-    throw std::runtime_error("texture coord not supported");
-  }
-  void face(const vector<obj_vertex>& verts) override {
-    split_shape();
-    add_fvverts(verts);
-    if (verts.size() == 4) {
-      shapes.back().quadspos.push_back(
-          {pos_map.at(verts[0].position), pos_map.at(verts[1].position),
-              pos_map.at(verts[2].position), pos_map.at(verts[3].position)});
-      shapes.back().quadsnorm.push_back(
-          {norm_map.at(verts[0].normal), norm_map.at(verts[1].normal),
-              norm_map.at(verts[2].normal), norm_map.at(verts[3].normal)});
-    } else {
-      for (auto i = 2; i < verts.size(); i++)
-        shapes.back().quadspos.push_back(
-            {pos_map.at(verts[0].position), pos_map.at(verts[i - 1].position),
+  auto fs = open_file(filename);
+
+  auto command   = obj_command{};
+  auto value     = obj_value{};
+  auto verts     = vector<obj_vertex>{};
+  auto vert_size = obj_vertex{};
+  while (read_obj_command(fs, command, value, verts, vert_size)) {
+    switch (command) {
+      case obj_command::vertex:
+        get_obj_value(value, opos.emplace_back());
+        break;
+      case obj_command::normal:
+        get_obj_value(value, onorm.emplace_back());
+        break;
+      case obj_command::texcoord:
+        throw std::runtime_error("texture coord not supported");
+        break;
+      case obj_command::face: {
+        split_shape();
+        add_fvverts(verts);
+        if (verts.size() == 4) {
+          shapes.back().quadspos.push_back({pos_map.at(verts[0].position),
+              pos_map.at(verts[1].position), pos_map.at(verts[2].position),
+              pos_map.at(verts[3].position)});
+          shapes.back().quadsnorm.push_back(
+              {norm_map.at(verts[0].normal), norm_map.at(verts[1].normal),
+                  norm_map.at(verts[2].normal), norm_map.at(verts[3].normal)});
+        } else {
+          for (auto i = 2; i < verts.size(); i++)
+            shapes.back().quadspos.push_back({pos_map.at(verts[0].position),
+                pos_map.at(verts[i - 1].position),
                 pos_map.at(verts[i].position), pos_map.at(verts[i].position)});
-      for (auto i = 2; i < verts.size(); i++)
-        shapes.back().quadsnorm.push_back(
-            {norm_map.at(verts[0].normal), norm_map.at(verts[i - 1].normal),
-                norm_map.at(verts[i].normal), norm_map.at(verts[i].normal)});
+          for (auto i = 2; i < verts.size(); i++)
+            shapes.back().quadsnorm.push_back({norm_map.at(verts[0].normal),
+                norm_map.at(verts[i - 1].normal), norm_map.at(verts[i].normal),
+                norm_map.at(verts[i].normal)});
+        }
+        if (dmaterials.back().color_ptex_faces) {
+          auto offset = (int)shapes.back().texcoords.size();
+          auto face   = (int)shapes.back().quadstexcoord.size();
+          face %= dmaterials.back().color_ptex_faces;
+          auto face_i = face % dmaterials.back().color_ptex_rowfaces;
+          auto face_j = face / dmaterials.back().color_ptex_rowfaces;
+          if (verts.size() == 4) {
+            auto du  = 1 / (float)dmaterials.back().color_ptex_rowfaces;
+            auto dv  = 1 / (float)dmaterials.back().color_ptex_colfaces;
+            auto dpu = 1 / (float)(dmaterials.back().color_ptex_rowfaces *
+                                   dmaterials.back().color_ptex_tilesize);
+            auto dpv = 1 / (float)(dmaterials.back().color_ptex_colfaces *
+                                   dmaterials.back().color_ptex_tilesize);
+            auto u0 = (face_i + 0) * du + dpu, v0 = (face_j + 0) * dv + dpv;
+            auto u1 = (face_i + 1) * du - dpu, v1 = (face_j + 1) * dv - dpv;
+            shapes.back().texcoords.push_back({u0, v0});
+            shapes.back().texcoords.push_back({u1, v0});
+            shapes.back().texcoords.push_back({u1, v1});
+            shapes.back().texcoords.push_back({u0, v1});
+            shapes.back().quadstexcoord.push_back(
+                {offset + 0, offset + 1, offset + 2, offset + 3});
+          } else {
+            throw std::runtime_error("BAD PTEX TEXCOORDS");
+          }
+        }
+      } break;
+      case obj_command::group: {
+        get_obj_value(value, gname);
+        split_next = true;
+      } break;
+      case obj_command::usemtl: {
+        get_obj_value(value, mname);
+        split_next = true;
+      } break;
+      default: break;
     }
-    if (dmaterials.back().color_ptex_faces) {
-      auto offset = (int)shapes.back().texcoords.size();
-      auto face   = (int)shapes.back().quadstexcoord.size();
-      face %= dmaterials.back().color_ptex_faces;
-      auto face_i = face % dmaterials.back().color_ptex_rowfaces;
-      auto face_j = face / dmaterials.back().color_ptex_rowfaces;
-      if (verts.size() == 4) {
-        auto du  = 1 / (float)dmaterials.back().color_ptex_rowfaces;
-        auto dv  = 1 / (float)dmaterials.back().color_ptex_colfaces;
-        auto dpu = 1 / (float)(dmaterials.back().color_ptex_rowfaces *
-                               dmaterials.back().color_ptex_tilesize);
-        auto dpv = 1 / (float)(dmaterials.back().color_ptex_colfaces *
-                               dmaterials.back().color_ptex_tilesize);
-        auto u0 = (face_i + 0) * du + dpu, v0 = (face_j + 0) * dv + dpv;
-        auto u1 = (face_i + 1) * du - dpu, v1 = (face_j + 1) * dv - dpv;
-        shapes.back().texcoords.push_back({u0, v0});
-        shapes.back().texcoords.push_back({u1, v0});
-        shapes.back().texcoords.push_back({u1, v1});
-        shapes.back().texcoords.push_back({u0, v1});
-        shapes.back().quadstexcoord.push_back(
-            {offset + 0, offset + 1, offset + 2, offset + 3});
-      } else {
-        throw std::runtime_error("BAD PTEX TEXCOORDS");
-      }
-    }
   }
-  void group(const string& name) override {
-    gname      = name;
-    split_next = true;
-  }
-  void usemtl(const string& name) override {
-    mname      = name;
-    split_next = true;
-  }
-};
+}
 
 void add_island_shape(yocto_scene& scene, const string& parent_name,
     const string& filename, const string& dirname,
@@ -519,63 +514,60 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
 
   auto shapes      = vector<yocto_shape>{};
   auto materials   = vector<yocto_material>{};
+  auto dmaterials  = vector<disney_material>{};
   auto facevarying = false;
 
-  try {
-    // load obj
-    auto cb = load_island_shape_callbacks{
-        shapes, materials, smap, mmap, tmap, scene, filename, parent_name};
-    load_obj(dirname + filename, cb, true);
+  // load obj
+  load_island_shape(shapes, materials, dmaterials, smap, mmap, tmap, scene,
+      filename, parent_name);
 
-    // check for PTEX errors
-    for (auto id = 0; id < shapes.size(); id++) {
-      if (cb.dmaterials[id].color_map != "") {
-        auto ptex_faces  = cb.dmaterials[id].color_ptex_faces;
-        auto shape_faces = max(
-            (int)shapes[id].quads.size(), (int)shapes[id].quadspos.size());
-        auto is_multiple = shape_faces % ptex_faces == 0;
-        if (!is_multiple)
-          printf("PTEX ERROR:  %d %d\n", ptex_faces, shape_faces);
-      }
+  // check for PTEX errors
+  for (auto id = 0; id < shapes.size(); id++) {
+    if (dmaterials[id].color_map != "") {
+      auto ptex_faces  = dmaterials[id].color_ptex_faces;
+      auto shape_faces = max(
+          (int)shapes[id].quads.size(), (int)shapes[id].quadspos.size());
+      auto is_multiple = shape_faces % ptex_faces == 0;
+      if (!is_multiple) printf("PTEX ERROR:  %d %d\n", ptex_faces, shape_faces);
     }
+  }
 
-    // conversion to non-facevarying
-    if (!facevarying) {
-      for (auto& shape : shapes) {
-        auto split_quads     = vector<vec4i>{};
-        auto split_positions = vector<vec3f>{};
-        auto split_normals   = vector<vec3f>{};
-        auto split_texcoords = vector<vec2f>{};
-        split_facevarying(split_quads, split_positions, split_normals,
-            split_texcoords, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords);
-        shape.quads         = split_quads;
-        shape.positions     = split_positions;
-        shape.normals       = split_normals;
-        shape.texcoords     = split_texcoords;
-        shape.quadspos      = {};
-        shape.quadsnorm     = {};
-        shape.quadstexcoord = {};
-        if (shape.texcoords.empty()) {
-          auto all_triangles = true;
-          for (auto& q : shape.quads) {
-            if (q.z != q.w) {
-              all_triangles = false;
-              break;
-            }
-          }
-          if (all_triangles) {
-            shape.triangles = quads_to_triangles(shape.quads);
-            shape.quads     = {};
+  // conversion to non-facevarying
+  if (!facevarying) {
+    for (auto& shape : shapes) {
+      auto split_quads     = vector<vec4i>{};
+      auto split_positions = vector<vec3f>{};
+      auto split_normals   = vector<vec3f>{};
+      auto split_texcoords = vector<vec2f>{};
+      split_facevarying(split_quads, split_positions, split_normals,
+          split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+          shape.positions, shape.normals, shape.texcoords);
+      shape.quads         = split_quads;
+      shape.positions     = split_positions;
+      shape.normals       = split_normals;
+      shape.texcoords     = split_texcoords;
+      shape.quadspos      = {};
+      shape.quadsnorm     = {};
+      shape.quadstexcoord = {};
+      if (shape.texcoords.empty()) {
+        auto all_triangles = true;
+        for (auto& q : shape.quads) {
+          if (q.z != q.w) {
+            all_triangles = false;
+            break;
           }
         }
-      }
-    } else {
-      for (auto& shape : shapes) {
-        shape.uri = get_noextension(shape.uri) + ".obj";
+        if (all_triangles) {
+          shape.triangles = quads_to_triangles(shape.quads);
+          shape.quads     = {};
+        }
       }
     }
+  } else {
+    for (auto& shape : shapes) {
+      shape.uri = get_noextension(shape.uri) + ".obj";
+    }
+  }
 
 // merging quads and triangles
 #if 0
@@ -587,10 +579,6 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
             }
         }
 #endif
-
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot load mesh " + filename + "\n" + e.what());
-  }
 
   for (auto shape_id = 0; shape_id < shapes.size(); shape_id++) {
     scene.shapes.push_back(shapes[shape_id]);
