@@ -3626,6 +3626,7 @@ static void load_pbrt(
         stack.push_back({});
       } break;
       case pbrt_command_::world_end: {
+        if (stack.empty()) throw std::runtime_error("bad pbrt stack");
         stack.pop_back();
         if (stack.size() != 1) throw std::runtime_error("bad stack");
       } break;
@@ -3633,12 +3634,14 @@ static void load_pbrt(
         stack.push_back(stack.back());
       } break;
       case pbrt_command_::attribute_end: {
+        if (stack.empty()) throw std::runtime_error("bad pbrt stack");
         stack.pop_back();
       } break;
       case pbrt_command_::transform_begin: {
         stack.push_back(stack.back());
       } break;
       case pbrt_command_::transform_end: {
+        if (stack.empty()) throw std::runtime_error("bad pbrt stack");
         stack.pop_back();
       } break;
       case pbrt_command_::active_transform: {

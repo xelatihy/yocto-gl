@@ -2839,7 +2839,7 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
       command = pbrt_command_::attribute_end;
       return true;
     } else if (cmd == "TransformBegin") {
-      command = pbrt_command_::transform_end;
+      command = pbrt_command_::transform_begin;
       return true;
     } else if (cmd == "TransformEnd") {
       command = pbrt_command_::transform_end;
@@ -5607,7 +5607,7 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command& command, string& name,
       return true;
     } else if (cmd == "TransformBegin") {
       stack.push_back(stack.back());
-      command = pbrt_command::transform_end;
+      command = pbrt_command::transform_begin;
       return true;
     } else if (cmd == "TransformEnd") {
       stack.pop_back();
