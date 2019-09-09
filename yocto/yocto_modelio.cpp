@@ -1820,7 +1820,306 @@ obj_value make_obj_value(const frame3f& value) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF LOW LEVEL PARSING
+// YAML SUPPORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static inline void remove_yaml_comment(
+    string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
+}
+
+static inline void parse_yaml_varname(string_view& str, string_view& value) {
+  skip_whitespace(str);
+  if (str.empty()) throw std::runtime_error("cannot parse value");
+  if (!is_alpha(str.front())) throw std::runtime_error("cannot parse value");
+  auto pos = 0;
+  while (is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
+    pos += 1;
+    if (pos >= str.size()) break;
+  }
+  value = str.substr(0, pos);
+  str.remove_prefix(pos);
+}
+static inline void parse_yaml_varname(string_view& str, string& value) {
+  auto view = ""sv;
+  parse_yaml_varname(str, view);
+  value = string{view};
+}
+
+inline void parse_yaml_value(string_view& str, string_view& value) {
+  skip_whitespace(str);
+  if (str.empty()) throw std::runtime_error("cannot parse value");
+  if (str.front() != '"') {
+    auto cpy = str;
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+  } else {
+    if (str.front() != '"') throw std::runtime_error("cannot parse value");
+    str.remove_prefix(1);
+    if (str.empty()) throw std::runtime_error("cannot parse value");
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    if (cpy.empty()) throw std::runtime_error("cannot parse value");
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    str.remove_prefix(1);
+  }
+}
+inline void parse_yaml_value(string_view& str, string& value) {
+  auto valuev = ""sv;
+  parse_yaml_value(str, valuev);
+  value = string{valuev};
+}
+inline void parse_yaml_value(string_view& str, int& value) {
+  skip_whitespace(str);
+  char* end = nullptr;
+  value     = (int)strtol(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+inline void parse_yaml_value(string_view& str, float& value) {
+  skip_whitespace(str);
+  char* end = nullptr;
+  value     = strtof(str.data(), &end);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+inline void parse_yaml_value(string_view& str, double& value) {
+  skip_whitespace(str);
+  char* end = nullptr;
+  value     = strtod(str.data(), &end);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+
+// parse yaml value
+void get_yaml_value(const yaml_value& yaml, string& value) {
+  if (yaml.type != yaml_value_type::string)
+    throw std::runtime_error("error parsing yaml value");
+  value = yaml.string_;
+}
+void get_yaml_value(const yaml_value& yaml, bool& value) {
+  if (yaml.type != yaml_value_type::boolean)
+    throw std::runtime_error("error parsing yaml value");
+  value = yaml.boolean;
+}
+void get_yaml_value(const yaml_value& yaml, int& value) {
+  if (yaml.type != yaml_value_type::number)
+    throw std::runtime_error("error parsing yaml value");
+  value = (int)yaml.number;
+}
+void get_yaml_value(const yaml_value& yaml, float& value) {
+  if (yaml.type != yaml_value_type::number)
+    throw std::runtime_error("error parsing yaml value");
+  value = (float)yaml.number;
+}
+void get_yaml_value(const yaml_value& yaml, vec2f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 2)
+    throw std::runtime_error("error parsing yaml value");
+  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
+}
+void get_yaml_value(const yaml_value& yaml, vec3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 3)
+    throw std::runtime_error("error parsing yaml value");
+  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
+}
+void get_yaml_value(const yaml_value& yaml, mat3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 9)
+    throw std::runtime_error("error parsing yaml value");
+  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+}
+void get_yaml_value(const yaml_value& yaml, frame3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 12)
+    throw std::runtime_error("error parsing yaml value");
+  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+}
+
+// construction
+yaml_value make_yaml_value(const string& value) {
+  return {yaml_value_type::string, 0, false, value};
+}
+yaml_value make_yaml_value(bool value) {
+  return {yaml_value_type::boolean, 0, value};
+}
+yaml_value make_yaml_value(int value) {
+  return {yaml_value_type::number, (double)value};
+}
+yaml_value make_yaml_value(float value) {
+  return {yaml_value_type::number, (double)value};
+}
+yaml_value make_yaml_value(const vec2f& value) {
+  return {
+      yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
+}
+yaml_value make_yaml_value(const vec3f& value) {
+  return {yaml_value_type::array, 3, false, "",
+      {(double)value.x, (double)value.y, (double)value.z}};
+}
+yaml_value make_yaml_value(const mat3f& value) {
+  auto yaml = yaml_value{yaml_value_type::array, 9};
+  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+yaml_value make_yaml_value(const frame3f& value) {
+  auto yaml = yaml_value{yaml_value_type::array, 12};
+  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+
+void parse_yaml_value(string_view& str, yaml_value& value) {
+  trim_whitespace(str);
+  if (str.empty()) throw std::runtime_error("bad yaml");
+  if (str.front() == '[') {
+    str.remove_prefix(1);
+    value.type   = yaml_value_type::array;
+    value.number = 0;
+    while (!str.empty()) {
+      skip_whitespace(str);
+      if (str.empty()) throw std::runtime_error("bad yaml");
+      if (str.front() == ']') {
+        str.remove_prefix(1);
+        break;
+      }
+      if (value.number >= 16) throw std::runtime_error("array too large");
+      parse_yaml_value(str, value.array_[(int)value.number]);
+      value.number += 1;
+      skip_whitespace(str);
+      if (str.front() == ',') {
+        str.remove_prefix(1);
+        continue;
+      } else if (str.front() == ']') {
+        str.remove_prefix(1);
+        break;
+      } else {
+        throw std::runtime_error("bad yaml");
+      }
+    }
+  } else if (is_digit(str.front()) || str.front() == '-' ||
+             str.front() == '+') {
+    value.type = yaml_value_type::number;
+    parse_yaml_value(str, value.number);
+  } else {
+    value.type = yaml_value_type::string;
+    parse_yaml_value(str, value.string_);
+    if (value.string_ == "true" || value.string_ == "false") {
+      value.type    = yaml_value_type::boolean;
+      value.boolean = value.string_ == "true";
+    }
+  }
+  skip_whitespace(str);
+  if (!str.empty() && !is_whitespace(str)) throw std::runtime_error("bad yaml");
+}
+
+bool read_yaml_property(file_wrapper& fs, string& group, string& key,
+    bool& newobj, yaml_value& value) {
+  // read the file line by line
+  char buffer[4096];
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_yaml_comment(line);
+    if (line.empty()) continue;
+    if (is_whitespace(line)) continue;
+
+    // peek commands
+    if (is_space(line.front())) {
+      // indented property
+      if (group == "") throw std::runtime_error("bad yaml");
+      skip_whitespace(line);
+      if (line.empty()) throw std::runtime_error("bad yaml");
+      if (line.front() == '-') {
+        newobj = true;
+        line.remove_prefix(1);
+        skip_whitespace(line);
+      } else {
+        newobj = false;
+      }
+      parse_yaml_varname(line, key);
+      skip_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
+      line.remove_prefix(1);
+      parse_yaml_value(line, value);
+      return true;
+    } else if (is_alpha(line.front())) {
+      // new group
+      parse_yaml_varname(line, key);
+      skip_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
+      line.remove_prefix(1);
+      if (!line.empty() && !is_whitespace(line)) {
+        group = "";
+        parse_yaml_value(line, value);
+        return true;
+      } else {
+        group = key;
+        key   = "";
+        return true;
+      }
+    } else {
+      throw std::runtime_error("bad yaml");
+    }
+  }
+  return false;
+}
+
+void write_yaml_comment(file_wrapper& fs, const string& comment) {
+  auto lines = split_string(comment, "\n");
+  for (auto& line : lines) {
+    checked_fprintf(fs, "# %s\n", line.c_str());
+  }
+  checked_fprintf(fs, "\n");
+}
+
+// Save yaml property
+void write_yaml_property(file_wrapper& fs, const string& object,
+    const string& key, bool newobj, const yaml_value& value) {
+  if (key.empty()) {
+    checked_fprintf(fs, "\n%s:\n", object.c_str());
+  } else {
+    if (!object.empty()) {
+      checked_fprintf(fs, (newobj ? "  - " : "    "));
+    }
+    checked_fprintf(fs, "%s: ", key.c_str());
+    switch (value.type) {
+      case yaml_value_type::number:
+        checked_fprintf(fs, "%g", value.number);
+        break;
+      case yaml_value_type::boolean:
+        checked_fprintf(fs, "%s", value.boolean ? "true" : "false");
+        break;
+      case yaml_value_type::string:
+        checked_fprintf(fs, "%s", value.string_.c_str());
+        break;
+      case yaml_value_type::array:
+        checked_fprintf(fs, "[ ");
+        for (auto i = 0; i < value.number; i++) {
+          if (i) checked_fprintf(fs, ", ");
+          checked_fprintf(fs, "%g", value.array_[i]);
+        }
+        checked_fprintf(fs, " ]");
+        break;
+    }
+    checked_fprintf(fs, "\n", key.c_str());
+  }
+}
+
+void write_yaml_object(file_wrapper& fs, const string& object) {
+  checked_fprintf(fs, "\n%s:\n", object.c_str());
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PBRT CONVERSION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -2366,311 +2665,294 @@ static inline void skip_pbrt_param(string_view& str) {
   }
 }
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// YAML SUPPORT
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline void remove_yaml_comment(
-    string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
-  auto cpy = str;
-  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
-  str.remove_suffix(cpy.size());
-}
-
-static inline void parse_yaml_varname(string_view& str, string_view& value) {
-  skip_whitespace(str);
-  if (str.empty()) throw std::runtime_error("cannot parse value");
-  if (!is_alpha(str.front())) throw std::runtime_error("cannot parse value");
-  auto pos = 0;
-  while (is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
-    pos += 1;
-    if (pos >= str.size()) break;
-  }
-  value = str.substr(0, pos);
-  str.remove_prefix(pos);
-}
-static inline void parse_yaml_varname(string_view& str, string& value) {
-  auto view = ""sv;
-  parse_yaml_varname(str, view);
-  value = string{view};
-}
-
-inline void parse_yaml_value(string_view& str, string_view& value) {
-  skip_whitespace(str);
-  if (str.empty()) throw std::runtime_error("cannot parse value");
-  if (str.front() != '"') {
-    auto cpy = str;
-    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-  } else {
-    if (str.front() != '"') throw std::runtime_error("cannot parse value");
-    str.remove_prefix(1);
-    if (str.empty()) throw std::runtime_error("cannot parse value");
-    auto cpy = str;
-    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
-    if (cpy.empty()) throw std::runtime_error("cannot parse value");
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-    str.remove_prefix(1);
-  }
-}
-inline void parse_yaml_value(string_view& str, string& value) {
-  auto valuev = ""sv;
-  parse_yaml_value(str, valuev);
-  value = string{valuev};
-}
-inline void parse_yaml_value(string_view& str, int& value) {
-  skip_whitespace(str);
-  char* end = nullptr;
-  value     = (int)strtol(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_yaml_value(string_view& str, float& value) {
-  skip_whitespace(str);
-  char* end = nullptr;
-  value     = strtof(str.data(), &end);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_yaml_value(string_view& str, double& value) {
-  skip_whitespace(str);
-  char* end = nullptr;
-  value     = strtod(str.data(), &end);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-
-// parse yaml value
-void get_yaml_value(const yaml_value& yaml, string& value) {
-  if (yaml.type != yaml_value_type::string)
-    throw std::runtime_error("error parsing yaml value");
-  value = yaml.string_;
-}
-void get_yaml_value(const yaml_value& yaml, bool& value) {
-  if (yaml.type != yaml_value_type::boolean)
-    throw std::runtime_error("error parsing yaml value");
-  value = yaml.boolean;
-}
-void get_yaml_value(const yaml_value& yaml, int& value) {
-  if (yaml.type != yaml_value_type::number)
-    throw std::runtime_error("error parsing yaml value");
-  value = (int)yaml.number;
-}
-void get_yaml_value(const yaml_value& yaml, float& value) {
-  if (yaml.type != yaml_value_type::number)
-    throw std::runtime_error("error parsing yaml value");
-  value = (float)yaml.number;
-}
-void get_yaml_value(const yaml_value& yaml, vec2f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 2)
-    throw std::runtime_error("error parsing yaml value");
-  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
-}
-void get_yaml_value(const yaml_value& yaml, vec3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 3)
-    throw std::runtime_error("error parsing yaml value");
-  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
-}
-void get_yaml_value(const yaml_value& yaml, mat3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 9)
-    throw std::runtime_error("error parsing yaml value");
-  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-}
-void get_yaml_value(const yaml_value& yaml, frame3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 12)
-    throw std::runtime_error("error parsing yaml value");
-  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-}
-
-// construction
-yaml_value make_yaml_value(const string& value) {
-  return {yaml_value_type::string, 0, false, value};
-}
-yaml_value make_yaml_value(bool value) {
-  return {yaml_value_type::boolean, 0, value};
-}
-yaml_value make_yaml_value(int value) {
-  return {yaml_value_type::number, (double)value};
-}
-yaml_value make_yaml_value(float value) {
-  return {yaml_value_type::number, (double)value};
-}
-yaml_value make_yaml_value(const vec2f& value) {
-  return {
-      yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
-}
-yaml_value make_yaml_value(const vec3f& value) {
-  return {yaml_value_type::array, 3, false, "",
-      {(double)value.x, (double)value.y, (double)value.z}};
-}
-yaml_value make_yaml_value(const mat3f& value) {
-  auto yaml = yaml_value{yaml_value_type::array, 9};
-  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
-  return yaml;
-}
-yaml_value make_yaml_value(const frame3f& value) {
-  auto yaml = yaml_value{yaml_value_type::array, 12};
-  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
-  return yaml;
-}
-
-void parse_yaml_value(string_view& str, yaml_value& value) {
-  trim_whitespace(str);
-  if (str.empty()) throw std::runtime_error("bad yaml");
-  if (str.front() == '[') {
-    str.remove_prefix(1);
-    value.type   = yaml_value_type::array;
-    value.number = 0;
-    while (!str.empty()) {
-      skip_whitespace(str);
-      if (str.empty()) throw std::runtime_error("bad yaml");
-      if (str.front() == ']') {
-        str.remove_prefix(1);
-        break;
+static inline void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
+  auto parse_pbrt_pvalues = [](string_view& str, auto& value, auto& values) {
+    values.clear();
+    skip_whitespace(str);
+    if(str.empty()) throw std::runtime_error("bad pbrt value");
+    if(str.front() == '[') { 
+      str.remove_prefix(1); skip_whitespace(str);
+      if(str.empty()) throw std::runtime_error("bad pbrt value");
+      while(!str.empty()) {
+        auto& val = values.empty() ? value : values.emplace_back();
+        parse_pbrt_value(str, val);
+        skip_whitespace(str);
+        if(str.empty()) break;
+        if(str.front() == ']') break;
+        if(values.empty()) values.push_back(value);
       }
-      if (value.number >= 16) throw std::runtime_error("array too large");
-      parse_yaml_value(str, value.array_[(int)value.number]);
-      value.number += 1;
-      skip_whitespace(str);
-      if (str.front() == ',') {
-        str.remove_prefix(1);
-        continue;
-      } else if (str.front() == ']') {
-        str.remove_prefix(1);
-        break;
-      } else {
-        throw std::runtime_error("bad yaml");
-      }
-    }
-  } else if (is_digit(str.front()) || str.front() == '-' ||
-             str.front() == '+') {
-    value.type = yaml_value_type::number;
-    parse_yaml_value(str, value.number);
-  } else {
-    value.type = yaml_value_type::string;
-    parse_yaml_value(str, value.string_);
-    if (value.string_ == "true" || value.string_ == "false") {
-      value.type    = yaml_value_type::boolean;
-      value.boolean = value.string_ == "true";
-    }
-  }
-  skip_whitespace(str);
-  if (!str.empty() && !is_whitespace(str)) throw std::runtime_error("bad yaml");
-}
-
-bool read_yaml_property(file_wrapper& fs, string& group, string& key,
-    bool& newobj, yaml_value& value) {
-  // read the file line by line
-  char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
-    // line
-    auto line = string_view{buffer};
-    remove_yaml_comment(line);
-    if (line.empty()) continue;
-    if (is_whitespace(line)) continue;
-
-    // peek commands
-    if (is_space(line.front())) {
-      // indented property
-      if (group == "") throw std::runtime_error("bad yaml");
-      skip_whitespace(line);
-      if (line.empty()) throw std::runtime_error("bad yaml");
-      if (line.front() == '-') {
-        newobj = true;
-        line.remove_prefix(1);
-        skip_whitespace(line);
-      } else {
-        newobj = false;
-      }
-      parse_yaml_varname(line, key);
-      skip_whitespace(line);
-      if (line.empty() || line.front() != ':')
-        throw std::runtime_error("bad yaml");
-      line.remove_prefix(1);
-      parse_yaml_value(line, value);
-      return true;
-    } else if (is_alpha(line.front())) {
-      // new group
-      parse_yaml_varname(line, key);
-      skip_whitespace(line);
-      if (line.empty() || line.front() != ':')
-        throw std::runtime_error("bad yaml");
-      line.remove_prefix(1);
-      if (!line.empty() && !is_whitespace(line)) {
-        group = "";
-        parse_yaml_value(line, value);
-        return true;
-      } else {
-        group = key;
-        key   = "";
-        return true;
-      }
+      if(str.empty()) throw std::runtime_error("bad pbrt value");
+      if(str.front() != ']') throw std::runtime_error("bad pbrt value");
+      str.remove_prefix(1);
     } else {
-      throw std::runtime_error("bad yaml");
+      parse_pbrt_value(str, value);
+    }
+  };
+
+  values.clear();
+  skip_whitespace(str);
+  while(!str.empty()) {
+    auto& value = values.emplace_back();
+  auto type = ""s;
+  parse_pbrt_nametype(str, value.name, type);
+  skip_whitespace(str);
+  if(str.empty()) throw std::runtime_error("expected value");
+  if(type == "float") {
+    value.type = pbrt_value_type::real;
+    parse_pbrt_pvalues(str, value.value1f, value.vector1f);
+  } else if(type == "integer") {
+    value.type = pbrt_value_type::integer;
+    parse_pbrt_pvalues(str, value.value1i, value.vector1i);
+  } else if(type == "string") {
+    auto vector1s = vector<string>{};
+    value.type = pbrt_value_type::string;
+    parse_pbrt_pvalues(str, value.value1s, vector1s);
+    if(!vector1s.empty()) throw std::runtime_error("do not support pbrt string array");
+  } else if(type == "texture") {
+    auto vector1s = vector<string>{};
+    value.type = pbrt_value_type::texture;
+    parse_pbrt_pvalues(str, value.value1s, vector1s);
+    if(!vector1s.empty()) throw std::runtime_error("do not support pbrt string array");
+  } else if(type == "point" || type == "point3") {
+    value.type = pbrt_value_type::point;
+    parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+  } else if(type == "normal" || type == "normal3") {
+    value.type = pbrt_value_type::normal;
+    parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+  } else if(type == "vector" || type == "vector3") {
+    value.type = pbrt_value_type::vector;
+    parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+  } else if(type == "point2") {
+    value.type = pbrt_value_type::point2;
+    parse_pbrt_pvalues(str, value.value2f, value.vector2f);
+  } else if(type == "vector2") {
+    value.type = pbrt_value_type::vector2;
+    parse_pbrt_pvalues(str, value.value2f, value.vector2f);
+  } else if(type == "blackbody") {
+    // TODO: blackbody conversion
+    value.type = pbrt_value_type::color;
+    parse_pbrt_pvalues(str, value.value2f, value.vector2f);
+    if(!value.vector2f.empty()) throw std::runtime_error("bad pbrt " + type + " property");
+    throw std::runtime_error("blackbody conversion");
+  } else if(type == "color" || type == "rgb") {
+    value.type = pbrt_value_type::color;
+    parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+  } else if(type == "xyz") {
+    // TODO: xyz conversion
+    value.type = pbrt_value_type::color;
+    parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+    throw std::runtime_error("xyz conversion");
+  } else {
+    throw std::runtime_error("unknown pbrt type");
+  }
+    skip_whitespace(str);
+  }
+}
+
+// Get typename
+static inline void parse_pbrt_typeparam(string_view& str, string& value) {
+  auto saved = str;
+  value      = "";
+  auto pname = ""s, ptype = ""s;
+  while (is_pbrt_param(str) && value == "") {
+    parse_pbrt_nametype(str, pname, ptype);
+    if (pname == "type") {
+      parse_pbrt_param(str, ptype, value);
+    } else {
+      skip_pbrt_param(str);
+    }
+  }
+  if (value == "") throw std::runtime_error("type not found");
+  str = saved;
+}
+
+// Read pbrt commands
+bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name, 
+  string& type, frame3f& xform, vector<pbrt_value>& values, string& line) {
+  // parse command by command
+  while (read_pbrt_cmdline(fs, line)) {
+    auto str = string_view{line};
+    // get command
+    auto cmd = ""s;
+    parse_pbrt_command(str, cmd);
+    if (cmd == "WorldBegin") {
+      command = pbrt_command_::world_begin;
+      return true;
+    } else if (cmd == "WorldEnd") {
+      command = pbrt_command_::world_end;
+      return true;
+    } else if (cmd == "AttributeBegin") {
+      command = pbrt_command_::attribute_begin;
+      return true;
+    } else if (cmd == "AttributeEnd") {
+      command = pbrt_command_::attribute_end;
+      return true;
+    } else if (cmd == "TransformBegin") {
+      command = pbrt_command_::transform_end;
+      return true;
+    } else if (cmd == "TransformEnd") {
+      command = pbrt_command_::transform_end;
+      return true;
+    } else if (cmd == "ObjectBegin") {
+      parse_pbrt_value(str, name);
+      command = pbrt_command_::object_begin;
+      return true;
+    } else if (cmd == "ObjectEnd") {
+      command = pbrt_command_::object_end;
+      return true;
+    } else if (cmd == "ObjectInstance") {
+      parse_pbrt_value(str, name);
+      command = pbrt_command_::object_instance;
+      return true;
+    } else if (cmd == "ActiveTransform") {
+      parse_pbrt_command(str, name);
+      command = pbrt_command_::active_transform;
+      return true;
+    } else if (cmd == "Transform") {
+      auto xf = identity4x4f;
+      parse_pbrt_param(str, xf);
+      xform = frame3f{xf};
+      command = pbrt_command_::set_transform;
+      return true;
+    } else if (cmd == "ConcatTransform") {
+      auto xf = identity4x4f;
+      parse_pbrt_param(str, xf);
+      xform = frame3f{xf};
+      command = pbrt_command_::concat_transform;
+      return true;
+    } else if (cmd == "Scale") {
+      auto v = zero3f;
+      parse_pbrt_param(str, v);
+      xform = scaling_frame(v);
+      command = pbrt_command_::concat_transform;
+      return true;
+    } else if (cmd == "Translate") {
+      auto v = zero3f;
+      parse_pbrt_param(str, v);
+      xform = translation_frame(v);
+      command = pbrt_command_::concat_transform;
+      return true;
+    } else if (cmd == "Rotate") {
+      auto v = zero4f;
+      parse_pbrt_param(str, v);
+      xform = rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x));
+      command = pbrt_command_::concat_transform;
+      return true;
+    } else if (cmd == "LookAt") {
+      auto from = zero3f, to = zero3f, up = zero3f;
+      parse_pbrt_param(str, from);
+      parse_pbrt_param(str, to);
+      parse_pbrt_param(str, up);
+      xform = {from, to, up, zero3f};
+      command = pbrt_command_::lookat_transform;
+      return true;
+    } else if (cmd == "ReverseOrientation") {
+      command              = pbrt_command_::reverse_orientation;
+      return true;
+    } else if (cmd == "CoordinateSystem") {
+      parse_pbrt_value(str, name);
+      command = pbrt_command_::coordinate_system_set;
+      return true;
+    } else if (cmd == "CoordSysTransform") {
+      parse_pbrt_value(str, name);
+      command = pbrt_command_::coordinate_system_transform;
+      return true;
+    } else if (cmd == "Integrator") {
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::integrator;
+      return true;
+    } else if (cmd == "Sampler") {
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::sampler;
+      return true;
+    } else if (cmd == "PixelFilter") {
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::filter;
+      return true;
+    } else if (cmd == "Film") {
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::film;
+      return true;
+    } else if (cmd == "Accelerator") {
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::accelerator;
+      return true;
+    } else if (cmd == "Camera") {
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::camera;
+      return true;
+    } else if (cmd == "Texture") {
+      auto comptype = ""s;
+      parse_pbrt_value(str, name);
+      parse_pbrt_value(str, comptype);
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::named_texture;
+      return true;
+    } else if (cmd == "Material") {
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::material;
+      return true;
+    } else if (cmd == "MakeNamedMaterial") {
+      parse_pbrt_value(str, name);
+      parse_pbrt_typeparam(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::named_material;
+      return true;
+    } else if (cmd == "NamedMaterial") {
+      parse_pbrt_value(str, name);
+      command = pbrt_command_::use_material;
+      return true;
+    } else if (cmd == "Shape") {
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::shape;
+      return true;
+    } else if (cmd == "AreaLightSource") {
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command                = pbrt_command_::arealight;
+      return true;
+    } else if (cmd == "LightSource") {
+      parse_pbrt_value(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::light;
+      return true;
+    } else if (cmd == "MakeNamedMedium") {
+      parse_pbrt_value(str, name);
+      parse_pbrt_typeparam(str, type);
+      parse_pbrt_params(str, values);
+      command = pbrt_command_::named_medium;
+      return true;
+    } else if (cmd == "MediumInterface") {
+      auto interior = ""s, exterior = ""s;
+      parse_pbrt_value(str, interior);
+      parse_pbrt_value(str, exterior);
+      name                         = interior + "####" + exterior;
+      command                      = pbrt_command_::medium_interface;
+      return true;
+    } else if (cmd == "Include") {
+      parse_pbrt_value(str, name);
+      command = pbrt_command_::include;
+      return true;
+    } else {
+      throw std::runtime_error("unknown command " + cmd);
     }
   }
   return false;
 }
-
-void write_yaml_comment(file_wrapper& fs, const string& comment) {
-  auto lines = split_string(comment, "\n");
-  for (auto& line : lines) {
-    checked_fprintf(fs, "# %s\n", line.c_str());
-  }
-  checked_fprintf(fs, "\n");
+bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name, 
+  string& type, frame3f& xform, vector<pbrt_value>& values) {
+  auto command_buffer = ""s;
+  return read_pbrt_command(fs, command, name, type, xform, values, command_buffer);
 }
-
-// Save yaml property
-void write_yaml_property(file_wrapper& fs, const string& object,
-    const string& key, bool newobj, const yaml_value& value) {
-  if (key.empty()) {
-    checked_fprintf(fs, "\n%s:\n", object.c_str());
-  } else {
-    if (!object.empty()) {
-      checked_fprintf(fs, (newobj ? "  - " : "    "));
-    }
-    checked_fprintf(fs, "%s: ", key.c_str());
-    switch (value.type) {
-      case yaml_value_type::number:
-        checked_fprintf(fs, "%g", value.number);
-        break;
-      case yaml_value_type::boolean:
-        checked_fprintf(fs, "%s", value.boolean ? "true" : "false");
-        break;
-      case yaml_value_type::string:
-        checked_fprintf(fs, "%s", value.string_.c_str());
-        break;
-      case yaml_value_type::array:
-        checked_fprintf(fs, "[ ");
-        for (auto i = 0; i < value.number; i++) {
-          if (i) checked_fprintf(fs, ", ");
-          checked_fprintf(fs, "%g", value.array_[i]);
-        }
-        checked_fprintf(fs, " ]");
-        break;
-    }
-    checked_fprintf(fs, "\n", key.c_str());
-  }
-}
-
-void write_yaml_object(file_wrapper& fs, const string& object) {
-  checked_fprintf(fs, "\n%s:\n", object.c_str());
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PBRT CONVERSION
-// -----------------------------------------------------------------------------
-namespace yocto {
 
 // Write obj elements
 void write_pbrt_comment(file_wrapper& fs, const string& comment) {
@@ -2843,8 +3125,23 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
     case pbrt_command_::use_material:
       checked_fprintf(fs, "NamedMaterial \"%s\"\n", name.c_str());
       break;
-    case pbrt_command_::medium_interface:
-      throw std::runtime_error("not supported yet");
+    case pbrt_command_::medium_interface: {
+      auto interior = ""s, exterior = ""s;
+      auto found = false;
+      for(auto c : name) {
+        if(c == '#') { found = true; continue; }
+        if(found) exterior.push_back(c); else interior.push_back(c);
+      }
+      checked_fprintf(fs, "MediumInterface \"%s\" \"%s\"\n", interior.c_str(), exterior.c_str());
+    } break;
+    case pbrt_command_::active_transform: 
+      checked_fprintf(fs, "ActiveTransform \"%s\"\n", name.c_str());
+      break;
+    case pbrt_command_::coordinate_system_set: 
+      checked_fprintf(fs, "CoordinateSystem \"%s\"\n", name.c_str());
+      break;
+    case pbrt_command_::coordinate_system_transform: 
+      checked_fprintf(fs, "CoordinateSysTransform \"%s\"\n", name.c_str());
       break;
   }
 }
@@ -3811,23 +4108,6 @@ static inline pair<vec3f, vec3f> parse_pbrt_subsurface(const string& name) {
                                           {0.031845, 0.031324, 0.030147}}},
   };
   return params.at(name);
-}
-
-// Get typename
-static inline void parse_pbrt_typeparam(string_view& str, string& value) {
-  auto saved = str;
-  value      = "";
-  auto pname = ""s, ptype = ""s;
-  while (is_pbrt_param(str) && value == "") {
-    parse_pbrt_nametype(str, pname, ptype);
-    if (pname == "type") {
-      parse_pbrt_param(str, ptype, value);
-    } else {
-      skip_pbrt_param(str);
-    }
-  }
-  if (value == "") throw std::runtime_error("type not found");
-  str = saved;
 }
 
 // Parse param and resolve constant textures

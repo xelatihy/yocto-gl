@@ -556,9 +556,14 @@ enum struct pbrt_command_ {
   object_instance, object_begin, object_end, include,      
   sampler, integrator, accelerator, film, filter, camera, shape, light,
   material, arealight, named_texture, named_medium, named_material,             
-  use_material, medium_interface
+  use_material, medium_interface, active_transform,
+  coordinate_system_set, coordinate_system_transform
   // clang-format on
 };
+
+// Read pbrt commands
+bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name, 
+  string& type, frame3f& xform, vector<pbrt_value>& values);
 
 // Write pbrt commands
 void write_pbrt_comment(file_wrapper& fs, const string& comment);
