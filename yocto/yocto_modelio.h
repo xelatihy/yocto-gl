@@ -579,12 +579,29 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
     const vector<pbrt_value>& values, bool texture_as_float = false);
 
 // type-cheked pbrt value access
-void get_pbrt_value(const pbrt_value& yaml, string& value);
-void get_pbrt_value(const pbrt_value& yaml, bool& value);
-void get_pbrt_value(const pbrt_value& yaml, int& value);
-void get_pbrt_value(const pbrt_value& yaml, float& value);
-void get_pbrt_value(const pbrt_value& yaml, vec2f& value);
-void get_pbrt_value(const pbrt_value& yaml, vec3f& value);
+void get_pbrt_value(const pbrt_value& pbrt, string& value);
+void get_pbrt_value(const pbrt_value& pbrt, bool& value);
+void get_pbrt_value(const pbrt_value& pbrt, int& value);
+void get_pbrt_value(const pbrt_value& pbrt, float& value);
+void get_pbrt_value(const pbrt_value& pbrt, vec2f& value);
+void get_pbrt_value(const pbrt_value& pbrt, vec3f& value);
+template<typename T>
+inline void get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, T& value, const T& def, bool required = false) {
+  for(auto& p : pbrt) {
+    if(p.name == name) {
+      get_pbrt_value(p, value);
+      return;
+    }
+  }
+  if(required) throw std::runtime_error("missing pbrt parameter " + name);
+  value = def;
+}
+template<typename T>
+inline T get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, const T& def, bool required = false) {
+  auto value = T{};
+  get_pbrt_value(pbrt, name, value, def, required);
+  return value;
+}
 
 // pbrt value construction
 pbrt_value make_pbrt_value(const string& name, const string& value, pbrt_value_type type = pbrt_value_type::string);

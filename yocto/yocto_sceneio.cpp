@@ -2981,34 +2981,33 @@ struct pbrt_context_ {
 void add_pbrt_camera(yocto_scene& scene, const string& type,
     const vector<pbrt_value>& values, const pbrt_context_& ctx,
     float last_film_aspect, bool verbose = false) {
-#if 0
   auto camera    = yocto_camera{};
   camera.frame   = inverse((frame3f)ctx.transform_start);
   camera.frame.z = -camera.frame.z;
-  switch (pcamera.type) {
-    case pbrt_camera::type_t::perspective: {
-      auto& perspective = pcamera.perspective;
-      auto  aspect      = perspective.frameaspectratio;
-      if (aspect < 0) aspect = last_film_aspect;
-      if (aspect < 0) aspect = 1;
-      if (aspect >= 1) {
-        set_yperspective(camera, radians(perspective.fov), aspect,
-            clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+  if (type == "perspective") {
+      auto fov = get_pbrt_value(values, "fov", 90.0f);
+      // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
+      auto frameaspectratio = get_pbrt_value(values, "frameaspectratio", -1.0f, true);
+      auto focaldistance = get_pbrt_value(values, "focaldistance", 1e30f);
+      if (frameaspectratio < 0) frameaspectratio = last_film_aspect;
+      if (frameaspectratio < 0) frameaspectratio = 1;
+      if (frameaspectratio >= 1) {
+        set_yperspective(camera, radians(fov), frameaspectratio,
+            clamp(focaldistance, 1.0e-2f, 1.0e4f));
       } else {
-        auto yfov = 2 * atan(tan(radians(perspective.fov) / 2) / aspect);
-        set_yperspective(camera, yfov, aspect,
-            clamp(perspective.focaldistance, 1.0e-2f, 1.0e4f));
+        auto yfov = 2 * atan(tan(radians(fov) / 2) / frameaspectratio);
+        set_yperspective(camera, yfov, frameaspectratio,
+            clamp(focaldistance, 1.0e-2f, 1.0e4f));
       }
-    } break;
-    case pbrt_camera::type_t::orthographic: {
-      throw std::runtime_error("unsupported Camera type");
-    } break;
-    case pbrt_camera::type_t::environment: {
-      throw std::runtime_error("unsupported Camera type");
-    } break;
-    case pbrt_camera::type_t::realistic: {
-      auto& realistic = pcamera.realistic;
-      camera.lens     = max(realistic.approx_focallength, 35.0f) * 0.001f;
+    } else if (type == "realistic") {
+      auto lensfile = get_pbrt_value(values, "lensfile", ""s);
+      lensfile      = lensfile.substr(0, lensfile.size() - 4);
+      lensfile      = lensfile.substr(lensfile.find('.') + 1);
+      lensfile      = lensfile.substr(0, lensfile.size() - 2);
+      auto focal  = std::atof(lensfile.c_str());
+      // auto aperturediameter = get_pbrt_value(values, "aperturediameter", 0.0f);
+      // auto focusdistance = get_pbrt_value(values, "focusdistance", 10.0f);
+      camera.lens     = max(focal, 35.0f) * 0.001f;
       auto aspect     = 1.0f;
       if (aspect < 0) aspect = last_film_aspect;
       if (aspect < 0) aspect = 1;
@@ -3017,12 +3016,12 @@ void add_pbrt_camera(yocto_scene& scene, const string& type,
       } else {
         camera.film.x = camera.film.y * aspect;
       }
-      camera.focus    = realistic.focusdistance;
-      camera.aperture = realistic.aperturediameter / 2;
-    } break;
-  }
+      get_pbrt_value(values, "focusdistance", camera.focus, 1);
+      get_pbrt_value(values, "aperturediameter", camera.aperture, 0);
+    } else {
+      throw std::runtime_error("unsupported Camera type " + type);
+    }
   scene.cameras.push_back(camera);
-#endif
 }
 
 static void add_pbrt_film(yocto_scene& scene, const string& type,
