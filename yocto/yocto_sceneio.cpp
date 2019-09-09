@@ -3114,122 +3114,97 @@ static void add_pbrt_texture(yocto_scene& scene, const string& type,
     const string& name, unordered_map<string, int>& tmap,
     unordered_map<string, vec3f>& ctmap, unordered_map<string, bool>& timap,
     bool remove_contant_textures = true, bool verbose = false) {
-#if 0
-  if (remove_contant_textures &&
-      ptexture.type == pbrt_texture::type_t::constant) {
-    auto& constant = ptexture.constant;
-    ctmap[name]    = (vec3f)constant.value.value;
-    timap[name]    = false;
+  if (remove_contant_textures && type == "constant") {
+    ctmap[name] = get_pbrt_value(values, "value", vec3f{1});
+    timap[name] = false;
     return;
   }
   auto texture = yocto_texture{};
   texture.uri  = "textures/" + name + ".png";
-  switch (ptexture.type) {
-    case pbrt_texture::type_t::imagemap: {
-      auto& imagemap = ptexture.imagemap;
-      texture.uri    = imagemap.filename;
-    } break;
-    case pbrt_texture::type_t::constant: {
-      auto& constant = ptexture.constant;
-      texture.ldr.resize({1, 1});
-      texture.ldr[{0, 0}] = float_to_byte(
-          vec4f{(vec3f)constant.value.value, 1});
-    } break;
-    case pbrt_texture::type_t::bilerp: {
-      // auto& bilerp   = get<pbrt_texture::bilerp_t>(ptexture);
-      texture.ldr.resize({1, 1});
-      texture.ldr[{0, 0}] = {255, 0, 0, 255};
-      if (verbose) printf("texture bilerp not supported well");
-    } break;
-    case pbrt_texture::type_t::checkerboard: {
-      auto& checkerboard = ptexture.checkerboard;
-      auto  rgb1         = checkerboard.tex1.texture == ""
-                      ? checkerboard.tex1.value
-                      : pbrt_spectrum3f{0.4f, 0.4f, 0.4f};
-      auto rgb2 = checkerboard.tex1.texture == ""
-                      ? checkerboard.tex2.value
-                      : pbrt_spectrum3f{0.6f, 0.6f, 0.6f};
-      auto params   = proc_image_params{};
-      params.type   = proc_image_params::type_t::checker;
-      params.color0 = {rgb1.x, rgb1.y, rgb1.z, 1};
-      params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1};
-      params.scale  = 2;
-      make_proc_image(texture.hdr, params);
-      float_to_byte(texture.ldr, texture.hdr);
-      texture.hdr = {};
-      if (verbose) printf("texture checkerboard not supported well");
-    } break;
-    case pbrt_texture::type_t::dots: {
-      // auto& dots   = get<pbrt_texture::dots_t>(ptexture);
-      texture.ldr.resize({1, 1});
-      texture.ldr[{0, 0}] = {255, 0, 0, 255};
-      if (verbose) printf("texture dots not supported well");
-    } break;
-    case pbrt_texture::type_t::fbm: {
-      // auto& fbm = ptexture.fbm;
-      auto params = proc_image_params{};
-      params.type = proc_image_params::type_t::fbm;
-      make_proc_image(texture.hdr, params);
-      float_to_byte(texture.ldr, texture.hdr);
-      texture.hdr = {};
-      if (verbose) printf("texture fbm not supported well");
-    } break;
-    case pbrt_texture::type_t::marble: {
-      // auto& marble = ptexture.marble;
-      auto params = proc_image_params{};
-      params.type = proc_image_params::type_t::fbm;
-      make_proc_image(texture.hdr, params);
-      float_to_byte(texture.ldr, texture.hdr);
-      texture.hdr = {};
-      if (verbose) printf("texture marble not supported well");
-    } break;
-    case pbrt_texture::type_t::mix: {
-      auto& mix = ptexture.mix;
-      if (timap.at(mix.tex1.texture)) {
-        texture.uri = scene.textures.at(tmap.at(mix.tex1.texture)).uri;
-      } else if (timap.at(mix.tex2.texture)) {
-        texture.uri = scene.textures.at(tmap.at(mix.tex2.texture)).uri;
-      } else {
-        texture.ldr.resize({1, 1});
-        texture.ldr[{0, 0}] = {255, 0, 0, 255};
-      }
-      if (verbose) printf("texture mix not supported well");
-    } break;
-    case pbrt_texture::type_t::scale: {
-      auto& scale = ptexture.scale;
-      if (timap.at(scale.tex1.texture)) {
-        texture.uri = scene.textures.at(tmap.at(scale.tex1.texture)).uri;
-      } else if (timap.at(scale.tex2.texture)) {
-        texture.uri = scene.textures.at(tmap.at(scale.tex2.texture)).uri;
-      } else {
-        texture.ldr.resize({1, 1});
-        texture.ldr[{0, 0}] = {255, 0, 0, 255};
-      }
-      if (verbose) printf("texture scale not supported well");
-    } break;
-    case pbrt_texture::type_t::uv: {
-      // auto& uv   = get<pbrt_texture::uv_t>(ptexture);
+  if (type == "imagemap") {
+    texture.uri = get_pbrt_value(values, "filename", ""s);
+  } else if (type == "constant") {
+    texture.ldr.resize({1, 1});
+    texture.ldr[{0, 0}] = float_to_byte(
+        vec4f{get_pbrt_value(values, "value", vec3f{1}), 1});
+  } else if (type == "bilerp") {
+    texture.ldr.resize({1, 1});
+    texture.ldr[{0, 0}] = {255, 0, 0, 255};
+    if (verbose) printf("texture bilerp not supported well");
+  } else if (type == "checkerboard") {
+    auto tex1     = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
+    auto tex2     = get_pbrt_value(values, "tex2", pair{vec3f{0}, ""s});
+    auto rgb1     = tex1.second == "" ? tex1.first : vec3f{0.4f, 0.4f, 0.4f};
+    auto rgb2     = tex1.second == "" ? tex2.first : vec3f{0.6f, 0.6f, 0.6f};
+    auto params   = proc_image_params{};
+    params.type   = proc_image_params::type_t::checker;
+    params.color0 = {rgb1.x, rgb1.y, rgb1.z, 1};
+    params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1};
+    params.scale  = 2;
+    make_proc_image(texture.hdr, params);
+    float_to_byte(texture.ldr, texture.hdr);
+    texture.hdr = {};
+    if (verbose) printf("texture checkerboard not supported well");
+  } else if (type == "dots") {
+    texture.ldr.resize({1, 1});
+    texture.ldr[{0, 0}] = {255, 0, 0, 255};
+    if (verbose) printf("texture dots not supported well");
+  } else if (type == "fbm") {
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::fbm;
+    make_proc_image(texture.hdr, params);
+    float_to_byte(texture.ldr, texture.hdr);
+    texture.hdr = {};
+    if (verbose) printf("texture fbm not supported well");
+  } else if (type == "marble") {
+    auto params = proc_image_params{};
+    params.type = proc_image_params::type_t::fbm;
+    make_proc_image(texture.hdr, params);
+    float_to_byte(texture.ldr, texture.hdr);
+    texture.hdr = {};
+    if (verbose) printf("texture marble not supported well");
+  } else if (type == "mix") {
+    auto tex1 = get_pbrt_value(values, "tex1", pair{vec3f{0}, ""s});
+    auto tex2 = get_pbrt_value(values, "tex2", pair{vec3f{1}, ""s});
+    if (timap.at(tex1.second)) {
+      texture.uri = scene.textures.at(tmap.at(tex1.second)).uri;
+    } else if (timap.at(tex2.second)) {
+      texture.uri = scene.textures.at(tmap.at(tex2.second)).uri;
+    } else {
       texture.ldr.resize({1, 1});
       texture.ldr[{0, 0}] = {255, 0, 0, 255};
-      if (verbose) printf("texture uv not supported well");
-    } break;
-    case pbrt_texture::type_t::windy: {
-      // auto& uv   = get<pbrt_texture::uv_t>(ptexture);
+    }
+    if (verbose) printf("texture mix not supported well");
+  } else if (type == "scale") {
+    auto tex1 = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
+    auto tex2 = get_pbrt_value(values, "tex2", pair{vec3f{1}, ""s});
+    if (timap.at(tex1.second)) {
+      texture.uri = scene.textures.at(tmap.at(tex1.second)).uri;
+    } else if (timap.at(tex2.second)) {
+      texture.uri = scene.textures.at(tmap.at(tex2.second)).uri;
+    } else {
       texture.ldr.resize({1, 1});
       texture.ldr[{0, 0}] = {255, 0, 0, 255};
-      if (verbose) printf("texture windy not supported well");
-    } break;
-    case pbrt_texture::type_t::wrinkled: {
-      // auto& uv   = get<pbrt_texture::wrinkled_t>(ptexture);
-      texture.ldr.resize({1, 1});
-      texture.ldr[{0, 0}] = {255, 0, 0, 255};
-      if (verbose) printf("texture wrinkled not supported well");
-    } break;
+    }
+    if (verbose) printf("texture scale not supported well");
+  } else if (type == "uv") {
+    texture.ldr.resize({1, 1});
+    texture.ldr[{0, 0}] = {255, 0, 0, 255};
+    if (verbose) printf("texture uv not supported well");
+  } else if (type == "windy") {
+    texture.ldr.resize({1, 1});
+    texture.ldr[{0, 0}] = {255, 0, 0, 255};
+    if (verbose) printf("texture windy not supported well");
+  } else if (type == "wrinkled") {
+    texture.ldr.resize({1, 1});
+    texture.ldr[{0, 0}] = {255, 0, 0, 255};
+    if (verbose) printf("texture wrinkled not supported well");
+  } else {
+    throw std::runtime_error("unsupported texture type " + type);
   }
   scene.textures.push_back(texture);
   tmap[name]  = (int)scene.textures.size() - 1;
-  timap[name] = ptexture.type == pbrt_texture::type_t::imagemap;
-#endif
+  timap[name] = type == "imagemap";
 }
 
 static void add_pbrt_material(yocto_scene& scnee, const string& type,
