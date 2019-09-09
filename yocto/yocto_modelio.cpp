@@ -2665,24 +2665,26 @@ static inline void skip_pbrt_param(string_view& str) {
   }
 }
 
-static inline void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
+static inline void parse_pbrt_params(
+    string_view& str, vector<pbrt_value>& values) {
   auto parse_pbrt_pvalues = [](string_view& str, auto& value, auto& values) {
     values.clear();
     skip_whitespace(str);
-    if(str.empty()) throw std::runtime_error("bad pbrt value");
-    if(str.front() == '[') { 
-      str.remove_prefix(1); skip_whitespace(str);
-      if(str.empty()) throw std::runtime_error("bad pbrt value");
-      while(!str.empty()) {
+    if (str.empty()) throw std::runtime_error("bad pbrt value");
+    if (str.front() == '[') {
+      str.remove_prefix(1);
+      skip_whitespace(str);
+      if (str.empty()) throw std::runtime_error("bad pbrt value");
+      while (!str.empty()) {
         auto& val = values.empty() ? value : values.emplace_back();
         parse_pbrt_value(str, val);
         skip_whitespace(str);
-        if(str.empty()) break;
-        if(str.front() == ']') break;
-        if(values.empty()) values.push_back(value);
+        if (str.empty()) break;
+        if (str.front() == ']') break;
+        if (values.empty()) values.push_back(value);
       }
-      if(str.empty()) throw std::runtime_error("bad pbrt value");
-      if(str.front() != ']') throw std::runtime_error("bad pbrt value");
+      if (str.empty()) throw std::runtime_error("bad pbrt value");
+      if (str.front() != ']') throw std::runtime_error("bad pbrt value");
       str.remove_prefix(1);
     } else {
       parse_pbrt_value(str, value);
@@ -2691,60 +2693,63 @@ static inline void parse_pbrt_params(string_view& str, vector<pbrt_value>& value
 
   values.clear();
   skip_whitespace(str);
-  while(!str.empty()) {
+  while (!str.empty()) {
     auto& value = values.emplace_back();
-  auto type = ""s;
-  parse_pbrt_nametype(str, value.name, type);
-  skip_whitespace(str);
-  if(str.empty()) throw std::runtime_error("expected value");
-  if(type == "float") {
-    value.type = pbrt_value_type::real;
-    parse_pbrt_pvalues(str, value.value1f, value.vector1f);
-  } else if(type == "integer") {
-    value.type = pbrt_value_type::integer;
-    parse_pbrt_pvalues(str, value.value1i, value.vector1i);
-  } else if(type == "string") {
-    auto vector1s = vector<string>{};
-    value.type = pbrt_value_type::string;
-    parse_pbrt_pvalues(str, value.value1s, vector1s);
-    if(!vector1s.empty()) throw std::runtime_error("do not support pbrt string array");
-  } else if(type == "texture") {
-    auto vector1s = vector<string>{};
-    value.type = pbrt_value_type::texture;
-    parse_pbrt_pvalues(str, value.value1s, vector1s);
-    if(!vector1s.empty()) throw std::runtime_error("do not support pbrt string array");
-  } else if(type == "point" || type == "point3") {
-    value.type = pbrt_value_type::point;
-    parse_pbrt_pvalues(str, value.value3f, value.vector3f);
-  } else if(type == "normal" || type == "normal3") {
-    value.type = pbrt_value_type::normal;
-    parse_pbrt_pvalues(str, value.value3f, value.vector3f);
-  } else if(type == "vector" || type == "vector3") {
-    value.type = pbrt_value_type::vector;
-    parse_pbrt_pvalues(str, value.value3f, value.vector3f);
-  } else if(type == "point2") {
-    value.type = pbrt_value_type::point2;
-    parse_pbrt_pvalues(str, value.value2f, value.vector2f);
-  } else if(type == "vector2") {
-    value.type = pbrt_value_type::vector2;
-    parse_pbrt_pvalues(str, value.value2f, value.vector2f);
-  } else if(type == "blackbody") {
-    // TODO: blackbody conversion
-    value.type = pbrt_value_type::color;
-    parse_pbrt_pvalues(str, value.value2f, value.vector2f);
-    if(!value.vector2f.empty()) throw std::runtime_error("bad pbrt " + type + " property");
-    throw std::runtime_error("blackbody conversion");
-  } else if(type == "color" || type == "rgb") {
-    value.type = pbrt_value_type::color;
-    parse_pbrt_pvalues(str, value.value3f, value.vector3f);
-  } else if(type == "xyz") {
-    // TODO: xyz conversion
-    value.type = pbrt_value_type::color;
-    parse_pbrt_pvalues(str, value.value3f, value.vector3f);
-    throw std::runtime_error("xyz conversion");
-  } else {
-    throw std::runtime_error("unknown pbrt type");
-  }
+    auto  type  = ""s;
+    parse_pbrt_nametype(str, value.name, type);
+    skip_whitespace(str);
+    if (str.empty()) throw std::runtime_error("expected value");
+    if (type == "float") {
+      value.type = pbrt_value_type::real;
+      parse_pbrt_pvalues(str, value.value1f, value.vector1f);
+    } else if (type == "integer") {
+      value.type = pbrt_value_type::integer;
+      parse_pbrt_pvalues(str, value.value1i, value.vector1i);
+    } else if (type == "string") {
+      auto vector1s = vector<string>{};
+      value.type    = pbrt_value_type::string;
+      parse_pbrt_pvalues(str, value.value1s, vector1s);
+      if (!vector1s.empty())
+        throw std::runtime_error("do not support pbrt string array");
+    } else if (type == "texture") {
+      auto vector1s = vector<string>{};
+      value.type    = pbrt_value_type::texture;
+      parse_pbrt_pvalues(str, value.value1s, vector1s);
+      if (!vector1s.empty())
+        throw std::runtime_error("do not support pbrt string array");
+    } else if (type == "point" || type == "point3") {
+      value.type = pbrt_value_type::point;
+      parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+    } else if (type == "normal" || type == "normal3") {
+      value.type = pbrt_value_type::normal;
+      parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+    } else if (type == "vector" || type == "vector3") {
+      value.type = pbrt_value_type::vector;
+      parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+    } else if (type == "point2") {
+      value.type = pbrt_value_type::point2;
+      parse_pbrt_pvalues(str, value.value2f, value.vector2f);
+    } else if (type == "vector2") {
+      value.type = pbrt_value_type::vector2;
+      parse_pbrt_pvalues(str, value.value2f, value.vector2f);
+    } else if (type == "blackbody") {
+      // TODO: blackbody conversion
+      value.type = pbrt_value_type::color;
+      parse_pbrt_pvalues(str, value.value2f, value.vector2f);
+      if (!value.vector2f.empty())
+        throw std::runtime_error("bad pbrt " + type + " property");
+      throw std::runtime_error("blackbody conversion");
+    } else if (type == "color" || type == "rgb") {
+      value.type = pbrt_value_type::color;
+      parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+    } else if (type == "xyz") {
+      // TODO: xyz conversion
+      value.type = pbrt_value_type::color;
+      parse_pbrt_pvalues(str, value.value3f, value.vector3f);
+      throw std::runtime_error("xyz conversion");
+    } else {
+      throw std::runtime_error("unknown pbrt type");
+    }
     skip_whitespace(str);
   }
 }
@@ -2767,8 +2772,8 @@ static inline void parse_pbrt_typeparam(string_view& str, string& value) {
 }
 
 // Read pbrt commands
-bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name, 
-  string& type, frame3f& xform, vector<pbrt_value>& values, string& line) {
+bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
+    string& type, frame3f& xform, vector<pbrt_value>& values, string& line) {
   // parse command by command
   while (read_pbrt_cmdline(fs, line)) {
     auto str = string_view{line};
@@ -2811,31 +2816,31 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;
       parse_pbrt_param(str, xf);
-      xform = frame3f{xf};
+      xform   = frame3f{xf};
       command = pbrt_command_::set_transform;
       return true;
     } else if (cmd == "ConcatTransform") {
       auto xf = identity4x4f;
       parse_pbrt_param(str, xf);
-      xform = frame3f{xf};
+      xform   = frame3f{xf};
       command = pbrt_command_::concat_transform;
       return true;
     } else if (cmd == "Scale") {
       auto v = zero3f;
       parse_pbrt_param(str, v);
-      xform = scaling_frame(v);
+      xform   = scaling_frame(v);
       command = pbrt_command_::concat_transform;
       return true;
     } else if (cmd == "Translate") {
       auto v = zero3f;
       parse_pbrt_param(str, v);
-      xform = translation_frame(v);
+      xform   = translation_frame(v);
       command = pbrt_command_::concat_transform;
       return true;
     } else if (cmd == "Rotate") {
       auto v = zero4f;
       parse_pbrt_param(str, v);
-      xform = rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x));
+      xform   = rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x));
       command = pbrt_command_::concat_transform;
       return true;
     } else if (cmd == "LookAt") {
@@ -2843,11 +2848,11 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
       parse_pbrt_param(str, from);
       parse_pbrt_param(str, to);
       parse_pbrt_param(str, up);
-      xform = {from, to, up, zero3f};
+      xform   = {from, to, up, zero3f};
       command = pbrt_command_::lookat_transform;
       return true;
     } else if (cmd == "ReverseOrientation") {
-      command              = pbrt_command_::reverse_orientation;
+      command = pbrt_command_::reverse_orientation;
       return true;
     } else if (cmd == "CoordinateSystem") {
       parse_pbrt_value(str, name);
@@ -2918,7 +2923,7 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
     } else if (cmd == "AreaLightSource") {
       parse_pbrt_value(str, type);
       parse_pbrt_params(str, values);
-      command                = pbrt_command_::arealight;
+      command = pbrt_command_::arealight;
       return true;
     } else if (cmd == "LightSource") {
       parse_pbrt_value(str, type);
@@ -2935,8 +2940,8 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
       auto interior = ""s, exterior = ""s;
       parse_pbrt_value(str, interior);
       parse_pbrt_value(str, exterior);
-      name                         = interior + "####" + exterior;
-      command                      = pbrt_command_::medium_interface;
+      name    = interior + "####" + exterior;
+      command = pbrt_command_::medium_interface;
       return true;
     } else if (cmd == "Include") {
       parse_pbrt_value(str, name);
@@ -2948,10 +2953,11 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
   }
   return false;
 }
-bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name, 
-  string& type, frame3f& xform, vector<pbrt_value>& values) {
+bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
+    string& type, frame3f& xform, vector<pbrt_value>& values) {
   auto command_buffer = ""s;
-  return read_pbrt_command(fs, command, name, type, xform, values, command_buffer);
+  return read_pbrt_command(
+      fs, command, name, type, xform, values, command_buffer);
 }
 
 // Write obj elements
@@ -3018,7 +3024,7 @@ void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
 }
 
 void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
-    const string& name, const string& type, const frame3f& xform, 
+    const string& name, const string& type, const frame3f& xform,
     const vector<pbrt_value>& values, bool texture_float) {
   switch (command) {
     case pbrt_command_::world_begin: checked_fprintf(fs, "WorldBegin\n"); break;
@@ -3105,17 +3111,15 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
       break;
     case pbrt_command_::set_transform:
       checked_fprintf(fs,
-          "Transform %g %g %g 0 %g %g %g 0 %g %g %g 0 %g %g %g 1\n",
-          xform.x.x, xform.x.y, xform.x.z, xform.y.x, xform.y.y,
-          xform.y.z, xform.z.x, xform.z.y, xform.z.z,
-          xform.o.x, xform.o.y, xform.o.z);
+          "Transform %g %g %g 0 %g %g %g 0 %g %g %g 0 %g %g %g 1\n", xform.x.x,
+          xform.x.y, xform.x.z, xform.y.x, xform.y.y, xform.y.z, xform.z.x,
+          xform.z.y, xform.z.z, xform.o.x, xform.o.y, xform.o.z);
       break;
     case pbrt_command_::concat_transform:
       checked_fprintf(fs,
           "ConcatTransform %g %g %g 0 %g %g %g 0 %g %g %g 0 %g %g %g 1\n",
-          xform.x.x, xform.x.y, xform.x.z, xform.y.x, xform.y.y,
-          xform.y.z, xform.z.x, xform.z.y, xform.z.z, 
-          xform.o.x, xform.o.y, xform.o.z);
+          xform.x.x, xform.x.y, xform.x.z, xform.y.x, xform.y.y, xform.y.z,
+          xform.z.x, xform.z.y, xform.z.z, xform.o.x, xform.o.y, xform.o.z);
       break;
     case pbrt_command_::lookat_transform:
       checked_fprintf(fs, "LookAt %g %g %g %g %g %g %g %g %g\n", xform.x.x,
@@ -3128,19 +3132,26 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
     case pbrt_command_::medium_interface: {
       auto interior = ""s, exterior = ""s;
       auto found = false;
-      for(auto c : name) {
-        if(c == '#') { found = true; continue; }
-        if(found) exterior.push_back(c); else interior.push_back(c);
+      for (auto c : name) {
+        if (c == '#') {
+          found = true;
+          continue;
+        }
+        if (found)
+          exterior.push_back(c);
+        else
+          interior.push_back(c);
       }
-      checked_fprintf(fs, "MediumInterface \"%s\" \"%s\"\n", interior.c_str(), exterior.c_str());
+      checked_fprintf(fs, "MediumInterface \"%s\" \"%s\"\n", interior.c_str(),
+          exterior.c_str());
     } break;
-    case pbrt_command_::active_transform: 
+    case pbrt_command_::active_transform:
       checked_fprintf(fs, "ActiveTransform \"%s\"\n", name.c_str());
       break;
-    case pbrt_command_::coordinate_system_set: 
+    case pbrt_command_::coordinate_system_set:
       checked_fprintf(fs, "CoordinateSystem \"%s\"\n", name.c_str());
       break;
-    case pbrt_command_::coordinate_system_transform: 
+    case pbrt_command_::coordinate_system_transform:
       checked_fprintf(fs, "CoordinateSysTransform \"%s\"\n", name.c_str());
       break;
   }
@@ -3151,51 +3162,198 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
   return write_pbrt_command(fs, command, name, "", xform, {});
 }
 void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
-    const string& name, const string& type, 
-    const vector<pbrt_value>& values, bool texture_as_float) {
-  return write_pbrt_command(fs, command, name, type, identity3x4f, values, texture_as_float);
+    const string& name, const string& type, const vector<pbrt_value>& values,
+    bool texture_as_float) {
+  return write_pbrt_command(
+      fs, command, name, type, identity3x4f, values, texture_as_float);
+}
+
+// get pbrt value
+void get_pbrt_value(const pbrt_value& pbrt, string& value) {
+  if (pbrt.type == pbrt_value_type::string) {
+    value = pbrt.value1s;
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, bool& value) {
+  if (pbrt.type == pbrt_value_type::boolean) {
+    value = pbrt.value1b;
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, int& value) {
+  if (pbrt.type == pbrt_value_type::integer) {
+    value = pbrt.value1i;
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, float& value) {
+  if (pbrt.type == pbrt_value_type::real) {
+    value = pbrt.value1f;
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, vec2f& value) {
+  if (pbrt.type == pbrt_value_type::point2 ||
+      pbrt.type == pbrt_value_type::vector2) {
+    value = pbrt.value2f;
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, vec3f& value) {
+  if (pbrt.type == pbrt_value_type::point ||
+      pbrt.type == pbrt_value_type::vector ||
+      pbrt.type == pbrt_value_type::normal ||
+      pbrt.type == pbrt_value_type::color) {
+    value = pbrt.value3f;
+  } else if (pbrt.type == pbrt_value_type::real) {
+    value = vec3f{pbrt.value1f};
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, vector<float>& value) {
+  if (pbrt.type == pbrt_value_type::real) {
+    if (!pbrt.vector1f.empty()) {
+      value = pbrt.vector1f;
+    } else {
+      value = {pbrt.value1f};
+    }
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& value) {
+  if (pbrt.type == pbrt_value_type::point2 ||
+      pbrt.type == pbrt_value_type::vector2) {
+    if (!pbrt.vector2f.empty()) {
+      value = pbrt.vector2f;
+    } else {
+      value = {pbrt.value2f};
+    }
+  } else if (pbrt.type == pbrt_value_type::real) {
+    if(pbrt.vector1f.empty() || pbrt.vector1f.size() % 2)
+      throw std::runtime_error("bad pbrt type");
+    value.resize(pbrt.vector1f.size()/2);
+    for(auto i = 0; i < value.size(); i ++)
+      value[i] = {pbrt.vector1f[i*2+0], pbrt.vector1f[i*2+1]};
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& value) {
+  if (pbrt.type == pbrt_value_type::point ||
+      pbrt.type == pbrt_value_type::vector ||
+      pbrt.type == pbrt_value_type::normal ||
+      pbrt.type == pbrt_value_type::color) {
+    if (!pbrt.vector3f.empty()) {
+      value = pbrt.vector3f;
+    } else {
+      value = {pbrt.value3f};
+    }
+  } else if (pbrt.type == pbrt_value_type::real) {
+    if(pbrt.vector1f.empty() || pbrt.vector1f.size() % 3)
+      throw std::runtime_error("bad pbrt type");
+    value.resize(pbrt.vector1f.size()/3);
+    for(auto i = 0; i < value.size(); i ++)
+      value[i] = {pbrt.vector1f[i*3+0], pbrt.vector1f[i*3+1], pbrt.vector1f[i*3+2]};
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+
+void get_pbrt_value(const pbrt_value& pbrt, vector<int>& value) {
+    if (pbrt.type == pbrt_value_type::integer) {
+    if (!pbrt.vector1i.empty()) {
+      value = pbrt.vector1i;
+    } else {
+      value = {pbrt.vector1i};
+    }
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value) {
+  if (pbrt.type == pbrt_value_type::integer) {
+    if(pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
+      throw std::runtime_error("bad pbrt type");
+    value.resize(pbrt.vector1i.size()/3);
+    for(auto i = 0; i < value.size(); i ++)
+      value[i] = {pbrt.vector1i[i*3+0], pbrt.vector1i[i*3+1], pbrt.vector1i[i*3+2]};
+  } else {
+    throw std::runtime_error("bad pbrt type");
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value) {
+  if (pbrt.type == pbrt_value_type::string) {
+    value.first = 0;
+    get_pbrt_value(pbrt, value.second);
+  } else {
+    get_pbrt_value(pbrt, value.first);
+    value.second = "";
+  }
+}
+void get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value) {
+  if (pbrt.type == pbrt_value_type::string) {
+    value.first = zero3f;
+    get_pbrt_value(pbrt, value.second);
+  } else {
+    get_pbrt_value(pbrt, value.first);
+    value.second = "";
+  }
 }
 
 // pbrt value construction
-pbrt_value make_pbrt_value(const string& name, const string& value, pbrt_value_type type) {
-  auto pbrt = pbrt_value{};
-  pbrt.name = name;
-  pbrt.type = type;
+pbrt_value make_pbrt_value(
+    const string& name, const string& value, pbrt_value_type type) {
+  auto pbrt    = pbrt_value{};
+  pbrt.name    = name;
+  pbrt.type    = type;
   pbrt.value1s = value;
   return pbrt;
 }
-pbrt_value make_pbrt_value(const string& name, bool value, pbrt_value_type type) {
-  auto pbrt = pbrt_value{};
-  pbrt.name = name;
-  pbrt.type = type;
+pbrt_value make_pbrt_value(
+    const string& name, bool value, pbrt_value_type type) {
+  auto pbrt    = pbrt_value{};
+  pbrt.name    = name;
+  pbrt.type    = type;
   pbrt.value1b = value;
   return pbrt;
 }
-pbrt_value make_pbrt_value(const string& name, int value, pbrt_value_type type) {
-  auto pbrt = pbrt_value{};
-  pbrt.name = name;
-  pbrt.type = type;
+pbrt_value make_pbrt_value(
+    const string& name, int value, pbrt_value_type type) {
+  auto pbrt    = pbrt_value{};
+  pbrt.name    = name;
+  pbrt.type    = type;
   pbrt.value1b = value;
   return pbrt;
 }
-pbrt_value make_pbrt_value(const string& name, float value, pbrt_value_type type) {
-  auto pbrt = pbrt_value{};
-  pbrt.name = name;
-  pbrt.type = type;
+pbrt_value make_pbrt_value(
+    const string& name, float value, pbrt_value_type type) {
+  auto pbrt    = pbrt_value{};
+  pbrt.name    = name;
+  pbrt.type    = type;
   pbrt.value1f = value;
   return pbrt;
 }
-pbrt_value make_pbrt_value(const string& name, const vec2f& value, pbrt_value_type type) {
-  auto pbrt = pbrt_value{};
-  pbrt.name = name;
-  pbrt.type = type;
+pbrt_value make_pbrt_value(
+    const string& name, const vec2f& value, pbrt_value_type type) {
+  auto pbrt    = pbrt_value{};
+  pbrt.name    = name;
+  pbrt.type    = type;
   pbrt.value2f = value;
   return pbrt;
 }
-pbrt_value make_pbrt_value(const string& name, const vec3f& value, pbrt_value_type type) {
-  auto pbrt = pbrt_value{};
-  pbrt.name = name;
-  pbrt.type = type;
+pbrt_value make_pbrt_value(
+    const string& name, const vec3f& value, pbrt_value_type type) {
+  auto pbrt    = pbrt_value{};
+  pbrt.name    = name;
+  pbrt.type    = type;
   pbrt.value3f = value;
   return pbrt;
 }
