@@ -3212,7 +3212,6 @@ static void add_pbrt_material(yocto_scene& scnee, const string& type,
     const string& name, unordered_map<string, yocto_material>& mmap,
     const unordered_map<string, int>&   tmap,
     const unordered_map<string, vec3f>& ctmap, bool verbose = false) {
-#if 0
   auto is_constant_texture = [&](const string& name) -> bool {
     return ctmap.find(name) != ctmap.end();
   };
@@ -3220,45 +3219,66 @@ static void add_pbrt_material(yocto_scene& scnee, const string& type,
     return ctmap.at(name);
   };
 
-  auto get_scaled_texture = [&](const pbrt_textured3f& textured, vec3f& color,
-                                int& texture) {
-    if (textured.texture == "") {
-      color   = {textured.value.x, textured.value.y, textured.value.z};
+  auto get_scaled_texture = [&](const vector<pbrt_value>& values,
+                                const string& name, vec3f& color, int& texture,
+                                vec3f def) {
+    auto textured = get_pbrt_value(values, name, pair{def, ""s});
+    if (textured.second == "") {
+      color   = textured.first;
       texture = -1;
-    } else if (is_constant_texture(textured.texture)) {
-      color   = get_constant_texture_color(textured.texture);
+    } else if (is_constant_texture(textured.second)) {
+      color   = get_constant_texture_color(textured.second);
       texture = -1;
     } else {
       color   = {1, 1, 1};
-      texture = tmap.at(textured.texture);
+      texture = tmap.at(textured.second);
     }
   };
 
-  auto get_scaled_texturef = [&](const pbrt_textured3f& textured, float& factor,
-                                 vec3f& color, int& texture) {
-    if (textured.texture == "") {
-      color  = {textured.value.x, textured.value.y, textured.value.z};
+  auto get_scaled_texturef = [&](const vector<pbrt_value>& values,
+                                 const string& name, float& factor,
+                                 vec3f& color, int& texture, float def) {
+    auto textured = get_pbrt_value(values, name, pair{vec3f{def}, ""s});
+    if (textured.second == "") {
+      color  = textured.first;
       factor = color == zero3f ? 0 : 1;
       if (!factor) color = {1, 1, 1};
       texture = -1;
-    } else if (is_constant_texture(textured.texture)) {
-      color  = get_constant_texture_color(textured.texture);
+    } else if (is_constant_texture(textured.second)) {
+      color  = get_constant_texture_color(textured.second);
       factor = color == zero3f ? 0 : 1;
       if (!factor) color = {1, 1, 1};
       texture = -1;
     } else {
       color   = {1, 1, 1};
       factor  = 1;
-      texture = tmap.at(textured.texture);
+      texture = tmap.at(textured.second);
     }
   };
 
-  auto get_pbrt_roughness = [&](float uroughness, float vroughness,
-                                bool remap) -> float {
+  auto get_pbrt_roughness = [&](const vector<pbrt_value>& values,
+                                float                     def = 0.1) -> float {
+    auto roughness_     = get_pbrt_value(values, "roughness", def);
+    auto uroughness     = get_pbrt_value(values, "uroughness", roughness_);
+    auto vroughness     = get_pbrt_value(values, "vroughness", roughness_);
+    auto remaproughness = get_pbrt_value(values, "remaproughness", true);
+
     if (uroughness == 0 && vroughness == 0) return 0;
     auto roughness = (uroughness + vroughness) / 2;
     // from pbrt code
-    if (remap) {
+    if (remaproughness) {
+      roughness = max(roughness, 1e-3f);
+      auto x    = log(roughness);
+      roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
+                  0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
+    }
+    return sqrt(roughness);
+  };
+
+  auto get_pbrt_roughnessf = [&](float roughness, bool remaproughness = true) -> float {
+    if (roughness == 0) return 0;
+    // from pbrt code
+    if (remaproughness) {
       roughness = max(roughness, 1e-3f);
       auto x    = log(roughness);
       roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
@@ -3269,159 +3289,140 @@ static void add_pbrt_material(yocto_scene& scnee, const string& type,
 
   auto material = yocto_material{};
   material.uri  = name;
-  switch (pmaterial.type) {
-    case pbrt_material::type_t::uber: {
-      auto& uber = pmaterial.uber;
-      get_scaled_texture(uber.Kd, material.diffuse, material.diffuse_tex);
-      get_scaled_texture(uber.Ks, material.specular, material.specular_tex);
-      get_scaled_texture(
-          uber.Kt, material.transmission, material.transmission_tex);
-      float op_f = 1;
-      auto  op   = vec3f{0, 0, 0};
-      get_scaled_texturef(uber.opacity, op_f, op, material.opacity_tex);
-      material.opacity   = (op.x + op.y + op.z) / 3;
-      material.roughness = get_pbrt_roughness(
-          uber.uroughness.value, uber.vroughness.value, uber.remaproughness);
-    } break;
-    case pbrt_material::type_t::plastic: {
-      auto& plastic = pmaterial.plastic;
-      get_scaled_texture(plastic.Kd, material.diffuse, material.diffuse_tex);
-      get_scaled_texture(plastic.Ks, material.specular, material.specular_tex);
-      material.specular *= 0.04f;
-      material.roughness = get_pbrt_roughness(plastic.uroughness.value,
-          plastic.vroughness.value, plastic.remaproughness);
-    } break;
-    case pbrt_material::type_t::translucent: {
-      auto& translucent = pmaterial.translucent;
-      get_scaled_texture(
-          translucent.Kd, material.diffuse, material.diffuse_tex);
-      get_scaled_texture(
-          translucent.Ks, material.specular, material.specular_tex);
-      material.specular *= 0.04f;
-      material.roughness = get_pbrt_roughness(translucent.uroughness.value,
-          translucent.vroughness.value, translucent.remaproughness);
-    } break;
-    case pbrt_material::type_t::matte: {
-      auto& matte = pmaterial.matte;
-      get_scaled_texture(matte.Kd, material.diffuse, material.diffuse_tex);
-      material.roughness = 1;
-    } break;
-    case pbrt_material::type_t::mirror: {
-      auto& mirror = pmaterial.mirror;
-      get_scaled_texturef(
-          mirror.Kr, material.metallic, material.diffuse, material.diffuse_tex);
-      material.roughness = 0;
-    } break;
-    case pbrt_material::type_t::metal: {
-      auto& metal = pmaterial.metal;
-      float eta_f = 0, etak_f = 0;
-      auto  eta = zero3f, k = zero3f;
-      auto  eta_texture = -1, k_texture = -1;
-      get_scaled_texturef(metal.eta, eta_f, eta, eta_texture);
-      get_scaled_texturef(metal.k, etak_f, k, k_texture);
-      material.specular  = pbrt_fresnel_metal(1, eta, k);
-      material.roughness = get_pbrt_roughness(
-          metal.uroughness.value, metal.vroughness.value, metal.remaproughness);
-    } break;
-    case pbrt_material::type_t::substrate: {
-      auto& substrate = pmaterial.substrate;
-      get_scaled_texture(substrate.Kd, material.diffuse, material.diffuse_tex);
-      get_scaled_texture(
-          substrate.Ks, material.specular, material.specular_tex);
-      material.roughness = get_pbrt_roughness(substrate.uroughness.value,
-          substrate.vroughness.value, substrate.remaproughness);
-    } break;
-    case pbrt_material::type_t::glass: {
-      auto& glass = pmaterial.glass;
-      get_scaled_texture(glass.Kr, material.specular, material.specular_tex);
-      material.specular *= 0.04f;
-      get_scaled_texture(
-          glass.Kt, material.transmission, material.transmission_tex);
-      material.roughness = get_pbrt_roughness(
-          glass.uroughness.value, glass.vroughness.value, glass.remaproughness);
-    } break;
-    case pbrt_material::type_t::hair: {
-      auto& hair = pmaterial.hair;
-      get_scaled_texture(hair.color, material.diffuse, material.diffuse_tex);
-      material.roughness = 1;
-      if (verbose) printf("hair material not properly supported\n");
-    } break;
-    case pbrt_material::type_t::disney: {
-      auto& disney = pmaterial.disney;
-      get_scaled_texture(disney.color, material.diffuse, material.diffuse_tex);
-      material.roughness = 1;
-      if (verbose) printf("disney material not properly supported\n");
-    } break;
-    case pbrt_material::type_t::kdsubsurface: {
-      auto& kdsubsurface = pmaterial.kdsubsurface;
-      get_scaled_texture(
-          kdsubsurface.Kd, material.diffuse, material.diffuse_tex);
-      get_scaled_texture(
-          kdsubsurface.Kr, material.specular, material.specular_tex);
-      material.specular *= 0.04f;
-      material.roughness = get_pbrt_roughness(kdsubsurface.uroughness.value,
-          kdsubsurface.vroughness.value, kdsubsurface.remaproughness);
-      if (verbose) printf("kdsubsurface material not properly supported\n");
-    } break;
-    case pbrt_material::type_t::subsurface: {
-      auto& subsurface = pmaterial.subsurface;
-      get_scaled_texture(
-          subsurface.Kr, material.specular, material.specular_tex);
-      material.specular *= 0.04f;
-      get_scaled_texture(
-          subsurface.Kt, material.transmission, material.transmission_tex);
-      material.roughness = get_pbrt_roughness(subsurface.uroughness.value,
-          subsurface.vroughness.value, subsurface.remaproughness);
-      material.volscale  = 1 / subsurface.scale;
-      auto sigma_a = zero3f, sigma_s = zero3f;
-      auto sigma_a_tex = -1, sigma_s_tex = -1;
-      get_scaled_texture(subsurface.sigma_a, sigma_a, sigma_a_tex);
-      get_scaled_texture(subsurface.sigma_prime_s, sigma_s, sigma_s_tex);
-      material.volmeanfreepath = 1 / (sigma_a + sigma_s);
-      material.volscatter      = sigma_s / (sigma_a + sigma_s);
-      if (verbose) printf("subsurface material not properly supported\n");
-    } break;
-    case pbrt_material::type_t::mix: {
-      auto& mix     = pmaterial.mix;
-      auto  matname = (!mix.namedmaterial1.empty()) ? mix.namedmaterial1
-                                                   : mix.namedmaterial2;
-      material = mmap.at(matname);
-      if (verbose) printf("mix material not properly supported\n");
-    } break;
-    case pbrt_material::type_t::fourier: {
-      auto& fourier = pmaterial.fourier;
-      if (fourier.approx_type ==
-          pbrt_material::fourier_t::approx_type_t::plastic) {
-        auto& plastic = fourier.approx_plastic;
-        get_scaled_texture(plastic.Kd, material.diffuse, material.diffuse_tex);
-        get_scaled_texture(
-            plastic.Ks, material.specular, material.specular_tex);
-        material.specular *= 0.04f;
-        material.roughness = get_pbrt_roughness(plastic.uroughness.value,
-            plastic.vroughness.value, plastic.remaproughness);
-      } else if (fourier.approx_type ==
-                 pbrt_material::fourier_t::approx_type_t::metal) {
-        auto& metal = fourier.approx_metal;
-        float eta_f = 0, etak_f = 0;
-        auto  eta = zero3f, k = zero3f;
-        auto  eta_texture = -1, k_texture = -1;
-        get_scaled_texturef(metal.eta, eta_f, eta, eta_texture);
-        get_scaled_texturef(metal.k, etak_f, k, k_texture);
-        material.specular  = pbrt_fresnel_metal(1, eta, k);
-        material.roughness = get_pbrt_roughness(metal.uroughness.value,
-            metal.vroughness.value, metal.remaproughness);
-      } else if (fourier.approx_type ==
-                 pbrt_material::fourier_t::approx_type_t::glass) {
-        auto& glass = fourier.approx_glass;
-        get_scaled_texture(glass.Kr, material.specular, material.specular_tex);
-        material.specular *= 0.04f;
-        get_scaled_texture(
-            glass.Kt, material.transmission, material.transmission_tex);
-      }
-    } break;
+  if (type == "uber") {
+    get_scaled_texture(
+        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.25});
+    get_scaled_texture(
+        values, "Ks", material.specular, material.specular_tex, vec3f{0.25});
+    get_scaled_texture(values, "Kt", material.transmission,
+        material.transmission_tex, vec3f{0});
+    float op_f = 1;
+    auto  op   = vec3f{0, 0, 0};
+    get_scaled_texturef(values, "opacity", op_f, op, material.opacity_tex, 1);
+    material.opacity   = (op.x + op.y + op.z) / 3;
+    material.roughness = get_pbrt_roughness(values, 0.1f);
+  } else if (type == "plastic") {
+    get_scaled_texture(
+        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.25});
+    get_scaled_texture(
+        values, "Ks", material.specular, material.specular_tex, vec3f{0.25});
+    material.specular *= 0.04f;
+    material.roughness = get_pbrt_roughness(values, 0.1);
+  } else if (type == "translucent") {
+    get_scaled_texture(
+        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.25});
+    get_scaled_texture(
+        values, "Ks", material.specular, material.specular_tex, vec3f{0.25});
+    material.specular *= 0.04f;
+    material.roughness = get_pbrt_roughness(values, 0.1);
+  } else if (type == "matte") {
+    get_scaled_texture(
+        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.5});
+    material.roughness = 1;
+  } else if (type == "mirror") {
+    get_scaled_texture(
+        values, "Kr", material.specular, material.specular_tex, vec3f{0.9});
+    material.roughness = 0;
+  } else if (type == "metal") {
+    auto eta = zero3f, k = zero3f;
+    auto eta_texture = -1, k_texture = -1;
+    get_scaled_texture(values, "eta", eta, eta_texture,
+        vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
+    get_scaled_texture(values, "k", k, k_texture,
+        vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
+    material.specular  = pbrt_fresnel_metal(1, eta, k);
+    material.roughness = get_pbrt_roughness(values, 0.01);
+  } else if (type == "substrate") {
+    get_scaled_texture(
+        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.5});
+    get_scaled_texture(
+        values, "Ks", material.specular, material.specular_tex, vec3f{0.5});
+    material.roughness = get_pbrt_roughness(values, 0.1);
+  } else if (type == "glass") {
+    get_scaled_texture(
+        values, "Kr", material.specular, material.specular_tex, vec3f{1});
+    material.specular *= 0.04f;
+    get_scaled_texture(values, "Kt", material.transmission,
+        material.transmission_tex, vec3f{1});
+    material.roughness = get_pbrt_roughness(values, 0);
+  } else if (type == "hair") {
+    get_scaled_texture(
+        values, "color", material.diffuse, material.diffuse_tex, vec3f{0});
+    material.roughness = 1;
+    if (verbose) printf("hair material not properly supported\n");
+  } else if (type == "disney") {
+    get_scaled_texture(
+        values, "color", material.diffuse, material.diffuse_tex, vec3f{0.5});
+    material.roughness = 1;
+    if (verbose) printf("disney material not properly supported\n");
+  } else if (type == "kdsubsurface") {
+    get_scaled_texture(
+        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.5});
+    get_scaled_texture(
+        values, "Kr", material.specular, material.specular_tex, vec3f{1});
+    material.specular *= 0.04f;
+    material.roughness = get_pbrt_roughness(values, 0);
+    if (verbose) printf("kdsubsurface material not properly supported\n");
+  } else if (type == "subsurface") {
+    get_scaled_texture(
+        values, "Kr", material.specular, material.specular_tex, vec3f{1});
+    material.specular *= 0.04f;
+    get_scaled_texture(values, "Kt", material.transmission,
+        material.transmission_tex, vec3f{1});
+    material.roughness = get_pbrt_roughness(values, 0);
+    auto scale         = get_pbrt_value(values, "scale", 1.0f);
+    material.volscale  = 1 / scale;
+    auto sigma_a = zero3f, sigma_s = zero3f;
+    auto sigma_a_tex = -1, sigma_s_tex = -1;
+    get_scaled_texture(
+        values, "sigma_a", sigma_a, sigma_a_tex, vec3f{0011, .0024, .014});
+    get_scaled_texture(
+        values, "sigma_prime_s", sigma_s, sigma_s_tex, vec3f{2.55, 3.12, 3.77});
+    material.volmeanfreepath = 1 / (sigma_a + sigma_s);
+    material.volscatter      = sigma_s / (sigma_a + sigma_s);
+    if (verbose) printf("subsurface material not properly supported\n");
+  } else if (type == "mix") {
+    auto namedmaterial1         = get_pbrt_value(values, "namedmaterial1", ""s);
+    auto namedmaterial2         = get_pbrt_value(values, "namedmaterial2", ""s);
+    auto matname = (!namedmaterial1.empty()) ? namedmaterial1
+                                                 : namedmaterial2;
+    material = mmap.at(matname);
+    if (verbose) printf("mix material not properly supported\n");
+  } else if (type == "fourier") {
+    auto bsdffile = get_pbrt_value(values, "bsdffile", ""s);
+    if (bsdffile == "paint.bsdf") {
+      material.diffuse          = {0.6f, 0.6f, 0.6f};
+      material.specular = {0.4f, 0.4f, 0.4f};
+      material.roughness = get_pbrt_roughnessf(0.2f, true);
+    } else if (bsdffile == "ceramic.bsdf") {
+      material.diffuse          = {0.6f, 0.6f, 0.6f};
+      material.specular = {0.4f, 0.4f, 0.4f};
+      material.roughness = get_pbrt_roughnessf(0.25, true);
+    } else if (bsdffile == "leather.bsdf") {
+      material.diffuse          = {0.6f, 0.57f, 0.48f};
+      material.specular = {0.4f, 0.4f, 0.4f};
+      material.roughness = get_pbrt_roughnessf(0.3, true);
+    } else if (bsdffile == "coated_copper.bsdf") {
+      auto eta = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
+      auto etak = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
+      material.specular   = pbrt_fresnel_metal(1, eta, etak);
+      material.roughness = get_pbrt_roughnessf(0.01, true);
+    } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
+      material.specular = {0.04, 0.04, 0.04};
+      material.transmission = {1, 1, 1};
+      material.roughness = get_pbrt_roughnessf(0.2, true);
+    } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
+      auto eta = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
+      auto etak = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
+      material.specular   = pbrt_fresnel_metal(1, eta, etak);
+      material.roughness = get_pbrt_roughnessf(0.2, true);
+    } else {
+      throw std::runtime_error("unsupported bsdffile " + bsdffile);
+    }
+  } else {
+    throw std::runtime_error("unsupported material type" + type);
   }
   mmap[name] = material;
-#endif
 }
 
 static void add_pbrt_arealight(yocto_scene& scene, const string& type,
