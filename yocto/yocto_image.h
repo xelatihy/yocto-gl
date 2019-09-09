@@ -285,6 +285,10 @@ image<vec4b> resize(const image<vec4b>& img, const vec2i& size);
 void resize(image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
 void resize(image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
 
+// Compute the difference between two images
+image<vec4f> difference(const image<vec4f>& a, const image<vec4f>& b, bool disply_diff);
+void difference(image<vec4f>& diff, const image<vec4f>& a, const image<vec4f>& b, bool disply_diff);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

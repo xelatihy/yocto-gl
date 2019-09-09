@@ -790,6 +790,26 @@ void resize(
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
 
+void difference(image<vec4f>& diff, const image<vec4f>& a,
+    const image<vec4f>& b, bool display) {
+  if (a.size() != b.size())
+    throw std::invalid_argument("image haev different sizes");
+  diff.resize(a.size());
+  for (auto i = 0llu; i < diff.count(); i++) diff[i] = abs(a[i] - b[i]);
+  if (display) {
+    for (auto i = 0llu; i < diff.count(); i++) {
+      auto d = max(diff[i]);
+      diff[i]         = {d, d, d, 1};
+    }
+  }
+}
+image<vec4f> difference(const image<vec4f>& a,
+    const image<vec4f>& b, bool display) {
+  auto diff = image<vec4f>{a.size()};
+  difference(diff, a, b, display);
+  return diff;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

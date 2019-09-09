@@ -111,6 +111,9 @@ int main(int argc, char* argv[]) {
   auto range_sigma         = 0.0f;
   auto alpha_filename      = ""s;
   auto coloralpha_filename = ""s;
+  auto diff_filename       = ""s;
+  auto diff_signal         = false;
+  auto diff_threshold      = 0.0f;
   auto output              = "out.png"s;
   auto filename            = "img.hdr"s;
 
@@ -138,6 +141,9 @@ int main(int argc, char* argv[]) {
   parser.add_option("--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
   parser.add_flag("--logo", logo, "Add logo");
+  parser.add_option("--diff", diff_filename, "compute the diff between images");
+  parser.add_flag("--diff-signal", diff_signal, "signal a diff as error");
+  parser.add_option("--diff-threshold,", diff_threshold, "diff threshold");
   parser.add_option("--output,-o", output, "output image filename")
       ->required(true);
   parser.add_option("filename", filename, "input image filename")
@@ -192,6 +198,22 @@ int main(int argc, char* argv[]) {
         img[{i, j}].w = mean(xyz(alpha[{i, j}]));
   }
 
+  // diff
+  if (diff_filename != "") {
+    auto diff = image<vec4f>();
+    try {
+      load_image(diff_filename, diff);
+    } catch (const std::exception& e) {
+      printf("%s\n", e.what());
+      exit(1);
+    }
+    if (img.size() != diff.size()) {
+      printf("image sizes are different\n");
+      exit(1);
+    }
+    img = difference(img, diff, true);
+  }
+
   // resize
   if (resize_width != 0 || resize_height != 0) {
     auto res = image<vec4f>{};
@@ -219,6 +241,16 @@ int main(int argc, char* argv[]) {
   } catch (const std::exception& e) {
     printf("%s\n", e.what());
     exit(1);
+  }
+
+  // check diff
+  if (diff_filename != "" && diff_signal) {
+    for(auto& c : img) {
+      if(max(xyz(c)) > diff_threshold) {
+        printf("image content differs\n");
+        exit(1);
+      }
+    }
   }
 
   // done
