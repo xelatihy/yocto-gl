@@ -3073,22 +3073,22 @@ static void add_pbrt_shape(yocto_scene& scene, const string& type,
     shape.normals.resize(shape.positions.size());
     compute_normals(shape.normals, shape.triangles, shape.positions);
   } else if (type == "plymesh") {
-    shape.uri  = get_pbrt_value(values, "filename", ""s);
+    shape.uri = get_pbrt_value(values, "filename", ""s);
     load_shape(fs::path(filename).parent_path() / shape.uri, shape.points,
         shape.lines, shape.triangles, shape.quads, shape.quadspos,
         shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
         shape.texcoords, shape.colors, shape.radius, false);
   } else if (type == "sphere") {
-    auto radius = get_pbrt_value(values, "radius", 1.0f);
-    auto  params        = proc_shape_params{};
+    auto radius         = get_pbrt_value(values, "radius", 1.0f);
+    auto params         = proc_shape_params{};
     params.type         = proc_shape_params::type_t::uvsphere;
     params.subdivisions = 5;
     params.scale        = radius;
     make_proc_shape(shape.triangles, shape.quads, shape.positions,
         shape.normals, shape.texcoords, params);
   } else if (type == "disk") {
-    auto radius = get_pbrt_value(values, "radius", 1.0f);
-    auto  params        = proc_shape_params{};
+    auto radius         = get_pbrt_value(values, "radius", 1.0f);
+    auto params         = proc_shape_params{};
     params.type         = proc_shape_params::type_t::uvdisk;
     params.subdivisions = 4;
     params.scale        = radius;
@@ -3452,151 +3452,144 @@ static void add_pbrt_material(yocto_scene& scnee, const string& type,
 static void add_pbrt_arealight(yocto_scene& scene, const string& type,
     const vector<pbrt_value>& values, const pbrt_context_& ctx,
     const string& name, unordered_map<string, vec3f>& amap) {
-#if 0
   auto emission = zero3f;
-  switch (plight.type) {
-    case pbrt_arealight::type_t::diffuse: {
-      auto& diffuse = plight.diffuse;
-      emission      = (vec3f)diffuse.L * (vec3f)diffuse.scale;
-    } break;
-    case pbrt_arealight::type_t::none: {
-      throw std::runtime_error("should not have gotten here");
-    } break;
+  if (type == "diffuse") {
+    auto L     = get_pbrt_value(values, "L", vec3f{1, 1, 1});
+    auto scale = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
+    emission   = L * scale;
+  } else {
+    throw std::runtime_error("unsupported arealight type " + type);
   }
   amap[name] = emission;
-#endif
 }
 
 static void add_pbrt_light(yocto_scene& scene, const string& type,
     const vector<pbrt_value>& values, const pbrt_context_& ctx) {
-#if 0
   static auto light_id = 0;
   auto        name     = "light_" + std::to_string(light_id++);
-  switch (plight.type) {
-    case pbrt_light::type_t::infinite: {
-      auto& infinite    = plight.infinite;
-      auto  environment = yocto_environment();
-      environment.uri   = name;
-      // environment.frame =
-      // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
-      // * stack.back().frame;
-      environment.frame = (frame3f)ctx.transform_start *
-                          frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-      environment.emission = (vec3f)infinite.scale * (vec3f)infinite.L;
-      if (infinite.mapname != "") {
-        auto texture = yocto_texture{};
-        texture.uri  = infinite.mapname;
-        scene.textures.push_back(texture);
-        environment.emission_tex = (int)scene.textures.size() - 1;
-      }
-      scene.environments.push_back(environment);
-    } break;
-    case pbrt_light::type_t::distant: {
-      auto& distant      = plight.distant;
-      auto  distant_dist = 100;
-      scene.shapes.push_back({});
-      auto& shape  = scene.shapes.back();
-      shape.uri    = name;
-      auto dir     = normalize(distant.from - distant.to);
-      auto size    = distant_dist * sin(5 * pif / 180);
-      auto params  = proc_shape_params{};
-      params.type  = proc_shape_params::type_t::quad;
-      params.scale = size / 2;
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
-      scene.materials.push_back({});
-      auto& material    = scene.materials.back();
-      material.uri      = shape.uri;
-      material.emission = (vec3f)distant.L * (vec3f)distant.scale;
-      material.emission *= (distant_dist * distant_dist) / (size * size);
-      auto instance     = yocto_instance();
-      instance.uri      = shape.uri;
-      instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material = (int)scene.materials.size() - 1;
-      instance.frame    = (frame3f)ctx.transform_start *
-                       lookat_frame(
-                           dir * distant_dist, zero3f, {0, 1, 0}, true);
-      scene.instances.push_back(instance);
-    } break;
-    case pbrt_light::type_t::point: {
-      auto& point = plight.point;
-      scene.shapes.push_back({});
-      auto& shape         = scene.shapes.back();
-      shape.uri           = name;
-      auto size           = 0.005f;
-      auto params         = proc_shape_params{};
-      params.type         = proc_shape_params::type_t::sphere;
-      params.scale        = size;
-      params.subdivisions = 2;
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
-      scene.materials.push_back({});
-      auto& material    = scene.materials.back();
-      material.uri      = shape.uri;
-      material.emission = (vec3f)point.I * (vec3f)point.scale;
-      // TODO: fix emission
-      auto instance     = yocto_instance();
-      instance.uri      = shape.uri;
-      instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material = (int)scene.materials.size() - 1;
-      instance.frame    = (frame3f)ctx.transform_start *
-                       translation_frame(point.from);
-      scene.instances.push_back(instance);
-    } break;
-    case pbrt_light::type_t::goniometric: {
-      auto& goniometric = plight.goniometric;
-      scene.shapes.push_back({});
-      auto& shape         = scene.shapes.back();
-      shape.uri           = name;
-      auto size           = 0.005f;
-      auto params         = proc_shape_params{};
-      params.type         = proc_shape_params::type_t::sphere;
-      params.scale        = size;
-      params.subdivisions = 2;
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
-      scene.materials.push_back({});
-      auto& material    = scene.materials.back();
-      material.uri      = shape.uri;
-      material.emission = (vec3f)goniometric.I * (vec3f)goniometric.scale;
-      // TODO: fix emission
-      auto instance     = yocto_instance();
-      instance.uri      = shape.uri;
-      instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material = (int)scene.materials.size() - 1;
-      instance.frame    = (frame3f)ctx.transform_start;
-      scene.instances.push_back(instance);
-    } break;
-    case pbrt_light::type_t::spot: {
-      auto& spot = plight.spot;
-      scene.shapes.push_back({});
-      auto& shape         = scene.shapes.back();
-      shape.uri           = name;
-      auto size           = 0.005f;
-      auto params         = proc_shape_params{};
-      params.type         = proc_shape_params::type_t::sphere;
-      params.scale        = size;
-      params.subdivisions = 2;
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
-      scene.materials.push_back({});
-      auto& material    = scene.materials.back();
-      material.uri      = shape.uri;
-      material.emission = (vec3f)spot.I * (vec3f)spot.scale;
-      // TODO: fix emission
-      auto instance     = yocto_instance();
-      instance.uri      = shape.uri;
-      instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material = (int)scene.materials.size() - 1;
-      instance.frame    = (frame3f)ctx.transform_start;
-      scene.instances.push_back(instance);
-    } break;
-    default: {
-      throw std::runtime_error(
-          "light type not supported " + std::to_string((int)plight.type));
+  if (type == "infinite") {
+    auto scale       = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
+    auto L           = get_pbrt_value(values, "L", vec3f{1, 1, 1});
+    auto mapname     = get_pbrt_value(values, "mapname", ""s);
+    auto environment = yocto_environment();
+    environment.uri  = name;
+    // environment.frame =
+    // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
+    // * stack.back().frame;
+    environment.frame = (frame3f)ctx.transform_start *
+                        frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+    environment.emission = scale * L;
+    if (mapname != "") {
+      auto texture = yocto_texture{};
+      texture.uri  = mapname;
+      scene.textures.push_back(texture);
+      environment.emission_tex = (int)scene.textures.size() - 1;
     }
+    scene.environments.push_back(environment);
+  } else if (type == "distant") {
+    auto scale        = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
+    auto L            = get_pbrt_value(values, "L", vec3f{1, 1, 1});
+    auto from         = get_pbrt_value(values, "from", vec3f{0, 0, 0});
+    auto to           = get_pbrt_value(values, "to", vec3f{0, 0, 1});
+    auto distant_dist = 100;
+    scene.shapes.push_back({});
+    auto& shape  = scene.shapes.back();
+    shape.uri    = name;
+    auto dir     = normalize(from - to);
+    auto size    = distant_dist * sin(5 * pif / 180);
+    auto params  = proc_shape_params{};
+    params.type  = proc_shape_params::type_t::quad;
+    params.scale = size / 2;
+    make_proc_shape(shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, params);
+    scene.materials.push_back({});
+    auto& material    = scene.materials.back();
+    material.uri      = shape.uri;
+    material.emission = (vec3f)L * (vec3f)scale;
+    material.emission *= (distant_dist * distant_dist) / (size * size);
+    auto instance     = yocto_instance();
+    instance.uri      = shape.uri;
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = (int)scene.materials.size() - 1;
+    instance.frame    = (frame3f)ctx.transform_start *
+                     lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
+    scene.instances.push_back(instance);
+  } else if (type == "point") {
+    auto scale = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
+    auto I     = get_pbrt_value(values, "I", vec3f{1, 1, 1});
+    auto from  = get_pbrt_value(values, "from", vec3f{0, 0, 0});
+    scene.shapes.push_back({});
+    auto& shape         = scene.shapes.back();
+    shape.uri           = name;
+    auto size           = 0.005f;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
+    params.scale        = size;
+    params.subdivisions = 2;
+    make_proc_shape(shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, params);
+    scene.materials.push_back({});
+    auto& material    = scene.materials.back();
+    material.uri      = shape.uri;
+    material.emission = I * scale;
+    // TODO: fix emission
+    auto instance     = yocto_instance();
+    instance.uri      = shape.uri;
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = (int)scene.materials.size() - 1;
+    instance.frame    = (frame3f)ctx.transform_start * translation_frame(from);
+    scene.instances.push_back(instance);
+  } else if (type == "goniometric") {
+    auto scale = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
+    auto I     = get_pbrt_value(values, "I", vec3f{1, 1, 1});
+    scene.shapes.push_back({});
+    auto& shape         = scene.shapes.back();
+    shape.uri           = name;
+    auto size           = 0.005f;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
+    params.scale        = size;
+    params.subdivisions = 2;
+    make_proc_shape(shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, params);
+    scene.materials.push_back({});
+    auto& material    = scene.materials.back();
+    material.uri      = shape.uri;
+    material.emission = I * scale;
+    // TODO: fix emission
+    auto instance     = yocto_instance();
+    instance.uri      = shape.uri;
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = (int)scene.materials.size() - 1;
+    instance.frame    = (frame3f)ctx.transform_start;
+    scene.instances.push_back(instance);
+  } else if (type == "spot") {
+    auto scale = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
+    auto I     = get_pbrt_value(values, "I", vec3f{1, 1, 1});
+    scene.shapes.push_back({});
+    auto& shape         = scene.shapes.back();
+    shape.uri           = name;
+    auto size           = 0.005f;
+    auto params         = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::sphere;
+    params.scale        = size;
+    params.subdivisions = 2;
+    make_proc_shape(shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, params);
+    scene.materials.push_back({});
+    auto& material    = scene.materials.back();
+    material.uri      = shape.uri;
+    material.emission = I * scale;
+    // TODO: fix emission
+    auto instance     = yocto_instance();
+    instance.uri      = shape.uri;
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = (int)scene.materials.size() - 1;
+    instance.frame    = (frame3f)ctx.transform_start;
+    scene.instances.push_back(instance);
+  } else {
+    throw std::runtime_error("unsupported light type " + type);
   }
-#endif
 }
 
 // load pbrt
