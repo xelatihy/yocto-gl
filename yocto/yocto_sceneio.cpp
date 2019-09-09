@@ -3097,6 +3097,7 @@ static void add_pbrt_shape(yocto_scene& scene, const string& type,
   } else {
     throw std::runtime_error("unsupported shape type " + type);
   }
+    if(shape.positions.empty()) throw std::runtime_error("bad shape");
   scene.shapes.push_back(shape);
   auto instance     = yocto_instance{};
   instance.frame    = (frame3f)ctx.transform_start;
@@ -3275,7 +3276,8 @@ static void add_pbrt_material(yocto_scene& scnee, const string& type,
     return sqrt(roughness);
   };
 
-  auto get_pbrt_roughnessf = [&](float roughness, bool remaproughness = true) -> float {
+  auto get_pbrt_roughnessf = [&](float roughness,
+                                 bool  remaproughness = true) -> float {
     if (roughness == 0) return 0;
     // from pbrt code
     if (remaproughness) {
@@ -3382,39 +3384,40 @@ static void add_pbrt_material(yocto_scene& scnee, const string& type,
     material.volscatter      = sigma_s / (sigma_a + sigma_s);
     if (verbose) printf("subsurface material not properly supported\n");
   } else if (type == "mix") {
-    auto namedmaterial1         = get_pbrt_value(values, "namedmaterial1", ""s);
-    auto namedmaterial2         = get_pbrt_value(values, "namedmaterial2", ""s);
-    auto matname = (!namedmaterial1.empty()) ? namedmaterial1
-                                                 : namedmaterial2;
-    material = mmap.at(matname);
+    auto namedmaterial1 = get_pbrt_value(values, "namedmaterial1", ""s);
+    auto namedmaterial2 = get_pbrt_value(values, "namedmaterial2", ""s);
+    auto matname = (!namedmaterial1.empty()) ? namedmaterial1 : namedmaterial2;
+    material     = mmap.at(matname);
     if (verbose) printf("mix material not properly supported\n");
   } else if (type == "fourier") {
     auto bsdffile = get_pbrt_value(values, "bsdffile", ""s);
+    if (bsdffile.rfind("/") != string::npos)
+      bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
     if (bsdffile == "paint.bsdf") {
-      material.diffuse          = {0.6f, 0.6f, 0.6f};
-      material.specular = {0.4f, 0.4f, 0.4f};
+      material.diffuse   = {0.6f, 0.6f, 0.6f};
+      material.specular  = {0.4f, 0.4f, 0.4f};
       material.roughness = get_pbrt_roughnessf(0.2f, true);
     } else if (bsdffile == "ceramic.bsdf") {
-      material.diffuse          = {0.6f, 0.6f, 0.6f};
-      material.specular = {0.4f, 0.4f, 0.4f};
+      material.diffuse   = {0.6f, 0.6f, 0.6f};
+      material.specular  = {0.4f, 0.4f, 0.4f};
       material.roughness = get_pbrt_roughnessf(0.25, true);
     } else if (bsdffile == "leather.bsdf") {
-      material.diffuse          = {0.6f, 0.57f, 0.48f};
-      material.specular = {0.4f, 0.4f, 0.4f};
+      material.diffuse   = {0.6f, 0.57f, 0.48f};
+      material.specular  = {0.4f, 0.4f, 0.4f};
       material.roughness = get_pbrt_roughnessf(0.3, true);
     } else if (bsdffile == "coated_copper.bsdf") {
-      auto eta = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
-      auto etak = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
-      material.specular   = pbrt_fresnel_metal(1, eta, etak);
+      auto eta           = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
+      auto etak          = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
+      material.specular  = pbrt_fresnel_metal(1, eta, etak);
       material.roughness = get_pbrt_roughnessf(0.01, true);
     } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
-      material.specular = {0.04, 0.04, 0.04};
+      material.specular     = {0.04, 0.04, 0.04};
       material.transmission = {1, 1, 1};
-      material.roughness = get_pbrt_roughnessf(0.2, true);
+      material.roughness    = get_pbrt_roughnessf(0.2, true);
     } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
-      auto eta = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
-      auto etak = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
-      material.specular   = pbrt_fresnel_metal(1, eta, etak);
+      auto eta           = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
+      auto etak          = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
+      material.specular  = pbrt_fresnel_metal(1, eta, etak);
       material.roughness = get_pbrt_roughnessf(0.2, true);
     } else {
       throw std::runtime_error("unsupported bsdffile " + bsdffile);

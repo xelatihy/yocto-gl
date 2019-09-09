@@ -527,24 +527,24 @@ namespace yocto {
 enum struct pbrt_value_type {
   // clang-format off
   real, integer, boolean, string, point, normal, vector, texture, color, 
-  point2, vector2, blackbody, spectrumv, spectrumf
+  point2, vector2, spectrum
   // clang-format on
 };
 
 // Yaml value
 struct pbrt_value {
-  string            name    = "";
-  pbrt_value_type   type    = pbrt_value_type::real;
-  int               value1i = 0;
-  float             value1f  = 0;
-  vec2f             value2f  = {0, 0};
-  vec3f             value3f  = {0, 0, 0};
-  bool              value1b = false;
-  string            value1s = "";
-  vector<float>     vector1f = {};
-  vector<vec2f>     vector2f = {};
-  vector<vec3f>     vector3f = {};
-  vector<int>       vector1i = {};
+  string          name     = "";
+  pbrt_value_type type     = pbrt_value_type::real;
+  int             value1i  = 0;
+  float           value1f  = 0;
+  vec2f           value2f  = {0, 0};
+  vec3f           value3f  = {0, 0, 0};
+  bool            value1b  = false;
+  string          value1s  = "";
+  vector<float>   vector1f = {};
+  vector<vec2f>   vector2f = {};
+  vector<vec3f>   vector3f = {};
+  vector<int>     vector1i = {};
 };
 
 // Pbrt command
@@ -562,21 +562,21 @@ enum struct pbrt_command_ {
 };
 
 // Read pbrt commands
-bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name, 
-  string& type, frame3f& xform, vector<pbrt_value>& values);
-bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name, 
-  string& type, frame3f& xform, vector<pbrt_value>& values, string& buffer);
+bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
+    string& type, frame3f& xform, vector<pbrt_value>& values);
+bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
+    string& type, frame3f& xform, vector<pbrt_value>& values, string& buffer);
 
 // Write pbrt commands
 void write_pbrt_comment(file_wrapper& fs, const string& comment);
 void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
-    const string& name, const string& type, const frame3f& xform, 
+    const string& name, const string& type, const frame3f& xform,
     const vector<pbrt_value>& values, bool texture_as_float = false);
 void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
     const string& name = "", const frame3f& xform = identity3x4f);
 void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
-    const string& name, const string& type, 
-    const vector<pbrt_value>& values, bool texture_as_float = false);
+    const string& name, const string& type, const vector<pbrt_value>& values,
+    bool texture_as_float = false);
 
 // type-cheked pbrt value access
 void get_pbrt_value(const pbrt_value& pbrt, string& value);
@@ -592,31 +592,38 @@ void get_pbrt_value(const pbrt_value& pbrt, vector<int>& value);
 void get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value);
 void get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value);
 void get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value);
-template<typename T>
-inline void get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, T& value, T def, bool required = false) {
-  for(auto& p : pbrt) {
-    if(p.name == name) {
+template <typename T>
+inline void get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name,
+    T& value, T def) {
+  for (auto& p : pbrt) {
+    if (p.name == name) {
       get_pbrt_value(p, value);
       return;
     }
   }
-  if(required) throw std::runtime_error("missing pbrt parameter " + name);
   value = def;
 }
-template<typename T>
-inline T get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, T def, bool required = false) {
+template <typename T>
+inline T get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name,
+    T def) {
   auto value = T{};
-  get_pbrt_value(pbrt, name, value, def, required);
+  get_pbrt_value(pbrt, name, value, def);
   return value;
 }
 
 // pbrt value construction
-pbrt_value make_pbrt_value(const string& name, const string& value, pbrt_value_type type = pbrt_value_type::string);
-pbrt_value make_pbrt_value(const string& name, bool value, pbrt_value_type type = pbrt_value_type::boolean);
-pbrt_value make_pbrt_value(const string& name, int value, pbrt_value_type type = pbrt_value_type::integer);
-pbrt_value make_pbrt_value(const string& name, float value, pbrt_value_type type = pbrt_value_type::real);
-pbrt_value make_pbrt_value(const string& name, const vec2f& value, pbrt_value_type type = pbrt_value_type::point2);
-pbrt_value make_pbrt_value(const string& name, const vec3f& value, pbrt_value_type type = pbrt_value_type::color);
+pbrt_value make_pbrt_value(const string& name, const string& value,
+    pbrt_value_type type = pbrt_value_type::string);
+pbrt_value make_pbrt_value(const string& name, bool value,
+    pbrt_value_type type = pbrt_value_type::boolean);
+pbrt_value make_pbrt_value(const string& name, int value,
+    pbrt_value_type type = pbrt_value_type::integer);
+pbrt_value make_pbrt_value(const string& name, float value,
+    pbrt_value_type type = pbrt_value_type::real);
+pbrt_value make_pbrt_value(const string& name, const vec2f& value,
+    pbrt_value_type type = pbrt_value_type::point2);
+pbrt_value make_pbrt_value(const string& name, const vec3f& value,
+    pbrt_value_type type = pbrt_value_type::color);
 
 // pbrt pbrt_spectrum as rgb color
 struct pbrt_spectrum3f {

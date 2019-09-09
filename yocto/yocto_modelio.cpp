@@ -2711,6 +2711,14 @@ static inline void parse_pbrt_params(
       parse_pbrt_pvalues(str, value.value1s, vector1s);
       if (!vector1s.empty())
         throw std::runtime_error("do not support pbrt string array");
+    } else if (type == "bool") {
+        auto value1s = ""s;
+        auto vector1s = vector<string>{};
+        value.type    = pbrt_value_type::boolean;
+        parse_pbrt_pvalues(str, value1s, vector1s);
+        if (!vector1s.empty())
+            throw std::runtime_error("do not support pbrt string array");
+        value.value1b = value1s == "true";
     } else if (type == "texture") {
       auto vector1s = vector<string>{};
       value.type    = pbrt_value_type::texture;
@@ -2733,12 +2741,13 @@ static inline void parse_pbrt_params(
       value.type = pbrt_value_type::vector2;
       parse_pbrt_pvalues(str, value.value2f, value.vector2f);
     } else if (type == "blackbody") {
-      // TODO: blackbody conversion
-      value.type = pbrt_value_type::color;
-      parse_pbrt_pvalues(str, value.value2f, value.vector2f);
-      if (!value.vector2f.empty())
+      value.type     = pbrt_value_type::color;
+      auto blackbody = zero2f;
+      auto vector2f  = vector<vec2f>{};
+      parse_pbrt_pvalues(str, blackbody, vector2f);
+      if (!vector2f.empty())
         throw std::runtime_error("bad pbrt " + type + " property");
-      throw std::runtime_error("blackbody conversion");
+      value.value3f = blackbody_to_rgb(blackbody.x) * blackbody.y;
     } else if (type == "color" || type == "rgb") {
       value.type = pbrt_value_type::color;
       parse_pbrt_pvalues(str, value.value3f, value.vector3f);
@@ -2747,6 +2756,43 @@ static inline void parse_pbrt_params(
       value.type = pbrt_value_type::color;
       parse_pbrt_pvalues(str, value.value3f, value.vector3f);
       throw std::runtime_error("xyz conversion");
+    } else if (type == "spectrum") {
+      auto is_string = false;
+      auto str1      = str;
+      skip_whitespace(str1);
+      if (!str1.empty() && str1.front() == '"')
+        is_string = true;
+      else if (!str1.empty() && str1.front() == '[') {
+        str1.remove_prefix(1);
+        skip_whitespace(str1);
+        if (!str1.empty() && str1.front() == '"') is_string = true;
+      }
+      if (is_string) {
+        value.type     = pbrt_value_type::color;
+        auto filename  = ""s;
+        auto filenames = vector<string>{};
+        parse_pbrt_param(str, filename);
+        auto filenamep = fs::path(filename).filename();
+        if (filenamep.extension() == ".spd") {
+          filenamep = filenamep.replace_extension("");
+          if (filenamep == "SHPS") {
+            value.value3f = {1, 1, 1};
+          } else if (filenamep.extension() == ".eta") {
+            auto eta = get_pbrt_etak(filenamep.replace_extension("")).first;
+            value.value3f = {eta.x, eta.y, eta.z};
+          } else if (filenamep.extension() == ".k") {
+            auto k = get_pbrt_etak(filenamep.replace_extension("")).second;
+            value.value3f = {k.x, k.y, k.z};
+          } else {
+            throw std::runtime_error("unknown spectrum file " + filename);
+          }
+        } else {
+          throw std::runtime_error("unsupported spectrum format");
+        }
+      } else {
+        value.type = pbrt_value_type::spectrum;
+        parse_pbrt_pvalues(str, value.value1f, value.vector1f);
+      }
     } else {
       throw std::runtime_error("unknown pbrt type");
     }
@@ -2973,27 +3019,39 @@ void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
   static auto type_labels = unordered_map<pbrt_value_type, string>{
       {pbrt_value_type::real, "float"},
       {pbrt_value_type::integer, "integer"},
-      {pbrt_value_type::boolean, "boolean"},
+      {pbrt_value_type::boolean, "bool"},
       {pbrt_value_type::string, "string"},
       {pbrt_value_type::point, "point"},
       {pbrt_value_type::normal, "normal"},
       {pbrt_value_type::vector, "vector"},
       {pbrt_value_type::texture, "texture"},
-      {pbrt_value_type::color, "color"},
+      {pbrt_value_type::color, "rgb"},
       {pbrt_value_type::point2, "point2"},
       {pbrt_value_type::vector2, "vector2"},
-      {pbrt_value_type::blackbody, "blackbody"},
-      {pbrt_value_type::spectrumv, "spectrum"},
-      {pbrt_value_type::spectrumv, "spectrum"},
+      {pbrt_value_type::spectrum, "spectrum"},
   };
   for (auto& value : values) {
     checked_fprintf(fs, " \"%s %s\" ", type_labels.at(value.type).c_str());
     switch (value.type) {
       case pbrt_value_type::real:
-        checked_fprintf(fs, "%g", value.value1f);
+        if(value.vector1f.empty()) {
+          checked_fprintf(fs, "[ ");
+          for(auto& v : value.vector1f)
+          checked_fprintf(fs, " %g", v);
+          checked_fprintf(fs, " ]");
+        } else {
+          checked_fprintf(fs, "%g", value.value1f);
+        }
         break;
       case pbrt_value_type::integer:
+        if(value.vector1f.empty()) {
+          checked_fprintf(fs, "[ ");
+          for(auto& v : value.vector1i)
+          checked_fprintf(fs, " %d", v);
+          checked_fprintf(fs, " ]");
+        } else {
         checked_fprintf(fs, "%d", value.value1i);
+        }
         break;
       case pbrt_value_type::boolean:
         checked_fprintf(fs, "\"%s\"", value.value1b ? "true" : "false");
@@ -3005,18 +3063,36 @@ void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
       case pbrt_value_type::vector:
       case pbrt_value_type::normal:
       case pbrt_value_type::color:
-      case pbrt_value_type::spectrumv:
-        checked_fprintf(fs, "[ %g %g %g ]", value.value3f.x, value.value3f.y,
-            value.value3f.z);
+        if(!value.vector3f.empty()) {
+          checked_fprintf(fs, "[ ");
+          for(auto& v : value.vector3f)
+          checked_fprintf(fs, " %g %g %g", v.x, v.y,
+              v.z);
+          checked_fprintf(fs, " ]");
+        } else {
+          checked_fprintf(fs, "[ %g %g %g ]", value.value3f.x, value.value3f.y,
+              value.value3f.z);
+        }
+        break;
+      case pbrt_value_type::spectrum:
+          checked_fprintf(fs, "[ ");
+          for(auto& v : value.vector1f)
+          checked_fprintf(fs, " %g", v);
+          checked_fprintf(fs, " ]");
         break;
       case pbrt_value_type::texture:
-      case pbrt_value_type::spectrumf:
         checked_fprintf(fs, "\"%s\"", value.value1s.c_str());
         break;
       case pbrt_value_type::point2:
       case pbrt_value_type::vector2:
-      case pbrt_value_type::blackbody:
-        checked_fprintf(fs, "[ %g %g ]", value.value2f.x, value.value3f.x);
+        if(!value.vector2f.empty()) {
+          checked_fprintf(fs, "[ ");
+          for(auto& v : value.vector2f)
+          checked_fprintf(fs, " %g %g", v.x, v.y);
+          checked_fprintf(fs, " ]");
+        } else {
+          checked_fprintf(fs, "[ %g %g ]", value.value2f.x, value.value2f.x);
+        }
         break;
     }
   }
@@ -3170,7 +3246,8 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
 
 // get pbrt value
 void get_pbrt_value(const pbrt_value& pbrt, string& value) {
-  if (pbrt.type == pbrt_value_type::string) {
+  if (pbrt.type == pbrt_value_type::string ||
+      pbrt.type == pbrt_value_type::texture) {
     value = pbrt.value1s;
   } else {
     throw std::runtime_error("bad pbrt type");
@@ -3237,11 +3314,11 @@ void get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& value) {
       value = {pbrt.value2f};
     }
   } else if (pbrt.type == pbrt_value_type::real) {
-    if(pbrt.vector1f.empty() || pbrt.vector1f.size() % 2)
+    if (pbrt.vector1f.empty() || pbrt.vector1f.size() % 2)
       throw std::runtime_error("bad pbrt type");
-    value.resize(pbrt.vector1f.size()/2);
-    for(auto i = 0; i < value.size(); i ++)
-      value[i] = {pbrt.vector1f[i*2+0], pbrt.vector1f[i*2+1]};
+    value.resize(pbrt.vector1f.size() / 2);
+    for (auto i = 0; i < value.size(); i++)
+      value[i] = {pbrt.vector1f[i * 2 + 0], pbrt.vector1f[i * 2 + 1]};
   } else {
     throw std::runtime_error("bad pbrt type");
   }
@@ -3257,18 +3334,19 @@ void get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& value) {
       value = {pbrt.value3f};
     }
   } else if (pbrt.type == pbrt_value_type::real) {
-    if(pbrt.vector1f.empty() || pbrt.vector1f.size() % 3)
+    if (pbrt.vector1f.empty() || pbrt.vector1f.size() % 3)
       throw std::runtime_error("bad pbrt type");
-    value.resize(pbrt.vector1f.size()/3);
-    for(auto i = 0; i < value.size(); i ++)
-      value[i] = {pbrt.vector1f[i*3+0], pbrt.vector1f[i*3+1], pbrt.vector1f[i*3+2]};
+    value.resize(pbrt.vector1f.size() / 3);
+    for (auto i = 0; i < value.size(); i++)
+      value[i] = {pbrt.vector1f[i * 3 + 0], pbrt.vector1f[i * 3 + 1],
+          pbrt.vector1f[i * 3 + 2]};
   } else {
     throw std::runtime_error("bad pbrt type");
   }
 }
 
 void get_pbrt_value(const pbrt_value& pbrt, vector<int>& value) {
-    if (pbrt.type == pbrt_value_type::integer) {
+  if (pbrt.type == pbrt_value_type::integer) {
     if (!pbrt.vector1i.empty()) {
       value = pbrt.vector1i;
     } else {
@@ -3280,11 +3358,12 @@ void get_pbrt_value(const pbrt_value& pbrt, vector<int>& value) {
 }
 void get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value) {
   if (pbrt.type == pbrt_value_type::integer) {
-    if(pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
+    if (pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
       throw std::runtime_error("bad pbrt type");
-    value.resize(pbrt.vector1i.size()/3);
-    for(auto i = 0; i < value.size(); i ++)
-      value[i] = {pbrt.vector1i[i*3+0], pbrt.vector1i[i*3+1], pbrt.vector1i[i*3+2]};
+    value.resize(pbrt.vector1i.size() / 3);
+    for (auto i = 0; i < value.size(); i++)
+      value[i] = {pbrt.vector1i[i * 3 + 0], pbrt.vector1i[i * 3 + 1],
+          pbrt.vector1i[i * 3 + 2]};
   } else {
     throw std::runtime_error("bad pbrt type");
   }
@@ -3299,7 +3378,8 @@ void get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value) {
   }
 }
 void get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value) {
-  if (pbrt.type == pbrt_value_type::string) {
+  if (pbrt.type == pbrt_value_type::string ||
+      pbrt.type == pbrt_value_type::texture) {
     value.first = zero3f;
     get_pbrt_value(pbrt, value.second);
   } else {
