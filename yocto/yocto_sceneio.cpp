@@ -3591,7 +3591,6 @@ static void load_pbrt(
 
   // parser state
   unordered_map<string, pair<frame3f, frame3f>> coordsys        = {};
-  unordered_map<string, pbrt_spectrum3f>        constant_values = {};
   auto                                          stack = vector<pbrt_context_>{};
   string                                        object = "";
   string                                        line   = "";
