@@ -1962,6 +1962,20 @@ static inline void parse_pbrt_value(string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++) parse_pbrt_value(str, value[i]);
 }
 
+// parse pbrt value with optional parens
+template<typename T>
+static inline void parse_pbrt_param(string_view& str, T& value) {
+    skip_whitespace(str);
+    auto parens = !str.empty() && str.front() == '[';
+    if(parens) str.remove_prefix(1);
+    parse_pbrt_value(str, value);
+    if(parens) {
+        skip_whitespace(str);
+        if(!str.empty() && str.front() == '[') throw std::runtime_error("bad pbrt param");
+        str.remove_prefix(1);
+    }
+}
+
 // parse a quoted string
 static inline void parse_pbrt_nametype(
     string_view& str_, string& name, string& type) {
@@ -2231,14 +2245,14 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
       command = pbrt_command_::transform_end;
       return true;
     } else if (cmd == "ObjectBegin") {
-      parse_pbrt_value(str, name);
+      parse_pbrt_param(str, name);
       command = pbrt_command_::object_begin;
       return true;
     } else if (cmd == "ObjectEnd") {
       command = pbrt_command_::object_end;
       return true;
     } else if (cmd == "ObjectInstance") {
-      parse_pbrt_value(str, name);
+      parse_pbrt_param(str, name);
       command = pbrt_command_::object_instance;
       return true;
     } else if (cmd == "ActiveTransform") {
@@ -2247,39 +2261,39 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
       return true;
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;
-      parse_pbrt_value(str, xf);
+      parse_pbrt_param(str, xf);
       xform   = frame3f{xf};
       command = pbrt_command_::set_transform;
       return true;
     } else if (cmd == "ConcatTransform") {
       auto xf = identity4x4f;
-      parse_pbrt_value(str, xf);
+      parse_pbrt_param(str, xf);
       xform   = frame3f{xf};
       command = pbrt_command_::concat_transform;
       return true;
     } else if (cmd == "Scale") {
       auto v = zero3f;
-      parse_pbrt_value(str, v);
+      parse_pbrt_param(str, v);
       xform   = scaling_frame(v);
       command = pbrt_command_::concat_transform;
       return true;
     } else if (cmd == "Translate") {
       auto v = zero3f;
-      parse_pbrt_value(str, v);
+      parse_pbrt_param(str, v);
       xform   = translation_frame(v);
       command = pbrt_command_::concat_transform;
       return true;
     } else if (cmd == "Rotate") {
       auto v = zero4f;
-      parse_pbrt_value(str, v);
+      parse_pbrt_param(str, v);
       xform   = rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x));
       command = pbrt_command_::concat_transform;
       return true;
     } else if (cmd == "LookAt") {
       auto from = zero3f, to = zero3f, up = zero3f;
-      parse_pbrt_value(str, from);
-      parse_pbrt_value(str, to);
-      parse_pbrt_value(str, up);
+      parse_pbrt_param(str, from);
+      parse_pbrt_param(str, to);
+      parse_pbrt_param(str, up);
       xform   = {from, to, up, zero3f};
       command = pbrt_command_::lookat_transform;
       return true;
@@ -2287,58 +2301,58 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
       command = pbrt_command_::reverse_orientation;
       return true;
     } else if (cmd == "CoordinateSystem") {
-      parse_pbrt_value(str, name);
+      parse_pbrt_param(str, name);
       command = pbrt_command_::coordinate_system_set;
       return true;
     } else if (cmd == "CoordSysTransform") {
-      parse_pbrt_value(str, name);
+      parse_pbrt_param(str, name);
       command = pbrt_command_::coordinate_system_transform;
       return true;
     } else if (cmd == "Integrator") {
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::integrator;
       return true;
     } else if (cmd == "Sampler") {
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::sampler;
       return true;
     } else if (cmd == "PixelFilter") {
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::filter;
       return true;
     } else if (cmd == "Film") {
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::film;
       return true;
     } else if (cmd == "Accelerator") {
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::accelerator;
       return true;
     } else if (cmd == "Camera") {
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::camera;
       return true;
     } else if (cmd == "Texture") {
       auto comptype = ""s;
-      parse_pbrt_value(str, name);
-      parse_pbrt_value(str, comptype);
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, name);
+      parse_pbrt_param(str, comptype);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::named_texture;
       return true;
     } else if (cmd == "Material") {
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::material;
       return true;
     } else if (cmd == "MakeNamedMaterial") {
-      parse_pbrt_value(str, name);
+      parse_pbrt_param(str, name);
       parse_pbrt_params(str, values);
       type = "";
       for (auto& value : values)
@@ -2346,26 +2360,26 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
       command = pbrt_command_::named_material;
       return true;
     } else if (cmd == "NamedMaterial") {
-      parse_pbrt_value(str, name);
+      parse_pbrt_param(str, name);
       command = pbrt_command_::use_material;
       return true;
     } else if (cmd == "Shape") {
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::shape;
       return true;
     } else if (cmd == "AreaLightSource") {
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::arealight;
       return true;
     } else if (cmd == "LightSource") {
-      parse_pbrt_value(str, type);
+      parse_pbrt_param(str, type);
       parse_pbrt_params(str, values);
       command = pbrt_command_::light;
       return true;
     } else if (cmd == "MakeNamedMedium") {
-      parse_pbrt_value(str, name);
+      parse_pbrt_param(str, name);
       parse_pbrt_params(str, values);
       type = "";
       for (auto& value : values)
@@ -2374,13 +2388,13 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
       return true;
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
-      parse_pbrt_value(str, interior);
-      parse_pbrt_value(str, exterior);
+      parse_pbrt_param(str, interior);
+      parse_pbrt_param(str, exterior);
       name    = interior + "####" + exterior;
       command = pbrt_command_::medium_interface;
       return true;
     } else if (cmd == "Include") {
-      parse_pbrt_value(str, name);
+      parse_pbrt_param(str, name);
       command = pbrt_command_::include;
       return true;
     } else {
