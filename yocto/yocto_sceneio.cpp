@@ -3093,7 +3093,7 @@ static void add_pbrt_shape(yocto_scene& scene, const string& type,
   } else {
     throw std::runtime_error("unsupported shape type " + type);
   }
-    if(shape.positions.empty()) throw std::runtime_error("bad shape");
+  if (shape.positions.empty()) throw std::runtime_error("bad shape");
   scene.shapes.push_back(shape);
   auto instance     = yocto_instance{};
   instance.frame    = (frame3f)ctx.transform_start;
@@ -3255,9 +3255,12 @@ static void add_pbrt_material(yocto_scene& scnee, const string& type,
 
   auto get_pbrt_roughness = [&](const vector<pbrt_value>& values,
                                 float                     def = 0.1) -> float {
-    auto roughness_     = get_pbrt_value(values, "roughness", pair{vec3f{def}, ""s});
-    auto uroughness     = get_pbrt_value(values, "uroughness", pair{roughness_.first, roughness_.second});
-    auto vroughness     = get_pbrt_value(values, "vroughness",  pair{roughness_.first, roughness_.second});
+    auto roughness_ = get_pbrt_value(
+        values, "roughness", pair{vec3f{def}, ""s});
+    auto uroughness = get_pbrt_value(
+        values, "uroughness", pair{roughness_.first, roughness_.second});
+    auto vroughness = get_pbrt_value(
+        values, "vroughness", pair{roughness_.first, roughness_.second});
     auto remaproughness = get_pbrt_value(values, "remaproughness", true);
 
     if (uroughness.first == zero3f || vroughness.first == zero3f) return 0;
@@ -3586,7 +3589,7 @@ static void load_pbrt(
   static auto shape_id         = 0;
 
   // parser state
-  unordered_map<string, pair<frame3f, frame3f>> coordsys        = {};
+  unordered_map<string, pair<frame3f, frame3f>> coordsys = {};
   auto                                          stack = vector<pbrt_context_>{};
   string                                        object = "";
   string                                        line   = "";
