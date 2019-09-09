@@ -586,7 +586,7 @@ void get_pbrt_value(const pbrt_value& pbrt, float& value);
 void get_pbrt_value(const pbrt_value& pbrt, vec2f& value);
 void get_pbrt_value(const pbrt_value& pbrt, vec3f& value);
 template<typename T>
-inline void get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, T& value, const T& def, bool required = false) {
+inline void get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, T& value, T def, bool required = false) {
   for(auto& p : pbrt) {
     if(p.name == name) {
       get_pbrt_value(p, value);
@@ -597,7 +597,7 @@ inline void get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, T
   value = def;
 }
 template<typename T>
-inline T get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, const T& def, bool required = false) {
+inline T get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, T def, bool required = false) {
   auto value = T{};
   get_pbrt_value(pbrt, name, value, def, required);
   return value;
