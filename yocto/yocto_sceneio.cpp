@@ -3673,120 +3673,13 @@ static void load_pbrt_scene(
   update_transforms(scene);
 }
 
-// Write text to file
-static inline void write_pbrt_text(FILE* fs, const char* value) {
-  if (fprintf(fs, "%s", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_pbrt_text(FILE* fs, const string& value) {
-  if (fprintf(fs, "%s", value.c_str()) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_pbrt_value(FILE* fs, int value, bool parens = true) {
-  if (fprintf(fs, parens ? "[ %d ]" : "%d", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_pbrt_value(FILE* fs, float value, bool parens = true) {
-  if (fprintf(fs, parens ? "[ %g ]" : "%g", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_pbrt_value(
-    FILE* fs, const char* value, bool parens = true) {
-  if (fprintf(fs, parens ? "\"%s\"" : "\"%s\"", value) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_pbrt_value(
-    FILE* fs, const string& value, bool parens = true) {
-  if (fprintf(fs, parens ? "[ \"%s\" ]" : "\"%s\"", value.c_str()) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_pbrt_value(
-    FILE* fs, const vec3f& value, bool parens = true) {
-  if (fprintf(fs, parens ? "[ %g %g %g ]" : "%g %g %g", value.x, value.y,
-          value.z) < 0)
-    throw std::runtime_error("cannot print value");
-}
-static inline void write_pbrt_value(
-    FILE* fs, const mat3f& value, bool parens = true) {
-  if (parens) {
-    if (fprintf(fs, "[ ") < 0) throw std::runtime_error("cannot print value");
-  }
-  for (auto i = 0; i < 9; i++)
-    if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
-      throw std::runtime_error("cannot print value");
-  if (parens) {
-    if (fprintf(fs, " ]") < 0) throw std::runtime_error("cannot print value");
-  }
-}
-// static inline void write_pbrt_value(
-//     FILE* fs, const frame3f& value, bool parens = true) {
-//   if (parens) {
-//     if (fprintf(fs, "[ ") < 0) throw std::runtime_error("cannot print
-//     value");
-//   }
-//   for (auto i = 0; i < 12; i++)
-//     if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
-//       throw std::runtime_error("cannot print value");
-//   if (parens) {
-//     if (fprintf(fs, " ]") < 0) throw std::runtime_error("cannot print
-//     value");
-//   }
-// }
-static inline void write_pbrt_value(
-    FILE* fs, const mat4f& value, bool parens = true) {
-  if (parens) {
-    if (fprintf(fs, "[ ") < 0) throw std::runtime_error("cannot print value");
-  }
-  for (auto i = 0; i < 16; i++)
-    if (fprintf(fs, i ? " %g" : "%g", (&value.x.x)[i]) < 0)
-      throw std::runtime_error("cannot print value");
-  if (parens) {
-    if (fprintf(fs, " ]") < 0) throw std::runtime_error("cannot print value");
-  }
-}
-
-template <typename T>
-struct pbrt_noparens {
-  T value;
-  pbrt_noparens(const T& value) : value{value} {}
-};
-template <typename T>
-static inline void write_pbrt_value(FILE* fs, const pbrt_noparens<T>& value) {
-  write_pbrt_value(fs, value.value, false);
-}
-
-template <typename T, typename... Ts>
-static inline void write_pbrt_line(
-    FILE* fs, const T& value, const Ts... values) {
-  write_pbrt_value(fs, value);
-  if constexpr (sizeof...(values) == 0) {
-    write_pbrt_text(fs, "\n");
-  } else {
-    write_pbrt_text(fs, " ");
-    write_pbrt_line(fs, values...);
-  }
-}
-
-template <typename... Ts>
-static inline void write_pbrt_command(
-    FILE* fs, const char* cmd, const Ts... values) {
-  write_pbrt_text(fs, cmd);
-  if constexpr (sizeof...(values) == 0) {
-    write_pbrt_text(fs, "\n");
-  } else {
-    write_pbrt_text(fs, " ");
-    write_pbrt_line(fs, values...);
-  }
-}
-
 // Convert a scene to pbrt format
 static void save_pbrt(const string& filename, const yocto_scene& scene) {
   // open file
-  auto fs_ = open_file(filename, "w");
-  auto fs  = fs_.fs;
+  auto fs = open_file(filename, "w");
 
   // embed data
-  write_pbrt_text(fs, get_save_scene_message(scene, "# ") + "\n\n");
+  write_pbrt_comment(fs, get_save_scene_message(scene, ""));
 
   // convert camera and settings
   auto& camera     = scene.cameras.front();
@@ -3794,80 +3687,72 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto  to         = camera.frame.o - camera.frame.z;
   auto  up         = camera.frame.y;
   auto  image_size = camera_resolution(camera, 1280);
-  write_pbrt_command(fs, "LookAt", pbrt_noparens<mat3f>{{from, to, up}});
-  write_pbrt_command(fs, "Camera", "perspective", "float fov",
-      camera_fov(camera).x * 180 / pif);
-
-  // save renderer
-  write_pbrt_command(fs, "Sampler", "random", "integer pixelsamples", 64);
-  write_pbrt_command(fs, "Integrator", "path");
-  write_pbrt_command(fs, "Film", "image", "string filename",
-      fs::path(filename).stem().string() + ".exr", "integer xresolution",
-      image_size.x, "integer yresolution", image_size.y);
+  write_pbrt_command(fs, pbrt_command_::lookat_transform, "",
+      frame3f{from, to, up, zero3f});
+  write_pbrt_command(fs, pbrt_command_::camera, "", "perspective",
+      {make_pbrt_value("perspective", camera_fov(camera).x * 180 / pif)});
+  write_pbrt_command(fs, pbrt_command_::sampler, "", "random",
+      {make_pbrt_value("pixelsamples", 64)});
+  write_pbrt_command(fs, pbrt_command_::integrator, "", "path", {});
+  write_pbrt_command(fs, pbrt_command_::film, "", "image",
+      {make_pbrt_value("filename", fs::path(filename).stem().string() + ".exr"),
+          make_pbrt_value("xresolution", image_size.x),
+          make_pbrt_value("yresolution", image_size.y)});
 
   // start world
-  write_pbrt_command(fs, "WorldBegin");
+  write_pbrt_command(fs, pbrt_command_::world_begin);
 
   // convert textures
   for (auto& texture : scene.textures) {
-    write_pbrt_command(fs, "Texture",
-        pbrt_noparens<string>{fs::path(texture.uri).stem().string()},
-        "spectrum", "imagemap", "string filename", texture.uri);
+    write_pbrt_command(fs, pbrt_command_::named_texture,
+        fs::path(texture.uri).stem().string(),
+        "imagemap", {make_pbrt_value("filename", texture.uri)});
   }
 
   // convert materials
+  auto make_pbrt_textured = [&scene](const string& name, vec3f color, int tex) {
+    if (tex >= 0) {
+      return make_pbrt_value(name,
+          fs::path(scene.textures[tex].uri).stem().string(),
+          pbrt_value_type::texture);
+    } else {
+      return make_pbrt_value(name, color, pbrt_value_type::color);
+    }
+  };
   for (auto& material : scene.materials) {
-    write_pbrt_command(fs, "MakeNamedMaterial",
-        fs::path(material.uri).stem().string().c_str(), "string type", "uber");
-    if (material.diffuse_tex >= 0) {
-      write_pbrt_command(fs, "    ", "texture Kd",
-          fs::path(scene.textures[material.diffuse_tex].uri).stem().string());
-    } else {
-      write_pbrt_command(fs, "    ", "rgb Kd", material.diffuse);
-    }
-    if (material.specular_tex >= 0) {
-      write_pbrt_command(fs, "    ", "texture Ks",
-          fs::path(scene.textures[material.specular_tex].uri).stem().string());
-    } else {
-      auto specular = vec3f{1};
-      write_pbrt_command(fs, "    ", "rgb Ks", specular);
-    }
-    if (material.transmission != zero3f) {
-      if (material.transmission_tex >= 0) {
-        write_pbrt_command(fs, "    ", "texture Kt",
-            fs::path(scene.textures[material.transmission_tex].uri)
-                .stem()
-                .string());
-      } else {
-        auto transmission = vec3f{1};
-        write_pbrt_command(fs, "    ", "rgb Kt", transmission);
-      }
-    }
-    write_pbrt_command(
-        fs, "    ", "float roughness", material.roughness * material.roughness);
+    write_pbrt_command(fs, pbrt_command_::named_material,
+        fs::path(material.uri).stem().string().c_str(), "uber",
+        {
+            make_pbrt_textured("Kd", material.diffuse, material.diffuse_tex),
+            make_pbrt_textured("Ks", material.specular, material.specular_tex),
+            make_pbrt_textured(
+                "Kt", material.transmission, material.transmission_tex),
+            make_pbrt_value(
+                "roughness", material.roughness * material.roughness),
+        });
   }
 
   // convert instances
   for (auto& instance : scene.instances) {
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
-    write_pbrt_command(fs, "AttributeBegin");
-    write_pbrt_command(fs, "  TransformBegin");
-    write_pbrt_command(fs, "    Transform", mat4f{instance.frame});
-    write_pbrt_command(fs, "    NamedMaterial",
-        pbrt_noparens{fs::path(material.uri).stem().string()});
+    write_pbrt_command(fs, pbrt_command_::attribute_begin);
+    write_pbrt_command(fs, pbrt_command_::transform_begin);
+    write_pbrt_command(fs, pbrt_command_::set_transform, "", instance.frame);
+    write_pbrt_command(
+        fs, pbrt_command_::use_material, fs::path(material.uri).stem().string());
     if (material.emission != zero3f) {
-      write_pbrt_command(
-          fs, "    AreaLightSource", "diffuse", "rgb L", material.emission);
+      write_pbrt_command(fs, pbrt_command_::arealight, "", "diffuse",
+          {make_pbrt_value("L", material.emission, pbrt_value_type::color)});
     }
-    write_pbrt_command(fs, "    Shape", "plymesh", "string filename",
-        fs::path(shape.uri).replace_extension(".ply").string());
-    write_pbrt_command(fs, "  TransformEnd");
-    write_pbrt_command(fs, "AttributeEnd");
+    write_pbrt_command(fs, pbrt_command_::shape, "", "plymesh", 
+        {make_pbrt_value("filename",fs::path(shape.uri).replace_extension(".ply").string())});
+    write_pbrt_command(fs, pbrt_command_::transform_end);
+    write_pbrt_command(fs, pbrt_command_::attribute_end);
   }
 
   // end world
-  write_pbrt_command(fs, "WorldEnd");
+  write_pbrt_command(fs, pbrt_command_::world_end);
 }
 
 // Save a pbrt scene

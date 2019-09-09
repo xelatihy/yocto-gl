@@ -523,6 +523,70 @@ yaml_value make_yaml_value(const frame3f& value);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Pbrt value type
+enum struct pbrt_value_type {
+  // clang-format off
+  real, integer, boolean, string, point, normal, vector, texture, color, 
+  point2, vector2, blackbody, spectrumv, spectrumf
+  // clang-format on
+};
+
+// Yaml value
+struct pbrt_value {
+  string            name    = "";
+  pbrt_value_type   type    = pbrt_value_type::real;
+  int               value1i = 0;
+  float             value1f  = 0;
+  vec2f             value2f  = {0, 0};
+  vec3f             value3f  = {0, 0, 0};
+  bool              value1b = false;
+  string            value1s = "";
+  vector<float>     vector1f = {};
+  vector<vec2f>     vector2f = {};
+  vector<vec3f>     vector3f = {};
+  vector<int>       vector1i = {};
+};
+
+// Pbrt command
+enum struct pbrt_command_ {
+  // clang-format off
+  world_begin, world_end, attribute_begin, attribute_end,
+  transform_begin, transform_end, reverse_orientation,
+  set_transform, concat_transform, lookat_transform,
+  object_instance, object_begin, object_end, include,      
+  sampler, integrator, accelerator, film, filter, camera, shape, light,
+  material, arealight, named_texture, named_medium, named_material,             
+  use_material, medium_interface
+  // clang-format on
+};
+
+// Write pbrt commands
+void write_pbrt_comment(file_wrapper& fs, const string& comment);
+void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
+    const string& name, const string& type, const frame3f& xform, 
+    const vector<pbrt_value>& values, bool texture_as_float = false);
+void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
+    const string& name = "", const frame3f& xform = identity3x4f);
+void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
+    const string& name, const string& type, 
+    const vector<pbrt_value>& values, bool texture_as_float = false);
+
+// type-cheked pbrt value access
+void get_pbrt_value(const pbrt_value& yaml, string& value);
+void get_pbrt_value(const pbrt_value& yaml, bool& value);
+void get_pbrt_value(const pbrt_value& yaml, int& value);
+void get_pbrt_value(const pbrt_value& yaml, float& value);
+void get_pbrt_value(const pbrt_value& yaml, vec2f& value);
+void get_pbrt_value(const pbrt_value& yaml, vec3f& value);
+
+// pbrt value construction
+pbrt_value make_pbrt_value(const string& name, const string& value, pbrt_value_type type = pbrt_value_type::string);
+pbrt_value make_pbrt_value(const string& name, bool value, pbrt_value_type type = pbrt_value_type::boolean);
+pbrt_value make_pbrt_value(const string& name, int value, pbrt_value_type type = pbrt_value_type::integer);
+pbrt_value make_pbrt_value(const string& name, float value, pbrt_value_type type = pbrt_value_type::real);
+pbrt_value make_pbrt_value(const string& name, const vec2f& value, pbrt_value_type type = pbrt_value_type::point2);
+pbrt_value make_pbrt_value(const string& name, const vec3f& value, pbrt_value_type type = pbrt_value_type::color);
+
 // pbrt pbrt_spectrum as rgb color
 struct pbrt_spectrum3f {
   float x = 0;
@@ -786,7 +850,7 @@ inline bool operator!=(const pbrt_textured1f& a, const pbrt_textured1f& b) {
   return !(a == b);
 }
 inline bool operator==(const pbrt_textured3f& a, const pbrt_textured3f& b) {
-  return a.value == b.value && a.texture == b.texture;  
+  return a.value == b.value && a.texture == b.texture;
 }
 inline bool operator!=(const pbrt_textured3f& a, const pbrt_textured3f& b) {
   return !(a == b);
@@ -1403,7 +1467,7 @@ struct pbrt_parser_state {
 bool read_pbrt_command(file_wrapper& fs, pbrt_command& command, string& name,
     pbrt_command_data& data, vector<pbrt_context>& stack,
     pbrt_parser_state& state);
-void write_pbrt_command(file_wrapper& fs, pbrt_command command, 
+void write_pbrt_command(file_wrapper& fs, pbrt_command command,
     const string& name, const mat4f& xform, const pbrt_command_data& data);
 
 }  // namespace yocto

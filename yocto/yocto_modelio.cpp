@@ -2672,6 +2672,237 @@ void write_yaml_object(file_wrapper& fs, const string& object) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Write obj elements
+void write_pbrt_comment(file_wrapper& fs, const string& comment) {
+  auto lines = split_string(comment, "\n");
+  for (auto& line : lines) {
+    checked_fprintf(fs, "# %s\n", line.c_str());
+  }
+  checked_fprintf(fs, "\n");
+}
+
+void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
+  static auto type_labels = unordered_map<pbrt_value_type, string>{
+      {pbrt_value_type::real, "float"},
+      {pbrt_value_type::integer, "integer"},
+      {pbrt_value_type::boolean, "boolean"},
+      {pbrt_value_type::string, "string"},
+      {pbrt_value_type::point, "point"},
+      {pbrt_value_type::normal, "normal"},
+      {pbrt_value_type::vector, "vector"},
+      {pbrt_value_type::texture, "texture"},
+      {pbrt_value_type::color, "color"},
+      {pbrt_value_type::point2, "point2"},
+      {pbrt_value_type::vector2, "vector2"},
+      {pbrt_value_type::blackbody, "blackbody"},
+      {pbrt_value_type::spectrumv, "spectrum"},
+      {pbrt_value_type::spectrumv, "spectrum"},
+  };
+  for (auto& value : values) {
+    checked_fprintf(fs, " \"%s %s\" ", type_labels.at(value.type).c_str());
+    switch (value.type) {
+      case pbrt_value_type::real:
+        checked_fprintf(fs, "%g", value.value1f);
+        break;
+      case pbrt_value_type::integer:
+        checked_fprintf(fs, "%d", value.value1i);
+        break;
+      case pbrt_value_type::boolean:
+        checked_fprintf(fs, "\"%s\"", value.value1b ? "true" : "false");
+        break;
+      case pbrt_value_type::string:
+        checked_fprintf(fs, "\"%s\"", value.value1b ? "true" : "false");
+        break;
+      case pbrt_value_type::point:
+      case pbrt_value_type::vector:
+      case pbrt_value_type::normal:
+      case pbrt_value_type::color:
+      case pbrt_value_type::spectrumv:
+        checked_fprintf(fs, "[ %g %g %g ]", value.value3f.x, value.value3f.y,
+            value.value3f.z);
+        break;
+      case pbrt_value_type::texture:
+      case pbrt_value_type::spectrumf:
+        checked_fprintf(fs, "\"%s\"", value.value1s.c_str());
+        break;
+      case pbrt_value_type::point2:
+      case pbrt_value_type::vector2:
+      case pbrt_value_type::blackbody:
+        checked_fprintf(fs, "[ %g %g ]", value.value2f.x, value.value3f.x);
+        break;
+    }
+  }
+  checked_fprintf(fs, "\n");
+}
+
+void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
+    const string& name, const string& type, const frame3f& xform, 
+    const vector<pbrt_value>& values, bool texture_float) {
+  switch (command) {
+    case pbrt_command_::world_begin: checked_fprintf(fs, "WorldBegin\n"); break;
+    case pbrt_command_::world_end: checked_fprintf(fs, "WorldEnd\n"); break;
+    case pbrt_command_::attribute_begin:
+      checked_fprintf(fs, "AttributeBegin\n");
+      break;
+    case pbrt_command_::attribute_end:
+      checked_fprintf(fs, "AttributeEnd\n");
+      break;
+    case pbrt_command_::transform_begin:
+      checked_fprintf(fs, "TransformBegin\n");
+      break;
+    case pbrt_command_::transform_end:
+      checked_fprintf(fs, "TransformEnd\n");
+      break;
+    case pbrt_command_::object_begin:
+      checked_fprintf(fs, "ObjectBegin \"%s\"\n", name.c_str());
+      break;
+    case pbrt_command_::object_end: checked_fprintf(fs, "ObjectEnd\n"); break;
+    case pbrt_command_::object_instance:
+      checked_fprintf(fs, "ObjectInstance \"%s\"\n", name.c_str());
+      break;
+    case pbrt_command_::sampler:
+      checked_fprintf(fs, "Sampler \"%s\"", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::integrator:
+      checked_fprintf(fs, "Integrator \"%s\"", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::accelerator:
+      checked_fprintf(fs, "Accelerator \"%s\"", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::film:
+      checked_fprintf(fs, "Film \"%s\"", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::filter:
+      checked_fprintf(fs, "Filter \"%s\"", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::camera:
+      checked_fprintf(fs, "Camera \"%s\"", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::shape:
+      checked_fprintf(fs, "Shape \"%s\"", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::light:
+      checked_fprintf(fs, "Light \"%s\"", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::material:
+      checked_fprintf(fs, "Material \"%s\"", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::arealight:
+      checked_fprintf(fs, "AreaLight \"%s\"", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::named_texture:
+      checked_fprintf(fs, "Texture \"%s\" \"%s\" \"%s\"", name.c_str(),
+          texture_float ? "float" : "rgb", type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::named_medium:
+      checked_fprintf(fs, "MakeNamedMedium \"%s\" \"string type\" \"%s\"",
+          name.c_str(), type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::named_material:
+      checked_fprintf(fs, "MakeNamedMaterial \"%s\" \"string type\" \"%s\"",
+          name.c_str(), type.c_str());
+      write_pbrt_values(fs, values);
+      break;
+    case pbrt_command_::include:
+      checked_fprintf(fs, "Include \"%s\"\n", name.c_str());
+      break;
+    case pbrt_command_::reverse_orientation:
+      checked_fprintf(fs, "ReverseOrientation\n");
+      break;
+    case pbrt_command_::set_transform:
+      checked_fprintf(fs,
+          "Transform %g %g %g 0 %g %g %g 0 %g %g %g 0 %g %g %g 1\n",
+          xform.x.x, xform.x.y, xform.x.z, xform.y.x, xform.y.y,
+          xform.y.z, xform.z.x, xform.z.y, xform.z.z,
+          xform.o.x, xform.o.y, xform.o.z);
+      break;
+    case pbrt_command_::concat_transform:
+      checked_fprintf(fs,
+          "ConcatTransform %g %g %g 0 %g %g %g 0 %g %g %g 0 %g %g %g 1\n",
+          xform.x.x, xform.x.y, xform.x.z, xform.y.x, xform.y.y,
+          xform.y.z, xform.z.x, xform.z.y, xform.z.z, 
+          xform.o.x, xform.o.y, xform.o.z);
+      break;
+    case pbrt_command_::lookat_transform:
+      checked_fprintf(fs, "LookAt %g %g %g %g %g %g %g %g %g\n", xform.x.x,
+          xform.x.y, xform.x.z, xform.y.x, xform.y.y, xform.y.z, xform.z.x,
+          xform.z.y, xform.z.z);
+      break;
+    case pbrt_command_::use_material:
+      checked_fprintf(fs, "NamedMaterial \"%s\"\n", name.c_str());
+      break;
+    case pbrt_command_::medium_interface:
+      throw std::runtime_error("not supported yet");
+      break;
+  }
+}
+
+void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
+    const string& name, const frame3f& xform) {
+  return write_pbrt_command(fs, command, name, "", xform, {});
+}
+void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
+    const string& name, const string& type, 
+    const vector<pbrt_value>& values, bool texture_as_float) {
+  return write_pbrt_command(fs, command, name, type, identity3x4f, values, texture_as_float);
+}
+
+// pbrt value construction
+pbrt_value make_pbrt_value(const string& name, const string& value, pbrt_value_type type) {
+  auto pbrt = pbrt_value{};
+  pbrt.name = name;
+  pbrt.type = type;
+  pbrt.value1s = value;
+  return pbrt;
+}
+pbrt_value make_pbrt_value(const string& name, bool value, pbrt_value_type type) {
+  auto pbrt = pbrt_value{};
+  pbrt.name = name;
+  pbrt.type = type;
+  pbrt.value1b = value;
+  return pbrt;
+}
+pbrt_value make_pbrt_value(const string& name, int value, pbrt_value_type type) {
+  auto pbrt = pbrt_value{};
+  pbrt.name = name;
+  pbrt.type = type;
+  pbrt.value1b = value;
+  return pbrt;
+}
+pbrt_value make_pbrt_value(const string& name, float value, pbrt_value_type type) {
+  auto pbrt = pbrt_value{};
+  pbrt.name = name;
+  pbrt.type = type;
+  pbrt.value1f = value;
+  return pbrt;
+}
+pbrt_value make_pbrt_value(const string& name, const vec2f& value, pbrt_value_type type) {
+  auto pbrt = pbrt_value{};
+  pbrt.name = name;
+  pbrt.type = type;
+  pbrt.value2f = value;
+  return pbrt;
+}
+pbrt_value make_pbrt_value(const string& name, const vec3f& value, pbrt_value_type type) {
+  auto pbrt = pbrt_value{};
+  pbrt.name = name;
+  pbrt.type = type;
+  pbrt.value3f = value;
+  return pbrt;
+}
+
 // Parse Accelerator
 static inline void parse_pbrt_accelerator(
     string_view& str, const string& type, pbrt_accelerator& value) {
