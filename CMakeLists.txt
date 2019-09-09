@@ -113,8 +113,6 @@ endif(YOCTO_OPENGL)
 
 if(YOCTO_TESTING)
 enable_testing()
-add_executable(yimgdiff apps/yimgdiff.cpp)
-target_link_libraries(yimgdiff yocto)
 set(test-yimgproc ${CMAKE_SOURCE_DIR}/tests/_results/test-yimgproc.sh)
 set(test-yscntrace ${CMAKE_SOURCE_DIR}/tests/_results/test-yscntrace.sh)
 set(test-yscnproc ${CMAKE_SOURCE_DIR}/tests/_results/test-yscnproc.sh)
