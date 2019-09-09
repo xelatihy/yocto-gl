@@ -2988,7 +2988,7 @@ void add_pbrt_camera(yocto_scene& scene, const string& type,
     auto fov = get_pbrt_value(values, "fov", 90.0f);
     // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
     auto frameaspectratio = get_pbrt_value(values, "frameaspectratio", -1.0f);
-    auto focaldistance = get_pbrt_value(values, "focaldistance", 1e30f);
+    auto focaldistance    = get_pbrt_value(values, "focaldistance", 1e30f);
     if (frameaspectratio < 0) frameaspectratio = last_film_aspect;
     if (frameaspectratio < 0) frameaspectratio = 1;
     if (frameaspectratio >= 1) {
@@ -3000,15 +3000,15 @@ void add_pbrt_camera(yocto_scene& scene, const string& type,
           clamp(focaldistance, 1.0e-2f, 1.0e4f));
     }
   } else if (type == "realistic") {
-    auto lensfile = get_pbrt_value(values, "lensfile", ""s);
-    lensfile      = lensfile.substr(0, lensfile.size() - 4);
-    lensfile      = lensfile.substr(lensfile.find('.') + 1);
-    lensfile      = lensfile.substr(0, lensfile.size() - 2);
-    auto focal    = std::atof(lensfile.c_str());
+    auto lensfile         = get_pbrt_value(values, "lensfile", ""s);
+    lensfile              = lensfile.substr(0, lensfile.size() - 4);
+    lensfile              = lensfile.substr(lensfile.find('.') + 1);
+    lensfile              = lensfile.substr(0, lensfile.size() - 2);
+    auto focal            = std::atof(lensfile.c_str());
     auto aperturediameter = get_pbrt_value(values, "aperturediameter", 0.0f);
-    auto focusdistance = get_pbrt_value(values, "focusdistance", 10.0f);
-    camera.lens = max(focal, 35.0f) * 0.001f;
-    auto aspect = 1.0f;
+    auto focusdistance    = get_pbrt_value(values, "focusdistance", 10.0f);
+    camera.lens           = max(focal, 35.0f) * 0.001f;
+    auto aspect           = 1.0f;
     if (aspect < 0) aspect = last_film_aspect;
     if (aspect < 0) aspect = 1;
     if (aspect >= 1) {
@@ -3016,7 +3016,7 @@ void add_pbrt_camera(yocto_scene& scene, const string& type,
     } else {
       camera.film.x = camera.film.y * aspect;
     }
-    camera.focus = focusdistance;
+    camera.focus    = focusdistance;
     camera.aperture = aperturediameter;
   } else {
     throw std::runtime_error("unsupported Camera type " + type);
@@ -3046,7 +3046,6 @@ static void add_pbrt_shape(yocto_scene& scene, const string& type,
     const unordered_map<string, yocto_material>&   mmap,
     const unordered_map<string, vec3f>&            amap,
     unordered_map<string, int>&                    ammap) {
-#if 0
   auto get_material = [&](const pbrt_context_& ctx) -> int {
     static auto light_id    = 0;
     auto        lookup_name = ctx.material + "_______" + ctx.arealight;
@@ -3062,52 +3061,41 @@ static void add_pbrt_shape(yocto_scene& scene, const string& type,
   };
   auto shape = yocto_shape{};
   shape.uri  = name;
-  switch (pshape.type) {
-    case pbrt_shape::type_t::trianglemesh: {
-      auto& mesh      = pshape.trianglemesh;
-      shape.positions = mesh.P;
-      shape.normals   = mesh.N;
-      shape.texcoords = mesh.uv;
-      for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
-      shape.triangles = mesh.indices;
-    } break;
-    case pbrt_shape::type_t::loopsubdiv: {
-      auto& mesh      = pshape.loopsubdiv;
-      shape.positions = mesh.P;
-      shape.triangles = mesh.indices;
-      shape.normals.resize(shape.positions.size());
-      compute_normals(shape.normals, shape.triangles, shape.positions);
-    } break;
-    case pbrt_shape::type_t::plymesh: {
-      auto& mesh = pshape.plymesh;
-      shape.uri  = mesh.filename;
-      load_shape(fs::path(filename).parent_path() / mesh.filename, shape.points,
-          shape.lines, shape.triangles, shape.quads, shape.quadspos,
-          shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.radius, false);
-    } break;
-    case pbrt_shape::type_t::sphere: {
-      auto& sphere        = pshape.sphere;
-      auto  params        = proc_shape_params{};
-      params.type         = proc_shape_params::type_t::uvsphere;
-      params.subdivisions = 5;
-      params.scale        = sphere.radius;
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
-    } break;
-    case pbrt_shape::type_t::disk: {
-      auto& disk          = pshape.disk;
-      auto  params        = proc_shape_params{};
-      params.type         = proc_shape_params::type_t::uvdisk;
-      params.subdivisions = 4;
-      params.scale        = disk.radius;
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
-    } break;
-    default: {
-      throw std::runtime_error(
-          "unsupported shape type " + std::to_string((int)pshape.type));
-    }
+  if (type == "trianglemesh") {
+    get_pbrt_value(values, "P", shape.positions, {});
+    get_pbrt_value(values, "N", shape.normals, {});
+    get_pbrt_value(values, "uv", shape.texcoords, {});
+    for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
+    get_pbrt_value(values, "indices", shape.triangles, {});
+  } else if (type == "loopsubdiv") {
+    get_pbrt_value(values, "P", shape.positions, {});
+    get_pbrt_value(values, "indices", shape.triangles, {});
+    shape.normals.resize(shape.positions.size());
+    compute_normals(shape.normals, shape.triangles, shape.positions);
+  } else if (type == "plymesh") {
+    shape.uri  = get_pbrt_value(values, "filename", ""s);
+    load_shape(fs::path(filename).parent_path() / shape.uri, shape.points,
+        shape.lines, shape.triangles, shape.quads, shape.quadspos,
+        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius, false);
+  } else if (type == "sphere") {
+    auto radius = get_pbrt_value(values, "radius", 1.0f);
+    auto  params        = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::uvsphere;
+    params.subdivisions = 5;
+    params.scale        = radius;
+    make_proc_shape(shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, params);
+  } else if (type == "disk") {
+    auto radius = get_pbrt_value(values, "radius", 1.0f);
+    auto  params        = proc_shape_params{};
+    params.type         = proc_shape_params::type_t::uvdisk;
+    params.subdivisions = 4;
+    params.scale        = radius;
+    make_proc_shape(shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, params);
+  } else {
+    throw std::runtime_error("unsupported shape type " + type);
   }
   scene.shapes.push_back(shape);
   auto instance     = yocto_instance{};
@@ -3119,7 +3107,6 @@ static void add_pbrt_shape(yocto_scene& scene, const string& type,
   } else {
     omap[cur_object].push_back(instance);
   }
-#endif
 }
 
 static void add_pbrt_texture(yocto_scene& scene, const string& type,
