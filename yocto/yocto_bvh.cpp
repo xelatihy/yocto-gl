@@ -1180,7 +1180,7 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_instances,
       }
     } else {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& instance = scene.instances[idx];
+        auto& instance = scene.instances[node.prims[idx]];
         auto& sbvh     = scene.shapes[instance.shape];
         auto  bbox     = sbvh.nodes.empty()
                         ? invalidb3f
