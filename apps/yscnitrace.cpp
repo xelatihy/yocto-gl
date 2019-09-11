@@ -499,7 +499,7 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
     throw std::runtime_error("unsupported type "s + type.name());
   }
 
-  refit_bvh(bvh, scene, updated_shapes, bvh_prms);
+  refit_bvh(bvh, scene, updated_instances, updated_shapes, bvh_prms);
 }
 
 void update(const opengl_window& win, app_state& app) {

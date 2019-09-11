@@ -529,6 +529,7 @@ void make_bvh(
 }
 
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
+    const vector<int>& updated_instances, 
     const vector<int>& updated_shapes, const bvh_params& params) {
   for (auto idx : updated_shapes) {
     auto& shape = scene.shapes[idx];
@@ -557,7 +558,7 @@ void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
     bvh.instances = {};
   }
 
-  refit_bvh(bvh, updated_shapes, params);
+  refit_bvh(bvh, updated_instances, updated_shapes, params);
 }
 
 }  // namespace yocto

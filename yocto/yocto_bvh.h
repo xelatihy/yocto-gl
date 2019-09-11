@@ -246,8 +246,8 @@ void build_bvh(bvh_scene& bvh, const bvh_params& params);
 
 // Refit bvh data
 void refit_bvh(bvh_shape& bvh, const bvh_params& params);
-void refit_bvh(bvh_scene& bvh, const vector<int>& updated_shapes,
-    const bvh_params& params);
+void refit_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
+  const vector<int>& updated_shapes, const bvh_params& params);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
