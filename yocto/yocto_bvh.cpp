@@ -659,9 +659,28 @@ static void build_embree_flattened_bvh(
 }
 // Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not
 // available.
-static void refit_embree_bvh(bvh_shape& bvh) {
+static void refit_embree_bvh(bvh_shape& shape, const bvh_params& params) {
   throw std::runtime_error("not yet implemented");
 }
+static void refit_embree_bvh(bvh_scene& scene, 
+  const vector<int>& updated_instances, const bvh_params& params) {
+  // scene bvh
+  auto embree_scene  = (RTCScene)scene.embree_bvh;
+  if (scene.instances.empty()) return;
+  for (auto instance_id : updated_instances) {
+    auto& instance = scene.instances[instance_id];
+    if (instance.shape < 0) throw std::runtime_error("empty instance");
+    auto& shape = scene.shapes[instance.shape];
+    if (!shape.embree_bvh) throw std::runtime_error("bvh not built");
+    auto embree_geom = rtcGetGeometry(embree_scene, instance_id);
+    rtcSetGeometryInstancedScene(embree_geom, (RTCScene)shape.embree_bvh);
+    rtcSetGeometryTransform(embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+    rtcCommitGeometry(embree_geom);
+  }
+  rtcCommitScene(embree_scene);
+  scene.embree_flattened = false;
+}
+
 static bool intersect_embree_bvh(const bvh_shape& shape, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
@@ -1093,7 +1112,7 @@ void build_bvh(bvh_scene& scene, const bvh_params& params) {
 
 void refit_bvh(bvh_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
-  if (shape.embree_bvh) throw std::runtime_error("Embree reftting disabled");
+  if (shape.embree_bvh) return refit_embree_bvh(shape, params);
 #endif
 
   // refit
@@ -1142,13 +1161,13 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
   }
 }
 
-void refit_bvh(bvh_scene& scene, const vector<int>& updated_shapes,
-    const bvh_params& params) {
+void refit_bvh(bvh_scene& scene, const vector<int>& updated_instances,
+  const vector<int>& updated_shapes, const bvh_params& params) {
   // update shapes
   for (auto shape : updated_shapes) refit_bvh(scene.shapes[shape], params);
 
 #if YOCTO_EMBREE
-  if (scene.embree_bvh) throw std::runtime_error("Embree reftting disabled");
+  if (scene.embree_bvh) return refit_embree_bvh(scene, updated_instances, params);
 #endif
 
   // refit
