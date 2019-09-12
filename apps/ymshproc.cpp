@@ -111,12 +111,11 @@ int main(int argc, char** argv) {
   if (geodesic_source >= 0) {
     printf("computing geodesics");
     auto transform_timer = timer();
-    auto solver          = geodesic_solver{};
-    init_geodesic_solver(solver, shape.triangles, shape.positions);
-    auto distances = vector<float>{};
-    compute_geodesic_distances(solver, distances, {geodesic_source});
+    auto adjacencies = face_adjacencies(shape.triangles);
+    auto solver          = make_geodesic_solver(shape.triangles, adjacencies, shape.positions);
+    auto distances = compute_geodesic_distances(solver, {geodesic_source});
     shape.colors = vector<vec4f>{};
-    convert_distance_to_color(shape.colors, distances);
+    distance_to_color(shape.colors, distances);
     printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
 
