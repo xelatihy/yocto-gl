@@ -164,14 +164,31 @@ inline void print_fatal(const string& fmt, const Args&... args) {
   exit(1);
 }
 
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration);
-// Format a large integer number in human readable form
-inline string format_num(uint64_t num);
-
 // get time in nanoseconds - useful only to compute difference of times
 inline int64_t get_time() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration) {
+  auto elapsed = duration / 1000000;  // milliseconds
+  auto hours   = (int)(elapsed / 3600000);
+  elapsed %= 3600000;
+  auto mins = (int)(elapsed / 60000);
+  elapsed %= 60000;
+  auto secs  = (int)(elapsed / 1000);
+  auto msecs = (int)(elapsed % 1000);
+  char buffer[256];
+  sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+  return buffer;
+}
+
+// Format a large integer number in human readable form
+inline string format_num(uint64_t num) {
+  auto rem = num % 1000;
+  auto div = num / 1000;
+  if (div > 0) return format_num(div) + "," + std::to_string(rem);
+  return std::to_string(rem);
 }
 
 // Print traces for timing and program debugging
@@ -180,10 +197,11 @@ inline auto print_trace(const string& fmt, const Args&... args) {
   struct print_scope {
     string  message    = "";
     int64_t start_time = -1;
-    ~print_scope() { print_info(message + " " + format_duration(get() - start_time)); }
+    print_scope(const string& msg) : message{msg}, start_time{get_time()} {}
+    ~print_scope() { print_info(message + " " + format_duration(get_time() - start_time)); }
   };
   print_info(fmt + " [started]", std::forward(args)...);
-  return print_scope{format(fmt, args...), get_time()};
+  return print_scope{format(fmt, args...)};
 }
 
 }  // namespace yocto
@@ -201,7 +219,8 @@ inline string to_string(const vec3f& value) {
   return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z);
 }
 inline string to_string(const vec4f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " + to_string(value.w);
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " +
+         to_string(value.w);
 }
 inline string to_string(const vec2i& value) {
   return to_string(value.x) + " " + to_string(value.y);
@@ -210,7 +229,8 @@ inline string to_string(const vec3i& value) {
   return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z);
 }
 inline string to_string(const vec4i& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " + to_string(value.w);
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " +
+         to_string(value.w);
 }
 inline string to_string(const mat2f& value) {
   return to_string(value.x) + " " + to_string(value.y);
@@ -219,19 +239,23 @@ inline string to_string(const mat3f& value) {
   return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z);
 }
 inline string to_string(const mat4f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " + to_string(value.w);
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " +
+         to_string(value.w);
 }
 inline string to_string(const frame2f& value) {
   return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.o);
 }
 inline string to_string(const frame3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " + to_string(value.o);
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " +
+         to_string(value.o);
 }
 inline string to_string(const ray2f& value) {
-  return to_string(value.o) + " " + to_string(value.d) + " " + to_string(value.tmin) + " " + to_string(value.tmax);
+  return to_string(value.o) + " " + to_string(value.d) + " " + to_string(value.tmin) + " " +
+         to_string(value.tmax);
 }
 inline string to_string(const ray3f& value) {
-  return to_string(value.o) + " " + to_string(value.d) + " " + to_string(value.tmin) + " " + to_string(value.tmax);
+  return to_string(value.o) + " " + to_string(value.d) + " " + to_string(value.tmin) + " " +
+         to_string(value.tmax);
 }
 inline string to_string(const bbox1f& value) {
   return to_string(value.min) + " " + to_string(value.max);
@@ -297,11 +321,11 @@ struct _enumerate_helper {
 template <typename T>
 inline auto enumerate(const vector<T>& vals) {
   return _enumerate_helper<const T>{vals.data(), vals.size()};
-};
+}
 template <typename T>
 inline auto enumerate(vector<T>& vals) {
   return _enumerate_helper<T>{vals.data(), vals.size()};
-};
+}
 
 // Vector append and concatenation
 template <typename T>
@@ -476,59 +500,6 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
     atomic<bool>* cancel = nullptr, bool serial = false) {
   parallel_for(
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
-}
-
-}  // namespace yocto
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-//                             IMPLEMENTATION                                 //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF STRING/TIME UTILITIES FOR CLI APPLICATIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Prints a string.
-inline bool print_next(stringstream& stream, const string& fmt) { return print_value(stream, fmt); }
-template <typename Arg, typename... Args>
-inline bool print_next(
-    stringstream& stream, const string& fmt, const Arg& arg, const Args&... args) {
-  auto pos = fmt.find("{}");
-  if (pos == string::npos) return print_value(stream, fmt);
-  if (!print_value(stream, fmt.substr(0, pos))) return false;
-  if (!print_value(stream, arg)) return false;
-  return print_next(stream, fmt.substr(pos + 2), args...);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF STRING FORMAT UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration) {
-  auto elapsed = duration / 1000000;  // milliseconds
-  auto hours   = (int)(elapsed / 3600000);
-  elapsed %= 3600000;
-  auto mins = (int)(elapsed / 60000);
-  elapsed %= 60000;
-  auto secs  = (int)(elapsed / 1000);
-  auto msecs = (int)(elapsed % 1000);
-  char buffer[256];
-  sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-  return buffer;
-}
-// Format a large integer number in human readable form
-inline string format_num(uint64_t num) {
-  auto rem = num % 1000;
-  auto div = num / 1000;
-  if (div > 0) return format_num(div) + "," + std::to_string(rem);
-  return std::to_string(rem);
 }
 
 }  // namespace yocto
