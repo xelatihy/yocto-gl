@@ -281,54 +281,58 @@ inline string to_string(const bbox3f& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Range helpper (this should not be used directly)
-struct _range_helper {
-  struct _iterator {
-    int        _pos = 0;
-    _iterator& operator++() {
-      _pos++;
+// Range object to support Python-like iteration. Use with `range()`.
+struct range_helper {
+  struct iterator {
+    int        pos = 0;
+    iterator& operator++() {
+      pos++;
       return *this;
     }
-    bool operator!=(const _iterator& other) const { return _pos != other._pos; }
-    int  operator*() const { return _pos; }
+    bool operator!=(const iterator& other) const {
+      return pos != other.pos;
+    }
+    int operator*() const { return pos; }
   };
-  int       _start = 0, _end = 0;
-  _iterator begin() const { return {_start}; }
-  _iterator end() const { return {_end}; }
+  int       begin_ = 0, end_ = 0;
+  iterator begin() const { return {begin_}; }
+  iterator end() const { return {end_}; }
 };
 
 // Python `range()` equivalent. Construct an object to iterate over a sequence.
-inline auto range(int max) { return _range_helper{0, max}; }
-inline auto range(int min, int max) { return _range_helper{min, max}; }
+inline auto range(int min, int max) {
+  return range_helper{min, max};
+}
+inline auto range(int max) { return range(0, max); }
 
-// Enumerate helper (this should not be used directly)
+// Enumerate object to support Python-like enumeration. Use with `enumerate()`.
 template <typename T>
-struct _enumerate_helper {
-  struct _iterator {
-    T*         _data = nullptr;
-    int        _pos  = 0;
-    _iterator& operator++() {
-      _pos++;
+struct enumerate_helper {
+  struct iterator {
+    T*         data = nullptr;
+    int        pos  = 0;
+    iterator& operator++() {
+      pos++;
       return *this;
     }
-    bool operator!=(const _iterator& other) const { return _pos != other._pos; }
-    pair<int&, T&> operator*() const { return {_pos, *(_data + _pos)}; }
+    bool operator!=(const iterator& other) const { return pos != other.pos; }
+    pair<int&, T&> operator*() const { return {pos, *(data + pos)}; }
   };
-  T*        _data = nullptr;
-  int       _size = 0;
-  _iterator begin() const { return {_data, 0}; }
-  _iterator end() const { return {_data, _size}; }
+  T*        data = nullptr;
+  int       size = 0;
+  iterator begin() const { return {data, 0}; }
+  iterator end() const { return {data, size}; }
 };
 
 // Python `enumerate()` equivalent. Construct an object that iteraterates over a
 // sequence of elements and numbers them.
 template <typename T>
 inline auto enumerate(const vector<T>& vals) {
-  return _enumerate_helper<const T>{vals.data(), vals.size()};
+  return enumerate_helper<const T>{vals.data(), vals.size()};
 }
 template <typename T>
 inline auto enumerate(vector<T>& vals) {
-  return _enumerate_helper<T>{vals.data(), vals.size()};
+  return enumerate_helper<T>{vals.data(), vals.size()};
 }
 
 // Vector append and concatenation
