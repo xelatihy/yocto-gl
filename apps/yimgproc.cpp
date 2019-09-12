@@ -245,8 +245,8 @@ int main(int argc, char* argv[]) {
 
   // check diff
   if (diff_filename != "" && diff_signal) {
-    for(auto& c : img) {
-      if(max(xyz(c)) > diff_threshold) {
+    for (auto& c : img) {
+      if (max(xyz(c)) > diff_threshold) {
         printf("image content differs\n");
         exit(1);
       }

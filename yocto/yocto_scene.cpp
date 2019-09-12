@@ -529,8 +529,8 @@ void make_bvh(
 }
 
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
-    const vector<int>& updated_instances, 
-    const vector<int>& updated_shapes, const bvh_params& params) {
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params) {
   for (auto idx : updated_shapes) {
     auto& shape = scene.shapes[idx];
     auto& sbvh  = bvh.shapes[idx];

@@ -662,10 +662,10 @@ static void build_embree_flattened_bvh(
 static void refit_embree_bvh(bvh_shape& shape, const bvh_params& params) {
   throw std::runtime_error("not yet implemented");
 }
-static void refit_embree_bvh(bvh_scene& scene, 
-  const vector<int>& updated_instances, const bvh_params& params) {
+static void refit_embree_bvh(bvh_scene& scene,
+    const vector<int>& updated_instances, const bvh_params& params) {
   // scene bvh
-  auto embree_scene  = (RTCScene)scene.embree_bvh;
+  auto embree_scene = (RTCScene)scene.embree_bvh;
   if (scene.instances.empty()) return;
   for (auto instance_id : updated_instances) {
     auto& instance = scene.instances[instance_id];
@@ -674,7 +674,8 @@ static void refit_embree_bvh(bvh_scene& scene,
     if (!shape.embree_bvh) throw std::runtime_error("bvh not built");
     auto embree_geom = rtcGetGeometry(embree_scene, instance_id);
     rtcSetGeometryInstancedScene(embree_geom, (RTCScene)shape.embree_bvh);
-    rtcSetGeometryTransform(embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+    rtcSetGeometryTransform(
+        embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(embree_geom);
   }
   rtcCommitScene(embree_scene);
@@ -1162,12 +1163,13 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
 }
 
 void refit_bvh(bvh_scene& scene, const vector<int>& updated_instances,
-  const vector<int>& updated_shapes, const bvh_params& params) {
+    const vector<int>& updated_shapes, const bvh_params& params) {
   // update shapes
   for (auto shape : updated_shapes) refit_bvh(scene.shapes[shape], params);
 
 #if YOCTO_EMBREE
-  if (scene.embree_bvh) return refit_embree_bvh(scene, updated_instances, params);
+  if (scene.embree_bvh)
+    return refit_embree_bvh(scene, updated_instances, params);
 #endif
 
   // refit
