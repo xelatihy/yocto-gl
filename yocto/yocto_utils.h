@@ -121,8 +121,6 @@
 namespace yocto {
 
 using std::deque;
-using std::lock_guard;
-using std::mutex;
 using std::thread;
 using std::getline;
 
@@ -211,7 +209,22 @@ inline auto print_trace(const string& fmt, const Args&... args) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Iostream utilities for basic types
+// Conversion to string for basic and Yocto/Math types
+inline string to_string(int value) {
+  return std::to_string(value);
+}
+inline string to_string(float value) {
+  return std::to_string(value);
+}
+inline string to_string(double value) {
+  return std::to_string(value);
+}
+inline string to_string(const string& value) {
+  return value;
+}
+inline string to_string(const char* value) {
+  return value;
+}
 inline string to_string(const vec2f& value) {
   return to_string(value.x) + " " + to_string(value.y);
 }
@@ -257,16 +270,10 @@ inline string to_string(const ray3f& value) {
   return to_string(value.o) + " " + to_string(value.d) + " " + to_string(value.tmin) + " " +
          to_string(value.tmax);
 }
-inline string to_string(const bbox1f& value) {
-  return to_string(value.min) + " " + to_string(value.max);
-}
 inline string to_string(const bbox2f& value) {
   return to_string(value.min) + " " + to_string(value.max);
 }
 inline string to_string(const bbox3f& value) {
-  return to_string(value.min) + " " + to_string(value.max);
-}
-inline string to_string(const bbox4f& value) {
   return to_string(value.min) + " " + to_string(value.max);
 }
 
@@ -467,19 +474,19 @@ struct concurrent_queue {
   concurrent_queue& operator=(const concurrent_queue& other) = delete;
 
   bool empty() {
-    lock_guard<mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(mutex);
     return queue.empty();
   }
   void clear() {
-    lock_guard<mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(mutex);
     queue.clear();
   }
   void push(const T& value) {
-    lock_guard<mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(mutex);
     queue.push_back(value);
   }
   bool try_pop(T& value) {
-    lock_guard<mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(mutex);
     if (queue.empty()) return false;
     value = queue.front();
     queue.pop_front();
@@ -495,7 +502,7 @@ struct concurrent_queue {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(
-    int begin, int end, const Func& func, atomic<bool>* cancel = nullptr, bool serial = false) {
+    int begin, int end, const Func& func, std::atomic<bool>* cancel = nullptr, bool serial = false) {
   if (serial) {
     for (auto idx = begin; idx < end; idx++) {
       if (cancel && *cancel) break;
@@ -504,7 +511,7 @@ inline void parallel_for(
   } else {
     auto        threads  = vector<thread>{};
     auto        nthreads = thread::hardware_concurrency();
-    atomic<int> next_idx(begin);
+    std::atomic<int> next_idx(begin);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
       threads.emplace_back([&func, &next_idx, cancel, end]() {
         while (true) {
@@ -521,7 +528,7 @@ inline void parallel_for(
 
 template <typename Func>
 inline void parallel_for(
-    int num, const Func& func, atomic<bool>* cancel = nullptr, bool serial = false) {
+    int num, const Func& func, std::atomic<bool>* cancel = nullptr, bool serial = false) {
   parallel_for(0, num, func, cancel, serial);
 }
 
@@ -529,13 +536,13 @@ inline void parallel_for(
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
 inline void parallel_foreach(
-    vector<T>& values, const Func& func, atomic<bool>* cancel = nullptr, bool serial = false) {
+    vector<T>& values, const Func& func, std::atomic<bool>* cancel = nullptr, bool serial = false) {
   parallel_for(
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
 }
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false) {
+    std::atomic<bool>* cancel = nullptr, bool serial = false) {
   parallel_for(
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
 }
@@ -558,6 +565,8 @@ inline cmdline_parser make_cmdline_parser(int argc, char** argv, const string& u
   parser.add_logging_flags = add_logging_flags;
   return parser;
 }
+
+#if 0
 
 // check if option or argument
 inline bool is_optional_argument(const string& name) {
@@ -926,72 +935,7 @@ inline vector<T> parse_arguments(cmdline_parser& parser, const string& name, con
   return values;
 }
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    log_error("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' && filename[3] == '/') {
-    log_error("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension (not including '.').
-string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-// Get filename without directory.
-string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-// Replace extension.
-string replace_extension(const string& filename_, const string& ext_) {
-  auto filename = normalize_path(filename_);
-  auto ext      = normalize_path(ext_);
-  if (ext.at(0) == '.') ext = ext.substr(1);
-  auto pos = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos) + "." + ext;
-}
-
-// Check if a file can be opened for reading.
-bool exists_file(const string& filename) {
-  auto f = fopen(filename.c_str(), "r");
-  if (!f) return false;
-  fclose(f);
-  return true;
-}
+#endif
 
 }  // namespace yocto
 

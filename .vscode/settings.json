@@ -85,7 +85,8 @@
         "__functional_03": "cpp",
         "cinttypes": "cpp",
         "strstream": "cpp",
-        "__memory": "cpp"
+        "__memory": "cpp",
+        "condition_variable": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Disabled",
     "cmake.buildDirectory": "${workspaceRoot}/build/vscode",
