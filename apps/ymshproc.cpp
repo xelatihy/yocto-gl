@@ -36,6 +36,7 @@ using namespace yocto;
 int main(int argc, char** argv) {
   // command line parameters
   auto geodesic_source = -1;
+  auto geodesic_scale  = 30.0f;
   auto facevarying     = false;
   auto normals         = false;
   auto rotate          = zero3f;
@@ -48,6 +49,7 @@ int main(int argc, char** argv) {
   // parse command line
   auto parser = CLI::App{"Applies operations on a triangle mesh"};
   parser.add_option("--geodesic-source,-g", geodesic_source, "Geodesic source");
+  parser.add_option("--geodesic-scale", geodesic_scale, "Geodesic scale");
   parser.add_flag("--facevarying", facevarying, "Preserve facevarying");
   parser.add_flag("--normals", normals, "Compute smooth normals");
   parser.add_option("--rotatey", rotate.y, "Rotate around y axis");
@@ -111,11 +113,12 @@ int main(int argc, char** argv) {
   if (geodesic_source >= 0) {
     printf("computing geodesics");
     auto transform_timer = timer();
-    auto adjacencies = face_adjacencies(shape.triangles);
-    auto solver          = make_geodesic_solver(shape.triangles, adjacencies, shape.positions);
+    auto adjacencies     = face_adjacencies(shape.triangles);
+    auto solver          = make_geodesic_solver(
+        shape.triangles, adjacencies, shape.positions);
     auto distances = compute_geodesic_distances(solver, {geodesic_source});
-    shape.colors = vector<vec4f>{};
-    distance_to_color(shape.colors, distances);
+    shape.colors   = vector<vec4f>{};
+    distance_to_color(shape.colors, distances, geodesic_scale);
     printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
 

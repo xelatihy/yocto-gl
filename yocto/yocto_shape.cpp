@@ -1737,7 +1737,7 @@ static inline void connect_opposite_nodes(geodesic_solver& solver,
 void make_geodesic_solver(geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
     const vector<vec3f>& positions) {
-  solver.graph.clear();
+  solver.graph.resize(positions.size());
   for (int face = 0; face < triangles.size(); face++) {
     for (int k = 0; k < 3; k++) {
       auto a = triangles[face][k];
