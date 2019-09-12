@@ -1683,7 +1683,7 @@ namespace yocto {
 
 static inline int opposite_vertex(const vec3i& tr, const vec2i& edge) {
   for (int i = 0; i < 3; ++i) {
-    if (tr[i] != edge.x and tr[i] != edge.y) return tr[i];
+    if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
   }
   return -1;
 }
