@@ -189,22 +189,64 @@ inline auto print_trace(const string& fmt, const Args&... args) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// LOGGING UTILITIES
+// CONVERSION TO STRING
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Log traces for timing and program debugging
-struct log_scope;
-template <typename... Args>
-inline void log_trace(const string& fmt, const Args&... args);
-template <typename... Args>
-inline log_scope log_trace_begin(const string& fmt, const Args&... args);
-template <typename... Args>
-inline void log_trace_end(log_scope& scope);
-template <typename... Args>
-inline log_scope log_trace_scoped(const string& fmt, const Args&... args);
+// Iostream utilities for basic types
+inline string to_string(const vec2f& value) {
+  return to_string(value.x) + " " + to_string(value.y);
+}
+inline string to_string(const vec3f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z);
+}
+inline string to_string(const vec4f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " + to_string(value.w);
+}
+inline string to_string(const vec2i& value) {
+  return to_string(value.x) + " " + to_string(value.y);
+}
+inline string to_string(const vec3i& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z);
+}
+inline string to_string(const vec4i& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " + to_string(value.w);
+}
+inline string to_string(const mat2f& value) {
+  return to_string(value.x) + " " + to_string(value.y);
+}
+inline string to_string(const mat3f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z);
+}
+inline string to_string(const mat4f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " + to_string(value.w);
+}
+inline string to_string(const frame2f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.o);
+}
+inline string to_string(const frame3f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " + to_string(value.o);
+}
+inline string to_string(const ray2f& value) {
+  return to_string(value.o) + " " + to_string(value.d) + " " + to_string(value.tmin) + " " + to_string(value.tmax);
+}
+inline string to_string(const ray3f& value) {
+  return to_string(value.o) + " " + to_string(value.d) + " " + to_string(value.tmin) + " " + to_string(value.tmax);
+}
+inline string to_string(const bbox1f& value) {
+  return to_string(value.min) + " " + to_string(value.max);
+}
+inline string to_string(const bbox2f& value) {
+  return to_string(value.min) + " " + to_string(value.max);
+}
+inline string to_string(const bbox3f& value) {
+  return to_string(value.min) + " " + to_string(value.max);
+}
+inline string to_string(const bbox4f& value) {
+  return to_string(value.min) + " " + to_string(value.max);
+}
 
-}  // namespace yocto
+}
 
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
@@ -462,105 +504,6 @@ inline bool print_next(
 }
 
 }  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IOSTREAM UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Iostream utilities for basic types
-inline ostream& operator<<(ostream& os, const vec2f& value) {
-  return os << value.x << " " << value.y;
-}
-inline ostream& operator<<(ostream& os, const vec3f& value) {
-  return os << value.x << " " << value.y << " " << value.z;
-}
-inline ostream& operator<<(ostream& os, const vec4f& value) {
-  return os << value.x << " " << value.y << " " << value.z << " " << value.w;
-}
-inline ostream& operator<<(ostream& os, const vec2i& value) {
-  return os << value.x << " " << value.y;
-}
-inline ostream& operator<<(ostream& os, const vec3i& value) {
-  return os << value.x << " " << value.y << " " << value.z;
-}
-inline ostream& operator<<(ostream& os, const vec4i& value) {
-  return os << value.x << " " << value.y << " " << value.z << " " << value.w;
-}
-inline ostream& operator<<(ostream& os, const mat2f& value) {
-  return os << value.x << " " << value.y;
-}
-inline ostream& operator<<(ostream& os, const mat3f& value) {
-  return os << value.x << " " << value.y << " " << value.z;
-}
-inline ostream& operator<<(ostream& os, const mat4f& value) {
-  return os << value.x << " " << value.y << " " << value.z << " " << value.w;
-}
-inline ostream& operator<<(ostream& os, const frame2f& value) {
-  return os << value.x << " " << value.y << " " << value.o;
-}
-inline ostream& operator<<(ostream& os, const frame3f& value) {
-  return os << value.x << " " << value.y << " " << value.z << " " << value.o;
-}
-inline ostream& operator<<(ostream& os, const ray2f& value) {
-  return os << value.o << " " << value.d << " " << value.tmin << " " << value.tmax;
-}
-inline ostream& operator<<(ostream& os, const ray3f& value) {
-  return os << value.o << " " << value.d << " " << value.tmin << " " << value.tmax;
-}
-inline ostream& operator<<(ostream& os, const bbox1f& value) {
-  return os << value.min << " " << value.max;
-}
-inline ostream& operator<<(ostream& os, const bbox2f& value) {
-  return os << value.min << " " << value.max;
-}
-inline ostream& operator<<(ostream& os, const bbox3f& value) {
-  return os << value.min << " " << value.max;
-}
-inline ostream& operator<<(ostream& os, const bbox4f& value) {
-  return os << value.min << " " << value.max;
-}
-
-// Iostream utilities for basic types
-inline istream& operator>>(istream& is, vec2f& value) { return is >> value.x >> value.y; }
-inline istream& operator>>(istream& is, vec3f& value) {
-  return is >> value.x >> value.y >> value.z;
-}
-inline istream& operator>>(istream& is, vec4f& value) {
-  return is >> value.x >> value.y >> value.z >> value.w;
-}
-inline istream& operator>>(istream& is, vec2i& value) { return is >> value.x >> value.y; }
-inline istream& operator>>(istream& is, vec3i& value) {
-  return is >> value.x >> value.y >> value.z;
-}
-inline istream& operator>>(istream& is, vec4i& value) {
-  return is >> value.x >> value.y >> value.z >> value.w;
-}
-inline istream& operator>>(istream& is, mat2f& value) { return is >> value.x >> value.y; }
-inline istream& operator>>(istream& is, mat3f& value) {
-  return is >> value.x >> value.y >> value.z;
-}
-inline istream& operator>>(istream& is, mat4f& value) {
-  return is >> value.x >> value.y >> value.z >> value.w;
-}
-inline istream& operator>>(istream& is, frame2f& value) {
-  return is >> value.x >> value.y >> value.o;
-}
-inline istream& operator>>(istream& is, frame3f& value) {
-  return is >> value.x >> value.y >> value.z >> value.o;
-}
-inline istream& operator>>(istream& is, ray2f& value) {
-  return is >> value.o >> value.d >> value.tmin >> value.tmax;
-}
-inline istream& operator>>(istream& is, ray3f& value) {
-  return is >> value.o >> value.d >> value.tmin >> value.tmax;
-}
-inline istream& operator>>(istream& is, bbox1f& value) { return is >> value.min >> value.max; }
-inline istream& operator>>(istream& is, bbox2f& value) { return is >> value.min >> value.max; }
-inline istream& operator>>(istream& is, bbox3f& value) { return is >> value.min >> value.max; }
-inline istream& operator>>(istream& is, bbox4f& value) { return is >> value.min >> value.max; }
-
-}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING FORMAT UTILITIES
