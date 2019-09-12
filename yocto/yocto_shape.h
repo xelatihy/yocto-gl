@@ -556,6 +556,12 @@ void          compute_geodesic_distances(vector<float>& distances,
              const geodesic_solver& solver, const vector<int>& sources,
              float max_distance = flt_max);
 
+// Sample vertices with a Poisson distribution using geodesic distances.
+// Sampling strategy is farthest point sampling (FPS): at every step
+// take the farthers point from current sampled set until done.
+vector<int> sample_vertices_poisson(const geodesic_solver& solver, int num_samples);
+void sample_vertices_poisson(vector<int>& verts, const geodesic_solver& solver, int num_samples);
+
 // Convert distances to colors
 vector<vec4f> distance_to_color(const vector<float>& distances, float scale = 1,
     const vec4f& c0 = {1, 1, 1, 1}, const vec4f& c1 = {1, 0.1, 0.1, 1});

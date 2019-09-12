@@ -1764,7 +1764,7 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
 }
 
 void compute_geodesic_distances(vector<float>& field,
-  const geodesic_solver& solver, const vector<int>& sources, 
+    const geodesic_solver& solver, const vector<int>& sources,
     float max_distance) {
   /*
      This algortithm uses the heuristic Small Label Fisrt and Large Label Last
@@ -1854,19 +1854,43 @@ vector<float> compute_geodesic_distances(const geodesic_solver& solver,
   return distances;
 }
 
+// Sample vertices with a Poisson distribution using geodesic distances
+// Sampling strategy is farthest point sampling (FPS): at every step
+// take the farthers point from current sampled set until done.
+void sample_vertices_poisson(
+    vector<int>& verts, const geodesic_solver& solver, int num_samples) {
+  verts.clear();
+  verts.reserve(num_samples);
+  auto distances = vector<float>(solver.graph.size(), flt_max);
+  while (true) {
+    auto max_index =
+        (int)(std::max_element(distances.begin(), distances.end()) -
+              distances.begin());
+    verts.push_back(max_index);
+    if (verts.size() >= num_samples) break;
+    distances[max_index] = 0.0f;
+    compute_geodesic_distances(distances, solver, {max_index}, flt_max);
+  }
+}
+vector<int> sample_vertices_poisson(
+    const geodesic_solver& solver, int num_samples) {
+  auto verts = vector<int>{};
+  sample_vertices_poisson(verts, solver, num_samples);
+  return verts;
+}
+
 void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
-    float scale, const vec4f& c0,
-    const vec4f& c1) {
+    float scale, const vec4f& c0, const vec4f& c1) {
   colors.resize(distances.size());
-  for(auto i = 0; i < colors.size(); i ++) {
+  for (auto i = 0; i < colors.size(); i++) {
     colors[i] = ((int64_t)(distances[i] * scale)) % 2 ? c0 : c1;
   }
 }
 vector<vec4f> distance_to_color(const vector<float>& distances, float scale,
     const vec4f& c0, const vec4f& c1) {
-    auto colors = vector<vec4f>{distances.size()};
-    distance_to_color(colors, distances, scale, c0, c1);
-    return colors;
+  auto colors = vector<vec4f>{distances.size()};
+  distance_to_color(colors, distances, scale, c0, c1);
+  return colors;
 }
 
 }  // namespace yocto
