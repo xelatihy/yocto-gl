@@ -161,8 +161,7 @@ int main(int argc, char* argv[]) {
   try {
     load_image(filename, img);
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
 
   // set alpha
@@ -171,13 +170,9 @@ int main(int argc, char* argv[]) {
     try {
       load_image(alpha_filename, alpha);
     } catch (const std::exception& e) {
-      printf("%s\n", e.what());
-      exit(1);
+      print_fatal(e.what());
     }
-    if (img.size() != alpha.size()) {
-      printf("bad image size\n");
-      exit(1);
-    }
+    if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++) img[{i, j}].w = alpha[{i, j}].w;
   }
@@ -188,13 +183,9 @@ int main(int argc, char* argv[]) {
     try {
       load_image(coloralpha_filename, alpha);
     } catch (const std::exception& e) {
-      printf("%s\n", e.what());
-      exit(1);
+      print_fatal(e.what());
     }
-    if (img.size() != alpha.size()) {
-      printf("bad image size\n");
-      exit(1);
-    }
+    if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++)
         img[{i, j}].w = mean(xyz(alpha[{i, j}]));
@@ -206,13 +197,9 @@ int main(int argc, char* argv[]) {
     try {
       load_image(diff_filename, diff);
     } catch (const std::exception& e) {
-      printf("%s\n", e.what());
-      exit(1);
+      print_fatal(e.what());
     }
-    if (img.size() != diff.size()) {
-      printf("image sizes are different\n");
-      exit(1);
-    }
+    if (img.size() != diff.size()) print_fatal("image sizes are different");
     img = difference(img, diff, true);
   }
 
@@ -241,17 +228,13 @@ int main(int argc, char* argv[]) {
       save_image(output, logo ? add_logo(img) : img);
     }
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
 
   // check diff
   if (diff_filename != "" && diff_signal) {
     for (auto& c : img) {
-      if (max(xyz(c)) > diff_threshold) {
-        printf("image content differs\n");
-        exit(1);
-      }
+      if (max(xyz(c)) > diff_threshold) print_fatal("image content differs");
     }
   }
 

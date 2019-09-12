@@ -137,28 +137,28 @@ template <typename Arg, typename... Args>
 inline string format(const string& fmt, const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
   if (pos == string::npos) return fmt;
-  return fmt.substr(0, pos) + to_string(arg) + format(fmt.substr(pos + 2), std::forward(args)...);
+  return fmt.substr(0, pos) + to_string(arg) + format(fmt.substr(pos + 2), args...);
 }
 
 // Prints a formatted string to stdout or file.
 template <typename... Args>
 inline bool print(const string& fmt, const Args&... args) {
-  return printf("%s", format(fmt, std::forward(args)...)) >= 0;
+  return printf("%s", format(fmt, args...).c_str()) >= 0;
 }
 template <typename... Args>
 inline bool print(FILE* fs, const string& fmt, const Args&... args) {
-  return fprintf(fs, "%s", format(fmt, std::forward(args)...)) >= 0;
+  return fprintf(fs, "%s", format(fmt, args...).c_str()) >= 0;
 }
 
 // Print a message to the console
 template <typename... Args>
 inline void print_info(const string& fmt, const Args&... args) {
-  printf("%s\n", format(fmt, std::forward(args)...));
+  printf("%s\n", format(fmt, args...).c_str());
 }
 // Prints a messgae to the console and exit with an error.
 template <typename... Args>
 inline void print_fatal(const string& fmt, const Args&... args) {
-  printf("%s\n", format(fmt, std::forward(args)...));
+  printf("%s\n", format(fmt, args...).c_str());
   exit(1);
 }
 
