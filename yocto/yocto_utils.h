@@ -121,8 +121,8 @@
 namespace yocto {
 
 using std::deque;
-using std::thread;
 using std::getline;
+using std::thread;
 
 }  // namespace yocto
 
@@ -137,7 +137,8 @@ template <typename Arg, typename... Args>
 inline string format(const string& fmt, const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
   if (pos == string::npos) return fmt;
-  return fmt.substr(0, pos) + to_string(arg) + format(fmt.substr(pos + 2), args...);
+  return fmt.substr(0, pos) + to_string(arg) +
+         format(fmt.substr(pos + 2), args...);
 }
 
 // Prints a formatted string to stdout or file.
@@ -196,7 +197,9 @@ inline auto print_trace(const string& fmt, const Args&... args) {
     string  message    = "";
     int64_t start_time = -1;
     print_scope(const string& msg) : message{msg}, start_time{get_time()} {}
-    ~print_scope() { print_info(message + " " + format_duration(get_time() - start_time)); }
+    ~print_scope() {
+      print_info(message + " " + format_duration(get_time() - start_time));
+    }
   };
   print_info(fmt + " [started]", std::forward(args)...);
   return print_scope{format(fmt, args...)};
@@ -210,65 +213,59 @@ inline auto print_trace(const string& fmt, const Args&... args) {
 namespace yocto {
 
 // Conversion to string for basic and Yocto/Math types
-inline string to_string(int value) {
-  return std::to_string(value);
-}
-inline string to_string(float value) {
-  return std::to_string(value);
-}
-inline string to_string(double value) {
-  return std::to_string(value);
-}
-inline string to_string(const string& value) {
-  return value;
-}
-inline string to_string(const char* value) {
-  return value;
-}
+inline string to_string(int value) { return std::to_string(value); }
+inline string to_string(float value) { return std::to_string(value); }
+inline string to_string(double value) { return std::to_string(value); }
+inline string to_string(const string& value) { return value; }
+inline string to_string(const char* value) { return value; }
 inline string to_string(const vec2f& value) {
   return to_string(value.x) + " " + to_string(value.y);
 }
 inline string to_string(const vec3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z);
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z);
 }
 inline string to_string(const vec4f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " +
-         to_string(value.w);
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z) + " " + to_string(value.w);
 }
 inline string to_string(const vec2i& value) {
   return to_string(value.x) + " " + to_string(value.y);
 }
 inline string to_string(const vec3i& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z);
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z);
 }
 inline string to_string(const vec4i& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " +
-         to_string(value.w);
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z) + " " + to_string(value.w);
 }
 inline string to_string(const mat2f& value) {
   return to_string(value.x) + " " + to_string(value.y);
 }
 inline string to_string(const mat3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z);
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z);
 }
 inline string to_string(const mat4f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " +
-         to_string(value.w);
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z) + " " + to_string(value.w);
 }
 inline string to_string(const frame2f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.o);
-}
-inline string to_string(const frame3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " + to_string(value.z) + " " +
+  return to_string(value.x) + " " + to_string(value.y) + " " +
          to_string(value.o);
 }
+inline string to_string(const frame3f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z) + " " + to_string(value.o);
+}
 inline string to_string(const ray2f& value) {
-  return to_string(value.o) + " " + to_string(value.d) + " " + to_string(value.tmin) + " " +
-         to_string(value.tmax);
+  return to_string(value.o) + " " + to_string(value.d) + " " +
+         to_string(value.tmin) + " " + to_string(value.tmax);
 }
 inline string to_string(const ray3f& value) {
-  return to_string(value.o) + " " + to_string(value.d) + " " + to_string(value.tmin) + " " +
-         to_string(value.tmax);
+  return to_string(value.o) + " " + to_string(value.d) + " " +
+         to_string(value.tmin) + " " + to_string(value.tmax);
 }
 inline string to_string(const bbox2f& value) {
   return to_string(value.min) + " " + to_string(value.max);
@@ -277,7 +274,7 @@ inline string to_string(const bbox3f& value) {
   return to_string(value.min) + " " + to_string(value.max);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
@@ -314,7 +311,7 @@ struct _enumerate_helper {
       _pos++;
       return *this;
     }
-    bool           operator!=(const _iterator& other) const { return _pos != other._pos; }
+    bool operator!=(const _iterator& other) const { return _pos != other._pos; }
     pair<int&, T&> operator*() const { return {_pos, *(_data + _pos)}; }
   };
   T*        _data = nullptr;
@@ -356,7 +353,7 @@ inline vector<T> operator+(const vector<T>& a, const T& b) {
   return c += b;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMMEDIATE-MODE COMMAND LINE PARSING
@@ -376,8 +373,9 @@ struct cmdline_parser {
 };
 
 // Initialize a command line parser.
-inline cmdline_parser make_cmdline_parser(int argc, char** argv, const string& usage,
-    const string& cmd = "", bool add_help_flag = true, bool add_logging_flags = true);
+inline cmdline_parser make_cmdline_parser(int argc, char** argv,
+    const string& usage, const string& cmd = "", bool add_help_flag = true,
+    bool add_logging_flags = true);
 // check if any error occurred and exit appropriately
 inline void check_cmdline(cmdline_parser& parser);
 
@@ -389,18 +387,18 @@ inline void check_cmdline(cmdline_parser& parser);
 // that we have both options available. You can also use the parse flag function
 // in which case only one name is used and the flag will flip the value passed.
 template <typename T>
-inline T parse_argument(
-    cmdline_parser& parser, const string& name, T def, const string& usage, bool req = false);
+inline T    parse_argument(cmdline_parser& parser, const string& name, T def,
+       const string& usage, bool req = false);
 inline bool parse_argument_flag(
     cmdline_parser& parser, const string& name, bool def, const string& usage);
 // Parse all arguments left on the command line.
 template <typename T>
-inline vector<T> parse_arguments(cmdline_parser& parser, const string& name, const vector<T>& def,
-    const string& usage, bool req = false);
+inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
+    const vector<T>& def, const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
 template <typename T>
-inline T parse_argument(cmdline_parser& parser, const string& name, T def, const string& usage,
-    const vector<string>& labels, bool req = false);
+inline T parse_argument(cmdline_parser& parser, const string& name, T def,
+    const string& usage, const vector<string>& labels, bool req = false);
 
 // Parse an int, float, string, vecXX and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
@@ -410,18 +408,19 @@ inline T parse_argument(cmdline_parser& parser, const string& name, T def, const
 // that we have both options available. You can also use the parse flag function
 // in which case only one name is used and the flag will flip the value passed.
 template <typename T>
-inline bool parse_argument_ref(
-    cmdline_parser& parser, const string& name, T& val, const string& usage, bool req = false);
+inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
+    T& val, const string& usage, bool req = false);
 inline bool parse_argument_flag(
     cmdline_parser& parser, const string& name, bool& val, const string& usage);
 // Parse all arguments left on the command line.
 template <typename T>
-inline bool parse_arguments_ref(cmdline_parser& parser, const string& name, vector<T>& val,
-    const string& usage, bool req = false);
+inline bool parse_arguments_ref(cmdline_parser& parser, const string& name,
+    vector<T>& val, const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
 template <typename T>
-inline bool parse_argument_ref(cmdline_parser& parser, const string& name, T& val,
-    const string& usage, const vector<string>& labels, bool req = false);
+inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
+    T& val, const string& usage, const vector<string>& labels,
+    bool req = false);
 
 }  // namespace yocto
 
@@ -501,16 +500,16 @@ struct concurrent_queue {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
-inline void parallel_for(
-    int begin, int end, const Func& func, std::atomic<bool>* cancel = nullptr, bool serial = false) {
+inline void parallel_for(int begin, int end, const Func& func,
+    std::atomic<bool>* cancel = nullptr, bool serial = false) {
   if (serial) {
     for (auto idx = begin; idx < end; idx++) {
       if (cancel && *cancel) break;
       func(idx);
     }
   } else {
-    auto        threads  = vector<thread>{};
-    auto        nthreads = thread::hardware_concurrency();
+    auto             threads  = vector<thread>{};
+    auto             nthreads = thread::hardware_concurrency();
     std::atomic<int> next_idx(begin);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
       threads.emplace_back([&func, &next_idx, cancel, end]() {
@@ -527,24 +526,26 @@ inline void parallel_for(
 }
 
 template <typename Func>
-inline void parallel_for(
-    int num, const Func& func, std::atomic<bool>* cancel = nullptr, bool serial = false) {
+inline void parallel_for(int num, const Func& func,
+    std::atomic<bool>* cancel = nullptr, bool serial = false) {
   parallel_for(0, num, func, cancel, serial);
 }
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline void parallel_foreach(
-    vector<T>& values, const Func& func, std::atomic<bool>* cancel = nullptr, bool serial = false) {
+inline void parallel_foreach(vector<T>& values, const Func& func,
+    std::atomic<bool>* cancel = nullptr, bool serial = false) {
   parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
+      cancel, serial);
 }
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, const Func& func,
     std::atomic<bool>* cancel = nullptr, bool serial = false) {
   parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
+      cancel, serial);
 }
 
 }  // namespace yocto
@@ -555,8 +556,9 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
 namespace yocto {
 
 // initialize a command line parser
-inline cmdline_parser make_cmdline_parser(int argc, char** argv, const string& usage,
-    const string& cmd, bool add_help_flag, bool add_logging_flags) {
+inline cmdline_parser make_cmdline_parser(int argc, char** argv,
+    const string& usage, const string& cmd, bool add_help_flag,
+    bool add_logging_flags) {
   auto parser              = cmdline_parser{};
   parser.args              = {argv + 1, argv + argc};
   parser.help_command      = (empty(cmd)) ? argv[0] : cmd;

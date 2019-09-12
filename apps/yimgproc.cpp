@@ -26,9 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_utils.h"
-#include "../yocto/yocto_image.h"
 using namespace yocto;
 
 #include "ext/CLI11.hpp"
