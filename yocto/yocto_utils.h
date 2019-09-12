@@ -462,25 +462,63 @@ namespace yocto {
 // a simple concurrent queue that locks at every call
 template <typename T>
 struct concurrent_queue {
-  concurrent_queue();
-  concurrent_queue(const concurrent_queue& other);
-  concurrent_queue& operator=(const concurrent_queue& other);
+  concurrent_queue() {}
+  concurrent_queue(const concurrent_queue& other) = delete;
+  concurrent_queue& operator=(const concurrent_queue& other) = delete;
 
-  bool empty();
-  void clear();
-  void push(const T& value);
-  bool try_pop(T& value);
+  bool empty() {
+    lock_guard<mutex> lock(mutex);
+    return queue.empty();
+  }
+  void clear() {
+    lock_guard<mutex> lock(mutex);
+    queue.clear();
+  }
+  void push(const T& value) {
+    lock_guard<mutex> lock(mutex);
+    queue.push_back(value);
+  }
+  bool try_pop(T& value) {
+    lock_guard<mutex> lock(mutex);
+    if (queue.empty()) return false;
+    value = queue.front();
+    queue.pop_front();
+    return true;
+  }
 
  private:
-  mutex    _mutex;
-  deque<T> _queue;
+  std::mutex    mutex;
+  std::deque<T> queue;
 };
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(
-    int begin, int end, const Func& func, atomic<bool>* cancel = nullptr, bool serial = false);
+    int begin, int end, const Func& func, atomic<bool>* cancel = nullptr, bool serial = false) {
+  if (serial) {
+    for (auto idx = begin; idx < end; idx++) {
+      if (cancel && *cancel) break;
+      func(idx);
+    }
+  } else {
+    auto        threads  = vector<thread>{};
+    auto        nthreads = thread::hardware_concurrency();
+    atomic<int> next_idx(begin);
+    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+      threads.emplace_back([&func, &next_idx, cancel, end]() {
+        while (true) {
+          if (cancel && *cancel) break;
+          auto idx = next_idx.fetch_add(1);
+          if (idx >= end) break;
+          func(idx);
+        }
+      });
+    }
+    for (auto& t : threads) t.join();
+  }
+}
+
 template <typename Func>
 inline void parallel_for(
     int num, const Func& func, atomic<bool>* cancel = nullptr, bool serial = false) {
@@ -953,184 +991,6 @@ bool exists_file(const string& filename) {
   if (!f) return false;
   fclose(f);
   return true;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF FILE READING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// log io error
-template <typename... Args>
-inline void log_io_error(const string& fmt, const Args&... args) {
-  log_error(fmt, args...);
-}
-
-// write value to a stream
-template <typename T>
-inline ostream& write_value(ostream& stream, const T& value) {
-  return stream.write((char*)&value, sizeof(T));
-}
-
-// write values to a stream
-template <typename T>
-inline ostream& write_values(ostream& stream, const vector<T>& values) {
-  if (values.empty()) return stream;
-  return stream.write((char*)values.data(), values.size() * sizeof(T));
-}
-
-// Read binary data to fill the whole buffer
-template <typename T>
-inline istream& read_value(istream& stream, T& value) {
-  return stream.read((char*)&value, sizeof(T));
-}
-
-// Read binary data to fill the whole buffer
-template <typename T>
-inline istream& read_values(istream& stream, vector<T>& values) {
-  if (values.empty()) return stream;
-  return stream.read((char*)values.data(), values.size() * sizeof(T));
-}
-
-// Load a text file
-inline bool load_text(const string& filename, string& str) {
-  // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-  auto stream = ifstream(filename);
-  if (!stream) {
-    log_io_error("cannot open file {}", filename);
-    return false;
-  }
-  stringstream buffer;
-  buffer << stream.rdbuf();
-  if (stream.fail()) {
-    log_io_error("cannot read file {}", filename);
-    return false;
-  }
-  str = buffer.str();
-  return true;
-}
-
-// Save a text file
-inline bool save_text(const string& filename, const string& str) {
-  auto stream = ofstream(filename);
-  if (!stream) {
-    log_io_error("cannot open file {}", filename);
-    return false;
-  }
-  stream << str;
-  if (!stream) {
-    log_io_error("cannot write file {}", filename);
-    return false;
-  }
-  return true;
-}
-
-// Load a binary file
-inline bool load_binary(const string& filename, vector<byte>& data) {
-  // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-  auto stream = ifstream(filename, std::ios::binary);
-  if (!stream) {
-    log_io_error("cannot open file {}", filename);
-    return false;
-  }
-  stringstream buffer;
-  buffer << stream.rdbuf();
-  if (stream.fail()) {
-    log_io_error("cannot read file {}", filename);
-    return false;
-  }
-  auto str = buffer.str();
-  data     = vector<byte>((byte*)str.data(), (byte*)str.data() + str.size());
-  return true;
-}
-
-// Save a binary file
-inline bool save_binary(const string& filename, const vector<byte>& data) {
-  auto stream = ofstream(filename, std::ios::binary);
-  if (!stream) {
-    log_io_error("cannot open file {}", filename);
-    return false;
-  }
-  stream.write((char*)data.data(), data.size());
-  if (!stream) {
-    log_io_error("cannot write file {}", filename);
-    return false;
-  }
-  return true;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR CONCURRENCY UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// a simple concurrent queue that locks at every call
-template <typename T>
-inline concurrent_queue<T>::concurrent_queue() {}
-template <typename T>
-inline concurrent_queue<T>::concurrent_queue(const concurrent_queue<T>& other) {
-  if (!empty(other._queue)) log_error("cannot copy full queue");
-  clear();
-}
-template <typename T>
-inline concurrent_queue<T>& concurrent_queue<T>::operator=(const concurrent_queue<T>& other) {
-  if (!empty(other._queue)) log_error("cannot copy full queue");
-  clear();
-}
-
-template <typename T>
-inline bool concurrent_queue<T>::empty() {
-  lock_guard<mutex> lock(_mutex);
-  return _queue.empty();
-}
-template <typename T>
-inline void concurrent_queue<T>::clear() {
-  lock_guard<mutex> lock(_mutex);
-  _queue.clear();
-}
-template <typename T>
-inline void concurrent_queue<T>::push(const T& value) {
-  lock_guard<mutex> lock(_mutex);
-  _queue.push_back(value);
-}
-template <typename T>
-inline bool concurrent_queue<T>::try_pop(T& value) {
-  lock_guard<mutex> lock(_mutex);
-  if (_queue.empty()) return false;
-  value = _queue.front();
-  _queue.pop_front();
-  return true;
-}
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms.
-template <typename Func>
-inline void parallel_for(int begin, int end, const Func& func, atomic<bool>* cancel, bool serial) {
-  if (serial) {
-    for (auto idx = begin; idx < end; idx++) {
-      if (cancel && *cancel) break;
-      func(idx);
-    }
-  } else {
-    auto        threads  = vector<thread>{};
-    auto        nthreads = thread::hardware_concurrency();
-    atomic<int> next_idx(begin);
-    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      threads.emplace_back([&func, &next_idx, cancel, end]() {
-        while (true) {
-          if (cancel && *cancel) break;
-          auto idx = next_idx.fetch_add(1);
-          if (idx >= end) break;
-          func(idx);
-        }
-      });
-    }
-    for (auto& t : threads) t.join();
-  }
 }
 
 }  // namespace yocto
