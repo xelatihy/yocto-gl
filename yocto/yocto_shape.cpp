@@ -276,7 +276,7 @@ vector<vec3f> align_vertices(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF EDGE AND GRID DATA STRUCTURES
+// EDGEA AND ADJACENCIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -364,6 +364,92 @@ vector<vec2i> get_edges(const vector<vec3i>& triangles) {
 vector<vec2i> get_edges(const vector<vec4i>& quads) {
   return get_edges(make_edge_map(quads));
 }
+
+// build triangle adajcency
+void face_adjacencies(
+    vector<vec3i>& adjacencies, const vector<vec3i>& triangles) {
+  auto get_edge = [](const vec3i& triangle, int i) -> vec2i {
+    auto x = triangle[i], y = triangle[i < 2 ? i + 1 : 0];
+    return x < y ? vec2i{x, y} : vec2i{y, x};
+  };
+  adjacencies.assign(triangles.size(), vec3i{-1, -1, -1});
+  auto edge_map = unordered_map<vec2i, int>();
+  edge_map.reserve((size_t)(triangles.size() * 1.5));
+  for (int i = 0; i < triangles.size(); ++i) {
+    for (int k = 0; k < 3; ++k) {
+      auto edge = get_edge(triangles[i], k);
+      auto it   = edge_map.find(edge);
+      if (it == edge_map.end()) {
+        edge_map.insert(it, {edge, i});
+      } else {
+        auto neighbor     = it->second;
+        adjacencies[i][k] = neighbor;
+        for (int kk = 0; kk < 3; ++kk) {
+          auto edge2 = get_edge(triangles[neighbor], kk);
+          if (edge2 == edge) {
+            adjacencies[neighbor][kk] = i;
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
+  auto adjacencies = vector<vec3i>{};
+  face_adjacencies(adjacencies, triangles);
+  return adjacencies;
+}
+
+// compute boundaries as a set of loops, sorted counter-clockwise
+vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacency, int num_vertices) {
+  // map every boundary vertex to its next one
+  auto next_vert = vector<int>(num_vertices, -1);
+  for (int i = 0; i < triangles.size(); ++i) {
+    for (int k = 0; k < 3; ++k) {
+      if (adjacency[i][k] == -1)
+        next_vert[triangles[i][k]] = triangles[i][(k + 1) % 3];
+    }
+  }
+
+  // result
+  auto boundaries = vector<vector<int>>();
+
+  // arrange boundary vertices in loops
+  for (int i = 0; i < next_vert.size(); i++) {
+    if (next_vert[i] == -1) continue;
+
+    // add new empty boundary
+    boundaries.push_back({});
+    auto current = i;
+
+    while (true) {
+      auto next = next_vert[current];
+      if (next == -1) {
+        return {};
+      }
+      next_vert[current] = -1;
+      boundaries.back().push_back(current);
+
+      // close loop if necessary
+      if (next == i)
+        break;
+      else
+        current = next;
+    }
+  }
+
+  return boundaries;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HASH GRID AND NEAREST NEIGHTBORS
+// -----------------------------------------------------------------------------
+
+namespace yocto {
 
 // Gets the cell index
 vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
@@ -1595,274 +1681,216 @@ void sample_quads(vector<vec3f>& sampled_positions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void add_node(geodesic_solver& solver, const vec3f& position) {
-  solver.positions.push_back(position);
-  solver.graph.push_back({});
-  solver.graph.back().reserve(8);
-}
-
-void add_directed_arc(geodesic_solver& solver, int from, int to) {
-  // assert(from >= 0 && from < solver.graph.size());
-  // assert(to >= 0 && to < solver.graph.size());
-  auto len = length(solver.positions[from] - solver.positions[to]);
-  solver.graph[from].push_back({to, len});
-}
-
-void add_undirected_arc(geodesic_solver& solver, int na, int nb) {
-  add_directed_arc(solver, na, nb);
-  add_directed_arc(solver, nb, na);
-}
-
-void make_edge_solver_slow(geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    bool use_steiner_points) {
-  solver.graph.reserve(positions.size());
-
-  for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
-
-  auto emap  = make_edge_map(triangles);
-  auto edges = get_edges(emap);
-  for (auto& edge : edges) {
-    add_undirected_arc(solver, edge.x, edge.y);
+static inline int opposite_vertex(const vec3i& tr, const vec2i& edge) {
+  for (int i = 0; i < 3; ++i) {
+    if (tr[i] != edge.x and tr[i] != edge.y) return tr[i];
   }
-
-  if (!use_steiner_points) return;
-
-  solver.graph.reserve(size(positions) + size(edges));
-  auto steiner_per_edge = vector<int>(num_edges(emap));
-
-  // On each edge, connect the mid vertex with the vertices on th same edge.
-  for (auto edge_index = 0; edge_index < size(edges); edge_index++) {
-    auto& edge                   = edges[edge_index];
-    auto  steiner_idx            = solver.graph.size();
-    steiner_per_edge[edge_index] = steiner_idx;
-    add_node(solver, (positions[edge.x] + positions[edge.y]) * 0.5f);
-    add_directed_arc(solver, steiner_idx, edge.x);
-    add_directed_arc(solver, steiner_idx, edge.y);
-  }
-
-  // Make connection for each face
-  for (int face = 0; face < triangles.size(); ++face) {
-    int steiner_idx[3];
-    for (int k : {0, 1, 2}) {
-      int a          = triangles[face][k];
-      int b          = triangles[face][(k + 1) % 3];
-      steiner_idx[k] = steiner_per_edge[edge_index(emap, {a, b})];
-    }
-
-    // Connect each mid-vertex to the opposite mesh vertex in the triangle
-    int opp[3] = {triangles[face].z, triangles[face].x, triangles[face].y};
-    add_undirected_arc(solver, steiner_idx[0], opp[0]);
-    add_undirected_arc(solver, steiner_idx[1], opp[1]);
-    add_undirected_arc(solver, steiner_idx[2], opp[2]);
-
-    // Connect mid-verts of the face between them
-    add_undirected_arc(solver, steiner_idx[0], steiner_idx[1]);
-    add_undirected_arc(solver, steiner_idx[0], steiner_idx[2]);
-    add_undirected_arc(solver, steiner_idx[1], steiner_idx[2]);
-  }
-}
-
-void add_half_edge(geodesic_solver& solver, const vec2i& edge) {
-  // check if edge exists already
-  for (auto [vert, _] : solver.graph[edge.x]) {
-    if (vert == edge.y) return;
-  }
-  auto len        = length(solver.positions[edge.x] - solver.positions[edge.y]);
-  auto edge_index = (int)solver.edges.size();
-  solver.graph[edge.x].push_back({edge.y, len});
-  solver.edge_index[edge.x].push_back({edge.y, edge_index});
-  solver.edges.push_back(edge);
-}
-
-void add_edge(geodesic_solver& solver, const vec2i& edge) {
-  // check if edge exists already
-  for (auto [vert, _] : solver.graph[edge.x]) {
-    if (vert == edge.y) return;
-  }
-  auto len = length(solver.positions[edge.x] - solver.positions[edge.y]);
-  solver.graph[edge.x].push_back({edge.y, len});
-  solver.graph[edge.y].push_back({edge.x, len});
-  auto edge_index = (int)solver.edges.size();
-  solver.edge_index[edge.x].push_back({edge.y, edge_index});
-  solver.edge_index[edge.y].push_back({edge.x, edge_index});
-  solver.edges.push_back(edge);
-}
-
-int edge_index(const geodesic_solver& solver, const vec2i& edge) {
-  for (auto [node, index] : solver.edge_index[edge.x])
-    if (edge.y == node) return index;
   return -1;
 }
 
-void make_edge_solver_fast(geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    bool use_steiner_points) {
-  solver.positions = positions;
-  solver.graph.resize(size(positions));
-  solver.edge_index.resize(size(positions));
-
-  // fast construction assuming edges are not repeated
-  for (auto t : triangles) {
-    add_edge(solver, {t.x, t.y});
-    add_edge(solver, {t.y, t.z});
-    add_edge(solver, {t.z, t.x});
-  }
-
-  if (!use_steiner_points) return;
-
-  auto edges = solver.edges;
-  solver.graph.resize(size(positions) + size(edges));
-  solver.edge_index.resize(size(positions) + size(edges));
-  solver.positions.resize(size(positions) + size(edges));
-  auto steiner_per_edge = vector<int>(size(edges));
-
-  // On each edge, connect the mid vertex with the vertices on th same edge.
-  auto edge_offset = (int)positions.size();
-  for (auto edge_index = 0; edge_index < size(edges); edge_index++) {
-    auto& edge                    = edges[edge_index];
-    auto  steiner_idx             = edge_offset + edge_index;
-    steiner_per_edge[edge_index]  = steiner_idx;
-    solver.positions[steiner_idx] = (positions[edge.x] + positions[edge.y]) *
-                                    0.5f;
-    add_half_edge(solver, {steiner_idx, edge.x});
-    add_half_edge(solver, {steiner_idx, edge.y});
-  }
-
-  // Make connection for each face
-  for (int face = 0; face < triangles.size(); ++face) {
-    int steiner_idx[3];
-    for (int k : {0, 1, 2}) {
-      int a          = triangles[face][k];
-      int b          = triangles[face][(k + 1) % 3];
-      steiner_idx[k] = steiner_per_edge[edge_index(solver, {a, b})];
-    }
-
-    // Connect each mid-vertex to the opposite mesh vertex in the triangle
-    int opp[3] = {triangles[face].z, triangles[face].x, triangles[face].y};
-    add_edge(solver, {steiner_idx[0], opp[0]});
-    add_edge(solver, {steiner_idx[1], opp[1]});
-    add_edge(solver, {steiner_idx[2], opp[2]});
-
-    // Connect mid-verts of the face between them
-    add_edge(solver, {steiner_idx[0], steiner_idx[1]});
-    add_edge(solver, {steiner_idx[1], steiner_idx[2]});
-    add_edge(solver, {steiner_idx[2], steiner_idx[0]});
-  }
+static inline void connect_nodes(
+    geodesic_solver& solver, int a, int b, float length) {
+  solver.graph[a].push_back({b, length});
+  solver.graph[b].push_back({a, length});
 }
 
-void log_geodesic_solver_stats(const geodesic_solver& solver) {
-  // stats
-  auto num_edges     = 0;
-  auto min_adjacents = int_max, max_adjacents = int_min;
-  auto min_length = flt_max, max_length = flt_min;
-  auto avg_adjacents = 0.0, avg_length = 0.0;
-  for (auto& adj : solver.graph) {
-    num_edges += (int)adj.size();
-    min_adjacents = min(min_adjacents, (int)adj.size());
-    max_adjacents = max(max_adjacents, (int)adj.size());
-    avg_adjacents += adj.size() / (double)solver.graph.size();
-    for (auto& edge : adj) {
-      min_length = min(min_length, edge.length);
-      max_length = max(max_length, edge.length);
-      avg_length += edge.length;
+static inline float opposite_nodes_arc_length(geodesic_solver& solver,
+    const vector<vec3f>& positions, int a, int c, const vec2i& edge) {
+  // Triangles (a, b, d) and (b, d, c) are connected by (b, d) edge
+  // Nodes a and c must be connected.
+
+  int  b  = edge.x;
+  int  d  = edge.y;
+  auto ba = positions[a] - positions[b];
+  auto bc = positions[c] - positions[b];
+  auto bd = positions[d] - positions[b];
+
+  float cos_alpha = dot(normalize(ba), normalize(bd));
+  float cos_beta  = dot(normalize(bc), normalize(bd));
+  float sin_alpha = sqrt(max(0.0f, 1 - cos_alpha * cos_alpha));
+  float sin_beta  = sqrt(max(0.0f, 1 - cos_beta * cos_beta));
+
+  // cos(alpha + beta)
+  float cos_alpha_beta = cos_alpha * cos_beta - sin_alpha * sin_beta;
+  if (cos_alpha_beta <= -1) return flt_max;
+
+  // law of cosines (generalized Pythagorean theorem)
+  float len = dot(ba, ba) + dot(bc, bc) -
+              length(ba) * length(bc) * 2 * cos_alpha_beta;
+
+  if (len <= 0)
+    return flt_max;
+  else
+    return sqrtf(len);
+}
+
+static inline void connect_opposite_nodes(geodesic_solver& solver,
+    const vector<vec3f>& positions, const vec3i& tr0, const vec3i& tr1,
+    const vec2i& edge) {
+  int v0 = opposite_vertex(tr0, edge);
+  int v1 = opposite_vertex(tr1, edge);
+  if (v0 == -1 or v1 == -1) return;
+  auto length = opposite_nodes_arc_length(solver, positions, v0, v1, edge);
+  connect_nodes(solver, v0, v1, length);
+}
+
+void make_geodesic_solver(geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
+    const vector<vec3f>& positions) {
+  solver.graph.resize(positions.size());
+  for (int face = 0; face < triangles.size(); face++) {
+    for (int k = 0; k < 3; k++) {
+      auto a = triangles[face][k];
+      auto b = triangles[face][(k + 1) % 3];
+
+      // connect mesh edges
+      auto len = length(positions[a] - positions[b]);
+      if (a < b) connect_nodes(solver, a, b, len);
+
+      // connect opposite nodes
+      auto neighbor = adjacencies[face][k];
+      if (face < neighbor) {
+        connect_opposite_nodes(
+            solver, positions, triangles[face], triangles[neighbor], {a, b});
+      }
     }
   }
-  avg_length /= num_edges;
+}
+geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, const vector<vec3f>& positions) {
+  auto solver = geodesic_solver{};
+  make_geodesic_solver(solver, triangles, adjacencies, positions);
+  return solver;
 }
 
-void update_edge_distances(geodesic_solver& solver) {
-  for (auto node = 0; node < solver.graph.size(); node++) {
-    for (auto& edge : solver.graph[node])
-      edge.length = length(
-          solver.positions[node] - solver.positions[edge.node]);
-  }
-}
+void compute_geodesic_distances(vector<float>& field,
+    const geodesic_solver& solver, const vector<int>& sources,
+    float max_distance) {
+  /*
+     This algortithm uses the heuristic Small Label Fisrt and Large Label Last
+     https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
 
-void init_geodesic_solver(geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-  make_edge_solver_fast(solver, triangles, positions, true);
-  // auto solver = make_edge_solver_slow(triangles, positions, true);
-  log_geodesic_solver_stats(solver);
-}
+     Large Label Last (LLL): When extracting nodes from the queue, pick the
+     front one. If it weights more than the average weight of the queue, put
+     on the back and check the next node. Continue this way.
+     Sometimes average_weight is less than every value due to floating point
+     errors (doesn't happen with double precision).
 
-void compute_geodesic_distances(geodesic_solver& graph,
-    vector<float>& distances, const vector<int>& sources) {
-  // preallocated
-  distances.resize(graph.positions.size());
-  for (auto& d : distances) d = flt_max;
+     Small Label First (SLF): When adding a new node to queue, instead of
+     always pushing it to the end of the queue, if it weights less than the
+     front node of the queue, it is put on front. Otherwise the node is put at
+     the end of the queue.
+  */
 
-  // Small Label Fisrt + Large Label Last
-  // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
-  auto num_nodes = (int)graph.graph.size();
-  // assert(distances.size() == num_nodes);
-  auto visited = vector<bool>(num_nodes, false);
+  auto in_queue = vector<bool>(solver.graph.size(), false);
 
   // setup queue
-  auto queue = std::deque<int>{};
+  auto queue = std::deque<int>();
   for (auto source : sources) {
-    distances[source] = 0.0f;
-    visited[source]   = true;
+    in_queue[source] = true;
     queue.push_back(source);
   }
 
-  // Cumulative weights of elements in queue.
-  auto cumulative_weight = 0.0f;
+  // Cumulative weights of elements in queue. Used to keep track of the
+  // average weight of the queue.
+  double cumulative_weight = 0.0;
+
   while (!queue.empty()) {
     auto node           = queue.front();
-    auto average_weight = (double)cumulative_weight / queue.size();
+    auto average_weight = (float)cumulative_weight / queue.size();
 
-    // Large Label Last: until front node weights more than the average, put
-    // it on back. Sometimes average_weight is less than envery value due to
-    // Ting point errors  (doesn't happen with double precision).
+    // Large Label Last (see comment at the beginning)
     for (auto tries = 0; tries < queue.size() + 1; tries++) {
-      if (distances[node] <= average_weight) break;
+      if (field[node] <= average_weight) break;
       queue.pop_front();
       queue.push_back(node);
       node = queue.front();
     }
+
+    // Remove node from queue.
     queue.pop_front();
-    visited[node] = false;                 // out of queue
-    cumulative_weight -= distances[node];  // update average
+    in_queue[node] = false;
+    cumulative_weight -= field[node];
 
-    const auto offset_distance = distances[node];
-    const auto num_neighbors   = (int)graph.graph[node].size();
+    // Check early exit condition.
+    if (field[node] > max_distance) continue;
 
-    for (int neighbor_idx = 0; neighbor_idx < num_neighbors; neighbor_idx++) {
-      // distance and id to neightbor through this node
-      auto new_distance = offset_distance +
-                          graph.graph[node][neighbor_idx].length;
-      auto neighbor = graph.graph[node][neighbor_idx].node;
+    for (int i = 0; i < solver.graph[node].size(); i++) {
+      // Distance of neighbor through this node
+      auto new_distance = field[node] + solver.graph[node][i].length;
+      auto neighbor     = solver.graph[node][i].node;
 
-      auto old_distance = distances[neighbor];
+      auto old_distance = field[neighbor];
       if (new_distance >= old_distance) continue;
 
-      if (visited[neighbor]) {
-        // if neighbor already in queue, update cumulative weights.
-        cumulative_weight = cumulative_weight - old_distance + new_distance;
+      if (in_queue[neighbor]) {
+        // If neighbor already in queue, don't add it.
+        // Just update cumulative weight.
+        cumulative_weight += new_distance - old_distance;
       } else {
-        // if neighbor not in queue, Small Label first.
-        if (queue.empty() || (new_distance < distances[queue.front()]))
+        // If neighbor not in queue, add node to queue using Small Label
+        // First (see comment at the beginning).
+        if (queue.empty() or (new_distance < field[queue.front()]))
           queue.push_front(neighbor);
         else
           queue.push_back(neighbor);
 
-        visited[neighbor] = true;
-        cumulative_weight = cumulative_weight + new_distance;
+        // Update queue information.
+        in_queue[neighbor] = true;
+        cumulative_weight += new_distance;
       }
 
-      distances[neighbor] = new_distance;
+      // Update distance of neighbor.
+      field[neighbor] = new_distance;
     }
   }
 }
 
-void convert_distance_to_color(
-    vector<vec4f>& colors, const vector<float>& distances) {
-  colors.resize(distances.size());
-  for (auto idx = 0; idx < distances.size(); idx++) {
-    auto distance = fmod(distances[idx] * 10, 1.0f);
-    colors[idx]   = {distance, distance, distance, 1};
+vector<float> compute_geodesic_distances(const geodesic_solver& solver,
+    const vector<int>& sources, float max_distance) {
+  auto distances = vector<float>(solver.graph.size(), flt_max);
+  for (auto source : sources) distances[source] = 0.0f;
+  compute_geodesic_distances(distances, solver, sources, max_distance);
+  return distances;
+}
+
+// Sample vertices with a Poisson distribution using geodesic distances
+// Sampling strategy is farthest point sampling (FPS): at every step
+// take the farthers point from current sampled set until done.
+void sample_vertices_poisson(
+    vector<int>& verts, const geodesic_solver& solver, int num_samples) {
+  verts.clear();
+  verts.reserve(num_samples);
+  auto distances = vector<float>(solver.graph.size(), flt_max);
+  while (true) {
+    auto max_index =
+        (int)(std::max_element(distances.begin(), distances.end()) -
+              distances.begin());
+    verts.push_back(max_index);
+    if (verts.size() >= num_samples) break;
+    distances[max_index] = 0.0f;
+    compute_geodesic_distances(distances, solver, {max_index}, flt_max);
   }
+}
+vector<int> sample_vertices_poisson(
+    const geodesic_solver& solver, int num_samples) {
+  auto verts = vector<int>{};
+  sample_vertices_poisson(verts, solver, num_samples);
+  return verts;
+}
+
+void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
+    float scale, const vec4f& c0, const vec4f& c1) {
+  colors.resize(distances.size());
+  for (auto i = 0; i < colors.size(); i++) {
+    colors[i] = ((int64_t)(distances[i] * scale)) % 2 ? c0 : c1;
+  }
+}
+vector<vec4f> distance_to_color(const vector<float>& distances, float scale,
+    const vec4f& c0, const vec4f& c1) {
+  auto colors = vector<vec4f>{distances.size()};
+  distance_to_color(colors, distances, scale, c0, c1);
+  return colors;
 }
 
 }  // namespace yocto

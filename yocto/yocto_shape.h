@@ -179,7 +179,7 @@ void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// EDGE AND GRID DATA STRUCTURES
+// EDGEA AND ADJACENCIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -200,9 +200,9 @@ void     insert_edges(edge_map& emap, const vector<vec3i>& triangles);
 void     insert_edges(edge_map& emap, const vector<vec4i>& quads);
 // Insert an edge and return its index
 int insert_edge(edge_map& emap, const vec2i& edge);
-// Get the edge index / insertion count
+// Get the edge index
 int edge_index(const edge_map& emap, const vec2i& edge);
-// Get list of edges / boundary edges
+// Get edges and boundaries
 int           num_edges(const edge_map& emap);
 vector<vec2i> get_edges(const edge_map& emap);
 vector<vec2i> get_boundary(const edge_map& emap);
@@ -210,6 +210,25 @@ void          get_edges(const edge_map& emap, vector<vec2i>& edges);
 void          get_boundary(const edge_map& emap, vector<vec2i>& edges);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);
 vector<vec2i> get_edges(const vector<vec4i>& quads);
+
+// Get face adjacencies
+vector<vec3i> face_adjacencies(const vector<vec3i>& triangles);
+void          face_adjacencies(
+             vector<vec3i>& adjacencies, const vector<vec3i>& triangles);
+
+// Get ordered boundaries
+vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacency, int num_vertices);
+void                ordered_boundaries(vector<vector<int>>& boundaries,
+                   const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
+                   int num_vertices);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HASH GRID AND NEAREST NEIGHTBORS
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // A sparse grid of cells, containing list of points. Cells are stored in
 // a dictionary to get sparsity. Helpful for nearest neighboor lookups.
@@ -511,27 +530,47 @@ namespace yocto {
 
 // Data structure used for geodesic computation
 struct geodesic_solver {
-  struct arc_ {
-    int   node   = 0;
-    float length = 0;
+  const int min_arcs = 12;
+  struct graph_edge {
+    int   node   = -1;
+    float length = flt_max;
   };
-  struct index_ {
-    int node  = 0;
-    int index = 0;
-  };
-  vector<vector<arc_>>   graph      = {};
-  vector<vector<index_>> edge_index = {};
-  vector<vec3f>          positions  = {};
-  vector<vec2i>          edges      = {};
+#ifdef YOCTO_ABSEIL
+  vector<short_vector<adjancency_list, min_arcs>> graph = {};
+#else
+  vector<vector<graph_edge>> graph = {};
+#endif
 };
 
-// Construct an edge graph
-void init_geodesic_solver(geodesic_solver& solver,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-void compute_geodesic_distances(geodesic_solver& solver,
-    vector<float>& distances, const vector<int>& sources);
-void convert_distance_to_color(
-    vector<vec4f>& colors, const vector<float>& distances);
+// Construct a a graph to compute geodesic distances
+geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, const vector<vec3f>& positions);
+void            make_geodesic_solver(geodesic_solver& solver,
+               const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
+               const vector<vec3f>& positions);
+
+// Compute geodesic distances
+vector<float> compute_geodesic_distances(const geodesic_solver& solver,
+    const vector<int>& sources, float max_distance = flt_max);
+void          compute_geodesic_distances(vector<float>& distances,
+             const geodesic_solver& solver, const vector<int>& sources,
+             float max_distance = flt_max);
+
+// Sample vertices with a Poisson distribution using geodesic distances.
+// Sampling strategy is farthest point sampling (FPS): at every step
+// take the farthers point from current sampled set until done.
+vector<int> sample_vertices_poisson(const geodesic_solver& solver, int num_samples);
+void sample_vertices_poisson(vector<int>& verts, const geodesic_solver& solver, int num_samples);
+
+// Convert distances to colors
+vector<vec4f> distance_to_color(const vector<float>& distances, float scale = 1,
+    const vec4f& c0 = {1, 1, 1, 1}, const vec4f& c1 = {1, 0.1, 0.1, 1});
+void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
+    float scale = 1, const vec4f& c0 = {1, 1, 1, 1},
+    const vec4f& c1 = {1, 0.1, 0.1, 1});
+
+// Sample vertices based on the geodesic distances and trying to get a Poisson
+// distribution
 
 }  // namespace yocto
 

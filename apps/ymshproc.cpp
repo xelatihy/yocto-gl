@@ -35,19 +35,24 @@ using namespace yocto;
 
 int main(int argc, char** argv) {
   // command line parameters
-  auto geodesic_source = -1;
-  auto facevarying     = false;
-  auto normals         = false;
-  auto rotate          = zero3f;
-  auto scale           = vec3f{1};
-  auto uscale          = 1.0f;
-  auto translate       = zero3f;
-  auto output          = "out.ply"s;
-  auto filename        = "mesh.ply"s;
+  auto geodesic_source      = -1;
+  auto num_geodesic_samples = 0;
+  auto geodesic_scale       = 30.0f;
+  auto facevarying          = false;
+  auto normals              = false;
+  auto rotate               = zero3f;
+  auto scale                = vec3f{1};
+  auto uscale               = 1.0f;
+  auto translate            = zero3f;
+  auto output               = "out.ply"s;
+  auto filename             = "mesh.ply"s;
 
   // parse command line
   auto parser = CLI::App{"Applies operations on a triangle mesh"};
   parser.add_option("--geodesic-source,-g", geodesic_source, "Geodesic source");
+  parser.add_option("--num-geodesic-samples", num_geodesic_samples,
+      "Number of sampled geodesic sources");
+  parser.add_option("--geodesic-scale", geodesic_scale, "Geodesic scale");
   parser.add_flag("--facevarying", facevarying, "Preserve facevarying");
   parser.add_flag("--normals", normals, "Compute smooth normals");
   parser.add_option("--rotatey", rotate.y, "Rotate around y axis");
@@ -108,15 +113,21 @@ int main(int argc, char** argv) {
   }
 
   // compute geodesics and store them as colors
-  if (geodesic_source >= 0) {
+  if (geodesic_source >= 0 or num_geodesic_samples > 0) {
     printf("computing geodesics");
     auto transform_timer = timer();
-    auto solver          = geodesic_solver{};
-    init_geodesic_solver(solver, shape.triangles, shape.positions);
-    auto distances = vector<float>{};
-    compute_geodesic_distances(solver, distances, {geodesic_source});
-    shape.colors = vector<vec4f>{};
-    convert_distance_to_color(shape.colors, distances);
+    auto adjacencies     = face_adjacencies(shape.triangles);
+    auto solver          = make_geodesic_solver(
+        shape.triangles, adjacencies, shape.positions);
+    auto sources = vector<int>();
+    if (geodesic_source >= 0) {
+      sources = {geodesic_source};
+    } else {
+      sources = sample_vertices_poisson(solver, num_geodesic_samples);
+    }
+    auto distances = compute_geodesic_distances(solver, sources);
+    shape.colors   = vector<vec4f>{};
+    distance_to_color(shape.colors, distances, geodesic_scale);
     printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
 
