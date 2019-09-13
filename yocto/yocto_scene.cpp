@@ -454,49 +454,17 @@ float sample_environment_pdf(const yocto_scene& scene,
   }
 }
 
-bvh_scene make_bvh(const yocto_scene& scene, const bvh_params& params) {
-  auto sbvhs = vector<bvh_shape>{scene.shapes.size()};
-  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-    auto& shape = scene.shapes[idx];
-    auto& sbvh  = sbvhs[idx];
-#if YOCTO_EMBREE
-    // call Embree if needed
-    if (params.use_embree) {
-      if (params.embree_compact &&
-          shape.positions.size() == shape.positions.capacity()) {
-        ((yocto_shape&)shape).positions.reserve(shape.positions.size() + 1);
-      }
-    }
-#endif
-    if (!shape.points.empty()) {
-      sbvh = make_points_bvh(shape.points, shape.positions, shape.radius);
-    } else if (!shape.lines.empty()) {
-      sbvh = make_lines_bvh(shape.lines, shape.positions, shape.radius);
-    } else if (!shape.triangles.empty()) {
-      sbvh = make_triangles_bvh(shape.triangles, shape.positions, shape.radius);
-    } else if (!shape.quads.empty()) {
-      sbvh = make_quads_bvh(shape.quads, shape.positions, shape.radius);
-    } else if (!shape.quadspos.empty()) {
-      sbvh = make_quadspos_bvh(shape.quadspos, shape.positions, shape.radius);
-    } else {
-      throw std::runtime_error("empty shape");
-    }
-  }
-
-  auto bvh = make_instances_bvh(
-      {&scene.instances[0].frame, (int)scene.instances.size(),
-          sizeof(scene.instances[0])},
-      sbvhs);
-  build_bvh(bvh, params);
-  return bvh;
-}
-
 void make_bvh(
     bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
-  auto sbvhs = vector<bvh_shape>{scene.shapes.size()};
+  // scene bvh
+  make_instances_bvh(bvh,
+      {&scene.instances[0].frame, (int)scene.instances.size(),
+          sizeof(scene.instances[0])},
+      (int)scene.shapes.size());
+  // shape bvhs
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
     auto& shape = scene.shapes[idx];
-    auto& sbvh  = sbvhs[idx];
+    auto& sbvh  = get_shape_bvh(bvh, idx);
 #if YOCTO_EMBREE
     // call Embree if needed
     if (params.use_embree) {
@@ -507,30 +475,27 @@ void make_bvh(
     }
 #endif
     if (!shape.points.empty()) {
-      sbvh = make_points_bvh(shape.points, shape.positions, shape.radius);
+      make_points_bvh(sbvh, shape.points, shape.positions, shape.radius);
     } else if (!shape.lines.empty()) {
-      sbvh = make_lines_bvh(shape.lines, shape.positions, shape.radius);
+      make_lines_bvh(sbvh, shape.lines, shape.positions, shape.radius);
     } else if (!shape.triangles.empty()) {
-      sbvh = make_triangles_bvh(shape.triangles, shape.positions, shape.radius);
+      make_triangles_bvh(sbvh, shape.triangles, shape.positions, shape.radius);
     } else if (!shape.quads.empty()) {
-      sbvh = make_quads_bvh(shape.quads, shape.positions, shape.radius);
+      make_quads_bvh(sbvh, shape.quads, shape.positions, shape.radius);
     } else if (!shape.quadspos.empty()) {
-      sbvh = make_quadspos_bvh(shape.quadspos, shape.positions, shape.radius);
+      make_quadspos_bvh(sbvh, shape.quadspos, shape.positions, shape.radius);
     } else {
       throw std::runtime_error("empty shape");
     }
   }
 
-  bvh = {{&scene.instances[0].frame, (int)scene.instances.size(),
-             sizeof(scene.instances[0])},
-      sbvhs};
-
+  // build
   build_bvh(bvh, params);
 }
 
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
-    const vector<int>& updated_instances, 
-    const vector<int>& updated_shapes, const bvh_params& params) {
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params) {
   for (auto idx : updated_shapes) {
     auto& shape = scene.shapes[idx];
     auto& sbvh  = bvh.shapes[idx];

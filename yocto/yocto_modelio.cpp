@@ -1963,17 +1963,18 @@ static inline void parse_pbrt_value(string_view& str, mat4f& value) {
 }
 
 // parse pbrt value with optional parens
-template<typename T>
+template <typename T>
 static inline void parse_pbrt_param(string_view& str, T& value) {
+  skip_whitespace(str);
+  auto parens = !str.empty() && str.front() == '[';
+  if (parens) str.remove_prefix(1);
+  parse_pbrt_value(str, value);
+  if (parens) {
     skip_whitespace(str);
-    auto parens = !str.empty() && str.front() == '[';
-    if(parens) str.remove_prefix(1);
-    parse_pbrt_value(str, value);
-    if(parens) {
-        skip_whitespace(str);
-        if(!str.empty() && str.front() == '[') throw std::runtime_error("bad pbrt param");
-        str.remove_prefix(1);
-    }
+    if (!str.empty() && str.front() == '[')
+      throw std::runtime_error("bad pbrt param");
+    str.remove_prefix(1);
+  }
 }
 
 // parse a quoted string

@@ -30,6 +30,7 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 #include "ysceneui.h"
 
@@ -43,8 +44,6 @@ namespace fs = ghc::filesystem;
 #undef near
 #undef far
 #endif
-
-#include "ext/CLI11.hpp"
 
 namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
@@ -1235,26 +1234,23 @@ void run_ui(app_state& app) {
   delete_glwindow(win);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
   // initialize app
   app_state app{};
   auto      filenames  = vector<string>{};
   auto      noparallel = false;
 
   // parse command line
-  auto parser = CLI::App{"views scenes inteactively"};
-  parser.add_option("--camera", app.drawgl_prms.camera, "Camera index.");
-  parser.add_option(
-      "--resolution,-r", app.drawgl_prms.resolution, "Image resolution.");
-  parser.add_flag("--eyelight,!--no-eyelight,-c", app.drawgl_prms.eyelight,
+  auto cli = make_cli("yscnview", "views scenes inteactively");
+  add_cli_option(cli, "--camera", app.drawgl_prms.camera, "Camera index.");
+  add_cli_option(
+      cli, "--resolution,-r", app.drawgl_prms.resolution, "Image resolution.");
+  add_cli_option(cli, "--eyelight/--no-eyelight,-c", app.drawgl_prms.eyelight,
       "Eyelight rendering.");
-  parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
-  parser.add_option("scenes", filenames, "Scene filenames")->required(true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
+  add_cli_option(
+      cli, "--noparallel", noparallel, "Disable parallel execution.");
+  add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // fix parallel code
   if (noparallel) {

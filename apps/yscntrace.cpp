@@ -26,9 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_math.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_trace.h"
+#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
 #include <map>
@@ -36,9 +38,7 @@ using namespace yocto;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-#include "ext/CLI11.hpp"
-
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
   // options
   auto load_prms    = load_params{};
   auto bvh_prms     = bvh_params{};
@@ -65,52 +65,45 @@ int main(int argc, char* argv[]) {
   }
 
   // parse command line
-  auto parser = CLI::App{"Offline path tracing"};
-  parser.add_option("--camera", trace_prms.camera, "Camera index.");
-  parser.add_option(
-      "--resolution,-r", trace_prms.resolution, "Image resolution.");
-  parser.add_option("--samples,-s", trace_prms.samples, "Number of samples.");
-  parser.add_option("--tracer,-t", trace_prms.sampler, "Trace type.")
-      ->transform(CLI::IsMember(sampler_namemap));
-  parser
-      .add_option(
-          "--falsecolor,-F", trace_prms.falsecolor, "Tracer false color type.")
-      ->transform(CLI::IsMember(falsecolor_namemap));
-  parser.add_option(
-      "--bounces", trace_prms.bounces, "Maximum number of bounces.");
-  parser.add_option("--clamp", trace_prms.clamp, "Final pixel clamping.");
-  parser.add_flag("--filter", trace_prms.tentfilter, "Filter image.");
-  parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
-  parser.add_option(
-      "--seed", trace_prms.seed, "Seed for the random number generators.");
-  parser.add_option("--batch,-b", trace_prms.batch, "Samples per batch.");
-  parser.add_flag("--env-hidden,!--no-env-hidden", trace_prms.envhidden,
+  auto cli = make_cli("yscntrace", "Offline path tracing");
+  add_cli_option(cli, "--camera", trace_prms.camera, "Camera index.");
+  add_cli_option(
+      cli, "--resolution,-r", trace_prms.resolution, "Image resolution.");
+  add_cli_option(cli, "--samples,-s", trace_prms.samples, "Number of samples.");
+  add_cli_option(cli, "--tracer,-t", (int&)trace_prms.sampler, "Trace type.",
+      trace_sampler_names);
+  add_cli_option(cli, "--falsecolor,-F", (int&)trace_prms.falsecolor,
+      "Tracer false color type.", trace_falsecolor_names);
+  add_cli_option(
+      cli, "--bounces", trace_prms.bounces, "Maximum number of bounces.");
+  add_cli_option(cli, "--clamp", trace_prms.clamp, "Final pixel clamping.");
+  add_cli_option(cli, "--filter", trace_prms.tentfilter, "Filter image.");
+  add_cli_option(
+      cli, "--noparallel", noparallel, "Disable parallel execution.");
+  add_cli_option(cli, "--batch,-b", trace_prms.batch, "Samples per batch.");
+  add_cli_option(cli, "--env-hidden/--no-env-hidden", trace_prms.envhidden,
       "Environments are hidden in renderer");
-  parser.add_option("--save-batch", save_batch, "Save images progressively");
-  parser.add_option("--exposure,-e", tonemap_prms.exposure, "Hdr exposure");
-  parser.add_flag("--filmic,!--no-filmic", tonemap_prms.filmic, "Hdr filmic");
-  parser.add_flag("--srgb,!--no-srgb", tonemap_prms.srgb, "Hdr srgb");
-  parser.add_flag("--bvh-high-quality,!--no-bvh-high-quality",
+  add_cli_option(cli, "--save-batch", save_batch, "Save images progressively");
+  add_cli_option(cli, "--exposure,-e", tonemap_prms.exposure, "Hdr exposure");
+  add_cli_option(
+      cli, "--filmic/--no-filmic", tonemap_prms.filmic, "Hdr filmic");
+  add_cli_option(cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Hdr srgb");
+  add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
       bvh_prms.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  parser.add_flag("--bvh-embree,!--no-bvh-embree", bvh_prms.use_embree,
+  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", bvh_prms.use_embree,
       "Use Embree ratracer");
-  parser.add_flag("--bvh-embree-flatten,!--no-bvh-fembree-latten",
+  add_cli_option(cli, "--bvh-embree-flatten/--no-bvh-fembree-latten",
       bvh_prms.embree_flatten, "Flatten BVH scene");
-  parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
+  add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
       bvh_prms.embree_compact, "Embree runs in compact memory");
 #endif
-  parser.add_flag("--add-skyenv", add_skyenv, "Add sky envmap");
-  parser.add_option("--output-image,-o", imfilename, "Image filename");
-  parser.add_flag("--validate", validate, "Validate scene");
-  parser.add_flag("--logo,!--no-logo", logo, "Whether to append a logo");
-  parser.add_option("scene", filename, "Scene filename", true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
-  setbuf(stdout, nullptr);
+  add_cli_option(cli, "--add-skyenv", add_skyenv, "Add sky envmap");
+  add_cli_option(cli, "--output-image,-o", imfilename, "Image filename");
+  add_cli_option(cli, "--validate", validate, "Validate scene");
+  add_cli_option(cli, "--logo/--no-logo", logo, "Whether to append a logo");
+  add_cli_option(cli, "scene", filename, "Scene filename", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // fix parallel code
   if (noparallel) {
@@ -120,49 +113,46 @@ int main(int argc, char* argv[]) {
 
   // scene loading
   auto scene = yocto_scene{};
-  printf("loading scene");
-  auto load_timer = timer();
   try {
+    auto timer = print_timed("loading scene");
     load_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
-  printf(" in %s\n", load_timer.elapsedf().c_str());
 
   // tesselate
-  printf("tesselating");
-  auto tesselate_timer = timer();
-  tesselate_subdivs(scene);
-  printf(" in %s\n", tesselate_timer.elapsedf().c_str());
+  {
+    auto timer = print_timed("tesselating");
+    tesselate_subdivs(scene);
+  }
 
   // add components
   if (validate) {
-    printf("validating");
-    auto validate_timer = timer();
+    auto timer = print_timed("validating");
     print_validation(scene);
-    printf(" in %s\n", validate_timer.elapsedf().c_str());
   }
 
   // add sky
   if (add_skyenv) add_sky(scene);
 
   // build bvh
-  printf("building bvh");
-  auto bvh_timer = timer();
-  auto bvh       = make_bvh(scene, bvh_prms);
-  printf(" in %s\n", bvh_timer.elapsedf().c_str());
+  auto bvh = bvh_scene{};
+  {
+    auto timer = print_timed("building bvh");
+    make_bvh(bvh, scene, bvh_prms);
+  }
 
   // init renderer
-  printf("building lights");
-  auto lights_timer = timer();
-  auto lights       = make_trace_lights(scene);
-  printf(" in %s\n", lights_timer.elapsedf().c_str());
+  auto lights = trace_lights{};
+  {
+    auto timer = print_timed("building lights");
+    make_trace_lights(lights, scene);
+  }
 
   // fix renderer type if no lights
-  if ((lights.instances.empty() && lights.environments.empty()) &&
+  if (lights.instances.empty() && lights.environments.empty() &&
       is_sampler_lit(trace_prms)) {
-    printf("no lights presents, switching to eyelight shader\n");
+    print_info("no lights presents, switching to eyelight shader");
     trace_prms.sampler = trace_params::sampler_type::eyelight;
   }
 
@@ -176,10 +166,9 @@ int main(int argc, char* argv[]) {
   for (auto sample = 0; sample < trace_prms.samples;
        sample += trace_prms.batch) {
     auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
-    printf("rendering samples %4d/%4d", sample, trace_prms.samples);
-    auto batch_timer = timer();
+    auto timer    = print_timed("rendering samples " + std::to_string(sample) +
+                             "/" + std::to_string(trace_prms.samples));
     trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
-    printf(" in %s\n", batch_timer.elapsedf().c_str());
     if (save_batch) {
       auto outfilename = fs::path(imfilename)
                              .replace_extension(
@@ -195,16 +184,14 @@ int main(int argc, char* argv[]) {
                                 : tonemapb(render, tonemap_prms));
         }
       } catch (const std::exception& e) {
-        printf("%s\n", e.what());
-        exit(1);
+        print_fatal(e.what());
       }
     }
   }
 
   // save image
-  printf("saving image");
-  auto save_timer = timer();
   try {
+    auto timer = print_timed("saving image");
     if (is_hdr_filename(imfilename)) {
       save_image(imfilename, logo ? add_logo(render) : render);
     } else {
@@ -212,10 +199,8 @@ int main(int argc, char* argv[]) {
                                    : tonemapb(render, tonemap_prms));
     }
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
-  printf(" in %s\n", save_timer.elapsedf().c_str());
 
   // done
   return 0;

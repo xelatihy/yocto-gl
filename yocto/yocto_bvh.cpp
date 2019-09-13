@@ -355,18 +355,21 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Embree cleanup is momentarily disabled since it is not clear from the
+// documentation the sharing policy as it applied to us.
+
 #if YOCTO_EMBREE
 // Cleanup
 bvh_shape::~bvh_shape() {
   if (embree_bvh) {
-    rtcReleaseScene((RTCScene)embree_bvh);
+    // rtcReleaseScene((RTCScene)embree_bvh);
   }
 }
 
 // Cleanup
 bvh_scene::~bvh_scene() {
   if (embree_bvh) {
-    rtcReleaseScene((RTCScene)embree_bvh);
+    // rtcReleaseScene((RTCScene)embree_bvh);
   }
 }
 
@@ -662,10 +665,10 @@ static void build_embree_flattened_bvh(
 static void refit_embree_bvh(bvh_shape& shape, const bvh_params& params) {
   throw std::runtime_error("not yet implemented");
 }
-static void refit_embree_bvh(bvh_scene& scene, 
-  const vector<int>& updated_instances, const bvh_params& params) {
+static void refit_embree_bvh(bvh_scene& scene,
+    const vector<int>& updated_instances, const bvh_params& params) {
   // scene bvh
-  auto embree_scene  = (RTCScene)scene.embree_bvh;
+  auto embree_scene = (RTCScene)scene.embree_bvh;
   if (scene.instances.empty()) return;
   for (auto instance_id : updated_instances) {
     auto& instance = scene.instances[instance_id];
@@ -674,7 +677,8 @@ static void refit_embree_bvh(bvh_scene& scene,
     if (!shape.embree_bvh) throw std::runtime_error("bvh not built");
     auto embree_geom = rtcGetGeometry(embree_scene, instance_id);
     rtcSetGeometryInstancedScene(embree_geom, (RTCScene)shape.embree_bvh);
-    rtcSetGeometryTransform(embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+    rtcSetGeometryTransform(
+        embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(embree_geom);
   }
   rtcCommitScene(embree_scene);
@@ -730,6 +734,34 @@ static bool intersect_embree_bvh(const bvh_scene& scene, const ray3f& ray,
   return true;
 }
 #endif
+
+// Initialize bvh data
+void make_points_bvh(bvh_shape& bvh, bvh_span<int> points,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  bvh = bvh_shape{points, {}, {}, {}, {}, positions, radius};
+}
+void make_lines_bvh(bvh_shape& bvh, bvh_span<vec2i> lines,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  bvh = {{}, lines, {}, {}, {}, positions, radius};
+}
+void make_triangles_bvh(bvh_shape& bvh, bvh_span<vec3i> triangles,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  bvh = {{}, {}, triangles, {}, {}, positions, radius};
+}
+void make_quads_bvh(bvh_shape& bvh, bvh_span<vec4i> quads,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  bvh = bvh_shape{{}, {}, {}, quads, {}, positions, radius};
+}
+void make_quadspos_bvh(bvh_shape& bvh, bvh_span<vec4i> quadspos,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  bvh = bvh_shape{{}, {}, {}, {}, quadspos, positions, radius};
+}
+void make_instances_bvh(
+    bvh_scene& bvh, bvh_sspan<bvh_instance> instances, int num_shapes) {
+  bvh = bvh_scene{instances, {}};
+  bvh.shapes.resize(num_shapes);
+}
+bvh_shape& get_shape_bvh(bvh_scene& bvh, int idx) { return bvh.shapes[idx]; }
 
 // BVH primitive with its bbox, its center and the index to the primitive
 struct bvh_prim {
@@ -1162,12 +1194,13 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
 }
 
 void refit_bvh(bvh_scene& scene, const vector<int>& updated_instances,
-  const vector<int>& updated_shapes, const bvh_params& params) {
+    const vector<int>& updated_shapes, const bvh_params& params) {
   // update shapes
   for (auto shape : updated_shapes) refit_bvh(scene.shapes[shape], params);
 
 #if YOCTO_EMBREE
-  if (scene.embree_bvh) return refit_embree_bvh(scene, updated_instances, params);
+  if (scene.embree_bvh)
+    return refit_embree_bvh(scene, updated_instances, params);
 #endif
 
   // refit

@@ -26,14 +26,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_math.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
-#include "ext/CLI11.hpp"
-
-int main(int argc, char** argv) {
+int main(int argc, const char** argv) {
   // command line parameters
   auto geodesic_source      = -1;
   auto num_geodesic_samples = 0;
@@ -48,76 +48,65 @@ int main(int argc, char** argv) {
   auto filename             = "mesh.ply"s;
 
   // parse command line
-  auto parser = CLI::App{"Applies operations on a triangle mesh"};
-  parser.add_option("--geodesic-source,-g", geodesic_source, "Geodesic source");
-  parser.add_option("--num-geodesic-samples", num_geodesic_samples,
+  auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
+  add_cli_option(
+      cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
+  add_cli_option(cli, "--num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
-  parser.add_option("--geodesic-scale", geodesic_scale, "Geodesic scale");
-  parser.add_flag("--facevarying", facevarying, "Preserve facevarying");
-  parser.add_flag("--normals", normals, "Compute smooth normals");
-  parser.add_option("--rotatey", rotate.y, "Rotate around y axis");
-  parser.add_option("--rotatex", rotate.x, "Rotate around x axis");
-  parser.add_option("--rotatez", rotate.z, "Rotate around z axis");
-  parser.add_option("--translatey", translate.y, "Translate along y axis");
-  parser.add_option("--translatex", translate.x, "Translate along x axis");
-  parser.add_option("--translatez", translate.z, "Translate along z axis");
-  parser.add_option("--scale", uscale, "Scale along xyz axes");
-  parser.add_option("--scaley", scale.y, "Scale along y axis");
-  parser.add_option("--scalex", scale.x, "Scale along x axis");
-  parser.add_option("--scalez", scale.z, "Scale along z axis");
-  parser.add_option("--output,-o", output, "output mesh")->required(true);
-  parser.add_option("mesh", filename, "input mesh")->required(true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
+  add_cli_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
+  add_cli_option(cli, "--facevarying", facevarying, "Preserve facevarying");
+  add_cli_option(cli, "--normals", normals, "Compute smooth normals");
+  add_cli_option(cli, "--rotatey", rotate.y, "Rotate around y axis");
+  add_cli_option(cli, "--rotatex", rotate.x, "Rotate around x axis");
+  add_cli_option(cli, "--rotatez", rotate.z, "Rotate around z axis");
+  add_cli_option(cli, "--translatey", translate.y, "Translate along y axis");
+  add_cli_option(cli, "--translatex", translate.x, "Translate along x axis");
+  add_cli_option(cli, "--translatez", translate.z, "Translate along z axis");
+  add_cli_option(cli, "--scale", uscale, "Scale along xyz axes");
+  add_cli_option(cli, "--scaley", scale.y, "Scale along y axis");
+  add_cli_option(cli, "--scalex", scale.x, "Scale along x axis");
+  add_cli_option(cli, "--scalez", scale.z, "Scale along z axis");
+  add_cli_option(cli, "--output,-o", output, "output mesh", true);
+  add_cli_option(cli, "mesh", filename, "input mesh", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load mesh
   auto shape = yocto_shape{};
   try {
-    printf("loading shape");
-    auto load_timer = timer();
+    auto timer = print_timed("loading shape");
     load_shape(filename, shape.points, shape.lines, shape.triangles,
         shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius, facevarying);
-    printf(" in %s\n", load_timer.elapsedf().c_str());
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
 
   // transform
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
-    printf("transforming shape");
-    auto transform_timer = timer();
-    auto xform           = translation_frame(translate) * scaling_frame(scale) *
+    auto timer = print_timed("transforming shape");
+    auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
                  rotation_frame({0, 1, 0}, radians(rotate.y));
     for (auto& p : shape.positions) p = transform_point(xform, p);
     for (auto& n : shape.normals)
       n = transform_normal(xform, n, max(scale) != min(scale));
-    printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
 
   // compute normals
   if (normals) {
-    printf("computing normals");
-    auto transform_timer = timer();
-    shape.normals        = compute_normals(shape);
+    auto timer    = print_timed("computing normals");
+    shape.normals = compute_normals(shape);
     if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
-    printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
 
   // compute geodesics and store them as colors
-  if (geodesic_source >= 0 or num_geodesic_samples > 0) {
-    printf("computing geodesics");
-    auto transform_timer = timer();
-    auto adjacencies     = face_adjacencies(shape.triangles);
-    auto solver          = make_geodesic_solver(
+  if (geodesic_source >= 0 || num_geodesic_samples > 0) {
+    auto timer       = print_timed("computing geodesics");
+    auto adjacencies = face_adjacencies(shape.triangles);
+    auto solver      = make_geodesic_solver(
         shape.triangles, adjacencies, shape.positions);
     auto sources = vector<int>();
     if (geodesic_source >= 0) {
@@ -128,20 +117,16 @@ int main(int argc, char** argv) {
     auto distances = compute_geodesic_distances(solver, sources);
     shape.colors   = vector<vec4f>{};
     distance_to_color(shape.colors, distances, geodesic_scale);
-    printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
 
   // save mesh
   try {
-    printf("saving shape");
-    auto save_timer = timer();
+    auto timer = print_timed("saving shape");
     save_shape(output, shape.points, shape.lines, shape.triangles, shape.quads,
         shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
         shape.normals, shape.texcoords, shape.colors, shape.radius);
-    printf(" in %s\n", save_timer.elapsedf().c_str());
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
 
   // done

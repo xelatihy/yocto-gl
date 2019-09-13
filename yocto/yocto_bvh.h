@@ -215,30 +215,19 @@ struct bvh_params {
 };
 
 // Initialize bvh data
-inline bvh_shape make_points_bvh(
-    bvh_span<int> points, bvh_span<vec3f> positions, bvh_span<float> radius) {
-  return bvh_shape{points, {}, {}, {}, {}, positions, radius};
-}
-inline bvh_shape make_lines_bvh(
-    bvh_span<vec2i> lines, bvh_span<vec3f> positions, bvh_span<float> radius) {
-  return bvh_shape{{}, lines, {}, {}, {}, positions, radius};
-}
-inline bvh_shape make_triangles_bvh(bvh_span<vec3i> triangles,
-    bvh_span<vec3f> positions, bvh_span<float> radius) {
-  return bvh_shape{{}, {}, triangles, {}, {}, positions, radius};
-}
-inline bvh_shape make_quads_bvh(
-    bvh_span<vec4i> quads, bvh_span<vec3f> positions, bvh_span<float> radius) {
-  return bvh_shape{{}, {}, {}, quads, {}, positions, radius};
-}
-inline bvh_shape make_quadspos_bvh(bvh_span<vec4i> quadspos,
-    bvh_span<vec3f> positions, bvh_span<float> radius) {
-  return bvh_shape{{}, {}, {}, {}, quadspos, positions, radius};
-}
-inline bvh_scene make_instances_bvh(
-    bvh_sspan<bvh_instance> instances, const vector<bvh_shape>& shapes) {
-  return bvh_scene{instances, shapes};
-}
+void make_points_bvh(bvh_shape& bvh, bvh_span<int> points,
+    bvh_span<vec3f> positions, bvh_span<float> radius);
+void make_lines_bvh(bvh_shape& bvh, bvh_span<vec2i> lines,
+    bvh_span<vec3f> positions, bvh_span<float> radius);
+void make_triangles_bvh(bvh_shape& bvh, bvh_span<vec3i> triangles,
+    bvh_span<vec3f> positions, bvh_span<float> radius);
+void make_quads_bvh(bvh_shape& bvh, bvh_span<vec4i> quads,
+    bvh_span<vec3f> positions, bvh_span<float> radius);
+void make_quadspos_bvh(bvh_shape& bvh, bvh_span<vec4i> quadspos,
+    bvh_span<vec3f> positions, bvh_span<float> radius);
+void make_instances_bvh(
+    bvh_scene& bvh, bvh_sspan<bvh_instance> instances, int num_shapes);
+bvh_shape& get_shape_bvh(bvh_scene& bvh, int idx);
 
 // Build the bvh acceleration structure.
 void build_bvh(bvh_shape& bvh, const bvh_params& params);
@@ -247,7 +236,7 @@ void build_bvh(bvh_scene& bvh, const bvh_params& params);
 // Refit bvh data
 void refit_bvh(bvh_shape& bvh, const bvh_params& params);
 void refit_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
-  const vector<int>& updated_shapes, const bvh_params& params);
+    const vector<int>& updated_shapes, const bvh_params& params);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,

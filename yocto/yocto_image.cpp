@@ -322,6 +322,7 @@ static inline color_space_params get_color_scape_params(color_space space) {
     case color_space::p3d60: return p3d60_params;
     case color_space::p3d65: return p3d65_params;
     case color_space::p3display: return p3display_params;
+    default: std::runtime_error("should not have gotten here");
   }
 }
 
@@ -798,13 +799,13 @@ void difference(image<vec4f>& diff, const image<vec4f>& a,
   for (auto i = 0llu; i < diff.count(); i++) diff[i] = abs(a[i] - b[i]);
   if (display) {
     for (auto i = 0llu; i < diff.count(); i++) {
-      auto d = max(diff[i]);
-      diff[i]         = {d, d, d, 1};
+      auto d  = max(diff[i]);
+      diff[i] = {d, d, d, 1};
     }
   }
 }
-image<vec4f> difference(const image<vec4f>& a,
-    const image<vec4f>& b, bool display) {
+image<vec4f> difference(
+    const image<vec4f>& a, const image<vec4f>& b, bool display) {
   auto diff = image<vec4f>{a.size()};
   difference(diff, a, b, display);
   return diff;

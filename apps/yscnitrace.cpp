@@ -30,6 +30,7 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
+#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 #include "ysceneui.h"
 using namespace yocto;
@@ -41,8 +42,6 @@ using namespace yocto;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
-
-#include "ext/CLI11.hpp"
 
 namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
@@ -912,7 +911,7 @@ void run_ui(app_state& app) {
   delete_glwindow(win);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
   // application
   app_state app{};
   app.trace_prms.batch = 1;
@@ -932,49 +931,42 @@ int main(int argc, char* argv[]) {
   }
 
   // parse command line
-  auto parser = CLI::App{"progressive path tracing"};
-  parser.add_option("--camera", app.trace_prms.camera, "Camera index.");
-  parser.add_option(
-      "--resolution,-r", app.trace_prms.resolution, "Image resolution.");
-  parser.add_option(
-      "--samples,-s", app.trace_prms.samples, "Number of samples.");
-  parser.add_option("--tracer,-t", app.trace_prms.sampler, "Tracer type.")
-      ->transform(CLI::IsMember(sampler_namemap));
-  parser
-      .add_option("--falsecolor,-F", app.trace_prms.falsecolor,
-          "Tracer false color type.")
-      ->transform(CLI::IsMember(falsecolor_namemap));
-  parser.add_option(
-      "--bounces", app.trace_prms.bounces, "Maximum number of bounces.");
-  parser.add_option("--clamp", app.trace_prms.clamp, "Final pixel clamping.");
-  parser.add_flag("--filter", app.trace_prms.tentfilter, "Filter image.");
-  parser.add_option(
-      "--seed", app.trace_prms.seed, "Seed for the random number generators.");
-  parser.add_flag("--env-hidden,!--no-env-hidden", app.trace_prms.envhidden,
+  auto cli = make_cli("yscnitrace", "progressive path tracing");
+  add_cli_option(cli, "--camera", app.trace_prms.camera, "Camera index.");
+  add_cli_option(
+      cli, "--resolution,-r", app.trace_prms.resolution, "Image resolution.");
+  add_cli_option(
+      cli, "--samples,-s", app.trace_prms.samples, "Number of samples.");
+  add_cli_option(cli, "--tracer,-t", (int&)app.trace_prms.sampler,
+      "Tracer type.", trace_sampler_names);
+  add_cli_option(cli, "--falsecolor,-F", (int&)app.trace_prms.falsecolor,
+      "Tracer false color type.", trace_falsecolor_names);
+  add_cli_option(
+      cli, "--bounces", app.trace_prms.bounces, "Maximum number of bounces.");
+  add_cli_option(cli, "--clamp", app.trace_prms.clamp, "Final pixel clamping.");
+  add_cli_option(cli, "--filter", app.trace_prms.tentfilter, "Filter image.");
+  add_cli_option(cli, "--env-hidden/--no-env-hidden", app.trace_prms.envhidden,
       "Environments are hidden in renderer");
-  parser.add_flag(
-      "--parallel,!--no-parallel", no_parallel, "Disable parallel execution.");
-  parser.add_option("--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
-  parser.add_flag(
-      "--filmic,!--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
-  parser.add_flag("--srgb,!--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
-  parser.add_flag("--bvh-high-quality,!--no-bvh-high-quality",
+  add_cli_option(cli, "--parallel,/--no-parallel", no_parallel,
+      "Disable parallel execution.");
+  add_cli_option(
+      cli, "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
+  add_cli_option(
+      cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
+  add_cli_option(cli, "--srgb/--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
+  add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
       app.bvh_prms.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  parser.add_flag("--bvh-embree,!--no-bvh-embree", app.bvh_prms.use_embree,
+  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.bvh_prms.use_embree,
       "Use Embree ratracer");
-  parser.add_flag("--bvh-embree-flatten,!--no-bvh-embree-flatten",
+  add_cli_option(cli, "--bvh-embree-flatten/--no-bvh-embree-flatten",
       app.bvh_prms.embree_flatten, "Flatten embree scene");
-  parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
+  add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
       app.bvh_prms.embree_compact, "Embree runs in compact memory");
 #endif
-  parser.add_flag("--add-skyenv", app.add_skyenv, "Add sky envmap");
-  parser.add_option("scenes", filenames, "Scene filenames")->required(true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
+  add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
+  add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // fix parallel code
   if (no_parallel) {

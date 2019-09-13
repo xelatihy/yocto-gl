@@ -26,8 +26,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_math.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
 #include <unordered_set>
@@ -35,8 +37,6 @@ using std::unordered_set;
 
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
-
-#include "ext/CLI11.hpp"
 
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -50,7 +50,7 @@ bool mkdir(const string& dir) {
 #endif
 }
 
-int main(int argc, char** argv) {
+int main(int argc, const char** argv) {
   // command line parameters
   auto notextures       = false;
   auto mesh_filenames   = false;
@@ -64,26 +64,23 @@ int main(int argc, char** argv) {
   auto filename         = "scene.json"s;
 
   // parse command line
-  auto parser = CLI::App{"Process scene"};
-  parser.add_flag("--notextures", notextures, "Disable textures.");
-  parser.add_flag("--mesh-filenames", mesh_filenames, "Add mesh filenames.");
-  parser.add_option("--shape-directory", shape_directory,
+  auto cli = make_cli("yscnproc", "Process scene");
+  add_cli_option(cli, "--notextures", notextures, "Disable textures.");
+  add_cli_option(
+      cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
+  add_cli_option(cli, "--shape-directory", shape_directory,
       "Shape directory when adding names.");
-  parser.add_option("--subdiv-directory", subdiv_directory,
+  add_cli_option(cli, "--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  parser.add_flag("--uniform-textures", uniform_txt, "uniform texture formats");
-  parser.add_flag(
-      "--obj-instances", obj_instances, "preserve instances in obj");
-  parser.add_flag("--info,-i", info, "print scene info");
-  parser.add_flag("--validate", validate, "Validate scene");
-  parser.add_option("--output,-o", output, "output scene")->required(true);
-  parser.add_option("scene", filename, "input scene")->required(true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
-  setbuf(stdout, nullptr);
+  add_cli_option(
+      cli, "--uniform-textures", uniform_txt, "uniform texture formats");
+  add_cli_option(
+      cli, "--obj-instances", obj_instances, "preserve instances in obj");
+  add_cli_option(cli, "--info,-i", info, "print scene info");
+  add_cli_option(cli, "--validate", validate, "Validate scene");
+  add_cli_option(cli, "--output,-o", output, "output scene", true);
+  add_cli_option(cli, "scene", filename, "input scene", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // fix options
   auto load_prms         = load_params();
@@ -95,21 +92,16 @@ int main(int argc, char** argv) {
   // load scene
   auto scene = yocto_scene{};
   try {
-    printf("loading scene");
-    auto load_timer = timer();
+    auto timer = print_timed("loading scene");
     load_scene(filename, scene, load_prms);
-    printf(" in %s\n", load_timer.elapsedf().c_str());
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
 
   // validate scene
   if (validate) {
-    printf("validating scene");
-    auto validate_timer = timer();
+    auto timer = print_timed("validating scene");
     print_validation(scene);
-    printf(" in %s\n", validate_timer.elapsedf().c_str());
   }
 
   // print info
@@ -128,10 +120,10 @@ int main(int argc, char** argv) {
   }
 
   // tesselating scene
-  printf("tesselating scene");
-  auto tesselate_timer = timer();
-  tesselate_subdivs(scene);
-  printf(" in %s\n", tesselate_timer.elapsedf().c_str());
+  {
+    auto timer = print_timed("tesselating scene");
+    tesselate_subdivs(scene);
+  }
 
   // add missing mesh names if necessary
   if (!shape_directory.empty() && shape_directory.back() != '/')
@@ -182,13 +174,10 @@ int main(int argc, char** argv) {
 
   // save scene
   try {
-    printf("saving scene");
-    auto save_timer = timer();
+    auto timer = print_timed("saving scene");
     save_scene(output, scene, save_prms);
-    printf(" in %s\n", save_timer.elapsedf().c_str());
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
 
   // done

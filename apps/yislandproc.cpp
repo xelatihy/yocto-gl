@@ -40,9 +40,8 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_utils.h"
 using namespace yocto;
-
-#include "ext/CLI11.hpp"
 
 #include "ext/json.hpp"
 #include "ext/sajson.h"
@@ -53,69 +52,6 @@ using namespace yocto;
 using std::string_view;
 using std::unordered_set;
 using namespace std::literals::string_view_literals;
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static inline string get_dirname(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-// Get filename without directory.
-static inline string get_filename(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-static inline string get_noextension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-// Get filename without directory and extension.
-static inline string get_basename(const string& filename) {
-  return get_noextension(get_filename(filename));
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF DISNEY ISLAND SCENE
@@ -137,33 +73,6 @@ inline string replace(string_view str, string_view from, string_view to) {
     }
   }
   return replaced;
-}
-
-// Load a text file
-static inline void load_text(const string& filename, string& str) {
-  // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-  auto fs = fopen(filename.c_str(), "rt");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
-  fseek(fs, 0, SEEK_END);
-  auto length = ftell(fs);
-  fseek(fs, 0, SEEK_SET);
-  str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
-    fclose(fs);
-    throw std::runtime_error("cannot read file " + filename);
-  }
-  fclose(fs);
-}
-
-// Save a text file
-inline void save_text(const string& filename, const string& str) {
-  auto fs = fopen(filename.c_str(), "wt");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
-    fclose(fs);
-    throw std::runtime_error("cannot write file " + filename);
-  }
-  fclose(fs);
 }
 
 using json = nlohmann::json;
@@ -1076,7 +985,7 @@ bool mkdir(const string& dir) {
 #endif
 }
 
-int main(int argc, char** argv) {
+int main(int argc, const char** argv) {
   // command line parameters
   auto notextures     = false;
   auto mesh_filenames = true;
@@ -1088,24 +997,19 @@ int main(int argc, char** argv) {
   auto filename       = "scene.json"s;
 
   // parse command line
-  auto parser = CLI::App{"Process scene"};
-  parser.add_flag("--notextures", notextures, "Disable textures.");
-  parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
+  auto cli = make_cli("yislandproc", "Process scene");
+  add_cli_option(cli, "--notextures", notextures, "Disable textures.");
+  add_cli_option(cli, "--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
       "Add mesh filenames.");
-  parser.add_option(
-      "--mesh-directory", mesh_directory, "Mesh directory when adding names.");
-  parser.add_flag("--uniform-textures,!--no-uniform-textures", uniform_txt,
+  add_cli_option(cli, "--mesh-directory", mesh_directory,
+      "Mesh directory when adding names.");
+  add_cli_option(cli, "--uniform-textures,!--no-uniform-textures", uniform_txt,
       "uniform texture formats");
-  parser.add_flag("--info,-i", info, "print scene info");
-  parser.add_flag("--validate,!--no-validate", validate, "Validate scene");
-  parser.add_option("--output,-o", output, "output scene")->required(true);
-  parser.add_option("scene", filename, "input scene")->required(true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
-  setbuf(stdout, nullptr);
+  add_cli_option(cli, "--info,-i", info, "print scene info");
+  add_cli_option(cli, "--validate,!--no-validate", validate, "Validate scene");
+  add_cli_option(cli, "--output,-o", output, "output scene", true);
+  add_cli_option(cli, "scene", filename, "input scene", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // fix params
   auto load_prms       = load_params();
@@ -1115,26 +1019,21 @@ int main(int argc, char** argv) {
 
   // load scene
   auto scene = yocto_scene{};
-  printf("loading scene");
-  auto load_timer = timer();
   try {
+    auto timer = print_timed("loading scene");
     load_island_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
-  printf(" in %s\n", load_timer.elapsedf().c_str());
 
   // validate scene
   if (validate) {
-    printf("validating scene");
-    auto validate_timer = timer();
+    auto timer = print_timed("validating scene");
     print_validation(scene);
-    printf(" in %s\n", validate_timer.elapsedf().c_str());
   }
 
   // print info
-  if (info) printf("%s\n", format_stats(scene).c_str());
+  if (info) print_info(format_stats(scene));
 
 // add missing mesh names if necessary
 #if 0
@@ -1162,25 +1061,20 @@ int main(int argc, char** argv) {
     dirnames.insert(dirname + get_dirname(texture.uri));
   if (get_extension(output) == "yaml") dirnames.insert(dirname + "instances/");
   for (auto& dir : dirnames) {
-    if (!mkdir(get_dirname(dir))) {
-      printf("cannot create directory %s\n", get_dirname(output).c_str());
-      exit(1);
-    }
+    if (!mkdir(get_dirname(dir)))
+      print_fatal("cannot create directory " + get_dirname(output));
   }
 
   // save scene
-  printf("saving scene");
-  auto save_timer = timer();
   try {
+    auto timer           = print_timed("saving scene");
     save_prms.notextures = false;
     save_prms.noparallel = false;
     // save_prms.ply_instances = true;
     save_scene(output, scene, save_prms);
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
-  printf(" in %s\n", save_timer.elapsedf().c_str());
 
   // done
   return 0;
