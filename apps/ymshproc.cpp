@@ -26,6 +26,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_math.h"
+#include "../yocto/yocto_utils.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
@@ -76,23 +78,19 @@ int main(int argc, char** argv) {
   // load mesh
   auto shape = yocto_shape{};
   try {
-    printf("loading shape");
-    auto load_timer = timer();
+    auto timer = print_trace("loading shape");
     load_shape(filename, shape.points, shape.lines, shape.triangles,
         shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius, facevarying);
-    printf(" in %s\n", load_timer.elapsedf().c_str());
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
 
   // transform
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
-    printf("transforming shape");
-    auto transform_timer = timer();
+    auto timer = print_trace("transforming shape");
     auto xform           = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
@@ -100,22 +98,18 @@ int main(int argc, char** argv) {
     for (auto& p : shape.positions) p = transform_point(xform, p);
     for (auto& n : shape.normals)
       n = transform_normal(xform, n, max(scale) != min(scale));
-    printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
 
   // compute normals
   if (normals) {
-    printf("computing normals");
-    auto transform_timer = timer();
+    auto timer = print_trace("computing normals");
     shape.normals        = compute_normals(shape);
     if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
-    printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
 
   // compute geodesics and store them as colors
   if (geodesic_source >= 0 or num_geodesic_samples > 0) {
-    printf("computing geodesics");
-    auto transform_timer = timer();
+    auto timer = print_trace("computing geodesics");
     auto adjacencies     = face_adjacencies(shape.triangles);
     auto solver          = make_geodesic_solver(
         shape.triangles, adjacencies, shape.positions);
@@ -128,20 +122,16 @@ int main(int argc, char** argv) {
     auto distances = compute_geodesic_distances(solver, sources);
     shape.colors   = vector<vec4f>{};
     distance_to_color(shape.colors, distances, geodesic_scale);
-    printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
 
   // save mesh
   try {
-    printf("saving shape");
-    auto save_timer = timer();
+    auto timer = print_trace("saving shape");
     save_shape(output, shape.points, shape.lines, shape.triangles, shape.quads,
         shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
         shape.normals, shape.texcoords, shape.colors, shape.radius);
-    printf(" in %s\n", save_timer.elapsedf().c_str());
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
 
   // done

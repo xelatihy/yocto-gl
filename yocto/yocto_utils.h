@@ -127,6 +127,75 @@ using std::thread;
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// CONVERSION TO STRING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Conversion to string for basic and Yocto/Math types
+inline string to_string(int value) { return std::to_string(value); }
+inline string to_string(float value) { return std::to_string(value); }
+inline string to_string(double value) { return std::to_string(value); }
+inline string to_string(const string& value) { return value; }
+inline string to_string(const char* value) { return value; }
+inline string to_string(const vec2f& value) {
+  return to_string(value.x) + " " + to_string(value.y);
+}
+inline string to_string(const vec3f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z);
+}
+inline string to_string(const vec4f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z) + " " + to_string(value.w);
+}
+inline string to_string(const vec2i& value) {
+  return to_string(value.x) + " " + to_string(value.y);
+}
+inline string to_string(const vec3i& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z);
+}
+inline string to_string(const vec4i& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z) + " " + to_string(value.w);
+}
+inline string to_string(const mat2f& value) {
+  return to_string(value.x) + " " + to_string(value.y);
+}
+inline string to_string(const mat3f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z);
+}
+inline string to_string(const mat4f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z) + " " + to_string(value.w);
+}
+inline string to_string(const frame2f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.o);
+}
+inline string to_string(const frame3f& value) {
+  return to_string(value.x) + " " + to_string(value.y) + " " +
+         to_string(value.z) + " " + to_string(value.o);
+}
+inline string to_string(const ray2f& value) {
+  return to_string(value.o) + " " + to_string(value.d) + " " +
+         to_string(value.tmin) + " " + to_string(value.tmax);
+}
+inline string to_string(const ray3f& value) {
+  return to_string(value.o) + " " + to_string(value.d) + " " +
+         to_string(value.tmin) + " " + to_string(value.tmax);
+}
+inline string to_string(const bbox2f& value) {
+  return to_string(value.min) + " " + to_string(value.max);
+}
+inline string to_string(const bbox3f& value) {
+  return to_string(value.min) + " " + to_string(value.max);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PRINT/PARSE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -201,77 +270,8 @@ inline auto print_trace(const string& fmt, const Args&... args) {
       print_info(message + " " + format_duration(get_time() - start_time));
     }
   };
-  print_info(fmt + " [started]", std::forward(args)...);
+  print_info(fmt + " [started]", args...);
   return print_scope{format(fmt, args...)};
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// CONVERSION TO STRING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Conversion to string for basic and Yocto/Math types
-inline string to_string(int value) { return std::to_string(value); }
-inline string to_string(float value) { return std::to_string(value); }
-inline string to_string(double value) { return std::to_string(value); }
-inline string to_string(const string& value) { return value; }
-inline string to_string(const char* value) { return value; }
-inline string to_string(const vec2f& value) {
-  return to_string(value.x) + " " + to_string(value.y);
-}
-inline string to_string(const vec3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z);
-}
-inline string to_string(const vec4f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.w);
-}
-inline string to_string(const vec2i& value) {
-  return to_string(value.x) + " " + to_string(value.y);
-}
-inline string to_string(const vec3i& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z);
-}
-inline string to_string(const vec4i& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.w);
-}
-inline string to_string(const mat2f& value) {
-  return to_string(value.x) + " " + to_string(value.y);
-}
-inline string to_string(const mat3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z);
-}
-inline string to_string(const mat4f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.w);
-}
-inline string to_string(const frame2f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.o);
-}
-inline string to_string(const frame3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.o);
-}
-inline string to_string(const ray2f& value) {
-  return to_string(value.o) + " " + to_string(value.d) + " " +
-         to_string(value.tmin) + " " + to_string(value.tmax);
-}
-inline string to_string(const ray3f& value) {
-  return to_string(value.o) + " " + to_string(value.d) + " " +
-         to_string(value.tmin) + " " + to_string(value.tmax);
-}
-inline string to_string(const bbox2f& value) {
-  return to_string(value.min) + " " + to_string(value.max);
-}
-inline string to_string(const bbox3f& value) {
-  return to_string(value.min) + " " + to_string(value.max);
 }
 
 }  // namespace yocto

@@ -26,6 +26,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_math.h"
+#include "../yocto/yocto_utils.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
@@ -95,21 +97,16 @@ int main(int argc, char** argv) {
   // load scene
   auto scene = yocto_scene{};
   try {
-    printf("loading scene");
-    auto load_timer = timer();
+    auto timer = print_trace("loading scene");
     load_scene(filename, scene, load_prms);
-    printf(" in %s\n", load_timer.elapsedf().c_str());
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
 
   // validate scene
   if (validate) {
-    printf("validating scene");
-    auto validate_timer = timer();
+    auto timer = print_trace("validating scene");
     print_validation(scene);
-    printf(" in %s\n", validate_timer.elapsedf().c_str());
   }
 
   // print info
@@ -128,10 +125,10 @@ int main(int argc, char** argv) {
   }
 
   // tesselating scene
-  printf("tesselating scene");
-  auto tesselate_timer = timer();
-  tesselate_subdivs(scene);
-  printf(" in %s\n", tesselate_timer.elapsedf().c_str());
+  {
+    auto timer = print_trace("tesselating scene");
+    tesselate_subdivs(scene);
+  }
 
   // add missing mesh names if necessary
   if (!shape_directory.empty() && shape_directory.back() != '/')
@@ -182,13 +179,10 @@ int main(int argc, char** argv) {
 
   // save scene
   try {
-    printf("saving scene");
-    auto save_timer = timer();
+    auto timer = print_trace("saving scene");
     save_scene(output, scene, save_prms);
-    printf(" in %s\n", save_timer.elapsedf().c_str());
   } catch (const std::exception& e) {
-    printf("%s\n", e.what());
-    exit(1);
+    print_fatal(e.what());
   }
 
   // done
