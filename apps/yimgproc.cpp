@@ -102,7 +102,7 @@ image<vec4f> filter_bilateral(
 
 }  // namespace yocto
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
   // command line parameters
   auto do_tonemap          = false;
   auto tonemap_prms        = tonemap_params{};
@@ -120,41 +120,35 @@ int main(int argc, char* argv[]) {
   auto filename            = "img.hdr"s;
 
   // parse command line
-  auto parser = CLI::App{"Transform images"};
-  parser.add_flag("--tonemap,!--no-tonemap,-t", do_tonemap, "Tonemap image");
-  parser.add_option("--exposure,-e", tonemap_prms.exposure, "Tonemap exposure");
-  parser.add_flag("--srgb,!--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
-  parser.add_flag("--filmic,!--no-filmic,-f", tonemap_prms.filmic,
+  auto cli = make_cmdline_parser("Transform images");
+  add_flag(cli, "--tonemap/--no-tonemap,-t", do_tonemap, "Tonemap image");
+  add_option(cli, "--exposure,-e", tonemap_prms.exposure, "Tonemap exposure");
+  add_flag(cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
+  add_flag(cli, "--filmic/--no-filmic,-f", tonemap_prms.filmic,
       "Tonemap uses filmic curve");
-  parser.add_option(
+  add_option(cli, 
       "--logcontrast", tonemap_prms.logcontrast, "Tonemap log contrast");
-  parser.add_option(
+  add_option(cli, 
       "--lincontrast", tonemap_prms.contrast, "Tonemap linear contrast");
-  parser.add_option(
+  add_option(cli, 
       "--saturation", tonemap_prms.saturation, "Tonemap saturation");
-  parser.add_option(
+  add_option(cli, 
       "--resize-width", resize_width, "resize size (0 to maintain aspect)");
-  parser.add_option(
+  add_option(cli, 
       "--resize-height", resize_height, "resize size (0 to maintain aspect)");
-  parser.add_option("--spatial-sigma", spatial_sigma, "blur spatial sigma");
-  parser.add_option("--range-sigma", range_sigma, "bilateral blur range sigma");
-  parser.add_option(
+  add_option(cli, "--spatial-sigma", spatial_sigma, "blur spatial sigma");
+  add_option(cli, "--range-sigma", range_sigma, "bilateral blur range sigma");
+  add_option(cli, 
       "--set-alpha", alpha_filename, "set alpha as this image alpha");
-  parser.add_option("--set-color-as-alpha", coloralpha_filename,
+  add_option(cli, "--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
-  parser.add_flag("--logo", logo, "Add logo");
-  parser.add_option("--diff", diff_filename, "compute the diff between images");
-  parser.add_flag("--diff-signal", diff_signal, "signal a diff as error");
-  parser.add_option("--diff-threshold,", diff_threshold, "diff threshold");
-  parser.add_option("--output,-o", output, "output image filename")
-      ->required(true);
-  parser.add_option("filename", filename, "input image filename")
-      ->required(true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
+  add_flag(cli, "--logo", logo, "Add logo");
+  add_option(cli, "--diff", diff_filename, "compute the diff between images");
+  add_flag(cli, "--diff-signal", diff_signal, "signal a diff as error");
+  add_option(cli, "--diff-threshold,", diff_threshold, "diff threshold");
+  add_option(cli, "--output,-o", output, "output image filename", true);
+  add_option(cli, "filename", filename, "input image filename", true);
+  if(!parse_cmdline(cli, argc, argv)) exit(1);
 
   // load
   auto img = image<vec4f>();

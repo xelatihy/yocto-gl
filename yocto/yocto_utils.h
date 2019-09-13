@@ -200,9 +200,7 @@ inline string to_string(const bbox3f& value) {
 namespace yocto {
 
 // Print a message to the console
-inline void print_info(const string& msg) {
-  printf("%s\n", msg.c_str());
-}
+inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
 // Prints a messgae to the console and exit with an error.
 inline void print_fatal(const string& msg) {
   printf("%s\n", msg.c_str());
@@ -358,7 +356,7 @@ inline void add_option(cmdline_parser& parser, const string& name, float& value,
     const string& usage, bool req = false);
 inline void add_option(cmdline_parser& parser, const string& name, bool& value,
     const string& usage, bool req = false);
-inline bool add_flag(cmdline_parser& parser, const string& name, bool& value,
+inline void add_flag(cmdline_parser& parser, const string& name, bool& value,
     const string& usage, bool req = false);
 // Parse all arguments left on the command line.
 inline void add_option(cmdline_parser& parser, const string& name,
@@ -579,7 +577,7 @@ inline vector<string> split_cmdline_names(const string& name_) {
   auto name  = name_;
   auto split = vector<string>{};
   if (name.empty()) throw std::runtime_error("option name cannot be empty");
-  if (name.find_first_of(" \t\r\n"))
+  if (name.find_first_of(" \t\r\n") != string::npos)
     throw std::runtime_error("option name cannot contain whitespaces");
   while (name.find_first_of(",/") != string::npos) {
     auto pos = name.find_first_of(",/");
@@ -588,9 +586,9 @@ inline vector<string> split_cmdline_names(const string& name_) {
   }
   if (!name.empty()) split.push_back(name);
   if (split.empty()) throw std::runtime_error("option name cannot be empty");
-  for (auto name : split)
+  for (auto& name : split)
     if ((split[0][0] == '-') != (name[0] == '-'))
-      throw std::runtime_error("inconsistent option names");
+      throw std::runtime_error("inconsistent option names for " + name);
   return split;
 }
 
@@ -601,23 +599,34 @@ inline void add_option(cmdline_parser& parser, const string& name,
 }
 inline void add_option(cmdline_parser& parser, const string& name, int& value,
     const string& usage, bool req) {
-  parser.options.push_back({name, usage, cmdline_type::int_, &value, req, false});
+  parser.options.push_back(
+      {name, usage, cmdline_type::int_, &value, req, false});
 }
 inline void add_option(cmdline_parser& parser, const string& name, float& value,
     const string& usage, bool req) {
-  parser.options.push_back({name, usage, cmdline_type::float_, &value, req, false});
+  parser.options.push_back(
+      {name, usage, cmdline_type::float_, &value, req, false});
 }
 inline void add_option(cmdline_parser& parser, const string& name, bool& value,
     const string& usage, bool req) {
-  parser.options.push_back({name, usage, cmdline_type::bool_, &value, req, false});
+  parser.options.push_back(
+      {name, usage, cmdline_type::bool_, &value, req, false});
 }
 inline void add_option(cmdline_parser& parser, const string& name,
     vector<string>& value, const string& usage, bool req) {
   parser.options.push_back(
       {name, usage, cmdline_type::string_vector_, &value, req, false});
 }
+inline void add_flag(cmdline_parser& parser, const string& name, bool& value,
+    const string& usage, bool req) {
+  parser.options.push_back(
+      {name, usage, cmdline_type::flag_, &value, req, false});
+}
 
 inline bool print_cmdline_help(cmdline_parser& parser, const string& error) {
+  if (error != "") {
+    printf("error: %s\n\n", error.c_str());
+  }
   auto options = false, positionals = false;
   for (auto& option : parser.options) {
     if (option.name.find("-") == 0) {
@@ -627,13 +636,13 @@ inline bool print_cmdline_help(cmdline_parser& parser, const string& error) {
     }
   }
   printf("usage: %s%s%s\n%s\n", parser.name.c_str(),
-      options ? " [options]" : "", positionals ? " <args>" : "",
+      options ? " [options]" : "", positionals ? " <arguments>" : "",
       parser.usage.c_str());
   if (options) printf("\noptions:\n");
   for (auto& option : parser.options) {
     if (option.name.find("-") == 0) printf("  %s\n", option.usage.c_str());
   }
-  if (positionals) printf("\npositional:\n");
+  if (positionals) printf("\narguments:\n");
   for (auto& option : parser.options) {
     if (option.name.find("-") != 0) printf("  %s\n", option.usage.c_str());
   }
@@ -694,6 +703,7 @@ inline bool parse_cmdline(cmdline_parser& parser, int argc, const char** argv) {
         if (pos + 1 >= args.size())
           return print_cmdline_help(parser, "missing value for " + name);
         auto value = args[pos + 1];
+          args.erase(args.begin() + pos, args.begin() + pos + 2);
         if (option.type == cmdline_type::string_) {
           *(string*)option.value = value;
           option.set             = true;
@@ -741,21 +751,27 @@ inline bool parse_cmdline(cmdline_parser& parser, int argc, const char** argv) {
         option.set             = true;
       } else if (option.type == cmdline_type::int_) {
         if (!parse_cmdline_value(value, *(int*)option.value))
-          return print_cmdline_help(parser, "incorrect value for " + option.name);
+          return print_cmdline_help(
+              parser, "incorrect value for " + option.name);
         option.set = true;
       } else if (option.type == cmdline_type::float_) {
         if (!parse_cmdline_value(value, *(float*)option.value))
-          return print_cmdline_help(parser, "incorrect value for " + option.name);
+          return print_cmdline_help(
+              parser, "incorrect value for " + option.name);
         option.set = true;
       } else if (option.type == cmdline_type::bool_) {
         if (!parse_cmdline_value(value, *(bool*)option.value))
-          return print_cmdline_help(parser, "incorrect value for " + option.name);
+          return print_cmdline_help(
+              parser, "incorrect value for " + option.name);
         option.set = true;
       } else {
         throw std::runtime_error("unsupported type");
       }
     }
   }
+  // check remaining
+    if(!args.empty())
+        return print_cmdline_help(parser, "mismatched value for " + args.front());
   return true;
 }
 
