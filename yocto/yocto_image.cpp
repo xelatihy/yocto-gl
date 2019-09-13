@@ -322,6 +322,7 @@ static inline color_space_params get_color_scape_params(color_space space) {
     case color_space::p3d60: return p3d60_params;
     case color_space::p3d65: return p3d65_params;
     case color_space::p3display: return p3display_params;
+    default: std::runtime_error("should not have gotten here");
   }
 }
 

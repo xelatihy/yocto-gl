@@ -1729,7 +1729,7 @@ static inline void connect_opposite_nodes(geodesic_solver& solver,
     const vec2i& edge) {
   int v0 = opposite_vertex(tr0, edge);
   int v1 = opposite_vertex(tr1, edge);
-  if (v0 == -1 or v1 == -1) return;
+  if (v0 == -1 || v1 == -1) return;
   auto length = opposite_nodes_arc_length(solver, positions, v0, v1, edge);
   connect_nodes(solver, v0, v1, length);
 }
@@ -1830,7 +1830,7 @@ void compute_geodesic_distances(vector<float>& field,
       } else {
         // If neighbor not in queue, add node to queue using Small Label
         // First (see comment at the beginning).
-        if (queue.empty() or (new_distance < field[queue.front()]))
+        if (queue.empty() || (new_distance < field[queue.front()]))
           queue.push_front(neighbor);
         else
           queue.push_back(neighbor);
