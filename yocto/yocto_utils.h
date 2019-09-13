@@ -8,10 +8,11 @@
 // manipulation, file lading/saving and basic concurrency utilities.
 //
 //
-// ## Printing and parsing values
+// ## Printing values
 //
-// Use `format()` to format a string using `{}` as placeholder and `print()`
-// to print it. Use `parse()` to parse a value from a string.
+// Use `print_info()` to print a message, `print_fatal()` to print and exit,
+// and `print_timed()` to use a RIIA timer. Several overloads of `to_string()`
+// are provided for both the basic types and Yocto/Math types.
 //
 //
 // ## Python-like iterators and collection helpers
@@ -36,15 +37,15 @@
 // support option and position arguments, automatic help generation, and
 // error checking.
 //
-// 1. initialize the parser with `make_cli(argc, argv, help)`
-// 2. read a value with `value = parse_argument(parser, name, default, help)`
-//    - is name starts with '--' or '-' then it is an option
-//    - otherwise it is a positional arguments
+// 1. initialize the parser with `auto cli = make_cli(argc, argv, help)`
+// 2. add options with `add_cli_option(cli, name, value, usage, req)`
+//    - if name starts with '--' or '-' then it is an option
+//    - otherwise it is a positional argument
 //    - options and arguments may be intermixed
-//    - the type of each option is determined by the default value `default`
-//    - the value is parsed on the stop
-// 3. finished parsing with `check_cmdline(parser)`
-//    - if an error occurred, the parser will exit and print a usage message
+//    - the type of each option is determined by the passed reference `value`
+//    - `req` indicates whether an option or argument is required or not
+// 3. parse options with `parse_cli(cli, argc, argv)`
+//    - if an error occurrs, the parser prints a usage message and returns false
 //
 //
 // ## Path manipulation
@@ -114,6 +115,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <algorithm>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
