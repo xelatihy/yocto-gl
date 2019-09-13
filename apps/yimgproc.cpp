@@ -31,8 +31,6 @@
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
 
-#include "ext/CLI11.hpp"
-
 namespace yocto {
 
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
@@ -120,26 +118,26 @@ int main(int argc, const char* argv[]) {
   auto filename            = "img.hdr"s;
 
   // parse command line
-  auto cli = make_cmdline_parser("Transform images");
+  auto cli = make_cmdline_parser("yimgproc", "Transform images");
   add_flag(cli, "--tonemap/--no-tonemap,-t", do_tonemap, "Tonemap image");
   add_option(cli, "--exposure,-e", tonemap_prms.exposure, "Tonemap exposure");
   add_flag(cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
   add_flag(cli, "--filmic/--no-filmic,-f", tonemap_prms.filmic,
       "Tonemap uses filmic curve");
-  add_option(cli, 
-      "--logcontrast", tonemap_prms.logcontrast, "Tonemap log contrast");
-  add_option(cli, 
-      "--lincontrast", tonemap_prms.contrast, "Tonemap linear contrast");
-  add_option(cli, 
-      "--saturation", tonemap_prms.saturation, "Tonemap saturation");
-  add_option(cli, 
-      "--resize-width", resize_width, "resize size (0 to maintain aspect)");
-  add_option(cli, 
-      "--resize-height", resize_height, "resize size (0 to maintain aspect)");
+  add_option(
+      cli, "--logcontrast", tonemap_prms.logcontrast, "Tonemap log contrast");
+  add_option(
+      cli, "--lincontrast", tonemap_prms.contrast, "Tonemap linear contrast");
+  add_option(
+      cli, "--saturation", tonemap_prms.saturation, "Tonemap saturation");
+  add_option(cli, "--resize-width", resize_width,
+      "resize size (0 to maintain aspect)");
+  add_option(cli, "--resize-height", resize_height,
+      "resize size (0 to maintain aspect)");
   add_option(cli, "--spatial-sigma", spatial_sigma, "blur spatial sigma");
   add_option(cli, "--range-sigma", range_sigma, "bilateral blur range sigma");
-  add_option(cli, 
-      "--set-alpha", alpha_filename, "set alpha as this image alpha");
+  add_option(
+      cli, "--set-alpha", alpha_filename, "set alpha as this image alpha");
   add_option(cli, "--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
   add_flag(cli, "--logo", logo, "Add logo");
@@ -148,7 +146,7 @@ int main(int argc, const char* argv[]) {
   add_option(cli, "--diff-threshold,", diff_threshold, "diff threshold");
   add_option(cli, "--output,-o", output, "output image filename", true);
   add_option(cli, "filename", filename, "input image filename", true);
-  if(!parse_cmdline(cli, argc, argv)) exit(1);
+  if (!parse_cmdline(cli, argc, argv)) exit(1);
 
   // load
   auto img = image<vec4f>();

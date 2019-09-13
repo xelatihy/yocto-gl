@@ -40,7 +40,7 @@ namespace fs = ghc::filesystem;
 
 #include "ext/CLI11.hpp"
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
   // options
   auto load_prms    = load_params{};
   auto bvh_prms     = bvh_params{};
@@ -67,52 +67,44 @@ int main(int argc, char* argv[]) {
   }
 
   // parse command line
-  auto parser = CLI::App{"Offline path tracing"};
-  parser.add_option("--camera", trace_prms.camera, "Camera index.");
-  parser.add_option(
-      "--resolution,-r", trace_prms.resolution, "Image resolution.");
-  parser.add_option("--samples,-s", trace_prms.samples, "Number of samples.");
-  parser.add_option("--tracer,-t", trace_prms.sampler, "Trace type.")
-      ->transform(CLI::IsMember(sampler_namemap));
-  parser
-      .add_option(
-          "--falsecolor,-F", trace_prms.falsecolor, "Tracer false color type.")
-      ->transform(CLI::IsMember(falsecolor_namemap));
-  parser.add_option(
-      "--bounces", trace_prms.bounces, "Maximum number of bounces.");
-  parser.add_option("--clamp", trace_prms.clamp, "Final pixel clamping.");
-  parser.add_flag("--filter", trace_prms.tentfilter, "Filter image.");
-  parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
-  parser.add_option(
-      "--seed", trace_prms.seed, "Seed for the random number generators.");
-  parser.add_option("--batch,-b", trace_prms.batch, "Samples per batch.");
-  parser.add_flag("--env-hidden,!--no-env-hidden", trace_prms.envhidden,
+  auto cli = make_cmdline_parser("yscntrace", "Offline path tracing");
+  add_option(cli, "--camera", trace_prms.camera, "Camera index.");
+  add_option(
+      cli, "--resolution,-r", trace_prms.resolution, "Image resolution.");
+  add_option(cli, "--samples,-s", trace_prms.samples, "Number of samples.");
+  add_option(cli, "--tracer,-t", trace_prms.sampler, "Trace type.");
+  add_option(
+      cli, "--falsecolor,-F", trace_prms.falsecolor, "Tracer false color type.");
+  add_option(
+      cli, "--bounces", trace_prms.bounces, "Maximum number of bounces.");
+  add_option(cli, "--clamp", trace_prms.clamp, "Final pixel clamping.");
+  add_flag(cli, "--filter", trace_prms.tentfilter, "Filter image.");
+  add_flag(cli, "--noparallel", noparallel, "Disable parallel execution.");
+  add_option(
+      cli, "--seed", trace_prms.seed, "Seed for the random number generators.");
+  add_option(cli, "--batch,-b", trace_prms.batch, "Samples per batch.");
+  add_flag(cli, "--env-hidden/--no-env-hidden", trace_prms.envhidden,
       "Environments are hidden in renderer");
-  parser.add_option("--save-batch", save_batch, "Save images progressively");
-  parser.add_option("--exposure,-e", tonemap_prms.exposure, "Hdr exposure");
-  parser.add_flag("--filmic,!--no-filmic", tonemap_prms.filmic, "Hdr filmic");
-  parser.add_flag("--srgb,!--no-srgb", tonemap_prms.srgb, "Hdr srgb");
-  parser.add_flag("--bvh-high-quality,!--no-bvh-high-quality",
+  add_option(cli, "--save-batch", save_batch, "Save images progressively");
+  add_option(cli, "--exposure,-e", tonemap_prms.exposure, "Hdr exposure");
+  add_flag(cli, "--filmic/--no-filmic", tonemap_prms.filmic, "Hdr filmic");
+  add_flag(cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Hdr srgb");
+  add_flag(cli, "--bvh-high-quality/--no-bvh-high-quality",
       bvh_prms.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  parser.add_flag("--bvh-embree,!--no-bvh-embree", bvh_prms.use_embree,
+  add_flag(cli, "--bvh-embree/--no-bvh-embree", bvh_prms.use_embree,
       "Use Embree ratracer");
-  parser.add_flag("--bvh-embree-flatten,!--no-bvh-fembree-latten",
+  add_flag(cli, "--bvh-embree-flatten/--no-bvh-fembree-latten",
       bvh_prms.embree_flatten, "Flatten BVH scene");
-  parser.add_flag("--bvh-embree-compact,!--no-bvh-embree-compact",
+  add_flag(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
       bvh_prms.embree_compact, "Embree runs in compact memory");
 #endif
-  parser.add_flag("--add-skyenv", add_skyenv, "Add sky envmap");
-  parser.add_option("--output-image,-o", imfilename, "Image filename");
-  parser.add_flag("--validate", validate, "Validate scene");
-  parser.add_flag("--logo,!--no-logo", logo, "Whether to append a logo");
-  parser.add_option("scene", filename, "Scene filename", true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
-  setbuf(stdout, nullptr);
+  add_flag(cli, "--add-skyenv", add_skyenv, "Add sky envmap");
+  add_option(cli, "--output-image,-o", imfilename, "Image filename");
+  add_flag(cli, "--validate", validate, "Validate scene");
+  add_flag(cli, "--logo/--no-logo", logo, "Whether to append a logo");
+  add_option(cli, "scene", filename, "Scene filename", true);
+  if (!parse_cmdline(cli, argc, argv)) exit(1);
 
   // fix parallel code
   if (noparallel) {

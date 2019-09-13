@@ -27,6 +27,7 @@
 //
 
 #include "../yocto/yocto_image.h"
+#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
@@ -517,21 +518,15 @@ void run_ui(app_state& app) {
   delete_glwindow(win);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
   // prepare application
   auto app       = app_state();
   auto filenames = vector<string>{};
 
   // command line options
-  auto parser = CLI::App{"view images"};
-  // auto quiet = parse_flag(
-  //     parser, "--quiet,-q", false, "Print only errors messages");
-  parser.add_option("images", filenames, "image filenames")->required(true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
+  auto cli = make_cmdline_parser("yimgview", "view images");
+  add_option(cli, "images", filenames, "image filenames", true);
+  if (!parse_cmdline(cli, argc, argv)) exit(1);
 
   // loading images
   for (auto filename : filenames) add_new_image(app, filename);

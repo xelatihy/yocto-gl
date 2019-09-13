@@ -27,9 +27,9 @@
 //
 
 #include "../yocto/yocto_math.h"
-#include "../yocto/yocto_utils.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
 #include <unordered_set>
@@ -52,7 +52,7 @@ bool mkdir(const string& dir) {
 #endif
 }
 
-int main(int argc, char** argv) {
+int main(int argc, const char** argv) {
   // command line parameters
   auto notextures       = false;
   auto mesh_filenames   = false;
@@ -66,26 +66,20 @@ int main(int argc, char** argv) {
   auto filename         = "scene.json"s;
 
   // parse command line
-  auto parser = CLI::App{"Process scene"};
-  parser.add_flag("--notextures", notextures, "Disable textures.");
-  parser.add_flag("--mesh-filenames", mesh_filenames, "Add mesh filenames.");
-  parser.add_option("--shape-directory", shape_directory,
+  auto cli = make_cmdline_parser("yscnproc", "Process scene");
+  add_flag(cli, "--notextures", notextures, "Disable textures.");
+  add_flag(cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
+  add_option(cli, "--shape-directory", shape_directory,
       "Shape directory when adding names.");
-  parser.add_option("--subdiv-directory", subdiv_directory,
+  add_option(cli, "--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  parser.add_flag("--uniform-textures", uniform_txt, "uniform texture formats");
-  parser.add_flag(
-      "--obj-instances", obj_instances, "preserve instances in obj");
-  parser.add_flag("--info,-i", info, "print scene info");
-  parser.add_flag("--validate", validate, "Validate scene");
-  parser.add_option("--output,-o", output, "output scene")->required(true);
-  parser.add_option("scene", filename, "input scene")->required(true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
-  setbuf(stdout, nullptr);
+  add_flag(cli, "--uniform-textures", uniform_txt, "uniform texture formats");
+  add_flag(cli, "--obj-instances", obj_instances, "preserve instances in obj");
+  add_flag(cli, "--info,-i", info, "print scene info");
+  add_flag(cli, "--validate", validate, "Validate scene");
+  add_option(cli, "--output,-o", output, "output scene", true);
+  add_option(cli, "scene", filename, "input scene", true);
+  if (!parse_cmdline(cli, argc, argv)) exit(1);
 
   // fix options
   auto load_prms         = load_params();

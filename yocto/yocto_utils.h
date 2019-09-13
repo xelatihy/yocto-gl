@@ -629,7 +629,7 @@ inline void add_option(cmdline_parser& parser, const string& name,
     line += " [required]";
   }
   line += "\n";
-  if(name.find("-") == 0) {
+  if (name.find("-") == 0) {
     parser.usage_options += line;
   } else {
     parser.usage_arguments += line;

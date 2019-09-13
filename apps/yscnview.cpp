@@ -1235,26 +1235,22 @@ void run_ui(app_state& app) {
   delete_glwindow(win);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
   // initialize app
   app_state app{};
   auto      filenames  = vector<string>{};
   auto      noparallel = false;
 
   // parse command line
-  auto parser = CLI::App{"views scenes inteactively"};
-  parser.add_option("--camera", app.drawgl_prms.camera, "Camera index.");
-  parser.add_option(
-      "--resolution,-r", app.drawgl_prms.resolution, "Image resolution.");
-  parser.add_flag("--eyelight,!--no-eyelight,-c", app.drawgl_prms.eyelight,
+  auto cli = make_cmdline_parser("yscnview", "views scenes inteactively");
+  add_option(cli, "--camera", app.drawgl_prms.camera, "Camera index.");
+  add_option(
+      cli, "--resolution,-r", app.drawgl_prms.resolution, "Image resolution.");
+  add_flag(cli, "--eyelight/--no-eyelight,-c", app.drawgl_prms.eyelight,
       "Eyelight rendering.");
-  parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
-  parser.add_option("scenes", filenames, "Scene filenames")->required(true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
+  add_flag(cli, "--noparallel", noparallel, "Disable parallel execution.");
+  add_option(cli, "scenes", filenames, "Scene filenames", true);
+  if (!parse_cmdline(cli, argc, argv)) exit(1);
 
   // fix parallel code
   if (noparallel) {

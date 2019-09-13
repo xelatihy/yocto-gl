@@ -27,15 +27,15 @@
 //
 
 #include "../yocto/yocto_math.h"
-#include "../yocto/yocto_utils.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
 #include "ext/CLI11.hpp"
 
-int main(int argc, char** argv) {
+int main(int argc, const char** argv) {
   // command line parameters
   auto geodesic_source      = -1;
   auto num_geodesic_samples = 0;
@@ -50,30 +50,27 @@ int main(int argc, char** argv) {
   auto filename             = "mesh.ply"s;
 
   // parse command line
-  auto parser = CLI::App{"Applies operations on a triangle mesh"};
-  parser.add_option("--geodesic-source,-g", geodesic_source, "Geodesic source");
-  parser.add_option("--num-geodesic-samples", num_geodesic_samples,
+  auto cli = make_cmdline_parser(
+      "ymshproc", "Applies operations on a triangle mesh");
+  add_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
+  add_option(cli, "--num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
-  parser.add_option("--geodesic-scale", geodesic_scale, "Geodesic scale");
-  parser.add_flag("--facevarying", facevarying, "Preserve facevarying");
-  parser.add_flag("--normals", normals, "Compute smooth normals");
-  parser.add_option("--rotatey", rotate.y, "Rotate around y axis");
-  parser.add_option("--rotatex", rotate.x, "Rotate around x axis");
-  parser.add_option("--rotatez", rotate.z, "Rotate around z axis");
-  parser.add_option("--translatey", translate.y, "Translate along y axis");
-  parser.add_option("--translatex", translate.x, "Translate along x axis");
-  parser.add_option("--translatez", translate.z, "Translate along z axis");
-  parser.add_option("--scale", uscale, "Scale along xyz axes");
-  parser.add_option("--scaley", scale.y, "Scale along y axis");
-  parser.add_option("--scalex", scale.x, "Scale along x axis");
-  parser.add_option("--scalez", scale.z, "Scale along z axis");
-  parser.add_option("--output,-o", output, "output mesh")->required(true);
-  parser.add_option("mesh", filename, "input mesh")->required(true);
-  try {
-    parser.parse(argc, argv);
-  } catch (const CLI::ParseError& e) {
-    return parser.exit(e);
-  }
+  add_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
+  add_flag(cli, "--facevarying", facevarying, "Preserve facevarying");
+  add_flag(cli, "--normals", normals, "Compute smooth normals");
+  add_option(cli, "--rotatey", rotate.y, "Rotate around y axis");
+  add_option(cli, "--rotatex", rotate.x, "Rotate around x axis");
+  add_option(cli, "--rotatez", rotate.z, "Rotate around z axis");
+  add_option(cli, "--translatey", translate.y, "Translate along y axis");
+  add_option(cli, "--translatex", translate.x, "Translate along x axis");
+  add_option(cli, "--translatez", translate.z, "Translate along z axis");
+  add_option(cli, "--scale", uscale, "Scale along xyz axes");
+  add_option(cli, "--scaley", scale.y, "Scale along y axis");
+  add_option(cli, "--scalex", scale.x, "Scale along x axis");
+  add_option(cli, "--scalez", scale.z, "Scale along z axis");
+  add_option(cli, "--output,-o", output, "output mesh", true);
+  add_option(cli, "mesh", filename, "input mesh", true);
+  if (!parse_cmdline(cli, argc, argv)) exit(1);
 
   // load mesh
   auto shape = yocto_shape{};
@@ -91,7 +88,7 @@ int main(int argc, char** argv) {
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
     auto timer = print_trace("transforming shape");
-    auto xform           = translation_frame(translate) * scaling_frame(scale) *
+    auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
                  rotation_frame({0, 1, 0}, radians(rotate.y));
@@ -102,16 +99,16 @@ int main(int argc, char** argv) {
 
   // compute normals
   if (normals) {
-    auto timer = print_trace("computing normals");
-    shape.normals        = compute_normals(shape);
+    auto timer    = print_trace("computing normals");
+    shape.normals = compute_normals(shape);
     if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
   }
 
   // compute geodesics and store them as colors
   if (geodesic_source >= 0 or num_geodesic_samples > 0) {
-    auto timer = print_trace("computing geodesics");
-    auto adjacencies     = face_adjacencies(shape.triangles);
-    auto solver          = make_geodesic_solver(
+    auto timer       = print_trace("computing geodesics");
+    auto adjacencies = face_adjacencies(shape.triangles);
+    auto solver      = make_geodesic_solver(
         shape.triangles, adjacencies, shape.positions);
     auto sources = vector<int>();
     if (geodesic_source >= 0) {
