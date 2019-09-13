@@ -116,6 +116,7 @@
 #include <string>
 #include <thread>
 #include <algorithm>
+#include <atomic>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

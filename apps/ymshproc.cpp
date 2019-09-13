@@ -103,7 +103,7 @@ int main(int argc, const char** argv) {
   }
 
   // compute geodesics and store them as colors
-  if (geodesic_source >= 0 or num_geodesic_samples > 0) {
+  if (geodesic_source >= 0 || num_geodesic_samples > 0) {
     auto timer       = print_timed("computing geodesics");
     auto adjacencies = face_adjacencies(shape.triangles);
     auto solver      = make_geodesic_solver(
