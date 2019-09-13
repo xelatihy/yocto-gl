@@ -355,18 +355,21 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Embree cleanup is momentarily disabled since it is not clear from the
+// documentation the sharing policy as it applied to us.
+    
 #if YOCTO_EMBREE
 // Cleanup
 bvh_shape::~bvh_shape() {
   if (embree_bvh) {
-    rtcReleaseScene((RTCScene)embree_bvh);
+    // rtcReleaseScene((RTCScene)embree_bvh);
   }
 }
 
 // Cleanup
 bvh_scene::~bvh_scene() {
   if (embree_bvh) {
-    rtcReleaseScene((RTCScene)embree_bvh);
+    // rtcReleaseScene((RTCScene)embree_bvh);
   }
 }
 
