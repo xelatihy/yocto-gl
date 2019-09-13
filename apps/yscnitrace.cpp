@@ -947,7 +947,7 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--filter", app.trace_prms.tentfilter, "Filter image.");
   add_cli_option(cli, "--env-hidden/--no-env-hidden", app.trace_prms.envhidden,
       "Environments are hidden in renderer");
-  add_cli_option(cli, "--parallel,!--no-parallel", no_parallel,
+  add_cli_option(cli, "--parallel,/--no-parallel", no_parallel,
       "Disable parallel execution.");
   add_cli_option(cli, "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
   add_cli_option(cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
