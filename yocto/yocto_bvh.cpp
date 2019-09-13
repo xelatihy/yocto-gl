@@ -357,7 +357,7 @@ namespace yocto {
 
 // Embree cleanup is momentarily disabled since it is not clear from the
 // documentation the sharing policy as it applied to us.
-    
+
 #if YOCTO_EMBREE
 // Cleanup
 bvh_shape::~bvh_shape() {
@@ -734,6 +734,36 @@ static bool intersect_embree_bvh(const bvh_scene& scene, const ray3f& ray,
   return true;
 }
 #endif
+
+// Initialize bvh data
+void make_points_bvh(bvh_shape& bvh, bvh_span<int> points,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  bvh = bvh_shape{points, {}, {}, {}, {}, positions, radius};
+}
+void make_lines_bvh(bvh_shape& bvh, bvh_span<vec2i> lines,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  bvh = {{}, lines, {}, {}, {}, positions, radius};
+}
+void make_triangles_bvh(bvh_shape& bvh, bvh_span<vec3i> triangles,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  bvh = {{}, {}, triangles, {}, {}, positions, radius};
+}
+void make_quads_bvh(bvh_shape& bvh, bvh_span<vec4i> quads,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  bvh = bvh_shape{{}, {}, {}, quads, {}, positions, radius};
+}
+void make_quadspos_bvh(bvh_shape& bvh, bvh_span<vec4i> quadspos,
+    bvh_span<vec3f> positions, bvh_span<float> radius) {
+  bvh = bvh_shape{{}, {}, {}, {}, quadspos, positions, radius};
+}
+void make_instances_bvh(bvh_scene& bvh, bvh_sspan<bvh_instance> instances,
+    int num_shapes) {
+  bvh = bvh_scene{instances, {}};
+  bvh.shapes.resize(num_shapes);
+}
+bvh_shape& get_shape_bvh(bvh_scene& bvh, int idx) {
+  return bvh.shapes[idx];
+}
 
 // BVH primitive with its bbox, its center and the index to the primitive
 struct bvh_prim {

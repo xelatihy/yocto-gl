@@ -937,8 +937,10 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--camera", app.trace_prms.camera, "Camera index.");
   add_cli_option(
       cli, "--resolution,-r", app.trace_prms.resolution, "Image resolution.");
-  add_cli_option(cli, "--samples,-s", app.trace_prms.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)app.trace_prms.sampler, "Tracer type.", trace_sampler_names);
+  add_cli_option(
+      cli, "--samples,-s", app.trace_prms.samples, "Number of samples.");
+  add_cli_option(cli, "--tracer,-t", (int&)app.trace_prms.sampler,
+      "Tracer type.", trace_sampler_names);
   add_cli_option(cli, "--falsecolor,-F", (int&)app.trace_prms.falsecolor,
       "Tracer false color type.", trace_falsecolor_names);
   add_cli_option(
@@ -949,8 +951,10 @@ int main(int argc, const char* argv[]) {
       "Environments are hidden in renderer");
   add_cli_option(cli, "--parallel,/--no-parallel", no_parallel,
       "Disable parallel execution.");
-  add_cli_option(cli, "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
-  add_cli_option(cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
+  add_cli_option(
+      cli, "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
+  add_cli_option(
+      cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
   add_cli_option(cli, "--srgb/--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
   add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
       app.bvh_prms.high_quality, "Use high quality bvh mode");

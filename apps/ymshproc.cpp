@@ -50,9 +50,9 @@ int main(int argc, const char** argv) {
   auto filename             = "mesh.ply"s;
 
   // parse command line
-  auto cli = make_cli(
-      "ymshproc", "Applies operations on a triangle mesh");
-  add_cli_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
+  auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
+  add_cli_option(
+      cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
   add_cli_option(cli, "--num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
   add_cli_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");

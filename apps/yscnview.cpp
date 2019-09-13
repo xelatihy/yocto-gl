@@ -26,11 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_utils.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 #include "ysceneui.h"
 
@@ -1249,7 +1249,8 @@ int main(int argc, const char* argv[]) {
       cli, "--resolution,-r", app.drawgl_prms.resolution, "Image resolution.");
   add_cli_option(cli, "--eyelight/--no-eyelight,-c", app.drawgl_prms.eyelight,
       "Eyelight rendering.");
-  add_cli_option(cli, "--noparallel", noparallel, "Disable parallel execution.");
+  add_cli_option(
+      cli, "--noparallel", noparallel, "Disable parallel execution.");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 

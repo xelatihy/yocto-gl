@@ -72,20 +72,23 @@ int main(int argc, const char* argv[]) {
   add_cli_option(
       cli, "--resolution,-r", trace_prms.resolution, "Image resolution.");
   add_cli_option(cli, "--samples,-s", trace_prms.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)trace_prms.sampler, "Trace type.", trace_sampler_names);
-  add_cli_option(
-      cli, "--falsecolor,-F", (int&)trace_prms.falsecolor, "Tracer false color type.", trace_falsecolor_names);
+  add_cli_option(cli, "--tracer,-t", (int&)trace_prms.sampler, "Trace type.",
+      trace_sampler_names);
+  add_cli_option(cli, "--falsecolor,-F", (int&)trace_prms.falsecolor,
+      "Tracer false color type.", trace_falsecolor_names);
   add_cli_option(
       cli, "--bounces", trace_prms.bounces, "Maximum number of bounces.");
   add_cli_option(cli, "--clamp", trace_prms.clamp, "Final pixel clamping.");
   add_cli_option(cli, "--filter", trace_prms.tentfilter, "Filter image.");
-  add_cli_option(cli, "--noparallel", noparallel, "Disable parallel execution.");
+  add_cli_option(
+      cli, "--noparallel", noparallel, "Disable parallel execution.");
   add_cli_option(cli, "--batch,-b", trace_prms.batch, "Samples per batch.");
   add_cli_option(cli, "--env-hidden/--no-env-hidden", trace_prms.envhidden,
       "Environments are hidden in renderer");
   add_cli_option(cli, "--save-batch", save_batch, "Save images progressively");
   add_cli_option(cli, "--exposure,-e", tonemap_prms.exposure, "Hdr exposure");
-  add_cli_option(cli, "--filmic/--no-filmic", tonemap_prms.filmic, "Hdr filmic");
+  add_cli_option(
+      cli, "--filmic/--no-filmic", tonemap_prms.filmic, "Hdr filmic");
   add_cli_option(cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Hdr srgb");
   add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
       bvh_prms.high_quality, "Use high quality bvh mode");

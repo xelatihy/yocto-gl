@@ -68,13 +68,16 @@ int main(int argc, const char** argv) {
   // parse command line
   auto cli = make_cli("yscnproc", "Process scene");
   add_cli_option(cli, "--notextures", notextures, "Disable textures.");
-  add_cli_option(cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
+  add_cli_option(
+      cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
   add_cli_option(cli, "--shape-directory", shape_directory,
       "Shape directory when adding names.");
   add_cli_option(cli, "--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  add_cli_option(cli, "--uniform-textures", uniform_txt, "uniform texture formats");
-  add_cli_option(cli, "--obj-instances", obj_instances, "preserve instances in obj");
+  add_cli_option(
+      cli, "--uniform-textures", uniform_txt, "uniform texture formats");
+  add_cli_option(
+      cli, "--obj-instances", obj_instances, "preserve instances in obj");
   add_cli_option(cli, "--info,-i", info, "print scene info");
   add_cli_option(cli, "--validate", validate, "Validate scene");
   add_cli_option(cli, "--output,-o", output, "output scene", true);

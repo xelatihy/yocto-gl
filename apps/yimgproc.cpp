@@ -120,8 +120,10 @@ int main(int argc, const char* argv[]) {
   // parse command line
   auto cli = make_cli("yimgproc", "Transform images");
   add_cli_option(cli, "--tonemap/--no-tonemap,-t", do_tonemap, "Tonemap image");
-  add_cli_option(cli, "--exposure,-e", tonemap_prms.exposure, "Tonemap exposure");
-  add_cli_option(cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
+  add_cli_option(
+      cli, "--exposure,-e", tonemap_prms.exposure, "Tonemap exposure");
+  add_cli_option(
+      cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
   add_cli_option(cli, "--filmic/--no-filmic,-f", tonemap_prms.filmic,
       "Tonemap uses filmic curve");
   add_cli_option(
@@ -135,13 +137,15 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--resize-height", resize_height,
       "resize size (0 to maintain aspect)");
   add_cli_option(cli, "--spatial-sigma", spatial_sigma, "blur spatial sigma");
-  add_cli_option(cli, "--range-sigma", range_sigma, "bilateral blur range sigma");
+  add_cli_option(
+      cli, "--range-sigma", range_sigma, "bilateral blur range sigma");
   add_cli_option(
       cli, "--set-alpha", alpha_filename, "set alpha as this image alpha");
   add_cli_option(cli, "--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
   add_cli_option(cli, "--logo", logo, "Add logo");
-  add_cli_option(cli, "--diff", diff_filename, "compute the diff between images");
+  add_cli_option(
+      cli, "--diff", diff_filename, "compute the diff between images");
   add_cli_option(cli, "--diff-signal", diff_signal, "signal a diff as error");
   add_cli_option(cli, "--diff-threshold,", diff_threshold, "diff threshold");
   add_cli_option(cli, "--output,-o", output, "output image filename", true);
