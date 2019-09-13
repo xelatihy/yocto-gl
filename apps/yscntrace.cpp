@@ -141,14 +141,14 @@ int main(int argc, const char* argv[]) {
   auto bvh = bvh_scene{};
   {
     auto timer = print_trace("building bvh");
-    bvh        = make_bvh(scene, bvh_prms);
+    make_bvh(bvh, scene, bvh_prms);
   }
 
   // init renderer
   auto lights = trace_lights{};
   {
     auto timer = print_trace("building lights");
-    lights     = make_trace_lights(scene);
+    make_trace_lights(lights, scene);
   }
 
   // fix renderer type if no lights

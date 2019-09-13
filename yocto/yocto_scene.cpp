@@ -454,12 +454,6 @@ float sample_environment_pdf(const yocto_scene& scene,
   }
 }
 
-bvh_scene make_bvh(const yocto_scene& scene, const bvh_params& params) {
-  auto bvh = bvh_scene{};
-  make_bvh(bvh, scene, params);
-  return bvh;
-}
-
 void make_bvh(
     bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
   // scene bvh

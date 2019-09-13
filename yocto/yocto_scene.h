@@ -359,9 +359,8 @@ void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);
 void tesselate_subdivs(yocto_scene& scene);
 
 // Build/refit the bvh acceleration structure.
-bvh_scene make_bvh(const yocto_scene& scene, const bvh_params& params);
-void      make_bvh(
-         bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params);
+void make_bvh(
+    bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params);
 void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params);
