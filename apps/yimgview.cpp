@@ -524,9 +524,9 @@ int main(int argc, const char* argv[]) {
   auto filenames = vector<string>{};
 
   // command line options
-  auto cli = make_cmdline_parser("yimgview", "view images");
-  add_option(cli, "images", filenames, "image filenames", true);
-  if (!parse_cmdline(cli, argc, argv)) exit(1);
+  auto cli = make_cli("yimgview", "view images");
+  add_cli_option(cli, "images", filenames, "image filenames", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // loading images
   for (auto filename : filenames) add_new_image(app, filename);

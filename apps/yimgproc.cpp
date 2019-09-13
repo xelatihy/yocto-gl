@@ -118,35 +118,35 @@ int main(int argc, const char* argv[]) {
   auto filename            = "img.hdr"s;
 
   // parse command line
-  auto cli = make_cmdline_parser("yimgproc", "Transform images");
-  add_flag(cli, "--tonemap/--no-tonemap,-t", do_tonemap, "Tonemap image");
-  add_option(cli, "--exposure,-e", tonemap_prms.exposure, "Tonemap exposure");
-  add_flag(cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
-  add_flag(cli, "--filmic/--no-filmic,-f", tonemap_prms.filmic,
+  auto cli = make_cli("yimgproc", "Transform images");
+  add_cli_option(cli, "--tonemap/--no-tonemap,-t", do_tonemap, "Tonemap image");
+  add_cli_option(cli, "--exposure,-e", tonemap_prms.exposure, "Tonemap exposure");
+  add_cli_option(cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
+  add_cli_option(cli, "--filmic/--no-filmic,-f", tonemap_prms.filmic,
       "Tonemap uses filmic curve");
-  add_option(
+  add_cli_option(
       cli, "--logcontrast", tonemap_prms.logcontrast, "Tonemap log contrast");
-  add_option(
+  add_cli_option(
       cli, "--lincontrast", tonemap_prms.contrast, "Tonemap linear contrast");
-  add_option(
+  add_cli_option(
       cli, "--saturation", tonemap_prms.saturation, "Tonemap saturation");
-  add_option(cli, "--resize-width", resize_width,
+  add_cli_option(cli, "--resize-width", resize_width,
       "resize size (0 to maintain aspect)");
-  add_option(cli, "--resize-height", resize_height,
+  add_cli_option(cli, "--resize-height", resize_height,
       "resize size (0 to maintain aspect)");
-  add_option(cli, "--spatial-sigma", spatial_sigma, "blur spatial sigma");
-  add_option(cli, "--range-sigma", range_sigma, "bilateral blur range sigma");
-  add_option(
+  add_cli_option(cli, "--spatial-sigma", spatial_sigma, "blur spatial sigma");
+  add_cli_option(cli, "--range-sigma", range_sigma, "bilateral blur range sigma");
+  add_cli_option(
       cli, "--set-alpha", alpha_filename, "set alpha as this image alpha");
-  add_option(cli, "--set-color-as-alpha", coloralpha_filename,
+  add_cli_option(cli, "--set-color-as-alpha", coloralpha_filename,
       "set alpha as this image color");
-  add_flag(cli, "--logo", logo, "Add logo");
-  add_option(cli, "--diff", diff_filename, "compute the diff between images");
-  add_flag(cli, "--diff-signal", diff_signal, "signal a diff as error");
-  add_option(cli, "--diff-threshold,", diff_threshold, "diff threshold");
-  add_option(cli, "--output,-o", output, "output image filename", true);
-  add_option(cli, "filename", filename, "input image filename", true);
-  if (!parse_cmdline(cli, argc, argv)) exit(1);
+  add_cli_option(cli, "--logo", logo, "Add logo");
+  add_cli_option(cli, "--diff", diff_filename, "compute the diff between images");
+  add_cli_option(cli, "--diff-signal", diff_signal, "signal a diff as error");
+  add_cli_option(cli, "--diff-threshold,", diff_threshold, "diff threshold");
+  add_cli_option(cli, "--output,-o", output, "output image filename", true);
+  add_cli_option(cli, "filename", filename, "input image filename", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load
   auto img = image<vec4f>();

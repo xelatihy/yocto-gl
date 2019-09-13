@@ -1243,15 +1243,15 @@ int main(int argc, const char* argv[]) {
   auto      noparallel = false;
 
   // parse command line
-  auto cli = make_cmdline_parser("yscnview", "views scenes inteactively");
-  add_option(cli, "--camera", app.drawgl_prms.camera, "Camera index.");
-  add_option(
+  auto cli = make_cli("yscnview", "views scenes inteactively");
+  add_cli_option(cli, "--camera", app.drawgl_prms.camera, "Camera index.");
+  add_cli_option(
       cli, "--resolution,-r", app.drawgl_prms.resolution, "Image resolution.");
-  add_flag(cli, "--eyelight/--no-eyelight,-c", app.drawgl_prms.eyelight,
+  add_cli_option(cli, "--eyelight/--no-eyelight,-c", app.drawgl_prms.eyelight,
       "Eyelight rendering.");
-  add_flag(cli, "--noparallel", noparallel, "Disable parallel execution.");
-  add_option(cli, "scenes", filenames, "Scene filenames", true);
-  if (!parse_cmdline(cli, argc, argv)) exit(1);
+  add_cli_option(cli, "--noparallel", noparallel, "Disable parallel execution.");
+  add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // fix parallel code
   if (noparallel) {

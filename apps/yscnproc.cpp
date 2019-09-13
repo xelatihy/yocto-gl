@@ -66,20 +66,20 @@ int main(int argc, const char** argv) {
   auto filename         = "scene.json"s;
 
   // parse command line
-  auto cli = make_cmdline_parser("yscnproc", "Process scene");
-  add_flag(cli, "--notextures", notextures, "Disable textures.");
-  add_flag(cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
-  add_option(cli, "--shape-directory", shape_directory,
+  auto cli = make_cli("yscnproc", "Process scene");
+  add_cli_option(cli, "--notextures", notextures, "Disable textures.");
+  add_cli_option(cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
+  add_cli_option(cli, "--shape-directory", shape_directory,
       "Shape directory when adding names.");
-  add_option(cli, "--subdiv-directory", subdiv_directory,
+  add_cli_option(cli, "--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  add_flag(cli, "--uniform-textures", uniform_txt, "uniform texture formats");
-  add_flag(cli, "--obj-instances", obj_instances, "preserve instances in obj");
-  add_flag(cli, "--info,-i", info, "print scene info");
-  add_flag(cli, "--validate", validate, "Validate scene");
-  add_option(cli, "--output,-o", output, "output scene", true);
-  add_option(cli, "scene", filename, "input scene", true);
-  if (!parse_cmdline(cli, argc, argv)) exit(1);
+  add_cli_option(cli, "--uniform-textures", uniform_txt, "uniform texture formats");
+  add_cli_option(cli, "--obj-instances", obj_instances, "preserve instances in obj");
+  add_cli_option(cli, "--info,-i", info, "print scene info");
+  add_cli_option(cli, "--validate", validate, "Validate scene");
+  add_cli_option(cli, "--output,-o", output, "output scene", true);
+  add_cli_option(cli, "scene", filename, "input scene", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // fix options
   auto load_prms         = load_params();

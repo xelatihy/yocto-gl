@@ -50,27 +50,27 @@ int main(int argc, const char** argv) {
   auto filename             = "mesh.ply"s;
 
   // parse command line
-  auto cli = make_cmdline_parser(
+  auto cli = make_cli(
       "ymshproc", "Applies operations on a triangle mesh");
-  add_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
-  add_option(cli, "--num-geodesic-samples", num_geodesic_samples,
+  add_cli_option(cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
+  add_cli_option(cli, "--num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
-  add_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
-  add_flag(cli, "--facevarying", facevarying, "Preserve facevarying");
-  add_flag(cli, "--normals", normals, "Compute smooth normals");
-  add_option(cli, "--rotatey", rotate.y, "Rotate around y axis");
-  add_option(cli, "--rotatex", rotate.x, "Rotate around x axis");
-  add_option(cli, "--rotatez", rotate.z, "Rotate around z axis");
-  add_option(cli, "--translatey", translate.y, "Translate along y axis");
-  add_option(cli, "--translatex", translate.x, "Translate along x axis");
-  add_option(cli, "--translatez", translate.z, "Translate along z axis");
-  add_option(cli, "--scale", uscale, "Scale along xyz axes");
-  add_option(cli, "--scaley", scale.y, "Scale along y axis");
-  add_option(cli, "--scalex", scale.x, "Scale along x axis");
-  add_option(cli, "--scalez", scale.z, "Scale along z axis");
-  add_option(cli, "--output,-o", output, "output mesh", true);
-  add_option(cli, "mesh", filename, "input mesh", true);
-  if (!parse_cmdline(cli, argc, argv)) exit(1);
+  add_cli_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
+  add_cli_option(cli, "--facevarying", facevarying, "Preserve facevarying");
+  add_cli_option(cli, "--normals", normals, "Compute smooth normals");
+  add_cli_option(cli, "--rotatey", rotate.y, "Rotate around y axis");
+  add_cli_option(cli, "--rotatex", rotate.x, "Rotate around x axis");
+  add_cli_option(cli, "--rotatez", rotate.z, "Rotate around z axis");
+  add_cli_option(cli, "--translatey", translate.y, "Translate along y axis");
+  add_cli_option(cli, "--translatex", translate.x, "Translate along x axis");
+  add_cli_option(cli, "--translatez", translate.z, "Translate along z axis");
+  add_cli_option(cli, "--scale", uscale, "Scale along xyz axes");
+  add_cli_option(cli, "--scaley", scale.y, "Scale along y axis");
+  add_cli_option(cli, "--scalex", scale.x, "Scale along x axis");
+  add_cli_option(cli, "--scalez", scale.z, "Scale along z axis");
+  add_cli_option(cli, "--output,-o", output, "output mesh", true);
+  add_cli_option(cli, "mesh", filename, "input mesh", true);
+  if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load mesh
   auto shape = yocto_shape{};
