@@ -43,8 +43,6 @@ using namespace yocto;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-#include "ext/CLI11.hpp"
-
 namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
 };  // namespace yocto

@@ -33,8 +33,6 @@
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
 
-#include "ext/CLI11.hpp"
-
 int main(int argc, const char** argv) {
   // command line parameters
   auto geodesic_source      = -1;

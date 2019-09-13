@@ -38,8 +38,6 @@ using std::unordered_set;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-#include "ext/CLI11.hpp"
-
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
     return true;

@@ -38,8 +38,6 @@ using namespace yocto;
 #include "ext/filesystem.hpp"
 namespace fs = ghc::filesystem;
 
-#include "ext/CLI11.hpp"
-
 struct image_stats {
   vec4f         min       = zero4f;
   vec4f         max       = zero4f;
