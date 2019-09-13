@@ -121,7 +121,6 @@
 namespace yocto {
 
 using std::deque;
-using std::getline;
 using std::thread;
 
 }  // namespace yocto
@@ -196,7 +195,7 @@ inline string to_string(const bbox3f& value) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PRINT/PARSE UTILITIES
+// PRINT/FORMATTING UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
