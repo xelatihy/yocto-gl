@@ -559,9 +559,11 @@ struct cmdline_option {
   bool         set   = false;
 };
 struct cmdline_parser {
-  string                 name    = "";
-  string                 usage   = "";
-  vector<cmdline_option> options = {};
+  string                 name            = "";
+  string                 usage           = "";
+  vector<cmdline_option> options         = {};
+  string                 usage_options   = "";
+  string                 usage_arguments = "";
 };
 
 // initialize a command line parser
@@ -593,60 +595,86 @@ inline vector<string> split_cmdline_names(const string& name_) {
 }
 
 inline void add_option(cmdline_parser& parser, const string& name,
-    string& value, const string& usage, bool req) {
+    cmdline_type type, void* value, const string& usage, bool req) {
+  static auto type_name = unordered_map<cmdline_type, string>{
+      {cmdline_type::string_, "<string>"},
+      {cmdline_type::int_, "<int>"},
+      {cmdline_type::float_, "<float>"},
+      {cmdline_type::bool_, "<true/false>"},
+      {cmdline_type::flag_, ""},
+      {cmdline_type::string_vector_, "<[string]>"},
+  };
+  // help message
+  auto line = "  " + name + " " + type_name.at(type);
+  while (line.size() < 32) line += " ";
+  line += usage;
+  if (!req) {
+    line += " [";
+    switch (type) {
+      case cmdline_type::string_: line += *(string*)value; break;
+      case cmdline_type::int_: line += std::to_string(*(int*)value); break;
+      case cmdline_type::float_: line += std::to_string(*(float*)value); break;
+      case cmdline_type::bool_: line += *(bool*)value ? "true" : "false"; break;
+      case cmdline_type::flag_: line += *(bool*)value ? "true" : "false"; break;
+      case cmdline_type::string_vector_: {
+        for (auto i = 0; i < (*(vector<string>*)value).size(); i++) {
+          if (i) line += ",";
+          line += (*(vector<string>*)value)[i];
+        }
+      } break;
+      default: throw std::runtime_error("unknown type");
+    }
+    line += "]";
+  } else {
+    line += " [required]";
+  }
+  line += "\n";
+  if(name.find("-") == 0) {
+    parser.usage_options += line;
+  } else {
+    parser.usage_arguments += line;
+  }
+  // add option
   parser.options.push_back(
-      {name, usage, cmdline_type::string_, &value, req, false});
+      cmdline_option{name, usage, type, value, req, false});
+}
+
+inline void add_option(cmdline_parser& parser, const string& name,
+    string& value, const string& usage, bool req) {
+  return add_option(parser, name, cmdline_type::string_, &value, usage, req);
 }
 inline void add_option(cmdline_parser& parser, const string& name, int& value,
     const string& usage, bool req) {
-  parser.options.push_back(
-      {name, usage, cmdline_type::int_, &value, req, false});
+  return add_option(parser, name, cmdline_type::int_, &value, usage, req);
 }
 inline void add_option(cmdline_parser& parser, const string& name, float& value,
     const string& usage, bool req) {
-  parser.options.push_back(
-      {name, usage, cmdline_type::float_, &value, req, false});
+  return add_option(parser, name, cmdline_type::float_, &value, usage, req);
 }
 inline void add_option(cmdline_parser& parser, const string& name, bool& value,
     const string& usage, bool req) {
-  parser.options.push_back(
-      {name, usage, cmdline_type::bool_, &value, req, false});
+  return add_option(parser, name, cmdline_type::bool_, &value, usage, req);
 }
 inline void add_option(cmdline_parser& parser, const string& name,
     vector<string>& value, const string& usage, bool req) {
-  parser.options.push_back(
-      {name, usage, cmdline_type::string_vector_, &value, req, false});
+  return add_option(
+      parser, name, cmdline_type::string_vector_, &value, usage, req);
 }
 inline void add_flag(cmdline_parser& parser, const string& name, bool& value,
     const string& usage, bool req) {
-  parser.options.push_back(
-      {name, usage, cmdline_type::flag_, &value, req, false});
+  return add_option(parser, name, cmdline_type::flag_, &value, usage, req);
 }
 
 inline bool print_cmdline_help(cmdline_parser& parser, const string& error) {
-  if (error != "") {
-    printf("error: %s\n\n", error.c_str());
-  }
-  auto options = false, positionals = false;
-  for (auto& option : parser.options) {
-    if (option.name.find("-") == 0) {
-      options = true;
-    } else {
-      positionals = true;
-    }
-  }
-  printf("usage: %s%s%s\n%s\n", parser.name.c_str(),
-      options ? " [options]" : "", positionals ? " <arguments>" : "",
+  if (error != "") printf("error: %s\n\n", error.c_str());
+  printf("usage: %s%s%s%s\n\n", parser.name.c_str(),
+      parser.usage_options.empty() ? "" : " [options]",
+      parser.usage_arguments.empty() ? "" : " <arguments>",
       parser.usage.c_str());
-  if (options) printf("\noptions:\n");
-  for (auto& option : parser.options) {
-    if (option.name.find("-") == 0) printf("  %s\n", option.usage.c_str());
-  }
-  if (positionals) printf("\narguments:\n");
-  for (auto& option : parser.options) {
-    if (option.name.find("-") != 0) printf("  %s\n", option.usage.c_str());
-  }
-  printf("\n");
+  if (!parser.usage_options.empty())
+    printf("options:\n%s\n", parser.usage_options.c_str());
+  if (!parser.usage_options.empty())
+    printf("arguments:\n%s\n", parser.usage_arguments.c_str());
   return error.empty();
 }
 
@@ -703,7 +731,7 @@ inline bool parse_cmdline(cmdline_parser& parser, int argc, const char** argv) {
         if (pos + 1 >= args.size())
           return print_cmdline_help(parser, "missing value for " + name);
         auto value = args[pos + 1];
-          args.erase(args.begin() + pos, args.begin() + pos + 2);
+        args.erase(args.begin() + pos, args.begin() + pos + 2);
         if (option.type == cmdline_type::string_) {
           *(string*)option.value = value;
           option.set             = true;
@@ -770,8 +798,8 @@ inline bool parse_cmdline(cmdline_parser& parser, int argc, const char** argv) {
     }
   }
   // check remaining
-    if(!args.empty())
-        return print_cmdline_help(parser, "mismatched value for " + args.front());
+  if (!args.empty())
+    return print_cmdline_help(parser, "mismatched value for " + args.front());
   return true;
 }
 
