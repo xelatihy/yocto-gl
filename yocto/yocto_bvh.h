@@ -225,8 +225,8 @@ void make_quads_bvh(bvh_shape& bvh, bvh_span<vec4i> quads,
     bvh_span<vec3f> positions, bvh_span<float> radius);
 void make_quadspos_bvh(bvh_shape& bvh, bvh_span<vec4i> quadspos,
     bvh_span<vec3f> positions, bvh_span<float> radius);
-void make_instances_bvh(bvh_scene& bvh, bvh_sspan<bvh_instance> instances,
-    int num_shapes);
+void make_instances_bvh(
+    bvh_scene& bvh, bvh_sspan<bvh_instance> instances, int num_shapes);
 bvh_shape& get_shape_bvh(bvh_scene& bvh, int idx);
 
 // Build the bvh acceleration structure.

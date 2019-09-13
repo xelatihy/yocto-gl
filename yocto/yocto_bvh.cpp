@@ -756,14 +756,12 @@ void make_quadspos_bvh(bvh_shape& bvh, bvh_span<vec4i> quadspos,
     bvh_span<vec3f> positions, bvh_span<float> radius) {
   bvh = bvh_shape{{}, {}, {}, {}, quadspos, positions, radius};
 }
-void make_instances_bvh(bvh_scene& bvh, bvh_sspan<bvh_instance> instances,
-    int num_shapes) {
+void make_instances_bvh(
+    bvh_scene& bvh, bvh_sspan<bvh_instance> instances, int num_shapes) {
   bvh = bvh_scene{instances, {}};
   bvh.shapes.resize(num_shapes);
 }
-bvh_shape& get_shape_bvh(bvh_scene& bvh, int idx) {
-  return bvh.shapes[idx];
-}
+bvh_shape& get_shape_bvh(bvh_scene& bvh, int idx) { return bvh.shapes[idx]; }
 
 // BVH primitive with its bbox, its center and the index to the primitive
 struct bvh_prim {

@@ -36,11 +36,11 @@
 // =============================================================================
 //
 
-#include "../yocto/yocto_utils.h"
 #include "../yocto/yocto_modelio.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
 #include "ext/json.hpp"
@@ -1001,8 +1001,8 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "--notextures", notextures, "Disable textures.");
   add_cli_option(cli, "--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
       "Add mesh filenames.");
-  add_cli_option(cli,
-      "--mesh-directory", mesh_directory, "Mesh directory when adding names.");
+  add_cli_option(cli, "--mesh-directory", mesh_directory,
+      "Mesh directory when adding names.");
   add_cli_option(cli, "--uniform-textures,!--no-uniform-textures", uniform_txt,
       "uniform texture formats");
   add_cli_option(cli, "--info,-i", info, "print scene info");
@@ -1061,12 +1061,13 @@ int main(int argc, const char** argv) {
     dirnames.insert(dirname + get_dirname(texture.uri));
   if (get_extension(output) == "yaml") dirnames.insert(dirname + "instances/");
   for (auto& dir : dirnames) {
-    if (!mkdir(get_dirname(dir))) print_fatal("cannot create directory " + get_dirname(output));
+    if (!mkdir(get_dirname(dir)))
+      print_fatal("cannot create directory " + get_dirname(output));
   }
 
   // save scene
   try {
-    auto timer = print_timed("saving scene");
+    auto timer           = print_timed("saving scene");
     save_prms.notextures = false;
     save_prms.noparallel = false;
     // save_prms.ply_instances = true;
