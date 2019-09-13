@@ -358,6 +358,9 @@ inline void add_option(cmdline_parser& parser, const string& name, bool& value,
     const string& usage, bool req = false);
 inline void add_flag(cmdline_parser& parser, const string& name, bool& value,
     const string& usage, bool req = false);
+// Parse an enum
+inline void add_option(cmdline_parser& parser, const string& name, int& value,
+    const string& usage, const vector<string>& choices, bool req = false);
 // Parse all arguments left on the command line.
 inline void add_option(cmdline_parser& parser, const string& name,
     vector<string>& value, const string& usage, bool req = false);
@@ -548,15 +551,17 @@ enum struct cmdline_type {
   float_,
   bool_,
   flag_,
-  string_vector_
+  string_vector_,
+  enum_
 };
 struct cmdline_option {
-  string       name  = "";
-  string       usage = "";
-  cmdline_type type  = cmdline_type::string_;
-  void*        value = nullptr;
-  bool         req   = false;
-  bool         set   = false;
+  string         name    = "";
+  string         usage   = "";
+  cmdline_type   type    = cmdline_type::string_;
+  void*          value   = nullptr;
+  bool           req     = false;
+  bool           set     = false;
+  vector<string> choices = {};
 };
 struct cmdline_parser {
   string                 name            = "";
@@ -595,7 +600,8 @@ inline vector<string> split_cmdline_names(const string& name_) {
 }
 
 inline void add_option(cmdline_parser& parser, const string& name,
-    cmdline_type type, void* value, const string& usage, bool req) {
+    cmdline_type type, void* value, const string& usage, bool req,
+    const vector<string>& choices) {
   static auto type_name = unordered_map<cmdline_type, string>{
       {cmdline_type::string_, "<string>"},
       {cmdline_type::int_, "<int>"},
@@ -603,6 +609,7 @@ inline void add_option(cmdline_parser& parser, const string& name,
       {cmdline_type::bool_, "<true/false>"},
       {cmdline_type::flag_, ""},
       {cmdline_type::string_vector_, "<[string]>"},
+      {cmdline_type::enum_, "<string>"},
   };
   // help message
   auto line = "  " + name + " " + type_name.at(type);
@@ -616,6 +623,7 @@ inline void add_option(cmdline_parser& parser, const string& name,
       case cmdline_type::float_: line += std::to_string(*(float*)value); break;
       case cmdline_type::bool_: line += *(bool*)value ? "true" : "false"; break;
       case cmdline_type::flag_: line += *(bool*)value ? "true" : "false"; break;
+      case cmdline_type::enum_: line += choices.at(*(int*)value); break;
       case cmdline_type::string_vector_: {
         for (auto i = 0; i < (*(vector<string>*)value).size(); i++) {
           if (i) line += ",";
@@ -636,33 +644,39 @@ inline void add_option(cmdline_parser& parser, const string& name,
   }
   // add option
   parser.options.push_back(
-      cmdline_option{name, usage, type, value, req, false});
+      cmdline_option{name, usage, type, value, req, false, choices});
 }
 
 inline void add_option(cmdline_parser& parser, const string& name,
     string& value, const string& usage, bool req) {
-  return add_option(parser, name, cmdline_type::string_, &value, usage, req);
+  return add_option(
+      parser, name, cmdline_type::string_, &value, usage, req, {});
 }
 inline void add_option(cmdline_parser& parser, const string& name, int& value,
     const string& usage, bool req) {
-  return add_option(parser, name, cmdline_type::int_, &value, usage, req);
+  return add_option(parser, name, cmdline_type::int_, &value, usage, req, {});
 }
 inline void add_option(cmdline_parser& parser, const string& name, float& value,
     const string& usage, bool req) {
-  return add_option(parser, name, cmdline_type::float_, &value, usage, req);
+  return add_option(parser, name, cmdline_type::float_, &value, usage, req, {});
 }
 inline void add_option(cmdline_parser& parser, const string& name, bool& value,
     const string& usage, bool req) {
-  return add_option(parser, name, cmdline_type::bool_, &value, usage, req);
+  return add_option(parser, name, cmdline_type::bool_, &value, usage, req, {});
 }
 inline void add_option(cmdline_parser& parser, const string& name,
     vector<string>& value, const string& usage, bool req) {
   return add_option(
-      parser, name, cmdline_type::string_vector_, &value, usage, req);
+      parser, name, cmdline_type::string_vector_, &value, usage, req, {});
 }
 inline void add_flag(cmdline_parser& parser, const string& name, bool& value,
     const string& usage, bool req) {
-  return add_option(parser, name, cmdline_type::flag_, &value, usage, req);
+  return add_option(parser, name, cmdline_type::flag_, &value, usage, req, {});
+}
+inline void add_option(cmdline_parser& parser, const string& name, int& value,
+    const string& usage, const vector<string>& choices, bool req) {
+  return add_option(
+      parser, name, cmdline_type::enum_, &value, usage, req, choices);
 }
 
 inline bool print_cmdline_help(cmdline_parser& parser, const string& error) {
@@ -746,6 +760,14 @@ inline bool parse_cmdline(cmdline_parser& parser, int argc, const char** argv) {
         } else if (option.type == cmdline_type::bool_) {
           if (!parse_cmdline_value(value, *(bool*)option.value))
             return print_cmdline_help(parser, "incorrect value for " + name);
+          option.set = true;
+        } else if (option.type == cmdline_type::enum_) {
+          auto pos = std::find(
+              option.choices.begin(), option.choices.end(), value);
+          if (pos == option.choices.end())
+            return print_cmdline_help(parser, "incorrect value for " + name);
+          else
+            *(int*)option.value = (int)(pos - option.choices.begin());
           option.set = true;
         } else {
           throw std::runtime_error("unsupported type");

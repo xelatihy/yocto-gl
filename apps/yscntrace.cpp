@@ -72,16 +72,14 @@ int main(int argc, const char* argv[]) {
   add_option(
       cli, "--resolution,-r", trace_prms.resolution, "Image resolution.");
   add_option(cli, "--samples,-s", trace_prms.samples, "Number of samples.");
-  add_option(cli, "--tracer,-t", trace_prms.sampler, "Trace type.");
+  add_option(cli, "--tracer,-t", (int&)trace_prms.sampler, "Trace type.", trace_sampler_names);
   add_option(
-      cli, "--falsecolor,-F", trace_prms.falsecolor, "Tracer false color type.");
+      cli, "--falsecolor,-F", (int&)trace_prms.falsecolor, "Tracer false color type.", trace_falsecolor_names);
   add_option(
       cli, "--bounces", trace_prms.bounces, "Maximum number of bounces.");
   add_option(cli, "--clamp", trace_prms.clamp, "Final pixel clamping.");
   add_flag(cli, "--filter", trace_prms.tentfilter, "Filter image.");
   add_flag(cli, "--noparallel", noparallel, "Disable parallel execution.");
-  add_option(
-      cli, "--seed", trace_prms.seed, "Seed for the random number generators.");
   add_option(cli, "--batch,-b", trace_prms.batch, "Samples per batch.");
   add_flag(cli, "--env-hidden/--no-env-hidden", trace_prms.envhidden,
       "Environments are hidden in renderer");
