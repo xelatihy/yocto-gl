@@ -27,10 +27,10 @@
 //
 
 #include "../yocto/yocto_math.h"
-#include "../yocto/yocto_utils.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_trace.h"
+#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
 #include <map>
@@ -147,15 +147,15 @@ int main(int argc, char* argv[]) {
   // build bvh
   auto bvh = bvh_scene{};
   {
-  auto timer = print_trace("building bvh");
-  bvh       = make_bvh(scene, bvh_prms);
+    auto timer = print_trace("building bvh");
+    bvh        = make_bvh(scene, bvh_prms);
   }
 
   // init renderer
   auto lights = trace_lights{};
   {
-  auto timer = print_trace("building lights");
-  lights       = make_trace_lights(scene);
+    auto timer = print_trace("building lights");
+    lights     = make_trace_lights(scene);
   }
 
   // fix renderer type if no lights
@@ -175,7 +175,8 @@ int main(int argc, char* argv[]) {
   for (auto sample = 0; sample < trace_prms.samples;
        sample += trace_prms.batch) {
     auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
-    auto timer = print_trace("rendering samples {}/{}", sample, trace_prms.samples);
+    auto timer    = print_trace("rendering samples " + std::to_string(sample) +
+                             "/" + std::to_string(trace_prms.samples));
     trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
     if (save_batch) {
       auto outfilename = fs::path(imfilename)

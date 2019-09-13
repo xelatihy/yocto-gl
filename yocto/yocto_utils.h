@@ -200,35 +200,13 @@ inline string to_string(const bbox3f& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Formats `fmt` substituting occurrences of `{}` with values from `args`.
-inline string format(const string& fmt) { return fmt; }
-template <typename Arg, typename... Args>
-inline string format(const string& fmt, const Arg& arg, const Args&... args) {
-  auto pos = fmt.find("{}");
-  if (pos == string::npos) return fmt;
-  return fmt.substr(0, pos) + to_string(arg) +
-         format(fmt.substr(pos + 2), args...);
-}
-
-// Prints a formatted string to stdout or file.
-template <typename... Args>
-inline bool print(const string& fmt, const Args&... args) {
-  return printf("%s", format(fmt, args...).c_str()) >= 0;
-}
-template <typename... Args>
-inline bool print(FILE* fs, const string& fmt, const Args&... args) {
-  return fprintf(fs, "%s", format(fmt, args...).c_str()) >= 0;
-}
-
 // Print a message to the console
-template <typename... Args>
-inline void print_info(const string& fmt, const Args&... args) {
-  printf("%s\n", format(fmt, args...).c_str());
+inline void print_info(const string& msg) {
+  printf("%s\n", msg.c_str());
 }
 // Prints a messgae to the console and exit with an error.
-template <typename... Args>
-inline void print_fatal(const string& fmt, const Args&... args) {
-  printf("%s\n", format(fmt, args...).c_str());
+inline void print_fatal(const string& msg) {
+  printf("%s\n", msg.c_str());
   exit(1);
 }
 
@@ -260,15 +238,14 @@ inline string format_num(uint64_t num) {
 }
 
 // Print traces for timing and program debugging
-template <typename... Args>
-inline auto print_trace(const string& fmt, const Args&... args) {
+inline auto print_trace(const string& msg) {
   struct scoped_timer {
     int64_t start_time = -1;
     ~scoped_timer() {
       printf(" in %s\n", format_duration(get_time() - start_time).c_str());
     }
   };
-  printf("%s", format(fmt, args...).c_str());
+  printf("%s", msg.c_str());
   fflush(stdout);
   // print_info(fmt + " [started]", args...);
   return scoped_timer{get_time()};
