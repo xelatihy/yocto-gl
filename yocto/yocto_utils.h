@@ -367,19 +367,81 @@ inline void add_cli_option(cli_state& cli, const string& name,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Normalize path delimiters.
-inline string normalize_path(const string& filename);
+// These utilities are here only for backward compatibility. They should be
+// considered deprecated.
+
+// Utility to normalize a path
+inline string normalize_path(const string& filename_) {
+  auto filename = filename_;
+  for (auto& c : filename)
+    if (c == '\\') c = '/';
+  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+      filename[3] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  auto pos = (size_t)0;
+  while ((pos = filename.find("//")) != filename.npos)
+    filename = filename.substr(0, pos) + filename.substr(pos + 1);
+  return filename;
+}
+
 // Get directory name (including '/').
-inline string get_dirname(const string& filename);
+inline string get_dirname(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return "";
+  return filename.substr(0, pos + 1);
+}
+
 // Get extension (not including '.').
-inline string get_extension(const string& filename);
+inline string get_extension(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return "";
+  return filename.substr(pos + 1);
+}
+
 // Get filename without directory.
-inline string get_filename(const string& filename);
-// Replace extension.
-inline string replace_extension(const string& filename, const string& ext);
+inline string get_filename(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return filename;
+  return filename.substr(pos + 1);
+}
+
+// Get extension.
+inline string get_noextension(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return filename;
+  return filename.substr(0, pos);
+}
+
+// Get filename without directory and extension.
+inline string get_basename(const string& filename) {
+  return get_noextension(get_filename(filename));
+}
+
+// Replaces extensions
+inline string replace_extension(const string& filename, const string& ext) {
+  return get_noextension(filename) + ext;
+}
 
 // Check if a file can be opened for reading.
-inline bool exists_file(const string& filename);
+inline bool exists_file(const string& filename) {
+  auto fs = fopen(filename.c_str(), "r");
+  if (fs) {
+    fclose(fs);
+    return true;
+  } else {
+    return false;
+  }
+}
 
 }  // namespace yocto
 
