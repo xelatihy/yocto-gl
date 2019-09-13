@@ -116,7 +116,7 @@ int main(int argc, const char* argv[]) {
   // scene loading
   auto scene = yocto_scene{};
   try {
-    auto timer = print_trace("loading scene");
+    auto timer = print_timed("loading scene");
     load_scene(filename, scene, load_prms);
   } catch (const std::exception& e) {
     print_fatal(e.what());
@@ -124,13 +124,13 @@ int main(int argc, const char* argv[]) {
 
   // tesselate
   {
-    auto timer = print_trace("tesselating");
+    auto timer = print_timed("tesselating");
     tesselate_subdivs(scene);
   }
 
   // add components
   if (validate) {
-    auto timer = print_trace("validating");
+    auto timer = print_timed("validating");
     print_validation(scene);
   }
 
@@ -140,14 +140,14 @@ int main(int argc, const char* argv[]) {
   // build bvh
   auto bvh = bvh_scene{};
   {
-    auto timer = print_trace("building bvh");
+    auto timer = print_timed("building bvh");
     make_bvh(bvh, scene, bvh_prms);
   }
 
   // init renderer
   auto lights = trace_lights{};
   {
-    auto timer = print_trace("building lights");
+    auto timer = print_timed("building lights");
     make_trace_lights(lights, scene);
   }
 
@@ -168,7 +168,7 @@ int main(int argc, const char* argv[]) {
   for (auto sample = 0; sample < trace_prms.samples;
        sample += trace_prms.batch) {
     auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
-    auto timer    = print_trace("rendering samples " + std::to_string(sample) +
+    auto timer    = print_timed("rendering samples " + std::to_string(sample) +
                              "/" + std::to_string(trace_prms.samples));
     trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
     if (save_batch) {
@@ -193,7 +193,7 @@ int main(int argc, const char* argv[]) {
 
   // save image
   try {
-    auto timer = print_trace("saving image");
+    auto timer = print_timed("saving image");
     if (is_hdr_filename(imfilename)) {
       save_image(imfilename, logo ? add_logo(render) : render);
     } else {

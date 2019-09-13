@@ -235,7 +235,7 @@ inline string format_num(uint64_t num) {
 }
 
 // Print traces for timing and program debugging
-inline auto print_trace(const string& msg) {
+inline auto print_timed(const string& msg) {
   struct scoped_timer {
     int64_t start_time = -1;
     ~scoped_timer() {
