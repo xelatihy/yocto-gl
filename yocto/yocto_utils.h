@@ -262,16 +262,16 @@ inline string format_num(uint64_t num) {
 // Print traces for timing and program debugging
 template <typename... Args>
 inline auto print_trace(const string& fmt, const Args&... args) {
-  struct print_scope {
-    string  message    = "";
+  struct scoped_timer {
     int64_t start_time = -1;
-    print_scope(const string& msg) : message{msg}, start_time{get_time()} {}
-    ~print_scope() {
-      print_info(message + " " + format_duration(get_time() - start_time));
+    ~scoped_timer() {
+      printf(" in %s\n", format_duration(get_time() - start_time).c_str());
     }
   };
-  print_info(fmt + " [started]", args...);
-  return print_scope{format(fmt, args...)};
+  printf("%s", format(fmt, args...).c_str());
+  fflush(stdout);
+  // print_info(fmt + " [started]", args...);
+  return scoped_timer{get_time()};
 }
 
 }  // namespace yocto
