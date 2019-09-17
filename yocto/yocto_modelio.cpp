@@ -670,6 +670,11 @@ vector<vec2i> get_ply_lines(const ply_model& ply) {
 vector<int> get_ply_points(const ply_model& ply, const string& element) {
   return get_ply_list_values(ply, "point", "vertex_indices");
 }
+bool has_ply_quads(const ply_model& ply) {
+  auto sizes   = get_ply_list_sizes(ply, "face", "vertex_indices");
+  for(auto size : sizes) if(size == 4) return true;
+  return false;
+}
 
 // Load ply data
 void read_ply_header(file_wrapper& fs, ply_format& format,

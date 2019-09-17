@@ -3048,6 +3048,8 @@ void save_shape(const string& filename, const vector<int>& points,
   }
 }
 
+#if 0
+
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
@@ -3124,6 +3126,45 @@ static void load_ply_shape(const string& filename, vector<int>& points,
 
   merge_triangles_and_quads(triangles, quads, false);
 }
+
+#else
+
+static void load_ply_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
+    vector<float>& radius, bool flip_texcoord) {
+  // open ply
+  auto ply = ply_model{};
+  load_ply(filename, ply);
+
+  // gets vertex
+  positions = get_ply_positions(ply);
+  normals = get_ply_normals(ply);
+  texcoords = get_ply_texcoords(ply);
+  colors = get_ply_colors(ply);
+  radius = get_ply_radius(ply);
+
+  // get faces
+  if(get_ply_face_quads(ply)) {
+    quads = get_ply_quads(ply);
+  } else {
+    triangles = get_ply_triangles(ply);
+  }
+  lines = get_ply_lines(ply);
+  points = get_ply_points(ply);
+
+  if (positions.empty())
+    throw std::runtime_error("vertex positions not present");
+
+  // fix texture coordinated
+  if (flip_texcoord && !texcoords.empty()) {
+    for (auto& uv : texcoords) uv.y = 1 - uv.y;
+  }
+}
+
+#endif
 
 // Save ply mesh
 static void save_ply_shape(const string& filename, const vector<int>& points,

@@ -176,8 +176,8 @@ struct ply_model {
 };
 
 // Load and save ply
-void load_ply(const string& filename, vector<ply_model>& ply);
-void save_ply(const string& filename, vector<ply_model>& ply);
+void load_ply(const string& filename, ply_model& ply);
+void save_ply(const string& filename, const ply_model& ply);
 
 // Get ply properties
 bool has_ply_property(
@@ -218,6 +218,7 @@ vector<vec3i>       get_ply_triangles(const ply_model& ply);
 vector<vec4i>       get_ply_quads(const ply_model& ply);
 vector<vec2i>       get_ply_lines(const ply_model& ply);
 vector<int>         get_ply_points(const ply_model& ply);
+bool                has_ply_quads(const ply_model& ply);
 
 // Read Ply functions
 void read_ply_header(file_wrapper& fs, ply_format& format,
