@@ -3050,7 +3050,7 @@ void save_shape(const string& filename, const vector<int>& points,
 
 // #define YOCTO_OLD_YAML
 
-#ifdef YOCTO_OLD_YAML 
+#ifdef YOCTO_OLD_YAML
 
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
