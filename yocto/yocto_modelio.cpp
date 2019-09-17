@@ -397,13 +397,15 @@ void load_ply(const string& filename, ply_model& ply) {
   // read data -------------------------------------
   if (ply.format == ply_format::ascii) {
     for (auto& elem : ply.elements) {
+      for(auto idx = 0; idx < elem.count; idx++) {
       if (!read_line(fs, buffer, sizeof(buffer)))
         throw std::runtime_error("cannot read ply");
       auto line = string_view{buffer};
       for (auto& prop : elem.properties) {
         if (prop.is_list)
           parse_ply_prop(line, prop.type, prop.ldata_u8.emplace_back());
-        for (auto i = 0; i < prop.is_list ? prop.ldata_u8.back() : 1; i++) {
+        auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
+        for (auto i = 0; i < vcount; i++) {
           switch (prop.type) {
             case ply_type::i8:
               parse_ply_prop(line, prop.type, prop.data_i8.emplace_back());
@@ -437,7 +439,7 @@ void load_ply(const string& filename, ply_model& ply) {
               break;
           }
         }
-      }
+      }}
     }
   } else {
     auto read_value = [&fs, format = ply.format](auto& value) {
@@ -446,9 +448,11 @@ void load_ply(const string& filename, ply_model& ply) {
       if (format == ply_format::binary_big_endian) value = swap_endian(value);
     };
     for (auto& elem : ply.elements) {
+      for(auto idx = 0; idx < elem.count; idx++) {
       for (auto& prop : elem.properties) {
         if (prop.is_list) read_value(prop.ldata_u8.emplace_back());
-        for (auto i = 0; i < prop.is_list ? prop.ldata_u8.back() : 1; i++) {
+        auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
+        for (auto i = 0; i < vcount; i++) {
           switch (prop.type) {
             case ply_type::i8: read_value(prop.data_i8.emplace_back()); break;
             case ply_type::i16: read_value(prop.data_i16.emplace_back()); break;
@@ -463,7 +467,7 @@ void load_ply(const string& filename, ply_model& ply) {
           }
         }
       }
-    }
+    }}
   }
 }
 
