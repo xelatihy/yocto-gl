@@ -664,7 +664,7 @@ vector<vec2i> get_ply_lines(const ply_model& ply) {
   auto cur = 0;
   for (auto size : sizes) {
     for (auto c = 1; c < size; c++) {
-      lines.push_back({indices[cur + c - 1], indices[cur + c]});
+      lines.push_back({indices[cur + c], indices[cur + c - 1]});
     }
     cur += size;
   }
