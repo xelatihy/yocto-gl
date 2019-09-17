@@ -2436,10 +2436,10 @@ void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
       {pbrt_value_type::spectrum, "spectrum"},
   };
   for (auto& value : values) {
-    checked_fprintf(fs, " \"%s %s\" ", type_labels.at(value.type).c_str());
+    checked_fprintf(fs, " \"%s %s\" ", type_labels.at(value.type).c_str(), value.name.c_str());
     switch (value.type) {
       case pbrt_value_type::real:
-        if (value.vector1f.empty()) {
+        if (!value.vector1f.empty()) {
           checked_fprintf(fs, "[ ");
           for (auto& v : value.vector1f) checked_fprintf(fs, " %g", v);
           checked_fprintf(fs, " ]");
@@ -2448,7 +2448,7 @@ void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
         }
         break;
       case pbrt_value_type::integer:
-        if (value.vector1f.empty()) {
+        if (!value.vector1f.empty()) {
           checked_fprintf(fs, "[ ");
           for (auto& v : value.vector1i) checked_fprintf(fs, " %d", v);
           checked_fprintf(fs, " ]");
@@ -2460,7 +2460,7 @@ void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
         checked_fprintf(fs, "\"%s\"", value.value1b ? "true" : "false");
         break;
       case pbrt_value_type::string:
-        checked_fprintf(fs, "\"%s\"", value.value1b ? "true" : "false");
+        checked_fprintf(fs, "\"%s\"", value.value1s.c_str());
         break;
       case pbrt_value_type::point:
       case pbrt_value_type::vector:
@@ -2554,7 +2554,7 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::light:
-      checked_fprintf(fs, "Light \"%s\"", type.c_str());
+      checked_fprintf(fs, "LightSource \"%s\"", type.c_str());
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::material:
@@ -2562,7 +2562,7 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::arealight:
-      checked_fprintf(fs, "AreaLight \"%s\"", type.c_str());
+      checked_fprintf(fs, "AreaLightSource \"%s\"", type.c_str());
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::named_texture:
@@ -2811,7 +2811,7 @@ pbrt_value make_pbrt_value(
   auto pbrt    = pbrt_value{};
   pbrt.name    = name;
   pbrt.type    = type;
-  pbrt.value1b = value;
+  pbrt.value1i = value;
   return pbrt;
 }
 pbrt_value make_pbrt_value(
