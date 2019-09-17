@@ -506,7 +506,7 @@ void save_ply(const string& filename, const ply_model& ply) {
 
   // header
   checked_fprintf(fs, "ply\n");
-  checked_fprintf(fs, "formt %s 1.0\n", format_map.at(ply.format).c_str());
+  checked_fprintf(fs, "format %s 1.0\n", format_map.at(ply.format).c_str());
   for (auto& comment : ply.comments)
     checked_fprintf(fs, "comment %s\n", comment.c_str());
   for (auto& elem : ply.elements) {
@@ -583,11 +583,11 @@ void save_ply(const string& filename, const ply_model& ply) {
       for (auto idx = 0; idx < elem.count; idx++) {
           for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
-          if (prop.is_list) checked_fprintf(fs, "%d ", (int)prop.ldata_u8[idx]);
+          if (prop.is_list) write(prop.ldata_u8[idx]);
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
-              case ply_type::i8: write((int)prop.data_i8[cur[pidx]++]); break;
+              case ply_type::i8: write(prop.data_i8[cur[pidx]++]); break;
               case ply_type::i16: write(prop.data_i16[cur[pidx]++]); break;
               case ply_type::i32: write(prop.data_i32[cur[pidx]++]); break;
               case ply_type::i64: write(prop.data_i64[cur[pidx]++]); break;
