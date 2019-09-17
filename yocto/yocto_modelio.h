@@ -146,16 +146,16 @@ struct ply_property {
   ply_type type    = ply_type::f32;
 
   // data if property is loaded
-  vector<int8_t>  data_i8  = {};
-  vector<int16_t> data_i16 = {};
-  vector<int32_t> data_i32 = {};
-  vector<int64_t> data_i64 = {};
-  vector<uint8_t> data_u8  = {};
+  vector<int8_t>   data_i8  = {};
+  vector<int16_t>  data_i16 = {};
+  vector<int32_t>  data_i32 = {};
+  vector<int64_t>  data_i64 = {};
+  vector<uint8_t>  data_u8  = {};
   vector<uint16_t> data_u16 = {};
   vector<uint32_t> data_u32 = {};
   vector<uint64_t> data_u64 = {};
-  vector<float> data_f32 = {};
-  vector<double> data_f64 = {};
+  vector<float>    data_f32 = {};
+  vector<double>   data_f64 = {};
 
   // list length
   vector<uint8_t> ldata_u8 = {};
@@ -219,6 +219,43 @@ vector<vec4i>       get_ply_quads(const ply_model& ply);
 vector<vec2i>       get_ply_lines(const ply_model& ply);
 vector<int>         get_ply_points(const ply_model& ply);
 bool                has_ply_quads(const ply_model& ply);
+
+// Add ply properties
+void add_ply_values(ply_model& ply, const vector<float>& values,
+    const string& element, const string& property);
+void add_ply_values( ply_model& ply, const vector<vec2f>& values,
+    const string& element, const string& property1, const string& property2);
+void add_ply_values( ply_model& ply, const vector<vec3f>& values,
+    const string& element, const string& property1, const string& property2,
+    const string& property3);
+void add_ply_values( ply_model& ply, const vector<vec4f>& values,
+    const string& element, const string& property1, const string& property2,
+    const string& property3, const string& property4);
+
+void add_ply_lists(
+    ply_model& ply, const vector<vector<int>>& values, const string& element, const string& property);
+void add_ply_lists(
+     ply_model& ply, vector<byte>& sizes, vector<int>& values, const string& element, const string& property);
+void add_ply_lists(
+     ply_model& ply, vector<int>& values, const string& element, const string& property);
+void add_ply_lists(
+     ply_model& ply, vector<vec2i>& values, const string& element, const string& property);
+void add_ply_lists(
+     ply_model& ply, vector<vec3i>& values, const string& element, const string& property);
+void add_ply_lists(
+     ply_model& ply, vector<vec4i>& values, const string& element, const string& property);
+
+// Add ply properties for meshes
+void add_ply_positions(ply_model& ply, const vector<vec3f>& values);
+void       add_ply_normals(ply_model& ply, const vector<vec3f>& values);
+void       add_ply_texcoords(ply_model& ply, const vector<vec2f>& values);
+void       add_ply_colors(ply_model& ply, const vector<vec4f>& values);
+void       add_ply_radius(ply_model& ply, const vector<float>& values);
+void add_ply_faces(ply_model& ply, const vector<vector<int>>& values);
+void       add_ply_triangles(ply_model& ply, const vector<vec3i>& values);
+void       add_ply_quads(ply_model& ply, const vector<vec4i>& values);
+void       add_ply_lines(ply_model& ply, const vector<vec2i>& values);
+void         add_ply_points(ply_model& ply, const vector<int>& values);
 
 // Read Ply functions
 void read_ply_header(file_wrapper& fs, ply_format& format,

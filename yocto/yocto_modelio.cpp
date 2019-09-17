@@ -397,49 +397,50 @@ void load_ply(const string& filename, ply_model& ply) {
   // read data -------------------------------------
   if (ply.format == ply_format::ascii) {
     for (auto& elem : ply.elements) {
-      for(auto idx = 0; idx < elem.count; idx++) {
-      if (!read_line(fs, buffer, sizeof(buffer)))
-        throw std::runtime_error("cannot read ply");
-      auto line = string_view{buffer};
-      for (auto& prop : elem.properties) {
-        if (prop.is_list)
-          parse_ply_prop(line, prop.type, prop.ldata_u8.emplace_back());
-        auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
-        for (auto i = 0; i < vcount; i++) {
-          switch (prop.type) {
-            case ply_type::i8:
-              parse_ply_prop(line, prop.type, prop.data_i8.emplace_back());
-              break;
-            case ply_type::i16:
-              parse_ply_prop(line, prop.type, prop.data_i16.emplace_back());
-              break;
-            case ply_type::i32:
-              parse_ply_prop(line, prop.type, prop.data_i32.emplace_back());
-              break;
-            case ply_type::i64:
-              parse_ply_prop(line, prop.type, prop.data_i64.emplace_back());
-              break;
-            case ply_type::u8:
-              parse_ply_prop(line, prop.type, prop.data_u8.emplace_back());
-              break;
-            case ply_type::u16:
-              parse_ply_prop(line, prop.type, prop.data_u16.emplace_back());
-              break;
-            case ply_type::u32:
-              parse_ply_prop(line, prop.type, prop.data_u32.emplace_back());
-              break;
-            case ply_type::u64:
-              parse_ply_prop(line, prop.type, prop.data_u64.emplace_back());
-              break;
-            case ply_type::f32:
-              parse_ply_prop(line, prop.type, prop.data_f32.emplace_back());
-              break;
-            case ply_type::f64:
-              parse_ply_prop(line, prop.type, prop.data_f64.emplace_back());
-              break;
+      for (auto idx = 0; idx < elem.count; idx++) {
+        if (!read_line(fs, buffer, sizeof(buffer)))
+          throw std::runtime_error("cannot read ply");
+        auto line = string_view{buffer};
+        for (auto& prop : elem.properties) {
+          if (prop.is_list)
+            parse_ply_prop(line, prop.type, prop.ldata_u8.emplace_back());
+          auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
+          for (auto i = 0; i < vcount; i++) {
+            switch (prop.type) {
+              case ply_type::i8:
+                parse_ply_prop(line, prop.type, prop.data_i8.emplace_back());
+                break;
+              case ply_type::i16:
+                parse_ply_prop(line, prop.type, prop.data_i16.emplace_back());
+                break;
+              case ply_type::i32:
+                parse_ply_prop(line, prop.type, prop.data_i32.emplace_back());
+                break;
+              case ply_type::i64:
+                parse_ply_prop(line, prop.type, prop.data_i64.emplace_back());
+                break;
+              case ply_type::u8:
+                parse_ply_prop(line, prop.type, prop.data_u8.emplace_back());
+                break;
+              case ply_type::u16:
+                parse_ply_prop(line, prop.type, prop.data_u16.emplace_back());
+                break;
+              case ply_type::u32:
+                parse_ply_prop(line, prop.type, prop.data_u32.emplace_back());
+                break;
+              case ply_type::u64:
+                parse_ply_prop(line, prop.type, prop.data_u64.emplace_back());
+                break;
+              case ply_type::f32:
+                parse_ply_prop(line, prop.type, prop.data_f32.emplace_back());
+                break;
+              case ply_type::f64:
+                parse_ply_prop(line, prop.type, prop.data_f64.emplace_back());
+                break;
+            }
           }
         }
-      }}
+      }
     }
   } else {
     auto read_value = [&fs, format = ply.format](auto& value) {
@@ -448,26 +449,43 @@ void load_ply(const string& filename, ply_model& ply) {
       if (format == ply_format::binary_big_endian) value = swap_endian(value);
     };
     for (auto& elem : ply.elements) {
-      for(auto idx = 0; idx < elem.count; idx++) {
-      for (auto& prop : elem.properties) {
-        if (prop.is_list) read_value(prop.ldata_u8.emplace_back());
-        auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
-        for (auto i = 0; i < vcount; i++) {
-          switch (prop.type) {
-            case ply_type::i8: read_value(prop.data_i8.emplace_back()); break;
-            case ply_type::i16: read_value(prop.data_i16.emplace_back()); break;
-            case ply_type::i32: read_value(prop.data_i32.emplace_back()); break;
-            case ply_type::i64: read_value(prop.data_i64.emplace_back()); break;
-            case ply_type::u8: read_value(prop.data_u8.emplace_back()); break;
-            case ply_type::u16: read_value(prop.data_u16.emplace_back()); break;
-            case ply_type::u32: read_value(prop.data_u32.emplace_back()); break;
-            case ply_type::u64: read_value(prop.data_u64.emplace_back()); break;
-            case ply_type::f32: read_value(prop.data_f32.emplace_back()); break;
-            case ply_type::f64: read_value(prop.data_f64.emplace_back()); break;
+      for (auto idx = 0; idx < elem.count; idx++) {
+        for (auto& prop : elem.properties) {
+          if (prop.is_list) read_value(prop.ldata_u8.emplace_back());
+          auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
+          for (auto i = 0; i < vcount; i++) {
+            switch (prop.type) {
+              case ply_type::i8: read_value(prop.data_i8.emplace_back()); break;
+              case ply_type::i16:
+                read_value(prop.data_i16.emplace_back());
+                break;
+              case ply_type::i32:
+                read_value(prop.data_i32.emplace_back());
+                break;
+              case ply_type::i64:
+                read_value(prop.data_i64.emplace_back());
+                break;
+              case ply_type::u8: read_value(prop.data_u8.emplace_back()); break;
+              case ply_type::u16:
+                read_value(prop.data_u16.emplace_back());
+                break;
+              case ply_type::u32:
+                read_value(prop.data_u32.emplace_back());
+                break;
+              case ply_type::u64:
+                read_value(prop.data_u64.emplace_back());
+                break;
+              case ply_type::f32:
+                read_value(prop.data_f32.emplace_back());
+                break;
+              case ply_type::f64:
+                read_value(prop.data_f64.emplace_back());
+                break;
+            }
           }
         }
       }
-    }}
+    }
   }
 }
 
@@ -616,7 +634,7 @@ vector<vec4f> get_ply_colors(const ply_model& ply) {
   }
 }
 vector<float> get_ply_radius(const ply_model& ply) {
-    return get_ply_values(ply, "vertex", "radius");
+  return get_ply_values(ply, "vertex", "radius");
 }
 vector<vector<int>> get_ply_faces(const ply_model& ply) {
   return get_ply_lists(ply, "face", "vertex_indices");
@@ -674,10 +692,137 @@ vector<int> get_ply_points(const ply_model& ply) {
   return get_ply_list_values(ply, "point", "vertex_indices");
 }
 bool has_ply_quads(const ply_model& ply) {
-  auto sizes   = get_ply_list_sizes(ply, "face", "vertex_indices");
-  for(auto size : sizes) if(size == 4) return true;
+  auto sizes = get_ply_list_sizes(ply, "face", "vertex_indices");
+  for (auto size : sizes)
+    if (size == 4) return true;
   return false;
 }
+
+// Add ply properties
+ply_element& add_ply_element(ply_model& ply, const string& element, size_t count) {
+  for (auto& elem : ply.elements) {
+    if (elem.name == element) return elem;
+  }
+  auto& elem = ply.elements.emplace_back();
+  elem.name = element;
+  elem.count = count;
+  return elem;
+}
+ply_property& add_ply_property(ply_model& ply, const string& element,
+    const string& property, size_t count, ply_type type, bool is_list) {
+  auto& elem = add_ply_element(ply, element, count);
+  for (auto& prop : elem.properties) {
+    if (prop.name == property) throw std::runtime_error("property already added");
+  }
+  auto& prop = elem.properties.emplace_back();
+  prop.type  = type;
+  prop.is_list = is_list;
+  return prop;
+}
+template<typename T>
+vector<T> make_ply_vector(const T* value, size_t count, int stride) {
+  auto ret=vector<T>(count);
+  for(auto idx = (size_t)0; idx < count; idx++) ret[idx] = value[idx*stride];
+  return ret;
+}
+
+void add_ply_values(ply_model& ply, const vector<float>& values,
+    const string& element, const string& property) {
+  if(values.empty()) return;
+  auto& prop = add_ply_property(ply, element, property, values.size(), ply_type::f32, false);
+  prop.data_f32 = values;
+}
+void add_ply_values(ply_model& ply, const vector<vec2f>& values,
+    const string& element, const string& property1, const string& property2) {
+  if(values.empty()) return;
+  auto& prop1 = add_ply_property(ply, element, property1, values.size(), ply_type::f32, false);
+  auto& prop2 = add_ply_property(ply, element, property2, values.size(), ply_type::f32, false);
+  prop1.data_f32 = make_ply_vector((float*)values.data()+0, values.size(), 2);
+  prop2.data_f32 = make_ply_vector((float*)values.data()+1, values.size(), 2);
+}
+void add_ply_values(ply_model& ply, const vector<vec3f>& values,
+    const string& element, const string& property1, const string& property2,
+    const string& property3) {
+  if(values.empty()) return;
+  auto& prop1 = add_ply_property(ply, element, property1, values.size(), ply_type::f32, false);
+  auto& prop2 = add_ply_property(ply, element, property2, values.size(), ply_type::f32, false);
+  auto& prop3 = add_ply_property(ply, element, property3, values.size(), ply_type::f32, false);
+  prop1.data_f32 = make_ply_vector((float*)values.data()+0, values.size(), 3);
+  prop2.data_f32 = make_ply_vector((float*)values.data()+1, values.size(), 3);
+  prop3.data_f32 = make_ply_vector((float*)values.data()+2, values.size(), 3);
+}
+void add_ply_values(ply_model& ply, const vector<vec4f>& values,
+    const string& element, const string& property1, const string& property2,
+    const string& property3, const string& property4) {
+  if(values.empty()) return;
+  auto& prop1 = add_ply_property(ply, element, property1, values.size(), ply_type::f32, false);
+  auto& prop2 = add_ply_property(ply, element, property2, values.size(), ply_type::f32, false);
+  auto& prop3 = add_ply_property(ply, element, property3, values.size(), ply_type::f32, false);
+  auto& prop4 = add_ply_property(ply, element, property4, values.size(), ply_type::f32, false);
+  prop1.data_f32 = make_ply_vector((float*)values.data()+0, values.size(), 4);
+  prop2.data_f32 = make_ply_vector((float*)values.data()+1, values.size(), 4);
+  prop3.data_f32 = make_ply_vector((float*)values.data()+2, values.size(), 4);
+  prop4.data_f32 = make_ply_vector((float*)values.data()+3, values.size(), 4);
+}
+
+void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
+    const string& element, const string& property) {
+  if(values.empty()) return;
+  auto& prop = add_ply_property(ply, element, property, values.size(), ply_type::i32, true);
+  prop.data_i32.reserve(values.size()*4);
+  prop.ldata_u8.reserve(values.size());
+  for(auto& value : values) {
+    prop.data_i32.insert(prop.data_i32.end(), value.begin(), value.end());
+    prop.ldata_u8.push_back((uint8_t)value.size());
+  }
+}
+void add_ply_lists(ply_model& ply, vector<byte>& sizes, vector<int>& values,
+    const string& element, const string& property) {
+  if(values.empty()) return;
+  auto& prop = add_ply_property(ply, element, property, values.size(), ply_type::i32, true);
+  prop.data_i32 = values;
+  prop.ldata_u8 = sizes;
+}
+void add_ply_lists(ply_model& ply, vector<int>& values, const string& element,
+    const string& property) {
+  if(values.empty()) return;
+  auto& prop = add_ply_property(ply, element, property, values.size(), ply_type::i32, true);
+  prop.data_i32 = values;
+  prop.ldata_u8.assign(values.size(), 1);
+}
+void add_ply_lists(ply_model& ply, vector<vec2i>& values, const string& element,
+    const string& property) {
+  if(values.empty()) return;
+  auto& prop = add_ply_property(ply, element, property, values.size(), ply_type::i32, true);
+  prop.data_i32.assign((int*)values.data(), (int*)values.data() + values.size()*2);
+  prop.ldata_u8.assign(values.size(), 2);
+}
+void add_ply_lists(ply_model& ply, vector<vec3i>& values, const string& element,
+    const string& property) {
+  if(values.empty()) return;
+  auto& prop = add_ply_property(ply, element, property, values.size(), ply_type::i32, true);
+  prop.data_i32.assign((int*)values.data(), (int*)values.data() + values.size()*3);
+  prop.ldata_u8.assign(values.size(), 3);
+}
+void add_ply_lists(ply_model& ply, vector<vec4i>& values, const string& element,
+    const string& property) {
+  if(values.empty()) return;
+  auto& prop = add_ply_property(ply, element, property, values.size(), ply_type::i32, true);
+  prop.data_i32.assign((int*)values.data(), (int*)values.data() + values.size()*4);
+  prop.ldata_u8.assign(values.size(), 4);
+}
+
+// Add ply properties for meshes
+void add_ply_positions(ply_model& ply, const vector<vec3f>& values);
+void add_ply_normals(ply_model& ply, const vector<vec3f>& values);
+void add_ply_texcoords(ply_model& ply, const vector<vec2f>& values);
+void add_ply_colors(ply_model& ply, const vector<vec4f>& values);
+void add_ply_radius(ply_model& ply, const vector<float>& values);
+void add_ply_faces(ply_model& ply, const vector<vector<int>>& values);
+void add_ply_triangles(ply_model& ply, const vector<vec3i>& values);
+void add_ply_quads(ply_model& ply, const vector<vec4i>& values);
+void add_ply_lines(ply_model& ply, const vector<vec2i>& values);
+void add_ply_points(ply_model& ply, const vector<int>& values);
 
 // Load ply data
 void read_ply_header(file_wrapper& fs, ply_format& format,
