@@ -3192,20 +3192,17 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
   if (!triangles.empty() || !quads.empty()) {
     elements.push_back({"face", triangles.size() + quads.size()});
     auto& face = elements.back();
-    face.properties.push_back(
-        {"vertex_indices", true, ply_type::u8, ply_type::i32});
+    face.properties.push_back({"vertex_indices", true, ply_type::i32});
   }
   if (!lines.empty()) {
     elements.push_back({"line", lines.size()});
     auto& face = elements.back();
-    face.properties.push_back(
-        {"vertex_indices", true, ply_type::u8, ply_type::i32});
+    face.properties.push_back({"vertex_indices", true, ply_type::i32});
   }
   if (!points.empty()) {
     elements.push_back({"point", points.size()});
     auto& face = elements.back();
-    face.properties.push_back(
-        {"vertex_indices", true, ply_type::u8, ply_type::i32});
+    face.properties.push_back({"vertex_indices", true, ply_type::i32});
   }
 
   // write header

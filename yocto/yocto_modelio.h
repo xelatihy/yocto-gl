@@ -140,10 +140,25 @@ enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 
 // Ply property
 struct ply_property {
-  string   name       = "";
-  bool     is_list    = false;
-  ply_type value_type = ply_type::f32;
-  ply_type list_type  = ply_type::f32;
+  // description
+  string   name    = "";
+  bool     is_list = false;
+  ply_type type    = ply_type::f32;
+
+  // data if property is loaded
+  vector<int8_t>  data_i8  = {};
+  vector<int16_t> data_i16 = {};
+  vector<int32_t> data_i32 = {};
+  vector<int64_t> data_i64 = {};
+  vector<int64_t> data_u8  = {};
+  vector<int64_t> data_u16 = {};
+  vector<int64_t> data_u32 = {};
+  vector<int64_t> data_u64 = {};
+  vector<int64_t> data_f32 = {};
+  vector<int64_t> data_f64 = {};
+
+  // list length
+  vector<uint8_t> ldata_u8 = {};
 };
 
 // Ply elements
@@ -152,6 +167,51 @@ struct ply_element {
   size_t               count      = 0;
   vector<ply_property> properties = {};
 };
+
+// Ply model
+struct ply_model {
+  ply_format          format   = ply_format::binary_little_endian;
+  vector<string>      comments = {};
+  vector<ply_element> elements = {};
+};
+
+// Load and save ply
+void load_ply(const string& filename, vector<ply_model>& ply);
+void save_ply(const string& filename, vector<ply_model>& ply);
+
+// Get ply properties
+bool has_ply_property(
+    const ply_model& ply, const string& element, const string& property);
+const ply_property& get_ply_property(
+    const ply_model& ply, const string& element, const string& property);
+vector<float> get_ply_values(
+    const ply_model& ply, const string& element, const string& property);
+vector<vec2f>       get_ply_values(const ply_model& ply, const string& element,
+          const string& property1, const string& property2);
+vector<vec3f>       get_ply_values(const ply_model& ply, const string& element,
+          const string& property1, const string& property2, const string& property3);
+vector<vec4f>       get_ply_values(const ply_model& ply, const string& element,
+          const string& property1, const string& property2, const string& property3,
+          const string& property4);
+vector<vec4f>       get_ply_values(const ply_model& ply, const string& element,
+          const string& property1, const string& property2, const string& property3,
+          float property4);
+vector<vector<int>> get_ply_lists(
+    const ply_model& ply, const string& element, const string& property);
+vector<byte> get_ply_list_sizes(
+    const ply_model& ply, const string& element, const string& property);
+vector<int> get_ply_list_values(
+    const ply_model& ply, const string& element, const string& property);
+
+// Get ply properties for meshes
+vector<vec3f> get_ply_positions(const ply_model& ply, const string& element);
+vector<vec3f> get_ply_normals(const ply_model& ply, const string& element);
+vector<vec2f> get_ply_texcoords(const ply_model& ply, const string& element);
+vector<vector<int>> get_ply_faces(const ply_model& ply, const string& element);
+vector<vec3i> get_ply_triangles(const ply_model& ply, const string& element);
+vector<vec4i> get_ply_quads(const ply_model& ply, const string& element);
+vector<vec2i> get_ply_lines(const ply_model& ply, const string& element);
+vector<int>   get_ply_points(const ply_model& ply, const string& element);
 
 // Read Ply functions
 void read_ply_header(file_wrapper& fs, ply_format& format,

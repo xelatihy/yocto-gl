@@ -108,6 +108,8 @@
 
 #include "yocto_math.h"
 
+#include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <chrono>
 #include <cstdio>
@@ -115,8 +117,6 @@
 #include <mutex>
 #include <string>
 #include <thread>
-#include <algorithm>
-#include <atomic>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
