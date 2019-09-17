@@ -615,6 +615,9 @@ vector<vec4f> get_ply_colors(const ply_model& ply) {
     return get_ply_values(ply, "vertex", "red", "green", "blue", 1);
   }
 }
+vector<float> get_ply_radius(const ply_model& ply) {
+    return get_ply_values(ply, "vertex", "radius");
+}
 vector<vector<int>> get_ply_faces(const ply_model& ply) {
   return get_ply_lists(ply, "face", "vertex_indices");
 }
@@ -667,7 +670,7 @@ vector<vec2i> get_ply_lines(const ply_model& ply) {
   }
   return lines;
 }
-vector<int> get_ply_points(const ply_model& ply, const string& element) {
+vector<int> get_ply_points(const ply_model& ply) {
   return get_ply_list_values(ply, "point", "vertex_indices");
 }
 bool has_ply_quads(const ply_model& ply) {

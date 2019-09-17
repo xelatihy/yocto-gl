@@ -150,12 +150,12 @@ struct ply_property {
   vector<int16_t> data_i16 = {};
   vector<int32_t> data_i32 = {};
   vector<int64_t> data_i64 = {};
-  vector<int64_t> data_u8  = {};
-  vector<int64_t> data_u16 = {};
-  vector<int64_t> data_u32 = {};
-  vector<int64_t> data_u64 = {};
-  vector<int64_t> data_f32 = {};
-  vector<int64_t> data_f64 = {};
+  vector<uint8_t> data_u8  = {};
+  vector<uint16_t> data_u16 = {};
+  vector<uint32_t> data_u32 = {};
+  vector<uint64_t> data_u64 = {};
+  vector<float> data_f32 = {};
+  vector<double> data_f64 = {};
 
   // list length
   vector<uint8_t> ldata_u8 = {};

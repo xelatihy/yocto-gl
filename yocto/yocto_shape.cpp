@@ -3147,7 +3147,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
   radius = get_ply_radius(ply);
 
   // get faces
-  if(get_ply_face_quads(ply)) {
+  if(has_ply_quads(ply)) {
     quads = get_ply_quads(ply);
   } else {
     triangles = get_ply_triangles(ply);
