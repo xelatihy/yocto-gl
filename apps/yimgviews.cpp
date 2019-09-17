@@ -305,6 +305,8 @@ void update(const opengl_window& win, app_state& app) {
   for (auto& img : app.images) {
     if (img.task_queue.empty()) continue;
     auto cmd = img.task_queue.front();
+    if(cmd == app_task_type::close) continue;
+    img.task_queue.pop_back();
     switch (cmd) {
       case app_task_type::load: {
         log_glinfo(win, "start loading " + img.filename);
