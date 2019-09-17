@@ -591,37 +591,80 @@ vector<int> get_ply_list_values(
 }
 
 // Get ply properties for meshes
-vector<vec3f> get_ply_positions3f(const ply_model& ply, const string& element) {
-  return get_ply_values(ply, element, "x", "y", "z");
+vector<vec3f> get_ply_positions(const ply_model& ply) {
+  return get_ply_values(ply, "vertex", "x", "y", "z");
 }
-vector<vec3f> get_ply_normals3f(const ply_model& ply, const string& element) {
-  return get_ply_values(ply, element, "nx", "ny", "nz");
+vector<vec3f> get_ply_normals(const ply_model& ply) {
+  return get_ply_values(ply, "vertex", "nx", "ny", "nz");
 }
-vector<vec2f> get_ply_texcoords(const ply_model& ply, const string& element) {
-  if (has_ply_property(ply, element, "u")) {
-    return get_ply_values(ply, element, "u", "v");
+vector<vec2f> get_ply_texcoords(const ply_model& ply) {
+  if (has_ply_property(ply, "vertex", "u")) {
+    return get_ply_values(ply, "vertex", "u", "v");
   } else {
-    return get_ply_values(ply, element, "s", "t");
+    return get_ply_values(ply, "vertex", "s", "t");
   }
 }
-vector<vector<int>> get_ply_faces(const ply_model& ply, const string& element) {
-  return get_ply_lists(ply, element, "vertex_indices");
+vector<vec4f> get_ply_colors(const ply_model& ply) {
+  if (has_ply_property(ply, "vertex", "alpha")) {
+    return get_ply_values(ply, "vertex", "red", "green", "blue", "alpha");
+  } else {
+    return get_ply_values(ply, "vertex", "red", "green", "blue", 1);
+  }
 }
-vector<vec3i> get_ply_triangles(const ply_model& ply, const string& element) {
-  auto faces     = get_ply_faces(ply, element);
+vector<vector<int>> get_ply_faces(const ply_model& ply) {
+  return get_ply_lists(ply, "face", "vertex_indices");
+}
+vector<vec3i> get_ply_triangles(const ply_model& ply) {
+  auto indices   = get_ply_list_values(ply, "face", "vertex_indices");
+  auto sizes     = get_ply_list_sizes(ply, "face", "vertex_indices");
   auto triangles = vector<vec3i>{};
-  triangles.reserve(faces.size());
-  return {};
+  triangles.reserve(sizes.size());
+  auto cur = 0;
+  for (auto size : sizes) {
+    for (auto c = 2; c < size; c++) {
+      triangles.push_back(
+          {indices[cur + 0], indices[cur + 1], indices[cur + c]});
+    }
+    cur += size;
+  }
+  return triangles;
 }
-vector<vec2i> get_ply_lines(const ply_model& ply, const string& element) {
-  return {};
+vector<vec4i> get_ply_quads(const ply_model& ply) {
+  auto indices = get_ply_list_values(ply, "face", "vertex_indices");
+  auto sizes   = get_ply_list_sizes(ply, "face", "vertex_indices");
+  auto quads   = vector<vec4i>{};
+  quads.reserve(sizes.size());
+  auto cur = 0;
+  for (auto size : sizes) {
+    if (size == 4) {
+      quads.push_back({indices[cur + 0], indices[cur + 1], indices[cur + 2],
+          indices[cur + 3]});
+    } else {
+      for (auto c = 2; c < size; c++) {
+        quads.push_back({indices[cur + 0], indices[cur + 1], indices[cur + c],
+            indices[cur + c]});
+      }
+    }
+    cur += size;
+  }
+  return quads;
 }
-vector<vec4i> get_ply_quads(const ply_model& ply, const string& element) {
-  return {};
+vector<vec2i> get_ply_lines(const ply_model& ply) {
+  auto indices = get_ply_list_values(ply, "line", "vertex_indices");
+  auto sizes   = get_ply_list_sizes(ply, "line", "vertex_indices");
+  auto lines   = vector<vec2i>{};
+  lines.reserve(sizes.size());
+  auto cur = 0;
+  for (auto size : sizes) {
+    for (auto c = 1; c < size; c++) {
+      lines.push_back({indices[cur + c - 1], indices[cur + c]});
+    }
+    cur += size;
+  }
+  return lines;
 }
-vector<int> get_ply_points(
-    const ply_model& ply, const string& element, const string& property) {
-  return get_ply_list_values(ply, element, property);
+vector<int> get_ply_points(const ply_model& ply, const string& element) {
+  return get_ply_list_values(ply, "point", "vertex_indices");
 }
 
 // Load ply data

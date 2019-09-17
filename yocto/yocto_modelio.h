@@ -184,34 +184,40 @@ bool has_ply_property(
     const ply_model& ply, const string& element, const string& property);
 const ply_property& get_ply_property(
     const ply_model& ply, const string& element, const string& property);
+
 vector<float> get_ply_values(
     const ply_model& ply, const string& element, const string& property);
-vector<vec2f>       get_ply_values(const ply_model& ply, const string& element,
-          const string& property1, const string& property2);
-vector<vec3f>       get_ply_values(const ply_model& ply, const string& element,
-          const string& property1, const string& property2, const string& property3);
-vector<vec4f>       get_ply_values(const ply_model& ply, const string& element,
-          const string& property1, const string& property2, const string& property3,
-          const string& property4);
-vector<vec4f>       get_ply_values(const ply_model& ply, const string& element,
-          const string& property1, const string& property2, const string& property3,
-          float property4);
+vector<vec2f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2);
+vector<vec3f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2, const string& property3);
+vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2, const string& property3,
+    const string& property4);
+vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2, const string& property3,
+    float property4);
+
 vector<vector<int>> get_ply_lists(
     const ply_model& ply, const string& element, const string& property);
 vector<byte> get_ply_list_sizes(
     const ply_model& ply, const string& element, const string& property);
 vector<int> get_ply_list_values(
     const ply_model& ply, const string& element, const string& property);
+vec2i get_ply_list_minxmax(
+    const ply_model& ply, const string& element, const string& property);
 
 // Get ply properties for meshes
-vector<vec3f> get_ply_positions(const ply_model& ply, const string& element);
-vector<vec3f> get_ply_normals(const ply_model& ply, const string& element);
-vector<vec2f> get_ply_texcoords(const ply_model& ply, const string& element);
-vector<vector<int>> get_ply_faces(const ply_model& ply, const string& element);
-vector<vec3i> get_ply_triangles(const ply_model& ply, const string& element);
-vector<vec4i> get_ply_quads(const ply_model& ply, const string& element);
-vector<vec2i> get_ply_lines(const ply_model& ply, const string& element);
-vector<int>   get_ply_points(const ply_model& ply, const string& element);
+vector<vec3f>       get_ply_positions(const ply_model& ply);
+vector<vec3f>       get_ply_normals(const ply_model& ply);
+vector<vec2f>       get_ply_texcoords(const ply_model& ply);
+vector<vec4f>       get_ply_colors(const ply_model& ply);
+vector<float>       get_ply_radius(const ply_model& ply);
+vector<vector<int>> get_ply_faces(const ply_model& ply);
+vector<vec3i>       get_ply_triangles(const ply_model& ply);
+vector<vec4i>       get_ply_quads(const ply_model& ply);
+vector<vec2i>       get_ply_lines(const ply_model& ply);
+vector<int>         get_ply_points(const ply_model& ply);
 
 // Read Ply functions
 void read_ply_header(file_wrapper& fs, ply_format& format,
