@@ -774,7 +774,7 @@ vector<vec3i> get_ply_triangles(const ply_model& ply) {
   for (auto size : sizes) {
     for (auto c = 2; c < size; c++) {
       triangles.push_back(
-          {indices[cur + 0], indices[cur + 1], indices[cur + c]});
+          {indices[cur + 0], indices[cur + c - 1], indices[cur + c]});
     }
     cur += size;
   }
@@ -792,7 +792,7 @@ vector<vec4i> get_ply_quads(const ply_model& ply) {
           indices[cur + 3]});
     } else {
       for (auto c = 2; c < size; c++) {
-        quads.push_back({indices[cur + 0], indices[cur + 1], indices[cur + c],
+        quads.push_back({indices[cur + 0], indices[cur + c - 1], indices[cur + c],
             indices[cur + c]});
       }
     }
@@ -808,7 +808,7 @@ vector<vec2i> get_ply_lines(const ply_model& ply) {
   auto cur = 0;
   for (auto size : sizes) {
     for (auto c = 1; c < size; c++) {
-      lines.push_back({indices[cur + c], indices[cur + c - 1]});
+      lines.push_back({indices[cur + c - 1], indices[cur + c]});
     }
     cur += size;
   }

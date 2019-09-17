@@ -3108,7 +3108,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
         if (indices < 0) continue;
         auto line = lists[indices];
         for (auto i = 1; i < line.size(); i++)
-          lines.push_back({line[i], line[i - 1]});
+          lines.push_back({line[i - 1], line[i]});
       }
     } else {
       for (auto idx = 0; idx < element.count; idx++)
