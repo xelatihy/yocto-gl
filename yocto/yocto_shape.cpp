@@ -3127,45 +3127,6 @@ static void load_ply_shape(const string& filename, vector<int>& points,
   merge_triangles_and_quads(triangles, quads, false);
 }
 
-#else
-
-static void load_ply_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, bool flip_texcoord) {
-  // open ply
-  auto ply = ply_model{};
-  load_ply(filename, ply);
-
-  // gets vertex
-  positions = get_ply_positions(ply);
-  normals = get_ply_normals(ply);
-  texcoords = get_ply_texcoords(ply);
-  colors = get_ply_colors(ply);
-  radius = get_ply_radius(ply);
-
-  // get faces
-  if(has_ply_quads(ply)) {
-    quads = get_ply_quads(ply);
-  } else {
-    triangles = get_ply_triangles(ply);
-  }
-  lines = get_ply_lines(ply);
-  points = get_ply_points(ply);
-
-  if (positions.empty())
-    throw std::runtime_error("vertex positions not present");
-
-  // fix texture coordinated
-  if (flip_texcoord && !texcoords.empty()) {
-    for (auto& uv : texcoords) uv.y = 1 - uv.y;
-  }
-}
-
-#endif
-
 // Save ply mesh
 static void save_ply_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -3336,6 +3297,87 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
     }
   }
 }
+
+#else
+
+static void load_ply_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
+    vector<float>& radius, bool flip_texcoord) {
+  // open ply
+  auto ply = ply_model{};
+  load_ply(filename, ply);
+
+  // gets vertex
+  positions = get_ply_positions(ply);
+  normals = get_ply_normals(ply);
+  texcoords = get_ply_texcoords(ply);
+  colors = get_ply_colors(ply);
+  radius = get_ply_radius(ply);
+
+  // get faces
+  if(has_ply_quads(ply)) {
+    quads = get_ply_quads(ply);
+  } else {
+    triangles = get_ply_triangles(ply);
+  }
+  lines = get_ply_lines(ply);
+  points = get_ply_points(ply);
+
+  if (positions.empty())
+    throw std::runtime_error("vertex positions not present");
+
+  // fix texture coordinated
+  if (flip_texcoord && !texcoords.empty()) {
+    for (auto& uv : texcoords) uv.y = 1 - uv.y;
+  }
+}
+
+// Save ply mesh
+static void save_ply_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, bool ascii, bool flip_texcoord) {
+  if (!quadspos.empty()) {
+    auto split_quads         = vector<vec4i>{};
+    auto split_positions     = vector<vec3f>{};
+    auto split_normals       = vector<vec3f>{};
+    auto split_texturecoords = vector<vec2f>{};
+    split_facevarying(split_quads, split_positions, split_normals,
+        split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords);
+    return save_ply_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
+        split_positions, split_normals, split_texturecoords, {}, {}, ascii,
+        flip_texcoord);
+  }
+
+  // create ply
+  auto ply = ply_model{};
+  ply.comments.push_back("Written by Yocto/GL");
+  ply.comments.push_back("https://github.com/xelatihy/yocto-gl");
+
+  // add vertices
+  add_ply_positions(ply, positions);
+  add_ply_normals(ply, normals);
+  add_ply_texcoords(ply, texcoords);
+  add_ply_colors(ply, colors);
+  add_ply_radius(ply, radius);
+
+  // elements
+  add_ply_faces(ply, triangles, quads);
+  add_ply_lines(ply, lines);
+  add_ply_points(ply, points);
+
+  // save ply
+  save_ply(filename, ply);
+}
+
+#endif
 
 // Load obj mesh
 static void load_obj_shape(const string& filename, vector<int>& points,

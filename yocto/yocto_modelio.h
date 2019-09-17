@@ -235,15 +235,15 @@ void add_ply_values( ply_model& ply, const vector<vec4f>& values,
 void add_ply_lists(
     ply_model& ply, const vector<vector<int>>& values, const string& element, const string& property);
 void add_ply_lists(
-     ply_model& ply, vector<byte>& sizes, vector<int>& values, const string& element, const string& property);
+     ply_model& ply, const vector<byte>& sizes, const vector<int>& values, const string& element, const string& property);
 void add_ply_lists(
-     ply_model& ply, vector<int>& values, const string& element, const string& property);
+     ply_model& ply, const vector<int>& values, const string& element, const string& property);
 void add_ply_lists(
-     ply_model& ply, vector<vec2i>& values, const string& element, const string& property);
+     ply_model& ply, const vector<vec2i>& values, const string& element, const string& property);
 void add_ply_lists(
-     ply_model& ply, vector<vec3i>& values, const string& element, const string& property);
+     ply_model& ply, const vector<vec3i>& values, const string& element, const string& property);
 void add_ply_lists(
-     ply_model& ply, vector<vec4i>& values, const string& element, const string& property);
+     ply_model& ply, const vector<vec4i>& values, const string& element, const string& property);
 
 // Add ply properties for meshes
 void add_ply_positions(ply_model& ply, const vector<vec3f>& values);
@@ -252,6 +252,7 @@ void       add_ply_texcoords(ply_model& ply, const vector<vec2f>& values);
 void       add_ply_colors(ply_model& ply, const vector<vec4f>& values);
 void       add_ply_radius(ply_model& ply, const vector<float>& values);
 void add_ply_faces(ply_model& ply, const vector<vector<int>>& values);
+void add_ply_faces(ply_model& ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
 void       add_ply_triangles(ply_model& ply, const vector<vec3i>& values);
 void       add_ply_quads(ply_model& ply, const vector<vec4i>& values);
 void       add_ply_lines(ply_model& ply, const vector<vec2i>& values);
