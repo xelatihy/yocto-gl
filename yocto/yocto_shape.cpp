@@ -3314,18 +3314,18 @@ static void load_ply_shape(const string& filename, vector<int>& points,
 
   // gets vertex
   positions = get_ply_positions(ply);
-  normals = get_ply_normals(ply);
+  normals   = get_ply_normals(ply);
   texcoords = get_ply_texcoords(ply);
-  colors = get_ply_colors(ply);
-  radius = get_ply_radius(ply);
+  colors    = get_ply_colors(ply);
+  radius    = get_ply_radius(ply);
 
   // get faces
-  if(has_ply_quads(ply)) {
+  if (has_ply_quads(ply)) {
     quads = get_ply_quads(ply);
   } else {
     triangles = get_ply_triangles(ply);
   }
-  lines = get_ply_lines(ply);
+  lines  = get_ply_lines(ply);
   points = get_ply_points(ply);
 
   if (positions.empty())
@@ -3651,179 +3651,42 @@ static void load_obj_shape(const string& filename, vector<int>& points,
   load_obj(filename, obj, true);
 
   // get shape
-  if(obj.shapes.empty()) return;
-  if(obj.shapes.size() > 1) 
+  if (obj.shapes.empty()) return;
+  if (obj.shapes.size() > 1)
     throw std::runtime_error("can only support one element type");
   auto& shape = obj.shapes.front();
-  if(shape.points.empty() && shape.lines.empty() && shape.faces.empty()) return;
+  if (shape.points.empty() && shape.lines.empty() && shape.faces.empty())
+    return;
 
-  // decide what to do
-  auto has_quads = has_obj_quads(shape);
-  if(!shape.faces.empty() && !facevarying && !has_quads) {
-    get_obj_triangles(obj, shape, triangles, positions, normals, texcoords);
-  } else if(!shape.faces.empty() && !facevarying && has_quads) {
-    get_obj_quads(obj, shape, triangles, positions, normals, texcoords);
-  } else if(!shape.lines.empty()) {
-    get_obj_lines(obj, shape, triangles, positions, normals, texcoords);
-  } else if(!shape.points.empty()) {
-    get_obj_points(obj, shape, triangles, positions, normals, texcoords);
-  } else if(!shape.faces.empty() && facevarying) {
-    get_obj_fvquads(obj, shape, quads, positions, normals, texcoords);
+  // decide what to do adn get properties
+  auto materials  = vector<string>{};
+  auto ematerials = vector<int>{};
+  auto has_quads  = has_obj_quads(shape);
+  if (!shape.faces.empty() && !facevarying && !has_quads) {
+    get_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
+        materials, ematerials);
+  } else if (!shape.faces.empty() && !facevarying && has_quads) {
+    get_obj_quads(obj, shape, quads, positions, normals, texcoords, materials,
+        ematerials);
+  } else if (!shape.lines.empty()) {
+    get_obj_lines(obj, shape, lines, positions, normals, texcoords, materials,
+        ematerials);
+  } else if (!shape.points.empty()) {
+    get_obj_points(obj, shape, points, positions, normals, texcoords, materials,
+        ematerials);
+  } else if (!shape.faces.empty() && facevarying) {
+    get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords, materials, ematerials);
   } else {
     throw std::runtime_error("should not have gotten here");
-  }
-
-  // obj vertices
-  std::deque<vec3f> opos      = std::deque<vec3f>();
-  std::deque<vec3f> onorm     = std::deque<vec3f>();
-  std::deque<vec2f> otexcoord = std::deque<vec2f>();
-
-  // vertex maps
-  unordered_map<obj_vertex, int> vertex_map = unordered_map<obj_vertex, int>();
-
-  // vertex maps
-  unordered_map<int, int> pos_map      = unordered_map<int, int>();
-  unordered_map<int, int> texcoord_map = unordered_map<int, int>();
-  unordered_map<int, int> norm_map     = unordered_map<int, int>();
-
-  // read obj
-  auto element   = obj_command{};
-  auto value     = obj_value{};
-  auto vertices  = vector<obj_vertex>{};
-  auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, element, value, vertices, vert_size)) {
-    if (element == obj_command::vertex) {
-      get_obj_value(value, opos.emplace_back());
-    } else if (element == obj_command::normal) {
-      get_obj_value(value, onorm.emplace_back());
-    } else if (element == obj_command::texcoord) {
-      get_obj_value(value, otexcoord.emplace_back());
-    } else if (element == obj_command::face && facevarying) {
-      for (auto& vert : vertices) {
-        if (!vert.position) continue;
-        auto pos_it = pos_map.find(vert.position);
-        if (pos_it != pos_map.end()) continue;
-        auto nverts = (int)positions.size();
-        pos_map.insert(pos_it, {vert.position, nverts});
-        positions.push_back(opos.at(vert.position - 1));
-      }
-      for (auto& vert : vertices) {
-        if (!vert.texcoord) continue;
-        auto texcoord_it = texcoord_map.find(vert.texcoord);
-        if (texcoord_it != texcoord_map.end()) continue;
-        auto nverts = (int)texcoords.size();
-        texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
-        texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-      }
-      for (auto& vert : vertices) {
-        if (!vert.normal) continue;
-        auto norm_it = norm_map.find(vert.normal);
-        if (norm_it != norm_map.end()) continue;
-        auto nverts = (int)normals.size();
-        norm_map.insert(norm_it, {vert.normal, nverts});
-        normals.push_back(onorm.at(vert.normal - 1));
-      }
-      if (vertices.size() == 4) {
-        if (vertices[0].position) {
-          quadspos.push_back({pos_map.at(vertices[0].position),
-              pos_map.at(vertices[1].position),
-              pos_map.at(vertices[2].position),
-              pos_map.at(vertices[3].position)});
-        }
-        if (vertices[0].texcoord) {
-          quadstexcoord.push_back({texcoord_map.at(vertices[0].texcoord),
-              texcoord_map.at(vertices[1].texcoord),
-              texcoord_map.at(vertices[2].texcoord),
-              texcoord_map.at(vertices[3].texcoord)});
-        }
-        if (vertices[0].normal) {
-          quadsnorm.push_back({norm_map.at(vertices[0].normal),
-              norm_map.at(vertices[1].normal), norm_map.at(vertices[2].normal),
-              norm_map.at(vertices[3].normal)});
-        }
-        // quads_materials.push_back(current_material_id);
-      } else {
-        if (vertices[0].position) {
-          for (auto i = 2; i < vertices.size(); i++)
-            quadspos.push_back({pos_map.at(vertices[0].position),
-                pos_map.at(vertices[1].position),
-                pos_map.at(vertices[i].position),
-                pos_map.at(vertices[i].position)});
-        }
-        if (vertices[0].texcoord) {
-          for (auto i = 2; i < vertices.size(); i++)
-            quadstexcoord.push_back({texcoord_map.at(vertices[0].texcoord),
-                texcoord_map.at(vertices[1].texcoord),
-                texcoord_map.at(vertices[i].texcoord),
-                texcoord_map.at(vertices[i].texcoord)});
-        }
-        if (vertices[0].normal) {
-          for (auto i = 2; i < vertices.size(); i++)
-            quadsnorm.push_back({norm_map.at(vertices[0].normal),
-                norm_map.at(vertices[1].normal),
-                norm_map.at(vertices[i].normal),
-                norm_map.at(vertices[i].normal)});
-        }
-      }
-    } else if (element == obj_command::face && !facevarying) {
-      for (auto& vert : vertices) {
-        auto it = vertex_map.find(vert);
-        if (it != vertex_map.end()) continue;
-        auto nverts = (int)positions.size();
-        vertex_map.insert(it, {vert, nverts});
-        if (vert.position) positions.push_back(opos.at(vert.position - 1));
-        if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-        if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
-      }
-      if (vertices.size() == 4) {
-        quads.push_back({vertex_map.at(vertices[0]), vertex_map.at(vertices[1]),
-            vertex_map.at(vertices[2]), vertex_map.at(vertices[3])});
-      } else {
-        for (auto i = 2; i < vertices.size(); i++)
-          triangles.push_back({vertex_map.at(vertices[0]),
-              vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
-      }
-    } else if (element == obj_command::line) {
-      for (auto& vert : vertices) {
-        auto it = vertex_map.find(vert);
-        if (it != vertex_map.end()) continue;
-        auto nverts = (int)positions.size();
-        vertex_map.insert(it, {vert, nverts});
-        if (vert.position) positions.push_back(opos.at(vert.position - 1));
-        if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-        if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
-      }
-      for (auto i = 1; i < vertices.size(); i++)
-        lines.push_back(
-            {vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
-    } else if (element == obj_command::point) {
-      for (auto& vert : vertices) {
-        auto it = vertex_map.find(vert);
-        if (it != vertex_map.end()) continue;
-        auto nverts = (int)positions.size();
-        vertex_map.insert(it, {vert, nverts});
-        if (vert.position) positions.push_back(opos.at(vert.position - 1));
-        if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-        if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
-      }
-      for (auto i = 0; i < vertices.size(); i++)
-        points.push_back(vertex_map.at(vertices[i]));
-    } else {
-      // skip all other commands
-    }
   }
 
   if (positions.empty())
     throw std::runtime_error("vertex positions not present");
 
-  // fix texture coordinated
+  // fix texture coordinates
   if (flip_texcoord && !texcoords.empty()) {
     for (auto& uv : texcoords) uv.y = 1 - uv.y;
-  }
-
-  // merging quads and triangles
-  if (!facevarying) {
-    merge_triangles_and_quads(triangles, quads, false);
   }
 }
 
