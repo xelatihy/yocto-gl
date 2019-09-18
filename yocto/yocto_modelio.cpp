@@ -1594,9 +1594,9 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
       // split if split_elements and different primitives
       if (auto& shape = obj.shapes.back();
           split_elements && !shape.vertices.empty()) {
-        if ((cmd == "f" && (shape.lines.empty() || !shape.points.empty())) ||
-            (cmd == "l" && (shape.faces.empty() || !shape.points.empty())) ||
-            (cmd == "p" && (shape.faces.empty() || !shape.lines.empty()))) {
+        if ((cmd == "f" && (!shape.lines.empty() || !shape.points.empty())) ||
+            (cmd == "l" && (!shape.faces.empty() || !shape.points.empty())) ||
+            (cmd == "p" && (!shape.faces.empty() || !shape.lines.empty()))) {
           obj.shapes.emplace_back();
           obj.shapes.back().name = oname + gname;
         }
