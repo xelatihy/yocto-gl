@@ -529,10 +529,10 @@ void save_ply(const string& filename, const ply_model& ply) {
     for (auto& elem : ply.elements) {
       auto cur = vector<size_t>(elem.properties.size(), 0);
       for (auto idx = 0; idx < elem.count; idx++) {
-          for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
-              auto& prop = elem.properties[pidx];
+        for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
+          auto& prop = elem.properties[pidx];
           if (prop.is_list) checked_fprintf(fs, "%d ", (int)prop.ldata_u8[idx]);
-            auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
+          auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
@@ -581,7 +581,7 @@ void save_ply(const string& filename, const ply_model& ply) {
     for (auto& elem : ply.elements) {
       auto cur = vector<size_t>(elem.properties.size(), 0);
       for (auto idx = 0; idx < elem.count; idx++) {
-          for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
+        for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
           if (prop.is_list) write(prop.ldata_u8[idx]);
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
@@ -792,8 +792,8 @@ vector<vec4i> get_ply_quads(const ply_model& ply) {
           indices[cur + 3]});
     } else {
       for (auto c = 2; c < size; c++) {
-        quads.push_back({indices[cur + 0], indices[cur + c - 1], indices[cur + c],
-            indices[cur + c]});
+        quads.push_back({indices[cur + 0], indices[cur + c - 1],
+            indices[cur + c], indices[cur + c]});
       }
     }
     cur += size;
@@ -843,7 +843,7 @@ void add_ply_property(ply_model& ply, const string& element,
         throw std::runtime_error("property already added");
     }
     auto& prop   = elem.properties.emplace_back();
-      prop.name = property;
+    prop.name    = property;
     prop.type    = type;
     prop.is_list = is_list;
     return;
@@ -859,35 +859,39 @@ vector<T> make_ply_vector(const T* value, size_t count, int stride) {
 void add_ply_values(ply_model& ply, const float* values, size_t count,
     const string& element, const string* properties, int nprops) {
   if (!values) return;
-  for(auto p = 0; p < nprops; p++) {
+  for (auto p = 0; p < nprops; p++) {
     add_ply_property(ply, element, properties[p], count, ply_type::f32, false);
-    auto& prop    = get_ply_property(ply, element, properties[p]);
+    auto& prop = get_ply_property(ply, element, properties[p]);
     prop.data_f32.resize(count);
-    for(auto i = 0; i < count; i ++) prop.data_f32[i] = values[p+i*nprops];
-  }    
+    for (auto i = 0; i < count; i++) prop.data_f32[i] = values[p + i * nprops];
+  }
 }
 
 void add_ply_values(ply_model& ply, const vector<float>& values,
     const string& element, const string& property) {
   auto properties = vector{property};
-  add_ply_values(ply, (float*)values.data(), values.size(), element, properties.data(), 1);
+  add_ply_values(
+      ply, (float*)values.data(), values.size(), element, properties.data(), 1);
 }
 void add_ply_values(ply_model& ply, const vector<vec2f>& values,
     const string& element, const string& property1, const string& property2) {
   auto properties = vector{property1, property2};
-  add_ply_values(ply, (float*)values.data(), values.size(), element, properties.data(), 2);
+  add_ply_values(
+      ply, (float*)values.data(), values.size(), element, properties.data(), 2);
 }
 void add_ply_values(ply_model& ply, const vector<vec3f>& values,
     const string& element, const string& property1, const string& property2,
     const string& property3) {
   auto properties = vector{property1, property2, property3};
-  add_ply_values(ply, (float*)values.data(), values.size(), element, properties.data(), 3);
+  add_ply_values(
+      ply, (float*)values.data(), values.size(), element, properties.data(), 3);
 }
 void add_ply_values(ply_model& ply, const vector<vec4f>& values,
     const string& element, const string& property1, const string& property2,
     const string& property3, const string& property4) {
   auto properties = vector{property1, property2, property3, property4};
-  add_ply_values(ply, (float*)values.data(), values.size(), element, properties.data(), 4);
+  add_ply_values(
+      ply, (float*)values.data(), values.size(), element, properties.data(), 4);
 }
 
 void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
@@ -914,8 +918,8 @@ void add_ply_lists(ply_model& ply, const int* values, size_t count, int size,
     const string& element, const string& property) {
   if (!values) return;
   add_ply_property(ply, element, property, count, ply_type::i32, true);
-  auto& prop    = get_ply_property(ply, element, property);
-  prop.data_i32.assign(values, values+count*size);
+  auto& prop = get_ply_property(ply, element, property);
+  prop.data_i32.assign(values, values + count * size);
   prop.ldata_u8.assign(count, size);
 }
 void add_ply_lists(ply_model& ply, const vector<int>& values,
@@ -924,15 +928,18 @@ void add_ply_lists(ply_model& ply, const vector<int>& values,
 }
 void add_ply_lists(ply_model& ply, const vector<vec2i>& values,
     const string& element, const string& property) {
-  return add_ply_lists(ply, (int*)values.data(), values.size(), 2, element, property);
+  return add_ply_lists(
+      ply, (int*)values.data(), values.size(), 2, element, property);
 }
 void add_ply_lists(ply_model& ply, const vector<vec3i>& values,
     const string& element, const string& property) {
-  return add_ply_lists(ply, (int*)values.data(), values.size(), 3, element, property);
+  return add_ply_lists(
+      ply, (int*)values.data(), values.size(), 3, element, property);
 }
 void add_ply_lists(ply_model& ply, const vector<vec4i>& values,
     const string& element, const string& property) {
-  return add_ply_lists(ply, (int*)values.data(), values.size(), 4, element, property);
+  return add_ply_lists(
+      ply, (int*)values.data(), values.size(), 4, element, property);
 }
 
 // Add ply properties for meshes
@@ -1541,6 +1548,264 @@ static inline void parse_obj_value_or_empty(
   } else {
     parse_obj_value(str, value, obj_value_type::string);
   }
+}
+
+// Read obj
+void load_obj(const string& filename, obj_model& obj, bool split_elements,
+    bool split_materials, bool geom_only) {
+  // open file
+  auto fs = open_file(filename, "rt");
+
+  // parsing state
+  auto vert_size = obj_vertex{};
+  auto oname     = ""s;
+  auto gname     = ""s;
+  auto mname     = ""s;
+
+  // initialize obj
+  obj = {};
+  obj.shapes.emplace_back();
+
+  // read the file line by line
+  char buffer[4096];
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_whitespace(line);
+    if (line.empty()) continue;
+
+    // get command
+    auto cmd = ""s;
+    parse_obj_value(line, cmd);
+    if (cmd == "") continue;
+
+    // possible token values
+    if (cmd == "v") {
+      parse_obj_value(line, obj.positions.emplace_back());
+      vert_size.position += 1;
+    } else if (cmd == "vn") {
+      parse_obj_value(line, obj.normals.emplace_back());
+      vert_size.normal += 1;
+    } else if (cmd == "vt") {
+      parse_obj_value(line, obj.texcoords.emplace_back());
+      vert_size.texcoord += 1;
+    } else if (cmd == "f" || cmd == "l" || cmd == "p") {
+      // split if split_elements and different primitives
+      if (auto& shape = obj.shapes.back();
+          split_elements && !shape.vertices.empty()) {
+        if ((cmd == "f" && (shape.lines.empty() || !shape.points.empty())) ||
+            (cmd == "l" && (shape.faces.empty() || !shape.points.empty())) ||
+            (cmd == "p" && (shape.faces.empty() || !shape.lines.empty()))) {
+          obj.shapes.emplace_back();
+          obj.shapes.back().name = oname + gname;
+        }
+      }
+      // split if splt_material and different materials
+      if (auto& shape = obj.shapes.back();
+          !geom_only && split_materials && !shape.materials.empty()) {
+        if (shape.materials.size() > 1)
+          throw std::runtime_error("should not have happened");
+        if (shape.materials.back() != mname) {
+          obj.shapes.emplace_back();
+          obj.shapes.back().name = oname + gname;
+        }
+      }
+      // grab shape and add element
+      auto& shape   = obj.shapes.back();
+      auto& element = (cmd == "f") ? shape.faces.emplace_back()
+                                   : (cmd == "l") ? shape.lines.emplace_back()
+                                                  : shape.points.emplace_back();
+      // get element material or add if needed
+      if (!geom_only) {
+        auto mat_idx = -1;
+        for (auto midx = 0; midx < shape.materials.size(); midx++)
+          if (shape.materials[midx] == mname) mat_idx = midx;
+        if (mat_idx < 0) {
+          shape.materials.push_back(mname);
+          mat_idx = shape.materials.size() - 1;
+        }
+        element.material = (uint8_t)mat_idx;
+      }
+      // parse vertices
+      skip_whitespace(line);
+      while (!line.empty()) {
+        auto vert = obj_vertex{};
+        parse_obj_value(line, vert);
+        if (!vert.position) break;
+        if (vert.position < 0)
+          vert.position = vert_size.position + vert.position + 1;
+        if (vert.texcoord < 0)
+          vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
+        if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
+        shape.vertices.push_back(vert);
+        element.size += 1;
+        skip_whitespace(line);
+      }
+    } else if (cmd == "o" || cmd == "g") {
+      if (geom_only) continue;
+      parse_obj_value_or_empty(line, cmd == "o" ? oname : gname);
+      if (!obj.shapes.back().vertices.empty()) {
+        obj.shapes.emplace_back();
+      } else {
+        obj.shapes.back().name = oname + gname;
+      }
+    } else if (cmd == "usemtl") {
+      if (geom_only) continue;
+      parse_obj_value_or_empty(line, mname);
+    } else if (cmd == "s") {
+      if (geom_only) continue;
+      // TODO: smoothing
+    } else if (cmd == "mtllib") {
+      if (geom_only) continue;
+      auto mlibname = ""s;
+      parse_obj_value(line, mlibname);
+    } else {
+      // unused
+    }
+  }
+}
+
+// Get obj vertices
+void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<int>& vindex) {
+  auto vmap = unordered_map<obj_vertex, int>{};
+  vmap.reserve(shape.vertices.size());
+  vindex.reserve(shape.vertices.size());
+  for (auto& vert : shape.vertices) {
+    auto it = vmap.find(vert);
+    if (it != vmap.end()) {
+      vindex.push_back(it->second);
+      continue;
+    }
+    vindex.push_back(positions.size());
+    vmap.insert(it, {vert, positions.size()});
+    if (!obj.positions.empty() && vert.position >= 0)
+      positions.push_back(obj.positions[vert.position]);
+    if (!obj.normals.empty() && vert.normal >= 0)
+      normals.push_back(obj.normals[vert.position]);
+    if (!obj.texcoords.empty() && vert.texcoord >= 0)
+      texcoords.push_back(obj.texcoords[vert.position]);
+  }
+}
+
+// Get obj shape
+void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
+    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials) {
+  if (shape.faces.empty()) return;
+  auto vindex = vector<int>{};
+  get_obj_vertices(obj, shape, positions, normals, texcoords, vindex);
+  materials            = shape.materials;
+  triangles.reserve(shape.faces.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& face : shape.faces) {
+    for (auto c = 2; c < face.size; c++) {
+      triangles.push_back(
+          {vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c]});
+      if (!materials.empty()) ematerials.push_back(face.material);
+    }
+    cur += face.size;
+  }
+}
+void get_obj_quads(const obj_model& obj, const obj_shape& shape,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials) {
+  if (shape.faces.empty()) return;
+  auto vindex = vector<int>{};
+  get_obj_vertices(obj, shape, positions, normals, texcoords, vindex);
+  materials            = shape.materials;
+  quads.reserve(shape.faces.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& face : shape.faces) {
+    if (face.size == 4) {
+      quads.push_back(
+          {vindex[cur + 0], vindex[cur + 1], vindex[cur + 2], vindex[cur + 3]});
+      if (!materials.empty()) ematerials.push_back(face.material);
+    } else {
+      for (auto c = 2; c < face.size; c++) {
+        quads.push_back({vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c],
+            vindex[cur + c]});
+        if (!materials.empty()) ematerials.push_back(face.material);
+      }
+    }
+    cur += face.size;
+  }
+}
+void get_obj_lines(const obj_model& obj, const obj_shape& shape,
+    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials) {
+  if (shape.lines.empty()) return;
+  auto vindex = vector<int>{};
+  get_obj_vertices(obj, shape, positions, normals, texcoords, vindex);
+  materials            = shape.materials;
+  lines.reserve(shape.lines.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& line : shape.lines) {
+    for (auto c = 1; c < line.size; c++) {
+      lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
+      if (!materials.empty()) ematerials.push_back(line.material);
+    }
+    cur += line.size;
+  }
+}
+void get_obj_points(const obj_model& obj, const obj_shape& shape,
+    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials) {
+  if (shape.points.empty()) return;
+  auto vindex = vector<int>{};
+  get_obj_vertices(obj, shape, positions, normals, texcoords, vindex);
+  materials            = shape.materials;
+  points.reserve(shape.points.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& point : shape.points) {
+    for (auto c = 0; c < point.size; c++) {
+      points.push_back({vindex[cur + 0]});
+      if (!materials.empty()) ematerials.push_back(point.material);
+    }
+    cur += point.size;
+  }
+}
+void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials) {
+  if (shape.faces.empty()) return;
+  auto vindex = vector<int>{};
+  get_obj_vertices(obj, shape, positions, normals, texcoords, vindex);
+  materials            = shape.materials;
+  quads.reserve(shape.faces.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& face : shape.faces) {
+    if (face.size == 4) {
+      quads.push_back(
+          {vindex[cur + 0], vindex[cur + 1], vindex[cur + 2], vindex[cur + 3]});
+      if (!materials.empty()) ematerials.push_back(face.material);
+    } else {
+      for (auto c = 2; c < face.size; c++) {
+        quads.push_back({vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c],
+            vindex[cur + c]});
+        if (!materials.empty()) ematerials.push_back(face.material);
+      }
+    }
+    cur += face.size;
+  }
+}
+
+bool has_obj_quads(const obj_shape& shape) {
+  for (auto& face : shape.faces)
+    if (face.size == 4) return true;
+  return false;
 }
 
 // Read obj
