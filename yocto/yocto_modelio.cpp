@@ -1551,8 +1551,8 @@ static inline void parse_obj_value_or_empty(
 }
 
 // Read obj
-void load_obj(const string& filename, obj_model& obj, bool split_elements,
-    bool split_materials, bool geom_only) {
+void load_obj(const string& filename, obj_model& obj, bool geom_only,
+    bool split_elements, bool split_materials) {
   // open file
   auto fs = open_file(filename, "rt");
 
@@ -1658,18 +1658,34 @@ void load_obj(const string& filename, obj_model& obj, bool split_elements,
       // TODO: smoothing
     } else if (cmd == "mtllib") {
       if (geom_only) continue;
-      auto mlibname = ""s;
-      parse_obj_value(line, mlibname);
+      auto mtllib = ""s;
+      parse_obj_value(line, mtllib);
     } else {
       // unused
     }
   }
+
+  // exit if done
+  if (geom_only) return;
+
+#if 0
+  // load materials
+  for(auto& mtllib : mtllibs) {
+    load_mtl(get_dirname(filename) + mtllib, obj);
+  }
+
+  // load extensions
+  if(file_exists(replace_extension(filename, ".objx"))) {
+    load_objx(replace_extension(filename, ".objx"), obj);
+  }
+#endif
 }
 
 // Get obj vertices
 void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<int>& vindex) {
+  if (shape.vertices.empty()) return;
   auto vmap = unordered_map<obj_vertex, int>{};
   vmap.reserve(shape.vertices.size());
   vindex.reserve(shape.vertices.size());
@@ -1690,6 +1706,58 @@ void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
   }
 }
 
+// Get obj vertices
+void get_obj_fvvertices(const obj_model& obj, const obj_shape& shape,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<int>& pindex, vector<int>& nindex, vector<int>& tindex) {
+  if (shape.vertices.empty()) return;
+  if (!obj.positions.empty() && shape.vertices[0].position >= 0) {
+    auto pmap = unordered_map<int, int>{};
+    pmap.reserve(shape.vertices.size());
+    pindex.reserve(shape.vertices.size());
+    for (auto& vert : shape.vertices) {
+      auto it = pmap.find(vert.position);
+      if (it != pmap.end()) {
+        pindex.push_back(it->second);
+        continue;
+      }
+      pindex.push_back(positions.size());
+      pmap.insert(it, {vert.position, positions.size()});
+      positions.push_back(obj.positions[vert.position]);
+    }
+  }
+  if (!obj.normals.empty() && shape.vertices[0].normal >= 0) {
+    auto nmap = unordered_map<int, int>{};
+    nmap.reserve(shape.vertices.size());
+    nindex.reserve(shape.vertices.size());
+    for (auto& vert : shape.vertices) {
+      auto it = nmap.find(vert.normal);
+      if (it != nmap.end()) {
+        nindex.push_back(it->second);
+        continue;
+      }
+      nindex.push_back(normals.size());
+      nmap.insert(it, {vert.normal, normals.size()});
+      normals.push_back(obj.normals[vert.position]);
+    }
+  }
+  if (!obj.texcoords.empty() && shape.vertices[0].texcoord >= 0) {
+    auto tmap = unordered_map<int, int>{};
+    tmap.reserve(shape.vertices.size());
+    tindex.reserve(shape.vertices.size());
+    for (auto& vert : shape.vertices) {
+      auto it = tmap.find(vert.texcoord);
+      if (it != tmap.end()) {
+        tindex.push_back(it->second);
+        continue;
+      }
+      tindex.push_back(texcoords.size());
+      tmap.insert(it, {vert.texcoord, texcoords.size()});
+      texcoords.push_back(obj.texcoords[vert.position]);
+    }
+  }
+}
+
 // Get obj shape
 void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
@@ -1698,7 +1766,7 @@ void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
   if (shape.faces.empty()) return;
   auto vindex = vector<int>{};
   get_obj_vertices(obj, shape, positions, normals, texcoords, vindex);
-  materials            = shape.materials;
+  materials = shape.materials;
   triangles.reserve(shape.faces.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
@@ -1718,7 +1786,7 @@ void get_obj_quads(const obj_model& obj, const obj_shape& shape,
   if (shape.faces.empty()) return;
   auto vindex = vector<int>{};
   get_obj_vertices(obj, shape, positions, normals, texcoords, vindex);
-  materials            = shape.materials;
+  materials = shape.materials;
   quads.reserve(shape.faces.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
@@ -1744,7 +1812,7 @@ void get_obj_lines(const obj_model& obj, const obj_shape& shape,
   if (shape.lines.empty()) return;
   auto vindex = vector<int>{};
   get_obj_vertices(obj, shape, positions, normals, texcoords, vindex);
-  materials            = shape.materials;
+  materials = shape.materials;
   lines.reserve(shape.lines.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
@@ -1763,7 +1831,7 @@ void get_obj_points(const obj_model& obj, const obj_shape& shape,
   if (shape.points.empty()) return;
   auto vindex = vector<int>{};
   get_obj_vertices(obj, shape, positions, normals, texcoords, vindex);
-  materials            = shape.materials;
+  materials = shape.materials;
   points.reserve(shape.points.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
@@ -1776,25 +1844,44 @@ void get_obj_points(const obj_model& obj, const obj_shape& shape,
   }
 }
 void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
-    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials) {
   if (shape.faces.empty()) return;
-  auto vindex = vector<int>{};
-  get_obj_vertices(obj, shape, positions, normals, texcoords, vindex);
-  materials            = shape.materials;
-  quads.reserve(shape.faces.size());
+  auto pindex = vector<int>{}, nindex = vector<int>{}, tindex = vector<int>{};
+  get_obj_fvvertices(
+      obj, shape, positions, normals, texcoords, pindex, nindex, tindex);
+  materials = shape.materials;
+  if (shape.vertices[0].position >= 0) quadspos.reserve(shape.faces.size());
+  if (shape.vertices[0].normal >= 0) quadsnorm.reserve(shape.faces.size());
+  if (shape.vertices[0].texcoord >= 0)
+    quadstexcoord.reserve(shape.faces.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
   for (auto& face : shape.faces) {
     if (face.size == 4) {
-      quads.push_back(
-          {vindex[cur + 0], vindex[cur + 1], vindex[cur + 2], vindex[cur + 3]});
+      if (shape.vertices[0].position >= 0)
+        quadspos.push_back({pindex[cur + 0], pindex[cur + 1], pindex[cur + 2],
+            pindex[cur + 3]});
+      if (shape.vertices[0].normal >= 0)
+        quadsnorm.push_back({nindex[cur + 0], nindex[cur + 1], nindex[cur + 2],
+            nindex[cur + 3]});
+      if (shape.vertices[0].texcoord >= 0)
+        quadstexcoord.push_back({tindex[cur + 0], tindex[cur + 1],
+            tindex[cur + 2], tindex[cur + 3]});
       if (!materials.empty()) ematerials.push_back(face.material);
     } else {
       for (auto c = 2; c < face.size; c++) {
-        quads.push_back({vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c],
-            vindex[cur + c]});
+        if (shape.vertices[0].position >= 0)
+          quadspos.push_back({pindex[cur + 0], pindex[cur + c - 1],
+              pindex[cur + c], pindex[cur + c]});
+        if (shape.vertices[0].normal >= 0)
+          quadsnorm.push_back({nindex[cur + 0], nindex[cur + c - 1],
+              nindex[cur + c], nindex[cur + c]});
+        if (shape.vertices[0].texcoord >= 0)
+          quadstexcoord.push_back({tindex[cur + 0], tindex[cur + c - 1],
+              tindex[cur + c], tindex[cur + c]});
         if (!materials.empty()) ematerials.push_back(face.material);
       }
     }
