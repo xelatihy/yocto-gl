@@ -1710,8 +1710,7 @@ void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
 void get_obj_fvvertices(const obj_model& obj, const obj_shape& shape,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<int>& pindex, vector<int>& nindex, vector<int>& tindex) {
-  if (shape.vertices.empty()) return;
-  if (!obj.positions.empty() && shape.vertices[0].position >= 0) {
+  if (!obj.positions.empty() && shape.vertices[0].position) {
     auto pmap = unordered_map<int, int>{};
     pmap.reserve(shape.vertices.size());
     pindex.reserve(shape.vertices.size());
@@ -1721,12 +1720,13 @@ void get_obj_fvvertices(const obj_model& obj, const obj_shape& shape,
         pindex.push_back(it->second);
         continue;
       }
-      pindex.push_back(positions.size());
-      pmap.insert(it, {vert.position, positions.size()});
-      positions.push_back(obj.positions[vert.position]);
+      auto nverts = (int)positions.size();
+      pindex.push_back(nverts);
+      pmap.insert(it, {vert.position, nverts});
+      positions.push_back(obj.positions[vert.position - 1]);
     }
   }
-  if (!obj.normals.empty() && shape.vertices[0].normal >= 0) {
+  if (!obj.normals.empty() && shape.vertices[0].normal) {
     auto nmap = unordered_map<int, int>{};
     nmap.reserve(shape.vertices.size());
     nindex.reserve(shape.vertices.size());
@@ -1736,12 +1736,13 @@ void get_obj_fvvertices(const obj_model& obj, const obj_shape& shape,
         nindex.push_back(it->second);
         continue;
       }
+        auto nverts = (int)normals.size();
       nindex.push_back(normals.size());
       nmap.insert(it, {vert.normal, normals.size()});
-      normals.push_back(obj.normals[vert.position]);
+      normals.push_back(obj.normals[vert.normal-1]);
     }
   }
-  if (!obj.texcoords.empty() && shape.vertices[0].texcoord >= 0) {
+  if (!obj.texcoords.empty() && shape.vertices[0].texcoord) {
     auto tmap = unordered_map<int, int>{};
     tmap.reserve(shape.vertices.size());
     tindex.reserve(shape.vertices.size());
@@ -1751,9 +1752,10 @@ void get_obj_fvvertices(const obj_model& obj, const obj_shape& shape,
         tindex.push_back(it->second);
         continue;
       }
-      tindex.push_back(texcoords.size());
-      tmap.insert(it, {vert.texcoord, texcoords.size()});
-      texcoords.push_back(obj.texcoords[vert.position]);
+      auto nverts = (int)texcoords.size();
+      tindex.push_back(nverts);
+      tmap.insert(it, {vert.texcoord, nverts});
+      texcoords.push_back(obj.texcoords[vert.texcoord - 1]);
     }
   }
 }
