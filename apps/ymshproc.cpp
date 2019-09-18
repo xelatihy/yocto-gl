@@ -114,9 +114,17 @@ int main(int argc, const char** argv) {
     } else {
       sources = sample_vertices_poisson(solver, num_geodesic_samples);
     }
-    auto distances = compute_geodesic_distances(solver, sources);
-    shape.colors   = vector<vec4f>{};
-    distance_to_color(shape.colors, distances, geodesic_scale);
+    auto field   = compute_geodesic_distances(solver, sources);
+    shape.colors = vector<vec4f>{};
+    distance_to_color(shape.colors, field, geodesic_scale);
+    auto tags = vector<int>(shape.triangles.size(), 0);
+    meandering_triangles(field, geodesic_scale, 0, 1, 2, shape.triangles, tags,
+        shape.positions, shape.normals);
+    for (int i = 0; i < shape.triangles.size(); i++) {
+      if (tags[i] == 1) shape.triangles[i] = {-1, -1, -1};
+    }
+    shape.colors.clear();
+    printf(" in %s\n", transform_timer.elapsedf().c_str());
   }
 
   // save mesh

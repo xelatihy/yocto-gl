@@ -516,6 +516,113 @@ void find_neightbors(const hash_grid& grid, vector<int>& neighboors, int vertex,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// PROCEDURAL MODELING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Extract isoline from surface scalar field.
+void meandering_triangles(const vector<float>& field, float isoline,
+    int selected_tag, int t0, int t1, vector<vec3i>& triangles,
+    vector<int>& tags, vector<vec3f>& positions, vector<vec3f>& normals) {
+  auto num_triangles = triangles.size();
+
+  // Keep track of the added vertex on each splitted edge.
+  // key: edge (ordered pair), value: vertex index
+  auto edgemap = unordered_map<vec2i, int>();
+
+  // define helper procedures
+  auto make_edge = [](int a, int b) {
+    return a < b ? vec2i{a, b} : vec2i{b, a};
+  };
+  auto add_vertex = [&](int a, int b, float coeff) {
+    auto position = coeff * positions[a] + (1 - coeff) * positions[b];
+    auto normal   = normalize(coeff * normals[a] + (1 - coeff) * normals[b]);
+    auto index    = positions.size();
+    positions.push_back(position);
+    normals.push_back(normal);
+    return index;
+  };
+  auto get_tag = [&](int v) { return field[v] > isoline ? t1 : t0; };
+
+  for (int i = 0; i < num_triangles; ++i) {
+    if (tags[i] != selected_tag) continue;
+
+    auto& triangle = triangles[i];
+
+    auto pos0 = field[triangle.x] > isoline;
+    auto pos1 = field[triangle.y] > isoline;
+    auto pos2 = field[triangle.z] > isoline;
+
+    if (pos0 == pos1 and pos1 == pos2) {
+      tags[i] = get_tag(triangle.x);
+      continue;
+    }
+
+    // triangles[i] = {-1, -1, -1};
+    // continue;
+
+    int diff;  // which vertex has different sign? 0, 1, or 2?
+    if (pos1 == pos2) diff = 0;
+    if (pos0 == pos2) diff = 1;
+    if (pos0 == pos1) diff = 2;
+
+    auto tri = vec3i{
+        triangle[(diff + 2) % 3], triangle[(diff + 1) % 3], triangle[diff]};
+
+    auto values = vec3f{field[tri.x], field[tri.y], field[tri.z]};
+    values -= vec3f{isoline, isoline, isoline};
+
+    int new_verts[2];
+
+    for (int k : {0, 1}) {
+      int   vert  = tri[k];
+      float a     = values[k];
+      float b     = values.z;
+      float alpha = fabs(a / (b - a));
+      auto  edge  = make_edge(tri.z, vert);
+      auto  it    = edgemap.find(edge);
+
+      if (it != edgemap.end()) {
+        // Edge already processed
+        new_verts[k] = it->second;
+      } else {
+        new_verts[k] = add_vertex(tri.z, vert, alpha);
+        edgemap.insert(it, {edge, new_verts[k]});
+      }
+    }
+
+    /*
+                     tri.z
+                       /\
+                      /  \
+                     /    \
+                    /  i   \
+                   /        \
+    new_verts[1]  /..........\  new_verts[0]
+                 /   .  nf[0] \
+                /       .      \
+               /           .    \
+              / new_faces[1]  .  \
+             /___________________.\
+       tri.y                      tri.x
+
+    */
+
+    triangles.push_back({new_verts[0], new_verts[1], tri.x});
+    tags.push_back(get_tag(tri.x));
+
+    triangles.push_back({tri.y, tri.x, new_verts[1]});
+    tags.push_back(get_tag(tri.y));
+
+    // Edit old face
+    triangles[i] = vec3i{new_verts[0], tri.z, new_verts[1]};
+    tags[i]      = get_tag(tri.z);
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE ELEMENT CONVERSION AND GROUPING
 // -----------------------------------------------------------------------------
 namespace yocto {
