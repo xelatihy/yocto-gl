@@ -1693,7 +1693,7 @@ void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
     auto it = vmap.find(vert);
     if (it != vmap.end()) {
       vindex.push_back(it->second);
-      continue;
+        continue;
     }
     vindex.push_back(positions.size());
     vmap.insert(it, {vert, positions.size()});
