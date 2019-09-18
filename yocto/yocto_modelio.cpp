@@ -1685,7 +1685,6 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
 void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<int>& vindex) {
-  if (shape.vertices.empty()) return;
   auto vmap = unordered_map<obj_vertex, int>{};
   vmap.reserve(shape.vertices.size());
   vindex.reserve(shape.vertices.size());
@@ -1695,14 +1694,15 @@ void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
       vindex.push_back(it->second);
         continue;
     }
-    vindex.push_back(positions.size());
-    vmap.insert(it, {vert, positions.size()});
-    if (!obj.positions.empty() && vert.position >= 0)
-      positions.push_back(obj.positions[vert.position]);
-    if (!obj.normals.empty() && vert.normal >= 0)
-      normals.push_back(obj.normals[vert.position]);
-    if (!obj.texcoords.empty() && vert.texcoord >= 0)
-      texcoords.push_back(obj.texcoords[vert.position]);
+    auto nverts = (int)positions.size();
+    vindex.push_back(nverts);
+    vmap.insert(it, {vert, nverts});
+    if (!obj.positions.empty() && vert.position)
+      positions.push_back(obj.positions[vert.position - 1]);
+    if (!obj.normals.empty() && vert.normal)
+      normals.push_back(obj.normals[vert.normal - 1]);
+    if (!obj.texcoords.empty() && vert.texcoord)
+      texcoords.push_back(obj.texcoords[vert.texcoord - 1]);
   }
 }
 
