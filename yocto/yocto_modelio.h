@@ -379,7 +379,7 @@ struct obj_model {
 // Load and save obj
 void load_obj(const string& filename, obj_model& obj,
     bool split_elements = true, bool split_materials = false,
-    bool geom_only = true);
+    bool geom_only = false);
 void save_obj(const string& filename, const obj_model& obj);
 
 // Obj command
