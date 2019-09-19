@@ -751,7 +751,7 @@ inline bool parse_cmdline_value(const string& str, int& value) {
 }
 inline bool parse_cmdline_value(const string& str, float& value) {
   auto end = (char*)nullptr;
-  value    = (int)strtof(str.c_str(), &end);
+  value    = strtof(str.c_str(), &end);
   return end != nullptr;
 }
 inline bool parse_cmdline_value(const string& str, bool& value) {
