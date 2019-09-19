@@ -340,7 +340,58 @@ struct obj_shape {
 
 // Obj material
 struct obj_material {
-  string name = "";
+  // material name and type
+  string name  = "";
+  int    illum = 0;
+
+  // material colors and values
+  vec3f emission     = zero3f;
+  vec3f ambient      = zero3f;
+  vec3f diffuse      = zero3f;
+  vec3f specular     = zero3f;
+  vec3f reflection   = zero3f;
+  vec3f transmission = zero3f;
+  float exponent     = 10;
+  float ior          = 1.5;
+  float opacity      = 1;
+
+  // material textures
+  obj_texture_info emission_map     = {};
+  obj_texture_info ambient_map      = {};
+  obj_texture_info diffuse_map      = {};
+  obj_texture_info specular_map     = {};
+  obj_texture_info reflection_map   = {};
+  obj_texture_info transmission_map = {};
+  obj_texture_info exponent_map     = {};
+  obj_texture_info opacity_map      = {};
+  obj_texture_info bump_map         = {};
+  obj_texture_info normal_map       = {};
+  obj_texture_info displacement_map = {};
+
+  // pbrt extension values
+  float pbr_roughness     = 0;
+  float pbr_metallic      = 0;
+  float pbr_sheen         = 0;
+  float pbr_clearcoat     = 0;
+  float pbr_coatroughness = 0;
+
+  // pbr extension textures
+  obj_texture_info pbr_roughness_map     = {};
+  obj_texture_info pbr_metallic_map      = {};
+  obj_texture_info pbr_sheen_map         = {};
+  obj_texture_info pbr_clearcoat_map     = {};
+  obj_texture_info pbr_coatroughness_map = {};
+
+  // volume extension colors and values
+  vec3f vol_emission     = zero3f;
+  vec3f vol_transmission = zero3f;
+  vec3f vol_meanfreepath = zero3f;
+  vec3f vol_scattering   = zero3f;
+  float vol_anisotropy   = 0;
+  float vol_scale        = 0.01;
+
+  // volument textures
+  obj_texture_info vol_scattering_map = {};
 };
 
 // Obj camera

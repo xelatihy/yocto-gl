@@ -33,6 +33,7 @@
 #include "yocto_modelio.h"
 
 #include "yocto_image.h"
+#include "yocto_utils.h"
 
 #include <algorithm>
 #include <cinttypes>
@@ -1553,6 +1554,124 @@ static inline void parse_obj_value_or_empty(
 }
 
 // Read obj
+void load_mtl(const string& filename, obj_model& obj, bool fliptr = true) {
+  // open file
+  auto fs = open_file(filename, "rt");
+
+  // init parsing
+  obj.materials.emplace_back();
+
+  // read the file line by line
+  char buffer[4096];
+  while (read_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_whitespace(line);
+    if (line.empty()) continue;
+
+    // get command
+    auto cmd = ""s;
+    parse_obj_value(line, cmd);
+    if (cmd == "") continue;
+
+    // possible token values
+    if (cmd == "newmtl") {
+      obj.materials.emplace_back();
+      parse_obj_value(line, obj.materials.back().name);
+    } else if (cmd == "illum") {
+      parse_obj_value(line, obj.materials.back().illum);
+    } else if (cmd == "Ke") {
+      parse_obj_value(line, obj.materials.back().emission);
+    } else if (cmd == "Ka") {
+      parse_obj_value(line, obj.materials.back().ambient);
+    } else if (cmd == "Kd") {
+      parse_obj_value(line, obj.materials.back().diffuse);
+    } else if (cmd == "Ks") {
+      parse_obj_value(line, obj.materials.back().specular);
+    } else if (cmd == "Kt") {
+      parse_obj_value(line, obj.materials.back().transmission);
+    } else if (cmd == "Tf") {
+      obj.materials.back().transmission = vec3f{-1};
+      parse_obj_value(line, obj.materials.back().transmission);
+      if (obj.materials.back().transmission.y < 0) obj.materials.back().transmission = vec3f{obj.materials.back().transmission.x};
+      if (fliptr) obj.materials.back().transmission = 1 - obj.materials.back().transmission;
+    } else if (cmd == "Tr") {
+      parse_obj_value(line, obj.materials.back().opacity);
+      if (fliptr) obj.materials.back().opacity = 1 - obj.materials.back().opacity;
+    } else if (cmd == "Ns") {
+      parse_obj_value(line, obj.materials.back().exponent);
+    } else if (cmd == "d") {
+      parse_obj_value(line, obj.materials.back().opacity);
+    } else if (cmd == "map_Ke") {
+      parse_obj_value(line, obj.materials.back().emission_map);
+    } else if (cmd == "map_Ka") {
+      parse_obj_value(line, obj.materials.back().ambient_map);
+    } else if (cmd == "map_Kd") {
+      parse_obj_value(line, obj.materials.back().diffuse_map);
+    } else if (cmd == "map_Ks") {
+      parse_obj_value(line, obj.materials.back().specular_map);
+    } else if (cmd == "map_Tr") {
+      parse_obj_value(line, obj.materials.back().transmission_map);
+    } else if (cmd == "map_d" || cmd == "map_Tr") {
+      parse_obj_value(line, obj.materials.back().opacity_map);
+    } else if (cmd == "map_bump" || cmd == "bump") {
+      parse_obj_value(line, obj.materials.back().bump_map);
+    } else if (cmd == "map_disp" || cmd == "disp") {
+      parse_obj_value(line, obj.materials.back().displacement_map);
+    } else if (cmd == "map_norm" || cmd == "norm") {
+      parse_obj_value(line, obj.materials.back().normal_map);
+    } else if (cmd == "Pm") {
+      parse_obj_value(line, obj.materials.back().pbr_metallic);
+    } else if (cmd == "Pr") {
+      parse_obj_value(line, obj.materials.back().pbr_roughness);
+    } else if (cmd == "Ps") {
+      parse_obj_value(line, obj.materials.back().pbr_sheen);
+    } else if (cmd == "Pc") {
+      parse_obj_value(line, obj.materials.back().pbr_clearcoat);
+    } else if (cmd == "Pcr") {
+      parse_obj_value(line, obj.materials.back().pbr_coatroughness);
+    } else if (cmd == "map_Pm") {
+      parse_obj_value(line, obj.materials.back().pbr_metallic_map);
+    } else if (cmd == "map_Pr") {
+      parse_obj_value(line, obj.materials.back().pbr_roughness_map);
+    } else if (cmd == "map_Ps") {
+      parse_obj_value(line, obj.materials.back().pbr_sheen_map);
+    } else if (cmd == "map_Pc") {
+      parse_obj_value(line, obj.materials.back().pbr_clearcoat_map);
+    } else if (cmd == "map_Pcr") {
+      parse_obj_value(line, obj.materials.back().pbr_coatroughness_map);
+    } else if (cmd == "Vt") {
+      parse_obj_value(line, obj.materials.back().vol_transmission);
+    } else if (cmd == "Vp") {
+      parse_obj_value(line, obj.materials.back().vol_meanfreepath);
+    } else if (cmd == "Ve") {
+      parse_obj_value(line, obj.materials.back().vol_emission);
+    } else if (cmd == "Vs") {
+      parse_obj_value(line, obj.materials.back().vol_scattering);
+    } else if (cmd == "Vg") {
+      parse_obj_value(line, obj.materials.back().vol_anisotropy);
+    } else if (cmd == "Vr") {
+      parse_obj_value(line, obj.materials.back().vol_scale);
+    } else if (cmd == "map_Vs") {
+      parse_obj_value(line, obj.materials.back().vol_scattering_map);
+    } else {
+      continue;
+    }
+  }
+
+  // remove placeholder material
+  obj.materials.erase(obj.materials.begin());
+}
+
+// Read obj
+void load_objx(const string& filename, obj_model& obj) {
+  // open file
+  auto fs = open_file(filename, "rt");
+
+}
+
+// Read obj
 void load_obj(const string& filename, obj_model& obj, bool geom_only,
     bool split_elements, bool split_materials) {
   // open file
@@ -1563,6 +1682,7 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
   auto oname     = ""s;
   auto gname     = ""s;
   auto mname     = ""s;
+  auto mtllibs = vector<string>{};
 
   // initialize obj
   obj = {};
@@ -1662,6 +1782,9 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
       if (geom_only) continue;
       auto mtllib = ""s;
       parse_obj_value(line, mtllib);
+      if(std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
+        mtllibs.push_back(mtllib);
+      }
     } else {
       // unused
     }
@@ -1670,17 +1793,17 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
   // exit if done
   if (geom_only) return;
 
-#if 0
   // load materials
+  auto dirname = get_dirname(filename);
   for(auto& mtllib : mtllibs) {
-    load_mtl(get_dirname(filename) + mtllib, obj);
+    load_mtl(dirname + mtllib, obj);
   }
 
   // load extensions
-  if(file_exists(replace_extension(filename, ".objx"))) {
-    load_objx(replace_extension(filename, ".objx"), obj);
+  auto extfilename = replace_extension(filename, ".objx");
+  if(exists_file(extfilename)) {
+    load_objx(extfilename, obj);
   }
-#endif
 }
 
 // Read obj
