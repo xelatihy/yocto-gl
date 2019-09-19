@@ -531,13 +531,13 @@ void meandering_triangles(const vector<float>& field, float isoline,
   auto emap = unordered_map<vec2i, int>();
 
   // Helper procedures.
-  auto make_edge = [](int a, int b) {
+  auto make_edge = [](int a, int b) -> vec2i {
     return a < b ? vec2i{a, b} : vec2i{b, a};
   };
-  auto add_vertex = [&](int a, int b, float coeff) {
+  auto add_vertex = [&](int a, int b, float coeff) -> int {
     auto position = coeff * positions[a] + (1 - coeff) * positions[b];
     auto normal   = normalize(coeff * normals[a] + (1 - coeff) * normals[b]);
-    auto index    = positions.size();
+    auto index    = (int)positions.size();
     positions.push_back(position);
     normals.push_back(normal);
     return index;
@@ -549,8 +549,7 @@ void meandering_triangles(const vector<float>& field, float isoline,
 
     auto tr = triangles[i];
 
-    // Find which vertex has different tag, so that we can reorder the tr
-    // such that the z vertex is the one with different tag.
+    // Find which vertex has different tag, if any.
     int j = -1;
     for (int k = 0; k < 3; k++) {
       if (get_tag(tr[k]) != get_tag(tr[(k + 1) % 3]) &&
@@ -559,12 +558,13 @@ void meandering_triangles(const vector<float>& field, float isoline,
       }
     }
 
-    // If all vertex have the same tag, then tag the whole tr and continue
+    // If all vertices have same tag, then tag the whole triangle and continue.
     if (j == -1) {
       tags[i] = get_tag(tr.x);
       continue;
     }
 
+    // Reorder the triangle such that vertex with different tag is always z
     tr = {tr[(j + 2) % 3], tr[(j + 1) % 3], tr[j]};
 
     auto values = vec3f{field[tr.x], field[tr.y], field[tr.z]};
