@@ -3703,88 +3703,19 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   // Add obj data
   auto& shape = obj.shapes.emplace_back();
   if(!triangles.empty()) {
-    set_obj_triangles(obj, shape, positions, normals, texcoords);
+    add_obj_triangles(obj, shape, triangles, positions, normals, texcoords);
   } else if(!quads.empty()) {
+    add_obj_quads(obj, shape, quads, positions, normals, texcoords);
   } else if(!lines.empty()) {
+    add_obj_lines(obj, shape, lines, positions, normals, texcoords);
   } else if(!points.empty()) {
+    add_obj_points(obj, shape, points, positions, normals, texcoords);
   } else if(!quadspos.empty()) {
-
+    add_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
+  } else {
+    throw std::runtime_error("do not support empty shapes");
   }
 
-  for (auto& p : positions)
-    write_obj_command(fs, obj_command::vertex, make_obj_value(p));
-  for (auto& n : normals)
-    write_obj_command(fs, obj_command::normal, make_obj_value(n));
-  for (auto& t : texcoords)
-    write_obj_command(fs, obj_command::texcoord,
-        make_obj_value(vec2f{t.x, flip_texcoord ? 1 - t.y : t.y}));
-
-  auto elems = vector<obj_vertex>{};
-  auto mask = obj_vertex{1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
-  auto vert = [mask](int i) {
-    return obj_vertex{(i + 1) * mask.position, (i + 1) * mask.texcoord,
-        (i + 1) * mask.normal};
-  };
-  auto fvvert = [mask](int pi, int ti, int ni) {
-    return obj_vertex{(pi + 1) * mask.position, (ti + 1) * mask.texcoord,
-        (ni + 1) * mask.normal};
-  };
-
-  elems.resize(1);
-  for (auto& p : points) {
-    elems[0] = vert(p);
-    write_obj_command(fs, obj_command::point, {}, elems);
-  }
-  elems.resize(2);
-  for (auto& l : lines) {
-    elems[0] = vert(l.x);
-    elems[1] = vert(l.y);
-    write_obj_command(fs, obj_command::line, {}, elems);
-  }
-  elems.resize(3);
-  for (auto& t : triangles) {
-    elems[0] = vert(t.x);
-    elems[1] = vert(t.y);
-    elems[2] = vert(t.z);
-    write_obj_command(fs, obj_command::face, {}, elems);
-  }
-  elems.resize(4);
-  for (auto& q : quads) {
-    elems[0] = vert(q.x);
-    elems[1] = vert(q.y);
-    elems[2] = vert(q.z);
-    if (q.z == q.w) {
-      elems.resize(3);
-    } else {
-      elems.resize(4);
-      elems[3] = vert(q.w);
-    }
-    write_obj_command(fs, obj_command::face, {}, elems);
-  }
-  // auto last_material_id = -1;
-  elems.resize(4);
-  for (auto i = 0; i < quadspos.size(); i++) {
-    //        if (!quads_materials.empty() &&
-    //            quads_materials[i] != last_material_id) {
-    //            last_material_id = quads_materials[i];
-    //            println_values(fs, "usemtl material_{}\n",
-    //            last_material_id);
-    //        }
-    auto qp = quadspos.at(i);
-    auto qt = !quadstexcoord.empty() ? quadstexcoord.at(i)
-                                     : vec4i{-1, -1, -1, -1};
-    auto qn  = !quadsnorm.empty() ? quadsnorm.at(i) : vec4i{-1, -1, -1, -1};
-    elems[0] = fvvert(qp.x, qt.x, qn.x);
-    elems[1] = fvvert(qp.y, qt.y, qn.y);
-    elems[2] = fvvert(qp.z, qt.z, qn.z);
-    if (qp.z == qp.w) {
-      elems.resize(3);
-    } else {
-      elems.resize(4);
-      elems[3] = fvvert(qp.w, qt.w, qn.w);
-    }
-    write_obj_command(fs, obj_command::face, {}, elems);
-  }
 }
 
 #endif

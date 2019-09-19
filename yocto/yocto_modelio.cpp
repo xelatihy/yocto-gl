@@ -2005,7 +2005,8 @@ void add_obj_triangles(obj_model& obj, obj_shape& shape,
           normals.empty() ? 0 : triangle[c] + vert_size.normal + 1,
       });
     }
-    shape.faces.push_back({3, ematerials.empty() ? 0 : ematerials[idx]});
+    shape.faces.push_back(
+        {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
 void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
@@ -2026,8 +2027,8 @@ void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
           normals.empty() ? 0 : quad[c] + vert_size.normal + 1,
       });
     }
-    shape.faces.push_back(
-        {(quad.z == quad.w ? 3 : 4), ematerials.empty() ? 0 : ematerials[idx]});
+    shape.faces.push_back({quad.z == quad.w ? (uint8_t)3 : (uint8_t)4,
+        ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
 void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
@@ -2048,7 +2049,8 @@ void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
           normals.empty() ? 0 : line[c] + vert_size.normal + 1,
       });
     }
-    shape.lines.push_back({2, ematerials.empty() ? 0 : ematerials[idx]});
+    shape.lines.push_back(
+        {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
 void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
@@ -2067,7 +2069,8 @@ void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
         texcoords.empty() ? 0 : point + vert_size.texcoord + 1,
         normals.empty() ? 0 : point + vert_size.normal + 1,
     });
-    shape.faces.push_back({1, ematerials.empty() ? 0 : ematerials[idx]});
+    shape.faces.push_back(
+        {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
 void add_obj_fvquads(obj_model& obj, obj_shape& shape,
@@ -2091,8 +2094,8 @@ void add_obj_fvquads(obj_model& obj, obj_shape& shape,
           quadsnorm.empty() ? 0 : quadsnorm[idx][c] + vert_size.normal + 1,
       });
     }
-    shape.faces.push_back({(quadspos[idx].z == quadspos[idx].w ? 3 : 4),
-        ematerials.empty() ? 0 : ematerials[idx]});
+    shape.faces.push_back({quadspos[idx].z == quadspos[idx].w ? (uint8_t)3 : (uint8_t)4,
+        ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
 
