@@ -216,9 +216,9 @@ vector<float>       get_ply_radius(const ply_model& ply);
 vector<vector<int>> get_ply_faces(const ply_model& ply);
 vector<vec2i>       get_ply_lines(const ply_model& ply);
 vector<int>         get_ply_points(const ply_model& ply);
-vector<vec3i> get_ply_triangles(const ply_model& ply);
-vector<vec4i> get_ply_quads(const ply_model& ply);
-bool          has_ply_quads(const ply_model& ply);
+vector<vec3i>       get_ply_triangles(const ply_model& ply);
+vector<vec4i>       get_ply_quads(const ply_model& ply);
+bool                has_ply_quads(const ply_model& ply);
 
 // Add ply properties
 void add_ply_values(ply_model& ply, const vector<float>& values,
@@ -365,9 +365,10 @@ struct obj_procedural {
 
 // Obj model
 struct obj_model {
-  vector<vec3f>             positions = {};
-  vector<vec3f>             normals = {};
-  vector<vec2f>             texcoords = {};
+  vector<string>          comments     = {};
+  vector<vec3f>           positions    = {};
+  vector<vec3f>           normals      = {};
+  vector<vec2f>           texcoords    = {};
   vector<obj_shape>       shapes       = {};
   vector<obj_material>    materials    = {};
   vector<obj_camera>      cameras      = {};
@@ -404,6 +405,29 @@ void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials);
 bool has_obj_quads(const obj_shape& shape);
+
+// Add obj shape
+void add_obj_triangles(obj_model& obj, const string& name,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials);
+void add_obj_quads(obj_model& obj, const string& name,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials);
+void add_obj_lines(obj_model& obj, const string& name,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials);
+void add_obj_points(obj_model& obj, const string& name,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials);
+void add_obj_fvquads(obj_model& obj, const string& name,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials);
 
 // Obj command
 enum struct obj_command {

@@ -507,6 +507,8 @@ void save_ply(const string& filename, const ply_model& ply) {
   // header
   checked_fprintf(fs, "ply\n");
   checked_fprintf(fs, "format %s 1.0\n", format_map.at(ply.format).c_str());
+  checked_fprintf(fs, "comment Written by Yocto/GL\n");
+  checked_fprintf(fs, "comment https://github.com/xelatihy/yocto-gl\n");
   for (auto& comment : ply.comments)
     checked_fprintf(fs, "comment %s\n", comment.c_str());
   for (auto& elem : ply.elements) {
@@ -1681,6 +1683,73 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
 #endif
 }
 
+// Read obj
+void save_obj(const string& filename, obj_model& obj) {
+  // open file
+  auto fs = open_file(filename, "wt");
+
+  // save comments
+  checked_fprintf(fs, "#\n");
+  checked_fprintf(fs, "# Written by Yocto/GL\n");
+  checked_fprintf(fs, "# https://github.com/xelatihy/yocto-gl\n");
+  checked_fprintf(fs, "#\n\n");
+  for (auto& comment : obj.comments) {
+    checked_fprintf(fs, "# %s\n", comment.c_str());
+  }
+  checked_fprintf(fs, "\n");
+
+// save material library
+#if 0
+  if(!obj.materials.empty()) {
+    checked_fprintf("mtllib %s\n\n", replace_extension(filename, ".mtl").c_str());
+  }
+#endif
+
+  // save vertices
+  for (auto& p : obj.positions)
+    checked_fprintf(fs, "v  %g %g %g\n", p.x, p.y, p.z);
+  for (auto& n : obj.normals)
+    checked_fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+  for (auto& t : obj.texcoords) checked_fprintf(fs, "vt %g %g\n", t.x, t.y);
+
+  // save objects
+  for (auto& shape : obj.shapes) {
+    checked_fprintf(fs, "o %s\n", shape.name.c_str());
+    auto element_labels = vector<string>{"f", "l", "p"};
+    auto element_groups = vector<const vector<obj_element>*>{
+        &shape.faces, &shape.lines, &shape.points};
+    for (auto element_idx = 0; element_idx < 3; element_idx++) {
+      auto& label        = element_labels[element_idx];
+      auto& elements     = *element_groups[element_idx];
+      auto  cur_material = -1, cur_vertex = 0;
+      for (auto& element : elements) {
+        if (!shape.materials.empty() && cur_material != element.material) {
+          checked_fprintf(
+              fs, "usemtl %s\n", shape.materials[element.material].c_str());
+          cur_material = element.material;
+        }
+        checked_fprintf(fs, "%s", label.c_str());
+        for (auto c = 0; c < element.size; c++) {
+          auto& vertex = shape.vertices[cur_vertex++];
+          checked_fprintf(fs, " %d", vertex.position);
+          if (vertex.texcoord) {
+            checked_fprintf(fs, "/%d", vertex.texcoord);
+            if (vertex.normal) {
+              checked_fprintf(fs, "/%d", vertex.normal);
+            }
+          } else if (vertex.normal) {
+            checked_fprintf(fs, "//%d", vertex.normal);
+          }
+        }
+        checked_fprintf(fs, "\n");
+      }
+    }
+    checked_fprintf(fs, "\n");
+  }
+
+  //
+}
+
 // Get obj vertices
 void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
@@ -1692,7 +1761,7 @@ void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
     auto it = vmap.find(vert);
     if (it != vmap.end()) {
       vindex.push_back(it->second);
-        continue;
+      continue;
     }
     auto nverts = (int)positions.size();
     vindex.push_back(nverts);
@@ -1736,10 +1805,10 @@ void get_obj_fvvertices(const obj_model& obj, const obj_shape& shape,
         nindex.push_back(it->second);
         continue;
       }
-        auto nverts = (int)normals.size();
-      nindex.push_back(normals.size());
-      nmap.insert(it, {vert.normal, normals.size()});
-      normals.push_back(obj.normals[vert.normal-1]);
+      auto nverts = (int)normals.size();
+      nindex.push_back(nverts);
+      nmap.insert(it, {vert.normal, nverts});
+      normals.push_back(obj.normals[vert.normal - 1]);
     }
   }
   if (!obj.texcoords.empty() && shape.vertices[0].texcoord) {
@@ -1895,6 +1964,124 @@ bool has_obj_quads(const obj_shape& shape) {
   for (auto& face : shape.faces)
     if (face.size == 4) return true;
   return false;
+}
+
+// Add obj vertices
+vector<obj_vertex> add_obj_vertices(obj_model& obj,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords) {
+  auto vert_size = obj_vertex{(int)obj.positions.size(),
+      (int)obj.texcoords.size(), (int)obj.normals.size()};
+  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
+  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
+  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  auto vertices = vector<obj_vertex>(positions.size());
+  for (auto idx = 0; idx < vertices.size(); idx++) {
+    vertices[idx] = {
+        positions.empty() ? 0 : vert_size.position + idx + 1,
+        texcoords.empty() ? 0 : vert_size.texcoord + idx + 1,
+        normals.empty() ? 0 : vert_size.normal + idx + 1,
+    };
+  }
+  return vertices;
+}
+
+// Add obj shape
+void set_obj_triangles(obj_model& obj, obj_shape& shape,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<int>& ematerials) {
+  auto vert_size = obj_vertex{(int)obj.positions.size(),
+      (int)obj.texcoords.size(), (int)obj.normals.size()};
+  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
+  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
+  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  for (auto& triangle : triangles) {
+    for (auto c = 0; c < 3; c++) {
+      shape.vertices.push_back({
+          positions.empty() ? 0 : triangle[c] + vert_size.position + 1,
+          texcoords.empty() ? 0 : triangle[c] + vert_size.texcoord + 1,
+          normals.empty() ? 0 : triangle[c] + vert_size.normal + 1,
+      });
+    }
+  }
+}
+void set_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials) {
+  auto vert_size = obj_vertex{(int)obj.positions.size(),
+      (int)obj.texcoords.size(), (int)obj.normals.size()};
+  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
+  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
+  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  shape.vertices.reserve(quads.size() * 4);
+  for (auto& quad : quads) {
+    for (auto c = 0; c < (quad.z == quad.w ? 3 : 4); c++) {
+      shape.vertices.push_back({
+          positions.empty() ? 0 : quad[c] + vert_size.position + 1,
+          texcoords.empty() ? 0 : quad[c] + vert_size.texcoord + 1,
+          normals.empty() ? 0 : quad[c] + vert_size.normal + 1,
+      });
+    }
+  }
+}
+void set_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials) {
+  auto vert_size = obj_vertex{(int)obj.positions.size(),
+      (int)obj.texcoords.size(), (int)obj.normals.size()};
+  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
+  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
+  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  shape.vertices.reserve(lines.size() * 2);
+  for (auto& line : lines) {
+    for (auto c = 0; c < 2; c++) {
+      shape.vertices.push_back({
+          positions.empty() ? 0 : line[c] + vert_size.position + 1,
+          texcoords.empty() ? 0 : line[c] + vert_size.texcoord + 1,
+          normals.empty() ? 0 : line[c] + vert_size.normal + 1,
+      });
+    }
+  }
+}
+void set_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials) {
+  auto vert_size = obj_vertex{(int)obj.positions.size(),
+      (int)obj.texcoords.size(), (int)obj.normals.size()};
+  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
+  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
+  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  shape.vertices.reserve(points.size());
+  for (auto& point : points) {
+    shape.vertices.push_back({
+        positions.empty() ? 0 : point + vert_size.position + 1,
+        texcoords.empty() ? 0 : point + vert_size.texcoord + 1,
+        normals.empty() ? 0 : point + vert_size.normal + 1,
+    });
+  }
+}
+void add_obj_fvquads(obj_model& obj, obj_shape& shape,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords) {
+  auto vert_size = obj_vertex{(int)obj.positions.size(),
+      (int)obj.texcoords.size(), (int)obj.normals.size()};
+  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
+  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
+  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  shape.vertices.reserve(quadspos.size() * 4);
+  for (auto idx = 0; idx < quadspos.size(); idx++) {
+    for (auto c = 0; c < (quadspos[idx].z == quadspos[idx].w ? 3 : 4); c++) {
+      shape.vertices.push_back({
+          quadspos.empty() ? 0 : quadspos[idx][c] + vert_size.position + 1,
+          quadstexcoord.empty()
+              ? 0
+              : quadstexcoord[idx][c] + vert_size.texcoord + 1,
+          quadsnorm.empty() ? 0 : quadsnorm[idx][c] + vert_size.normal + 1,
+      });
+    }
+  }
 }
 
 // Read obj
