@@ -1594,13 +1594,24 @@ void load_mtl(const string& filename, obj_model& obj, bool fliptr = true) {
     } else if (cmd == "Tf") {
       obj.materials.back().transmission = vec3f{-1};
       parse_obj_value(line, obj.materials.back().transmission);
-      if (obj.materials.back().transmission.y < 0) obj.materials.back().transmission = vec3f{obj.materials.back().transmission.x};
-      if (fliptr) obj.materials.back().transmission = 1 - obj.materials.back().transmission;
+      if (obj.materials.back().transmission.y < 0)
+        obj.materials.back().transmission = vec3f{
+            obj.materials.back().transmission.x};
+      if (fliptr)
+        obj.materials.back().transmission = 1 -
+                                            obj.materials.back().transmission;
     } else if (cmd == "Tr") {
       parse_obj_value(line, obj.materials.back().opacity);
-      if (fliptr) obj.materials.back().opacity = 1 - obj.materials.back().opacity;
+      if (fliptr)
+        obj.materials.back().opacity = 1 - obj.materials.back().opacity;
     } else if (cmd == "Ns") {
       parse_obj_value(line, obj.materials.back().exponent);
+      obj.materials.back().pbr_roughness = pow(
+          2 / (obj.materials.back().pbr_roughness + 2), 1 / 4.0f);
+      if (obj.materials.back().pbr_roughness < 0.01f)
+        obj.materials.back().pbr_roughness = 0;
+      if (obj.materials.back().pbr_roughness > 0.99f)
+        obj.materials.back().pbr_roughness = 1;
     } else if (cmd == "d") {
       parse_obj_value(line, obj.materials.back().opacity);
     } else if (cmd == "map_Ke") {
@@ -1668,7 +1679,6 @@ void load_mtl(const string& filename, obj_model& obj, bool fliptr = true) {
 void load_objx(const string& filename, obj_model& obj) {
   // open file
   auto fs = open_file(filename, "rt");
-
 }
 
 // Read obj
@@ -1682,7 +1692,7 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
   auto oname     = ""s;
   auto gname     = ""s;
   auto mname     = ""s;
-  auto mtllibs = vector<string>{};
+  auto mtllibs   = vector<string>{};
 
   // initialize obj
   obj = {};
@@ -1782,7 +1792,7 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
       if (geom_only) continue;
       auto mtllib = ""s;
       parse_obj_value(line, mtllib);
-      if(std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
+      if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
       }
     } else {
@@ -1795,13 +1805,13 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
 
   // load materials
   auto dirname = get_dirname(filename);
-  for(auto& mtllib : mtllibs) {
+  for (auto& mtllib : mtllibs) {
     load_mtl(dirname + mtllib, obj);
   }
 
   // load extensions
   auto extfilename = replace_extension(filename, ".objx");
-  if(exists_file(extfilename)) {
+  if (exists_file(extfilename)) {
     load_objx(extfilename, obj);
   }
 }
