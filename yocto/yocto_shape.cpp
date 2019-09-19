@@ -3716,6 +3716,9 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   } else {
     throw std::runtime_error("do not support empty shapes");
   }
+
+  // Save
+  save_obj(filename, obj);
 }
 
 #endif

@@ -1684,7 +1684,7 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
 }
 
 // Read obj
-void save_obj(const string& filename, obj_model& obj) {
+void save_obj(const string& filename, const obj_model& obj) {
   // open file
   auto fs = open_file(filename, "wt");
 
@@ -1746,8 +1746,6 @@ void save_obj(const string& filename, obj_model& obj) {
     }
     checked_fprintf(fs, "\n");
   }
-
-  //
 }
 
 // Get obj vertices
