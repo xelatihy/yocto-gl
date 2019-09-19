@@ -407,27 +407,24 @@ void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
 bool has_obj_quads(const obj_shape& shape);
 
 // Add obj shape
-void add_obj_triangles(obj_model& obj, const string& name,
+void add_obj_triangles(obj_model& obj, obj_shape& shape,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<string>& materials, const vector<int>& ematerials);
-void add_obj_quads(obj_model& obj, const string& name,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<string>& materials, const vector<int>& ematerials);
-void add_obj_lines(obj_model& obj, const string& name,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<string>& materials, const vector<int>& ematerials);
-void add_obj_points(obj_model& obj, const string& name,
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<string>& materials, const vector<int>& ematerials);
-void add_obj_fvquads(obj_model& obj, const string& name,
+    const vector<int>& ematerials = {});
+void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {});
+void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {});
+void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {});
+void add_obj_fvquads(obj_model& obj, obj_shape& shape,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<string>& materials, const vector<int>& ematerials);
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords, 
+    const vector<int>& ematerials = {});
 
 // Obj command
 enum struct obj_command {

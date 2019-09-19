@@ -1987,7 +1987,7 @@ vector<obj_vertex> add_obj_vertices(obj_model& obj,
 }
 
 // Add obj shape
-void set_obj_triangles(obj_model& obj, obj_shape& shape,
+void add_obj_triangles(obj_model& obj, obj_shape& shape,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<int>& ematerials) {
@@ -1996,7 +1996,8 @@ void set_obj_triangles(obj_model& obj, obj_shape& shape,
   obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
   obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
   obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
-  for (auto& triangle : triangles) {
+  for (auto idx = 0; idx < triangles.size(); idx++) {
+    auto& triangle = triangles[idx];
     for (auto c = 0; c < 3; c++) {
       shape.vertices.push_back({
           positions.empty() ? 0 : triangle[c] + vert_size.position + 1,
@@ -2004,9 +2005,10 @@ void set_obj_triangles(obj_model& obj, obj_shape& shape,
           normals.empty() ? 0 : triangle[c] + vert_size.normal + 1,
       });
     }
+    shape.faces.push_back({3, ematerials.empty() ? 0 : ematerials[idx]});
   }
 }
-void set_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
+void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
@@ -2015,7 +2017,8 @@ void set_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
   obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
   obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
   shape.vertices.reserve(quads.size() * 4);
-  for (auto& quad : quads) {
+  for (auto idx = 0; idx < quads.size(); idx++) {
+    auto& quad = quads[idx];
     for (auto c = 0; c < (quad.z == quad.w ? 3 : 4); c++) {
       shape.vertices.push_back({
           positions.empty() ? 0 : quad[c] + vert_size.position + 1,
@@ -2023,9 +2026,11 @@ void set_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
           normals.empty() ? 0 : quad[c] + vert_size.normal + 1,
       });
     }
+    shape.faces.push_back(
+        {(quad.z == quad.w ? 3 : 4), ematerials.empty() ? 0 : ematerials[idx]});
   }
 }
-void set_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
+void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
@@ -2034,7 +2039,8 @@ void set_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
   obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
   obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
   shape.vertices.reserve(lines.size() * 2);
-  for (auto& line : lines) {
+  for (auto idx = 0; idx < lines.size(); idx++) {
+    auto& line = lines[idx];
     for (auto c = 0; c < 2; c++) {
       shape.vertices.push_back({
           positions.empty() ? 0 : line[c] + vert_size.position + 1,
@@ -2042,9 +2048,10 @@ void set_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
           normals.empty() ? 0 : line[c] + vert_size.normal + 1,
       });
     }
+    shape.lines.push_back({2, ematerials.empty() ? 0 : ematerials[idx]});
   }
 }
-void set_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
+void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<int>& ematerials) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
@@ -2053,18 +2060,21 @@ void set_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
   obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
   obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
   shape.vertices.reserve(points.size());
-  for (auto& point : points) {
+  for (auto idx = 0; idx < points.size(); idx++) {
+    auto& point = points[idx];
     shape.vertices.push_back({
         positions.empty() ? 0 : point + vert_size.position + 1,
         texcoords.empty() ? 0 : point + vert_size.texcoord + 1,
         normals.empty() ? 0 : point + vert_size.normal + 1,
     });
+    shape.faces.push_back({1, ematerials.empty() ? 0 : ematerials[idx]});
   }
 }
 void add_obj_fvquads(obj_model& obj, obj_shape& shape,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords) {
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<int>& ematerials) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
       (int)obj.texcoords.size(), (int)obj.normals.size()};
   obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
@@ -2081,6 +2091,8 @@ void add_obj_fvquads(obj_model& obj, obj_shape& shape,
           quadsnorm.empty() ? 0 : quadsnorm[idx][c] + vert_size.normal + 1,
       });
     }
+    shape.faces.push_back({(quadspos[idx].z == quadspos[idx].w ? 3 : 4),
+        ematerials.empty() ? 0 : ematerials[idx]});
   }
 }
 

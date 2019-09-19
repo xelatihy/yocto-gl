@@ -3697,10 +3697,19 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, bool flip_texcoord) {
-  auto fs = open_file(filename, "w");
+  // Obj model
+  auto obj = obj_model{};
 
-  write_obj_comment(
-      fs, "Written by Yocto/GL\nhttps://github.com/xelatihy/yocto-gl\n");
+  // Add obj data
+  auto& shape = obj.shapes.emplace_back();
+  if(!triangles.empty()) {
+    set_obj_triangles(obj, shape, positions, normals, texcoords);
+  } else if(!quads.empty()) {
+  } else if(!lines.empty()) {
+  } else if(!points.empty()) {
+  } else if(!quadspos.empty()) {
+
+  }
 
   for (auto& p : positions)
     write_obj_command(fs, obj_command::vertex, make_obj_value(p));
