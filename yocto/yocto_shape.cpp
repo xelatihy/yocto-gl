@@ -526,11 +526,11 @@ void meandering_triangles(const vector<float>& field, float isoline,
     vector<int>& tags, vector<vec3f>& positions, vector<vec3f>& normals) {
   auto num_triangles = triangles.size();
 
-  // Keep track of the added vertex on each splitted edge.
+  // Edgemap to keep track of the added vertex on each splitted edge.
   // key: edge (ordered pair), value: vertex index
-  auto edgemap = unordered_map<vec2i, int>();
+  auto emap = unordered_map<vec2i, int>();
 
-  // define helper procedures
+  // Helper procedures.
   auto make_edge = [](int a, int b) {
     return a < b ? vec2i{a, b} : vec2i{b, a};
   };
@@ -547,76 +547,76 @@ void meandering_triangles(const vector<float>& field, float isoline,
   for (int i = 0; i < num_triangles; ++i) {
     if (tags[i] != selected_tag) continue;
 
-    auto& triangle = triangles[i];
+    auto tr = triangles[i];
 
-    auto pos0 = field[triangle.x] > isoline;
-    auto pos1 = field[triangle.y] > isoline;
-    auto pos2 = field[triangle.z] > isoline;
+    // Find which vertex has different tag, so that we can reorder the tr
+    // such that the z vertex is the one with different tag.
+    int j = -1;
+    for (int k = 0; k < 3; k++) {
+      if (get_tag(tr[k]) != get_tag(tr[(k + 1) % 3]) &&
+          get_tag(tr[k]) != get_tag(tr[(k + 2) % 3])) {
+        j = k;
+      }
+    }
 
-    if (pos0 == pos1 and pos1 == pos2) {
-      tags[i] = get_tag(triangle.x);
+    // If all vertex have the same tag, then tag the whole tr and continue
+    if (j == -1) {
+      tags[i] = get_tag(tr.x);
       continue;
     }
 
-    // triangles[i] = {-1, -1, -1};
-    // continue;
+    tr = {tr[(j + 2) % 3], tr[(j + 1) % 3], tr[j]};
 
-    int diff;  // which vertex has different sign? 0, 1, or 2?
-    if (pos1 == pos2) diff = 0;
-    if (pos0 == pos2) diff = 1;
-    if (pos0 == pos1) diff = 2;
+    auto values = vec3f{field[tr.x], field[tr.y], field[tr.z]};
+    values -= isoline;
 
-    auto tri = vec3i{
-        triangle[(diff + 2) % 3], triangle[(diff + 1) % 3], triangle[diff]};
-
-    auto values = vec3f{field[tri.x], field[tri.y], field[tri.z]};
-    values -= vec3f{isoline, isoline, isoline};
-
+    // Create or retrieve new vertices that split the edges
     int new_verts[2];
-
     for (int k : {0, 1}) {
-      int   vert  = tri[k];
-      float a     = values[k];
-      float b     = values.z;
-      float alpha = fabs(a / (b - a));
-      auto  edge  = make_edge(tri.z, vert);
-      auto  it    = edgemap.find(edge);
+      int   vert = tr[k];
+      float a    = values[k];
+      float b    = values.z;
+      auto  edge = make_edge(tr.z, vert);
+      auto  it   = emap.find(edge);
 
-      if (it != edgemap.end()) {
-        // Edge already processed
+      if (it != emap.end()) {
+        // Edge already processed.
         new_verts[k] = it->second;
       } else {
-        new_verts[k] = add_vertex(tri.z, vert, alpha);
-        edgemap.insert(it, {edge, new_verts[k]});
+        // Compute new vertex via interpolation.
+        float alpha  = fabs(a / (b - a));
+        new_verts[k] = add_vertex(tr.z, vert, alpha);
+        emap.insert(it, {edge, new_verts[k]});
       }
     }
 
     /*
-                     tri.z
+                     tr.z
                        /\
                       /  \
                      /    \
                     /  i   \
                    /        \
     new_verts[1]  /..........\  new_verts[0]
-                 /   .  nf[0] \
+                 /   . n_f[0] \
                 /       .      \
                /           .    \
               / new_faces[1]  .  \
              /___________________.\
-       tri.y                      tri.x
+       tr.y                      tr.x
 
     */
 
-    triangles.push_back({new_verts[0], new_verts[1], tri.x});
-    tags.push_back(get_tag(tri.x));
+    // Add two new faces.
+    triangles.push_back({new_verts[0], new_verts[1], tr.x});
+    tags.push_back(get_tag(tr.x));
 
-    triangles.push_back({tri.y, tri.x, new_verts[1]});
-    tags.push_back(get_tag(tri.y));
+    triangles.push_back({tr.y, tr.x, new_verts[1]});
+    tags.push_back(get_tag(tr.y));
 
-    // Edit old face
-    triangles[i] = vec3i{new_verts[0], tri.z, new_verts[1]};
-    tags[i]      = get_tag(tri.z);
+    // Edit old face.
+    triangles[i] = vec3i{new_verts[0], tr.z, new_verts[1]};
+    tags[i]      = get_tag(tr.z);
   }
 }
 
