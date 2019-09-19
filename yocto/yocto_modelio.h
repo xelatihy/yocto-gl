@@ -423,7 +423,7 @@ void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
 void add_obj_fvquads(obj_model& obj, obj_shape& shape,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, 
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<int>& ematerials = {});
 
 // Obj command

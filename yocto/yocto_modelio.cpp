@@ -2094,8 +2094,9 @@ void add_obj_fvquads(obj_model& obj, obj_shape& shape,
           quadsnorm.empty() ? 0 : quadsnorm[idx][c] + vert_size.normal + 1,
       });
     }
-    shape.faces.push_back({quadspos[idx].z == quadspos[idx].w ? (uint8_t)3 : (uint8_t)4,
-        ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
+    shape.faces.push_back(
+        {quadspos[idx].z == quadspos[idx].w ? (uint8_t)3 : (uint8_t)4,
+            ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
 

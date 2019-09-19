@@ -3702,20 +3702,20 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
 
   // Add obj data
   auto& shape = obj.shapes.emplace_back();
-  if(!triangles.empty()) {
+  if (!triangles.empty()) {
     add_obj_triangles(obj, shape, triangles, positions, normals, texcoords);
-  } else if(!quads.empty()) {
+  } else if (!quads.empty()) {
     add_obj_quads(obj, shape, quads, positions, normals, texcoords);
-  } else if(!lines.empty()) {
+  } else if (!lines.empty()) {
     add_obj_lines(obj, shape, lines, positions, normals, texcoords);
-  } else if(!points.empty()) {
+  } else if (!points.empty()) {
     add_obj_points(obj, shape, points, positions, normals, texcoords);
-  } else if(!quadspos.empty()) {
-    add_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
+  } else if (!quadspos.empty()) {
+    add_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords);
   } else {
     throw std::runtime_error("do not support empty shapes");
   }
-
 }
 
 #endif
