@@ -396,22 +396,40 @@ struct obj_material {
 
 // Obj camera
 struct obj_camera {
-  string name = "";
+  string  name     = "";
+  frame3f frame    = identity3x4f;
+  bool    ortho    = false;
+  float   width    = 0.036;
+  float   height   = 0.028;
+  float   lens     = 0.50;
+  float   focus    = 0;
+  float   aperture = 0;
 };
 
 // Obj environment
 struct obj_environment {
-  string name = "";
+  string           name         = "";
+  frame3f          frame        = identity3x4f;
+  vec3f            emission     = zero3f;
+  obj_texture_info emission_map = {};
 };
 
 // Obj instance
 struct obj_instance {
-  string name = "";
+  string  name     = "";
+  frame3f frame    = identity3x4f;
+  string  object   = "";
+  string  material = "";
 };
 
 // Obj peocedural
 struct obj_procedural {
-  string name = "";
+  string  name     = "";
+  frame3f frame    = identity3x4f;
+  string  type   = "";
+  string  material = "";
+  float   size = 1;
+  int level = 0;
 };
 
 // Obj model
@@ -519,14 +537,14 @@ enum struct objx_command {
   // clang-format off
   // object names
   camera, environment, instance, procedural,
-  // object frames
-  frame,
   // camera values
-  ortho, width, height, lens, aperture, focus,
+  cam_frame, cam_ortho, cam_width, cam_height, cam_lens, cam_aperture, cam_focus,
   // environment values
-  emission, emission_map,
-  // instance/procedural values
-  object, material
+  env_frame, env_emission, env_emission_map,
+  // instance values
+  ist_frame, ist_object, ist_material,
+  // procedural values
+  prc_frame, prc_type, prc_material, prc_size, prc_level
   // clang-format on
 };
 

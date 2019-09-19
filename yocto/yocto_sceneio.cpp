@@ -1211,41 +1211,41 @@ static void load_objx(const string& filename, yocto_scene& scene,
     } else if (ptype == parsing_type::camera) {
       auto& camera = scene.cameras.back();
       switch (command) {
-        case objx_command::frame: get_obj_value(value, camera.frame); break;
-        case objx_command::ortho:
+        case objx_command::cam_frame: get_obj_value(value, camera.frame); break;
+        case objx_command::cam_ortho:
           get_obj_value(value, camera.orthographic);
           break;
-        case objx_command::width: get_obj_value(value, camera.film.x); break;
-        case objx_command::height: get_obj_value(value, camera.film.y); break;
-        case objx_command::lens: get_obj_value(value, camera.lens); break;
-        case objx_command::aperture:
+        case objx_command::cam_width: get_obj_value(value, camera.film.x); break;
+        case objx_command::cam_height: get_obj_value(value, camera.film.y); break;
+        case objx_command::cam_lens: get_obj_value(value, camera.lens); break;
+        case objx_command::cam_aperture:
           get_obj_value(value, camera.aperture);
           break;
-        case objx_command::focus: get_obj_value(value, camera.focus); break;
+        case objx_command::cam_focus: get_obj_value(value, camera.focus); break;
         default: throw std::runtime_error("bad objx"); break;
       }
     } else if (ptype == parsing_type::environment) {
       auto& environment = scene.environments.back();
       switch (command) {
-        case objx_command::frame:
+        case objx_command::env_frame:
           get_obj_value(value, environment.frame);
           break;
-        case objx_command::emission:
+        case objx_command::env_emission:
           get_obj_value(value, environment.emission);
           break;
-        case objx_command::emission_map:
+        case objx_command::env_emission_map:
           environment.emission_tex = add_texture(texture, false);
           break;
         default: throw std::runtime_error("bad objx"); break;
       }
     } else if (ptype == parsing_type::instance) {
       switch (command) {
-        case objx_command::frame: {
+        case objx_command::ist_frame: {
           for (auto& ist : instances_idx) {
             get_obj_value(value, scene.instances[ist].frame);
           }
         } break;
-        case objx_command::material: {
+        case objx_command::ist_material: {
           auto name = ""s;
           get_obj_value(value, name);
           auto ist_material = mmap.at(name);
@@ -1253,7 +1253,7 @@ static void load_objx(const string& filename, yocto_scene& scene,
             scene.instances[ist].material = ist_material;
           }
         } break;
-        case objx_command::object: {
+        case objx_command::ist_object: {
           auto name = ""s;
           get_obj_value(value, name);
           auto& shapes = object_shapes.at(name);
@@ -1276,8 +1276,8 @@ static void load_objx(const string& filename, yocto_scene& scene,
       auto& shape    = scene.shapes.back();
       auto& instance = scene.instances.back();
       switch (command) {
-        case objx_command::frame: get_obj_value(value, instance.frame); break;
-        case objx_command::material: {
+        case objx_command::prc_frame: get_obj_value(value, instance.frame); break;
+        case objx_command::prc_material: {
           auto name = ""s;
           get_obj_value(value, name);
           if (mmap.find(name) == mmap.end()) {
@@ -1286,7 +1286,7 @@ static void load_objx(const string& filename, yocto_scene& scene,
             instance.material = mmap.find(name)->second;
           }
         } break;
-        case objx_command::object: {
+        case objx_command::prc_type: {
           auto name = ""s;
           get_obj_value(value, name);
           if (name == "floor") {
@@ -1795,14 +1795,14 @@ static void save_objx(
     write_objx_command(fs, objx_command::camera, make_obj_value(camera.uri));
     if (camera.orthographic)
       write_objx_command(
-          fs, objx_command::ortho, make_obj_value((float)camera.orthographic));
-    write_objx_command(fs, objx_command::width, make_obj_value(camera.film.x));
-    write_objx_command(fs, objx_command::height, make_obj_value(camera.film.y));
-    write_objx_command(fs, objx_command::lens, make_obj_value(camera.lens));
-    write_objx_command(fs, objx_command::focus, make_obj_value(camera.focus));
+          fs, objx_command::cam_ortho, make_obj_value((float)camera.orthographic));
+    write_objx_command(fs, objx_command::cam_width, make_obj_value(camera.film.x));
+    write_objx_command(fs, objx_command::cam_height, make_obj_value(camera.film.y));
+    write_objx_command(fs, objx_command::cam_lens, make_obj_value(camera.lens));
+    write_objx_command(fs, objx_command::cam_focus, make_obj_value(camera.focus));
     write_objx_command(
-        fs, objx_command::aperture, make_obj_value(camera.aperture));
-    write_objx_command(fs, objx_command::frame, make_obj_value(camera.frame));
+        fs, objx_command::cam_aperture, make_obj_value(camera.aperture));
+    write_objx_command(fs, objx_command::cam_frame, make_obj_value(camera.frame));
   }
 
   // environments
@@ -1810,12 +1810,12 @@ static void save_objx(
     write_objx_command(
         fs, objx_command::environment, make_obj_value(environment.uri));
     write_objx_command(
-        fs, objx_command::emission, make_obj_value(environment.emission));
+        fs, objx_command::env_emission, make_obj_value(environment.emission));
     if (environment.emission_tex >= 0)
-      write_objx_command(fs, objx_command::emission_map, {},
+      write_objx_command(fs, objx_command::env_emission_map, {},
           scene.textures[environment.emission_tex].uri);
     write_objx_command(
-        fs, objx_command::frame, make_obj_value(environment.frame));
+        fs, objx_command::env_frame, make_obj_value(environment.frame));
   }
 
   // instances
@@ -1823,12 +1823,12 @@ static void save_objx(
     for (auto& instance : scene.instances) {
       write_objx_command(
           fs, objx_command::instance, make_obj_value(instance.uri));
-      write_objx_command(fs, objx_command::object,
+      write_objx_command(fs, objx_command::ist_object,
           make_obj_value(scene.shapes[instance.shape].uri));
-      write_objx_command(fs, objx_command::material,
+      write_objx_command(fs, objx_command::ist_material,
           make_obj_value(scene.materials[instance.material].uri));
       write_objx_command(
-          fs, objx_command::frame, make_obj_value(instance.frame));
+          fs, objx_command::ist_frame, make_obj_value(instance.frame));
     }
   }
 }
