@@ -1,5 +1,4 @@
 cameras:
-
   - uri: cameras/default.yaml
     lens: 0.05
     aperture: 0.0
