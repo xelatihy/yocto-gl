@@ -1611,12 +1611,14 @@ void load_mtl(const string& filename, obj_model& obj, bool fliptr = true) {
         obj.materials.back().opacity = 1 - obj.materials.back().opacity;
     } else if (cmd == "Ns") {
       parse_obj_value(line, obj.materials.back().exponent);
-      obj.materials.back().pbr_roughness = pow(
-          2 / (obj.materials.back().pbr_roughness + 2), 1 / 4.0f);
-      if (obj.materials.back().pbr_roughness < 0.01f)
-        obj.materials.back().pbr_roughness = 0;
-      if (obj.materials.back().pbr_roughness > 0.99f)
-        obj.materials.back().pbr_roughness = 1;
+      auto roughness = obj.materials.back().exponent;
+      roughness = pow(
+          2 / (roughness + 2), 1 / 4.0f);
+      if (roughness < 0.01f)
+        roughness = 0;
+      if (roughness > 0.99f)
+        roughness = 1;
+      obj.materials.back().pbr_roughness = roughness;
     } else if (cmd == "d") {
       parse_obj_value(line, obj.materials.back().opacity);
     } else if (cmd == "map_Ke") {

@@ -1688,13 +1688,42 @@ void load_obj(
     }
   }
 
+  // convert environments
+  for(auto& oenvironment : obj.environments) {
+    auto& environment = scene.environments.emplace_back();
+    environment.uri = oenvironment.name;
+    environment.frame = oenvironment.frame;
+    environment.emission = oenvironment.emission;
+    environment.emission_tex = get_texture(oenvironment.emission_map);
+  }
+
   // convert instances
   if(!obj.instances.empty()) {
-    // HO SCAZZATO!!!!!!
-    auto shape_map = vector<vector<int>>{};
+    auto shape_map = unordered_map<string, vector<int>>{{"", {}}};
+    for(auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
+      shape_map[scene.shapes[shape_id].uri].push_back(shape_id);
+    }
+    for(auto& oinstance : obj.instances) {
+      if(shape_map.find(oinstance.name) == shape_map.end()) 
+        throw std::runtime_error("cannot find object " + oinstance.object);
+      if(material_map.find(oinstance.name) == material_map.end()) 
+        throw std::runtime_error("cannot find material " + oinstance.material);
+      auto material_id = material_map.at(oinstance.material);
+      for(auto shape_id : shape_map.at(oinstance.object)) {
+        auto& instance = scene.instances.emplace_back();
+        instance.uri = oinstance.name;
+        instance.frame = oinstance.frame;
+        instance.shape = shape_id;
+        instance.material = material_id;
+      }
+    }
   }
 
   // convert procedurals
+  if(!obj.procedurals.empty()) {
+    throw std::runtime_error("not implemented yet");
+  }
+
 }
 
 #endif
