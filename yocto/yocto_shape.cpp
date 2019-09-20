@@ -3664,30 +3664,25 @@ static void load_obj_shape(const string& filename, vector<int>& points,
   auto has_quads  = has_obj_quads(shape);
   if (!shape.faces.empty() && !facevarying && !has_quads) {
     get_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
-        materials, ematerials);
+        materials, ematerials, flip_texcoord);
   } else if (!shape.faces.empty() && !facevarying && has_quads) {
     get_obj_quads(obj, shape, quads, positions, normals, texcoords, materials,
-        ematerials);
+        ematerials, flip_texcoord);
   } else if (!shape.lines.empty()) {
     get_obj_lines(obj, shape, lines, positions, normals, texcoords, materials,
-        ematerials);
+        ematerials, flip_texcoord);
   } else if (!shape.points.empty()) {
     get_obj_points(obj, shape, points, positions, normals, texcoords, materials,
-        ematerials);
+        ematerials, flip_texcoord);
   } else if (!shape.faces.empty() && facevarying) {
     get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords, materials, ematerials);
+        normals, texcoords, materials, ematerials, flip_texcoord);
   } else {
     throw std::runtime_error("should not have gotten here");
   }
 
   if (positions.empty())
     throw std::runtime_error("vertex positions not present");
-
-  // fix texture coordinates
-  if (flip_texcoord && !texcoords.empty()) {
-    for (auto& uv : texcoords) uv.y = 1 - uv.y;
-  }
 }
 
 // Load ply mesh
@@ -3703,16 +3698,16 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   // Add obj data
   auto& shape = obj.shapes.emplace_back();
   if (!triangles.empty()) {
-    add_obj_triangles(obj, shape, triangles, positions, normals, texcoords);
+    add_obj_triangles(obj, shape, triangles, positions, normals, texcoords, {}, flip_texcoord);
   } else if (!quads.empty()) {
-    add_obj_quads(obj, shape, quads, positions, normals, texcoords);
+    add_obj_quads(obj, shape, quads, positions, normals, texcoords, {}, flip_texcoord);
   } else if (!lines.empty()) {
-    add_obj_lines(obj, shape, lines, positions, normals, texcoords);
+    add_obj_lines(obj, shape, lines, positions, normals, texcoords, {}, flip_texcoord);
   } else if (!points.empty()) {
-    add_obj_points(obj, shape, points, positions, normals, texcoords);
+    add_obj_points(obj, shape, points, positions, normals, texcoords, {}, flip_texcoord);
   } else if (!quadspos.empty()) {
     add_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords);
+        normals, texcoords, {}, flip_texcoord);
   } else {
     throw std::runtime_error("do not support empty shapes");
   }

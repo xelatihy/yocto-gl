@@ -2242,16 +2242,29 @@ vector<obj_vertex> add_obj_vertices(obj_model& obj,
   return vertices;
 }
 
+void add_obj_vertices(obj_model& obj,
+    const vector<vec3f>& positions, const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    bool flip_texcoord) {
+  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
+  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
+  if(flip_texcoord) {
+    auto flipped = vector<vec2f>(texcoords.size());
+    for(auto idx = 0; idx < texcoords.size(); idx++) flipped[idx] = {texcoords[idx].x, 1 - texcoords[idx].y};
+    obj.texcoords.insert(obj.texcoords.end(), flipped.begin(), flipped.end());
+  } else {
+    obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  }
+}
+
+
 // Add obj shape
 void add_obj_triangles(obj_model& obj, obj_shape& shape,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials) {
+    const vector<int>& ematerials, bool flip_texcoord) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
       (int)obj.texcoords.size(), (int)obj.normals.size()};
-  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
-  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
-  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  add_obj_vertices(obj, positions, normals, texcoords, flip_texcoord);
   for (auto idx = 0; idx < triangles.size(); idx++) {
     auto& triangle = triangles[idx];
     for (auto c = 0; c < 3; c++) {
@@ -2267,12 +2280,10 @@ void add_obj_triangles(obj_model& obj, obj_shape& shape,
 }
 void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials) {
+    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flip_texcoord) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
       (int)obj.texcoords.size(), (int)obj.normals.size()};
-  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
-  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
-  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  add_obj_vertices(obj, positions, normals, texcoords, flip_texcoord);
   shape.vertices.reserve(quads.size() * 4);
   for (auto idx = 0; idx < quads.size(); idx++) {
     auto& quad = quads[idx];
@@ -2289,12 +2300,10 @@ void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
 }
 void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials) {
+    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flip_texcoord) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
       (int)obj.texcoords.size(), (int)obj.normals.size()};
-  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
-  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
-  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  add_obj_vertices(obj, positions, normals, texcoords, flip_texcoord);
   shape.vertices.reserve(lines.size() * 2);
   for (auto idx = 0; idx < lines.size(); idx++) {
     auto& line = lines[idx];
@@ -2311,12 +2320,10 @@ void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
 }
 void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials) {
+    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flip_texcoord) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
       (int)obj.texcoords.size(), (int)obj.normals.size()};
-  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
-  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
-  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  add_obj_vertices(obj, positions, normals, texcoords, flip_texcoord);
   shape.vertices.reserve(points.size());
   for (auto idx = 0; idx < points.size(); idx++) {
     auto& point = points[idx];
@@ -2333,12 +2340,10 @@ void add_obj_fvquads(obj_model& obj, obj_shape& shape,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials) {
+    const vector<int>& ematerials, bool flip_texcoord) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
       (int)obj.texcoords.size(), (int)obj.normals.size()};
-  obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
-  obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
-  obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+  add_obj_vertices(obj, positions, normals, texcoords, flip_texcoord);
   shape.vertices.reserve(quadspos.size() * 4);
   for (auto idx = 0; idx < quadspos.size(); idx++) {
     for (auto c = 0; c < (quadspos[idx].z == quadspos[idx].w ? 3 : 4); c++) {

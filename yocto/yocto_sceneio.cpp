@@ -1657,19 +1657,19 @@ void load_obj(
     auto  has_quads  = has_obj_quads(oshape);
     if (!oshape.faces.empty() && !params.facevarying && !has_quads) {
       get_obj_triangles(obj, oshape, shape.triangles, shape.positions, shape.normals, shape.texcoords,
-          materials, ematerials);
+          materials, ematerials, true);
     } else if (!oshape.faces.empty() && !params.facevarying && has_quads) {
       get_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals, shape.texcoords, materials,
-          ematerials);
+          ematerials, true);
     } else if (!oshape.lines.empty()) {
       get_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals, shape.texcoords, materials,
-          ematerials);
+          ematerials, true);
     } else if (!oshape.points.empty()) {
       get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals, shape.texcoords,
-          materials, ematerials);
+          materials, ematerials, true);
     } else if (!oshape.faces.empty() && params.facevarying) {
       get_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-          shape.normals, shape.texcoords, materials, ematerials);
+          shape.normals, shape.texcoords, materials, ematerials, true);
     } else {
       throw std::runtime_error("should not have gotten here");
     }
