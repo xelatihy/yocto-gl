@@ -1693,7 +1693,6 @@ void load_objx(const string& filename, obj_model& obj) {
 
   // read the file line by line
   char buffer[4096];
-  auto pos = ftell(fs.fs);
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
@@ -1725,7 +1724,7 @@ void load_objx(const string& filename, obj_model& obj) {
     } else if (cmd == "Caperture") {
       parse_obj_value(line, obj.cameras.back().aperture);
     } else if (cmd == "newenv") {
-      obj.cameras.emplace_back();
+      obj.environments.emplace_back();
       parse_obj_value(line, obj.environments.back().name);
     } else if (cmd == "Eframe") {
       parse_obj_value(line, obj.environments.back().frame);
@@ -1734,7 +1733,7 @@ void load_objx(const string& filename, obj_model& obj) {
     } else if (cmd == "map_Ee") {
       parse_obj_value(line, obj.environments.back().emission_map);
     } else if (cmd == "newist") {
-      obj.cameras.emplace_back();
+      obj.instances.emplace_back();
       parse_obj_value(line, obj.instances.back().name);
     } else if (cmd == "Iframe") {
       parse_obj_value(line, obj.instances.back().frame);
@@ -1743,7 +1742,7 @@ void load_objx(const string& filename, obj_model& obj) {
     } else if (cmd == "Imat") {
       parse_obj_value(line, obj.instances.back().material);
     } else if (cmd == "newproc") {
-      obj.cameras.emplace_back();
+      obj.procedurals.emplace_back();
       parse_obj_value(line, obj.procedurals.back().name);
     } else if (cmd == "Pframe") {
       parse_obj_value(line, obj.procedurals.back().frame);
@@ -1791,6 +1790,12 @@ void load_objx(const string& filename, obj_model& obj) {
       // unused
     }
   }
+    
+  // cleanup unused
+  obj.cameras.erase(obj.cameras.begin());
+  obj.environments.erase(obj.environments.begin());
+  obj.instances.erase(obj.instances.begin());
+  obj.procedurals.erase(obj.procedurals.begin());
 }
 
 // Read obj

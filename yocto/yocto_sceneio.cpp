@@ -1006,6 +1006,8 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#ifdef YOCTO_OLD_OBJ
+
 // Loads an MTL
 static void load_mtl(const string& filename, yocto_scene& scene,
     unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
@@ -1215,8 +1217,12 @@ static void load_objx(const string& filename, yocto_scene& scene,
         case objx_command::cam_ortho:
           get_obj_value(value, camera.orthographic);
           break;
-        case objx_command::cam_width: get_obj_value(value, camera.film.x); break;
-        case objx_command::cam_height: get_obj_value(value, camera.film.y); break;
+        case objx_command::cam_width:
+          get_obj_value(value, camera.film.x);
+          break;
+        case objx_command::cam_height:
+          get_obj_value(value, camera.film.y);
+          break;
         case objx_command::cam_lens: get_obj_value(value, camera.lens); break;
         case objx_command::cam_aperture:
           get_obj_value(value, camera.aperture);
@@ -1276,7 +1282,9 @@ static void load_objx(const string& filename, yocto_scene& scene,
       auto& shape    = scene.shapes.back();
       auto& instance = scene.instances.back();
       switch (command) {
-        case objx_command::prc_frame: get_obj_value(value, instance.frame); break;
+        case objx_command::prc_frame:
+          get_obj_value(value, instance.frame);
+          break;
         case objx_command::prc_material: {
           auto name = ""s;
           get_obj_value(value, name);
@@ -1576,6 +1584,121 @@ static void load_obj(
   }
 }
 
+#else
+
+void load_obj(
+    const string& filename, yocto_scene& scene, const load_params& params) {
+  // load obj
+  auto obj = obj_model{};
+  load_obj(filename, obj, false, true, true);
+
+  // convert cameras
+  for (auto& ocam : obj.cameras) {
+    auto& camera        = scene.cameras.emplace_back();
+    camera.uri          = ocam.name;
+    camera.frame        = ocam.frame;
+    camera.orthographic = ocam.ortho;
+    camera.film         = {ocam.width, ocam.height};
+    camera.focus        = ocam.focus;
+    camera.lens         = ocam.lens;
+    camera.aperture     = ocam.aperture;
+  }
+
+  // helper to create texture maps
+  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto get_texture = [&texture_map, &scene](const obj_texture_info& info) {
+    if (info.path == "") return -1;
+    auto it = texture_map.find(info.path);
+    if (it != texture_map.end()) return it->second;
+    auto& texture            = scene.textures.emplace_back();
+    texture.uri              = info.path;
+    texture_map[texture.uri] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
+  };
+
+  // convert materials and textures
+  auto material_map = unordered_map<string, int>{{"", -1}};
+  for (auto& omat : obj.materials) {
+    auto& material            = scene.materials.emplace_back();
+    material.uri              = omat.name;
+    material.emission         = omat.emission;
+    material.diffuse          = omat.diffuse;
+    material.specular         = omat.specular;
+    material.roughness        = omat.pbr_roughness;
+    material.metallic         = omat.pbr_metallic;
+    material.coat             = omat.reflection;
+    material.transmission     = omat.transmission;
+    material.voltransmission  = omat.vol_transmission;
+    material.volmeanfreepath  = omat.vol_meanfreepath;
+    material.volemission      = omat.vol_emission;
+    material.volscatter       = omat.vol_scattering;
+    material.volanisotropy    = omat.vol_anisotropy;
+    material.volscale         = omat.vol_scale;
+    material.opacity          = omat.opacity;
+    material.emission_tex     = get_texture(omat.emission_map);
+    material.diffuse_tex      = get_texture(omat.diffuse_map);
+    material.specular_tex     = get_texture(omat.specular_map);
+    material.metallic_tex     = get_texture(omat.pbr_metallic_map);
+    material.roughness_tex    = get_texture(omat.pbr_roughness_map);
+    material.transmission_tex = get_texture(omat.transmission_map);
+    material.coat_tex         = get_texture(omat.reflection_map);
+    material.opacity_tex      = get_texture(omat.opacity_map);
+    material.normal_tex       = get_texture(omat.normal_map);
+    // TODO: refract, subsurface_map, vol_scatter
+    material_map[material.uri] = (int)scene.materials.size()-1;
+  }
+
+  // convert shapes
+  for (auto& oshape : obj.shapes) {
+    auto& shape      = scene.shapes.emplace_back();
+    shape.uri = oshape.name;
+    auto  materials  = vector<string>{};
+    auto  ematerials = vector<int>{};
+    auto  has_quads  = has_obj_quads(oshape);
+    if (!oshape.faces.empty() && !params.facevarying && !has_quads) {
+      get_obj_triangles(obj, oshape, shape.triangles, shape.positions, shape.normals, shape.texcoords,
+          materials, ematerials);
+    } else if (!oshape.faces.empty() && !params.facevarying && has_quads) {
+      get_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals, shape.texcoords, materials,
+          ematerials);
+    } else if (!oshape.lines.empty()) {
+      get_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals, shape.texcoords, materials,
+          ematerials);
+    } else if (!oshape.points.empty()) {
+      get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals, shape.texcoords,
+          materials, ematerials);
+    } else if (!oshape.faces.empty() && params.facevarying) {
+      get_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+          shape.normals, shape.texcoords, materials, ematerials);
+    } else {
+      throw std::runtime_error("should not have gotten here");
+    }
+    // make instance
+    if(obj.instances.empty()) {
+      auto& instance = scene.instances.emplace_back();
+      instance.shape = (int)scene.shapes.size()-1;
+      if(oshape.materials.size() != 1) {
+        throw std::runtime_error("missing material for " + oshape.name);
+      }
+      try {
+        instance.material = material_map.at(oshape.materials.at(0));
+      } catch(...) {
+        throw std::runtime_error("cannot find material " + oshape.materials.at(0));
+      }
+    }
+  }
+
+  // convert instances
+  if(!obj.instances.empty()) {
+    // HO SCAZZATO!!!!!!
+    auto shape_map = vector<vector<int>>{};
+  }
+
+  // convert procedurals
+}
+
+#endif
+
 // Loads an OBJ
 static void load_obj_scene(
     const string& filename, yocto_scene& scene, const load_params& params) {
@@ -1794,15 +1917,19 @@ static void save_objx(
   for (auto& camera : scene.cameras) {
     write_objx_command(fs, objx_command::camera, make_obj_value(camera.uri));
     if (camera.orthographic)
-      write_objx_command(
-          fs, objx_command::cam_ortho, make_obj_value((float)camera.orthographic));
-    write_objx_command(fs, objx_command::cam_width, make_obj_value(camera.film.x));
-    write_objx_command(fs, objx_command::cam_height, make_obj_value(camera.film.y));
+      write_objx_command(fs, objx_command::cam_ortho,
+          make_obj_value((float)camera.orthographic));
+    write_objx_command(
+        fs, objx_command::cam_width, make_obj_value(camera.film.x));
+    write_objx_command(
+        fs, objx_command::cam_height, make_obj_value(camera.film.y));
     write_objx_command(fs, objx_command::cam_lens, make_obj_value(camera.lens));
-    write_objx_command(fs, objx_command::cam_focus, make_obj_value(camera.focus));
+    write_objx_command(
+        fs, objx_command::cam_focus, make_obj_value(camera.focus));
     write_objx_command(
         fs, objx_command::cam_aperture, make_obj_value(camera.aperture));
-    write_objx_command(fs, objx_command::cam_frame, make_obj_value(camera.frame));
+    write_objx_command(
+        fs, objx_command::cam_frame, make_obj_value(camera.frame));
   }
 
   // environments
