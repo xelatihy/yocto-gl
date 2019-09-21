@@ -3330,11 +3330,6 @@ static void load_ply_shape(const string& filename, vector<int>& points,
 
   if (positions.empty())
     throw std::runtime_error("vertex positions not present");
-
-  // fix texture coordinated
-  if (flip_texcoord && !texcoords.empty()) {
-    for (auto& uv : texcoords) uv.y = 1 - uv.y;
-  }
 }
 
 // Save ply mesh
