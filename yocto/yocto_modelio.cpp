@@ -155,13 +155,14 @@ static inline void checked_fprintf(file_wrapper& fs, const char* fmt, ...) {
   va_end(args1);
 }
 
-static inline void flip_texcoord(vector<vec2f>& flipped, const vector<vec2f>& texcoord) {
-  for(auto&uv : flipped) uv.y = 1 - uv.y;
+static inline void flip_texcoord(
+    vector<vec2f>& flipped, const vector<vec2f>& texcoord) {
+  for (auto& uv : flipped) uv.y = 1 - uv.y;
 }
 
 static inline vector<vec2f> flip_texcoord(const vector<vec2f>& texcoord) {
   auto flipped = texcoord;
-  for(auto&uv : flipped) uv.y = 1 - uv.y;
+  for (auto& uv : flipped) uv.y = 1 - uv.y;
   return flipped;
 }
 
@@ -759,12 +760,10 @@ vector<vec3f> get_ply_normals(const ply_model& ply) {
   return get_ply_values(ply, "vertex", "nx", "ny", "nz");
 }
 vector<vec2f> get_ply_texcoords(const ply_model& ply, bool flipv) {
-  auto texcoord = has_ply_property(ply, "vertex", "u") ? 
-    get_ply_values(ply, "vertex", "u", "v") :
-    get_ply_values(ply, "vertex", "s", "t");
-  return flipv ? 
-  flip_texcoord(texcoord) : 
-   texcoord;
+  auto texcoord = has_ply_property(ply, "vertex", "u")
+                      ? get_ply_values(ply, "vertex", "u", "v")
+                      : get_ply_values(ply, "vertex", "s", "t");
+  return flipv ? flip_texcoord(texcoord) : texcoord;
 }
 vector<vec4f> get_ply_colors(const ply_model& ply) {
   if (has_ply_property(ply, "vertex", "alpha")) {
@@ -963,8 +962,10 @@ void add_ply_positions(ply_model& ply, const vector<vec3f>& values) {
 void add_ply_normals(ply_model& ply, const vector<vec3f>& values) {
   return add_ply_values(ply, values, "vertex", "nx", "ny", "nz");
 }
-void add_ply_texcoords(ply_model& ply, const vector<vec2f>& values, bool flipv) {
-  return add_ply_values(ply, flipv ? flip_texcoord(values) : values, "vertex", "u", "v");
+void add_ply_texcoords(
+    ply_model& ply, const vector<vec2f>& values, bool flipv) {
+  return add_ply_values(
+      ply, flipv ? flip_texcoord(values) : values, "vertex", "u", "v");
 }
 void add_ply_colors(ply_model& ply, const vector<vec4f>& values) {
   return add_ply_values(ply, values, "vertex", "red", "green", "blue", "alpha");
@@ -1622,14 +1623,6 @@ void load_mtl(const string& filename, obj_model& obj, bool fliptr = true) {
         obj.materials.back().opacity = 1 - obj.materials.back().opacity;
     } else if (cmd == "Ns") {
       parse_obj_value(line, obj.materials.back().exponent);
-      auto roughness = obj.materials.back().exponent;
-      roughness = pow(
-          2 / (roughness + 2), 1 / 4.0f);
-      if (roughness < 0.01f)
-        roughness = 0;
-      if (roughness > 0.99f)
-        roughness = 1;
-      obj.materials.back().pbr_roughness = roughness;
     } else if (cmd == "d") {
       parse_obj_value(line, obj.materials.back().opacity);
     } else if (cmd == "map_Ke") {
@@ -1803,7 +1796,7 @@ void load_objx(const string& filename, obj_model& obj) {
       // unused
     }
   }
-    
+
   // cleanup unused
   obj.cameras.erase(obj.cameras.begin());
   obj.environments.erase(obj.environments.begin());
@@ -2011,6 +2004,16 @@ void save_obj(const string& filename, const obj_model& obj) {
   }
 }
 
+// convert between roughness and exponent
+float obj_exponent_to_roughness(float exponent) {
+  auto roughness = exponent;
+  roughness      = pow(2 / (roughness + 2), 1 / 4.0f);
+  if (roughness < 0.01f) roughness = 0;
+  if (roughness > 0.99f) roughness = 1;
+  return roughness;
+}
+float obj_roughness_to_exponent(float roughness) { throw std::runtime_error("not implemented"); }
+
 // Get obj vertices
 void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
@@ -2034,15 +2037,16 @@ void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
     if (!obj.texcoords.empty() && vert.texcoord)
       texcoords.push_back(obj.texcoords[vert.texcoord - 1]);
   }
-  if(flip_texcoord) {
-    for(auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
+  if (flip_texcoord) {
+    for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
   }
 }
 
 // Get obj vertices
 void get_obj_fvvertices(const obj_model& obj, const obj_shape& shape,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<int>& pindex, vector<int>& nindex, vector<int>& tindex, bool flip_texcoord) {
+    vector<int>& pindex, vector<int>& nindex, vector<int>& tindex,
+    bool flip_texcoord) {
   if (!obj.positions.empty() && shape.vertices[0].position) {
     auto pmap = unordered_map<int, int>{};
     pmap.reserve(shape.vertices.size());
@@ -2091,8 +2095,8 @@ void get_obj_fvvertices(const obj_model& obj, const obj_shape& shape,
       texcoords.push_back(obj.texcoords[vert.texcoord - 1]);
     }
   }
-  if(flip_texcoord) {
-    for(auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
+  if (flip_texcoord) {
+    for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
   }
 }
 
@@ -2103,7 +2107,8 @@ void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
     vector<int>& ematerials, bool flip_texcoord) {
   if (shape.faces.empty()) return;
   auto vindex = vector<int>{};
-  get_obj_vertices(obj, shape, positions, normals, texcoords, vindex, flip_texcoord);
+  get_obj_vertices(
+      obj, shape, positions, normals, texcoords, vindex, flip_texcoord);
   materials = shape.materials;
   triangles.reserve(shape.faces.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
@@ -2123,7 +2128,8 @@ void get_obj_quads(const obj_model& obj, const obj_shape& shape,
     vector<int>& ematerials, bool flip_texcoord) {
   if (shape.faces.empty()) return;
   auto vindex = vector<int>{};
-  get_obj_vertices(obj, shape, positions, normals, texcoords, vindex, flip_texcoord);
+  get_obj_vertices(
+      obj, shape, positions, normals, texcoords, vindex, flip_texcoord);
   materials = shape.materials;
   quads.reserve(shape.faces.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
@@ -2149,7 +2155,8 @@ void get_obj_lines(const obj_model& obj, const obj_shape& shape,
     vector<int>& ematerials, bool flip_texcoord) {
   if (shape.lines.empty()) return;
   auto vindex = vector<int>{};
-  get_obj_vertices(obj, shape, positions, normals, texcoords, vindex, flip_texcoord);
+  get_obj_vertices(
+      obj, shape, positions, normals, texcoords, vindex, flip_texcoord);
   materials = shape.materials;
   lines.reserve(shape.lines.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
@@ -2168,7 +2175,8 @@ void get_obj_points(const obj_model& obj, const obj_shape& shape,
     vector<int>& ematerials, bool flip_texcoord) {
   if (shape.points.empty()) return;
   auto vindex = vector<int>{};
-  get_obj_vertices(obj, shape, positions, normals, texcoords, vindex, flip_texcoord);
+  get_obj_vertices(
+      obj, shape, positions, normals, texcoords, vindex, flip_texcoord);
   materials = shape.materials;
   points.reserve(shape.points.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
@@ -2188,8 +2196,8 @@ void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
     vector<int>& ematerials, bool flip_texcoord) {
   if (shape.faces.empty()) return;
   auto pindex = vector<int>{}, nindex = vector<int>{}, tindex = vector<int>{};
-  get_obj_fvvertices(
-      obj, shape, positions, normals, texcoords, pindex, nindex, tindex, flip_texcoord);
+  get_obj_fvvertices(obj, shape, positions, normals, texcoords, pindex, nindex,
+      tindex, flip_texcoord);
   materials = shape.materials;
   if (shape.vertices[0].position >= 0) quadspos.reserve(shape.faces.size());
   if (shape.vertices[0].normal >= 0) quadsnorm.reserve(shape.faces.size());
@@ -2253,20 +2261,21 @@ vector<obj_vertex> add_obj_vertices(obj_model& obj,
   return vertices;
 }
 
-void add_obj_vertices(obj_model& obj,
-    const vector<vec3f>& positions, const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+void add_obj_vertices(obj_model& obj, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     bool flip_texcoord) {
   obj.positions.insert(obj.positions.end(), positions.begin(), positions.end());
   obj.normals.insert(obj.normals.end(), normals.begin(), normals.end());
-  if(flip_texcoord) {
+  if (flip_texcoord) {
     auto flipped = vector<vec2f>(texcoords.size());
-    for(auto idx = 0; idx < texcoords.size(); idx++) flipped[idx] = {texcoords[idx].x, 1 - texcoords[idx].y};
+    for (auto idx = 0; idx < texcoords.size(); idx++)
+      flipped[idx] = {texcoords[idx].x, 1 - texcoords[idx].y};
     obj.texcoords.insert(obj.texcoords.end(), flipped.begin(), flipped.end());
   } else {
-    obj.texcoords.insert(obj.texcoords.end(), texcoords.begin(), texcoords.end());
+    obj.texcoords.insert(
+        obj.texcoords.end(), texcoords.begin(), texcoords.end());
   }
 }
-
 
 // Add obj shape
 void add_obj_triangles(obj_model& obj, obj_shape& shape,
@@ -2291,7 +2300,8 @@ void add_obj_triangles(obj_model& obj, obj_shape& shape,
 }
 void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flip_texcoord) {
+    const vector<vec2f>& texcoords, const vector<int>& ematerials,
+    bool flip_texcoord) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
       (int)obj.texcoords.size(), (int)obj.normals.size()};
   add_obj_vertices(obj, positions, normals, texcoords, flip_texcoord);
@@ -2311,7 +2321,8 @@ void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
 }
 void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flip_texcoord) {
+    const vector<vec2f>& texcoords, const vector<int>& ematerials,
+    bool flip_texcoord) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
       (int)obj.texcoords.size(), (int)obj.normals.size()};
   add_obj_vertices(obj, positions, normals, texcoords, flip_texcoord);
@@ -2331,7 +2342,8 @@ void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
 }
 void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flip_texcoord) {
+    const vector<vec2f>& texcoords, const vector<int>& ematerials,
+    bool flip_texcoord) {
   auto vert_size = obj_vertex{(int)obj.positions.size(),
       (int)obj.texcoords.size(), (int)obj.normals.size()};
   add_obj_vertices(obj, positions, normals, texcoords, flip_texcoord);
@@ -3051,24 +3063,36 @@ void write_objx_command(file_wrapper& fs, objx_command command,
     case objx_command::prc_material:
       checked_fprintf(fs, "  Pmat %s\n", name.c_str());
       break;
-    case objx_command::cam_ortho: checked_fprintf(fs, "  Cortho %g\n", value); break;
-    case objx_command::cam_width: checked_fprintf(fs, "  Cwidth %g\n", value); break;
+    case objx_command::cam_ortho:
+      checked_fprintf(fs, "  Cortho %g\n", value);
+      break;
+    case objx_command::cam_width:
+      checked_fprintf(fs, "  Cwidth %g\n", value);
+      break;
     case objx_command::cam_height:
       checked_fprintf(fs, "  Cheight %g\n", value);
       break;
-    case objx_command::cam_lens: checked_fprintf(fs, "  Clens %g\n", value); break;
+    case objx_command::cam_lens:
+      checked_fprintf(fs, "  Clens %g\n", value);
+      break;
     case objx_command::cam_aperture:
       checked_fprintf(fs, "  Caperture %g\n", value);
       break;
-    case objx_command::cam_focus: checked_fprintf(fs, "  Cfocus %g\n", value); break;
+    case objx_command::cam_focus:
+      checked_fprintf(fs, "  Cfocus %g\n", value);
+      break;
     case objx_command::env_emission:
       checked_fprintf(fs, "  Ee %g %g %g\n", color[0], color[1], color[2]);
       break;
     case objx_command::env_emission_map:
       checked_fprintf(fs, "  map_Ee %s\n", texture.path.c_str());
       break;
-    case objx_command::prc_size: checked_fprintf(fs, "  Psize %g\n", value); break;
-    case objx_command::prc_level: checked_fprintf(fs, "  Plevel %g\n", value); break;
+    case objx_command::prc_size:
+      checked_fprintf(fs, "  Psize %g\n", value);
+      break;
+    case objx_command::prc_level:
+      checked_fprintf(fs, "  Plevel %g\n", value);
+      break;
   }
 }
 

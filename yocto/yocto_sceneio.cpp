@@ -1624,7 +1624,7 @@ void load_obj(
     material.emission         = omat.emission;
     material.diffuse          = omat.diffuse;
     material.specular         = omat.specular;
-    material.roughness        = omat.pbr_roughness;
+    material.roughness        = obj_exponent_to_roughness(omat.exponent);
     material.metallic         = omat.pbr_metallic;
     material.coat             = omat.reflection;
     material.transmission     = omat.transmission;

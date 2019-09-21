@@ -451,6 +451,10 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only = false,
     bool split_elements = true, bool split_materials = false);
 void save_obj(const string& filename, const obj_model& obj);
 
+// convert between roughness and exponent
+float obj_exponent_to_roughness(float exponent);
+float obj_roughness_to_exponent(float roughness);
+
 // Get obj shape
 void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
