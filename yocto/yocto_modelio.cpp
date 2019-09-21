@@ -155,6 +155,16 @@ static inline void checked_fprintf(file_wrapper& fs, const char* fmt, ...) {
   va_end(args1);
 }
 
+static inline void flip_texcoord(vector<vec2f>& flipped, const vector<vec2f>& texcoord) {
+  for(auto&uv : flipped) uv.y = 1 - uv.y;
+}
+
+static inline vector<vec2f> flip_texcoord(const vector<vec2f>& texcoord) {
+  auto flipped = texcoord;
+  for(auto&uv : flipped) uv.y = 1 - uv.y;
+  return flipped;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -748,12 +758,13 @@ vector<vec3f> get_ply_positions(const ply_model& ply) {
 vector<vec3f> get_ply_normals(const ply_model& ply) {
   return get_ply_values(ply, "vertex", "nx", "ny", "nz");
 }
-vector<vec2f> get_ply_texcoords(const ply_model& ply) {
-  if (has_ply_property(ply, "vertex", "u")) {
-    return get_ply_values(ply, "vertex", "u", "v");
-  } else {
-    return get_ply_values(ply, "vertex", "s", "t");
-  }
+vector<vec2f> get_ply_texcoords(const ply_model& ply, bool flipv) {
+  auto texcoord = has_ply_property(ply, "vertex", "u") ? 
+    get_ply_values(ply, "vertex", "u", "v") :
+    get_ply_values(ply, "vertex", "s", "t");
+  return flipv ? 
+  flip_texcoord(texcoord) : 
+   texcoord;
 }
 vector<vec4f> get_ply_colors(const ply_model& ply) {
   if (has_ply_property(ply, "vertex", "alpha")) {
@@ -952,8 +963,8 @@ void add_ply_positions(ply_model& ply, const vector<vec3f>& values) {
 void add_ply_normals(ply_model& ply, const vector<vec3f>& values) {
   return add_ply_values(ply, values, "vertex", "nx", "ny", "nz");
 }
-void add_ply_texcoords(ply_model& ply, const vector<vec2f>& values) {
-  return add_ply_values(ply, values, "vertex", "u", "v");
+void add_ply_texcoords(ply_model& ply, const vector<vec2f>& values, bool flipv) {
+  return add_ply_values(ply, flipv ? flip_texcoord(values) : values, "vertex", "u", "v");
 }
 void add_ply_colors(ply_model& ply, const vector<vec4f>& values) {
   return add_ply_values(ply, values, "vertex", "red", "green", "blue", "alpha");

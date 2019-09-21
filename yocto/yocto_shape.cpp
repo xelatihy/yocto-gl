@@ -3315,7 +3315,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
   // gets vertex
   positions = get_ply_positions(ply);
   normals   = get_ply_normals(ply);
-  texcoords = get_ply_texcoords(ply);
+  texcoords = get_ply_texcoords(ply, flip_texcoord);
   colors    = get_ply_colors(ply);
   radius    = get_ply_radius(ply);
 
@@ -3366,7 +3366,7 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
   // add vertices
   add_ply_positions(ply, positions);
   add_ply_normals(ply, normals);
-  add_ply_texcoords(ply, texcoords);
+  add_ply_texcoords(ply, texcoords, flip_texcoord);
   add_ply_colors(ply, colors);
   add_ply_radius(ply, radius);
 

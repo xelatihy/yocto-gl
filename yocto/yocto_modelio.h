@@ -210,7 +210,7 @@ vec2i get_ply_list_minxmax(
 // Get ply properties for meshes
 vector<vec3f>       get_ply_positions(const ply_model& ply);
 vector<vec3f>       get_ply_normals(const ply_model& ply);
-vector<vec2f>       get_ply_texcoords(const ply_model& ply);
+vector<vec2f>       get_ply_texcoords(const ply_model& ply, bool flipv = false);
 vector<vec4f>       get_ply_colors(const ply_model& ply);
 vector<float>       get_ply_radius(const ply_model& ply);
 vector<vector<int>> get_ply_faces(const ply_model& ply);
@@ -248,7 +248,7 @@ void add_ply_lists(ply_model& ply, const vector<vec4i>& values,
 // Add ply properties for meshes
 void add_ply_positions(ply_model& ply, const vector<vec3f>& values);
 void add_ply_normals(ply_model& ply, const vector<vec3f>& values);
-void add_ply_texcoords(ply_model& ply, const vector<vec2f>& values);
+void add_ply_texcoords(ply_model& ply, const vector<vec2f>& values, bool flipv = false);
 void add_ply_colors(ply_model& ply, const vector<vec4f>& values);
 void add_ply_radius(ply_model& ply, const vector<float>& values);
 void add_ply_faces(ply_model& ply, const vector<vector<int>>& values);
@@ -455,45 +455,45 @@ void save_obj(const string& filename, const obj_model& obj);
 void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool flip_texcoord = true);
+    vector<int>& ematerials, bool flip_texcoord = false);
 void get_obj_quads(const obj_model& obj, const obj_shape& shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool flip_texcoord = true);
+    vector<int>& ematerials, bool flip_texcoord = false);
 void get_obj_lines(const obj_model& obj, const obj_shape& shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool flip_texcoord = true);
+    vector<int>& ematerials, bool flip_texcoord = false);
 void get_obj_points(const obj_model& obj, const obj_shape& shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool flip_texcoord = true);
+    vector<int>& ematerials, bool flip_texcoord = false);
 void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool flip_texcoord = true);
+    vector<int>& ematerials, bool flip_texcoord = false);
 bool has_obj_quads(const obj_shape& shape);
 
 // Add obj shape
 void add_obj_triangles(obj_model& obj, obj_shape& shape,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, bool flip_texcoord = true);
+    const vector<int>& ematerials = {}, bool flip_texcoord = false);
 void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials = {}, bool flip_texcoord = true);
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {}, bool flip_texcoord = false);
 void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials = {}, bool flip_texcoord = true);
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {}, bool flip_texcoord = false);
 void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials = {}, bool flip_texcoord = true);
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {}, bool flip_texcoord = false);
 void add_obj_fvquads(obj_model& obj, obj_shape& shape,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials = {}, bool flip_texcoord = true);
+    const vector<int>& ematerials = {}, bool flip_texcoord = false);
 
 // Obj command
 enum struct obj_command {
