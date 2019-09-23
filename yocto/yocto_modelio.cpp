@@ -2248,9 +2248,10 @@ void save_obj(const string& filename, const obj_model& obj) {
   }
   format_values(fs, "\n");
 
-// save material library
-  if(!obj.materials.empty()) {
-    format_values(fs, "mtllib {}\n\n", replace_extension(get_filename(filename), ".mtl"));
+  // save material library
+  if (!obj.materials.empty()) {
+    format_values(
+        fs, "mtllib {}\n\n", replace_extension(get_filename(filename), ".mtl"));
   }
 
   // save vertices

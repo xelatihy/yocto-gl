@@ -1744,9 +1744,9 @@ void load_obj(
   }
 
   // convert procedurals
-  for(auto& oprocedural : obj.procedurals) {
+  for (auto& oprocedural : obj.procedurals) {
     auto& shape = scene.shapes.emplace_back();
-    shape.uri = oprocedural.name;
+    shape.uri   = oprocedural.name;
     if (oprocedural.type == "floor") {
       auto params         = proc_shape_params{};
       params.type         = proc_shape_params::type_t::floor;
@@ -1760,10 +1760,10 @@ void load_obj(
     }
     if (material_map.find(oprocedural.name) == material_map.end())
       throw std::runtime_error("cannot find material " + oprocedural.material);
-    auto& instance = scene.instances.emplace_back();
-    instance.uri = oprocedural.name;
-    instance.frame = oprocedural.frame;
-    instance.shape = (int)scene.shapes.size()-1;
+    auto& instance    = scene.instances.emplace_back();
+    instance.uri      = oprocedural.name;
+    instance.frame    = oprocedural.frame;
+    instance.shape    = (int)scene.shapes.size() - 1;
     instance.material = material_map.at(oprocedural.material);
   }
 }
@@ -2099,13 +2099,14 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     omaterial.reflection_map    = get_texture(material.coat_tex);
     omaterial.opacity_map       = get_texture(material.opacity_tex);
     omaterial.normal_map        = get_texture(material.normal_tex);
-    if(material.voltransmission != zero3f || material.volmeanfreepath != zero3f) {
-    omaterial.vol_transmission  = material.voltransmission;
-    omaterial.vol_meanfreepath  = material.volmeanfreepath;
-    omaterial.vol_emission      = material.volemission;
-    omaterial.vol_scattering    = material.volscatter;
-    omaterial.vol_anisotropy    = material.volanisotropy;
-    omaterial.vol_scale         = material.volscale;
+    if (material.voltransmission != zero3f ||
+        material.volmeanfreepath != zero3f) {
+      omaterial.vol_transmission = material.voltransmission;
+      omaterial.vol_meanfreepath = material.volmeanfreepath;
+      omaterial.vol_emission     = material.volemission;
+      omaterial.vol_scattering   = material.volscatter;
+      omaterial.vol_anisotropy   = material.volanisotropy;
+      omaterial.vol_scale        = material.volscale;
     }
   }
 
@@ -2135,24 +2136,26 @@ static void save_obj(const string& filename, const yocto_scene& scene,
       }
     }
     for (auto& instance : scene.instances) {
-      auto& oinstance    = obj.instances.emplace_back();
-      oinstance.name     = fs::path(instance.uri).stem();
-      oinstance.frame    = instance.frame;
-      oinstance.object   = fs::path(scene.shapes[instance.shape].uri).stem();
-      oinstance.material = fs::path(scene.materials[instance.material].uri).stem();
+      auto& oinstance  = obj.instances.emplace_back();
+      oinstance.name   = fs::path(instance.uri).stem();
+      oinstance.frame  = instance.frame;
+      oinstance.object = fs::path(scene.shapes[instance.shape].uri).stem();
+      oinstance.material =
+          fs::path(scene.materials[instance.material].uri).stem();
     }
   } else {
     for (auto& instance : scene.instances) {
-      auto& shape = scene.shapes[instance.shape];
+      auto& shape      = scene.shapes[instance.shape];
       auto& oshape     = obj.shapes.emplace_back();
       oshape.name      = fs::path(instance.uri).stem();
-      oshape.materials = {fs::path(scene.materials[instance.material].uri).stem()};
+      oshape.materials = {
+          fs::path(scene.materials[instance.material].uri).stem()};
       auto positions = shape.positions, normals = shape.normals;
-      for(auto& p : positions) p = transform_point(instance.frame, p);
-      for(auto& n : normals) n = transform_normal(instance.frame, n);
+      for (auto& p : positions) p = transform_point(instance.frame, p);
+      for (auto& n : normals) n = transform_normal(instance.frame, n);
       if (!shape.triangles.empty()) {
-        add_obj_triangles(obj, oshape, shape.triangles, positions,
-            normals, shape.texcoords, {}, true);
+        add_obj_triangles(obj, oshape, shape.triangles, positions, normals,
+            shape.texcoords, {}, true);
       } else if (!shape.quads.empty()) {
         add_obj_quads(obj, oshape, shape.quads, positions, normals,
             shape.texcoords, {}, true);
@@ -2160,12 +2163,11 @@ static void save_obj(const string& filename, const yocto_scene& scene,
         add_obj_lines(obj, oshape, shape.lines, positions, normals,
             shape.texcoords, {}, true);
       } else if (!shape.points.empty()) {
-        add_obj_points(obj, oshape, shape.points, positions,
-            normals, shape.texcoords, {}, true);
+        add_obj_points(obj, oshape, shape.points, positions, normals,
+            shape.texcoords, {}, true);
       } else if (!shape.quadspos.empty()) {
         add_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, positions, normals,
-            shape.texcoords, {}, true);
+            shape.quadstexcoord, positions, normals, shape.texcoords, {}, true);
       } else {
         throw std::runtime_error("do not support empty shapes");
       }

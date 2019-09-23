@@ -3693,13 +3693,17 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
   // Add obj data
   auto& shape = obj.shapes.emplace_back();
   if (!triangles.empty()) {
-    add_obj_triangles(obj, shape, triangles, positions, normals, texcoords, {}, flip_texcoord);
+    add_obj_triangles(obj, shape, triangles, positions, normals, texcoords, {},
+        flip_texcoord);
   } else if (!quads.empty()) {
-    add_obj_quads(obj, shape, quads, positions, normals, texcoords, {}, flip_texcoord);
+    add_obj_quads(
+        obj, shape, quads, positions, normals, texcoords, {}, flip_texcoord);
   } else if (!lines.empty()) {
-    add_obj_lines(obj, shape, lines, positions, normals, texcoords, {}, flip_texcoord);
+    add_obj_lines(
+        obj, shape, lines, positions, normals, texcoords, {}, flip_texcoord);
   } else if (!points.empty()) {
-    add_obj_points(obj, shape, points, positions, normals, texcoords, {}, flip_texcoord);
+    add_obj_points(
+        obj, shape, points, positions, normals, texcoords, {}, flip_texcoord);
   } else if (!quadspos.empty()) {
     add_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, {}, flip_texcoord);
