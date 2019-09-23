@@ -194,9 +194,51 @@ static inline void parse_value(string_view& str, string& value) {
   parse_value(str, valuev);
   value = string{valuev};
 }
-static inline void parse_value(string_view& str, int& value) {
+static inline void parse_value(string_view& str, int8_t& value) {
   char* end = nullptr;
-  value     = (int)strtol(str.data(), &end, 10);
+  value     = (int8_t)strtol(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+static inline void parse_value(string_view& str, int16_t& value) {
+  char* end = nullptr;
+  value     = (int16_t)strtol(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+static inline void parse_value(string_view& str, int32_t& value) {
+  char* end = nullptr;
+  value     = (int32_t)strtol(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+static inline void parse_value(string_view& str, int64_t& value) {
+  char* end = nullptr;
+  value     = (int64_t)strtoll(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+static inline void parse_value(string_view& str, uint8_t& value) {
+  char* end = nullptr;
+  value     = (uint8_t)strtoul(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+static inline void parse_value(string_view& str, uint16_t& value) {
+  char* end = nullptr;
+  value     = (uint16_t)strtoul(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+static inline void parse_value(string_view& str, uint32_t& value) {
+  char* end = nullptr;
+  value     = (uint32_t)strtoul(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+static inline void parse_value(string_view& str, uint64_t& value) {
+  char* end = nullptr;
+  value     = (uint64_t)strtoull(str.data(), &end, 10);
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
@@ -208,6 +250,12 @@ static inline void parse_value(string_view& str, bool& value) {
 static inline void parse_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+static inline void parse_value(string_view& str, double& value) {
+  char* end = nullptr;
+  value     = strtod(str.data(), &end);
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
@@ -401,71 +449,6 @@ static inline void remove_ply_comment(
   str.remove_suffix(cpy.size());
 }
 
-// get ply value either ascii or binary
-template <typename T>
-static inline T read_ply_value(file_wrapper& fs, bool big_endian) {
-  auto value = (T)0;
-  if (fread(&value, sizeof(T), 1, fs.fs) != 1)
-    throw std::runtime_error("cannot read value");
-  if (big_endian) value = swap_endian(value);
-  return value;
-}
-template <typename VT>
-static inline void read_ply_prop(
-    file_wrapper& fs, bool big_endian, ply_type type, VT& value) {
-  switch (type) {
-    case ply_type::i8:
-      value = (VT)read_ply_value<int8_t>(fs, big_endian);
-      break;
-    case ply_type::i16:
-      value = (VT)read_ply_value<int16_t>(fs, big_endian);
-      break;
-    case ply_type::i32:
-      value = (VT)read_ply_value<int32_t>(fs, big_endian);
-      break;
-    case ply_type::i64:
-      value = (VT)read_ply_value<int64_t>(fs, big_endian);
-      break;
-    case ply_type::u8:
-      value = (VT)read_ply_value<uint8_t>(fs, big_endian);
-      break;
-    case ply_type::u16:
-      value = (VT)read_ply_value<uint16_t>(fs, big_endian);
-      break;
-    case ply_type::u32:
-      value = (VT)read_ply_value<uint32_t>(fs, big_endian);
-      break;
-    case ply_type::u64:
-      value = (VT)read_ply_value<uint64_t>(fs, big_endian);
-      break;
-    case ply_type::f32:
-      value = (VT)read_ply_value<float>(fs, big_endian);
-      break;
-    case ply_type::f64:
-      value = (VT)read_ply_value<double>(fs, big_endian);
-      break;
-  }
-}
-
-template <typename VT>
-static inline void parse_ply_prop(string_view& str, ply_type type, VT& value) {
-  char* end = nullptr;
-  switch (type) {
-    case ply_type::i8: value = (VT)strtol(str.data(), &end, 10); break;
-    case ply_type::i16: value = (VT)strtol(str.data(), &end, 10); break;
-    case ply_type::i32: value = (VT)strtol(str.data(), &end, 10); break;
-    case ply_type::i64: value = (VT)strtoll(str.data(), &end, 10); break;
-    case ply_type::u8: value = (VT)strtoul(str.data(), &end, 10); break;
-    case ply_type::u16: value = (VT)strtoul(str.data(), &end, 10); break;
-    case ply_type::u32: value = (VT)strtoul(str.data(), &end, 10); break;
-    case ply_type::u64: value = (VT)strtoull(str.data(), &end, 10); break;
-    case ply_type::f32: value = (VT)strtof(str.data(), &end); break;
-    case ply_type::f64: value = (VT)strtod(str.data(), &end); break;
-  }
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-
 // Load ply
 void load_ply(const string& filename, ply_model& ply) {
   // ply type names
@@ -599,40 +582,39 @@ void load_ply(const string& filename, ply_model& ply) {
           throw std::runtime_error("cannot read ply");
         auto line = string_view{buffer};
         for (auto& prop : elem.properties) {
-          if (prop.is_list)
-            parse_ply_prop(line, prop.type, prop.ldata_u8.emplace_back());
+          if (prop.is_list) parse_value(line, prop.ldata_u8.emplace_back());
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                parse_ply_prop(line, prop.type, prop.data_i8.emplace_back());
+                parse_value(line, prop.data_i8.emplace_back());
                 break;
               case ply_type::i16:
-                parse_ply_prop(line, prop.type, prop.data_i16.emplace_back());
+                parse_value(line, prop.data_i16.emplace_back());
                 break;
               case ply_type::i32:
-                parse_ply_prop(line, prop.type, prop.data_i32.emplace_back());
+                parse_value(line, prop.data_i32.emplace_back());
                 break;
               case ply_type::i64:
-                parse_ply_prop(line, prop.type, prop.data_i64.emplace_back());
+                parse_value(line, prop.data_i64.emplace_back());
                 break;
               case ply_type::u8:
-                parse_ply_prop(line, prop.type, prop.data_u8.emplace_back());
+                parse_value(line, prop.data_u8.emplace_back());
                 break;
               case ply_type::u16:
-                parse_ply_prop(line, prop.type, prop.data_u16.emplace_back());
+                parse_value(line, prop.data_u16.emplace_back());
                 break;
               case ply_type::u32:
-                parse_ply_prop(line, prop.type, prop.data_u32.emplace_back());
+                parse_value(line, prop.data_u32.emplace_back());
                 break;
               case ply_type::u64:
-                parse_ply_prop(line, prop.type, prop.data_u64.emplace_back());
+                parse_value(line, prop.data_u64.emplace_back());
                 break;
               case ply_type::f32:
-                parse_ply_prop(line, prop.type, prop.data_f32.emplace_back());
+                parse_value(line, prop.data_f32.emplace_back());
                 break;
               case ply_type::f64:
-                parse_ply_prop(line, prop.type, prop.data_f64.emplace_back());
+                parse_value(line, prop.data_f64.emplace_back());
                 break;
             }
           }
@@ -1220,6 +1202,71 @@ void add_ply_points(ply_model& ply, const vector<int>& values) {
   return add_ply_lists(ply, values, "point", "vertex_indices");
 }
 
+// get ply value either ascii or binary
+template <typename T>
+static inline T read_ply_value(file_wrapper& fs, bool big_endian) {
+  auto value = (T)0;
+  if (fread(&value, sizeof(T), 1, fs.fs) != 1)
+    throw std::runtime_error("cannot read value");
+  if (big_endian) value = swap_endian(value);
+  return value;
+}
+template <typename VT>
+static inline void read_ply_prop(
+    file_wrapper& fs, bool big_endian, ply_type type, VT& value) {
+  switch (type) {
+    case ply_type::i8:
+      value = (VT)read_ply_value<int8_t>(fs, big_endian);
+      break;
+    case ply_type::i16:
+      value = (VT)read_ply_value<int16_t>(fs, big_endian);
+      break;
+    case ply_type::i32:
+      value = (VT)read_ply_value<int32_t>(fs, big_endian);
+      break;
+    case ply_type::i64:
+      value = (VT)read_ply_value<int64_t>(fs, big_endian);
+      break;
+    case ply_type::u8:
+      value = (VT)read_ply_value<uint8_t>(fs, big_endian);
+      break;
+    case ply_type::u16:
+      value = (VT)read_ply_value<uint16_t>(fs, big_endian);
+      break;
+    case ply_type::u32:
+      value = (VT)read_ply_value<uint32_t>(fs, big_endian);
+      break;
+    case ply_type::u64:
+      value = (VT)read_ply_value<uint64_t>(fs, big_endian);
+      break;
+    case ply_type::f32:
+      value = (VT)read_ply_value<float>(fs, big_endian);
+      break;
+    case ply_type::f64:
+      value = (VT)read_ply_value<double>(fs, big_endian);
+      break;
+  }
+}
+
+template <typename VT>
+static inline void parse_ply_prop(string_view& str, ply_type type, VT& value) {
+  char* end = nullptr;
+  switch (type) {
+    case ply_type::i8: value = (VT)strtol(str.data(), &end, 10); break;
+    case ply_type::i16: value = (VT)strtol(str.data(), &end, 10); break;
+    case ply_type::i32: value = (VT)strtol(str.data(), &end, 10); break;
+    case ply_type::i64: value = (VT)strtoll(str.data(), &end, 10); break;
+    case ply_type::u8: value = (VT)strtoul(str.data(), &end, 10); break;
+    case ply_type::u16: value = (VT)strtoul(str.data(), &end, 10); break;
+    case ply_type::u32: value = (VT)strtoul(str.data(), &end, 10); break;
+    case ply_type::u64: value = (VT)strtoull(str.data(), &end, 10); break;
+    case ply_type::f32: value = (VT)strtof(str.data(), &end); break;
+    case ply_type::f64: value = (VT)strtod(str.data(), &end); break;
+  }
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+
 // Load ply data
 void read_ply_header(file_wrapper& fs, ply_format& format,
     vector<ply_element>& elements, vector<string>& comments) {
@@ -1434,18 +1481,11 @@ static inline void write_ply_binprop(
 void write_ply_header(file_wrapper& fs, ply_format format,
     const vector<ply_element>& elements, const vector<string>& comments) {
   // ply type names
-  static auto type_map = unordered_map<ply_type, string>{
-      {ply_type::i8, "char"},
-      {ply_type::i16, "short"},
-      {ply_type::i32, "int"},
-      {ply_type::i64, "uint"},
-      {ply_type::u8, "uchar"},
-      {ply_type::u16, "ushort"},
-      {ply_type::u32, "uint"},
-      {ply_type::u64, "ulong"},
-      {ply_type::f32, "float"},
-      {ply_type::f64, "double"},
-  };
+  static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
+      {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
+      {ply_type::u8, "uchar"}, {ply_type::u16, "ushort"},
+      {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
+      {ply_type::f32, "float"}, {ply_type::f64, "double"}};
 
   write_text(fs, "ply\n");
   switch (format) {
