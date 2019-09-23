@@ -501,6 +501,118 @@ void load_ply(const string& filename, ply_model& ply) {
   }
 }
 
+// Formats values to string
+static inline void format_value(string& str, const string& value) {
+  str += value;
+}
+static inline void format_value(string& str, const char* value) {
+  str += value;
+}
+static inline void format_value(string& str, int8_t value) {
+  char buf[256];
+  sprintf(buf, "%d", (int)value);
+  str += buf;
+}
+static inline void format_value(string& str, int16_t value) {
+  char buf[256];
+  sprintf(buf, "%d", (int)value);
+  str += buf;
+}
+static inline void format_value(string& str, int32_t value) {
+  char buf[256];
+  sprintf(buf, "%d", (int)value);
+  str += buf;
+}
+static inline void format_value(string& str, int64_t value) {
+  char buf[256];
+  sprintf(buf, "%lld", (long long)value);
+  str += buf;
+}
+static inline void format_value(string& str, uint8_t value) {
+  char buf[256];
+  sprintf(buf, "%u", (unsigned)value);
+  str += buf;
+}
+static inline void format_value(string& str, uint16_t value) {
+  char buf[256];
+  sprintf(buf, "%u", (unsigned)value);
+  str += buf;
+}
+static inline void format_value(string& str, uint32_t value) {
+  char buf[256];
+  sprintf(buf, "%u", (unsigned)value);
+  str += buf;
+}
+static inline void format_value(string& str, uint64_t value) {
+  char buf[256];
+  sprintf(buf, "%llu", (unsigned long long)value);
+  str += buf;
+}
+static inline void format_value(string& str, float value) {
+  char buf[256];
+  sprintf(buf, "%g", value);
+  str += buf;
+}
+static inline void format_value(string& str, double value) {
+  char buf[256];
+  sprintf(buf, "%g", value);
+  str += buf;
+}
+static inline void format_value(string& str, const vec2f& value) {
+  char buf[256];
+  sprintf(buf, "%g %g", value.x, value.y);
+  str += buf;
+}
+static inline void format_value(string& str, const vec3f& value) {
+  char buf[256];
+  sprintf(buf, "%g %g %g", value.x, value.y, value.z);
+  str += buf;
+}
+static inline void format_value(string& str, const vec2i& value) {
+  char buf[256];
+  sprintf(buf, "%d %d", value.x, value.y);
+  str += buf;
+}
+static inline void format_value(string& str, const vec3i& value) {
+  char buf[256];
+  sprintf(buf, "%d %d %d", value.x, value.y, value.z);
+  str += buf;
+}
+static inline void format_value(string& str, const frame3f& value) {
+  char buf[256];
+  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y, value.x.z,
+      value.y.x, value.y.y, value.y.z, value.z.x, value.z.y, value.z.z, value.o.x, value.o.y,
+      value.o.z);
+  str += buf;
+}
+
+// Foramt to file
+static inline void format_values(string& str, const string& fmt) {
+  auto pos = fmt.find("{}");
+  if(pos != string::npos) throw std::runtime_error("bad format string");
+  str += fmt;
+}
+template<typename Arg, typename ... Args>
+static inline void format_values(string& str, const string& fmt, const Arg& arg, const Args& ... args) {
+  auto pos = fmt.find("{}");
+  if(pos == string::npos) throw std::runtime_error("bad format string");
+  str += fmt.substr(0, pos);
+  format_value(str, arg);
+  format_values(str, fmt.substr(pos+2), args...);
+} 
+template<typename ... Args>
+static inline void format_values(file_wrapper& fs, const string& fmt, const Args& ... args) {
+  auto str = ""s;
+  format_values(str, fmt, args...);
+  if(fputs(str.c_str(), fs.fs) < 0) throw std::runtime_error("cannor write to " + fs.filename);
+}
+
+template<typename T>
+static inline void write_value(file_wrapper& fs, const T& value) {
+  if (fwrite(&value, sizeof(value), 1, fs.fs) != 1)
+    throw std::runtime_error("cannot write to " + fs.filename);
+};
+
 // Save ply
 void save_ply(const string& filename, const ply_model& ply) {
   auto fs = open_file(filename, "wb");
@@ -517,26 +629,26 @@ void save_ply(const string& filename, const ply_model& ply) {
       {ply_format::binary_big_endian, "binary_big_endian"}};
 
   // header
-  checked_fprintf(fs, "ply\n");
-  checked_fprintf(fs, "format %s 1.0\n", format_map.at(ply.format).c_str());
-  checked_fprintf(fs, "comment Written by Yocto/GL\n");
-  checked_fprintf(fs, "comment https://github.com/xelatihy/yocto-gl\n");
+  format_values(fs, "ply\n");
+  format_values(fs, "format {} 1.0\n", format_map.at(ply.format));
+  format_values(fs, "comment Written by Yocto/GL\n");
+  format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
   for (auto& comment : ply.comments)
-    checked_fprintf(fs, "comment %s\n", comment.c_str());
+    format_values(fs, "comment {}\n", comment);
   for (auto& elem : ply.elements) {
-    checked_fprintf(
-        fs, "element %s %llu\n", elem.name.c_str(), (size_t)elem.count);
+    format_values(
+        fs, "element {} {}\n", elem.name, (unsigned long long)elem.count);
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        checked_fprintf(fs, "property list uchar %s %s\n",
-            type_map[prop.type].c_str(), prop.name.c_str());
+        format_values(fs, "property list uchar {} {}\n",
+            type_map[prop.type].c_str(), prop.name);
       } else {
-        checked_fprintf(fs, "property %s %s\n", type_map[prop.type].c_str(),
-            prop.name.c_str());
+        format_values(fs, "property {} {}\n", type_map[prop.type],
+            prop.name);
       }
     }
   }
-  checked_fprintf(fs, "end_header\n");
+  format_values(fs, "end_header\n");
 
   // properties
   if (ply.format == ply_format::ascii) {
@@ -545,41 +657,41 @@ void save_ply(const string& filename, const ply_model& ply) {
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
-          if (prop.is_list) checked_fprintf(fs, "%d ", (int)prop.ldata_u8[idx]);
+          if (prop.is_list) format_values(fs, "{} ", (int)prop.ldata_u8[idx]);
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                checked_fprintf(fs, "%d ", (int)prop.data_i8[cur[idx]++]);
+                format_values(fs, "{} ", (int)prop.data_i8[cur[idx]++]);
                 break;
               case ply_type::i16:
-                checked_fprintf(fs, "%d ", (int)prop.data_i16[cur[idx]++]);
+                format_values(fs, "{} ", (int)prop.data_i16[cur[idx]++]);
                 break;
               case ply_type::i32:
-                checked_fprintf(fs, "%d ", (int)prop.data_i32[cur[idx]++]);
+                format_values(fs, "{} ", (int)prop.data_i32[cur[idx]++]);
                 break;
               case ply_type::i64:
-                checked_fprintf(
-                    fs, "%lld ", (long long int)prop.data_i64[cur[idx]++]);
+                format_values(
+                    fs, "{} ", (long long int)prop.data_i64[cur[idx]++]);
                 break;
               case ply_type::u8:
-                checked_fprintf(fs, "%u ", (unsigned)prop.data_i8[cur[idx]++]);
+                format_values(fs, "{} ", (unsigned)prop.data_i8[cur[idx]++]);
                 break;
               case ply_type::u16:
-                checked_fprintf(fs, "%u ", (unsigned)prop.data_i16[cur[idx]++]);
+                format_values(fs, "{} ", (unsigned)prop.data_i16[cur[idx]++]);
                 break;
               case ply_type::u32:
-                checked_fprintf(fs, "%u ", (unsigned)prop.data_u32[cur[idx]++]);
+                format_values(fs, "{} ", (unsigned)prop.data_u32[cur[idx]++]);
                 break;
               case ply_type::u64:
-                checked_fprintf(
-                    fs, "%llu ", (long long unsigned)prop.data_u64[cur[idx]++]);
+                format_values(
+                    fs, "{} ", (long long unsigned)prop.data_u64[cur[idx]++]);
                 break;
               case ply_type::f32:
-                checked_fprintf(fs, "%g", prop.data_f32[cur[idx]++]);
+                format_values(fs, "{}", prop.data_f32[cur[idx]++]);
                 break;
               case ply_type::f64:
-                checked_fprintf(fs, "%g", prop.data_f64[cur[idx]++]);
+                format_values(fs, "{}", prop.data_f64[cur[idx]++]);
                 break;
             }
           }
@@ -588,29 +700,25 @@ void save_ply(const string& filename, const ply_model& ply) {
       }
     }
   } else {
-    auto write = [&fs](auto value) {
-      if (fwrite(&value, sizeof(value), 1, fs.fs) != 1)
-        throw std::runtime_error("cannot write " + fs.filename);
-    };
     for (auto& elem : ply.elements) {
       auto cur = vector<size_t>(elem.properties.size(), 0);
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
-          if (prop.is_list) write(prop.ldata_u8[idx]);
+          if (prop.is_list) write_value(fs, prop.ldata_u8[idx]);
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
-              case ply_type::i8: write(prop.data_i8[cur[pidx]++]); break;
-              case ply_type::i16: write(prop.data_i16[cur[pidx]++]); break;
-              case ply_type::i32: write(prop.data_i32[cur[pidx]++]); break;
-              case ply_type::i64: write(prop.data_i64[cur[pidx]++]); break;
-              case ply_type::u8: write(prop.data_i8[cur[pidx]++]); break;
-              case ply_type::u16: write(prop.data_i16[cur[pidx]++]); break;
-              case ply_type::u32: write(prop.data_u32[cur[pidx]++]); break;
-              case ply_type::u64: write(prop.data_u64[cur[pidx]++]); break;
-              case ply_type::f32: write(prop.data_f32[cur[pidx]++]); break;
-              case ply_type::f64: write(prop.data_f64[cur[pidx]++]); break;
+              case ply_type::i8: write_value(fs, prop.data_i8[cur[pidx]++]); break;
+              case ply_type::i16: write_value(fs, prop.data_i16[cur[pidx]++]); break;
+              case ply_type::i32: write_value(fs, prop.data_i32[cur[pidx]++]); break;
+              case ply_type::i64: write_value(fs, prop.data_i64[cur[pidx]++]); break;
+              case ply_type::u8: write_value(fs, prop.data_i8[cur[pidx]++]); break;
+              case ply_type::u16: write_value(fs, prop.data_i16[cur[pidx]++]); break;
+              case ply_type::u32: write_value(fs, prop.data_u32[cur[pidx]++]); break;
+              case ply_type::u64: write_value(fs, prop.data_u64[cur[pidx]++]); break;
+              case ply_type::f32: write_value(fs, prop.data_f32[cur[pidx]++]); break;
+              case ply_type::f64: write_value(fs, prop.data_f64[cur[pidx]++]); break;
             }
           }
         }
@@ -2012,7 +2120,9 @@ float obj_exponent_to_roughness(float exponent) {
   if (roughness > 0.99f) roughness = 1;
   return roughness;
 }
-float obj_roughness_to_exponent(float roughness) { throw std::runtime_error("not implemented"); }
+float obj_roughness_to_exponent(float roughness) {
+  throw std::runtime_error("not implemented");
+}
 
 // Get obj vertices
 void get_obj_vertices(const obj_model& obj, const obj_shape& shape,
