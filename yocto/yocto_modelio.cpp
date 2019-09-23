@@ -2087,7 +2087,149 @@ static inline void format_value(string& str, const obj_vertex& value) {
   }
 }
 
-// Read obj
+// Save obj
+void save_mtl(const string& filename, const obj_model& obj) {
+  // open file
+  auto fs = open_file(filename, "wt");
+
+  // save comments
+  format_values(fs, "#\n");
+  format_values(fs, "# Written by Yocto/GL\n");
+  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(fs, "#\n\n");
+  for (auto& comment : obj.comments) {
+    format_values(fs, "# {}\n", comment);
+  }
+  format_values(fs, "\n");
+
+  // write material
+  for (auto& material : obj.materials) {
+    format_values(fs, "newmtl {}\n", material.name);
+    format_values(fs, "illum {}\n", material.illum);
+    if (material.emission != zero3f)
+      format_values(fs, "Ke {}\n", material.emission);
+    if (material.ambient != zero3f)
+      format_values(fs, "Ka {}\n", material.ambient);
+    format_values(fs, "Kd {}\n", material.diffuse);
+    format_values(fs, "Ks {}\n", material.specular);
+    if (material.reflection != zero3f)
+      format_values(fs, "Kr {}\n", material.reflection);
+    if (material.transmission != zero3f)
+      format_values(fs, "Kt {}\n", material.transmission);
+    format_values(fs, "Ns {}\n", material.exponent);
+    if (material.opacity != 1) format_values(fs, "d {}\n", material.opacity);
+    if (!material.emission_map.path.empty())
+      format_values(fs, "map_Ke {}\n", material.emission_map);
+    if (!material.diffuse_map.path.empty())
+      format_values(fs, "map_Kd {}\n", material.diffuse_map);
+    if (!material.specular_map.path.empty())
+      format_values(fs, "map_Ks {}\n", material.specular_map);
+    if (!material.transmission_map.path.empty())
+      format_values(fs, "map_Kt {}\n", material.transmission_map);
+    if (!material.reflection_map.path.empty())
+      format_values(fs, "map_Kr {}\n", material.reflection_map);
+    if (!material.exponent_map.path.empty())
+      format_values(fs, "map_Ns {}\n", material.exponent_map);
+    if (!material.opacity_map.path.empty())
+      format_values(fs, "map_d {}\n", material.opacity_map);
+    if (!material.bump_map.path.empty())
+      format_values(fs, "map_bump {}\n", material.bump_map);
+    if (!material.displacement_map.path.empty())
+      format_values(fs, "map_disp {}\n", material.displacement_map);
+    if (!material.normal_map.path.empty())
+      format_values(fs, "map_norm {}\n", material.normal_map);
+    if (material.pbr_roughness)
+      format_values(fs, "Pr {}\n", material.pbr_roughness);
+    if (material.pbr_metallic)
+      format_values(fs, "Pm {}\n", material.pbr_metallic);
+    if (material.pbr_sheen) format_values(fs, "Ps {}\n", material.pbr_sheen);
+    if (material.pbr_clearcoat)
+      format_values(fs, "Pc {}\n", material.pbr_clearcoat);
+    if (material.pbr_coatroughness)
+      format_values(fs, "Pcr {}\n", material.pbr_coatroughness);
+    if (!material.pbr_roughness_map.path.empty())
+      format_values(fs, "map_Pr {}\n", material.pbr_roughness_map);
+    if (!material.pbr_metallic_map.path.empty())
+      format_values(fs, "map_Pm {}\n", material.pbr_metallic_map);
+    if (!material.pbr_sheen_map.path.empty())
+      format_values(fs, "map_Ps {}\n", material.pbr_sheen_map);
+    if (!material.pbr_clearcoat_map.path.empty())
+      format_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map);
+    if (!material.pbr_coatroughness_map.path.empty())
+      format_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map);
+    if (material.vol_transmission != zero3f)
+      format_values(fs, "Vt {}\n", material.vol_transmission);
+    if (material.vol_meanfreepath != zero3f)
+      format_values(fs, "Vp {}\n", material.vol_meanfreepath);
+    if (material.vol_emission != zero3f)
+      format_values(fs, "Ve {}\n", material.vol_emission);
+    if (material.vol_scattering != zero3f)
+      format_values(fs, "Vs {}\n", material.vol_scattering);
+    if (material.vol_anisotropy)
+      format_values(fs, "Vg {}\n", material.vol_anisotropy);
+    if (material.vol_scale)
+      format_values(fs, "Vr {}\n", material.vol_scale);
+    if (!material.vol_scattering_map.path.empty())
+      format_values(fs, "map_Vs {}\n", material.vol_scattering_map);
+  }
+}
+
+// Save obj
+void save_objx(const string& filename, const obj_model& obj) {
+  // open file
+  auto fs = open_file(filename, "wt");
+
+  // save comments
+  format_values(fs, "#\n");
+  format_values(fs, "# Written by Yocto/GL\n");
+  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(fs, "#\n\n");
+  for (auto& comment : obj.comments) {
+    format_values(fs, "# {}\n", comment);
+  }
+  format_values(fs, "\n");
+
+  // cameras
+  for (auto& camera : obj.cameras) {
+    format_values(fs, "newcam {}\n", camera.name);
+    format_values(fs, "Cframe {}\n", camera.frame);
+    format_values(fs, "Cortho {}\n", camera.ortho);
+    format_values(fs, "Pwidth {}\n", camera.width);
+    format_values(fs, "Pheight {}\n", camera.height);
+    format_values(fs, "Plens {}\n", camera.lens);
+    format_values(fs, "Pfocus {}\n", camera.focus);
+    format_values(fs, "Paperture {}\n", camera.aperture);
+  }
+
+  // environments
+  for (auto& environment : obj.environments) {
+    format_values(fs, "newenv {}\n", environment.name);
+    format_values(fs, "Eframe {}\n", environment.frame);
+    format_values(fs, "Ee {}\n", environment.emission);
+    if (!environment.emission_map.path.empty())
+      format_values(fs, "map_Ee {}\n", environment.emission_map);
+  }
+
+  // instances
+  for (auto& instance : obj.instances) {
+    format_values(fs, "newist {}\n", instance.name);
+    format_values(fs, "Iframe {}\n", instance.frame);
+    format_values(fs, "Iobj {}\n", instance.object);
+    format_values(fs, "Imat {}\n", instance.material);
+  }
+
+  // procedurals
+  for (auto& procedural : obj.procedurals) {
+    format_values(fs, "newist {}\n", procedural.name);
+    format_values(fs, "Pframe {}\n", procedural.frame);
+    format_values(fs, "Ptype {}\n", procedural.type);
+    format_values(fs, "Pmat {}\n", procedural.material);
+    format_values(fs, "Psize {}\n", procedural.size);
+    format_values(fs, "Plevel {}\n", procedural.level);
+  }
+}
+
+// Save obj
 void save_obj(const string& filename, const obj_model& obj) {
   // open file
   auto fs = open_file(filename, "wt");
