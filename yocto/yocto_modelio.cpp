@@ -352,12 +352,39 @@ static inline void format_values(
     throw std::runtime_error("cannor write to " + fs.filename);
 }
 
+static inline void write_text(file_wrapper& fs, const string& value) {
+  if (fputs(value.c_str(), fs.fs) < 0)
+    throw std::runtime_error("cannot write to " + fs.filename);
+}
+static inline void write_text(file_wrapper& fs, const char* value) {
+  if (fputs(value, fs.fs) < 0)
+    throw std::runtime_error("cannot write to " + fs.filename);
+}
+
 template <typename T>
 static inline void write_value(file_wrapper& fs, const T& value) {
   if (fwrite(&value, sizeof(value), 1, fs.fs) != 1)
     throw std::runtime_error("cannot write to " + fs.filename);
-};
+}
+template <typename T>
+static inline void write_value(
+    file_wrapper& fs, const T& value_, bool big_endian) {
+  auto value = big_endian ? swap_endian(value_) : value_;
+  if (fwrite(&value, sizeof(value), 1, fs.fs) != 1)
+    throw std::runtime_error("cannot write to " + fs.filename);
+}
 
+template <typename T>
+static inline void read_value(file_wrapper& fs, T& value) {
+  if (fread(&value, sizeof(value), 1, fs.fs) != 1)
+    throw std::runtime_error("cannot read " + fs.filename);
+}
+template <typename T>
+static inline void read_value(file_wrapper& fs, T& value, bool big_endian) {
+  if (fread(&value, sizeof(value), 1, fs.fs) != 1)
+    throw std::runtime_error("cannot read " + fs.filename);
+  if (big_endian) value = swap_endian(value);
+}
 
 }  // namespace yocto
 
@@ -613,43 +640,44 @@ void load_ply(const string& filename, ply_model& ply) {
       }
     }
   } else {
-    auto read_value = [&fs, format = ply.format](auto& value) {
-      if (fread(&value, sizeof(value), 1, fs.fs) != 1)
-        throw std::runtime_error("cannot read " + fs.filename);
-      if (format == ply_format::binary_big_endian) value = swap_endian(value);
-    };
+    auto big_endian = ply.format == ply_format::binary_big_endian;
     for (auto& elem : ply.elements) {
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto& prop : elem.properties) {
-          if (prop.is_list) read_value(prop.ldata_u8.emplace_back());
+          if (prop.is_list)
+            read_value(fs, prop.ldata_u8.emplace_back(), big_endian);
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
-              case ply_type::i8: read_value(prop.data_i8.emplace_back()); break;
+              case ply_type::i8:
+                read_value(fs, prop.data_i8.emplace_back(), big_endian);
+                break;
               case ply_type::i16:
-                read_value(prop.data_i16.emplace_back());
+                read_value(fs, prop.data_i16.emplace_back(), big_endian);
                 break;
               case ply_type::i32:
-                read_value(prop.data_i32.emplace_back());
+                read_value(fs, prop.data_i32.emplace_back(), big_endian);
                 break;
               case ply_type::i64:
-                read_value(prop.data_i64.emplace_back());
+                read_value(fs, prop.data_i64.emplace_back(), big_endian);
                 break;
-              case ply_type::u8: read_value(prop.data_u8.emplace_back()); break;
+              case ply_type::u8:
+                read_value(fs, prop.data_u8.emplace_back(), big_endian);
+                break;
               case ply_type::u16:
-                read_value(prop.data_u16.emplace_back());
+                read_value(fs, prop.data_u16.emplace_back(), big_endian);
                 break;
               case ply_type::u32:
-                read_value(prop.data_u32.emplace_back());
+                read_value(fs, prop.data_u32.emplace_back(), big_endian);
                 break;
               case ply_type::u64:
-                read_value(prop.data_u64.emplace_back());
+                read_value(fs, prop.data_u64.emplace_back(), big_endian);
                 break;
               case ply_type::f32:
-                read_value(prop.data_f32.emplace_back());
+                read_value(fs, prop.data_f32.emplace_back(), big_endian);
                 break;
               case ply_type::f64:
-                read_value(prop.data_f64.emplace_back());
+                read_value(fs, prop.data_f64.emplace_back(), big_endian);
                 break;
             }
           }
@@ -739,49 +767,50 @@ void save_ply(const string& filename, const ply_model& ply) {
                 break;
             }
           }
-          checked_fprintf(fs, "\n");
+          format_values(fs, "\n");
         }
       }
     }
   } else {
+    auto big_endian = ply.format == ply_format::binary_big_endian;
     for (auto& elem : ply.elements) {
       auto cur = vector<size_t>(elem.properties.size(), 0);
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
-          if (prop.is_list) write_value(fs, prop.ldata_u8[idx]);
+          if (prop.is_list) write_value(fs, prop.ldata_u8[idx], big_endian);
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                write_value(fs, prop.data_i8[cur[pidx]++]);
+                write_value(fs, prop.data_i8[cur[pidx]++], big_endian);
                 break;
               case ply_type::i16:
-                write_value(fs, prop.data_i16[cur[pidx]++]);
+                write_value(fs, prop.data_i16[cur[pidx]++], big_endian);
                 break;
               case ply_type::i32:
-                write_value(fs, prop.data_i32[cur[pidx]++]);
+                write_value(fs, prop.data_i32[cur[pidx]++], big_endian);
                 break;
               case ply_type::i64:
-                write_value(fs, prop.data_i64[cur[pidx]++]);
+                write_value(fs, prop.data_i64[cur[pidx]++], big_endian);
                 break;
               case ply_type::u8:
-                write_value(fs, prop.data_i8[cur[pidx]++]);
+                write_value(fs, prop.data_i8[cur[pidx]++], big_endian);
                 break;
               case ply_type::u16:
-                write_value(fs, prop.data_i16[cur[pidx]++]);
+                write_value(fs, prop.data_i16[cur[pidx]++], big_endian);
                 break;
               case ply_type::u32:
-                write_value(fs, prop.data_u32[cur[pidx]++]);
+                write_value(fs, prop.data_u32[cur[pidx]++], big_endian);
                 break;
               case ply_type::u64:
-                write_value(fs, prop.data_u64[cur[pidx]++]);
+                write_value(fs, prop.data_u64[cur[pidx]++], big_endian);
                 break;
               case ply_type::f32:
-                write_value(fs, prop.data_f32[cur[pidx]++]);
+                write_value(fs, prop.data_f32[cur[pidx]++], big_endian);
                 break;
               case ply_type::f64:
-                write_value(fs, prop.data_f64[cur[pidx]++]);
+                write_value(fs, prop.data_f64[cur[pidx]++], big_endian);
                 break;
             }
           }
@@ -1195,28 +1224,16 @@ void add_ply_points(ply_model& ply, const vector<int>& values) {
 void read_ply_header(file_wrapper& fs, ply_format& format,
     vector<ply_element>& elements, vector<string>& comments) {
   // ply type names
-  static auto type_map = unordered_map<string, ply_type>{
-      {"char", ply_type::i8},
-      {"short", ply_type::i16},
-      {"int", ply_type::i32},
-      {"long", ply_type::i64},
-      {"uchar", ply_type::u8},
-      {"ushort", ply_type::u16},
-      {"uint", ply_type::u32},
-      {"ulong", ply_type::u64},
-      {"float", ply_type::f32},
-      {"double", ply_type::f64},
-      {"int8", ply_type::i8},
-      {"int16", ply_type::i16},
-      {"int32", ply_type::i32},
-      {"int64", ply_type::i64},
-      {"uint8", ply_type::u8},
-      {"uint16", ply_type::u16},
-      {"uint32", ply_type::u32},
-      {"uint64", ply_type::u64},
-      {"float32", ply_type::f32},
-      {"float64", ply_type::f64}
-  };
+  static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
+      {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
+      {"uchar", ply_type::u8}, {"ushort", ply_type::u16},
+      {"uint", ply_type::u32}, {"ulong", ply_type::u64},
+      {"float", ply_type::f32}, {"double", ply_type::f64},
+      {"int8", ply_type::i8}, {"int16", ply_type::i16},
+      {"int32", ply_type::i32}, {"int64", ply_type::i64},
+      {"uint8", ply_type::u8}, {"uint16", ply_type::u16},
+      {"uint32", ply_type::u32}, {"uint64", ply_type::u64},
+      {"float32", ply_type::f32}, {"float64", ply_type::f64}};
 
   // parsing checks
   auto first_line = true;
@@ -1307,7 +1324,7 @@ void read_ply_header(file_wrapper& fs, ply_format& format,
 }
 
 template <typename VT, typename LT>
-void read_ply_value_impl(file_wrapper& fs, ply_format format,
+void read_ply_value_generic(file_wrapper& fs, ply_format format,
     const ply_element& element, vector<VT>& values, vector<vector<LT>>& lists) {
   // prepare properties
   if (values.size() != element.properties.size()) {
@@ -1355,14 +1372,6 @@ void read_ply_value_impl(file_wrapper& fs, ply_format format,
       }
     }
   }
-}
-
-// Write text to file
-static inline void write_ply_text(file_wrapper& fs, const char* value) {
-  checked_fprintf(fs, "%s", value);
-}
-static inline void write_ply_text(file_wrapper& fs, const string& value) {
-  checked_fprintf(fs, "%s", value.c_str());
 }
 
 template <typename VT>
@@ -1438,51 +1447,50 @@ void write_ply_header(file_wrapper& fs, ply_format format,
       {ply_type::f64, "double"},
   };
 
-  write_ply_text(fs, "ply\n");
+  write_text(fs, "ply\n");
   switch (format) {
-    case ply_format::ascii: write_ply_text(fs, "format ascii 1.0\n"); break;
+    case ply_format::ascii: write_text(fs, "format ascii 1.0\n"); break;
     case ply_format::binary_little_endian:
-      write_ply_text(fs, "format binary_little_endian 1.0\n");
+      write_text(fs, "format binary_little_endian 1.0\n");
       break;
     case ply_format::binary_big_endian:
-      write_ply_text(fs, "format binary_big_endian 1.0\n");
+      write_text(fs, "format binary_big_endian 1.0\n");
       break;
   }
-  for (auto& comment : comments)
-    write_ply_text(fs, "comment " + comment + "\n");
+  for (auto& comment : comments) write_text(fs, "comment " + comment + "\n");
   for (auto& elem : elements) {
-    write_ply_text(
+    write_text(
         fs, "element " + elem.name + " " + std::to_string(elem.count) + "\n");
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        write_ply_text(fs, "property list uchar " + type_map[prop.type] + " " +
-                               prop.name + "\n");
+        write_text(fs, "property list uchar " + type_map[prop.type] + " " +
+                           prop.name + "\n");
       } else {
-        write_ply_text(
+        write_text(
             fs, "property " + type_map[prop.type] + " " + prop.name + "\n");
       }
     }
   }
-  write_ply_text(fs, "end_header\n");
+  write_text(fs, "end_header\n");
 }
 
 template <typename VT, typename LT>
-void write_ply_value_impl(file_wrapper& fs, ply_format format,
+void write_ply_value_generic(file_wrapper& fs, ply_format format,
     const ply_element& element, vector<VT>& values, vector<vector<LT>>& lists) {
   if (format == ply_format::ascii) {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
-      if (pidx) write_ply_text(fs, " ");
+      if (pidx) write_text(fs, " ");
       if (!prop.is_list) {
         write_ply_prop(fs, prop.type, values[pidx]);
       } else {
         write_ply_prop(fs, ply_type::u8, values[pidx]);
         for (auto i = 0; i < (int)lists[pidx].size(); i++) {
-          if (i) write_ply_text(fs, " ");
+          if (i) write_text(fs, " ");
           write_ply_prop(fs, prop.type, lists[pidx][i]);
         }
       }
-      write_ply_text(fs, "\n");
+      write_text(fs, "\n");
     }
   } else {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -1504,23 +1512,23 @@ void write_ply_value_impl(file_wrapper& fs, ply_format format,
 void write_ply_value(file_wrapper& fs, ply_format format,
     const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists) {
-  write_ply_value_impl(fs, format, element, values, lists);
+  write_ply_value_generic(fs, format, element, values, lists);
 }
 void write_ply_value(file_wrapper& fs, ply_format format,
     const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists) {
-  write_ply_value_impl(fs, format, element, values, lists);
+  write_ply_value_generic(fs, format, element, values, lists);
 }
 
 void read_ply_value(file_wrapper& fs, ply_format format,
     const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists) {
-  read_ply_value_impl(fs, format, element, values, lists);
+  read_ply_value_generic(fs, format, element, values, lists);
 }
 void read_ply_value(file_wrapper& fs, ply_format format,
     const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists) {
-  read_ply_value_impl(fs, format, element, values, lists);
+  read_ply_value_generic(fs, format, element, values, lists);
 }
 
 int find_ply_element(const vector<ply_element>& elements, const string& name) {
