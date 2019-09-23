@@ -4195,9 +4195,9 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   open_file(files.emplace_back(), filename);
 
   // parser state
-  unordered_map<string, pbrt_context> coordsys = {};
-  auto                           stack          = vector<pbrt_context>{};
-  string                         cur_object     = "";
+  unordered_map<string, pbrt_context> coordsys   = {};
+  auto                                stack      = vector<pbrt_context>{};
+  string                              cur_object = "";
 
   // helpers
   auto set_transform = [](pbrt_context& ctx, const frame3f& xform) {
@@ -4299,7 +4299,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         auto name = ""s;
         parse_pbrt_param(str, name);
         coordsys[name].transform_start = stack.back().transform_start;
-        coordsys[name].transform_end = stack.back().transform_end;
+        coordsys[name].transform_end   = stack.back().transform_end;
       } else if (cmd == "CoordSysTransform") {
         auto name = ""s;
         parse_pbrt_param(str, name);
@@ -4343,8 +4343,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         parse_pbrt_params(str, camera.values);
         camera.transform_start = stack.back().transform_start;
         camera.transform_end   = stack.back().transform_end;
-        camera.lookat = stack.back().last_lookat_distance;
-        camera.aspect = stack.back().last_film_aspect;
+        camera.lookat          = stack.back().last_lookat_distance;
+        camera.aspect          = stack.back().last_film_aspect;
       } else if (cmd == "Texture") {
         auto& texture  = pbrt.textures.emplace_back();
         auto  comptype = ""s;
@@ -4393,7 +4393,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         parse_pbrt_params(str, arealight.values);
         arealight.transform_start = stack.back().transform_start;
         arealight.transform_end   = stack.back().transform_end;
-        stack.back().arealight = arealight.name;
+        stack.back().arealight    = arealight.name;
       } else if (cmd == "LightSource") {
         auto& light = pbrt.lights.emplace_back();
         parse_pbrt_param(str, light.type);

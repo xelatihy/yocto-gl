@@ -708,10 +708,10 @@ struct pbrt_value {
 // Pbrt camera
 struct pbrt_camera {
   // camera parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f transform_start    = identity3x4f;
-  frame3f transform_end    = identity3x4f;
+  string             type            = "";
+  vector<pbrt_value> values          = {};
+  frame3f            transform_start = identity3x4f;
+  frame3f            transform_end   = identity3x4f;
   // camera approximation
   float width    = 0;
   float height   = 0;
@@ -723,7 +723,7 @@ struct pbrt_camera {
 };
 
 // Pbrt texture
-struct pbrt_texture  {
+struct pbrt_texture {
   // texture parameters
   string             name   = "";
   string             type   = "";
@@ -735,7 +735,7 @@ struct pbrt_texture  {
 };
 
 // Pbrt material
-struct pbrt_material  {
+struct pbrt_material {
   // material parameters
   string             name   = "";
   string             type   = "";
@@ -764,14 +764,14 @@ struct pbrt_medium {
 // Pbrt shape
 struct pbrt_shape {
   // shape parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f transform_start    = identity3x4f;
-  frame3f transform_end    = identity3x4f;
-  string material  = "";
-  string arealight = "";
-  string interior = "";
-  string exterior = "";
+  string             type            = "";
+  vector<pbrt_value> values          = {};
+  frame3f            transform_start = identity3x4f;
+  frame3f            transform_end   = identity3x4f;
+  string             material        = "";
+  string             arealight       = "";
+  string             interior        = "";
+  string             exterior        = "";
   // shape approximation
   string        filename  = "";
   vector<vec3f> positions = {};
@@ -786,18 +786,18 @@ struct pbrt_object {
   vector<pbrt_shape> shapes = {};
 };
 struct pbrt_instance {
-  string  object = "";
-  frame3f transform_start    = identity3x4f;
-  frame3f transform_end    = identity3x4f;
+  string  object          = "";
+  frame3f transform_start = identity3x4f;
+  frame3f transform_end   = identity3x4f;
 };
 
 // Pbrt lights
 struct pbrt_light {
   // light parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f transform_start    = identity3x4f;
-  frame3f transform_end    = identity3x4f;
+  string             type            = "";
+  vector<pbrt_value> values          = {};
+  frame3f            transform_start = identity3x4f;
+  frame3f            transform_end   = identity3x4f;
   // light approximation
   vec3f emission = zero3f;
   vec3f from     = zero3f;
@@ -805,20 +805,20 @@ struct pbrt_light {
 };
 struct pbrt_arealight {
   // arealight parameters
-  string             name   = "";
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f transform_start    = identity3x4f;
-  frame3f transform_end    = identity3x4f;
+  string             name            = "";
+  string             type            = "";
+  vector<pbrt_value> values          = {};
+  frame3f            transform_start = identity3x4f;
+  frame3f            transform_end   = identity3x4f;
   // arealight approximation
   vec3f emission = zero3f;
 };
 struct pbrt_environment {
   // shape parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f transform_start    = identity3x4f;
-  frame3f transform_end    = identity3x4f;
+  string             type            = "";
+  vector<pbrt_value> values          = {};
+  frame3f            transform_start = identity3x4f;
+  frame3f            transform_end   = identity3x4f;
   // environment approximation
   string emission     = "";
   string emission_map = "";
@@ -853,17 +853,17 @@ struct pbrt_model {
   vector<pbrt_shape>       shapes       = {};
   vector<pbrt_texture>     textures     = {};
   vector<pbrt_material>    materials    = {};
-  vector<pbrt_medium>      mediums    = {};
+  vector<pbrt_medium>      mediums      = {};
   vector<pbrt_environment> environments = {};
-  vector<pbrt_arealight> arealights   = {};
+  vector<pbrt_arealight>   arealights   = {};
   vector<pbrt_light>       lights       = {};
   vector<pbrt_object>      objects      = {};
   vector<pbrt_instance>    instances    = {};
   // other elements
-  vector<pbrt_integrator> integrators  = {};
-  vector<pbrt_film> films        = {};
-  vector<pbrt_filter> filters      = {};
-  vector<pbrt_sampler> samplers     = {};
+  vector<pbrt_integrator>  integrators  = {};
+  vector<pbrt_film>        films        = {};
+  vector<pbrt_filter>      filters      = {};
+  vector<pbrt_sampler>     samplers     = {};
   vector<pbrt_accelerator> accelerators = {};
 };
 
