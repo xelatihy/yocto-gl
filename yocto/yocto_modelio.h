@@ -689,7 +689,7 @@ enum struct pbrt_value_type {
   // clang-format on
 };
 
-// Yaml value
+// Pbrt value
 struct pbrt_value {
   string          name     = "";
   pbrt_value_type type     = pbrt_value_type::real;
@@ -703,6 +703,168 @@ struct pbrt_value {
   vector<vec2f>   vector2f = {};
   vector<vec3f>   vector3f = {};
   vector<int>     vector1i = {};
+};
+
+// Pbrt camera
+struct pbrt_camera {
+  // camera parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f transform_start    = identity3x4f;
+  frame3f transform_end    = identity3x4f;
+  // camera approximation
+  float width    = 0;
+  float height   = 0;
+  float lens     = 0;
+  float focus    = 0;
+  float aperture = 0;
+  float aspect   = 0;
+  float lookat   = 0;
+};
+
+// Pbrt texture
+struct pbrt_texture  {
+  // texture parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  // texture approximation
+  bool   is_constant = false;
+  vec3f  constant    = vec3f{1, 1, 1};
+  string filename    = "";
+};
+
+// Pbrt material
+struct pbrt_material  {
+  // material parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  // material approximation
+  vec3f  emission         = zero3f;
+  vec3f  diffuse          = zero3f;
+  vec3f  specular         = zero3f;
+  vec3f  transmission     = zero3f;
+  vec2f  roughness        = zero2f;
+  string emission_map     = "";
+  string diffuse_map      = "";
+  string specular_map     = "";
+  string transmission_map = "";
+  string roughness_map    = "";
+};
+
+// Pbrt medium
+struct pbrt_medium {
+  // medium parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+
+// Pbrt shape
+struct pbrt_shape {
+  // shape parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f transform_start    = identity3x4f;
+  frame3f transform_end    = identity3x4f;
+  string material  = "";
+  string arealight = "";
+  string interior = "";
+  string exterior = "";
+  // shape approximation
+  string        filename  = "";
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec3i> triangles = {};
+};
+
+// Pbrt object and instance
+struct pbrt_object {
+  string             name   = "";
+  vector<pbrt_shape> shapes = {};
+};
+struct pbrt_instance {
+  string  object = "";
+  frame3f transform_start    = identity3x4f;
+  frame3f transform_end    = identity3x4f;
+};
+
+// Pbrt lights
+struct pbrt_light {
+  // light parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f transform_start    = identity3x4f;
+  frame3f transform_end    = identity3x4f;
+  // light approximation
+  vec3f emission = zero3f;
+  vec3f from     = zero3f;
+  vec3f to       = zero3f;
+};
+struct pbrt_arealight {
+  // arealight parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f transform_start    = identity3x4f;
+  frame3f transform_end    = identity3x4f;
+  // arealight approximation
+  vec3f emission = zero3f;
+};
+struct pbrt_environment {
+  // shape parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f transform_start    = identity3x4f;
+  frame3f transform_end    = identity3x4f;
+  // environment approximation
+  string emission     = "";
+  string emission_map = "";
+};
+
+// Other pbrt elements
+struct pbrt_integrator {
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+struct pbrt_film {
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+struct pbrt_filter {
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+struct pbrt_accelerator {
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+struct pbrt_sampler {
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+
+// Pbrt model
+struct pbrt_model {
+  // scene objects
+  vector<pbrt_camera>      cameras      = {};
+  vector<pbrt_shape>       shapes       = {};
+  vector<pbrt_texture>     textures     = {};
+  vector<pbrt_material>    materials    = {};
+  vector<pbrt_medium>      mediums    = {};
+  vector<pbrt_environment> environments = {};
+  vector<pbrt_arealight> arealights   = {};
+  vector<pbrt_light>       lights       = {};
+  vector<pbrt_object>      objects      = {};
+  vector<pbrt_instance>    instances    = {};
+  // other elements
+  vector<pbrt_integrator> integrators  = {};
+  vector<pbrt_film> films        = {};
+  vector<pbrt_filter> filters      = {};
+  vector<pbrt_sampler> samplers     = {};
+  vector<pbrt_accelerator> accelerators = {};
 };
 
 // Pbrt command
