@@ -2194,11 +2194,11 @@ void save_objx(const string& filename, const obj_model& obj) {
     format_values(fs, "newcam {}\n", camera.name);
     format_values(fs, "Cframe {}\n", camera.frame);
     format_values(fs, "Cortho {}\n", camera.ortho);
-    format_values(fs, "Pwidth {}\n", camera.width);
-    format_values(fs, "Pheight {}\n", camera.height);
-    format_values(fs, "Plens {}\n", camera.lens);
-    format_values(fs, "Pfocus {}\n", camera.focus);
-    format_values(fs, "Paperture {}\n", camera.aperture);
+    format_values(fs, "Cwidth {}\n", camera.width);
+    format_values(fs, "Cheight {}\n", camera.height);
+    format_values(fs, "Clens {}\n", camera.lens);
+    format_values(fs, "Cfocus {}\n", camera.focus);
+    format_values(fs, "Caperture {}\n", camera.aperture);
     format_values(fs, "\n");
   }
 
