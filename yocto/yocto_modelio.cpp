@@ -4247,7 +4247,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
       } else if (cmd == "ObjectInstance") {
         auto& instance = pbrt.instances.emplace_back();
         parse_pbrt_param(str, instance.object);
-        instance.transform_start = stack.back().transform_start;
+        instance.frame = stack.back().transform_start;
         instance.transform_end   = stack.back().transform_end;
       } else if (cmd == "ActiveTransform") {
         auto name = ""s;
@@ -4341,7 +4341,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         auto& camera = pbrt.cameras.emplace_back();
         parse_pbrt_param(str, camera.type);
         parse_pbrt_params(str, camera.values);
-        camera.transform_start = stack.back().transform_start;
+        camera.frame = stack.back().transform_start;
         camera.transform_end   = stack.back().transform_end;
         camera.lookat          = stack.back().last_lookat_distance;
         camera.aspect          = stack.back().last_film_aspect;
@@ -4379,7 +4379,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
                           : pbrt.objects.back().shapes.emplace_back();
         parse_pbrt_param(str, shape.type);
         parse_pbrt_params(str, shape.values);
-        shape.transform_start = stack.back().transform_start;
+        shape.frame = stack.back().transform_start;
         shape.transform_end   = stack.back().transform_end;
         shape.material        = stack.back().material;
         shape.arealight       = stack.back().arealight;
@@ -4391,15 +4391,15 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         arealight.name = "arealight_" + std::to_string(arealight_id++);
         parse_pbrt_param(str, arealight.type);
         parse_pbrt_params(str, arealight.values);
-        arealight.transform_start = stack.back().transform_start;
-        arealight.transform_end   = stack.back().transform_end;
+        arealight.frame = stack.back().transform_start;
+        arealight.frend   = stack.back().transform_end;
         stack.back().arealight    = arealight.name;
       } else if (cmd == "LightSource") {
         auto& light = pbrt.lights.emplace_back();
         parse_pbrt_param(str, light.type);
         parse_pbrt_params(str, light.values);
-        light.transform_start = stack.back().transform_start;
-        light.transform_end   = stack.back().transform_end;
+        light.frame = stack.back().transform_start;
+        light.frend   = stack.back().transform_end;
       } else if (cmd == "MakeNamedMedium") {
         auto& medium = pbrt.mediums.emplace_back();
         parse_pbrt_param(str, medium.name);

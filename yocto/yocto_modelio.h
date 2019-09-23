@@ -710,7 +710,7 @@ struct pbrt_camera {
   // camera parameters
   string             type            = "";
   vector<pbrt_value> values          = {};
-  frame3f            transform_start = identity3x4f;
+  frame3f            frame = identity3x4f;
   frame3f            transform_end   = identity3x4f;
   // camera approximation
   float width    = 0;
@@ -766,7 +766,7 @@ struct pbrt_shape {
   // shape parameters
   string             type            = "";
   vector<pbrt_value> values          = {};
-  frame3f            transform_start = identity3x4f;
+  frame3f            frame = identity3x4f;
   frame3f            transform_end   = identity3x4f;
   string             material        = "";
   string             arealight       = "";
@@ -787,7 +787,7 @@ struct pbrt_object {
 };
 struct pbrt_instance {
   string  object          = "";
-  frame3f transform_start = identity3x4f;
+  frame3f frame = identity3x4f;
   frame3f transform_end   = identity3x4f;
 };
 
@@ -796,8 +796,8 @@ struct pbrt_light {
   // light parameters
   string             type            = "";
   vector<pbrt_value> values          = {};
-  frame3f            transform_start = identity3x4f;
-  frame3f            transform_end   = identity3x4f;
+  frame3f            frame = identity3x4f;
+  frame3f            frend   = identity3x4f;
   // light approximation
   vec3f emission = zero3f;
   vec3f from     = zero3f;
@@ -808,8 +808,8 @@ struct pbrt_arealight {
   string             name            = "";
   string             type            = "";
   vector<pbrt_value> values          = {};
-  frame3f            transform_start = identity3x4f;
-  frame3f            transform_end   = identity3x4f;
+  frame3f            frame = identity3x4f;
+  frame3f            frend   = identity3x4f;
   // arealight approximation
   vec3f emission = zero3f;
 };
@@ -817,8 +817,8 @@ struct pbrt_environment {
   // shape parameters
   string             type            = "";
   vector<pbrt_value> values          = {};
-  frame3f            transform_start = identity3x4f;
-  frame3f            transform_end   = identity3x4f;
+  frame3f            frame = identity3x4f;
+  frame3f            frend   = identity3x4f;
   // environment approximation
   string emission     = "";
   string emission_map = "";
