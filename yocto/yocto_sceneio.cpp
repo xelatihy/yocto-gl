@@ -2059,7 +2059,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   // convert cameras
   for (auto& camera : scene.cameras) {
     auto& ocamera    = obj.cameras.emplace_back();
-    ocamera.name     = camera.uri;
+    ocamera.name     = fs::path(camera.uri).stem();
     ocamera.frame    = camera.frame;
     ocamera.ortho    = camera.orthographic;
     ocamera.width    = camera.film.x;
@@ -2080,7 +2080,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   // convert materials and textures
   for (auto& material : scene.materials) {
     auto& omaterial             = obj.materials.emplace_back();
-    omaterial.name              = material.uri;
+    omaterial.name              = fs::path(material.uri).stem();
     omaterial.illum             = 2;
     omaterial.emission          = material.emission;
     omaterial.diffuse           = material.diffuse;
@@ -2089,12 +2089,6 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     omaterial.pbr_metallic      = material.metallic;
     omaterial.reflection        = material.coat;
     omaterial.transmission      = material.transmission;
-    omaterial.vol_transmission  = material.voltransmission;
-    omaterial.vol_meanfreepath  = material.volmeanfreepath;
-    omaterial.vol_emission      = material.volemission;
-    omaterial.vol_scattering    = material.volscatter;
-    omaterial.vol_anisotropy    = material.volanisotropy;
-    omaterial.vol_scale         = material.volscale;
     omaterial.opacity           = material.opacity;
     omaterial.emission_map      = get_texture(material.emission_tex);
     omaterial.diffuse_map       = get_texture(material.diffuse_tex);
@@ -2105,13 +2099,21 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     omaterial.reflection_map    = get_texture(material.coat_tex);
     omaterial.opacity_map       = get_texture(material.opacity_tex);
     omaterial.normal_map        = get_texture(material.normal_tex);
+    if(material.voltransmission != zero3f || material.volmeanfreepath != zero3f) {
+    omaterial.vol_transmission  = material.voltransmission;
+    omaterial.vol_meanfreepath  = material.volmeanfreepath;
+    omaterial.vol_emission      = material.volemission;
+    omaterial.vol_scattering    = material.volscatter;
+    omaterial.vol_anisotropy    = material.volanisotropy;
+    omaterial.vol_scale         = material.volscale;
+    }
   }
 
   // convert shapes
   if (params.objinstances) {
     for (auto& shape : scene.shapes) {
       auto& oshape = obj.shapes.emplace_back();
-      oshape.name  = shape.uri;
+      oshape.name  = fs::path(shape.uri).stem();
       if (!shape.triangles.empty()) {
         add_obj_triangles(obj, oshape, shape.triangles, shape.positions,
             shape.normals, shape.texcoords, {}, true);
@@ -2134,17 +2136,17 @@ static void save_obj(const string& filename, const yocto_scene& scene,
     }
     for (auto& instance : scene.instances) {
       auto& oinstance    = obj.instances.emplace_back();
-      oinstance.name     = instance.uri;
+      oinstance.name     = fs::path(instance.uri).stem();
       oinstance.frame    = instance.frame;
-      oinstance.object   = scene.shapes[instance.shape].uri;
-      oinstance.material = scene.materials[instance.material].uri;
+      oinstance.object   = fs::path(scene.shapes[instance.shape].uri).stem();
+      oinstance.material = fs::path(scene.materials[instance.material].uri).stem();
     }
   } else {
     for (auto& instance : scene.instances) {
       auto& shape = scene.shapes[instance.shape];
       auto& oshape     = obj.shapes.emplace_back();
-      oshape.name      = instance.uri;
-      oshape.materials = {scene.materials[instance.material].uri};
+      oshape.name      = fs::path(instance.uri).stem();
+      oshape.materials = {fs::path(scene.materials[instance.material].uri).stem()};
       auto positions = shape.positions, normals = shape.normals;
       for(auto& p : positions) p = transform_point(instance.frame, p);
       for(auto& n : normals) n = transform_normal(instance.frame, n);
@@ -2173,7 +2175,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   // convert environments
   for (auto& environment : scene.environments) {
     auto& oenvironment        = obj.environments.emplace_back();
-    oenvironment.name         = environment.uri;
+    oenvironment.name         = fs::path(environment.uri).stem();
     oenvironment.frame        = environment.frame;
     oenvironment.emission     = environment.emission;
     oenvironment.emission_map = get_texture(environment.emission_tex);

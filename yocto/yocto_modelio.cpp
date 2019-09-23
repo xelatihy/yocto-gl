@@ -2167,7 +2167,7 @@ void save_mtl(const string& filename, const obj_model& obj) {
       format_values(fs, "Vs {}\n", material.vol_scattering);
     if (material.vol_anisotropy)
       format_values(fs, "Vg {}\n", material.vol_anisotropy);
-    if (material.vol_scale != 0.01) format_values(fs, "Vr {}\n", material.vol_scale);
+    if (material.vol_scale) format_values(fs, "Vr {}\n", material.vol_scale);
     if (!material.vol_scattering_map.path.empty())
       format_values(fs, "map_Vs {}\n", material.vol_scattering_map);
     format_values(fs, "\n");
@@ -2249,11 +2249,9 @@ void save_obj(const string& filename, const obj_model& obj) {
   format_values(fs, "\n");
 
 // save material library
-#if 0
   if(!obj.materials.empty()) {
-    checked_fprintf("mtllib %s\n\n", replace_extension(filename, ".mtl").c_str());
+    format_values(fs, "mtllib {}\n\n", replace_extension(get_filename(filename), ".mtl"));
   }
-#endif
 
   // save vertices
   for (auto& p : obj.positions) format_values(fs, "v {}\n", p);
