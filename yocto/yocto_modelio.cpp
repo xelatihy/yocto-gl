@@ -2116,7 +2116,7 @@ void save_mtl(const string& filename, const obj_model& obj) {
       format_values(fs, "Kr {}\n", material.reflection);
     if (material.transmission != zero3f)
       format_values(fs, "Kt {}\n", material.transmission);
-    format_values(fs, "Ns {}\n", material.exponent);
+    format_values(fs, "Ns {}\n", (int)material.exponent);
     if (material.opacity != 1) format_values(fs, "d {}\n", material.opacity);
     if (!material.emission_map.path.empty())
       format_values(fs, "map_Ke {}\n", material.emission_map);
@@ -2167,10 +2167,10 @@ void save_mtl(const string& filename, const obj_model& obj) {
       format_values(fs, "Vs {}\n", material.vol_scattering);
     if (material.vol_anisotropy)
       format_values(fs, "Vg {}\n", material.vol_anisotropy);
-    if (material.vol_scale)
-      format_values(fs, "Vr {}\n", material.vol_scale);
+    if (material.vol_scale != 0.01) format_values(fs, "Vr {}\n", material.vol_scale);
     if (!material.vol_scattering_map.path.empty())
       format_values(fs, "map_Vs {}\n", material.vol_scattering_map);
+    format_values(fs, "\n");
   }
 }
 
@@ -2199,6 +2199,7 @@ void save_objx(const string& filename, const obj_model& obj) {
     format_values(fs, "Plens {}\n", camera.lens);
     format_values(fs, "Pfocus {}\n", camera.focus);
     format_values(fs, "Paperture {}\n", camera.aperture);
+    format_values(fs, "\n");
   }
 
   // environments
@@ -2208,6 +2209,7 @@ void save_objx(const string& filename, const obj_model& obj) {
     format_values(fs, "Ee {}\n", environment.emission);
     if (!environment.emission_map.path.empty())
       format_values(fs, "map_Ee {}\n", environment.emission_map);
+    format_values(fs, "\n");
   }
 
   // instances
@@ -2216,6 +2218,7 @@ void save_objx(const string& filename, const obj_model& obj) {
     format_values(fs, "Iframe {}\n", instance.frame);
     format_values(fs, "Iobj {}\n", instance.object);
     format_values(fs, "Imat {}\n", instance.material);
+    format_values(fs, "\n");
   }
 
   // procedurals
@@ -2226,6 +2229,7 @@ void save_objx(const string& filename, const obj_model& obj) {
     format_values(fs, "Pmat {}\n", procedural.material);
     format_values(fs, "Psize {}\n", procedural.size);
     format_values(fs, "Plevel {}\n", procedural.level);
+    format_values(fs, "\n");
   }
 }
 
@@ -2280,6 +2284,15 @@ void save_obj(const string& filename, const obj_model& obj) {
     }
     format_values(fs, "\n");
   }
+
+  // save mtl
+  if (!obj.materials.empty())
+    save_mtl(replace_extension(filename, ".mtl"), obj);
+
+  // save objx
+  if (!obj.cameras.empty() || !obj.environments.empty() ||
+      !obj.instances.empty() || !obj.procedurals.empty())
+    save_objx(replace_extension(filename, ".objx"), obj);
 }
 
 // convert between roughness and exponent
@@ -2291,7 +2304,8 @@ float obj_exponent_to_roughness(float exponent) {
   return roughness;
 }
 float obj_roughness_to_exponent(float roughness) {
-  throw std::runtime_error("not implemented");
+  return (int)clamp(
+      2 / pow(clamp(roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2, 0.0f, 1.0e9f);
 }
 
 // Get obj vertices

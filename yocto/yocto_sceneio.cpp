@@ -1584,6 +1584,28 @@ static void load_obj(
   }
 }
 
+// Loads an OBJ
+static void load_obj_scene(
+    const string& filename, yocto_scene& scene, const load_params& params) {
+  scene = {};
+
+  // Parse obj
+  load_obj(filename, scene, params);
+
+  // load textures
+  auto dirname = fs::path(filename).parent_path();
+  load_textures(scene, dirname, params);
+
+  // fix scene
+  scene.uri = fs::path(filename).filename();
+  add_cameras(scene);
+  add_materials(scene);
+  add_radius(scene);
+  normalize_uris(scene);
+  trim_memory(scene);
+  update_transforms(scene);
+}
+
 #else
 
 void load_obj(
@@ -1645,88 +1667,106 @@ void load_obj(
     material.opacity_tex      = get_texture(omat.opacity_map);
     material.normal_tex       = get_texture(omat.normal_map);
     // TODO: refract, subsurface_map, vol_scatter
-    material_map[material.uri] = (int)scene.materials.size()-1;
+    material_map[material.uri] = (int)scene.materials.size() - 1;
   }
 
   // convert shapes
   for (auto& oshape : obj.shapes) {
-    auto& shape      = scene.shapes.emplace_back();
-    shape.uri = oshape.name;
-    auto  materials  = vector<string>{};
-    auto  ematerials = vector<int>{};
-    auto  has_quads  = has_obj_quads(oshape);
+    auto& shape     = scene.shapes.emplace_back();
+    shape.uri       = oshape.name;
+    auto materials  = vector<string>{};
+    auto ematerials = vector<int>{};
+    auto has_quads  = has_obj_quads(oshape);
     if (!oshape.faces.empty() && !params.facevarying && !has_quads) {
-      get_obj_triangles(obj, oshape, shape.triangles, shape.positions, shape.normals, shape.texcoords,
-          materials, ematerials, true);
-    } else if (!oshape.faces.empty() && !params.facevarying && has_quads) {
-      get_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals, shape.texcoords, materials,
-          ematerials, true);
-    } else if (!oshape.lines.empty()) {
-      get_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals, shape.texcoords, materials,
-          ematerials, true);
-    } else if (!oshape.points.empty()) {
-      get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals, shape.texcoords,
-          materials, ematerials, true);
-    } else if (!oshape.faces.empty() && params.facevarying) {
-      get_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+      get_obj_triangles(obj, oshape, shape.triangles, shape.positions,
           shape.normals, shape.texcoords, materials, ematerials, true);
+    } else if (!oshape.faces.empty() && !params.facevarying && has_quads) {
+      get_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, true);
+    } else if (!oshape.lines.empty()) {
+      get_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, true);
+    } else if (!oshape.points.empty()) {
+      get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, true);
+    } else if (!oshape.faces.empty() && params.facevarying) {
+      get_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
+          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
+          materials, ematerials, true);
     } else {
       throw std::runtime_error("should not have gotten here");
     }
     // make instance
-    if(obj.instances.empty()) {
+    if (obj.instances.empty()) {
       auto& instance = scene.instances.emplace_back();
-      instance.shape = (int)scene.shapes.size()-1;
-      if(oshape.materials.size() != 1) {
+      instance.shape = (int)scene.shapes.size() - 1;
+      if (oshape.materials.size() != 1) {
         throw std::runtime_error("missing material for " + oshape.name);
       }
       try {
         instance.material = material_map.at(oshape.materials.at(0));
-      } catch(...) {
-        throw std::runtime_error("cannot find material " + oshape.materials.at(0));
+      } catch (...) {
+        throw std::runtime_error(
+            "cannot find material " + oshape.materials.at(0));
       }
     }
   }
 
   // convert environments
-  for(auto& oenvironment : obj.environments) {
-    auto& environment = scene.environments.emplace_back();
-    environment.uri = oenvironment.name;
-    environment.frame = oenvironment.frame;
-    environment.emission = oenvironment.emission;
+  for (auto& oenvironment : obj.environments) {
+    auto& environment        = scene.environments.emplace_back();
+    environment.uri          = oenvironment.name;
+    environment.frame        = oenvironment.frame;
+    environment.emission     = oenvironment.emission;
     environment.emission_tex = get_texture(oenvironment.emission_map);
   }
 
   // convert instances
-  if(!obj.instances.empty()) {
+  if (!obj.instances.empty()) {
     auto shape_map = unordered_map<string, vector<int>>{{"", {}}};
-    for(auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
+    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
       shape_map[scene.shapes[shape_id].uri].push_back(shape_id);
     }
-    for(auto& oinstance : obj.instances) {
-      if(shape_map.find(oinstance.name) == shape_map.end()) 
+    for (auto& oinstance : obj.instances) {
+      if (shape_map.find(oinstance.name) == shape_map.end())
         throw std::runtime_error("cannot find object " + oinstance.object);
-      if(material_map.find(oinstance.name) == material_map.end()) 
+      if (material_map.find(oinstance.name) == material_map.end())
         throw std::runtime_error("cannot find material " + oinstance.material);
       auto material_id = material_map.at(oinstance.material);
-      for(auto shape_id : shape_map.at(oinstance.object)) {
-        auto& instance = scene.instances.emplace_back();
-        instance.uri = oinstance.name;
-        instance.frame = oinstance.frame;
-        instance.shape = shape_id;
+      for (auto shape_id : shape_map.at(oinstance.object)) {
+        auto& instance    = scene.instances.emplace_back();
+        instance.uri      = oinstance.name;
+        instance.frame    = oinstance.frame;
+        instance.shape    = shape_id;
         instance.material = material_id;
       }
     }
   }
 
   // convert procedurals
-  if(!obj.procedurals.empty()) {
-    throw std::runtime_error("not implemented yet");
+  for(auto& oprocedural : obj.procedurals) {
+    auto& shape = scene.shapes.emplace_back();
+    shape.uri = oprocedural.name;
+    if (oprocedural.type == "floor") {
+      auto params         = proc_shape_params{};
+      params.type         = proc_shape_params::type_t::floor;
+      params.subdivisions = oprocedural.level;
+      params.scale        = oprocedural.size / 2;
+      params.uvscale      = oprocedural.size;
+      make_proc_shape(shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, params);
+    } else {
+      throw std::runtime_error("unknown obj procedural");
+    }
+    if (material_map.find(oprocedural.name) == material_map.end())
+      throw std::runtime_error("cannot find material " + oprocedural.material);
+    auto& instance = scene.instances.emplace_back();
+    instance.uri = oprocedural.name;
+    instance.frame = oprocedural.frame;
+    instance.shape = (int)scene.shapes.size()-1;
+    instance.material = material_map.at(oprocedural.material);
   }
-
 }
-
-#endif
 
 // Loads an OBJ
 static void load_obj_scene(
@@ -1749,6 +1789,10 @@ static void load_obj_scene(
   trim_memory(scene);
   update_transforms(scene);
 }
+
+#endif
+
+#ifdef YOCTO_OLD_OBJ
 
 static void save_obj(const string& filename, const yocto_scene& scene,
     bool preserve_instances, bool flip_texcoord = true) {
@@ -2005,6 +2049,148 @@ static void save_obj_scene(const string& filename, const yocto_scene& scene,
     throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
   }
 }
+
+#else
+
+static void save_obj(const string& filename, const yocto_scene& scene,
+    const save_params& params) {
+  auto obj = obj_model{};
+
+  // convert cameras
+  for (auto& camera : scene.cameras) {
+    auto& ocamera    = obj.cameras.emplace_back();
+    ocamera.name     = camera.uri;
+    ocamera.frame    = camera.frame;
+    ocamera.ortho    = camera.orthographic;
+    ocamera.width    = camera.film.x;
+    ocamera.height   = camera.film.y;
+    ocamera.focus    = camera.focus;
+    ocamera.lens     = camera.lens;
+    ocamera.aperture = camera.aperture;
+  }
+
+  // textures
+  auto get_texture = [&scene](int tex) {
+    if (tex < 0) return obj_texture_info{};
+    auto info = obj_texture_info{};
+    info.path = scene.textures[tex].uri;
+    return info;
+  };
+
+  // convert materials and textures
+  for (auto& material : scene.materials) {
+    auto& omaterial             = obj.materials.emplace_back();
+    omaterial.name              = material.uri;
+    omaterial.illum             = 2;
+    omaterial.emission          = material.emission;
+    omaterial.diffuse           = material.diffuse;
+    omaterial.specular          = material.specular;
+    omaterial.exponent          = obj_roughness_to_exponent(material.roughness);
+    omaterial.pbr_metallic      = material.metallic;
+    omaterial.reflection        = material.coat;
+    omaterial.transmission      = material.transmission;
+    omaterial.vol_transmission  = material.voltransmission;
+    omaterial.vol_meanfreepath  = material.volmeanfreepath;
+    omaterial.vol_emission      = material.volemission;
+    omaterial.vol_scattering    = material.volscatter;
+    omaterial.vol_anisotropy    = material.volanisotropy;
+    omaterial.vol_scale         = material.volscale;
+    omaterial.opacity           = material.opacity;
+    omaterial.emission_map      = get_texture(material.emission_tex);
+    omaterial.diffuse_map       = get_texture(material.diffuse_tex);
+    omaterial.specular_map      = get_texture(material.specular_tex);
+    omaterial.pbr_metallic_map  = get_texture(material.metallic_tex);
+    omaterial.pbr_roughness_map = get_texture(material.roughness_tex);
+    omaterial.transmission_map  = get_texture(material.transmission_tex);
+    omaterial.reflection_map    = get_texture(material.coat_tex);
+    omaterial.opacity_map       = get_texture(material.opacity_tex);
+    omaterial.normal_map        = get_texture(material.normal_tex);
+  }
+
+  // convert shapes
+  if (params.objinstances) {
+    for (auto& shape : scene.shapes) {
+      auto& oshape = obj.shapes.emplace_back();
+      oshape.name  = shape.uri;
+      if (!shape.triangles.empty()) {
+        add_obj_triangles(obj, oshape, shape.triangles, shape.positions,
+            shape.normals, shape.texcoords, {}, true);
+      } else if (!shape.quads.empty()) {
+        add_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, {}, true);
+      } else if (!shape.lines.empty()) {
+        add_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
+            shape.texcoords, {}, true);
+      } else if (!shape.points.empty()) {
+        add_obj_points(obj, oshape, shape.points, shape.positions,
+            shape.normals, shape.texcoords, {}, true);
+      } else if (!shape.quadspos.empty()) {
+        add_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, shape.positions, shape.normals,
+            shape.texcoords, {}, true);
+      } else {
+        throw std::runtime_error("do not support empty shapes");
+      }
+    }
+    for (auto& instance : scene.instances) {
+      auto& oinstance    = obj.instances.emplace_back();
+      oinstance.name     = instance.uri;
+      oinstance.frame    = instance.frame;
+      oinstance.object   = scene.shapes[instance.shape].uri;
+      oinstance.material = scene.materials[instance.material].uri;
+    }
+  } else {
+    for (auto& instance : scene.instances) {
+      auto& shape = scene.shapes[instance.shape];
+      auto& oshape     = obj.shapes.emplace_back();
+      oshape.name      = instance.uri;
+      oshape.materials = {scene.materials[instance.material].uri};
+      auto positions = shape.positions, normals = shape.normals;
+      for(auto& p : positions) p = transform_point(instance.frame, p);
+      for(auto& n : normals) n = transform_normal(instance.frame, n);
+      if (!shape.triangles.empty()) {
+        add_obj_triangles(obj, oshape, shape.triangles, positions,
+            normals, shape.texcoords, {}, true);
+      } else if (!shape.quads.empty()) {
+        add_obj_quads(obj, oshape, shape.quads, positions, normals,
+            shape.texcoords, {}, true);
+      } else if (!shape.lines.empty()) {
+        add_obj_lines(obj, oshape, shape.lines, positions, normals,
+            shape.texcoords, {}, true);
+      } else if (!shape.points.empty()) {
+        add_obj_points(obj, oshape, shape.points, positions,
+            normals, shape.texcoords, {}, true);
+      } else if (!shape.quadspos.empty()) {
+        add_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, positions, normals,
+            shape.texcoords, {}, true);
+      } else {
+        throw std::runtime_error("do not support empty shapes");
+      }
+    }
+  }
+
+  // convert environments
+  for (auto& environment : scene.environments) {
+    auto& oenvironment        = obj.environments.emplace_back();
+    oenvironment.name         = environment.uri;
+    oenvironment.frame        = environment.frame;
+    oenvironment.emission     = environment.emission;
+    oenvironment.emission_map = get_texture(environment.emission_tex);
+  }
+
+  // save obj
+  save_obj(filename, obj);
+}
+
+static void save_obj_scene(const string& filename, const yocto_scene& scene,
+    const save_params& params) {
+  save_obj(filename, scene, params);
+  auto dirname = fs::path(filename).parent_path();
+  save_textures(scene, dirname, params);
+}
+
+#endif
 
 void print_obj_camera(const yocto_camera& camera) {
   printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
