@@ -580,34 +580,37 @@ static inline void format_value(string& str, const vec3i& value) {
 }
 static inline void format_value(string& str, const frame3f& value) {
   char buf[256];
-  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y, value.x.z,
-      value.y.x, value.y.y, value.y.z, value.z.x, value.z.y, value.z.z, value.o.x, value.o.y,
-      value.o.z);
+  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y,
+      value.x.z, value.y.x, value.y.y, value.y.z, value.z.x, value.z.y,
+      value.z.z, value.o.x, value.o.y, value.o.z);
   str += buf;
 }
 
 // Foramt to file
 static inline void format_values(string& str, const string& fmt) {
   auto pos = fmt.find("{}");
-  if(pos != string::npos) throw std::runtime_error("bad format string");
+  if (pos != string::npos) throw std::runtime_error("bad format string");
   str += fmt;
 }
-template<typename Arg, typename ... Args>
-static inline void format_values(string& str, const string& fmt, const Arg& arg, const Args& ... args) {
+template <typename Arg, typename... Args>
+static inline void format_values(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
-  if(pos == string::npos) throw std::runtime_error("bad format string");
+  if (pos == string::npos) throw std::runtime_error("bad format string");
   str += fmt.substr(0, pos);
   format_value(str, arg);
-  format_values(str, fmt.substr(pos+2), args...);
-} 
-template<typename ... Args>
-static inline void format_values(file_wrapper& fs, const string& fmt, const Args& ... args) {
+  format_values(str, fmt.substr(pos + 2), args...);
+}
+template <typename... Args>
+static inline void format_values(
+    file_wrapper& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
-  if(fputs(str.c_str(), fs.fs) < 0) throw std::runtime_error("cannor write to " + fs.filename);
+  if (fputs(str.c_str(), fs.fs) < 0)
+    throw std::runtime_error("cannor write to " + fs.filename);
 }
 
-template<typename T>
+template <typename T>
 static inline void write_value(file_wrapper& fs, const T& value) {
   if (fwrite(&value, sizeof(value), 1, fs.fs) != 1)
     throw std::runtime_error("cannot write to " + fs.filename);
@@ -633,8 +636,7 @@ void save_ply(const string& filename, const ply_model& ply) {
   format_values(fs, "format {} 1.0\n", format_map.at(ply.format));
   format_values(fs, "comment Written by Yocto/GL\n");
   format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
-  for (auto& comment : ply.comments)
-    format_values(fs, "comment {}\n", comment);
+  for (auto& comment : ply.comments) format_values(fs, "comment {}\n", comment);
   for (auto& elem : ply.elements) {
     format_values(
         fs, "element {} {}\n", elem.name, (unsigned long long)elem.count);
@@ -643,8 +645,7 @@ void save_ply(const string& filename, const ply_model& ply) {
         format_values(fs, "property list uchar {} {}\n",
             type_map[prop.type].c_str(), prop.name);
       } else {
-        format_values(fs, "property {} {}\n", type_map[prop.type],
-            prop.name);
+        format_values(fs, "property {} {}\n", type_map[prop.type], prop.name);
       }
     }
   }
@@ -709,16 +710,36 @@ void save_ply(const string& filename, const ply_model& ply) {
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
-              case ply_type::i8: write_value(fs, prop.data_i8[cur[pidx]++]); break;
-              case ply_type::i16: write_value(fs, prop.data_i16[cur[pidx]++]); break;
-              case ply_type::i32: write_value(fs, prop.data_i32[cur[pidx]++]); break;
-              case ply_type::i64: write_value(fs, prop.data_i64[cur[pidx]++]); break;
-              case ply_type::u8: write_value(fs, prop.data_i8[cur[pidx]++]); break;
-              case ply_type::u16: write_value(fs, prop.data_i16[cur[pidx]++]); break;
-              case ply_type::u32: write_value(fs, prop.data_u32[cur[pidx]++]); break;
-              case ply_type::u64: write_value(fs, prop.data_u64[cur[pidx]++]); break;
-              case ply_type::f32: write_value(fs, prop.data_f32[cur[pidx]++]); break;
-              case ply_type::f64: write_value(fs, prop.data_f64[cur[pidx]++]); break;
+              case ply_type::i8:
+                write_value(fs, prop.data_i8[cur[pidx]++]);
+                break;
+              case ply_type::i16:
+                write_value(fs, prop.data_i16[cur[pidx]++]);
+                break;
+              case ply_type::i32:
+                write_value(fs, prop.data_i32[cur[pidx]++]);
+                break;
+              case ply_type::i64:
+                write_value(fs, prop.data_i64[cur[pidx]++]);
+                break;
+              case ply_type::u8:
+                write_value(fs, prop.data_i8[cur[pidx]++]);
+                break;
+              case ply_type::u16:
+                write_value(fs, prop.data_i16[cur[pidx]++]);
+                break;
+              case ply_type::u32:
+                write_value(fs, prop.data_u32[cur[pidx]++]);
+                break;
+              case ply_type::u64:
+                write_value(fs, prop.data_u64[cur[pidx]++]);
+                break;
+              case ply_type::f32:
+                write_value(fs, prop.data_f32[cur[pidx]++]);
+                break;
+              case ply_type::f64:
+                write_value(fs, prop.data_f64[cur[pidx]++]);
+                break;
             }
           }
         }
@@ -2047,20 +2068,39 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
   }
 }
 
+// Format values
+static inline void format_value(string& str, const obj_texture_info& value) {
+  str += value.path.empty() ? "" : value.path;
+}
+static inline void format_value(string& str, const obj_vertex& value) {
+  format_value(str, value.position);
+  if (value.texcoord) {
+    str += "/";
+    format_value(str, value.texcoord);
+    if (value.normal) {
+      str += "/";
+      format_value(str, value.normal);
+    }
+  } else if (value.normal) {
+    str += "//";
+    format_value(str, value.normal);
+  }
+}
+
 // Read obj
 void save_obj(const string& filename, const obj_model& obj) {
   // open file
   auto fs = open_file(filename, "wt");
 
   // save comments
-  checked_fprintf(fs, "#\n");
-  checked_fprintf(fs, "# Written by Yocto/GL\n");
-  checked_fprintf(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  checked_fprintf(fs, "#\n\n");
+  format_values(fs, "#\n");
+  format_values(fs, "# Written by Yocto/GL\n");
+  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(fs, "#\n\n");
   for (auto& comment : obj.comments) {
-    checked_fprintf(fs, "# %s\n", comment.c_str());
+    format_values(fs, "# {}\n", comment);
   }
-  checked_fprintf(fs, "\n");
+  format_values(fs, "\n");
 
 // save material library
 #if 0
@@ -2070,15 +2110,13 @@ void save_obj(const string& filename, const obj_model& obj) {
 #endif
 
   // save vertices
-  for (auto& p : obj.positions)
-    checked_fprintf(fs, "v  %g %g %g\n", p.x, p.y, p.z);
-  for (auto& n : obj.normals)
-    checked_fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
-  for (auto& t : obj.texcoords) checked_fprintf(fs, "vt %g %g\n", t.x, t.y);
+  for (auto& p : obj.positions) format_values(fs, "v {}\n", p);
+  for (auto& n : obj.normals) format_values(fs, "vn {}\n", n);
+  for (auto& t : obj.texcoords) format_values(fs, "vt {}\n", t);
 
   // save objects
   for (auto& shape : obj.shapes) {
-    checked_fprintf(fs, "o %s\n", shape.name.c_str());
+    format_values(fs, "o {}\n", shape.name.c_str());
     auto element_labels = vector<string>{"f", "l", "p"};
     auto element_groups = vector<const vector<obj_element>*>{
         &shape.faces, &shape.lines, &shape.points};
@@ -2088,27 +2126,17 @@ void save_obj(const string& filename, const obj_model& obj) {
       auto  cur_material = -1, cur_vertex = 0;
       for (auto& element : elements) {
         if (!shape.materials.empty() && cur_material != element.material) {
-          checked_fprintf(
-              fs, "usemtl %s\n", shape.materials[element.material].c_str());
+          format_values(fs, "usemtl {}\n", shape.materials[element.material]);
           cur_material = element.material;
         }
-        checked_fprintf(fs, "%s", label.c_str());
+        format_values(fs, "{}", label);
         for (auto c = 0; c < element.size; c++) {
-          auto& vertex = shape.vertices[cur_vertex++];
-          checked_fprintf(fs, " %d", vertex.position);
-          if (vertex.texcoord) {
-            checked_fprintf(fs, "/%d", vertex.texcoord);
-            if (vertex.normal) {
-              checked_fprintf(fs, "/%d", vertex.normal);
-            }
-          } else if (vertex.normal) {
-            checked_fprintf(fs, "//%d", vertex.normal);
-          }
+          format_values(fs, " {}", shape.vertices[cur_vertex++]);
         }
-        checked_fprintf(fs, "\n");
+        format_values(fs, "\n");
       }
     }
-    checked_fprintf(fs, "\n");
+    format_values(fs, "\n");
   }
 }
 
