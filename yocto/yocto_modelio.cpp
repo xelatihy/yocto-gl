@@ -1672,54 +1672,6 @@ static inline void parse_value(string_view& str, obj_texture_info& info) {
   }
 }
 
-void parse_value(string_view& str, obj_value& value, obj_value_type type,
-    int array_size = 3) {
-  switch (type) {
-    case obj_value_type::number: {
-      auto value_ = 0.0f;
-      parse_value(str, value_);
-      value = make_obj_value(value_);
-    } break;
-    case obj_value_type::string: {
-      auto value_ = ""s;
-      parse_value(str, value_);
-      value = make_obj_value(value_);
-    } break;
-    case obj_value_type::array: {
-      if (array_size == 2) {
-        auto value_ = zero2f;
-        parse_value(str, value_);
-        value = make_obj_value(value_);
-      } else if (array_size == 3) {
-        auto value_ = zero3f;
-        parse_value(str, value_);
-        value = make_obj_value(value_);
-      } else if (array_size == 12) {
-        auto value_ = identity3x4f;
-        parse_value(str, value_);
-        value = make_obj_value(value_);
-      } else {
-        throw std::runtime_error("should not have gotten here");
-      }
-    } break;
-    case obj_value_type::boolean: {
-      auto value_ = 0;
-      parse_value(str, value_);
-      value = make_obj_value((bool)value_);
-    } break;
-  }
-}
-
-static inline void parse_obj_value_or_empty(
-    string_view& str, obj_value& value) {
-  skip_whitespace(str);
-  if (str.empty()) {
-    value = make_obj_value(""s);
-  } else {
-    parse_value(str, value, obj_value_type::string);
-  }
-}
-
 // Read obj
 void load_mtl(const string& filename, obj_model& obj, bool fliptr = true) {
   // open file
@@ -2695,6 +2647,54 @@ void add_obj_fvquads(obj_model& obj, obj_shape& shape,
     shape.faces.push_back(
         {quadspos[idx].z == quadspos[idx].w ? (uint8_t)3 : (uint8_t)4,
             ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
+  }
+}
+
+void parse_value(string_view& str, obj_value& value, obj_value_type type,
+    int array_size = 3) {
+  switch (type) {
+    case obj_value_type::number: {
+      auto value_ = 0.0f;
+      parse_value(str, value_);
+      value = make_obj_value(value_);
+    } break;
+    case obj_value_type::string: {
+      auto value_ = ""s;
+      parse_value(str, value_);
+      value = make_obj_value(value_);
+    } break;
+    case obj_value_type::array: {
+      if (array_size == 2) {
+        auto value_ = zero2f;
+        parse_value(str, value_);
+        value = make_obj_value(value_);
+      } else if (array_size == 3) {
+        auto value_ = zero3f;
+        parse_value(str, value_);
+        value = make_obj_value(value_);
+      } else if (array_size == 12) {
+        auto value_ = identity3x4f;
+        parse_value(str, value_);
+        value = make_obj_value(value_);
+      } else {
+        throw std::runtime_error("should not have gotten here");
+      }
+    } break;
+    case obj_value_type::boolean: {
+      auto value_ = 0;
+      parse_value(str, value_);
+      value = make_obj_value((bool)value_);
+    } break;
+  }
+}
+
+static inline void parse_obj_value_or_empty(
+    string_view& str, obj_value& value) {
+  skip_whitespace(str);
+  if (str.empty()) {
+    value = make_obj_value(""s);
+  } else {
+    parse_value(str, value, obj_value_type::string);
   }
 }
 
