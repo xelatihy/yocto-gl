@@ -4175,45 +4175,30 @@ static inline void parse_pbrt_params(
 }
 
 // convert pbrt elements
-static void convert_pbrt_cameras(pbrt_model& pbrt) {
-  for (auto& camera : pbrt.cameras) {
+static void convert_pbrt_cameras(
+    vector<pbrt_camera>& cameras, bool verbose = false) {
+  for (auto& camera : cameras) {
     auto& values   = camera.values;
     camera.frame   = inverse((frame3f)camera.frame);
     camera.frame.z = -camera.frame.z;
     if (camera.type == "perspective") {
-      auto fov = get_pbrt_value(values, "fov", 90.0f);
+      camera.fov = get_pbrt_value(values, "fov", 90.0f);
       // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
-      auto frameaspectratio = get_pbrt_value(values, "frameaspectratio", -1.0f);
-      auto focaldistance    = get_pbrt_value(values, "focaldistance", 1e30f);
-      if (frameaspectratio < 0) frameaspectratio = camera.aspect;
-      if (frameaspectratio < 0) frameaspectratio = 1;
-      if (frameaspectratio >= 1) {
-        set_yperspective(camera, radians(fov), frameaspectratio,
-            clamp(focaldistance, 1.0e-2f, 1.0e4f));
-      } else {
-        auto yfov = 2 * atan(tan(radians(fov) / 2) / frameaspectratio);
-        set_yperspective(camera, yfov, frameaspectratio,
-            clamp(focaldistance, 1.0e-2f, 1.0e4f));
-      }
+      camera.aspect = get_pbrt_value(values, "frameaspectratio", camera.aspect);
+      camera.focus    = get_pbrt_value(values, "focaldistance", camera.focus);
+      if (!camera.aspect) camera.aspect = 1;
+      if (!camera.focus) camera.focus = 10;
     } else if (camera.type == "realistic") {
       auto lensfile         = get_pbrt_value(values, "lensfile", ""s);
       lensfile              = lensfile.substr(0, lensfile.size() - 4);
       lensfile              = lensfile.substr(lensfile.find('.') + 1);
       lensfile              = lensfile.substr(0, lensfile.size() - 2);
-      auto focal            = std::atof(lensfile.c_str());
-      auto aperturediameter = get_pbrt_value(values, "aperturediameter", 0.0f);
-      auto focusdistance    = get_pbrt_value(values, "focusdistance", 10.0f);
-      camera.lens           = max(focal, 35.0f) * 0.001f;
-      auto aspect           = 1.0f;
-      if (aspect < 0) aspect = last_film_aspect;
-      if (aspect < 0) aspect = 1;
-      if (aspect >= 1) {
-        camera.film.y = camera.film.x / aspect;
-      } else {
-        camera.film.x = camera.film.y * aspect;
-      }
-      camera.focus    = focusdistance;
-      camera.aperture = aperturediameter;
+      auto lens             = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
+      camera.fov            = 2 * atan(0.036f / (2 * lens));
+      camera.aperture       = get_pbrt_value(values, "aperturediameter", 0.0f);
+      camera.focus          = get_pbrt_value(values, "focusdistance",  camera.focus);
+      if (!camera.aspect) camera.aspect = 1;
+      if (!camera.focus) camera.focus = 10;
     } else {
       throw std::runtime_error("unsupported Camera type " + camera.type);
     }
@@ -4221,20 +4206,26 @@ static void convert_pbrt_cameras(pbrt_model& pbrt) {
 }
 
 // convert pbrt textures
-static void convert_pbrt_textures(pbrt_model& pbrt, bool verbose = false) {
+static void convert_pbrt_textures(
+    vector<pbrt_texture>& textures, bool verbose = false) {
   auto texture_map = unordered_map<string, int>{};
-  for (auto& texture : pbrt.textures) {
-    auto index                = (int)pbrt.textures.size();
+  for (auto& texture : textures) {
+    auto index                = (int)texture_map.size();
     texture_map[texture.name] = index;
   }
-  auto get_filename = [&pbrt, &texture_map](const string& name) {
+  auto get_filename = [&textures, &texture_map](const string& name) {
     if (name.empty()) return ""s;
     auto pos = texture_map.find(name);
     if (pos == texture_map.end()) return ""s;
-    return pbrt.textures[pos->second].filename;
+    return textures[pos->second].filename;
+  };
+  auto make_placeholder = [](pbrt_texture& texture,
+                              const vec3f& color = {1, 0, 0}) {
+    texture.constant    = color;
+    texture.is_constant = true;
   };
 
-  for (auto& texture : pbrt.textures) {
+  for (auto& texture : textures) {
     auto& values = texture.values;
     if (texture.type == "imagemap") {
       texture.filename = get_pbrt_value(values, "filename", ""s);
@@ -4255,16 +4246,14 @@ static void convert_pbrt_textures(pbrt_model& pbrt, bool verbose = false) {
       // rgb1.z, 1}; params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1}; params.scale
       // = 2; make_proc_image(texture.hdr, params); float_to_byte(texture.ldr,
       // texture.hdr); texture.hdr = {};
-      texture.size = {1, 1};
-      texture.pixels.push_back({1, 0, 0, 1});
+      make_placeholder(texture);
       if (verbose) printf("texture checkerboard not supported well");
     } else if (texture.type == "dots") {
       texture.size = {1, 1};
       texture.pixels.push_back({1, 0, 0, 1});
       if (verbose) printf("texture dots not supported well");
     } else if (texture.type == "fbm") {
-      texture.size = {1, 1};
-      texture.pixels.push_back({1, 0, 0, 1});
+      make_placeholder(texture);
       // auto params = proc_image_params{};
       // params.type = proc_image_params::type_t::fbm;
       // make_proc_image(texture.hdr, params);
@@ -4272,8 +4261,7 @@ static void convert_pbrt_textures(pbrt_model& pbrt, bool verbose = false) {
       // texture.hdr = {};
       if (verbose) printf("texture fbm not supported well");
     } else if (texture.type == "marble") {
-      texture.size = {1, 1};
-      texture.pixels.push_back({1, 0, 0, 1});
+      make_placeholder(texture);
       // auto params = proc_image_params{};
       // params.type = proc_image_params::type_t::fbm;
       // make_proc_image(texture.hdr, params);
@@ -4288,8 +4276,7 @@ static void convert_pbrt_textures(pbrt_model& pbrt, bool verbose = false) {
       } else if (!get_filename(tex2.second).empty()) {
         texture.filename = get_filename(tex2.second);
       } else {
-        texture.size = {1, 1};
-        texture.pixels.push_back({1, 0, 0, 1});
+        make_placeholder(texture);
       }
       if (verbose) printf("texture mix not supported well");
     } else if (texture.type == "scale") {
@@ -4300,21 +4287,17 @@ static void convert_pbrt_textures(pbrt_model& pbrt, bool verbose = false) {
       } else if (!get_filename(tex2.second).empty()) {
         texture.filename = get_filename(tex2.second);
       } else {
-        texture.size = {1, 1};
-        texture.pixels.push_back({1, 0, 0, 1});
+        make_placeholder(texture);
       }
       if (verbose) printf("texture scale not supported well");
     } else if (texture.type == "uv") {
-      texture.size = {1, 1};
-      texture.pixels.push_back({1, 0, 0, 1});
+      make_placeholder(texture);
       if (verbose) printf("texture uv not supported well");
     } else if (texture.type == "windy") {
-      texture.size = {1, 1};
-      texture.pixels.push_back({1, 0, 0, 1});
+      make_placeholder(texture);
       if (verbose) printf("texture windy not supported well");
     } else if (texture.type == "wrinkled") {
-      texture.size = {1, 1};
-      texture.pixels.push_back({1, 0, 0, 1});
+      make_placeholder(texture);
       if (verbose) printf("texture wrinkled not supported well");
     } else {
       throw std::runtime_error("unsupported texture type " + texture.type);
@@ -4323,36 +4306,24 @@ static void convert_pbrt_textures(pbrt_model& pbrt, bool verbose = false) {
 }
 
 // convert pbrt materials
-static void convert_pbrt_materials(pbrt_model& pbrt, bool verbose = false) {
-  auto is_constant_texture = [&](const string& name) -> bool {
-    return ctmap.find(name) != ctmap.end();
-  };
-  auto get_constant_texture_color = [&](const string& name) -> vec3f {
-    return ctmap.at(name);
-  };
+static void convert_pbrt_materials(vector<pbrt_material>& materials,
+    const vector<pbrt_texture>& textures, bool verbose = false) {
+  auto constants = unordered_map<string, vec3f>{};
 
   auto get_scaled_texture = [&](const vector<pbrt_value>& values,
                                 const string& name, vec3f& color,
-                                string& texture, vec3f def) {
+                                string& texture, const vec3f& def) {
     auto textured = get_pbrt_value(values, name, pair{def, ""s});
     if (textured.second == "") {
       color   = textured.first;
       texture = -1;
-    } else if (is_constant_texture(textured.second)) {
-      color   = get_constant_texture_color(textured.second);
+    } else if (constants.find(textured.second) != constants.end()) {
+      color   = constants.at(textured.second);
       texture = -1;
     } else {
       color   = {1, 1, 1};
       texture = textured.second;
     }
-  };
-
-  auto get_scaled_texturef = [&](const vector<pbrt_value>& values,
-                                 const string& name, float& factor,
-                                 string& texture, float def) {
-    auto color = zero3f;
-    get_scaled_texture(values, name, color, texture, vec3f{def});
-    factor = mean(color);
   };
 
   auto get_pbrt_roughness = [&](const vector<pbrt_value>& values,
@@ -4363,7 +4334,7 @@ static void convert_pbrt_materials(pbrt_model& pbrt, bool verbose = false) {
     auto vroughness     = get_pbrt_value(values, "vroughness", roughness_);
     auto remaproughness = get_pbrt_value(values, "remaproughness", true);
 
-    roughness  = zero2f;
+    roughness = zero2f;
     if (uroughness.first == zero3f || vroughness.first == zero3f) return;
     roughness = vec2f{mean(uroughness.first), mean(vroughness.first)};
     // from pbrt code
@@ -4376,7 +4347,7 @@ static void convert_pbrt_materials(pbrt_model& pbrt, bool verbose = false) {
     roughness = sqrt(roughness);
   };
 
-  for (auto& material : pbrt.materials) {
+  for (auto& material : materials) {
     auto& values = material.values;
     if (material.type == "uber") {
       get_scaled_texture(
@@ -4385,22 +4356,26 @@ static void convert_pbrt_materials(pbrt_model& pbrt, bool verbose = false) {
           values, "Ks", material.specular, material.specular_map, vec3f{0.25});
       get_scaled_texture(values, "Kt", material.transmission,
           material.transmission_map, vec3f{0});
-      get_scaled_texture(values, "opacity", material.opacity, material.opacity_map, vec3f{1});
-      get_scaled_texture(values, "eta", material.eta, material.eta_map, vec3f{1.5});
+      get_scaled_texture(
+          values, "opacity", material.opacity, material.opacity_map, vec3f{1});
+      get_scaled_texture(
+          values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1f);
     } else if (material.type == "plastic") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
       get_scaled_texture(
           values, "Ks", material.specular, material.specular_map, vec3f{0.25});
-      get_scaled_texture(values, "eta", material.eta, material.eta_map, vec3f{1.5});
+      get_scaled_texture(
+          values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1);
     } else if (material.type == "translucent") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
       get_scaled_texture(
           values, "Ks", material.specular, material.specular_map, vec3f{0.25});
-      get_scaled_texture(values, "eta", material.eta, material.eta_map, vec3f{1.5});
+      get_scaled_texture(
+          values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1);
     } else if (material.type == "matte") {
       get_scaled_texture(
@@ -4409,17 +4384,20 @@ static void convert_pbrt_materials(pbrt_model& pbrt, bool verbose = false) {
     } else if (material.type == "mirror") {
       get_scaled_texture(
           values, "Kr", material.specular, material.specular_map, vec3f{0.9});
-      material.meta = vec3f{1,1,1};
-      material.metak= vec3f{1,1,1};
+      material.eta       = zero3f;
+      material.etak      = zero3f;
       material.roughness = zero2f;
     } else if (material.type == "metal") {
-      get_scaled_texture(values, "eta", material.eta, material.eta_texture,
+      get_scaled_texture(
+          values, "Kr", material.specular, material.specular_map, vec3f{1});
+      get_scaled_texture(values, "eta", material.eta, material.eta_map,
           vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
-      get_scaled_texture(values, "k", material.etak, material.etak_texture,
+      get_scaled_texture(values, "k", material.etak, material.etak_map,
           vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
       get_pbrt_roughness(values, material.roughness, 0.01);
     } else if (material.type == "substrate") {
-      get_scaled_texture(values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
+      get_scaled_texture(
+          values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
       get_scaled_texture(
           values, "Ks", material.specular, material.specular_map, vec3f{0.5});
       get_pbrt_roughness(values, material.roughness, 0.1);
@@ -4428,7 +4406,8 @@ static void convert_pbrt_materials(pbrt_model& pbrt, bool verbose = false) {
           values, "Kr", material.specular, material.specular_map, vec3f{1});
       get_scaled_texture(values, "Kt", material.transmission,
           material.transmission_map, vec3f{1});
-      get_scaled_texture(values, "eta", material.eta, material.eta_map, vec3f{1.5});
+      get_scaled_texture(
+          values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0);
     } else if (material.type == "hair") {
       get_scaled_texture(
@@ -4453,12 +4432,13 @@ static void convert_pbrt_materials(pbrt_model& pbrt, bool verbose = false) {
           values, "Kr", material.specular, material.specular_map, vec3f{1});
       get_scaled_texture(values, "Kt", material.transmission,
           material.transmission_map, vec3f{1});
-      get_scaled_texture(values, "eta", material.eta, material.eta_map, vec3f{1.5});
+      get_scaled_texture(
+          values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0);
-      auto scale         = get_pbrt_value(values, "scale", 1.0f);
-      material.volscale  = 1 / scale;
+      auto scale        = get_pbrt_value(values, "scale", 1.0f);
+      material.volscale = 1 / scale;
       auto sigma_a = zero3f, sigma_s = zero3f;
-      auto sigma_a_tex = -1, sigma_s_tex = -1;
+      auto sigma_a_tex = ""s, sigma_s_tex = ""s;
       get_scaled_texture(
           values, "sigma_a", sigma_a, sigma_a_tex, vec3f{0011, .0024, .014});
       get_scaled_texture(values, "sigma_prime_s", sigma_s, sigma_s_tex,
@@ -4471,7 +4451,8 @@ static void convert_pbrt_materials(pbrt_model& pbrt, bool verbose = false) {
       auto namedmaterial2 = get_pbrt_value(values, "namedmaterial2", ""s);
       auto matname        = (!namedmaterial1.empty()) ? namedmaterial1
                                                : namedmaterial2;
-      material = mmap.at(matname);
+      // material = mmap.at(matname);
+      throw std::runtime_error("unsupporrted mix material");
       if (verbose) printf("mix material not properly supported\n");
     } else if (material.type == "fourier") {
       auto bsdffile = get_pbrt_value(values, "bsdffile", ""s);
@@ -4479,35 +4460,150 @@ static void convert_pbrt_materials(pbrt_model& pbrt, bool verbose = false) {
         bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
       if (bsdffile == "paint.bsdf") {
         material.diffuse   = {0.6f, 0.6f, 0.6f};
-        material.specular  = {0.4f, 0.4f, 0.4f};
-        material.roughness = get_pbrt_roughnessf(0.2f, true);
+        material.specular  = {1, 1, 1};
+        material.eta       = vec3f{1.5};
+        material.roughness = vec2f{0.2};
+        // material.roughness = get_pbrt_roughnessf(0.2f, true);
       } else if (bsdffile == "ceramic.bsdf") {
         material.diffuse   = {0.6f, 0.6f, 0.6f};
-        material.specular  = {0.4f, 0.4f, 0.4f};
-        material.roughness = get_pbrt_roughnessf(0.25, true);
+        material.specular  = {1, 1, 1};
+        material.eta       = vec3f{1.5};
+        material.roughness = vec2f{0.25};
+        // material.roughness = get_pbrt_roughnessf(0.25, true);
       } else if (bsdffile == "leather.bsdf") {
         material.diffuse   = {0.6f, 0.57f, 0.48f};
         material.specular  = {0.4f, 0.4f, 0.4f};
-        material.roughness = get_pbrt_roughnessf(0.3, true);
+        material.roughness = vec2f{0.3};
+        // material.roughness = get_pbrt_roughnessf(0.3, true);
       } else if (bsdffile == "coated_copper.bsdf") {
-        auto eta           = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
-        auto etak          = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
-        material.specular  = pbrt_fresnel_metal(1, eta, etak);
-        material.roughness = get_pbrt_roughnessf(0.01, true);
+        material.specular  = vec3f{1};
+        material.eta       = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
+        material.etak      = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
+        material.roughness = vec2f{0.01};
+        // material.roughness = get_pbrt_roughnessf(0.01, true);
       } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
-        material.specular     = {0.04, 0.04, 0.04};
+        material.specular     = {1, 1, 1};
+        material.eta          = vec3f{1.5};
         material.transmission = {1, 1, 1};
-        material.roughness    = get_pbrt_roughnessf(0.2, true);
+        material.roughness    = vec2f{0.2};
+        // material.roughness = get_pbrt_roughness(0.2, true);
       } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
-        auto eta           = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
-        auto etak          = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
-        material.specular  = pbrt_fresnel_metal(1, eta, etak);
-        material.roughness = get_pbrt_roughness(0.2, true);
+        material.specular  = vec3f{1, 1, 1};
+        material.eta       = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
+        material.etak      = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
+        material.roughness = vec2f{0.2};
+        // material.roughness = get_pbrt_roughness(0.2, true);
       } else {
         throw std::runtime_error("unsupported bsdffile " + bsdffile);
       }
     } else {
       throw std::runtime_error("unsupported material type" + material.type);
+    }
+  }
+}
+
+// Convert pbrt arealights
+static void convert_pbrt_arealights(
+    vector<pbrt_arealight>& lights, bool verbose = false) {
+  for (auto& light : lights) {
+    auto& values = light.values;
+    if (light.type == "diffuse") {
+      light.emission = get_pbrt_value(values, "L", vec3f{1, 1, 1}) *
+                       get_pbrt_value(values, "scale", vec3f{1, 1, 1});
+    } else {
+      throw std::runtime_error("unsupported arealight type " + light.type);
+    }
+  }
+}
+
+// Convert pbrt lights
+static void convert_pbrt_lights(
+    vector<pbrt_light>& lights, bool verbose = false) {
+  for (auto& light : lights) {
+    auto& values = light.values;
+    if (light.type == "distant") {
+      light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
+                       get_pbrt_value(values, "L", vec3f{1, 1, 1});
+      light.from    = get_pbrt_value(values, "from", vec3f{0, 0, 0});
+      light.to      = get_pbrt_value(values, "to", vec3f{0, 0, 1});
+      light.distant = true;
+    } else if (light.type == "point") {
+      light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
+                       get_pbrt_value(values, "I", vec3f{1, 1, 1});
+      light.from = get_pbrt_value(values, "from", vec3f{0, 0, 0});
+    } else if (light.type == "goniometric") {
+      light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
+                       get_pbrt_value(values, "I", vec3f{1, 1, 1});
+    } else if (light.type == "spot") {
+      light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
+                       get_pbrt_value(values, "I", vec3f{1, 1, 1});
+    } else {
+      throw std::runtime_error("unsupported light type " + light.type);
+    }
+  }
+}
+
+static void convert_pbrt_environments(
+    vector<pbrt_environment>& environments, bool verbose = false) {
+  for (auto& light : environments) {
+    auto& values = light.values;
+    if (light.type == "infinite") {
+      light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
+                       get_pbrt_value(values, "L", vec3f{1, 1, 1});
+      light.emission_map = get_pbrt_value(values, "mapname", ""s);
+      // environment.frame =
+      // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
+      // * stack.back().frame;
+      light.frame = light.frame *
+                    frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+      light.frend = light.frend *
+                    frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+    } else {
+      throw std::runtime_error("unsupported environment type " + light.type);
+    }
+  }
+}
+
+// Convert pbrt shapes
+static void convert_pbrt_shapes(
+    vector<pbrt_shape>& shapes, bool verbose = false) {
+  for (auto& shape : shapes) {
+    auto& values = shape.values;
+    if (shape.type == "trianglemesh") {
+      get_pbrt_value(values, "P", shape.positions, {});
+      get_pbrt_value(values, "N", shape.normals, {});
+      get_pbrt_value(values, "uv", shape.texcoords, {});
+      for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
+      get_pbrt_value(values, "indices", shape.triangles, {});
+    } else if (shape.type == "loopsubdiv") {
+      get_pbrt_value(values, "P", shape.positions, {});
+      get_pbrt_value(values, "indices", shape.triangles, {});
+      shape.normals.resize(shape.positions.size());
+      // compute_normals(shape.normals, shape.triangles, shape.positions);
+    } else if (shape.type == "plymesh") {
+      shape.filename = get_pbrt_value(values, "filename", ""s);
+      // load_shape(fs::path(filename).parent_path() / shape.uri, shape.points,
+      //     shape.lines, shape.triangles, shape.quads, shape.quadspos,
+      //     shape.quadsnorm, shape.quadstexcoord, shape.positions,
+      //     shape.normals, shape.texcoords, shape.colors, shape.radius, false);
+    } else if (shape.type == "sphere") {
+      shape.radius = get_pbrt_value(values, "radius", 1.0f);
+      // auto params         = proc_shape_params{};
+      // params.type         = proc_shape_params::type_t::uvsphere;
+      // params.subdivisions = 5;
+      // params.scale        = radius;
+      // make_proc_shape(shape.triangles, shape.quads, shape.positions,
+      //     shape.normals, shape.texcoords, params);
+    } else if (shape.type == "disk") {
+      shape.radius = get_pbrt_value(values, "radius", 1.0f);
+      // auto params         = proc_shape_params{};
+      // params.type         = proc_shape_params::type_t::uvdisk;
+      // params.subdivisions = 4;
+      // params.scale        = radius;
+      // make_proc_shape(shape.triangles, shape.quads, shape.positions,
+      //     shape.normals, shape.texcoords, params);
+    } else {
+      throw std::runtime_error("unsupported shape type " + shape.type);
     }
   }
 }
@@ -4698,7 +4794,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         parse_pbrt_params(str, material.values);
         if (material.type == "") {
           stack.back().material = "";
-          pbrt.materials.erase(pbrt.materials.end() - 1);
+          pbrt.materials.pop_back();
         } else {
           stack.back().material = material.name;
         }
@@ -4717,12 +4813,12 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
                           : pbrt.objects.back().shapes.emplace_back();
         parse_pbrt_param(str, shape.type);
         parse_pbrt_params(str, shape.values);
-        shape.frame         = stack.back().transform_start;
-        shape.transform_end = stack.back().transform_end;
-        shape.material      = stack.back().material;
-        shape.arealight     = stack.back().arealight;
-        shape.interior      = stack.back().medium_interior;
-        shape.exterior      = stack.back().medium_exterior;
+        shape.frame     = stack.back().transform_start;
+        shape.frend     = stack.back().transform_end;
+        shape.material  = stack.back().material;
+        shape.arealight = stack.back().arealight;
+        shape.interior  = stack.back().medium_interior;
+        shape.exterior  = stack.back().medium_exterior;
       } else if (cmd == "AreaLightSource") {
         static auto arealight_id = 0;
         auto&       arealight    = pbrt.arealights.emplace_back();
@@ -4738,6 +4834,14 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         parse_pbrt_params(str, light.values);
         light.frame = stack.back().transform_start;
         light.frend = stack.back().transform_end;
+        if (light.type == "infinite") {
+          auto& environment  = pbrt.environments.emplace_back();
+          environment.type   = light.type;
+          environment.values = light.values;
+          environment.frame  = light.frame;
+          environment.frend  = light.frend;
+          pbrt.lights.pop_back();
+        }
       } else if (cmd == "MakeNamedMedium") {
         auto& medium = pbrt.mediums.emplace_back();
         parse_pbrt_param(str, medium.name);
@@ -4760,11 +4864,14 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   }
 
   // convert objects
-  for (auto& camera : pbrt.cameras) convert_pbrt_camera(camera);
-  // for(auto& texture : pbrt.textures) convert_pbrt_texture(texture);
-  // for(auto& material : pbrt.materials) convert_pbrt_material(material);
-  // for(auto& light : pbrt.lights) convert_pbrt_light(light);
-  // for(auto& arealight : pbrt.arealights) convert_pbrt_arealight(arealight);
+  convert_pbrt_cameras(pbrt.cameras);
+  convert_pbrt_textures(pbrt.textures);
+  convert_pbrt_materials(pbrt.materials, pbrt.textures);
+  convert_pbrt_shapes(pbrt.shapes);
+  convert_pbrt_lights(pbrt.lights);
+  convert_pbrt_arealights(pbrt.arealights);
+  convert_pbrt_environments(pbrt.environments);
+  for (auto& object : pbrt.objects) convert_pbrt_shapes(object.shapes);
 }
 
 // Read pbrt commands

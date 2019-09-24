@@ -715,11 +715,10 @@ struct pbrt_camera {
   // camera approximation
   float width    = 0;
   float height   = 0;
-  float lens     = 0;
+  float fov      = 0;
+  float aspect   = 0;
   float focus    = 0;
   float aperture = 0;
-  float aspect   = 0;
-  float lookat   = 0;
 };
 
 // Pbrt texture
@@ -749,16 +748,20 @@ struct pbrt_material {
   vec3f  transmission     = zero3f;
   vec2f  roughness        = zero2f;
   vec3f  opacity          = vec3f{1};
-  vec3f eta               = vec3f{1};
-  vec3f etak              = vec3f{1};
+  vec3f  eta              = vec3f{1};
+  vec3f  etak             = vec3f{1};
   string emission_map     = "";
   string diffuse_map      = "";
   string specular_map     = "";
   string transmission_map = "";
   string roughness_map    = "";
   string opacity_map      = "";
-  string eta_map      = "";
-  string etak_map      = "";
+  string eta_map          = "";
+  string etak_map         = "";
+  vec3f  volmeanfreepath  = vec3f{0};
+  vec3f  volscatter       = vec3f{0};
+  float  volscale         = 0.01;
+  bool   refract          = true;
 };
 
 // Pbrt medium
@@ -775,17 +778,19 @@ struct pbrt_shape {
   string             type          = "";
   vector<pbrt_value> values        = {};
   frame3f            frame         = identity3x4f;
-  frame3f            transform_end = identity3x4f;
+  frame3f            frend = identity3x4f;
   string             material      = "";
   string             arealight     = "";
   string             interior      = "";
   string             exterior      = "";
+  bool               is_instanced  = false;
   // shape approximation
   string        filename  = "";
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
+  float         radius    = 0;  // radius for sphere, cylinder, disk
 };
 
 // Pbrt object and instance
@@ -796,7 +801,7 @@ struct pbrt_object {
 struct pbrt_instance {
   string  object        = "";
   frame3f frame         = identity3x4f;
-  frame3f transform_end = identity3x4f;
+  frame3f frend = identity3x4f;
 };
 
 // Pbrt lights
@@ -810,6 +815,7 @@ struct pbrt_light {
   vec3f emission = zero3f;
   vec3f from     = zero3f;
   vec3f to       = zero3f;
+  bool  distant  = false;
 };
 struct pbrt_arealight {
   // arealight parameters
@@ -828,7 +834,7 @@ struct pbrt_environment {
   frame3f            frame  = identity3x4f;
   frame3f            frend  = identity3x4f;
   // environment approximation
-  string emission     = "";
+  vec3f  emission     = zero3f;
   string emission_map = "";
 };
 
