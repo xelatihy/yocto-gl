@@ -4682,7 +4682,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         auto& instance = pbrt.instances.emplace_back();
         parse_pbrt_param(str, instance.object);
         instance.frame         = stack.back().transform_start;
-        instance.transform_end = stack.back().transform_end;
+        instance.frend = stack.back().transform_end;
       } else if (cmd == "ActiveTransform") {
         auto name = ""s;
         parse_pbrt_param(str, name);
@@ -4777,7 +4777,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         parse_pbrt_params(str, camera.values);
         camera.frame         = stack.back().transform_start;
         camera.transform_end = stack.back().transform_end;
-        camera.lookat        = stack.back().last_lookat_distance;
+        camera.focus         = stack.back().last_lookat_distance;
         camera.aspect        = stack.back().last_film_aspect;
       } else if (cmd == "Texture") {
         auto& texture  = pbrt.textures.emplace_back();
