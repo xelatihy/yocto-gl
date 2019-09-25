@@ -4294,8 +4294,14 @@ static void convert_pbrt_textures(
 // convert pbrt materials
 static void convert_pbrt_materials(vector<pbrt_material>& materials,
     const vector<pbrt_texture>& textures, bool verbose = false) {
+  // add constant textures
   auto constants = unordered_map<string, vec3f>{};
+  for(auto& texture : textures) {
+    if(!texture.is_constant) continue;
+    constants[texture.name] = texture.constant;
+  }
 
+  // helpers
   auto get_scaled_texture = [&](const vector<pbrt_value>& values,
                                 const string& name, vec3f& color,
                                 string& texture, const vec3f& def) {
@@ -4339,6 +4345,7 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
            ((eta + 1) * (eta + 1) + etak * etak);
   };
 
+  // convert materials
   for (auto& material : materials) {
     auto& values = material.values;
     if (material.type == "uber") {
