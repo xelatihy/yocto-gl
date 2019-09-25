@@ -4207,6 +4207,7 @@ static void load_pbrt(
     material.diffuse             = pmaterial.diffuse;
     material.specular            = pmaterial.sspecular;
     material.transmission        = pmaterial.transmission;
+    material.opacity             = pmaterial.opacity == vec3f{1} ? 1 : mean(pmaterial.opacity);
     material.diffuse_tex         = get_texture(pmaterial.diffuse_map);
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
   }

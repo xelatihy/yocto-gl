@@ -4409,6 +4409,7 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_pbrt_roughness(values, material.roughness, 0.1f);
       material.sspecular = material.specular *
                            eta_to_reflectivity(material.eta);
+      material.refract = false;
     } else if (material.type == "plastic") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
