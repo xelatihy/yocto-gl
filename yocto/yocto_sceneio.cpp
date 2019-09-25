@@ -4253,6 +4253,7 @@ static void load_pbrt(
   for (auto& penvironment : pbrt.environments) {
     auto& environment    = scene.environments.emplace_back();
     environment.uri      = "env" + std::to_string(scene.environments.size());
+    environment.frame    = penvironment.frame;
     environment.emission = penvironment.emission;
     environment.emission_tex = get_texture(penvironment.emission_map);
   }
