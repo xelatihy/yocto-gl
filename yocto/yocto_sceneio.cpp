@@ -4202,12 +4202,14 @@ static void load_pbrt(
   };
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
-    auto& material               = scene.materials.emplace_back();
-    material.uri                 = pmaterial.name;
-    material.diffuse             = pmaterial.diffuse;
-    material.specular            = pmaterial.sspecular;
-    material.transmission        = pmaterial.transmission;
-    material.opacity             = pmaterial.opacity == vec3f{1} ? 1 : mean(pmaterial.opacity);
+    auto& material        = scene.materials.emplace_back();
+    material.uri          = pmaterial.name;
+    material.diffuse      = pmaterial.diffuse;
+    material.specular     = pmaterial.sspecular;
+    material.transmission = pmaterial.transmission;
+    material.roughness    = mean(pmaterial.roughness);
+    material.opacity      = pmaterial.opacity == vec3f{1} ? 1
+                                                     : mean(pmaterial.opacity);
     material.diffuse_tex         = get_texture(pmaterial.diffuse_map);
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
   }
@@ -4255,7 +4257,37 @@ static void load_pbrt(
 
   // TODO lights
   for (auto& plight : pbrt.lights) {
-    throw std::runtime_error("not implemented");
+    auto& shape       = scene.shapes.emplace_back();
+    auto& material    = scene.materials.emplace_back();
+    auto& instance    = scene.instances.emplace_back();
+    shape.uri         = "light" + std::to_string(scene.shapes.size());
+    material.uri      = "light" + std::to_string(scene.shapes.size());
+    material.emission = plight.emission;
+    instance.uri      = "light" + std::to_string(scene.shapes.size());
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = (int)scene.materials.size() - 1;
+    if (plight.distant) {
+      auto distant_dist = 100;
+      auto size         = distant_dist * sin(5 * pif / 180);
+      auto params       = proc_shape_params{};
+      params.type       = proc_shape_params::type_t::quad;
+      params.scale      = size / 2;
+      make_proc_shape(shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, params);
+      material.emission *= (distant_dist * distant_dist) / (size * size);
+      instance.frame = plight.frame *
+                       lookat_frame(
+                           normalize(plight.from - plight.to) * distant_dist,
+                           zero3f, {0, 1, 0}, true);
+    } else {
+      auto params         = proc_shape_params{};
+      params.type         = proc_shape_params::type_t::sphere;
+      params.scale        = 0.005f;
+      params.subdivisions = 2;
+      make_proc_shape(shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, params);
+      instance.frame = plight.frame * translation_frame(plight.from);
+    }
   }
 }
 
