@@ -4519,8 +4519,13 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       auto namedmaterial2 = get_pbrt_value(values, "namedmaterial2", ""s);
       auto matname        = (!namedmaterial1.empty()) ? namedmaterial1
                                                : namedmaterial2;
-      // material = mmap.at(matname);
-      throw std::runtime_error("unsupporrted mix material");
+      auto matit = std::find_if(materials.begin(), materials.end(),
+          [&matname](auto& material) { return material.name == matname; });
+      if (matit == materials.end())
+        throw std::runtime_error("cannot find material " + matname);
+      auto saved_name = material.name;
+      material        = *matit;
+      material.name   = saved_name;
       if (verbose) printf("mix material not properly supported\n");
     } else if (material.type == "fourier") {
       auto bsdffile = get_pbrt_value(values, "bsdffile", ""s);
@@ -4721,8 +4726,7 @@ static void convert_pbrt_shapes(
           1,
           [radius = shape.radius](const vec2f& uv) {
             auto a = 2 * pif * uv.x;
-            return radius * (1 - uv.y) *
-                   vec3f{cos(a), sin(a), 0};
+            return radius * (1 - uv.y) * vec3f{cos(a), sin(a), 0};
           },
           [](const vec2f& uv) {
             return vec3f{0, 0, 1};
@@ -5021,10 +5025,10 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         parse_pbrt_param(str, stack.back().medium_interior);
         parse_pbrt_param(str, stack.back().medium_exterior);
       } else if (cmd == "Include") {
-        auto filename = ""s;
-        parse_pbrt_param(str, filename);
-        open_file(
-            files.emplace_back(), fs::path(filename).parent_path() / filename);
+        auto includename = ""s;
+        parse_pbrt_param(str, includename);
+        open_file(files.emplace_back(),
+            fs::path(filename).parent_path() / includename);
       } else {
         throw std::runtime_error("unknown command " + cmd);
       }
