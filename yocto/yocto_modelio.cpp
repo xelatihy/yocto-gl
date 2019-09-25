@@ -383,9 +383,10 @@ static inline void format_value(string& str, const frame3f& value) {
 }
 static inline void format_value(string& str, const mat4f& value) {
   char buf[512];
-  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y,
-      value.x.z, value.x.w, value.y.x, value.y.y, value.y.z, value.y.w, value.z.x, value.z.y,
-      value.z.z, value.z.w, value.w.x, value.w.y, value.w.z, value.w.w);
+  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", value.x.x,
+      value.x.y, value.x.z, value.x.w, value.y.x, value.y.y, value.y.z,
+      value.y.w, value.z.x, value.z.y, value.z.z, value.z.w, value.w.x,
+      value.w.y, value.w.z, value.w.w);
   str += buf;
 }
 
@@ -5319,7 +5320,7 @@ void save_pbrt(
       }
     }
     auto object = "object" + std::to_string(object_id++);
-    if(shape.is_instanced) format_values(fs, "ObjectBegin \"{}\"\n", object);
+    if (shape.is_instanced) format_values(fs, "ObjectBegin \"{}\"\n", object);
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)shape.frame);
     format_values(fs, "NamedMaterial {}\n", shape.material);
@@ -5327,12 +5328,12 @@ void save_pbrt(
       format_values(fs, arealights_map.at(shape.arealight));
     format_values(fs, "Shape \"{}\" {}\n", shape.type, shape.values);
     format_values(fs, "AttributeEnd\n");
-    if(shape.is_instanced) format_values(fs, "ObjectEnd\n");
-    for(auto& iframe : shape.instance_frames) {
-    format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", (mat4f)iframe);
-    format_values(fs, "ObjectInstance {}\n", object);
-    format_values(fs, "AttributeEnd\n");
+    if (shape.is_instanced) format_values(fs, "ObjectEnd\n");
+    for (auto& iframe : shape.instance_frames) {
+      format_values(fs, "AttributeBegin\n");
+      format_values(fs, "Transform {}\n", (mat4f)iframe);
+      format_values(fs, "ObjectInstance {}\n", object);
+      format_values(fs, "AttributeEnd\n");
     }
   }
 
