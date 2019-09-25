@@ -968,7 +968,8 @@ void load_island_scene(
   update_transforms(scene);
 
   // print stats
-  printf("%s\n", format_stats(scene).c_str());
+  for(auto& stat : format_stats(scene))
+  printf("%s\n", stat.c_str());
 }
 
 }  // namespace yocto
@@ -1033,7 +1034,9 @@ int main(int argc, const char** argv) {
   }
 
   // print info
-  if (info) print_info(format_stats(scene));
+  if (info) {
+    for(auto stat : format_stats(scene)) print_info(stat);
+  }
 
 // add missing mesh names if necessary
 #if 0

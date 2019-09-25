@@ -304,8 +304,7 @@ namespace yocto {
 void merge_scene(yocto_scene& scene, const yocto_scene& merge);
 
 // Print scene statistics.
-string format_stats(
-    const yocto_scene& scene, const string& prefix = "", bool verbose = false);
+vector<string> format_stats(const yocto_scene& scene, bool verbose = false);
 
 // Add missing names, normals, tangents and hierarchy.
 void add_normals(yocto_scene& scene);

@@ -335,7 +335,8 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      printf("%s\n", format_stats(scn.scene).c_str());
+      for(auto stat : format_stats(scn.scene))
+      printf("%s\n", stat.c_str());
       printf("%s\n", format_stats(scn.bvh).c_str());
     }
     auto mouse_pos = get_glmouse_pos(win);

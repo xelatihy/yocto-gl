@@ -245,18 +245,6 @@ void save_scene(const string& filename, const yocto_scene& scene,
   }
 }
 
-static string get_save_scene_message(
-    const yocto_scene& scene, const string& indent) {
-  auto str = ""s;
-  str += indent + "\n";
-  str += indent + "Written by Yocto/GL\n";
-  str += indent + "https://github.com/xelatihy/yocto-gl\n";
-  str += indent + "\n";
-  str += format_stats(scene, indent);
-  str += indent + "\n";
-  return str;
-}
-
 // Return the preset type and the remaining filename
 static inline bool is_preset_filename(const string& filename) {
   return filename.find("::yocto::") == 0;
@@ -785,7 +773,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   // open file
   auto fs = open_file(filename, "w");
 
-  write_yaml_comment(fs, get_save_scene_message(scene, ""));
+  // write_yaml_comment(fs, get_save_scene_message(scene, ""));
 
   static const auto def_camera      = yocto_camera{};
   static const auto def_texture     = yocto_texture{};
@@ -4138,16 +4126,13 @@ static void load_pbrt_scene(
     const string& filename, yocto_scene& scene, const load_params& params) {
   scene = yocto_scene{};
 
-  try {
-    // Parse pbrt
-    load_pbrt(filename, scene, params);
+  // Parse pbrt
+  load_pbrt(filename, scene, params);
 
-    // load textures
-    auto dirname = fs::path(filename).parent_path();
-    load_textures(scene, dirname, params);
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
-  }
+  // load shapes and textures
+  auto dirname = fs::path(filename).parent_path();
+  load_shapes(scene, dirname, params);
+  load_textures(scene, dirname, params);
 
   // fix scene
   scene.uri = fs::path(filename).filename();
@@ -4165,7 +4150,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto fs = open_file(filename, "w");
 
   // embed data
-  write_pbrt_comment(fs, get_save_scene_message(scene, ""));
+  // write_pbrt_comment(fs, get_save_scene_message(scene, ""));
 
   // convert camera and settings
   auto& camera     = scene.cameras.front();
@@ -4340,6 +4325,7 @@ static void load_pbrt(
     shape.normals     = pshape.normals;
     shape.texcoords   = pshape.texcoords;
     shape.triangles   = pshape.triangles;
+    for(auto& uv : shape.texcoords) uv.y = 1 - uv.y;
     auto material_id  = material_map.at(pshape.material);
     auto arealight_id = arealight_map.at(pshape.arealight);
     auto instance_id  = 0;
@@ -4352,8 +4338,6 @@ static void load_pbrt(
       instance.material = arealight_id >= 0 ? arealight_id : material_id;
       instance.shape    = (int)scene.shapes.size() - 1;
     }
-    if (shape.positions.empty())
-      throw std::runtime_error("empty shape of type " + pshape.type);
   }
 
   // convert environments
@@ -4399,6 +4383,7 @@ static void load_pbrt_scene(
 
   // load textures
   auto dirname = fs::path(filename).parent_path();
+  load_shapes(scene, dirname, params);
   load_textures(scene, dirname, params);
 
   // fix scene
@@ -4416,7 +4401,8 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto pbrt = pbrt_model{};
 
   // embed data
-  pbrt.comments.push_back(get_save_scene_message(scene, ""));
+  for(auto stat : format_stats(scene))
+  pbrt.comments.push_back(stat);
 
   // convert camera
   auto& camera     = scene.cameras.front();
@@ -4470,6 +4456,8 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
       penvironment.filename = scene.textures[environment.emission_tex].uri;
     }
   }
+    
+  save_pbrt(filename, pbrt);
 }
 
 // Save a pbrt scene

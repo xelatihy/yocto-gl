@@ -3821,13 +3821,14 @@ static inline void remove_pbrt_comment(
 }
 
 // Read a pbrt command from file
-bool read_pbrt_cmdline(file_wrapper& fs, string& cmd) {
+bool read_pbrt_cmdline(file_wrapper& fs, string& cmd, int& line_num) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
   auto pos   = ftell(fs.fs);
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
+    line_num += 1;
     auto line = string_view{buffer};
     remove_pbrt_comment(line);
     skip_whitespace(line);
@@ -3838,6 +3839,7 @@ bool read_pbrt_cmdline(file_wrapper& fs, string& cmd) {
     if (is_cmd) {
       if (found) {
         fseek(fs.fs, pos, SEEK_SET);
+        line_num -= 1;
         return true;
       } else {
         found = true;
@@ -4793,7 +4795,7 @@ struct pbrt_context {
 };
 
 // load pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
+void load_pbrt(const string& filename, pbrt_model& pbrt) {
   auto files = vector<file_wrapper>{};
   open_file(files.emplace_back(), filename);
 
@@ -4821,7 +4823,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
   // parse command by command
   while (!files.empty()) {
     auto line = ""s;
-    while (read_pbrt_cmdline(files.back(), line)) {
+    auto line_num = 0;
+    while (read_pbrt_cmdline(files.back(), line, line_num)) {
       auto str = string_view{line};
       // get command
       auto cmd = ""s;
@@ -5042,24 +5045,6 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
   convert_pbrt_arealights(pbrt.arealights);
   convert_pbrt_environments(pbrt.environments, pbrt.textures);
 
-  // load ply data
-  for (auto& shape : pbrt.shapes) {
-    if (shape.filename.empty()) continue;
-    auto ply = ply_model{};
-    load_ply(get_dirname(filename) + shape.filename, ply);
-    shape.triangles = get_ply_triangles(ply);
-    shape.positions = get_ply_positions(ply);
-    shape.normals   = get_ply_normals(ply);
-    shape.texcoords = get_ply_texcoords(ply);
-  }
-
-  // flip texture coords
-  if (flip_texcoord) {
-    for (auto& shape : pbrt.shapes) {
-      for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
-    }
-  }
-
   // remove_pbrt_materials(pbrt.materials, pbrt.shapes);
   // remove_pbrt_textures(pbrt.textures, pbrt.materials);
 }
@@ -5142,7 +5127,7 @@ inline static void format_value(string& str, const vector<pbrt_value>& values) {
 }
 
 void save_pbrt(
-    const string& filename, const pbrt_model& pbrt, bool flip_texcoord) {
+    const string& filename, const pbrt_model& pbrt) {
   auto fs = open_file(filename, "wt");
 
   // save comments
@@ -5158,7 +5143,7 @@ void save_pbrt(
   for (auto& camera_ : pbrt.cameras) {
     auto camera = camera_;
     if (camera.type == "") {
-      camera.type = "persepctive";
+      camera.type = "perspective";
       camera.values.push_back(make_pbrt_value("fov", camera.fov * 180 / pif));
     }
     format_values(fs, "Camera \"{}\" {}\n", camera.type, camera.values);
@@ -5326,7 +5311,7 @@ void save_pbrt(
     if (shape.is_instanced) format_values(fs, "ObjectBegin \"{}\"\n", object);
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)shape.frame);
-    format_values(fs, "NamedMaterial {}\n", shape.material);
+    format_values(fs, "NamedMaterial \"{}\"\n", shape.material);
     if (shape.arealight != "")
       format_values(fs, arealights_map.at(shape.arealight));
     format_values(fs, "Shape \"{}\" {}\n", shape.type, shape.values);
@@ -5335,7 +5320,7 @@ void save_pbrt(
     for (auto& iframe : shape.instance_frames) {
       format_values(fs, "AttributeBegin\n");
       format_values(fs, "Transform {}\n", (mat4f)iframe);
-      format_values(fs, "ObjectInstance {}\n", object);
+      format_values(fs, "ObjectInstance \"{}\"\n", object);
       format_values(fs, "AttributeEnd\n");
     }
   }
@@ -5347,7 +5332,8 @@ void save_pbrt(
 bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
     string& type, frame3f& xform, vector<pbrt_value>& values, string& line) {
   // parse command by command
-  while (read_pbrt_cmdline(fs, line)) {
+  auto line_num = 0;
+  while (read_pbrt_cmdline(fs, line, line_num)) {
     auto str = string_view{line};
     // get command
     auto cmd = ""s;
