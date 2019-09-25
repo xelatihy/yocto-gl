@@ -804,6 +804,13 @@ struct pbrt_light {
   vec3f from     = zero3f;
   vec3f to       = zero3f;
   bool  distant  = false;
+  // arealight approximation
+  vec3f         area_emission  = zero3f;
+  frame3f area_frame     = identity3x4f;
+  frame3f area_frend     = identity3x4f;
+  vector<vec3i> area_triangles = {};
+  vector<vec3f> area_positions = {};
+  vector<vec3f> area_normals   = {};
 };
 struct pbrt_arealight {
   // arealight parameters
@@ -868,7 +875,8 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord = true);
+void load_pbrt(
+    const string& filename, pbrt_model& pbrt, bool flip_texcoord = true);
 void save_pbrt(const string& filename, const pbrt_model& pbrt);
 
 // Pbrt command

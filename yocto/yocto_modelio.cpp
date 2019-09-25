@@ -4180,61 +4180,6 @@ static inline void parse_pbrt_params(
   }
 }
 
-// Compute the fresnel term for dielectrics. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-static vec3f pbrt_fresnel_dielectric(float cosw, const vec3f& eta_) {
-  auto eta = eta_;
-  if (cosw < 0) {
-    eta  = vec3f{1, 1, 1} / eta;
-    cosw = -cosw;
-  }
-
-  auto sin2 = 1 - cosw * cosw;
-  auto eta2 = eta * eta;
-
-  auto cos2t = vec3f{1, 1, 1} - vec3f{sin2, sin2, sin2} / eta2;
-  if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0) return vec3f{1, 1, 1};  // tir
-
-  auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
-  auto t1 = eta * t0;
-  auto t2 = eta * cosw;
-
-  auto rs = (vec3f{cosw, cosw, cosw} - t1) / (vec3f{cosw, cosw, cosw} + t1);
-  auto rp = (t0 - t2) / (t0 + t2);
-
-  return (rs * rs + rp * rp) / 2.0f;
-}
-
-// Compute the fresnel term for metals. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-static vec3f pbrt_fresnel_metal(
-    float cosw, const vec3f& eta, const vec3f& etak) {
-  if (etak == zero3f) return pbrt_fresnel_dielectric(cosw, eta);
-
-  cosw       = clamp(cosw, (float)-1, (float)1);
-  auto cos2  = cosw * cosw;
-  auto sin2  = clamp(1 - cos2, (float)0, (float)1);
-  auto eta2  = eta * eta;
-  auto etak2 = etak * etak;
-
-  auto t0         = eta2 - etak2 - vec3f{sin2, sin2, sin2};
-  auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
-  auto a2plusb2   = vec3f{
-      sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
-  auto t1  = a2plusb2 + vec3f{cos2, cos2, cos2};
-  auto a_2 = (a2plusb2 + t0) / 2.0f;
-  auto a   = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
-  auto t2  = 2.0f * a * cosw;
-  auto rs  = (t1 - t2) / (t1 + t2);
-
-  auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
-            vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
-  auto t4 = t2 * sin2;
-  auto rp = rs * (t3 - t4) / (t3 + t4);
-
-  return (rp + rs) / 2.0f;
-}
-
 // convert pbrt elements
 static void convert_pbrt_cameras(
     vector<pbrt_camera>& cameras, bool verbose = false) {
@@ -4588,6 +4533,108 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
   }
 }
 
+// Make a triangle shape from a quad grid
+template <typename PositionFunc, typename NormalFunc>
+static inline void make_pbrt_shape(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps, const PositionFunc& position_func,
+    const NormalFunc& normal_func) {
+  auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
+  auto tid = [steps](int i, int j, int c) { return (j * steps.x + i) * 2 + c; };
+  positions.resize((steps.x + 1) * (steps.y + 1));
+  normals.resize((steps.x + 1) * (steps.y + 1));
+  texcoords.resize((steps.x + 1) * (steps.y + 1));
+  for (auto j = 0; j < steps.y + 1; j++) {
+    for (auto i = 0; i < steps.x + 1; i++) {
+      auto uv              = vec2f{i / (float)steps.x, j / (float)steps.y};
+      positions[vid(i, j)] = position_func(uv);
+      normals[vid(i, j)]   = normal_func(uv);
+      texcoords[vid(i, j)] = uv;
+    }
+  }
+  triangles.resize(steps.x * steps.y * 2);
+  for (auto j = 0; j < steps.y; j++) {
+    for (auto i = 0; i < steps.x; i++) {
+      triangles[tid(i, j, 0)] = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
+      triangles[tid(i, j, 1)] = {vid(i, j), vid(i + 1, j + 1), vid(i, j + 1)};
+    }
+  }
+}
+
+// pbrt sphere
+static inline void make_pbrt_sphere(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps, float radius) {
+  make_pbrt_shape(
+      triangles, positions, normals, texcoords, steps,
+      [radius](const vec2f& uv) {
+        auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+        return radius *
+               vec3f{cos(pt.x) * sin(pt.y), sin(pt.x) * sin(pt.y), cos(pt.y)};
+      },
+      [](const vec2f& uv) {
+        auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+        return vec3f{cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y), sin(pt.y)};
+      });
+}
+static inline void make_pbrt_disk(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps, float radius) {
+  make_pbrt_shape(
+      triangles, positions, normals, texcoords, steps,
+      [radius](const vec2f& uv) {
+        auto a = 2 * pif * uv.x;
+        return radius * (1 - uv.y) * vec3f{cos(a), sin(a), 0};
+      },
+      [](const vec2f& uv) {
+        return vec3f{0, 0, 1};
+      });
+}
+static inline void make_pbrt_quad(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps, float radius) {
+  make_pbrt_shape(
+      triangles, positions, normals, texcoords, steps,
+      [radius](const vec2f& uv) {
+        return vec3f{(uv.x - 0.5f) * radius, (uv.y - 0.5f) * radius, 0};
+      },
+      [](const vec2f& uv) {
+        return vec3f{0, 0, 1};
+      });
+}
+
+// Convert pbrt shapes
+static void convert_pbrt_shapes(
+    vector<pbrt_shape>& shapes, bool verbose = false) {
+  for (auto& shape : shapes) {
+    auto& values = shape.values;
+    if (shape.type == "trianglemesh") {
+      get_pbrt_value(values, "P", shape.positions, {});
+      get_pbrt_value(values, "N", shape.normals, {});
+      get_pbrt_value(values, "uv", shape.texcoords, {});
+      for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
+      get_pbrt_value(values, "indices", shape.triangles, {});
+    } else if (shape.type == "loopsubdiv") {
+      get_pbrt_value(values, "P", shape.positions, {});
+      get_pbrt_value(values, "indices", shape.triangles, {});
+      shape.normals.resize(shape.positions.size());
+      // compute_normals(shape.normals, shape.triangles, shape.positions);
+    } else if (shape.type == "plymesh") {
+      shape.filename = get_pbrt_value(values, "filename", ""s);
+    } else if (shape.type == "sphere") {
+      auto radius = get_pbrt_value(values, "radius", 1.0f);
+      make_pbrt_sphere(shape.triangles, shape.positions, shape.normals,
+          shape.texcoords, {32, 16}, radius);
+    } else if (shape.type == "disk") {
+      auto radius = get_pbrt_value(values, "radius", 1.0f);
+      make_pbrt_disk(shape.triangles, shape.positions, shape.normals,
+          shape.texcoords, {32, 1}, radius);
+    } else {
+      throw std::runtime_error("unsupported shape type " + shape.type);
+    }
+  }
+}
+
 // Convert pbrt arealights
 static void convert_pbrt_arealights(
     vector<pbrt_arealight>& lights, bool verbose = false) {
@@ -4610,19 +4657,32 @@ static void convert_pbrt_lights(
     if (light.type == "distant") {
       light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
                        get_pbrt_value(values, "L", vec3f{1, 1, 1});
-      light.from    = get_pbrt_value(values, "from", vec3f{0, 0, 0});
-      light.to      = get_pbrt_value(values, "to", vec3f{0, 0, 1});
-      light.distant = true;
-    } else if (light.type == "point") {
+      light.from          = get_pbrt_value(values, "from", vec3f{0, 0, 0});
+      light.to            = get_pbrt_value(values, "to", vec3f{0, 0, 1});
+      light.distant       = true;
+      auto distant_dist   = 100;
+      auto size           = distant_dist * sin(5 * pif / 180);
+      light.area_emission = light.emission * (distant_dist * distant_dist) / (size * size);
+      light.area_frame    = light.frame * lookat_frame(
+          normalize(light.from - light.to) * distant_dist, zero3f, {0, 1, 0},
+          true);
+      light.area_frend    = light.frend * lookat_frame(
+          normalize(light.from - light.to) * distant_dist, zero3f, {0, 1, 0},
+          true);
+      auto texcoords = vector<vec2f>{};
+      make_pbrt_quad(light.area_triangles, light.area_positions,
+          light.area_normals, texcoords, {4, 2}, size);
+    } else if (light.type == "point" || light.type == "goniometric" ||
+               light.type == "spot") {
       light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
                        get_pbrt_value(values, "I", vec3f{1, 1, 1});
-      light.from = get_pbrt_value(values, "from", vec3f{0, 0, 0});
-    } else if (light.type == "goniometric") {
-      light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
-                       get_pbrt_value(values, "I", vec3f{1, 1, 1});
-    } else if (light.type == "spot") {
-      light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
-                       get_pbrt_value(values, "I", vec3f{1, 1, 1});
+      light.from          = get_pbrt_value(values, "from", vec3f{0, 0, 0});
+      light.area_emission = light.emission;
+      light.area_frame    = light.frame * translation_frame(light.from);
+      light.area_frend    = light.frend * translation_frame(light.from);
+      auto texcoords      = vector<vec2f>{};
+      make_pbrt_sphere(light.area_triangles, light.area_positions,
+          light.area_normals, texcoords, {4, 2}, 0.0025f);
     } else {
       throw std::runtime_error("unsupported light type " + light.type);
     }
@@ -4654,85 +4714,6 @@ static void convert_pbrt_environments(vector<pbrt_environment>& environments,
       }
     } else {
       throw std::runtime_error("unsupported environment type " + light.type);
-    }
-  }
-}
-
-// Make a triangle shape from a quad grid
-template <typename PositionFunc, typename NormalFunc>
-static inline void make_pbrt_shape(vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    int usteps, int vsteps, const PositionFunc& position_func,
-    const NormalFunc& normal_func) {
-  auto vid = [usteps](int i, int j) { return j * (usteps + 1) + i; };
-  auto tid = [usteps](int i, int j, int c) { return (j * usteps + i) * 2 + c; };
-  positions.resize((usteps + 1) * (vsteps + 1));
-  normals.resize((usteps + 1) * (vsteps + 1));
-  texcoords.resize((usteps + 1) * (vsteps + 1));
-  for (auto j = 0; j < vsteps + 1; j++) {
-    for (auto i = 0; i < usteps + 1; i++) {
-      auto uv              = vec2f{i / (float)usteps, j / (float)vsteps};
-      positions[vid(i, j)] = position_func(uv);
-      normals[vid(i, j)]   = normal_func(uv);
-      texcoords[vid(i, j)] = uv;
-    }
-  }
-  triangles.resize(usteps * vsteps * 2);
-  for (auto j = 0; j < vsteps; j++) {
-    for (auto i = 0; i < usteps; i++) {
-      triangles[tid(i, j, 0)] = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
-      triangles[tid(i, j, 1)] = {vid(i, j), vid(i + 1, j + 1), vid(i, j + 1)};
-    }
-  }
-}
-
-// Convert pbrt shapes
-static void convert_pbrt_shapes(
-    vector<pbrt_shape>& shapes, bool verbose = false) {
-  for (auto& shape : shapes) {
-    auto& values = shape.values;
-    if (shape.type == "trianglemesh") {
-      get_pbrt_value(values, "P", shape.positions, {});
-      get_pbrt_value(values, "N", shape.normals, {});
-      get_pbrt_value(values, "uv", shape.texcoords, {});
-      for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
-      get_pbrt_value(values, "indices", shape.triangles, {});
-    } else if (shape.type == "loopsubdiv") {
-      get_pbrt_value(values, "P", shape.positions, {});
-      get_pbrt_value(values, "indices", shape.triangles, {});
-      shape.normals.resize(shape.positions.size());
-      // compute_normals(shape.normals, shape.triangles, shape.positions);
-    } else if (shape.type == "plymesh") {
-      shape.filename = get_pbrt_value(values, "filename", ""s);
-    } else if (shape.type == "sphere") {
-      shape.radius = get_pbrt_value(values, "radius", 1.0f);
-      make_pbrt_shape(
-          shape.triangles, shape.positions, shape.normals, shape.texcoords, 32,
-          16,
-          [radius = shape.radius](const vec2f& uv) {
-            auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-            return radius * vec3f{cos(pt.x) * sin(pt.y), sin(pt.x) * sin(pt.y),
-                                cos(pt.y)};
-          },
-          [](const vec2f& uv) {
-            auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-            return vec3f{
-                cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y), sin(pt.y)};
-          });
-    } else if (shape.type == "disk") {
-      shape.radius = get_pbrt_value(values, "radius", 1.0f);
-      make_pbrt_shape(
-          shape.triangles, shape.positions, shape.normals, shape.texcoords, 32,
-          1,
-          [radius = shape.radius](const vec2f& uv) {
-            auto a = 2 * pif * uv.x;
-            return radius * (1 - uv.y) * vec3f{cos(a), sin(a), 0};
-          },
-          [](const vec2f& uv) {
-            return vec3f{0, 0, 1};
-          });
-    } else {
-      throw std::runtime_error("unsupported shape type " + shape.type);
     }
   }
 }
@@ -5057,9 +5038,9 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
   }
 
   // flip texture coords
-  if(flip_texcoord) {
-    for(auto& shape : pbrt.shapes) {
-      for(auto& uv : shape.texcoords) uv.y = 1 - uv.y;
+  if (flip_texcoord) {
+    for (auto& shape : pbrt.shapes) {
+      for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
     }
   }
 

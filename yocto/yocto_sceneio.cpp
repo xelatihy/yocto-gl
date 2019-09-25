@@ -4260,36 +4260,18 @@ static void load_pbrt(
   // TODO lights
   for (auto& plight : pbrt.lights) {
     auto& shape       = scene.shapes.emplace_back();
-    auto& material    = scene.materials.emplace_back();
-    auto& instance    = scene.instances.emplace_back();
     shape.uri         = "light" + std::to_string(scene.shapes.size());
-    material.uri      = "light" + std::to_string(scene.shapes.size());
-    material.emission = plight.emission;
-    instance.uri      = "light" + std::to_string(scene.shapes.size());
+    shape.triangles   = plight.area_triangles;
+    shape.positions   = plight.area_positions;
+    shape.normals     = plight.area_normals;
+    auto& material    = scene.materials.emplace_back();
+    material.uri      = shape.uri;
+    material.emission = plight.area_emission;
+    auto& instance    = scene.instances.emplace_back();
+    instance.uri      = shape.uri;
+    instance.frame    = plight.area_frame;
     instance.shape    = (int)scene.shapes.size() - 1;
     instance.material = (int)scene.materials.size() - 1;
-    if (plight.distant) {
-      auto distant_dist = 100;
-      auto size         = distant_dist * sin(5 * pif / 180);
-      auto params       = proc_shape_params{};
-      params.type       = proc_shape_params::type_t::quad;
-      params.scale      = size / 2;
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
-      material.emission *= (distant_dist * distant_dist) / (size * size);
-      instance.frame = plight.frame *
-                       lookat_frame(
-                           normalize(plight.from - plight.to) * distant_dist,
-                           zero3f, {0, 1, 0}, true);
-    } else {
-      auto params         = proc_shape_params{};
-      params.type         = proc_shape_params::type_t::sphere;
-      params.scale        = 0.005f;
-      params.subdivisions = 2;
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
-      instance.frame = plight.frame * translation_frame(plight.from);
-    }
   }
 }
 
