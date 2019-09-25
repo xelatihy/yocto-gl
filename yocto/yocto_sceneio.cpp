@@ -4255,7 +4255,13 @@ static void load_pbrt(
     environment.uri      = "env" + std::to_string(scene.environments.size());
     environment.frame    = penvironment.frame;
     environment.emission = penvironment.emission;
-    environment.emission_tex = get_texture(penvironment.emission_map);
+    if (!penvironment.filename.empty()) {
+      auto& texture            = scene.textures.emplace_back();
+      texture.uri              = penvironment.filename;
+      environment.emission_tex = (int)scene.textures.size() - 1;
+    } else {
+      environment.emission_tex = -1;
+    }
   }
 
   // TODO lights

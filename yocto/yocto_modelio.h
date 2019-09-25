@@ -728,8 +728,8 @@ struct pbrt_texture {
   string             type   = "";
   vector<pbrt_value> values = {};
   // texture approximation
-  vec3f  constant    = vec3f{1, 1, 1};
-  string filename    = "";
+  vec3f  constant = vec3f{1, 1, 1};
+  string filename = "";
 };
 
 // Pbrt material
@@ -757,7 +757,7 @@ struct pbrt_material {
   vec3f  volmeanfreepath  = vec3f{0};
   vec3f  volscatter       = vec3f{0};
   float  volscale         = 0.01;
-  bool   refract          = true;
+  bool   refract          = false;
 };
 
 // Pbrt medium
@@ -828,8 +828,8 @@ struct pbrt_environment {
   frame3f            frame  = identity3x4f;
   frame3f            frend  = identity3x4f;
   // environment approximation
-  vec3f  emission     = zero3f;
-  string emission_map = "";
+  vec3f  emission = zero3f;
+  string filename = "";
 };
 
 // Other pbrt elements
@@ -864,7 +864,7 @@ struct pbrt_sampler {
 
 // Pbrt model
 struct pbrt_model {
-  // scene objects
+  vector<string>           comments     = {};
   vector<pbrt_camera>      cameras      = {};
   vector<pbrt_shape>       shapes       = {};
   vector<pbrt_texture>     textures     = {};
@@ -873,7 +873,6 @@ struct pbrt_model {
   vector<pbrt_environment> environments = {};
   vector<pbrt_arealight>   arealights   = {};
   vector<pbrt_light>       lights       = {};
-  // other elements
   vector<pbrt_integrator>  integrators  = {};
   vector<pbrt_film>        films        = {};
   vector<pbrt_filter>      filters      = {};
@@ -963,6 +962,12 @@ pbrt_value make_pbrt_value(const string& name, const vec2f& value,
     pbrt_value_type type = pbrt_value_type::point2);
 pbrt_value make_pbrt_value(const string& name, const vec3f& value,
     pbrt_value_type type = pbrt_value_type::color);
+pbrt_value make_pbrt_value(const string& name, const vector<vec2f>& value,
+    pbrt_value_type type = pbrt_value_type::point2);
+pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& value,
+    pbrt_value_type type = pbrt_value_type::point);
+pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
+    pbrt_value_type type = pbrt_value_type::integer);
 
 }  // namespace yocto
 

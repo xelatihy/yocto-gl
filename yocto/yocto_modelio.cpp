@@ -4223,7 +4223,7 @@ static void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
       camera.fov      = 2 * atan(0.036f / (2 * lens));
       camera.aperture = get_pbrt_value(values, "aperturediameter", 0.0f);
       camera.focus    = get_pbrt_value(values, "focusdistance", 10);
-      camera.aspect = film_aspect;
+      camera.aspect   = film_aspect;
     } else {
       throw std::runtime_error("unsupported Camera type " + camera.type);
     }
@@ -4246,7 +4246,7 @@ static void convert_pbrt_textures(
   };
   auto make_placeholder = [verbose](pbrt_texture& texture,
                               const vec3f&        color = {1, 0, 0}) {
-    texture.constant    = color;
+    texture.constant = color;
     if (verbose)
       printf("texture %s not supported well\n", texture.type.c_str());
   };
@@ -4256,7 +4256,7 @@ static void convert_pbrt_textures(
     if (texture.type == "imagemap") {
       texture.filename = get_pbrt_value(values, "filename", ""s);
     } else if (texture.type == "constant") {
-      texture.constant    = get_pbrt_value(values, "value", vec3f{1});
+      texture.constant = get_pbrt_value(values, "value", vec3f{1});
     } else if (texture.type == "bilerp") {
       make_placeholder(texture, {1, 0, 0});
     } else if (texture.type == "checkerboard") {
@@ -4379,7 +4379,6 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_pbrt_roughness(values, material.roughness, 0.1f);
       material.sspecular = material.specular *
                            eta_to_reflectivity(material.eta);
-      material.refract = false;
     } else if (material.type == "plastic") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
@@ -4441,6 +4440,7 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_pbrt_roughness(values, material.roughness, 0);
       material.sspecular = material.specular *
                            eta_to_reflectivity(material.eta);
+      material.refract = true;
     } else if (material.type == "hair") {
       get_scaled_texture(
           values, "color", material.diffuse, material.diffuse_map, vec3f{0});
@@ -4723,7 +4723,7 @@ static void convert_pbrt_environments(vector<pbrt_environment>& environments,
     if (light.type == "infinite") {
       light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
                        get_pbrt_value(values, "L", vec3f{1, 1, 1});
-      light.emission_map = get_pbrt_value(values, "mapname", ""s);
+      light.filename = get_pbrt_value(values, "mapname", ""s);
       // environment.frame =
       // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
       // * stack.back().frame;
@@ -4731,14 +4731,6 @@ static void convert_pbrt_environments(vector<pbrt_environment>& environments,
                     frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
       light.frend = light.frend *
                     frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-      if (!light.emission_map.empty()) {
-        auto& texture    = textures.emplace_back();
-        texture.name     = light.emission_map;
-        texture.filename = light.emission_map;
-        texture.type     = "imagemap";
-        texture.values.push_back(
-            make_pbrt_value("filename", light.emission_map));
-      }
     } else {
       throw std::runtime_error("unsupported environment type " + light.type);
     }
@@ -4937,8 +4929,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
         auto& camera = pbrt.cameras.emplace_back();
         parse_pbrt_param(str, camera.type);
         parse_pbrt_params(str, camera.values);
-        camera.frame  = stack.back().transform_start;
-        camera.frend  = stack.back().transform_end;
+        camera.frame = stack.back().transform_start;
+        camera.frend = stack.back().transform_end;
       } else if (cmd == "Texture") {
         auto& texture  = pbrt.textures.emplace_back();
         auto  comptype = ""s;
@@ -5059,6 +5051,275 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
 
   // remove_pbrt_materials(pbrt.materials, pbrt.shapes);
   // remove_pbrt_textures(pbrt.textures, pbrt.materials);
+}
+
+inline static void format_value(string& str, const pbrt_value& value) {
+  static auto type_labels = unordered_map<pbrt_value_type, string>{
+      {pbrt_value_type::real, "float"},
+      {pbrt_value_type::integer, "integer"},
+      {pbrt_value_type::boolean, "bool"},
+      {pbrt_value_type::string, "string"},
+      {pbrt_value_type::point, "point"},
+      {pbrt_value_type::normal, "normal"},
+      {pbrt_value_type::vector, "vector"},
+      {pbrt_value_type::texture, "texture"},
+      {pbrt_value_type::color, "rgb"},
+      {pbrt_value_type::point2, "point2"},
+      {pbrt_value_type::vector2, "vector2"},
+      {pbrt_value_type::spectrum, "spectrum"},
+  };
+
+  auto format_vector = [](string& str, auto& values) {
+    str += "[ ";
+    for (auto& value : values) {
+      str += " ";
+      format_value(str, value);
+    }
+    str += " ]";
+  };
+
+  format_values(str, "\"{} {}\" ", type_labels.at(value.type), value.name);
+  switch (value.type) {
+    case pbrt_value_type::real:
+      if (!value.vector1f.empty()) {
+        format_vector(str, value.vector1f);
+      } else {
+        format_value(str, value.value1f);
+      }
+      break;
+    case pbrt_value_type::integer:
+      if (!value.vector1f.empty()) {
+        format_vector(str, value.vector1i);
+      } else {
+        format_value(str, value.value1i);
+      }
+      break;
+    case pbrt_value_type::boolean:
+      format_values(str, "\"{}\"", value.value1b ? "true" : "false");
+      break;
+    case pbrt_value_type::string:
+    case pbrt_value_type::texture:
+      format_values(str, "\"{}\"", value.value1s);
+      break;
+    case pbrt_value_type::point:
+    case pbrt_value_type::vector:
+    case pbrt_value_type::normal:
+    case pbrt_value_type::color:
+      if (!value.vector3f.empty()) {
+        format_vector(str, value.vector3f);
+      } else {
+        format_values(str, "[ {} ]", value.value3f);
+      }
+      break;
+    case pbrt_value_type::spectrum: format_vector(str, value.vector1f); break;
+    case pbrt_value_type::point2:
+    case pbrt_value_type::vector2:
+      if (!value.vector2f.empty()) {
+        format_vector(str, value.vector2f);
+      } else {
+        format_values(str, "[ {} ]", value.value2f);
+      }
+      break;
+  }
+}
+
+inline static void format_value(string& str, const vector<pbrt_value>& values) {
+  for (auto& value : values) {
+    str += " ";
+    format_value(str, value);
+  }
+}
+
+void save_pbrt(
+    const string& filename, const pbrt_model& pbrt, bool flip_texcoord) {
+  auto fs = open_file(filename, "wt");
+
+  // save comments
+  format_values(fs, "#\n");
+  format_values(fs, "# Written by Yocto/GL\n");
+  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(fs, "#\n\n");
+  for (auto& comment : pbrt.comments) {
+    format_values(fs, "# {}\n", comment);
+  }
+  format_values(fs, "\n");
+
+  for (auto& camera_ : pbrt.cameras) {
+    auto camera = camera_;
+    if (camera.type == "") {
+      camera.type = "persepctive";
+      camera.values.push_back(make_pbrt_value("fov", camera.fov * 180 / pif));
+    }
+    format_values(fs, "Camera \"{}\" {}\n", camera.type, camera.values);
+  }
+  for (auto& film_ : pbrt.films) {
+    auto film = film_;
+    if (film.type == "") {
+      film.type = "image";
+      film.values.push_back(make_pbrt_value("xresolution", film.resolution.x));
+      film.values.push_back(make_pbrt_value("yresolution", film.resolution.y));
+      film.values.push_back(make_pbrt_value("filename", film.filename));
+    }
+    format_values(fs, "Film \"{}\" {}\n", film.type, film.values);
+  }
+  for (auto& integrator_ : pbrt.integrators) {
+    auto integrator = integrator_;
+    format_values(
+        fs, "Integrator \"{}\" {}\n", integrator.type, integrator.values);
+  }
+  for (auto& sampler_ : pbrt.samplers) {
+    auto sampler = sampler_;
+    format_values(fs, "Sampler \"{}\" {}\n", sampler.type, sampler.values);
+  }
+  for (auto& filter_ : pbrt.filters) {
+    auto filter = filter_;
+    format_values(fs, "PixelFilter \"{}\" {}\n", filter.type, filter.values);
+  }
+  for (auto& accelerator_ : pbrt.accelerators) {
+    auto accelerator = accelerator_;
+    format_values(
+        fs, "Accelerator \"{}\" {}\n", accelerator.type, accelerator.values);
+  }
+
+  format_values(fs, "\nWorldBegin\n\n");
+
+  for (auto& texture_ : pbrt.textures) {
+    auto texture = texture_;
+    if (texture.type == "") {
+      if (texture.filename.empty()) {
+        texture.type = "constant";
+        texture.values.push_back(make_pbrt_value("value", texture.constant));
+      } else {
+        texture.type = "imagemap";
+        texture.values.push_back(make_pbrt_value("filename", texture.filename));
+      }
+    }
+    format_values(fs, "Texture \"{}\" \"color\" \"{}\" {}\n", texture.name,
+        texture.type, texture.values);
+  }
+
+  auto reflectivity_to_eta = [](const vec3f& reflectivity) {
+    return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
+  };
+  for (auto& material_ : pbrt.materials) {
+    auto material = material_;
+    if (material.type == "") {
+      if (material.specular == zero3f && material.transmission == zero3f) {
+        material.type = "matte";
+        material.values.push_back(make_pbrt_value("Kd", material.diffuse));
+      } else if (material.specular != zero3f &&
+                 material.transmission != zero3f && material.refract) {
+        material.type = "glass";
+        material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
+        material.values.push_back(
+            make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
+        material.values.push_back(make_pbrt_value(
+            "eta", mean(reflectivity_to_eta(material.specular))));
+        material.values.push_back(make_pbrt_value("remaproughness", false));
+      } else if (mean(material.specular) > 0.1f &&
+                 material.transmission == zero3f) {
+        material.type = "metal";
+        material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
+        material.values.push_back(
+            make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
+        material.values.push_back(
+            make_pbrt_value("eta", reflectivity_to_eta(material.specular)));
+        material.values.push_back(make_pbrt_value("remaproughness", false));
+      } else {
+        material.type = "uber";
+        material.values.push_back(make_pbrt_value("Kd", material.diffuse));
+        material.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
+        material.values.push_back(make_pbrt_value("Kt", material.transmission));
+        material.values.push_back(
+            make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
+        material.values.push_back(make_pbrt_value(
+            "eta", mean(reflectivity_to_eta(material.specular))));
+        material.values.push_back(make_pbrt_value("remaproughness", false));
+        material.values.push_back(make_pbrt_value("opacity", material.opacity));
+      }
+    }
+    format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
+        material.name, material.type, material.values);
+  }
+
+  for (auto& medium_ : pbrt.mediums) {
+    auto medium = medium_;
+    format_values(fs, "MakeNamedMedium \"{}\" \"string type\" \"{}\" {}\n",
+        medium.name, medium.type, medium.values);
+  }
+
+  for (auto& light_ : pbrt.lights) {
+    auto light = light_;
+    if (light.type == "") {
+      if (light.distant) {
+        light.type = "distance";
+        light.values.push_back(make_pbrt_value("L", light.emission));
+      } else {
+        light.type = "point";
+        light.values.push_back(make_pbrt_value("I", light.emission));
+      }
+    }
+    format_values(fs, "AttributeBegin\n");
+    format_values(fs, "Transform {}\n", (mat4f)light.frame);
+    format_values(fs, "LightSource \"{}\" {}\n", light.type, light.values);
+    format_values(fs, "AttributeEnd\n");
+  }
+
+  for (auto& environment_ : pbrt.environments) {
+    auto environment = environment_;
+    if (environment.type == "") {
+      environment.type = "infinite";
+      environment.values.push_back(make_pbrt_value("L", environment.emission));
+      environment.values.push_back(
+          make_pbrt_value("mapname", environment.filename));
+    }
+    format_values(fs, "AttributeBegin\n");
+    format_values(fs, "Transform {}\n", (mat4f)environment.frame);
+    // TODO: should we correct frames?
+    format_values(
+        fs, "LightSource \"{}\" {}\n", environment.type, environment.values);
+    format_values(fs, "AttributeEnd\n");
+  }
+
+  auto arealights_map = unordered_map<string, string>{};
+  for (auto& arealight_ : pbrt.arealights) {
+    auto arealight = arealight_;
+    if (arealight.type == "") {
+      arealight.type = "diffuse";
+      arealight.values.push_back(make_pbrt_value("L", arealight.emission));
+    }
+    format_values(arealights_map[arealight.name], "AreaLightSource \"{}\" {}\n",
+        arealight.type, arealight.values);
+  }
+
+  for (auto& shape_ : pbrt.shapes) {
+    auto shape = shape_;
+    if (shape.type == "") {
+      if (!shape.filename.empty()) {
+        shape.type = "plymesh";
+        shape.values.push_back(make_pbrt_value("filename", shape.filename));
+      } else {
+        shape.type = "trianglemesh";
+        shape.values.push_back(make_pbrt_value("indices", shape.triangles));
+        shape.values.push_back(
+            make_pbrt_value("P", shape.positions, pbrt_value_type::point));
+        if (!shape.normals.empty())
+          shape.values.push_back(
+              make_pbrt_value("N", shape.triangles, pbrt_value_type::normal));
+        if (!shape.texcoords.empty())
+          shape.values.push_back(make_pbrt_value("uv", shape.texcoords));
+      }
+    }
+    format_values(fs, "AttributeBegin\n");
+    format_values(fs, "Transform {}\n", (mat4f)shape.frame);
+    format_values(fs, "NamedMaterial {}\n", shape.material);
+    if (shape.arealight != "")
+      format_values(fs, arealights_map.at(shape.arealight));
+    format_values(fs, "Shape \"{}\" {}\n", shape.type, shape.values);
+    format_values(fs, "AttributeEnd\n");
+  }
+
+  format_values(fs, "\nWorldEnd\n\n");
 }
 
 // Read pbrt commands
@@ -5680,6 +5941,30 @@ pbrt_value make_pbrt_value(
   pbrt.name    = name;
   pbrt.type    = type;
   pbrt.value3f = value;
+  return pbrt;
+}
+pbrt_value make_pbrt_value(
+    const string& name, const vector<vec2f>& value, pbrt_value_type type) {
+  auto pbrt     = pbrt_value{};
+  pbrt.name     = name;
+  pbrt.type     = type;
+  pbrt.vector2f = value;
+  return pbrt;
+}
+pbrt_value make_pbrt_value(
+    const string& name, const vector<vec3f>& value, pbrt_value_type type) {
+  auto pbrt     = pbrt_value{};
+  pbrt.name     = name;
+  pbrt.type     = type;
+  pbrt.vector3f = value;
+  return pbrt;
+}
+pbrt_value make_pbrt_value(
+    const string& name, const vector<vec3i>& value, pbrt_value_type type) {
+  auto pbrt     = pbrt_value{};
+  pbrt.name     = name;
+  pbrt.type     = type;
+  pbrt.vector1i = {(int*)value.data(), (int*)value.data() + value.size() * 3};
   return pbrt;
 }
 
