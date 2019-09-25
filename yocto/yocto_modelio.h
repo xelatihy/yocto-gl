@@ -870,7 +870,7 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt, bool convert = true);
+void load_pbrt(const string& filename, pbrt_model& pbrt, bool approximate_elements = true, bool remove_unused = true);
 void save_pbrt(const string& filename, const pbrt_model& pbrt);
 
 // Pbrt command

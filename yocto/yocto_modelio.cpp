@@ -3,6 +3,11 @@
 //
 
 //
+// TODO: fov/aspect lens/film everywhere
+// TODO: pbrt design, split elements from approximations
+//
+
+//
 // LICENSE:
 //
 // Copyright (c) 2016 -- 2019 Fabio Pellacini
@@ -4670,6 +4675,14 @@ static void convert_pbrt_shapes(
   }
 }
 
+
+static void remove_pbrt_materials(vector<pbrt_material>& textures, const vector<pbrt_shape>& shapes) {
+
+}
+static void remove_pbrt_textures(vector<pbrt_texture>& textures, const vector<pbrt_material>& materials) {
+
+}
+
 // pbrt stack ctm
 struct pbrt_context {
   frame3f transform_start        = identity3x4f;
@@ -4686,7 +4699,7 @@ struct pbrt_context {
 };
 
 // load pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt, bool convert) {
+void load_pbrt(const string& filename, pbrt_model& pbrt, bool approximate_elements, bool remove_unused) {
   auto files = vector<file_wrapper>{};
   open_file(files.emplace_back(), filename);
 
@@ -4939,7 +4952,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool convert) {
   }
 
   // convert if needed
-  if(!convert) return;
+  if(!approximate_elements) return;
 
   // convert objects
   convert_pbrt_cameras(pbrt.cameras);
@@ -4960,6 +4973,12 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool convert) {
       shape.normals = get_ply_normals(ply);
       shape.texcoords = get_ply_texcoords(ply);
   }
+
+  // remove unused elements
+  if(!remove_unused) return;
+
+  remove_pbrt_materials(pbrt.materials, pbrt.shapes);
+  remove_pbrt_textures(pbrt.textures, pbrt.materials);
 }
 
 // Read pbrt commands
