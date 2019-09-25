@@ -4706,8 +4706,8 @@ static void convert_pbrt_shapes(
           16,
           [radius = shape.radius](const vec2f& uv) {
             auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-            return radius * vec3f{cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y),
-                                sin(pt.y)};
+            return radius * vec3f{cos(pt.x) * sin(pt.y), sin(pt.x) * sin(pt.y),
+                                cos(pt.y)};
           },
           [](const vec2f& uv) {
             auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
