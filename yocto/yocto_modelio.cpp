@@ -4674,8 +4674,8 @@ static inline void make_pbrt_shape(vector<vec3i>& triangles,
     }
   }
   triangles.resize(usteps * vsteps * 2);
-  for (auto j = 0; j < vsteps + 1; j++) {
-    for (auto i = 0; i < usteps + 1; i++) {
+  for (auto j = 0; j < vsteps; j++) {
+    for (auto i = 0; i < usteps; i++) {
       triangles[tid(i, j, 0)] = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
       triangles[tid(i, j, 1)] = {vid(i, j), vid(i + 1, j + 1), vid(i, j + 1)};
     }
