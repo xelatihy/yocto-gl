@@ -728,9 +728,8 @@ struct pbrt_texture {
   string             type   = "";
   vector<pbrt_value> values = {};
   // texture approximation
-  bool   is_constant = false;
-  vec3f  constant    = vec3f{1, 1, 1};  // constant value
-  string filename    = "";              // image map filename
+  vec3f  constant    = vec3f{1, 1, 1};
+  string filename    = "";
 };
 
 // Pbrt material
@@ -806,8 +805,8 @@ struct pbrt_light {
   bool  distant  = false;
   // arealight approximation
   vec3f         area_emission  = zero3f;
-  frame3f area_frame     = identity3x4f;
-  frame3f area_frend     = identity3x4f;
+  frame3f       area_frame     = identity3x4f;
+  frame3f       area_frend     = identity3x4f;
   vector<vec3i> area_triangles = {};
   vector<vec3f> area_positions = {};
   vector<vec3f> area_normals   = {};
@@ -835,22 +834,30 @@ struct pbrt_environment {
 
 // Other pbrt elements
 struct pbrt_integrator {
+  // integrator parameters
   string             type   = "";
   vector<pbrt_value> values = {};
 };
 struct pbrt_film {
+  // film parameters
   string             type   = "";
   vector<pbrt_value> values = {};
+  // film approximation
+  string filename   = "";
+  vec2i  resolution = zero2i;
 };
 struct pbrt_filter {
+  // filter parameters
   string             type   = "";
   vector<pbrt_value> values = {};
 };
 struct pbrt_accelerator {
+  // accelerator parameters
   string             type   = "";
   vector<pbrt_value> values = {};
 };
 struct pbrt_sampler {
+  // sampler parameters
   string             type   = "";
   vector<pbrt_value> values = {};
 };

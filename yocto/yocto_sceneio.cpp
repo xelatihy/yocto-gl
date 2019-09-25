@@ -4187,7 +4187,7 @@ static void load_pbrt(
   // convert textures
   auto texture_map = unordered_map<string, int>{{"", -1}};
   for (auto& ptexture : pbrt.textures) {
-    if (ptexture.is_constant) continue;
+    if (ptexture.filename.empty()) continue;
     auto& texture              = scene.textures.emplace_back();
     texture.uri                = ptexture.filename;
     texture_map[ptexture.name] = (int)scene.textures.size() - 1;

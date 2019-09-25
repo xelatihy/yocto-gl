@@ -4180,9 +4180,29 @@ static inline void parse_pbrt_params(
   }
 }
 
+// convert pbrt films
+static void convert_pbrt_films(vector<pbrt_film>& films, bool verbose = false) {
+  for (auto& film : films) {
+    auto& values = film.values;
+    if (film.type == "image") {
+      film.resolution = {
+          get_pbrt_value(values, "xresolution", 512),
+          get_pbrt_value(values, "yresolution", 512),
+      };
+      film.filename = get_pbrt_value(values, "filename", "out.png"s);
+    } else {
+      throw std::runtime_error("unsupported Film type " + film.type);
+    }
+  }
+}
+
 // convert pbrt elements
-static void convert_pbrt_cameras(
-    vector<pbrt_camera>& cameras, bool verbose = false) {
+static void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
+    const vector<pbrt_film>& films, bool verbose = false) {
+  auto film_aspect = 1.0f;
+  for (auto& film : films) {
+    film_aspect = (float)film.resolution.x / (float)film.resolution.y;
+  }
   for (auto& camera : cameras) {
     auto& values   = camera.values;
     camera.frame   = inverse((frame3f)camera.frame);
@@ -4190,8 +4210,8 @@ static void convert_pbrt_cameras(
     if (camera.type == "perspective") {
       camera.fov = get_pbrt_value(values, "fov", 90.0f);
       // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
-      camera.aspect = get_pbrt_value(values, "frameaspectratio", camera.aspect);
-      camera.focus  = get_pbrt_value(values, "focaldistance", camera.focus);
+      camera.aspect = get_pbrt_value(values, "frameaspectratio", film_aspect);
+      camera.focus  = get_pbrt_value(values, "focaldistance", 10);
       if (!camera.aspect) camera.aspect = 1;
       if (!camera.focus) camera.focus = 10;
     } else if (camera.type == "realistic") {
@@ -4202,9 +4222,8 @@ static void convert_pbrt_cameras(
       auto lens       = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
       camera.fov      = 2 * atan(0.036f / (2 * lens));
       camera.aperture = get_pbrt_value(values, "aperturediameter", 0.0f);
-      camera.focus    = get_pbrt_value(values, "focusdistance", camera.focus);
-      if (!camera.aspect) camera.aspect = 1;
-      if (!camera.focus) camera.focus = 10;
+      camera.focus    = get_pbrt_value(values, "focusdistance", 10);
+      camera.aspect = film_aspect;
     } else {
       throw std::runtime_error("unsupported Camera type " + camera.type);
     }
@@ -4228,7 +4247,6 @@ static void convert_pbrt_textures(
   auto make_placeholder = [verbose](pbrt_texture& texture,
                               const vec3f&        color = {1, 0, 0}) {
     texture.constant    = color;
-    texture.is_constant = true;
     if (verbose)
       printf("texture %s not supported well\n", texture.type.c_str());
   };
@@ -4238,7 +4256,6 @@ static void convert_pbrt_textures(
     if (texture.type == "imagemap") {
       texture.filename = get_pbrt_value(values, "filename", ""s);
     } else if (texture.type == "constant") {
-      texture.is_constant = true;
       texture.constant    = get_pbrt_value(values, "value", vec3f{1});
     } else if (texture.type == "bilerp") {
       make_placeholder(texture, {1, 0, 0});
@@ -4296,8 +4313,8 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
     const vector<pbrt_texture>& textures, bool verbose = false) {
   // add constant textures
   auto constants = unordered_map<string, vec3f>{};
-  for(auto& texture : textures) {
-    if(!texture.is_constant) continue;
+  for (auto& texture : textures) {
+    if (!texture.filename.empty()) continue;
     constants[texture.name] = texture.constant;
   }
 
@@ -4669,13 +4686,16 @@ static void convert_pbrt_lights(
       light.distant       = true;
       auto distant_dist   = 100;
       auto size           = distant_dist * sin(5 * pif / 180);
-      light.area_emission = light.emission * (distant_dist * distant_dist) / (size * size);
-      light.area_frame    = light.frame * lookat_frame(
-          normalize(light.from - light.to) * distant_dist, zero3f, {0, 1, 0},
-          true);
-      light.area_frend    = light.frend * lookat_frame(
-          normalize(light.from - light.to) * distant_dist, zero3f, {0, 1, 0},
-          true);
+      light.area_emission = light.emission * (distant_dist * distant_dist) /
+                            (size * size);
+      light.area_frame =
+          light.frame *
+          lookat_frame(normalize(light.from - light.to) * distant_dist, zero3f,
+              {0, 1, 0}, true);
+      light.area_frend =
+          light.frend *
+          lookat_frame(normalize(light.from - light.to) * distant_dist, zero3f,
+              {0, 1, 0}, true);
       auto texcoords = vector<vec2f>{};
       make_pbrt_quad(light.area_triangles, light.area_positions,
           light.area_normals, texcoords, {4, 2}, size);
@@ -4767,8 +4787,6 @@ struct pbrt_context {
   bool    reverse                = false;
   bool    active_transform_start = true;
   bool    active_transform_end   = true;
-  float   last_lookat_distance   = 0;
-  float   last_film_aspect       = 0;
 };
 
 // load pbrt
@@ -4881,7 +4899,6 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
         parse_pbrt_param(str, up);
         auto frame = lookat_frame(from, to, up, true);
         concat_transform(stack.back(), inverse(frame));
-        stack.back().last_lookat_distance = length(from - to);
       } else if (cmd == "ReverseOrientation") {
         stack.back().reverse = !stack.back().reverse;
       } else if (cmd == "CoordinateSystem") {
@@ -4912,16 +4929,6 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
         auto& film = pbrt.films.emplace_back();
         parse_pbrt_param(str, film.type);
         parse_pbrt_params(str, film.values);
-        auto xresolution = 0, yresolution = 0;
-        for (auto& value : film.values) {
-          if (value.name == "xresolution") xresolution = value.value1i;
-          if (value.name == "yresolution") yresolution = value.value1i;
-        }
-        if (xresolution && yresolution) {
-          auto aspect = (float)xresolution / (float)yresolution;
-          stack.back().last_film_aspect = aspect;
-          for (auto& camera : pbrt.cameras) camera.aspect = aspect;
-        }
       } else if (cmd == "Accelerator") {
         auto& accelerator = pbrt.accelerators.emplace_back();
         parse_pbrt_param(str, accelerator.type);
@@ -4932,8 +4939,6 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
         parse_pbrt_params(str, camera.values);
         camera.frame  = stack.back().transform_start;
         camera.frend  = stack.back().transform_end;
-        camera.focus  = stack.back().last_lookat_distance;
-        camera.aspect = stack.back().last_film_aspect;
       } else if (cmd == "Texture") {
         auto& texture  = pbrt.textures.emplace_back();
         auto  comptype = ""s;
@@ -5025,7 +5030,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
   }
 
   // convert objects
-  convert_pbrt_cameras(pbrt.cameras);
+  convert_pbrt_films(pbrt.films);
+  convert_pbrt_cameras(pbrt.cameras, pbrt.films);
   convert_pbrt_textures(pbrt.textures);
   convert_pbrt_materials(pbrt.materials, pbrt.textures);
   convert_pbrt_shapes(pbrt.shapes);
