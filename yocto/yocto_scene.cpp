@@ -1245,40 +1245,35 @@ vector<string> format_stats(const yocto_scene& scene, bool verbose) {
   stats.push_back("materials:    " + format(scene.materials.size()));
   stats.push_back("nodes:        " + format(scene.nodes.size()));
   stats.push_back("animations:   " + format(scene.animations.size()));
-  stats.push_back("points:       " +
-           format(accumulate(
-               scene.shapes, [](auto& shape) { return shape.points.size(); })));
-  stats.push_back("lines:        " +
-           format(accumulate(
-               scene.shapes, [](auto& shape) { return shape.lines.size(); })));
+  stats.push_back(
+      "points:       " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.points.size(); })));
+  stats.push_back(
+      "lines:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.lines.size(); })));
   stats.push_back("triangles:    " +
-           format(accumulate(scene.shapes,
-               [](auto& shape) { return shape.triangles.size(); })));
-  stats.push_back("quads:        " +
-           format(accumulate(
-               scene.shapes, [](auto& shape) { return shape.quads.size(); })));
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.triangles.size(); })));
+  stats.push_back(
+      "quads:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.quads.size(); })));
   stats.push_back("fvquads:      " +
-           format(accumulate(scene.shapes,
-               [](auto& shape) { return shape.quadspos.size(); })));
-  stats.push_back("texels4b:     " +
-           format(accumulate(scene.textures,
-               [](auto& texture) {
-                 return (size_t)texture.ldr.size().x *
-                        (size_t)texture.ldr.size().x;
-               })));
-  stats.push_back("texels4f:     " +
-           format(accumulate(scene.textures,
-               [](auto& texture) {
-                 return (size_t)texture.hdr.size().x *
-                        (size_t)texture.hdr.size().y;
-               })));
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.quadspos.size(); })));
+  stats.push_back(
+      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.ldr.size().x * (size_t)texture.ldr.size().x;
+      })));
+  stats.push_back(
+      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
+      })));
   stats.push_back("volxels1f:    " +
-           format(accumulate(scene.voltextures,
-               [](auto& texture) {
-                 return (size_t)texture.vol.size().x *
-                        (size_t)texture.vol.size().y *
-                        (size_t)texture.vol.size().z;
-               })));
+                  format(accumulate(scene.voltextures, [](auto& texture) {
+                    return (size_t)texture.vol.size().x *
+                           (size_t)texture.vol.size().y *
+                           (size_t)texture.vol.size().z;
+                  })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));
 

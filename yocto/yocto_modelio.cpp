@@ -4822,7 +4822,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
 
   // parse command by command
   while (!files.empty()) {
-    auto line = ""s;
+    auto line     = ""s;
     auto line_num = 0;
     while (read_pbrt_cmdline(files.back(), line, line_num)) {
       auto str = string_view{line};
@@ -5126,8 +5126,7 @@ inline static void format_value(string& str, const vector<pbrt_value>& values) {
   }
 }
 
-void save_pbrt(
-    const string& filename, const pbrt_model& pbrt) {
+void save_pbrt(const string& filename, const pbrt_model& pbrt) {
   auto fs = open_file(filename, "wt");
 
   // save comments

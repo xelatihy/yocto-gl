@@ -4321,11 +4321,11 @@ static void load_pbrt(
     shape.uri   = !pshape.filename.empty()
                     ? pshape.filename
                     : ("shape" + std::to_string(scene.shapes.size()));
-    shape.positions   = pshape.positions;
-    shape.normals     = pshape.normals;
-    shape.texcoords   = pshape.texcoords;
-    shape.triangles   = pshape.triangles;
-    for(auto& uv : shape.texcoords) uv.y = 1 - uv.y;
+    shape.positions = pshape.positions;
+    shape.normals   = pshape.normals;
+    shape.texcoords = pshape.texcoords;
+    shape.triangles = pshape.triangles;
+    for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
     auto material_id  = material_map.at(pshape.material);
     auto arealight_id = arealight_map.at(pshape.arealight);
     auto instance_id  = 0;
@@ -4401,8 +4401,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   auto pbrt = pbrt_model{};
 
   // embed data
-  for(auto stat : format_stats(scene))
-  pbrt.comments.push_back(stat);
+  for (auto stat : format_stats(scene)) pbrt.comments.push_back(stat);
 
   // convert camera
   auto& camera     = scene.cameras.front();
@@ -4456,7 +4455,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
       penvironment.filename = scene.textures[environment.emission_tex].uri;
     }
   }
-    
+
   save_pbrt(filename, pbrt);
 }
 

@@ -106,8 +106,7 @@ int main(int argc, const char** argv) {
 
   // print info
   if (info) {
-    for(auto stat : format_stats(scene))
-    print_info(stat);
+    for (auto stat : format_stats(scene)) print_info(stat);
   }
 
   // change texture names
