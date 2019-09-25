@@ -375,10 +375,17 @@ static inline void format_value(string& str, const vec3i& value) {
   str += buf;
 }
 static inline void format_value(string& str, const frame3f& value) {
-  char buf[256];
+  char buf[512];
   sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y,
       value.x.z, value.y.x, value.y.y, value.y.z, value.z.x, value.z.y,
       value.z.z, value.o.x, value.o.y, value.o.z);
+  str += buf;
+}
+static inline void format_value(string& str, const mat4f& value) {
+  char buf[512];
+  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y,
+      value.x.z, value.x.w, value.y.x, value.y.y, value.y.z, value.y.w, value.z.x, value.z.y,
+      value.z.z, value.z.w, value.w.x, value.w.y, value.w.z, value.w.w);
   str += buf;
 }
 
