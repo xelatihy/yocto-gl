@@ -4411,7 +4411,7 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   pcamera.aspect   = camera_aspect(camera);
   auto& pfilm      = pbrt.films.emplace_back();
   pfilm.filename   = "out.png";
-  pfilm.resolution = {1280, (int)(pcamera.aspect * 1280)};
+  pfilm.resolution = {1280, (int)(1280 / pcamera.aspect)};
 
   // convert textures
   for (auto& texture : scene.textures) {
