@@ -5145,7 +5145,8 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
       camera.type = "perspective";
       camera.values.push_back(make_pbrt_value("fov", camera.fov * 180 / pif));
     }
-    format_values(fs, "LookAt {} {} {}\n", camera.frame.o, camera.frame.o - camera.frame.z, camera.frame.y);
+    format_values(fs, "LookAt {} {} {}\n", camera.frame.o,
+        camera.frame.o - camera.frame.z, camera.frame.y);
     format_values(fs, "Camera \"{}\" {}\n", camera.type, camera.values);
   }
   for (auto& film_ : pbrt.films) {
@@ -5200,8 +5201,8 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
   for (auto& material_ : pbrt.materials) {
     auto material = material_;
     if (material.type == "") {
-      if (material.specular != zero3f &&
-                 material.transmission != zero3f && material.refract) {
+      if (material.specular != zero3f && material.transmission != zero3f &&
+          material.refract) {
         material.type = "glass";
         material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
         material.values.push_back(
@@ -5220,13 +5221,13 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
         material.values.push_back(make_pbrt_value("remaproughness", false));
       } else {
         material.type = "uber";
-        if(material.diffuse_map.empty()) {
+        if (material.diffuse_map.empty()) {
           material.values.push_back(make_pbrt_value("Kd", material.diffuse));
-        } else if(material.diffuse != zero3f) {
-          material.values.push_back(make_pbrt_value("Kd", material.diffuse_map, 
-            pbrt_value_type::texture));
+        } else if (material.diffuse != zero3f) {
+          material.values.push_back(make_pbrt_value(
+              "Kd", material.diffuse_map, pbrt_value_type::texture));
         }
-        if(material.specular != zero3f) {
+        if (material.specular != zero3f) {
           material.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
           material.values.push_back(
               make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
@@ -5234,13 +5235,16 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
               "eta", mean(reflectivity_to_eta(material.specular))));
           material.values.push_back(make_pbrt_value("remaproughness", false));
         }
-        if(material.transmission != zero3f) {
-          material.values.push_back(make_pbrt_value("Kt", material.transmission));
+        if (material.transmission != zero3f) {
+          material.values.push_back(
+              make_pbrt_value("Kt", material.transmission));
         }
-        if(!material.opacity_map.empty()) {
-          material.values.push_back(make_pbrt_value("opacity", material.opacity_map, pbrt_value_type::texture));
-        } else if(material.opacity != vec3f{1}) {
-          material.values.push_back(make_pbrt_value("opacity", material.opacity));
+        if (!material.opacity_map.empty()) {
+          material.values.push_back(make_pbrt_value(
+              "opacity", material.opacity_map, pbrt_value_type::texture));
+        } else if (material.opacity != vec3f{1}) {
+          material.values.push_back(
+              make_pbrt_value("opacity", material.opacity));
         }
       }
     }
