@@ -4714,12 +4714,6 @@ static void convert_pbrt_shapes(
             return vec3f{
                 cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y), sin(pt.y)};
           });
-      // auto params         = proc_shape_params{};
-      // params.type         = proc_shape_params::type_t::uvsphere;
-      // params.subdivisions = 5;
-      // params.scale        = radius;
-      // make_proc_shape(shape.triangles, shape.quads, shape.positions,
-      //     shape.normals, shape.texcoords, params);
     } else if (shape.type == "disk") {
       shape.radius = get_pbrt_value(values, "radius", 1.0f);
       make_pbrt_shape(
@@ -4733,12 +4727,6 @@ static void convert_pbrt_shapes(
           [](const vec2f& uv) {
             return vec3f{0, 0, 1};
           });
-      // auto params         = proc_shape_params{};
-      // params.type         = proc_shape_params::type_t::uvdisk;
-      // params.subdivisions = 4;
-      // params.scale        = radius;
-      // make_proc_shape(shape.triangles, shape.quads, shape.positions,
-      //     shape.normals, shape.texcoords, params);
     } else {
       throw std::runtime_error("unsupported shape type " + shape.type);
     }
