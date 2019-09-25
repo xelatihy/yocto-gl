@@ -4174,6 +4174,61 @@ static inline void parse_pbrt_params(
   }
 }
 
+// Compute the fresnel term for dielectrics. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+static vec3f pbrt_fresnel_dielectric(float cosw, const vec3f& eta_) {
+  auto eta = eta_;
+  if (cosw < 0) {
+    eta  = vec3f{1, 1, 1} / eta;
+    cosw = -cosw;
+  }
+
+  auto sin2 = 1 - cosw * cosw;
+  auto eta2 = eta * eta;
+
+  auto cos2t = vec3f{1, 1, 1} - vec3f{sin2, sin2, sin2} / eta2;
+  if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0) return vec3f{1, 1, 1};  // tir
+
+  auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
+  auto t1 = eta * t0;
+  auto t2 = eta * cosw;
+
+  auto rs = (vec3f{cosw, cosw, cosw} - t1) / (vec3f{cosw, cosw, cosw} + t1);
+  auto rp = (t0 - t2) / (t0 + t2);
+
+  return (rs * rs + rp * rp) / 2.0f;
+}
+
+// Compute the fresnel term for metals. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+static vec3f pbrt_fresnel_metal(
+    float cosw, const vec3f& eta, const vec3f& etak) {
+  if (etak == zero3f) return pbrt_fresnel_dielectric(cosw, eta);
+
+  cosw       = clamp(cosw, (float)-1, (float)1);
+  auto cos2  = cosw * cosw;
+  auto sin2  = clamp(1 - cos2, (float)0, (float)1);
+  auto eta2  = eta * eta;
+  auto etak2 = etak * etak;
+
+  auto t0         = eta2 - etak2 - vec3f{sin2, sin2, sin2};
+  auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
+  auto a2plusb2   = vec3f{
+      sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
+  auto t1  = a2plusb2 + vec3f{cos2, cos2, cos2};
+  auto a_2 = (a2plusb2 + t0) / 2.0f;
+  auto a   = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
+  auto t2  = 2.0f * a * cosw;
+  auto rs  = (t1 - t2) / (t1 + t2);
+
+  auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
+            vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
+  auto t4 = t2 * sin2;
+  auto rp = rs * (t3 - t4) / (t3 + t4);
+
+  return (rp + rs) / 2.0f;
+}
+
 // convert pbrt elements
 static void convert_pbrt_cameras(
     vector<pbrt_camera>& cameras, bool verbose = false) {
@@ -4219,10 +4274,11 @@ static void convert_pbrt_textures(
     if (pos == texture_map.end()) return ""s;
     return textures[pos->second].filename;
   };
-  auto make_placeholder = [](pbrt_texture& texture,
+  auto make_placeholder = [verbose](pbrt_texture& texture,
                               const vec3f& color = {1, 0, 0}) {
     texture.constant    = color;
     texture.is_constant = true;
+    if (verbose) printf("texture %s not supported well\n", texture.type.c_str());
   };
 
   for (auto& texture : textures) {
@@ -4233,9 +4289,7 @@ static void convert_pbrt_textures(
       texture.is_constant = true;
       texture.constant    = get_pbrt_value(values, "value", vec3f{1});
     } else if (texture.type == "bilerp") {
-      texture.size = {1, 1};
-      texture.pixels.push_back({1, 0, 0, 1});
-      if (verbose) printf("texture bilerp not supported well");
+      make_placeholder(texture, {1,0,0});
     } else if (texture.type == "checkerboard") {
       // auto tex1     = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
       // auto tex2     = get_pbrt_value(values, "tex2", pair{vec3f{0}, ""s});
@@ -4246,28 +4300,13 @@ static void convert_pbrt_textures(
       // rgb1.z, 1}; params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1}; params.scale
       // = 2; make_proc_image(texture.hdr, params); float_to_byte(texture.ldr,
       // texture.hdr); texture.hdr = {};
-      make_placeholder(texture);
-      if (verbose) printf("texture checkerboard not supported well");
+      make_placeholder(texture, vec3f{0.5});
     } else if (texture.type == "dots") {
-      texture.size = {1, 1};
-      texture.pixels.push_back({1, 0, 0, 1});
-      if (verbose) printf("texture dots not supported well");
+      make_placeholder(texture, vec3f{0.5});
     } else if (texture.type == "fbm") {
-      make_placeholder(texture);
-      // auto params = proc_image_params{};
-      // params.type = proc_image_params::type_t::fbm;
-      // make_proc_image(texture.hdr, params);
-      // float_to_byte(texture.ldr, texture.hdr);
-      // texture.hdr = {};
-      if (verbose) printf("texture fbm not supported well");
+      make_placeholder(texture, vec3f{0.5});
     } else if (texture.type == "marble") {
-      make_placeholder(texture);
-      // auto params = proc_image_params{};
-      // params.type = proc_image_params::type_t::fbm;
-      // make_proc_image(texture.hdr, params);
-      // float_to_byte(texture.ldr, texture.hdr);
-      // texture.hdr = {};
-      if (verbose) printf("texture marble not supported well");
+      make_placeholder(texture, vec3f{0.5});
     } else if (texture.type == "mix") {
       auto tex1 = get_pbrt_value(values, "tex1", pair{vec3f{0}, ""s});
       auto tex2 = get_pbrt_value(values, "tex2", pair{vec3f{1}, ""s});
@@ -4278,7 +4317,6 @@ static void convert_pbrt_textures(
       } else {
         make_placeholder(texture);
       }
-      if (verbose) printf("texture mix not supported well");
     } else if (texture.type == "scale") {
       auto tex1 = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
       auto tex2 = get_pbrt_value(values, "tex2", pair{vec3f{1}, ""s});
@@ -4289,16 +4327,12 @@ static void convert_pbrt_textures(
       } else {
         make_placeholder(texture);
       }
-      if (verbose) printf("texture scale not supported well");
     } else if (texture.type == "uv") {
       make_placeholder(texture);
-      if (verbose) printf("texture uv not supported well");
     } else if (texture.type == "windy") {
       make_placeholder(texture);
-      if (verbose) printf("texture windy not supported well");
     } else if (texture.type == "wrinkled") {
       make_placeholder(texture);
-      if (verbose) printf("texture wrinkled not supported well");
     } else {
       throw std::runtime_error("unsupported texture type " + texture.type);
     }
@@ -4347,6 +4381,11 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
     roughness = sqrt(roughness);
   };
 
+  auto eta_to_reflectivity = [](const vec3f& eta, const vec3f& etak = zero3f) -> vec3f {
+    return ((eta - 1) * (eta - 1) + etak * etak) /
+          ((eta + 1) * (eta + 1) + etak * etak);
+  };
+
   for (auto& material : materials) {
     auto& values = material.values;
     if (material.type == "uber") {
@@ -4361,6 +4400,7 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1f);
+      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
     } else if (material.type == "plastic") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
@@ -4369,6 +4409,7 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1);
+      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
     } else if (material.type == "translucent") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
@@ -4377,6 +4418,7 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1);
+      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
     } else if (material.type == "matte") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
@@ -4387,6 +4429,7 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       material.eta       = zero3f;
       material.etak      = zero3f;
       material.roughness = zero2f;
+      material.sspecular = material.specular;
     } else if (material.type == "metal") {
       get_scaled_texture(
           values, "Kr", material.specular, material.specular_map, vec3f{1});
@@ -4395,12 +4438,16 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(values, "k", material.etak, material.etak_map,
           vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
       get_pbrt_roughness(values, material.roughness, 0.01);
+      material.sspecular = material.specular * eta_to_reflectivity(material.eta, material.etak);
     } else if (material.type == "substrate") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
       get_scaled_texture(
           values, "Ks", material.specular, material.specular_map, vec3f{0.5});
+      get_scaled_texture(
+          values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1);
+      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
     } else if (material.type == "glass") {
       get_scaled_texture(
           values, "Kr", material.specular, material.specular_map, vec3f{1});
@@ -4409,6 +4456,7 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0);
+      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
     } else if (material.type == "hair") {
       get_scaled_texture(
           values, "color", material.diffuse, material.diffuse_map, vec3f{0});
@@ -4424,8 +4472,10 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
       get_scaled_texture(
           values, "Kr", material.specular, material.specular_map, vec3f{1});
-      material.specular *= 0.04f;
+      get_scaled_texture(
+          values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0);
+      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
       if (verbose) printf("kdsubsurface material not properly supported\n");
     } else if (material.type == "subsurface") {
       get_scaled_texture(
@@ -4435,6 +4485,7 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0);
+      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
       auto scale        = get_pbrt_value(values, "scale", 1.0f);
       material.volscale = 1 / scale;
       auto sigma_a = zero3f, sigma_s = zero3f;
@@ -4464,35 +4515,42 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
         material.eta       = vec3f{1.5};
         material.roughness = vec2f{0.2};
         // material.roughness = get_pbrt_roughnessf(0.2f, true);
+        material.sspecular = material.specular * eta_to_reflectivity(material.eta);
       } else if (bsdffile == "ceramic.bsdf") {
         material.diffuse   = {0.6f, 0.6f, 0.6f};
         material.specular  = {1, 1, 1};
         material.eta       = vec3f{1.5};
         material.roughness = vec2f{0.25};
         // material.roughness = get_pbrt_roughnessf(0.25, true);
+        material.sspecular = material.specular * eta_to_reflectivity(material.eta);
       } else if (bsdffile == "leather.bsdf") {
         material.diffuse   = {0.6f, 0.57f, 0.48f};
-        material.specular  = {0.4f, 0.4f, 0.4f};
+        material.specular  = {1, 1, 1};
+        material.eta       = vec3f{1.5};
         material.roughness = vec2f{0.3};
         // material.roughness = get_pbrt_roughnessf(0.3, true);
+        material.sspecular = material.specular * eta_to_reflectivity(material.eta);
       } else if (bsdffile == "coated_copper.bsdf") {
         material.specular  = vec3f{1};
         material.eta       = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
         material.etak      = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
         material.roughness = vec2f{0.01};
         // material.roughness = get_pbrt_roughnessf(0.01, true);
+        material.sspecular = material.specular * eta_to_reflectivity(material.eta, material.etak);
       } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
         material.specular     = {1, 1, 1};
         material.eta          = vec3f{1.5};
         material.transmission = {1, 1, 1};
         material.roughness    = vec2f{0.2};
         // material.roughness = get_pbrt_roughness(0.2, true);
+        material.sspecular = material.specular * eta_to_reflectivity(material.eta);
       } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
         material.specular  = vec3f{1, 1, 1};
         material.eta       = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
         material.etak      = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
         material.roughness = vec2f{0.2};
         // material.roughness = get_pbrt_roughness(0.2, true);
+        material.sspecular = material.specular * eta_to_reflectivity(material.eta, material.etak);
       } else {
         throw std::runtime_error("unsupported bsdffile " + bsdffile);
       }

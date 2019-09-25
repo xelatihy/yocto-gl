@@ -728,11 +728,9 @@ struct pbrt_texture {
   string             type   = "";
   vector<pbrt_value> values = {};
   // texture approximation
-  bool          is_constant = false;
-  vec3f         constant    = vec3f{1, 1, 1};  // constant value
-  string        filename    = "";              // image map filename
-  vec2i         size        = {0, 0};          // procedural texture size
-  vector<vec4f> pixels      = {};              // procedural texture pixels
+  bool   is_constant = false;
+  vec3f  constant    = vec3f{1, 1, 1};  // constant value
+  string filename    = "";              // image map filename
 };
 
 // Pbrt material
@@ -748,8 +746,9 @@ struct pbrt_material {
   vec3f  transmission     = zero3f;
   vec2f  roughness        = zero2f;
   vec3f  opacity          = vec3f{1};
-  vec3f  eta              = vec3f{1};
-  vec3f  etak             = vec3f{1};
+  vec3f  eta              = zero3f;
+  vec3f  etak             = zero3f;
+  vec3f  sspecular        = zero3f;  // specular scaled by fresnel
   string emission_map     = "";
   string diffuse_map      = "";
   string specular_map     = "";

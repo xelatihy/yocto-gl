@@ -4206,11 +4206,9 @@ static void load_pbrt(
     material.uri                 = pmaterial.name;
     material.emission            = pmaterial.emission;
     material.diffuse             = pmaterial.diffuse;
-    material.specular            = pmaterial.specular;
+    material.specular            = pmaterial.sspecular;
     material.transmission        = pmaterial.transmission;
     material.diffuse_tex         = get_texture(pmaterial.diffuse_map);
-    material.specular_tex        = get_texture(pmaterial.specular_map);
-    material.transmission_tex    = get_texture(pmaterial.transmission_map);
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
   }
 
