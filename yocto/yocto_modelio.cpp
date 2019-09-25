@@ -4660,8 +4660,7 @@ static inline void make_pbrt_shape(vector<vec3i>& triangles,
     int usteps, int vsteps, const PositionFunc& position_func,
     const NormalFunc& normal_func) {
   auto vid = [usteps](int i, int j) { return j * (usteps + 1) + i; };
-  auto tid = [usteps](
-                 int i, int j, int c) { return (j * usteps + i) * 2 + c; };
+  auto tid = [usteps](int i, int j, int c) { return (j * usteps + i) * 2 + c; };
   positions.resize((usteps + 1) * (vsteps + 1));
   normals.resize((usteps + 1) * (vsteps + 1));
   texcoords.resize((usteps + 1) * (vsteps + 1));
@@ -4702,16 +4701,18 @@ static void convert_pbrt_shapes(
       shape.filename = get_pbrt_value(values, "filename", ""s);
     } else if (shape.type == "sphere") {
       shape.radius = get_pbrt_value(values, "radius", 1.0f);
-      make_pbrt_shape(shape.triangles, shape.positions, shape.normals, shape.texcoords,
-          32, 16,
+      make_pbrt_shape(
+          shape.triangles, shape.positions, shape.normals, shape.texcoords, 32,
+          16,
           [radius = shape.radius](const vec2f& uv) {
-            return radius * vec3f{cos(2 * pif * uv.x) * cos(1 - uv.y),
-                                sin(2 * pif * uv.x) * cos(1 - uv.y),
-                                sin(1 - uv.y)};
+            auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+            return radius * vec3f{cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y),
+                                sin(pt.y)};
           },
           [](const vec2f& uv) {
-            return normalize(vec3f{cos(2 * pif * uv.x) * cos(1 - uv.y),
-                sin(2 * pif * uv.x) * cos(1 - uv.y), sin(1 - uv.y)});
+            auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+            return vec3f{
+                cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y), sin(pt.y)};
           });
       // auto params         = proc_shape_params{};
       // params.type         = proc_shape_params::type_t::uvsphere;
@@ -4721,11 +4722,13 @@ static void convert_pbrt_shapes(
       //     shape.normals, shape.texcoords, params);
     } else if (shape.type == "disk") {
       shape.radius = get_pbrt_value(values, "radius", 1.0f);
-      make_pbrt_shape(shape.triangles, shape.positions, shape.normals, shape.texcoords,
-          32, 1,
+      make_pbrt_shape(
+          shape.triangles, shape.positions, shape.normals, shape.texcoords, 32,
+          1,
           [radius = shape.radius](const vec2f& uv) {
+            auto a = 2 * pif * uv.x;
             return radius * (1 - uv.y) *
-                   vec3f{cos(2 * pif * uv.x), sin(2 * pif * uv.x), 0};
+                   vec3f{cos(a), sin(a), 0};
           },
           [](const vec2f& uv) {
             return vec3f{0, 0, 1};
