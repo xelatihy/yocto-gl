@@ -711,7 +711,7 @@ struct pbrt_camera {
   string             type          = "";
   vector<pbrt_value> values        = {};
   frame3f            frame         = identity3x4f;
-  frame3f            transform_end = identity3x4f;
+  frame3f            frend = identity3x4f;
   // camera approximation
   float width    = 0;
   float height   = 0;
@@ -740,7 +740,6 @@ struct pbrt_material {
   string             type   = "";
   vector<pbrt_value> values = {};
   // material approximation
-  vec3f  emission         = zero3f;
   vec3f  diffuse          = zero3f;
   vec3f  specular         = zero3f;
   vec3f  transmission     = zero3f;
@@ -749,7 +748,6 @@ struct pbrt_material {
   vec3f  eta              = zero3f;
   vec3f  etak             = zero3f;
   vec3f  sspecular        = zero3f;  // specular scaled by fresnel
-  string emission_map     = "";
   string diffuse_map      = "";
   string specular_map     = "";
   string transmission_map = "";
@@ -870,7 +868,7 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt, bool approximate_elements = true, bool remove_unused = true);
+void load_pbrt(const string& filename, pbrt_model& pbrt);
 void save_pbrt(const string& filename, const pbrt_model& pbrt);
 
 // Pbrt command

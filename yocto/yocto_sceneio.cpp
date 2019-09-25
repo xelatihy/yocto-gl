@@ -4204,12 +4204,20 @@ static void load_pbrt(
   for (auto& pmaterial : pbrt.materials) {
     auto& material               = scene.materials.emplace_back();
     material.uri                 = pmaterial.name;
-    material.emission            = pmaterial.emission;
     material.diffuse             = pmaterial.diffuse;
     material.specular            = pmaterial.sspecular;
     material.transmission        = pmaterial.transmission;
     material.diffuse_tex         = get_texture(pmaterial.diffuse_map);
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
+  }
+
+  // convert arealights
+  auto arealight_map = unordered_map<string, int>{{"", -1}};
+  for (auto& parealight : pbrt.arealights) {
+    auto& material                 = scene.materials.emplace_back();
+    material.uri                   = parealight.name;
+    material.emission              = parealight.emission;
+    arealight_map[parealight.name] = (int)scene.materials.size() - 1;
   }
 
   // convert shapes
@@ -4218,33 +4226,34 @@ static void load_pbrt(
     shape.uri   = !pshape.filename.empty()
                     ? pshape.filename
                     : ("shape" + std::to_string(scene.shapes.size()));
-    shape.positions  = pshape.positions;
-    shape.normals    = pshape.normals;
-    shape.texcoords  = pshape.texcoords;
-    shape.triangles  = pshape.triangles;
-    auto material    = material_map.at(pshape.material);
-    auto instance_id = 0;
+    shape.positions   = pshape.positions;
+    shape.normals     = pshape.normals;
+    shape.texcoords   = pshape.texcoords;
+    shape.triangles   = pshape.triangles;
+    auto material_id  = material_map.at(pshape.material);
+    auto arealight_id = arealight_map.at(pshape.arealight);
+    auto instance_id  = 0;
     for (auto& frame : pshape.instance_frames) {
       auto& instance    = scene.instances.emplace_back();
       instance.uri      = shape.uri + (pshape.instance_frames.empty()
                                          ? ""s
                                          : std::to_string(instance_id++));
       instance.frame    = frame * pshape.frame;
-      instance.material = material;
+      instance.material = arealight_id >= 0 ? arealight_id : material_id;
       instance.shape    = (int)scene.shapes.size() - 1;
     }
   }
 
   // convert environments
-  for(auto& penvironment : pbrt.environments) {
-    auto& environment = scene.environments.emplace_back();
-    environment.uri = "env" + std::to_string(scene.environments.size());
+  for (auto& penvironment : pbrt.environments) {
+    auto& environment    = scene.environments.emplace_back();
+    environment.uri      = "env" + std::to_string(scene.environments.size());
     environment.emission = penvironment.emission;
     environment.emission_tex = get_texture(penvironment.emission_map);
   }
-  
+
   // TODO lights
-  for(auto& plight : pbrt.lights) {
+  for (auto& plight : pbrt.lights) {
     throw std::runtime_error("not implemented");
   }
 }

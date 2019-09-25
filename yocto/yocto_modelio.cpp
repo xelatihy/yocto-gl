@@ -4280,10 +4280,11 @@ static void convert_pbrt_textures(
     return textures[pos->second].filename;
   };
   auto make_placeholder = [verbose](pbrt_texture& texture,
-                              const vec3f& color = {1, 0, 0}) {
+                              const vec3f&        color = {1, 0, 0}) {
     texture.constant    = color;
     texture.is_constant = true;
-    if (verbose) printf("texture %s not supported well\n", texture.type.c_str());
+    if (verbose)
+      printf("texture %s not supported well\n", texture.type.c_str());
   };
 
   for (auto& texture : textures) {
@@ -4294,7 +4295,7 @@ static void convert_pbrt_textures(
       texture.is_constant = true;
       texture.constant    = get_pbrt_value(values, "value", vec3f{1});
     } else if (texture.type == "bilerp") {
-      make_placeholder(texture, {1,0,0});
+      make_placeholder(texture, {1, 0, 0});
     } else if (texture.type == "checkerboard") {
       // auto tex1     = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
       // auto tex2     = get_pbrt_value(values, "tex2", pair{vec3f{0}, ""s});
@@ -4386,9 +4387,10 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
     roughness = sqrt(roughness);
   };
 
-  auto eta_to_reflectivity = [](const vec3f& eta, const vec3f& etak = zero3f) -> vec3f {
+  auto eta_to_reflectivity = [](const vec3f&  eta,
+                                 const vec3f& etak = zero3f) -> vec3f {
     return ((eta - 1) * (eta - 1) + etak * etak) /
-          ((eta + 1) * (eta + 1) + etak * etak);
+           ((eta + 1) * (eta + 1) + etak * etak);
   };
 
   for (auto& material : materials) {
@@ -4405,7 +4407,8 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1f);
-      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+      material.sspecular = material.specular *
+                           eta_to_reflectivity(material.eta);
     } else if (material.type == "plastic") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
@@ -4414,7 +4417,8 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1);
-      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+      material.sspecular = material.specular *
+                           eta_to_reflectivity(material.eta);
     } else if (material.type == "translucent") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
@@ -4423,7 +4427,8 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1);
-      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+      material.sspecular = material.specular *
+                           eta_to_reflectivity(material.eta);
     } else if (material.type == "matte") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
@@ -4443,7 +4448,8 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(values, "k", material.etak, material.etak_map,
           vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
       get_pbrt_roughness(values, material.roughness, 0.01);
-      material.sspecular = material.specular * eta_to_reflectivity(material.eta, material.etak);
+      material.sspecular = material.specular *
+                           eta_to_reflectivity(material.eta, material.etak);
     } else if (material.type == "substrate") {
       get_scaled_texture(
           values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
@@ -4452,7 +4458,8 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0.1);
-      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+      material.sspecular = material.specular *
+                           eta_to_reflectivity(material.eta);
     } else if (material.type == "glass") {
       get_scaled_texture(
           values, "Kr", material.specular, material.specular_map, vec3f{1});
@@ -4461,7 +4468,8 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0);
-      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+      material.sspecular = material.specular *
+                           eta_to_reflectivity(material.eta);
     } else if (material.type == "hair") {
       get_scaled_texture(
           values, "color", material.diffuse, material.diffuse_map, vec3f{0});
@@ -4480,7 +4488,8 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0);
-      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+      material.sspecular = material.specular *
+                           eta_to_reflectivity(material.eta);
       if (verbose) printf("kdsubsurface material not properly supported\n");
     } else if (material.type == "subsurface") {
       get_scaled_texture(
@@ -4490,7 +4499,8 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
       get_pbrt_roughness(values, material.roughness, 0);
-      material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+      material.sspecular = material.specular *
+                           eta_to_reflectivity(material.eta);
       auto scale        = get_pbrt_value(values, "scale", 1.0f);
       material.volscale = 1 / scale;
       auto sigma_a = zero3f, sigma_s = zero3f;
@@ -4520,42 +4530,48 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
         material.eta       = vec3f{1.5};
         material.roughness = vec2f{0.2};
         // material.roughness = get_pbrt_roughnessf(0.2f, true);
-        material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+        material.sspecular = material.specular *
+                             eta_to_reflectivity(material.eta);
       } else if (bsdffile == "ceramic.bsdf") {
         material.diffuse   = {0.6f, 0.6f, 0.6f};
         material.specular  = {1, 1, 1};
         material.eta       = vec3f{1.5};
         material.roughness = vec2f{0.25};
         // material.roughness = get_pbrt_roughnessf(0.25, true);
-        material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+        material.sspecular = material.specular *
+                             eta_to_reflectivity(material.eta);
       } else if (bsdffile == "leather.bsdf") {
         material.diffuse   = {0.6f, 0.57f, 0.48f};
         material.specular  = {1, 1, 1};
         material.eta       = vec3f{1.5};
         material.roughness = vec2f{0.3};
         // material.roughness = get_pbrt_roughnessf(0.3, true);
-        material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+        material.sspecular = material.specular *
+                             eta_to_reflectivity(material.eta);
       } else if (bsdffile == "coated_copper.bsdf") {
         material.specular  = vec3f{1};
         material.eta       = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
         material.etak      = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
         material.roughness = vec2f{0.01};
         // material.roughness = get_pbrt_roughnessf(0.01, true);
-        material.sspecular = material.specular * eta_to_reflectivity(material.eta, material.etak);
+        material.sspecular = material.specular *
+                             eta_to_reflectivity(material.eta, material.etak);
       } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
         material.specular     = {1, 1, 1};
         material.eta          = vec3f{1.5};
         material.transmission = {1, 1, 1};
         material.roughness    = vec2f{0.2};
         // material.roughness = get_pbrt_roughness(0.2, true);
-        material.sspecular = material.specular * eta_to_reflectivity(material.eta);
+        material.sspecular = material.specular *
+                             eta_to_reflectivity(material.eta);
       } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
         material.specular  = vec3f{1, 1, 1};
         material.eta       = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
         material.etak      = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
         material.roughness = vec2f{0.2};
         // material.roughness = get_pbrt_roughness(0.2, true);
-        material.sspecular = material.specular * eta_to_reflectivity(material.eta, material.etak);
+        material.sspecular = material.specular *
+                             eta_to_reflectivity(material.eta, material.etak);
       } else {
         throw std::runtime_error("unsupported bsdffile " + bsdffile);
       }
@@ -4606,9 +4622,8 @@ static void convert_pbrt_lights(
   }
 }
 
-static void convert_pbrt_environments(
-    vector<pbrt_environment>& environments, vector<pbrt_texture>& textures, 
-    bool verbose = false) {
+static void convert_pbrt_environments(vector<pbrt_environment>& environments,
+    vector<pbrt_texture>& textures, bool verbose = false) {
   for (auto& light : environments) {
     auto& values = light.values;
     if (light.type == "infinite") {
@@ -4622,12 +4637,13 @@ static void convert_pbrt_environments(
                     frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
       light.frend = light.frend *
                     frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-      if(!light.emission_map.empty()) {
-        auto& texture = textures.emplace_back();
-        texture.name = light.emission_map;
+      if (!light.emission_map.empty()) {
+        auto& texture    = textures.emplace_back();
+        texture.name     = light.emission_map;
         texture.filename = light.emission_map;
-        texture.type = "imagemap";
-        texture.values.push_back(make_pbrt_value("filename", light.emission_map));
+        texture.type     = "imagemap";
+        texture.values.push_back(
+            make_pbrt_value("filename", light.emission_map));
       }
     } else {
       throw std::runtime_error("unsupported environment type " + light.type);
@@ -4675,12 +4691,34 @@ static void convert_pbrt_shapes(
   }
 }
 
-
-static void remove_pbrt_materials(vector<pbrt_material>& textures, const vector<pbrt_shape>& shapes) {
-
+static void remove_pbrt_materials(
+    vector<pbrt_material>& materials, const vector<pbrt_shape>& shapes) {
+  auto material_map = unordered_map<string, int>{};
+  for (auto& shape : shapes) material_map[shape.material] = 1;
+  materials.erase(std::remove_if(materials.begin(), materials.end(),
+                      [&material_map](const pbrt_material& material) {
+                        return material_map.find(material.name) ==
+                               material_map.end();
+                      }),
+      materials.end());
 }
-static void remove_pbrt_textures(vector<pbrt_texture>& textures, const vector<pbrt_material>& materials) {
-
+static void remove_pbrt_textures(
+    vector<pbrt_texture>& textures, const vector<pbrt_material>& materials) {
+  auto texture_map = unordered_map<string, int>{};
+  for (auto& material : materials) {
+    if(material.diffuse_map != "") texture_map[material.diffuse_map] = 1;
+    if(material.specular_map != "") texture_map[material.specular_map] = 1;
+    if(material.transmission_map != "") texture_map[material.transmission_map] = 1;
+    if(material.eta_map != "") texture_map[material.eta_map] = 1;
+    if(material.etak_map != "") texture_map[material.etak_map] = 1;
+    if(material.opacity_map != "") texture_map[material.opacity_map] = 1;
+  }
+  textures.erase(std::remove_if(textures.begin(), textures.end(),
+                      [&texture_map](const pbrt_texture& texture) {
+                        return texture_map.find(texture.name) ==
+                               texture_map.end();
+                      }),
+      textures.end());
 }
 
 // pbrt stack ctm
@@ -4699,7 +4737,7 @@ struct pbrt_context {
 };
 
 // load pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt, bool approximate_elements, bool remove_unused) {
+void load_pbrt(const string& filename, pbrt_model& pbrt) {
   auto files = vector<file_wrapper>{};
   open_file(files.emplace_back(), filename);
 
@@ -4760,8 +4798,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool approximate_elemen
         parse_pbrt_param(str, object);
         if (objects.find(object) == objects.end())
           throw std::runtime_error("cannot find object " + object);
-        for(auto shape_id : objects.at(object)) {
-          auto& shape  =pbrt.shapes[shape_id];
+        for (auto shape_id : objects.at(object)) {
+          auto& shape = pbrt.shapes[shape_id];
           shape.instance_frames.push_back(stack.back().transform_start);
           shape.instance_frends.push_back(stack.back().transform_end);
         }
@@ -4857,10 +4895,10 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool approximate_elemen
         auto& camera = pbrt.cameras.emplace_back();
         parse_pbrt_param(str, camera.type);
         parse_pbrt_params(str, camera.values);
-        camera.frame         = stack.back().transform_start;
-        camera.transform_end = stack.back().transform_end;
-        camera.focus         = stack.back().last_lookat_distance;
-        camera.aspect        = stack.back().last_film_aspect;
+        camera.frame  = stack.back().transform_start;
+        camera.frend  = stack.back().transform_end;
+        camera.focus  = stack.back().last_lookat_distance;
+        camera.aspect = stack.back().last_film_aspect;
       } else if (cmd == "Texture") {
         auto& texture  = pbrt.textures.emplace_back();
         auto  comptype = ""s;
@@ -4899,9 +4937,9 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool approximate_elemen
         shape.arealight = stack.back().arealight;
         shape.interior  = stack.back().medium_interior;
         shape.exterior  = stack.back().medium_exterior;
-        if(cur_object != "") {
+        if (cur_object != "") {
           shape.is_instanced = true;
-          objects[cur_object].push_back((int)pbrt.shapes.size()-1);
+          objects[cur_object].push_back((int)pbrt.shapes.size() - 1);
         } else {
           shape.instance_frames.push_back(identity3x4f);
           shape.instance_frends.push_back(identity3x4f);
@@ -4948,11 +4986,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool approximate_elemen
         throw std::runtime_error("unknown command " + cmd);
       }
     }
-      files.pop_back();
+    files.pop_back();
   }
-
-  // convert if needed
-  if(!approximate_elements) return;
 
   // convert objects
   convert_pbrt_cameras(pbrt.cameras);
@@ -4964,21 +4999,18 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, bool approximate_elemen
   convert_pbrt_environments(pbrt.environments, pbrt.textures);
 
   // load ply data
-  for(auto& shape : pbrt.shapes) {
-    if(shape.filename.empty()) continue;
-      auto ply = ply_model{};
-      load_ply(get_dirname(filename) + shape.filename, ply);
-      shape.triangles = get_ply_triangles(ply);
-      shape.positions = get_ply_positions(ply);
-      shape.normals = get_ply_normals(ply);
-      shape.texcoords = get_ply_texcoords(ply);
+  for (auto& shape : pbrt.shapes) {
+    if (shape.filename.empty()) continue;
+    auto ply = ply_model{};
+    load_ply(get_dirname(filename) + shape.filename, ply);
+    shape.triangles = get_ply_triangles(ply);
+    shape.positions = get_ply_positions(ply);
+    shape.normals   = get_ply_normals(ply);
+    shape.texcoords = get_ply_texcoords(ply);
   }
 
-  // remove unused elements
-  if(!remove_unused) return;
-
-  remove_pbrt_materials(pbrt.materials, pbrt.shapes);
-  remove_pbrt_textures(pbrt.textures, pbrt.materials);
+  // remove_pbrt_materials(pbrt.materials, pbrt.shapes);
+  // remove_pbrt_textures(pbrt.textures, pbrt.materials);
 }
 
 // Read pbrt commands
