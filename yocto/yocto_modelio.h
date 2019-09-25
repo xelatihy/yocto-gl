@@ -644,6 +644,22 @@ struct yaml_value {
   array<double, 16> array_  = {};
 };
 
+// Yaml element
+struct yaml_element {
+  string                           name       = "";
+  vector<pair<string, yaml_value>> key_values = {};
+};
+
+// Yaml model
+struct yaml_model {
+  vector<string>       comments = {};
+  vector<yaml_element> elements = {};
+};
+
+// Load/save yaml
+void load_yaml(const string& filename, yaml_model& yaml);
+void save_yaml(const string& filename, const yaml_model& yaml);
+
 // Load Yaml properties
 bool read_yaml_property(file_wrapper& fs, string& group, string& key,
     bool& newobj, yaml_value& value);
