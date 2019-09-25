@@ -775,15 +775,17 @@ struct pbrt_medium {
 // Pbrt shape
 struct pbrt_shape {
   // shape parameters
-  string             type          = "";
-  vector<pbrt_value> values        = {};
-  frame3f            frame         = identity3x4f;
-  frame3f            frend = identity3x4f;
-  string             material      = "";
-  string             arealight     = "";
-  string             interior      = "";
-  string             exterior      = "";
-  bool               is_instanced  = false;
+  string             type            = "";
+  vector<pbrt_value> values          = {};
+  frame3f            frame           = identity3x4f;
+  frame3f            frend           = identity3x4f;
+  string             material        = "";
+  string             arealight       = "";
+  string             interior        = "";
+  string             exterior        = "";
+  bool               is_instanced    = false;
+  vector<frame3f>    instance_frames = {};
+  vector<frame3f>    instance_frends = {};
   // shape approximation
   string        filename  = "";
   vector<vec3f> positions = {};
@@ -791,17 +793,6 @@ struct pbrt_shape {
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
   float         radius    = 0;  // radius for sphere, cylinder, disk
-};
-
-// Pbrt object and instance
-struct pbrt_object {
-  string             name   = "";
-  vector<pbrt_shape> shapes = {};
-};
-struct pbrt_instance {
-  string  object        = "";
-  frame3f frame         = identity3x4f;
-  frame3f frend = identity3x4f;
 };
 
 // Pbrt lights
@@ -871,8 +862,6 @@ struct pbrt_model {
   vector<pbrt_environment> environments = {};
   vector<pbrt_arealight>   arealights   = {};
   vector<pbrt_light>       lights       = {};
-  vector<pbrt_object>      objects      = {};
-  vector<pbrt_instance>    instances    = {};
   // other elements
   vector<pbrt_integrator>  integrators  = {};
   vector<pbrt_film>        films        = {};
@@ -880,6 +869,10 @@ struct pbrt_model {
   vector<pbrt_sampler>     samplers     = {};
   vector<pbrt_accelerator> accelerators = {};
 };
+
+// Load/save pbrt
+void load_pbrt(const string& filename, pbrt_model& pbrt, bool convert = true);
+void save_pbrt(const string& filename, const pbrt_model& pbrt);
 
 // Pbrt command
 enum struct pbrt_command_ {

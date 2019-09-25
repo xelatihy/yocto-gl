@@ -4185,18 +4185,18 @@ static void convert_pbrt_cameras(
       camera.fov = get_pbrt_value(values, "fov", 90.0f);
       // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
       camera.aspect = get_pbrt_value(values, "frameaspectratio", camera.aspect);
-      camera.focus    = get_pbrt_value(values, "focaldistance", camera.focus);
+      camera.focus  = get_pbrt_value(values, "focaldistance", camera.focus);
       if (!camera.aspect) camera.aspect = 1;
       if (!camera.focus) camera.focus = 10;
     } else if (camera.type == "realistic") {
-      auto lensfile         = get_pbrt_value(values, "lensfile", ""s);
-      lensfile              = lensfile.substr(0, lensfile.size() - 4);
-      lensfile              = lensfile.substr(lensfile.find('.') + 1);
-      lensfile              = lensfile.substr(0, lensfile.size() - 2);
-      auto lens             = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
-      camera.fov            = 2 * atan(0.036f / (2 * lens));
-      camera.aperture       = get_pbrt_value(values, "aperturediameter", 0.0f);
-      camera.focus          = get_pbrt_value(values, "focusdistance",  camera.focus);
+      auto lensfile   = get_pbrt_value(values, "lensfile", ""s);
+      lensfile        = lensfile.substr(0, lensfile.size() - 4);
+      lensfile        = lensfile.substr(lensfile.find('.') + 1);
+      lensfile        = lensfile.substr(0, lensfile.size() - 2);
+      auto lens       = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
+      camera.fov      = 2 * atan(0.036f / (2 * lens));
+      camera.aperture = get_pbrt_value(values, "aperturediameter", 0.0f);
+      camera.focus    = get_pbrt_value(values, "focusdistance", camera.focus);
       if (!camera.aspect) camera.aspect = 1;
       if (!camera.focus) camera.focus = 10;
     } else {
@@ -4316,10 +4316,10 @@ static void convert_pbrt_materials(vector<pbrt_material>& materials,
     auto textured = get_pbrt_value(values, name, pair{def, ""s});
     if (textured.second == "") {
       color   = textured.first;
-      texture = -1;
+      texture = "";
     } else if (constants.find(textured.second) != constants.end()) {
       color   = constants.at(textured.second);
-      texture = -1;
+      texture = "";
     } else {
       color   = {1, 1, 1};
       texture = textured.second;
@@ -4544,7 +4544,8 @@ static void convert_pbrt_lights(
 }
 
 static void convert_pbrt_environments(
-    vector<pbrt_environment>& environments, bool verbose = false) {
+    vector<pbrt_environment>& environments, vector<pbrt_texture>& textures, 
+    bool verbose = false) {
   for (auto& light : environments) {
     auto& values = light.values;
     if (light.type == "infinite") {
@@ -4558,6 +4559,13 @@ static void convert_pbrt_environments(
                     frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
       light.frend = light.frend *
                     frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+      if(!light.emission_map.empty()) {
+        auto& texture = textures.emplace_back();
+        texture.name = light.emission_map;
+        texture.filename = light.emission_map;
+        texture.type = "imagemap";
+        texture.values.push_back(make_pbrt_value("filename", light.emission_map));
+      }
     } else {
       throw std::runtime_error("unsupported environment type " + light.type);
     }
@@ -4582,10 +4590,6 @@ static void convert_pbrt_shapes(
       // compute_normals(shape.normals, shape.triangles, shape.positions);
     } else if (shape.type == "plymesh") {
       shape.filename = get_pbrt_value(values, "filename", ""s);
-      // load_shape(fs::path(filename).parent_path() / shape.uri, shape.points,
-      //     shape.lines, shape.triangles, shape.quads, shape.quadspos,
-      //     shape.quadsnorm, shape.quadstexcoord, shape.positions,
-      //     shape.normals, shape.texcoords, shape.colors, shape.radius, false);
     } else if (shape.type == "sphere") {
       shape.radius = get_pbrt_value(values, "radius", 1.0f);
       // auto params         = proc_shape_params{};
@@ -4624,14 +4628,17 @@ struct pbrt_context {
 };
 
 // load pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt) {
+void load_pbrt(const string& filename, pbrt_model& pbrt, bool convert) {
   auto files = vector<file_wrapper>{};
   open_file(files.emplace_back(), filename);
 
   // parser state
-  unordered_map<string, pbrt_context> coordsys   = {};
-  auto                                stack      = vector<pbrt_context>{};
-  string                              cur_object = "";
+  auto   stack      = vector<pbrt_context>{};
+  string cur_object = "";
+
+  // objects and coords
+  unordered_map<string, pbrt_context> coordsys = {};
+  unordered_map<string, vector<int>>  objects  = {};
 
   // helpers
   auto set_transform = [](pbrt_context& ctx, const frame3f& xform) {
@@ -4672,17 +4679,21 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         stack.pop_back();
       } else if (cmd == "ObjectBegin") {
         stack.push_back(stack.back());
-        auto& object = pbrt.objects.emplace_back();
-        parse_pbrt_param(str, object.name);
-        cur_object = object.name;
+        parse_pbrt_param(str, cur_object);
+        objects[cur_object] = {};
       } else if (cmd == "ObjectEnd") {
         stack.pop_back();
         cur_object = "";
       } else if (cmd == "ObjectInstance") {
-        auto& instance = pbrt.instances.emplace_back();
-        parse_pbrt_param(str, instance.object);
-        instance.frame         = stack.back().transform_start;
-        instance.frend = stack.back().transform_end;
+        auto object = ""s;
+        parse_pbrt_param(str, object);
+        if (objects.find(object) == objects.end())
+          throw std::runtime_error("cannot find object " + object);
+        for(auto shape_id : objects.at(object)) {
+          auto& shape  =pbrt.shapes[shape_id];
+          shape.instance_frames.push_back(stack.back().transform_start);
+          shape.instance_frends.push_back(stack.back().transform_end);
+        }
       } else if (cmd == "ActiveTransform") {
         auto name = ""s;
         parse_pbrt_param(str, name);
@@ -4808,9 +4819,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
       } else if (cmd == "NamedMaterial") {
         parse_pbrt_param(str, stack.back().material);
       } else if (cmd == "Shape") {
-        auto& shape = cur_object.empty()
-                          ? pbrt.shapes.emplace_back()
-                          : pbrt.objects.back().shapes.emplace_back();
+        auto& shape = pbrt.shapes.emplace_back();
         parse_pbrt_param(str, shape.type);
         parse_pbrt_params(str, shape.values);
         shape.frame     = stack.back().transform_start;
@@ -4819,6 +4828,13 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         shape.arealight = stack.back().arealight;
         shape.interior  = stack.back().medium_interior;
         shape.exterior  = stack.back().medium_exterior;
+        if(cur_object != "") {
+          shape.is_instanced = true;
+          objects[cur_object].push_back((int)pbrt.shapes.size()-1);
+        } else {
+          shape.instance_frames.push_back(identity3x4f);
+          shape.instance_frends.push_back(identity3x4f);
+        }
       } else if (cmd == "AreaLightSource") {
         static auto arealight_id = 0;
         auto&       arealight    = pbrt.arealights.emplace_back();
@@ -4861,7 +4877,11 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         throw std::runtime_error("unknown command " + cmd);
       }
     }
+      files.pop_back();
   }
+
+  // convert if needed
+  if(!convert) return;
 
   // convert objects
   convert_pbrt_cameras(pbrt.cameras);
@@ -4870,8 +4890,18 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   convert_pbrt_shapes(pbrt.shapes);
   convert_pbrt_lights(pbrt.lights);
   convert_pbrt_arealights(pbrt.arealights);
-  convert_pbrt_environments(pbrt.environments);
-  for (auto& object : pbrt.objects) convert_pbrt_shapes(object.shapes);
+  convert_pbrt_environments(pbrt.environments, pbrt.textures);
+
+  // load ply data
+  for(auto& shape : pbrt.shapes) {
+    if(shape.filename.empty()) continue;
+      auto ply = ply_model{};
+      load_ply(get_dirname(filename) + shape.filename, ply);
+      shape.triangles = get_ply_triangles(ply);
+      shape.positions = get_ply_positions(ply);
+      shape.normals = get_ply_normals(ply);
+      shape.texcoords = get_ply_texcoords(ply);
+  }
 }
 
 // Read pbrt commands

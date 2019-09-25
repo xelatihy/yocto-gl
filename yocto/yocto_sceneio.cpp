@@ -3319,6 +3319,10 @@ struct pbrt_context_ {
   float   last_lookat_distance   = 0;
 };
 
+// #define YOCTO_OLD_PBRT
+
+#ifdef YOCTO_OLD_PBRT
+
 // convert pbrt elements
 void add_pbrt_camera(yocto_scene& scene, const string& type,
     const vector<pbrt_value>& values, const pbrt_context_& ctx,
@@ -4154,6 +4158,122 @@ static void load_pbrt_scene(
   trim_memory(scene);
   update_transforms(scene);
 }
+
+#else
+
+static void load_pbrt(
+    const string& filename, yocto_scene& scene, const load_params& params) {
+  // load pbrt
+  auto pbrt = pbrt_model{};
+  load_pbrt(filename, pbrt);
+
+  // convert cameras
+  auto camera_id = 0;
+  for (auto& pcamera : pbrt.cameras) {
+    auto& camera = scene.cameras.emplace_back();
+    camera.uri   = "camera" + std::to_string(camera_id++);
+    camera.frame = pcamera.frame;
+    if (pcamera.aspect >= 1) {
+      set_yperspective(camera, radians(pcamera.fov), pcamera.aspect,
+          clamp(pcamera.focus, 1.0e-2f, 1.0e4f));
+    } else {
+      auto yfov = 2 * atan(tan(radians(pcamera.fov) / 2) / pcamera.aspect);
+      set_yperspective(
+          camera, yfov, pcamera.aspect, clamp(pcamera.focus, 1.0e-2f, 1.0e4f));
+      camera.aperture = pcamera.aperture;
+    }
+  }
+
+  // convert textures
+  auto texture_map = unordered_map<string, int>{{"", -1}};
+  for (auto& ptexture : pbrt.textures) {
+    if (ptexture.is_constant) continue;
+    auto& texture              = scene.textures.emplace_back();
+    texture.uri                = ptexture.filename;
+    texture_map[ptexture.name] = (int)scene.textures.size() - 1;
+  }
+
+  // convert materials
+  auto get_texture = [&texture_map](const string& name) {
+    if (name == "") return -1;
+    if (texture_map.find(name) == texture_map.end())
+      throw std::runtime_error("cannot find texture " + name);
+    return texture_map.at(name);
+  };
+  auto material_map = unordered_map<string, int>{{"", -1}};
+  for (auto& pmaterial : pbrt.materials) {
+    auto& material               = scene.materials.emplace_back();
+    material.uri                 = pmaterial.name;
+    material.emission            = pmaterial.emission;
+    material.diffuse             = pmaterial.diffuse;
+    material.specular            = pmaterial.specular;
+    material.transmission        = pmaterial.transmission;
+    material.diffuse_tex         = get_texture(pmaterial.diffuse_map);
+    material.specular_tex        = get_texture(pmaterial.specular_map);
+    material.transmission_tex    = get_texture(pmaterial.transmission_map);
+    material_map[pmaterial.name] = (int)scene.materials.size() - 1;
+  }
+
+  // convert shapes
+  for (auto& pshape : pbrt.shapes) {
+    auto& shape = scene.shapes.emplace_back();
+    shape.uri   = !pshape.filename.empty()
+                    ? pshape.filename
+                    : ("shape" + std::to_string(scene.shapes.size()));
+    shape.positions  = pshape.positions;
+    shape.normals    = pshape.normals;
+    shape.texcoords  = pshape.texcoords;
+    shape.triangles  = pshape.triangles;
+    auto material    = material_map.at(pshape.material);
+    auto instance_id = 0;
+    for (auto& frame : pshape.instance_frames) {
+      auto& instance    = scene.instances.emplace_back();
+      instance.uri      = shape.uri + (pshape.instance_frames.empty()
+                                         ? ""s
+                                         : std::to_string(instance_id++));
+      instance.frame    = frame * pshape.frame;
+      instance.material = material;
+      instance.shape    = (int)scene.shapes.size() - 1;
+    }
+  }
+
+  // convert environments
+  for(auto& penvironment : pbrt.environments) {
+    auto& environment = scene.environments.emplace_back();
+    environment.uri = "env" + std::to_string(scene.environments.size());
+    environment.emission = penvironment.emission;
+    environment.emission_tex = get_texture(penvironment.emission_map);
+  }
+  
+  // TODO lights
+  for(auto& plight : pbrt.lights) {
+    throw std::runtime_error("not implemented");
+  }
+}
+
+// load pbrt scenes
+static void load_pbrt_scene(
+    const string& filename, yocto_scene& scene, const load_params& params) {
+  scene = yocto_scene{};
+
+  // Parse pbrt
+  load_pbrt(filename, scene, params);
+
+  // load textures
+  auto dirname = fs::path(filename).parent_path();
+  load_textures(scene, dirname, params);
+
+  // fix scene
+  scene.uri = fs::path(filename).filename();
+  add_cameras(scene);
+  add_materials(scene);
+  add_radius(scene);
+  normalize_uris(scene);
+  trim_memory(scene);
+  update_transforms(scene);
+}
+
+#endif
 
 // Convert a scene to pbrt format
 static void save_pbrt(const string& filename, const yocto_scene& scene) {
