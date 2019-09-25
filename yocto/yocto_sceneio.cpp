@@ -4159,6 +4159,113 @@ static void load_pbrt_scene(
   update_transforms(scene);
 }
 
+// Convert a scene to pbrt format
+static void save_pbrt(const string& filename, const yocto_scene& scene) {
+  // open file
+  auto fs = open_file(filename, "w");
+
+  // embed data
+  write_pbrt_comment(fs, get_save_scene_message(scene, ""));
+
+  // convert camera and settings
+  auto& camera     = scene.cameras.front();
+  auto  from       = camera.frame.o;
+  auto  to         = camera.frame.o - camera.frame.z;
+  auto  up         = camera.frame.y;
+  auto  image_size = camera_resolution(camera, 1280);
+  write_pbrt_command(
+      fs, pbrt_command_::lookat_transform, "", frame3f{from, to, up, zero3f});
+  write_pbrt_command(fs, pbrt_command_::camera, "", "perspective",
+      {make_pbrt_value("perspective", camera_fov(camera).x * 180 / pif)});
+  write_pbrt_command(fs, pbrt_command_::sampler, "", "random",
+      {make_pbrt_value("pixelsamples", 64)});
+  write_pbrt_command(fs, pbrt_command_::integrator, "", "path", {});
+  write_pbrt_command(fs, pbrt_command_::film, "", "image",
+      {make_pbrt_value("filename", fs::path(filename).stem().string() + ".exr"),
+          make_pbrt_value("xresolution", image_size.x),
+          make_pbrt_value("yresolution", image_size.y)});
+
+  // start world
+  write_pbrt_command(fs, pbrt_command_::world_begin);
+
+  // convert textures
+  for (auto& texture : scene.textures) {
+    write_pbrt_command(fs, pbrt_command_::named_texture,
+        fs::path(texture.uri).stem().string(), "imagemap",
+        {make_pbrt_value("filename", texture.uri)});
+  }
+
+  // convert materials
+  auto make_pbrt_textured = [&scene](const string& name, vec3f color, int tex) {
+    if (tex >= 0) {
+      return make_pbrt_value(name,
+          fs::path(scene.textures[tex].uri).stem().string(),
+          pbrt_value_type::texture);
+    } else {
+      return make_pbrt_value(name, color, pbrt_value_type::color);
+    }
+  };
+  for (auto& material : scene.materials) {
+    write_pbrt_command(fs, pbrt_command_::named_material,
+        fs::path(material.uri).stem().string().c_str(), "uber",
+        {
+            make_pbrt_textured("Kd", material.diffuse, material.diffuse_tex),
+            make_pbrt_textured("Ks", material.specular, material.specular_tex),
+            make_pbrt_textured(
+                "Kt", material.transmission, material.transmission_tex),
+            make_pbrt_value(
+                "roughness", material.roughness * material.roughness),
+        });
+  }
+
+  // convert instances
+  for (auto& instance : scene.instances) {
+    auto& shape    = scene.shapes[instance.shape];
+    auto& material = scene.materials[instance.material];
+    write_pbrt_command(fs, pbrt_command_::attribute_begin);
+    write_pbrt_command(fs, pbrt_command_::transform_begin);
+    write_pbrt_command(fs, pbrt_command_::set_transform, "", instance.frame);
+    write_pbrt_command(fs, pbrt_command_::use_material,
+        fs::path(material.uri).stem().string());
+    if (material.emission != zero3f) {
+      write_pbrt_command(fs, pbrt_command_::arealight, "", "diffuse",
+          {make_pbrt_value("L", material.emission, pbrt_value_type::color)});
+    }
+    write_pbrt_command(fs, pbrt_command_::shape, "", "plymesh",
+        {make_pbrt_value("filename",
+            fs::path(shape.uri).replace_extension(".ply").string())});
+    write_pbrt_command(fs, pbrt_command_::transform_end);
+    write_pbrt_command(fs, pbrt_command_::attribute_end);
+  }
+
+  // end world
+  write_pbrt_command(fs, pbrt_command_::world_end);
+}
+
+// Save a pbrt scene
+void save_pbrt_scene(const string& filename, const yocto_scene& scene,
+    const save_params& params) {
+  try {
+    // save json
+    save_pbrt(filename, scene);
+
+    // save meshes
+    auto dirname = fs::path(filename).parent_path();
+    for (auto& shape : scene.shapes) {
+      save_shape((dirname / shape.uri).replace_extension(".ply"), shape.points,
+          shape.lines, shape.triangles, shape.quads, shape.quadspos,
+          shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+          shape.texcoords, shape.colors, shape.radius);
+    }
+
+    // save textures
+    save_textures(scene, dirname, params);
+
+  } catch (const std::exception& e) {
+    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
+  }
+}
+
 #else
 
 static void load_pbrt(
@@ -4304,114 +4411,85 @@ static void load_pbrt_scene(
   update_transforms(scene);
 }
 
-#endif
-
 // Convert a scene to pbrt format
 static void save_pbrt(const string& filename, const yocto_scene& scene) {
-  // open file
-  auto fs = open_file(filename, "w");
+  auto pbrt = pbrt_model{};
 
   // embed data
-  write_pbrt_comment(fs, get_save_scene_message(scene, ""));
+  pbrt.comments.push_back(get_save_scene_message(scene, ""));
 
-  // convert camera and settings
+  // convert camera
   auto& camera     = scene.cameras.front();
-  auto  from       = camera.frame.o;
-  auto  to         = camera.frame.o - camera.frame.z;
-  auto  up         = camera.frame.y;
-  auto  image_size = camera_resolution(camera, 1280);
-  write_pbrt_command(
-      fs, pbrt_command_::lookat_transform, "", frame3f{from, to, up, zero3f});
-  write_pbrt_command(fs, pbrt_command_::camera, "", "perspective",
-      {make_pbrt_value("perspective", camera_fov(camera).x * 180 / pif)});
-  write_pbrt_command(fs, pbrt_command_::sampler, "", "random",
-      {make_pbrt_value("pixelsamples", 64)});
-  write_pbrt_command(fs, pbrt_command_::integrator, "", "path", {});
-  write_pbrt_command(fs, pbrt_command_::film, "", "image",
-      {make_pbrt_value("filename", fs::path(filename).stem().string() + ".exr"),
-          make_pbrt_value("xresolution", image_size.x),
-          make_pbrt_value("yresolution", image_size.y)});
-
-  // start world
-  write_pbrt_command(fs, pbrt_command_::world_begin);
+  auto& pcamera    = pbrt.cameras.emplace_back();
+  pcamera.frame    = camera.frame;
+  pcamera.fov      = max(camera_fov(camera));
+  pcamera.aspect   = camera_aspect(camera);
+  auto& pfilm = pbrt.films.emplace_back();
+  pfilm.filename   = "out.png";
+  pfilm.resolution = {1280, (int)(pcamera.aspect * 1280)};
 
   // convert textures
   for (auto& texture : scene.textures) {
-    write_pbrt_command(fs, pbrt_command_::named_texture,
-        fs::path(texture.uri).stem().string(), "imagemap",
-        {make_pbrt_value("filename", texture.uri)});
+    auto& ptexture = pbrt.textures.emplace_back();
+    ptexture.name = texture.uri;
+    ptexture.filename = texture.uri;
   }
 
   // convert materials
-  auto make_pbrt_textured = [&scene](const string& name, vec3f color, int tex) {
-    if (tex >= 0) {
-      return make_pbrt_value(name,
-          fs::path(scene.textures[tex].uri).stem().string(),
-          pbrt_value_type::texture);
-    } else {
-      return make_pbrt_value(name, color, pbrt_value_type::color);
-    }
-  };
-  for (auto& material : scene.materials) {
-    write_pbrt_command(fs, pbrt_command_::named_material,
-        fs::path(material.uri).stem().string().c_str(), "uber",
-        {
-            make_pbrt_textured("Kd", material.diffuse, material.diffuse_tex),
-            make_pbrt_textured("Ks", material.specular, material.specular_tex),
-            make_pbrt_textured(
-                "Kt", material.transmission, material.transmission_tex),
-            make_pbrt_value(
-                "roughness", material.roughness * material.roughness),
-        });
+  for(auto& material : scene.materials) {
+    auto& pmaterial = pbrt.materials.emplace_back();
+    pmaterial.name = material.uri;
+    pmaterial.diffuse = material.diffuse;
+    pmaterial.specular = material.specular;
+    pmaterial.transmission = material.transmission;
+    pmaterial.roughness = {material.roughness, material.roughness};
+    pmaterial.diffuse_map = material.diffuse_tex >= 0 ? scene.textures[material.diffuse_tex].uri : ""s;
+    auto& parealight = pbrt.arealights.emplace_back();
+    parealight.name = material.uri;
+    parealight.emission = material.emission; 
   }
 
   // convert instances
   for (auto& instance : scene.instances) {
-    auto& shape    = scene.shapes[instance.shape];
+    auto& shape = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
-    write_pbrt_command(fs, pbrt_command_::attribute_begin);
-    write_pbrt_command(fs, pbrt_command_::transform_begin);
-    write_pbrt_command(fs, pbrt_command_::set_transform, "", instance.frame);
-    write_pbrt_command(fs, pbrt_command_::use_material,
-        fs::path(material.uri).stem().string());
-    if (material.emission != zero3f) {
-      write_pbrt_command(fs, pbrt_command_::arealight, "", "diffuse",
-          {make_pbrt_value("L", material.emission, pbrt_value_type::color)});
-    }
-    write_pbrt_command(fs, pbrt_command_::shape, "", "plymesh",
-        {make_pbrt_value("filename",
-            fs::path(shape.uri).replace_extension(".ply").string())});
-    write_pbrt_command(fs, pbrt_command_::transform_end);
-    write_pbrt_command(fs, pbrt_command_::attribute_end);
+    auto& pshape = pbrt.shapes.emplace_back();
+    pshape.filename = fs::path(shape.uri).replace_extension(".ply").string();
+    pshape.frame = instance.frame;
+    pshape.material = material.uri;
+    pshape.arealight = material.emission == zero3f ? ""s : material.uri;
   }
 
-  // end world
-  write_pbrt_command(fs, pbrt_command_::world_end);
+  // convert environments
+  for (auto& environment : scene.environments) {
+    auto& penvironment = pbrt.environments.emplace_back();
+    penvironment.emission = environment.emission;
+    if(environment.emission_tex >= 0) {
+      penvironment.filename = scene.textures[environment.emission_tex].uri;
+    }
+  }
 }
 
 // Save a pbrt scene
 void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     const save_params& params) {
-  try {
-    // save json
-    save_pbrt(filename, scene);
+  // save pbrt
+  save_pbrt(filename, scene);
 
-    // save meshes
-    auto dirname = fs::path(filename).parent_path();
-    for (auto& shape : scene.shapes) {
-      save_shape((dirname / shape.uri).replace_extension(".ply"), shape.points,
-          shape.lines, shape.triangles, shape.quads, shape.quadspos,
-          shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.radius);
-    }
-
-    // save textures
-    save_textures(scene, dirname, params);
-
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
+  // save meshes
+  auto dirname = fs::path(filename).parent_path();
+  for (auto& shape : scene.shapes) {
+    save_shape((dirname / shape.uri).replace_extension(".ply"), shape.points,
+        shape.lines, shape.triangles, shape.quads, shape.quadspos,
+        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius);
   }
+
+  // save textures
+  save_textures(scene, dirname, params);
 }
+
+#endif
 
 }  // namespace yocto
 

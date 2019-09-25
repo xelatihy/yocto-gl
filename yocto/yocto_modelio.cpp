@@ -6,6 +6,9 @@
 // TODO: fov/aspect lens/film everywhere
 // TODO: pbrt design, split elements from approximations
 // TODO: add uvdisk and uvsphere to pbrt shape loading
+// TODO: remove obj instances
+// TODO: remove obj procedurals
+// TODO: simplify objx parsing using single line commands
 //
 
 //
