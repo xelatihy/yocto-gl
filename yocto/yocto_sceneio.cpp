@@ -4424,47 +4424,49 @@ static void save_pbrt(const string& filename, const yocto_scene& scene) {
   pcamera.frame    = camera.frame;
   pcamera.fov      = max(camera_fov(camera));
   pcamera.aspect   = camera_aspect(camera);
-  auto& pfilm = pbrt.films.emplace_back();
+  auto& pfilm      = pbrt.films.emplace_back();
   pfilm.filename   = "out.png";
   pfilm.resolution = {1280, (int)(pcamera.aspect * 1280)};
 
   // convert textures
   for (auto& texture : scene.textures) {
-    auto& ptexture = pbrt.textures.emplace_back();
-    ptexture.name = texture.uri;
+    auto& ptexture    = pbrt.textures.emplace_back();
+    ptexture.name     = texture.uri;
     ptexture.filename = texture.uri;
   }
 
   // convert materials
-  for(auto& material : scene.materials) {
-    auto& pmaterial = pbrt.materials.emplace_back();
-    pmaterial.name = material.uri;
-    pmaterial.diffuse = material.diffuse;
-    pmaterial.specular = material.specular;
+  for (auto& material : scene.materials) {
+    auto& pmaterial        = pbrt.materials.emplace_back();
+    pmaterial.name         = material.uri;
+    pmaterial.diffuse      = material.diffuse;
+    pmaterial.specular     = material.specular;
     pmaterial.transmission = material.transmission;
-    pmaterial.roughness = {material.roughness, material.roughness};
-    pmaterial.diffuse_map = material.diffuse_tex >= 0 ? scene.textures[material.diffuse_tex].uri : ""s;
-    auto& parealight = pbrt.arealights.emplace_back();
-    parealight.name = material.uri;
-    parealight.emission = material.emission; 
+    pmaterial.roughness    = {material.roughness, material.roughness};
+    pmaterial.diffuse_map  = material.diffuse_tex >= 0
+                                ? scene.textures[material.diffuse_tex].uri
+                                : ""s;
+    auto& parealight    = pbrt.arealights.emplace_back();
+    parealight.name     = material.uri;
+    parealight.emission = material.emission;
   }
 
   // convert instances
   for (auto& instance : scene.instances) {
-    auto& shape = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
-    auto& pshape = pbrt.shapes.emplace_back();
-    pshape.filename = fs::path(shape.uri).replace_extension(".ply").string();
-    pshape.frame = instance.frame;
-    pshape.material = material.uri;
+    auto& shape      = scene.shapes[instance.shape];
+    auto& material   = scene.materials[instance.material];
+    auto& pshape     = pbrt.shapes.emplace_back();
+    pshape.filename  = fs::path(shape.uri).replace_extension(".ply").string();
+    pshape.frame     = instance.frame;
+    pshape.material  = material.uri;
     pshape.arealight = material.emission == zero3f ? ""s : material.uri;
   }
 
   // convert environments
   for (auto& environment : scene.environments) {
-    auto& penvironment = pbrt.environments.emplace_back();
+    auto& penvironment    = pbrt.environments.emplace_back();
     penvironment.emission = environment.emission;
-    if(environment.emission_tex >= 0) {
+    if (environment.emission_tex >= 0) {
       penvironment.filename = scene.textures[environment.emission_tex].uri;
     }
   }
