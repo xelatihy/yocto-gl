@@ -4245,6 +4245,8 @@ static void load_pbrt(
       instance.material = arealight_id >= 0 ? arealight_id : material_id;
       instance.shape    = (int)scene.shapes.size() - 1;
     }
+    if (shape.positions.empty())
+      throw std::runtime_error("empty shape of type " + pshape.type);
   }
 
   // convert environments

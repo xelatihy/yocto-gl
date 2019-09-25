@@ -5,6 +5,7 @@
 //
 // TODO: fov/aspect lens/film everywhere
 // TODO: pbrt design, split elements from approximations
+// TODO: add uvdisk and uvsphere to pbrt shape loading
 //
 
 //
@@ -4652,6 +4653,35 @@ static void convert_pbrt_environments(vector<pbrt_environment>& environments,
   }
 }
 
+// Make a triangle shape from a quad grid
+template <typename PositionFunc, typename NormalFunc>
+static inline void make_pbrt_shape(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    int usteps, int vsteps, const PositionFunc& position_func,
+    const NormalFunc& normal_func) {
+  auto vid = [usteps](int i, int j) { return j * (usteps + 1) + i; };
+  auto tid = [usteps](
+                 int i, int j, int c) { return (j * usteps + i) * 2 + c; };
+  positions.resize((usteps + 1) * (vsteps + 1));
+  normals.resize((usteps + 1) * (vsteps + 1));
+  texcoords.resize((usteps + 1) * (vsteps + 1));
+  for (auto j = 0; j < vsteps + 1; j++) {
+    for (auto i = 0; i < usteps + 1; i++) {
+      auto uv              = vec2f{i / (float)usteps, j / (float)vsteps};
+      positions[vid(i, j)] = position_func(uv);
+      normals[vid(i, j)]   = normal_func(uv);
+      texcoords[vid(i, j)] = uv;
+    }
+  }
+  triangles.resize(usteps * vsteps * 2);
+  for (auto j = 0; j < vsteps + 1; j++) {
+    for (auto i = 0; i < usteps + 1; i++) {
+      triangles[tid(i, j, 0)] = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
+      triangles[tid(i, j, 1)] = {vid(i, j), vid(i + 1, j + 1), vid(i, j + 1)};
+    }
+  }
+}
+
 // Convert pbrt shapes
 static void convert_pbrt_shapes(
     vector<pbrt_shape>& shapes, bool verbose = false) {
@@ -4672,6 +4702,17 @@ static void convert_pbrt_shapes(
       shape.filename = get_pbrt_value(values, "filename", ""s);
     } else if (shape.type == "sphere") {
       shape.radius = get_pbrt_value(values, "radius", 1.0f);
+      make_pbrt_shape(shape.triangles, shape.positions, shape.normals, shape.texcoords,
+          32, 16,
+          [radius = shape.radius](const vec2f& uv) {
+            return radius * vec3f{cos(2 * pif * uv.x) * cos(1 - uv.y),
+                                sin(2 * pif * uv.x) * cos(1 - uv.y),
+                                sin(1 - uv.y)};
+          },
+          [](const vec2f& uv) {
+            return normalize(vec3f{cos(2 * pif * uv.x) * cos(1 - uv.y),
+                sin(2 * pif * uv.x) * cos(1 - uv.y), sin(1 - uv.y)});
+          });
       // auto params         = proc_shape_params{};
       // params.type         = proc_shape_params::type_t::uvsphere;
       // params.subdivisions = 5;
@@ -4680,6 +4721,15 @@ static void convert_pbrt_shapes(
       //     shape.normals, shape.texcoords, params);
     } else if (shape.type == "disk") {
       shape.radius = get_pbrt_value(values, "radius", 1.0f);
+      make_pbrt_shape(shape.triangles, shape.positions, shape.normals, shape.texcoords,
+          32, 1,
+          [radius = shape.radius](const vec2f& uv) {
+            return radius * (1 - uv.y) *
+                   vec3f{cos(2 * pif * uv.x), sin(2 * pif * uv.x), 0};
+          },
+          [](const vec2f& uv) {
+            return vec3f{0, 0, 1};
+          });
       // auto params         = proc_shape_params{};
       // params.type         = proc_shape_params::type_t::uvdisk;
       // params.subdivisions = 4;
@@ -4707,18 +4757,19 @@ static void remove_pbrt_textures(
     vector<pbrt_texture>& textures, const vector<pbrt_material>& materials) {
   auto texture_map = unordered_map<string, int>{};
   for (auto& material : materials) {
-    if(material.diffuse_map != "") texture_map[material.diffuse_map] = 1;
-    if(material.specular_map != "") texture_map[material.specular_map] = 1;
-    if(material.transmission_map != "") texture_map[material.transmission_map] = 1;
-    if(material.eta_map != "") texture_map[material.eta_map] = 1;
-    if(material.etak_map != "") texture_map[material.etak_map] = 1;
-    if(material.opacity_map != "") texture_map[material.opacity_map] = 1;
+    if (material.diffuse_map != "") texture_map[material.diffuse_map] = 1;
+    if (material.specular_map != "") texture_map[material.specular_map] = 1;
+    if (material.transmission_map != "")
+      texture_map[material.transmission_map] = 1;
+    if (material.eta_map != "") texture_map[material.eta_map] = 1;
+    if (material.etak_map != "") texture_map[material.etak_map] = 1;
+    if (material.opacity_map != "") texture_map[material.opacity_map] = 1;
   }
   textures.erase(std::remove_if(textures.begin(), textures.end(),
-                      [&texture_map](const pbrt_texture& texture) {
-                        return texture_map.find(texture.name) ==
-                               texture_map.end();
-                      }),
+                     [&texture_map](const pbrt_texture& texture) {
+                       return texture_map.find(texture.name) ==
+                              texture_map.end();
+                     }),
       textures.end());
 }
 

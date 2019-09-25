@@ -708,10 +708,10 @@ struct pbrt_value {
 // Pbrt camera
 struct pbrt_camera {
   // camera parameters
-  string             type          = "";
-  vector<pbrt_value> values        = {};
-  frame3f            frame         = identity3x4f;
-  frame3f            frend = identity3x4f;
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
   // camera approximation
   float width    = 0;
   float height   = 0;
