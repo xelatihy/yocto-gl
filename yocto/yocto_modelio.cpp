@@ -5299,6 +5299,7 @@ void save_pbrt(
         arealight.type, arealight.values);
   }
 
+  auto object_id = 0;
   for (auto& shape_ : pbrt.shapes) {
     auto shape = shape_;
     if (shape.type == "") {
@@ -5317,6 +5318,8 @@ void save_pbrt(
           shape.values.push_back(make_pbrt_value("uv", shape.texcoords));
       }
     }
+    auto object = "object" + std::to_string(object_id++);
+    if(shape.is_instanced) format_values(fs, "ObjectBegin \"{}\"\n", object);
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)shape.frame);
     format_values(fs, "NamedMaterial {}\n", shape.material);
@@ -5324,6 +5327,13 @@ void save_pbrt(
       format_values(fs, arealights_map.at(shape.arealight));
     format_values(fs, "Shape \"{}\" {}\n", shape.type, shape.values);
     format_values(fs, "AttributeEnd\n");
+    if(shape.is_instanced) format_values(fs, "ObjectEnd\n");
+    for(auto& iframe : shape.instance_frames) {
+    format_values(fs, "AttributeBegin\n");
+    format_values(fs, "Transform {}\n", (mat4f)iframe);
+    format_values(fs, "ObjectInstance {}\n", object);
+    format_values(fs, "AttributeEnd\n");
+    }
   }
 
   format_values(fs, "\nWorldEnd\n\n");
