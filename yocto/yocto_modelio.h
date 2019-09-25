@@ -868,7 +868,7 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt);
+void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord = true);
 void save_pbrt(const string& filename, const pbrt_model& pbrt);
 
 // Pbrt command

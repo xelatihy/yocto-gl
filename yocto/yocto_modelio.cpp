@@ -4784,7 +4784,7 @@ struct pbrt_context {
 };
 
 // load pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt) {
+void load_pbrt(const string& filename, pbrt_model& pbrt, bool flip_texcoord) {
   auto files = vector<file_wrapper>{};
   open_file(files.emplace_back(), filename);
 
@@ -5054,6 +5054,13 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
     shape.positions = get_ply_positions(ply);
     shape.normals   = get_ply_normals(ply);
     shape.texcoords = get_ply_texcoords(ply);
+  }
+
+  // flip texture coords
+  if(flip_texcoord) {
+    for(auto& shape : pbrt.shapes) {
+      for(auto& uv : shape.texcoords) uv.y = 1 - uv.y;
+    }
   }
 
   // remove_pbrt_materials(pbrt.materials, pbrt.shapes);
