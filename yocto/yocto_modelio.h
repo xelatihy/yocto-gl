@@ -521,18 +521,6 @@ enum struct mtl_command {
 // Objx command
 enum struct objx_command { camera, environment, instance, procedural };
 
-// Obj value type
-enum struct obj_value_type { number, boolean, string, array };
-
-// Obj value
-struct obj_value {
-  obj_value_type    type    = obj_value_type::number;
-  double            number  = 0;
-  bool              boolean = false;
-  string            string_ = "";
-  array<double, 16> array_  = {};
-};
-
 // Read obj elements
 bool read_obj_command(file_wrapper& fs, obj_command& command, string& name,
     vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size);
@@ -548,31 +536,11 @@ void write_obj_command(file_wrapper& fs, obj_command command,
     const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices = {});
 void write_mtl_command(file_wrapper& fs, mtl_command command,
-    obj_material& material, const obj_value& value,
+    obj_material& material, 
     const obj_texture_info& texture = {});
 void write_objx_command(file_wrapper& fs, objx_command command,
     const obj_camera& camera, const obj_environment& environment,
     const obj_instance& instance, const obj_procedural& procedural);
-
-// typesafe access of obj value
-void get_obj_value(const obj_value& yaml, string& value);
-void get_obj_value(const obj_value& yaml, bool& value);
-void get_obj_value(const obj_value& yaml, int& value);
-void get_obj_value(const obj_value& yaml, float& value);
-void get_obj_value(const obj_value& yaml, vec2f& value);
-void get_obj_value(const obj_value& yaml, vec3f& value);
-void get_obj_value(const obj_value& yaml, mat3f& value);
-void get_obj_value(const obj_value& yaml, frame3f& value);
-
-// typesafe access of obj value
-obj_value make_obj_value(const string& value);
-obj_value make_obj_value(bool value);
-obj_value make_obj_value(int value);
-obj_value make_obj_value(float value);
-obj_value make_obj_value(const vec2f& value);
-obj_value make_obj_value(const vec3f& value);
-obj_value make_obj_value(const mat3f& value);
-obj_value make_obj_value(const frame3f& value);
 
 }  // namespace yocto
 
