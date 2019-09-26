@@ -515,29 +515,7 @@ enum struct obj_command {
 
 // Mtl command
 enum struct mtl_command {
-  // clang-format off
-  // material name and type (value)
-  material, illum,
-  // material colors
-  emission, ambient, diffuse, specular, reflection, transmission,
-  // material values
-  exponent, ior, opacity,
-  // material textures
-  emission_map, ambient_map, diffuse_map, specular_map, reflection_map,  
-  transmission_map, exponent_map, opacity_map, bump_map, normal_map, 
-  displacement_map,                  
-  // pbrt extension values
-  pbr_roughness, pbr_metallic, pbr_sheen, pbr_clearcoat, pbr_coatroughness,
-  // pbr extension textures
-  pbr_roughness_map, pbr_metallic_map, pbr_sheen_map,
-  pbr_clearcoat_map, pbr_coatroughness_map,
-  // volume extension colors
-  vol_transmission, vol_meanfreepath, vol_scattering, vol_emission,
-  // volume extension values
-  vol_anisotropy, vol_scale,
-  // volument textures
-  vol_scattering_map
-  // clang-format on
+  material,
 };
 
 // Objx command
@@ -571,8 +549,8 @@ struct obj_value {
 // Read obj elements
 bool read_obj_command(file_wrapper& fs, obj_command& command, string& name, 
   vec3f &value, vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(file_wrapper& fs, mtl_command& command, obj_value& value,
-    obj_texture_info& texture, bool fliptr = true);
+bool read_mtl_command(file_wrapper& fs, mtl_command& command, 
+  obj_material& material, bool fliptr = true);
 bool read_objx_command(file_wrapper& fs, objx_command& command,
     obj_value& value, obj_texture_info& texture);
 
@@ -580,7 +558,7 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
 void write_obj_comment(file_wrapper& fs, const string& comment);
 void write_obj_command(file_wrapper& fs, obj_command command, 
   const string& name, const vec3f& value, const vector<obj_vertex>& vertices = {});
-void write_mtl_command(file_wrapper& fs, mtl_command command,
+void write_mtl_command(file_wrapper& fs, mtl_command command, obj_material& material,
     const obj_value& value, const obj_texture_info& texture = {});
 void write_objx_command(file_wrapper& fs, objx_command command,
     const obj_value& value, const obj_texture_info& texture = {});
