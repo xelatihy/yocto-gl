@@ -332,6 +332,9 @@ struct obj_element {
 // Obj shape
 struct obj_shape {
   string              name      = "";
+  vector<vec3f>       positions    = {};
+  vector<vec3f>       normals      = {};
+  vector<vec2f>       texcoords    = {};
   vector<string>      materials = {};
   vector<obj_vertex>  vertices  = {};
   vector<obj_element> faces     = {};
@@ -436,9 +439,6 @@ struct obj_procedural {
 // Obj model
 struct obj_model {
   vector<string>          comments     = {};
-  vector<vec3f>           positions    = {};
-  vector<vec3f>           normals      = {};
-  vector<vec2f>           texcoords    = {};
   vector<obj_shape>       shapes       = {};
   vector<obj_material>    materials    = {};
   vector<obj_camera>      cameras      = {};
