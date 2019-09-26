@@ -1852,7 +1852,7 @@ void load_objx(const string& filename, obj_model& obj) {
       parse_value(line, environment.emission);
       auto emission_path = ""s;
       parse_value(line, emission_path);
-      if(emission_path == "\"\"") emission_path = "";
+      if (emission_path == "\"\"") emission_path = "";
       environment.emission_map.path = emission_path;
       parse_value(line, environment.frame);
     } else if (cmd == "i") {
@@ -2564,8 +2564,8 @@ void add_obj_fvquads(obj_model& obj, obj_shape& shape,
       });
     }
     shape.faces.push_back({(uint8_t)nv,
-            ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
-}
+        ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
+  }
 }  // namespace yocto
 
 // Read obj

@@ -332,9 +332,9 @@ struct obj_element {
 // Obj shape
 struct obj_shape {
   string              name      = "";
-  vector<vec3f>       positions    = {};
-  vector<vec3f>       normals      = {};
-  vector<vec2f>       texcoords    = {};
+  vector<vec3f>       positions = {};
+  vector<vec3f>       normals   = {};
+  vector<vec2f>       texcoords = {};
   vector<string>      materials = {};
   vector<obj_vertex>  vertices  = {};
   vector<obj_element> faces     = {};
