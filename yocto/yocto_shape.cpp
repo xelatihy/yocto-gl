@@ -9,11 +9,9 @@
 #include "yocto_shape.h"
 #include "yocto_modelio.h"
 #include "yocto_random.h"
+#include "yocto_utils.h"
 
 #include <deque>
-
-#include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES
@@ -3110,7 +3108,7 @@ void load_shape(const string& filename, vector<int>& points,
   radius        = {};
 
   try {
-    auto ext = fs::path(filename).extension().string();
+    auto ext = get_extension(filename);
     if (ext == ".ply" || ext == ".PLY") {
       load_ply_shape(filename, points, lines, triangles, quads, quadspos,
           quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
@@ -3139,7 +3137,7 @@ void save_shape(const string& filename, const vector<int>& points,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, bool ascii) {
   try {
-    auto ext = fs::path(filename).extension().string();
+    auto ext = get_extension(filename);
     if (ext == ".ply" || ext == ".PLY") {
       return save_ply_shape(filename, points, lines, triangles, quads, quadspos,
           quadsnorm, quadstexcoord, positions, normals, texcoords, colors,

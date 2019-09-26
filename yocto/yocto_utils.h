@@ -406,7 +406,7 @@ inline string get_extension(const string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
+  return filename.substr(pos);
 }
 
 // Get filename without directory.

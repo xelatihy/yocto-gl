@@ -29,12 +29,10 @@
 #include "yocto_scene.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
+#include "yocto_utils.h"
 
 #include <assert.h>
 #include <unordered_map>
-
-#include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES
@@ -1288,8 +1286,8 @@ void normalize_uris(yocto_scene& scene) {
       if (c == ':' || c == ' ') c = '_';
     }
     if (name.empty()) name = base + "_" + std::to_string(num);
-    if (fs::path(name).parent_path().empty()) name = base + "s/" + name;
-    if (fs::path(name).extension().empty()) name = name + "." + ext;
+    if (get_dirname(name).empty()) name = base + "s/" + name;
+    if (get_extension(name).empty()) name = name + "." + ext;
   };
   for (auto id = 0; id < scene.cameras.size(); id++)
     normalize(scene.cameras[id].uri, "camera", "yaml", id);
@@ -1311,7 +1309,7 @@ void normalize_uris(yocto_scene& scene) {
 void rename_instances(yocto_scene& scene) {
   auto shape_names = vector<string>(scene.shapes.size());
   for (auto sid = 0; sid < scene.shapes.size(); sid++) {
-    shape_names[sid] = fs::path(scene.shapes[sid].uri).stem();
+    shape_names[sid] = get_basename(scene.shapes[sid].uri);
   }
   auto shape_count = vector<vec2i>(scene.shapes.size(), vec2i{0, 0});
   for (auto& instance : scene.instances) shape_count[instance.shape].y += 1;

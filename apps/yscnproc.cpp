@@ -35,9 +35,6 @@ using namespace yocto;
 #include <unordered_set>
 using std::unordered_set;
 
-#include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
-
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
     return true;
@@ -112,11 +109,11 @@ int main(int argc, const char** argv) {
   // change texture names
   if (uniform_txt) {
     for (auto& texture : scene.textures) {
-      auto ext = fs::path(texture.uri).extension().string();
+      auto ext = get_extension(texture.uri);
       if (is_hdr_filename(texture.uri)) {
-        texture.uri = fs::path(texture.uri).replace_extension(".hdr");
+        texture.uri = replace_extension(texture.uri, ".hdr");
       } else {
-        texture.uri = fs::path(texture.uri).replace_extension(".png");
+        texture.uri = replace_extension(texture.uri, ".png");
       }
     }
   }
@@ -159,18 +156,18 @@ int main(int argc, const char** argv) {
   }
 
   // make a directory if needed
-  auto dirname  = fs::path(output).parent_path();
+  auto dirname  = get_dirname(output);
   auto dirnames = unordered_set<string>{};
   if (!dirname.empty()) dirnames.insert(dirname);
   for (auto& shape : scene.shapes)
-    dirnames.insert(dirname / fs::path(shape.uri).parent_path());
+    dirnames.insert(dirname + get_dirname(shape.uri));
   for (auto& subdiv : scene.subdivs)
-    dirnames.insert(dirname / fs::path(subdiv.uri).parent_path());
+    dirnames.insert(dirname + get_dirname(subdiv.uri));
   for (auto& texture : scene.textures)
-    dirnames.insert(dirname / fs::path(texture.uri).parent_path());
+    dirnames.insert(dirname + get_dirname(texture.uri));
   for (auto& dir : dirnames) {
-    if (!mkdir(fs::path(dir))) {
-      printf("cannot create directory %s\n", fs::path(output).c_str());
+    if (!mkdir(dir)) {
+      print_fatal("cannot create directory " + output);
     }
   }
 
