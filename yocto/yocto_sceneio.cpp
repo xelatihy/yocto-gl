@@ -1389,28 +1389,28 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
   load_gltf(filename, gltf);
 
   // convert textures
-  for(auto& gtexture : gltf.textures) {
+  for (auto& gtexture : gltf.textures) {
     auto& texture = scene.textures.emplace_back();
-    texture.uri = gtexture.filename;
+    texture.uri   = gtexture.filename;
   }
 
   // convert materials
-  for(auto& gmaterial : gltf.materials) {
-    auto& material = scene.materials.emplace_back();
-    material.uri = gmaterial.name;
-    material.emission = gmaterial.emission; 
-    material.emission_tex = gmaterial.emission_tex; 
-    if(gmaterial.has_specgloss) {
-      material.diffuse = xyz(gmaterial.sg_diffuse);
-      material.opacity = gmaterial.sg_diffuse.w;
-      material.specular = gmaterial.sg_specular;
-      material.diffuse_tex = gmaterial.sg_diffuse_tex;
+  for (auto& gmaterial : gltf.materials) {
+    auto& material        = scene.materials.emplace_back();
+    material.uri          = gmaterial.name;
+    material.emission     = gmaterial.emission;
+    material.emission_tex = gmaterial.emission_tex;
+    if (gmaterial.has_specgloss) {
+      material.diffuse      = xyz(gmaterial.sg_diffuse);
+      material.opacity      = gmaterial.sg_diffuse.w;
+      material.specular     = gmaterial.sg_specular;
+      material.diffuse_tex  = gmaterial.sg_diffuse_tex;
       material.specular_tex = gmaterial.sg_specular_tex;
-    } else if(gmaterial.has_metalrough) {
-      material.diffuse = xyz(gmaterial.mr_base);
-      material.opacity = gmaterial.mr_base.w;
-      material.specular = vec3f{0.04f};
-      material.diffuse_tex = gmaterial.mr_base_tex;
+    } else if (gmaterial.has_metalrough) {
+      material.diffuse      = xyz(gmaterial.mr_base);
+      material.opacity      = gmaterial.mr_base.w;
+      material.specular     = vec3f{0.04f};
+      material.diffuse_tex  = gmaterial.mr_base_tex;
       material.metallic_tex = gmaterial.mr_metallic_tex;
     }
     material.normal_tex = gmaterial.normal_tex;
@@ -1418,44 +1418,48 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
 
   // convert shapes
   auto shape_indices = vector<vector<vec2i>>{};
-  for(auto& gmesh : gltf.meshes) {
+  for (auto& gmesh : gltf.meshes) {
     shape_indices.push_back({});
-    for(auto& gprim : gmesh.primitives) {
+    for (auto& gprim : gmesh.primitives) {
       auto& shape = scene.shapes.emplace_back();
-      shape_indices.back().push_back({(int)scene.shapes.size()-1, gprim.material});
-      shape.uri = gmesh.name.empty() ? ""s : (gmesh.name + std::to_string(shape_indices.back().size()));
+      shape_indices.back().push_back(
+          {(int)scene.shapes.size() - 1, gprim.material});
+      shape.uri =
+          gmesh.name.empty()
+              ? ""s
+              : (gmesh.name + std::to_string(shape_indices.back().size()));
       shape.positions = gprim.positions;
-      shape.normals = gprim.normals;
+      shape.normals   = gprim.normals;
       shape.texcoords = gprim.texcoords;
-      shape.colors = gprim.colors;
-      shape.radius = gprim.radius;
-      shape.tangents = gprim.tangents;
+      shape.colors    = gprim.colors;
+      shape.radius    = gprim.radius;
+      shape.tangents  = gprim.tangents;
       shape.triangles = gprim.triangles;
-      shape.lines = gprim.lines;
-      shape.points = gprim.points;
+      shape.lines     = gprim.lines;
+      shape.points    = gprim.points;
     }
   }
 
   // convert cameras
   auto cameras = vector<yocto_camera>{};
-  for(auto& gcamera : gltf.cameras) {
-      auto& camera = cameras.emplace_back();
-      camera.uri = gcamera.name;
-      set_yperspective(camera, gcamera.yfov, gcamera.aspect, 10);
+  for (auto& gcamera : gltf.cameras) {
+    auto& camera = cameras.emplace_back();
+    camera.uri   = gcamera.name;
+    set_yperspective(camera, gcamera.yfov, gcamera.aspect, 10);
   }
 
   // convert scene nodes
-  for(auto& gnode : gltf.nodes) {
-    if(gnode.camera >= 0) {
+  for (auto& gnode : gltf.nodes) {
+    if (gnode.camera >= 0) {
       auto& camera = scene.cameras.emplace_back(cameras[gnode.camera]);
       camera.frame = gnode.frame;
     }
-    if(gnode.mesh >= 0) {
-      for(auto [shape, material] : shape_indices[gnode.mesh]) {
-        auto& instance = scene.instances.emplace_back();
-        instance.uri = scene.shapes[shape].uri;
-        instance.frame = gnode.frame;
-        instance.shape = shape;
+    if (gnode.mesh >= 0) {
+      for (auto [shape, material] : shape_indices[gnode.mesh]) {
+        auto& instance    = scene.instances.emplace_back();
+        instance.uri      = scene.shapes[shape].uri;
+        instance.frame    = gnode.frame;
+        instance.shape    = shape;
         instance.material = material;
       }
     }
@@ -1468,12 +1472,12 @@ static void load_gltf_scene(
   // initialization
   scene = {};
 
-    // load gltf
-    load_gltf(filename, scene);
+  // load gltf
+  load_gltf(filename, scene);
 
-    // load textures
-    auto dirname = fs::path(filename).parent_path();
-    load_textures(scene, dirname, params);
+  // load textures
+  auto dirname = fs::path(filename).parent_path();
+  load_textures(scene, dirname, params);
 
   // fix scene
   scene.uri = fs::path(filename).filename();

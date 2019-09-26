@@ -5797,8 +5797,8 @@ static inline pair<vec3f, vec3f> parse_pbrt_subsurface(const string& name) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void update_transforms(gltf_model& scene, gltf_node& node,
-    const frame3f& parent = identity3x4f) {
+void update_transforms(
+    gltf_model& scene, gltf_node& node, const frame3f& parent = identity3x4f) {
   auto frame = parent * node.local * translation_frame(node.translation) *
                rotation_frame(node.rotation) * scaling_frame(node.scale);
   for (auto child : node.children)
@@ -6122,11 +6122,11 @@ void load_gltf(const string& filename, gltf_model& scene) {
   }
 
   // set up scenes
-  for(auto sid = 0; sid < gltf->scenes_count; sid++) {
-    auto gscn = &gltf->scenes[sid];
-    auto& scn = scene.scenes.emplace_back();
-    scn.name = gscn->name ? gscn->name : "";
-    for(auto nid = 0; nid < gscn->nodes_count; nid++) {
+  for (auto sid = 0; sid < gltf->scenes_count; sid++) {
+    auto  gscn = &gltf->scenes[sid];
+    auto& scn  = scene.scenes.emplace_back();
+    scn.name   = gscn->name ? gscn->name : "";
+    for (auto nid = 0; nid < gscn->nodes_count; nid++) {
       scn.nodes.push_back(nmap.at(gscn->nodes[nid]));
     }
   }

@@ -978,7 +978,7 @@ struct gltf_node {
   vector<int> children    = {};
 };
 struct gltf_scene {
-  string name = "";
+  string      name  = "";
   vector<int> nodes = {};
 };
 struct gltf_model {
