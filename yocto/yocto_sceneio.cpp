@@ -1005,6 +1005,7 @@ void load_obj(
     // make instance
     if (obj.instances.empty()) {
       auto& instance = scene.instances.emplace_back();
+      instance.name = shape.name;
       instance.shape = (int)scene.shapes.size() - 1;
       if (oshape.materials.size() != 1) {
         throw std::runtime_error("missing material for " + oshape.name);

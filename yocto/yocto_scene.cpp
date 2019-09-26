@@ -1292,7 +1292,7 @@ void add_names(yocto_scene& scene) {
   auto fix_names = [](auto& values, const string& base) {
     auto count = 0;
     for (auto& value : values)
-      if (value.name.empty()) value.name = std::to_string(count++);
+      if (value.name.empty()) value.name = base + std::to_string(count++);
   };
   auto fix_filenames = [](auto& values, const string& base,
                            const string& dirname, const string& ext) {
