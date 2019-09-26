@@ -266,6 +266,7 @@ int main(int argc, const char* argv[]) {
 
   // load image
   try {
+    auto timer = print_timed("loading image");
     load_image(app.filename, app.img);
     compute_stats(app.image_stats, app.img, is_hdr_filename(app.filename));
   } catch (const std::exception& e) {
@@ -273,7 +274,10 @@ int main(int argc, const char* argv[]) {
   }
 
   // update display
-  update_display(app);
+  {
+    auto timer = print_timed("updating display");
+    update_display(app);
+  }
 
   // run ui
   run_ui(app);
