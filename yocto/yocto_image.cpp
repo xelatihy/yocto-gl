@@ -32,6 +32,7 @@
 
 #include "yocto_image.h"
 #include "yocto_random.h"
+#include "yocto_utils.h"
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #pragma GCC diagnostic push
@@ -63,9 +64,6 @@
 #endif
 
 #include <memory>
-
-#include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
@@ -1874,7 +1872,7 @@ static inline void load_image_preset(
 
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename) {
-  auto ext = fs::path(filename).extension().string();
+  auto ext = get_extension(filename);
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
@@ -1888,7 +1886,7 @@ image<vec4f> load_image(const string& filename) {
 // Loads an hdr image.
 void load_image(const string& filename, image<vec4f>& img) {
   if (is_preset_filename(filename)) return load_image_preset(filename, img);
-  auto ext = fs::path(filename).extension().string();
+  auto ext = get_extension(filename);
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
@@ -1921,7 +1919,7 @@ void load_image(const string& filename, image<vec4f>& img) {
 
 // Saves an hdr image.
 void save_image(const string& filename, const image<vec4f>& img) {
-  auto ext = fs::path(filename).extension().string();
+  auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data()))
@@ -1951,7 +1949,7 @@ image<vec4b> load_imageb(const string& filename) {
 // Loads an ldr image.
 void load_imageb(const string& filename, image<vec4b>& img) {
   if (is_preset_filename(filename)) return load_image_preset(filename, img);
-  auto ext = fs::path(filename).extension().string();
+  auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
@@ -1968,7 +1966,7 @@ void load_imageb(const string& filename, image<vec4b>& img) {
 
 // Saves an ldr image.
 void save_imageb(const string& filename, const image<vec4b>& img) {
-  auto ext = fs::path(filename).extension().string();
+  auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
             img.data(), img.size().x * 4))

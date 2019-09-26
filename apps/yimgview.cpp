@@ -35,9 +35,6 @@ using namespace yocto;
 #include <future>
 #include <thread>
 
-#include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
-
 struct image_stats {
   vec4f         min       = zero4f;
   vec4f         max       = zero4f;
@@ -165,8 +162,8 @@ void update_app_display(const string& filename, const image<vec4f>& img,
 void add_new_image(app_state& app, const string& filename) {
   auto& img           = app.images.emplace_back();
   img.filename        = filename;
-  img.outname         = fs::path(filename).replace_extension(".display.png");
-  img.name            = fs::path(filename).filename();
+  img.outname         = replace_extension(filename, ".display.png");
+  img.name            = get_filename(filename);
   img.tonemap_prms    = app.tonemap_prms;
   img.colorgrade_prms = app.colorgrade_prms;
   img.load_done       = false;
@@ -192,7 +189,7 @@ void draw_glwidgets(const opengl_window& win) {
     add_new_image(app, load_path);
   }
   if (draw_glfiledialog(win, "save image", save_path, true,
-          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
+          get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     app.images[app.selected].outname = save_path;
     app.images[app.selected].task_queue.emplace_back(app_task_type::save);
@@ -258,7 +255,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "image", fs::path(img.filename).filename());
+    draw_gllabel(win, "image", get_filename(img.filename));
     draw_gllabel(win, "filename", img.filename);
     draw_gllabel(win, "outname", img.outname);
     draw_gllabel(win, "image", "%d x %d", img.img.size().x, img.img.size().y);
@@ -388,7 +385,7 @@ void update(const opengl_window& win, app_state& app) {
         try {
           task.result.get();
           img.load_done = true;
-          img.name      = fs::path(img.filename).filename().string() + " [" +
+          img.name      = get_filename(img.filename) + " [" +
                      std::to_string(img.img.size().x) + "x" +
                      std::to_string(img.img.size().y) + "]";
           img.display = img.img;
@@ -397,7 +394,7 @@ void update(const opengl_window& win, app_state& app) {
           img.task_queue.emplace_back(app_task_type::display);
         } catch (std::exception& e) {
           log_glerror(win, e.what());
-          img.name = fs::path(img.filename).filename().string() + " [error]";
+          img.name = get_filename(img.filename) + " [error]";
           app.errors.push_back("cannot load " + img.filename);
         }
       } break;
