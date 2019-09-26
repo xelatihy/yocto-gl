@@ -958,7 +958,7 @@ void load_obj(
     auto& texture = scene.textures.emplace_back();
     texture.name  = make_safe_name(
         get_basename(info.path), "texture", (int)scene.textures.size());
-    texture.filename          = info.path;
+    texture.filename       = info.path;
     texture_map[info.path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
   };
@@ -966,8 +966,9 @@ void load_obj(
   // convert materials and textures
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& omat : obj.materials) {
-    auto& material            = scene.materials.emplace_back();
-    material.name             = make_safe_name(omat.name, "material", (int)scene.materials.size());
+    auto& material = scene.materials.emplace_back();
+    material.name  = make_safe_name(
+        omat.name, "material", (int)scene.materials.size());
     material.emission         = omat.emission;
     material.diffuse          = omat.diffuse;
     material.specular         = omat.specular;
@@ -1288,8 +1289,8 @@ static void load_ply_scene(
   try {
     // load ply mesh
     scene.shapes.push_back({});
-    auto& shape = scene.shapes.back();
-    shape.name = "shape";
+    auto& shape    = scene.shapes.back();
+    shape.name     = "shape";
     shape.filename = get_filename(filename);
     load_shape(filename, shape.points, shape.lines, shape.triangles,
         shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
@@ -1343,19 +1344,22 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
 
   // convert textures
   for (auto& gtexture : gltf.textures) {
-    auto& texture    = scene.textures.emplace_back();
-    if(!gtexture.name.empty()) {
-      texture.name     = make_safe_name(gtexture.name, "texture", (int)scene.textures.size());
+    auto& texture = scene.textures.emplace_back();
+    if (!gtexture.name.empty()) {
+      texture.name = make_safe_name(
+          gtexture.name, "texture", (int)scene.textures.size());
     } else {
-      texture.name     = make_safe_name(get_basename(gtexture.filename), "texture", (int)scene.textures.size());
+      texture.name = make_safe_name(get_basename(gtexture.filename), "texture",
+          (int)scene.textures.size());
     }
     texture.filename = gtexture.filename;
   }
 
   // convert materials
   for (auto& gmaterial : gltf.materials) {
-    auto& material        = scene.materials.emplace_back();
-    material.name         = make_safe_name(gmaterial.name, "material", (int)scene.materials.size());
+    auto& material = scene.materials.emplace_back();
+    material.name  = make_safe_name(
+        gmaterial.name, "material", (int)scene.materials.size());
     material.emission     = gmaterial.emission;
     material.emission_tex = gmaterial.emission_tex;
     if (gmaterial.has_specgloss) {
@@ -1387,7 +1391,8 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
               ? ""s
               : (gmesh.name + std::to_string(shape_indices.back().size()));
       make_safe_name(shape.name, "shape", (int)scene.shapes.size());
-      shape.filename = make_safe_filename("shapes/shape" + std::to_string(scene.shapes.size()));
+      shape.filename = make_safe_filename(
+          "shapes/shape" + std::to_string(scene.shapes.size()));
       shape.positions = gprim.positions;
       shape.normals   = gprim.normals;
       shape.texcoords = gprim.texcoords;
@@ -1412,13 +1417,15 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
   for (auto& gnode : gltf.nodes) {
     if (gnode.camera >= 0) {
       auto& camera = scene.cameras.emplace_back(cameras[gnode.camera]);
-      camera.name = make_safe_name(camera.name, "caemra", (int)scene.cameras.size());
+      camera.name  = make_safe_name(
+          camera.name, "caemra", (int)scene.cameras.size());
       camera.frame = gnode.frame;
     }
     if (gnode.mesh >= 0) {
       for (auto [shape, material] : shape_indices[gnode.mesh]) {
-        auto& instance    = scene.instances.emplace_back();
-        instance.name     = make_safe_name(scene.shapes[shape].name, "instance", (int)scene.instances.size());
+        auto& instance = scene.instances.emplace_back();
+        instance.name  = make_safe_name(
+            scene.shapes[shape].name, "instance", (int)scene.instances.size());
         instance.frame    = gnode.frame;
         instance.shape    = shape;
         instance.material = material;
@@ -1488,8 +1495,9 @@ static void load_pbrt(
   auto texture_map = unordered_map<string, int>{{"", -1}};
   for (auto& ptexture : pbrt.textures) {
     if (ptexture.filename.empty()) continue;
-    auto& texture              = scene.textures.emplace_back();
-    texture.name               = make_safe_name(ptexture.name, "texture", (int)scene.textures.size());
+    auto& texture = scene.textures.emplace_back();
+    texture.name  = make_safe_name(
+        ptexture.name, "texture", (int)scene.textures.size());
     texture.filename           = ptexture.filename;
     texture_map[ptexture.name] = (int)scene.textures.size() - 1;
   }
@@ -1503,8 +1511,9 @@ static void load_pbrt(
   };
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
-    auto& material        = scene.materials.emplace_back();
-    material.name         = make_safe_name(pmaterial.name, "material", (int)scene.materials.size());
+    auto& material = scene.materials.emplace_back();
+    material.name  = make_safe_name(
+        pmaterial.name, "material", (int)scene.materials.size());
     material.diffuse      = pmaterial.diffuse;
     material.specular     = pmaterial.sspecular;
     material.transmission = pmaterial.transmission;
@@ -1518,23 +1527,26 @@ static void load_pbrt(
   // convert arealights
   auto arealight_map = unordered_map<string, int>{{"", -1}};
   for (auto& parealight : pbrt.arealights) {
-    auto& material                 = scene.materials.emplace_back();
-    material.name                  = make_safe_name(parealight.name, "arealight", (int)arealight_map.size());
+    auto& material = scene.materials.emplace_back();
+    material.name  = make_safe_name(
+        parealight.name, "arealight", (int)arealight_map.size());
     material.emission              = parealight.emission;
     arealight_map[parealight.name] = (int)scene.materials.size() - 1;
   }
 
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
-    auto& shape    = scene.shapes.emplace_back();
-    shape.name      = make_safe_name(get_basename(shape.filename), "shape", (int)scene.shapes.size());
+    auto& shape = scene.shapes.emplace_back();
+    shape.name  = make_safe_name(
+        get_basename(shape.filename), "shape", (int)scene.shapes.size());
     if (pshape.filename.empty()) {
-      shape.name      = make_safe_name("", "shape", (int)scene.shapes.size());
-      shape.filename = make_safe_filename("shapes/shape" + std::to_string(scene.shapes.size()) +
-                       ".ply");
+      shape.name     = make_safe_name("", "shape", (int)scene.shapes.size());
+      shape.filename = make_safe_filename(
+          "shapes/shape" + std::to_string(scene.shapes.size()) + ".ply");
     } else {
       shape.filename = pshape.filename;
-      shape.name      = make_safe_name(get_basename(pshape.filename), "shape", (int)scene.shapes.size());
+      shape.name     = make_safe_name(
+          get_basename(pshape.filename), "shape", (int)scene.shapes.size());
     }
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
@@ -1557,14 +1569,16 @@ static void load_pbrt(
 
   // convert environments
   for (auto& penvironment : pbrt.environments) {
-    auto& environment    = scene.environments.emplace_back();
-    environment.name     = make_safe_name("", "environment", (int)scene.environments.size());
+    auto& environment = scene.environments.emplace_back();
+    environment.name  = make_safe_name(
+        "", "environment", (int)scene.environments.size());
     environment.frame    = penvironment.frame;
     environment.emission = penvironment.emission;
     if (!penvironment.filename.empty()) {
-      auto& texture            = scene.textures.emplace_back();
-      texture.name             = make_safe_name(get_basename(penvironment.filename), "environment", (int)scene.environments.size());
-      texture.filename         = penvironment.filename;
+      auto& texture    = scene.textures.emplace_back();
+      texture.name     = make_safe_name(get_basename(penvironment.filename),
+          "environment", (int)scene.environments.size());
+      texture.filename = penvironment.filename;
       environment.emission_tex = (int)scene.textures.size() - 1;
     } else {
       environment.emission_tex = -1;
