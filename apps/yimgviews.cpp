@@ -94,7 +94,7 @@ void compute_stats(
 }
 
 void update_display(app_state& app) {
-  if(app.display.size() != app.img.size()) app.display = app.img;
+  if (app.display.size() != app.img.size()) app.display = app.img;
   auto regions = make_regions(app.img.size(), 128);
   parallel_foreach(regions, [&app](const image_region& region) {
     tonemap(app.display, app.img, region, app.tonemap_prms);
@@ -115,37 +115,41 @@ void draw_glwidgets(const opengl_window& win) {
   continue_glline(win);
   if (draw_glbutton(win, "quit")) set_glwindow_close(win, true);
   if (begin_glheader(win, "tonemap")) {
-    auto options = app.tonemap_prms;
-    draw_glslider(win, "exposure", options.exposure, -5, 5);
-    draw_glcoloredit(win, "tint", options.tint);
-    draw_glslider(win, "contrast", options.contrast, 0, 1);
-    draw_glslider(win, "logcontrast", options.logcontrast, 0, 1);
-    draw_glslider(win, "saturation", options.saturation, 0, 1);
-    draw_glcheckbox(win, "filmic", options.filmic);
+    auto& tonemap = app.tonemap_prms;
+    auto  edited  = 0;
+    edited += (int)draw_glslider(win, "exposure", tonemap.exposure, -5, 5);
+    edited += (int)draw_glcoloredit(win, "tint", tonemap.tint);
+    edited += (int)draw_glslider(win, "contrast", tonemap.contrast, 0, 1);
+    edited += (int)draw_glslider(win, "logcontrast", tonemap.logcontrast, 0, 1);
+    edited += (int)draw_glslider(win, "saturation", tonemap.saturation, 0, 1);
+    edited += (int)draw_glcheckbox(win, "filmic", tonemap.filmic);
     continue_glline(win);
-    draw_glcheckbox(win, "srgb", options.srgb);
+    edited += (int)draw_glcheckbox(win, "srgb", tonemap.srgb);
     continue_glline(win);
     if (draw_glbutton(win, "auto wb")) {
       auto wb      = 1 / xyz(app.image_stats.average);
-      options.tint = wb / max(wb);
+      tonemap.tint = wb / max(wb);
+      edited += 1;
     }
-    if (options != app.tonemap_prms) {
-      app.tonemap_prms = options;
-      app.updates.push_back({"tonemap", 0});
-    }
+    if (edited) app.updates.push_back({"tonemap", -1});
     end_glheader(win);
   }
   if (begin_glheader(win, "colorgrade")) {
-    auto options = app.colorgrade_prms;
-    draw_glslider(win, "contrast", options.contrast, 0, 1);
-    draw_glslider(win, "ldr shadows", options.shadows, 0, 1);
-    draw_glslider(win, "ldr midtones", options.midtones, 0, 1);
-    draw_glslider(win, "highlights", options.highlights, 0, 1);
-    draw_glcoloredit(win, "shadows color", options.shadows_color);
-    draw_glcoloredit(win, "midtones color", options.midtones_color);
-    draw_glcoloredit(win, "highlights color", options.highlights_color);
-    if (options != app.colorgrade_prms)
-      app.updates.push_back({"colorgrade", -1});
+    auto& colorgrade = app.colorgrade_prms;
+    auto  edited     = 0;
+    edited += (int)draw_glslider(win, "contrast", colorgrade.contrast, 0, 1);
+    edited += (int)draw_glslider(win, "ldr shadows", colorgrade.shadows, 0, 1);
+    edited += (int)draw_glslider(
+        win, "ldr midtones", colorgrade.midtones, 0, 1);
+    edited += (int)draw_glslider(
+        win, "highlights", colorgrade.highlights, 0, 1);
+    edited += (int)draw_glcoloredit(
+        win, "shadows color", colorgrade.shadows_color);
+    edited += (int)draw_glcoloredit(
+        win, "midtones color", colorgrade.midtones_color);
+    edited += (int)draw_glcoloredit(
+        win, "highlights color", colorgrade.highlights_color);
+    if (edited) app.updates.push_back({"colorgrade", -1});
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
@@ -177,10 +181,6 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glhistogram(win, "display histo", app.display_stats.histogram);
     end_glheader(win);
   }
-  if (begin_glheader(win, "log")) {
-    draw_gllog(win);
-    end_glheader(win);
-  }
 }
 
 void draw(const opengl_window& win) {
@@ -206,12 +206,10 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
-  if (!app.gl_txt) {
-    init_gltexture(app.gl_txt, app.display, false, false, false);
-    if (app.updates.empty()) return;
-    update_display(app);
-    update_gltexture(app.gl_txt, app.display, false);
-  }
+  if (!app.gl_txt) init_gltexture(app.gl_txt, app.display, false, false, false);
+  if (app.updates.empty()) return;
+  update_display(app);
+  update_gltexture(app.gl_txt, app.display, false);
 }
 
 void run_ui(app_state& app) {
