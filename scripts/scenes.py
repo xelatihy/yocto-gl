@@ -171,8 +171,9 @@ def sync_images(directory='mcguire',scene='*',format='obj',mode='path',clean=Tru
 @click.option('--clean/--no-clean','-C', default=False)
 def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='path',clean=True):
     modes = {
-        'default': '--uniform-textures --mesh-filenames',
-        'gltf': '--uniform-textures --mesh-filenames --mesh-directory gltf_meshes/'
+        # 'default': '--uniform-textures --mesh-filenames',
+        # 'gltf': '--uniform-textures --mesh-filenames --mesh-directory gltf_meshes/'
+        'default': '--uniform-textures',
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/source/{scene}')):

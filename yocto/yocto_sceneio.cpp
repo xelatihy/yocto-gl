@@ -321,6 +321,32 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
   }
 }
 
+// create and cleanup names and filenames
+static inline string make_safe_name(
+    const string& name_, const string& base, int count) {
+  auto name = name_;
+  if (name.empty()) name = base + std::to_string(count);
+  if (name.front() == '-') name = "_" + name;
+  if (name.front() >= '0' && name.front() <= '9') name = "_" + name;
+  for (auto& c : name) {
+    if (c == '-' || c == '_') continue;
+    if (c >= '0' && c <= '9') continue;
+    if (c >= 'a' && c <= 'z') continue;
+    if (c >= 'A' && c <= 'Z') continue;
+    c = '_';
+  }
+  std::transform(name.begin(), name.end(), name.begin(),
+      [](unsigned char c) { return std::tolower(c); });
+  return name;
+}
+static inline string make_safe_filename(const string& filename_) {
+  auto filename = filename_;
+  for (auto& c : filename) {
+    if (c == ' ') c = '_';
+  }
+  return filename;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -662,9 +688,7 @@ static void load_yaml_scene(
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
-  fix_names(scene);
   trim_memory(scene);
-  update_transforms(scene);
 }
 
 // Save yaml
@@ -915,9 +939,9 @@ void load_obj(
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
-    auto& camera        = scene.cameras.emplace_back();
-    camera.name         = ocam.name;
-    camera.frame        = ocam.frame;
+    auto& camera = scene.cameras.emplace_back();
+    camera.name  = make_safe_name(ocam.name, "cam", (int)scene.cameras.size());
+    camera.frame = ocam.frame;
     camera.orthographic = ocam.ortho;
     camera.film         = {ocam.width, ocam.height};
     camera.focus        = ocam.focus;
@@ -931,18 +955,20 @@ void load_obj(
     if (info.path == "") return -1;
     auto it = texture_map.find(info.path);
     if (it != texture_map.end()) return it->second;
-    auto& texture             = scene.textures.emplace_back();
-    texture.name              = get_basename(info.path);
-    texture.filename          = info.path;
-    texture_map[texture.name] = (int)scene.textures.size() - 1;
+    auto& texture = scene.textures.emplace_back();
+    texture.name  = make_safe_name(
+        get_basename(info.path), "texture", (int)scene.textures.size());
+    texture.filename       = info.path;
+    texture_map[info.path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
   };
 
   // convert materials and textures
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& omat : obj.materials) {
-    auto& material            = scene.materials.emplace_back();
-    material.name             = omat.name;
+    auto& material = scene.materials.emplace_back();
+    material.name  = make_safe_name(
+        omat.name, "material", (int)scene.materials.size());
     material.emission         = omat.emission;
     material.diffuse          = omat.diffuse;
     material.specular         = omat.specular;
@@ -967,11 +993,12 @@ void load_obj(
     material.opacity_tex      = get_texture(omat.opacity_map);
     material.normal_tex       = get_texture(omat.normal_map);
     // TODO: refract, subsurface_map, vol_scatter
-    material_map[material.name] = (int)scene.materials.size() - 1;
+    material_map[omat.name] = (int)scene.materials.size() - 1;
   }
 
   // convert shapes
   auto shape_name_counts = unordered_map<string, int>{};
+  auto shape_map         = unordered_map<string, vector<int>>{{"", {}}};
   for (auto& oshape : obj.shapes) {
     auto& shape = scene.shapes.emplace_back();
     shape.name  = oshape.name;
@@ -979,7 +1006,8 @@ void load_obj(
     shape_name_counts[shape.name] += 1;
     if (shape_name_counts[shape.name] > 1)
       shape.name += std::to_string(shape_name_counts[shape.name]);
-    shape.filename  = "shapes/" + shape.name + ".ply";
+    shape.name = make_safe_name(shape.name, "shape", (int)scene.shapes.size());
+    shape.filename  = make_safe_filename("shapes/" + shape.name + ".ply");
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
     auto has_quads  = has_obj_quads(oshape);
@@ -1016,13 +1044,16 @@ void load_obj(
         throw std::runtime_error(
             "cannot find material " + oshape.materials.at(0));
       }
+    } else {
+      shape_map[oshape.name].push_back((int)scene.shapes.size() - 1);
     }
   }
 
   // convert environments
   for (auto& oenvironment : obj.environments) {
-    auto& environment        = scene.environments.emplace_back();
-    environment.name         = oenvironment.name;
+    auto& environment = scene.environments.emplace_back();
+    environment.name  = make_safe_name(
+        oenvironment.name, "environment", scene.environments.size());
     environment.frame        = oenvironment.frame;
     environment.emission     = oenvironment.emission;
     environment.emission_tex = get_texture(oenvironment.emission_map);
@@ -1030,19 +1061,16 @@ void load_obj(
 
   // convert instances
   if (!obj.instances.empty()) {
-    auto shape_map = unordered_map<string, vector<int>>{{"", {}}};
-    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
-      shape_map[scene.shapes[shape_id].name].push_back(shape_id);
-    }
     for (auto& oinstance : obj.instances) {
-      if (shape_map.find(oinstance.name) == shape_map.end())
+      if (shape_map.find(oinstance.object) == shape_map.end())
         throw std::runtime_error("cannot find object " + oinstance.object);
-      if (material_map.find(oinstance.name) == material_map.end())
+      if (material_map.find(oinstance.material) == material_map.end())
         throw std::runtime_error("cannot find material " + oinstance.material);
       auto material_id = material_map.at(oinstance.material);
       for (auto shape_id : shape_map.at(oinstance.object)) {
-        auto& instance    = scene.instances.emplace_back();
-        instance.name     = oinstance.name;
+        auto& instance = scene.instances.emplace_back();
+        instance.name  = make_safe_name(
+            oinstance.name, "instance", (int)scene.instances.size());
         instance.frame    = oinstance.frame;
         instance.shape    = shape_id;
         instance.material = material_id;
@@ -1052,9 +1080,11 @@ void load_obj(
 
   // convert procedurals
   for (auto& oprocedural : obj.procedurals) {
-    auto& shape    = scene.shapes.emplace_back();
-    shape.name     = oprocedural.name;
-    shape.filename = "shapes/ypreset-" + shape.name + ".ply";
+    auto& shape = scene.shapes.emplace_back();
+    shape.name  = make_safe_name(
+        oprocedural.name, "procedural", (int)scene.shapes.size());
+    shape.filename = make_safe_filename(
+        "shapes/ypreset-" + shape.name + ".ply");
     if (oprocedural.type == "floor") {
       auto params         = proc_shape_params{};
       params.type         = proc_shape_params::type_t::floor;
@@ -1066,10 +1096,11 @@ void load_obj(
     } else {
       throw std::runtime_error("unknown obj procedural");
     }
-    if (material_map.find(oprocedural.name) == material_map.end())
+    if (material_map.find(oprocedural.material) == material_map.end())
       throw std::runtime_error("cannot find material " + oprocedural.material);
-    auto& instance    = scene.instances.emplace_back();
-    instance.name     = oprocedural.name;
+    auto& instance = scene.instances.emplace_back();
+    instance.name  = make_safe_name(
+        oprocedural.name, "instance", (int)scene.instances.size());
     instance.frame    = oprocedural.frame;
     instance.shape    = (int)scene.shapes.size() - 1;
     instance.material = material_map.at(oprocedural.material);
@@ -1093,9 +1124,6 @@ static void load_obj_scene(
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
-  fix_names(scene);
-  trim_memory(scene);
-  update_transforms(scene);
 }
 
 static void save_obj(const string& filename, const yocto_scene& scene,
@@ -1261,7 +1289,9 @@ static void load_ply_scene(
   try {
     // load ply mesh
     scene.shapes.push_back({});
-    auto& shape = scene.shapes.back();
+    auto& shape    = scene.shapes.back();
+    shape.name     = "shape";
+    shape.filename = get_filename(filename);
     load_shape(filename, shape.points, shape.lines, shape.triangles,
         shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
@@ -1282,9 +1312,6 @@ static void load_ply_scene(
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
-  fix_names(scene);
-  trim_memory(scene);
-  update_transforms(scene);
 }
 
 static void save_ply_scene(const string& filename, const yocto_scene& scene,
@@ -1317,15 +1344,22 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
 
   // convert textures
   for (auto& gtexture : gltf.textures) {
-    auto& texture    = scene.textures.emplace_back();
-    texture.name     = gtexture.name;
+    auto& texture = scene.textures.emplace_back();
+    if (!gtexture.name.empty()) {
+      texture.name = make_safe_name(
+          gtexture.name, "texture", (int)scene.textures.size());
+    } else {
+      texture.name = make_safe_name(get_basename(gtexture.filename), "texture",
+          (int)scene.textures.size());
+    }
     texture.filename = gtexture.filename;
   }
 
   // convert materials
   for (auto& gmaterial : gltf.materials) {
-    auto& material        = scene.materials.emplace_back();
-    material.name         = gmaterial.name;
+    auto& material = scene.materials.emplace_back();
+    material.name  = make_safe_name(
+        gmaterial.name, "material", (int)scene.materials.size());
     material.emission     = gmaterial.emission;
     material.emission_tex = gmaterial.emission_tex;
     if (gmaterial.has_specgloss) {
@@ -1356,7 +1390,9 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
           gmesh.name.empty()
               ? ""s
               : (gmesh.name + std::to_string(shape_indices.back().size()));
-      shape.filename = "shapes/shape" + std::to_string(scene.shapes.size() - 1);
+      make_safe_name(shape.name, "shape", (int)scene.shapes.size());
+      shape.filename = make_safe_filename(
+          "shapes/shape" + std::to_string(scene.shapes.size()));
       shape.positions = gprim.positions;
       shape.normals   = gprim.normals;
       shape.texcoords = gprim.texcoords;
@@ -1381,12 +1417,15 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
   for (auto& gnode : gltf.nodes) {
     if (gnode.camera >= 0) {
       auto& camera = scene.cameras.emplace_back(cameras[gnode.camera]);
+      camera.name  = make_safe_name(
+          camera.name, "caemra", (int)scene.cameras.size());
       camera.frame = gnode.frame;
     }
     if (gnode.mesh >= 0) {
       for (auto [shape, material] : shape_indices[gnode.mesh]) {
-        auto& instance    = scene.instances.emplace_back();
-        instance.name     = scene.shapes[shape].name;
+        auto& instance = scene.instances.emplace_back();
+        instance.name  = make_safe_name(
+            scene.shapes[shape].name, "instance", (int)scene.instances.size());
         instance.frame    = gnode.frame;
         instance.shape    = shape;
         instance.material = material;
@@ -1413,9 +1452,6 @@ static void load_gltf_scene(
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
-  fix_names(scene);
-  trim_memory(scene);
-  update_transforms(scene);
 
   // fix cameras
   auto bbox = compute_bounds(scene);
@@ -1440,10 +1476,9 @@ static void load_pbrt(
   load_pbrt(filename, pbrt);
 
   // convert cameras
-  auto camera_id = 0;
   for (auto& pcamera : pbrt.cameras) {
     auto& camera = scene.cameras.emplace_back();
-    camera.name  = "camera" + std::to_string(camera_id++);
+    camera.name  = make_safe_name("", "camera", (int)scene.cameras.size());
     camera.frame = pcamera.frame;
     if (pcamera.aspect >= 1) {
       set_yperspective(camera, radians(pcamera.fov), pcamera.aspect,
@@ -1460,8 +1495,9 @@ static void load_pbrt(
   auto texture_map = unordered_map<string, int>{{"", -1}};
   for (auto& ptexture : pbrt.textures) {
     if (ptexture.filename.empty()) continue;
-    auto& texture              = scene.textures.emplace_back();
-    texture.name               = ptexture.name;
+    auto& texture = scene.textures.emplace_back();
+    texture.name  = make_safe_name(
+        ptexture.name, "texture", (int)scene.textures.size());
     texture.filename           = ptexture.filename;
     texture_map[ptexture.name] = (int)scene.textures.size() - 1;
   }
@@ -1475,8 +1511,9 @@ static void load_pbrt(
   };
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
-    auto& material        = scene.materials.emplace_back();
-    material.name         = pmaterial.name;
+    auto& material = scene.materials.emplace_back();
+    material.name  = make_safe_name(
+        pmaterial.name, "material", (int)scene.materials.size());
     material.diffuse      = pmaterial.diffuse;
     material.specular     = pmaterial.sspecular;
     material.transmission = pmaterial.transmission;
@@ -1490,21 +1527,27 @@ static void load_pbrt(
   // convert arealights
   auto arealight_map = unordered_map<string, int>{{"", -1}};
   for (auto& parealight : pbrt.arealights) {
-    auto& material                 = scene.materials.emplace_back();
-    material.name                  = parealight.name;
+    auto& material = scene.materials.emplace_back();
+    material.name  = make_safe_name(
+        parealight.name, "arealight", (int)arealight_map.size());
     material.emission              = parealight.emission;
     arealight_map[parealight.name] = (int)scene.materials.size() - 1;
   }
 
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
-    auto& shape    = scene.shapes.emplace_back();
-    shape.filename = pshape.filename;
-    if (shape.filename.empty()) {
-      shape.filename = "shapes/shape" + std::to_string(scene.shapes.size()) +
-                       ".ply";
+    auto& shape = scene.shapes.emplace_back();
+    shape.name  = make_safe_name(
+        get_basename(shape.filename), "shape", (int)scene.shapes.size());
+    if (pshape.filename.empty()) {
+      shape.name     = make_safe_name("", "shape", (int)scene.shapes.size());
+      shape.filename = make_safe_filename(
+          "shapes/shape" + std::to_string(scene.shapes.size()) + ".ply");
+    } else {
+      shape.filename = pshape.filename;
+      shape.name     = make_safe_name(
+          get_basename(pshape.filename), "shape", (int)scene.shapes.size());
     }
-    shape.name      = get_basename(shape.filename);
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
     shape.texcoords = pshape.texcoords;
@@ -1526,14 +1569,16 @@ static void load_pbrt(
 
   // convert environments
   for (auto& penvironment : pbrt.environments) {
-    auto& environment    = scene.environments.emplace_back();
-    environment.name     = "env" + std::to_string(scene.environments.size());
+    auto& environment = scene.environments.emplace_back();
+    environment.name  = make_safe_name(
+        "", "environment", (int)scene.environments.size());
     environment.frame    = penvironment.frame;
     environment.emission = penvironment.emission;
     if (!penvironment.filename.empty()) {
-      auto& texture            = scene.textures.emplace_back();
-      texture.name             = get_basename(penvironment.filename);
-      texture.filename         = penvironment.filename;
+      auto& texture    = scene.textures.emplace_back();
+      texture.name     = make_safe_name(get_basename(penvironment.filename),
+          "environment", (int)scene.environments.size());
+      texture.filename = penvironment.filename;
       environment.emission_tex = (int)scene.textures.size() - 1;
     } else {
       environment.emission_tex = -1;
@@ -1543,8 +1588,8 @@ static void load_pbrt(
   // lights
   for (auto& plight : pbrt.lights) {
     auto& shape       = scene.shapes.emplace_back();
-    shape.name        = "light" + std::to_string(scene.shapes.size());
-    shape.filename    = "shapes/" + shape.name + ".ply";
+    shape.name        = make_safe_name("", "light", (int)scene.shapes.size());
+    shape.filename    = make_safe_filename("shapes/" + shape.name + ".ply");
     shape.triangles   = plight.area_triangles;
     shape.positions   = plight.area_positions;
     shape.normals     = plight.area_normals;
@@ -1577,9 +1622,6 @@ static void load_pbrt_scene(
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
-  fix_names(scene);
-  trim_memory(scene);
-  update_transforms(scene);
 }
 
 // Convert a scene to pbrt format
