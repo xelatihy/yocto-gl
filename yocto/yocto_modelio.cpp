@@ -354,6 +354,7 @@ static inline void format_value(string& str, const vec3f& value) {
   sprintf(buf, "%g %g %g", value.x, value.y, value.z);
   str += buf;
 }
+#if 0
 static inline void format_value(string& str, const vec2i& value) {
   char buf[256];
   sprintf(buf, "%d %d", value.x, value.y);
@@ -364,6 +365,7 @@ static inline void format_value(string& str, const vec3i& value) {
   sprintf(buf, "%d %d %d", value.x, value.y, value.z);
   str += buf;
 }
+#endif
 static inline void format_value(string& str, const frame3f& value) {
   char buf[512];
   sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y,
@@ -4491,37 +4493,6 @@ static void convert_pbrt_environments(vector<pbrt_environment>& environments,
       throw std::runtime_error("unsupported environment type " + light.type);
     }
   }
-}
-
-static void remove_pbrt_materials(
-    vector<pbrt_material>& materials, const vector<pbrt_shape>& shapes) {
-  auto material_map = unordered_map<string, int>{};
-  for (auto& shape : shapes) material_map[shape.material] = 1;
-  materials.erase(std::remove_if(materials.begin(), materials.end(),
-                      [&material_map](const pbrt_material& material) {
-                        return material_map.find(material.name) ==
-                               material_map.end();
-                      }),
-      materials.end());
-}
-static void remove_pbrt_textures(
-    vector<pbrt_texture>& textures, const vector<pbrt_material>& materials) {
-  auto texture_map = unordered_map<string, int>{};
-  for (auto& material : materials) {
-    if (material.diffuse_map != "") texture_map[material.diffuse_map] = 1;
-    if (material.specular_map != "") texture_map[material.specular_map] = 1;
-    if (material.transmission_map != "")
-      texture_map[material.transmission_map] = 1;
-    if (material.eta_map != "") texture_map[material.eta_map] = 1;
-    if (material.etak_map != "") texture_map[material.etak_map] = 1;
-    if (material.opacity_map != "") texture_map[material.opacity_map] = 1;
-  }
-  textures.erase(std::remove_if(textures.begin(), textures.end(),
-                     [&texture_map](const pbrt_texture& texture) {
-                       return texture_map.find(texture.name) ==
-                              texture_map.end();
-                     }),
-      textures.end());
 }
 
 // pbrt stack ctm
