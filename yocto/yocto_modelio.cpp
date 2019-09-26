@@ -156,14 +156,6 @@ static inline vector<string> split_string(
   return tokens;
 }
 
-static inline void checked_fprintf(file_wrapper& fs, const char* fmt, ...) {
-  va_list args1;
-  va_start(args1, fmt);
-  if (vfprintf(fs.fs, fmt, args1) < 0)
-    throw std::runtime_error("cannot write to file");
-  va_end(args1);
-}
-
 static inline vector<vec2f> flip_texcoord(const vector<vec2f>& texcoord) {
   auto flipped = texcoord;
   for (auto& uv : flipped) uv.y = 1 - uv.y;
@@ -708,7 +700,7 @@ void save_ply(const string& filename, const ply_model& ply) {
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
         format_values(fs, "property list uchar {} {}\n",
-            type_map[prop.type].c_str(), prop.name);
+            type_map[prop.type], prop.name);
       } else {
         format_values(fs, "property {} {}\n", type_map[prop.type], prop.name);
       }
@@ -1436,18 +1428,18 @@ void read_ply_value_generic(file_wrapper& fs, ply_format format,
 template <typename VT>
 static inline void write_ply_prop(file_wrapper& fs, ply_type type, VT value) {
   switch (type) {
-    case ply_type::i8: checked_fprintf(fs, "%d", (int)value); break;
-    case ply_type::i16: checked_fprintf(fs, "%d", (int)value); break;
-    case ply_type::i32: checked_fprintf(fs, "%d", (int)value); break;
-    case ply_type::i64: checked_fprintf(fs, "%lld", (long long)value); break;
-    case ply_type::u8: checked_fprintf(fs, "%u", (unsigned)value); break;
-    case ply_type::u16: checked_fprintf(fs, "%u", (unsigned)value); break;
-    case ply_type::u32: checked_fprintf(fs, "%u", (unsigned)value); break;
+    case ply_type::i8: format_values(fs, "{}", (int)value); break;
+    case ply_type::i16: format_values(fs, "{}", (int)value); break;
+    case ply_type::i32: format_values(fs, "{}", (int)value); break;
+    case ply_type::i64: format_values(fs, "{}", (long long)value); break;
+    case ply_type::u8: format_values(fs, "{}", (unsigned)value); break;
+    case ply_type::u16: format_values(fs, "{}", (unsigned)value); break;
+    case ply_type::u32: format_values(fs, "{}", (unsigned)value); break;
     case ply_type::u64:
-      checked_fprintf(fs, "%llu", (unsigned long long)value);
+      format_values(fs, "{}", (unsigned long long)value);
       break;
-    case ply_type::f32: checked_fprintf(fs, "%g", (float)value); break;
-    case ply_type::f64: checked_fprintf(fs, "%g", (double)value); break;
+    case ply_type::f32: format_values(fs, "{}", (float)value); break;
+    case ply_type::f64: format_values(fs, "{}", (double)value); break;
   }
 }
 
@@ -2246,7 +2238,7 @@ void save_obj(const string& filename, const obj_model& obj) {
 
   // save objects
   for (auto& shape : obj.shapes) {
-    format_values(fs, "o {}\n", shape.name.c_str());
+    format_values(fs, "o {}\n", shape.name);
     auto element_labels = vector<string>{"f", "l", "p"};
     auto element_groups = vector<const vector<obj_element>*>{
         &shape.faces, &shape.lines, &shape.points};
@@ -3026,9 +3018,9 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
 void write_obj_comment(file_wrapper& fs, const string& comment) {
   auto lines = split_string(comment, "\n");
   for (auto& line : lines) {
-    checked_fprintf(fs, "# %s\n", line.c_str());
+    format_values(fs, "# {}\n", line);
   }
-  checked_fprintf(fs, "\n");
+  format_values(fs, "\n");
 }
 
 void write_obj_command(file_wrapper& fs, obj_command command,
@@ -3047,16 +3039,16 @@ void write_obj_command(file_wrapper& fs, obj_command command,
       for (auto& vert : vertices) format_values(fs, " {}", vert);
       format_values(fs, "\n");
       break;
-    case obj_command::object: format_values(fs, "o {}\n", name.c_str()); break;
-    case obj_command::group: format_values(fs, "g {}\n", name.c_str()); break;
+    case obj_command::object: format_values(fs, "o {}\n", name); break;
+    case obj_command::group: format_values(fs, "g {}\n", name); break;
     case obj_command::usemtl:
-      format_values(fs, "usemtl {}\n", name.c_str());
+      format_values(fs, "usemtl {}\n", name);
       break;
     case obj_command::smoothing:
-      format_values(fs, "s {}\n", name.c_str());
+      format_values(fs, "s {}\n", name);
       break;
     case obj_command::mtllib:
-      format_values(fs, "mtllib {}\n", name.c_str());
+      format_values(fs, "mtllib {}\n", name);
       break;
     case obj_command::objxlib: break;
   }
@@ -3549,46 +3541,46 @@ bool read_yaml_property(file_wrapper& fs, string& group, string& key,
 void write_yaml_comment(file_wrapper& fs, const string& comment) {
   auto lines = split_string(comment, "\n");
   for (auto& line : lines) {
-    checked_fprintf(fs, "# %s\n", line.c_str());
+    format_values(fs, "# {}\n", line);
   }
-  checked_fprintf(fs, "\n");
+  format_values(fs, "\n");
 }
 
 // Save yaml property
 void write_yaml_property(file_wrapper& fs, const string& object,
     const string& key, bool newobj, const yaml_value& value) {
   if (key.empty()) {
-    checked_fprintf(fs, "\n%s:\n", object.c_str());
+    format_values(fs, "\n{}:\n", object);
   } else {
     if (!object.empty()) {
-      checked_fprintf(fs, (newobj ? "  - " : "    "));
+      format_values(fs, (newobj ? "  - " : "    "));
     }
-    checked_fprintf(fs, "%s: ", key.c_str());
+    format_values(fs, "{}: ", key);
     switch (value.type) {
       case yaml_value_type::number:
-        checked_fprintf(fs, "%g", value.number);
+        format_values(fs, "{}", value.number);
         break;
       case yaml_value_type::boolean:
-        checked_fprintf(fs, "%s", value.boolean ? "true" : "false");
+        format_values(fs, "{}", value.boolean ? "true" : "false");
         break;
       case yaml_value_type::string:
-        checked_fprintf(fs, "%s", value.string_.c_str());
+        format_values(fs, "{}", value.string_);
         break;
       case yaml_value_type::array:
-        checked_fprintf(fs, "[ ");
+        format_values(fs, "[ ");
         for (auto i = 0; i < value.number; i++) {
-          if (i) checked_fprintf(fs, ", ");
-          checked_fprintf(fs, "%g", value.array_[i]);
+          if (i) format_values(fs, ", ");
+          format_values(fs, "{}", value.array_[i]);
         }
-        checked_fprintf(fs, " ]");
+        format_values(fs, " ]");
         break;
     }
-    checked_fprintf(fs, "\n", key.c_str());
+    format_values(fs, "\n");
   }
 }
 
 void write_yaml_object(file_wrapper& fs, const string& object) {
-  checked_fprintf(fs, "\n%s:\n", object.c_str());
+  format_values(fs, "\n{}:\n", object);
 }
 
 }  // namespace yocto
@@ -5331,9 +5323,9 @@ bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
 void write_pbrt_comment(file_wrapper& fs, const string& comment) {
   auto lines = split_string(comment, "\n");
   for (auto& line : lines) {
-    checked_fprintf(fs, "# %s\n", line.c_str());
+    format_values(fs, "# {}\n", line);
   }
-  checked_fprintf(fs, "\n");
+  format_values(fs, "\n");
 }
 
 void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
@@ -5352,176 +5344,169 @@ void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
       {pbrt_value_type::spectrum, "spectrum"},
   };
   for (auto& value : values) {
-    checked_fprintf(fs, " \"%s %s\" ", type_labels.at(value.type).c_str(),
-        value.name.c_str());
+    format_values(fs, " \"{} {}\" ", type_labels.at(value.type),
+        value.name);
     switch (value.type) {
       case pbrt_value_type::real:
         if (!value.vector1f.empty()) {
-          checked_fprintf(fs, "[ ");
-          for (auto& v : value.vector1f) checked_fprintf(fs, " %g", v);
-          checked_fprintf(fs, " ]");
+          format_values(fs, "[ ");
+          for (auto& v : value.vector1f) format_values(fs, " {}", v);
+          format_values(fs, " ]");
         } else {
-          checked_fprintf(fs, "%g", value.value1f);
+          format_values(fs, "{}", value.value1f);
         }
         break;
       case pbrt_value_type::integer:
         if (!value.vector1f.empty()) {
-          checked_fprintf(fs, "[ ");
-          for (auto& v : value.vector1i) checked_fprintf(fs, " %d", v);
-          checked_fprintf(fs, " ]");
+          format_values(fs, "[ ");
+          for (auto& v : value.vector1i) format_values(fs, " {}", v);
+          format_values(fs, " ]");
         } else {
-          checked_fprintf(fs, "%d", value.value1i);
+          format_values(fs, "{}", value.value1i);
         }
         break;
       case pbrt_value_type::boolean:
-        checked_fprintf(fs, "\"%s\"", value.value1b ? "true" : "false");
+        format_values(fs, "\"{}\"", value.value1b ? "true" : "false");
         break;
       case pbrt_value_type::string:
-        checked_fprintf(fs, "\"%s\"", value.value1s.c_str());
+        format_values(fs, "\"{}\"", value.value1s);
         break;
       case pbrt_value_type::point:
       case pbrt_value_type::vector:
       case pbrt_value_type::normal:
       case pbrt_value_type::color:
         if (!value.vector3f.empty()) {
-          checked_fprintf(fs, "[ ");
+          format_values(fs, "[ ");
           for (auto& v : value.vector3f)
-            checked_fprintf(fs, " %g %g %g", v.x, v.y, v.z);
-          checked_fprintf(fs, " ]");
+            format_values(fs, " {}", v);
+          format_values(fs, " ]");
         } else {
-          checked_fprintf(fs, "[ %g %g %g ]", value.value3f.x, value.value3f.y,
-              value.value3f.z);
+          format_values(fs, "[ {} ]", value.value3f);
         }
         break;
       case pbrt_value_type::spectrum:
-        checked_fprintf(fs, "[ ");
-        for (auto& v : value.vector1f) checked_fprintf(fs, " %g", v);
-        checked_fprintf(fs, " ]");
+        format_values(fs, "[ ");
+        for (auto& v : value.vector1f) format_values(fs, " {}", v);
+        format_values(fs, " ]");
         break;
       case pbrt_value_type::texture:
-        checked_fprintf(fs, "\"%s\"", value.value1s.c_str());
+        format_values(fs, "\"{}\"", value.value1s);
         break;
       case pbrt_value_type::point2:
       case pbrt_value_type::vector2:
         if (!value.vector2f.empty()) {
-          checked_fprintf(fs, "[ ");
+          format_values(fs, "[ ");
           for (auto& v : value.vector2f)
-            checked_fprintf(fs, " %g %g", v.x, v.y);
-          checked_fprintf(fs, " ]");
+            format_values(fs, " {}", v);
+          format_values(fs, " ]");
         } else {
-          checked_fprintf(fs, "[ %g %g ]", value.value2f.x, value.value2f.x);
+          format_values(fs, "[ {} ]", value.value2f);
         }
         break;
     }
   }
-  checked_fprintf(fs, "\n");
+  format_values(fs, "\n");
 }
 
 void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
     const string& name, const string& type, const frame3f& xform,
     const vector<pbrt_value>& values, bool texture_float) {
   switch (command) {
-    case pbrt_command_::world_begin: checked_fprintf(fs, "WorldBegin\n"); break;
-    case pbrt_command_::world_end: checked_fprintf(fs, "WorldEnd\n"); break;
+    case pbrt_command_::world_begin: format_values(fs, "WorldBegin\n"); break;
+    case pbrt_command_::world_end: format_values(fs, "WorldEnd\n"); break;
     case pbrt_command_::attribute_begin:
-      checked_fprintf(fs, "AttributeBegin\n");
+      format_values(fs, "AttributeBegin\n");
       break;
     case pbrt_command_::attribute_end:
-      checked_fprintf(fs, "AttributeEnd\n");
+      format_values(fs, "AttributeEnd\n");
       break;
     case pbrt_command_::transform_begin:
-      checked_fprintf(fs, "TransformBegin\n");
+      format_values(fs, "TransformBegin\n");
       break;
     case pbrt_command_::transform_end:
-      checked_fprintf(fs, "TransformEnd\n");
+      format_values(fs, "TransformEnd\n");
       break;
     case pbrt_command_::object_begin:
-      checked_fprintf(fs, "ObjectBegin \"%s\"\n", name.c_str());
+      format_values(fs, "ObjectBegin \"{}\"\n", name);
       break;
-    case pbrt_command_::object_end: checked_fprintf(fs, "ObjectEnd\n"); break;
+    case pbrt_command_::object_end: format_values(fs, "ObjectEnd\n"); break;
     case pbrt_command_::object_instance:
-      checked_fprintf(fs, "ObjectInstance \"%s\"\n", name.c_str());
+      format_values(fs, "ObjectInstance \"{}\"\n", name);
       break;
     case pbrt_command_::sampler:
-      checked_fprintf(fs, "Sampler \"%s\"", type.c_str());
+      format_values(fs, "Sampler \"{}\"", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::integrator:
-      checked_fprintf(fs, "Integrator \"%s\"", type.c_str());
+      format_values(fs, "Integrator \"{}\"", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::accelerator:
-      checked_fprintf(fs, "Accelerator \"%s\"", type.c_str());
+      format_values(fs, "Accelerator \"{}\"", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::film:
-      checked_fprintf(fs, "Film \"%s\"", type.c_str());
+      format_values(fs, "Film \"{}\"", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::filter:
-      checked_fprintf(fs, "Filter \"%s\"", type.c_str());
+      format_values(fs, "Filter \"{}\"", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::camera:
-      checked_fprintf(fs, "Camera \"%s\"", type.c_str());
+      format_values(fs, "Camera \"{}\"", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::shape:
-      checked_fprintf(fs, "Shape \"%s\"", type.c_str());
+      format_values(fs, "Shape \"{}\"", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::light:
-      checked_fprintf(fs, "LightSource \"%s\"", type.c_str());
+      format_values(fs, "LightSource \"{}\"", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::material:
-      checked_fprintf(fs, "Material \"%s\"", type.c_str());
+      format_values(fs, "Material \"{}\"", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::arealight:
-      checked_fprintf(fs, "AreaLightSource \"%s\"", type.c_str());
+      format_values(fs, "AreaLightSource \"{}\"", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::named_texture:
-      checked_fprintf(fs, "Texture \"%s\" \"%s\" \"%s\"", name.c_str(),
-          texture_float ? "float" : "rgb", type.c_str());
+      format_values(fs, "Texture \"{}\" \"{}\" \"{}\"", name,
+          texture_float ? "float" : "rgb", type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::named_medium:
-      checked_fprintf(fs, "MakeNamedMedium \"%s\" \"string type\" \"%s\"",
-          name.c_str(), type.c_str());
+      format_values(fs, "MakeNamedMedium \"{}\" \"string type\" \"{}\"",
+          name, type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::named_material:
-      checked_fprintf(fs, "MakeNamedMaterial \"%s\" \"string type\" \"%s\"",
-          name.c_str(), type.c_str());
+      format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\"",
+          name, type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::include:
-      checked_fprintf(fs, "Include \"%s\"\n", name.c_str());
+      format_values(fs, "Include \"{}\"\n", name);
       break;
     case pbrt_command_::reverse_orientation:
-      checked_fprintf(fs, "ReverseOrientation\n");
+      format_values(fs, "ReverseOrientation\n");
       break;
     case pbrt_command_::set_transform:
-      checked_fprintf(fs,
-          "Transform %g %g %g 0 %g %g %g 0 %g %g %g 0 %g %g %g 1\n", xform.x.x,
-          xform.x.y, xform.x.z, xform.y.x, xform.y.y, xform.y.z, xform.z.x,
-          xform.z.y, xform.z.z, xform.o.x, xform.o.y, xform.o.z);
+      format_values(fs,
+          "Transform {}\n", (mat4f)xform);
       break;
     case pbrt_command_::concat_transform:
-      checked_fprintf(fs,
-          "ConcatTransform %g %g %g 0 %g %g %g 0 %g %g %g 0 %g %g %g 1\n",
-          xform.x.x, xform.x.y, xform.x.z, xform.y.x, xform.y.y, xform.y.z,
-          xform.z.x, xform.z.y, xform.z.z, xform.o.x, xform.o.y, xform.o.z);
+      format_values(fs,
+          "ConcatTransform {}\n", (mat4f)xform);
       break;
     case pbrt_command_::lookat_transform:
-      checked_fprintf(fs, "LookAt %g %g %g %g %g %g %g %g %g\n", xform.x.x,
-          xform.x.y, xform.x.z, xform.y.x, xform.y.y, xform.y.z, xform.z.x,
-          xform.z.y, xform.z.z);
+      format_values(fs, "LookAt {} {} {}\n", xform.x, xform.y, xform.z);
       break;
     case pbrt_command_::use_material:
-      checked_fprintf(fs, "NamedMaterial \"%s\"\n", name.c_str());
+      format_values(fs, "NamedMaterial \"{}\"\n", name);
       break;
     case pbrt_command_::medium_interface: {
       auto interior = ""s, exterior = ""s;
@@ -5536,17 +5521,17 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
         else
           interior.push_back(c);
       }
-      checked_fprintf(fs, "MediumInterface \"%s\" \"%s\"\n", interior.c_str(),
-          exterior.c_str());
+      format_values(fs, "MediumInterface \"{}\" \"{}\"\n", interior,
+          exterior);
     } break;
     case pbrt_command_::active_transform:
-      checked_fprintf(fs, "ActiveTransform \"%s\"\n", name.c_str());
+      format_values(fs, "ActiveTransform \"{}\"\n", name);
       break;
     case pbrt_command_::coordinate_system_set:
-      checked_fprintf(fs, "CoordinateSystem \"%s\"\n", name.c_str());
+      format_values(fs, "CoordinateSystem \"{}\"\n", name);
       break;
     case pbrt_command_::coordinate_system_transform:
-      checked_fprintf(fs, "CoordinateSysTransform \"%s\"\n", name.c_str());
+      format_values(fs, "CoordinateSysTransform \"{}\"\n", name);
       break;
   }
 }
