@@ -135,8 +135,8 @@ template <typename T>
 inline void draw_glscenetree(const opengl_window& win, const string& lbl_,
     yocto_scene& scene, int index, const vector<T>& vals, app_selection& sel) {
   if (index < 0) return;
-  auto lbl = vals[index].uri;
-  if (!empty(lbl_)) lbl = lbl_ + ": " + vals[index].uri;
+  auto lbl = vals[index].name;
+  if (!empty(lbl_)) lbl = lbl_ + ": " + vals[index].name;
   auto selected = sel.type == type_index(typeid(T)) && sel.index == index;
   if (begin_glselectabletreenode(win, lbl.c_str(), selected)) {
     draw_glscenetree_rec(win, lbl_, scene, vals[index], sel);
@@ -209,7 +209,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     yocto_scene& scene) {
   auto edited  = value;
   auto updated = false;
-  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_gltextinput(win, "name", edited.name)) updated = true;
   if (draw_glslider(win, "frame.x", edited.frame.x, -1, 1)) updated = true;
   if (draw_glslider(win, "frame.y", edited.frame.y, -1, 1)) updated = true;
   if (draw_glslider(win, "frame.z", edited.frame.z, -1, 1)) updated = true;
@@ -238,14 +238,16 @@ inline bool draw_glsceneinspector(const opengl_window& win,
 inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_texture& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-  auto edited  = yocto_texture{};
-  edited.uri   = value.uri;
-  auto updated = false;
-  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  auto edited     = yocto_texture{};
+  edited.name     = value.name;
+  edited.filename = value.filename;
+  auto updated    = false;
+  if (draw_gltextinput(win, "name", edited.name)) updated = true;
+  if (draw_gltextinput(win, "filename", edited.filename)) updated = true;
   draw_gllabel(win, "hdr", "%d x %d", value.hdr.size().x, value.hdr.size().y);
   draw_gllabel(win, "ldr", "%d x %d", value.ldr.size().x, value.ldr.size().y);
   if (updated) {
-    auto reload = edited.uri != value.uri;
+    auto reload = edited.filename != value.filename;
     if (!reload) {
       edited.hdr = value.hdr;
       edited.ldr = value.ldr;
@@ -258,14 +260,16 @@ inline bool draw_glsceneinspector(const opengl_window& win,
 inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_voltexture& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-  auto edited  = yocto_voltexture{};
-  edited.uri   = value.uri;
-  auto updated = false;
-  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  auto edited     = yocto_voltexture{};
+  edited.name     = value.name;
+  edited.filename = value.filename;
+  auto updated    = false;
+  if (draw_gltextinput(win, "name", edited.name)) updated = true;
+  if (draw_gltextinput(win, "filename", edited.filename)) updated = true;
   draw_gllabel(win, "voxel_data", "%d x %d x %d", value.vol.size().x,
       value.vol.size().y, value.vol.size().z);
   if (updated) {
-    auto reload = edited.uri != value.uri;
+    auto reload = edited.filename != value.filename;
     if (!reload) {
       edited.vol = value.vol;
     }
@@ -279,7 +283,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     yocto_scene& scene) {
   auto edited  = value;
   auto updated = false;
-  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_gltextinput(win, "name", edited.name)) updated = true;
   if (draw_glhdrcoloredit(win, "emission", edited.emission)) updated = true;
   if (draw_glcoloredit(win, "diffuse", edited.diffuse)) updated = true;
   if (draw_glcoloredit(win, "specular", edited.specular)) updated = true;
@@ -335,10 +339,12 @@ inline bool draw_glsceneinspector(const opengl_window& win,
 inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_shape& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
-  auto edited  = yocto_shape{};
-  edited.uri   = value.uri;
-  auto updated = false;
-  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  auto edited     = yocto_shape{};
+  edited.name     = value.name;
+  edited.filename = value.filename;
+  auto updated    = false;
+  if (draw_gltextinput(win, "name", edited.name)) updated = true;
+  if (draw_gltextinput(win, "filename", edited.filename)) updated = true;
   draw_gllabel(win, "points", "%ld", value.points.size());
   draw_gllabel(win, "lines", "%ld", value.lines.size());
   draw_gllabel(win, "triangles", "%ld", value.triangles.size());
@@ -353,7 +359,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   draw_gllabel(win, "radius", "%ld", value.radius.size());
   draw_gllabel(win, "tangsp", "%ld", value.tangents.size());
   if (updated) {
-    auto reload = edited.uri != value.uri;
+    auto reload = edited.filename != value.filename;
     if (!reload) {
       edited.points        = value.points;
       edited.lines         = value.lines;
@@ -379,7 +385,8 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     const yocto_subdiv& value, const app_selection& sel, app_edit& edit,
     yocto_scene& scene) {
   auto edited             = yocto_subdiv{};
-  edited.uri              = value.uri;
+  edited.name             = value.name;
+  edited.filename         = value.filename;
   edited.subdivisions     = value.subdivisions;
   edited.catmullclark     = value.catmullclark;
   edited.smooth           = value.smooth;
@@ -388,7 +395,8 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   edited.displacement_tex = value.displacement_tex;
   edited.displacement     = value.displacement;
   auto updated            = false;
-  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_gltextinput(win, "name", edited.name)) updated = true;
+  if (draw_gltextinput(win, "filename", edited.filename)) updated = true;
   if (draw_glslider(win, "subdivisions", edited.subdivisions, 0, 10))
     updated = true;
   if (draw_glcheckbox(win, "catmullclark", edited.catmullclark)) updated = true;
@@ -414,7 +422,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
   draw_gllabel(win, "color", "%ld", value.colors.size());
   draw_gllabel(win, "radius", "%ld", value.radius.size());
   if (updated) {
-    auto reload = edited.uri != value.uri;
+    auto reload = edited.filename != value.filename;
     if (!reload) {
       edited.points        = value.points;
       edited.lines         = value.lines;
@@ -439,7 +447,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     yocto_scene& scene) {
   auto edited  = value;
   auto updated = false;
-  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_gltextinput(win, "name", edited.name)) updated = true;
   if (draw_glslider(win, "frame[0]", edited.frame.x, -1, 1)) updated = true;
   if (draw_glslider(win, "frame[1]", edited.frame.y, -1, 1)) updated = true;
   if (draw_glslider(win, "frame[2]", edited.frame.z, -1, 1)) updated = true;
@@ -459,7 +467,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     yocto_scene& scene) {
   auto edited  = value;
   auto updated = false;
-  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_gltextinput(win, "name", edited.name)) updated = true;
   if (draw_glslider(win, "frame[0]", edited.frame.x, -1, 1)) updated = true;
   if (draw_glslider(win, "frame[1]", edited.frame.y, -1, 1)) updated = true;
   if (draw_glslider(win, "frame[2]", edited.frame.z, -1, 1)) updated = true;
@@ -479,7 +487,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     yocto_scene& scene) {
   auto edited  = value;
   auto updated = false;
-  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_gltextinput(win, "uri", edited.name)) updated = true;
   if (draw_glcombobox(win, "parent", edited.parent, scene.nodes, true))
     updated = true;
   if (draw_glslider(win, "local[0]", edited.local.x, -1, 1)) updated = true;
@@ -508,7 +516,7 @@ inline bool draw_glsceneinspector(const opengl_window& win,
     yocto_scene& scene) {
   auto edited  = value;
   auto updated = false;
-  if (draw_gltextinput(win, "uri", edited.uri)) updated = true;
+  if (draw_gltextinput(win, "uri", edited.name)) updated = true;
   if (draw_gltextinput(win, "path", edited.filename)) updated = true;
   if (draw_gltextinput(win, "group", edited.group)) updated = true;
   // if(draw_glcombobox(win, "type", &value.type,

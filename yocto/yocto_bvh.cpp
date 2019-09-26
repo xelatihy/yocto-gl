@@ -1666,12 +1666,12 @@ bvh_intersection overlap_bvh(const bvh_scene& scene, const vec3f& pos,
 namespace yocto {
 
 // Print bvh statistics.
-string format_stats(const bvh_shape& bvh) {
-  // TODO
-  auto str = ""s;
-  return str;
+vector<string> format_stats(const bvh_shape& bvh) {
+  // TODO: implement this
+  return {};
 }
-string format_stats(const bvh_scene& bvh) {
+vector<string> format_stats(const bvh_scene& bvh) {
+  // TODO: implement this
 #if 0
     auto num_shapes    = (size_t)0;
     auto num_instances = (size_t)0;
@@ -1748,9 +1748,7 @@ string format_stats(const bvh_scene& bvh) {
     str += "memory_embree: " + std::to_string(embree_memory) + "\n";
 #endif
 #endif
-  // TODO
-  auto str = ""s;
-  return str;
+  return {};
 }
 
 }  // namespace yocto

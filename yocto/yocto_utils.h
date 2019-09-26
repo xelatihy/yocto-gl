@@ -108,6 +108,8 @@
 
 #include "yocto_math.h"
 
+#include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <chrono>
 #include <cstdio>
@@ -115,8 +117,6 @@
 #include <mutex>
 #include <string>
 #include <thread>
-#include <algorithm>
-#include <atomic>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -406,7 +406,7 @@ inline string get_extension(const string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
+  return filename.substr(pos);
 }
 
 // Get filename without directory.
@@ -751,7 +751,7 @@ inline bool parse_cmdline_value(const string& str, int& value) {
 }
 inline bool parse_cmdline_value(const string& str, float& value) {
   auto end = (char*)nullptr;
-  value    = (int)strtof(str.c_str(), &end);
+  value    = strtof(str.c_str(), &end);
   return end != nullptr;
 }
 inline bool parse_cmdline_value(const string& str, bool& value) {

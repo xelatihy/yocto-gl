@@ -35,9 +35,6 @@ using namespace yocto;
 
 #include <map>
 
-#include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
-
 int main(int argc, const char* argv[]) {
   // options
   auto load_prms    = load_params{};
@@ -170,11 +167,8 @@ int main(int argc, const char* argv[]) {
                              "/" + std::to_string(trace_prms.samples));
     trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
     if (save_batch) {
-      auto outfilename = fs::path(imfilename)
-                             .replace_extension(
-                                 "-s" + std::to_string(sample + nsamples) +
-                                 fs::path(imfilename).extension().string())
-                             .string();
+      auto outfilename = replace_extension(imfilename,
+          "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
       try {
         if (is_hdr_filename(outfilename)) {
           save_image(outfilename, logo ? add_logo(render) : render);

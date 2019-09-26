@@ -29,12 +29,10 @@
 #include "yocto_scene.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
+#include "yocto_utils.h"
 
 #include <assert.h>
 #include <unordered_map>
-
-#include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES
@@ -159,7 +157,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       auto disp = mean(
           xyz(eval_texture(displacement, shape.texcoords[vid], true)));
-      if (!is_hdr_filename(displacement.uri)) disp -= 0.5f;
+      if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       shape.positions[vid] += normals[vid] * scale * disp;
     }
     if (update_normals || !shape.normals.empty()) {
@@ -175,7 +173,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
       for (auto i = 0; i < 4; i++) {
         auto disp = mean(
             xyz(eval_texture(displacement, shape.texcoords[qtxt[i]], true)));
-        if (!is_hdr_filename(displacement.uri)) disp -= 0.5f;
+        if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
         offset[qpos[i]] += scale * disp;
         count[qpos[i]] += 1;
       }
@@ -1214,8 +1212,7 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
   }
 }
 
-string format_stats(
-    const yocto_scene& scene, const string& prefix, bool verbose) {
+vector<string> format_stats(const yocto_scene& scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
@@ -1235,111 +1232,50 @@ string format_stats(
 
   auto bbox = compute_bounds(scene);
 
-  auto stats = ""s;
-  stats += prefix + "cameras:      " + format(scene.cameras.size()) + "\n";
-  stats += prefix + "shapes:       " + format(scene.shapes.size()) + "\n";
-  stats += prefix + "subdivs:      " + format(scene.subdivs.size()) + "\n";
-  stats += prefix + "instances:    " + format(scene.instances.size()) + "\n";
-  stats += prefix + "environments: " + format(scene.environments.size()) + "\n";
-  stats += prefix + "textures:     " + format(scene.textures.size()) + "\n";
-  stats += prefix + "voltextures:  " + format(scene.voltextures.size()) + "\n";
-  stats += prefix + "materials:    " + format(scene.materials.size()) + "\n";
-  stats += prefix + "nodes:        " + format(scene.nodes.size()) + "\n";
-  stats += prefix + "animations:   " + format(scene.animations.size()) + "\n";
-  stats += prefix + "points:       " +
-           format(accumulate(
-               scene.shapes, [](auto& shape) { return shape.points.size(); })) +
-           "\n";
-  stats += prefix + "lines:        " +
-           format(accumulate(
-               scene.shapes, [](auto& shape) { return shape.lines.size(); })) +
-           "\n";
-  stats += prefix + "triangles:    " +
-           format(accumulate(scene.shapes,
-               [](auto& shape) { return shape.triangles.size(); })) +
-           "\n";
-  stats += prefix + "quads:        " +
-           format(accumulate(
-               scene.shapes, [](auto& shape) { return shape.quads.size(); })) +
-           "\n";
-  stats += prefix + "fvquads:      " +
-           format(accumulate(scene.shapes,
-               [](auto& shape) { return shape.quadspos.size(); })) +
-           "\n";
-  stats += prefix + "texels4b:     " +
-           format(accumulate(scene.textures,
-               [](auto& texture) {
-                 return (size_t)texture.ldr.size().x *
-                        (size_t)texture.ldr.size().x;
-               })) +
-           "\n";
-  stats += prefix + "texels4f:     " +
-           format(accumulate(scene.textures,
-               [](auto& texture) {
-                 return (size_t)texture.hdr.size().x *
-                        (size_t)texture.hdr.size().y;
-               })) +
-           "\n";
-  stats += prefix + "volxels1f:    " +
-           format(accumulate(scene.voltextures,
-               [](auto& texture) {
-                 return (size_t)texture.vol.size().x *
-                        (size_t)texture.vol.size().y *
-                        (size_t)texture.vol.size().z;
-               })) +
-           "\n";
-  stats += prefix + "center:       " + format3(center(bbox)) + "\n";
-  stats += prefix + "size:         " + format3(size(bbox)) + "\n";
+  auto stats = vector<string>{};
+  stats.push_back("cameras:      " + format(scene.cameras.size()));
+  stats.push_back("shapes:       " + format(scene.shapes.size()));
+  stats.push_back("subdivs:      " + format(scene.subdivs.size()));
+  stats.push_back("instances:    " + format(scene.instances.size()));
+  stats.push_back("environments: " + format(scene.environments.size()));
+  stats.push_back("textures:     " + format(scene.textures.size()));
+  stats.push_back("voltextures:  " + format(scene.voltextures.size()));
+  stats.push_back("materials:    " + format(scene.materials.size()));
+  stats.push_back("nodes:        " + format(scene.nodes.size()));
+  stats.push_back("animations:   " + format(scene.animations.size()));
+  stats.push_back(
+      "points:       " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.points.size(); })));
+  stats.push_back(
+      "lines:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.lines.size(); })));
+  stats.push_back("triangles:    " +
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.triangles.size(); })));
+  stats.push_back(
+      "quads:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.quads.size(); })));
+  stats.push_back("fvquads:      " +
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.quadspos.size(); })));
+  stats.push_back(
+      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.ldr.size().x * (size_t)texture.ldr.size().x;
+      })));
+  stats.push_back(
+      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
+      })));
+  stats.push_back("volxels1f:    " +
+                  format(accumulate(scene.voltextures, [](auto& texture) {
+                    return (size_t)texture.vol.size().x *
+                           (size_t)texture.vol.size().y *
+                           (size_t)texture.vol.size().z;
+                  })));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
 
   return stats;
-}
-
-// Add missing names and resolve duplicated names.
-void normalize_uris(yocto_scene& scene) {
-  auto normalize = [](string& name, const string& base, const string& ext,
-                       int num) {
-    for (auto& c : name) {
-      if (c == ':' || c == ' ') c = '_';
-    }
-    if (name.empty()) name = base + "_" + std::to_string(num);
-    if (fs::path(name).parent_path().empty()) name = base + "s/" + name;
-    if (fs::path(name).extension().empty()) name = name + "." + ext;
-  };
-  for (auto id = 0; id < scene.cameras.size(); id++)
-    normalize(scene.cameras[id].uri, "camera", "yaml", id);
-  for (auto id = 0; id < scene.textures.size(); id++)
-    normalize(scene.textures[id].uri, "texture", "png", id);
-  for (auto id = 0; id < scene.voltextures.size(); id++)
-    normalize(scene.voltextures[id].uri, "volume", "yvol", id);
-  for (auto id = 0; id < scene.materials.size(); id++)
-    normalize(scene.materials[id].uri, "material", "yaml", id);
-  for (auto id = 0; id < scene.shapes.size(); id++)
-    normalize(scene.shapes[id].uri, "shape", "ply", id);
-  for (auto id = 0; id < scene.instances.size(); id++)
-    normalize(scene.instances[id].uri, "instance", "yaml", id);
-  for (auto id = 0; id < scene.animations.size(); id++)
-    normalize(scene.animations[id].uri, "animation", "yaml", id);
-  for (auto id = 0; id < scene.nodes.size(); id++)
-    normalize(scene.nodes[id].uri, "node", "yaml", id);
-}
-void rename_instances(yocto_scene& scene) {
-  auto shape_names = vector<string>(scene.shapes.size());
-  for (auto sid = 0; sid < scene.shapes.size(); sid++) {
-    shape_names[sid] = fs::path(scene.shapes[sid].uri).stem();
-  }
-  auto shape_count = vector<vec2i>(scene.shapes.size(), vec2i{0, 0});
-  for (auto& instance : scene.instances) shape_count[instance.shape].y += 1;
-  for (auto& instance : scene.instances) {
-    if (shape_count[instance.shape].y == 1) {
-      instance.uri = "instances/" + shape_names[instance.shape] + ".yaml";
-    } else {
-      auto num = std::to_string(shape_count[instance.shape].x++);
-      while (num.size() < (int)ceil(log10(shape_count[instance.shape].y)))
-        num = '0' + num;
-      instance.uri = "instances/" + shape_names[instance.shape] + "-" + num +
-                     ".yaml";
-    }
-  }
 }
 
 // Normalized a scaled color in a material
@@ -1382,7 +1318,7 @@ void add_materials(yocto_scene& scene) {
     if (instance.material >= 0) continue;
     if (material_id < 0) {
       auto material    = yocto_material{};
-      material.uri     = "materails/default.yaml";
+      material.name    = "default";
       material.diffuse = {0.2f, 0.2f, 0.2f};
       scene.materials.push_back(material);
       material_id = (int)scene.materials.size() - 1;
@@ -1404,7 +1340,7 @@ void add_radius(yocto_scene& scene, float radius) {
 void add_cameras(yocto_scene& scene) {
   if (scene.cameras.empty()) {
     auto camera = yocto_camera{};
-    camera.uri  = "cameras/default.yaml";
+    camera.name = "default";
     set_view(camera, compute_bounds(scene), {0, 0, 1});
     scene.cameras.push_back(camera);
   }
@@ -1412,12 +1348,13 @@ void add_cameras(yocto_scene& scene) {
 
 // Add a sky environment
 void add_sky(yocto_scene& scene, float sun_angle) {
-  auto texture = yocto_texture{};
-  texture.uri  = "textures/sky.hdr";
+  auto texture     = yocto_texture{};
+  texture.name     = "sky";
+  texture.filename = "textures/sky.hdr";
   make_sunsky(texture.hdr, {1024, 512}, sun_angle);
   scene.textures.push_back(texture);
   auto environment         = yocto_environment{};
-  environment.uri          = "environments/default.yaml";
+  environment.name         = "sky";
   environment.emission     = {1, 1, 1};
   environment.emission_tex = (int)scene.textures.size() - 1;
   scene.environments.push_back(environment);
@@ -1461,7 +1398,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool notextures) {
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = unordered_map<string, int>();
     used.reserve(vals.size());
-    for (auto& value : vals) used[value.uri] += 1;
+    for (auto& value : vals) used[value.name] += 1;
     for (auto& [name, used] : used) {
       if (name == "") {
         errs.push_back("empty " + base + " name");
@@ -1473,13 +1410,14 @@ vector<string> validate_scene(const yocto_scene& scene, bool notextures) {
   auto check_empty_textures = [&errs](const vector<yocto_texture>& vals) {
     for (auto& value : vals) {
       if (value.hdr.empty() && value.ldr.empty()) {
-        errs.push_back("empty texture " + value.uri);
+        errs.push_back("empty texture " + value.name);
       }
     }
   };
 
   check_names(scene.cameras, "camera");
   check_names(scene.shapes, "shape");
+  check_names(scene.subdivs, "subdiv");
   check_names(scene.textures, "texture");
   check_names(scene.voltextures, "voltexture");
   check_names(scene.materials, "material");

@@ -32,6 +32,7 @@
 
 #include "yocto_image.h"
 #include "yocto_random.h"
+#include "yocto_utils.h"
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #pragma GCC diagnostic push
@@ -63,9 +64,6 @@
 #endif
 
 #include <memory>
-
-#include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
@@ -1413,6 +1411,7 @@ void add_logo(
 void make_image_preset(image<vec4f>& img, const string& type) {
   auto size = vec2i{1024, 1024};
   if (type.find("sky") != type.npos) size = {2048, 1024};
+  if (type.find("images2") != type.npos) size = {2048, 1024};
   if (type == "grid") {
     auto params   = proc_image_params{};
     params.type   = proc_image_params::type_t::grid;
@@ -1643,7 +1642,7 @@ volume<float> make_test(const vec3i& size, float scale, float exponent) {
   return vol;
 }
 
-void make_volpreset(volume<float>& vol, const string& type) {
+void make_volume_preset(volume<float>& vol, const string& type) {
   auto size = vec3i{256, 256, 256};
   if (type == "test-volume") {
     make_test(vol, size, 6, 10);
@@ -1651,9 +1650,9 @@ void make_volpreset(volume<float>& vol, const string& type) {
     throw std::runtime_error("unknown volume preset " + type);
   }
 }
-volume<float> make_volpreset(const string& type) {
+volume<float> make_volume_preset(const string& type) {
   auto vol = volume<float>{};
-  make_volpreset(vol, type);
+  make_volume_preset(vol, type);
   return vol;
 }
 
@@ -1841,40 +1840,9 @@ static inline const char* get_tinyexr_error(int error) {
   }
 }
 
-// Return the preset type and the remaining filename
-static inline bool is_preset_filename(const string& filename) {
-  return filename.find("::yocto::") == 0;
-}
-// Return the preset type and the filename. Call only if this is a preset.
-static inline pair<string, string> get_preset_type(const string& filename) {
-  if (filename.find("::yocto::") == 0) {
-    auto aux = filename.substr(string("::yocto::").size());
-    auto pos = aux.find("::");
-    if (pos == aux.npos) throw std::runtime_error("bad preset name" + filename);
-    return {aux.substr(0, pos), aux.substr(pos + 2)};
-  } else {
-    return {"", filename};
-  }
-}
-
-static inline void load_image_preset(
-    const string& filename, image<vec4f>& img) {
-  auto [type, nfilename] = get_preset_type(filename);
-  img.resize({1024, 1024});
-  if (type == "images2") img.resize({2048, 1024});
-  make_image_preset(img, type);
-}
-static inline void load_image_preset(
-    const string& filename, image<vec4b>& img) {
-  auto imgf = image<vec4f>{};
-  load_image_preset(filename, imgf);
-  img.resize(imgf.size());
-  rgb_to_srgb(img, imgf);
-}
-
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename) {
-  auto ext = fs::path(filename).extension().string();
+  auto ext = get_extension(filename);
   return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
@@ -1887,8 +1855,10 @@ image<vec4f> load_image(const string& filename) {
 
 // Loads an hdr image.
 void load_image(const string& filename, image<vec4f>& img) {
-  if (is_preset_filename(filename)) return load_image_preset(filename, img);
-  auto ext = fs::path(filename).extension().string();
+  auto ext = get_extension(filename);
+  if (ext == ".ypreset") {
+    return make_image_preset(img, get_basename(filename));
+  }
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
@@ -1921,7 +1891,7 @@ void load_image(const string& filename, image<vec4f>& img) {
 
 // Saves an hdr image.
 void save_image(const string& filename, const image<vec4f>& img) {
-  auto ext = fs::path(filename).extension().string();
+  auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data()))
@@ -1950,8 +1920,10 @@ image<vec4b> load_imageb(const string& filename) {
 
 // Loads an ldr image.
 void load_imageb(const string& filename, image<vec4b>& img) {
-  if (is_preset_filename(filename)) return load_image_preset(filename, img);
-  auto ext = fs::path(filename).extension().string();
+  auto ext = get_extension(filename);
+  if (ext == ".ypreset") {
+    return make_image_preset(img, get_basename(filename));
+  }
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
@@ -1968,7 +1940,7 @@ void load_imageb(const string& filename, image<vec4b>& img) {
 
 // Saves an ldr image.
 void save_imageb(const string& filename, const image<vec4b>& img) {
-  auto ext = fs::path(filename).extension().string();
+  auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
             img.data(), img.size().x * 4))

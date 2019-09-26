@@ -38,8 +38,6 @@
 #include <future>
 #include <thread>
 
-#include "ext/filesystem.hpp"
-namespace fs = ghc::filesystem;
 #ifdef _WIN32
 #undef near
 #undef far
@@ -212,9 +210,9 @@ struct app_state {
 void add_new_scene(app_state& app, const string& filename) {
   auto& scn       = app.scenes.emplace_back();
   scn.filename    = filename;
-  scn.imagename   = fs::path(filename).replace_extension(".png");
-  scn.outname     = fs::path(filename).replace_extension(".edited.yaml");
-  scn.name        = fs::path(scn.filename).filename();
+  scn.imagename   = replace_extension(filename, ".png");
+  scn.outname     = replace_extension(filename, ".edited.yaml");
+  scn.name        = get_filename(scn.filename);
   scn.load_prms   = app.load_prms;
   scn.save_prms   = app.save_prms;
   scn.drawgl_prms = app.drawgl_prms;
@@ -799,15 +797,14 @@ void draw_glwidgets(const opengl_window& win) {
           win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
     add_new_scene(app, load_path);
   }
-  if (draw_glfiledialog(win, "save", save_path, true,
-          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
-          "*.yaml;*.obj;*.pbrt")) {
+  if (draw_glfiledialog(win, "save", save_path, true, get_dirname(save_path),
+          get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
     app.scenes[app.selected].outname = save_path;
     app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_scene);
     save_path = "";
   }
   if (draw_glfiledialog(win, "save image", save_path, true,
-          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
+          get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     app.scenes[app.selected].imagename = save_path;
     app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_image);
@@ -843,7 +840,7 @@ void draw_glwidgets(const opengl_window& win) {
   auto& scn = app.scenes[app.selected];
   if (begin_glheader(win, "view")) {
     auto cam_names = vector<string>();
-    for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
+    for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.name);
     auto drawgl_prms = scn.drawgl_prms;
     if (scn.load_done) {
       if (draw_glcombobox(win, "camera", drawgl_prms.camera, cam_names)) {
@@ -873,7 +870,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "scene", fs::path(scn.filename).filename());
+    draw_gllabel(win, "scene", get_filename(scn.filename));
     draw_gllabel(win, "filename", scn.filename);
     draw_gllabel(win, "outname", scn.outname);
     draw_gllabel(win, "imagename", scn.imagename);
@@ -886,7 +883,7 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      printf("%s\n", format_stats(scn.scene).c_str());
+      for (auto stat : format_stats(scn.scene)) print_info(stat);
     }
     end_glheader(win);
   }
@@ -974,24 +971,24 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    if (is_hdr_filename(texture.uri)) {
-      load_image(fs::path(filename).parent_path() / texture.uri, texture.hdr);
+    if (is_hdr_filename(texture.filename)) {
+      load_image(get_dirname(filename) + texture.filename, texture.hdr);
     } else {
-      load_imageb(fs::path(filename).parent_path() / texture.uri, texture.ldr);
+      load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
     }
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
-    load_volume(fs::path(filename).parent_path() / texture.uri, texture.vol);
+    load_volume(get_dirname(filename) + texture.filename, texture.vol);
   } else if (type == typeid(yocto_shape)) {
     auto& shape = scene.shapes[index];
-    load_shape(fs::path(filename).parent_path() / shape.uri, shape.points,
+    load_shape(get_dirname(filename) + shape.filename, shape.points,
         shape.lines, shape.triangles, shape.quads, shape.quadspos,
         shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
         shape.texcoords, shape.colors, shape.radius, false);
   } else if (type == typeid(yocto_subdiv)) {
     // TODO: this needs more fixing?
     auto& subdiv = scene.subdivs[index];
-    load_shape(fs::path(filename).parent_path() / subdiv.uri, subdiv.points,
+    load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
         subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.quadspos,
         subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
         subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
@@ -1058,7 +1055,7 @@ void update(const opengl_window& win, app_state& app) {
           log_glinfo(win, "done loading " + scn.filename);
         } catch (std::exception& e) {
           log_glerror(win, e.what());
-          scn.name = fs::path(scn.filename).filename().string() + " [error]";
+          scn.name = get_filename(scn.filename) + " [error]";
           app.errors.push_back("cannot load " + scn.filename);
         }
       } break;
@@ -1082,7 +1079,7 @@ void update(const opengl_window& win, app_state& app) {
           }
         } catch (std::exception& e) {
           log_glerror(win, e.what());
-          scn.name = fs::path(scn.filename).filename().string() + " [error]";
+          scn.name = get_filename(scn.filename) + " [error]";
           app.errors.push_back("cannot load element from " + scn.filename);
         }
       } break;
