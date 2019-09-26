@@ -1119,7 +1119,7 @@ void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
 void add_ply_lists(ply_model& ply, const vector<byte>& sizes,
     const vector<int>& values, const string& element, const string& property) {
   if (values.empty()) return;
-  add_ply_property(ply, element, property, values.size(), ply_type::i32, true);
+  add_ply_property(ply, element, property, sizes.size(), ply_type::i32, true);
   auto& prop    = get_ply_property(ply, element, property);
   prop.data_i32 = values;
   prop.ldata_u8 = sizes;

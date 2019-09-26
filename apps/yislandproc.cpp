@@ -977,7 +977,7 @@ void load_island_scene(
   if (scene.name == "") scene.name = get_basename(filename);
   add_cameras(scene);
   add_materials(scene);
-  add_names(scene);
+  fix_names(scene);
   trim_memory(scene);
   update_transforms(scene);
 
