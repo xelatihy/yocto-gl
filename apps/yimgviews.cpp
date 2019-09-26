@@ -81,7 +81,6 @@ struct app_state {
   // data
   std::deque<app_image> images;
   int                   selected = -1;
-  std::deque<string>    errors;
 
   // default options
   tonemap_params    tonemap_prms    = {};
@@ -157,47 +156,15 @@ void add_new_image(app_state& app, const string& filename) {
 }
 
 void draw_glwidgets(const opengl_window& win) {
-  static string load_path = "", save_path = "", error_message = "";
   auto&         app = *(app_state*)get_gluser_pointer(win);
   if (!begin_glwidgets_window(win, "yimview")) return;
-  if (!app.errors.empty() && error_message.empty()) {
-    error_message = app.errors.front();
-    app.errors.pop_front();
-    open_glmodal(win, "error");
-  }
-  if (!draw_glmessage(win, "error", error_message)) {
-    error_message = "";
-  }
-  if (draw_glfiledialog(win, "load image", load_path, false, "./", "",
-          "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    add_new_image(app, load_path);
-  }
-  if (draw_glfiledialog(win, "save image", save_path, true,
-          fs::path(save_path).parent_path(), fs::path(save_path).filename(),
-          "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    app.images[app.selected].outname = save_path;
-    app.images[app.selected].task_queue.emplace_back(app_task_type::save);
-    save_path = "";
-  }
-  if (draw_glbutton(win, "load")) {
-    open_glmodal(win, "load image");
-  }
-  continue_glline(win);
   if (draw_glbutton(win, "save",
           app.selected >= 0 && app.images[app.selected].display_done)) {
-    save_path = app.images[app.selected].outname;
-    open_glmodal(win, "save image");
+    // TODO: save
+    // app.images[app.selected].outname;
   }
   continue_glline(win);
-  if (draw_glbutton(win, "close", app.selected >= 0)) {
-    auto& img = app.images.at(app.selected);
-    img.task_queue.emplace_back(app_task_type::close);
-  }
-  continue_glline(win);
-  if (draw_glbutton(win, "quit")) {
-    set_glwindow_close(win, true);
-  }
-  if (app.images.empty()) return;
+  if (draw_glbutton(win, "quit")) set_glwindow_close(win, true);
   draw_glcombobox(
       win, "image", app.selected, (int)app.images.size(),
       [&app](int idx) { return app.images[idx].name.c_str(); }, false);
@@ -316,7 +283,6 @@ void update(const opengl_window& win, app_state& app) {
           load_image(img.filename, img.img);
         } catch (...) {
           log_glinfo(win, "cannot load " + img.filename);
-          app.errors.push_back("cannot load " + img.filename);
         }
         compute_image_stats(
             img.image_stats, img.img, is_hdr_filename(img.filename));
@@ -343,7 +309,6 @@ void update(const opengl_window& win, app_state& app) {
           }
         } catch (...) {
           log_glinfo(win, "cannot save " + img.outname);
-          app.errors.push_back("cannot save " + img.outname);
         }
         log_glinfo(win, "done saving " + img.outname);
       } break;
