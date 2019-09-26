@@ -840,7 +840,7 @@ void draw_glwidgets(const opengl_window& win) {
   auto& scn = app.scenes[app.selected];
   if (begin_glheader(win, "view")) {
     auto cam_names = vector<string>();
-    for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.uri);
+    for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.name);
     auto drawgl_prms = scn.drawgl_prms;
     if (scn.load_done) {
       if (draw_glcombobox(win, "camera", drawgl_prms.camera, cam_names)) {
@@ -971,27 +971,28 @@ void load_element(
 
   if (type == typeid(yocto_texture)) {
     auto& texture = scene.textures[index];
-    if (is_hdr_filename(texture.uri)) {
-      load_image(get_dirname(filename) + texture.uri, texture.hdr);
+    if (is_hdr_filename(texture.filename)) {
+      load_image(get_dirname(filename) + texture.filename, texture.hdr);
     } else {
-      load_imageb(get_dirname(filename) + texture.uri, texture.ldr);
+      load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
     }
   } else if (type == typeid(yocto_voltexture)) {
     auto& texture = scene.voltextures[index];
-    load_volume(get_dirname(filename) + texture.uri, texture.vol);
+    load_volume(get_dirname(filename) + texture.filename, texture.vol);
   } else if (type == typeid(yocto_shape)) {
     auto& shape = scene.shapes[index];
-    load_shape(get_dirname(filename) + shape.uri, shape.points, shape.lines,
-        shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
-        shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
-        shape.colors, shape.radius, false);
+    load_shape(get_dirname(filename) + shape.filename, shape.points,
+        shape.lines, shape.triangles, shape.quads, shape.quadspos,
+        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius, false);
   } else if (type == typeid(yocto_subdiv)) {
     // TODO: this needs more fixing?
     auto& subdiv = scene.subdivs[index];
-    load_shape(get_dirname(filename) + subdiv.uri, subdiv.points, subdiv.lines,
-        subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
-        subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius, subdiv.facevarying);
+    load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+        subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.quadspos,
+        subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+        subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
+        subdiv.facevarying);
     tesselate_subdiv(scene, scene.subdivs[index]);
   } else {
     throw std::runtime_error("unsupported type "s + type.name());

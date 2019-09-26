@@ -460,7 +460,7 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b) {
 // make a simple example volume
 void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
     float exponent = 6);
-void make_volpreset(volume<float>& vol, const string& type);
+void make_volume_preset(volume<float>& vol, const string& type);
 
 }  // namespace yocto
 // -----------------------------------------------------------------------------
