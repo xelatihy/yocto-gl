@@ -519,20 +519,7 @@ enum struct mtl_command {
 };
 
 // Objx command
-enum struct objx_command {
-  // clang-format off
-  // object names
-  camera, environment, instance, procedural,
-  // camera values
-  cam_frame, cam_ortho, cam_width, cam_height, cam_lens, cam_aperture, cam_focus,
-  // environment values
-  env_frame, env_emission, env_emission_map,
-  // instance values
-  ist_frame, ist_object, ist_material,
-  // procedural values
-  prc_frame, prc_type, prc_material, prc_size, prc_level
-  // clang-format on
-};
+enum struct objx_command { camera, environment, instance, procedural };
 
 // Obj value type
 enum struct obj_value_type { number, boolean, string, array };
@@ -547,21 +534,25 @@ struct obj_value {
 };
 
 // Read obj elements
-bool read_obj_command(file_wrapper& fs, obj_command& command, string& name, 
-  vec3f &value, vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(file_wrapper& fs, mtl_command& command, 
-  obj_material& material, bool fliptr = true);
+bool read_obj_command(file_wrapper& fs, obj_command& command, string& name,
+    vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size);
+bool read_mtl_command(file_wrapper& fs, mtl_command& command,
+    obj_material& material, bool fliptr = true);
 bool read_objx_command(file_wrapper& fs, objx_command& command,
-    obj_value& value, obj_texture_info& texture);
+    obj_camera& camera, obj_environment& environment, obj_instance& instance,
+    obj_procedural& procedural);
 
 // Write obj elements
 void write_obj_comment(file_wrapper& fs, const string& comment);
-void write_obj_command(file_wrapper& fs, obj_command command, 
-  const string& name, const vec3f& value, const vector<obj_vertex>& vertices = {});
-void write_mtl_command(file_wrapper& fs, mtl_command command, obj_material& material,
-    const obj_value& value, const obj_texture_info& texture = {});
+void write_obj_command(file_wrapper& fs, obj_command command,
+    const string& name, const vec3f& value,
+    const vector<obj_vertex>& vertices = {});
+void write_mtl_command(file_wrapper& fs, mtl_command command,
+    obj_material& material, const obj_value& value,
+    const obj_texture_info& texture = {});
 void write_objx_command(file_wrapper& fs, objx_command command,
-    const obj_value& value, const obj_texture_info& texture = {});
+    const obj_camera& camera, const obj_environment& environment,
+    const obj_instance& instance, const obj_procedural& procedural);
 
 // typesafe access of obj value
 void get_obj_value(const obj_value& yaml, string& value);

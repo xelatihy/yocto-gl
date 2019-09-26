@@ -2786,7 +2786,7 @@ bool read_mtl_command(file_wrapper& fs, mtl_command& command,
   material = {};
 
   // read the file line by line
-  auto pos = ftell(fs.fs);
+  auto pos   = ftell(fs.fs);
   auto found = false;
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -2894,7 +2894,7 @@ bool read_mtl_command(file_wrapper& fs, mtl_command& command,
     pos = ftell(fs.fs);
   }
 
-  if(found) {
+  if (found) {
     command = mtl_command::material;
     return true;
   }
@@ -2904,10 +2904,17 @@ bool read_mtl_command(file_wrapper& fs, mtl_command& command,
 
 // Read objx
 bool read_objx_command(file_wrapper& fs, objx_command& command,
-    obj_value& value, obj_texture_info& texture) {
+    obj_camera& camera, obj_environment& environment, obj_instance& instance,
+    obj_procedural& procedural) {
+  camera = {};
+  environment = {};
+  instance = {};
+  procedural = {};
+
   // read the file line by line
   char buffer[4096];
   auto pos = ftell(fs.fs);
+  auto found = false;
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
@@ -2922,214 +2929,133 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
 
     // read values
     if (cmd == "newcam") {
-      command = objx_command::camera;
-      parse_value(line, value, obj_value_type::string);
-      return true;
+      if(found) {
+        fseek(fs.fs, pos, SEEK_SET);
+        return true;
+      } else {
+        command = objx_command::camera;
+        found = true;
+      }
+      parse_value(line, camera.name);
     } else if (cmd == "Cframe") {
-      command = objx_command::cam_frame;
-      parse_value(line, value, obj_value_type::array, 12);
-      return true;
+      parse_value(line, camera.frame);
     } else if (cmd == "Cortho") {
-      command = objx_command::cam_ortho;
-      parse_value(line, value, obj_value_type::boolean);
-      return true;
+      parse_value(line, camera.ortho);
     } else if (cmd == "Cwidth") {
-      command = objx_command::cam_width;
-      parse_value(line, value, obj_value_type::number);
-      return true;
+      parse_value(line, camera.width);
     } else if (cmd == "Cheight") {
-      command = objx_command::cam_height;
-      parse_value(line, value, obj_value_type::number);
-      return true;
+      parse_value(line, camera.height);
     } else if (cmd == "Clens") {
-      command = objx_command::cam_lens;
-      parse_value(line, value, obj_value_type::number);
-      return true;
-    } else if (cmd == "Caperture") {
-      command = objx_command::cam_aperture;
-      parse_value(line, value, obj_value_type::number);
-      return true;
+      parse_value(line, camera.lens);
     } else if (cmd == "Cfocus") {
-      command = objx_command::cam_focus;
-      parse_value(line, value, obj_value_type::number);
-      return true;
+      parse_value(line, camera.focus);
+    } else if (cmd == "Caperture") {
+      parse_value(line, camera.aperture);
     } else if (cmd == "newenv") {
-      command = objx_command::environment;
-      parse_value(line, value, obj_value_type::string);
-      return true;
+      if(found) {
+        fseek(fs.fs, pos, SEEK_SET);
+        return true;
+      } else {
+        command = objx_command::environment;
+        found = true;
+      }
+      parse_value(line, environment.name);
     } else if (cmd == "Eframe") {
-      command = objx_command::env_frame;
-      parse_value(line, value, obj_value_type::array, 12);
-      return true;
+      parse_value(line, environment.frame);
     } else if (cmd == "Ee") {
-      command = objx_command::env_emission;
-      parse_value(line, value, obj_value_type::array);
-      return true;
+      parse_value(line, environment.emission);
     } else if (cmd == "map_Ee") {
-      command = objx_command::env_emission_map;
-      parse_value(line, texture);
-      return true;
+      parse_value(line, environment.emission_map);
     } else if (cmd == "newist") {
-      command = objx_command::instance;
-      parse_value(line, value, obj_value_type::string);
-      return true;
+      if(found) {
+        fseek(fs.fs, pos, SEEK_SET);
+        return true;
+      } else {
+        command = objx_command::instance;
+        found = true;
+      }
+      parse_value(line, instance.name);
     } else if (cmd == "Iframe") {
-      command = objx_command::ist_frame;
-      parse_value(line, value, obj_value_type::array, 12);
-      return true;
+      parse_value(line, instance.frame);
     } else if (cmd == "Iobj") {
-      command = objx_command::ist_object;
-      parse_value(line, value, obj_value_type::string);
-      return true;
+      parse_value(line, instance.object);
     } else if (cmd == "Imat") {
-      command = objx_command::ist_material;
-      parse_value(line, value, obj_value_type::string);
-      return true;
+      parse_value(line, instance.material);
     } else if (cmd == "newproc") {
-      command = objx_command::procedural;
-      parse_value(line, value, obj_value_type::string);
-      return true;
+      if(found) {
+        fseek(fs.fs, pos, SEEK_SET);
+        return true;
+      } else {
+        command = objx_command::camera;
+        found = true;
+      }
+      parse_value(line, procedural.name);
     } else if (cmd == "Pframe") {
-      command = objx_command::prc_frame;
-      parse_value(line, value, obj_value_type::array, 12);
-      return true;
+      parse_value(line, procedural.frame);
     } else if (cmd == "Ptype") {
-      command = objx_command::prc_type;
-      parse_value(line, value, obj_value_type::string);
-      return true;
+      parse_value(line, procedural.type);
     } else if (cmd == "Pmat") {
-      command = objx_command::prc_material;
-      parse_value(line, value, obj_value_type::string);
-      return true;
+      parse_value(line, procedural.material);
     } else if (cmd == "Psize") {
-      command = objx_command::prc_size;
-      parse_value(line, value, obj_value_type::string);
-      return true;
+      parse_value(line, procedural.size);
     } else if (cmd == "Plevel") {
-      command = objx_command::prc_level;
-      parse_value(line, value, obj_value_type::string);
-      return true;
+      parse_value(line, procedural.level);
     }
     // backward compatibility
     else if (cmd == "c") {
-      auto oname = value.string_;
-      auto name = obj_value{}, ortho = obj_value{}, width = obj_value{},
-           height = obj_value{}, lens = obj_value{}, aperture = obj_value{},
-           focus = obj_value{}, frame = obj_value{};
-      parse_value(line, name, obj_value_type::string);
-      parse_value(line, ortho, obj_value_type::boolean);
-      parse_value(line, width, obj_value_type::number);
-      parse_value(line, height, obj_value_type::number);
-      parse_value(line, lens, obj_value_type::number);
-      parse_value(line, focus, obj_value_type::number);
-      parse_value(line, aperture, obj_value_type::number);
-      parse_value(line, frame, obj_value_type::array, 12);
-      if (command == objx_command::camera && oname != "") {
-        command = objx_command::cam_ortho;
-        value   = ortho;
-      } else if (command == objx_command::cam_ortho) {
-        command = objx_command::cam_width;
-        value   = width;
-      } else if (command == objx_command::cam_width) {
-        command = objx_command::cam_height;
-        value   = height;
-      } else if (command == objx_command::cam_height) {
-        command = objx_command::cam_lens;
-        value   = lens;
-      } else if (command == objx_command::cam_lens) {
-        command = objx_command::cam_focus;
-        value   = focus;
-      } else if (command == objx_command::cam_focus) {
-        command = objx_command::cam_aperture;
-        value   = aperture;
-      } else if (command == objx_command::cam_aperture) {
-        command = objx_command::cam_frame;
-        value   = frame;
-      } else {
-        command = objx_command::camera;
-        value   = name;
+      if(found) {
+        fseek(fs.fs, pos, SEEK_SET);
+        return true;
       }
-      if (command != objx_command::cam_frame) fseek(fs.fs, pos, SEEK_SET);
+      command = objx_command::camera;
+      parse_value(line, camera.name);
+      parse_value(line, camera.ortho);
+      parse_value(line, camera.width);
+      parse_value(line, camera.height);
+      parse_value(line, camera.lens);
+      parse_value(line, camera.focus);
+      parse_value(line, camera.aperture);
+      parse_value(line, camera.frame);
       return true;
     } else if (cmd == "e") {
-      auto name = obj_value{}, frame = obj_value{}, emission = obj_value{},
-           emission_map = obj_value{};
-      parse_value(line, name, obj_value_type::string);
-      parse_value(line, emission, obj_value_type::array);
-      parse_value(line, emission_map, obj_value_type::string);
-      parse_value(line, frame, obj_value_type::array, 12);
-      if (emission_map.string_ == "\"\"") emission_map.string_ = "";
-      if (command == objx_command::environment) {
-        command = objx_command::env_emission;
-        value   = emission;
-      } else if (command == objx_command::env_emission) {
-        command = objx_command::env_emission_map;
-        get_obj_value(emission_map, texture.path);
-      } else if (command == objx_command::env_emission_map) {
-        command = objx_command::env_frame;
-        value   = frame;
-      } else {
-        command = objx_command::environment;
-        value   = name;
+      if(found) {
+        fseek(fs.fs, pos, SEEK_SET);
+        return true;
       }
-      if (command != objx_command::env_frame) fseek(fs.fs, pos, SEEK_SET);
-      return true;
+      command = objx_command::environment;
+      parse_value(line, environment.name);
+      parse_value(line, environment.emission);
+      parse_value(line, environment.emission_map);
+      parse_value(line, environment.frame);
     } else if (cmd == "i") {
-      auto name = obj_value{}, frame = obj_value{}, object = obj_value{},
-           material = obj_value{};
-      parse_value(line, name, obj_value_type::string);
-      parse_value(line, object, obj_value_type::string);
-      parse_value(line, material, obj_value_type::string);
-      parse_value(line, frame, obj_value_type::array, 12);
-      if (command == objx_command::instance) {
-        command = objx_command::ist_object;
-        value   = object;
-      } else if (command == objx_command::ist_object) {
-        command = objx_command::ist_material;
-        value   = material;
-      } else if (command == objx_command::ist_material) {
-        command = objx_command::ist_frame;
-        value   = frame;
-      } else {
-        command = objx_command::instance;
-        value   = name;
+      if(found) {
+        fseek(fs.fs, pos, SEEK_SET);
+        return true;
       }
-      if (command != objx_command::ist_frame) fseek(fs.fs, pos, SEEK_SET);
-      return true;
+      command = objx_command::instance;
+      parse_value(line, instance.name);
+      parse_value(line, instance.object);
+      parse_value(line, instance.material);
+      parse_value(line, instance.frame);
     } else if (cmd == "po") {
-      auto name = obj_value{}, frame = obj_value{}, type = obj_value{},
-           material = obj_value{}, size = obj_value{}, level = obj_value{};
-      parse_value(line, name, obj_value_type::string);
-      parse_value(line, type, obj_value_type::string);
-      parse_value(line, material, obj_value_type::string);
-      parse_value(line, size, obj_value_type::number);
-      parse_value(line, level, obj_value_type::number);
-      parse_value(line, frame, obj_value_type::array, 12);
-      if (command == objx_command::procedural) {
-        command = objx_command::prc_type;
-        value   = type;
-      } else if (command == objx_command::prc_type) {
-        command = objx_command::prc_material;
-        value   = material;
-      } else if (command == objx_command::prc_material) {
-        command = objx_command::prc_size;
-        value   = size;
-      } else if (command == objx_command::prc_size) {
-        command = objx_command::prc_level;
-        value   = level;
-      } else if (command == objx_command::prc_level) {
-        command = objx_command::prc_frame;
-        value   = frame;
-      } else {
-        command = objx_command::procedural;
-        value   = name;
+      if(found) {
+        fseek(fs.fs, pos, SEEK_SET);
+        return true;
       }
-      if (command != objx_command::prc_frame) fseek(fs.fs, pos, SEEK_SET);
-      return true;
+      command = objx_command::procedural;
+      parse_value(line, procedural.name);
+      parse_value(line, procedural.type);
+      parse_value(line, procedural.material);
+      parse_value(line, procedural.size);
+      parse_value(line, procedural.level);
+      parse_value(line, procedural.frame);
     } else {
       // unused
     }
+    pos = ftell(fs.fs);
   }
+
+  if(found) return true;
 
   return false;
 }
@@ -3174,159 +3100,117 @@ void write_obj_command(file_wrapper& fs, obj_command command,
   }
 }
 
-void write_mtl_command(file_wrapper& fs, mtl_command command, 
-    const obj_material& material) {
+void write_mtl_command(
+    file_wrapper& fs, mtl_command command, const obj_material& material) {
   // write material
-    format_values(fs, "newmtl {}\n", material.name);
-    format_values(fs, "illum {}\n", material.illum);
-    if (material.emission != zero3f)
-      format_values(fs, "Ke {}\n", material.emission);
-    if (material.ambient != zero3f)
-      format_values(fs, "Ka {}\n", material.ambient);
-    format_values(fs, "Kd {}\n", material.diffuse);
-    format_values(fs, "Ks {}\n", material.specular);
-    if (material.reflection != zero3f)
-      format_values(fs, "Kr {}\n", material.reflection);
-    if (material.transmission != zero3f)
-      format_values(fs, "Kt {}\n", material.transmission);
-    format_values(fs, "Ns {}\n", (int)material.exponent);
-    if (material.opacity != 1) format_values(fs, "d {}\n", material.opacity);
-    if (!material.emission_map.path.empty())
-      format_values(fs, "map_Ke {}\n", material.emission_map);
-    if (!material.diffuse_map.path.empty())
-      format_values(fs, "map_Kd {}\n", material.diffuse_map);
-    if (!material.specular_map.path.empty())
-      format_values(fs, "map_Ks {}\n", material.specular_map);
-    if (!material.transmission_map.path.empty())
-      format_values(fs, "map_Kt {}\n", material.transmission_map);
-    if (!material.reflection_map.path.empty())
-      format_values(fs, "map_Kr {}\n", material.reflection_map);
-    if (!material.exponent_map.path.empty())
-      format_values(fs, "map_Ns {}\n", material.exponent_map);
-    if (!material.opacity_map.path.empty())
-      format_values(fs, "map_d {}\n", material.opacity_map);
-    if (!material.bump_map.path.empty())
-      format_values(fs, "map_bump {}\n", material.bump_map);
-    if (!material.displacement_map.path.empty())
-      format_values(fs, "map_disp {}\n", material.displacement_map);
-    if (!material.normal_map.path.empty())
-      format_values(fs, "map_norm {}\n", material.normal_map);
-    if (material.pbr_roughness)
-      format_values(fs, "Pr {}\n", material.pbr_roughness);
-    if (material.pbr_metallic)
-      format_values(fs, "Pm {}\n", material.pbr_metallic);
-    if (material.pbr_sheen) format_values(fs, "Ps {}\n", material.pbr_sheen);
-    if (material.pbr_clearcoat)
-      format_values(fs, "Pc {}\n", material.pbr_clearcoat);
-    if (material.pbr_coatroughness)
-      format_values(fs, "Pcr {}\n", material.pbr_coatroughness);
-    if (!material.pbr_roughness_map.path.empty())
-      format_values(fs, "map_Pr {}\n", material.pbr_roughness_map);
-    if (!material.pbr_metallic_map.path.empty())
-      format_values(fs, "map_Pm {}\n", material.pbr_metallic_map);
-    if (!material.pbr_sheen_map.path.empty())
-      format_values(fs, "map_Ps {}\n", material.pbr_sheen_map);
-    if (!material.pbr_clearcoat_map.path.empty())
-      format_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map);
-    if (!material.pbr_coatroughness_map.path.empty())
-      format_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map);
-    if (material.vol_transmission != zero3f)
-      format_values(fs, "Vt {}\n", material.vol_transmission);
-    if (material.vol_meanfreepath != zero3f)
-      format_values(fs, "Vp {}\n", material.vol_meanfreepath);
-    if (material.vol_emission != zero3f)
-      format_values(fs, "Ve {}\n", material.vol_emission);
-    if (material.vol_scattering != zero3f)
-      format_values(fs, "Vs {}\n", material.vol_scattering);
-    if (material.vol_anisotropy)
-      format_values(fs, "Vg {}\n", material.vol_anisotropy);
-    if (material.vol_scale) format_values(fs, "Vr {}\n", material.vol_scale);
-    if (!material.vol_scattering_map.path.empty())
-      format_values(fs, "map_Vs {}\n", material.vol_scattering_map);
-    format_values(fs, "\n");
+  format_values(fs, "newmtl {}\n", material.name);
+  format_values(fs, "illum {}\n", material.illum);
+  if (material.emission != zero3f)
+    format_values(fs, "Ke {}\n", material.emission);
+  if (material.ambient != zero3f)
+    format_values(fs, "Ka {}\n", material.ambient);
+  format_values(fs, "Kd {}\n", material.diffuse);
+  format_values(fs, "Ks {}\n", material.specular);
+  if (material.reflection != zero3f)
+    format_values(fs, "Kr {}\n", material.reflection);
+  if (material.transmission != zero3f)
+    format_values(fs, "Kt {}\n", material.transmission);
+  format_values(fs, "Ns {}\n", (int)material.exponent);
+  if (material.opacity != 1) format_values(fs, "d {}\n", material.opacity);
+  if (!material.emission_map.path.empty())
+    format_values(fs, "map_Ke {}\n", material.emission_map);
+  if (!material.diffuse_map.path.empty())
+    format_values(fs, "map_Kd {}\n", material.diffuse_map);
+  if (!material.specular_map.path.empty())
+    format_values(fs, "map_Ks {}\n", material.specular_map);
+  if (!material.transmission_map.path.empty())
+    format_values(fs, "map_Kt {}\n", material.transmission_map);
+  if (!material.reflection_map.path.empty())
+    format_values(fs, "map_Kr {}\n", material.reflection_map);
+  if (!material.exponent_map.path.empty())
+    format_values(fs, "map_Ns {}\n", material.exponent_map);
+  if (!material.opacity_map.path.empty())
+    format_values(fs, "map_d {}\n", material.opacity_map);
+  if (!material.bump_map.path.empty())
+    format_values(fs, "map_bump {}\n", material.bump_map);
+  if (!material.displacement_map.path.empty())
+    format_values(fs, "map_disp {}\n", material.displacement_map);
+  if (!material.normal_map.path.empty())
+    format_values(fs, "map_norm {}\n", material.normal_map);
+  if (material.pbr_roughness)
+    format_values(fs, "Pr {}\n", material.pbr_roughness);
+  if (material.pbr_metallic)
+    format_values(fs, "Pm {}\n", material.pbr_metallic);
+  if (material.pbr_sheen) format_values(fs, "Ps {}\n", material.pbr_sheen);
+  if (material.pbr_clearcoat)
+    format_values(fs, "Pc {}\n", material.pbr_clearcoat);
+  if (material.pbr_coatroughness)
+    format_values(fs, "Pcr {}\n", material.pbr_coatroughness);
+  if (!material.pbr_roughness_map.path.empty())
+    format_values(fs, "map_Pr {}\n", material.pbr_roughness_map);
+  if (!material.pbr_metallic_map.path.empty())
+    format_values(fs, "map_Pm {}\n", material.pbr_metallic_map);
+  if (!material.pbr_sheen_map.path.empty())
+    format_values(fs, "map_Ps {}\n", material.pbr_sheen_map);
+  if (!material.pbr_clearcoat_map.path.empty())
+    format_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map);
+  if (!material.pbr_coatroughness_map.path.empty())
+    format_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map);
+  if (material.vol_transmission != zero3f)
+    format_values(fs, "Vt {}\n", material.vol_transmission);
+  if (material.vol_meanfreepath != zero3f)
+    format_values(fs, "Vp {}\n", material.vol_meanfreepath);
+  if (material.vol_emission != zero3f)
+    format_values(fs, "Ve {}\n", material.vol_emission);
+  if (material.vol_scattering != zero3f)
+    format_values(fs, "Vs {}\n", material.vol_scattering);
+  if (material.vol_anisotropy)
+    format_values(fs, "Vg {}\n", material.vol_anisotropy);
+  if (material.vol_scale) format_values(fs, "Vr {}\n", material.vol_scale);
+  if (!material.vol_scattering_map.path.empty())
+    format_values(fs, "map_Vs {}\n", material.vol_scattering_map);
+  format_values(fs, "\n");
 }
 
 void write_objx_command(file_wrapper& fs, objx_command command,
-    const obj_value& value_, const obj_texture_info& texture) {
-  auto& name  = value_.string_;
-  auto  value = value_.number;
-  auto& color = value_.array_;
-  auto& frame = value_.array_;
+    const obj_camera& camera, const obj_environment& environment,
+    const obj_instance& instance, const obj_procedural& procedural) {
   switch (command) {
-    case objx_command::camera:
-      checked_fprintf(fs, "\nnewcam %s\n", name.c_str());
-      break;
-    case objx_command::environment:
-      checked_fprintf(fs, "\nnewenv %s\n", name.c_str());
-      break;
-    case objx_command::instance:
-      checked_fprintf(fs, "\nnewist %s\n", name.c_str());
-      break;
-    case objx_command::procedural:
-      checked_fprintf(fs, "\nnewproc %s\n", name.c_str());
-      break;
-    case objx_command::cam_frame:
-      checked_fprintf(fs, "  Cframe %g %g %g %g %g %g %g %g %g %g %g %g\n",
-          frame[0], frame[1], frame[2], frame[3], frame[4], frame[5], frame[6],
-          frame[7], frame[8], frame[9], frame[10], frame[11]);
-      break;
-    case objx_command::env_frame:
-      checked_fprintf(fs, "  Eframe %g %g %g %g %g %g %g %g %g %g %g %g\n",
-          frame[0], frame[1], frame[2], frame[3], frame[4], frame[5], frame[6],
-          frame[7], frame[8], frame[9], frame[10], frame[11]);
-      break;
-    case objx_command::ist_frame:
-      checked_fprintf(fs, "  Iframe %g %g %g %g %g %g %g %g %g %g %g %g\n",
-          frame[0], frame[1], frame[2], frame[3], frame[4], frame[5], frame[6],
-          frame[7], frame[8], frame[9], frame[10], frame[11]);
-      break;
-    case objx_command::prc_frame:
-      checked_fprintf(fs, "  Pframe %g %g %g %g %g %g %g %g %g %g %g %g\n",
-          frame[0], frame[1], frame[2], frame[3], frame[4], frame[5], frame[6],
-          frame[7], frame[8], frame[9], frame[10], frame[11]);
-      break;
-    case objx_command::ist_object:
-      checked_fprintf(fs, "  Iobj %s\n", name.c_str());
-      break;
-    case objx_command::prc_type:
-      checked_fprintf(fs, "  Ptype %s\n", name.c_str());
-      break;
-    case objx_command::ist_material:
-      checked_fprintf(fs, "  Imat %s\n", name.c_str());
-      break;
-    case objx_command::prc_material:
-      checked_fprintf(fs, "  Pmat %s\n", name.c_str());
-      break;
-    case objx_command::cam_ortho:
-      checked_fprintf(fs, "  Cortho %g\n", value);
-      break;
-    case objx_command::cam_width:
-      checked_fprintf(fs, "  Cwidth %g\n", value);
-      break;
-    case objx_command::cam_height:
-      checked_fprintf(fs, "  Cheight %g\n", value);
-      break;
-    case objx_command::cam_lens:
-      checked_fprintf(fs, "  Clens %g\n", value);
-      break;
-    case objx_command::cam_aperture:
-      checked_fprintf(fs, "  Caperture %g\n", value);
-      break;
-    case objx_command::cam_focus:
-      checked_fprintf(fs, "  Cfocus %g\n", value);
-      break;
-    case objx_command::env_emission:
-      checked_fprintf(fs, "  Ee %g %g %g\n", color[0], color[1], color[2]);
-      break;
-    case objx_command::env_emission_map:
-      checked_fprintf(fs, "  map_Ee %s\n", texture.path.c_str());
-      break;
-    case objx_command::prc_size:
-      checked_fprintf(fs, "  Psize %g\n", value);
-      break;
-    case objx_command::prc_level:
-      checked_fprintf(fs, "  Plevel %g\n", value);
-      break;
+    case objx_command::camera: {
+      format_values(fs, "newcam {}\n", camera.name);
+      format_values(fs, "Cframe {}\n", camera.frame);
+      format_values(fs, "Cortho {}\n", camera.ortho);
+      format_values(fs, "Cwidth {}\n", camera.width);
+      format_values(fs, "Cheight {}\n", camera.height);
+      format_values(fs, "Clens {}\n", camera.lens);
+      format_values(fs, "Cfocus {}\n", camera.focus);
+      format_values(fs, "Caperture {}\n", camera.aperture);
+      format_values(fs, "\n");
+    } break;
+    case objx_command::environment: {
+      format_values(fs, "newenv {}\n", environment.name);
+      format_values(fs, "Eframe {}\n", environment.frame);
+      format_values(fs, "Ee {}\n", environment.emission);
+      if (!environment.emission_map.path.empty())
+        format_values(fs, "map_Ee {}\n", environment.emission_map);
+      format_values(fs, "\n");
+    } break;
+    case objx_command::instance: {
+      format_values(fs, "newist {}\n", instance.name);
+      format_values(fs, "Iframe {}\n", instance.frame);
+      format_values(fs, "Iobj {}\n", instance.object);
+      format_values(fs, "Imat {}\n", instance.material);
+      format_values(fs, "\n");
+    } break;
+    case objx_command::procedural: {
+      format_values(fs, "newist {}\n", procedural.name);
+      format_values(fs, "Pframe {}\n", procedural.frame);
+      format_values(fs, "Ptype {}\n", procedural.type);
+      format_values(fs, "Pmat {}\n", procedural.material);
+      format_values(fs, "Psize {}\n", procedural.size);
+      format_values(fs, "Plevel {}\n", procedural.level);
+      format_values(fs, "\n");
+    } break;
   }
 }
 
