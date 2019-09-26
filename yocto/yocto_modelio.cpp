@@ -2414,43 +2414,43 @@ void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
   normals   = shape.normals;
   texcoords = flipv ? flip_texcoord(shape.texcoords) : shape.texcoords;
   materials = shape.materials;
-  if (shape.vertices[0].position >= 0) quadspos.reserve(shape.faces.size());
-  if (shape.vertices[0].normal >= 0) quadsnorm.reserve(shape.faces.size());
-  if (shape.vertices[0].texcoord >= 0)
+  if (shape.vertices[0].position) quadspos.reserve(shape.faces.size());
+  if (shape.vertices[0].normal) quadsnorm.reserve(shape.faces.size());
+  if (shape.vertices[0].texcoord)
     quadstexcoord.reserve(shape.faces.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
   for (auto& face : shape.faces) {
     if (face.size == 4) {
       if (shape.vertices[0].position)
-        quadspos.push_back({shape.vertices[cur + 0].position,
-            shape.vertices[cur + 1].position, shape.vertices[cur + 2].position,
-            shape.vertices[cur + 3].position});
+        quadspos.push_back({shape.vertices[cur + 0].position - 1,
+            shape.vertices[cur + 1].position - 1, shape.vertices[cur + 2].position - 1,
+            shape.vertices[cur + 3].position - 1});
       if (shape.vertices[0].normal)
-        quadsnorm.push_back({shape.vertices[cur + 0].normal,
-            shape.vertices[cur + 1].normal, shape.vertices[cur + 2].normal,
-            shape.vertices[cur + 3].normal});
+        quadsnorm.push_back({shape.vertices[cur + 0].normal - 1,
+            shape.vertices[cur + 1].normal - 1, shape.vertices[cur + 2].normal - 1,
+            shape.vertices[cur + 3].normal - 1});
       if (shape.vertices[0].texcoord)
-        quadstexcoord.push_back({shape.vertices[cur + 0].texcoord,
-            shape.vertices[cur + 1].texcoord, shape.vertices[cur + 2].texcoord,
-            shape.vertices[cur + 3].texcoord});
+        quadstexcoord.push_back({shape.vertices[cur + 0].texcoord - 1,
+            shape.vertices[cur + 1].texcoord - 1, shape.vertices[cur + 2].texcoord - 1,
+            shape.vertices[cur + 3].texcoord - 1});
       if (!materials.empty()) ematerials.push_back(face.material);
     } else {
       for (auto c = 2; c < face.size; c++) {
         if (shape.vertices[0].position)
-          quadspos.push_back({shape.vertices[cur + 0].position,
-              shape.vertices[cur + c - 1].position,
-              shape.vertices[cur + c].position,
-              shape.vertices[cur + c].position});
+          quadspos.push_back({shape.vertices[cur + 0].position - 1,
+              shape.vertices[cur + c - 1].position - 1,
+              shape.vertices[cur + c].position - 1,
+              shape.vertices[cur + c].position - 1});
         if (shape.vertices[0].normal)
-          quadsnorm.push_back({shape.vertices[cur + 0].normal,
-              shape.vertices[cur + c - 1].normal,
-              shape.vertices[cur + c].normal, shape.vertices[cur + c].normal});
+          quadsnorm.push_back({shape.vertices[cur + 0].normal - 1,
+              shape.vertices[cur + c - 1].normal - 1,
+              shape.vertices[cur + c].normal - 1, shape.vertices[cur + c].normal - 1});
         if (shape.vertices[0].texcoord)
-          quadstexcoord.push_back({shape.vertices[cur + 0].texcoord,
-              shape.vertices[cur + c - 1].texcoord,
-              shape.vertices[cur + c].texcoord,
-              shape.vertices[cur + c].texcoord});
+          quadstexcoord.push_back({shape.vertices[cur + 0].texcoord - 1,
+              shape.vertices[cur + c - 1].texcoord - 1,
+              shape.vertices[cur + c].texcoord - 1,
+              shape.vertices[cur + c].texcoord - 1});
         if (!materials.empty()) ematerials.push_back(face.material);
       }
     }
