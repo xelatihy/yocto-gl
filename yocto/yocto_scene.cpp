@@ -1285,12 +1285,13 @@ void fix_names(yocto_scene& scene) {
     for (auto& value : values) {
       if (value.name.empty()) value.name = base + std::to_string(count++);
       if (value.name.front() == '-') value.name = "_" + value.name;
-      if (value.name.front() >= '0' && value.name.front() <= '9') value.name = "_" + value.name;
-      for(auto& c : value.name) {
-        if(c == '-' || c == '_') continue;
-        if(c >= '0' && c <= '9') continue;
-        if(c >= 'a' && c <= 'z') continue;
-        if(c >= 'A' && c <= 'Z') continue;
+      if (value.name.front() >= '0' && value.name.front() <= '9')
+        value.name = "_" + value.name;
+      for (auto& c : value.name) {
+        if (c == '-' || c == '_') continue;
+        if (c >= '0' && c <= '9') continue;
+        if (c >= 'a' && c <= 'z') continue;
+        if (c >= 'A' && c <= 'Z') continue;
         c = '_';
       }
     }

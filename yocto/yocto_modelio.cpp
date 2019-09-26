@@ -3906,7 +3906,7 @@ static void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
       camera.fov = get_pbrt_value(values, "fov", 90.0f);
       // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
       camera.aspect = get_pbrt_value(values, "frameaspectratio", film_aspect);
-      camera.focus  = get_pbrt_value(values, "focaldistance", 10);
+      camera.focus  = get_pbrt_value(values, "focaldistance", 10.0f);
       if (!camera.aspect) camera.aspect = 1;
       if (!camera.focus) camera.focus = 10;
     } else if (camera.type == "realistic") {
@@ -3917,7 +3917,7 @@ static void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
       auto lens       = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
       camera.fov      = 2 * atan(0.036f / (2 * lens));
       camera.aperture = get_pbrt_value(values, "aperturediameter", 0.0f);
-      camera.focus    = get_pbrt_value(values, "focusdistance", 10);
+      camera.focus    = get_pbrt_value(values, "focusdistance", 10.0f);
       camera.aspect   = film_aspect;
     } else {
       throw std::runtime_error("unsupported Camera type " + camera.type);
@@ -4515,7 +4515,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         }
       } else if (cmd == "ActiveTransform") {
         auto name = ""s;
-        parse_pbrt_param(str, name);
+        parse_pbrt_command(str, name);
         if (name == "StartTime") {
           stack.back().active_transform_start = true;
           stack.back().active_transform_end   = false;
