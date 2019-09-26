@@ -395,11 +395,19 @@ static inline void format_values(
   format_value(str, arg);
   format_values(str, fmt.substr(pos + 2), args...);
 }
+
 template <typename... Args>
 static inline void format_values(
     file_wrapper& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
+  if (fputs(str.c_str(), fs.fs) < 0)
+    throw std::runtime_error("cannor write to " + fs.filename);
+}
+template <typename T>
+static inline void format_value(file_wrapper& fs, const T& value) {
+  auto str = ""s;
+  format_value(str, value);
   if (fputs(str.c_str(), fs.fs) < 0)
     throw std::runtime_error("cannor write to " + fs.filename);
 }
@@ -699,8 +707,8 @@ void save_ply(const string& filename, const ply_model& ply) {
         fs, "element {} {}\n", elem.name, (unsigned long long)elem.count);
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        format_values(fs, "property list uchar {} {}\n",
-            type_map[prop.type], prop.name);
+        format_values(
+            fs, "property list uchar {} {}\n", type_map[prop.type], prop.name);
       } else {
         format_values(fs, "property {} {}\n", type_map[prop.type], prop.name);
       }
@@ -1426,58 +1434,35 @@ void read_ply_value_generic(file_wrapper& fs, ply_format format,
 }
 
 template <typename VT>
-static inline void write_ply_prop(file_wrapper& fs, ply_type type, VT value) {
+static inline void format_ply_prop(file_wrapper& fs, ply_type type, VT value) {
   switch (type) {
-    case ply_type::i8: format_values(fs, "{}", (int)value); break;
-    case ply_type::i16: format_values(fs, "{}", (int)value); break;
-    case ply_type::i32: format_values(fs, "{}", (int)value); break;
-    case ply_type::i64: format_values(fs, "{}", (long long)value); break;
-    case ply_type::u8: format_values(fs, "{}", (unsigned)value); break;
-    case ply_type::u16: format_values(fs, "{}", (unsigned)value); break;
-    case ply_type::u32: format_values(fs, "{}", (unsigned)value); break;
-    case ply_type::u64:
-      format_values(fs, "{}", (unsigned long long)value);
-      break;
-    case ply_type::f32: format_values(fs, "{}", (float)value); break;
-    case ply_type::f64: format_values(fs, "{}", (double)value); break;
+    case ply_type::i8: format_value(fs, (int8_t)value); break;
+    case ply_type::i16: format_value(fs, (int16_t)value); break;
+    case ply_type::i32: format_value(fs, (int32_t)value); break;
+    case ply_type::i64: format_value(fs, (int64_t)value); break;
+    case ply_type::u8: format_value(fs, (uint8_t)value); break;
+    case ply_type::u16: format_value(fs, (uint16_t)value); break;
+    case ply_type::u32: format_value(fs, (uint32_t)value); break;
+    case ply_type::u64: format_value(fs, (uint64_t)value); break;
+    case ply_type::f32: format_value(fs, (float)value); break;
+    case ply_type::f64: format_value(fs, (double)value); break;
   }
 }
 
-template <typename T, typename VT>
-static inline void write_ply_binprop(
-    file_wrapper& fs, bool big_endian, VT value) {
-  auto typed_value = (T)value;
-  if (big_endian) typed_value = swap_endian(typed_value);
-  if (fwrite(&typed_value, sizeof(T), 1, fs.fs) != 1)
-    throw std::runtime_error("cannot write to file");
-}
-
 template <typename VT>
-static inline void write_ply_binprop(
-    file_wrapper& fs, bool big_endian, ply_type type, VT value) {
+static inline void write_ply_prop(
+    file_wrapper& fs, ply_type type, VT value, bool big_endian) {
   switch (type) {
-    case ply_type::i8: write_ply_binprop<int8_t>(fs, big_endian, value); break;
-    case ply_type::i16:
-      write_ply_binprop<int16_t>(fs, big_endian, value);
-      break;
-    case ply_type::i32:
-      write_ply_binprop<int32_t>(fs, big_endian, value);
-      break;
-    case ply_type::i64:
-      write_ply_binprop<int64_t>(fs, big_endian, value);
-      break;
-    case ply_type::u8: write_ply_binprop<uint8_t>(fs, big_endian, value); break;
-    case ply_type::u16:
-      write_ply_binprop<uint16_t>(fs, big_endian, value);
-      break;
-    case ply_type::u32:
-      write_ply_binprop<uint32_t>(fs, big_endian, value);
-      break;
-    case ply_type::u64:
-      write_ply_binprop<uint64_t>(fs, big_endian, value);
-      break;
-    case ply_type::f32: write_ply_binprop<float>(fs, big_endian, value); break;
-    case ply_type::f64: write_ply_binprop<double>(fs, big_endian, value); break;
+    case ply_type::i8: write_value(fs, (int8_t)value, big_endian); break;
+    case ply_type::i16: write_value(fs, (int16_t)value, big_endian); break;
+    case ply_type::i32: write_value(fs, (int32_t)value, big_endian); break;
+    case ply_type::i64: write_value(fs, (int64_t)value, big_endian); break;
+    case ply_type::u8: write_value(fs, (uint8_t)value, big_endian); break;
+    case ply_type::u16: write_value(fs, (uint16_t)value, big_endian); break;
+    case ply_type::u32: write_value(fs, (uint32_t)value, big_endian); break;
+    case ply_type::u64: write_value(fs, (uint64_t)value, big_endian); break;
+    case ply_type::f32: write_value(fs, (float)value, big_endian); break;
+    case ply_type::f64: write_value(fs, (double)value, big_endian); break;
   }
 }
 
@@ -1524,30 +1509,30 @@ void write_ply_value_generic(file_wrapper& fs, ply_format format,
   if (format == ply_format::ascii) {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
-      if (pidx) write_text(fs, " ");
+      if (pidx) format_value(fs, " ");
       if (!prop.is_list) {
-        write_ply_prop(fs, prop.type, values[pidx]);
+        format_ply_prop(fs, prop.type, values[pidx]);
       } else {
-        write_ply_prop(fs, ply_type::u8, values[pidx]);
+        format_ply_prop(fs, ply_type::u8, values[pidx]);
         for (auto i = 0; i < (int)lists[pidx].size(); i++) {
-          if (i) write_text(fs, " ");
-          write_ply_prop(fs, prop.type, lists[pidx][i]);
+          if (i) format_value(fs, " ");
+          format_ply_prop(fs, prop.type, lists[pidx][i]);
         }
       }
-      write_text(fs, "\n");
+      format_value(fs, "\n");
     }
   } else {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
       if (!prop.is_list) {
-        write_ply_binprop(fs, format == ply_format::binary_big_endian,
-            prop.type, values[pidx]);
+        write_ply_prop(fs,
+            prop.type, values[pidx], format == ply_format::binary_big_endian);
       } else {
-        write_ply_binprop(fs, format == ply_format::binary_big_endian,
-            ply_type::u8, values[pidx]);
+        write_ply_prop(fs, 
+            ply_type::u8, values[pidx], format == ply_format::binary_big_endian);
         for (auto i = 0; i < (int)lists[pidx].size(); i++)
-          write_ply_binprop(fs, format == ply_format::binary_big_endian,
-              prop.type, lists[pidx][i]);
+          write_ply_prop(fs, 
+              prop.type, lists[pidx][i], format == ply_format::binary_big_endian);
       }
     }
   }
@@ -2860,14 +2845,14 @@ bool read_mtl_command(file_wrapper& fs, mtl_command& command,
 bool read_objx_command(file_wrapper& fs, objx_command& command,
     obj_camera& camera, obj_environment& environment, obj_instance& instance,
     obj_procedural& procedural) {
-  camera = {};
+  camera      = {};
   environment = {};
-  instance = {};
-  procedural = {};
+  instance    = {};
+  procedural  = {};
 
   // read the file line by line
   char buffer[4096];
-  auto pos = ftell(fs.fs);
+  auto pos   = ftell(fs.fs);
   auto found = false;
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
@@ -2883,12 +2868,12 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
 
     // read values
     if (cmd == "newcam") {
-      if(found) {
+      if (found) {
         fseek(fs.fs, pos, SEEK_SET);
         return true;
       } else {
         command = objx_command::camera;
-        found = true;
+        found   = true;
       }
       parse_value(line, camera.name);
     } else if (cmd == "Cframe") {
@@ -2906,12 +2891,12 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
     } else if (cmd == "Caperture") {
       parse_value(line, camera.aperture);
     } else if (cmd == "newenv") {
-      if(found) {
+      if (found) {
         fseek(fs.fs, pos, SEEK_SET);
         return true;
       } else {
         command = objx_command::environment;
-        found = true;
+        found   = true;
       }
       parse_value(line, environment.name);
     } else if (cmd == "Eframe") {
@@ -2921,12 +2906,12 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
     } else if (cmd == "map_Ee") {
       parse_value(line, environment.emission_map);
     } else if (cmd == "newist") {
-      if(found) {
+      if (found) {
         fseek(fs.fs, pos, SEEK_SET);
         return true;
       } else {
         command = objx_command::instance;
-        found = true;
+        found   = true;
       }
       parse_value(line, instance.name);
     } else if (cmd == "Iframe") {
@@ -2936,12 +2921,12 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
     } else if (cmd == "Imat") {
       parse_value(line, instance.material);
     } else if (cmd == "newproc") {
-      if(found) {
+      if (found) {
         fseek(fs.fs, pos, SEEK_SET);
         return true;
       } else {
         command = objx_command::camera;
-        found = true;
+        found   = true;
       }
       parse_value(line, procedural.name);
     } else if (cmd == "Pframe") {
@@ -2957,7 +2942,7 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
     }
     // backward compatibility
     else if (cmd == "c") {
-      if(found) {
+      if (found) {
         fseek(fs.fs, pos, SEEK_SET);
         return true;
       }
@@ -2972,7 +2957,7 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
       parse_value(line, camera.frame);
       return true;
     } else if (cmd == "e") {
-      if(found) {
+      if (found) {
         fseek(fs.fs, pos, SEEK_SET);
         return true;
       }
@@ -2982,7 +2967,7 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
       parse_value(line, environment.emission_map);
       parse_value(line, environment.frame);
     } else if (cmd == "i") {
-      if(found) {
+      if (found) {
         fseek(fs.fs, pos, SEEK_SET);
         return true;
       }
@@ -2992,7 +2977,7 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
       parse_value(line, instance.material);
       parse_value(line, instance.frame);
     } else if (cmd == "po") {
-      if(found) {
+      if (found) {
         fseek(fs.fs, pos, SEEK_SET);
         return true;
       }
@@ -3009,7 +2994,7 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
     pos = ftell(fs.fs);
   }
 
-  if(found) return true;
+  if (found) return true;
 
   return false;
 }
@@ -3041,15 +3026,9 @@ void write_obj_command(file_wrapper& fs, obj_command command,
       break;
     case obj_command::object: format_values(fs, "o {}\n", name); break;
     case obj_command::group: format_values(fs, "g {}\n", name); break;
-    case obj_command::usemtl:
-      format_values(fs, "usemtl {}\n", name);
-      break;
-    case obj_command::smoothing:
-      format_values(fs, "s {}\n", name);
-      break;
-    case obj_command::mtllib:
-      format_values(fs, "mtllib {}\n", name);
-      break;
+    case obj_command::usemtl: format_values(fs, "usemtl {}\n", name); break;
+    case obj_command::smoothing: format_values(fs, "s {}\n", name); break;
+    case obj_command::mtllib: format_values(fs, "mtllib {}\n", name); break;
     case obj_command::objxlib: break;
   }
 }
@@ -5344,8 +5323,7 @@ void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
       {pbrt_value_type::spectrum, "spectrum"},
   };
   for (auto& value : values) {
-    format_values(fs, " \"{} {}\" ", type_labels.at(value.type),
-        value.name);
+    format_values(fs, " \"{} {}\" ", type_labels.at(value.type), value.name);
     switch (value.type) {
       case pbrt_value_type::real:
         if (!value.vector1f.empty()) {
@@ -5377,8 +5355,7 @@ void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
       case pbrt_value_type::color:
         if (!value.vector3f.empty()) {
           format_values(fs, "[ ");
-          for (auto& v : value.vector3f)
-            format_values(fs, " {}", v);
+          for (auto& v : value.vector3f) format_values(fs, " {}", v);
           format_values(fs, " ]");
         } else {
           format_values(fs, "[ {} ]", value.value3f);
@@ -5396,8 +5373,7 @@ void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
       case pbrt_value_type::vector2:
         if (!value.vector2f.empty()) {
           format_values(fs, "[ ");
-          for (auto& v : value.vector2f)
-            format_values(fs, " {}", v);
+          for (auto& v : value.vector2f) format_values(fs, " {}", v);
           format_values(fs, " ]");
         } else {
           format_values(fs, "[ {} ]", value.value2f);
@@ -5479,13 +5455,13 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::named_medium:
-      format_values(fs, "MakeNamedMedium \"{}\" \"string type\" \"{}\"",
-          name, type);
+      format_values(
+          fs, "MakeNamedMedium \"{}\" \"string type\" \"{}\"", name, type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::named_material:
-      format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\"",
-          name, type);
+      format_values(
+          fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\"", name, type);
       write_pbrt_values(fs, values);
       break;
     case pbrt_command_::include:
@@ -5495,12 +5471,10 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
       format_values(fs, "ReverseOrientation\n");
       break;
     case pbrt_command_::set_transform:
-      format_values(fs,
-          "Transform {}\n", (mat4f)xform);
+      format_values(fs, "Transform {}\n", (mat4f)xform);
       break;
     case pbrt_command_::concat_transform:
-      format_values(fs,
-          "ConcatTransform {}\n", (mat4f)xform);
+      format_values(fs, "ConcatTransform {}\n", (mat4f)xform);
       break;
     case pbrt_command_::lookat_transform:
       format_values(fs, "LookAt {} {} {}\n", xform.x, xform.y, xform.z);
@@ -5521,8 +5495,7 @@ void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
         else
           interior.push_back(c);
       }
-      format_values(fs, "MediumInterface \"{}\" \"{}\"\n", interior,
-          exterior);
+      format_values(fs, "MediumInterface \"{}\" \"{}\"\n", interior, exterior);
     } break;
     case pbrt_command_::active_transform:
       format_values(fs, "ActiveTransform \"{}\"\n", name);
