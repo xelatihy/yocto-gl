@@ -114,6 +114,11 @@ void draw_glwidgets(const opengl_window& win) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) set_glwindow_close(win, true);
+  draw_gllabel(win, "image",
+      get_filename(app.filename) + " @ " + to_string(app.img.size().x) + " x " +
+          to_string(app.img.size().y));
+  draw_gllabel(win, "filename", app.filename);
+  draw_gllabel(win, "outname", app.outname);
   if (begin_glheader(win, "tonemap")) {
     auto& tonemap = app.tonemap_prms;
     auto  edited  = 0;
@@ -137,6 +142,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (begin_glheader(win, "colorgrade")) {
     auto& colorgrade = app.colorgrade_prms;
     auto  edited     = 0;
+    edited += (int)draw_glcheckbox(win, "enable colorgrade", app.colorgrade);
     edited += (int)draw_glslider(win, "contrast", colorgrade.contrast, 0, 1);
     edited += (int)draw_glslider(win, "ldr shadows", colorgrade.shadows, 0, 1);
     edited += (int)draw_glslider(
@@ -153,10 +159,6 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "image", get_filename(app.filename));
-    draw_gllabel(win, "filename", app.filename);
-    draw_gllabel(win, "outname", app.outname);
-    draw_gllabel(win, "image", "%d x %d", app.img.size().x, app.img.size().y);
     draw_glslider(win, "zoom", app.image_scale, 0.1, 10);
     draw_glcheckbox(win, "zoom to fit", app.zoom_to_fit);
     auto mouse_pos = get_glmouse_pos(win);
