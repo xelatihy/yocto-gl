@@ -2705,16 +2705,6 @@ void parse_value(string_view& str, obj_value& value, obj_value_type type,
   }
 }
 
-static inline void parse_obj_value_or_empty(
-    string_view& str, obj_value& value) {
-  skip_whitespace(str);
-  if (str.empty()) {
-    value = make_obj_value(""s);
-  } else {
-    parse_value(str, value, obj_value_type::string);
-  }
-}
-
 // Read obj
 bool read_obj_command(file_wrapper& fs, obj_command& command, string& name, 
   vec3f &value, vector<obj_vertex>& vertices, obj_vertex& vert_size) {
@@ -3176,52 +3166,39 @@ void write_obj_comment(file_wrapper& fs, const string& comment) {
   checked_fprintf(fs, "\n");
 }
 
-void write_obj_command(file_wrapper& fs, obj_command command,
-    const obj_value& value_, const vector<obj_vertex>& vertices) {
-  auto& name  = value_.string_;
-  auto& value = value_.array_;
+void write_obj_command(file_wrapper& fs, obj_command command, const string& name,
+    const vec3f& value, const vector<obj_vertex>& vertices) {
   switch (command) {
     case obj_command::vertex:
-      checked_fprintf(fs, "v %g %g %g\n", value[0], value[1], value[2]);
+      format_values(fs, "v {}\n", value);
       break;
     case obj_command::normal:
-      checked_fprintf(fs, "vn %g  %g %g\n", value[0], value[1], value[2]);
+      format_values(fs, "vn {}\n", value);
       break;
     case obj_command::texcoord:
-      checked_fprintf(fs, "vt %g %g\n", value[0], value[1]);
+      format_values(fs, "vt {}\n", value);
       break;
     case obj_command::face:
     case obj_command::line:
     case obj_command::point:
-      if (command == obj_command::face) checked_fprintf(fs, "f ");
-      if (command == obj_command::line) checked_fprintf(fs, "l ");
-      if (command == obj_command::point) checked_fprintf(fs, "p ");
-      for (auto& vert : vertices) {
-        checked_fprintf(fs, " ");
-        checked_fprintf(fs, "%d", vert.position);
-        if (vert.texcoord) {
-          checked_fprintf(fs, "/%d", vert.texcoord);
-          if (vert.normal) {
-            checked_fprintf(fs, "/%d", vert.normal);
-          }
-        } else if (vert.normal) {
-          checked_fprintf(fs, "//%d", vert.normal);
-        }
-      }
-      checked_fprintf(fs, "\n");
+      if (command == obj_command::face) format_values(fs, "f ");
+      if (command == obj_command::line) format_values(fs, "l ");
+      if (command == obj_command::point) format_values(fs, "p ");
+      for (auto& vert : vertices) format_values(fs, " {}", vert);
+      format_values(fs, "\n");
       break;
     case obj_command::object:
-      checked_fprintf(fs, "o %s\n", name.c_str());
+      format_values(fs, "o {}\n", name.c_str());
       break;
-    case obj_command::group: checked_fprintf(fs, "g %s\n", name.c_str()); break;
+    case obj_command::group: format_values(fs, "g {}\n", name.c_str()); break;
     case obj_command::usemtl:
-      checked_fprintf(fs, "usemtl %s\n", name.c_str());
+      format_values(fs, "usemtl {}\n", name.c_str());
       break;
     case obj_command::smoothing:
-      checked_fprintf(fs, "s %s\n", name.c_str());
+      format_values(fs, "s {}\n", name.c_str());
       break;
     case obj_command::mtllib:
-      checked_fprintf(fs, "mtllib %s\n", name.c_str());
+      format_values(fs, "mtllib {}\n", name.c_str());
       break;
     case obj_command::objxlib: break;
   }

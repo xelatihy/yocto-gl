@@ -578,8 +578,8 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
 
 // Write obj elements
 void write_obj_comment(file_wrapper& fs, const string& comment);
-void write_obj_command(file_wrapper& fs, obj_command command,
-    const obj_value& value, const vector<obj_vertex>& vertices = {});
+void write_obj_command(file_wrapper& fs, obj_command command, 
+  const string& name, const vec3f& value, const vector<obj_vertex>& vertices = {});
 void write_mtl_command(file_wrapper& fs, mtl_command command,
     const obj_value& value, const obj_texture_info& texture = {});
 void write_objx_command(file_wrapper& fs, objx_command command,
