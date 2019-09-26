@@ -690,6 +690,18 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// PROCEDURAL MODELING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Extract isoline from surface scalar field.
+void meandering_triangles(const vector<float>& field, float isoline,
+    int selected_tag, int t0, int t1, vector<vec3i>& triangles,
+    vector<int>& tags, vector<vec3f>& positions, vector<vec3f>& normals);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {

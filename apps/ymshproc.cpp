@@ -38,6 +38,7 @@ int main(int argc, const char** argv) {
   auto geodesic_source      = -1;
   auto num_geodesic_samples = 0;
   auto geodesic_scale       = 30.0f;
+  auto slice                = false;
   auto facevarying          = false;
   auto normals              = false;
   auto rotate               = zero3f;
@@ -54,6 +55,7 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "--num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
   add_cli_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
+  add_cli_option(cli, "--slice", slice, "Slice mesh along field isolines");
   add_cli_option(cli, "--facevarying", facevarying, "Preserve facevarying");
   add_cli_option(cli, "--normals", normals, "Compute smooth normals");
   add_cli_option(cli, "--rotatey", rotate.y, "Rotate around y axis");
@@ -114,9 +116,19 @@ int main(int argc, const char** argv) {
     } else {
       sources = sample_vertices_poisson(solver, num_geodesic_samples);
     }
-    auto distances = compute_geodesic_distances(solver, sources);
-    shape.colors   = vector<vec4f>{};
-    distance_to_color(shape.colors, distances, geodesic_scale);
+    auto field = compute_geodesic_distances(solver, sources);
+
+    if (slice) {
+      auto tags = vector<int>(shape.triangles.size(), 0);
+      meandering_triangles(field, geodesic_scale, 0, 1, 2, shape.triangles,
+          tags, shape.positions, shape.normals);
+      for (int i = 0; i < shape.triangles.size(); i++) {
+        if (tags[i] == 1) shape.triangles[i] = {-1, -1, -1};
+      }
+    } else {
+      shape.colors = vector<vec4f>{};
+      distance_to_color(shape.colors, field, geodesic_scale);
+    }
   }
 
   // save mesh
