@@ -688,7 +688,6 @@ static void load_yaml_scene(
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
-  // fix_names(scene);
   trim_memory(scene);
 }
 
@@ -1124,7 +1123,6 @@ static void load_obj_scene(
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
-  // fix_names(scene);
 }
 
 static void save_obj(const string& filename, const yocto_scene& scene,
@@ -1346,14 +1344,18 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
   // convert textures
   for (auto& gtexture : gltf.textures) {
     auto& texture    = scene.textures.emplace_back();
-    texture.name     = gtexture.name;
+    if(!gtexture.name.empty()) {
+      texture.name     = make_safe_name(gtexture.name, "texture", (int)scene.textures.size());
+    } else {
+      texture.name     = make_safe_name(get_basename(gtexture.filename), "texture", (int)scene.textures.size());
+    }
     texture.filename = gtexture.filename;
   }
 
   // convert materials
   for (auto& gmaterial : gltf.materials) {
     auto& material        = scene.materials.emplace_back();
-    material.name         = gmaterial.name;
+    material.name         = make_safe_name(gmaterial.name, "material", (int)scene.materials.size());
     material.emission     = gmaterial.emission;
     material.emission_tex = gmaterial.emission_tex;
     if (gmaterial.has_specgloss) {
@@ -1384,7 +1386,8 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
           gmesh.name.empty()
               ? ""s
               : (gmesh.name + std::to_string(shape_indices.back().size()));
-      shape.filename = "shapes/shape" + std::to_string(scene.shapes.size() - 1);
+      make_safe_name(shape.name, "shape", (int)scene.shapes.size());
+      shape.filename = make_safe_filename("shapes/shape" + std::to_string(scene.shapes.size()));
       shape.positions = gprim.positions;
       shape.normals   = gprim.normals;
       shape.texcoords = gprim.texcoords;
@@ -1409,12 +1412,13 @@ static void load_gltf(const string& filename, yocto_scene& scene) {
   for (auto& gnode : gltf.nodes) {
     if (gnode.camera >= 0) {
       auto& camera = scene.cameras.emplace_back(cameras[gnode.camera]);
+      camera.name = make_safe_name(camera.name, "caemra", (int)scene.cameras.size());
       camera.frame = gnode.frame;
     }
     if (gnode.mesh >= 0) {
       for (auto [shape, material] : shape_indices[gnode.mesh]) {
         auto& instance    = scene.instances.emplace_back();
-        instance.name     = scene.shapes[shape].name;
+        instance.name     = make_safe_name(scene.shapes[shape].name, "instance", (int)scene.instances.size());
         instance.frame    = gnode.frame;
         instance.shape    = shape;
         instance.material = material;
@@ -1441,7 +1445,6 @@ static void load_gltf_scene(
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
-  fix_names(scene);
 
   // fix cameras
   auto bbox = compute_bounds(scene);
@@ -1605,7 +1608,6 @@ static void load_pbrt_scene(
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
-  // fix_names(scene);
 }
 
 // Convert a scene to pbrt format

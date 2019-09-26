@@ -316,8 +316,6 @@ void add_tangent_spaces(yocto_scene& scene);
 void add_materials(yocto_scene& scene);
 void add_cameras(yocto_scene& scene);
 void add_radius(yocto_scene& scene, float radius = 0.001f);
-void fix_names(yocto_scene& sceme);
-void rename_instances(yocto_scene& scene);
 
 // Add a sky environment
 void add_sky(yocto_scene& scene, float sun_angle = pif / 4);
