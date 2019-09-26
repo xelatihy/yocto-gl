@@ -3349,7 +3349,13 @@ static inline void format_value(string& str, const yaml_value& value) {
     case yaml_value_type::boolean:
       format_value(str, value.boolean ? "true" : "false");
       break;
-    case yaml_value_type::string: format_value(str, value.string_); break;
+    case yaml_value_type::string:
+      if (value.string_.empty() || is_digit(value.string_.front())) {
+        format_values(str, "\"{}\"", value.string_);
+      } else {
+        format_values(str, "{}", value.string_);
+      }
+      break;
     case yaml_value_type::array:
       format_value(str, "[ ");
       for (auto i = 0; i < value.number; i++) {
@@ -3465,29 +3471,10 @@ void write_yaml_property(file_wrapper& fs, const string& object,
     format_values(fs, "\n{}:\n", object);
   } else {
     if (!object.empty()) {
-      format_values(fs, (newobj ? "  - " : "    "));
+      format_values(fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value);
+    } else {
+      format_values(fs, "{}: {}\n", key, value);
     }
-    format_values(fs, "{}: ", key);
-    switch (value.type) {
-      case yaml_value_type::number:
-        format_values(fs, "{}", value.number);
-        break;
-      case yaml_value_type::boolean:
-        format_values(fs, "{}", value.boolean ? "true" : "false");
-        break;
-      case yaml_value_type::string:
-        format_values(fs, "{}", value.string_);
-        break;
-      case yaml_value_type::array:
-        format_values(fs, "[ ");
-        for (auto i = 0; i < value.number; i++) {
-          if (i) format_values(fs, ", ");
-          format_values(fs, "{}", value.array_[i]);
-        }
-        format_values(fs, " ]");
-        break;
-    }
-    format_values(fs, "\n");
   }
 }
 

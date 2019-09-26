@@ -1280,19 +1280,13 @@ vector<string> format_stats(const yocto_scene& scene, bool verbose) {
 
 // Add missing names and resolve duplicated names.
 void add_names(yocto_scene& scene) {
-  auto normalize = [](string& name, const string& base, const string& ext,
-                       int num) {
-    for (auto& c : name) {
-      if (c == ':' || c == ' ') c = '_';
-    }
-    if (name.empty()) name = base + "_" + std::to_string(num);
-    if (get_dirname(name).empty()) name = base + "s/" + name;
-    if (get_extension(name).empty()) name = name + "." + ext;
-  };
   auto fix_names = [](auto& values, const string& base) {
     auto count = 0;
-    for (auto& value : values)
+    for (auto& value : values) {
       if (value.name.empty()) value.name = base + std::to_string(count++);
+      if (value.name.front() == '-') value.name = "_" + value.name;
+      if (value.name.front() >= '0' && value.name.front() <= '9') value.name = "_" + value.name;
+    }
   };
   auto fix_filenames = [](auto& values, const string& base,
                            const string& dirname, const string& ext) {
