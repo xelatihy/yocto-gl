@@ -109,11 +109,11 @@ int main(int argc, const char** argv) {
   // change texture names
   if (uniform_txt) {
     for (auto& texture : scene.textures) {
-      auto ext = get_extension(texture.uri);
-      if (is_hdr_filename(texture.uri)) {
-        texture.uri = replace_extension(texture.uri, ".hdr");
+      auto ext = get_extension(texture.filename);
+      if (is_hdr_filename(texture.filename)) {
+        texture.filename = replace_extension(texture.filename, ".hdr");
       } else {
-        texture.uri = replace_extension(texture.uri, ".png");
+        texture.filename = replace_extension(texture.filename, ".png");
       }
     }
   }
@@ -131,9 +131,11 @@ int main(int argc, const char** argv) {
     auto sid = 0;
     for (auto& shape : scene.shapes) {
       if (!shape.quadspos.empty()) {
-        shape.uri = shape_directory + "shape_" + std::to_string(sid) + ".obj";
+        shape.filename = shape_directory + "shape_" + std::to_string(sid) +
+                         ".obj";
       } else {
-        shape.uri = shape_directory + "shape_" + std::to_string(sid) + ".ply";
+        shape.filename = shape_directory + "shape_" + std::to_string(sid) +
+                         ".ply";
       }
       sid++;
     }
@@ -145,11 +147,11 @@ int main(int argc, const char** argv) {
     auto sid = 0;
     for (auto& subdiv : scene.subdivs) {
       if (!subdiv.quadspos.empty()) {
-        subdiv.uri = subdiv_directory + "subdiv_" + std::to_string(sid) +
-                     ".obj";
+        subdiv.filename = subdiv_directory + "subdiv_" + std::to_string(sid) +
+                          ".obj";
       } else {
-        subdiv.uri = subdiv_directory + "subdiv_" + std::to_string(sid) +
-                     ".ply";
+        subdiv.filename = subdiv_directory + "subdiv_" + std::to_string(sid) +
+                          ".ply";
       }
       sid++;
     }
@@ -160,11 +162,13 @@ int main(int argc, const char** argv) {
   auto dirnames = unordered_set<string>{};
   if (!dirname.empty()) dirnames.insert(dirname);
   for (auto& shape : scene.shapes)
-    dirnames.insert(dirname + get_dirname(shape.uri));
+    dirnames.insert(dirname + get_dirname(shape.filename));
   for (auto& subdiv : scene.subdivs)
-    dirnames.insert(dirname + get_dirname(subdiv.uri));
+    dirnames.insert(dirname + get_dirname(subdiv.filename));
   for (auto& texture : scene.textures)
-    dirnames.insert(dirname + get_dirname(texture.uri));
+    dirnames.insert(dirname + get_dirname(texture.filename));
+  for (auto& texture : scene.voltextures)
+    dirnames.insert(dirname + get_dirname(texture.filename));
   for (auto& dir : dirnames) {
     if (!mkdir(dir)) {
       print_fatal("cannot create directory " + output);

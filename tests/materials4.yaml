@@ -1,139 +1,152 @@
 cameras:
-  - uri: cameras/default.yaml
+  - name: default
     lens: 0.1
     aperture: 0.0
     film: [0.036, 0.015]
     lookat: [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
-  - uri: cameras/front.yaml
+  - name: front
     lens: 0.1
     aperture: 0.0
     film: [0.036, 0.012]
     lookat: [0, 1.75, 3, 0, 0.175, 0, 0, 1, 0]
-  - uri: cameras/back.yaml
+  - name: back
     lens: 0.1
     aperture: 0.0
     film: [0.036, 0.012]
     lookat: [0, 1.5, -3.25, 0, -0.05, 0, 0, 1, 0]
-  - uri: cameras/perspective-sharp.yaml
+  - name: perspective-sharp
     lens: 0.1
     aperture: 0.0
     film: [0.036, 0.015]
     lookat: [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
-  - uri: cameras/perspective-dof.yaml
+  - name: perspective-dof
     lens: 0.1
     aperture: 0.05
     film: [0.036, 0.015]
     lookat: [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
-  - uri: cameras/orthographic-sharp.yaml
+  - name: orthographic-sharp
     lens: 0.03
     aperture: 0.0
     film: [0.036, 0.015]
     orthographic: true
     lookat: [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
-  - uri: cameras/orthographic-dof.yaml
+  - name: orthographic-dof
     lens: 0.03
     aperture: 0.02
     film: [0.036, 0.015]
     orthographic: true
     lookat: [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
 textures:
-  - uri: ::yocto::test-floor::textures/test-floor.png
-  - uri: ::yocto::test-sky::textures/test-sky.hdr
+  - name: floor
+    filename: textures/test-floor.png
+    preset: test-floor
+  - name: sky
+    filename: textures/test-sky.hdr
+    preset: test-sky
 materials:
-  - uri: materials/test-floor.yaml
+  - name: floor
     diffuse: [0.7, 0.7, 0.7]
-    diffuse_tex: textures/test-floor.png
-  - uri: materials/test-volume-jade.yaml
+    diffuse_tex: floor
+  - name: volume-jade
     specular: [0.04, 0.04, 0.04]
     roughness: 0
     transmission: [1, 1, 1]
     voltransmission: [0.5, 0.5, 0.5]
     volscatter: [0.3, 0.6, 0.3]
     refract: true
-  - uri: materials/test-volume-cloud.yaml
+  - name: volume-cloud
     transmission: [1, 1, 1]
     voltransmission: [0.65, 0.65, 0.65]
     volscatter: [0.9, 0.9, 0.9]
-  - uri: materials/test-volume-glass.yaml
+  - name: volume-glass
     specular: [0.04, 0.04, 0.04]
     roughness: 0
     transmission: [1, 1, 1]
     voltransmission: [1, 0.5, 0.5]
     volscale: 0.02
     refract: true
-  - uri: materials/test-volume-smoke.yaml
+  - name: volume-smoke
     transmission: [1, 1, 1]
     voltransmission: [0.5, 0.5, 0.5]
     volscatter: [0.2, 0.2, 0.2]
     volanisotropy: -0.8
-  - uri: materials/test-volume-emissive.yaml
+  - name: volume-emissive
     transmission: [1, 1, 1]
     voltransmission: [0.95, 0.95, 0.95]
     volemission: [15, 15, 10]
     volscatter: [0.01, 0.01, 0.01]
-  - uri: materials/test-largearealight1.yaml
+  - name: largearealight1
     emission: [10, 10, 10]
-  - uri: materials/test-largearealight2.yaml
+  - name: largearealight2
     emission: [10, 10, 10]
 shapes:
-  - uri: ::yocto::test-floor::shapes/test-floor.ply
-  - uri: shapes/test-bunny.obj
-  - uri: ::yocto::test-sphere::shapes/test-sphere.ply
-  - uri: ::yocto::test-largearealight1::shapes/test-largearealight1.ply
-  - uri: ::yocto::test-largearealight2::shapes/test-largearealight2.ply
+  - name: floor
+    filename: shapes/test-floor.ply
+    preset: test-floor
+  - name: bunny
+    filename: shapes/test-bunny.obj
+  - name: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
+  - name: largearealight1
+    filename: shapes/test-largearealight1.ply
+    preset: test-largearealight1
+  - name: largearealight2
+    filename: shapes/test-largearealight2.ply
+    preset: test-largearealight2
 instances:
-  - uri: instances/test-floor.yaml
-    shape: shapes/test-floor.ply
-    material: materials/test-floor.yaml
-  - uri: instances/test-largearealight1.yaml
-    shape: shapes/test-largearealight1.ply
-    material: materials/test-largearealight1.yaml
+  - name: floor
+    shape: floor
+    material: floor
+  - name: largearealight1
+    shape: largearealight1
+    material: largearealight1
     lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - uri: instances/test-largearealight2.yaml
-    shape: shapes/test-largearealight2.ply
-    material: materials/test-largearealight2.yaml
+  - name: largearealight2
+    shape: largearealight2
+    material: largearealight2
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - uri: instances/test-sphere_test-volume-cloud.yaml
-    shape: shapes/test-sphere.ply
-    material: materials/test-volume-cloud.yaml
+  - name: sphere_volume-cloud
+    shape: sphere
+    material: volume-cloud
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - uri: instances/test-sphere_test-volume-glass.yaml
-    shape: shapes/test-sphere.ply
-    material: materials/test-volume-glass.yaml
+  - name: sphere_volume-glass
+    shape: sphere
+    material: volume-glass
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - uri: instances/test-sphere_test-volume-jade.yaml
-    shape: shapes/test-sphere.ply
-    material: materials/test-volume-jade.yaml
+  - name: sphere_volume-jade
+    shape: sphere
+    material: volume-jade
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - uri: instances/test-sphere_test-volume-emissive.yaml
-    shape: shapes/test-sphere.ply
-    material: materials/test-volume-emissive.yaml
+  - name: sphere_volume-emissive
+    shape: sphere
+    material: volume-emissive
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - uri: instances/test-sphere_test-volume-smoke.yaml
-    shape: shapes/test-sphere.ply
-    material: materials/test-volume-smoke.yaml
+  - name: sphere_volume-smoke
+    shape: sphere
+    material: volume-smoke
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - uri: instances/test-bunny_test-volume-cloud.yaml
-    shape: shapes/test-bunny.obj
-    material: materials/test-volume-cloud.yaml
+  - name: bunny_volume-cloud
+    shape: bunny
+    material: volume-cloud
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - uri: instances/test-bunny_test-volume-glass.yaml
-    shape: shapes/test-bunny.obj
-    material: materials/test-volume-glass.yaml
+  - name: bunny_volume-glass
+    shape: bunny
+    material: volume-glass
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - uri: instances/test-bunny_test-volume-jade.yaml
-    shape: shapes/test-bunny.obj
-    material: materials/test-volume-jade.yaml
+  - name: bunny_volume-jade
+    shape: bunny
+    material: volume-jade
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - uri: instances/test-bunny_test-volume-emissive.yaml
-    shape: shapes/test-bunny.obj
-    material: materials/test-volume-emissive.yaml
+  - name: bunny_volume-emissive
+    shape: bunny
+    material: volume-emissive
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
-  - uri: instances/test-bunny_test-volume-smoke.yaml
-    shape: shapes/test-bunny.obj
-    material: materials/test-volume-smoke.yaml
+  - name: bunny_volume-smoke
+    shape: bunny
+    material: volume-smoke
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
 environments:
-  - uri: environments/test-sky.yaml
+  - name: sky
     emission: [0.5, 0.5, 0.5]
-    emission_tex: textures/test-sky.hdr
+    emission_tex: sky

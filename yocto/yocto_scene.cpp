@@ -157,7 +157,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       auto disp = mean(
           xyz(eval_texture(displacement, shape.texcoords[vid], true)));
-      if (!is_hdr_filename(displacement.uri)) disp -= 0.5f;
+      if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       shape.positions[vid] += normals[vid] * scale * disp;
     }
     if (update_normals || !shape.normals.empty()) {
@@ -173,7 +173,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
       for (auto i = 0; i < 4; i++) {
         auto disp = mean(
             xyz(eval_texture(displacement, shape.texcoords[qtxt[i]], true)));
-        if (!is_hdr_filename(displacement.uri)) disp -= 0.5f;
+        if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
         offset[qpos[i]] += scale * disp;
         count[qpos[i]] += 1;
       }
@@ -1279,49 +1279,65 @@ vector<string> format_stats(const yocto_scene& scene, bool verbose) {
 }
 
 // Add missing names and resolve duplicated names.
-void normalize_uris(yocto_scene& scene) {
-  auto normalize = [](string& name, const string& base, const string& ext,
-                       int num) {
-    for (auto& c : name) {
-      if (c == ':' || c == ' ') c = '_';
+void fix_names(yocto_scene& scene) {
+  auto fix_names = [](auto& values, const string& base) {
+    auto count = 0;
+    for (auto& value : values) {
+      if (value.name.empty()) value.name = base + std::to_string(count++);
+      if (value.name.front() == '-') value.name = "_" + value.name;
+      if (value.name.front() >= '0' && value.name.front() <= '9')
+        value.name = "_" + value.name;
+      for (auto& c : value.name) {
+        if (c == '-' || c == '_') continue;
+        if (c >= '0' && c <= '9') continue;
+        if (c >= 'a' && c <= 'z') continue;
+        if (c >= 'A' && c <= 'Z') continue;
+        c = '_';
+      }
     }
-    if (name.empty()) name = base + "_" + std::to_string(num);
-    if (get_dirname(name).empty()) name = base + "s/" + name;
-    if (get_extension(name).empty()) name = name + "." + ext;
   };
-  for (auto id = 0; id < scene.cameras.size(); id++)
-    normalize(scene.cameras[id].uri, "camera", "yaml", id);
-  for (auto id = 0; id < scene.textures.size(); id++)
-    normalize(scene.textures[id].uri, "texture", "png", id);
-  for (auto id = 0; id < scene.voltextures.size(); id++)
-    normalize(scene.voltextures[id].uri, "volume", "yvol", id);
-  for (auto id = 0; id < scene.materials.size(); id++)
-    normalize(scene.materials[id].uri, "material", "yaml", id);
-  for (auto id = 0; id < scene.shapes.size(); id++)
-    normalize(scene.shapes[id].uri, "shape", "ply", id);
-  for (auto id = 0; id < scene.instances.size(); id++)
-    normalize(scene.instances[id].uri, "instance", "yaml", id);
-  for (auto id = 0; id < scene.animations.size(); id++)
-    normalize(scene.animations[id].uri, "animation", "yaml", id);
-  for (auto id = 0; id < scene.nodes.size(); id++)
-    normalize(scene.nodes[id].uri, "node", "yaml", id);
+  auto fix_filenames = [](auto& values, const string& base,
+                           const string& dirname, const string& ext) {
+    auto count = 0;
+    for (auto& value : values) {
+      for (auto& c : value.filename) {
+        if (c == ':' || c == ' ') c = '_';
+      }
+      if (value.filename.empty()) {
+        value.filename = dirname + base + std::to_string(count++) + ext;
+      }
+    }
+  };
+  fix_names(scene.cameras, "camera");
+  fix_names(scene.textures, "texture");
+  fix_names(scene.voltextures, "voltexture");
+  fix_names(scene.materials, "material");
+  fix_names(scene.shapes, "shape");
+  fix_names(scene.subdivs, "subdiv");
+  fix_names(scene.instances, "instance");
+  fix_names(scene.environments, "environment");
+  fix_names(scene.animations, "animation");
+  fix_names(scene.nodes, "node");
+  fix_filenames(scene.textures, "texture", "textures/", ".png");
+  fix_filenames(scene.voltextures, "voltexture", "voltextures/", ".yvol");
+  fix_filenames(scene.shapes, "shape", "shapes/", ".png");
+  fix_filenames(scene.subdivs, "subdiv", "subdivs/", ".yvol");
 }
 void rename_instances(yocto_scene& scene) {
   auto shape_names = vector<string>(scene.shapes.size());
   for (auto sid = 0; sid < scene.shapes.size(); sid++) {
-    shape_names[sid] = get_basename(scene.shapes[sid].uri);
+    shape_names[sid] = get_basename(scene.shapes[sid].name);
   }
   auto shape_count = vector<vec2i>(scene.shapes.size(), vec2i{0, 0});
   for (auto& instance : scene.instances) shape_count[instance.shape].y += 1;
   for (auto& instance : scene.instances) {
     if (shape_count[instance.shape].y == 1) {
-      instance.uri = "instances/" + shape_names[instance.shape] + ".yaml";
+      instance.name = shape_names[instance.shape];
     } else {
       auto num = std::to_string(shape_count[instance.shape].x++);
       while (num.size() < (int)ceil(log10(shape_count[instance.shape].y)))
         num = '0' + num;
-      instance.uri = "instances/" + shape_names[instance.shape] + "-" + num +
-                     ".yaml";
+      instance.name = shape_names[instance.shape] + "-" + num;
     }
   }
 }
@@ -1366,7 +1382,7 @@ void add_materials(yocto_scene& scene) {
     if (instance.material >= 0) continue;
     if (material_id < 0) {
       auto material    = yocto_material{};
-      material.uri     = "materails/default.yaml";
+      material.name    = "default";
       material.diffuse = {0.2f, 0.2f, 0.2f};
       scene.materials.push_back(material);
       material_id = (int)scene.materials.size() - 1;
@@ -1388,7 +1404,7 @@ void add_radius(yocto_scene& scene, float radius) {
 void add_cameras(yocto_scene& scene) {
   if (scene.cameras.empty()) {
     auto camera = yocto_camera{};
-    camera.uri  = "cameras/default.yaml";
+    camera.name = "default";
     set_view(camera, compute_bounds(scene), {0, 0, 1});
     scene.cameras.push_back(camera);
   }
@@ -1396,12 +1412,13 @@ void add_cameras(yocto_scene& scene) {
 
 // Add a sky environment
 void add_sky(yocto_scene& scene, float sun_angle) {
-  auto texture = yocto_texture{};
-  texture.uri  = "textures/sky.hdr";
+  auto texture     = yocto_texture{};
+  texture.name     = "sky";
+  texture.filename = "textures/sky.hdr";
   make_sunsky(texture.hdr, {1024, 512}, sun_angle);
   scene.textures.push_back(texture);
   auto environment         = yocto_environment{};
-  environment.uri          = "environments/default.yaml";
+  environment.name         = "sky";
   environment.emission     = {1, 1, 1};
   environment.emission_tex = (int)scene.textures.size() - 1;
   scene.environments.push_back(environment);
@@ -1445,7 +1462,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool notextures) {
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = unordered_map<string, int>();
     used.reserve(vals.size());
-    for (auto& value : vals) used[value.uri] += 1;
+    for (auto& value : vals) used[value.name] += 1;
     for (auto& [name, used] : used) {
       if (name == "") {
         errs.push_back("empty " + base + " name");
@@ -1457,13 +1474,14 @@ vector<string> validate_scene(const yocto_scene& scene, bool notextures) {
   auto check_empty_textures = [&errs](const vector<yocto_texture>& vals) {
     for (auto& value : vals) {
       if (value.hdr.empty() && value.ldr.empty()) {
-        errs.push_back("empty texture " + value.uri);
+        errs.push_back("empty texture " + value.name);
       }
     }
   };
 
   check_names(scene.cameras, "camera");
   check_names(scene.shapes, "shape");
+  check_names(scene.subdivs, "subdiv");
   check_names(scene.textures, "texture");
   check_names(scene.voltextures, "voltexture");
   check_names(scene.materials, "material");

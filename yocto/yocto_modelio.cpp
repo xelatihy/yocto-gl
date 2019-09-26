@@ -1119,7 +1119,7 @@ void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
 void add_ply_lists(ply_model& ply, const vector<byte>& sizes,
     const vector<int>& values, const string& element, const string& property) {
   if (values.empty()) return;
-  add_ply_property(ply, element, property, values.size(), ply_type::i32, true);
+  add_ply_property(ply, element, property, sizes.size(), ply_type::i32, true);
   auto& prop    = get_ply_property(ply, element, property);
   prop.data_i32 = values;
   prop.ldata_u8 = sizes;
@@ -1982,6 +1982,7 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
       parse_value_or_empty(line, cmd == "o" ? oname : gname);
       if (!obj.shapes.back().vertices.empty()) {
         obj.shapes.emplace_back();
+        obj.shapes.back().name = oname + gname;
       } else {
         obj.shapes.back().name = oname + gname;
       }
@@ -3348,7 +3349,13 @@ static inline void format_value(string& str, const yaml_value& value) {
     case yaml_value_type::boolean:
       format_value(str, value.boolean ? "true" : "false");
       break;
-    case yaml_value_type::string: format_value(str, value.string_); break;
+    case yaml_value_type::string:
+      if (value.string_.empty() || is_digit(value.string_.front())) {
+        format_values(str, "\"{}\"", value.string_);
+      } else {
+        format_values(str, "{}", value.string_);
+      }
+      break;
     case yaml_value_type::array:
       format_value(str, "[ ");
       for (auto i = 0; i < value.number; i++) {
@@ -3464,29 +3471,10 @@ void write_yaml_property(file_wrapper& fs, const string& object,
     format_values(fs, "\n{}:\n", object);
   } else {
     if (!object.empty()) {
-      format_values(fs, (newobj ? "  - " : "    "));
+      format_values(fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value);
+    } else {
+      format_values(fs, "{}: {}\n", key, value);
     }
-    format_values(fs, "{}: ", key);
-    switch (value.type) {
-      case yaml_value_type::number:
-        format_values(fs, "{}", value.number);
-        break;
-      case yaml_value_type::boolean:
-        format_values(fs, "{}", value.boolean ? "true" : "false");
-        break;
-      case yaml_value_type::string:
-        format_values(fs, "{}", value.string_);
-        break;
-      case yaml_value_type::array:
-        format_values(fs, "[ ");
-        for (auto i = 0; i < value.number; i++) {
-          if (i) format_values(fs, ", ");
-          format_values(fs, "{}", value.array_[i]);
-        }
-        format_values(fs, " ]");
-        break;
-    }
-    format_values(fs, "\n");
   }
 }
 
@@ -3918,7 +3906,7 @@ static void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
       camera.fov = get_pbrt_value(values, "fov", 90.0f);
       // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
       camera.aspect = get_pbrt_value(values, "frameaspectratio", film_aspect);
-      camera.focus  = get_pbrt_value(values, "focaldistance", 10);
+      camera.focus  = get_pbrt_value(values, "focaldistance", 10.0f);
       if (!camera.aspect) camera.aspect = 1;
       if (!camera.focus) camera.focus = 10;
     } else if (camera.type == "realistic") {
@@ -3929,7 +3917,7 @@ static void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
       auto lens       = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
       camera.fov      = 2 * atan(0.036f / (2 * lens));
       camera.aperture = get_pbrt_value(values, "aperturediameter", 0.0f);
-      camera.focus    = get_pbrt_value(values, "focusdistance", 10);
+      camera.focus    = get_pbrt_value(values, "focusdistance", 10.0f);
       camera.aspect   = film_aspect;
     } else {
       throw std::runtime_error("unsupported Camera type " + camera.type);
@@ -4527,7 +4515,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
         }
       } else if (cmd == "ActiveTransform") {
         auto name = ""s;
-        parse_pbrt_param(str, name);
+        parse_pbrt_command(str, name);
         if (name == "StartTime") {
           stack.back().active_transform_start = true;
           stack.back().active_transform_end   = false;

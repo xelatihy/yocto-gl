@@ -157,7 +157,7 @@ void load_island_cameras(
   auto js = json{};
   load_json(dirname + filename, js);
   auto camera  = yocto_camera{};
-  camera.uri   = "cameras/" + get_basename(filename) + ".yaml";
+  camera.name  = get_basename(filename);
   camera.lens  = js.at("focalLength").get<float>() * 0.001f;
   camera.focus = js.at("centerOfInterest").get<float>();
   // camera.aperture  = js.at("lensRadius").get<float>();
@@ -178,32 +178,34 @@ void load_island_lights(
   for (auto& [name, ljs] : js.items()) {
     if (ljs.at("type") == "quad") {
       auto material     = yocto_material{};
-      material.uri      = "materials/lights/" + name + ".yaml";
+      material.name     = name;
       material.emission = xyz(ljs.at("color").get<vec4f>()) *
                           pow(2.0f, ljs.at("exposure").get<float>());
       scene.materials.push_back(material);
-      auto shape  = yocto_shape{};
-      shape.uri   = "shapes/lights/" + name + ".ply";
-      auto params = proc_shape_params{};
-      params.type = proc_shape_params::type_t::quad;
+      auto shape     = yocto_shape{};
+      shape.name     = "shapes/lights/" + name + ".ply";
+      shape.filename = "shapes/lights/" + name + ".ply";
+      auto params    = proc_shape_params{};
+      params.type    = proc_shape_params::type_t::quad;
       params.scale =
           (ljs.at("width").get<float>() + ljs.at("height").get<float>());
       make_proc_shape(shape.triangles, shape.quads, shape.positions,
           shape.normals, shape.texcoords, params);
       scene.shapes.push_back(shape);
       auto instance     = yocto_instance{};
-      instance.uri      = "instances/lights/" + name + ".yaml";
+      instance.name     = name;
       instance.frame    = frame3f(ljs.at("translationMatrix").get<mat4f>());
       instance.shape    = (int)scene.shapes.size() - 1;
       instance.material = (int)scene.materials.size() - 1;
       scene.instances.push_back(instance);
     } else if (ljs.at("type") == "dome") {
-      auto texture = yocto_texture{};
-      texture.uri  = ljs.at("map");
-      load_image(dirname + texture.uri, texture.hdr);
+      auto texture     = yocto_texture{};
+      texture.name     = ljs.at("map");
+      texture.filename = ljs.at("map");
+      load_image(dirname + texture.filename, texture.hdr);
       scene.textures.push_back(texture);
       auto environment     = yocto_environment{};
-      environment.uri      = "environments/lights/" + name + ".yaml";
+      environment.name     = name;
       environment.emission = xyz(ljs.at("color").get<vec4f>()) *
                              pow(2.0f, ljs.at("exposure").get<float>());
       environment.emission_tex = (int)scene.textures.size() - 1;
@@ -296,8 +298,9 @@ void load_island_shape(vector<yocto_shape>& shapes,
   auto add_texture = [&](const string& mapname) -> int {
     if (tmap.find(mapname) == tmap.end()) {
       scene.textures.push_back({});
-      scene.textures.back().uri = mapname;
-      tmap[mapname]             = scene.textures.size() - 1;
+      scene.textures.back().name     = mapname;
+      scene.textures.back().filename = mapname;
+      tmap[mapname]                  = scene.textures.size() - 1;
     }
     return tmap.at(mapname);
   };
@@ -313,10 +316,10 @@ void load_island_shape(vector<yocto_shape>& shapes,
         throw;
       }
     }
-    if (!shapes.empty() && materials.back().uri == dmaterial.name) return;
+    if (!shapes.empty() && materials.back().name == dmaterial.name) return;
     dmaterials.push_back(dmaterial);
     materials.push_back({});
-    materials.back().uri = dmaterial.name;
+    materials.back().name = dmaterial.name;
     if (dmaterial.color_map != "") {
       materials.back().diffuse     = {1, 1, 1};
       materials.back().diffuse_tex = add_texture(dmaterial.color_map_baked);
@@ -329,8 +332,12 @@ void load_island_shape(vector<yocto_shape>& shapes,
       materials.back().refract      = true;
     }
     shapes.push_back(yocto_shape{});
-    shapes.back().uri = "shapes/" + parent_name + "/" + get_basename(filename) +
-                        "-" + std::to_string((int)shapes.size()) + ".ply";
+    shapes.back().name = "shapes/" + parent_name + "/" +
+                         get_basename(filename) + "-" +
+                         std::to_string((int)shapes.size()) + ".ply";
+    shapes.back().filename = "shapes/" + parent_name + "/" +
+                             get_basename(filename) + "-" +
+                             std::to_string((int)shapes.size()) + ".ply";
     pos_map.clear();
     pos_map.reserve(1024 * 1024);
     norm_map.clear();
@@ -471,7 +478,8 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
     }
   } else {
     for (auto& shape : shapes) {
-      shape.uri = get_noextension(shape.uri) + ".obj";
+      shape.filename = get_noextension(shape.filename) + ".obj";
+      shape.name     = shape.filename;
     }
   }
 
@@ -499,8 +507,8 @@ void add_island_instance(yocto_scene& scene, const string& parent_name,
   static auto name_counter = unordered_map<string, int>{};
   for (auto shape_material : shapes) {
     auto instance = yocto_instance{};
-    instance.uri  = "instances/" + parent_name + "/" + parent_name + "-" +
-                   std::to_string(name_counter[parent_name]++) + ".yaml";
+    instance.name = parent_name + "/" + parent_name + "-" +
+                    std::to_string(name_counter[parent_name]++);
     instance.frame    = frame3f(xform);
     instance.shape    = shape_material.x;
     instance.material = shape_material.y;
@@ -666,8 +674,9 @@ void load_island_curve(const string& filename, const string& dirname,
     auto shape    = yocto_shape{};
     auto material = -1;
     for (auto j = 0; j < curves.get_length(); j++) {
-      auto curve = curves.get_array_element(j);
-      shape.uri  = outname;
+      auto curve     = curves.get_array_element(j);
+      shape.name     = outname;
+      shape.filename = outname;
       for (auto i = 0; i < curve.get_length(); i++) {
         auto point = curve.get_array_element(i);
         shape.positions.push_back({
@@ -708,7 +717,8 @@ void load_island_curvetube(const string& filename, const string& dirname,
     material.diffuse = mmap.at(material_name).color;
     scene.materials.push_back(material);
     auto shape      = yocto_shape{};
-    shape.uri       = outname;
+    shape.name      = outname;
+    shape.filename  = outname;
     auto ssmaterial = (int)scene.materials.size() - 1;
     for (auto j = 0; j < curves.get_length(); j++) {
       auto curve             = curves.get_array_element(j);
@@ -901,55 +911,62 @@ void load_island_scene(
 
   // fix texture names
   for (auto& texture : scene.textures) {
-    texture.uri = replace(texture.uri, "ptex2png/", "textures/");
-    texture.uri = replace(texture.uri, ".exr", ".hdr");
+    texture.filename = replace(texture.filename, "ptex2png/", "textures/");
+    texture.filename = replace(texture.filename, ".exr", ".hdr");
+    texture.name     = texture.filename;
   }
 
   // fix names
   auto parent_shape_map = unordered_map<string, vec2i>{};
   for (auto id = 0; id < scene.shapes.size(); id++) {
-    auto parent_name = get_dirname(scene.shapes[id].uri).substr(7);
+    auto parent_name = get_dirname(scene.shapes[id].filename).substr(7);
     parent_name      = parent_name.substr(0, parent_name.size() - 1);
     parent_shape_map[parent_name].y += 1;
   }
   for (auto id = 0; id < scene.shapes.size(); id++) {
-    auto parent_name = get_dirname(scene.shapes[id].uri).substr(7);
+    auto parent_name = get_dirname(scene.shapes[id].filename).substr(7);
     parent_name      = parent_name.substr(0, parent_name.size() - 1);
     if (parent_shape_map[parent_name].y == 1) {
-      scene.shapes[id].uri    = "shapes/" + parent_name + ".ply";
-      scene.materials[id].uri = "materials/" + parent_name + ".yaml";
+      scene.shapes[id].filename = "shapes/" + parent_name + ".ply";
+      scene.shapes[id].name     = "shapes/" + parent_name + ".ply";
+      scene.materials[id].name  = parent_name;
     } else {
-      scene.shapes[id].uri = "shapes/" + parent_name +
-                             std::to_string(parent_shape_map[parent_name].x) +
-                             ".ply";
-      scene.materials[id].uri =
-          "materials/" + parent_name +
+      scene.shapes[id].filename =
+          "shapes/" + parent_name +
           std::to_string(parent_shape_map[parent_name].x) + ".ply";
+      scene.shapes[id].name = "shapes/" + parent_name +
+                              std::to_string(parent_shape_map[parent_name].x) +
+                              ".ply";
+      scene.materials[id].name =
+          parent_name + std::to_string(parent_shape_map[parent_name].x);
       parent_shape_map[parent_name].x += 1;
     }
   }
   auto parent_texture_map = unordered_map<string, vec2i>{};
   for (auto id = 0; id < scene.textures.size(); id++) {
-    auto parent_name = get_dirname(scene.textures[id].uri).substr(9);
+    auto parent_name = get_dirname(scene.textures[id].filename).substr(9);
     parent_name      = parent_name.substr(0, parent_name.size() - 1);
     parent_name      = replace(parent_name, "/Color", "");
     parent_texture_map[parent_name].y += 1;
   }
   for (auto id = 0; id < scene.textures.size(); id++) {
-    auto parent_name = get_dirname(scene.textures[id].uri).substr(9);
+    auto parent_name = get_dirname(scene.textures[id].filename).substr(9);
     parent_name      = parent_name.substr(0, parent_name.size() - 1);
     if (parent_name == "lights") {
-      scene.textures[id].uri = "textures/" +
-                               get_filename(scene.textures[id].uri);
+      scene.textures[id].filename = "textures/" +
+                                    get_filename(scene.textures[id].filename);
+      scene.textures[id].name = scene.textures[id].filename;
       continue;
     }
     parent_name = replace(parent_name, "/Color", "");
     if (parent_texture_map[parent_name].y == 1) {
-      scene.textures[id].uri = "textures/" + parent_name + ".png";
+      scene.textures[id].filename = "textures/" + parent_name + ".png";
+      scene.textures[id].name     = scene.textures[id].filename;
     } else {
-      scene.textures[id].uri =
+      scene.textures[id].filename =
           "textures/" + parent_name +
           std::to_string(parent_texture_map[parent_name].x) + ".png";
+      scene.textures[id].name = scene.textures[id].filename;
       parent_texture_map[parent_name].x += 1;
     }
   }
@@ -957,10 +974,10 @@ void load_island_scene(
   rename_instances(scene);
 
   // fix scene
-  if (scene.uri == "") scene.uri = get_filename(filename);
+  if (scene.name == "") scene.name = get_basename(filename);
   add_cameras(scene);
   add_materials(scene);
-  normalize_uris(scene);
+  fix_names(scene);
   trim_memory(scene);
   update_transforms(scene);
 
@@ -1055,9 +1072,9 @@ int main(int argc, const char** argv) {
   auto dirname  = get_dirname(output);
   auto dirnames = unordered_set<string>{dirname};
   for (auto& shape : scene.shapes)
-    dirnames.insert(dirname + get_dirname(shape.uri));
+    dirnames.insert(dirname + get_dirname(shape.filename));
   for (auto& texture : scene.textures)
-    dirnames.insert(dirname + get_dirname(texture.uri));
+    dirnames.insert(dirname + get_dirname(texture.filename));
   if (get_extension(output) == "yaml") dirnames.insert(dirname + "instances/");
   for (auto& dir : dirnames) {
     if (!mkdir(get_dirname(dir)))

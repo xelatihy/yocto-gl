@@ -130,7 +130,7 @@ endforeach()
 # procedurla images
 foreach(name "images1" "images2")
     add_test(NAME yimgproc-${name}
-             COMMAND ${test-yimgproc} ::yocto::${name}::/${testdir}/${name}.png ${outdir}/yimgproc-${name}.png ${resdir}/yimgproc-${name}.png ${diffdir}/yimgproc-${name}.png
+             COMMAND ${test-yimgproc} ${name}.ypreset ${outdir}/yimgproc-${name}.png ${resdir}/yimgproc-${name}.png ${diffdir}/yimgproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 # eyelight
