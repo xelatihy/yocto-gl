@@ -503,7 +503,7 @@ void add_obj_fvquads(obj_model& obj, obj_shape& shape,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<int>& ematerials = {}, bool flip_texcoord = false);
 
-// Obj command
+// Obj/Mtl/Objx command
 enum struct obj_command {
   // clang-format off
   vertex, normal, texcoord,         // data in value
@@ -512,16 +512,10 @@ enum struct obj_command {
   mtllib, objxlib,                  // data in name
   // clang-format on
 };
-
-// Mtl command
-enum struct mtl_command {
-  material,
-};
-
-// Objx command
+enum struct mtl_command { material };
 enum struct objx_command { camera, environment, instance, procedural };
 
-// Read obj elements
+// Read obj/mtl/objx elements
 bool read_obj_command(file_wrapper& fs, obj_command& command, string& name,
     vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size);
 bool read_mtl_command(file_wrapper& fs, mtl_command& command,
@@ -530,14 +524,13 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
     obj_camera& camera, obj_environment& environment, obj_instance& instance,
     obj_procedural& procedural);
 
-// Write obj elements
+// Write obj/mtl/objx elements
 void write_obj_comment(file_wrapper& fs, const string& comment);
 void write_obj_command(file_wrapper& fs, obj_command command,
     const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices = {});
 void write_mtl_command(file_wrapper& fs, mtl_command command,
-    obj_material& material, 
-    const obj_texture_info& texture = {});
+    obj_material& material, const obj_texture_info& texture = {});
 void write_objx_command(file_wrapper& fs, objx_command command,
     const obj_camera& camera, const obj_environment& environment,
     const obj_instance& instance, const obj_procedural& procedural);
