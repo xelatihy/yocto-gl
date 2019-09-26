@@ -1982,6 +1982,7 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
       parse_value_or_empty(line, cmd == "o" ? oname : gname);
       if (!obj.shapes.back().vertices.empty()) {
         obj.shapes.emplace_back();
+        obj.shapes.back().name = oname + gname;
       } else {
         obj.shapes.back().name = oname + gname;
       }
