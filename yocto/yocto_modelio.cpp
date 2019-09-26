@@ -1850,7 +1850,10 @@ void load_objx(const string& filename, obj_model& obj) {
       auto& environment = obj.environments.emplace_back();
       parse_value(line, environment.name);
       parse_value(line, environment.emission);
-      parse_value(line, environment.emission_map);
+      auto emission_path = ""s;
+      parse_value(line, emission_path);
+      if(emission_path == "\"\"") emission_path = "";
+      environment.emission_map.path = emission_path;
       parse_value(line, environment.frame);
     } else if (cmd == "i") {
       auto& instance = obj.instances.emplace_back();
