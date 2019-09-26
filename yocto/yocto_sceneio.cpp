@@ -31,9 +31,6 @@
 #include "yocto_random.h"
 #include "yocto_shape.h"
 
-#define CGLTF_IMPLEMENTATION
-#include "ext/cgltf.h"
-
 #include <limits.h>
 #include <stdlib.h>
 #include <array>
@@ -195,8 +192,6 @@ static void save_ply_scene(const string& filename, const yocto_scene& scene,
 // Load/save a scene from/to glTF.
 static void load_gltf_scene(
     const string& filename, yocto_scene& scene, const load_params& params);
-static void save_gltf_scene(const string& filename, const yocto_scene& scene,
-    const save_params& params);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
@@ -234,8 +229,6 @@ void save_scene(const string& filename, const yocto_scene& scene,
     save_yaml_scene(filename, scene, params);
   } else if (ext == ".obj" || ext == ".OBJ") {
     save_obj_scene(filename, scene, params);
-  } else if (ext == ".gltf" || ext == ".GLTF") {
-    save_gltf_scene(filename, scene, params);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
     save_pbrt_scene(filename, scene, params);
   } else if (ext == ".ply" || ext == ".PLY") {
@@ -243,18 +236,6 @@ void save_scene(const string& filename, const yocto_scene& scene,
   } else {
     throw std::runtime_error("unsupported scene format " + ext);
   }
-}
-
-static string get_save_scene_message(
-    const yocto_scene& scene, const string& indent) {
-  auto str = ""s;
-  str += indent + "\n";
-  str += indent + "Written by Yocto/GL\n";
-  str += indent + "https://github.com/xelatihy/yocto-gl\n";
-  str += indent + "\n";
-  str += format_stats(scene, indent);
-  str += indent + "\n";
-  return str;
 }
 
 // Return the preset type and the remaining filename
@@ -785,7 +766,7 @@ static void save_yaml(const string& filename, const yocto_scene& scene,
   // open file
   auto fs = open_file(filename, "w");
 
-  write_yaml_comment(fs, get_save_scene_message(scene, ""));
+  // write_yaml_comment(fs, get_save_scene_message(scene, ""));
 
   static const auto def_camera      = yocto_camera{};
   static const auto def_texture     = yocto_texture{};
@@ -1006,573 +987,163 @@ static void save_yaml_scene(const string& filename, const yocto_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Loads an MTL
-static void load_mtl(const string& filename, yocto_scene& scene,
-    unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
-    const load_params& params) {
-  // open file
-  auto fs = open_file(filename);
-
-  // parsing type
-  enum struct parsing_type { none, material };
-  auto ptype = parsing_type::none;
-
-  // Parse texture params and name
-  auto add_texture = [&scene, &tmap](const obj_texture_info& info,
-                         bool force_linear) -> int {
-    if (info.path == "") return -1;
-    if (tmap.find(info.path) != tmap.end()) {
-      return tmap.at(info.path);
-    }
-
-    // create texture
-    auto texture = yocto_texture{};
-    texture.uri  = info.path;
-    for (auto& c : texture.uri)
-      if (c == '\\') c = '/';
-    scene.textures.push_back(texture);
-    auto index      = (int)scene.textures.size() - 1;
-    tmap[info.path] = index;
-
-    return index;
-  };
-
-  // read mtl elements
-  auto command = mtl_command{};
-  auto value   = obj_value{};
-  auto texture = obj_texture_info{};
-  while (read_mtl_command(fs, command, value, texture)) {
-    if (command == mtl_command::material) {
-      auto& material = scene.materials.emplace_back();
-      get_obj_value(value, material.uri);
-      mmap[material.uri] = (int)scene.materials.size() - 1;
-      ptype              = parsing_type::material;
-      continue;
-    }
-    if (ptype == parsing_type::none) {
-      throw std::runtime_error("bad mtl");
-    } else {
-      auto& material = scene.materials.back();
-      switch (command) {
-        case mtl_command::emission:
-          get_obj_value(value, material.emission);
-          break;
-        case mtl_command::diffuse:
-          get_obj_value(value, material.diffuse);
-          break;
-        case mtl_command::specular:
-          get_obj_value(value, material.specular);
-          break;
-        case mtl_command::transmission:
-          get_obj_value(value, material.transmission);
-          break;
-        case mtl_command::exponent:
-          get_obj_value(value, material.roughness);
-          material.roughness = pow(2 / (material.roughness + 2), 1 / 4.0f);
-          if (material.roughness < 0.01f) material.roughness = 0;
-          if (material.roughness > 0.99f) material.roughness = 1;
-          break;
-        case mtl_command::opacity:
-          get_obj_value(value, material.opacity);
-          break;
-        case mtl_command::emission_map:
-          material.emission_tex = add_texture(texture, false);
-          break;
-        case mtl_command::diffuse_map:
-          material.diffuse_tex = add_texture(texture, false);
-          break;
-        case mtl_command::specular_map:
-          material.specular_tex = add_texture(texture, false);
-          break;
-        case mtl_command::transmission_map:
-          material.transmission_tex = add_texture(texture, false);
-          break;
-        case mtl_command::opacity_map:
-          material.opacity_tex = add_texture(texture, true);
-          break;
-        case mtl_command::normal_map:
-          material.normal_tex = add_texture(texture, true);
-          break;
-        case mtl_command::pbr_roughness:
-          get_obj_value(value, material.roughness);
-          break;
-        case mtl_command::pbr_metallic:
-          get_obj_value(value, material.metallic);
-          break;
-        case mtl_command::pbr_roughness_map:
-          material.roughness_tex = add_texture(texture, true);
-          break;
-        case mtl_command::pbr_metallic_map:
-          material.metallic_tex = add_texture(texture, true);
-          break;
-        case mtl_command::vol_transmission:
-          get_obj_value(value, material.voltransmission);
-          break;
-        case mtl_command::vol_meanfreepath:
-          get_obj_value(value, material.volmeanfreepath);
-          break;
-        case mtl_command::vol_scattering:
-          get_obj_value(value, material.volscatter);
-          break;
-        case mtl_command::vol_emission:
-          get_obj_value(value, material.volemission);
-          break;
-        case mtl_command::vol_anisotropy:
-          get_obj_value(value, material.volanisotropy);
-          break;
-        case mtl_command::vol_scale:
-          get_obj_value(value, material.volscale);
-          break;
-        case mtl_command::vol_scattering_map:
-          material.subsurface_tex = add_texture(texture, false);
-          break;
-        default: break;  // ignore other values
-      }
-    }
-  }
-}
-
-// Loads an OBJX
-static void load_objx(const string& filename, yocto_scene& scene,
-    const unordered_map<string, int>& mmap, unordered_map<string, int>& tmap,
-    const unordered_map<string, vector<int>>& object_shapes,
-    const load_params&                        params) {
-  // open file
-  auto fs = open_file(filename);
-
-  // parsing types
-  enum struct parsing_type { none, camera, environment, instance, procedural };
-  auto ptype = parsing_type::none;
-
-  // Parse texture params and name
-  auto add_texture = [&scene, &tmap](const obj_texture_info& info,
-                         bool force_linear) -> int {
-    if (info.path == "") return -1;
-    if (tmap.find(info.path) != tmap.end()) {
-      return tmap.at(info.path);
-    }
-
-    // create texture
-    auto texture = yocto_texture{};
-    texture.uri  = info.path;
-    for (auto& c : texture.uri)
-      if (c == '\\') c = '/';
-    scene.textures.push_back(texture);
-    auto index      = (int)scene.textures.size() - 1;
-    tmap[info.path] = index;
-
-    return index;
-  };
-
-  // parsed geometry and materials
-  bool first_instance = true;
-  auto instances_idx  = vector<int>{};
-
-  // read mtl elements
-  auto command = objx_command{};
-  auto value   = obj_value{};
-  auto texture = obj_texture_info{};
-  while (read_objx_command(fs, command, value, texture)) {
-    if (command == objx_command::camera) {
-      auto& camera = scene.cameras.emplace_back();
-      get_obj_value(value, camera.uri);
-      ptype = parsing_type::camera;
-      continue;
-    }
-    if (command == objx_command::environment) {
-      auto& environment = scene.environments.emplace_back();
-      get_obj_value(value, environment.uri);
-      ptype = parsing_type::environment;
-      continue;
-    }
-    if (command == objx_command::instance) {
-      if (first_instance) {
-        scene.instances.clear();
-        first_instance = false;
-      }
-      auto& instance = scene.instances.emplace_back();
-      get_obj_value(value, instance.uri);
-      ptype         = parsing_type::instance;
-      instances_idx = {(int)scene.instances.size() - 1};
-      continue;
-    }
-    if (command == objx_command::procedural) {
-      auto& shape = scene.shapes.emplace_back();
-      get_obj_value(value, shape.uri);
-      auto& instance = scene.instances.emplace_back();
-      instance.uri   = shape.uri;
-      instance.shape = (int)scene.shapes.size() - 1;
-      ptype          = parsing_type::procedural;
-      continue;
-    }
-
-    if (ptype == parsing_type::none) {
-      throw std::runtime_error("bad objx");
-    } else if (ptype == parsing_type::camera) {
-      auto& camera = scene.cameras.back();
-      switch (command) {
-        case objx_command::frame: get_obj_value(value, camera.frame); break;
-        case objx_command::ortho:
-          get_obj_value(value, camera.orthographic);
-          break;
-        case objx_command::width: get_obj_value(value, camera.film.x); break;
-        case objx_command::height: get_obj_value(value, camera.film.y); break;
-        case objx_command::lens: get_obj_value(value, camera.lens); break;
-        case objx_command::aperture:
-          get_obj_value(value, camera.aperture);
-          break;
-        case objx_command::focus: get_obj_value(value, camera.focus); break;
-        default: throw std::runtime_error("bad objx"); break;
-      }
-    } else if (ptype == parsing_type::environment) {
-      auto& environment = scene.environments.back();
-      switch (command) {
-        case objx_command::frame:
-          get_obj_value(value, environment.frame);
-          break;
-        case objx_command::emission:
-          get_obj_value(value, environment.emission);
-          break;
-        case objx_command::emission_map:
-          environment.emission_tex = add_texture(texture, false);
-          break;
-        default: throw std::runtime_error("bad objx"); break;
-      }
-    } else if (ptype == parsing_type::instance) {
-      switch (command) {
-        case objx_command::frame: {
-          for (auto& ist : instances_idx) {
-            get_obj_value(value, scene.instances[ist].frame);
-          }
-        } break;
-        case objx_command::material: {
-          auto name = ""s;
-          get_obj_value(value, name);
-          auto ist_material = mmap.at(name);
-          for (auto& ist : instances_idx) {
-            scene.instances[ist].material = ist_material;
-          }
-        } break;
-        case objx_command::object: {
-          auto name = ""s;
-          get_obj_value(value, name);
-          auto& shapes = object_shapes.at(name);
-          if (instances_idx.size() != shapes.size()) {
-            auto to_add = shapes.size() - instances_idx.size();
-            auto name   = scene.instances.back().uri;
-            for (auto i = 0; i < to_add; i++) {
-              auto& instance = scene.instances.emplace_back();
-              instance.uri   = name;
-              instances_idx.push_back((int)scene.instances.size() - 1);
-            }
-          }
-          for (auto i = 0; i < shapes.size(); i++) {
-            scene.instances[instances_idx[i]].shape = shapes[i];
-          }
-        } break;
-        default: throw std::runtime_error("bad objx"); break;
-      }
-    } else if (ptype == parsing_type::procedural) {
-      auto& shape    = scene.shapes.back();
-      auto& instance = scene.instances.back();
-      switch (command) {
-        case objx_command::frame: get_obj_value(value, instance.frame); break;
-        case objx_command::material: {
-          auto name = ""s;
-          get_obj_value(value, name);
-          if (mmap.find(name) == mmap.end()) {
-            throw std::runtime_error("missing material " + name);
-          } else {
-            instance.material = mmap.find(name)->second;
-          }
-        } break;
-        case objx_command::object: {
-          auto name = ""s;
-          get_obj_value(value, name);
-          if (name == "floor") {
-            auto params         = proc_shape_params{};
-            params.type         = proc_shape_params::type_t::floor;
-            params.subdivisions = 0;
-            params.scale        = 40 / 2;
-            params.uvscale      = 40;
-            make_proc_shape(shape.triangles, shape.quads, shape.positions,
-                shape.normals, shape.texcoords, params);
-          } else {
-            throw std::runtime_error("unknown obj procedural");
-          }
-        } break;
-        default: throw std::runtime_error("bad objx"); break;
-      }
-    } else {
-      // skip other
-      throw std::runtime_error("bad objx");
-    }
-  }
-}
-
-// Loads an OBJ
-static void load_obj(
+void load_obj(
     const string& filename, yocto_scene& scene, const load_params& params) {
-  // current parsing values
-  string mname = ""s;
-  string oname = ""s;
-  string gname = ""s;
+  // load obj
+  auto obj = obj_model{};
+  load_obj(filename, obj, false, true, true);
 
-  // vertices
-  auto opos      = std::deque<vec3f>{};
-  auto onorm     = std::deque<vec3f>{};
-  auto otexcoord = std::deque<vec2f>{};
+  // convert cameras
+  for (auto& ocam : obj.cameras) {
+    auto& camera        = scene.cameras.emplace_back();
+    camera.uri          = ocam.name;
+    camera.frame        = ocam.frame;
+    camera.orthographic = ocam.ortho;
+    camera.film         = {ocam.width, ocam.height};
+    camera.focus        = ocam.focus;
+    camera.lens         = ocam.lens;
+    camera.aperture     = ocam.aperture;
+  }
 
-  // object maps
-  auto tmap = unordered_map<string, int>{{"", -1}};
-  auto vmap = unordered_map<string, int>{{"", -1}};
-  auto mmap = unordered_map<string, int>{{"", -1}};
-
-  // vertex maps
-  auto vertex_map   = unordered_map<obj_vertex, int>();
-  auto pos_map      = unordered_map<int, int>();
-  auto norm_map     = unordered_map<int, int>();
-  auto texcoord_map = unordered_map<int, int>();
-
-  // parsed geometry and materials
-  auto object_shapes = unordered_map<string, vector<int>>{};
-
-  // material libraries read already
-  auto mlibs = vector<string>{};
-
-  // current parse state
-  bool facevarying_now = false;
-
-  // Add  vertices to the current shape
-  auto add_verts = [&](const vector<obj_vertex>& verts, yocto_shape& shape) {
-    for (auto& vert : verts) {
-      auto it = vertex_map.find(vert);
-      if (it != vertex_map.end()) continue;
-      auto& shape  = scene.shapes.back();
-      auto  nverts = (int)shape.positions.size();
-      vertex_map.insert(it, {vert, nverts});
-      if (vert.position) shape.positions.push_back(opos.at(vert.position - 1));
-      if (vert.texcoord)
-        shape.texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-      if (vert.normal) shape.normals.push_back(onorm.at(vert.normal - 1));
-      if (shape.normals.size() != 0 &&
-          shape.normals.size() != shape.positions.size()) {
-        while (shape.normals.size() != shape.positions.size())
-          shape.normals.push_back({0, 0, 1});
-      }
-      if (shape.texcoords.size() != 0 &&
-          shape.texcoords.size() != shape.positions.size()) {
-        while (shape.texcoords.size() != shape.positions.size())
-          shape.texcoords.push_back({0, 0});
-      }
-    }
+  // helper to create texture maps
+  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto get_texture = [&texture_map, &scene](const obj_texture_info& info) {
+    if (info.path == "") return -1;
+    auto it = texture_map.find(info.path);
+    if (it != texture_map.end()) return it->second;
+    auto& texture            = scene.textures.emplace_back();
+    texture.uri              = info.path;
+    texture_map[texture.uri] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
   };
 
-  // add vertex
-  auto add_fvverts = [&](const vector<obj_vertex>& verts, yocto_shape& shape) {
-    for (auto& vert : verts) {
-      if (!vert.position) continue;
-      auto pos_it = pos_map.find(vert.position);
-      if (pos_it != pos_map.end()) continue;
-      auto nverts = (int)shape.positions.size();
-      pos_map.insert(pos_it, {vert.position, nverts});
-      shape.positions.push_back(opos.at(vert.position - 1));
-    }
-    for (auto& vert : verts) {
-      if (!vert.texcoord) continue;
-      auto texcoord_it = texcoord_map.find(vert.texcoord);
-      if (texcoord_it != texcoord_map.end()) continue;
-      auto nverts = (int)shape.texcoords.size();
-      texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
-      shape.texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-    }
-    for (auto& vert : verts) {
-      if (!vert.normal) continue;
-      auto norm_it = norm_map.find(vert.normal);
-      if (norm_it != norm_map.end()) continue;
-      auto nverts = (int)shape.normals.size();
-      norm_map.insert(norm_it, {vert.normal, nverts});
-      shape.normals.push_back(onorm.at(vert.normal - 1));
-    }
-  };
+  // convert materials and textures
+  auto material_map = unordered_map<string, int>{{"", -1}};
+  for (auto& omat : obj.materials) {
+    auto& material            = scene.materials.emplace_back();
+    material.uri              = omat.name;
+    material.emission         = omat.emission;
+    material.diffuse          = omat.diffuse;
+    material.specular         = omat.specular;
+    material.roughness        = obj_exponent_to_roughness(omat.exponent);
+    material.metallic         = omat.pbr_metallic;
+    material.coat             = omat.reflection;
+    material.transmission     = omat.transmission;
+    material.voltransmission  = omat.vol_transmission;
+    material.volmeanfreepath  = omat.vol_meanfreepath;
+    material.volemission      = omat.vol_emission;
+    material.volscatter       = omat.vol_scattering;
+    material.volanisotropy    = omat.vol_anisotropy;
+    material.volscale         = omat.vol_scale;
+    material.opacity          = omat.opacity;
+    material.emission_tex     = get_texture(omat.emission_map);
+    material.diffuse_tex      = get_texture(omat.diffuse_map);
+    material.specular_tex     = get_texture(omat.specular_map);
+    material.metallic_tex     = get_texture(omat.pbr_metallic_map);
+    material.roughness_tex    = get_texture(omat.pbr_roughness_map);
+    material.transmission_tex = get_texture(omat.transmission_map);
+    material.coat_tex         = get_texture(omat.reflection_map);
+    material.opacity_tex      = get_texture(omat.opacity_map);
+    material.normal_tex       = get_texture(omat.normal_map);
+    // TODO: refract, subsurface_map, vol_scatter
+    material_map[material.uri] = (int)scene.materials.size() - 1;
+  }
 
-  // add object if needed
-  auto add_shape = [&]() {
-    auto shape      = yocto_shape{};
-    shape.uri       = oname + gname;
-    facevarying_now = params.facevarying ||
-                      shape.uri.find("[yocto::facevarying]") != string::npos;
-    scene.shapes.push_back(shape);
-    auto instance     = yocto_instance{};
-    instance.uri      = shape.uri;
-    instance.shape    = (int)scene.shapes.size() - 1;
-    instance.material = mmap.at(mname);
-    scene.instances.push_back(instance);
-    object_shapes[oname].push_back((int)scene.shapes.size() - 1);
-    vertex_map.clear();
-    pos_map.clear();
-    norm_map.clear();
-    texcoord_map.clear();
-  };
-
-  // open file
-  auto fs = open_file(filename);
-
-  // load obj elements
-  auto command   = obj_command{};
-  auto value     = obj_value{};
-  auto vertices  = vector<obj_vertex>{};
-  auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, command, value, vertices, vert_size)) {
-    if (command == obj_command::vertex) {
-      get_obj_value(value, opos.emplace_back());
-    } else if (command == obj_command::normal) {
-      get_obj_value(value, onorm.emplace_back());
-    } else if (command == obj_command::texcoord) {
-      get_obj_value(value, otexcoord.emplace_back());
-      otexcoord.back().y = 1 - otexcoord.back().y;
-    } else if (command == obj_command::face) {
-      if (scene.shapes.empty()) add_shape();
-      if (!scene.shapes.back().positions.empty() &&
-          (!scene.shapes.back().lines.empty() ||
-              !scene.shapes.back().points.empty())) {
-        add_shape();
-      }
-      auto& shape = scene.shapes.back();
-      if (!facevarying_now) {
-        add_verts(vertices, shape);
-        if (vertices.size() == 4) {
-          shape.quads.push_back(
-              {vertex_map.at(vertices[0]), vertex_map.at(vertices[1]),
-                  vertex_map.at(vertices[2]), vertex_map.at(vertices[3])});
-        } else {
-          for (auto i = 2; i < vertices.size(); i++)
-            shape.triangles.push_back({vertex_map.at(vertices[0]),
-                vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
-        }
-      } else {
-        add_fvverts(vertices, shape);
-        if (vertices.size() == 4) {
-          if (vertices[0].position) {
-            shape.quadspos.push_back({pos_map.at(vertices[0].position),
-                pos_map.at(vertices[1].position),
-                pos_map.at(vertices[2].position),
-                pos_map.at(vertices[3].position)});
-          }
-          if (vertices[0].texcoord) {
-            shape.quadstexcoord.push_back(
-                {texcoord_map.at(vertices[0].texcoord),
-                    texcoord_map.at(vertices[1].texcoord),
-                    texcoord_map.at(vertices[2].texcoord),
-                    texcoord_map.at(vertices[3].texcoord)});
-          }
-          if (vertices[0].normal) {
-            shape.quadsnorm.push_back({norm_map.at(vertices[0].normal),
-                norm_map.at(vertices[1].normal),
-                norm_map.at(vertices[2].normal),
-                norm_map.at(vertices[3].normal)});
-          }
-        } else {
-          if (vertices[0].position) {
-            for (auto i = 2; i < vertices.size(); i++)
-              shape.quadspos.push_back({pos_map.at(vertices[0].position),
-                  pos_map.at(vertices[i - 1].position),
-                  pos_map.at(vertices[i].position),
-                  pos_map.at(vertices[i].position)});
-          }
-          if (vertices[0].texcoord) {
-            for (auto i = 2; i < vertices.size(); i++)
-              shape.quadstexcoord.push_back(
-                  {texcoord_map.at(vertices[0].texcoord),
-                      texcoord_map.at(vertices[i - 1].texcoord),
-                      texcoord_map.at(vertices[i].texcoord),
-                      texcoord_map.at(vertices[i].texcoord)});
-          }
-          if (vertices[0].normal) {
-            for (auto i = 2; i < vertices.size(); i++)
-              shape.quadsnorm.push_back({norm_map.at(vertices[0].normal),
-                  norm_map.at(vertices[i - 1].normal),
-                  norm_map.at(vertices[i].normal),
-                  norm_map.at(vertices[i].normal)});
-          }
-        }
-      }
-    } else if (command == obj_command::line) {
-      if (scene.shapes.empty()) add_shape();
-      if (!scene.shapes.back().positions.empty() &&
-          scene.shapes.back().lines.empty()) {
-        add_shape();
-      }
-      auto& shape = scene.shapes.back();
-      add_verts(vertices, shape);
-      for (auto i = 1; i < vertices.size(); i++)
-        shape.lines.push_back(
-            {vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
-    } else if (command == obj_command::point) {
-      if (scene.shapes.empty()) add_shape();
-      if (!scene.shapes.back().positions.empty() &&
-          scene.shapes.back().points.empty()) {
-        add_shape();
-      }
-      auto& shape = scene.shapes.back();
-      add_verts(vertices, shape);
-      for (auto i = 0; i < vertices.size(); i++)
-        shape.points.push_back(vertex_map.at(vertices[i]));
-    } else if (command == obj_command::object) {
-      get_obj_value(value, oname);
-      gname = "";
-      mname = "";
-      add_shape();
-    } else if (command == obj_command::group) {
-      get_obj_value(value, gname);
-      add_shape();
-    } else if (command == obj_command::usemtl) {
-      get_obj_value(value, mname);
-      add_shape();
-    } else if (command == obj_command::mtllib) {
-      auto name = ""s;
-      get_obj_value(value, name);
-      if (std::find(mlibs.begin(), mlibs.end(), name) != mlibs.end()) continue;
-      mlibs.push_back(name);
-      auto mtlpath = fs::path(filename).parent_path() / name;
-      load_mtl(mtlpath, scene, mmap, tmap, params);
+  // convert shapes
+  for (auto& oshape : obj.shapes) {
+    auto& shape     = scene.shapes.emplace_back();
+    shape.uri       = oshape.name;
+    auto materials  = vector<string>{};
+    auto ematerials = vector<int>{};
+    auto has_quads  = has_obj_quads(oshape);
+    if (!oshape.faces.empty() && !params.facevarying && !has_quads) {
+      get_obj_triangles(obj, oshape, shape.triangles, shape.positions,
+          shape.normals, shape.texcoords, materials, ematerials, true);
+    } else if (!oshape.faces.empty() && !params.facevarying && has_quads) {
+      get_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, true);
+    } else if (!oshape.lines.empty()) {
+      get_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, true);
+    } else if (!oshape.points.empty()) {
+      get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, true);
+    } else if (!oshape.faces.empty() && params.facevarying) {
+      get_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
+          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
+          materials, ematerials, true);
     } else {
-      // skip all other commands
+      throw std::runtime_error("should not have gotten here");
+    }
+    // make instance
+    if (obj.instances.empty()) {
+      auto& instance = scene.instances.emplace_back();
+      instance.shape = (int)scene.shapes.size() - 1;
+      if (oshape.materials.size() != 1) {
+        throw std::runtime_error("missing material for " + oshape.name);
+      }
+      try {
+        instance.material = material_map.at(oshape.materials.at(0));
+      } catch (...) {
+        throw std::runtime_error(
+            "cannot find material " + oshape.materials.at(0));
+      }
     }
   }
 
-  // check for extension
-  auto extname = fs::path(filename).replace_extension(".objx");
-  if (fs::exists(extname))
-    load_objx(extname, scene, mmap, tmap, object_shapes, params);
-
-  // cleanup empty
-  auto shape_count = 0;
-  auto shape_pos   = vector<int>(scene.shapes.size(), -1);
-  for (auto shape = 0; shape < scene.shapes.size(); shape++) {
-    if (!scene.shapes[shape].positions.empty())
-      shape_pos[shape] = shape_count++;
-  }
-  scene.shapes.erase(std::remove_if(scene.shapes.begin(), scene.shapes.end(),
-                         [](auto& shape) { return shape.positions.empty(); }),
-      scene.shapes.end());
-  for (auto& instance : scene.instances)
-    instance.shape = shape_pos[instance.shape];
-  scene.instances.erase(
-      std::remove_if(scene.instances.begin(), scene.instances.end(),
-          [](auto& instance) { return instance.shape < 0; }),
-      scene.instances.end());
-
-  // check if any empty shape is left
-  for (auto& shape : scene.shapes) {
-    if (shape.positions.empty())
-      throw std::runtime_error("empty shapes not supported");
+  // convert environments
+  for (auto& oenvironment : obj.environments) {
+    auto& environment        = scene.environments.emplace_back();
+    environment.uri          = oenvironment.name;
+    environment.frame        = oenvironment.frame;
+    environment.emission     = oenvironment.emission;
+    environment.emission_tex = get_texture(oenvironment.emission_map);
   }
 
-  // merging quads and triangles
-  for (auto& shape : scene.shapes) {
-    if (shape.triangles.empty() || shape.quads.empty()) continue;
-    merge_triangles_and_quads(shape.triangles, shape.quads, false);
+  // convert instances
+  if (!obj.instances.empty()) {
+    auto shape_map = unordered_map<string, vector<int>>{{"", {}}};
+    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
+      shape_map[scene.shapes[shape_id].uri].push_back(shape_id);
+    }
+    for (auto& oinstance : obj.instances) {
+      if (shape_map.find(oinstance.name) == shape_map.end())
+        throw std::runtime_error("cannot find object " + oinstance.object);
+      if (material_map.find(oinstance.name) == material_map.end())
+        throw std::runtime_error("cannot find material " + oinstance.material);
+      auto material_id = material_map.at(oinstance.material);
+      for (auto shape_id : shape_map.at(oinstance.object)) {
+        auto& instance    = scene.instances.emplace_back();
+        instance.uri      = oinstance.name;
+        instance.frame    = oinstance.frame;
+        instance.shape    = shape_id;
+        instance.material = material_id;
+      }
+    }
+  }
+
+  // convert procedurals
+  for (auto& oprocedural : obj.procedurals) {
+    auto& shape = scene.shapes.emplace_back();
+    shape.uri   = oprocedural.name;
+    if (oprocedural.type == "floor") {
+      auto params         = proc_shape_params{};
+      params.type         = proc_shape_params::type_t::floor;
+      params.subdivisions = oprocedural.level;
+      params.scale        = oprocedural.size / 2;
+      params.uvscale      = oprocedural.size;
+      make_proc_shape(shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, params);
+    } else {
+      throw std::runtime_error("unknown obj procedural");
+    }
+    if (material_map.find(oprocedural.name) == material_map.end())
+      throw std::runtime_error("cannot find material " + oprocedural.material);
+    auto& instance    = scene.instances.emplace_back();
+    instance.uri      = oprocedural.name;
+    instance.frame    = oprocedural.frame;
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = material_map.at(oprocedural.material);
   }
 }
 
@@ -1599,255 +1170,145 @@ static void load_obj_scene(
 }
 
 static void save_obj(const string& filename, const yocto_scene& scene,
-    bool preserve_instances, bool flip_texcoord = true) {
-  // open writer
-  auto fs = open_file(filename, "w");
+    const save_params& params) {
+  auto obj = obj_model{};
 
-  // stats
-  write_obj_comment(fs, get_save_scene_message(scene, ""));
-
-  // material library
-  if (!scene.materials.empty())
-    write_obj_command(fs, obj_command::mtllib,
-        make_obj_value(
-            fs::path(filename).replace_extension(".mtl").filename().string()));
-
-  // shapes
-  auto offset    = obj_vertex{0, 0, 0};
-  auto instances = vector<yocto_instance>{};
-  if (preserve_instances) {
-    instances.reserve(scene.shapes.size());
-    for (auto shape = 0; shape < scene.shapes.size(); shape++) {
-      instances.push_back({scene.shapes[shape].uri, identity3x4f, shape, -1});
-    }
+  // convert cameras
+  for (auto& camera : scene.cameras) {
+    auto& ocamera    = obj.cameras.emplace_back();
+    ocamera.name     = fs::path(camera.uri).stem();
+    ocamera.frame    = camera.frame;
+    ocamera.ortho    = camera.orthographic;
+    ocamera.width    = camera.film.x;
+    ocamera.height   = camera.film.y;
+    ocamera.focus    = camera.focus;
+    ocamera.lens     = camera.lens;
+    ocamera.aperture = camera.aperture;
   }
-  for (auto& instance : preserve_instances ? instances : scene.instances) {
-    auto& shape = scene.shapes[instance.shape];
-    write_obj_command(fs, obj_command::object,
-        make_obj_value(fs::path(instance.uri).stem().string()));
-    if (instance.material >= 0)
-      write_obj_command(fs, obj_command::usemtl,
-          make_obj_value(fs::path(scene.materials[instance.material].uri)
-                             .stem()
-                             .string()));
-    if (instance.frame == identity3x4f) {
-      for (auto& p : shape.positions)
-        write_obj_command(fs, obj_command::vertex, make_obj_value(p));
-      for (auto& n : shape.normals)
-        write_obj_command(fs, obj_command::normal, make_obj_value(n));
-      for (auto& t : shape.texcoords)
-        write_obj_command(fs, obj_command::texcoord,
-            make_obj_value(vec2f{t.x, flip_texcoord ? 1 - t.y : t.y}));
-    } else {
-      for (auto& p : shape.positions) {
-        write_obj_command(fs, obj_command::vertex,
-            make_obj_value(transform_point(instance.frame, p)));
-      }
-      for (auto& n : shape.normals) {
-        write_obj_command(fs, obj_command::normal,
-            make_obj_value(transform_direction(instance.frame, n)));
-      }
-      for (auto& t : shape.texcoords)
-        write_obj_command(fs, obj_command::texcoord,
-            make_obj_value(vec2f{t.x, flip_texcoord ? 1 - t.y : t.y}));
-    }
-    auto mask = obj_vertex{
-        1, shape.texcoords.empty() ? 0 : 1, shape.normals.empty() ? 0 : 1};
-    auto vert = [mask, offset](int i) {
-      return obj_vertex{(i + offset.position + 1) * mask.position,
-          (i + offset.texcoord + 1) * mask.texcoord,
-          (i + offset.normal + 1) * mask.normal};
-    };
-    auto fvvert = [mask, offset](int pi, int ti, int ni) {
-      return obj_vertex{(pi + offset.position + 1) * mask.position,
-          (ti + offset.texcoord + 1) * mask.texcoord,
-          (ni + offset.normal + 1) * mask.normal};
-    };
-    auto elems = vector<obj_vertex>{};
-    elems.resize(1);
-    for (auto& p : shape.points) {
-      elems[0] = vert(p);
-      write_obj_command(fs, obj_command::point, {}, elems);
-    }
-    elems.resize(2);
-    for (auto& l : shape.lines) {
-      elems[0] = vert(l.x);
-      elems[1] = vert(l.y);
-      write_obj_command(fs, obj_command::line, {}, elems);
-    }
-    elems.resize(3);
-    for (auto& t : shape.triangles) {
-      elems[0] = vert(t.x);
-      elems[1] = vert(t.y);
-      elems[2] = vert(t.z);
-      write_obj_command(fs, obj_command::face, {}, elems);
-    }
-    elems.resize(4);
-    for (auto& q : shape.quads) {
-      elems[0] = vert(q.x);
-      elems[1] = vert(q.y);
-      elems[2] = vert(q.z);
-      if (q.z == q.w) {
-        elems.resize(3);
-      } else {
-        elems.resize(4);
-        elems[3] = vert(q.w);
-      }
-      write_obj_command(fs, obj_command::face, {}, elems);
-    }
-    elems.resize(4);
-    for (auto i = 0; i < shape.quadspos.size(); i++) {
-      auto qp = shape.quadspos.at(i);
-      auto qt = !shape.quadstexcoord.empty() ? shape.quadstexcoord.at(i)
-                                             : vec4i{-1, -1, -1, -1};
-      auto qn = !shape.quadsnorm.empty() ? shape.quadsnorm.at(i)
-                                         : vec4i{-1, -1, -1, -1};
-      elems[0] = fvvert(qp.x, qt.x, qn.x);
-      elems[1] = fvvert(qp.y, qt.y, qn.y);
-      elems[2] = fvvert(qp.z, qt.z, qn.z);
-      if (qp.z == qp.w) {
-        elems.resize(3);
-      } else {
-        elems.resize(4);
-        elems[3] = fvvert(qp.w, qt.w, qn.w);
-      }
-      write_obj_command(fs, obj_command::face, {}, elems);
-    }
-    offset.position += shape.positions.size();
-    offset.texcoord += shape.texcoords.size();
-    offset.normal += shape.normals.size();
-  }
-}
 
-static void save_mtl(const string& filename, const yocto_scene& scene) {
-  // open writer
-  auto fs = open_file(filename, "w");
+  // textures
+  auto get_texture = [&scene](int tex) {
+    if (tex < 0) return obj_texture_info{};
+    auto info = obj_texture_info{};
+    info.path = scene.textures[tex].uri;
+    return info;
+  };
 
-  // stats
-  write_obj_comment(fs, get_save_scene_message(scene, ""));
-
-  // materials
+  // convert materials and textures
   for (auto& material : scene.materials) {
-    write_mtl_command(fs, mtl_command::material,
-        make_obj_value(fs::path(material.uri).stem()));
-    write_mtl_command(fs, mtl_command::illum, make_obj_value(2));
-    if (material.emission != zero3f)
-      write_mtl_command(
-          fs, mtl_command::emission, make_obj_value(material.emission));
-    auto kd = material.diffuse * (1 - material.metallic);
-    auto ks = material.specular * (1 - material.metallic) +
-              material.metallic * material.diffuse;
-    write_mtl_command(fs, mtl_command::diffuse, make_obj_value(kd));
-    write_mtl_command(fs, mtl_command::specular, make_obj_value(ks));
-    if (material.transmission != zero3f)
-      write_mtl_command(
-          fs, mtl_command::transmission, make_obj_value(material.transmission));
-    auto ns = (int)clamp(
-        2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2,
-        0.0f, 1.0e9f);
-    write_mtl_command(fs, mtl_command::exponent, make_obj_value(ns));
-    if (material.opacity != 1)
-      write_mtl_command(
-          fs, mtl_command::opacity, make_obj_value(material.opacity));
-    if (material.emission_tex >= 0)
-      write_mtl_command(fs, mtl_command::emission_map, {},
-          scene.textures[material.emission_tex].uri);
-    if (material.diffuse_tex >= 0)
-      write_mtl_command(fs, mtl_command::diffuse_map, {},
-          scene.textures[material.diffuse_tex].uri);
-    if (material.specular_tex >= 0)
-      write_mtl_command(fs, mtl_command::specular_map, {},
-          scene.textures[material.specular_tex].uri);
-    if (material.transmission_tex >= 0)
-      write_mtl_command(fs, mtl_command::transmission_map, {},
-          scene.textures[material.transmission_tex].uri);
-    if (material.normal_tex >= 0)
-      write_mtl_command(fs, mtl_command::normal_map, {},
-          scene.textures[material.normal_tex].uri);
+    auto& omaterial             = obj.materials.emplace_back();
+    omaterial.name              = fs::path(material.uri).stem();
+    omaterial.illum             = 2;
+    omaterial.emission          = material.emission;
+    omaterial.diffuse           = material.diffuse;
+    omaterial.specular          = material.specular;
+    omaterial.exponent          = obj_roughness_to_exponent(material.roughness);
+    omaterial.pbr_metallic      = material.metallic;
+    omaterial.reflection        = material.coat;
+    omaterial.transmission      = material.transmission;
+    omaterial.opacity           = material.opacity;
+    omaterial.emission_map      = get_texture(material.emission_tex);
+    omaterial.diffuse_map       = get_texture(material.diffuse_tex);
+    omaterial.specular_map      = get_texture(material.specular_tex);
+    omaterial.pbr_metallic_map  = get_texture(material.metallic_tex);
+    omaterial.pbr_roughness_map = get_texture(material.roughness_tex);
+    omaterial.transmission_map  = get_texture(material.transmission_tex);
+    omaterial.reflection_map    = get_texture(material.coat_tex);
+    omaterial.opacity_map       = get_texture(material.opacity_tex);
+    omaterial.normal_map        = get_texture(material.normal_tex);
     if (material.voltransmission != zero3f ||
         material.volmeanfreepath != zero3f) {
-      write_mtl_command(fs, mtl_command::vol_transmission,
-          make_obj_value(material.voltransmission));
-      write_mtl_command(fs, mtl_command::vol_meanfreepath,
-          make_obj_value(material.volmeanfreepath));
-      write_mtl_command(
-          fs, mtl_command::vol_emission, make_obj_value(material.volemission));
-      write_mtl_command(
-          fs, mtl_command::vol_scattering, make_obj_value(material.volscatter));
-      write_mtl_command(fs, mtl_command::vol_anisotropy,
-          make_obj_value(material.volanisotropy));
-      write_mtl_command(
-          fs, mtl_command::vol_scale, make_obj_value(material.volscale));
+      omaterial.vol_transmission = material.voltransmission;
+      omaterial.vol_meanfreepath = material.volmeanfreepath;
+      omaterial.vol_emission     = material.volemission;
+      omaterial.vol_scattering   = material.volscatter;
+      omaterial.vol_anisotropy   = material.volanisotropy;
+      omaterial.vol_scale        = material.volscale;
     }
   }
-}
 
-static void save_objx(
-    const string& filename, const yocto_scene& scene, bool preserve_instances) {
-  // open writer
-  auto fs = open_file(filename, "w");
-
-  // stats
-  write_obj_comment(fs, get_save_scene_message(scene, ""));
-
-  // cameras
-  for (auto& camera : scene.cameras) {
-    write_objx_command(fs, objx_command::camera, make_obj_value(camera.uri));
-    if (camera.orthographic)
-      write_objx_command(
-          fs, objx_command::ortho, make_obj_value((float)camera.orthographic));
-    write_objx_command(fs, objx_command::width, make_obj_value(camera.film.x));
-    write_objx_command(fs, objx_command::height, make_obj_value(camera.film.y));
-    write_objx_command(fs, objx_command::lens, make_obj_value(camera.lens));
-    write_objx_command(fs, objx_command::focus, make_obj_value(camera.focus));
-    write_objx_command(
-        fs, objx_command::aperture, make_obj_value(camera.aperture));
-    write_objx_command(fs, objx_command::frame, make_obj_value(camera.frame));
-  }
-
-  // environments
-  for (auto& environment : scene.environments) {
-    write_objx_command(
-        fs, objx_command::environment, make_obj_value(environment.uri));
-    write_objx_command(
-        fs, objx_command::emission, make_obj_value(environment.emission));
-    if (environment.emission_tex >= 0)
-      write_objx_command(fs, objx_command::emission_map, {},
-          scene.textures[environment.emission_tex].uri);
-    write_objx_command(
-        fs, objx_command::frame, make_obj_value(environment.frame));
-  }
-
-  // instances
-  if (preserve_instances) {
+  // convert shapes
+  if (params.objinstances) {
+    for (auto& shape : scene.shapes) {
+      auto& oshape = obj.shapes.emplace_back();
+      oshape.name  = fs::path(shape.uri).stem();
+      if (!shape.triangles.empty()) {
+        add_obj_triangles(obj, oshape, shape.triangles, shape.positions,
+            shape.normals, shape.texcoords, {}, true);
+      } else if (!shape.quads.empty()) {
+        add_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, {}, true);
+      } else if (!shape.lines.empty()) {
+        add_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
+            shape.texcoords, {}, true);
+      } else if (!shape.points.empty()) {
+        add_obj_points(obj, oshape, shape.points, shape.positions,
+            shape.normals, shape.texcoords, {}, true);
+      } else if (!shape.quadspos.empty()) {
+        add_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, shape.positions, shape.normals,
+            shape.texcoords, {}, true);
+      } else {
+        throw std::runtime_error("do not support empty shapes");
+      }
+    }
     for (auto& instance : scene.instances) {
-      write_objx_command(
-          fs, objx_command::instance, make_obj_value(instance.uri));
-      write_objx_command(fs, objx_command::object,
-          make_obj_value(scene.shapes[instance.shape].uri));
-      write_objx_command(fs, objx_command::material,
-          make_obj_value(scene.materials[instance.material].uri));
-      write_objx_command(
-          fs, objx_command::frame, make_obj_value(instance.frame));
+      auto& oinstance  = obj.instances.emplace_back();
+      oinstance.name   = fs::path(instance.uri).stem();
+      oinstance.frame  = instance.frame;
+      oinstance.object = fs::path(scene.shapes[instance.shape].uri).stem();
+      oinstance.material =
+          fs::path(scene.materials[instance.material].uri).stem();
+    }
+  } else {
+    for (auto& instance : scene.instances) {
+      auto& shape      = scene.shapes[instance.shape];
+      auto& oshape     = obj.shapes.emplace_back();
+      oshape.name      = fs::path(instance.uri).stem();
+      oshape.materials = {
+          fs::path(scene.materials[instance.material].uri).stem()};
+      auto positions = shape.positions, normals = shape.normals;
+      for (auto& p : positions) p = transform_point(instance.frame, p);
+      for (auto& n : normals) n = transform_normal(instance.frame, n);
+      if (!shape.triangles.empty()) {
+        add_obj_triangles(obj, oshape, shape.triangles, positions, normals,
+            shape.texcoords, {}, true);
+      } else if (!shape.quads.empty()) {
+        add_obj_quads(obj, oshape, shape.quads, positions, normals,
+            shape.texcoords, {}, true);
+      } else if (!shape.lines.empty()) {
+        add_obj_lines(obj, oshape, shape.lines, positions, normals,
+            shape.texcoords, {}, true);
+      } else if (!shape.points.empty()) {
+        add_obj_points(obj, oshape, shape.points, positions, normals,
+            shape.texcoords, {}, true);
+      } else if (!shape.quadspos.empty()) {
+        add_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, positions, normals, shape.texcoords, {}, true);
+      } else {
+        throw std::runtime_error("do not support empty shapes");
+      }
     }
   }
+
+  // convert environments
+  for (auto& environment : scene.environments) {
+    auto& oenvironment        = obj.environments.emplace_back();
+    oenvironment.name         = fs::path(environment.uri).stem();
+    oenvironment.frame        = environment.frame;
+    oenvironment.emission     = environment.emission;
+    oenvironment.emission_map = get_texture(environment.emission_tex);
+  }
+
+  // save obj
+  save_obj(filename, obj);
 }
 
 static void save_obj_scene(const string& filename, const yocto_scene& scene,
     const save_params& params) {
-  try {
-    save_obj(filename, scene, params.objinstances, true);
-    if (!scene.materials.empty())
-      save_mtl(fs::path(filename).replace_extension(".mtl"), scene);
-    if (!scene.cameras.empty() || !scene.cameras.empty() ||
-        (!scene.instances.empty() && params.objinstances))
-      save_objx(fs::path(filename).replace_extension(".objx"), scene,
-          params.objinstances);
-    auto dirname = fs::path(filename).parent_path();
-    save_textures(scene, dirname, params);
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
-  }
+  save_obj(filename, scene, params);
+  auto dirname = fs::path(filename).parent_path();
+  save_textures(scene, dirname, params);
 }
 
 void print_obj_camera(const yocto_camera& camera) {
@@ -1923,465 +1384,84 @@ static void save_ply_scene(const string& filename, const yocto_scene& scene,
 namespace yocto {
 
 // convert gltf to scene
-static void gltf_to_scene(const string& filename, yocto_scene& scene) {
-  // load gltf
-  auto params = cgltf_options{};
-  memset(&params, 0, sizeof(params));
-  auto data   = (cgltf_data*)nullptr;
-  auto result = cgltf_parse_file(&params, filename.c_str(), &data);
-  if (result != cgltf_result_success) {
-    throw std::runtime_error("could not load gltf " + filename);
-  }
-  auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
-      data, cgltf_free};
-  auto dirname = fs::path(filename).parent_path().string();
-  if (dirname != "") dirname += "/";
-  if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
-      cgltf_result_success) {
-    throw std::runtime_error("could not load gltf buffers " + filename);
-  }
+static void load_gltf(const string& filename, yocto_scene& scene) {
+  auto gltf = gltf_model{};
+  load_gltf(filename, gltf);
 
   // convert textures
-  auto _startswith = [](string_view str, string_view substr) {
-    if (str.size() < substr.size()) return false;
-    return str.substr(0, substr.size()) == substr;
-  };
-  auto imap = unordered_map<cgltf_image*, int>{};
-  for (auto tid = 0; tid < gltf->images_count; tid++) {
-    auto gimg    = &gltf->images[tid];
-    auto texture = yocto_texture{};
-    texture.uri  = (_startswith(gimg->uri, "data:"))
-                      ? string("[glTF-static inline].png")
-                      : gimg->uri;
-    scene.textures.push_back(texture);
-    imap[gimg] = tid;
+  for (auto& gtexture : gltf.textures) {
+    auto& texture = scene.textures.emplace_back();
+    texture.uri   = gtexture.filename;
   }
-
-  // add a texture
-  auto add_texture = [&imap](
-                         const cgltf_texture_view& ginfo, bool force_linear) {
-    if (!ginfo.texture || !ginfo.texture->image) return -1;
-    auto gtxt = ginfo.texture;
-    return imap.at(gtxt->image);
-  };
 
   // convert materials
-  auto mmap = unordered_map<cgltf_material*, int>{{nullptr, -1}};
-  for (auto mid = 0; mid < gltf->materials_count; mid++) {
-    auto gmat             = &gltf->materials[mid];
-    auto material         = yocto_material();
-    material.uri          = gmat->name ? gmat->name : "";
-    material.emission     = {gmat->emissive_factor[0], gmat->emissive_factor[1],
-        gmat->emissive_factor[2]};
-    material.emission_tex = add_texture(gmat->emissive_texture, false);
-    if (gmat->has_pbr_specular_glossiness) {
-      material.gltf_textures = true;
-      auto gsg               = &gmat->pbr_specular_glossiness;
-      auto kb            = vec4f{gsg->diffuse_factor[0], gsg->diffuse_factor[1],
-          gsg->diffuse_factor[2], gsg->diffuse_factor[3]};
-      material.diffuse   = {kb.x, kb.y, kb.z};
-      material.opacity   = kb.w;
-      material.specular  = {gsg->specular_factor[0], gsg->specular_factor[1],
-          gsg->specular_factor[2]};
-      material.roughness = 1 - gsg->glossiness_factor;
-      material.diffuse_tex  = add_texture(gsg->diffuse_texture, false);
-      material.specular_tex = add_texture(
-          gsg->specular_glossiness_texture, false);
-      material.roughness_tex = material.specular_tex;
-    } else if (gmat->has_pbr_metallic_roughness) {
-      material.gltf_textures = true;
-      auto gmr               = &gmat->pbr_metallic_roughness;
-      auto kb = vec4f{gmr->base_color_factor[0], gmr->base_color_factor[1],
-          gmr->base_color_factor[2], gmr->base_color_factor[3]};
-      material.diffuse      = {kb.x, kb.y, kb.z};
-      material.opacity      = kb.w;
-      material.specular     = {0.04, 0.04, 0.04};
-      material.metallic     = gmr->metallic_factor;
-      material.roughness    = gmr->roughness_factor;
-      material.diffuse_tex  = add_texture(gmr->base_color_texture, false);
-      material.metallic_tex = add_texture(
-          gmr->metallic_roughness_texture, true);
-      material.roughness_tex = material.specular_tex;
+  for (auto& gmaterial : gltf.materials) {
+    auto& material        = scene.materials.emplace_back();
+    material.uri          = gmaterial.name;
+    material.emission     = gmaterial.emission;
+    material.emission_tex = gmaterial.emission_tex;
+    if (gmaterial.has_specgloss) {
+      material.diffuse      = xyz(gmaterial.sg_diffuse);
+      material.opacity      = gmaterial.sg_diffuse.w;
+      material.specular     = gmaterial.sg_specular;
+      material.diffuse_tex  = gmaterial.sg_diffuse_tex;
+      material.specular_tex = gmaterial.sg_specular_tex;
+    } else if (gmaterial.has_metalrough) {
+      material.diffuse      = xyz(gmaterial.mr_base);
+      material.opacity      = gmaterial.mr_base.w;
+      material.specular     = vec3f{0.04f};
+      material.diffuse_tex  = gmaterial.mr_base_tex;
+      material.metallic_tex = gmaterial.mr_metallic_tex;
     }
-    material.normal_tex = add_texture(gmat->normal_texture, true);
-    scene.materials.push_back(material);
-    mmap[gmat] = (int)scene.materials.size() - 1;
+    material.normal_tex = gmaterial.normal_tex;
   }
 
-  // get values from accessors
-  auto accessor_values =
-      [](const cgltf_accessor* gacc,
-          bool normalize = false) -> vector<std::array<double, 4>> {
-    auto gview       = gacc->buffer_view;
-    auto data        = (byte*)gview->buffer->data;
-    auto offset      = gacc->offset + gview->offset;
-    auto stride      = gview->stride;
-    auto compTypeNum = gacc->component_type;
-    auto count       = gacc->count;
-    auto type        = gacc->type;
-    auto ncomp       = 0;
-    if (type == cgltf_type_scalar) ncomp = 1;
-    if (type == cgltf_type_vec2) ncomp = 2;
-    if (type == cgltf_type_vec3) ncomp = 3;
-    if (type == cgltf_type_vec4) ncomp = 4;
-    auto compSize = 1;
-    if (compTypeNum == cgltf_component_type_r_16 ||
-        compTypeNum == cgltf_component_type_r_16u) {
-      compSize = 2;
-    }
-    if (compTypeNum == cgltf_component_type_r_32u ||
-        compTypeNum == cgltf_component_type_r_32f) {
-      compSize = 4;
-    }
-    if (!stride) stride = compSize * ncomp;
-    auto vals = vector<std::array<double, 4>>(count, {{0.0, 0.0, 0.0, 1.0}});
-    for (auto i = 0; i < count; i++) {
-      auto d = data + offset + i * stride;
-      for (auto c = 0; c < ncomp; c++) {
-        if (compTypeNum == cgltf_component_type_r_8) {  // char
-          vals[i][c] = (double)(*(char*)d);
-          if (normalize) vals[i][c] /= SCHAR_MAX;
-        } else if (compTypeNum == cgltf_component_type_r_8u) {  // byte
-          vals[i][c] = (double)(*(byte*)d);
-          if (normalize) vals[i][c] /= UCHAR_MAX;
-        } else if (compTypeNum == cgltf_component_type_r_16) {  // short
-          vals[i][c] = (double)(*(short*)d);
-          if (normalize) vals[i][c] /= SHRT_MAX;
-        } else if (compTypeNum ==
-                   cgltf_component_type_r_16u) {  // unsigned short
-          vals[i][c] = (double)(*(unsigned short*)d);
-          if (normalize) vals[i][c] /= USHRT_MAX;
-        } else if (compTypeNum == cgltf_component_type_r_32u) {  // unsigned int
-          vals[i][c] = (double)(*(unsigned int*)d);
-          if (normalize) vals[i][c] /= UINT_MAX;
-        } else if (compTypeNum == cgltf_component_type_r_32f) {  // float
-          vals[i][c] = (*(float*)d);
-        }
-        d += compSize;
-      }
-    }
-    return vals;
-  };
-
-  // convert meshes
-  auto meshes = unordered_map<cgltf_mesh*, vector<vec2i>>{{nullptr, {}}};
-  for (auto mid = 0; mid < gltf->meshes_count; mid++) {
-    auto gmesh    = &gltf->meshes[mid];
-    meshes[gmesh] = {};
-    for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
-      auto gprim = &gmesh->primitives[sid];
-      if (!gprim->attributes_count) continue;
-      auto shape = yocto_shape();
-      shape.uri  = (gmesh->name ? gmesh->name : "") +
-                  ((sid) ? std::to_string(sid) : string());
-      for (auto aid = 0; aid < gprim->attributes_count; aid++) {
-        auto gattr    = &gprim->attributes[aid];
-        auto semantic = string(gattr->name ? gattr->name : "");
-        auto gacc     = gattr->data;
-        auto vals     = accessor_values(gacc);
-        if (semantic == "POSITION") {
-          shape.positions.reserve(vals.size());
-          for (auto i = 0; i < vals.size(); i++)
-            shape.positions.push_back(
-                {(float)vals[i][0], (float)vals[i][1], (float)vals[i][2]});
-        } else if (semantic == "NORMAL") {
-          shape.normals.reserve(vals.size());
-          for (auto i = 0; i < vals.size(); i++)
-            shape.normals.push_back(
-                {(float)vals[i][0], (float)vals[i][1], (float)vals[i][2]});
-        } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
-          shape.texcoords.reserve(vals.size());
-          for (auto i = 0; i < vals.size(); i++)
-            shape.texcoords.push_back({(float)vals[i][0], (float)vals[i][1]});
-        } else if (semantic == "COLOR" || semantic == "COLOR_0") {
-          shape.colors.reserve(vals.size());
-          for (auto i = 0; i < vals.size(); i++)
-            shape.colors.push_back({(float)vals[i][0], (float)vals[i][1],
-                (float)vals[i][2], (float)vals[i][3]});
-        } else if (semantic == "TANGENT") {
-          shape.tangents.reserve(vals.size());
-          for (auto i = 0; i < vals.size(); i++)
-            shape.tangents.push_back({(float)vals[i][0], (float)vals[i][1],
-                (float)vals[i][2], (float)vals[i][3]});
-          for (auto& t : shape.tangents) t.w = -t.w;
-        } else if (semantic == "RADIUS") {
-          shape.radius.reserve(vals.size());
-          for (auto i = 0; i < vals.size(); i++)
-            shape.radius.push_back((float)vals[i][0]);
-        } else {
-          // ignore
-        }
-      }
-      // indices
-      if (!gprim->indices) {
-        if (gprim->type == cgltf_primitive_type_triangles) {
-          shape.triangles.reserve(shape.positions.size() / 3);
-          for (auto i = 0; i < shape.positions.size() / 3; i++)
-            shape.triangles.push_back({i * 3 + 0, i * 3 + 1, i * 3 + 2});
-        } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
-          shape.triangles.reserve(shape.positions.size() - 2);
-          for (auto i = 2; i < shape.positions.size(); i++)
-            shape.triangles.push_back({0, i - 1, i});
-        } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
-          shape.triangles.reserve(shape.positions.size() - 2);
-          for (auto i = 2; i < shape.positions.size(); i++)
-            shape.triangles.push_back({i - 2, i - 1, i});
-        } else if (gprim->type == cgltf_primitive_type_lines) {
-          shape.lines.reserve(shape.positions.size() / 2);
-          for (auto i = 0; i < shape.positions.size() / 2; i++)
-            shape.lines.push_back({i * 2 + 0, i * 2 + 1});
-        } else if (gprim->type == cgltf_primitive_type_line_loop) {
-          shape.lines.reserve(shape.positions.size());
-          for (auto i = 1; i < shape.positions.size(); i++)
-            shape.lines.push_back({i - 1, i});
-          shape.lines.back() = {(int)shape.positions.size() - 1, 0};
-        } else if (gprim->type == cgltf_primitive_type_line_strip) {
-          shape.lines.reserve(shape.positions.size() - 1);
-          for (auto i = 1; i < shape.positions.size(); i++)
-            shape.lines.push_back({i - 1, i});
-        } else if (gprim->type == cgltf_primitive_type_points) {
-          // points
-          throw std::runtime_error("points not supported");
-        } else {
-          throw std::runtime_error("unknown primitive type");
-        }
-      } else {
-        auto indices = accessor_values(gprim->indices);
-        if (gprim->type == cgltf_primitive_type_triangles) {
-          shape.triangles.reserve(indices.size() / 3);
-          for (auto i = 0; i < indices.size() / 3; i++)
-            shape.triangles.push_back({(int)indices[i * 3 + 0][0],
-                (int)indices[i * 3 + 1][0], (int)indices[i * 3 + 2][0]});
-        } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
-          shape.triangles.reserve(indices.size() - 2);
-          for (auto i = 2; i < indices.size(); i++)
-            shape.triangles.push_back({(int)indices[0][0],
-                (int)indices[i - 1][0], (int)indices[i][0]});
-        } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
-          shape.triangles.reserve(indices.size() - 2);
-          for (auto i = 2; i < indices.size(); i++)
-            shape.triangles.push_back({(int)indices[i - 2][0],
-                (int)indices[i - 1][0], (int)indices[i][0]});
-        } else if (gprim->type == cgltf_primitive_type_lines) {
-          shape.lines.reserve(indices.size() / 2);
-          for (auto i = 0; i < indices.size() / 2; i++)
-            shape.lines.push_back(
-                {(int)indices[i * 2 + 0][0], (int)indices[i * 2 + 1][0]});
-        } else if (gprim->type == cgltf_primitive_type_line_loop) {
-          shape.lines.reserve(indices.size());
-          for (auto i = 1; i < indices.size(); i++)
-            shape.lines.push_back({(int)indices[i - 1][0], (int)indices[i][0]});
-          shape.lines.back() = {
-              (int)indices[indices.size() - 1][0], (int)indices[0][0]};
-        } else if (gprim->type == cgltf_primitive_type_line_strip) {
-          shape.lines.reserve(indices.size() - 1);
-          for (auto i = 1; i < indices.size(); i++)
-            shape.lines.push_back({(int)indices[i - 1][0], (int)indices[i][0]});
-        } else if (gprim->type == cgltf_primitive_type_points) {
-          throw std::runtime_error("points not supported");
-        } else {
-          throw std::runtime_error("unknown primitive type");
-        }
-      }
-      scene.shapes.push_back(shape);
-      meshes[gmesh].push_back(
-          {(int)scene.shapes.size() - 1, mmap.at(gprim->material)});
+  // convert shapes
+  auto shape_indices = vector<vector<vec2i>>{};
+  for (auto& gmesh : gltf.meshes) {
+    shape_indices.push_back({});
+    for (auto& gprim : gmesh.primitives) {
+      auto& shape = scene.shapes.emplace_back();
+      shape_indices.back().push_back(
+          {(int)scene.shapes.size() - 1, gprim.material});
+      shape.uri =
+          gmesh.name.empty()
+              ? ""s
+              : (gmesh.name + std::to_string(shape_indices.back().size()));
+      shape.positions = gprim.positions;
+      shape.normals   = gprim.normals;
+      shape.texcoords = gprim.texcoords;
+      shape.colors    = gprim.colors;
+      shape.radius    = gprim.radius;
+      shape.tangents  = gprim.tangents;
+      shape.triangles = gprim.triangles;
+      shape.lines     = gprim.lines;
+      shape.points    = gprim.points;
     }
   }
 
   // convert cameras
-  auto cmap = unordered_map<cgltf_camera*, int>{{nullptr, -1}};
-  for (auto cid = 0; cid < gltf->cameras_count; cid++) {
-    auto gcam           = &gltf->cameras[cid];
-    auto camera         = yocto_camera{};
-    camera.uri          = gcam->name ? gcam->name : "";
-    camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
-    if (camera.orthographic) {
-      // throw std::runtime_error("orthographic not supported well");
-      auto ortho          = &gcam->orthographic;
-      camera.aperture     = 0;
-      camera.orthographic = true;
-      camera.film         = {ortho->xmag, ortho->ymag};
-    } else {
-      auto persp      = &gcam->perspective;
-      camera.aperture = 0;
-      set_yperspective(camera, persp->yfov, persp->aspect_ratio, flt_max);
-    }
-    scene.cameras.push_back(camera);
-    cmap[gcam] = (int)scene.cameras.size() - 1;
+  auto cameras = vector<yocto_camera>{};
+  for (auto& gcamera : gltf.cameras) {
+    auto& camera = cameras.emplace_back();
+    camera.uri   = gcamera.name;
+    set_yperspective(camera, gcamera.yfov, gcamera.aspect, 10);
   }
 
-  // convert nodes
-  auto nmap = unordered_map<cgltf_node*, int>{{nullptr, -1}};
-  for (auto nid = 0; nid < gltf->nodes_count; nid++) {
-    auto gnde = &gltf->nodes[nid];
-    auto node = yocto_scene_node{};
-    node.uri  = gnde->name ? gnde->name : "";
-    if (gnde->camera) node.camera = cmap.at(gnde->camera);
-    if (gnde->has_translation) {
-      node.translation = {
-          gnde->translation[0], gnde->translation[1], gnde->translation[2]};
+  // convert scene nodes
+  for (auto& gnode : gltf.nodes) {
+    if (gnode.camera >= 0) {
+      auto& camera = scene.cameras.emplace_back(cameras[gnode.camera]);
+      camera.frame = gnode.frame;
     }
-    if (gnde->has_rotation) {
-      node.rotation = {gnde->rotation[0], gnde->rotation[1], gnde->rotation[2],
-          gnde->rotation[3]};
-    }
-    if (gnde->has_scale) {
-      node.scale = {gnde->scale[0], gnde->scale[1], gnde->scale[2]};
-    }
-    if (gnde->has_matrix) {
-      auto m     = gnde->matrix;
-      node.local = frame3f(
-          mat4f{{m[0], m[1], m[2], m[3]}, {m[4], m[5], m[6], m[7]},
-              {m[8], m[9], m[10], m[11]}, {m[12], m[13], m[14], m[15]}});
-    }
-    scene.nodes.push_back(node);
-    nmap[gnde] = (int)scene.nodes.size();
-  }
-
-  // set up parent pointers
-  for (auto nid = 0; nid < gltf->nodes_count; nid++) {
-    auto gnde = &gltf->nodes[nid];
-    if (!gnde->children_count) continue;
-    for (auto cid = 0; cid < gnde->children_count; cid++) {
-      scene.nodes[nmap.at(gnde->children[cid])].parent = nid;
-    }
-  }
-
-  // set up instances
-  for (auto nid = 0; nid < gltf->nodes_count; nid++) {
-    auto gnde = &gltf->nodes[nid];
-    if (!gnde->mesh) continue;
-    auto& node = scene.nodes[nid];
-    auto& shps = meshes.at(gnde->mesh);
-    if (shps.empty()) continue;
-    if (shps.size() == 1) {
-      auto instance     = yocto_instance();
-      instance.uri      = node.uri;
-      instance.shape    = shps[0].x;
-      instance.material = shps[0].y;
-      scene.instances.push_back(instance);
-      node.instance = (int)scene.instances.size() - 1;
-    } else {
-      for (auto shp : shps) {
-        auto& shape       = scene.shapes[shp.x];
-        auto  instance    = yocto_instance();
-        instance.uri      = node.uri + "_" + shape.uri;
-        instance.shape    = shp.x;
-        instance.material = shp.y;
-        scene.instances.push_back(instance);
-        auto child     = yocto_scene_node{};
-        child.uri      = node.uri + "_" + shape.uri;
-        child.parent   = nid;
-        child.instance = (int)scene.instances.size() - 1;
-        scene.nodes.push_back(child);
+    if (gnode.mesh >= 0) {
+      for (auto [shape, material] : shape_indices[gnode.mesh]) {
+        auto& instance    = scene.instances.emplace_back();
+        instance.uri      = scene.shapes[shape].uri;
+        instance.frame    = gnode.frame;
+        instance.shape    = shape;
+        instance.material = material;
       }
-    }
-  }
-
-  // hasher for later
-  struct sampler_map_hash {
-    size_t operator()(
-        const pair<cgltf_animation_sampler*, cgltf_animation_path_type>& value)
-        const {
-      auto hasher1 = std::hash<cgltf_animation_sampler*>();
-      auto hasher2 = std::hash<int>();
-      auto h       = (size_t)0;
-      h ^= hasher1(value.first) + 0x9e3779b9 + (h << 6) + (h >> 2);
-      h ^= hasher2(value.second) + 0x9e3779b9 + (h << 6) + (h >> 2);
-      return h;
-    }
-  };
-
-  // convert animations
-  for (auto gid = 0; gid < gltf->animations_count; gid++) {
-    auto ganm = &gltf->animations[gid];
-    auto aid  = 0;
-    auto sampler_map =
-        unordered_map<pair<cgltf_animation_sampler*, cgltf_animation_path_type>,
-            int, sampler_map_hash>();
-    for (auto cid = 0; cid < ganm->channels_count; cid++) {
-      auto gchannel = &ganm->channels[cid];
-      auto path     = gchannel->target_path;
-      if (sampler_map.find({gchannel->sampler, path}) == sampler_map.end()) {
-        auto gsampler  = gchannel->sampler;
-        auto animation = yocto_animation{};
-        animation.uri  = (ganm->name ? ganm->name : "anim") +
-                        std::to_string(aid++);
-        animation.group = ganm->name ? ganm->name : "";
-        auto input_view = accessor_values(gsampler->input);
-        animation.times.resize(input_view.size());
-        for (auto i = 0; i < input_view.size(); i++)
-          animation.times[i] = input_view[i][0];
-        switch (gsampler->interpolation) {
-          case cgltf_interpolation_type_linear:
-            animation.interpolation =
-                yocto_animation::interpolation_type::linear;
-            break;
-          case cgltf_interpolation_type_step:
-            animation.interpolation = yocto_animation::interpolation_type::step;
-            break;
-          case cgltf_interpolation_type_cubic_spline:
-            animation.interpolation =
-                yocto_animation::interpolation_type::bezier;
-            break;
-        }
-        auto output_view = accessor_values(gsampler->output);
-        switch (path) {
-          case cgltf_animation_path_type_translation: {
-            animation.translations.reserve(output_view.size());
-            for (auto i = 0; i < output_view.size(); i++)
-              animation.translations.push_back({(float)output_view[i][0],
-                  (float)output_view[i][1], (float)output_view[i][2]});
-          } break;
-          case cgltf_animation_path_type_rotation: {
-            animation.rotations.reserve(output_view.size());
-            for (auto i = 0; i < output_view.size(); i++)
-              animation.rotations.push_back(
-                  {(float)output_view[i][0], (float)output_view[i][1],
-                      (float)output_view[i][2], (float)output_view[i][3]});
-          } break;
-          case cgltf_animation_path_type_scale: {
-            animation.scales.reserve(output_view.size());
-            for (auto i = 0; i < output_view.size(); i++)
-              animation.scales.push_back({(float)output_view[i][0],
-                  (float)output_view[i][1], (float)output_view[i][2]});
-          } break;
-          case cgltf_animation_path_type_weights: {
-            throw std::runtime_error("weights not supported for now");
-#if 0
-                    // get a node that it refers to
-                    auto ncomp = 0;
-                    auto gnode = gltf->get(gchannel->target->node);
-                    auto gmesh = gltf->get(gnode->mesh);
-                    if (gmesh) {
-                        for (auto gshp : gmesh->primitives) {
-                            ncomp = max((int)gshp->targets.size(), ncomp);
-                        }
-                    }
-                    if (ncomp) {
-                        auto values = vector<float>();
-                        values.reserve(output_view.size());
-                        for (auto i = 0; i < output_view.size(); i++)
-                            values.push_back(output_view.get(i));
-                        animation.weights.resize(values.size() / ncomp);
-                        for (auto i = 0; i < animation.weights.size(); i++) {
-                            animation.weights[i].resize(ncomp);
-                            for (auto j = 0; j < ncomp; j++)
-                                animation.weights[i][j] = values[i * ncomp + j];
-                        }
-                    }
-#endif
-          } break;
-          default: {
-            throw std::runtime_error("bad gltf animation");
-          }
-        }
-        sampler_map[{gchannel->sampler, path}] = (int)scene.animations.size();
-        scene.animations.push_back(animation);
-      }
-      scene.animations[sampler_map.at({gchannel->sampler, path})]
-          .targets.push_back(nmap.at(gchannel->target_node));
     }
   }
 }
@@ -2392,17 +1472,12 @@ static void load_gltf_scene(
   // initialization
   scene = {};
 
-  try {
-    // load gltf
-    gltf_to_scene(filename, scene);
+  // load gltf
+  load_gltf(filename, scene);
 
-    // load textures
-    auto dirname = fs::path(filename).parent_path();
-    load_textures(scene, dirname, params);
-
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
-  }
+  // load textures
+  auto dirname = fs::path(filename).parent_path();
+  load_textures(scene, dirname, params);
 
   // fix scene
   scene.uri = fs::path(filename).filename();
@@ -2422,481 +1497,6 @@ static void load_gltf_scene(
   }
 }
 
-// begin/end objects and arrays
-struct write_json_state {
-  FILE*                    fs = nullptr;
-  vector<pair<bool, bool>> stack;
-};
-static inline void write_json_text(write_json_state& state, const char* text) {
-  if (fprintf(state.fs, "%s", text) < 0)
-    throw std::runtime_error("cannot write json");
-}
-// static inline void write_json_text(
-//     write_json_state& state, const string& text) {
-//   if (fprintf(state.fs, "%s", text.c_str()) < 0)
-//     throw std::runtime_error("cannot write json");
-// }
-static inline void _write_json_next(
-    write_json_state& state, bool dedent = false) {
-  static const char* indents[7] = {
-      "", "  ", "    ", "      ", "        ", "          ", "            "};
-  if (state.stack.empty()) return;
-  write_json_text(state, state.stack.back().second ? ",\n" : "\n");
-  write_json_text(
-      state, indents[clamp((int)state.stack.size() + (dedent ? -1 : 0), 0, 6)]);
-  state.stack.back().second = true;
-}
-static inline void _write_json_value(write_json_state& state, int value) {
-  if (fprintf(state.fs, "%d", value) < 0)
-    throw std::runtime_error("cannot write json");
-}
-static inline void _write_json_value(write_json_state& state, size_t value) {
-  if (fprintf(state.fs, "%llu", (unsigned long long)value) < 0)
-    throw std::runtime_error("cannot write json");
-}
-static inline void _write_json_value(write_json_state& state, float value) {
-  if (fprintf(state.fs, "%g", value) < 0)
-    throw std::runtime_error("cannot write json");
-}
-// static inline void _write_json_value(write_json_state& state, bool value) {
-//   if (fprintf(state.fs, "%s", value ? "true" : "false") < 0)
-//     throw std::runtime_error("cannot write json");
-// }
-static inline void _write_json_value(
-    write_json_state& state, const string& value) {
-  if (fprintf(state.fs, "\"%s\"", value.c_str()) < 0)
-    throw std::runtime_error("cannot write json");
-}
-static inline void _write_json_value(
-    write_json_state& state, const char* value) {
-  if (fprintf(state.fs, "\"%s\"", value) < 0)
-    throw std::runtime_error("cannot write json");
-}
-// static inline void _write_json_value(
-//     write_json_state& state, const vec2f& value) {
-//   if (fprintf(state.fs, "[%g, %g]", value.x, value.y) < 0)
-//     throw std::runtime_error("cannot write json");
-// }
-static inline void _write_json_value(
-    write_json_state& state, const vec3f& value) {
-  if (fprintf(state.fs, "[%g, %g, %g]", value.x, value.y, value.z) < 0)
-    throw std::runtime_error("cannot write json");
-}
-static inline void _write_json_value(
-    write_json_state& state, const vec4f& value) {
-  if (fprintf(
-          state.fs, "[%g, %g, %g, %g]", value.x, value.y, value.z, value.w) < 0)
-    throw std::runtime_error("cannot write json");
-}
-static inline void _write_json_value(
-    write_json_state& state, const mat4f& value) {
-  if (fprintf(state.fs, "[ ") < 0)
-    throw std::runtime_error("cannot write json");
-  for (auto i = 0; i < 16; i++) {
-    if (fprintf(state.fs, i ? ", %g" : "%g", (&value.x.x)[i]) < 0)
-      throw std::runtime_error("cannot write json");
-  }
-  if (fprintf(state.fs, " ]") < 0)
-    throw std::runtime_error("cannot write json");
-}
-static inline void _write_json_value(
-    write_json_state& state, const vector<int>& value) {
-  write_json_text(state, "[ ");
-  for (auto i = 0; i < value.size(); i++) {
-    if (i) write_json_text(state, ", ");
-    _write_json_value(state, value[i]);
-  }
-  write_json_text(state, " ]");
-}
-static inline void write_json_object(write_json_state& state) {
-  _write_json_next(state);
-  write_json_text(state, "{ ");
-  state.stack.push_back({true, false});
-}
-static inline void write_json_object(write_json_state& state, const char* key) {
-  _write_json_next(state);
-  _write_json_value(state, key);
-  write_json_text(state, ": {");
-  state.stack.push_back({true, false});
-}
-// static inline void write_json_array(write_json_state& state) {
-//   _write_json_next(state);
-//   write_json_text(state, "[ ");
-//   state.stack.push_back({false, false});
-// }
-static inline void write_json_array(write_json_state& state, const char* key) {
-  _write_json_next(state);
-  _write_json_value(state, key);
-  write_json_text(state, ": [");
-  state.stack.push_back({false, false});
-}
-static inline void write_json_pop(write_json_state& state) {
-  _write_json_next(state, true);
-  write_json_text(state, state.stack.back().first ? "}" : "]");
-  state.stack.pop_back();
-}
-template <typename T>
-static inline void write_json_value(write_json_state& state, const T& value) {
-  _write_json_next(state);
-  _write_json_value(state, value);
-}
-template <typename T>
-static inline void write_json_value(
-    write_json_state& state, const char* key, const T& value) {
-  _write_json_next(state);
-  _write_json_value(state, key);
-  write_json_text(state, ": ");
-  _write_json_value(state, value);
-}
-static inline void write_json_begin(write_json_state& state) {
-  state.stack.clear();
-  write_json_object(state);
-}
-static inline void write_json_end(write_json_state& state) {
-  write_json_pop(state);
-  if (state.stack.empty()) throw std::runtime_error("bad json stack");
-}
-
-// convert gltf scene to json
-static void save_gltf(const string& filename, const yocto_scene& scene) {
-  // shapes
-  struct gltf_shape {
-    string        uri       = "";
-    int           material  = -1;
-    int           mode      = 0;
-    vector<int>   indices   = {};
-    vector<vec3f> positions = {};
-    vector<vec3f> normals   = {};
-    vector<vec2f> texcoords = {};
-    vector<vec4f> colors    = {};
-    vector<float> radius    = {};
-    vector<vec4f> tangents  = {};
-  };
-
-  // json writer
-  auto fs_   = open_file(filename, "w");
-  auto fs    = fs_.fs;
-  auto state = write_json_state{fs};
-
-  // begin writing
-  write_json_begin(state);
-
-  // start creating json
-  write_json_object(state, "asset");
-  write_json_value(state, "version", "2.0");
-  write_json_value(
-      state, "generator", "Yocto/GL - https://github.com/xelatihy/yocto-gl");
-  write_json_pop(state);
-
-  // convert cameras
-  write_json_array(state, "cameras");
-  for (auto& camera : scene.cameras) {
-    write_json_object(state);
-    write_json_value(state, "name", camera.uri);
-    if (!camera.orthographic) {
-      write_json_value(state, "type", "perspective");
-      write_json_object(state, "perspective");
-      write_json_value(state, "yfov", camera_yfov(camera));
-      write_json_value(state, "aspectRatio", camera.film.x / camera.film.y);
-      write_json_value(state, "znear", 0.01f);
-      write_json_pop(state);
-    } else {
-      write_json_value(state, "type", "orthographic");
-      write_json_object(state, "orthographic");
-      write_json_value(state, "xmag", camera.film.x / 2);
-      write_json_value(state, "ymag", camera.film.y / 2);
-      write_json_value(state, "znear", 0.01f);
-      write_json_pop(state);
-    }
-    write_json_pop(state);
-  }
-  write_json_pop(state);
-
-  // textures
-  write_json_array(state, "images");
-  for (auto& texture : scene.textures) {
-    write_json_object(state);
-    write_json_value(state, "uri", texture.uri);
-    write_json_pop(state);
-  }
-  write_json_pop(state);
-  auto tid = 0;
-  write_json_array(state, "textures");
-  for (auto& texture : scene.textures) {
-    write_json_object(state);
-    write_json_value(state, "source", tid++);
-    write_json_pop(state);
-  }
-  write_json_pop(state);
-
-  // material
-  auto write_json_texture = [](write_json_state& state, const char* key,
-                                int tid) {
-    write_json_object(state, key);
-    write_json_value(state, "index", tid);
-    write_json_pop(state);
-  };
-  write_json_array(state, "materials");
-  for (auto& material : scene.materials) {
-    write_json_object(state);
-    write_json_value(state, "name", material.uri);
-    if (material.emission != zero3f)
-      write_json_value(state, "emissiveFactor", material.emission);
-    if (material.emission_tex >= 0)
-      write_json_texture(state, "emissiveTexture", material.emission_tex);
-    auto kd = vec4f{material.diffuse.x, material.diffuse.y, material.diffuse.z,
-        material.opacity};
-    if (material.metallic || material.metallic_tex >= 0) {
-      write_json_object(state, "pbrMetallicRoughness");
-      write_json_value(state, "baseColorFactor", kd);
-      write_json_value(state, "metallicFactor", material.metallic);
-      write_json_value(state, "roughnessFactor", material.roughness);
-      if (material.diffuse_tex >= 0)
-        write_json_texture(state, "baseColorTexture", material.diffuse_tex);
-      if (material.metallic_tex >= 0)
-        write_json_texture(
-            state, "metallicRoughnessTexture", material.metallic_tex);
-      write_json_pop(state);
-    } else {
-      write_json_object(state, "extensions");
-      write_json_object(state, "KHR_materials_pbrSpecularGlossiness");
-      write_json_value(state, "diffuseFactor", kd);
-      write_json_value(state, "specularFactor", material.specular);
-      write_json_value(state, "glossinessFactor", 1 - material.roughness);
-      if (material.diffuse_tex >= 0)
-        write_json_texture(state, "diffuseTexture", material.diffuse_tex);
-      if (material.specular_tex >= 0)
-        write_json_texture(
-            state, "specularGlossinessTexture", material.specular_tex);
-      write_json_pop(state);
-      write_json_pop(state);
-    }
-    if (material.normal_tex >= 0)
-      write_json_texture(state, "normalTexture", material.normal_tex);
-    write_json_pop(state);
-  }
-  write_json_pop(state);
-
-  auto shapes = vector<gltf_shape>(scene.shapes.size());
-  auto sid    = 0;
-  for (auto& shape : scene.shapes) {
-    auto& split = shapes[sid++];
-    split.uri   = fs::path(shape.uri).replace_extension(".bin");
-    split.mode  = 4;
-    if (!shape.points.empty()) split.mode = 1;
-    if (!shape.lines.empty()) split.mode = 1;
-    if (shape.quadspos.empty()) {
-      split.positions = shape.positions;
-      split.normals   = shape.normals;
-      split.texcoords = shape.texcoords;
-      split.colors    = shape.colors;
-      split.radius    = shape.radius;
-      split.indices.insert(split.indices.end(), shape.points.data(),
-          shape.points.data() + shape.points.size());
-      split.indices.insert(split.indices.end(), (int*)shape.lines.data(),
-          (int*)shape.lines.data() + shape.lines.size() * 2);
-      split.indices.insert(split.indices.end(), (int*)shape.triangles.data(),
-          (int*)shape.triangles.data() + shape.triangles.size() * 3);
-      if (!shape.quads.empty()) {
-        auto triangles = quads_to_triangles(shape.quads);
-        split.indices.insert(split.indices.end(), (int*)triangles.data(),
-            (int*)triangles.data() + triangles.size() * 3);
-      }
-    } else {
-      auto quads = vector<vec4i>{};
-      split_facevarying(quads, split.positions, split.normals, split.texcoords,
-          shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-          shape.normals, shape.texcoords);
-      auto triangles = quads_to_triangles(quads);
-      split.indices.insert(split.indices.end(), (int*)triangles.data(),
-          (int*)triangles.data() + triangles.size() * 3);
-    }
-  }
-  for (auto& instance : scene.instances) {
-    shapes[instance.shape].material = instance.material;
-  }
-
-  // buffers
-  write_json_array(state, "buffers");
-  for (auto& shape : shapes) {
-    auto buffer_size = sizeof(int) * shape.indices.size() +
-                       sizeof(vec3f) * shape.positions.size() +
-                       sizeof(vec3f) * shape.normals.size() +
-                       sizeof(vec2f) * shape.texcoords.size() +
-                       sizeof(vec4f) * shape.colors.size() +
-                       sizeof(float) * shape.radius.size();
-    write_json_object(state);
-    write_json_value(state, "name", shape.uri);
-    write_json_value(state, "uri", shape.uri);
-    write_json_value(state, "byteLength", buffer_size);
-    write_json_pop(state);
-  }
-  write_json_pop(state);
-
-  // buffer views
-  auto write_json_bufferview = [](write_json_state& state, auto& values,
-                                   size_t& offset, int bid, bool indices) {
-    if (values.empty()) return;
-    auto bytes = values.size() * sizeof(values[0]);
-    write_json_object(state);
-    write_json_value(state, "buffer", bid);
-    write_json_value(state, "byteLength", bytes);
-    write_json_value(state, "byteOffset", offset);
-    write_json_value(state, "target", (!indices) ? 34962 : 34963);
-    write_json_pop(state);
-    offset += bytes;
-  };
-  write_json_array(state, "bufferViews");
-  auto bid = 0;
-  for (auto& shape : shapes) {
-    auto offset = (size_t)0;
-    write_json_bufferview(state, shape.indices, offset, bid, true);
-    write_json_bufferview(state, shape.positions, offset, bid, false);
-    write_json_bufferview(state, shape.normals, offset, bid, false);
-    write_json_bufferview(state, shape.texcoords, offset, bid, false);
-    write_json_bufferview(state, shape.colors, offset, bid, false);
-    write_json_bufferview(state, shape.radius, offset, bid, false);
-    bid++;
-  }
-  write_json_pop(state);
-
-  // accessors
-  auto write_json_accessor = [](write_json_state& state, auto& values, int& vid,
-                                 bool indices) {
-    if (values.empty()) return;
-    auto count = values.size();
-    auto type  = "SCALAR";
-    if (!indices) {
-      if (sizeof(values[0]) / sizeof(float) == 2) type = "VEC2";
-      if (sizeof(values[0]) / sizeof(float) == 3) type = "VEC3";
-      if (sizeof(values[0]) / sizeof(float) == 4) type = "VEC4";
-    }
-    write_json_object(state);
-    write_json_value(state, "bufferView", vid++);
-    write_json_value(state, "byteOffset", 0);
-    write_json_value(state, "componentType", (!indices) ? 5126 : 5125);
-    write_json_value(state, "count", count);
-    write_json_value(state, "type", type);
-    write_json_pop(state);
-  };
-  auto vid = 0;
-  write_json_array(state, "accessors");
-  for (auto& shape : shapes) {
-    write_json_accessor(state, shape.indices, vid, true);
-    write_json_accessor(state, shape.positions, vid, false);
-    write_json_accessor(state, shape.normals, vid, false);
-    write_json_accessor(state, shape.texcoords, vid, false);
-    write_json_accessor(state, shape.colors, vid, false);
-    write_json_accessor(state, shape.radius, vid, false);
-  }
-  write_json_pop(state);
-
-  // meshes
-  auto aid = 0;
-  write_json_array(state, "meshes");
-  for (auto& shape : shapes) {
-    write_json_object(state);
-    write_json_value(state, "name", shape.uri);
-    write_json_array(state, "primitives");
-    write_json_value(state, "material", shape.material);
-    if (!shape.indices.empty()) write_json_value(state, "indices", aid++);
-    write_json_object(state, "attributes");
-    if (!shape.positions.empty()) write_json_value(state, "POSITION", aid++);
-    if (!shape.normals.empty()) write_json_value(state, "NORMAL", aid++);
-    if (!shape.texcoords.empty()) write_json_value(state, "indices", aid++);
-    if (!shape.colors.empty()) write_json_value(state, "TEXCOORD_0", aid++);
-    if (!shape.radius.empty()) write_json_value(state, "RADIUS", aid++);
-    write_json_accessor(state, shape.positions, vid, false);
-    write_json_accessor(state, shape.normals, vid, false);
-    write_json_accessor(state, shape.texcoords, vid, false);
-    write_json_accessor(state, shape.colors, vid, false);
-    write_json_accessor(state, shape.radius, vid, false);
-    write_json_pop(state);
-    write_json_pop(state);
-  }
-  write_json_pop(state);
-
-  // nodes
-  write_json_array(state, "nodes");
-  if (scene.nodes.empty()) {
-    auto camera_id = 0;
-    for (auto& camera : scene.cameras) {
-      write_json_object(state);
-      write_json_value(state, "name", camera.uri);
-      write_json_value(state, "camera", camera_id++);
-      write_json_value(state, "matrix", mat4f(camera.frame));
-      write_json_pop(state);
-    }
-    for (auto& instance : scene.instances) {
-      write_json_object(state);
-      write_json_value(state, "name", instance.uri);
-      write_json_value(state, "mesh", instance.shape);
-      write_json_value(state, "matrix", mat4f(instance.frame));
-      write_json_pop(state);
-    }
-  } else {
-    for (auto& node : scene.nodes) {
-      write_json_object(state);
-      write_json_value(state, "name", node.uri);
-      write_json_value(state, "matrix", mat4f(node.local));
-      write_json_value(state, "translation", node.translation);
-      write_json_value(state, "rotation", node.rotation);
-      write_json_value(state, "scale", node.scale);
-      if (node.camera >= 0) write_json_value(state, "camera", node.camera);
-      if (node.instance >= 0) {
-        auto& instance = scene.instances[node.instance];
-        write_json_value(state, "mesh", instance.shape);
-      }
-      if (!node.children.empty()) {
-        write_json_value(state, "children", node.children);
-      }
-      write_json_pop(state);
-    }
-  }
-  write_json_pop(state);
-
-  // animations not supported yet
-  if (!scene.animations.empty())
-    throw std::runtime_error("animation not supported yet");
-
-  // end writing
-  write_json_end(state);
-
-  // meshes
-  auto write_values = [](FILE* fs, const auto& values) {
-    if (values.empty()) return;
-    if (fwrite(values.data(), sizeof(values.front()), values.size(), fs) !=
-        values.size())
-      throw std::runtime_error("cannot write to file");
-  };
-  auto dirname = fs::path(filename).parent_path();
-  for (auto& shape : shapes) {
-    auto fs_ = open_file(dirname / shape.uri, "w");
-    auto fs  = fs_.fs;
-    write_values(fs, shape.indices);
-    write_values(fs, shape.positions);
-    write_values(fs, shape.normals);
-    write_values(fs, shape.texcoords);
-    write_values(fs, shape.colors);
-    write_values(fs, shape.radius);
-  }
-}
-
-// Save gltf json
-static void save_gltf_scene(const string& filename, const yocto_scene& scene,
-    const save_params& params) {
-  try {
-    // save json
-    save_gltf(filename, scene);
-
-    // save textures
-    auto dirname = fs::path(filename).parent_path();
-    save_textures(scene, dirname, params);
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
-  }
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -2904,882 +1504,123 @@ static void save_gltf_scene(const string& filename, const yocto_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Compute the fresnel term for dielectrics. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-static vec3f pbrt_fresnel_dielectric(float cosw, const vec3f& eta_) {
-  auto eta = eta_;
-  if (cosw < 0) {
-    eta  = vec3f{1, 1, 1} / eta;
-    cosw = -cosw;
-  }
-
-  auto sin2 = 1 - cosw * cosw;
-  auto eta2 = eta * eta;
-
-  auto cos2t = vec3f{1, 1, 1} - vec3f{sin2, sin2, sin2} / eta2;
-  if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0) return vec3f{1, 1, 1};  // tir
-
-  auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
-  auto t1 = eta * t0;
-  auto t2 = eta * cosw;
-
-  auto rs = (vec3f{cosw, cosw, cosw} - t1) / (vec3f{cosw, cosw, cosw} + t1);
-  auto rp = (t0 - t2) / (t0 + t2);
-
-  return (rs * rs + rp * rp) / 2.0f;
-}
-
-// Compute the fresnel term for metals. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-static vec3f pbrt_fresnel_metal(
-    float cosw, const vec3f& eta, const vec3f& etak) {
-  if (etak == zero3f) return pbrt_fresnel_dielectric(cosw, eta);
-
-  cosw       = clamp(cosw, (float)-1, (float)1);
-  auto cos2  = cosw * cosw;
-  auto sin2  = clamp(1 - cos2, (float)0, (float)1);
-  auto eta2  = eta * eta;
-  auto etak2 = etak * etak;
-
-  auto t0         = eta2 - etak2 - vec3f{sin2, sin2, sin2};
-  auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
-  auto a2plusb2   = vec3f{
-      sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
-  auto t1  = a2plusb2 + vec3f{cos2, cos2, cos2};
-  auto a_2 = (a2plusb2 + t0) / 2.0f;
-  auto a   = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
-  auto t2  = 2.0f * a * cosw;
-  auto rs  = (t1 - t2) / (t1 + t2);
-
-  auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
-            vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
-  auto t4 = t2 * sin2;
-  auto rp = rs * (t3 - t4) / (t3 + t4);
-
-  return (rp + rs) / 2.0f;
-}
-
-// pbrt stack ctm
-struct pbrt_context_ {
-  frame3f transform_start        = identity3x4f;
-  frame3f transform_end          = identity3x4f;
-  string  material               = "";
-  string  arealight              = "";
-  string  medium_interior        = "";
-  string  medium_exterior        = "";
-  bool    reverse                = false;
-  bool    active_transform_start = true;
-  bool    active_transform_end   = true;
-  float   last_lookat_distance   = 0;
-};
-
-// convert pbrt elements
-void add_pbrt_camera(yocto_scene& scene, const string& type,
-    const vector<pbrt_value>& values, const pbrt_context_& ctx,
-    float last_film_aspect, bool verbose = false) {
-  auto camera    = yocto_camera{};
-  camera.frame   = inverse((frame3f)ctx.transform_start);
-  camera.frame.z = -camera.frame.z;
-  if (type == "perspective") {
-    auto fov = get_pbrt_value(values, "fov", 90.0f);
-    // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
-    auto frameaspectratio = get_pbrt_value(values, "frameaspectratio", -1.0f);
-    auto focaldistance    = get_pbrt_value(values, "focaldistance", 1e30f);
-    if (frameaspectratio < 0) frameaspectratio = last_film_aspect;
-    if (frameaspectratio < 0) frameaspectratio = 1;
-    if (frameaspectratio >= 1) {
-      set_yperspective(camera, radians(fov), frameaspectratio,
-          clamp(focaldistance, 1.0e-2f, 1.0e4f));
-    } else {
-      auto yfov = 2 * atan(tan(radians(fov) / 2) / frameaspectratio);
-      set_yperspective(camera, yfov, frameaspectratio,
-          clamp(focaldistance, 1.0e-2f, 1.0e4f));
-    }
-  } else if (type == "realistic") {
-    auto lensfile         = get_pbrt_value(values, "lensfile", ""s);
-    lensfile              = lensfile.substr(0, lensfile.size() - 4);
-    lensfile              = lensfile.substr(lensfile.find('.') + 1);
-    lensfile              = lensfile.substr(0, lensfile.size() - 2);
-    auto focal            = std::atof(lensfile.c_str());
-    auto aperturediameter = get_pbrt_value(values, "aperturediameter", 0.0f);
-    auto focusdistance    = get_pbrt_value(values, "focusdistance", 10.0f);
-    camera.lens           = max(focal, 35.0f) * 0.001f;
-    auto aspect           = 1.0f;
-    if (aspect < 0) aspect = last_film_aspect;
-    if (aspect < 0) aspect = 1;
-    if (aspect >= 1) {
-      camera.film.y = camera.film.x / aspect;
-    } else {
-      camera.film.x = camera.film.y * aspect;
-    }
-    camera.focus    = focusdistance;
-    camera.aperture = aperturediameter;
-  } else {
-    throw std::runtime_error("unsupported Camera type " + type);
-  }
-  scene.cameras.push_back(camera);
-}
-
-static void add_pbrt_film(yocto_scene& scene, const string& type,
-    const vector<pbrt_value>& values, const pbrt_context_& ctx,
-    float& last_film_aspect) {
-  if (type == "image") {
-    auto xresolution = get_pbrt_value(values, "xresolution", 640);
-    auto yresolution = get_pbrt_value(values, "yresolution", 480);
-    last_film_aspect = (float)xresolution / (float)yresolution;
-    for (auto& camera : scene.cameras) {
-      camera.film.x = camera.film.y * last_film_aspect;
-    }
-  } else {
-    throw std::runtime_error("unsupported Film type " + type);
-  }
-}
-
-static void add_pbrt_shape(yocto_scene& scene, const string& type,
-    const vector<pbrt_value>& values, const pbrt_context_& ctx,
-    const string& name, const string& filename, const string& cur_object,
-    unordered_map<string, vector<yocto_instance>>& omap,
-    const unordered_map<string, yocto_material>&   mmap,
-    const unordered_map<string, vec3f>&            amap,
-    unordered_map<string, int>&                    ammap) {
-  auto get_material = [&](const pbrt_context_& ctx) -> int {
-    static auto light_id    = 0;
-    auto        lookup_name = ctx.material + "_______" + ctx.arealight;
-    if (ammap.find(lookup_name) != ammap.end()) return ammap.at(lookup_name);
-    auto material = mmap.at(ctx.material);
-    if (amap.at(ctx.arealight) != zero3f) {
-      material.emission = amap.at(ctx.arealight);
-      material.uri += "_arealight_" + std::to_string(light_id++);
-    }
-    scene.materials.push_back(material);
-    ammap[lookup_name] = (int)scene.materials.size() - 1;
-    return (int)scene.materials.size() - 1;
-  };
-  auto shape = yocto_shape{};
-  shape.uri  = name;
-  if (type == "trianglemesh") {
-    get_pbrt_value(values, "P", shape.positions, {});
-    get_pbrt_value(values, "N", shape.normals, {});
-    get_pbrt_value(values, "uv", shape.texcoords, {});
-    for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
-    get_pbrt_value(values, "indices", shape.triangles, {});
-  } else if (type == "loopsubdiv") {
-    get_pbrt_value(values, "P", shape.positions, {});
-    get_pbrt_value(values, "indices", shape.triangles, {});
-    shape.normals.resize(shape.positions.size());
-    compute_normals(shape.normals, shape.triangles, shape.positions);
-  } else if (type == "plymesh") {
-    shape.uri = get_pbrt_value(values, "filename", ""s);
-    load_shape(fs::path(filename).parent_path() / shape.uri, shape.points,
-        shape.lines, shape.triangles, shape.quads, shape.quadspos,
-        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, false);
-  } else if (type == "sphere") {
-    auto radius         = get_pbrt_value(values, "radius", 1.0f);
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::uvsphere;
-    params.subdivisions = 5;
-    params.scale        = radius;
-    make_proc_shape(shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, params);
-  } else if (type == "disk") {
-    auto radius         = get_pbrt_value(values, "radius", 1.0f);
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::uvdisk;
-    params.subdivisions = 4;
-    params.scale        = radius;
-    make_proc_shape(shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, params);
-  } else {
-    throw std::runtime_error("unsupported shape type " + type);
-  }
-  if (shape.positions.empty()) throw std::runtime_error("bad shape");
-  scene.shapes.push_back(shape);
-  auto instance     = yocto_instance{};
-  instance.frame    = (frame3f)ctx.transform_start;
-  instance.shape    = (int)scene.shapes.size() - 1;
-  instance.material = get_material(ctx);
-  if (cur_object == "") {
-    scene.instances.push_back(instance);
-  } else {
-    omap[cur_object].push_back(instance);
-  }
-}
-
-static void add_pbrt_texture(yocto_scene& scene, const string& type,
-    const vector<pbrt_value>& values, const pbrt_context_& ctx,
-    const string& name, unordered_map<string, int>& tmap,
-    unordered_map<string, vec3f>& ctmap, unordered_map<string, bool>& timap,
-    bool remove_contant_textures = true, bool verbose = false) {
-  if (remove_contant_textures && type == "constant") {
-    ctmap[name] = get_pbrt_value(values, "value", vec3f{1});
-    timap[name] = false;
-    return;
-  }
-  auto texture = yocto_texture{};
-  texture.uri  = "textures/" + name + ".png";
-  if (type == "imagemap") {
-    texture.uri = get_pbrt_value(values, "filename", ""s);
-  } else if (type == "constant") {
-    texture.ldr.resize({1, 1});
-    texture.ldr[{0, 0}] = float_to_byte(
-        vec4f{get_pbrt_value(values, "value", vec3f{1}), 1});
-  } else if (type == "bilerp") {
-    texture.ldr.resize({1, 1});
-    texture.ldr[{0, 0}] = {255, 0, 0, 255};
-    if (verbose) printf("texture bilerp not supported well");
-  } else if (type == "checkerboard") {
-    auto tex1     = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
-    auto tex2     = get_pbrt_value(values, "tex2", pair{vec3f{0}, ""s});
-    auto rgb1     = tex1.second == "" ? tex1.first : vec3f{0.4f, 0.4f, 0.4f};
-    auto rgb2     = tex1.second == "" ? tex2.first : vec3f{0.6f, 0.6f, 0.6f};
-    auto params   = proc_image_params{};
-    params.type   = proc_image_params::type_t::checker;
-    params.color0 = {rgb1.x, rgb1.y, rgb1.z, 1};
-    params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1};
-    params.scale  = 2;
-    make_proc_image(texture.hdr, params);
-    float_to_byte(texture.ldr, texture.hdr);
-    texture.hdr = {};
-    if (verbose) printf("texture checkerboard not supported well");
-  } else if (type == "dots") {
-    texture.ldr.resize({1, 1});
-    texture.ldr[{0, 0}] = {255, 0, 0, 255};
-    if (verbose) printf("texture dots not supported well");
-  } else if (type == "fbm") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::fbm;
-    make_proc_image(texture.hdr, params);
-    float_to_byte(texture.ldr, texture.hdr);
-    texture.hdr = {};
-    if (verbose) printf("texture fbm not supported well");
-  } else if (type == "marble") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::fbm;
-    make_proc_image(texture.hdr, params);
-    float_to_byte(texture.ldr, texture.hdr);
-    texture.hdr = {};
-    if (verbose) printf("texture marble not supported well");
-  } else if (type == "mix") {
-    auto tex1 = get_pbrt_value(values, "tex1", pair{vec3f{0}, ""s});
-    auto tex2 = get_pbrt_value(values, "tex2", pair{vec3f{1}, ""s});
-    if (timap.at(tex1.second)) {
-      texture.uri = scene.textures.at(tmap.at(tex1.second)).uri;
-    } else if (timap.at(tex2.second)) {
-      texture.uri = scene.textures.at(tmap.at(tex2.second)).uri;
-    } else {
-      texture.ldr.resize({1, 1});
-      texture.ldr[{0, 0}] = {255, 0, 0, 255};
-    }
-    if (verbose) printf("texture mix not supported well");
-  } else if (type == "scale") {
-    auto tex1 = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
-    auto tex2 = get_pbrt_value(values, "tex2", pair{vec3f{1}, ""s});
-    if (timap.at(tex1.second)) {
-      texture.uri = scene.textures.at(tmap.at(tex1.second)).uri;
-    } else if (timap.at(tex2.second)) {
-      texture.uri = scene.textures.at(tmap.at(tex2.second)).uri;
-    } else {
-      texture.ldr.resize({1, 1});
-      texture.ldr[{0, 0}] = {255, 0, 0, 255};
-    }
-    if (verbose) printf("texture scale not supported well");
-  } else if (type == "uv") {
-    texture.ldr.resize({1, 1});
-    texture.ldr[{0, 0}] = {255, 0, 0, 255};
-    if (verbose) printf("texture uv not supported well");
-  } else if (type == "windy") {
-    texture.ldr.resize({1, 1});
-    texture.ldr[{0, 0}] = {255, 0, 0, 255};
-    if (verbose) printf("texture windy not supported well");
-  } else if (type == "wrinkled") {
-    texture.ldr.resize({1, 1});
-    texture.ldr[{0, 0}] = {255, 0, 0, 255};
-    if (verbose) printf("texture wrinkled not supported well");
-  } else {
-    throw std::runtime_error("unsupported texture type " + type);
-  }
-  scene.textures.push_back(texture);
-  tmap[name]  = (int)scene.textures.size() - 1;
-  timap[name] = type == "imagemap";
-}
-
-static void add_pbrt_material(yocto_scene& scnee, const string& type,
-    const vector<pbrt_value>& values, const pbrt_context_& ctx,
-    const string& name, unordered_map<string, yocto_material>& mmap,
-    const unordered_map<string, int>&   tmap,
-    const unordered_map<string, vec3f>& ctmap, bool verbose = false) {
-  auto is_constant_texture = [&](const string& name) -> bool {
-    return ctmap.find(name) != ctmap.end();
-  };
-  auto get_constant_texture_color = [&](const string& name) -> vec3f {
-    return ctmap.at(name);
-  };
-
-  auto get_scaled_texture = [&](const vector<pbrt_value>& values,
-                                const string& name, vec3f& color, int& texture,
-                                vec3f def) {
-    auto textured = get_pbrt_value(values, name, pair{def, ""s});
-    if (textured.second == "") {
-      color   = textured.first;
-      texture = -1;
-    } else if (is_constant_texture(textured.second)) {
-      color   = get_constant_texture_color(textured.second);
-      texture = -1;
-    } else {
-      color   = {1, 1, 1};
-      texture = tmap.at(textured.second);
-    }
-  };
-
-  auto get_scaled_texturef = [&](const vector<pbrt_value>& values,
-                                 const string& name, float& factor,
-                                 vec3f& color, int& texture, float def) {
-    auto textured = get_pbrt_value(values, name, pair{vec3f{def}, ""s});
-    if (textured.second == "") {
-      color  = textured.first;
-      factor = color == zero3f ? 0 : 1;
-      if (!factor) color = {1, 1, 1};
-      texture = -1;
-    } else if (is_constant_texture(textured.second)) {
-      color  = get_constant_texture_color(textured.second);
-      factor = color == zero3f ? 0 : 1;
-      if (!factor) color = {1, 1, 1};
-      texture = -1;
-    } else {
-      color   = {1, 1, 1};
-      factor  = 1;
-      texture = tmap.at(textured.second);
-    }
-  };
-
-  auto get_pbrt_roughness = [&](const vector<pbrt_value>& values,
-                                float                     def = 0.1) -> float {
-    auto roughness_ = get_pbrt_value(
-        values, "roughness", pair{vec3f{def}, ""s});
-    auto uroughness = get_pbrt_value(
-        values, "uroughness", pair{roughness_.first, roughness_.second});
-    auto vroughness = get_pbrt_value(
-        values, "vroughness", pair{roughness_.first, roughness_.second});
-    auto remaproughness = get_pbrt_value(values, "remaproughness", true);
-
-    if (uroughness.first == zero3f || vroughness.first == zero3f) return 0;
-    auto roughness = (mean(uroughness.first) + mean(vroughness.first)) / 2;
-    // from pbrt code
-    if (remaproughness) {
-      roughness = max(roughness, 1e-3f);
-      auto x    = log(roughness);
-      roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
-                  0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
-    }
-    return sqrt(roughness);
-  };
-
-  auto get_pbrt_roughnessf = [&](float roughness,
-                                 bool  remaproughness = true) -> float {
-    if (roughness == 0) return 0;
-    // from pbrt code
-    if (remaproughness) {
-      roughness = max(roughness, 1e-3f);
-      auto x    = log(roughness);
-      roughness = 1.62142f + 0.819955f * x + 0.1734f * x * x +
-                  0.0171201f * x * x * x + 0.000640711f * x * x * x * x;
-    }
-    return sqrt(roughness);
-  };
-
-  auto material = yocto_material{};
-  material.uri  = name;
-  if (type == "uber") {
-    get_scaled_texture(
-        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.25});
-    get_scaled_texture(
-        values, "Ks", material.specular, material.specular_tex, vec3f{0.25});
-    get_scaled_texture(values, "Kt", material.transmission,
-        material.transmission_tex, vec3f{0});
-    float op_f = 1;
-    auto  op   = vec3f{0, 0, 0};
-    get_scaled_texturef(values, "opacity", op_f, op, material.opacity_tex, 1);
-    material.opacity   = (op.x + op.y + op.z) / 3;
-    material.roughness = get_pbrt_roughness(values, 0.1f);
-  } else if (type == "plastic") {
-    get_scaled_texture(
-        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.25});
-    get_scaled_texture(
-        values, "Ks", material.specular, material.specular_tex, vec3f{0.25});
-    material.specular *= 0.04f;
-    material.roughness = get_pbrt_roughness(values, 0.1);
-  } else if (type == "translucent") {
-    get_scaled_texture(
-        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.25});
-    get_scaled_texture(
-        values, "Ks", material.specular, material.specular_tex, vec3f{0.25});
-    material.specular *= 0.04f;
-    material.roughness = get_pbrt_roughness(values, 0.1);
-  } else if (type == "matte") {
-    get_scaled_texture(
-        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.5});
-    material.roughness = 1;
-  } else if (type == "mirror") {
-    get_scaled_texture(
-        values, "Kr", material.specular, material.specular_tex, vec3f{0.9});
-    material.roughness = 0;
-  } else if (type == "metal") {
-    auto eta = zero3f, k = zero3f;
-    auto eta_texture = -1, k_texture = -1;
-    get_scaled_texture(values, "eta", eta, eta_texture,
-        vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
-    get_scaled_texture(values, "k", k, k_texture,
-        vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
-    material.specular  = pbrt_fresnel_metal(1, eta, k);
-    material.roughness = get_pbrt_roughness(values, 0.01);
-  } else if (type == "substrate") {
-    get_scaled_texture(
-        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.5});
-    get_scaled_texture(
-        values, "Ks", material.specular, material.specular_tex, vec3f{0.5});
-    material.roughness = get_pbrt_roughness(values, 0.1);
-  } else if (type == "glass") {
-    get_scaled_texture(
-        values, "Kr", material.specular, material.specular_tex, vec3f{1});
-    material.specular *= 0.04f;
-    get_scaled_texture(values, "Kt", material.transmission,
-        material.transmission_tex, vec3f{1});
-    material.roughness = get_pbrt_roughness(values, 0);
-  } else if (type == "hair") {
-    get_scaled_texture(
-        values, "color", material.diffuse, material.diffuse_tex, vec3f{0});
-    material.roughness = 1;
-    if (verbose) printf("hair material not properly supported\n");
-  } else if (type == "disney") {
-    get_scaled_texture(
-        values, "color", material.diffuse, material.diffuse_tex, vec3f{0.5});
-    material.roughness = 1;
-    if (verbose) printf("disney material not properly supported\n");
-  } else if (type == "kdsubsurface") {
-    get_scaled_texture(
-        values, "Kd", material.diffuse, material.diffuse_tex, vec3f{0.5});
-    get_scaled_texture(
-        values, "Kr", material.specular, material.specular_tex, vec3f{1});
-    material.specular *= 0.04f;
-    material.roughness = get_pbrt_roughness(values, 0);
-    if (verbose) printf("kdsubsurface material not properly supported\n");
-  } else if (type == "subsurface") {
-    get_scaled_texture(
-        values, "Kr", material.specular, material.specular_tex, vec3f{1});
-    material.specular *= 0.04f;
-    get_scaled_texture(values, "Kt", material.transmission,
-        material.transmission_tex, vec3f{1});
-    material.roughness = get_pbrt_roughness(values, 0);
-    auto scale         = get_pbrt_value(values, "scale", 1.0f);
-    material.volscale  = 1 / scale;
-    auto sigma_a = zero3f, sigma_s = zero3f;
-    auto sigma_a_tex = -1, sigma_s_tex = -1;
-    get_scaled_texture(
-        values, "sigma_a", sigma_a, sigma_a_tex, vec3f{0011, .0024, .014});
-    get_scaled_texture(
-        values, "sigma_prime_s", sigma_s, sigma_s_tex, vec3f{2.55, 3.12, 3.77});
-    material.volmeanfreepath = 1 / (sigma_a + sigma_s);
-    material.volscatter      = sigma_s / (sigma_a + sigma_s);
-    if (verbose) printf("subsurface material not properly supported\n");
-  } else if (type == "mix") {
-    auto namedmaterial1 = get_pbrt_value(values, "namedmaterial1", ""s);
-    auto namedmaterial2 = get_pbrt_value(values, "namedmaterial2", ""s);
-    auto matname = (!namedmaterial1.empty()) ? namedmaterial1 : namedmaterial2;
-    material     = mmap.at(matname);
-    if (verbose) printf("mix material not properly supported\n");
-  } else if (type == "fourier") {
-    auto bsdffile = get_pbrt_value(values, "bsdffile", ""s);
-    if (bsdffile.rfind("/") != string::npos)
-      bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
-    if (bsdffile == "paint.bsdf") {
-      material.diffuse   = {0.6f, 0.6f, 0.6f};
-      material.specular  = {0.4f, 0.4f, 0.4f};
-      material.roughness = get_pbrt_roughnessf(0.2f, true);
-    } else if (bsdffile == "ceramic.bsdf") {
-      material.diffuse   = {0.6f, 0.6f, 0.6f};
-      material.specular  = {0.4f, 0.4f, 0.4f};
-      material.roughness = get_pbrt_roughnessf(0.25, true);
-    } else if (bsdffile == "leather.bsdf") {
-      material.diffuse   = {0.6f, 0.57f, 0.48f};
-      material.specular  = {0.4f, 0.4f, 0.4f};
-      material.roughness = get_pbrt_roughnessf(0.3, true);
-    } else if (bsdffile == "coated_copper.bsdf") {
-      auto eta           = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
-      auto etak          = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
-      material.specular  = pbrt_fresnel_metal(1, eta, etak);
-      material.roughness = get_pbrt_roughnessf(0.01, true);
-    } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
-      material.specular     = {0.04, 0.04, 0.04};
-      material.transmission = {1, 1, 1};
-      material.roughness    = get_pbrt_roughnessf(0.2, true);
-    } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
-      auto eta           = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
-      auto etak          = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
-      material.specular  = pbrt_fresnel_metal(1, eta, etak);
-      material.roughness = get_pbrt_roughnessf(0.2, true);
-    } else {
-      throw std::runtime_error("unsupported bsdffile " + bsdffile);
-    }
-  } else {
-    throw std::runtime_error("unsupported material type" + type);
-  }
-  mmap[name] = material;
-}
-
-static void add_pbrt_arealight(yocto_scene& scene, const string& type,
-    const vector<pbrt_value>& values, const pbrt_context_& ctx,
-    const string& name, unordered_map<string, vec3f>& amap) {
-  auto emission = zero3f;
-  if (type == "diffuse") {
-    auto L     = get_pbrt_value(values, "L", vec3f{1, 1, 1});
-    auto scale = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
-    emission   = L * scale;
-  } else {
-    throw std::runtime_error("unsupported arealight type " + type);
-  }
-  amap[name] = emission;
-}
-
-static void add_pbrt_light(yocto_scene& scene, const string& type,
-    const vector<pbrt_value>& values, const pbrt_context_& ctx) {
-  static auto light_id = 0;
-  auto        name     = "light_" + std::to_string(light_id++);
-  if (type == "infinite") {
-    auto scale       = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
-    auto L           = get_pbrt_value(values, "L", vec3f{1, 1, 1});
-    auto mapname     = get_pbrt_value(values, "mapname", ""s);
-    auto environment = yocto_environment();
-    environment.uri  = name;
-    // environment.frame =
-    // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
-    // * stack.back().frame;
-    environment.frame = (frame3f)ctx.transform_start *
-                        frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-    environment.emission = scale * L;
-    if (mapname != "") {
-      auto texture = yocto_texture{};
-      texture.uri  = mapname;
-      scene.textures.push_back(texture);
-      environment.emission_tex = (int)scene.textures.size() - 1;
-    }
-    scene.environments.push_back(environment);
-  } else if (type == "distant") {
-    auto scale        = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
-    auto L            = get_pbrt_value(values, "L", vec3f{1, 1, 1});
-    auto from         = get_pbrt_value(values, "from", vec3f{0, 0, 0});
-    auto to           = get_pbrt_value(values, "to", vec3f{0, 0, 1});
-    auto distant_dist = 100;
-    scene.shapes.push_back({});
-    auto& shape  = scene.shapes.back();
-    shape.uri    = name;
-    auto dir     = normalize(from - to);
-    auto size    = distant_dist * sin(5 * pif / 180);
-    auto params  = proc_shape_params{};
-    params.type  = proc_shape_params::type_t::quad;
-    params.scale = size / 2;
-    make_proc_shape(shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, params);
-    scene.materials.push_back({});
-    auto& material    = scene.materials.back();
-    material.uri      = shape.uri;
-    material.emission = (vec3f)L * (vec3f)scale;
-    material.emission *= (distant_dist * distant_dist) / (size * size);
-    auto instance     = yocto_instance();
-    instance.uri      = shape.uri;
-    instance.shape    = (int)scene.shapes.size() - 1;
-    instance.material = (int)scene.materials.size() - 1;
-    instance.frame    = (frame3f)ctx.transform_start *
-                     lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
-    scene.instances.push_back(instance);
-  } else if (type == "point") {
-    auto scale = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
-    auto I     = get_pbrt_value(values, "I", vec3f{1, 1, 1});
-    auto from  = get_pbrt_value(values, "from", vec3f{0, 0, 0});
-    scene.shapes.push_back({});
-    auto& shape         = scene.shapes.back();
-    shape.uri           = name;
-    auto size           = 0.005f;
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::sphere;
-    params.scale        = size;
-    params.subdivisions = 2;
-    make_proc_shape(shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, params);
-    scene.materials.push_back({});
-    auto& material    = scene.materials.back();
-    material.uri      = shape.uri;
-    material.emission = I * scale;
-    // TODO: fix emission
-    auto instance     = yocto_instance();
-    instance.uri      = shape.uri;
-    instance.shape    = (int)scene.shapes.size() - 1;
-    instance.material = (int)scene.materials.size() - 1;
-    instance.frame    = (frame3f)ctx.transform_start * translation_frame(from);
-    scene.instances.push_back(instance);
-  } else if (type == "goniometric") {
-    auto scale = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
-    auto I     = get_pbrt_value(values, "I", vec3f{1, 1, 1});
-    scene.shapes.push_back({});
-    auto& shape         = scene.shapes.back();
-    shape.uri           = name;
-    auto size           = 0.005f;
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::sphere;
-    params.scale        = size;
-    params.subdivisions = 2;
-    make_proc_shape(shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, params);
-    scene.materials.push_back({});
-    auto& material    = scene.materials.back();
-    material.uri      = shape.uri;
-    material.emission = I * scale;
-    // TODO: fix emission
-    auto instance     = yocto_instance();
-    instance.uri      = shape.uri;
-    instance.shape    = (int)scene.shapes.size() - 1;
-    instance.material = (int)scene.materials.size() - 1;
-    instance.frame    = (frame3f)ctx.transform_start;
-    scene.instances.push_back(instance);
-  } else if (type == "spot") {
-    auto scale = get_pbrt_value(values, "scale", vec3f{1, 1, 1});
-    auto I     = get_pbrt_value(values, "I", vec3f{1, 1, 1});
-    scene.shapes.push_back({});
-    auto& shape         = scene.shapes.back();
-    shape.uri           = name;
-    auto size           = 0.005f;
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::sphere;
-    params.scale        = size;
-    params.subdivisions = 2;
-    make_proc_shape(shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, params);
-    scene.materials.push_back({});
-    auto& material    = scene.materials.back();
-    material.uri      = shape.uri;
-    material.emission = I * scale;
-    // TODO: fix emission
-    auto instance     = yocto_instance();
-    instance.uri      = shape.uri;
-    instance.shape    = (int)scene.shapes.size() - 1;
-    instance.material = (int)scene.materials.size() - 1;
-    instance.frame    = (frame3f)ctx.transform_start;
-    scene.instances.push_back(instance);
-  } else {
-    throw std::runtime_error("unsupported light type " + type);
-  }
-}
-
-// load pbrt
 static void load_pbrt(
     const string& filename, yocto_scene& scene, const load_params& params) {
-  auto files = vector<file_wrapper>{};
-  open_file(files.emplace_back(), filename);
+  // load pbrt
+  auto pbrt = pbrt_model{};
+  load_pbrt(filename, pbrt);
 
-  // parse state
-  auto        mmap       = unordered_map<string, yocto_material>{{"", {}}};
-  auto        amap       = unordered_map<string, vec3f>{{"", zero3f}};
-  auto        ammap      = unordered_map<string, int>{};
-  auto        tmap       = unordered_map<string, int>{{"", -1}};
-  auto        ctmap      = unordered_map<string, vec3f>{{"", zero3f}};
-  auto        timap      = unordered_map<string, bool>{{"", false}};
-  auto        omap       = unordered_map<string, vector<yocto_instance>>{};
-  string      cur_object = ""s;
-  float       last_film_aspect = -1.0f;
-  static auto shape_id         = 0;
-
-  // parser state
-  unordered_map<string, pair<frame3f, frame3f>> coordsys = {};
-  auto                                          stack = vector<pbrt_context_>{};
-  string                                        object = "";
-  string                                        line   = "";
-
-  // helpers
-  auto set_transform = [](pbrt_context_& ctx, const frame3f& xform) {
-    if (ctx.active_transform_start) ctx.transform_start = xform;
-    if (ctx.active_transform_end) ctx.transform_end = xform;
-  };
-  auto concat_transform = [](pbrt_context_& ctx, const frame3f& xform) {
-    if (ctx.active_transform_start) ctx.transform_start *= xform;
-    if (ctx.active_transform_end) ctx.transform_end *= xform;
-  };
-
-  // init stack
-  if (stack.empty()) stack.emplace_back();
-
-  // parse command by command
-  auto command = pbrt_command_{};
-  auto name    = ""s;
-  auto type    = ""s;
-  auto xform   = identity3x4f;
-  auto values  = vector<pbrt_value>{};
-  while (!files.empty()) {
-    if (!read_pbrt_command(
-            files.back(), command, name, type, xform, values, line)) {
-      files.pop_back();
-      continue;
+  // convert cameras
+  auto camera_id = 0;
+  for (auto& pcamera : pbrt.cameras) {
+    auto& camera = scene.cameras.emplace_back();
+    camera.uri   = "camera" + std::to_string(camera_id++);
+    camera.frame = pcamera.frame;
+    if (pcamera.aspect >= 1) {
+      set_yperspective(camera, radians(pcamera.fov), pcamera.aspect,
+          clamp(pcamera.focus, 1.0e-2f, 1.0e4f));
+    } else {
+      auto yfov = 2 * atan(tan(radians(pcamera.fov) / 2) / pcamera.aspect);
+      set_yperspective(
+          camera, yfov, pcamera.aspect, clamp(pcamera.focus, 1.0e-2f, 1.0e4f));
+      camera.aperture = pcamera.aperture;
     }
-    switch (command) {
-      case pbrt_command_::world_begin: {
-        stack.push_back({});
-      } break;
-      case pbrt_command_::world_end: {
-        if (stack.empty()) throw std::runtime_error("bad pbrt stack");
-        stack.pop_back();
-        if (stack.size() != 1) throw std::runtime_error("bad stack");
-      } break;
-      case pbrt_command_::attribute_begin: {
-        stack.push_back(stack.back());
-      } break;
-      case pbrt_command_::attribute_end: {
-        if (stack.empty()) throw std::runtime_error("bad pbrt stack");
-        stack.pop_back();
-      } break;
-      case pbrt_command_::transform_begin: {
-        stack.push_back(stack.back());
-      } break;
-      case pbrt_command_::transform_end: {
-        if (stack.empty()) throw std::runtime_error("bad pbrt stack");
-        stack.pop_back();
-      } break;
-      case pbrt_command_::active_transform: {
-        if (name == "StartTime") {
-          stack.back().active_transform_start = true;
-          stack.back().active_transform_end   = false;
-        } else if (name == "EndTime") {
-          stack.back().active_transform_start = false;
-          stack.back().active_transform_end   = true;
-        } else if (name == "All") {
-          stack.back().active_transform_start = true;
-          stack.back().active_transform_end   = true;
-        } else {
-          throw std::runtime_error("bad active transform");
-        }
-      } break;
-      case pbrt_command_::set_transform: {
-        set_transform(stack.back(), xform);
-      } break;
-      case pbrt_command_::concat_transform: {
-        concat_transform(stack.back(), xform);
-      } break;
-      case pbrt_command_::lookat_transform: {
-        auto [from, to, up, skip] = xform;
-        // from pbrt parser
-        auto frame = lookat_frame(from, to, up, true);
-        concat_transform(stack.back(), inverse(frame));
-        stack.back().last_lookat_distance = length(from - to);
-      } break;
-      case pbrt_command_::reverse_orientation: {
-        stack.back().reverse = !stack.back().reverse;
-      } break;
-      case pbrt_command_::film: {
-        add_pbrt_film(scene, type, values, stack.back(), last_film_aspect);
-      } break;
-      case pbrt_command_::camera: {
-        add_pbrt_camera(scene, type, values, stack.back(), last_film_aspect);
-      } break;
-      case pbrt_command_::shape: {
-        add_pbrt_shape(scene, type, values, stack.back(),
-            "shapes/shape__" + std::to_string(shape_id++) + ".ply", filename,
-            cur_object, omap, mmap, amap, ammap);
-      } break;
-      case pbrt_command_::light: {
-        add_pbrt_light(scene, type, values, stack.back());
-      } break;
-      case pbrt_command_::named_texture: {
-        add_pbrt_texture(
-            scene, type, values, stack.back(), name, tmap, ctmap, timap);
-        if (type == "constant") {
-          // constant_values[name] = data.texture.constant.value.value;
-          // TODO: FIX CONSTANT TEXTURES
-        }
-      } break;
-      case pbrt_command_::material: {
-        static auto material_id = 0;
-        if (type == "") {
-          stack.back().material = "";
-        } else {
-          name = "unnamed_material_" + std::to_string(material_id++);
-          stack.back().material = name;
-          add_pbrt_material(
-              scene, type, values, stack.back(), name, mmap, tmap, ctmap);
-        }
-      } break;
-      case pbrt_command_::named_material: {
-        stack.back().material = name;
-        add_pbrt_material(
-            scene, type, values, stack.back(), name, mmap, tmap, ctmap);
-      } break;
-      case pbrt_command_::use_material: {
-        stack.back().material = name;
-      } break;
-      case pbrt_command_::named_medium: {
-        // skip
-        break;
-      } break;
-      case pbrt_command_::medium_interface: {
-        auto interior = ""s, exterior = ""s;
-        auto found = false;
-        for (auto c : name) {
-          if (c == '#') {
-            found = true;
-            continue;
-          }
-          if (found)
-            exterior.push_back(c);
-          else
-            interior.push_back(c);
-        }
-        stack.back().medium_interior = interior;
-        stack.back().medium_exterior = exterior;
-      } break;
-      case pbrt_command_::arealight: {
-        static auto material_id = 0;
-        name = "unnamed_arealight_" + std::to_string(material_id++);
-        stack.back().arealight = name;
-        add_pbrt_arealight(scene, type, values, stack.back(), name, amap);
-      } break;
-      case pbrt_command_::object_instance: {
-        auto& pinstances = omap.at(name);
-        for (auto& pinstance : pinstances) {
-          auto instance  = yocto_instance();
-          instance.frame = (frame3f)stack.back().transform_start *
-                           pinstance.frame;
-          instance.shape    = pinstance.shape;
-          instance.material = pinstance.material;
-          scene.instances.push_back(instance);
-        }
-      } break;
-      case pbrt_command_::object_begin: {
-        stack.push_back(stack.back());
-        cur_object       = name;
-        omap[cur_object] = {};
-      } break;
-      case pbrt_command_::object_end: {
-        stack.pop_back();
-        cur_object = "";
-      } break;
-      case pbrt_command_::include: {
-        open_file(
-            files.emplace_back(), fs::path(filename).parent_path() / name);
-      } break;
-      case pbrt_command_::coordinate_system_set: {
-        coordsys[name] = {
-            stack.back().transform_start, stack.back().transform_end};
-      } break;
-      case pbrt_command_::coordinate_system_transform: {
-        if (coordsys.find(name) != coordsys.end()) {
-          stack.back().transform_start = coordsys.at(name).first;
-          stack.back().transform_end   = coordsys.at(name).second;
-        }
-      } break;
-      case pbrt_command_::sampler:
-      case pbrt_command_::integrator:
-      case pbrt_command_::accelerator:
-      case pbrt_command_::filter:
-        // ignored for now
-        break;
+  }
+
+  // convert textures
+  auto texture_map = unordered_map<string, int>{{"", -1}};
+  for (auto& ptexture : pbrt.textures) {
+    if (ptexture.filename.empty()) continue;
+    auto& texture              = scene.textures.emplace_back();
+    texture.uri                = ptexture.filename;
+    texture_map[ptexture.name] = (int)scene.textures.size() - 1;
+  }
+
+  // convert materials
+  auto get_texture = [&texture_map](const string& name) {
+    if (name == "") return -1;
+    if (texture_map.find(name) == texture_map.end())
+      throw std::runtime_error("cannot find texture " + name);
+    return texture_map.at(name);
+  };
+  auto material_map = unordered_map<string, int>{{"", -1}};
+  for (auto& pmaterial : pbrt.materials) {
+    auto& material        = scene.materials.emplace_back();
+    material.uri          = pmaterial.name;
+    material.diffuse      = pmaterial.diffuse;
+    material.specular     = pmaterial.sspecular;
+    material.transmission = pmaterial.transmission;
+    material.roughness    = mean(pmaterial.roughness);
+    material.opacity      = pmaterial.opacity == vec3f{1} ? 1
+                                                     : mean(pmaterial.opacity);
+    material.diffuse_tex         = get_texture(pmaterial.diffuse_map);
+    material_map[pmaterial.name] = (int)scene.materials.size() - 1;
+  }
+
+  // convert arealights
+  auto arealight_map = unordered_map<string, int>{{"", -1}};
+  for (auto& parealight : pbrt.arealights) {
+    auto& material                 = scene.materials.emplace_back();
+    material.uri                   = parealight.name;
+    material.emission              = parealight.emission;
+    arealight_map[parealight.name] = (int)scene.materials.size() - 1;
+  }
+
+  // convert shapes
+  for (auto& pshape : pbrt.shapes) {
+    auto& shape = scene.shapes.emplace_back();
+    shape.uri   = !pshape.filename.empty()
+                    ? pshape.filename
+                    : ("shape" + std::to_string(scene.shapes.size()));
+    shape.positions = pshape.positions;
+    shape.normals   = pshape.normals;
+    shape.texcoords = pshape.texcoords;
+    shape.triangles = pshape.triangles;
+    for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
+    auto material_id  = material_map.at(pshape.material);
+    auto arealight_id = arealight_map.at(pshape.arealight);
+    auto instance_id  = 0;
+    for (auto& frame : pshape.instance_frames) {
+      auto& instance    = scene.instances.emplace_back();
+      instance.uri      = shape.uri + (pshape.instance_frames.empty()
+                                         ? ""s
+                                         : std::to_string(instance_id++));
+      instance.frame    = frame * pshape.frame;
+      instance.material = arealight_id >= 0 ? arealight_id : material_id;
+      instance.shape    = (int)scene.shapes.size() - 1;
     }
+  }
+
+  // convert environments
+  for (auto& penvironment : pbrt.environments) {
+    auto& environment    = scene.environments.emplace_back();
+    environment.uri      = "env" + std::to_string(scene.environments.size());
+    environment.frame    = penvironment.frame;
+    environment.emission = penvironment.emission;
+    if (!penvironment.filename.empty()) {
+      auto& texture            = scene.textures.emplace_back();
+      texture.uri              = penvironment.filename;
+      environment.emission_tex = (int)scene.textures.size() - 1;
+    } else {
+      environment.emission_tex = -1;
+    }
+  }
+
+  // lights
+  for (auto& plight : pbrt.lights) {
+    auto& shape       = scene.shapes.emplace_back();
+    shape.uri         = "light" + std::to_string(scene.shapes.size());
+    shape.triangles   = plight.area_triangles;
+    shape.positions   = plight.area_positions;
+    shape.normals     = plight.area_normals;
+    auto& material    = scene.materials.emplace_back();
+    material.uri      = shape.uri;
+    material.emission = plight.area_emission;
+    auto& instance    = scene.instances.emplace_back();
+    instance.uri      = shape.uri;
+    instance.frame    = plight.area_frame;
+    instance.shape    = (int)scene.shapes.size() - 1;
+    instance.material = (int)scene.materials.size() - 1;
   }
 }
 
@@ -3788,16 +1629,13 @@ static void load_pbrt_scene(
     const string& filename, yocto_scene& scene, const load_params& params) {
   scene = yocto_scene{};
 
-  try {
-    // Parse pbrt
-    load_pbrt(filename, scene, params);
+  // Parse pbrt
+  load_pbrt(filename, scene, params);
 
-    // load textures
-    auto dirname = fs::path(filename).parent_path();
-    load_textures(scene, dirname, params);
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
-  }
+  // load textures
+  auto dirname = fs::path(filename).parent_path();
+  load_shapes(scene, dirname, params);
+  load_textures(scene, dirname, params);
 
   // fix scene
   scene.uri = fs::path(filename).filename();
@@ -3811,109 +1649,84 @@ static void load_pbrt_scene(
 
 // Convert a scene to pbrt format
 static void save_pbrt(const string& filename, const yocto_scene& scene) {
-  // open file
-  auto fs = open_file(filename, "w");
+  auto pbrt = pbrt_model{};
 
   // embed data
-  write_pbrt_comment(fs, get_save_scene_message(scene, ""));
+  for (auto stat : format_stats(scene)) pbrt.comments.push_back(stat);
 
-  // convert camera and settings
+  // convert camera
   auto& camera     = scene.cameras.front();
-  auto  from       = camera.frame.o;
-  auto  to         = camera.frame.o - camera.frame.z;
-  auto  up         = camera.frame.y;
-  auto  image_size = camera_resolution(camera, 1280);
-  write_pbrt_command(
-      fs, pbrt_command_::lookat_transform, "", frame3f{from, to, up, zero3f});
-  write_pbrt_command(fs, pbrt_command_::camera, "", "perspective",
-      {make_pbrt_value("perspective", camera_fov(camera).x * 180 / pif)});
-  write_pbrt_command(fs, pbrt_command_::sampler, "", "random",
-      {make_pbrt_value("pixelsamples", 64)});
-  write_pbrt_command(fs, pbrt_command_::integrator, "", "path", {});
-  write_pbrt_command(fs, pbrt_command_::film, "", "image",
-      {make_pbrt_value("filename", fs::path(filename).stem().string() + ".exr"),
-          make_pbrt_value("xresolution", image_size.x),
-          make_pbrt_value("yresolution", image_size.y)});
-
-  // start world
-  write_pbrt_command(fs, pbrt_command_::world_begin);
+  auto& pcamera    = pbrt.cameras.emplace_back();
+  pcamera.frame    = camera.frame;
+  pcamera.fov      = max(camera_fov(camera));
+  pcamera.aspect   = camera_aspect(camera);
+  auto& pfilm      = pbrt.films.emplace_back();
+  pfilm.filename   = "out.png";
+  pfilm.resolution = {1280, (int)(1280 / pcamera.aspect)};
 
   // convert textures
   for (auto& texture : scene.textures) {
-    write_pbrt_command(fs, pbrt_command_::named_texture,
-        fs::path(texture.uri).stem().string(), "imagemap",
-        {make_pbrt_value("filename", texture.uri)});
+    auto& ptexture    = pbrt.textures.emplace_back();
+    ptexture.name     = texture.uri;
+    ptexture.filename = texture.uri;
   }
 
   // convert materials
-  auto make_pbrt_textured = [&scene](const string& name, vec3f color, int tex) {
-    if (tex >= 0) {
-      return make_pbrt_value(name,
-          fs::path(scene.textures[tex].uri).stem().string(),
-          pbrt_value_type::texture);
-    } else {
-      return make_pbrt_value(name, color, pbrt_value_type::color);
-    }
-  };
   for (auto& material : scene.materials) {
-    write_pbrt_command(fs, pbrt_command_::named_material,
-        fs::path(material.uri).stem().string().c_str(), "uber",
-        {
-            make_pbrt_textured("Kd", material.diffuse, material.diffuse_tex),
-            make_pbrt_textured("Ks", material.specular, material.specular_tex),
-            make_pbrt_textured(
-                "Kt", material.transmission, material.transmission_tex),
-            make_pbrt_value(
-                "roughness", material.roughness * material.roughness),
-        });
+    auto& pmaterial        = pbrt.materials.emplace_back();
+    pmaterial.name         = material.uri;
+    pmaterial.diffuse      = material.diffuse;
+    pmaterial.specular     = material.specular;
+    pmaterial.transmission = material.transmission;
+    pmaterial.roughness    = {material.roughness, material.roughness};
+    pmaterial.diffuse_map  = material.diffuse_tex >= 0
+                                ? scene.textures[material.diffuse_tex].uri
+                                : ""s;
+    auto& parealight    = pbrt.arealights.emplace_back();
+    parealight.name     = material.uri;
+    parealight.emission = material.emission;
   }
 
   // convert instances
   for (auto& instance : scene.instances) {
-    auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
-    write_pbrt_command(fs, pbrt_command_::attribute_begin);
-    write_pbrt_command(fs, pbrt_command_::transform_begin);
-    write_pbrt_command(fs, pbrt_command_::set_transform, "", instance.frame);
-    write_pbrt_command(fs, pbrt_command_::use_material,
-        fs::path(material.uri).stem().string());
-    if (material.emission != zero3f) {
-      write_pbrt_command(fs, pbrt_command_::arealight, "", "diffuse",
-          {make_pbrt_value("L", material.emission, pbrt_value_type::color)});
-    }
-    write_pbrt_command(fs, pbrt_command_::shape, "", "plymesh",
-        {make_pbrt_value("filename",
-            fs::path(shape.uri).replace_extension(".ply").string())});
-    write_pbrt_command(fs, pbrt_command_::transform_end);
-    write_pbrt_command(fs, pbrt_command_::attribute_end);
+    auto& shape      = scene.shapes[instance.shape];
+    auto& material   = scene.materials[instance.material];
+    auto& pshape     = pbrt.shapes.emplace_back();
+    pshape.filename  = fs::path(shape.uri).replace_extension(".ply").string();
+    pshape.frame     = instance.frame;
+    pshape.material  = material.uri;
+    pshape.arealight = material.emission == zero3f ? ""s : material.uri;
   }
 
-  // end world
-  write_pbrt_command(fs, pbrt_command_::world_end);
+  // convert environments
+  for (auto& environment : scene.environments) {
+    auto& penvironment    = pbrt.environments.emplace_back();
+    penvironment.emission = environment.emission;
+    if (environment.emission_tex >= 0) {
+      penvironment.filename = scene.textures[environment.emission_tex].uri;
+    }
+  }
+
+  save_pbrt(filename, pbrt);
 }
 
 // Save a pbrt scene
 void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     const save_params& params) {
-  try {
-    // save json
-    save_pbrt(filename, scene);
+  // save pbrt
+  save_pbrt(filename, scene);
 
-    // save meshes
-    auto dirname = fs::path(filename).parent_path();
-    for (auto& shape : scene.shapes) {
-      save_shape((dirname / shape.uri).replace_extension(".ply"), shape.points,
-          shape.lines, shape.triangles, shape.quads, shape.quadspos,
-          shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.radius);
-    }
-
-    // save textures
-    save_textures(scene, dirname, params);
-
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
+  // save meshes
+  auto dirname = fs::path(filename).parent_path();
+  for (auto& shape : scene.shapes) {
+    save_shape((dirname / shape.uri).replace_extension(".ply"), shape.points,
+        shape.lines, shape.triangles, shape.quads, shape.quadspos,
+        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius);
   }
+
+  // save textures
+  save_textures(scene, dirname, params);
 }
 
 }  // namespace yocto
@@ -3922,6 +1735,7 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
 void make_cornellbox_scene(yocto_scene& scene) {
   scene.uri               = "cornellbox";
   auto& camera            = scene.cameras.emplace_back();

@@ -340,17 +340,14 @@ void load_island_shape(vector<yocto_shape>& shapes,
   auto fs = open_file(filename);
 
   auto command   = obj_command{};
-  auto value     = obj_value{};
+  auto value     = vec3f{};
+  auto name      = ""s;
   auto verts     = vector<obj_vertex>{};
   auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, command, value, verts, vert_size)) {
+  while (read_obj_command(fs, command, name, value, verts, vert_size)) {
     switch (command) {
-      case obj_command::vertex:
-        get_obj_value(value, opos.emplace_back());
-        break;
-      case obj_command::normal:
-        get_obj_value(value, onorm.emplace_back());
-        break;
+      case obj_command::vertex: opos.push_back(value); break;
+      case obj_command::normal: onorm.push_back(value); break;
       case obj_command::texcoord:
         throw std::runtime_error("texture coord not supported");
         break;
@@ -401,11 +398,11 @@ void load_island_shape(vector<yocto_shape>& shapes,
         }
       } break;
       case obj_command::group: {
-        get_obj_value(value, gname);
+        gname      = name;
         split_next = true;
       } break;
       case obj_command::usemtl: {
-        get_obj_value(value, mname);
+        mname      = name;
         split_next = true;
       } break;
       default: break;
@@ -968,7 +965,7 @@ void load_island_scene(
   update_transforms(scene);
 
   // print stats
-  printf("%s\n", format_stats(scene).c_str());
+  for (auto& stat : format_stats(scene)) printf("%s\n", stat.c_str());
 }
 
 }  // namespace yocto
@@ -1033,7 +1030,9 @@ int main(int argc, const char** argv) {
   }
 
   // print info
-  if (info) print_info(format_stats(scene));
+  if (info) {
+    for (auto stat : format_stats(scene)) print_info(stat);
+  }
 
 // add missing mesh names if necessary
 #if 0

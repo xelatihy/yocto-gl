@@ -105,7 +105,9 @@ int main(int argc, const char** argv) {
   }
 
   // print info
-  if (info) printf("%s\n", format_stats(scene).c_str());
+  if (info) {
+    for (auto stat : format_stats(scene)) print_info(stat);
+  }
 
   // change texture names
   if (uniform_txt) {

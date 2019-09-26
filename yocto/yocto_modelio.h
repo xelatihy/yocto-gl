@@ -140,10 +140,25 @@ enum struct ply_type { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 
 // Ply property
 struct ply_property {
-  string   name       = "";
-  bool     is_list    = false;
-  ply_type value_type = ply_type::f32;
-  ply_type list_type  = ply_type::f32;
+  // description
+  string   name    = "";
+  bool     is_list = false;
+  ply_type type    = ply_type::f32;
+
+  // data if property is loaded
+  vector<int8_t>   data_i8  = {};
+  vector<int16_t>  data_i16 = {};
+  vector<int32_t>  data_i32 = {};
+  vector<int64_t>  data_i64 = {};
+  vector<uint8_t>  data_u8  = {};
+  vector<uint16_t> data_u16 = {};
+  vector<uint32_t> data_u32 = {};
+  vector<uint64_t> data_u64 = {};
+  vector<float>    data_f32 = {};
+  vector<double>   data_f64 = {};
+
+  // list length
+  vector<uint8_t> ldata_u8 = {};
 };
 
 // Ply elements
@@ -152,6 +167,98 @@ struct ply_element {
   size_t               count      = 0;
   vector<ply_property> properties = {};
 };
+
+// Ply model
+struct ply_model {
+  ply_format          format   = ply_format::binary_little_endian;
+  vector<string>      comments = {};
+  vector<ply_element> elements = {};
+};
+
+// Load and save ply
+void load_ply(const string& filename, ply_model& ply);
+void save_ply(const string& filename, const ply_model& ply);
+
+// Get ply properties
+bool has_ply_property(
+    const ply_model& ply, const string& element, const string& property);
+const ply_property& get_ply_property(
+    const ply_model& ply, const string& element, const string& property);
+
+vector<float> get_ply_values(
+    const ply_model& ply, const string& element, const string& property);
+vector<vec2f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2);
+vector<vec3f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2, const string& property3);
+vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2, const string& property3,
+    const string& property4);
+vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2, const string& property3,
+    float property4);
+
+vector<vector<int>> get_ply_lists(
+    const ply_model& ply, const string& element, const string& property);
+vector<byte> get_ply_list_sizes(
+    const ply_model& ply, const string& element, const string& property);
+vector<int> get_ply_list_values(
+    const ply_model& ply, const string& element, const string& property);
+vec2i get_ply_list_minxmax(
+    const ply_model& ply, const string& element, const string& property);
+
+// Get ply properties for meshes
+vector<vec3f>       get_ply_positions(const ply_model& ply);
+vector<vec3f>       get_ply_normals(const ply_model& ply);
+vector<vec2f>       get_ply_texcoords(const ply_model& ply, bool flipv = false);
+vector<vec4f>       get_ply_colors(const ply_model& ply);
+vector<float>       get_ply_radius(const ply_model& ply);
+vector<vector<int>> get_ply_faces(const ply_model& ply);
+vector<vec2i>       get_ply_lines(const ply_model& ply);
+vector<int>         get_ply_points(const ply_model& ply);
+vector<vec3i>       get_ply_triangles(const ply_model& ply);
+vector<vec4i>       get_ply_quads(const ply_model& ply);
+bool                has_ply_quads(const ply_model& ply);
+
+// Add ply properties
+void add_ply_values(ply_model& ply, const vector<float>& values,
+    const string& element, const string& property);
+void add_ply_values(ply_model& ply, const vector<vec2f>& values,
+    const string& element, const string& property1, const string& property2);
+void add_ply_values(ply_model& ply, const vector<vec3f>& values,
+    const string& element, const string& property1, const string& property2,
+    const string& property3);
+void add_ply_values(ply_model& ply, const vector<vec4f>& values,
+    const string& element, const string& property1, const string& property2,
+    const string& property3, const string& property4);
+
+void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
+    const string& element, const string& property);
+void add_ply_lists(ply_model& ply, const vector<byte>& sizes,
+    const vector<int>& values, const string& element, const string& property);
+void add_ply_lists(ply_model& ply, const vector<int>& values,
+    const string& element, const string& property);
+void add_ply_lists(ply_model& ply, const vector<vec2i>& values,
+    const string& element, const string& property);
+void add_ply_lists(ply_model& ply, const vector<vec3i>& values,
+    const string& element, const string& property);
+void add_ply_lists(ply_model& ply, const vector<vec4i>& values,
+    const string& element, const string& property);
+
+// Add ply properties for meshes
+void add_ply_positions(ply_model& ply, const vector<vec3f>& values);
+void add_ply_normals(ply_model& ply, const vector<vec3f>& values);
+void add_ply_texcoords(
+    ply_model& ply, const vector<vec2f>& values, bool flipv = false);
+void add_ply_colors(ply_model& ply, const vector<vec4f>& values);
+void add_ply_radius(ply_model& ply, const vector<float>& values);
+void add_ply_faces(ply_model& ply, const vector<vector<int>>& values);
+void add_ply_faces(
+    ply_model& ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
+void add_ply_triangles(ply_model& ply, const vector<vec3i>& values);
+void add_ply_quads(ply_model& ply, const vector<vec4i>& values);
+void add_ply_lines(ply_model& ply, const vector<vec2i>& values);
+void add_ply_points(ply_model& ply, const vector<int>& values);
 
 // Read Ply functions
 void read_ply_header(file_wrapper& fs, ply_format& format,
@@ -216,7 +323,187 @@ struct obj_texture_info {
   obj_texture_info(const string& path) : path{path} {}
 };
 
-// Obj command
+// Obj element
+struct obj_element {
+  uint8_t size     = 0;
+  uint8_t material = 0;
+};
+
+// Obj shape
+struct obj_shape {
+  string              name      = "";
+  vector<vec3f>       positions = {};
+  vector<vec3f>       normals   = {};
+  vector<vec2f>       texcoords = {};
+  vector<string>      materials = {};
+  vector<obj_vertex>  vertices  = {};
+  vector<obj_element> faces     = {};
+  vector<obj_element> lines     = {};
+  vector<obj_element> points    = {};
+};
+
+// Obj material
+struct obj_material {
+  // material name and type
+  string name  = "";
+  int    illum = 0;
+
+  // material colors and values
+  vec3f emission     = zero3f;
+  vec3f ambient      = zero3f;
+  vec3f diffuse      = zero3f;
+  vec3f specular     = zero3f;
+  vec3f reflection   = zero3f;
+  vec3f transmission = zero3f;
+  float exponent     = 10;
+  float ior          = 1.5;
+  float opacity      = 1;
+
+  // material textures
+  obj_texture_info emission_map     = {};
+  obj_texture_info ambient_map      = {};
+  obj_texture_info diffuse_map      = {};
+  obj_texture_info specular_map     = {};
+  obj_texture_info reflection_map   = {};
+  obj_texture_info transmission_map = {};
+  obj_texture_info exponent_map     = {};
+  obj_texture_info opacity_map      = {};
+  obj_texture_info bump_map         = {};
+  obj_texture_info normal_map       = {};
+  obj_texture_info displacement_map = {};
+
+  // pbrt extension values
+  float pbr_roughness     = 0;
+  float pbr_metallic      = 0;
+  float pbr_sheen         = 0;
+  float pbr_clearcoat     = 0;
+  float pbr_coatroughness = 0;
+
+  // pbr extension textures
+  obj_texture_info pbr_roughness_map     = {};
+  obj_texture_info pbr_metallic_map      = {};
+  obj_texture_info pbr_sheen_map         = {};
+  obj_texture_info pbr_clearcoat_map     = {};
+  obj_texture_info pbr_coatroughness_map = {};
+
+  // volume extension colors and values
+  vec3f vol_emission     = zero3f;
+  vec3f vol_transmission = zero3f;
+  vec3f vol_meanfreepath = zero3f;
+  vec3f vol_scattering   = zero3f;
+  float vol_anisotropy   = 0;
+  float vol_scale        = 0.01;
+
+  // volument textures
+  obj_texture_info vol_scattering_map = {};
+};
+
+// Obj camera
+struct obj_camera {
+  string  name     = "";
+  frame3f frame    = identity3x4f;
+  bool    ortho    = false;
+  float   width    = 0.036;
+  float   height   = 0.028;
+  float   lens     = 0.50;
+  float   focus    = 0;
+  float   aperture = 0;
+};
+
+// Obj environment
+struct obj_environment {
+  string           name         = "";
+  frame3f          frame        = identity3x4f;
+  vec3f            emission     = zero3f;
+  obj_texture_info emission_map = {};
+};
+
+// Obj instance
+struct obj_instance {
+  string  name     = "";
+  frame3f frame    = identity3x4f;
+  string  object   = "";
+  string  material = "";
+};
+
+// Obj peocedural
+struct obj_procedural {
+  string  name     = "";
+  frame3f frame    = identity3x4f;
+  string  type     = "";
+  string  material = "";
+  float   size     = 1;
+  int     level    = 0;
+};
+
+// Obj model
+struct obj_model {
+  vector<string>          comments     = {};
+  vector<obj_shape>       shapes       = {};
+  vector<obj_material>    materials    = {};
+  vector<obj_camera>      cameras      = {};
+  vector<obj_environment> environments = {};
+  vector<obj_instance>    instances    = {};
+  vector<obj_procedural>  procedurals  = {};
+};
+
+// Load and save obj
+void load_obj(const string& filename, obj_model& obj, bool geom_only = false,
+    bool split_elements = true, bool split_materials = false);
+void save_obj(const string& filename, const obj_model& obj);
+
+// convert between roughness and exponent
+float obj_exponent_to_roughness(float exponent);
+float obj_roughness_to_exponent(float roughness);
+
+// Get obj shape
+void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
+    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
+void get_obj_quads(const obj_model& obj, const obj_shape& shape,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
+void get_obj_lines(const obj_model& obj, const obj_shape& shape,
+    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
+void get_obj_points(const obj_model& obj, const obj_shape& shape,
+    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
+void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
+bool has_obj_quads(const obj_shape& shape);
+
+// Add obj shape
+void add_obj_triangles(obj_model& obj, obj_shape& shape,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+    bool flip_texcoord = false);
+void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+    bool flip_texcoord = false);
+void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<int>& ematerials = {},
+    bool flip_texcoord = false);
+void add_obj_fvquads(obj_model& obj, obj_shape& shape,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+
+// Obj/Mtl/Objx command
 enum struct obj_command {
   // clang-format off
   vertex, normal, texcoord,         // data in value
@@ -225,98 +512,28 @@ enum struct obj_command {
   mtllib, objxlib,                  // data in name
   // clang-format on
 };
+enum struct mtl_command { material };
+enum struct objx_command { camera, environment, instance, procedural };
 
-// Mtl command
-enum struct mtl_command {
-  // clang-format off
-  // material name and type (value)
-  material, illum,
-  // material colors
-  emission, ambient, diffuse, specular, reflection, transmission,
-  // material values
-  exponent, ior, opacity,
-  // material textures
-  emission_map, ambient_map, diffuse_map, specular_map, reflection_map,  
-  transmission_map, exponent_map, opacity_map, bump_map, normal_map, 
-  displacement_map,                  
-  // pbrt extension values
-  pbr_roughness, pbr_metallic, pbr_sheen, pbr_clearcoat, pbr_coatroughness,
-  // pbr extension textures
-  pbr_roughness_map, pbr_metallic_map, pbr_sheen_map,
-  pbr_clearcoat_map, pbr_coatroughness_map,
-  // volume extension colors
-  vol_transmission, vol_meanfreepath, vol_scattering, vol_emission,
-  // volume extension values
-  vol_anisotropy, vol_scale,
-  // volument textures
-  vol_scattering_map
-  // clang-format on
-};
-
-// Objx command
-enum struct objx_command {
-  // clang-format off
-  // object names
-  camera, environment, instance, procedural,
-  // object frames
-  frame,
-  // camera values
-  ortho, width, height, lens, aperture, focus,
-  // environment values
-  emission, emission_map,
-  // instance/procedural values
-  object, material
-  // clang-format on
-};
-
-// Obj value type
-enum struct obj_value_type { number, boolean, string, array };
-
-// Obj value
-struct obj_value {
-  obj_value_type    type    = obj_value_type::number;
-  double            number  = 0;
-  bool              boolean = false;
-  string            string_ = "";
-  array<double, 16> array_  = {};
-};
-
-// Read obj elements
-bool read_obj_command(file_wrapper& fs, obj_command& command, obj_value& value,
-    vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(file_wrapper& fs, mtl_command& command, obj_value& value,
-    obj_texture_info& texture, bool fliptr = true);
+// Read obj/mtl/objx elements
+bool read_obj_command(file_wrapper& fs, obj_command& command, string& name,
+    vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size);
+bool read_mtl_command(file_wrapper& fs, mtl_command& command,
+    obj_material& material, bool fliptr = true);
 bool read_objx_command(file_wrapper& fs, objx_command& command,
-    obj_value& value, obj_texture_info& texture);
+    obj_camera& camera, obj_environment& environment, obj_instance& instance,
+    obj_procedural& procedural);
 
-// Write obj elements
+// Write obj/mtl/objx elements
 void write_obj_comment(file_wrapper& fs, const string& comment);
 void write_obj_command(file_wrapper& fs, obj_command command,
-    const obj_value& value, const vector<obj_vertex>& vertices = {});
+    const string& name, const vec3f& value,
+    const vector<obj_vertex>& vertices = {});
 void write_mtl_command(file_wrapper& fs, mtl_command command,
-    const obj_value& value, const obj_texture_info& texture = {});
+    obj_material& material, const obj_texture_info& texture = {});
 void write_objx_command(file_wrapper& fs, objx_command command,
-    const obj_value& value, const obj_texture_info& texture = {});
-
-// typesafe access of obj value
-void get_obj_value(const obj_value& yaml, string& value);
-void get_obj_value(const obj_value& yaml, bool& value);
-void get_obj_value(const obj_value& yaml, int& value);
-void get_obj_value(const obj_value& yaml, float& value);
-void get_obj_value(const obj_value& yaml, vec2f& value);
-void get_obj_value(const obj_value& yaml, vec3f& value);
-void get_obj_value(const obj_value& yaml, mat3f& value);
-void get_obj_value(const obj_value& yaml, frame3f& value);
-
-// typesafe access of obj value
-obj_value make_obj_value(const string& value);
-obj_value make_obj_value(bool value);
-obj_value make_obj_value(int value);
-obj_value make_obj_value(float value);
-obj_value make_obj_value(const vec2f& value);
-obj_value make_obj_value(const vec3f& value);
-obj_value make_obj_value(const mat3f& value);
-obj_value make_obj_value(const frame3f& value);
+    const obj_camera& camera, const obj_environment& environment,
+    const obj_instance& instance, const obj_procedural& procedural);
 
 }  // namespace yocto
 
@@ -356,6 +573,22 @@ struct yaml_value {
   string            string_ = "";
   array<double, 16> array_  = {};
 };
+
+// Yaml element
+struct yaml_element {
+  string                           name       = "";
+  vector<pair<string, yaml_value>> key_values = {};
+};
+
+// Yaml model
+struct yaml_model {
+  vector<string>       comments = {};
+  vector<yaml_element> elements = {};
+};
+
+// Load/save yaml
+void load_yaml(const string& filename, yaml_model& yaml);
+void save_yaml(const string& filename, const yaml_model& yaml);
 
 // Load Yaml properties
 bool read_yaml_property(file_wrapper& fs, string& group, string& key,
@@ -402,7 +635,7 @@ enum struct pbrt_value_type {
   // clang-format on
 };
 
-// Yaml value
+// Pbrt value
 struct pbrt_value {
   string          name     = "";
   pbrt_value_type type     = pbrt_value_type::real;
@@ -418,8 +651,187 @@ struct pbrt_value {
   vector<int>     vector1i = {};
 };
 
+// Pbrt camera
+struct pbrt_camera {
+  // camera parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
+  // camera approximation
+  float width    = 0;
+  float height   = 0;
+  float fov      = 0;
+  float aspect   = 0;
+  float focus    = 0;
+  float aperture = 0;
+};
+
+// Pbrt texture
+struct pbrt_texture {
+  // texture parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  // texture approximation
+  vec3f  constant = vec3f{1, 1, 1};
+  string filename = "";
+};
+
+// Pbrt material
+struct pbrt_material {
+  // material parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  // material approximation
+  vec3f  diffuse          = zero3f;
+  vec3f  specular         = zero3f;
+  vec3f  transmission     = zero3f;
+  vec2f  roughness        = zero2f;
+  vec3f  opacity          = vec3f{1};
+  vec3f  eta              = zero3f;
+  vec3f  etak             = zero3f;
+  vec3f  sspecular        = zero3f;  // specular scaled by fresnel
+  string diffuse_map      = "";
+  string specular_map     = "";
+  string transmission_map = "";
+  string roughness_map    = "";
+  string opacity_map      = "";
+  string eta_map          = "";
+  string etak_map         = "";
+  vec3f  volmeanfreepath  = vec3f{0};
+  vec3f  volscatter       = vec3f{0};
+  float  volscale         = 0.01;
+  bool   refract          = false;
+};
+
+// Pbrt medium
+struct pbrt_medium {
+  // medium parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+
+// Pbrt shape
+struct pbrt_shape {
+  // shape parameters
+  string             type            = "";
+  vector<pbrt_value> values          = {};
+  frame3f            frame           = identity3x4f;
+  frame3f            frend           = identity3x4f;
+  string             material        = "";
+  string             arealight       = "";
+  string             interior        = "";
+  string             exterior        = "";
+  bool               is_instanced    = false;
+  vector<frame3f>    instance_frames = {};
+  vector<frame3f>    instance_frends = {};
+  // shape approximation
+  string        filename  = "";
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec3i> triangles = {};
+  float         radius    = 0;  // radius for sphere, cylinder, disk
+};
+
+// Pbrt lights
+struct pbrt_light {
+  // light parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
+  // light approximation
+  vec3f emission = zero3f;
+  vec3f from     = zero3f;
+  vec3f to       = zero3f;
+  bool  distant  = false;
+  // arealight approximation
+  vec3f         area_emission  = zero3f;
+  frame3f       area_frame     = identity3x4f;
+  frame3f       area_frend     = identity3x4f;
+  vector<vec3i> area_triangles = {};
+  vector<vec3f> area_positions = {};
+  vector<vec3f> area_normals   = {};
+};
+struct pbrt_arealight {
+  // arealight parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
+  // arealight approximation
+  vec3f emission = zero3f;
+};
+struct pbrt_environment {
+  // shape parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
+  // environment approximation
+  vec3f  emission = zero3f;
+  string filename = "";
+};
+
+// Other pbrt elements
+struct pbrt_integrator {
+  // integrator parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+struct pbrt_film {
+  // film parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  // film approximation
+  string filename   = "";
+  vec2i  resolution = zero2i;
+};
+struct pbrt_filter {
+  // filter parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+struct pbrt_accelerator {
+  // accelerator parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+struct pbrt_sampler {
+  // sampler parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+
+// Pbrt model
+struct pbrt_model {
+  vector<string>           comments     = {};
+  vector<pbrt_camera>      cameras      = {};
+  vector<pbrt_shape>       shapes       = {};
+  vector<pbrt_texture>     textures     = {};
+  vector<pbrt_material>    materials    = {};
+  vector<pbrt_medium>      mediums      = {};
+  vector<pbrt_environment> environments = {};
+  vector<pbrt_arealight>   arealights   = {};
+  vector<pbrt_light>       lights       = {};
+  vector<pbrt_integrator>  integrators  = {};
+  vector<pbrt_film>        films        = {};
+  vector<pbrt_filter>      filters      = {};
+  vector<pbrt_sampler>     samplers     = {};
+  vector<pbrt_accelerator> accelerators = {};
+};
+
+// Load/save pbrt
+void load_pbrt(const string& filename, pbrt_model& pbrt);
+void save_pbrt(const string& filename, const pbrt_model& pbrt);
+
 // Pbrt command
-enum struct pbrt_command_ {
+enum struct pbrt_command {
   // clang-format off
   world_begin, world_end, attribute_begin, attribute_end,
   transform_begin, transform_end, reverse_orientation,
@@ -433,19 +845,19 @@ enum struct pbrt_command_ {
 };
 
 // Read pbrt commands
-bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
+bool read_pbrt_command(file_wrapper& fs, pbrt_command& command, string& name,
     string& type, frame3f& xform, vector<pbrt_value>& values);
-bool read_pbrt_command(file_wrapper& fs, pbrt_command_& command, string& name,
+bool read_pbrt_command(file_wrapper& fs, pbrt_command& command, string& name,
     string& type, frame3f& xform, vector<pbrt_value>& values, string& buffer);
 
 // Write pbrt commands
 void write_pbrt_comment(file_wrapper& fs, const string& comment);
-void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
+void write_pbrt_command(file_wrapper& fs, pbrt_command command,
     const string& name, const string& type, const frame3f& xform,
     const vector<pbrt_value>& values, bool texture_as_float = false);
-void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
+void write_pbrt_command(file_wrapper& fs, pbrt_command command,
     const string& name = "", const frame3f& xform = identity3x4f);
-void write_pbrt_command(file_wrapper& fs, pbrt_command_ command,
+void write_pbrt_command(file_wrapper& fs, pbrt_command command,
     const string& name, const string& type, const vector<pbrt_value>& values,
     bool texture_as_float = false);
 
@@ -495,6 +907,90 @@ pbrt_value make_pbrt_value(const string& name, const vec2f& value,
     pbrt_value_type type = pbrt_value_type::point2);
 pbrt_value make_pbrt_value(const string& name, const vec3f& value,
     pbrt_value_type type = pbrt_value_type::color);
+pbrt_value make_pbrt_value(const string& name, const vector<vec2f>& value,
+    pbrt_value_type type = pbrt_value_type::point2);
+pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& value,
+    pbrt_value_type type = pbrt_value_type::point);
+pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
+    pbrt_value_type type = pbrt_value_type::integer);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SIMPLE GLTF LOADER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+struct gltf_camera {
+  string name   = "";
+  bool   ortho  = false;
+  float  yfov   = 45 * pif / 180;
+  float  aspect = 1;
+};
+struct gltf_texture {
+  string name     = "";
+  string filename = "";
+};
+struct gltf_material {
+  string name            = "";
+  vec3f  emission        = zero3f;
+  int    emission_tex    = -1;
+  int    normal_tex      = -1;
+  bool   has_metalrough  = false;
+  vec4f  mr_base         = zero4f;
+  float  mr_metallic     = 0;
+  float  mr_roughness    = 1;
+  int    mr_base_tex     = -1;
+  int    mr_metallic_tex = -1;
+  bool   has_specgloss   = false;
+  vec4f  sg_diffuse      = zero4f;
+  vec3f  sg_specular     = zero3f;
+  float  sg_glossiness   = 1;
+  int    sg_diffuse_tex  = -1;
+  int    sg_specular_tex = -1;
+};
+struct gltf_primitive {
+  int           material  = -1;
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
+  vector<vec3i> triangles = {};
+  vector<vec2i> lines     = {};
+  vector<int>   points    = {};
+};
+struct gltf_mesh {
+  string                 name       = "";
+  vector<gltf_primitive> primitives = {};
+};
+struct gltf_node {
+  string      name        = "";
+  frame3f     frame       = {};
+  vec3f       translation = zero3f;
+  vec4f       rotation    = vec4f{0, 0, 0, 1};
+  vec3f       scale       = vec3f{1};
+  frame3f     local       = identity3x4f;
+  int         camera      = -1;
+  int         mesh        = -1;
+  int         parent      = -1;
+  vector<int> children    = {};
+};
+struct gltf_scene {
+  string      name  = "";
+  vector<int> nodes = {};
+};
+struct gltf_model {
+  vector<gltf_camera>   cameras   = {};
+  vector<gltf_mesh>     meshes    = {};
+  vector<gltf_texture>  textures  = {};
+  vector<gltf_material> materials = {};
+  vector<gltf_node>     nodes     = {};
+  vector<gltf_scene>    scenes    = {};
+};
+
+void load_gltf(const string& filename, gltf_model& gltf);
 
 }  // namespace yocto
 

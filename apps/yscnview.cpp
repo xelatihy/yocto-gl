@@ -886,7 +886,7 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      printf("%s\n", format_stats(scn.scene).c_str());
+      for (auto stat : format_stats(scn.scene)) print_info(stat);
     }
     end_glheader(win);
   }

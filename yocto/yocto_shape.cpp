@@ -3155,6 +3155,10 @@ void save_shape(const string& filename, const vector<int>& points,
   }
 }
 
+// #define YOCTO_OLD_YAML
+
+#ifdef YOCTO_OLD_YAML
+
 static void load_ply_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
@@ -3213,7 +3217,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
         if (indices < 0) continue;
         auto line = lists[indices];
         for (auto i = 1; i < line.size(); i++)
-          lines.push_back({line[i], line[i - 1]});
+          lines.push_back({line[i - 1], line[i]});
       }
     } else {
       for (auto idx = 0; idx < element.count; idx++)
@@ -3299,20 +3303,17 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
   if (!triangles.empty() || !quads.empty()) {
     elements.push_back({"face", triangles.size() + quads.size()});
     auto& face = elements.back();
-    face.properties.push_back(
-        {"vertex_indices", true, ply_type::u8, ply_type::i32});
+    face.properties.push_back({"vertex_indices", true, ply_type::i32});
   }
   if (!lines.empty()) {
     elements.push_back({"line", lines.size()});
     auto& face = elements.back();
-    face.properties.push_back(
-        {"vertex_indices", true, ply_type::u8, ply_type::i32});
+    face.properties.push_back({"vertex_indices", true, ply_type::i32});
   }
   if (!points.empty()) {
     elements.push_back({"point", points.size()});
     auto& face = elements.back();
-    face.properties.push_back(
-        {"vertex_indices", true, ply_type::u8, ply_type::i32});
+    face.properties.push_back({"vertex_indices", true, ply_type::i32});
   }
 
   // write header
@@ -3405,6 +3406,86 @@ static void save_ply_shape(const string& filename, const vector<int>& points,
     }
   }
 }
+
+#else
+
+static void load_ply_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
+    vector<float>& radius, bool flip_texcoord) {
+  // open ply
+  auto ply = ply_model{};
+  load_ply(filename, ply);
+
+  // gets vertex
+  positions = get_ply_positions(ply);
+  normals   = get_ply_normals(ply);
+  texcoords = get_ply_texcoords(ply, flip_texcoord);
+  colors    = get_ply_colors(ply);
+  radius    = get_ply_radius(ply);
+
+  // get faces
+  if (has_ply_quads(ply)) {
+    quads = get_ply_quads(ply);
+  } else {
+    triangles = get_ply_triangles(ply);
+  }
+  lines  = get_ply_lines(ply);
+  points = get_ply_points(ply);
+
+  if (positions.empty())
+    throw std::runtime_error("vertex positions not present");
+}
+
+// Save ply mesh
+static void save_ply_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, bool ascii, bool flip_texcoord) {
+  if (!quadspos.empty()) {
+    auto split_quads         = vector<vec4i>{};
+    auto split_positions     = vector<vec3f>{};
+    auto split_normals       = vector<vec3f>{};
+    auto split_texturecoords = vector<vec2f>{};
+    split_facevarying(split_quads, split_positions, split_normals,
+        split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords);
+    return save_ply_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
+        split_positions, split_normals, split_texturecoords, {}, {}, ascii,
+        flip_texcoord);
+  }
+
+  // create ply
+  auto ply = ply_model{};
+  ply.comments.push_back("Written by Yocto/GL");
+  ply.comments.push_back("https://github.com/xelatihy/yocto-gl");
+
+  // add vertices
+  add_ply_positions(ply, positions);
+  add_ply_normals(ply, normals);
+  add_ply_texcoords(ply, texcoords, flip_texcoord);
+  add_ply_colors(ply, colors);
+  add_ply_radius(ply, radius);
+
+  // elements
+  add_ply_faces(ply, triangles, quads);
+  add_ply_lines(ply, lines);
+  add_ply_points(ply, points);
+
+  // save ply
+  save_ply(filename, ply);
+}
+
+#endif
+
+// #define YOCTO_OLD_OBJ
+
+#ifdef YOCTO_OLD_OBJ
 
 // Load obj mesh
 static void load_obj_shape(const string& filename, vector<int>& points,
@@ -3657,6 +3738,91 @@ static void save_obj_shape(const string& filename, const vector<int>& points,
     write_obj_command(fs, obj_command::face, {}, elems);
   }
 }
+
+#else
+
+// Load obj mesh
+static void load_obj_shape(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
+    bool flip_texcoord) {
+  // load obj
+  auto obj = obj_model();
+  load_obj(filename, obj, true);
+
+  // get shape
+  if (obj.shapes.empty()) return;
+  if (obj.shapes.size() > 1)
+    throw std::runtime_error("can only support one element type");
+  auto& shape = obj.shapes.front();
+  if (shape.points.empty() && shape.lines.empty() && shape.faces.empty())
+    return;
+
+  // decide what to do adn get properties
+  auto materials  = vector<string>{};
+  auto ematerials = vector<int>{};
+  auto has_quads  = has_obj_quads(shape);
+  if (!shape.faces.empty() && !facevarying && !has_quads) {
+    get_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
+        materials, ematerials, flip_texcoord);
+  } else if (!shape.faces.empty() && !facevarying && has_quads) {
+    get_obj_quads(obj, shape, quads, positions, normals, texcoords, materials,
+        ematerials, flip_texcoord);
+  } else if (!shape.lines.empty()) {
+    get_obj_lines(obj, shape, lines, positions, normals, texcoords, materials,
+        ematerials, flip_texcoord);
+  } else if (!shape.points.empty()) {
+    get_obj_points(obj, shape, points, positions, normals, texcoords, materials,
+        ematerials, flip_texcoord);
+  } else if (!shape.faces.empty() && facevarying) {
+    get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords, materials, ematerials, flip_texcoord);
+  } else {
+    throw std::runtime_error("should not have gotten here");
+  }
+
+  if (positions.empty())
+    throw std::runtime_error("vertex positions not present");
+}
+
+// Load ply mesh
+static void save_obj_shape(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, bool flip_texcoord) {
+  // Obj model
+  auto obj = obj_model{};
+
+  // Add obj data
+  auto& shape = obj.shapes.emplace_back();
+  if (!triangles.empty()) {
+    add_obj_triangles(obj, shape, triangles, positions, normals, texcoords, {},
+        flip_texcoord);
+  } else if (!quads.empty()) {
+    add_obj_quads(
+        obj, shape, quads, positions, normals, texcoords, {}, flip_texcoord);
+  } else if (!lines.empty()) {
+    add_obj_lines(
+        obj, shape, lines, positions, normals, texcoords, {}, flip_texcoord);
+  } else if (!points.empty()) {
+    add_obj_points(
+        obj, shape, points, positions, normals, texcoords, {}, flip_texcoord);
+  } else if (!quadspos.empty()) {
+    add_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords, {}, flip_texcoord);
+  } else {
+    throw std::runtime_error("do not support empty shapes");
+  }
+
+  // Save
+  save_obj(filename, obj);
+}
+
+#endif
 
 }  // namespace yocto
 

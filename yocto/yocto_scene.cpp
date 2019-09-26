@@ -1214,8 +1214,7 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
   }
 }
 
-string format_stats(
-    const yocto_scene& scene, const string& prefix, bool verbose) {
+vector<string> format_stats(const yocto_scene& scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
@@ -1235,61 +1234,48 @@ string format_stats(
 
   auto bbox = compute_bounds(scene);
 
-  auto stats = ""s;
-  stats += prefix + "cameras:      " + format(scene.cameras.size()) + "\n";
-  stats += prefix + "shapes:       " + format(scene.shapes.size()) + "\n";
-  stats += prefix + "subdivs:      " + format(scene.subdivs.size()) + "\n";
-  stats += prefix + "instances:    " + format(scene.instances.size()) + "\n";
-  stats += prefix + "environments: " + format(scene.environments.size()) + "\n";
-  stats += prefix + "textures:     " + format(scene.textures.size()) + "\n";
-  stats += prefix + "voltextures:  " + format(scene.voltextures.size()) + "\n";
-  stats += prefix + "materials:    " + format(scene.materials.size()) + "\n";
-  stats += prefix + "nodes:        " + format(scene.nodes.size()) + "\n";
-  stats += prefix + "animations:   " + format(scene.animations.size()) + "\n";
-  stats += prefix + "points:       " +
-           format(accumulate(
-               scene.shapes, [](auto& shape) { return shape.points.size(); })) +
-           "\n";
-  stats += prefix + "lines:        " +
-           format(accumulate(
-               scene.shapes, [](auto& shape) { return shape.lines.size(); })) +
-           "\n";
-  stats += prefix + "triangles:    " +
-           format(accumulate(scene.shapes,
-               [](auto& shape) { return shape.triangles.size(); })) +
-           "\n";
-  stats += prefix + "quads:        " +
-           format(accumulate(
-               scene.shapes, [](auto& shape) { return shape.quads.size(); })) +
-           "\n";
-  stats += prefix + "fvquads:      " +
-           format(accumulate(scene.shapes,
-               [](auto& shape) { return shape.quadspos.size(); })) +
-           "\n";
-  stats += prefix + "texels4b:     " +
-           format(accumulate(scene.textures,
-               [](auto& texture) {
-                 return (size_t)texture.ldr.size().x *
-                        (size_t)texture.ldr.size().x;
-               })) +
-           "\n";
-  stats += prefix + "texels4f:     " +
-           format(accumulate(scene.textures,
-               [](auto& texture) {
-                 return (size_t)texture.hdr.size().x *
-                        (size_t)texture.hdr.size().y;
-               })) +
-           "\n";
-  stats += prefix + "volxels1f:    " +
-           format(accumulate(scene.voltextures,
-               [](auto& texture) {
-                 return (size_t)texture.vol.size().x *
-                        (size_t)texture.vol.size().y *
-                        (size_t)texture.vol.size().z;
-               })) +
-           "\n";
-  stats += prefix + "center:       " + format3(center(bbox)) + "\n";
-  stats += prefix + "size:         " + format3(size(bbox)) + "\n";
+  auto stats = vector<string>{};
+  stats.push_back("cameras:      " + format(scene.cameras.size()));
+  stats.push_back("shapes:       " + format(scene.shapes.size()));
+  stats.push_back("subdivs:      " + format(scene.subdivs.size()));
+  stats.push_back("instances:    " + format(scene.instances.size()));
+  stats.push_back("environments: " + format(scene.environments.size()));
+  stats.push_back("textures:     " + format(scene.textures.size()));
+  stats.push_back("voltextures:  " + format(scene.voltextures.size()));
+  stats.push_back("materials:    " + format(scene.materials.size()));
+  stats.push_back("nodes:        " + format(scene.nodes.size()));
+  stats.push_back("animations:   " + format(scene.animations.size()));
+  stats.push_back(
+      "points:       " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.points.size(); })));
+  stats.push_back(
+      "lines:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.lines.size(); })));
+  stats.push_back("triangles:    " +
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.triangles.size(); })));
+  stats.push_back(
+      "quads:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.quads.size(); })));
+  stats.push_back("fvquads:      " +
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.quadspos.size(); })));
+  stats.push_back(
+      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.ldr.size().x * (size_t)texture.ldr.size().x;
+      })));
+  stats.push_back(
+      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
+      })));
+  stats.push_back("volxels1f:    " +
+                  format(accumulate(scene.voltextures, [](auto& texture) {
+                    return (size_t)texture.vol.size().x *
+                           (size_t)texture.vol.size().y *
+                           (size_t)texture.vol.size().z;
+                  })));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
 
   return stats;
 }
