@@ -1311,6 +1311,7 @@ void fix_names(yocto_scene& scene) {
   fix_names(scene.cameras, "camera");
   fix_names(scene.textures, "texture");
   fix_names(scene.voltextures, "voltexture");
+  fix_names(scene.materials, "material");
   fix_names(scene.shapes, "shape");
   fix_names(scene.subdivs, "subdiv");
   fix_names(scene.instances, "instance");
