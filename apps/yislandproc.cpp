@@ -340,16 +340,17 @@ void load_island_shape(vector<yocto_shape>& shapes,
   auto fs = open_file(filename);
 
   auto command   = obj_command{};
-  auto value     = obj_value{};
+  auto value     = vec3f{};
+  auto name      = ""s;
   auto verts     = vector<obj_vertex>{};
   auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, command, value, verts, vert_size)) {
+  while (read_obj_command(fs, command, name, value, verts, vert_size)) {
     switch (command) {
       case obj_command::vertex:
-        get_obj_value(value, opos.emplace_back());
+        opos.push_back(value);
         break;
       case obj_command::normal:
-        get_obj_value(value, onorm.emplace_back());
+        onorm.push_back(value);
         break;
       case obj_command::texcoord:
         throw std::runtime_error("texture coord not supported");
@@ -401,11 +402,11 @@ void load_island_shape(vector<yocto_shape>& shapes,
         }
       } break;
       case obj_command::group: {
-        get_obj_value(value, gname);
+        gname = name;
         split_next = true;
       } break;
       case obj_command::usemtl: {
-        get_obj_value(value, mname);
+        mname = name;
         split_next = true;
       } break;
       default: break;

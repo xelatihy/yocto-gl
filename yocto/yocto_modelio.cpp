@@ -2716,8 +2716,8 @@ static inline void parse_obj_value_or_empty(
 }
 
 // Read obj
-bool read_obj_command(file_wrapper& fs, obj_command& command, obj_value& value,
-    vector<obj_vertex>& vertices, obj_vertex& vert_size) {
+bool read_obj_command(file_wrapper& fs, obj_command& command, string& name, 
+  vec3f &value, vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // read the file line by line
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -2735,17 +2735,18 @@ bool read_obj_command(file_wrapper& fs, obj_command& command, obj_value& value,
     // possible token values
     if (cmd == "v") {
       command = obj_command::vertex;
-      parse_value(line, value, obj_value_type::array);
+      parse_value(line, value);
       vert_size.position += 1;
       return true;
     } else if (cmd == "vn") {
       command = obj_command::normal;
-      parse_value(line, value, obj_value_type::array);
+      parse_value(line, value);
       vert_size.normal += 1;
       return true;
     } else if (cmd == "vt") {
       command = obj_command::texcoord;
-      parse_value(line, value, obj_value_type::array, 2);
+      parse_value(line, (vec2f&)value);
+      value.z = 0;
       vert_size.texcoord += 1;
       return true;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -2769,23 +2770,23 @@ bool read_obj_command(file_wrapper& fs, obj_command& command, obj_value& value,
       return true;
     } else if (cmd == "o") {
       command = obj_command::object;
-      parse_obj_value_or_empty(line, value);
+      parse_value_or_empty(line, name);
       return true;
     } else if (cmd == "usemtl") {
       command = obj_command::usemtl;
-      parse_obj_value_or_empty(line, value);
+      parse_value_or_empty(line, name);
       return true;
     } else if (cmd == "g") {
       command = obj_command::group;
-      parse_obj_value_or_empty(line, value);
+      parse_value_or_empty(line, name);
       return true;
     } else if (cmd == "s") {
       command = obj_command::smoothing;
-      parse_obj_value_or_empty(line, value);
+      parse_value_or_empty(line, name);
       return true;
     } else if (cmd == "mtllib") {
       command = obj_command::mtllib;
-      parse_value(line, value, obj_value_type::string);
+      parse_value(line, name);
       return true;
     } else {
       // unused

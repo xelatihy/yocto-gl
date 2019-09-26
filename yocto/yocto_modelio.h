@@ -569,8 +569,8 @@ struct obj_value {
 };
 
 // Read obj elements
-bool read_obj_command(file_wrapper& fs, obj_command& command, obj_value& value,
-    vector<obj_vertex>& vertices, obj_vertex& vert_size);
+bool read_obj_command(file_wrapper& fs, obj_command& command, string& name, 
+  vec3f &value, vector<obj_vertex>& vertices, obj_vertex& vert_size);
 bool read_mtl_command(file_wrapper& fs, mtl_command& command, obj_value& value,
     obj_texture_info& texture, bool fliptr = true);
 bool read_objx_command(file_wrapper& fs, objx_command& command,
