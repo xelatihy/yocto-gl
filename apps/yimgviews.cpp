@@ -66,11 +66,6 @@ struct app_image {
   colorgrade_params colorgrade_prms  = {};
   bool              apply_colorgrade = false;
 
-  // computation futures
-  bool   load_done    = false;
-  bool   display_done = false;
-  string error        = "";
-
   // viewing properties
   vec2f          image_center = zero2f;
   float          image_scale  = 1;
@@ -124,7 +119,6 @@ void update_display(app_image& image) {
 }
 
 void update_texture(app_image& image) {
-  if (!image.load_done) return;
   if (!image.gl_txt) {
     init_gltexture(image.gl_txt, image.display, false, false, false);
   }
@@ -139,8 +133,6 @@ void load_image_async(app_state& app, const string& filename) {
   image.name            = get_filename(filename);
   image.tonemap_prms    = app.tonemap_prms;
   image.colorgrade_prms = app.colorgrade_prms;
-  image.load_done       = false;
-  image.display_done    = false;
   app.selected          = (int)app.images.size() - 1;
   app.load_workers.push_back(run_async([&image]() {
     load_image(image.filename, image.source);
@@ -158,8 +150,7 @@ void close_image(app_state& app) {
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
   auto&         app      = *(app_state*)get_gluser_pointer(win);
-  auto          image_ok = !app.images.empty() && app.selected >= 0 &&
-                  app.images[app.selected].load_done;
+  auto          image_ok = !app.images.empty() && app.selected >= 0;
   if (!begin_glwidgets_window(win, "yimview")) return;
   draw_glmessages(win);
   if (draw_glfiledialog(win, "load image", load_path, false, "./", "",
@@ -178,8 +169,7 @@ void draw_glwidgets(const opengl_window& win) {
     open_glmodal(win, "load image");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "save",
-          app.selected >= 0 && app.images[app.selected].display_done)) {
+  if (draw_glbutton(win, "save", app.selected >= 0)) {
     save_path = app.images[app.selected].outname;
     open_glmodal(win, "save image");
   }
@@ -263,17 +253,14 @@ void draw_glwidgets(const opengl_window& win) {
     }
     draw_glcoloredit(win, "image", img_pixel);
     draw_gldragger(win, "display", display_pixel);
-    auto img_stats = (image.load_done) ? image.source_stats : image_stats{};
-    draw_gldragger(win, "image min", img_stats.min);
-    draw_gldragger(win, "image max", img_stats.max);
-    draw_gldragger(win, "image avg", img_stats.average);
-    draw_glhistogram(win, "image histo", img_stats.histogram);
-    auto display_stats = (image.load_done) ? image.display_stats
-                                           : image_stats{};
-    draw_gldragger(win, "display min", display_stats.min);
-    draw_gldragger(win, "display max", display_stats.max);
-    draw_gldragger(win, "display avg", display_stats.average);
-    draw_glhistogram(win, "display histo", display_stats.histogram);
+    draw_gldragger(win, "image min", image.source_stats.min);
+    draw_gldragger(win, "image max", image.source_stats.max);
+    draw_gldragger(win, "image avg", image.source_stats.average);
+    draw_glhistogram(win, "image histo", image.source_stats.histogram);
+    draw_gldragger(win, "display min", image.display_stats.min);
+    draw_gldragger(win, "display max", image.display_stats.max);
+    draw_gldragger(win, "display avg", image.display_stats.average);
+    draw_glhistogram(win, "display histo", image.display_stats.histogram);
     end_glheader(win);
   }
   if (begin_glheader(win, "log")) {
@@ -288,8 +275,7 @@ void draw(const opengl_window& win) {
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  auto image_ok = !app.images.empty() && app.selected >= 0 &&
-                  app.images[app.selected].load_done;
+  auto image_ok = !app.images.empty() && app.selected >= 0;
   if (image_ok) {
     auto& image = app.images.at(app.selected);
     if (!image.gl_txt) update_texture(image);
@@ -309,27 +295,10 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
-#if 0
-  for (auto& image : app.images) {
-    if (is_valid(image.load_worker)) {
-      if (!is_ready(image.load_worker)) return;
-      try {
-        image.load_worker.get();
-        image.load_done = true;
-      } catch (const std::exception& e) {
-        push_glmessage(win, "cannot load image " + image.filename);
-        log_glinfo(win, "cannot load image " + image.filename);
-        log_glinfo(win, e.what());
-        break;
-      }
-    }
-  }
-#endif
   for (auto idx = 0; idx < app.load_workers.size(); idx++) {
     if (!is_ready(app.load_workers[idx])) return;
     try {
       app.load_workers[idx].get();
-      app.loading[idx].load_done = true;
       app.images.push_back(app.loading[idx]);
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load image " + app.loading[idx].filename);
