@@ -320,6 +320,7 @@ void update(const opengl_window& win, app_state& app) {
         image.load_done = true;
       } catch(const std::exception& e) {
         image.error = "cannot load image "s + e.what();
+        app.errors.push_back(image.error);
         log_glinfo(win, "cannot load image " + image.filename);
         log_glinfo(win, e.what());
       }
