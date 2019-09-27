@@ -261,6 +261,8 @@ bool begin_glmodal(const opengl_window& win, const char* lbl);
 void end_glmodal(const opengl_window& win);
 bool is_glmodal_open(const opengl_window& win, const char* lbl);
 
+bool draw_glmessages(const opengl_window& win);
+void push_glmessage(const string& message);
 bool draw_glmessage(
     const opengl_window& win, const char* lbl, const string& message);
 bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,

@@ -27,6 +27,7 @@
 //
 //
 
+#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 #include <stdarg.h>
 #include <algorithm>
@@ -47,40 +48,6 @@
 
 #define CUTE_FILES_IMPLEMENTATION
 #include "ext/cute_files.h"
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-}  // namespace yocto
 
 namespace yocto {
 
@@ -855,6 +822,25 @@ bool draw_glmessage(
   } else {
     return false;
   }
+}
+
+string _message_text = {};
+deque<string> _message_queue = {};
+std::mutex         _message_mutex;
+void push_glmessage(const string& message) {
+  std::lock_guard lock(_message_mutex);
+  _message_queue.push_back(message);
+}
+bool draw_glmessages(const opengl_window& win) {
+  std::lock_guard lock(_message_mutex);
+  if (!_message_queue.empty() && _message_text.empty()) {
+    _message_text = _message_queue.front();
+    _message_queue.pop_front();
+    open_glmodal(win, "<message>");
+  }
+  auto ret = draw_glmessage(win, "<message>", _message_text);
+  if(!ret) _message_text = "";
+  return ret;
 }
 
 struct filedialog_state {

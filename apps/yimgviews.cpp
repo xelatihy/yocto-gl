@@ -165,14 +165,7 @@ void draw_glwidgets(const opengl_window& win) {
   auto&         app = *(app_state*)get_gluser_pointer(win);
   auto image_ok = !app.images.empty() && app.selected >= 0 && app.images[app.selected].load_done;
   if (!begin_glwidgets_window(win, "yimview")) return;
-  if (!app.errors.empty() && error_message.empty()) {
-    error_message = app.errors.front();
-    app.errors.pop_front();
-    open_glmodal(win, "error");
-  }
-  if (!draw_glmessage(win, "error", error_message)) {
-    error_message = "";
-  }
+  draw_glmessages(win);
   if (draw_glfiledialog(win, "load image", load_path, false, "./", "",
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     add_new_image(app, load_path);
@@ -325,6 +318,7 @@ void update(const opengl_window& win, app_state& app) {
       } catch(const std::exception& e) {
         image.error = "cannot load image "s + e.what();
         app.errors.push_back(image.error);
+        push_glmessage(image.error);
         log_glinfo(win, "cannot load image " + image.filename);
         log_glinfo(win, e.what());
       }
