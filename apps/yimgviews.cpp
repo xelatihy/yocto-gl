@@ -42,27 +42,6 @@ struct image_stats {
   vector<vec3f> histogram = {};
 };
 
-enum struct app_task_type { none, load, save, display, close };
-
-struct app_task {
-  app_task_type            type;
-  std::future<void>        result;
-  std::atomic<bool>        stop;
-  std::deque<image_region> queue;
-  std::mutex               queuem;
-
-  app_task(app_task_type type) : type{type}, result{}, stop{false} {}
-  ~app_task() {
-    stop = true;
-    if (result.valid()) {
-      try {
-        result.get();
-      } catch (...) {
-      }
-    }
-  }
-};
-
 struct app_image {
   // original data
   string name     = "";
@@ -70,27 +49,31 @@ struct app_image {
   string outname  = "";
 
   // image data
-  image<vec4f> img = {};
-
-  // diplay image
+  image<vec4f> source = {};
   image<vec4f>   display = {};
-  opengl_texture gl_txt  = {};
 
   // image stats
-  image_stats image_stats, display_stats;
+  image_stats source_stats = {};
+  image_stats display_stats = {};
 
   // tonemapping values
   tonemap_params    tonemap_prms    = {};
   colorgrade_params colorgrade_prms = {};
+  bool apply_colorgrade = false;
 
   // computation futures
-  bool                 load_done = false, display_done = false;
-  std::deque<app_task> task_queue;
+  bool load_done = false;
+  bool display_done = false;
+  future<void> load_worker = {};
+  future<void> display_worker = {};
+  vector<pair<string, int>> updates = {};
+  string error = "";
 
   // viewing properties
   vec2f image_center = zero2f;
   float image_scale  = 1;
   bool  zoom_to_fit  = false;
+  opengl_texture gl_txt  = {};
 };
 
 struct app_state {
@@ -105,7 +88,7 @@ struct app_state {
 };
 
 // compute min/max
-void compute_image_stats(
+void compute_stats(
     image_stats& stats, const image<vec4f>& img, bool linear_hdr) {
   auto max_histo = linear_hdr ? 8 : 1;
   stats.min      = vec4f{flt_max};
@@ -125,50 +108,37 @@ void compute_image_stats(
   stats.average /= num_pixels;
 }
 
-void update_app_display(const string& filename, const image<vec4f>& img,
-    image<vec4f>& display, image_stats& stats,
-    const tonemap_params&    tonemap_prms,
-    const colorgrade_params& colorgrade_prms, std::atomic<bool>* cancel,
-    std::deque<image_region>& queue, std::mutex& queuem) {
-  auto                regions  = make_regions(img.size(), 128);
-  auto                futures  = vector<std::future<void>>{};
-  auto                nthreads = std::thread::hardware_concurrency();
-  std::atomic<size_t> next_idx(0);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(std::async(std::launch::async,
-        [&next_idx, cancel, &regions, &queue, &queuem, &display, &img,
-            tonemap_prms, colorgrade_prms]() {
-          while (true) {
-            if (cancel && *cancel) break;
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= regions.size()) break;
-            auto region = regions[idx];
-            tonemap(display, img, region, tonemap_prms);
-            if (colorgrade_prms != colorgrade_params{}) {
-              colorgrade(display, display, region, colorgrade_prms);
-            }
-            {
-              std::lock_guard guard{queuem};
-              queue.push_back(region);
-            }
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-  compute_image_stats(stats, display, false);
+void update_display(app_image& image) {
+  if (image.display.size() != image.source.size()) image.display = image.source;
+  auto regions = make_regions(image.source.size(), 128);
+  parallel_foreach(regions, [&image](const image_region& region) {
+    tonemap(image.display, image.source, region, image.tonemap_prms);
+    if (image.apply_colorgrade) {
+      colorgrade(image.display, image.display, region, image.colorgrade_prms);
+    }
+  });
+  compute_stats(image.display_stats, image.display, false);
+}
+
+void load_image(app_image& image) {
+  image.load_done = false;
+  load_image(image.filename, image.source);
+  compute_stats(image.source_stats, image.source, is_hdr_filename(image.filename));
+  update_display(image);
+  image.load_done = true;
 }
 
 // add a new image
 void add_new_image(app_state& app, const string& filename) {
-  auto& img           = app.images.emplace_back();
-  img.filename        = filename;
-  img.outname         = replace_extension(filename, ".display.png");
-  img.name            = get_filename(filename);
-  img.tonemap_prms    = app.tonemap_prms;
-  img.colorgrade_prms = app.colorgrade_prms;
-  img.load_done       = false;
-  img.display_done    = false;
-  img.task_queue.emplace_back(app_task_type::load);
+  auto& image           = app.images.emplace_back();
+  image.filename        = filename;
+  image.outname         = replace_extension(filename, ".display.png");
+  image.name            = get_filename(filename);
+  image.tonemap_prms    = app.tonemap_prms;
+  image.colorgrade_prms = app.colorgrade_prms;
+  image.load_done       = false;
+  image.display_done    = false;
+  image.load_worker = run_async([&image]() { load_image(image); });
   app.selected = (int)app.images.size() - 1;
 }
 
@@ -192,8 +162,9 @@ void draw_glwidgets(const opengl_window& win) {
           get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     app.images[app.selected].outname = save_path;
-    app.images[app.selected].task_queue.emplace_back(app_task_type::save);
+    // app.images[app.selected].task_queue.emplace_back(app_task_type::save);
     save_path = "";
+    // TODO> implement save
   }
   if (draw_glbutton(win, "load")) {
     open_glmodal(win, "load image");
@@ -206,8 +177,8 @@ void draw_glwidgets(const opengl_window& win) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", app.selected >= 0)) {
-    auto& img = app.images.at(app.selected);
-    img.task_queue.emplace_back(app_task_type::close);
+    // auto& img = app.images.at(app.selected);
+    // TODO: implement close here
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
@@ -230,12 +201,13 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glcheckbox(win, "srgb", options.srgb);
     continue_glline(win);
     if (draw_glbutton(win, "auto wb")) {
-      auto wb      = 1 / xyz(img.image_stats.average);
+      auto wb      = 1 / xyz(img.source_stats.average);
       options.tint = wb / max(wb);
     }
     if (options != img.tonemap_prms) {
       img.tonemap_prms = options;
-      if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
+      // TODO: implement tonemap
+      // if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
     }
     end_glheader(win);
   }
@@ -250,7 +222,8 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glcoloredit(win, "highlights color", options.highlights_color);
     if (options != img.colorgrade_prms) {
       img.colorgrade_prms = options;
-      if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
+      // TODO: implement colorgrade
+      // if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
     }
     end_glheader(win);
   }
@@ -258,22 +231,22 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "image", get_filename(img.filename));
     draw_gllabel(win, "filename", img.filename);
     draw_gllabel(win, "outname", img.outname);
-    draw_gllabel(win, "image", "%d x %d", img.img.size().x, img.img.size().y);
+    draw_gllabel(win, "image", "%d x %d", img.source.size().x, img.source.size().y);
     draw_glslider(win, "zoom", img.image_scale, 0.1, 10);
     draw_glcheckbox(win, "zoom to fit", img.zoom_to_fit);
     auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(
-        mouse_pos, img.image_center, img.image_scale, img.img.size());
+        mouse_pos, img.image_center, img.image_scale, img.source.size());
     draw_gldragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
-    if (ij.x >= 0 && ij.x < img.img.size().x && ij.y >= 0 &&
-        ij.y < img.img.size().y) {
-      img_pixel     = img.img[{ij.x, ij.y}];
+    if (ij.x >= 0 && ij.x < img.source.size().x && ij.y >= 0 &&
+        ij.y < img.source.size().y) {
+      img_pixel     = img.source[{ij.x, ij.y}];
       display_pixel = img.display[{ij.x, ij.y}];
     }
     draw_glcoloredit(win, "image", img_pixel);
     draw_gldragger(win, "display", display_pixel);
-    auto img_stats = (img.load_done) ? img.image_stats : image_stats{};
+    auto img_stats = (img.load_done) ? img.source_stats : image_stats{};
     draw_gldragger(win, "image min", img_stats.min);
     draw_gldragger(win, "image max", img_stats.max);
     draw_gldragger(win, "image avg", img_stats.average);
@@ -317,152 +290,25 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
-  // close if needed
-  while (!app.images.empty()) {
-    auto pos = -1;
-    for (auto idx = 0; idx < app.images.size(); idx++) {
-      for (auto& task : app.images[idx].task_queue) {
-        if (task.type == app_task_type::close) pos = idx;
+  for(auto& image : app.images) {
+    if (is_valid(image.load_worker)) {
+      if(!is_ready(image.load_worker)) return;
+      try {
+        image.load_worker.get();
+        image.load_done = true;
+      } catch(const std::exception& e) {
+        image.error = "cannot load image "s + e.what();
+        log_glinfo(win, "cannot load image " + image.filename);
+        log_glinfo(win, e.what());
       }
     }
-    if (pos < 0) break;
-    app.images.erase(app.images.begin() + pos);
-    app.selected = app.images.empty() ? -1 : 0;
-  }
-  // consume partial results
-  for (auto& img : app.images) {
-    if (img.task_queue.empty()) continue;
-    auto& task = img.task_queue.front();
-    if (task.type != app_task_type::display) continue;
-    while (true) {
-      auto region = image_region{};
-      {
-        std::lock_guard guard{task.queuem};
-        if (task.queue.empty()) break;
-        region = task.queue.front();
-        task.queue.pop_front();
-      }
-      update_gltexture_region(img.gl_txt, img.display, region, false);
+    if (!image.load_done) return;
+    if (image.gl_txt.size != image.source.size()) {
+      init_gltexture(image.gl_txt, image.display, false, false, false);
     }
-  }
-  // remove unneeded tasks
-  for (auto& img : app.images) {
-    while (img.task_queue.size() > 1) {
-      auto& task = img.task_queue.at(0);
-      auto& next = img.task_queue.at(1);
-      if (task.type == app_task_type::display) {
-        if (next.type != app_task_type::display) break;
-        log_glinfo(win, "cancel rendering " + img.filename);
-      } else {
-        break;
-      }
-      task.stop = true;
-      if (task.result.valid()) {
-        try {
-          task.result.get();
-        } catch (...) {
-        }
-      }
-      img.task_queue.pop_front();
-    }
-  }
-  // grab result of finished tasks
-  for (auto& img : app.images) {
-    if (img.task_queue.empty()) continue;
-    auto& task = img.task_queue.front();
-    if (!task.result.valid()) continue;
-    if (task.type == app_task_type::display) {
-      std::lock_guard guard{task.queuem};
-      if (!task.queue.empty()) continue;
-    }
-    if (task.result.wait_for(std::chrono::nanoseconds(10)) !=
-        std::future_status::ready)
-      continue;
-    switch (task.type) {
-      case app_task_type::none: break;
-      case app_task_type::close: break;
-      case app_task_type::load: {
-        try {
-          task.result.get();
-          img.load_done = true;
-          img.name      = get_filename(img.filename) + " [" +
-                     std::to_string(img.img.size().x) + "x" +
-                     std::to_string(img.img.size().y) + "]";
-          img.display = img.img;
-          log_glinfo(win, "done loading " + img.filename);
-          init_gltexture(img.gl_txt, img.display, false, false, false);
-          img.task_queue.emplace_back(app_task_type::display);
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          img.name = get_filename(img.filename) + " [error]";
-          app.errors.push_back("cannot load " + img.filename);
-        }
-      } break;
-      case app_task_type::save: {
-        try {
-          task.result.get();
-          log_glinfo(win, "done saving " + img.outname);
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          app.errors.push_back("cannot save " + img.outname);
-        }
-      } break;
-      case app_task_type::display: {
-        try {
-          task.result.get();
-          img.display_done = true;
-          log_glinfo(win, "done rendering " + img.filename);
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          app.errors.push_back("cannot render " + img.filename);
-        }
-      } break;
-    }
-    img.task_queue.pop_front();
-  }
-  // schedule tasks not running
-  for (auto& img : app.images) {
-    if (img.task_queue.empty()) continue;
-    auto& task = img.task_queue.front();
-    if (task.result.valid()) continue;
-    task.stop = false;
-    switch (task.type) {
-      case app_task_type::none: break;
-      case app_task_type::close: break;
-      case app_task_type::load: {
-        log_glinfo(win, "start loading " + img.filename);
-        img.load_done = false;
-        task.result   = std::async(std::launch::async, [&img]() {
-          img.img = {};
-          load_image(img.filename, img.img);
-          compute_image_stats(
-              img.image_stats, img.img, is_hdr_filename(img.filename));
-        });
-      } break;
-      case app_task_type::save: {
-        log_glinfo(win, "start saving " + img.outname);
-        task.result = std::async(std::launch::async, [&img]() {
-          if (!is_hdr_filename(img.outname)) {
-            auto ldr = image<vec4b>{};
-            float_to_byte(ldr, img.display);
-            save_imageb(img.outname, ldr);
-          } else {
-            auto aux = image<vec4f>{};
-            srgb_to_rgb(aux, img.display);
-            save_image(img.outname, aux);
-          }
-        });
-      } break;
-      case app_task_type::display: {
-        log_glinfo(win, "start rendering " + img.filename);
-        img.display_done = false;
-        task.result      = std::async(std::launch::async, [&img, &task]() {
-          update_app_display(img.filename, img.img, img.display,
-              img.display_stats, img.tonemap_prms, img.colorgrade_prms,
-              &task.stop, task.queue, task.queuem);
-        });
-      } break;
-    }
+    if (image.updates.empty()) return;
+    update_display(image);
+    update_gltexture(image.gl_txt, image.display, false);
   }
 }
 

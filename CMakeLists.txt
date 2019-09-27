@@ -106,11 +106,13 @@ if(YOCTO_OPENGL)
     add_executable(yscnitrace apps/yscnitrace.cpp)
     add_executable(yimgview apps/yimgview.cpp)
     add_executable(yimgviews apps/yimgviews.cpp)
+    add_executable(yimgviewss apps/yimgviewss.cpp)
 
     target_link_libraries(yscnview yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
     target_link_libraries(yscnitrace yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
     target_link_libraries(yimgview yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
     target_link_libraries(yimgviews yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
+    target_link_libraries(yimgviewss yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
 endif(YOCTO_OPENGL)
 
 if(YOCTO_TESTING)
