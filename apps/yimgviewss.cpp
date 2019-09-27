@@ -37,18 +37,14 @@ using namespace yocto;
 
 struct app_state {
   // original data
-  string name     = "image";
   string filename = "image.png";
   string outname  = "out.png";
 
   // image data
   image<vec4f> img = {};
 
-  // diplay image
+  // diplay data
   image<vec4f>   display = {};
-  opengl_texture gl_txt  = {};
-
-  // tonemapping values
   tonemap_params    tonemap_prms    = {};
   colorgrade_params colorgrade_prms = {};
   bool              colorgrade      = false;
@@ -57,6 +53,7 @@ struct app_state {
   vec2f image_center = zero2f;
   float image_scale  = 1;
   bool  zoom_to_fit  = false;
+  opengl_texture gl_txt  = {};
 };
 
 void update_display(app_state& app) {
