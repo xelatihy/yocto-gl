@@ -34,6 +34,11 @@ using namespace yocto;
 #include <atomic>
 #include <future>
 #include <thread>
+#include <any>
+#include <typeindex>
+using std::any;
+using std::any_cast;
+using std::type_index;
 
 struct image_stats {
   vec4f         min       = zero4f;
@@ -66,7 +71,7 @@ struct app_image {
   bool display_done = false;
   future<void> load_worker = {};
   future<void> display_worker = {};
-  vector<pair<string, int>> updates = {};
+  deque<pair<string, int>> updates = {};
   string error = "";
 
   // viewing properties
@@ -145,6 +150,7 @@ void add_new_image(app_state& app, const string& filename) {
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
   auto&         app = *(app_state*)get_gluser_pointer(win);
+  auto image_ok = !app.images.empty() && app.selected >= 0 && app.images[app.selected].load_done;
   if (!begin_glwidgets_window(win, "yimview")) return;
   if (!app.errors.empty() && error_message.empty()) {
     error_message = app.errors.front();
@@ -188,70 +194,76 @@ void draw_glwidgets(const opengl_window& win) {
   draw_glcombobox(
       win, "image", app.selected, (int)app.images.size(),
       [&app](int idx) { return app.images[idx].name.c_str(); }, false);
-  auto& img = app.images.at(app.selected);
-  if (begin_glheader(win, "tonemap")) {
-    auto options = img.tonemap_prms;
-    draw_glslider(win, "exposure", options.exposure, -5, 5);
-    draw_glcoloredit(win, "tint", options.tint);
-    draw_glslider(win, "contrast", options.contrast, 0, 1);
-    draw_glslider(win, "logcontrast", options.logcontrast, 0, 1);
-    draw_glslider(win, "saturation", options.saturation, 0, 1);
-    draw_glcheckbox(win, "filmic", options.filmic);
+  if (image_ok && begin_glheader(win, "tonemap")) {
+    auto& image = app.images[app.selected];
+    auto params = image.tonemap_prms;
+    auto edited = 0;
+    edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
+    edited += draw_glcoloredit(win, "tint", params.tint);
+    edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
+    edited += draw_glslider(win, "logcontrast", params.logcontrast, 0, 1);
+    edited += draw_glslider(win, "saturation", params.saturation, 0, 1);
+    edited += draw_glcheckbox(win, "filmic", params.filmic);
     continue_glline(win);
-    draw_glcheckbox(win, "srgb", options.srgb);
+    edited += draw_glcheckbox(win, "srgb", params.srgb);
     continue_glline(win);
     if (draw_glbutton(win, "auto wb")) {
-      auto wb      = 1 / xyz(img.source_stats.average);
-      options.tint = wb / max(wb);
+      auto wb      = 1 / xyz(image.source_stats.average);
+      params.tint = wb / max(wb);
+      edited += 1;
     }
-    if (options != img.tonemap_prms) {
-      img.tonemap_prms = options;
-      // TODO: implement tonemap
-      // if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
-    }
-    end_glheader(win);
-  }
-  if (begin_glheader(win, "colorgrade")) {
-    auto options = img.colorgrade_prms;
-    draw_glslider(win, "contrast", options.contrast, 0, 1);
-    draw_glslider(win, "ldr shadows", options.shadows, 0, 1);
-    draw_glslider(win, "ldr midtones", options.midtones, 0, 1);
-    draw_glslider(win, "highlights", options.highlights, 0, 1);
-    draw_glcoloredit(win, "shadows color", options.shadows_color);
-    draw_glcoloredit(win, "midtones color", options.midtones_color);
-    draw_glcoloredit(win, "highlights color", options.highlights_color);
-    if (options != img.colorgrade_prms) {
-      img.colorgrade_prms = options;
-      // TODO: implement colorgrade
-      // if (img.load_done) img.task_queue.emplace_back(app_task_type::display);
+    if (edited) {
+      image.tonemap_prms = params;
+      image.updates.push_back({"tonemap", -1});
     }
     end_glheader(win);
   }
-  if (begin_glheader(win, "inspect")) {
-    draw_gllabel(win, "image", get_filename(img.filename));
-    draw_gllabel(win, "filename", img.filename);
-    draw_gllabel(win, "outname", img.outname);
-    draw_gllabel(win, "image", "%d x %d", img.source.size().x, img.source.size().y);
-    draw_glslider(win, "zoom", img.image_scale, 0.1, 10);
-    draw_glcheckbox(win, "zoom to fit", img.zoom_to_fit);
+  if (image_ok && begin_glheader(win, "colorgrade")) {
+    auto& image = app.images[app.selected];
+    auto apply_colorgrade = image.apply_colorgrade;
+    auto params = image.colorgrade_prms;
+    auto edited = 0;
+    edited += draw_glcheckbox(win, "apply colorgrade", apply_colorgrade);
+    edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
+    edited += draw_glslider(win, "ldr shadows", params.shadows, 0, 1);
+    edited += draw_glslider(win, "ldr midtones", params.midtones, 0, 1);
+    edited += draw_glslider(win, "highlights", params.highlights, 0, 1);
+    edited += draw_glcoloredit(win, "shadows color", params.shadows_color);
+    edited += draw_glcoloredit(win, "midtones color", params.midtones_color);
+    edited += draw_glcoloredit(win, "highlights color", params.highlights_color);
+    if (edited) {
+      image.apply_colorgrade = apply_colorgrade;
+      image.colorgrade_prms = params;
+      image.updates.push_back({"colorgrade", -1});
+    }
+    end_glheader(win);
+  }
+  if (image_ok && begin_glheader(win, "inspect")) {
+    auto& image = app.images[app.selected];
+    draw_gllabel(win, "image", get_filename(image.filename));
+    draw_gllabel(win, "filename", image.filename);
+    draw_gllabel(win, "outname", image.outname);
+    draw_gllabel(win, "image", "%d x %d", image.source.size().x, image.source.size().y);
+    draw_glslider(win, "zoom", image.image_scale, 0.1, 10);
+    draw_glcheckbox(win, "zoom to fit", image.zoom_to_fit);
     auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(
-        mouse_pos, img.image_center, img.image_scale, img.source.size());
+        mouse_pos, image.image_center, image.image_scale, image.source.size());
     draw_gldragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
-    if (ij.x >= 0 && ij.x < img.source.size().x && ij.y >= 0 &&
-        ij.y < img.source.size().y) {
-      img_pixel     = img.source[{ij.x, ij.y}];
-      display_pixel = img.display[{ij.x, ij.y}];
+    if (ij.x >= 0 && ij.x < image.source.size().x && ij.y >= 0 &&
+        ij.y < image.source.size().y) {
+      img_pixel     = image.source[{ij.x, ij.y}];
+      display_pixel = image.display[{ij.x, ij.y}];
     }
     draw_glcoloredit(win, "image", img_pixel);
     draw_gldragger(win, "display", display_pixel);
-    auto img_stats = (img.load_done) ? img.source_stats : image_stats{};
+    auto img_stats = (image.load_done) ? image.source_stats : image_stats{};
     draw_gldragger(win, "image min", img_stats.min);
     draw_gldragger(win, "image max", img_stats.max);
     draw_gldragger(win, "image avg", img_stats.average);
     draw_glhistogram(win, "image histo", img_stats.histogram);
-    auto display_stats = (img.load_done) ? img.display_stats : image_stats{};
+    auto display_stats = (image.load_done) ? image.display_stats : image_stats{};
     draw_gldragger(win, "display min", display_stats.min);
     draw_gldragger(win, "display max", display_stats.max);
     draw_gldragger(win, "display avg", display_stats.average);
