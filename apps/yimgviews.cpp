@@ -125,6 +125,14 @@ void update_display(app_image& image) {
   compute_stats(image.display_stats, image.display, false);
 }
 
+void update_texture(app_image& image) {
+  if(!image.load_done) return;
+  if(!image.gl_txt) {
+    init_gltexture(image.gl_txt, image.display, false, false, false);
+  }
+  update_gltexture(image.gl_txt, image.display, false);
+}
+
 void load_image(app_image& image) {
   image.load_done = false;
   load_image(image.filename, image.source);
@@ -214,7 +222,8 @@ void draw_glwidgets(const opengl_window& win) {
     }
     if (edited) {
       image.tonemap_prms = params;
-      image.updates.push_back({"tonemap", -1});
+      update_display(image);
+      update_texture(image);
     }
     end_glheader(win);
   }
@@ -234,7 +243,8 @@ void draw_glwidgets(const opengl_window& win) {
     if (edited) {
       image.apply_colorgrade = apply_colorgrade;
       image.colorgrade_prms = params;
-      image.updates.push_back({"colorgrade", -1});
+      update_display(image);
+      update_texture(image);
     }
     end_glheader(win);
   }
