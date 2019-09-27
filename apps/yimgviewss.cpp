@@ -41,13 +41,13 @@ struct app_state {
   string outname  = "out.png";
 
   // image data
-  image<vec4f> img = {};
+  image<vec4f> source = {};
 
   // diplay data
   image<vec4f>   display = {};
   tonemap_params    tonemap_prms    = {};
   colorgrade_params colorgrade_prms = {};
-  bool              colorgrade      = false;
+  bool              apply_colorgrade      = false;
 
   // viewing properties
   vec2f image_center = zero2f;
@@ -57,11 +57,11 @@ struct app_state {
 };
 
 void update_display(app_state& app) {
-  if (app.display.size() != app.img.size()) app.display = app.img;
-  auto regions = make_regions(app.img.size(), 128);
+  if (app.display.size() != app.source.size()) app.display = app.source;
+  auto regions = make_regions(app.source.size(), 128);
   parallel_foreach(regions, [&app](const image_region& region) {
-    tonemap(app.display, app.img, region, app.tonemap_prms);
-    if (app.colorgrade) {
+    tonemap(app.display, app.source, region, app.tonemap_prms);
+    if (app.apply_colorgrade) {
       colorgrade(app.display, app.display, region, app.colorgrade_prms);
     }
   });
@@ -131,7 +131,7 @@ int main(int argc, const char* argv[]) {
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load image
-  load_image(app.filename, app.img);
+  load_image(app.filename, app.source);
   update_display(app);
 
   // run ui

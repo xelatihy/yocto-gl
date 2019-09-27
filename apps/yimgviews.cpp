@@ -31,10 +31,10 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
+#include <any>
 #include <atomic>
 #include <future>
 #include <thread>
-#include <any>
 #include <typeindex>
 using std::any;
 using std::any_cast;
@@ -54,37 +54,36 @@ struct app_image {
   string outname  = "";
 
   // image data
-  image<vec4f> source = {};
-  image<vec4f>   display = {};
+  image<vec4f> source  = {};
+  image<vec4f> display = {};
 
   // image stats
-  image_stats source_stats = {};
+  image_stats source_stats  = {};
   image_stats display_stats = {};
 
   // tonemapping values
-  tonemap_params    tonemap_prms    = {};
-  colorgrade_params colorgrade_prms = {};
-  bool apply_colorgrade = false;
+  tonemap_params    tonemap_prms     = {};
+  colorgrade_params colorgrade_prms  = {};
+  bool              apply_colorgrade = false;
 
   // computation futures
-  bool load_done = false;
-  bool display_done = false;
-  future<void> load_worker = {};
-  future<void> display_worker = {};
-  string error = "";
+  bool   load_done    = false;
+  bool   display_done = false;
+  string error        = "";
 
   // viewing properties
-  vec2f image_center = zero2f;
-  float image_scale  = 1;
-  bool  zoom_to_fit  = false;
-  opengl_texture gl_txt  = {};
+  vec2f          image_center = zero2f;
+  float          image_scale  = 1;
+  bool           zoom_to_fit  = false;
+  opengl_texture gl_txt       = {};
 };
 
 struct app_state {
   // data
-  std::deque<app_image> images;
-  int                   selected = -1;
-  std::deque<string>    errors;
+  std::deque<app_image>    images;
+  int                      selected = -1;
+  std::deque<app_image>    loading;
+  std::deque<future<void>> load_workers;
 
   // default options
   tonemap_params    tonemap_prms    = {};
@@ -125,8 +124,8 @@ void update_display(app_image& image) {
 }
 
 void update_texture(app_image& image) {
-  if(!image.load_done) return;
-  if(!image.gl_txt) {
+  if (!image.load_done) return;
+  if (!image.gl_txt) {
     init_gltexture(image.gl_txt, image.display, false, false, false);
   }
   update_gltexture(image.gl_txt, image.display, false);
@@ -134,7 +133,7 @@ void update_texture(app_image& image) {
 
 // add a new image
 void load_image_async(app_state& app, const string& filename) {
-  auto& image           = app.images.emplace_back();
+  auto& image           = app.loading.emplace_back();
   image.filename        = filename;
   image.outname         = replace_extension(filename, ".display.png");
   image.name            = get_filename(filename);
@@ -142,12 +141,13 @@ void load_image_async(app_state& app, const string& filename) {
   image.colorgrade_prms = app.colorgrade_prms;
   image.load_done       = false;
   image.display_done    = false;
-  app.selected = (int)app.images.size() - 1;
-  image.load_worker = run_async([&image]() { 
+  app.selected          = (int)app.images.size() - 1;
+  app.load_workers.push_back(run_async([&image]() {
     load_image(image.filename, image.source);
-    compute_stats(image.source_stats, image.source, is_hdr_filename(image.filename));
+    compute_stats(
+        image.source_stats, image.source, is_hdr_filename(image.filename));
     update_display(image);
-  });
+  }));
 }
 
 void close_image(app_state& app) {
@@ -157,8 +157,9 @@ void close_image(app_state& app) {
 
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         app = *(app_state*)get_gluser_pointer(win);
-  auto image_ok = !app.images.empty() && app.selected >= 0 && app.images[app.selected].load_done;
+  auto&         app      = *(app_state*)get_gluser_pointer(win);
+  auto          image_ok = !app.images.empty() && app.selected >= 0 &&
+                  app.images[app.selected].load_done;
   if (!begin_glwidgets_window(win, "yimview")) return;
   draw_glmessages(win);
   if (draw_glfiledialog(win, "load image", load_path, false, "./", "",
@@ -195,9 +196,9 @@ void draw_glwidgets(const opengl_window& win) {
       win, "image", app.selected, (int)app.images.size(),
       [&app](int idx) { return app.images[idx].name.c_str(); }, false);
   if (image_ok && begin_glheader(win, "tonemap")) {
-    auto& image = app.images[app.selected];
-    auto params = image.tonemap_prms;
-    auto edited = 0;
+    auto& image  = app.images[app.selected];
+    auto  params = image.tonemap_prms;
+    auto  edited = 0;
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
     edited += draw_glcoloredit(win, "tint", params.tint);
     edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
@@ -208,7 +209,7 @@ void draw_glwidgets(const opengl_window& win) {
     edited += draw_glcheckbox(win, "srgb", params.srgb);
     continue_glline(win);
     if (draw_glbutton(win, "auto wb")) {
-      auto wb      = 1 / xyz(image.source_stats.average);
+      auto wb     = 1 / xyz(image.source_stats.average);
       params.tint = wb / max(wb);
       edited += 1;
     }
@@ -220,10 +221,10 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "colorgrade")) {
-    auto& image = app.images[app.selected];
-    auto apply_colorgrade = image.apply_colorgrade;
-    auto params = image.colorgrade_prms;
-    auto edited = 0;
+    auto& image            = app.images[app.selected];
+    auto  apply_colorgrade = image.apply_colorgrade;
+    auto  params           = image.colorgrade_prms;
+    auto  edited           = 0;
     edited += draw_glcheckbox(win, "apply colorgrade", apply_colorgrade);
     edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
     edited += draw_glslider(win, "ldr shadows", params.shadows, 0, 1);
@@ -231,10 +232,11 @@ void draw_glwidgets(const opengl_window& win) {
     edited += draw_glslider(win, "highlights", params.highlights, 0, 1);
     edited += draw_glcoloredit(win, "shadows color", params.shadows_color);
     edited += draw_glcoloredit(win, "midtones color", params.midtones_color);
-    edited += draw_glcoloredit(win, "highlights color", params.highlights_color);
+    edited += draw_glcoloredit(
+        win, "highlights color", params.highlights_color);
     if (edited) {
       image.apply_colorgrade = apply_colorgrade;
-      image.colorgrade_prms = params;
+      image.colorgrade_prms  = params;
       update_display(image);
       update_texture(image);
     }
@@ -245,7 +247,8 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "image", get_filename(image.filename));
     draw_gllabel(win, "filename", image.filename);
     draw_gllabel(win, "outname", image.outname);
-    draw_gllabel(win, "image", "%d x %d", image.source.size().x, image.source.size().y);
+    draw_gllabel(
+        win, "image", "%d x %d", image.source.size().x, image.source.size().y);
     draw_glslider(win, "zoom", image.image_scale, 0.1, 10);
     draw_glcheckbox(win, "zoom to fit", image.zoom_to_fit);
     auto mouse_pos = get_glmouse_pos(win);
@@ -265,7 +268,8 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gldragger(win, "image max", img_stats.max);
     draw_gldragger(win, "image avg", img_stats.average);
     draw_glhistogram(win, "image histo", img_stats.histogram);
-    auto display_stats = (image.load_done) ? image.display_stats : image_stats{};
+    auto display_stats = (image.load_done) ? image.display_stats
+                                           : image_stats{};
     draw_gldragger(win, "display min", display_stats.min);
     draw_gldragger(win, "display max", display_stats.max);
     draw_gldragger(win, "display avg", display_stats.average);
@@ -284,10 +288,11 @@ void draw(const opengl_window& win) {
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  auto image_ok = !app.images.empty() && app.selected >= 0 && app.images[app.selected].load_done;
-  if(image_ok) {
+  auto image_ok = !app.images.empty() && app.selected >= 0 &&
+                  app.images[app.selected].load_done;
+  if (image_ok) {
     auto& image = app.images.at(app.selected);
-    if(!image.gl_txt) update_texture(image);
+    if (!image.gl_txt) update_texture(image);
     update_imview(image.image_center, image.image_scale, image.display.size(),
         win_size, image.zoom_to_fit);
     draw_glimage_background(image.gl_txt, win_size.x, win_size.y,
@@ -304,18 +309,33 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
-  for(auto& image : app.images) {
+#if 0
+  for (auto& image : app.images) {
     if (is_valid(image.load_worker)) {
-      if(!is_ready(image.load_worker)) return;
+      if (!is_ready(image.load_worker)) return;
       try {
         image.load_worker.get();
         image.load_done = true;
-      } catch(const std::exception& e) {
+      } catch (const std::exception& e) {
         push_glmessage(win, "cannot load image " + image.filename);
         log_glinfo(win, "cannot load image " + image.filename);
         log_glinfo(win, e.what());
         break;
       }
+    }
+  }
+#endif
+  for (auto idx = 0; idx < app.load_workers.size(); idx++) {
+    if (!is_ready(app.load_workers[idx])) return;
+    try {
+      app.load_workers[idx].get();
+      app.loading[idx].load_done = true;
+      app.images.push_back(app.loading[idx]);
+    } catch (const std::exception& e) {
+      push_glmessage(win, "cannot load image " + app.loading[idx].filename);
+      log_glinfo(win, "cannot load image " + app.loading[idx].filename);
+      log_glinfo(win, e.what());
+      break;
     }
   }
 }
@@ -379,7 +399,6 @@ int main(int argc, const char* argv[]) {
 
   // loading images
   for (auto filename : filenames) load_image_async(app, filename);
-  app.selected = 0;
 
   // run ui
   run_ui(app);
