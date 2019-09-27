@@ -71,7 +71,6 @@ struct app_image {
   bool display_done = false;
   future<void> load_worker = {};
   future<void> display_worker = {};
-  deque<pair<string, int>> updates = {};
   string error = "";
 
   // viewing properties
@@ -133,16 +132,8 @@ void update_texture(app_image& image) {
   update_gltexture(image.gl_txt, image.display, false);
 }
 
-void load_image(app_image& image) {
-  image.load_done = false;
-  load_image(image.filename, image.source);
-  compute_stats(image.source_stats, image.source, is_hdr_filename(image.filename));
-  update_display(image);
-  image.load_done = true;
-}
-
 // add a new image
-void add_new_image(app_state& app, const string& filename) {
+void load_image_async(app_state& app, const string& filename) {
   auto& image           = app.images.emplace_back();
   image.filename        = filename;
   image.outname         = replace_extension(filename, ".display.png");
@@ -151,8 +142,12 @@ void add_new_image(app_state& app, const string& filename) {
   image.colorgrade_prms = app.colorgrade_prms;
   image.load_done       = false;
   image.display_done    = false;
-  image.load_worker = run_async([&image]() { load_image(image); });
   app.selected = (int)app.images.size() - 1;
+  image.load_worker = run_async([&image]() { 
+    load_image(image.filename, image.source);
+    compute_stats(image.source_stats, image.source, is_hdr_filename(image.filename));
+    update_display(image);
+  });
 }
 
 void close_image(app_state& app) {
@@ -168,7 +163,7 @@ void draw_glwidgets(const opengl_window& win) {
   draw_glmessages(win);
   if (draw_glfiledialog(win, "load image", load_path, false, "./", "",
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    add_new_image(app, load_path);
+    load_image_async(app, load_path);
   }
   if (draw_glfiledialog(win, "save image", save_path, true,
           get_dirname(save_path), get_filename(save_path),
@@ -327,7 +322,7 @@ void update(const opengl_window& win, app_state& app) {
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
   auto& app = *(app_state*)get_gluser_pointer(win);
-  for (auto path : paths) add_new_image(app, path);
+  for (auto path : paths) load_image_async(app, path);
 }
 
 void run_ui(app_state& app) {
@@ -383,7 +378,7 @@ int main(int argc, const char* argv[]) {
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // loading images
-  for (auto filename : filenames) add_new_image(app, filename);
+  for (auto filename : filenames) load_image_async(app, filename);
   app.selected = 0;
 
   // run ui
