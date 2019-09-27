@@ -292,18 +292,18 @@ void draw(const opengl_window& win) {
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.images.empty() && app.selected >= 0) {
-    auto& img = app.images.at(app.selected);
-    if (img.load_done && img.gl_txt) {
-      update_imview(img.image_center, img.image_scale, img.display.size(),
-          win_size, img.zoom_to_fit);
-      draw_glimage_background(img.gl_txt, win_size.x, win_size.y,
-          img.image_center, img.image_scale);
-      set_glblending(true);
-      draw_glimage(img.gl_txt, win_size.x, win_size.y, img.image_center,
-          img.image_scale);
-      set_glblending(false);
-    }
+  auto image_ok = !app.images.empty() && app.selected >= 0 && app.images[app.selected].load_done;
+  if(image_ok) {
+    auto& image = app.images.at(app.selected);
+    if(!image.gl_txt) update_texture(image);
+    update_imview(image.image_center, image.image_scale, image.display.size(),
+        win_size, image.zoom_to_fit);
+    draw_glimage_background(image.gl_txt, win_size.x, win_size.y,
+        image.image_center, image.image_scale);
+    set_glblending(true);
+    draw_glimage(image.gl_txt, win_size.x, win_size.y, image.image_center,
+        image.image_scale);
+    set_glblending(false);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
