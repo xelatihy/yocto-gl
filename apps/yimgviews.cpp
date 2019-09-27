@@ -155,6 +155,11 @@ void add_new_image(app_state& app, const string& filename) {
   app.selected = (int)app.images.size() - 1;
 }
 
+void close_image(app_state& app) {
+  app.images.erase(app.images.begin() + app.selected);
+  app.selected = app.images.empty() ? -1 : 0;
+}
+
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
   auto&         app = *(app_state*)get_gluser_pointer(win);
@@ -191,8 +196,7 @@ void draw_glwidgets(const opengl_window& win) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", app.selected >= 0)) {
-    // auto& img = app.images.at(app.selected);
-    // TODO: implement close here
+    close_image(app);
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
