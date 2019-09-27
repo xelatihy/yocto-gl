@@ -324,13 +324,6 @@ void update(const opengl_window& win, app_state& app) {
         log_glinfo(win, e.what());
       }
     }
-    if (!image.load_done) return;
-    if (image.gl_txt.size != image.source.size()) {
-      init_gltexture(image.gl_txt, image.display, false, false, false);
-    }
-    if (image.updates.empty()) return;
-    update_display(image);
-    update_gltexture(image.gl_txt, image.display, false);
   }
 }
 
