@@ -133,7 +133,7 @@ void draw_glwidgets(const opengl_window& win) {
     if (draw_glbutton(win, "quit")) set_glwindow_close(win, true);
     end_glheader(win);
   }
-  if (begin_glheader(win, "tonemap")) {
+  if (app.load_done && begin_glheader(win, "tonemap")) {
     auto& tonemap = app.tonemap_prms;
     auto  edited  = 0;
     edited += (int)draw_glslider(win, "exposure", tonemap.exposure, -5, 5);
@@ -153,7 +153,7 @@ void draw_glwidgets(const opengl_window& win) {
     if (edited) app.updates.push_back({"tonemap", -1});
     end_glheader(win);
   }
-  if (begin_glheader(win, "colorgrade")) {
+  if (app.load_done && begin_glheader(win, "colorgrade")) {
     auto& colorgrade = app.colorgrade_prms;
     auto  edited     = 0;
     edited += (int)draw_glcheckbox(win, "enable colorgrade", app.colorgrade);
@@ -172,7 +172,7 @@ void draw_glwidgets(const opengl_window& win) {
     if (edited) app.updates.push_back({"colorgrade", -1});
     end_glheader(win);
   }
-  if (begin_glheader(win, "inspect")) {
+  if (app.load_done && begin_glheader(win, "inspect")) {
     draw_glslider(win, "zoom", app.image_scale, 0.1, 10);
     draw_glcheckbox(win, "zoom to fit", app.zoom_to_fit);
     auto mouse_pos = get_glmouse_pos(win);
