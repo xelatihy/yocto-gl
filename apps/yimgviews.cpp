@@ -44,9 +44,9 @@ struct image_stats {
 
 struct app_state {
   // original data
-  string name     = "";
-  string filename = "";
-  string outname  = "";
+  string name     = "image";
+  string filename = "image.png";
+  string outname  = "out.png";
 
   // image data
   image<vec4f> img = {};
@@ -70,6 +70,9 @@ struct app_state {
 
   // computation
   deque<pair<string, int>> updates = {};
+  bool load_done = false;
+  string error = "";
+  std::future<void> worker = {};
 };
 
 // compute min/max
@@ -108,17 +111,20 @@ void update_display(app_state& app) {
 void draw_glwidgets(const opengl_window& win) {
   auto& app = *(app_state*)get_gluser_pointer(win);
   if (!begin_glwidgets_window(win, "yimview")) return;
-  if (draw_glbutton(win, "save")) {
-    // TODO: save
-    // app.images[app.selected].outname;
+  if (begin_glheader(win, "yimview")) {
+    draw_gllabel(win, "image",
+        get_filename(app.filename) + " @ " + to_string(app.img.size().x) + " x " +
+            to_string(app.img.size().y));
+    draw_gllabel(win, "filename", app.filename);
+    draw_gllabel(win, "outname", app.outname);
+    if (draw_glbutton(win, "save")) {
+      // TODO: save
+      // app.images[app.selected].outname;
+    }
+    continue_glline(win);
+    if (draw_glbutton(win, "quit")) set_glwindow_close(win, true);
+    end_glheader(win);
   }
-  continue_glline(win);
-  if (draw_glbutton(win, "quit")) set_glwindow_close(win, true);
-  draw_gllabel(win, "image",
-      get_filename(app.filename) + " @ " + to_string(app.img.size().x) + " x " +
-          to_string(app.img.size().y));
-  draw_gllabel(win, "filename", app.filename);
-  draw_gllabel(win, "outname", app.outname);
   if (begin_glheader(win, "tonemap")) {
     auto& tonemap = app.tonemap_prms;
     auto  edited  = 0;
@@ -208,7 +214,9 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
-  if (!app.gl_txt) init_gltexture(app.gl_txt, app.display, false, false, false);
+  if (app.gl_txt.size != app.img.size()) {
+    init_gltexture(app.gl_txt, app.display, false, false, false);
+  }
   if (app.updates.empty()) return;
   update_display(app);
   update_gltexture(app.gl_txt, app.display, false);
