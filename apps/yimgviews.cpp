@@ -69,10 +69,10 @@ struct app_state {
   bool  zoom_to_fit  = false;
 
   // computation
-  deque<pair<string, int>> updates = {};
-  bool load_done = false;
-  string error = "";
-  std::future<void> worker = {};
+  deque<pair<string, int>> updates     = {};
+  bool                     load_done   = false;
+  string                   error       = "";
+  std::future<void>        load_worker = {};
 };
 
 // compute min/max
@@ -108,13 +108,21 @@ void update_display(app_state& app) {
   compute_stats(app.display_stats, app.display, false);
 }
 
+void load_image(app_state& app) {
+  app.load_done = false;
+  load_image(app.filename, app.img);
+  compute_stats(app.image_stats, app.img, is_hdr_filename(app.filename));
+  update_display(app);
+  app.load_done = true;
+}
+
 void draw_glwidgets(const opengl_window& win) {
   auto& app = *(app_state*)get_gluser_pointer(win);
   if (!begin_glwidgets_window(win, "yimview")) return;
   if (begin_glheader(win, "yimview")) {
     draw_gllabel(win, "image",
-        get_filename(app.filename) + " @ " + to_string(app.img.size().x) + " x " +
-            to_string(app.img.size().y));
+        get_filename(app.filename) + " @ " + to_string(app.img.size().x) +
+            " x " + to_string(app.img.size().y));
     draw_gllabel(win, "filename", app.filename);
     draw_gllabel(win, "outname", app.outname);
     if (draw_glbutton(win, "save")) {
@@ -189,6 +197,10 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glhistogram(win, "display histo", app.display_stats.histogram);
     end_glheader(win);
   }
+  if (begin_glheader(win, "log")) {
+    draw_gllog(win);
+    end_glheader(win);
+  }
 }
 
 void draw(const opengl_window& win) {
@@ -214,6 +226,18 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
+  if (is_valid(app.load_worker)) {
+    if(!is_ready(app.load_worker)) return;
+    try {
+      app.load_worker.get();
+      app.load_done = true;
+    } catch(const std::exception& e) {
+      app.error = "cannot load image "s + e.what();
+      log_glinfo(win, "cannot load image " + app.filename);
+      log_glinfo(win, e.what());
+    }
+  }
+  if (!app.load_done) return;
   if (app.gl_txt.size != app.img.size()) {
     init_gltexture(app.gl_txt, app.display, false, false, false);
   }
@@ -273,19 +297,7 @@ int main(int argc, const char* argv[]) {
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load image
-  try {
-    auto timer = print_timed("loading image");
-    load_image(app.filename, app.img);
-    compute_stats(app.image_stats, app.img, is_hdr_filename(app.filename));
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
-  }
-
-  // update display
-  {
-    auto timer = print_timed("updating display");
-    update_display(app);
-  }
+  app.load_worker = run_async([&app]() { load_image(app); });
 
   // run ui
   run_ui(app);
