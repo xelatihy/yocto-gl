@@ -135,10 +135,10 @@ void update_texture(app_image& image) {
 
 void load_image(app_image& image) {
   image.load_done = false;
-    load_image(image.filename, image.source);
-    compute_stats(image.source_stats, image.source, is_hdr_filename(image.filename));
-    update_display(image);
-    image.load_done = true;
+  load_image(image.filename, image.source);
+  compute_stats(image.source_stats, image.source, is_hdr_filename(image.filename));
+  update_display(image);
+  image.load_done = true;
 }
 
 // add a new image
@@ -319,6 +319,7 @@ void update(const opengl_window& win, app_state& app) {
         push_glmessage(win, "cannot load image " + image.filename);
         log_glinfo(win, "cannot load image " + image.filename);
         log_glinfo(win, e.what());
+        break;
       }
     }
   }

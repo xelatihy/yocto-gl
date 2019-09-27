@@ -827,7 +827,14 @@ bool draw_glmessage(
 string _message_text = {};
 deque<string> _message_queue = {};
 std::mutex         _message_mutex;
+void push_glmessage(const string& message) {
+  printf("message %s\n", message.c_str());
+  std::lock_guard lock(_message_mutex);
+  _message_queue.push_back(message);
+  printf("message %s\n", message.c_str());
+}
 void push_glmessage(const opengl_window& win, const string& message) {
+  printf("message %s\n", message.c_str());
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
