@@ -90,10 +90,7 @@ void draw(const opengl_window& win) {
 void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yimview", &app, draw);
-
-  // init widgets
-  init_glwidgets(win);
+  init_glwindow(win, {1280, 720}, "yimview", &app, draw);
 
   // window values
   auto mouse_pos = zero2f, last_pos = zero2f;
@@ -102,13 +99,12 @@ void run_ui(app_state& app) {
     mouse_pos           = get_glmouse_pos(win);
     auto mouse_left     = get_glmouse_left(win);
     auto mouse_right    = get_glmouse_right(win);
-    auto widgets_active = get_glwidgets_active(win);
 
     // handle mouse
-    if (mouse_left && !widgets_active) {
+    if (mouse_left) {
       app.image_center += mouse_pos - last_pos;
     }
-    if (mouse_right && !widgets_active) {
+    if (mouse_right) {
       app.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
