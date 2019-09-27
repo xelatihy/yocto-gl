@@ -119,6 +119,13 @@ void load_image(app_state& app) {
 void draw_glwidgets(const opengl_window& win) {
   auto& app = *(app_state*)get_gluser_pointer(win);
   if (!begin_glwidgets_window(win, "yimview")) return;
+  if(!app.error.empty()) {
+    if(!is_glmodal_open(win, "error")) {
+      open_glmodal(win, "error");
+    } else if (!draw_glmessage(win, "error", app.error)) {
+      app.error = "";
+    }
+  }
   if (begin_glheader(win, "yimview")) {
     draw_gllabel(win, "image",
         get_filename(app.filename) + " @ " + to_string(app.img.size().x) +

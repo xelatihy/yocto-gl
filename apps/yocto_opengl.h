@@ -259,7 +259,7 @@ void open_glmodal(const opengl_window& win, const char* lbl);
 void clear_glmodal(const opengl_window& win);
 bool begin_glmodal(const opengl_window& win, const char* lbl);
 void end_glmodal(const opengl_window& win);
-bool is_glmodal_open(const opengl_window& win);
+bool is_glmodal_open(const opengl_window& win, const char* lbl);
 
 bool draw_glmessage(
     const opengl_window& win, const char* lbl, const string& message);
