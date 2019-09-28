@@ -32,7 +32,7 @@
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
-#include "ysceneui.h"
+#include "ysceneuit.h"
 using namespace yocto;
 
 #include <atomic>

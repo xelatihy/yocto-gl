@@ -32,7 +32,7 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
-#include "ysceneui.h"
+#include "ysceneuiv.h"
 
 #include <atomic>
 #include <future>
