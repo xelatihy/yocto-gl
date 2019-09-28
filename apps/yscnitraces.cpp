@@ -330,23 +330,30 @@ void draw_glwidgets(const opengl_window& win) {
   }
 }
 
+void update_texture(app_scene& scene) {
+  if (!scene.gl_txt) {
+    init_gltexture(scene.gl_txt, scene.display, false, false, false);
+  }
+  update_gltexture(scene.gl_txt, scene.display, false);
+}
+
 void draw(const opengl_window& win) {
   auto& app      = *(app_state*)get_gluser_pointer(win);
   auto  win_size = get_glwindow_size(win);
-  set_glviewport(get_glframebuffer_viewport(win));
+  auto  fb_view  = get_glframebuffer_viewport(win);
+  set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.scenes.empty() && app.selected >= 0) {
-    auto& scn = app.scenes.at(app.selected);
-    if (scn.gl_txt) {
-      update_imview(scn.image_center, scn.image_scale, scn.display.size(),
-          win_size, scn.zoom_to_fit);
-      draw_glimage_background(scn.gl_txt, win_size.x, win_size.y,
-          scn.image_center, scn.image_scale);
-      set_glblending(true);
-      draw_glimage(scn.gl_txt, win_size.x, win_size.y, scn.image_center,
-          scn.image_scale);
-      set_glblending(false);
-    }
+    auto& scene = app.scenes.at(app.selected);
+    if (!scene.gl_txt) update_texture(scene);
+    update_imview(scene.image_center, scene.image_scale, scene.display.size(),
+        win_size, scene.zoom_to_fit);
+    draw_glimage_background(scene.gl_txt, win_size.x, win_size.y,
+        scene.image_center, scene.image_scale);
+    set_glblending(true);
+    draw_glimage(scene.gl_txt, win_size.x, win_size.y, scene.image_center,
+        scene.image_scale);
+    set_glblending(false);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -464,6 +471,18 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
 }
 
 void update(const opengl_window& win, app_state& app) {
+  for (auto idx = 0; idx < app.load_workers.size(); idx++) {
+    if (!is_ready(app.load_workers[idx])) return;
+    try {
+      app.load_workers[idx].get();
+      app.scenes.push_back(app.loading[idx]);
+    } catch (const std::exception& e) {
+      push_glmessage(win, "cannot load scene " + app.loading[idx].filename);
+      log_glinfo(win, "cannot load scene " + app.loading[idx].filename);
+      log_glinfo(win, e.what());
+      break;
+    }
+  }
   #if 0
   // close if needed
   while (!app.scenes.empty()) {

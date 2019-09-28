@@ -275,8 +275,7 @@ void draw(const opengl_window& win) {
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  auto image_ok = !app.images.empty() && app.selected >= 0;
-  if (image_ok) {
+  if (!app.images.empty() && app.selected >= 0) {
     auto& image = app.images.at(app.selected);
     if (!image.gl_txt) update_texture(image);
     update_imview(image.image_center, image.image_scale, image.display.size(),
