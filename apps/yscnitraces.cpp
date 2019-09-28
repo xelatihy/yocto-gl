@@ -44,43 +44,6 @@ namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
 };  // namespace yocto
 
-// Application task
-enum struct app_task_type {
-  none,
-  load_scene,
-  load_element,
-  build_bvh,
-  refit_bvh,
-  init_lights,
-  render_image,
-  apply_edit,
-  save_image,
-  save_scene,
-  close_scene
-};
-
-struct app_task {
-  app_task_type            type;
-  std::future<void>        result;
-  std::atomic<bool>        stop;
-  std::atomic<int>         current;
-  std::deque<image_region> queue;
-  std::mutex               queuem;
-  app_edit                 edit;
-
-  app_task(app_task_type type, const app_edit& edit = {})
-      : type{type}, result{}, stop{false}, current{-1}, edit{edit} {}
-  ~app_task() {
-    stop = true;
-    if (result.valid()) {
-      try {
-        result.get();
-      } catch (...) {
-      }
-    }
-  }
-};
-
 // Application scene
 struct app_scene {
   // loading options
@@ -118,19 +81,18 @@ struct app_scene {
   bool           navigation_fps = false;
   opengl_texture gl_txt         = {};
 
-  // tasks
-  bool load_done = false, bvh_done = false, lights_done = false,
-       render_done = false;
-  std::deque<app_task> task_queue;
-  app_selection        selection = {typeid(void), -1};
+  // editing
+  app_selection selection = {typeid(void), -1};
 };
 
 // Application state
 struct app_state {
   // data
-  std::deque<app_scene> scenes;
-  int                   selected = -1;
-  std::deque<string>    errors;
+  std::deque<app_scene>    scenes;
+  int                      selected = -1;
+  std::deque<string>       errors;
+  std::deque<app_scene>    loading;
+  std::deque<future<void>> load_workers;
 
   // default options
   load_params    load_prms    = {};
@@ -204,20 +166,32 @@ void update_app_render(const string& filename, image<vec4f>& render,
   }
 }
 
-void add_new_scene(app_state& app, const string& filename) {
-  auto& scn        = app.scenes.emplace_back();
-  scn.filename     = filename;
-  scn.imagename    = replace_extension(filename, ".png");
-  scn.outname      = replace_extension(filename, ".edited.yaml");
-  scn.name         = get_filename(scn.filename);
-  scn.load_prms    = app.load_prms;
-  scn.save_prms    = app.save_prms;
-  scn.trace_prms   = app.trace_prms;
-  scn.bvh_prms     = app.bvh_prms;
-  scn.tonemap_prms = app.tonemap_prms;
-  scn.add_skyenv   = app.add_skyenv;
-  scn.task_queue.emplace_back(app_task_type::load_scene);
-  app.selected = (int)app.scenes.size() - 1;
+void load_scene_async(app_state& app, const string& filename) {
+  auto& scene        = app.loading.emplace_back();
+  scene.filename     = filename;
+  scene.imagename    = replace_extension(filename, ".png");
+  scene.outname      = replace_extension(filename, ".edited.yaml");
+  scene.name         = get_filename(scene.filename);
+  scene.load_prms    = app.load_prms;
+  scene.save_prms    = app.save_prms;
+  scene.trace_prms   = app.trace_prms;
+  scene.bvh_prms     = app.bvh_prms;
+  scene.tonemap_prms = app.tonemap_prms;
+  scene.add_skyenv   = app.add_skyenv;
+  app.load_workers.push_back(run_async([&scene]() {
+    load_scene(scene.filename, scene.scene);
+    make_bvh(scene.bvh, scene.scene, scene.bvh_prms);
+    make_trace_lights(scene.lights, scene.scene);
+    scene.image_size = camera_resolution(
+        scene.scene.cameras[scene.trace_prms.camera],
+        scene.trace_prms.resolution);
+    scene.render.resize(scene.image_size);
+    scene.display.resize(scene.image_size);
+    scene.preview.resize(scene.image_size);
+    scene.name = get_filename(scene.filename) + " [" +
+                 std::to_string(scene.render.size().x) + "x" +
+                 std::to_string(scene.render.size().y) + " @ 0]";
+  }));
 }
 
 void draw_glwidgets(const opengl_window& win) {
@@ -234,40 +208,37 @@ void draw_glwidgets(const opengl_window& win) {
   }
   if (draw_glfiledialog(
           win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
-    add_new_scene(app, load_path);
+    load_scene_async(app, load_path);
   }
   if (draw_glfiledialog(win, "save", save_path, true, get_dirname(save_path),
           get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
     app.scenes[app.selected].outname = save_path;
-    app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_scene);
+    // TODO: support save
     save_path = "";
   }
   if (draw_glfiledialog(win, "save image", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     app.scenes[app.selected].imagename = save_path;
-    app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_image);
+    // TODO: support save
     save_path = "";
   }
   if (draw_glbutton(win, "load")) {
     open_glmodal(win, "load");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "save",
-          app.selected >= 0 && app.scenes[app.selected].task_queue.empty())) {
+  if (draw_glbutton(win, "save", app.selected >= 0)) {
     save_path = app.scenes[app.selected].outname;
     open_glmodal(win, "save");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "save image",
-          app.selected >= 0 && app.scenes[app.selected].render_done)) {
+  if (draw_glbutton(win, "save image", app.selected >= 0)) {
     save_path = app.scenes[app.selected].imagename;
     open_glmodal(win, "save image");
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", app.selected >= 0)) {
-    app.scenes[app.selected].task_queue.emplace_back(
-        app_task_type::close_scene);
+    // TODO: support close
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
@@ -282,10 +253,7 @@ void draw_glwidgets(const opengl_window& win) {
     auto cam_names = vector<string>();
     for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.name);
     auto trace_prms = scn.trace_prms;
-    if (scn.load_done) {
-      if (draw_glcombobox(win, "camera", trace_prms.camera, cam_names)) {
-      }
-    }
+    draw_glcombobox(win, "camera", trace_prms.camera, cam_names);
     draw_glslider(win, "resolution", trace_prms.resolution, 180, 4096);
     draw_glslider(win, "nsamples", trace_prms.samples, 16, 4096);
     draw_glcombobox(
@@ -304,12 +272,10 @@ void draw_glwidgets(const opengl_window& win) {
     continue_glline(win);
     draw_glcheckbox(win, "srgb", tonemap_prms.srgb);
     if (trace_prms != scn.trace_prms) {
-      scn.task_queue.emplace_back(app_task_type::apply_edit,
-          app_edit{typeid(trace_params), -1, trace_prms, false});
+      // TODO: support edit
     }
     if (tonemap_prms != scn.tonemap_prms) {
-      scn.task_queue.emplace_back(app_task_type::apply_edit,
-          app_edit{typeid(tonemap_params), -1, tonemap_prms, false});
+      // TODO: support edit
     }
     end_glheader(win);
   }
@@ -347,14 +313,14 @@ void draw_glwidgets(const opengl_window& win) {
     }
     end_glheader(win);
   }
-  if (scn.load_done && begin_glheader(win, "scene tree")) {
+  if (begin_glheader(win, "scene tree")) {
     draw_glscenetree(win, "", scn.scene, scn.selection, 200);
     end_glheader(win);
   }
-  if (scn.load_done && begin_glheader(win, "scene object")) {
+  if (begin_glheader(win, "scene object")) {
     auto edit = app_edit{};
     if (draw_glsceneinspector(win, "", scn.scene, scn.selection, edit, 200)) {
-      scn.task_queue.emplace_back(app_task_type::apply_edit, edit);
+      // TODO: support edit
     }
     end_glheader(win);
   }
@@ -371,7 +337,7 @@ void draw(const opengl_window& win) {
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.scenes.empty() && app.selected >= 0) {
     auto& scn = app.scenes.at(app.selected);
-    if (scn.load_done && scn.gl_txt) {
+    if (scn.gl_txt) {
       update_imview(scn.image_center, scn.image_scale, scn.display.size(),
           win_size, scn.zoom_to_fit);
       draw_glimage_background(scn.gl_txt, win_size.x, win_size.y,
@@ -498,6 +464,7 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
 }
 
 void update(const opengl_window& win, app_state& app) {
+  #if 0
   // close if needed
   while (!app.scenes.empty()) {
     auto pos = -1;
@@ -825,11 +792,12 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::apply_edit: break;
     }
   }
+  #endif
 }
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
   auto& app = *(app_state*)get_gluser_pointer(win);
-  for (auto& path : paths) add_new_scene(app, path);
+  for (auto& path : paths) load_scene_async(app, path);
 }
 
 // run ui loop
@@ -854,8 +822,7 @@ void run_ui(app_state& app) {
     auto widgets_active = get_glwidgets_active(win);
 
     // handle mouse and keyboard for navigation
-    if (app.selected >= 0 && app.scenes[app.selected].load_done &&
-        (mouse_left || mouse_right) && !alt_down && !widgets_active) {
+    if (app.selected >= 0 && (mouse_left || mouse_right) && !alt_down && !widgets_active) {
       auto& scn        = app.scenes[app.selected];
       auto& old_camera = scn.scene.cameras.at(scn.trace_prms.camera);
       auto  camera     = scn.scene.cameras.at(scn.trace_prms.camera);
@@ -870,14 +837,12 @@ void run_ui(app_state& app) {
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       if (camera.frame != old_camera.frame ||
           camera.focus != old_camera.focus) {
-        scn.task_queue.emplace_back(app_task_type::apply_edit,
-            app_edit{
-                typeid(yocto_camera), scn.trace_prms.camera, camera, false});
+            // TODO: support edits
       }
     }
 
     // selection
-    if (app.selected >= 0 && app.scenes[app.selected].load_done &&
+    if (app.selected >= 0 &&
         (mouse_left || mouse_right) && alt_down && !widgets_active) {
       auto& scn = app.scenes[app.selected];
       auto  ij  = get_image_coords(
@@ -973,8 +938,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // loading images
-  for (auto filename : filenames) add_new_scene(app, filename);
-  app.selected = app.scenes.empty() ? -1 : 0;
+  for (auto filename : filenames) load_scene_async(app, filename);
 
   // run interactive
   run_ui(app);
