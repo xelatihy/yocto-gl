@@ -138,11 +138,6 @@ void load_image_async(app_state& app, const string& filename) {
   }));
 }
 
-void close_image(app_state& app) {
-  app.images.erase(app.images.begin() + app.selected);
-  app.selected = app.images.empty() ? -1 : 0;
-}
-
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
   auto&         app      = *(app_state*)get_gluser_pointer(win);
@@ -171,7 +166,8 @@ void draw_glwidgets(const opengl_window& win) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", image_ok)) {
-    close_image(app);
+    app.images.erase(app.images.begin() + app.selected);
+    app.selected = app.images.empty() ? -1 : 0;
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
@@ -300,36 +296,37 @@ void update(const opengl_window& win, app_state& app) {
     if (image.render_region < image.render_regions.size()) {
       auto num_regions = min(
           12, image.render_regions.size() - image.render_region);
-      parallel_for(image.render_region, image.render_region + num_regions,
-          [&image](int region_id) {
+      parallel_for(num_regions, [&image](int idx) {
+            auto& region = image.render_regions[image.render_region + idx];
             tonemap(image.display, image.source,
-                image.render_regions[region_id], image.tonemap_prms);
+                image.render_regions[image.render_region + idx], image.tonemap_prms);
             if (image.apply_colorgrade) {
               colorgrade(image.display, image.display,
-                  image.render_regions[region_id], image.colorgrade_prms);
+                  region, image.colorgrade_prms);
             }
           });
       if (!image.gl_txt || image.gl_txt.size != image.display.size()) {
         init_gltexture(image.gl_txt, image.display, false, false, false);
       } else {
-        update_gltexture(image.gl_txt, image.display, false);
+        for(auto idx = 0; idx < num_regions; idx++)
+        update_gltexture_region(image.gl_txt, image.display, 
+          image.render_regions[image.render_region + idx], false);
       }
+      image.render_region += num_regions;
     } else if (image.render_stats) {
       compute_stats(image.display_stats, image.display, false);
     }
   }
 }
 
-void drop_callback(const opengl_window& win, const vector<string>& paths) {
-  auto& app = *(app_state*)get_gluser_pointer(win);
-  for (auto path : paths) load_image_async(app, path);
-}
-
 void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yimview", &app, draw);
-  set_drop_glcallback(win, drop_callback);
+  set_drop_glcallback(win, [](const opengl_window& win, const vector<string>& paths){
+    auto& app = *(app_state*)get_gluser_pointer(win);
+    for (auto path : paths) load_image_async(app, path);
+  });
 
   // init widgets
   init_glwidgets(win);

@@ -598,12 +598,18 @@ void update(const opengl_window& win, app_state& app) {
             tonemap(scene.display, scene.render,
                 scene.render_regions[region_id], scene.tonemap_prms);
           });
+      if (!scene.gl_txt || scene.gl_txt.size != scene.display.size()) {
+        init_gltexture(scene.gl_txt, scene.display, false, false, false);
+      } else {
+        for(auto idx = 0; idx < num_regions; idx++)
+        update_gltexture_region(scene.gl_txt, scene.display, 
+          scene.render_regions[scene.render_region + idx], false);
+      }
       scene.render_region += num_regions;
       if (scene.render_region >= scene.render_regions.size()) {
         scene.render_region = 0;
         scene.render_sample += 1;
       }
-      update_gltexture(scene.gl_txt, scene.display, false);
     }
   }
 #if 0
