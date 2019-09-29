@@ -130,6 +130,7 @@ void start_render_async(app_scene& scene) {
   });
 }
 void stop_render_async(app_scene& scene) {
+  if(!is_valid(*scene.render_worker)) return;
   *scene.render_stop = true;
   scene.render_worker->get();
 }
