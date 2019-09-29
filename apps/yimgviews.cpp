@@ -35,7 +35,7 @@ using namespace yocto;
 #include <future>
 #include <thread>
 
-struct app_states {
+struct app_state {
   // original data
   string filename = "image.png";
   string outname  = "out.png";
@@ -56,41 +56,41 @@ struct app_states {
   opengl_texture gl_txt       = {};
 };
 
-void update_display(app_states& app) {
-  if (app.display.size() != app.source.size()) app.display = app.source;
-  auto regions = make_regions(app.source.size(), 128);
-  parallel_foreach(regions, [&app](const image_region& region) {
-    tonemap(app.display, app.source, region, app.tonemap_prms);
-    if (app.apply_colorgrade) {
-      colorgrade(app.display, app.display, region, app.colorgrade_prms);
+void update_display(app_state& state) {
+  if (state.display.size() != state.source.size()) state.display = state.source;
+  auto regions = make_regions(state.source.size(), 128);
+  parallel_foreach(regions, [&state](const image_region& region) {
+    tonemap(state.display, state.source, region, state.tonemap_prms);
+    if (state.apply_colorgrade) {
+      colorgrade(state.display, state.display, region, state.colorgrade_prms);
     }
   });
 }
 
 void draw(const opengl_window& win) {
-  auto& app      = *(app_states*)get_gluser_pointer(win);
+  auto& state      = *(app_state*)get_gluser_pointer(win);
   auto  win_size = get_glwindow_size(win);
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_txt) {
-    init_gltexture(app.gl_txt, app.display, false, false, false);
+  if (!state.gl_txt) {
+    init_gltexture(state.gl_txt, state.display, false, false, false);
   }
-  update_imview(app.image_center, app.image_scale, app.display.size(), win_size,
-      app.zoom_to_fit);
+  update_imview(state.image_center, state.image_scale, state.display.size(), win_size,
+      state.zoom_to_fit);
   draw_glimage_background(
-      app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
+      state.gl_txt, win_size.x, win_size.y, state.image_center, state.image_scale);
   set_glblending(true);
   draw_glimage(
-      app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
+      state.gl_txt, win_size.x, win_size.y, state.image_center, state.image_scale);
   set_glblending(false);
   swap_glbuffers(win);
 }
 
-void run_ui(app_states& app) {
+void run_ui(app_state& state) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280, 720}, "yimview", &app, draw);
+  init_glwindow(win, {1280, 720}, "yimview", &state, draw);
 
   // window values
   auto mouse_pos = zero2f, last_pos = zero2f;
@@ -102,10 +102,10 @@ void run_ui(app_states& app) {
 
     // handle mouse
     if (mouse_left) {
-      app.image_center += mouse_pos - last_pos;
+      state.image_center += mouse_pos - last_pos;
     }
     if (mouse_right) {
-      app.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+      state.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
     // draw
@@ -121,21 +121,21 @@ void run_ui(app_states& app) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto app       = app_states();
+  auto state       = app_state();
   auto filenames = vector<string>{};
 
   // command line options
   auto cli = make_cli("yimgview", "view images");
-  add_cli_option(cli, "--output,-o", app.outname, "image output");
-  add_cli_option(cli, "image", app.filename, "image filename", true);
+  add_cli_option(cli, "--output,-o", state.outname, "image output");
+  add_cli_option(cli, "image", state.filename, "image filename", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load image
-  load_image(app.filename, app.source);
-  update_display(app);
+  load_image(state.filename, state.source);
+  update_display(state);
 
   // run ui
-  run_ui(app);
+  run_ui(state);
 
   // done
   return 0;
