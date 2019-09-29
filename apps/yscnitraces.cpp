@@ -479,40 +479,42 @@ void draw_glwidgets(const opengl_window& win) {
     }
     end_glheader(win);
   }
-  if (scene_ok && begin_glheader(win, "scene")) {
+  if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{"camera", "shape", "environment", "instance", "materials", "textures", "subdivs"};
     auto& scene  = app.scenes[app.selected];
     if (draw_glcombobox(win, "selection##1", scene.selection.first, labels))
       scene.selection.second = 0;
+    auto edited = 0;
     if (scene.selection.first == "camera") {
-      draw_glcombobox(
+      edited +=draw_glcombobox(
           win, "selection##2", scene.selection.second, scene.scene.cameras);
-      draw_glwidgets_camera(win, scene, scene.selection.second);
+      edited += draw_glwidgets_camera(win, scene, scene.selection.second);
     } else if (scene.selection.first == "texture") {
       draw_glcombobox(
           win, "selection##2", scene.selection.second, scene.scene.textures);
-      draw_glwidgets_texture(win, scene, scene.selection.second);
+      edited += draw_glwidgets_texture(win, scene, scene.selection.second);
     } else if (scene.selection.first == "material") {
       draw_glcombobox(
           win, "selection##2", scene.selection.second, scene.scene.materials);
-      draw_glwidgets_material(win, scene, scene.selection.second);
+      edited += draw_glwidgets_material(win, scene, scene.selection.second);
     } else if (scene.selection.first == "shape") {
       draw_glcombobox(
           win, "selection##2", scene.selection.second, scene.scene.subdivs);
-      draw_glwidgets_shape(win, scene, scene.selection.second);
+      edited += draw_glwidgets_shape(win, scene, scene.selection.second);
     } else if (scene.selection.first == "subdiv") {
       draw_glcombobox(
           win, "selection##2", scene.selection.second, scene.scene.subdivs);
-      draw_glwidgets_subdiv(win, scene, scene.selection.second);
+      edited += draw_glwidgets_subdiv(win, scene, scene.selection.second);
     } else if (scene.selection.first == "instance") {
       draw_glcombobox(
           win, "selection##2", scene.selection.second, scene.scene.instances);
-      draw_glwidgets_instance(win, scene, scene.selection.second);
+      edited += draw_glwidgets_instance(win, scene, scene.selection.second);
     } else if (scene.selection.first == "environment") {
       draw_glcombobox(
           win, "selection##2", scene.selection.second, scene.scene.environments);
-      draw_glwidgets_environment(win, scene, scene.selection.second);
+      edited += draw_glwidgets_environment(win, scene, scene.selection.second);
     }
+    if(edited) reset_display(scene);
     end_glheader(win);
   }
   if (begin_glheader(win, "log")) {
