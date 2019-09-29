@@ -110,6 +110,7 @@ struct app_state {
 
 void start_render_async(app_scene& scene) {
   scene.render_sample = 0;
+    *scene.render_stop = false;
   scene.state = make_trace_state(scene.render.size(), scene.trace_prms.seed);
   scene.render_regions = make_regions(
       scene.render.size(), scene.trace_prms.region, true);
@@ -126,7 +127,6 @@ void start_render_async(app_scene& scene) {
                 scene.lights, region, num_samples, scene.trace_prms);
             tonemap(scene.display, scene.render, region, scene.tonemap_prms);
             *scene.render_updated = true;
-            printf("cacca %d\n", (int)*scene.render_updated);
           });
       scene.render_sample = scene.trace_prms.samples;
     }
