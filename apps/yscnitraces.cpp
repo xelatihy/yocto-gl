@@ -85,7 +85,8 @@ struct app_scene {
   // computation
   atomic<bool>*        render_stop    = new atomic<bool>();  // TODO: fix me
   vector<image_region> render_regions = {};
-  future<void>*        render_worker  = new future<void>(); // TODO: fix me
+  atomic<bool>*        render_updated    = new atomic<bool>();  // TODO: fix me
+  future<void>*        render_worker  = new future<void>();  // TODO: fix me
   int                  render_sample  = 0;  // TODO: fix me, make it atomic
 };
 
@@ -124,13 +125,15 @@ void start_render_async(app_scene& scene) {
             trace_region(scene.render, scene.state, scene.scene, scene.bvh,
                 scene.lights, region, num_samples, scene.trace_prms);
             tonemap(scene.display, scene.render, region, scene.tonemap_prms);
+            *scene.render_updated = true;
+            printf("cacca %d\n", (int)*scene.render_updated);
           });
       scene.render_sample = scene.trace_prms.samples;
     }
   });
 }
 void stop_render_async(app_scene& scene) {
-  if(!is_valid(*scene.render_worker)) return;
+  if (!is_valid(*scene.render_worker)) return;
   *scene.render_stop = true;
   scene.render_worker->get();
 }
@@ -187,7 +190,7 @@ void load_scene_async(app_state& app, const string& filename) {
 
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         app = *(app_state*)get_gluser_pointer(win);
+  auto&         app      = *(app_state*)get_gluser_pointer(win);
   auto          scene_ok = !app.scenes.empty() && app.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnitrace")) return;
   draw_glmessages(win);
@@ -234,8 +237,8 @@ void draw_glwidgets(const opengl_window& win) {
       win, "scene", app.selected, (int)app.scenes.size(),
       [&app](int idx) { return app.scenes[idx].name.c_str(); }, false);
   if (scene_ok && begin_glheader(win, "trace")) {
-  auto& scn = app.scenes[app.selected];
-    auto cam_names = vector<string>();
+    auto& scn       = app.scenes[app.selected];
+    auto  cam_names = vector<string>();
     for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.name);
     auto trace_prms = scn.trace_prms;
     draw_glcombobox(win, "camera", trace_prms.camera, cam_names);
@@ -265,7 +268,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "inspect")) {
-  auto& scn = app.scenes[app.selected];
+    auto& scn = app.scenes[app.selected];
     draw_gllabel(win, "scene", get_filename(scn.filename));
     draw_gllabel(win, "filename", scn.filename);
     draw_gllabel(win, "outname", scn.outname);
@@ -305,8 +308,8 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "scene object")) {
-    auto& scn = app.scenes[app.selected];
-    auto edit = app_edit{};
+    auto& scn  = app.scenes[app.selected];
+    auto  edit = app_edit{};
     if (draw_glsceneinspector(win, "", scn.scene, scn.selection, edit, 200)) {
       // TODO: support edit
     }
@@ -454,7 +457,7 @@ void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
 
 void update(const opengl_window& win, app_state& app) {
   for (auto idx = 0; idx < app.load_workers.size(); idx++) {
-    if (!is_ready(app.load_workers[idx])) return;
+    if (!is_ready(app.load_workers[idx])) continue;
     try {
       app.load_workers[idx].get();
       app.scenes.push_back(app.loading[idx]);
@@ -465,7 +468,13 @@ void update(const opengl_window& win, app_state& app) {
       break;
     }
     start_render_async(app.scenes.back());
-    if(app.selected < 0) app.selected = (int)app.scenes.size()-1;
+    if (app.selected < 0) app.selected = (int)app.scenes.size() - 1;
+  }
+  for (auto& scene : app.scenes) {
+    printf("pippo %d\n", (int)*scene.render_updated);
+    if (!*scene.render_updated) continue;
+    update_gltexture(scene.gl_txt, scene.display, false);
+    *scene.render_updated = false;
   }
 #if 0
   // close if needed
