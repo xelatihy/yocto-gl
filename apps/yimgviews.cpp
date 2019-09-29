@@ -295,7 +295,7 @@ void draw(const opengl_window& win) {
 
 void update(const opengl_window& win, app_state& app) {
   for (auto idx = 0; idx < app.load_workers.size(); idx++) {
-    if (!is_ready(app.load_workers[idx])) return;
+    if (!is_ready(app.load_workers[idx])) continue;
     try {
       app.load_workers[idx].get();
       app.images.push_back(app.loading[idx]);
