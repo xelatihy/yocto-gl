@@ -27,12 +27,12 @@
 //
 //
 
-#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 #include <stdarg.h>
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+#include "../yocto/yocto_utils.h"
 
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
@@ -824,10 +824,10 @@ bool draw_glmessage(
   }
 }
 
-string _message_text = {};
+string        _message_text  = {};
 deque<string> _message_queue = {};
-std::mutex         _message_mutex;
-void push_glmessage(const string& message) {
+std::mutex    _message_mutex;
+void          push_glmessage(const string& message) {
   printf("message %s\n", message.c_str());
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
@@ -846,7 +846,7 @@ bool draw_glmessages(const opengl_window& win) {
     open_glmodal(win, "<message>");
   }
   auto ret = draw_glmessage(win, "<message>", _message_text);
-  if(!ret) _message_text = "";
+  if (!ret) _message_text = "";
   return ret;
 }
 

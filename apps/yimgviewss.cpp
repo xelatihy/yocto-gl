@@ -44,16 +44,16 @@ struct app_state {
   image<vec4f> source = {};
 
   // diplay data
-  image<vec4f>   display = {};
-  tonemap_params    tonemap_prms    = {};
-  colorgrade_params colorgrade_prms = {};
-  bool              apply_colorgrade      = false;
+  image<vec4f>      display          = {};
+  tonemap_params    tonemap_prms     = {};
+  colorgrade_params colorgrade_prms  = {};
+  bool              apply_colorgrade = false;
 
   // viewing properties
-  vec2f image_center = zero2f;
-  float image_scale  = 1;
-  bool  zoom_to_fit  = false;
-  opengl_texture gl_txt  = {};
+  vec2f          image_center = zero2f;
+  float          image_scale  = 1;
+  bool           zoom_to_fit  = false;
+  opengl_texture gl_txt       = {};
 };
 
 void update_display(app_state& app) {
@@ -76,8 +76,8 @@ void draw(const opengl_window& win) {
   if (!app.gl_txt) {
     init_gltexture(app.gl_txt, app.display, false, false, false);
   }
-  update_imview(app.image_center, app.image_scale, app.display.size(),
-      win_size, app.zoom_to_fit);
+  update_imview(app.image_center, app.image_scale, app.display.size(), win_size,
+      app.zoom_to_fit);
   draw_glimage_background(
       app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
   set_glblending(true);
@@ -95,10 +95,10 @@ void run_ui(app_state& app) {
   // window values
   auto mouse_pos = zero2f, last_pos = zero2f;
   while (!should_glwindow_close(win)) {
-    last_pos            = mouse_pos;
-    mouse_pos           = get_glmouse_pos(win);
-    auto mouse_left     = get_glmouse_left(win);
-    auto mouse_right    = get_glmouse_right(win);
+    last_pos         = mouse_pos;
+    mouse_pos        = get_glmouse_pos(win);
+    auto mouse_left  = get_glmouse_left(win);
+    auto mouse_right = get_glmouse_right(win);
 
     // handle mouse
     if (mouse_left) {
