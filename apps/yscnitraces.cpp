@@ -79,7 +79,7 @@ struct app_scene {
   opengl_texture gl_txt         = {};
 
   // editing
-  app_selection selection = {typeid(void), -1};
+  pair<string, int> selection = {"camera", 0};
 
   // computation
   atomic<bool>*        render_stop    = new atomic<bool>();  // TODO: fix me
@@ -300,6 +300,22 @@ void draw_glwidgets(const opengl_window& win) {
     }
     end_glheader(win);
   }
+  if (scene_ok && begin_glheader(win, "selection")) {
+    static auto labels = vector<string>{"camera", "texture", "material", "shape", "instance"};
+    auto& scene = app.scenes[app.selected];
+    if(draw_glcombobox(win, "selection##1", scene.selection.first, labels))
+      scene.selection.second = -1; // TODO: fixme, selection should always be valid
+    if(scene.selection.first == "camera") {
+      draw_glcombobox(win, "selection##2", scene.selection.second, scene.scene.cameras);
+    } else if(scene.selection.first == "texture") {
+      draw_glcombobox(win, "selection##2", scene.selection.second, scene.scene.textures);
+    } else if(scene.selection.first == "material") {
+    } else if(scene.selection.first == "shape") {
+    } else if(scene.selection.first == "instance") {
+    }
+    end_glheader(win);
+  }
+  #if 0
   if (scene_ok && begin_glheader(win, "scene tree")) {
     auto& scn = app.scenes[app.selected];
     draw_glscenetree(win, "", scn.scene, scn.selection, 200);
@@ -313,6 +329,7 @@ void draw_glwidgets(const opengl_window& win) {
     }
     end_glheader(win);
   }
+  #endif
   if (begin_glheader(win, "log")) {
     draw_gllog(win);
     end_glheader(win);
@@ -866,7 +883,7 @@ void run_ui(app_state& app) {
         auto  ray    = eval_camera(
             camera, ij, scn.render.size(), {0.5f, 0.5f}, zero2f);
         if (auto isec = intersect_bvh(scn.bvh, ray); isec.hit) {
-          scn.selection = {typeid(yocto_instance), isec.instance};
+          scn.selection = {"instance", isec.instance};
         }
       }
     }
