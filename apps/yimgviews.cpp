@@ -31,14 +31,8 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-#include <any>
-#include <atomic>
-#include <future>
-#include <thread>
-#include <typeindex>
-using std::any;
-using std::any_cast;
-using std::type_index;
+#include<list>
+using std::list;
 
 struct image_stats {
   vec4f         min       = zero4f;
@@ -80,10 +74,24 @@ struct app_image {
 
 struct app_state {
   // data
-  std::deque<app_image>    images;
+  std::list<app_image>    images = {};
   int                      selected = -1;
-  std::deque<app_image>    loading;
-  std::deque<future<void>> load_workers;
+  std::list<app_image>    loading = {};
+  std::list<future<void>> load_workers = {};
+
+  // get image
+  app_image& at(int idx) {
+    auto it = images.begin();
+    std::advance(it, selected);
+    return *it;
+  }
+  const app_image& at(int idx) const {
+    auto it = images.begin();
+    std::advance(it, selected);
+    return *it;
+  }
+  app_image& get_selected() { return at(selected); }
+  const app_image& get_selected() const { return at(selected); }
 
   // default options
   tonemap_params    tonemap_prms    = {};
@@ -151,7 +159,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog(win, "save image", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    app.images[app.selected].outname = save_path;
+    // app.images[app.selected].outname = save_path;
     // app.images[app.selected].task_queue.emplace_back(app_task_type::save);
     save_path = "";
     // TODO> implement save
@@ -161,12 +169,15 @@ void draw_glwidgets(const opengl_window& win) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "save", image_ok)) {
-    save_path = app.images[app.selected].outname;
-    open_glmodal(win, "save image");
+    // TODO: implement save
+    // save_path = app.images[app.selected].outname;
+    // open_glmodal(win, "save image");
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", image_ok)) {
-    app.images.erase(app.images.begin() + app.selected);
+    auto it = app.images.begin();
+    std::advance(it, app.selected);
+    app.images.erase(it);
     app.selected = app.images.empty() ? -1 : 0;
   }
   continue_glline(win);
@@ -176,9 +187,9 @@ void draw_glwidgets(const opengl_window& win) {
   if (app.images.empty()) return;
   draw_glcombobox(
       win, "image", app.selected, (int)app.images.size(),
-      [&app](int idx) { return app.images[idx].name.c_str(); }, false);
+      [&app](int idx) { return app.at(idx).name.c_str(); }, false);
   if (image_ok && begin_glheader(win, "tonemap")) {
-    auto& image  = app.images[app.selected];
+    auto& image  = app.get_selected();
     auto& params = image.tonemap_prms;
     auto  edited = 0;
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
@@ -199,7 +210,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "colorgrade")) {
-    auto& image  = app.images[app.selected];
+    auto& image  = app.get_selected();
     auto& params = image.colorgrade_prms;
     auto  edited = 0;
     edited += draw_glcheckbox(win, "apply colorgrade", image.apply_colorgrade);
@@ -215,7 +226,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "inspect")) {
-    auto& image = app.images[app.selected];
+    auto& image = app.get_selected();
     draw_gllabel(win, "image", get_filename(image.filename));
     draw_gllabel(win, "filename", image.filename);
     draw_gllabel(win, "outname", image.outname);
@@ -258,7 +269,7 @@ void draw(const opengl_window& win) {
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.images.empty() && app.selected >= 0) {
-    auto& image = app.images.at(app.selected);
+    auto& image = app.get_selected();
     if (!image.gl_txt || image.gl_txt.size != image.display.size())
       init_gltexture(image.gl_txt, image.display, false, false, false);
     update_imview(image.image_center, image.image_scale, image.display.size(),
@@ -280,17 +291,15 @@ void update(const opengl_window& win, app_state& app) {
   while(app.load_workers.empty() && is_ready(app.load_workers.front())) {
     try {
       app.load_workers.front().get();
-      app.images.push_back(app.loading.front());
-      reset_display(app.images.back());
-      if(app.selected < 0) app.selected = (int)app.images.size() - 1;
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load image " + app.loading.front().filename);
       log_glinfo(win, "cannot load image " + app.loading.front().filename);
       log_glinfo(win, e.what());
       break;
     }
-    app.loading.pop_front();
-    app.load_workers.pop_front();
+    app.images.splice(app.images.end(), app.loading, app.loading.begin());
+    reset_display(app.images.back());
+    if(app.selected < 0) app.selected = (int)app.images.size() - 1;
   }
   for (auto& image : app.images) {
     if (image.render_region < image.render_regions.size()) {
@@ -342,11 +351,11 @@ void run_ui(app_state& app) {
 
     // handle mouse
     if (mouse_left && !widgets_active) {
-      auto& img = app.images.at(app.selected);
+      auto& img = app.get_selected();
       img.image_center += mouse_pos - last_pos;
     }
     if (mouse_right && !widgets_active) {
-      auto& img = app.images.at(app.selected);
+      auto& img = app.get_selected();
       img.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
