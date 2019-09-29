@@ -434,7 +434,7 @@ void draw_glwidgets(const opengl_window& win) {
         return it->name.c_str(); 
   }, false);
   if (scene_ok && begin_glheader(win, "trace")) {
-    auto  edited  = false;
+    auto  edited  = 0;
     auto& scene   = app.get_selected();
     auto& tparams = scene.trace_prms;
     edited += draw_glcombobox(
@@ -626,340 +626,6 @@ void update(const opengl_window& win, app_state& app) {
       }
     }
   }
-#if 0
-  // close if needed
-  while (!app.scenes.empty()) {
-    auto pos = -1;
-    for (auto idx = 0; idx < app.scenes.size(); idx++) {
-      for (auto& task : app.scenes[idx].task_queue) {
-        if (task.type == app_task_type::close_scene) pos = idx;
-      }
-    }
-    if (pos < 0) break;
-    app.scenes.erase(app.scenes.begin() + pos);
-    app.selected = app.scenes.empty() ? -1 : 0;
-  }
-
-  // consume partial results
-  for (auto& scn : app.scenes) {
-    if (scn.task_queue.empty()) continue;
-    auto& task = scn.task_queue.front();
-    if (task.type != app_task_type::render_image) continue;
-    auto updated = false;
-    while (true) {
-      auto region = image_region{};
-      {
-        std::lock_guard guard{task.queuem};
-        if (task.queue.empty()) break;
-        region = task.queue.front();
-        task.queue.pop_front();
-      }
-      if (region.size() == zero2i) {
-        update_gltexture_region(
-            scn.gl_txt, scn.preview, {zero2i, scn.preview.size()}, false);
-      } else {
-        update_gltexture_region(scn.gl_txt, scn.display, region, false);
-      }
-      updated = true;
-    }
-    if (updated) {
-      scn.render_sample = max(scn.render_sample, (int)task.current);
-      scn.name          = get_filename(scn.filename) + "[" +
-                 std::to_string(scn.render.size().x) + "x" +
-                 std::to_string(scn.render.size().y) + " @ " +
-                 std::to_string(scn.render_sample) + "]";
-    }
-  }
-
-  // remove unneeded tasks
-  for (auto& scn : app.scenes) {
-    while (scn.task_queue.size() > 1) {
-      auto& task = scn.task_queue.at(0);
-      auto& next = scn.task_queue.at(1);
-      if (task.type == app_task_type::render_image) {
-        if (next.type != app_task_type::render_image &&
-            next.type != app_task_type::apply_edit)
-          break;
-        log_glinfo(win, "cancel rendering " + scn.filename);
-      } else if (task.type == app_task_type::apply_edit) {
-        if (next.type != app_task_type::apply_edit ||
-            task.edit.type != next.edit.type ||
-            task.edit.index != next.edit.index)
-          break;
-        log_glinfo(win, "cancel editing " + scn.filename);
-      } else {
-        break;
-      }
-      task.stop = true;
-      if (task.result.valid()) {
-        try {
-          task.result.get();
-        } catch (...) {
-        }
-      }
-      scn.task_queue.pop_front();
-    }
-  }
-
-  // apply synchronous edit
-  for (auto& scn : app.scenes) {
-    while (!scn.task_queue.empty()) {
-      auto& task = scn.task_queue.front();
-      if (task.type != app_task_type::apply_edit) break;
-      log_glinfo(win, "start editing " + scn.filename);
-      try {
-        scn.render_done     = false;
-        auto reload_element = false, update_bvh = false, update_lights = false;
-        apply_edit(scn.filename, scn.scene, scn.trace_prms, scn.tonemap_prms,
-            reload_element, update_lights, update_bvh, task.edit);
-        log_glinfo(win, "done editing " + scn.filename);
-        if (reload_element) {
-          scn.load_done = false;
-          scn.task_queue.emplace_back(app_task_type::load_element, task.edit);
-        }
-        if (update_bvh) {
-          scn.bvh_done = false;
-          scn.task_queue.emplace_back(app_task_type::refit_bvh, task.edit);
-        }
-        if (update_lights) {
-          scn.lights_done = false;
-          scn.task_queue.emplace_back(app_task_type::init_lights);
-        }
-        scn.task_queue.emplace_back(app_task_type::render_image);
-      } catch (std::exception& e) {
-        log_glerror(win, e.what());
-        app.errors.push_back("cannot edit " + scn.filename);
-      }
-      scn.task_queue.pop_front();
-    }
-  }
-
-  // grab result of finished tasks
-  for (auto& scn : app.scenes) {
-    if (scn.task_queue.empty()) continue;
-    auto& task = scn.task_queue.front();
-    if (!task.result.valid()) continue;
-    if (task.type == app_task_type::render_image) {
-      std::lock_guard guard{task.queuem};
-      if (!task.queue.empty()) continue;
-    }
-    if (task.result.wait_for(std::chrono::nanoseconds(10)) !=
-        std::future_status::ready)
-      continue;
-    switch (task.type) {
-      case app_task_type::none: break;
-      case app_task_type::close_scene: break;
-      case app_task_type::load_scene: {
-        try {
-          task.result.get();
-          scn.load_done  = true;
-          scn.image_size = camera_resolution(
-              scn.scene.cameras[scn.trace_prms.camera],
-              scn.trace_prms.resolution);
-          scn.render.resize(scn.image_size);
-          scn.display.resize(scn.image_size);
-          scn.preview.resize(scn.image_size);
-          scn.name = get_filename(scn.filename) + " [" +
-                     std::to_string(scn.render.size().x) + "x" +
-                     std::to_string(scn.render.size().y) + " @ 0]";
-          log_glinfo(win, "done loading " + scn.filename);
-          init_gltexture(scn.gl_txt, scn.display, false, false, false);
-          scn.task_queue.emplace_back(app_task_type::build_bvh);
-          scn.task_queue.emplace_back(app_task_type::init_lights);
-          scn.task_queue.emplace_back(app_task_type::render_image);
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          scn.name = get_filename(scn.filename) + " [errpr]";
-          app.errors.push_back("cannot load " + scn.filename);
-        }
-      } break;
-      case app_task_type::load_element: {
-        try {
-          task.result.get();
-          scn.load_done = true;
-          log_glinfo(win, "done loading element from " + scn.filename);
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          scn.name = get_filename(scn.filename) + " [errpr]";
-          app.errors.push_back("cannot load element from " + scn.filename);
-        }
-      } break;
-      case app_task_type::build_bvh: {
-        try {
-          task.result.get();
-          scn.bvh_done = true;
-          scn.name     = get_filename(scn.filename);
-          log_glinfo(win, "done building bvh " + scn.filename);
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          scn.name = get_filename(scn.filename) + " [errpr]";
-          app.errors.push_back("cannot build bvh " + scn.filename);
-        }
-      } break;
-      case app_task_type::refit_bvh: {
-        try {
-          task.result.get();
-          scn.bvh_done = true;
-          scn.name     = get_filename(scn.filename);
-          log_glinfo(win, "done refitting bvh " + scn.filename);
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          scn.name = get_filename(scn.filename) + " [errpr]";
-          app.errors.push_back("cannot refit bvh " + scn.filename);
-        }
-      } break;
-      case app_task_type::init_lights: {
-        try {
-          task.result.get();
-          scn.lights_done = true;
-          scn.name        = get_filename(scn.filename);
-          log_glinfo(win, "done building lights " + scn.filename);
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          scn.name = get_filename(scn.filename) + " [errpr]";
-          app.errors.push_back("cannot build lights " + scn.filename);
-        }
-      } break;
-      case app_task_type::save_image: {
-        try {
-          task.result.get();
-          log_glinfo(win, "done saving " + scn.imagename);
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          app.errors.push_back("cannot save " + scn.imagename);
-        }
-      } break;
-      case app_task_type::save_scene: {
-        try {
-          task.result.get();
-          log_glinfo(win, "done saving " + scn.outname);
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          app.errors.push_back("cannot save " + scn.outname);
-        }
-      } break;
-      case app_task_type::render_image: {
-        try {
-          task.result.get();
-          scn.render_done = true;
-          log_glinfo(win, "done rendering " + scn.filename);
-          scn.render_sample = scn.trace_prms.samples;
-          scn.name          = get_filename(scn.filename) + " [" +
-                     std::to_string(scn.render.size().x) + "x" +
-                     std::to_string(scn.render.size().y) + " @ " +
-                     std::to_string(scn.render_sample) + "]";
-        } catch (std::exception& e) {
-          log_glerror(win, e.what());
-          app.errors.push_back("cannot render " + scn.filename);
-        }
-      } break;
-      case app_task_type::apply_edit: break;
-    }
-    scn.task_queue.pop_front();
-  }
-  // schedule tasks not running
-  for (auto& scn : app.scenes) {
-    if (scn.task_queue.empty()) continue;
-    auto& task = scn.task_queue.front();
-    if (task.result.valid()) continue;
-    task.stop = false;
-    switch (task.type) {
-      case app_task_type::none: break;
-      case app_task_type::close_scene: break;
-      case app_task_type::load_scene: {
-        log_glinfo(win, "start loading " + scn.filename);
-        scn.load_done   = false;
-        scn.bvh_done    = false;
-        scn.lights_done = false;
-        task.result     = std::async(std::launch::async, [&scn]() {
-          load_scene(scn.filename, scn.scene, scn.load_prms);
-          tesselate_subdivs(scn.scene);
-          if (scn.add_skyenv) add_sky(scn.scene);
-        });
-      } break;
-      case app_task_type::load_element: {
-        log_glinfo(win, "start loading element for " + scn.filename);
-        scn.load_done = false;
-        task.result   = std::async(std::launch::async, [&scn, &task]() {
-          load_element(scn.filename, scn.scene, task.edit);
-        });
-      } break;
-      case app_task_type::build_bvh: {
-        log_glinfo(win, "start building bvh " + scn.filename);
-        scn.bvh_done = false;
-        task.result  = std::async(std::launch::async,
-            [&scn]() { make_bvh(scn.bvh, scn.scene, scn.bvh_prms); });
-      } break;
-      case app_task_type::refit_bvh: {
-        log_glinfo(win, "start refitting bvh " + scn.filename);
-        scn.bvh_done = false;
-        task.result  = std::async(std::launch::async, [&scn, &task]() {
-          refit_bvh(scn.filename, scn.scene, scn.bvh, scn.bvh_prms, task.edit);
-        });
-      } break;
-      case app_task_type::init_lights: {
-        log_glinfo(win, "start building lights " + scn.filename);
-        scn.lights_done = false;
-        task.result     = std::async(std::launch::async,
-            [&scn]() { scn.lights = make_trace_lights(scn.scene); });
-      } break;
-      case app_task_type::save_image: {
-        log_glinfo(win, "start saving " + scn.imagename);
-        task.result = std::async(std::launch::async, [&scn]() {
-          if (is_hdr_filename(scn.imagename)) {
-            save_image(scn.imagename, scn.render);
-          } else {
-            save_imageb(scn.imagename, tonemapb(scn.render, scn.tonemap_prms));
-          }
-        });
-      } break;
-      case app_task_type::save_scene: {
-        log_glinfo(win, "start saving " + scn.outname);
-        task.result = std::async(std::launch::async,
-            [&scn]() { save_scene(scn.outname, scn.scene, scn.save_prms); });
-      } break;
-      case app_task_type::render_image: {
-        log_glinfo(win, "start rendering " + scn.filename);
-        scn.render_done = false;
-        scn.image_size  = camera_resolution(
-            scn.scene.cameras[scn.trace_prms.camera],
-            scn.trace_prms.resolution);
-        if (scn.lights.instances.empty() && scn.lights.environments.empty() &&
-            is_sampler_lit(scn.trace_prms)) {
-          log_glinfo(win, "no lights presents, switching to eyelight shader");
-          scn.trace_prms.sampler = trace_params::sampler_type::eyelight;
-        }
-        scn.render_sample = 0;
-        scn.name          = get_filename(scn.filename) + " [" +
-                   std::to_string(scn.render.size().x) + "x" +
-                   std::to_string(scn.render.size().y) + " @ " +
-                   std::to_string(scn.render_sample) + "]";
-        task.result = std::async(std::launch::async, [&scn, &task]() {
-          update_app_render(scn.filename, scn.render, scn.display, scn.preview,
-              scn.state, scn.scene, scn.lights, scn.bvh, scn.trace_prms,
-              scn.tonemap_prms, scn.preview_ratio, &task.stop, task.current,
-              task.queue, task.queuem);
-        });
-        if (scn.render.size() != scn.image_size) {
-          scn.render.resize(scn.image_size);
-          scn.display.assign(scn.image_size);
-          scn.preview.assign(scn.image_size);
-          if (scn.gl_txt) {
-            delete_gltexture(scn.gl_txt);
-            scn.gl_txt = {};
-          }
-          init_gltexture(scn.gl_txt, scn.display, false, false, false);
-        }
-      } break;
-      case app_task_type::apply_edit: break;
-    }
-  }
-#endif
-}
-
-void drop_callback(const opengl_window& win, const vector<string>& paths) {
-  auto& app = *(app_state*)get_gluser_pointer(win);
-  for (auto& path : paths) load_scene_async(app, path);
 }
 
 // run ui loop
@@ -967,7 +633,10 @@ void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yscnitrace", &app, draw);
-  set_drop_glcallback(win, drop_callback);
+  set_drop_glcallback(win, [](const opengl_window& win, const vector<string>& paths){
+      auto& app = *(app_state*)get_gluser_pointer(win);
+      for (auto& path : paths) load_scene_async(app, path);
+  });
 
   // init widgets
   init_glwidgets(win);
@@ -982,9 +651,9 @@ void run_ui(app_state& app) {
     auto alt_down       = get_glalt_key(win);
     auto shift_down     = get_glshift_key(win);
     auto widgets_active = get_glwidgets_active(win);
+    auto scene_ok = !app.scenes.empty() && app.selected >= 0;
 
     // handle mouse and keyboard for navigation
-    auto scene_ok = !app.scenes.empty() && app.selected >= 0;
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
       auto& scene  = app.get_selected();
@@ -1002,7 +671,7 @@ void run_ui(app_state& app) {
     }
 
     // selection
-    if (app.selected >= 0 && (mouse_left || mouse_right) && alt_down &&
+    if (scene_ok && (mouse_left || mouse_right) && alt_down &&
         !widgets_active) {
       auto& scn = app.get_selected();
       auto  ij  = get_image_coords(
