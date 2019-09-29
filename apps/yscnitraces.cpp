@@ -70,7 +70,6 @@ struct app_scene {
   trace_state  state   = {};
   image<vec4f> render  = {};
   image<vec4f> display = {};
-  image<vec4f> preview = {};
 
   // view scene
   vec2f          image_center   = zero2f;
@@ -141,14 +140,14 @@ void render_preview_sync(app_scene& scene) {
   auto preview_prms = scene.trace_prms;
   preview_prms.resolution /= scene.preview_ratio;
   preview_prms.samples = 1;
-  auto small_preview   = trace_image(
+  auto preview   = trace_image(
       scene.scene, scene.bvh, scene.lights, preview_prms);
-  auto display_preview = tonemap(small_preview, scene.tonemap_prms);
-  for (auto j = 0; j < scene.preview.size().y; j++) {
-    for (auto i = 0; i < scene.preview.size().x; i++) {
-      auto pi = clamp(i / scene.preview_ratio, 0, display_preview.size().x - 1),
-           pj = clamp(j / scene.preview_ratio, 0, display_preview.size().y - 1);
-      scene.preview[{i, j}] = display_preview[{pi, pj}];
+  preview = tonemap(preview, scene.tonemap_prms);
+  for (auto j = 0; j < scene.display.size().y; j++) {
+    for (auto i = 0; i < scene.display.size().x; i++) {
+      auto pi = clamp(i / scene.preview_ratio, 0, preview.size().x - 1),
+           pj = clamp(j / scene.preview_ratio, 0, preview.size().y - 1);
+      scene.display[{i, j}] = preview[{pi, pj}];
     }
   }
 }
@@ -156,7 +155,7 @@ void render_preview_sync(app_scene& scene) {
 void render_image_async(app_scene& scene) {
   stop_render_async(scene);
   render_preview_sync(scene);
-  update_gltexture(scene.gl_txt, scene.preview, false);
+  update_gltexture(scene.gl_txt, scene.display, false);
   start_render_async(scene);
 }
 
@@ -181,7 +180,6 @@ void load_scene_async(app_state& app, const string& filename) {
         scene.trace_prms.resolution);
     scene.render.resize(image_size);
     scene.display.resize(image_size);
-    scene.preview.resize(image_size);
     scene.name = get_filename(scene.filename) + " [" +
                  std::to_string(scene.render.size().x) + "x" +
                  std::to_string(scene.render.size().y) + " @ 0]";
@@ -471,7 +469,6 @@ void update(const opengl_window& win, app_state& app) {
     if (app.selected < 0) app.selected = (int)app.scenes.size() - 1;
   }
   for (auto& scene : app.scenes) {
-    printf("pippo %d\n", (int)*scene.render_updated);
     if (!*scene.render_updated) continue;
     update_gltexture(scene.gl_txt, scene.display, false);
     *scene.render_updated = false;
