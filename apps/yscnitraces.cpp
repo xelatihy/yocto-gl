@@ -549,7 +549,7 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
-  while(app.load_workers.empty() && is_ready(app.load_workers.front())) {
+  while(!app.load_workers.empty() && is_ready(app.load_workers.front())) {
     try {
       app.load_workers.front().get();
       app.scenes.push_back(app.loading.front());
