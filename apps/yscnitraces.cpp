@@ -82,11 +82,10 @@ struct app_scene {
   pair<string, int> selection = {"camera", 0};
 
   // computation
-  atomic<bool>*        render_stop    = new atomic<bool>();  // TODO: fix me
+  bool                 render_preview = true;
+  int                  render_sample  = 0;
+  int                  render_region  = 0;
   vector<image_region> render_regions = {};
-  atomic<bool>*        render_updated = new atomic<bool>();  // TODO: fix me
-  future<void>*        render_worker  = new future<void>();  // TODO: fix me
-  int                  render_sample  = 0;  // TODO: fix me, make it atomic
 };
 
 // Application state
@@ -107,56 +106,18 @@ struct app_state {
   bool           add_skyenv   = false;
 };
 
-void start_render_async(app_scene& scene) {
+void reset_render(app_scene& scene) {
+  auto image_size = camera_resolution(
+      scene.scene.cameras[scene.trace_prms.camera],
+      scene.trace_prms.resolution);
+  scene.render.resize(image_size);
+  scene.display.resize(image_size);
+  scene.render_preview = true;
   scene.render_sample = 0;
-  *scene.render_stop  = false;
+  scene.render_region = 0;
   scene.state = make_trace_state(scene.render.size(), scene.trace_prms.seed);
   scene.render_regions = make_regions(
       scene.render.size(), scene.trace_prms.region, true);
-  *scene.render_worker = run_async([&scene]() {
-    for (auto sample = 0; sample < scene.trace_prms.samples;
-         sample += scene.trace_prms.batch) {
-      if (scene.render_stop && *scene.render_stop) return;
-      scene.render_sample = sample;
-      auto num_samples    = min(scene.trace_prms.batch,
-          scene.trace_prms.samples - scene.render_sample);
-      parallel_foreach(scene.render_regions,
-          [&scene, num_samples](const image_region& region) {
-            trace_region(scene.render, scene.state, scene.scene, scene.bvh,
-                scene.lights, region, num_samples, scene.trace_prms);
-            tonemap(scene.display, scene.render, region, scene.tonemap_prms);
-            *scene.render_updated = true;
-          });
-      scene.render_sample = scene.trace_prms.samples;
-    }
-  });
-}
-void stop_render_async(app_scene& scene) {
-  if (!is_valid(*scene.render_worker)) return;
-  *scene.render_stop = true;
-  scene.render_worker->get();
-}
-void render_preview_sync(app_scene& scene) {
-  auto preview_prms = scene.trace_prms;
-  preview_prms.resolution /= scene.preview_ratio;
-  preview_prms.samples = 1;
-  auto preview         = trace_image(
-      scene.scene, scene.bvh, scene.lights, preview_prms);
-  preview = tonemap(preview, scene.tonemap_prms);
-  for (auto j = 0; j < scene.display.size().y; j++) {
-    for (auto i = 0; i < scene.display.size().x; i++) {
-      auto pi = clamp(i / scene.preview_ratio, 0, preview.size().x - 1),
-           pj = clamp(j / scene.preview_ratio, 0, preview.size().y - 1);
-      scene.display[{i, j}] = preview[{pi, pj}];
-    }
-  }
-}
-
-void render_image_async(app_scene& scene) {
-  stop_render_async(scene);
-  render_preview_sync(scene);
-  update_gltexture(scene.gl_txt, scene.display, false);
-  start_render_async(scene);
 }
 
 void load_scene_async(app_state& app, const string& filename) {
@@ -210,9 +171,9 @@ bool draw_glwidgets_camera(const opengl_window& win, app_scene& scene, int id) {
     edited += 1;
   }
   if (edited) {
-    stop_render_async(scene);
+    // stop_render_async(scene);
     scamera = camera;
-    start_render_async(scene);
+    // start_render_async(scene);
   }
   return edited;
 }
@@ -233,7 +194,7 @@ bool draw_glwidgets_texture(
       win, "ldr", "%d x %d", stexture.ldr.size().x, stexture.ldr.size().y);
   if (edited) {
     auto reload = texture.filename != stexture.filename;
-    stop_render_async(scene);
+    // stop_render_async(scene);
     stexture.name     = texture.name;
     stexture.filename = texture.filename;
     if (reload) {
@@ -249,7 +210,7 @@ bool draw_glwidgets_texture(
         log_glinfo(win, e.what());
       }
     }
-    start_render_async(scene);
+    // start_render_async(scene);
   }
   return edited;
 }
@@ -294,9 +255,9 @@ bool draw_glwidgets_material(
       win, "normal_tex", material.normal_tex, scene.scene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   if (edited) {
-    stop_render_async(scene);
+    // stop_render_async(scene);
     smaterial = material;
-    start_render_async(scene);
+    //start_render_async(scene);
   }
   return edited;
 }
@@ -324,7 +285,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_scene& scene, int id) {
   draw_gllabel(win, "tangsp", "%ld", sshape.tangents.size());
   if (edited) {
     // auto reload = sshape.filename != shape.filename;
-    stop_render_async(scene);
+    // stop_render_async(scene);
     sshape.name     = shape.name;
     sshape.filename = shape.filename;
     // if (reload) {
@@ -340,7 +301,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_scene& scene, int id) {
     //   }
     //   // add bvh refit here
     // }
-    start_render_async(scene);
+    // start_render_async(scene);
   }
   return edited;
 }
@@ -746,19 +707,52 @@ void update(const opengl_window& win, app_state& app) {
     try {
       app.load_workers[idx].get();
       app.scenes.push_back(app.loading[idx]);
+      reset_render(app.scenes.back());
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load scene " + app.loading[idx].filename);
       log_glinfo(win, "cannot load scene " + app.loading[idx].filename);
       log_glinfo(win, e.what());
       break;
     }
-    start_render_async(app.scenes.back());
-    if (app.selected < 0) app.selected = (int)app.scenes.size() - 1;
   }
   for (auto& scene : app.scenes) {
-    if (!*scene.render_updated) continue;
-    update_gltexture(scene.gl_txt, scene.display, false);
-    *scene.render_updated = false;
+    if(scene.render_sample < 0) {
+      // rendering preview
+      auto preview_prms = scene.trace_prms;
+      preview_prms.resolution /= scene.preview_ratio;
+      preview_prms.samples = 1;
+      auto preview         = trace_image(
+          scene.scene, scene.bvh, scene.lights, preview_prms);
+      preview = tonemap(preview, scene.tonemap_prms);
+      for (auto j = 0; j < scene.display.size().y; j++) {
+        for (auto i = 0; i < scene.display.size().x; i++) {
+          auto pi = clamp(i / scene.preview_ratio, 0, preview.size().x - 1),
+              pj = clamp(j / scene.preview_ratio, 0, preview.size().y - 1);
+          scene.display[{i, j}] = preview[{pi, pj}];
+        }
+      }
+      if(!scene.gl_txt || scene.gl_txt.size != scene.display.size()) {
+        init_gltexture(scene.gl_txt, scene.display, false, false, false);
+      } else {
+        update_gltexture(scene.gl_txt, scene.display, false);
+      }
+    } else if(scene.render_sample < scene.trace_prms.samples) {
+      // rendering blocks
+      auto num_regions = min(128, scene.render_regions.size() - scene.render_region);
+      parallel_for(scene.render_region, scene.render_region + num_regions,
+          [&scene](int region_id) {
+            trace_region(scene.render, scene.state, scene.scene, scene.bvh,
+                scene.lights, scene.render_regions[region_id], 1, scene.trace_prms);
+            tonemap(scene.display, scene.render, scene.render_regions[region_id], 
+              scene.tonemap_prms);
+          });
+      scene.render_region += num_regions;
+      if(scene.render_region >= scene.render_regions.size()) {
+        scene.render_region = 0;
+        scene.render_sample += 1;
+      }
+      update_gltexture(scene.gl_txt, scene.display, false);
+    }
   }
 #if 0
   // close if needed
@@ -1122,8 +1116,7 @@ void run_ui(app_state& app) {
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
       auto& scene      = app.scenes[app.selected];
-      auto& old_camera = scene.scene.cameras.at(scene.trace_prms.camera);
-      auto  camera     = scene.scene.cameras.at(scene.trace_prms.camera);
+      auto& camera = scene.scene.cameras.at(scene.trace_prms.camera);
       auto  dolly      = 0.0f;
       auto  pan        = zero2f;
       auto  rotate     = zero2f;
@@ -1133,12 +1126,7 @@ void run_ui(app_state& app) {
         pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
       pan.x = -pan.x;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      if (camera.frame != old_camera.frame ||
-          camera.focus != old_camera.focus) {
-        stop_render_async(scene);
-        scene.scene.cameras.at(scene.trace_prms.camera) = camera;
-        render_image_async(scene);
-      }
+      reset_render(scene);
     }
 
     // selection
