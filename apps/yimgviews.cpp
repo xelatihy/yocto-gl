@@ -73,9 +73,9 @@ struct app_image {
   opengl_texture gl_txt       = {};
 
   // rendering properties
-  int render_region = 0;
+  int                  render_region  = 0;
   vector<image_region> render_regions = {};
-  bool render_stats = false;
+  bool                 render_stats   = false;
 };
 
 struct app_state {
@@ -92,9 +92,8 @@ struct app_state {
 
 // reset display
 void reset_display(app_image& image) {
-  if(image.display.size() != image.source.size())
-    image.display = image.source;
-  image.render_region = 0;
+  if (image.display.size() != image.source.size()) image.display = image.source;
+  image.render_region  = 0;
   image.render_regions = make_regions(image.source.size(), 256);
 }
 
@@ -133,7 +132,7 @@ void load_image_async(app_state& app, const string& filename) {
     compute_stats(
         image.source_stats, image.source, is_hdr_filename(image.filename));
     image.display = tonemap(image.source, image.tonemap_prms);
-    if(image.apply_colorgrade)
+    if (image.apply_colorgrade)
       image.display = colorgrade(image.display, image.colorgrade_prms);
     compute_stats(image.display_stats, image.display, false);
   }));
@@ -204,9 +203,9 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "colorgrade")) {
-    auto& image            = app.images[app.selected];
-    auto&  params           = image.colorgrade_prms;
-    auto  edited           = 0;
+    auto& image  = app.images[app.selected];
+    auto& params = image.colorgrade_prms;
+    auto  edited = 0;
     edited += draw_glcheckbox(win, "apply colorgrade", image.apply_colorgrade);
     edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
     edited += draw_glslider(win, "ldr shadows", params.shadows, 0, 1);
@@ -264,7 +263,7 @@ void draw(const opengl_window& win) {
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.images.empty() && app.selected >= 0) {
     auto& image = app.images.at(app.selected);
-    if (!image.gl_txt || image.gl_txt.size != image.display.size()) 
+    if (!image.gl_txt || image.gl_txt.size != image.display.size())
       init_gltexture(image.gl_txt, image.display, false, false, false);
     update_imview(image.image_center, image.image_scale, image.display.size(),
         win_size, image.zoom_to_fit);
@@ -297,23 +296,25 @@ void update(const opengl_window& win, app_state& app) {
     }
     if (app.selected < 0) app.selected = (int)app.images.size() - 1;
   }
-  for(auto& image : app.images) {
-    if(image.render_region < image.render_regions.size()) {
+  for (auto& image : app.images) {
+    if (image.render_region < image.render_regions.size()) {
       auto num_regions = min(
           12, image.render_regions.size() - image.render_region);
       parallel_for(image.render_region, image.render_region + num_regions,
           [&image](int region_id) {
-        tonemap(image.display, image.source, image.render_regions[region_id], image.tonemap_prms);
-        if (image.apply_colorgrade) {
-          colorgrade(image.display, image.display, image.render_regions[region_id], image.colorgrade_prms);
-        }
-      });
+            tonemap(image.display, image.source,
+                image.render_regions[region_id], image.tonemap_prms);
+            if (image.apply_colorgrade) {
+              colorgrade(image.display, image.display,
+                  image.render_regions[region_id], image.colorgrade_prms);
+            }
+          });
       if (!image.gl_txt || image.gl_txt.size != image.display.size()) {
         init_gltexture(image.gl_txt, image.display, false, false, false);
       } else {
         update_gltexture(image.gl_txt, image.display, false);
       }
-    } else if(image.render_stats) {
+    } else if (image.render_stats) {
       compute_stats(image.display_stats, image.display, false);
     }
   }

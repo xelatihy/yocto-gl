@@ -479,13 +479,14 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "edit")) {
-    static auto labels = vector<string>{"camera", "shape", "environment", "instance", "materials", "textures", "subdivs"};
-    auto& scene  = app.scenes[app.selected];
+    static auto labels = vector<string>{"camera", "shape", "environment",
+        "instance", "materials", "textures", "subdivs"};
+    auto&       scene  = app.scenes[app.selected];
     if (draw_glcombobox(win, "selection##1", scene.selection.first, labels))
       scene.selection.second = 0;
     auto edited = 0;
     if (scene.selection.first == "camera") {
-      edited +=draw_glcombobox(
+      edited += draw_glcombobox(
           win, "selection##2", scene.selection.second, scene.scene.cameras);
       edited += draw_glwidgets_camera(win, scene, scene.selection.second);
     } else if (scene.selection.first == "texture") {
@@ -509,11 +510,11 @@ void draw_glwidgets(const opengl_window& win) {
           win, "selection##2", scene.selection.second, scene.scene.instances);
       edited += draw_glwidgets_instance(win, scene, scene.selection.second);
     } else if (scene.selection.first == "environment") {
-      draw_glcombobox(
-          win, "selection##2", scene.selection.second, scene.scene.environments);
+      draw_glcombobox(win, "selection##2", scene.selection.second,
+          scene.scene.environments);
       edited += draw_glwidgets_environment(win, scene, scene.selection.second);
     }
-    if(edited) reset_display(scene);
+    if (edited) reset_display(scene);
     end_glheader(win);
   }
   if (begin_glheader(win, "log")) {

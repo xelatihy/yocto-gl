@@ -1232,7 +1232,7 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, string& value,
 
 bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     int num, const std::function<const char*(int)>& labels, bool include_null) {
-  if(num <= 0) idx = -1;
+  if (num <= 0) idx = -1;
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>")) return false;
   auto old_idx = idx;
   if (include_null) {
