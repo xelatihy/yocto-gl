@@ -97,10 +97,10 @@ struct app_states {
 };
 
 // reset display
-void reset_display(app_state& state) {
-  if (state.display.size() != state.source.size()) state.display = state.source;
-  state.render_region  = 0;
-  state.render_regions = make_regions(state.source.size(), 256);
+void reset_display(app_state& app) {
+  if (app.display.size() != app.source.size()) app.display = app.source;
+  app.render_region  = 0;
+  app.render_regions = make_regions(app.source.size(), 256);
 }
 
 // compute min/max
@@ -125,34 +125,34 @@ void compute_stats(
 }
 
 // add a new image
-void load_image_async(app_states& app, const string& filename) {
-  auto& state           = app.loading.emplace_back();
-  state.filename        = filename;
-  state.outname         = replace_extension(filename, ".display.png");
-  state.name            = get_filename(filename);
-  state.tonemap_prms    = app.tonemap_prms;
-  state.colorgrade_prms = app.colorgrade_prms;
-  app.selected          = (int)app.states.size() - 1;
-  app.load_workers.push_back(run_async([&state]() {
-    load_image(state.filename, state.source);
+void load_image_async(app_states& apps, const string& filename) {
+  auto& app           = apps.loading.emplace_back();
+  app.filename        = filename;
+  app.outname         = replace_extension(filename, ".display.png");
+  app.name            = get_filename(filename);
+  app.tonemap_prms    = app.tonemap_prms;
+  app.colorgrade_prms = app.colorgrade_prms;
+  apps.selected          = (int)apps.states.size() - 1;
+  apps.load_workers.push_back(run_async([&app]() {
+    load_image(app.filename, app.source);
     compute_stats(
-        state.source_stats, state.source, is_hdr_filename(state.filename));
-    state.display = tonemap(state.source, state.tonemap_prms);
-    if (state.apply_colorgrade)
-      state.display = colorgrade(state.display, state.colorgrade_prms);
-    compute_stats(state.display_stats, state.display, false);
+        app.source_stats, app.source, is_hdr_filename(app.filename));
+    app.display = tonemap(app.source, app.tonemap_prms);
+    if (app.apply_colorgrade)
+      app.display = colorgrade(app.display, app.colorgrade_prms);
+    compute_stats(app.display_stats, app.display, false);
   }));
 }
 
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         app      = *(app_states*)get_gluser_pointer(win);
-  auto          image_ok = !app.states.empty() && app.selected >= 0;
+  auto&         apps      = *(app_states*)get_gluser_pointer(win);
+  auto          image_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yimview")) return;
   draw_glmessages(win);
   if (draw_glfiledialog(win, "load image", load_path, false, "./", "",
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    load_image_async(app, load_path);
+    load_image_async(apps, load_path);
   }
   if (draw_glfiledialog(win, "save image", save_path, true,
           get_dirname(save_path), get_filename(save_path),
@@ -173,27 +173,27 @@ void draw_glwidgets(const opengl_window& win) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", image_ok)) {
-    auto it = app.states.begin();
-    std::advance(it, app.selected);
-    app.states.erase(it);
-    app.selected = app.states.empty() ? -1 : 0;
+    auto it = apps.states.begin();
+    std::advance(it, apps.selected);
+    apps.states.erase(it);
+    apps.selected = apps.states.empty() ? -1 : 0;
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  if (app.states.empty()) return;
+  if (apps.states.empty()) return;
   draw_glcombobox(
-      win, "image", app.selected, (int)app.states.size(),
-      [&app](int idx) {
-        auto it = app.states.begin();
+      win, "image", apps.selected, (int)apps.states.size(),
+      [&apps](int idx) {
+        auto it = apps.states.begin();
         std::advance(it, idx);
         return it->name.c_str();
       },
       false);
   if (image_ok && begin_glheader(win, "tonemap")) {
-    auto& state  = app.get_selected();
-    auto& params = state.tonemap_prms;
+    auto& app  = apps.get_selected();
+    auto& params = app.tonemap_prms;
     auto  edited = 0;
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
     edited += draw_glcoloredit(win, "tint", params.tint);
@@ -205,18 +205,18 @@ void draw_glwidgets(const opengl_window& win) {
     edited += draw_glcheckbox(win, "srgb", params.srgb);
     continue_glline(win);
     if (draw_glbutton(win, "auto wb")) {
-      auto wb     = 1 / xyz(state.source_stats.average);
+      auto wb     = 1 / xyz(app.source_stats.average);
       params.tint = wb / max(wb);
       edited += 1;
     }
-    if (edited) reset_display(state);
+    if (edited) reset_display(app);
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "colorgrade")) {
-    auto& state  = app.get_selected();
-    auto& params = state.colorgrade_prms;
+    auto& app  = apps.get_selected();
+    auto& params = app.colorgrade_prms;
     auto  edited = 0;
-    edited += draw_glcheckbox(win, "apply colorgrade", state.apply_colorgrade);
+    edited += draw_glcheckbox(win, "apply colorgrade", app.apply_colorgrade);
     edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
     edited += draw_glslider(win, "ldr shadows", params.shadows, 0, 1);
     edited += draw_glslider(win, "ldr midtones", params.midtones, 0, 1);
@@ -225,38 +225,38 @@ void draw_glwidgets(const opengl_window& win) {
     edited += draw_glcoloredit(win, "midtones color", params.midtones_color);
     edited += draw_glcoloredit(
         win, "highlights color", params.highlights_color);
-    if (edited) reset_display(state);
+    if (edited) reset_display(app);
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "inspect")) {
-    auto& state = app.get_selected();
-    draw_gllabel(win, "image", get_filename(state.filename));
-    draw_gllabel(win, "filename", state.filename);
-    draw_gllabel(win, "outname", state.outname);
+    auto& app = apps.get_selected();
+    draw_gllabel(win, "image", get_filename(app.filename));
+    draw_gllabel(win, "filename", app.filename);
+    draw_gllabel(win, "outname", app.outname);
     draw_gllabel(
-        win, "image", "%d x %d", state.source.size().x, state.source.size().y);
-    draw_glslider(win, "zoom", state.image_scale, 0.1, 10);
-    draw_glcheckbox(win, "zoom to fit", state.zoom_to_fit);
+        win, "image", "%d x %d", app.source.size().x, app.source.size().y);
+    draw_glslider(win, "zoom", app.image_scale, 0.1, 10);
+    draw_glcheckbox(win, "zoom to fit", app.zoom_to_fit);
     auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(
-        mouse_pos, state.image_center, state.image_scale, state.source.size());
+        mouse_pos, app.image_center, app.image_scale, app.source.size());
     draw_gldragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
-    if (ij.x >= 0 && ij.x < state.source.size().x && ij.y >= 0 &&
-        ij.y < state.source.size().y) {
-      img_pixel     = state.source[{ij.x, ij.y}];
-      display_pixel = state.display[{ij.x, ij.y}];
+    if (ij.x >= 0 && ij.x < app.source.size().x && ij.y >= 0 &&
+        ij.y < app.source.size().y) {
+      img_pixel     = app.source[{ij.x, ij.y}];
+      display_pixel = app.display[{ij.x, ij.y}];
     }
     draw_glcoloredit(win, "image", img_pixel);
     draw_gldragger(win, "display", display_pixel);
-    draw_gldragger(win, "image min", state.source_stats.min);
-    draw_gldragger(win, "image max", state.source_stats.max);
-    draw_gldragger(win, "image avg", state.source_stats.average);
-    draw_glhistogram(win, "image histo", state.source_stats.histogram);
-    draw_gldragger(win, "display min", state.display_stats.min);
-    draw_gldragger(win, "display max", state.display_stats.max);
-    draw_gldragger(win, "display avg", state.display_stats.average);
-    draw_glhistogram(win, "display histo", state.display_stats.histogram);
+    draw_gldragger(win, "image min", app.source_stats.min);
+    draw_gldragger(win, "image max", app.source_stats.max);
+    draw_gldragger(win, "image avg", app.source_stats.average);
+    draw_glhistogram(win, "image histo", app.source_stats.histogram);
+    draw_gldragger(win, "display min", app.display_stats.min);
+    draw_gldragger(win, "display max", app.display_stats.max);
+    draw_gldragger(win, "display avg", app.display_stats.average);
+    draw_glhistogram(win, "display histo", app.display_stats.histogram);
     end_glheader(win);
   }
   if (begin_glheader(win, "log")) {
@@ -266,22 +266,22 @@ void draw_glwidgets(const opengl_window& win) {
 }
 
 void draw(const opengl_window& win) {
-  auto& app      = *(app_states*)get_gluser_pointer(win);
+  auto& apps      = *(app_states*)get_gluser_pointer(win);
   auto  win_size = get_glwindow_size(win);
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.states.empty() && app.selected >= 0) {
-    auto& state = app.get_selected();
-    if (!state.gl_txt || state.gl_txt.size != state.display.size())
-      init_gltexture(state.gl_txt, state.display, false, false, false);
-    update_imview(state.image_center, state.image_scale, state.display.size(),
-        win_size, state.zoom_to_fit);
-    draw_glimage_background(state.gl_txt, win_size.x, win_size.y,
-        state.image_center, state.image_scale);
+  if (!apps.states.empty() && apps.selected >= 0) {
+    auto& app = apps.get_selected();
+    if (!app.gl_txt || app.gl_txt.size != app.display.size())
+      init_gltexture(app.gl_txt, app.display, false, false, false);
+    update_imview(app.image_center, app.image_scale, app.display.size(),
+        win_size, app.zoom_to_fit);
+    draw_glimage_background(app.gl_txt, win_size.x, win_size.y,
+        app.image_center, app.image_scale);
     set_glblending(true);
-    draw_glimage(state.gl_txt, win_size.x, win_size.y, state.image_center,
-        state.image_scale);
+    draw_glimage(app.gl_txt, win_size.x, win_size.y, app.image_center,
+        app.image_scale);
     set_glblending(false);
   }
   begin_glwidgets(win);
@@ -304,38 +304,38 @@ void update(const opengl_window& win, app_states& app) {
     reset_display(app.states.back());
     if (app.selected < 0) app.selected = (int)app.states.size() - 1;
   }
-  for (auto& state : app.states) {
-    if (state.render_region < state.render_regions.size()) {
+  for (auto& app : app.states) {
+    if (app.render_region < app.render_regions.size()) {
       auto num_regions = min(
-          12, state.render_regions.size() - state.render_region);
-      parallel_for(num_regions, [&state](int idx) {
-        auto& region = state.render_regions[state.render_region + idx];
-        tonemap(state.display, state.source,
-            state.render_regions[state.render_region + idx],
-            state.tonemap_prms);
-        if (state.apply_colorgrade) {
+          12, app.render_regions.size() - app.render_region);
+      parallel_for(num_regions, [&app](int idx) {
+        auto& region = app.render_regions[app.render_region + idx];
+        tonemap(app.display, app.source,
+            app.render_regions[app.render_region + idx],
+            app.tonemap_prms);
+        if (app.apply_colorgrade) {
           colorgrade(
-              state.display, state.display, region, state.colorgrade_prms);
+              app.display, app.display, region, app.colorgrade_prms);
         }
       });
-      if (!state.gl_txt || state.gl_txt.size != state.display.size()) {
-        init_gltexture(state.gl_txt, state.display, false, false, false);
+      if (!app.gl_txt || app.gl_txt.size != app.display.size()) {
+        init_gltexture(app.gl_txt, app.display, false, false, false);
       } else {
         for (auto idx = 0; idx < num_regions; idx++)
-          update_gltexture_region(state.gl_txt, state.display,
-              state.render_regions[state.render_region + idx], false);
+          update_gltexture_region(app.gl_txt, app.display,
+              app.render_regions[app.render_region + idx], false);
       }
-      state.render_region += num_regions;
-    } else if (state.render_stats) {
-      compute_stats(state.display_stats, state.display, false);
+      app.render_region += num_regions;
+    } else if (app.render_stats) {
+      compute_stats(app.display_stats, app.display, false);
     }
   }
 }
 
-void run_ui(app_states& states) {
+void run_ui(app_states& apps) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yimview", &states, draw);
+  init_glwindow(win, {1280 + 320, 720}, "yimview", &apps, draw);
   set_drop_glcallback(
       win, [](const opengl_window& win, const vector<string>& paths) {
         auto& app = *(app_states*)get_gluser_pointer(win);
@@ -356,16 +356,16 @@ void run_ui(app_states& states) {
 
     // handle mouse
     if (mouse_left && !widgets_active) {
-      auto& img = states.get_selected();
+      auto& img = apps.get_selected();
       img.image_center += mouse_pos - last_pos;
     }
     if (mouse_right && !widgets_active) {
-      auto& img = states.get_selected();
+      auto& img = apps.get_selected();
       img.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
     // update
-    update(win, states);
+    update(win, apps);
 
     // draw
     draw(win);
@@ -380,7 +380,7 @@ void run_ui(app_states& states) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto states       = app_states();
+  auto apps       = app_states();
   auto filenames = vector<string>{};
 
   // command line options
@@ -389,10 +389,10 @@ int main(int argc, const char* argv[]) {
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // loading images
-  for (auto filename : filenames) load_image_async(states, filename);
+  for (auto filename : filenames) load_image_async(apps, filename);
 
   // run ui
-  run_ui(states);
+  run_ui(apps);
 
   // done
   return 0;
