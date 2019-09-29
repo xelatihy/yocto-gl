@@ -149,26 +149,19 @@ void draw_glwidgets(const opengl_window& win) {
   auto          image_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yimview")) return;
   draw_glmessages(win);
-  if (draw_glfiledialog(win, "load image", load_path, false, "./", "",
-          "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
+  if (draw_glfiledialog_button(win, "load", true, 
+    "load image", load_path, false, "./", "", 
+    "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
   }
-  if (draw_glfiledialog(win, "save image", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
+  continue_glline(win);
+  if (draw_glfiledialog_button(win, "save", image_ok, "save image", save_path, 
+    true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     // app.images[app.selected].outname = save_path;
     // app.images[app.selected].task_queue.emplace_back(app_task_type::save);
     save_path = "";
     // TODO> implement save
-  }
-  if (draw_glbutton(win, "load")) {
-    open_glmodal(win, "load image");
-  }
-  continue_glline(win);
-  if (draw_glbutton(win, "save", image_ok)) {
-    // TODO: implement save
-    // save_path = app.images[app.selected].outname;
-    // open_glmodal(win, "save image");
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", image_ok)) {
