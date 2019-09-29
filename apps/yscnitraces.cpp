@@ -480,14 +480,8 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "scene")) {
+    static auto labels = vector<string>{"camera", "shape", "environment", "instance", "materials", "textures", "subdivs"};
     auto& scene  = app.scenes[app.selected];
-    auto  labels = vector<string>{};
-    if (!scene.scene.cameras.empty()) labels.push_back("camera");
-    if (!scene.scene.textures.empty()) labels.push_back("texture");
-    if (!scene.scene.materials.empty()) labels.push_back("material");
-    if (!scene.scene.shapes.empty()) labels.push_back("shape");
-    if (!scene.scene.instances.empty()) labels.push_back("instance");
-    if (!scene.scene.environments.empty()) labels.push_back("environment");
     if (draw_glcombobox(win, "selection##1", scene.selection.first, labels))
       scene.selection.second = 0;
     if (scene.selection.first == "camera") {
@@ -499,26 +493,28 @@ void draw_glwidgets(const opengl_window& win) {
           win, "selection##2", scene.selection.second, scene.scene.textures);
       draw_glwidgets_texture(win, scene, scene.selection.second);
     } else if (scene.selection.first == "material") {
+      draw_glcombobox(
+          win, "selection##2", scene.selection.second, scene.scene.materials);
+      draw_glwidgets_material(win, scene, scene.selection.second);
     } else if (scene.selection.first == "shape") {
+      draw_glcombobox(
+          win, "selection##2", scene.selection.second, scene.scene.subdivs);
+      draw_glwidgets_shape(win, scene, scene.selection.second);
+    } else if (scene.selection.first == "subdiv") {
+      draw_glcombobox(
+          win, "selection##2", scene.selection.second, scene.scene.subdivs);
+      draw_glwidgets_subdiv(win, scene, scene.selection.second);
     } else if (scene.selection.first == "instance") {
+      draw_glcombobox(
+          win, "selection##2", scene.selection.second, scene.scene.instances);
+      draw_glwidgets_instance(win, scene, scene.selection.second);
+    } else if (scene.selection.first == "environment") {
+      draw_glcombobox(
+          win, "selection##2", scene.selection.second, scene.scene.environments);
+      draw_glwidgets_environment(win, scene, scene.selection.second);
     }
     end_glheader(win);
   }
-#if 0
-  if (scene_ok && begin_glheader(win, "scene tree")) {
-    auto& scn = app.scenes[app.selected];
-    draw_glscenetree(win, "", scn.scene, scn.selection, 200);
-    end_glheader(win);
-  }
-  if (scene_ok && begin_glheader(win, "scene object")) {
-    auto& scn  = app.scenes[app.selected];
-    auto  edit = app_edit{};
-    if (draw_glsceneinspector(win, "", scn.scene, scn.selection, edit, 200)) {
-      // TODO: support edit
-    }
-    end_glheader(win);
-  }
-#endif
   if (begin_glheader(win, "log")) {
     draw_gllog(win);
     end_glheader(win);
