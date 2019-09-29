@@ -169,12 +169,12 @@ void draw_glwidgets(const opengl_window& win) {
     open_glmodal(win, "load image");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "save", app.selected >= 0)) {
+  if (draw_glbutton(win, "save", image_ok)) {
     save_path = app.images[app.selected].outname;
     open_glmodal(win, "save image");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "close", app.selected >= 0)) {
+  if (draw_glbutton(win, "close", image_ok)) {
     close_image(app);
   }
   continue_glline(win);

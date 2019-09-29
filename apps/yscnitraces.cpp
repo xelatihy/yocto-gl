@@ -59,7 +59,6 @@ struct app_scene {
   trace_params   trace_prms    = {};
   tonemap_params tonemap_prms  = {};
   int            preview_ratio = 8;
-  vec2i          image_size    = {0, 0};
 
   // scene
   yocto_scene scene      = {};
@@ -67,12 +66,11 @@ struct app_scene {
   bool        add_skyenv = false;
 
   // rendering state
-  trace_lights lights        = {};
-  trace_state  state         = {};
-  image<vec4f> render        = {};
-  image<vec4f> display       = {};
-  image<vec4f> preview       = {};
-  int          render_sample = 0;
+  trace_lights lights  = {};
+  trace_state  state   = {};
+  image<vec4f> render  = {};
+  image<vec4f> display = {};
+  image<vec4f> preview = {};
 
   // view scene
   vec2f          image_center   = zero2f;
@@ -83,6 +81,12 @@ struct app_scene {
 
   // editing
   app_selection selection = {typeid(void), -1};
+
+  // computation
+  atomic<bool>*        render_stop    = new atomic<bool>();  // TODO: fix me
+  vector<image_region> render_regions = {};
+  future<void>*        render_worker  = new future<void>(); // TODO: fix me
+  int                  render_sample  = 0;  // TODO: fix me, make it atomic
 };
 
 // Application state
@@ -103,67 +107,53 @@ struct app_state {
   bool           add_skyenv   = false;
 };
 
-void update_app_render(const string& filename, image<vec4f>& render,
-    image<vec4f>& display, image<vec4f>& preview, trace_state& state,
-    const yocto_scene& scene, const trace_lights& lights, const bvh_scene& bvh,
-    const trace_params& trace_prms, const tonemap_params& tonemap_prms,
-    int preview_ratio, std::atomic<bool>* cancel,
-    std::atomic<int>& current_sample, std::deque<image_region>& queue,
-    std::mutex& queuem) {
-  auto preview_prms = trace_prms;
-  preview_prms.resolution /= preview_ratio;
+void start_render_async(app_scene& scene) {
+  scene.render_sample = 0;
+  scene.state = make_trace_state(scene.render.size(), scene.trace_prms.seed);
+  scene.render_regions = make_regions(
+      scene.render.size(), scene.trace_prms.region, true);
+  *scene.render_worker = run_async([&scene]() {
+    for (auto sample = 0; sample < scene.trace_prms.samples;
+         sample += scene.trace_prms.batch) {
+      if (scene.render_stop && *scene.render_stop) return;
+      scene.render_sample = sample;
+      auto num_samples    = min(scene.trace_prms.batch,
+          scene.trace_prms.samples - scene.render_sample);
+      parallel_foreach(scene.render_regions,
+          [&scene, num_samples](const image_region& region) {
+            trace_region(scene.render, scene.state, scene.scene, scene.bvh,
+                scene.lights, region, num_samples, scene.trace_prms);
+            tonemap(scene.display, scene.render, region, scene.tonemap_prms);
+          });
+      scene.render_sample = scene.trace_prms.samples;
+    }
+  });
+}
+void stop_render_async(app_scene& scene) {
+  *scene.render_stop = true;
+  scene.render_worker->get();
+}
+void render_preview_sync(app_scene& scene) {
+  auto preview_prms = scene.trace_prms;
+  preview_prms.resolution /= scene.preview_ratio;
   preview_prms.samples = 1;
-  auto small_preview   = trace_image(scene, bvh, lights, preview_prms);
-  auto display_preview = tonemap(small_preview, tonemap_prms);
-  for (auto j = 0; j < preview.size().y; j++) {
-    for (auto i = 0; i < preview.size().x; i++) {
-      auto pi = clamp(i / preview_ratio, 0, display_preview.size().x - 1),
-           pj = clamp(j / preview_ratio, 0, display_preview.size().y - 1);
-      preview[{i, j}] = display_preview[{pi, pj}];
+  auto small_preview   = trace_image(
+      scene.scene, scene.bvh, scene.lights, preview_prms);
+  auto display_preview = tonemap(small_preview, scene.tonemap_prms);
+  for (auto j = 0; j < scene.preview.size().y; j++) {
+    for (auto i = 0; i < scene.preview.size().x; i++) {
+      auto pi = clamp(i / scene.preview_ratio, 0, display_preview.size().x - 1),
+           pj = clamp(j / scene.preview_ratio, 0, display_preview.size().y - 1);
+      scene.preview[{i, j}] = display_preview[{pi, pj}];
     }
   }
-  {
-    std::lock_guard guard{queuem};
-    queue.push_back({{0, 0}, {0, 0}});
-  }
-  current_sample = 0;
+}
 
-  auto& camera     = scene.cameras.at(trace_prms.camera);
-  auto  image_size = camera_resolution(camera, trace_prms.resolution);
-  state            = make_trace_state(image_size, trace_prms.seed);
-  auto regions     = make_regions(render.size(), trace_prms.region, true);
-
-  for (auto sample = 0; sample < trace_prms.samples;
-       sample += trace_prms.batch) {
-    if (cancel && *cancel) return;
-    current_sample   = sample;
-    auto num_samples = min(
-        trace_prms.batch, trace_prms.samples - current_sample);
-    auto                futures  = vector<std::future<void>>{};
-    auto                nthreads = std::thread::hardware_concurrency();
-    std::atomic<size_t> next_idx(0);
-    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      futures.emplace_back(std::async(std::launch::async,
-          [num_samples, &trace_prms, &tonemap_prms, &render, &display, &scene,
-              &lights, &bvh, &state, &queue, &queuem, &next_idx, cancel,
-              &regions]() {
-            while (true) {
-              if (cancel && *cancel) break;
-              auto idx = next_idx.fetch_add(1);
-              if (idx >= regions.size()) break;
-              auto region = regions[idx];
-              trace_region(render, state, scene, bvh, lights, region,
-                  num_samples, trace_prms);
-              tonemap(display, render, region, tonemap_prms);
-              {
-                std::lock_guard guard{queuem};
-                queue.push_back(region);
-              }
-            }
-          }));
-    }
-    current_sample = trace_prms.samples;
-  }
+void render_image_async(app_scene& scene) {
+  stop_render_async(scene);
+  render_preview_sync(scene);
+  update_gltexture(scene.gl_txt, scene.preview, false);
+  start_render_async(scene);
 }
 
 void load_scene_async(app_state& app, const string& filename) {
@@ -182,12 +172,12 @@ void load_scene_async(app_state& app, const string& filename) {
     load_scene(scene.filename, scene.scene);
     make_bvh(scene.bvh, scene.scene, scene.bvh_prms);
     make_trace_lights(scene.lights, scene.scene);
-    scene.image_size = camera_resolution(
+    auto image_size = camera_resolution(
         scene.scene.cameras[scene.trace_prms.camera],
         scene.trace_prms.resolution);
-    scene.render.resize(scene.image_size);
-    scene.display.resize(scene.image_size);
-    scene.preview.resize(scene.image_size);
+    scene.render.resize(image_size);
+    scene.display.resize(image_size);
+    scene.preview.resize(image_size);
     scene.name = get_filename(scene.filename) + " [" +
                  std::to_string(scene.render.size().x) + "x" +
                  std::to_string(scene.render.size().y) + " @ 0]";
@@ -197,15 +187,9 @@ void load_scene_async(app_state& app, const string& filename) {
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
   auto&         app = *(app_state*)get_gluser_pointer(win);
+  auto          scene_ok = !app.scenes.empty() && app.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnitrace")) return;
-  if (!app.errors.empty() && error_message.empty()) {
-    error_message = app.errors.front();
-    app.errors.pop_front();
-    open_glmodal(win, "error");
-  }
-  if (!draw_glmessage(win, "error", error_message)) {
-    error_message = "";
-  }
+  draw_glmessages(win);
   if (draw_glfiledialog(
           win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(app, load_path);
@@ -227,17 +211,17 @@ void draw_glwidgets(const opengl_window& win) {
     open_glmodal(win, "load");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "save", app.selected >= 0)) {
+  if (draw_glbutton(win, "save", scene_ok)) {
     save_path = app.scenes[app.selected].outname;
     open_glmodal(win, "save");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "save image", app.selected >= 0)) {
+  if (draw_glbutton(win, "save image", scene_ok)) {
     save_path = app.scenes[app.selected].imagename;
     open_glmodal(win, "save image");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "close", app.selected >= 0)) {
+  if (draw_glbutton(win, "close", scene_ok)) {
     // TODO: support close
   }
   continue_glline(win);
@@ -248,8 +232,8 @@ void draw_glwidgets(const opengl_window& win) {
   draw_glcombobox(
       win, "scene", app.selected, (int)app.scenes.size(),
       [&app](int idx) { return app.scenes[idx].name.c_str(); }, false);
+  if (scene_ok && begin_glheader(win, "trace")) {
   auto& scn = app.scenes[app.selected];
-  if (begin_glheader(win, "trace")) {
     auto cam_names = vector<string>();
     for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.name);
     auto trace_prms = scn.trace_prms;
@@ -279,7 +263,8 @@ void draw_glwidgets(const opengl_window& win) {
     }
     end_glheader(win);
   }
-  if (begin_glheader(win, "inspect")) {
+  if (scene_ok && begin_glheader(win, "inspect")) {
+  auto& scn = app.scenes[app.selected];
     draw_gllabel(win, "scene", get_filename(scn.filename));
     draw_gllabel(win, "filename", scn.filename);
     draw_gllabel(win, "outname", scn.outname);
@@ -313,11 +298,13 @@ void draw_glwidgets(const opengl_window& win) {
     }
     end_glheader(win);
   }
-  if (begin_glheader(win, "scene tree")) {
+  if (scene_ok && begin_glheader(win, "scene tree")) {
+    auto& scn = app.scenes[app.selected];
     draw_glscenetree(win, "", scn.scene, scn.selection, 200);
     end_glheader(win);
   }
-  if (begin_glheader(win, "scene object")) {
+  if (scene_ok && begin_glheader(win, "scene object")) {
+    auto& scn = app.scenes[app.selected];
     auto edit = app_edit{};
     if (draw_glsceneinspector(win, "", scn.scene, scn.selection, edit, 200)) {
       // TODO: support edit
@@ -330,13 +317,6 @@ void draw_glwidgets(const opengl_window& win) {
   }
 }
 
-void update_texture(app_scene& scene) {
-  if (!scene.gl_txt) {
-    init_gltexture(scene.gl_txt, scene.display, false, false, false);
-  }
-  update_gltexture(scene.gl_txt, scene.display, false);
-}
-
 void draw(const opengl_window& win) {
   auto& app      = *(app_state*)get_gluser_pointer(win);
   auto  win_size = get_glwindow_size(win);
@@ -345,7 +325,8 @@ void draw(const opengl_window& win) {
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.scenes.empty() && app.selected >= 0) {
     auto& scene = app.scenes.at(app.selected);
-    if (!scene.gl_txt) update_texture(scene);
+    if (!scene.gl_txt || scene.gl_txt.size != scene.display.size())
+      init_gltexture(scene.gl_txt, scene.display, false, false, false);
     update_imview(scene.image_center, scene.image_scale, scene.display.size(),
         win_size, scene.zoom_to_fit);
     draw_glimage_background(scene.gl_txt, win_size.x, win_size.y,
@@ -482,8 +463,9 @@ void update(const opengl_window& win, app_state& app) {
       log_glinfo(win, e.what());
       break;
     }
+    start_render_async(app.scenes.back());
   }
-  #if 0
+#if 0
   // close if needed
   while (!app.scenes.empty()) {
     auto pos = -1;
@@ -811,7 +793,7 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::apply_edit: break;
     }
   }
-  #endif
+#endif
 }
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
@@ -841,10 +823,12 @@ void run_ui(app_state& app) {
     auto widgets_active = get_glwidgets_active(win);
 
     // handle mouse and keyboard for navigation
-    if (app.selected >= 0 && (mouse_left || mouse_right) && !alt_down && !widgets_active) {
-      auto& scn        = app.scenes[app.selected];
-      auto& old_camera = scn.scene.cameras.at(scn.trace_prms.camera);
-      auto  camera     = scn.scene.cameras.at(scn.trace_prms.camera);
+    auto scene_ok = !app.scenes.empty() && app.selected >= 0;
+    if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
+        !widgets_active) {
+      auto& scene      = app.scenes[app.selected];
+      auto& old_camera = scene.scene.cameras.at(scene.trace_prms.camera);
+      auto  camera     = scene.scene.cameras.at(scene.trace_prms.camera);
       auto  dolly      = 0.0f;
       auto  pan        = zero2f;
       auto  rotate     = zero2f;
@@ -856,13 +840,15 @@ void run_ui(app_state& app) {
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       if (camera.frame != old_camera.frame ||
           camera.focus != old_camera.focus) {
-            // TODO: support edits
+        stop_render_async(scene);
+        scene.scene.cameras.at(scene.trace_prms.camera) = camera;
+        render_image_async(scene);
       }
     }
 
     // selection
-    if (app.selected >= 0 &&
-        (mouse_left || mouse_right) && alt_down && !widgets_active) {
+    if (app.selected >= 0 && (mouse_left || mouse_right) && alt_down &&
+        !widgets_active) {
       auto& scn = app.scenes[app.selected];
       auto  ij  = get_image_coords(
           mouse_pos, scn.image_center, scn.image_scale, scn.render.size());
