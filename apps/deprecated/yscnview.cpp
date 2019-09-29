@@ -34,7 +34,9 @@
 #include "yocto_opengl.h"
 #include "ysceneuiv.h"
 
-#include <list>
+#include <atomic>
+#include <future>
+#include <thread>
 
 #ifdef _WIN32
 #undef near
@@ -120,6 +122,45 @@ struct drawgl_params {
   float far              = 10000.0f;
 };
 
+// Equality operators
+inline bool operator==(const drawgl_params& a, const drawgl_params& b) {
+  return memcmp(&a, &b, sizeof(a)) == 0;
+}
+inline bool operator!=(const drawgl_params& a, const drawgl_params& b) {
+  return memcmp(&a, &b, sizeof(a)) != 0;
+}
+
+// Application task
+enum struct app_task_type {
+  none,
+  load_scene,
+  load_element,
+  apply_edit,
+  save_image,
+  save_scene,
+  close_scene
+};
+
+struct app_task {
+  app_task_type     type;
+  std::future<void> result;
+  std::atomic<bool> stop;
+  std::atomic<int>  current;
+  app_edit          edit;
+
+  app_task(app_task_type type, const app_edit& edit = {})
+      : type{type}, result{}, stop{false}, current{-1}, edit{edit} {}
+  ~app_task() {
+    stop = true;
+    if (result.valid()) {
+      try {
+        result.get();
+      } catch (...) {
+      }
+    }
+  }
+};
+
 // Application state
 struct app_scene {
   // loading parameters
@@ -147,30 +188,18 @@ struct app_scene {
   vec2f  time_range     = zero2f;
   bool   animate        = false;
 
-  // editing
-  pair<string, int> selection = {"camera", 0};
+  // tasks
+  bool                 load_done = false;
+  std::deque<app_task> task_queue;
+  app_selection        selection = {typeid(void), -1};
 };
 
 // Application state
 struct app_state {
   // data
-  std::list<app_scene>    scenes;
-  int                     selected = -1;
-  std::list<string>       errors;
-  std::list<app_scene>    loading;
-  std::list<future<void>> load_workers;
-
-  // get image
-  app_scene& get_selected() {
-    auto it = scenes.begin();
-    std::advance(it, selected);
-    return *it;
-  }
-  const app_scene& get_selected() const {
-    auto it = scenes.begin();
-    std::advance(it, selected);
-    return *it;
-  }
+  std::deque<app_scene> scenes;
+  int                   selected = -1;
+  std::deque<string>    errors;
 
   // default options
   load_params   load_prms   = {};
@@ -178,22 +207,17 @@ struct app_state {
   drawgl_params drawgl_prms = {};
 };
 
-void load_scene_async(app_state& app, const string& filename) {
-  auto& scene       = app.loading.emplace_back();
-  scene.filename    = filename;
-  scene.imagename   = replace_extension(filename, ".png");
-  scene.outname     = replace_extension(filename, ".edited.yaml");
-  scene.name        = get_filename(scene.filename);
-  scene.load_prms   = app.load_prms;
-  scene.save_prms   = app.save_prms;
-  scene.drawgl_prms = app.drawgl_prms;
-  app.load_workers.push_back(run_async([&scene]() {
-    load_scene(scene.filename, scene.scene);
-    tesselate_subdivs(scene.scene);
-    init_drawgl_lights(scene.lights, scene.scene);
-    scene.time_range = compute_animation_range(scene.scene);
-    scene.time       = scene.time_range.x;
-  }));
+void add_new_scene(app_state& app, const string& filename) {
+  auto& scn       = app.scenes.emplace_back();
+  scn.filename    = filename;
+  scn.imagename   = replace_extension(filename, ".png");
+  scn.outname     = replace_extension(filename, ".edited.yaml");
+  scn.name        = get_filename(scn.filename);
+  scn.load_prms   = app.load_prms;
+  scn.save_prms   = app.save_prms;
+  scn.drawgl_prms = app.drawgl_prms;
+  scn.task_queue.emplace_back(app_task_type::load_scene);
+  app.selected = (int)app.scenes.size() - 1;
 }
 
 #ifndef _WIN32
@@ -598,7 +622,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
-    const vec4i& viewport, const pair<string, int>& highlighted,
+    const vec4i& viewport, const app_selection& highlighted,
     const drawgl_params& options) {
   auto& camera      = scene.cameras.at(options.camera);
   auto  camera_view = mat4f(inverse(camera.frame));
@@ -663,8 +687,8 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     auto& instance = scene.instances[instance_id];
     // auto& shape     = scene.shapes[instance.shape];
     // auto& material  = scene.materials[shape.material];
-    auto highlight = highlighted.first == "instance" &&
-                     highlighted.second == instance_id;
+    auto highlight = highlighted.type == typeid(yocto_instance) &&
+                     highlighted.index == instance_id;
     draw_glinstance(state, scene, instance, highlight, options);
   }
 
@@ -756,270 +780,54 @@ void delete_drawgl_state(drawgl_state& state) {
   state.shapes.clear();
 }
 
-bool draw_glwidgets_camera(const opengl_window& win, app_scene& scene, int id) {
-  auto& camera = scene.scene.cameras[id];
-  auto  edited = 0;
-  edited += (int)draw_gltextinput(win, "name", camera.name);
-  edited += (int)draw_glslider(win, "frame.x", camera.frame.x, -1, 1);
-  edited += (int)draw_glslider(win, "frame.y", camera.frame.y, -1, 1);
-  edited += (int)draw_glslider(win, "frame.z", camera.frame.z, -1, 1);
-  edited += (int)draw_glslider(win, "frame.o", camera.frame.o, -10, 10);
-  edited += (int)draw_glcheckbox(win, "ortho", camera.orthographic);
-  edited += (int)draw_glslider(win, "lens", camera.lens, 0.01f, 1);
-  edited += (int)draw_glslider(win, "film", camera.film, 0.01f, 0.1f);
-  edited += (int)draw_glslider(win, "focus", camera.focus, 0.01f, 1000);
-  edited += (int)draw_glslider(win, "aperture", camera.aperture, 0, 5);
-  auto from         = camera.frame.o,
-       to           = camera.frame.o - camera.focus * camera.frame.z;
-  auto from_changed = draw_glslider(win, "!!from", from, -10, 10);
-  auto to_changed   = draw_glslider(win, "!!to", to, -10, 10);
-  if (from_changed || to_changed) {
-    camera.frame = lookat_frame(from, to, {0, 1, 0});
-    camera.focus = length(from - to);
-    edited += 1;
-  }
-  return edited;
-}
-
-/// Visit struct elements.
-bool draw_glwidgets_texture(
-    const opengl_window& win, app_scene& scene, int id) {
-  auto& texture      = scene.scene.textures[id];
-  auto  old_filename = texture.filename;
-  auto  edited       = 0;
-  edited += draw_gltextinput(win, "name", texture.name);
-  edited += draw_gltextinput(win, "filename", texture.filename);
-  draw_gllabel(
-      win, "hdr", "%d x %d", texture.hdr.size().x, texture.hdr.size().y);
-  draw_gllabel(
-      win, "ldr", "%d x %d", texture.ldr.size().x, texture.ldr.size().y);
-  if (edited && old_filename != texture.filename) {
-    try {
-      if (is_hdr_filename(texture.filename)) {
-        load_image(texture.filename, texture.hdr);
-      } else {
-        load_imageb(texture.filename, texture.ldr);
-      }
-    } catch (std::exception& e) {
-      push_glmessage("cannot load " + texture.filename);
-      log_glinfo(win, "cannot load " + texture.filename);
-      log_glinfo(win, e.what());
-    }
-    // TODO: update lights
-  }
-  return edited;
-}
-
-bool draw_glwidgets_material(
-    const opengl_window& win, app_scene& scene, int id) {
-  auto& material = scene.scene.materials[id];
-  auto  edited   = 0;
-  edited += draw_gltextinput(win, "name", material.name);
-  edited += draw_glhdrcoloredit(win, "emission", material.emission);
-  edited += draw_glcoloredit(win, "diffuse", material.diffuse);
-  edited += draw_glcoloredit(win, "specular", material.specular);
-  edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
-  edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
-  edited += draw_glcoloredit(win, "coat", material.coat);
-  edited += draw_glcoloredit(win, "transmission", material.transmission);
-  edited += draw_glcheckbox(win, "refract", material.refract);
-  edited += draw_glcoloredit(win, "vol transmission", material.voltransmission);
-  edited += draw_glcoloredit(win, "vol meanfreepath", material.volmeanfreepath);
-  edited += draw_glcoloredit(win, "vol scatter", material.volscatter);
-  edited += draw_glcoloredit(win, "vol emission", material.volemission);
-  edited += draw_glslider(win, "vol scale", material.volscale, 0, 1);
-  edited += draw_glslider(win, "vol anisotropy", material.volanisotropy, -1, 1);
-  edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
-
-  edited += draw_glcombobox(
-      win, "emission_tex", material.emission_tex, scene.scene.textures, true);
-  edited += draw_glcombobox(
-      win, "diffuse_tex", material.diffuse_tex, scene.scene.textures, true);
-  edited += draw_glcombobox(
-      win, "metallic_tex", material.metallic_tex, scene.scene.textures, true);
-  edited += draw_glcombobox(
-      win, "specular_tex", material.specular_tex, scene.scene.textures, true);
-  edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
-      scene.scene.textures, true);
-  edited += draw_glcombobox(win, "subsurface_tex", material.subsurface_tex,
-      scene.scene.textures, true);
-  edited += draw_glcombobox(
-      win, "roughness_tex", material.roughness_tex, scene.scene.textures, true);
-  edited += draw_glcombobox(
-      win, "normal_tex", material.normal_tex, scene.scene.textures, true);
-  edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
-  // TODO: update lights
-  return edited;
-}
-
-bool draw_glwidgets_shape(const opengl_window& win, app_scene& scene, int id) {
-  auto& shape        = scene.scene.shapes[id];
-  auto  old_filename = shape.filename;
-  auto  edited       = 0;
-  edited += draw_gltextinput(win, "name", shape.name);
-  edited += draw_gltextinput(win, "filename", shape.filename);
-  draw_gllabel(win, "points", "%ld", shape.points.size());
-  draw_gllabel(win, "lines", "%ld", shape.lines.size());
-  draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
-  draw_gllabel(win, "quads", "%ld", shape.quads.size());
-  draw_gllabel(win, "quads pos", "%ld", shape.quadspos.size());
-  draw_gllabel(win, "quads norm", "%ld", shape.quadsnorm.size());
-  draw_gllabel(win, "quads texcoord", "%ld", shape.quadstexcoord.size());
-  draw_gllabel(win, "pos", "%ld", shape.positions.size());
-  draw_gllabel(win, "norm", "%ld", shape.normals.size());
-  draw_gllabel(win, "texcoord", "%ld", shape.texcoords.size());
-  draw_gllabel(win, "color", "%ld", shape.colors.size());
-  draw_gllabel(win, "radius", "%ld", shape.radius.size());
-  draw_gllabel(win, "tangsp", "%ld", shape.tangents.size());
-  if (edited && old_filename != shape.filename) {
-    try {
-      load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius, false);
-    } catch (std::exception& e) {
-      push_glmessage("cannot load " + shape.filename);
-      log_glinfo(win, "cannot load " + shape.filename);
-      log_glinfo(win, e.what());
-    }
-    // TODO: update mesh state
-    // TODO: update lights
-  }
-  return edited;
-}
-
-inline bool draw_glwidgets_subdiv(
-    const opengl_window& win, app_scene& scene, int id) {
-  auto& shape        = scene.scene.subdivs[id];
-  auto  old_filename = shape.filename;
-  auto  edited       = 0;
-  edited += draw_gltextinput(win, "name", shape.name);
-  edited += draw_gltextinput(win, "filename", shape.filename);
-  edited += draw_glslider(win, "subdivisions", shape.subdivisions, 0, 10);
-  edited += draw_glcheckbox(win, "catmullclark", shape.catmullclark);
-  edited += draw_glcheckbox(win, "smooth", shape.smooth);
-  edited += draw_glcheckbox(win, "facevarying", shape.facevarying);
-  edited += draw_glcombobox(
-      win, "shape", shape.shape, scene.scene.shapes, true);
-  edited += draw_glcombobox(win, "displacement_tex", shape.displacement_tex,
-      scene.scene.textures, true);
-  edited += draw_glslider(win, "displacement", shape.displacement, 0, 1);
-  draw_gllabel(win, "points", "%ld", shape.points.size());
-  draw_gllabel(win, "lines", "%ld", shape.lines.size());
-  draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
-  draw_gllabel(win, "quads", "%ld", shape.quads.size());
-  draw_gllabel(win, "quads pos", "%ld", shape.quadspos.size());
-  draw_gllabel(win, "quads norm", "%ld", shape.quadsnorm.size());
-  draw_gllabel(win, "quads texcoord", "%ld", shape.quadstexcoord.size());
-  draw_gllabel(win, "pos", "%ld", shape.positions.size());
-  draw_gllabel(win, "norm", "%ld", shape.normals.size());
-  draw_gllabel(win, "texcoord", "%ld", shape.texcoords.size());
-  draw_gllabel(win, "color", "%ld", shape.colors.size());
-  draw_gllabel(win, "radius", "%ld", shape.radius.size());
-  if (edited && old_filename != shape.filename) {
-    try {
-      load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius, false);
-    } catch (std::exception& e) {
-      push_glmessage("cannot load " + shape.filename);
-      log_glinfo(win, "cannot load " + shape.filename);
-      log_glinfo(win, e.what());
-    }
-    tesselate_subdiv(scene.scene, shape);
-    // TODO: update mesh state
-    // TODO: update lights
-  }
-  if (edited && old_filename == shape.filename) {
-    tesselate_subdiv(scene.scene, shape);
-    // TODO: update mesh state
-    // TODO: update lights
-  }
-  return edited;
-}
-
-bool draw_glwidgets_instance(
-    const opengl_window& win, app_scene& scene, int id) {
-  auto& instance     = scene.scene.instances[id];
-  auto  old_instance = instance;
-  auto  edited       = 0;
-  edited += draw_gltextinput(win, "name", instance.name);
-  edited += draw_glslider(win, "frame[0]", instance.frame.x, -1, 1);
-  edited += draw_glslider(win, "frame[1]", instance.frame.y, -1, 1);
-  edited += draw_glslider(win, "frame[2]", instance.frame.z, -1, 1);
-  edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
-  edited += draw_glcombobox(
-      win, "shape", instance.shape, scene.scene.shapes, true);
-  edited += draw_glcombobox(
-      win, "material", instance.material, scene.scene.materials, true);
-  // TODO: update lights
-  return edited;
-}
-
-bool draw_glwidgets_environment(
-    const opengl_window& win, app_scene& scene, int id) {
-  auto& environment = scene.scene.environments[id];
-  auto  edited      = 0;
-  edited += draw_gltextinput(win, "name", environment.name);
-  edited += draw_glslider(win, "frame[0]", environment.frame.x, -1, 1);
-  edited += draw_glslider(win, "frame[1]", environment.frame.y, -1, 1);
-  edited += draw_glslider(win, "frame[2]", environment.frame.z, -1, 1);
-  edited += draw_glslider(win, "frame.o", environment.frame.o, -10, 10);
-  edited += draw_glhdrcoloredit(win, "emission", environment.emission);
-  edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
-      scene.scene.textures, true);
-  if (edited) {
-    // TODO: update lights
-  }
-  return edited;
-}
-
 // draw with shading
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         app      = *(app_state*)get_gluser_pointer(win);
-  auto          scene_ok = !app.scenes.empty() && app.selected >= 0;
+  auto&         app = *(app_state*)get_gluser_pointer(win);
   if (!begin_glwidgets_window(win, "yscnview")) return;
-  draw_glmessages(win);
+  if (!app.errors.empty() && error_message.empty()) {
+    error_message = app.errors.front();
+    app.errors.pop_front();
+    open_glmodal(win, "error");
+  }
+  if (!draw_glmessage(win, "error", error_message)) {
+    error_message = "";
+  }
   if (draw_glfiledialog(
           win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
-    // add_new_scene(app, load_path);
-    // TODO: handle load
+    add_new_scene(app, load_path);
   }
   if (draw_glfiledialog(win, "save", save_path, true, get_dirname(save_path),
           get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
-    // app.scenes[app.selected].outname = save_path;
-    // app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_scene);
-    // save_path = "";
-    // TODO: handle load
+    app.scenes[app.selected].outname = save_path;
+    app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_scene);
+    save_path = "";
   }
   if (draw_glfiledialog(win, "save image", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    // app.scenes[app.selected].imagename = save_path;
-    // app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_image);
-    // save_path = "";
-    // TODO: handle load
+    app.scenes[app.selected].imagename = save_path;
+    app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_image);
+    save_path = "";
   }
   if (draw_glbutton(win, "load")) {
     open_glmodal(win, "load");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "save", scene_ok)) {
-    // save_path = app.scenes[app.selected].outname;
-    // open_glmodal(win, "save");
-    // TODO: support save
+  if (draw_glbutton(win, "save",
+          app.selected >= 0 && app.scenes[app.selected].task_queue.empty())) {
+    save_path = app.scenes[app.selected].outname;
+    open_glmodal(win, "save");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "save image", scene_ok)) {
-    // save_path = app.scenes[app.selected].imagename;
-    // open_glmodal(win, "save image");
-    // TODO: support save
+  if (draw_glbutton(win, "save image", app.selected >= 0)) {
+    save_path = app.scenes[app.selected].imagename;
+    open_glmodal(win, "save image");
   }
   continue_glline(win);
-  if (draw_glbutton(win, "close", scene_ok)) {
-    // TODO: support close
+  if (draw_glbutton(win, "close", app.selected >= 0)) {
+    app.scenes[app.selected].task_queue.emplace_back(
+        app_task_type::close_scene);
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
@@ -1028,89 +836,67 @@ void draw_glwidgets(const opengl_window& win) {
   if (app.scenes.empty()) return;
   draw_glcombobox(
       win, "scene", app.selected, (int)app.scenes.size(),
-      [&app](int idx) {
-        auto it = app.scenes.begin();
-        std::advance(it, app.selected);
-        return it->name.c_str();
-      },
-      false);
-  if (scene_ok && begin_glheader(win, "view")) {
-    auto& scene  = app.get_selected();
-    auto& params = scene.drawgl_prms;
-    draw_glcombobox(win, "camera", params.camera, scene.scene.cameras);
-    draw_glslider(win, "resolution", params.resolution, 0, 4096);
-    draw_glcheckbox(win, "eyelight", params.eyelight);
-    continue_glline(win);
-    draw_glcheckbox(win, "wireframe", params.wireframe);
-    continue_glline(win);
-    draw_glcheckbox(win, "edges", params.edges);
-    if (scene.time_range != zero2f) {
-      draw_glslider(
-          win, "time", scene.time, scene.time_range.x, scene.time_range.y);
-      draw_gltextinput(win, "anim group", scene.anim_group);
-      draw_glcheckbox(win, "animate", scene.animate);
+      [&app](int idx) { return app.scenes[idx].name.c_str(); }, false);
+  auto& scn = app.scenes[app.selected];
+  if (begin_glheader(win, "view")) {
+    auto cam_names = vector<string>();
+    for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.name);
+    auto drawgl_prms = scn.drawgl_prms;
+    if (scn.load_done) {
+      if (draw_glcombobox(win, "camera", drawgl_prms.camera, cam_names)) {
+      }
     }
-    draw_glslider(win, "exposure", params.exposure, -10, 10);
-    draw_glslider(win, "gamma", params.gamma, 0.1f, 4);
-    draw_glcheckbox(win, "double sided", params.double_sided);
-    draw_glslider(win, "near", params.near, 0.01f, 1.0f);
-    draw_glslider(win, "far", params.far, 1000.0f, 10000.0f);
+    draw_glslider(win, "resolution", drawgl_prms.resolution, 0, 4096);
+    draw_glcheckbox(win, "eyelight", drawgl_prms.eyelight);
+    continue_glline(win);
+    draw_glcheckbox(win, "wireframe", drawgl_prms.wireframe);
+    continue_glline(win);
+    draw_glcheckbox(win, "edges", drawgl_prms.edges);
+    if (scn.time_range != zero2f) {
+      draw_glslider(win, "time", scn.time, scn.time_range.x, scn.time_range.y);
+      draw_gltextinput(win, "anim group", scn.anim_group);
+      draw_glcheckbox(win, "animate", scn.animate);
+    }
+    draw_glslider(win, "exposure", drawgl_prms.exposure, -10, 10);
+    draw_glslider(win, "gamma", drawgl_prms.gamma, 0.1f, 4);
+    draw_glcheckbox(win, "double sided", drawgl_prms.double_sided);
+    draw_glslider(win, "near", drawgl_prms.near, 0.01f, 1.0f);
+    draw_glslider(win, "far", drawgl_prms.far, 1000.0f, 10000.0f);
+
+    if (drawgl_prms != scn.drawgl_prms) {
+      scn.task_queue.emplace_back(app_task_type::apply_edit,
+          app_edit{typeid(drawgl_params), -1, drawgl_prms, false});
+    }
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    auto& scene = app.get_selected();
-    draw_gllabel(win, "scene", get_filename(scene.filename));
-    draw_gllabel(win, "filename", scene.filename);
-    draw_gllabel(win, "outname", scene.outname);
-    draw_gllabel(win, "imagename", scene.imagename);
+    draw_gllabel(win, "scene", get_filename(scn.filename));
+    draw_gllabel(win, "filename", scn.filename);
+    draw_gllabel(win, "outname", scn.outname);
+    draw_gllabel(win, "imagename", scn.imagename);
     continue_glline(win);
-    draw_glcheckbox(win, "fps", scene.navigation_fps);
+    draw_glcheckbox(win, "fps", scn.navigation_fps);
     if (draw_glbutton(win, "print cams")) {
-      for (auto& camera : scene.scene.cameras) {
+      for (auto& camera : scn.scene.cameras) {
         print_obj_camera(camera);
       }
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : format_stats(scene.scene)) print_info(stat);
+      for (auto stat : format_stats(scn.scene)) print_info(stat);
     }
     end_glheader(win);
   }
-  if (scene_ok && begin_glheader(win, "edit")) {
-    static auto labels = vector<string>{"camera", "shape", "environment",
-        "instance", "materials", "textures", "subdivs"};
-    auto&       scene  = app.get_selected();
-    if (draw_glcombobox(win, "selection##1", scene.selection.first, labels))
-      scene.selection.second = 0;
-    if (scene.selection.first == "camera") {
-      draw_glcombobox(
-          win, "selection##2", scene.selection.second, scene.scene.cameras);
-      draw_glwidgets_camera(win, scene, scene.selection.second);
-    } else if (scene.selection.first == "texture") {
-      draw_glcombobox(
-          win, "selection##2", scene.selection.second, scene.scene.textures);
-      draw_glwidgets_texture(win, scene, scene.selection.second);
-    } else if (scene.selection.first == "material") {
-      draw_glcombobox(
-          win, "selection##2", scene.selection.second, scene.scene.materials);
-      draw_glwidgets_material(win, scene, scene.selection.second);
-    } else if (scene.selection.first == "shape") {
-      draw_glcombobox(
-          win, "selection##2", scene.selection.second, scene.scene.subdivs);
-      draw_glwidgets_shape(win, scene, scene.selection.second);
-    } else if (scene.selection.first == "subdiv") {
-      draw_glcombobox(
-          win, "selection##2", scene.selection.second, scene.scene.subdivs);
-      draw_glwidgets_subdiv(win, scene, scene.selection.second);
-    } else if (scene.selection.first == "instance") {
-      draw_glcombobox(
-          win, "selection##2", scene.selection.second, scene.scene.instances);
-      draw_glwidgets_instance(win, scene, scene.selection.second);
-    } else if (scene.selection.first == "environment") {
-      draw_glcombobox(win, "selection##2", scene.selection.second,
-          scene.scene.environments);
-      draw_glwidgets_environment(win, scene, scene.selection.second);
+  if (scn.load_done && begin_glheader(win, "scene tree")) {
+    draw_glscenetree(win, "", scn.scene, scn.selection, 200);
+    end_glheader(win);
+  }
+  if (scn.load_done && begin_glheader(win, "scene object")) {
+    auto edit = app_edit{};
+    if (draw_glsceneinspector(win, "", scn.scene, scn.selection, edit, 200)) {
+      scn.task_queue.emplace_back(app_task_type::apply_edit, edit);
     }
+    end_glheader(win);
   }
   if (begin_glheader(win, "log")) {
     draw_gllog(win);
@@ -1124,10 +910,11 @@ void draw(const opengl_window& win) {
 
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   set_glviewport(get_glframebuffer_viewport(win));
-  if (!app.scenes.empty() && app.selected >= 0) {
-    auto& scene = app.get_selected();
-    draw_glscene(scene.state, scene.scene, get_glframebuffer_viewport(win),
-        scene.selection, scene.drawgl_prms);
+  if (!app.scenes.empty() && app.selected >= 0 &&
+      app.scenes[app.selected].load_done) {
+    auto& scn = app.scenes[app.selected];
+    draw_glscene(scn.state, scn.scene, get_glframebuffer_viewport(win),
+        scn.selection, scn.drawgl_prms);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -1135,22 +922,209 @@ void draw(const opengl_window& win) {
   swap_glbuffers(win);
 }
 
+void apply_edit(const string& filename, yocto_scene& scene,
+    drawgl_lights& lights, drawgl_params& drawgl_prms, float time,
+    const string& anim_group, bool& reload_element, const app_edit& edit) {
+  static auto last_time             = 0.0f;
+  bool        updated_hierarchy     = false;
+  auto& [type, index, data, reload] = edit;
+  if (type == typeid(yocto_camera)) {
+    scene.cameras[index] = any_cast<yocto_camera>(data);
+  } else if (type == typeid(yocto_texture)) {
+    scene.textures[index] = any_cast<yocto_texture>(data);
+    if (reload) reload_element = true;
+  } else if (type == typeid(yocto_voltexture)) {
+    scene.voltextures[index] = any_cast<yocto_voltexture>(data);
+    if (reload) reload_element = true;
+  } else if (type == typeid(yocto_shape)) {
+    scene.shapes[index] = any_cast<yocto_shape>(data);
+    if (reload) reload_element = true;
+  } else if (type == typeid(yocto_subdiv)) {
+    // TODO: this needs more fixing?
+    scene.subdivs[index] = any_cast<yocto_subdiv>(data);
+    if (reload) reload_element = true;
+  } else if (type == typeid(yocto_material)) {
+    scene.materials[index] = any_cast<yocto_material>(data);
+  } else if (type == typeid(yocto_instance)) {
+    scene.instances[index] = any_cast<yocto_instance>(data);
+  } else if (type == typeid(yocto_animation)) {
+    scene.animations[index] = any_cast<yocto_animation>(data);
+    updated_hierarchy       = true;
+  } else if (type == typeid(yocto_scene_node)) {
+    scene.nodes[index] = any_cast<yocto_scene_node>(data);
+    updated_hierarchy  = true;
+  } else if (type == typeid(drawgl_params)) {
+    drawgl_prms = any_cast<drawgl_params>(data);
+  } else {
+    throw std::runtime_error("unsupported type "s + type.name());
+  }
+  if (updated_hierarchy || time != last_time) {
+    update_transforms(scene, time, anim_group);
+    last_time = time;
+  }
+}
+
+// reload an element
+void load_element(
+    const string& filename, yocto_scene& scene, const app_edit& edit) {
+  auto& [type, index, data, reload] = edit;
+
+  if (type == typeid(yocto_texture)) {
+    auto& texture = scene.textures[index];
+    if (is_hdr_filename(texture.filename)) {
+      load_image(get_dirname(filename) + texture.filename, texture.hdr);
+    } else {
+      load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+    }
+  } else if (type == typeid(yocto_voltexture)) {
+    auto& texture = scene.voltextures[index];
+    load_volume(get_dirname(filename) + texture.filename, texture.vol);
+  } else if (type == typeid(yocto_shape)) {
+    auto& shape = scene.shapes[index];
+    load_shape(get_dirname(filename) + shape.filename, shape.points,
+        shape.lines, shape.triangles, shape.quads, shape.quadspos,
+        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius, false);
+  } else if (type == typeid(yocto_subdiv)) {
+    // TODO: this needs more fixing?
+    auto& subdiv = scene.subdivs[index];
+    load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+        subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.quadspos,
+        subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+        subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
+        subdiv.facevarying);
+    tesselate_subdiv(scene, scene.subdivs[index]);
+  } else {
+    throw std::runtime_error("unsupported type "s + type.name());
+  }
+}
+
 // update
 void update(const opengl_window& win, app_state& app) {
-  while (!app.load_workers.empty() && is_ready(app.load_workers.front())) {
-    try {
-      app.load_workers.front().get();
-    } catch (const std::exception& e) {
-      push_glmessage(win, "cannot load scene " + app.loading.front().filename);
-      log_glinfo(win, "cannot load scene " + app.loading.front().filename);
-      log_glinfo(win, e.what());
-      break;
+  // close if needed
+  while (!app.scenes.empty()) {
+    auto pos = -1;
+    for (auto idx = 0; idx < app.scenes.size(); idx++) {
+      for (auto& task : app.scenes[idx].task_queue) {
+        if (task.type == app_task_type::close_scene) pos = idx;
+      }
     }
-    app.scenes.splice(app.scenes.end(), app.loading, app.loading.begin());
-    init_drawgl_state(app.scenes.back().state, app.scenes.back().scene);
-    if (app.selected < 0) app.selected = (int)app.scenes.size() - 1;
+    if (pos < 0) break;
+    app.scenes.erase(app.scenes.begin() + pos);
+    app.selected = app.scenes.empty() ? -1 : 0;
   }
-#if 0
+
+  // apply synchronous edit
+  for (auto& scn : app.scenes) {
+    while (!scn.task_queue.empty()) {
+      auto& task = scn.task_queue.front();
+      if (task.type != app_task_type::apply_edit) break;
+      log_glinfo(win, "start editing " + scn.filename);
+      try {
+        auto reload_element = false;
+        apply_edit(scn.filename, scn.scene, scn.lights, scn.drawgl_prms,
+            scn.time, scn.anim_group, reload_element, task.edit);
+        log_glinfo(win, "done editing " + scn.filename);
+        if (reload_element) {
+          scn.load_done = false;
+          scn.task_queue.emplace_back(app_task_type::load_element, task.edit);
+        }
+      } catch (std::exception& e) {
+        log_glerror(win, e.what());
+        app.errors.push_back("cannot edit " + scn.filename);
+      }
+      scn.task_queue.pop_front();
+    }
+  }
+
+  // grab result of finished tasks
+  for (auto& scn : app.scenes) {
+    if (scn.task_queue.empty()) continue;
+    auto& task = scn.task_queue.front();
+    if (!task.result.valid() || task.result.wait_for(std::chrono::nanoseconds(
+                                    10)) != std::future_status::ready)
+      continue;
+    switch (task.type) {
+      case app_task_type::none: break;
+      case app_task_type::close_scene: break;
+      case app_task_type::load_scene: {
+        try {
+          task.result.get();
+          scn.load_done = true;
+          init_drawgl_state(scn.state, scn.scene);
+          log_glinfo(win, "done loading " + scn.filename);
+        } catch (std::exception& e) {
+          log_glerror(win, e.what());
+          scn.name = get_filename(scn.filename) + " [error]";
+          app.errors.push_back("cannot load " + scn.filename);
+        }
+      } break;
+      case app_task_type::load_element: {
+        try {
+          task.result.get();
+          scn.load_done = true;
+          log_glinfo(win, "done loading element from " + scn.filename);
+          if (task.edit.type == typeid(yocto_texture)) {
+            // not supported yet
+            log_glerror(win, "texture refresh is not supported yet");
+          } else if (task.edit.type == typeid(yocto_voltexture)) {
+          } else if (task.edit.type == typeid(yocto_shape)) {
+            // not supported yet
+            log_glerror(win, "shape refresh is not supported yet");
+          } else if (task.edit.type == typeid(yocto_subdiv)) {
+            // not supported yet
+            log_glerror(win, "shape refresh is not supported yet");
+          } else {
+            throw std::runtime_error("unsupported type");
+          }
+        } catch (std::exception& e) {
+          log_glerror(win, e.what());
+          scn.name = get_filename(scn.filename) + " [error]";
+          app.errors.push_back("cannot load element from " + scn.filename);
+        }
+      } break;
+      case app_task_type::save_image: {
+        try {
+          task.result.get();
+          log_glinfo(win, "done saving " + scn.imagename);
+        } catch (std::exception& e) {
+          log_glerror(win, e.what());
+          app.errors.push_back("cannot save " + scn.imagename);
+        }
+      } break;
+      case app_task_type::save_scene: {
+        try {
+          task.result.get();
+          log_glinfo(win, "done saving " + scn.outname);
+        } catch (std::exception& e) {
+          log_glerror(win, e.what());
+          app.errors.push_back("cannot save " + scn.outname);
+        }
+      } break;
+      case app_task_type::apply_edit: break;
+    }
+    scn.task_queue.pop_front();
+  }
+  // schedule tasks not running
+  for (auto& scn : app.scenes) {
+    if (scn.task_queue.empty()) continue;
+    auto& task = scn.task_queue.front();
+    if (task.result.valid()) continue;
+    task.stop = false;
+    switch (task.type) {
+      case app_task_type::none: break;
+      case app_task_type::close_scene: break;
+      case app_task_type::load_scene: {
+        log_glinfo(win, "start loading " + scn.filename);
+        scn.load_done = false;
+        task.result   = std::async(std::launch::async, [&scn]() {
+          load_scene(scn.filename, scn.scene, scn.load_prms);
+          tesselate_subdivs(scn.scene);
+          init_drawgl_lights(scn.lights, scn.scene);
+          if (scn.lights.empty() && !scn.drawgl_prms.eyelight) {
+            printf("no lights presents, switching to eyelight shader\n");
+            scn.drawgl_prms.eyelight = true;
+          }
           scn.time_range = compute_animation_range(scn.scene);
           scn.time       = scn.time_range.x;
         });
@@ -1175,7 +1149,11 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::apply_edit: break;
     }
   }
-#endif
+}
+
+void drop_callback(const opengl_window& win, const vector<string>& paths) {
+  auto& app = *(app_state*)get_gluser_pointer(win);
+  for (auto& path : paths) add_new_scene(app, path);
 }
 
 // run ui loop
@@ -1183,11 +1161,6 @@ void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yscnview", &app, draw);
-  set_drop_glcallback(
-      win, [](const opengl_window& win, const vector<string>& paths) {
-        auto& app = *(app_state*)get_gluser_pointer(win);
-        for (auto& path : paths) load_scene_async(app, path);
-      });
 
   // init widget
   init_glwidgets(win);
@@ -1203,38 +1176,44 @@ void run_ui(app_state& app) {
     auto alt_down       = get_glalt_key(win);
     auto shift_down     = get_glshift_key(win);
     auto widgets_active = get_glwidgets_active(win);
-    auto scene_ok       = !app.scenes.empty() && app.selected >= 0;
 
     // update trasforms
-    if (scene_ok) {
-      auto& scene = app.get_selected();
-      update_transforms(scene.scene, scene.time);
+    if (app.selected >= 0) {
+      auto& scn = app.scenes[app.selected];
+      update_transforms(scn.scene, scn.time);
     }
 
     // handle mouse and keyboard for navigation
-    if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
+    if (app.selected >= 0 && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
-      auto& scene  = app.get_selected();
-      auto& camera = scene.scene.cameras.at(scene.drawgl_prms.camera);
-      auto  dolly  = 0.0f;
-      auto  pan    = zero2f;
-      auto  rotate = zero2f;
+      auto& scn        = app.scenes[app.selected];
+      auto& old_camera = scn.scene.cameras.at(scn.drawgl_prms.camera);
+      auto  camera     = scn.scene.cameras.at(scn.drawgl_prms.camera);
+      auto  dolly      = 0.0f;
+      auto  pan        = zero2f;
+      auto  rotate     = zero2f;
       if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
       if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
       if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
+      if (camera.frame != old_camera.frame ||
+          camera.focus != old_camera.focus) {
+        scn.task_queue.emplace_back(app_task_type::apply_edit,
+            app_edit{
+                typeid(yocto_camera), scn.drawgl_prms.camera, camera, false});
+      }
     }
 
     // animation
-    if (scene_ok && app.get_selected().animate) {
-      auto& scene   = app.get_selected();
+    if (app.selected >= 0 && app.scenes[app.selected].animate) {
+      auto& scn     = app.scenes[app.selected];
       auto  now     = std::chrono::high_resolution_clock::now();
       auto  elapsed = now - last_time;
       auto  time    = (double)(elapsed.count()) / 1000000000.0;
-      scene.time += min(1 / 60.0f, (float)time);
-      if (scene.time < scene.time_range.x || scene.time > scene.time_range.y)
-        scene.time = scene.time_range.x;
-      update_transforms(scene.scene, scene.time);
+      scn.time += min(1 / 60.0f, (float)time);
+      if (scn.time < scn.time_range.x || scn.time > scn.time_range.y)
+        scn.time = scn.time_range.x;
+      update_transforms(scn.scene, scn.time);
       last_time = now;
     }
 
@@ -1277,7 +1256,8 @@ int main(int argc, const char* argv[]) {
   }
 
   // loading images
-  for (auto filename : filenames) load_scene_async(app, filename);
+  for (auto filename : filenames) add_new_scene(app, filename);
+  app.selected = app.scenes.empty() ? -1 : 0;
 
   // run ui
   run_ui(app);
