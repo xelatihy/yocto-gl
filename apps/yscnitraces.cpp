@@ -464,6 +464,7 @@ void update(const opengl_window& win, app_state& app) {
       break;
     }
     start_render_async(app.scenes.back());
+    if(app.selected < 0) app.selected = (int)app.scenes.size()-1;
   }
 #if 0
   // close if needed

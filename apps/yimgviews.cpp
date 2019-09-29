@@ -305,6 +305,7 @@ void update(const opengl_window& win, app_state& app) {
       log_glinfo(win, e.what());
       break;
     }
+    if(app.selected < 0) app.selected = (int)app.images.size()-1;
   }
 }
 
