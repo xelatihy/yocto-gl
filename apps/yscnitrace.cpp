@@ -93,6 +93,7 @@ struct app_states {
   std::list<string>       errors;
   std::list<app_state>    loading;
   std::list<future<void>> load_workers;
+  std::deque<std::unique_ptr<app_state>> minchia;
 
   // get image
   app_state& get_selected() {
@@ -422,7 +423,6 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  if (apps.states.empty()) return;
   draw_glcombobox(
       win, "scene", apps.selected, (int)apps.states.size(),
       [&apps](int idx) {
