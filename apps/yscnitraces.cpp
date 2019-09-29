@@ -708,6 +708,7 @@ void update(const opengl_window& win, app_state& app) {
       app.load_workers[idx].get();
       app.scenes.push_back(app.loading[idx]);
       reset_display(app.scenes.back());
+      app.selected = (int)app.scenes.size()-1;
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load scene " + app.loading[idx].filename);
       log_glinfo(win, "cannot load scene " + app.loading[idx].filename);
@@ -716,7 +717,7 @@ void update(const opengl_window& win, app_state& app) {
     }
   }
   for (auto& scene : app.scenes) {
-    if(scene.render_sample < 0) {
+    if(scene.render_preview) {
       // rendering preview
       auto preview_prms = scene.trace_prms;
       preview_prms.resolution /= scene.preview_ratio;
@@ -736,6 +737,7 @@ void update(const opengl_window& win, app_state& app) {
       } else {
         update_gltexture(scene.gl_txt, scene.display, false);
       }
+      scene.render_preview = false;
     } else if(scene.render_sample < scene.trace_prms.samples) {
       // rendering blocks
       auto num_regions = min(128, scene.render_regions.size() - scene.render_region);
