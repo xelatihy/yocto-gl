@@ -283,7 +283,7 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_states& app) {
-  while (app.load_workers.empty() && is_ready(app.load_workers.front())) {
+  while (!app.load_workers.empty() && is_ready(app.load_workers.front())) {
     try {
       app.load_workers.front().get();
     } catch (const std::exception& e) {
@@ -293,6 +293,7 @@ void update(const opengl_window& win, app_states& app) {
       break;
     }
     app.states.splice(app.states.end(), app.loading, app.loading.begin());
+    app.load_workers.pop_front();
     reset_display(app.states.back());
     if (app.selected < 0) app.selected = (int)app.states.size() - 1;
   }
