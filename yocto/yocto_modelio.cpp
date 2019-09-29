@@ -269,12 +269,14 @@ static inline void parse_value(string_view& str, vec3f& value) {
 static inline void parse_value(string_view& str, frame3f& value) {
   parse_value(str, &value.x.x, 12);
 }
+#ifndef _MSC_VER
 static inline void parse_value(string_view& str, size_t& value) {
   char* end = nullptr;
   value     = (size_t)strtoull(str.data(), &end, 10);
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
+#endif
 
 // Parse values from a string
 template <typename T>
