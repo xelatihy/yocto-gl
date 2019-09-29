@@ -31,7 +31,7 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-#include<list>
+#include <list>
 using std::list;
 
 struct image_stats {
@@ -74,9 +74,9 @@ struct app_image {
 
 struct app_state {
   // data
-  std::list<app_image>    images = {};
-  int                     selected = -1;
-  std::list<app_image>    loading = {};
+  std::list<app_image>    images       = {};
+  int                     selected     = -1;
+  std::list<app_image>    loading      = {};
   std::list<future<void>> load_workers = {};
 
   // get image
@@ -185,11 +185,12 @@ void draw_glwidgets(const opengl_window& win) {
   if (app.images.empty()) return;
   draw_glcombobox(
       win, "image", app.selected, (int)app.images.size(),
-      [&app](int idx) { 
+      [&app](int idx) {
         auto it = app.images.begin();
         std::advance(it, idx);
-        return it->name.c_str(); 
-  }, false);
+        return it->name.c_str();
+      },
+      false);
   if (image_ok && begin_glheader(win, "tonemap")) {
     auto& image  = app.get_selected();
     auto& params = image.tonemap_prms;
@@ -290,7 +291,7 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
-  while(app.load_workers.empty() && is_ready(app.load_workers.front())) {
+  while (app.load_workers.empty() && is_ready(app.load_workers.front())) {
     try {
       app.load_workers.front().get();
     } catch (const std::exception& e) {
@@ -301,27 +302,28 @@ void update(const opengl_window& win, app_state& app) {
     }
     app.images.splice(app.images.end(), app.loading, app.loading.begin());
     reset_display(app.images.back());
-    if(app.selected < 0) app.selected = (int)app.images.size() - 1;
+    if (app.selected < 0) app.selected = (int)app.images.size() - 1;
   }
   for (auto& image : app.images) {
     if (image.render_region < image.render_regions.size()) {
       auto num_regions = min(
           12, image.render_regions.size() - image.render_region);
       parallel_for(num_regions, [&image](int idx) {
-            auto& region = image.render_regions[image.render_region + idx];
-            tonemap(image.display, image.source,
-                image.render_regions[image.render_region + idx], image.tonemap_prms);
-            if (image.apply_colorgrade) {
-              colorgrade(image.display, image.display,
-                  region, image.colorgrade_prms);
-            }
-          });
+        auto& region = image.render_regions[image.render_region + idx];
+        tonemap(image.display, image.source,
+            image.render_regions[image.render_region + idx],
+            image.tonemap_prms);
+        if (image.apply_colorgrade) {
+          colorgrade(
+              image.display, image.display, region, image.colorgrade_prms);
+        }
+      });
       if (!image.gl_txt || image.gl_txt.size != image.display.size()) {
         init_gltexture(image.gl_txt, image.display, false, false, false);
       } else {
-        for(auto idx = 0; idx < num_regions; idx++)
-        update_gltexture_region(image.gl_txt, image.display, 
-          image.render_regions[image.render_region + idx], false);
+        for (auto idx = 0; idx < num_regions; idx++)
+          update_gltexture_region(image.gl_txt, image.display,
+              image.render_regions[image.render_region + idx], false);
       }
       image.render_region += num_regions;
     } else if (image.render_stats) {
@@ -334,10 +336,11 @@ void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yimview", &app, draw);
-  set_drop_glcallback(win, [](const opengl_window& win, const vector<string>& paths){
-    auto& app = *(app_state*)get_gluser_pointer(win);
-    for (auto path : paths) load_image_async(app, path);
-  });
+  set_drop_glcallback(
+      win, [](const opengl_window& win, const vector<string>& paths) {
+        auto& app = *(app_state*)get_gluser_pointer(win);
+        for (auto path : paths) load_image_async(app, path);
+      });
 
   // init widgets
   init_glwidgets(win);

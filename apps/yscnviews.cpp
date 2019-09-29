@@ -179,7 +179,7 @@ struct app_state {
 };
 
 void load_scene_async(app_state& app, const string& filename) {
-  auto& scene        = app.loading.emplace_back();
+  auto& scene       = app.loading.emplace_back();
   scene.filename    = filename;
   scene.imagename   = replace_extension(filename, ".png");
   scene.outname     = replace_extension(filename, ".edited.yaml");
@@ -978,7 +978,7 @@ bool draw_glwidgets_environment(
 // draw with shading
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         app = *(app_state*)get_gluser_pointer(win);
+  auto&         app      = *(app_state*)get_gluser_pointer(win);
   auto          scene_ok = !app.scenes.empty() && app.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
@@ -1028,13 +1028,14 @@ void draw_glwidgets(const opengl_window& win) {
   if (app.scenes.empty()) return;
   draw_glcombobox(
       win, "scene", app.selected, (int)app.scenes.size(),
-      [&app](int idx) { 
+      [&app](int idx) {
         auto it = app.scenes.begin();
         std::advance(it, app.selected);
-        return it->name.c_str(); 
-       }, false);
+        return it->name.c_str();
+      },
+      false);
   if (scene_ok && begin_glheader(win, "view")) {
-    auto& scene   = app.get_selected();
+    auto& scene  = app.get_selected();
     auto& params = scene.drawgl_prms;
     draw_glcombobox(win, "camera", params.camera, scene.scene.cameras);
     draw_glslider(win, "resolution", params.resolution, 0, 4096);
@@ -1044,7 +1045,8 @@ void draw_glwidgets(const opengl_window& win) {
     continue_glline(win);
     draw_glcheckbox(win, "edges", params.edges);
     if (scene.time_range != zero2f) {
-      draw_glslider(win, "time", scene.time, scene.time_range.x, scene.time_range.y);
+      draw_glslider(
+          win, "time", scene.time, scene.time_range.x, scene.time_range.y);
       draw_gltextinput(win, "anim group", scene.anim_group);
       draw_glcheckbox(win, "animate", scene.animate);
     }
@@ -1056,7 +1058,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    auto& scene   = app.get_selected();
+    auto& scene = app.get_selected();
     draw_gllabel(win, "scene", get_filename(scene.filename));
     draw_gllabel(win, "filename", scene.filename);
     draw_gllabel(win, "outname", scene.outname);
@@ -1135,7 +1137,7 @@ void draw(const opengl_window& win) {
 
 // update
 void update(const opengl_window& win, app_state& app) {
-  while(!app.load_workers.empty() && is_ready(app.load_workers.front())) {
+  while (!app.load_workers.empty() && is_ready(app.load_workers.front())) {
     try {
       app.load_workers.front().get();
     } catch (const std::exception& e) {
@@ -1146,9 +1148,9 @@ void update(const opengl_window& win, app_state& app) {
     }
     app.scenes.splice(app.scenes.end(), app.loading, app.loading.begin());
     init_drawgl_state(app.scenes.back().state, app.scenes.back().scene);
-    if(app.selected < 0) app.selected = (int)app.scenes.size() - 1;
+    if (app.selected < 0) app.selected = (int)app.scenes.size() - 1;
   }
-  #if 0
+#if 0
           scn.time_range = compute_animation_range(scn.scene);
           scn.time       = scn.time_range.x;
         });
@@ -1173,7 +1175,7 @@ void update(const opengl_window& win, app_state& app) {
       case app_task_type::apply_edit: break;
     }
   }
-  #endif
+#endif
 }
 
 // run ui loop
@@ -1181,10 +1183,11 @@ void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yscnview", &app, draw);
-  set_drop_glcallback(win, [](const opengl_window& win, const vector<string>& paths){
-      auto& app = *(app_state*)get_gluser_pointer(win);
-      for (auto& path : paths) load_scene_async(app, path);
-  });
+  set_drop_glcallback(
+      win, [](const opengl_window& win, const vector<string>& paths) {
+        auto& app = *(app_state*)get_gluser_pointer(win);
+        for (auto& path : paths) load_scene_async(app, path);
+      });
 
   // init widget
   init_glwidgets(win);
@@ -1200,7 +1203,7 @@ void run_ui(app_state& app) {
     auto alt_down       = get_glalt_key(win);
     auto shift_down     = get_glshift_key(win);
     auto widgets_active = get_glwidgets_active(win);
-    auto scene_ok = !app.scenes.empty() && app.selected >= 0;
+    auto scene_ok       = !app.scenes.empty() && app.selected >= 0;
 
     // update trasforms
     if (scene_ok) {
@@ -1211,11 +1214,11 @@ void run_ui(app_state& app) {
     // handle mouse and keyboard for navigation
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
-      auto& scene        = app.get_selected();
-      auto&  camera     = scene.scene.cameras.at(scene.drawgl_prms.camera);
-      auto  dolly      = 0.0f;
-      auto  pan        = zero2f;
-      auto  rotate     = zero2f;
+      auto& scene  = app.get_selected();
+      auto& camera = scene.scene.cameras.at(scene.drawgl_prms.camera);
+      auto  dolly  = 0.0f;
+      auto  pan    = zero2f;
+      auto  rotate = zero2f;
       if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
       if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
       if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
@@ -1224,7 +1227,7 @@ void run_ui(app_state& app) {
 
     // animation
     if (scene_ok && app.get_selected().animate) {
-      auto& scene     = app.get_selected();
+      auto& scene   = app.get_selected();
       auto  now     = std::chrono::high_resolution_clock::now();
       auto  elapsed = now - last_time;
       auto  time    = (double)(elapsed.count()) / 1000000000.0;

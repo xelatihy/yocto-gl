@@ -34,8 +34,8 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-#include <map>
 #include <list>
+#include <map>
 
 namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
@@ -428,11 +428,12 @@ void draw_glwidgets(const opengl_window& win) {
   if (app.scenes.empty()) return;
   draw_glcombobox(
       win, "scene", app.selected, (int)app.scenes.size(),
-      [&app](int idx) { 
+      [&app](int idx) {
         auto it = app.scenes.begin();
         std::advance(it, app.selected);
-        return it->name.c_str(); 
-  }, false);
+        return it->name.c_str();
+      },
+      false);
   if (scene_ok && begin_glheader(win, "trace")) {
     auto  edited  = 0;
     auto& scene   = app.get_selected();
@@ -565,7 +566,7 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
-  while(!app.load_workers.empty() && is_ready(app.load_workers.front())) {
+  while (!app.load_workers.empty() && is_ready(app.load_workers.front())) {
     try {
       app.load_workers.front().get();
     } catch (const std::exception& e) {
@@ -576,7 +577,7 @@ void update(const opengl_window& win, app_state& app) {
     }
     app.scenes.splice(app.scenes.end(), app.loading, app.loading.begin());
     reset_display(app.scenes.back());
-    if(app.selected < 0) app.selected = (int)app.scenes.size() - 1;
+    if (app.selected < 0) app.selected = (int)app.scenes.size() - 1;
   }
   for (auto& scene : app.scenes) {
     if (scene.render_preview) {
@@ -615,9 +616,9 @@ void update(const opengl_window& win, app_state& app) {
       if (!scene.gl_txt || scene.gl_txt.size != scene.display.size()) {
         init_gltexture(scene.gl_txt, scene.display, false, false, false);
       } else {
-        for(auto idx = 0; idx < num_regions; idx++)
-        update_gltexture_region(scene.gl_txt, scene.display, 
-          scene.render_regions[scene.render_region + idx], false);
+        for (auto idx = 0; idx < num_regions; idx++)
+          update_gltexture_region(scene.gl_txt, scene.display,
+              scene.render_regions[scene.render_region + idx], false);
       }
       scene.render_region += num_regions;
       if (scene.render_region >= scene.render_regions.size()) {
@@ -633,10 +634,11 @@ void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yscnitrace", &app, draw);
-  set_drop_glcallback(win, [](const opengl_window& win, const vector<string>& paths){
-      auto& app = *(app_state*)get_gluser_pointer(win);
-      for (auto& path : paths) load_scene_async(app, path);
-  });
+  set_drop_glcallback(
+      win, [](const opengl_window& win, const vector<string>& paths) {
+        auto& app = *(app_state*)get_gluser_pointer(win);
+        for (auto& path : paths) load_scene_async(app, path);
+      });
 
   // init widgets
   init_glwidgets(win);
@@ -651,7 +653,7 @@ void run_ui(app_state& app) {
     auto alt_down       = get_glalt_key(win);
     auto shift_down     = get_glshift_key(win);
     auto widgets_active = get_glwidgets_active(win);
-    auto scene_ok = !app.scenes.empty() && app.selected >= 0;
+    auto scene_ok       = !app.scenes.empty() && app.selected >= 0;
 
     // handle mouse and keyboard for navigation
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&

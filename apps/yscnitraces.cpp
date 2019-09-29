@@ -34,8 +34,8 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-#include <map>
 #include <list>
+#include <map>
 
 namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
@@ -428,11 +428,12 @@ void draw_glwidgets(const opengl_window& win) {
   if (app.scenes.empty()) return;
   draw_glcombobox(
       win, "scene", app.selected, (int)app.scenes.size(),
-      [&app](int idx) { 
+      [&app](int idx) {
         auto it = app.scenes.begin();
         std::advance(it, app.selected);
-        return it->name.c_str(); 
-  }, false);
+        return it->name.c_str();
+      },
+      false);
   if (scene_ok && begin_glheader(win, "trace")) {
     auto  edited  = false;
     auto& scene   = app.get_selected();
@@ -565,7 +566,7 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
-  while(!app.load_workers.empty() && is_ready(app.load_workers.front())) {
+  while (!app.load_workers.empty() && is_ready(app.load_workers.front())) {
     try {
       app.load_workers.front().get();
     } catch (const std::exception& e) {
@@ -576,7 +577,7 @@ void update(const opengl_window& win, app_state& app) {
     }
     app.scenes.splice(app.scenes.end(), app.loading, app.loading.begin());
     reset_display(app.scenes.back());
-    if(app.selected < 0) app.selected = (int)app.scenes.size() - 1;
+    if (app.selected < 0) app.selected = (int)app.scenes.size() - 1;
   }
   for (auto& scene : app.scenes) {
     if (scene.render_preview) {
@@ -615,9 +616,9 @@ void update(const opengl_window& win, app_state& app) {
       if (!scene.gl_txt || scene.gl_txt.size != scene.display.size()) {
         init_gltexture(scene.gl_txt, scene.display, false, false, false);
       } else {
-        for(auto idx = 0; idx < num_regions; idx++)
-        update_gltexture_region(scene.gl_txt, scene.display, 
-          scene.render_regions[scene.render_region + idx], false);
+        for (auto idx = 0; idx < num_regions; idx++)
+          update_gltexture_region(scene.gl_txt, scene.display,
+              scene.render_regions[scene.render_region + idx], false);
       }
       scene.render_region += num_regions;
       if (scene.render_region >= scene.render_regions.size()) {
