@@ -31,10 +31,6 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-#include <atomic>
-#include <future>
-#include <thread>
-
 struct app_state {
   // original data
   string filename = "image.png";
