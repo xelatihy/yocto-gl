@@ -259,12 +259,19 @@ void open_glmodal(const opengl_window& win, const char* lbl);
 void clear_glmodal(const opengl_window& win);
 bool begin_glmodal(const opengl_window& win, const char* lbl);
 void end_glmodal(const opengl_window& win);
-bool is_glmodal_open(const opengl_window& win);
+bool is_glmodal_open(const opengl_window& win, const char* lbl);
 
+bool draw_glmessages(const opengl_window& win);
+void push_glmessage(const string& message);
+void push_glmessage(const opengl_window& win, const string& message);
 bool draw_glmessage(
     const opengl_window& win, const char* lbl, const string& message);
 bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
+    const string& filter);
+bool draw_glfiledialog_button(const opengl_window& win, const char* button_lbl,
+    bool button_active, const char* lbl,
+    string& path, bool save, const string& dirname, const string& filename,
     const string& filter);
 
 void draw_gltext(const opengl_window& win, const string& text);
@@ -345,13 +352,6 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     int num, const std::function<const char*(int)>& labels,
     bool include_null = false);
 
-template <typename T>
-inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
-    const vector<T*>& vals, bool include_null = false) {
-  return draw_glcombobox(
-      win, lbl, idx, (int)vals.size(),
-      [&](int idx) { return vals[idx]->uri.c_str(); }, include_null);
-}
 template <typename T>
 inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {

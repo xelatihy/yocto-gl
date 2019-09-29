@@ -269,12 +269,14 @@ static inline void parse_value(string_view& str, vec3f& value) {
 static inline void parse_value(string_view& str, frame3f& value) {
   parse_value(str, &value.x.x, 12);
 }
+#ifdef __APPLE__
 static inline void parse_value(string_view& str, size_t& value) {
   char* end = nullptr;
   value     = (size_t)strtoull(str.data(), &end, 10);
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
+#endif
 
 // Parse values from a string
 template <typename T>
@@ -706,7 +708,7 @@ void save_ply(const string& filename, const ply_model& ply) {
   for (auto& comment : ply.comments) format_values(fs, "comment {}\n", comment);
   for (auto& elem : ply.elements) {
     format_values(
-        fs, "element {} {}\n", elem.name, (unsigned long long)elem.count);
+        fs, "element {} {}\n", elem.name, elem.count);
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
         format_values(
@@ -730,30 +732,30 @@ void save_ply(const string& filename, const ply_model& ply) {
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                format_values(fs, "{} ", (int)prop.data_i8[cur[idx]++]);
+                format_values(fs, "{} ", prop.data_i8[cur[idx]++]);
                 break;
               case ply_type::i16:
-                format_values(fs, "{} ", (int)prop.data_i16[cur[idx]++]);
+                format_values(fs, "{} ", prop.data_i16[cur[idx]++]);
                 break;
               case ply_type::i32:
-                format_values(fs, "{} ", (int)prop.data_i32[cur[idx]++]);
+                format_values(fs, "{} ", prop.data_i32[cur[idx]++]);
                 break;
               case ply_type::i64:
                 format_values(
-                    fs, "{} ", (long long int)prop.data_i64[cur[idx]++]);
+                    fs, "{} ", prop.data_i64[cur[idx]++]);
                 break;
               case ply_type::u8:
-                format_values(fs, "{} ", (unsigned)prop.data_i8[cur[idx]++]);
+                format_values(fs, "{} ", prop.data_i8[cur[idx]++]);
                 break;
               case ply_type::u16:
-                format_values(fs, "{} ", (unsigned)prop.data_i16[cur[idx]++]);
+                format_values(fs, "{} ", prop.data_i16[cur[idx]++]);
                 break;
               case ply_type::u32:
-                format_values(fs, "{} ", (unsigned)prop.data_u32[cur[idx]++]);
+                format_values(fs, "{} ", prop.data_u32[cur[idx]++]);
                 break;
               case ply_type::u64:
                 format_values(
-                    fs, "{} ", (long long unsigned)prop.data_u64[cur[idx]++]);
+                    fs, "{} ", prop.data_u64[cur[idx]++]);
                 break;
               case ply_type::f32:
                 format_values(fs, "{}", prop.data_f32[cur[idx]++]);

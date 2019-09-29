@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+#include "../yocto/yocto_utils.h"
 
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
@@ -47,40 +48,6 @@
 
 #define CUTE_FILES_IMPLEMENTATION
 #include "ext/cute_files.h"
-
-// -----------------------------------------------------------------------------
-// PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-static inline string normalize_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get extension (not including '.').
-static inline string get_extension(const string& filename_) {
-  auto filename = normalize_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos + 1);
-}
-
-}  // namespace yocto
 
 namespace yocto {
 
@@ -857,6 +824,32 @@ bool draw_glmessage(
   }
 }
 
+string        _message_text  = {};
+deque<string> _message_queue = {};
+std::mutex    _message_mutex;
+void          push_glmessage(const string& message) {
+  printf("message %s\n", message.c_str());
+  std::lock_guard lock(_message_mutex);
+  _message_queue.push_back(message);
+  printf("message %s\n", message.c_str());
+}
+void push_glmessage(const opengl_window& win, const string& message) {
+  printf("message %s\n", message.c_str());
+  std::lock_guard lock(_message_mutex);
+  _message_queue.push_back(message);
+}
+bool draw_glmessages(const opengl_window& win) {
+  std::lock_guard lock(_message_mutex);
+  if (!_message_queue.empty() && _message_text.empty()) {
+    _message_text = _message_queue.front();
+    _message_queue.pop_front();
+    open_glmodal(win, "<message>");
+  }
+  auto ret = draw_glmessage(win, "<message>", _message_text);
+  if (!ret) _message_text = "";
+  return ret;
+}
+
 struct filedialog_state {
   string                     dirname       = "";
   string                     filename      = "";
@@ -1009,6 +1002,19 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     ImGui::EndPopup();
     return ok;
   } else {
+    return false;
+  }
+}
+bool draw_glfiledialog_button(const opengl_window& win, const char* button_lbl,
+    bool button_active, const char* lbl,
+    string& path, bool save, const string& dirname, const string& filename,
+    const string& filter) {
+  if(is_glmodal_open(win, lbl)) {
+    return draw_glfiledialog(win, lbl, path, save, dirname, filename, filter);
+  } else {
+    if(draw_glbutton(win, button_lbl, button_active)) {
+      open_glmodal(win, lbl);
+    }
     return false;
   }
 }
@@ -1239,6 +1245,7 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, string& value,
 
 bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     int num, const std::function<const char*(int)>& labels, bool include_null) {
+  if (num <= 0) idx = -1;
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>")) return false;
   auto old_idx = idx;
   if (include_null) {

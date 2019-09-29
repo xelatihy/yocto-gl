@@ -114,6 +114,8 @@
 #include <chrono>
 #include <cstdio>
 #include <deque>
+#include <functional>
+#include <future>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -123,7 +125,10 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+using std::atomic;
 using std::deque;
+using std::function;
+using std::future;
 using std::thread;
 
 }  // namespace yocto
@@ -545,6 +550,21 @@ struct concurrent_queue {
   std::mutex    mutex;
   std::deque<T> queue;
 };
+
+// Run a task asynchronously
+inline future<void> run_async(function<void()> task) {
+  return std::async(std::launch::async, task);
+}
+// Check if an async task is ready
+inline bool is_valid(const future<void>& result) { return result.valid(); }
+inline bool is_running(const future<void>& result) {
+  return result.valid() && result.wait_for(std::chrono::microseconds(0)) !=
+                               std::future_status::ready;
+}
+inline bool is_ready(const future<void>& result) {
+  return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
+                               std::future_status::ready;
+}
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
