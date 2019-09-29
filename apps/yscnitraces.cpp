@@ -148,8 +148,7 @@ void load_scene_async(app_state& app, const string& filename) {
 }
 
 bool draw_glwidgets_camera(const opengl_window& win, app_scene& scene, int id) {
-  auto& scamera = scene.scene.cameras[id];
-  auto  camera  = scamera;
+  auto& camera = scene.scene.cameras[id];
   auto  edited  = 0;
   edited += (int)draw_gltextinput(win, "name", camera.name);
   edited += (int)draw_glslider(win, "frame.x", camera.frame.x, -1, 1);
@@ -170,34 +169,22 @@ bool draw_glwidgets_camera(const opengl_window& win, app_scene& scene, int id) {
     camera.focus = length(from - to);
     edited += 1;
   }
-  if (edited) {
-    // stop_render_async(scene);
-    scamera = camera;
-    // start_render_async(scene);
-  }
   return edited;
 }
 
 /// Visit struct elements.
 bool draw_glwidgets_texture(
     const opengl_window& win, app_scene& scene, int id) {
-  auto& stexture   = scene.scene.textures[id];
-  auto  texture    = yocto_texture{};  // copy
-  texture.name     = stexture.name;
-  texture.filename = stexture.filename;
+  auto&  texture    = scene.scene.textures[id];
+  auto old_filename = texture.filename;
   auto edited      = 0;
   edited += draw_gltextinput(win, "name", texture.name);
   edited += draw_gltextinput(win, "filename", texture.filename);
   draw_gllabel(
-      win, "hdr", "%d x %d", stexture.hdr.size().x, stexture.hdr.size().y);
+      win, "hdr", "%d x %d", texture.hdr.size().x, texture.hdr.size().y);
   draw_gllabel(
-      win, "ldr", "%d x %d", stexture.ldr.size().x, stexture.ldr.size().y);
-  if (edited) {
-    auto reload = texture.filename != stexture.filename;
-    // stop_render_async(scene);
-    stexture.name     = texture.name;
-    stexture.filename = texture.filename;
-    if (reload) {
+      win, "ldr", "%d x %d", texture.ldr.size().x, texture.ldr.size().y);
+  if (edited && old_filename != texture.filename) {
       try {
         if (is_hdr_filename(texture.filename)) {
           load_image(texture.filename, texture.hdr);
@@ -209,16 +196,13 @@ bool draw_glwidgets_texture(
         log_glinfo(win, "cannot load " + texture.filename);
         log_glinfo(win, e.what());
       }
-    }
-    // start_render_async(scene);
   }
   return edited;
 }
 
 bool draw_glwidgets_material(
     const opengl_window& win, app_scene& scene, int id) {
-  auto& smaterial = scene.scene.materials[id];
-  auto  material  = smaterial;
+  auto& material = scene.scene.materials[id];
   auto  edited    = 0;
   edited += draw_gltextinput(win, "name", material.name);
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
@@ -254,55 +238,41 @@ bool draw_glwidgets_material(
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, scene.scene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
-  if (edited) {
-    // stop_render_async(scene);
-    smaterial = material;
-    //start_render_async(scene);
-  }
   return edited;
 }
 
 bool draw_glwidgets_shape(const opengl_window& win, app_scene& scene, int id) {
-  auto& sshape   = scene.scene.shapes[id];
-  auto  shape    = yocto_shape{};  // copy
-  shape.name     = sshape.name;
-  shape.filename = sshape.filename;
+  auto& shape   = scene.scene.shapes[id];
+  auto old_filename = shape.filename;
   auto edited    = 0;
   edited += draw_gltextinput(win, "name", shape.name);
   edited += draw_gltextinput(win, "filename", shape.filename);
-  draw_gllabel(win, "points", "%ld", sshape.points.size());
-  draw_gllabel(win, "lines", "%ld", sshape.lines.size());
-  draw_gllabel(win, "triangles", "%ld", sshape.triangles.size());
-  draw_gllabel(win, "quads", "%ld", sshape.quads.size());
-  draw_gllabel(win, "quads pos", "%ld", sshape.quadspos.size());
-  draw_gllabel(win, "quads norm", "%ld", sshape.quadsnorm.size());
-  draw_gllabel(win, "quads texcoord", "%ld", sshape.quadstexcoord.size());
-  draw_gllabel(win, "pos", "%ld", sshape.positions.size());
-  draw_gllabel(win, "norm", "%ld", sshape.normals.size());
-  draw_gllabel(win, "texcoord", "%ld", sshape.texcoords.size());
-  draw_gllabel(win, "color", "%ld", sshape.colors.size());
-  draw_gllabel(win, "radius", "%ld", sshape.radius.size());
-  draw_gllabel(win, "tangsp", "%ld", sshape.tangents.size());
-  if (edited) {
-    // auto reload = sshape.filename != shape.filename;
-    // stop_render_async(scene);
-    sshape.name     = shape.name;
-    sshape.filename = shape.filename;
-    // if (reload) {
-    //   try {
-    //     load_shape(sshape.filename, sshape.points, sshape.lines,
-    //         sshape.triangles, sshape.quads, sshape.quadspos, sshape.quadsnorm,
-    //         sshape.quadstexcoord, sshape.positions, sshape.normals,
-    //         sshape.texcoords, sshape.colors, sshape.radius);
-    //   } catch (std::exception& e) {
-    //     push_glmessage("cannot load " + shape.filename);
-    //     log_glinfo(win, "cannot load " + shape.filename);
-    //     log_glinfo(win, e.what());
-    //   }
-    //   // add bvh refit here
-    // }
-    // start_render_async(scene);
-  }
+  draw_gllabel(win, "points", "%ld", shape.points.size());
+  draw_gllabel(win, "lines", "%ld", shape.lines.size());
+  draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
+  draw_gllabel(win, "quads", "%ld", shape.quads.size());
+  draw_gllabel(win, "quads pos", "%ld", shape.quadspos.size());
+  draw_gllabel(win, "quads norm", "%ld", shape.quadsnorm.size());
+  draw_gllabel(win, "quads texcoord", "%ld", shape.quadstexcoord.size());
+  draw_gllabel(win, "pos", "%ld", shape.positions.size());
+  draw_gllabel(win, "norm", "%ld", shape.normals.size());
+  draw_gllabel(win, "texcoord", "%ld", shape.texcoords.size());
+  draw_gllabel(win, "color", "%ld", shape.colors.size());
+  draw_gllabel(win, "radius", "%ld", shape.radius.size());
+  draw_gllabel(win, "tangsp", "%ld", shape.tangents.size());
+  if (edited && old_filename != shape.filename) {
+      try {
+        load_shape(shape.filename, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
+      } catch (std::exception& e) {
+        push_glmessage("cannot load " + shape.filename);
+        log_glinfo(win, "cannot load " + shape.filename);
+        log_glinfo(win, e.what());
+      }
+      refit_bvh(scene.bvh, scene.scene, {}, {id}, scene.bvh_prms);
+    }
   return edited;
 }
 
@@ -456,34 +426,28 @@ void draw_glwidgets(const opengl_window& win) {
       win, "scene", app.selected, (int)app.scenes.size(),
       [&app](int idx) { return app.scenes[idx].name.c_str(); }, false);
   if (scene_ok && begin_glheader(win, "trace")) {
-    auto& scn       = app.scenes[app.selected];
-    auto  cam_names = vector<string>();
-    for (auto& camera : scn.scene.cameras) cam_names.push_back(camera.name);
-    auto trace_prms = scn.trace_prms;
-    draw_glcombobox(win, "camera", trace_prms.camera, cam_names);
-    draw_glslider(win, "resolution", trace_prms.resolution, 180, 4096);
-    draw_glslider(win, "nsamples", trace_prms.samples, 16, 4096);
-    draw_glcombobox(
-        win, "tracer", (int&)trace_prms.sampler, trace_sampler_names);
-    draw_glcombobox(win, "false color", (int&)trace_prms.falsecolor,
+    auto edited = false;
+    auto& scene = app.scenes[app.selected];
+    auto& tparams       = scene.trace_prms;
+    edited+=draw_glcombobox(win, "camera", tparams.camera, scene.scene.cameras);
+    edited+=draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
+    edited+=draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
+    edited+=draw_glcombobox(
+        win, "tracer", (int&)tparams.sampler, trace_sampler_names);
+    edited+=draw_glcombobox(win, "false color", (int&)tparams.falsecolor,
         trace_falsecolor_names);
-    draw_glslider(win, "nbounces", trace_prms.bounces, 1, 128);
-    draw_glcheckbox(win, "env hidden", trace_prms.envhidden);
+    edited+=draw_glslider(win, "nbounces", tparams.bounces, 1, 128);
+    edited+=draw_glcheckbox(win, "env hidden", tparams.envhidden);
     continue_glline(win);
-    draw_glcheckbox(win, "filter", trace_prms.tentfilter);
-    draw_glslider(win, "seed", (int&)trace_prms.seed, 0, 1000000);
-    draw_glslider(win, "pratio", scn.preview_ratio, 1, 64);
-    auto tonemap_prms = scn.tonemap_prms;
-    draw_glslider(win, "exposure", tonemap_prms.exposure, -5, 5);
-    draw_glcheckbox(win, "filmic", tonemap_prms.filmic);
+    edited+=draw_glcheckbox(win, "filter", tparams.tentfilter);
+    edited+=draw_glslider(win, "seed", (int&)tparams.seed, 0, 1000000);
+    edited+=draw_glslider(win, "pratio", scene.preview_ratio, 1, 64);
+    auto& dparams = scene.tonemap_prms;
+    edited+=draw_glslider(win, "exposure", dparams.exposure, -5, 5);
+    draw_glcheckbox(win, "filmic", dparams.filmic);
     continue_glline(win);
-    draw_glcheckbox(win, "srgb", tonemap_prms.srgb);
-    if (trace_prms != scn.trace_prms) {
-      // TODO: support edit
-    }
-    if (tonemap_prms != scn.tonemap_prms) {
-      // TODO: support edit
-    }
+    edited+=draw_glcheckbox(win, "srgb", dparams.srgb);
+    if (edited) reset_display(scene);
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "inspect")) {
@@ -521,7 +485,7 @@ void draw_glwidgets(const opengl_window& win) {
     }
     end_glheader(win);
   }
-  if (scene_ok && begin_glheader(win, "selection")) {
+  if (scene_ok && begin_glheader(win, "scene")) {
     auto& scene  = app.scenes[app.selected];
     auto  labels = vector<string>{};
     if (!scene.scene.cameras.empty()) labels.push_back("camera");
