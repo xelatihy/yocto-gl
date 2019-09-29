@@ -413,7 +413,10 @@ void draw_glwidgets(const opengl_window& win) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", scene_ok)) {
-    // TODO: support close
+    auto it = apps.states.begin();
+    std::advance(it, apps.selected);
+    apps.states.erase(it);
+    apps.selected = apps.states.empty() ? -1 : 0;
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
