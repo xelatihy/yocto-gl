@@ -978,7 +978,7 @@ bool draw_glwidgets_environment(
 // draw with shading
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         apps      = *(app_states*)get_gluser_pointer(win);
+  auto&         apps     = *(app_states*)get_gluser_pointer(win);
   auto          scene_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
@@ -1035,7 +1035,7 @@ void draw_glwidgets(const opengl_window& win) {
       },
       false);
   if (scene_ok && begin_glheader(win, "view")) {
-    auto& app  = apps.get_selected();
+    auto& app    = apps.get_selected();
     auto& params = app.drawgl_prms;
     draw_glcombobox(win, "camera", params.camera, app.scene.cameras);
     draw_glslider(win, "resolution", params.resolution, 0, 4096);
@@ -1045,8 +1045,7 @@ void draw_glwidgets(const opengl_window& win) {
     continue_glline(win);
     draw_glcheckbox(win, "edges", params.edges);
     if (app.time_range != zero2f) {
-      draw_glslider(
-          win, "time", app.time, app.time_range.x, app.time_range.y);
+      draw_glslider(win, "time", app.time, app.time_range.x, app.time_range.y);
       draw_gltextinput(win, "anim group", app.anim_group);
       draw_glcheckbox(win, "animate", app.animate);
     }
@@ -1079,7 +1078,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{"camera", "shape", "environment",
         "instance", "materials", "textures", "subdivs"};
-    auto&       app  = apps.get_selected();
+    auto&       app    = apps.get_selected();
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
     if (app.selection.first == "camera") {
@@ -1107,8 +1106,8 @@ void draw_glwidgets(const opengl_window& win) {
           win, "selection##2", app.selection.second, app.scene.instances);
       draw_glwidgets_instance(win, app, app.selection.second);
     } else if (app.selection.first == "environment") {
-      draw_glcombobox(win, "selection##2", app.selection.second,
-          app.scene.environments);
+      draw_glcombobox(
+          win, "selection##2", app.selection.second, app.scene.environments);
       draw_glwidgets_environment(win, app, app.selection.second);
     }
   }
@@ -1214,7 +1213,7 @@ void run_ui(app_states& apps) {
     // handle mouse and keyboard for navigation
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
-      auto& app  = apps.get_selected();
+      auto& app    = apps.get_selected();
       auto& camera = app.scene.cameras.at(app.drawgl_prms.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
@@ -1227,7 +1226,7 @@ void run_ui(app_states& apps) {
 
     // animation
     if (scene_ok && apps.get_selected().animate) {
-      auto& app   = apps.get_selected();
+      auto& app     = apps.get_selected();
       auto  now     = std::chrono::high_resolution_clock::now();
       auto  elapsed = now - last_time;
       auto  time    = (double)(elapsed.count()) / 1000000000.0;
@@ -1255,8 +1254,8 @@ void run_ui(app_states& apps) {
 int main(int argc, const char* argv[]) {
   // initialize app
   app_states app{};
-  auto      filenames  = vector<string>{};
-  auto      noparallel = false;
+  auto       filenames  = vector<string>{};
+  auto       noparallel = false;
 
   // parse command line
   auto cli = make_cli("yscnview", "views scenes inteactively");

@@ -132,11 +132,10 @@ void load_image_async(app_states& apps, const string& filename) {
   app.name            = get_filename(filename);
   app.tonemap_prms    = app.tonemap_prms;
   app.colorgrade_prms = app.colorgrade_prms;
-  apps.selected          = (int)apps.states.size() - 1;
+  apps.selected       = (int)apps.states.size() - 1;
   apps.load_workers.push_back(run_async([&app]() {
     load_image(app.filename, app.source);
-    compute_stats(
-        app.source_stats, app.source, is_hdr_filename(app.filename));
+    compute_stats(app.source_stats, app.source, is_hdr_filename(app.filename));
     app.display = tonemap(app.source, app.tonemap_prms);
     if (app.apply_colorgrade)
       app.display = colorgrade(app.display, app.colorgrade_prms);
@@ -146,7 +145,7 @@ void load_image_async(app_states& apps, const string& filename) {
 
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         apps      = *(app_states*)get_gluser_pointer(win);
+  auto&         apps     = *(app_states*)get_gluser_pointer(win);
   auto          image_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yimview")) return;
   draw_glmessages(win);
@@ -192,7 +191,7 @@ void draw_glwidgets(const opengl_window& win) {
       },
       false);
   if (image_ok && begin_glheader(win, "tonemap")) {
-    auto& app  = apps.get_selected();
+    auto& app    = apps.get_selected();
     auto& params = app.tonemap_prms;
     auto  edited = 0;
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
@@ -213,7 +212,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "colorgrade")) {
-    auto& app  = apps.get_selected();
+    auto& app    = apps.get_selected();
     auto& params = app.colorgrade_prms;
     auto  edited = 0;
     edited += draw_glcheckbox(win, "apply colorgrade", app.apply_colorgrade);
@@ -266,7 +265,7 @@ void draw_glwidgets(const opengl_window& win) {
 }
 
 void draw(const opengl_window& win) {
-  auto& apps      = *(app_states*)get_gluser_pointer(win);
+  auto& apps     = *(app_states*)get_gluser_pointer(win);
   auto  win_size = get_glwindow_size(win);
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
@@ -277,11 +276,11 @@ void draw(const opengl_window& win) {
       init_gltexture(app.gl_txt, app.display, false, false, false);
     update_imview(app.image_center, app.image_scale, app.display.size(),
         win_size, app.zoom_to_fit);
-    draw_glimage_background(app.gl_txt, win_size.x, win_size.y,
-        app.image_center, app.image_scale);
+    draw_glimage_background(
+        app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
     set_glblending(true);
-    draw_glimage(app.gl_txt, win_size.x, win_size.y, app.image_center,
-        app.image_scale);
+    draw_glimage(
+        app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
     set_glblending(false);
   }
   begin_glwidgets(win);
@@ -306,16 +305,13 @@ void update(const opengl_window& win, app_states& app) {
   }
   for (auto& app : app.states) {
     if (app.render_region < app.render_regions.size()) {
-      auto num_regions = min(
-          12, app.render_regions.size() - app.render_region);
+      auto num_regions = min(12, app.render_regions.size() - app.render_region);
       parallel_for(num_regions, [&app](int idx) {
         auto& region = app.render_regions[app.render_region + idx];
         tonemap(app.display, app.source,
-            app.render_regions[app.render_region + idx],
-            app.tonemap_prms);
+            app.render_regions[app.render_region + idx], app.tonemap_prms);
         if (app.apply_colorgrade) {
-          colorgrade(
-              app.display, app.display, region, app.colorgrade_prms);
+          colorgrade(app.display, app.display, region, app.colorgrade_prms);
         }
       });
       if (!app.gl_txt || app.gl_txt.size != app.display.size()) {
@@ -380,7 +376,7 @@ void run_ui(app_states& apps) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto apps       = app_states();
+  auto apps      = app_states();
   auto filenames = vector<string>{};
 
   // command line options

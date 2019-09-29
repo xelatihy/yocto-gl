@@ -79,14 +79,13 @@ struct app_state {
 
 void reset_display(app_state& app) {
   auto image_size = camera_resolution(
-      app.scene.cameras[app.trace_prms.camera],
-      app.trace_prms.resolution);
+      app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
   app.render.resize(image_size);
   app.display.resize(image_size);
   app.render_preview = true;
   app.render_sample  = 0;
   app.render_region  = 0;
-  app.state = make_trace_state(app.render.size(), app.trace_prms.seed);
+  app.state          = make_trace_state(app.render.size(), app.trace_prms.seed);
   app.render_regions = make_regions(
       app.render.size(), app.trace_prms.region, true);
 }
@@ -99,13 +98,13 @@ void draw(const opengl_window& win) {
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.gl_txt || app.gl_txt.size != app.display.size())
     init_gltexture(app.gl_txt, app.display, false, false, false);
-  update_imview(app.image_center, app.image_scale, app.display.size(),
-      win_size, app.zoom_to_fit);
-  draw_glimage_background(app.gl_txt, win_size.x, win_size.y,
-      app.image_center, app.image_scale);
+  update_imview(app.image_center, app.image_scale, app.display.size(), win_size,
+      app.zoom_to_fit);
+  draw_glimage_background(
+      app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
   set_glblending(true);
-  draw_glimage(app.gl_txt, win_size.x, win_size.y, app.image_center,
-      app.image_scale);
+  draw_glimage(
+      app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
   set_glblending(false);
   swap_glbuffers(win);
 }
@@ -116,13 +115,12 @@ void update(const opengl_window& win, app_state& app) {
     auto preview_prms = app.trace_prms;
     preview_prms.resolution /= app.preview_ratio;
     preview_prms.samples = 1;
-    auto preview         = trace_image(
-        app.scene, app.bvh, app.lights, preview_prms);
-    preview = tonemap(preview, app.tonemap_prms);
+    auto preview = trace_image(app.scene, app.bvh, app.lights, preview_prms);
+    preview      = tonemap(preview, app.tonemap_prms);
     for (auto j = 0; j < app.display.size().y; j++) {
       for (auto i = 0; i < app.display.size().x; i++) {
         auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
-              pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
+             pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
         app.display[{i, j}] = preview[{pi, pj}];
       }
     }
@@ -134,15 +132,13 @@ void update(const opengl_window& win, app_state& app) {
     app.render_preview = false;
   } else if (app.render_sample < app.trace_prms.samples) {
     // rendering blocks
-    auto num_regions = min(
-        128, app.render_regions.size() - app.render_region);
+    auto num_regions = min(128, app.render_regions.size() - app.render_region);
     parallel_for(app.render_region, app.render_region + num_regions,
         [&app](int region_id) {
-          trace_region(app.render, app.state, app.scene, app.bvh,
-              app.lights, app.render_regions[region_id], 1,
-              app.trace_prms);
-          tonemap(app.display, app.render,
-              app.render_regions[region_id], app.tonemap_prms);
+          trace_region(app.render, app.state, app.scene, app.bvh, app.lights,
+              app.render_regions[region_id], 1, app.trace_prms);
+          tonemap(app.display, app.render, app.render_regions[region_id],
+              app.tonemap_prms);
         });
     if (!app.gl_txt || app.gl_txt.size != app.display.size()) {
       init_gltexture(app.gl_txt, app.display, false, false, false);
@@ -168,12 +164,12 @@ void run_ui(app_state& app) {
   // loop
   auto mouse_pos = zero2f, last_pos = zero2f;
   while (!should_glwindow_close(win)) {
-    last_pos            = mouse_pos;
-    mouse_pos           = get_glmouse_pos(win);
-    auto mouse_left     = get_glmouse_left(win);
-    auto mouse_right    = get_glmouse_right(win);
-    auto alt_down       = get_glalt_key(win);
-    auto shift_down     = get_glshift_key(win);
+    last_pos         = mouse_pos;
+    mouse_pos        = get_glmouse_pos(win);
+    auto mouse_left  = get_glmouse_left(win);
+    auto mouse_right = get_glmouse_right(win);
+    auto alt_down    = get_glalt_key(win);
+    auto shift_down  = get_glshift_key(win);
 
     // handle mouse and keyboard for navigation
     if ((mouse_left || mouse_right) && !alt_down) {
@@ -207,7 +203,7 @@ void run_ui(app_state& app) {
 int main(int argc, const char* argv[]) {
   // application
   app_state app{};
-  auto no_parallel     = false;
+  auto      no_parallel = false;
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");
@@ -295,8 +291,8 @@ int main(int argc, const char* argv[]) {
   // allocate buffers
   auto image_size = camera_resolution(
       app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-  app.render = image{image_size, zero4f};
-  app.state  = make_trace_state(image_size, app.trace_prms.seed);
+  app.render  = image{image_size, zero4f};
+  app.state   = make_trace_state(image_size, app.trace_prms.seed);
   app.display = app.render;
   reset_display(app);
 

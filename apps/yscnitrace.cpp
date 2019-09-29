@@ -117,14 +117,13 @@ struct app_states {
 
 void reset_display(app_state& app) {
   auto image_size = camera_resolution(
-      app.scene.cameras[app.trace_prms.camera],
-      app.trace_prms.resolution);
+      app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
   app.render.resize(image_size);
   app.display.resize(image_size);
   app.render_preview = true;
   app.render_sample  = 0;
   app.render_region  = 0;
-  app.state = make_trace_state(app.render.size(), app.trace_prms.seed);
+  app.state          = make_trace_state(app.render.size(), app.trace_prms.seed);
   app.render_regions = make_regions(
       app.render.size(), app.trace_prms.region, true);
 }
@@ -146,13 +145,12 @@ void load_scene_async(app_states& apps, const string& filename) {
     make_bvh(app.bvh, app.scene, app.bvh_prms);
     make_trace_lights(app.lights, app.scene);
     auto image_size = camera_resolution(
-        app.scene.cameras[app.trace_prms.camera],
-        app.trace_prms.resolution);
+        app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
     app.render.resize(image_size);
     app.display.resize(image_size);
     app.name = get_filename(app.filename) + " [" +
-                 std::to_string(app.render.size().x) + "x" +
-                 std::to_string(app.render.size().y) + " @ 0]";
+               std::to_string(app.render.size().x) + "x" +
+               std::to_string(app.render.size().y) + " @ 0]";
   }));
 }
 
@@ -182,8 +180,7 @@ bool draw_glwidgets_camera(const opengl_window& win, app_state& app, int id) {
 }
 
 /// Visit struct elements.
-bool draw_glwidgets_texture(
-    const opengl_window& win, app_state& app, int id) {
+bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
   auto& texture      = app.scene.textures[id];
   auto  old_filename = texture.filename;
   auto  edited       = 0;
@@ -210,8 +207,7 @@ bool draw_glwidgets_texture(
   return edited;
 }
 
-bool draw_glwidgets_material(
-    const opengl_window& win, app_state& app, int id) {
+bool draw_glwidgets_material(const opengl_window& win, app_state& app, int id) {
   auto& material = app.scene.materials[id];
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
@@ -241,8 +237,8 @@ bool draw_glwidgets_material(
       win, "specular_tex", material.specular_tex, app.scene.textures, true);
   edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
       app.scene.textures, true);
-  edited += draw_glcombobox(win, "subsurface_tex", material.subsurface_tex,
-      app.scene.textures, true);
+  edited += draw_glcombobox(
+      win, "subsurface_tex", material.subsurface_tex, app.scene.textures, true);
   edited += draw_glcombobox(
       win, "roughness_tex", material.roughness_tex, app.scene.textures, true);
   edited += draw_glcombobox(
@@ -299,8 +295,7 @@ inline bool draw_glwidgets_subdiv(
   edited += draw_glcheckbox(win, "catmullclark", shape.catmullclark);
   edited += draw_glcheckbox(win, "smooth", shape.smooth);
   edited += draw_glcheckbox(win, "facevarying", shape.facevarying);
-  edited += draw_glcombobox(
-      win, "shape", shape.shape, app.scene.shapes, true);
+  edited += draw_glcombobox(win, "shape", shape.shape, app.scene.shapes, true);
   edited += draw_glcombobox(win, "displacement_tex", shape.displacement_tex,
       app.scene.textures, true);
   edited += draw_glslider(win, "displacement", shape.displacement, 0, 1);
@@ -339,8 +334,7 @@ inline bool draw_glwidgets_subdiv(
   return edited;
 }
 
-bool draw_glwidgets_instance(
-    const opengl_window& win, app_state& app, int id) {
+bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
   auto& instance     = app.scene.instances[id];
   auto  old_instance = instance;
   auto  edited       = 0;
@@ -381,7 +375,7 @@ bool draw_glwidgets_environment(
 
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         apps      = *(app_states*)get_gluser_pointer(win);
+  auto&         apps     = *(app_states*)get_gluser_pointer(win);
   auto          scene_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnitrace")) return;
   draw_glmessages(win);
@@ -436,10 +430,9 @@ void draw_glwidgets(const opengl_window& win) {
       false);
   if (scene_ok && begin_glheader(win, "trace")) {
     auto  edited  = 0;
-    auto& app   = apps.get_selected();
+    auto& app     = apps.get_selected();
     auto& tparams = app.trace_prms;
-    edited += draw_glcombobox(
-        win, "camera", tparams.camera, app.scene.cameras);
+    edited += draw_glcombobox(win, "camera", tparams.camera, app.scene.cameras);
     edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_glcombobox(
@@ -498,7 +491,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{"camera", "shape", "environment",
         "instance", "materials", "textures", "subdivs"};
-    auto&       app  = apps.get_selected();
+    auto&       app    = apps.get_selected();
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
     auto edited = 0;
@@ -527,8 +520,8 @@ void draw_glwidgets(const opengl_window& win) {
           win, "selection##2", app.selection.second, app.scene.instances);
       edited += draw_glwidgets_instance(win, app, app.selection.second);
     } else if (app.selection.first == "environment") {
-      draw_glcombobox(win, "selection##2", app.selection.second,
-          app.scene.environments);
+      draw_glcombobox(
+          win, "selection##2", app.selection.second, app.scene.environments);
       edited += draw_glwidgets_environment(win, app, app.selection.second);
     }
     if (edited) reset_display(app);
@@ -541,7 +534,7 @@ void draw_glwidgets(const opengl_window& win) {
 }
 
 void draw(const opengl_window& win) {
-  auto& apps      = *(app_states*)get_gluser_pointer(win);
+  auto& apps     = *(app_states*)get_gluser_pointer(win);
   auto  win_size = get_glwindow_size(win);
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
@@ -552,11 +545,11 @@ void draw(const opengl_window& win) {
       init_gltexture(app.gl_txt, app.display, false, false, false);
     update_imview(app.image_center, app.image_scale, app.display.size(),
         win_size, app.zoom_to_fit);
-    draw_glimage_background(app.gl_txt, win_size.x, win_size.y,
-        app.image_center, app.image_scale);
+    draw_glimage_background(
+        app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
     set_glblending(true);
-    draw_glimage(app.gl_txt, win_size.x, win_size.y, app.image_center,
-        app.image_scale);
+    draw_glimage(
+        app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
     set_glblending(false);
   }
   begin_glwidgets(win);
@@ -585,9 +578,8 @@ void update(const opengl_window& win, app_states& app) {
       auto preview_prms = app.trace_prms;
       preview_prms.resolution /= app.preview_ratio;
       preview_prms.samples = 1;
-      auto preview         = trace_image(
-          app.scene, app.bvh, app.lights, preview_prms);
-      preview = tonemap(preview, app.tonemap_prms);
+      auto preview = trace_image(app.scene, app.bvh, app.lights, preview_prms);
+      preview      = tonemap(preview, app.tonemap_prms);
       for (auto j = 0; j < app.display.size().y; j++) {
         for (auto i = 0; i < app.display.size().x; i++) {
           auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
@@ -607,11 +599,10 @@ void update(const opengl_window& win, app_states& app) {
           128, app.render_regions.size() - app.render_region);
       parallel_for(app.render_region, app.render_region + num_regions,
           [&app](int region_id) {
-            trace_region(app.render, app.state, app.scene, app.bvh,
-                app.lights, app.render_regions[region_id], 1,
-                app.trace_prms);
-            tonemap(app.display, app.render,
-                app.render_regions[region_id], app.tonemap_prms);
+            trace_region(app.render, app.state, app.scene, app.bvh, app.lights,
+                app.render_regions[region_id], 1, app.trace_prms);
+            tonemap(app.display, app.render, app.render_regions[region_id],
+                app.tonemap_prms);
           });
       if (!app.gl_txt || app.gl_txt.size != app.display.size()) {
         init_gltexture(app.gl_txt, app.display, false, false, false);
@@ -658,7 +649,7 @@ void run_ui(app_states& apps) {
     // handle mouse and keyboard for navigation
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
-      auto& app  = apps.get_selected();
+      auto& app    = apps.get_selected();
       auto& camera = app.scene.cameras.at(app.trace_prms.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
