@@ -71,6 +71,11 @@ struct app_image {
   float          image_scale  = 1;
   bool           zoom_to_fit  = false;
   opengl_texture gl_txt       = {};
+
+  // rendering properties
+  int render_region = 0;
+  vector<image_region> render_regions = {};
+  bool render_stats = false;
 };
 
 struct app_state {
@@ -84,6 +89,14 @@ struct app_state {
   tonemap_params    tonemap_prms    = {};
   colorgrade_params colorgrade_prms = {};
 };
+
+// reset display
+void reset_display(app_image& image) {
+  if(image.display.size() != image.source.size())
+    image.display = image.source;
+  image.render_region = 0;
+  image.render_regions = make_regions(image.source.size(), 256);
+}
 
 // compute min/max
 void compute_stats(
@@ -106,25 +119,6 @@ void compute_stats(
   stats.average /= num_pixels;
 }
 
-void update_display(app_image& image) {
-  if (image.display.size() != image.source.size()) image.display = image.source;
-  auto regions = make_regions(image.source.size(), 128);
-  parallel_foreach(regions, [&image](const image_region& region) {
-    tonemap(image.display, image.source, region, image.tonemap_prms);
-    if (image.apply_colorgrade) {
-      colorgrade(image.display, image.display, region, image.colorgrade_prms);
-    }
-  });
-  compute_stats(image.display_stats, image.display, false);
-}
-
-void update_texture(app_image& image) {
-  if (!image.gl_txt) {
-    init_gltexture(image.gl_txt, image.display, false, false, false);
-  }
-  update_gltexture(image.gl_txt, image.display, false);
-}
-
 // add a new image
 void load_image_async(app_state& app, const string& filename) {
   auto& image           = app.loading.emplace_back();
@@ -138,7 +132,10 @@ void load_image_async(app_state& app, const string& filename) {
     load_image(image.filename, image.source);
     compute_stats(
         image.source_stats, image.source, is_hdr_filename(image.filename));
-    update_display(image);
+    image.display = tonemap(image.source, image.tonemap_prms);
+    if(image.apply_colorgrade)
+      image.display = colorgrade(image.display, image.colorgrade_prms);
+    compute_stats(image.display_stats, image.display, false);
   }));
 }
 
@@ -187,7 +184,7 @@ void draw_glwidgets(const opengl_window& win) {
       [&app](int idx) { return app.images[idx].name.c_str(); }, false);
   if (image_ok && begin_glheader(win, "tonemap")) {
     auto& image  = app.images[app.selected];
-    auto  params = image.tonemap_prms;
+    auto& params = image.tonemap_prms;
     auto  edited = 0;
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
     edited += draw_glcoloredit(win, "tint", params.tint);
@@ -203,19 +200,14 @@ void draw_glwidgets(const opengl_window& win) {
       params.tint = wb / max(wb);
       edited += 1;
     }
-    if (edited) {
-      image.tonemap_prms = params;
-      update_display(image);
-      update_texture(image);
-    }
+    if (edited) reset_display(image);
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "colorgrade")) {
     auto& image            = app.images[app.selected];
-    auto  apply_colorgrade = image.apply_colorgrade;
-    auto  params           = image.colorgrade_prms;
+    auto&  params           = image.colorgrade_prms;
     auto  edited           = 0;
-    edited += draw_glcheckbox(win, "apply colorgrade", apply_colorgrade);
+    edited += draw_glcheckbox(win, "apply colorgrade", image.apply_colorgrade);
     edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
     edited += draw_glslider(win, "ldr shadows", params.shadows, 0, 1);
     edited += draw_glslider(win, "ldr midtones", params.midtones, 0, 1);
@@ -224,12 +216,7 @@ void draw_glwidgets(const opengl_window& win) {
     edited += draw_glcoloredit(win, "midtones color", params.midtones_color);
     edited += draw_glcoloredit(
         win, "highlights color", params.highlights_color);
-    if (edited) {
-      image.apply_colorgrade = apply_colorgrade;
-      image.colorgrade_prms  = params;
-      update_display(image);
-      update_texture(image);
-    }
+    if (edited) reset_display(image);
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "inspect")) {
@@ -277,7 +264,8 @@ void draw(const opengl_window& win) {
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.images.empty() && app.selected >= 0) {
     auto& image = app.images.at(app.selected);
-    if (!image.gl_txt) update_texture(image);
+    if (!image.gl_txt || image.gl_txt.size != image.display.size()) 
+      init_gltexture(image.gl_txt, image.display, false, false, false);
     update_imview(image.image_center, image.image_scale, image.display.size(),
         win_size, image.zoom_to_fit);
     draw_glimage_background(image.gl_txt, win_size.x, win_size.y,
@@ -299,6 +287,8 @@ void update(const opengl_window& win, app_state& app) {
     try {
       app.load_workers[idx].get();
       app.images.push_back(app.loading[idx]);
+      reset_display(app.images.back());
+      app.selected = (int)app.images.size() - 1;
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load image " + app.loading[idx].filename);
       log_glinfo(win, "cannot load image " + app.loading[idx].filename);
@@ -306,6 +296,26 @@ void update(const opengl_window& win, app_state& app) {
       break;
     }
     if (app.selected < 0) app.selected = (int)app.images.size() - 1;
+  }
+  for(auto& image : app.images) {
+    if(image.render_region < image.render_regions.size()) {
+      auto num_regions = min(
+          12, image.render_regions.size() - image.render_region);
+      parallel_for(image.render_region, image.render_region + num_regions,
+          [&image](int region_id) {
+        tonemap(image.display, image.source, image.render_regions[region_id], image.tonemap_prms);
+        if (image.apply_colorgrade) {
+          colorgrade(image.display, image.display, image.render_regions[region_id], image.colorgrade_prms);
+        }
+      });
+      if (!image.gl_txt || image.gl_txt.size != image.display.size()) {
+        init_gltexture(image.gl_txt, image.display, false, false, false);
+      } else {
+        update_gltexture(image.gl_txt, image.display, false);
+      }
+    } else if(image.render_stats) {
+      compute_stats(image.display_stats, image.display, false);
+    }
   }
 }
 

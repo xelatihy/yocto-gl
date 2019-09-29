@@ -32,7 +32,6 @@
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
-#include "ysceneuit.h"
 using namespace yocto;
 
 #include <atomic>
@@ -546,115 +545,6 @@ void draw(const opengl_window& win) {
   draw_glwidgets(win);
   end_glwidgets(win);
   swap_glbuffers(win);
-}
-
-void apply_edit(const string& filename, yocto_scene& scene,
-    trace_params& trace_prms, tonemap_params& tonemap_prms,
-    bool& reload_element, bool& updated_lights, bool& updated_bvh,
-    const app_edit& edit) {
-  auto& [type, index, data, reload] = edit;
-
-  if (type == typeid(yocto_camera)) {
-    scene.cameras[index] = any_cast<yocto_camera>(data);
-  } else if (type == typeid(yocto_texture)) {
-    scene.textures[index] = any_cast<yocto_texture>(data);
-    if (reload) reload_element = true;
-  } else if (type == typeid(yocto_voltexture)) {
-    scene.voltextures[index] = any_cast<yocto_voltexture>(data);
-    if (reload) reload_element = true;
-  } else if (type == typeid(yocto_shape)) {
-    scene.shapes[index] = any_cast<yocto_shape>(data);
-    if (reload) {
-      reload_element = true;
-      updated_bvh    = true;
-    }
-  } else if (type == typeid(yocto_subdiv)) {
-    scene.subdivs[index] = any_cast<yocto_subdiv>(data);
-    if (reload) {
-      reload_element = true;
-      updated_bvh    = true;
-    }
-  } else if (type == typeid(yocto_material)) {
-    auto old_emission      = scene.materials[index].emission;
-    scene.materials[index] = any_cast<yocto_material>(data);
-    if (old_emission != scene.materials[index].emission) {
-      updated_lights = true;
-    }
-  } else if (type == typeid(yocto_instance)) {
-    auto old_instance      = scene.instances[index];
-    scene.instances[index] = any_cast<yocto_instance>(data);
-    if (old_instance.shape != scene.instances[index].shape ||
-        old_instance.frame != scene.instances[index].frame) {
-      updated_bvh = true;
-    }
-  } else if (type == typeid(yocto_environment)) {
-    auto old_emission         = scene.materials[index].emission;
-    scene.environments[index] = any_cast<yocto_environment>(data);
-    if (old_emission != scene.materials[index].emission) {
-      updated_lights = true;
-    }
-  } else if (type == typeid(trace_params)) {
-    trace_prms = any_cast<trace_params>(data);
-  } else if (type == typeid(tonemap_params)) {
-    tonemap_prms = any_cast<tonemap_params>(data);
-  } else {
-    throw std::runtime_error("unsupported type "s + type.name());
-  }
-}
-
-// reload an element
-void load_element(
-    const string& filename, yocto_scene& scene, const app_edit& edit) {
-  auto& [type, index, data, reload] = edit;
-
-  if (type == typeid(yocto_texture)) {
-    auto& texture = scene.textures[index];
-    if (is_hdr_filename(texture.filename)) {
-      load_image(get_dirname(filename) + texture.filename, texture.hdr);
-    } else {
-      load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
-    }
-  } else if (type == typeid(yocto_voltexture)) {
-    auto& texture = scene.voltextures[index];
-    load_volume(get_dirname(filename) + texture.filename, texture.vol);
-  } else if (type == typeid(yocto_shape)) {
-    auto& shape = scene.shapes[index];
-    load_shape(get_dirname(filename) + shape.filename, shape.points,
-        shape.lines, shape.triangles, shape.quads, shape.quadspos,
-        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, false);
-  } else if (type == typeid(yocto_subdiv)) {
-    // TODO: this needs more fixing?
-    auto& subdiv = scene.subdivs[index];
-    load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
-        subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.quadspos,
-        subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-        subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius,
-        subdiv.facevarying);
-    tesselate_subdiv(scene, scene.subdivs[index]);
-  } else {
-    throw std::runtime_error("unsupported type "s + type.name());
-  }
-}
-
-void refit_bvh(const string& filename, yocto_scene& scene, bvh_scene& bvh,
-    const bvh_params& bvh_prms, const app_edit& edit) {
-  auto& [type, index, data, reload] = edit;
-
-  auto updated_shapes    = vector<int>{};
-  auto updated_instances = vector<int>{};
-  if (type == typeid(yocto_shape)) {
-    updated_shapes.push_back(index);
-  } else if (type == typeid(yocto_subdiv)) {
-    auto& subdiv = scene.subdivs[index];
-    updated_shapes.push_back(subdiv.shape);
-  } else if (type == typeid(yocto_instance)) {
-    updated_instances.push_back(index);
-  } else {
-    throw std::runtime_error("unsupported type "s + type.name());
-  }
-
-  refit_bvh(bvh, scene, updated_instances, updated_shapes, bvh_prms);
 }
 
 void update(const opengl_window& win, app_state& app) {
