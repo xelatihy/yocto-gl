@@ -196,6 +196,7 @@ bool draw_glwidgets_texture(
         log_glinfo(win, "cannot load " + texture.filename);
         log_glinfo(win, e.what());
       }
+      // TODO: update lights
   }
   return edited;
 }
@@ -238,6 +239,7 @@ bool draw_glwidgets_material(
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, scene.scene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
+      // TODO: update lights
   return edited;
 }
 
@@ -265,13 +267,14 @@ bool draw_glwidgets_shape(const opengl_window& win, app_scene& scene, int id) {
         load_shape(shape.filename, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
             shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+            shape.texcoords, shape.colors, shape.radius, false);
       } catch (std::exception& e) {
         push_glmessage("cannot load " + shape.filename);
         log_glinfo(win, "cannot load " + shape.filename);
         log_glinfo(win, e.what());
       }
       refit_bvh(scene.bvh, scene.scene, {}, {id}, scene.bvh_prms);
+      // TODO: update lights
     }
   return edited;
 }
