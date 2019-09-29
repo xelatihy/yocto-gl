@@ -75,23 +75,21 @@ struct app_image {
 struct app_state {
   // data
   std::list<app_image>    images = {};
-  int                      selected = -1;
+  int                     selected = -1;
   std::list<app_image>    loading = {};
   std::list<future<void>> load_workers = {};
 
   // get image
-  app_image& at(int idx) {
+  app_image& get_selected() {
     auto it = images.begin();
     std::advance(it, selected);
     return *it;
   }
-  const app_image& at(int idx) const {
+  const app_image& get_selected() const {
     auto it = images.begin();
     std::advance(it, selected);
     return *it;
   }
-  app_image& get_selected() { return at(selected); }
-  const app_image& get_selected() const { return at(selected); }
 
   // default options
   tonemap_params    tonemap_prms    = {};
@@ -187,7 +185,11 @@ void draw_glwidgets(const opengl_window& win) {
   if (app.images.empty()) return;
   draw_glcombobox(
       win, "image", app.selected, (int)app.images.size(),
-      [&app](int idx) { return app.at(idx).name.c_str(); }, false);
+      [&app](int idx) { 
+        auto it = app.images.begin();
+        std::advance(it, idx);
+        return it->name.c_str(); 
+  }, false);
   if (image_ok && begin_glheader(win, "tonemap")) {
     auto& image  = app.get_selected();
     auto& params = image.tonemap_prms;

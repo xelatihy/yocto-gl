@@ -34,10 +34,8 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-#include <atomic>
-#include <future>
 #include <map>
-#include <thread>
+#include <list>
 
 namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
@@ -90,11 +88,23 @@ struct app_scene {
 // Application state
 struct app_state {
   // data
-  std::deque<app_scene>    scenes;
-  int                      selected = -1;
-  std::deque<string>       errors;
-  std::deque<app_scene>    loading;
-  std::deque<future<void>> load_workers;
+  std::list<app_scene>    scenes;
+  int                     selected = -1;
+  std::list<string>       errors;
+  std::list<app_scene>    loading;
+  std::list<future<void>> load_workers;
+
+  // get image
+  app_scene& get_selected() {
+    auto it = scenes.begin();
+    std::advance(it, selected);
+    return *it;
+  }
+  const app_scene& get_selected() const {
+    auto it = scenes.begin();
+    std::advance(it, selected);
+    return *it;
+  }
 
   // default options
   load_params    load_prms    = {};
@@ -381,14 +391,14 @@ void draw_glwidgets(const opengl_window& win) {
   }
   if (draw_glfiledialog(win, "save", save_path, true, get_dirname(save_path),
           get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
-    app.scenes[app.selected].outname = save_path;
+    // app.scenes[app.selected].outname = save_path;
     // TODO: support save
     save_path = "";
   }
   if (draw_glfiledialog(win, "save image", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    app.scenes[app.selected].imagename = save_path;
+    // app.scenes[app.selected].imagename = save_path;
     // TODO: support save
     save_path = "";
   }
@@ -397,13 +407,15 @@ void draw_glwidgets(const opengl_window& win) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "save", scene_ok)) {
-    save_path = app.scenes[app.selected].outname;
-    open_glmodal(win, "save");
+    // save_path = app.scenes[app.selected].outname;
+    // open_glmodal(win, "save");
+    // TODO: support save
   }
   continue_glline(win);
   if (draw_glbutton(win, "save image", scene_ok)) {
-    save_path = app.scenes[app.selected].imagename;
-    open_glmodal(win, "save image");
+    // save_path = app.scenes[app.selected].imagename;
+    // open_glmodal(win, "save image");
+    // TODO: support save
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", scene_ok)) {
@@ -416,10 +428,14 @@ void draw_glwidgets(const opengl_window& win) {
   if (app.scenes.empty()) return;
   draw_glcombobox(
       win, "scene", app.selected, (int)app.scenes.size(),
-      [&app](int idx) { return app.scenes[idx].name.c_str(); }, false);
+      [&app](int idx) { 
+        auto it = app.scenes.begin();
+        std::advance(it, app.selected);
+        return it->name.c_str(); 
+  }, false);
   if (scene_ok && begin_glheader(win, "trace")) {
     auto  edited  = false;
-    auto& scene   = app.scenes[app.selected];
+    auto& scene   = app.get_selected();
     auto& tparams = scene.trace_prms;
     edited += draw_glcombobox(
         win, "camera", tparams.camera, scene.scene.cameras);
@@ -444,7 +460,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "inspect")) {
-    auto& scn = app.scenes[app.selected];
+    auto& scn = app.get_selected();
     draw_gllabel(win, "scene", get_filename(scn.filename));
     draw_gllabel(win, "filename", scn.filename);
     draw_gllabel(win, "outname", scn.outname);
@@ -481,7 +497,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{"camera", "shape", "environment",
         "instance", "materials", "textures", "subdivs"};
-    auto&       scene  = app.scenes[app.selected];
+    auto&       scene  = app.get_selected();
     if (draw_glcombobox(win, "selection##1", scene.selection.first, labels))
       scene.selection.second = 0;
     auto edited = 0;
@@ -530,7 +546,7 @@ void draw(const opengl_window& win) {
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.scenes.empty() && app.selected >= 0) {
-    auto& scene = app.scenes.at(app.selected);
+    auto& scene = app.get_selected();
     if (!scene.gl_txt || scene.gl_txt.size != scene.display.size())
       init_gltexture(scene.gl_txt, scene.display, false, false, false);
     update_imview(scene.image_center, scene.image_scale, scene.display.size(),
@@ -552,17 +568,15 @@ void update(const opengl_window& win, app_state& app) {
   while(!app.load_workers.empty() && is_ready(app.load_workers.front())) {
     try {
       app.load_workers.front().get();
-      app.scenes.push_back(app.loading.front());
-      reset_display(app.scenes.back());
-      if(app.selected < 0) app.selected = (int)app.scenes.size() - 1;
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load scene " + app.loading.front().filename);
       log_glinfo(win, "cannot load scene " + app.loading.front().filename);
       log_glinfo(win, e.what());
       break;
     }
-    app.loading.pop_front();
-    app.load_workers.pop_front();
+    app.scenes.splice(app.scenes.end(), app.loading, app.loading.begin());
+    reset_display(app.scenes.back());
+    if(app.selected < 0) app.selected = (int)app.scenes.size() - 1;
   }
   for (auto& scene : app.scenes) {
     if (scene.render_preview) {
@@ -973,7 +987,7 @@ void run_ui(app_state& app) {
     auto scene_ok = !app.scenes.empty() && app.selected >= 0;
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
-      auto& scene  = app.scenes[app.selected];
+      auto& scene  = app.get_selected();
       auto& camera = scene.scene.cameras.at(scene.trace_prms.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
@@ -990,7 +1004,7 @@ void run_ui(app_state& app) {
     // selection
     if (app.selected >= 0 && (mouse_left || mouse_right) && alt_down &&
         !widgets_active) {
-      auto& scn = app.scenes[app.selected];
+      auto& scn = app.get_selected();
       auto  ij  = get_image_coords(
           mouse_pos, scn.image_center, scn.image_scale, scn.render.size());
       if (ij.x >= 0 && ij.x < scn.render.size().x && ij.y >= 0 &&
