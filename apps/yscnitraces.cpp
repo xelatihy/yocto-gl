@@ -35,7 +35,7 @@
 using namespace yocto;
 
 // Application state
-struct app_states {
+struct app_state {
   // loading options
   string filename  = "app.yaml";
   string imagename = "out.png";
@@ -77,7 +77,7 @@ struct app_states {
   vector<image_region> render_regions = {};
 };
 
-void reset_display(app_states& app) {
+void reset_display(app_state& app) {
   auto image_size = camera_resolution(
       app.scene.cameras[app.trace_prms.camera],
       app.trace_prms.resolution);
@@ -92,7 +92,7 @@ void reset_display(app_states& app) {
 }
 
 void draw(const opengl_window& win) {
-  auto& app      = *(app_states*)get_gluser_pointer(win);
+  auto& app      = *(app_state*)get_gluser_pointer(win);
   auto  win_size = get_glwindow_size(win);
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
@@ -110,7 +110,7 @@ void draw(const opengl_window& win) {
   swap_glbuffers(win);
 }
 
-void update(const opengl_window& win, app_states& app) {
+void update(const opengl_window& win, app_state& app) {
   if (app.render_preview) {
     // rendering preview
     auto preview_prms = app.trace_prms;
@@ -160,7 +160,7 @@ void update(const opengl_window& win, app_states& app) {
 }
 
 // run ui loop
-void run_ui(app_states& app) {
+void run_ui(app_state& app) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yscnitrace", &app, draw);
@@ -206,7 +206,7 @@ void run_ui(app_states& app) {
 
 int main(int argc, const char* argv[]) {
   // application
-  app_states app{};
+  app_state app{};
   auto no_parallel     = false;
 
   // parse command line
