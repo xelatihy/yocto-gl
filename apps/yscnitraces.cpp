@@ -549,19 +549,20 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_state& app) {
-  for (auto idx = 0; idx < app.load_workers.size(); idx++) {
-    if (!is_ready(app.load_workers[idx])) continue;
+  while(app.load_workers.empty() && is_ready(app.load_workers.front())) {
     try {
-      app.load_workers[idx].get();
-      app.scenes.push_back(app.loading[idx]);
+      app.load_workers.front().get();
+      app.scenes.push_back(app.loading.front());
       reset_display(app.scenes.back());
-      app.selected = (int)app.scenes.size() - 1;
+      if(app.selected < 0) app.selected = (int)app.scenes.size() - 1;
     } catch (const std::exception& e) {
-      push_glmessage(win, "cannot load scene " + app.loading[idx].filename);
-      log_glinfo(win, "cannot load scene " + app.loading[idx].filename);
+      push_glmessage(win, "cannot load scene " + app.loading.front().filename);
+      log_glinfo(win, "cannot load scene " + app.loading.front().filename);
       log_glinfo(win, e.what());
       break;
     }
+    app.loading.pop_front();
+    app.load_workers.pop_front();
   }
   for (auto& scene : app.scenes) {
     if (scene.render_preview) {
