@@ -152,7 +152,7 @@ struct app_scene {
 };
 
 // Application state
-struct app_state {
+struct app_states {
   // data
   std::list<app_scene>    scenes;
   int                     selected = -1;
@@ -178,7 +178,7 @@ struct app_state {
   drawgl_params drawgl_prms = {};
 };
 
-void load_scene_async(app_state& app, const string& filename) {
+void load_scene_async(app_states& app, const string& filename) {
   auto& scene       = app.loading.emplace_back();
   scene.filename    = filename;
   scene.imagename   = replace_extension(filename, ".png");
@@ -978,7 +978,7 @@ bool draw_glwidgets_environment(
 // draw with shading
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         app      = *(app_state*)get_gluser_pointer(win);
+  auto&         app      = *(app_states*)get_gluser_pointer(win);
   auto          scene_ok = !app.scenes.empty() && app.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
@@ -1120,7 +1120,7 @@ void draw_glwidgets(const opengl_window& win) {
 
 // draw with shading
 void draw(const opengl_window& win) {
-  auto& app = *(app_state*)get_gluser_pointer(win);
+  auto& app = *(app_states*)get_gluser_pointer(win);
 
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   set_glviewport(get_glframebuffer_viewport(win));
@@ -1136,7 +1136,7 @@ void draw(const opengl_window& win) {
 }
 
 // update
-void update(const opengl_window& win, app_state& app) {
+void update(const opengl_window& win, app_states& app) {
   while (!app.load_workers.empty() && is_ready(app.load_workers.front())) {
     try {
       app.load_workers.front().get();
@@ -1179,13 +1179,13 @@ void update(const opengl_window& win, app_state& app) {
 }
 
 // run ui loop
-void run_ui(app_state& app) {
+void run_ui(app_states& app) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yscnview", &app, draw);
   set_drop_glcallback(
       win, [](const opengl_window& win, const vector<string>& paths) {
-        auto& app = *(app_state*)get_gluser_pointer(win);
+        auto& app = *(app_states*)get_gluser_pointer(win);
         for (auto& path : paths) load_scene_async(app, path);
       });
 
@@ -1254,7 +1254,7 @@ void run_ui(app_state& app) {
 
 int main(int argc, const char* argv[]) {
   // initialize app
-  app_state app{};
+  app_states app{};
   auto      filenames  = vector<string>{};
   auto      noparallel = false;
 

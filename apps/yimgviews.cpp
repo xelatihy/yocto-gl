@@ -35,7 +35,7 @@ using namespace yocto;
 #include <future>
 #include <thread>
 
-struct app_state {
+struct app_states {
   // original data
   string filename = "image.png";
   string outname  = "out.png";
@@ -56,7 +56,7 @@ struct app_state {
   opengl_texture gl_txt       = {};
 };
 
-void update_display(app_state& app) {
+void update_display(app_states& app) {
   if (app.display.size() != app.source.size()) app.display = app.source;
   auto regions = make_regions(app.source.size(), 128);
   parallel_foreach(regions, [&app](const image_region& region) {
@@ -68,7 +68,7 @@ void update_display(app_state& app) {
 }
 
 void draw(const opengl_window& win) {
-  auto& app      = *(app_state*)get_gluser_pointer(win);
+  auto& app      = *(app_states*)get_gluser_pointer(win);
   auto  win_size = get_glwindow_size(win);
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
@@ -87,7 +87,7 @@ void draw(const opengl_window& win) {
   swap_glbuffers(win);
 }
 
-void run_ui(app_state& app) {
+void run_ui(app_states& app) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280, 720}, "yimview", &app, draw);
@@ -121,7 +121,7 @@ void run_ui(app_state& app) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto app       = app_state();
+  auto app       = app_states();
   auto filenames = vector<string>{};
 
   // command line options
