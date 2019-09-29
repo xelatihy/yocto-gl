@@ -572,6 +572,7 @@ void update(const opengl_window& win, app_states& app) {
       break;
     }
     app.states.splice(app.states.end(), app.loading, app.loading.begin());
+    app.load_workers.pop_front();
     reset_display(app.states.back());
     if (app.selected < 0) app.selected = (int)app.states.size() - 1;
   }
