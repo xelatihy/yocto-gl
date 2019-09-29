@@ -153,15 +153,22 @@ void draw_glwidgets(const opengl_window& win) {
     "load image", load_path, false, "./", "", 
     "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
+    load_path = "";
   }
   continue_glline(win);
   if (draw_glfiledialog_button(win, "save", image_ok, "save image", save_path, 
     true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    // app.images[app.selected].outname = save_path;
-    // app.images[app.selected].task_queue.emplace_back(app_task_type::save);
+    auto& app = apps.get_selected();
+    app.outname = save_path;
+    try {
+      save_image(app.outname, app.display);
+    } catch(std::exception& e) {
+      push_glmessage("cannot save " + app.outname);
+      log_glinfo(win, "cannot save " + app.outname);
+      log_glinfo(win, e.what());
+    }
     save_path = "";
-    // TODO> implement save
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", image_ok)) {
@@ -174,7 +181,6 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  if (apps.states.empty()) return;
   draw_glcombobox(
       win, "image", apps.selected, (int)apps.states.size(),
       [&apps](int idx) {

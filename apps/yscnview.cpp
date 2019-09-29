@@ -982,40 +982,24 @@ void draw_glwidgets(const opengl_window& win) {
   auto          scene_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
-  if (draw_glfiledialog(
-          win, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
-    // add_new_scene(app, load_path);
-    // TODO: handle load
+  if (draw_glfiledialog_button(
+          win, "load", true, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
+    load_scene_async(apps, load_path);
+    load_path = "";
   }
-  if (draw_glfiledialog(win, "save", save_path, true, get_dirname(save_path),
+  continue_glline(win);
+  if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true, get_dirname(save_path),
           get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
-    // app.scenes[app.selected].outname = save_path;
-    // app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_scene);
-    // save_path = "";
-    // TODO: handle load
-  }
-  if (draw_glfiledialog(win, "save image", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
-          "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    // app.scenes[app.selected].imagename = save_path;
-    // app.scenes[app.selected].task_queue.emplace_back(app_task_type::save_image);
-    // save_path = "";
-    // TODO: handle load
-  }
-  if (draw_glbutton(win, "load")) {
-    open_glmodal(win, "load");
-  }
-  continue_glline(win);
-  if (draw_glbutton(win, "save", scene_ok)) {
-    // save_path = app.scenes[app.selected].outname;
-    // open_glmodal(win, "save");
-    // TODO: support save
-  }
-  continue_glline(win);
-  if (draw_glbutton(win, "save image", scene_ok)) {
-    // save_path = app.scenes[app.selected].imagename;
-    // open_glmodal(win, "save image");
-    // TODO: support save
+    auto& app = apps.get_selected();
+    app.outname = save_path;
+    try {
+      save_scene(app.outname, app.scene);
+    } catch(std::exception& e) {
+      push_glmessage("cannot save " + app.outname);
+      log_glinfo(win, "cannot save " + app.outname);
+      log_glinfo(win, e.what());
+    }
+    save_path = "";
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", scene_ok)) {
@@ -1149,6 +1133,7 @@ void update(const opengl_window& win, app_states& apps) {
       break;
     }
     apps.states.splice(apps.states.end(), apps.loading, apps.loading.begin());
+    apps.load_workers.pop_front();
     init_drawgl_state(apps.states.back().state, apps.states.back().scene);
     if (apps.selected < 0) apps.selected = (int)apps.states.size() - 1;
   }
