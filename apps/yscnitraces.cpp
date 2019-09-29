@@ -113,8 +113,8 @@ void reset_display(app_scene& scene) {
   scene.render.resize(image_size);
   scene.display.resize(image_size);
   scene.render_preview = true;
-  scene.render_sample = 0;
-  scene.render_region = 0;
+  scene.render_sample  = 0;
+  scene.render_region  = 0;
   scene.state = make_trace_state(scene.render.size(), scene.trace_prms.seed);
   scene.render_regions = make_regions(
       scene.render.size(), scene.trace_prms.region, true);
@@ -149,7 +149,7 @@ void load_scene_async(app_state& app, const string& filename) {
 
 bool draw_glwidgets_camera(const opengl_window& win, app_scene& scene, int id) {
   auto& camera = scene.scene.cameras[id];
-  auto  edited  = 0;
+  auto  edited = 0;
   edited += (int)draw_gltextinput(win, "name", camera.name);
   edited += (int)draw_glslider(win, "frame.x", camera.frame.x, -1, 1);
   edited += (int)draw_glslider(win, "frame.y", camera.frame.y, -1, 1);
@@ -175,9 +175,9 @@ bool draw_glwidgets_camera(const opengl_window& win, app_scene& scene, int id) {
 /// Visit struct elements.
 bool draw_glwidgets_texture(
     const opengl_window& win, app_scene& scene, int id) {
-  auto&  texture    = scene.scene.textures[id];
-  auto old_filename = texture.filename;
-  auto edited      = 0;
+  auto& texture      = scene.scene.textures[id];
+  auto  old_filename = texture.filename;
+  auto  edited       = 0;
   edited += draw_gltextinput(win, "name", texture.name);
   edited += draw_gltextinput(win, "filename", texture.filename);
   draw_gllabel(
@@ -185,18 +185,18 @@ bool draw_glwidgets_texture(
   draw_gllabel(
       win, "ldr", "%d x %d", texture.ldr.size().x, texture.ldr.size().y);
   if (edited && old_filename != texture.filename) {
-      try {
-        if (is_hdr_filename(texture.filename)) {
-          load_image(texture.filename, texture.hdr);
-        } else {
-          load_imageb(texture.filename, texture.ldr);
-        }
-      } catch (std::exception& e) {
-        push_glmessage("cannot load " + texture.filename);
-        log_glinfo(win, "cannot load " + texture.filename);
-        log_glinfo(win, e.what());
+    try {
+      if (is_hdr_filename(texture.filename)) {
+        load_image(texture.filename, texture.hdr);
+      } else {
+        load_imageb(texture.filename, texture.ldr);
       }
-      // TODO: update lights
+    } catch (std::exception& e) {
+      push_glmessage("cannot load " + texture.filename);
+      log_glinfo(win, "cannot load " + texture.filename);
+      log_glinfo(win, e.what());
+    }
+    // TODO: update lights
   }
   return edited;
 }
@@ -204,7 +204,7 @@ bool draw_glwidgets_texture(
 bool draw_glwidgets_material(
     const opengl_window& win, app_scene& scene, int id) {
   auto& material = scene.scene.materials[id];
-  auto  edited    = 0;
+  auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
   edited += draw_glcoloredit(win, "diffuse", material.diffuse);
@@ -239,14 +239,14 @@ bool draw_glwidgets_material(
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, scene.scene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
-      // TODO: update lights
+  // TODO: update lights
   return edited;
 }
 
 bool draw_glwidgets_shape(const opengl_window& win, app_scene& scene, int id) {
-  auto& shape   = scene.scene.shapes[id];
-  auto old_filename = shape.filename;
-  auto edited    = 0;
+  auto& shape        = scene.scene.shapes[id];
+  auto  old_filename = shape.filename;
+  auto  edited       = 0;
   edited += draw_gltextinput(win, "name", shape.name);
   edited += draw_gltextinput(win, "filename", shape.filename);
   draw_gllabel(win, "points", "%ld", shape.points.size());
@@ -263,19 +263,19 @@ bool draw_glwidgets_shape(const opengl_window& win, app_scene& scene, int id) {
   draw_gllabel(win, "radius", "%ld", shape.radius.size());
   draw_gllabel(win, "tangsp", "%ld", shape.tangents.size());
   if (edited && old_filename != shape.filename) {
-      try {
-        load_shape(shape.filename, shape.points, shape.lines,
-            shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius, false);
-      } catch (std::exception& e) {
-        push_glmessage("cannot load " + shape.filename);
-        log_glinfo(win, "cannot load " + shape.filename);
-        log_glinfo(win, e.what());
-      }
-      refit_bvh(scene.bvh, scene.scene, {}, {id}, scene.bvh_prms);
-      // TODO: update lights
+    try {
+      load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
+          shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+          shape.positions, shape.normals, shape.texcoords, shape.colors,
+          shape.radius, false);
+    } catch (std::exception& e) {
+      push_glmessage("cannot load " + shape.filename);
+      log_glinfo(win, "cannot load " + shape.filename);
+      log_glinfo(win, e.what());
     }
+    refit_bvh(scene.bvh, scene.scene, {}, {id}, scene.bvh_prms);
+    // TODO: update lights
+  }
   return edited;
 }
 
@@ -378,7 +378,7 @@ bool draw_glwidgets_environment(const opengl_window& win, app_scene& scene, int 
   }
   return updated;
 }
-#endif 
+#endif
 
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
@@ -429,27 +429,28 @@ void draw_glwidgets(const opengl_window& win) {
       win, "scene", app.selected, (int)app.scenes.size(),
       [&app](int idx) { return app.scenes[idx].name.c_str(); }, false);
   if (scene_ok && begin_glheader(win, "trace")) {
-    auto edited = false;
-    auto& scene = app.scenes[app.selected];
-    auto& tparams       = scene.trace_prms;
-    edited+=draw_glcombobox(win, "camera", tparams.camera, scene.scene.cameras);
-    edited+=draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
-    edited+=draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
-    edited+=draw_glcombobox(
+    auto  edited  = false;
+    auto& scene   = app.scenes[app.selected];
+    auto& tparams = scene.trace_prms;
+    edited += draw_glcombobox(
+        win, "camera", tparams.camera, scene.scene.cameras);
+    edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
+    edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
+    edited += draw_glcombobox(
         win, "tracer", (int&)tparams.sampler, trace_sampler_names);
-    edited+=draw_glcombobox(win, "false color", (int&)tparams.falsecolor,
-        trace_falsecolor_names);
-    edited+=draw_glslider(win, "nbounces", tparams.bounces, 1, 128);
-    edited+=draw_glcheckbox(win, "env hidden", tparams.envhidden);
+    edited += draw_glcombobox(
+        win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+    edited += draw_glslider(win, "nbounces", tparams.bounces, 1, 128);
+    edited += draw_glcheckbox(win, "env hidden", tparams.envhidden);
     continue_glline(win);
-    edited+=draw_glcheckbox(win, "filter", tparams.tentfilter);
-    edited+=draw_glslider(win, "seed", (int&)tparams.seed, 0, 1000000);
-    edited+=draw_glslider(win, "pratio", scene.preview_ratio, 1, 64);
+    edited += draw_glcheckbox(win, "filter", tparams.tentfilter);
+    edited += draw_glslider(win, "seed", (int&)tparams.seed, 0, 1000000);
+    edited += draw_glslider(win, "pratio", scene.preview_ratio, 1, 64);
     auto& dparams = scene.tonemap_prms;
-    edited+=draw_glslider(win, "exposure", dparams.exposure, -5, 5);
+    edited += draw_glslider(win, "exposure", dparams.exposure, -5, 5);
     draw_glcheckbox(win, "filmic", dparams.filmic);
     continue_glline(win);
-    edited+=draw_glcheckbox(win, "srgb", dparams.srgb);
+    edited += draw_glcheckbox(win, "srgb", dparams.srgb);
     if (edited) reset_display(scene);
     end_glheader(win);
   }
@@ -675,7 +676,7 @@ void update(const opengl_window& win, app_state& app) {
       app.load_workers[idx].get();
       app.scenes.push_back(app.loading[idx]);
       reset_display(app.scenes.back());
-      app.selected = (int)app.scenes.size()-1;
+      app.selected = (int)app.scenes.size() - 1;
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load scene " + app.loading[idx].filename);
       log_glinfo(win, "cannot load scene " + app.loading[idx].filename);
@@ -684,7 +685,7 @@ void update(const opengl_window& win, app_state& app) {
     }
   }
   for (auto& scene : app.scenes) {
-    if(scene.render_preview) {
+    if (scene.render_preview) {
       // rendering preview
       auto preview_prms = scene.trace_prms;
       preview_prms.resolution /= scene.preview_ratio;
@@ -695,28 +696,30 @@ void update(const opengl_window& win, app_state& app) {
       for (auto j = 0; j < scene.display.size().y; j++) {
         for (auto i = 0; i < scene.display.size().x; i++) {
           auto pi = clamp(i / scene.preview_ratio, 0, preview.size().x - 1),
-              pj = clamp(j / scene.preview_ratio, 0, preview.size().y - 1);
+               pj = clamp(j / scene.preview_ratio, 0, preview.size().y - 1);
           scene.display[{i, j}] = preview[{pi, pj}];
         }
       }
-      if(!scene.gl_txt || scene.gl_txt.size != scene.display.size()) {
+      if (!scene.gl_txt || scene.gl_txt.size != scene.display.size()) {
         init_gltexture(scene.gl_txt, scene.display, false, false, false);
       } else {
         update_gltexture(scene.gl_txt, scene.display, false);
       }
       scene.render_preview = false;
-    } else if(scene.render_sample < scene.trace_prms.samples) {
+    } else if (scene.render_sample < scene.trace_prms.samples) {
       // rendering blocks
-      auto num_regions = min(128, scene.render_regions.size() - scene.render_region);
+      auto num_regions = min(
+          128, scene.render_regions.size() - scene.render_region);
       parallel_for(scene.render_region, scene.render_region + num_regions,
           [&scene](int region_id) {
             trace_region(scene.render, scene.state, scene.scene, scene.bvh,
-                scene.lights, scene.render_regions[region_id], 1, scene.trace_prms);
-            tonemap(scene.display, scene.render, scene.render_regions[region_id], 
-              scene.tonemap_prms);
+                scene.lights, scene.render_regions[region_id], 1,
+                scene.trace_prms);
+            tonemap(scene.display, scene.render,
+                scene.render_regions[region_id], scene.tonemap_prms);
           });
       scene.render_region += num_regions;
-      if(scene.render_region >= scene.render_regions.size()) {
+      if (scene.render_region >= scene.render_regions.size()) {
         scene.render_region = 0;
         scene.render_sample += 1;
       }
@@ -1084,11 +1087,11 @@ void run_ui(app_state& app) {
     auto scene_ok = !app.scenes.empty() && app.selected >= 0;
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
-      auto& scene      = app.scenes[app.selected];
+      auto& scene  = app.scenes[app.selected];
       auto& camera = scene.scene.cameras.at(scene.trace_prms.camera);
-      auto  dolly      = 0.0f;
-      auto  pan        = zero2f;
-      auto  rotate     = zero2f;
+      auto  dolly  = 0.0f;
+      auto  pan    = zero2f;
+      auto  rotate = zero2f;
       if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
       if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
       if (mouse_left && shift_down)
