@@ -106,7 +106,7 @@ struct app_state {
   bool           add_skyenv   = false;
 };
 
-void reset_render(app_scene& scene) {
+void reset_display(app_scene& scene) {
   auto image_size = camera_resolution(
       scene.scene.cameras[scene.trace_prms.camera],
       scene.trace_prms.resolution);
@@ -707,7 +707,7 @@ void update(const opengl_window& win, app_state& app) {
     try {
       app.load_workers[idx].get();
       app.scenes.push_back(app.loading[idx]);
-      reset_render(app.scenes.back());
+      reset_display(app.scenes.back());
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load scene " + app.loading[idx].filename);
       log_glinfo(win, "cannot load scene " + app.loading[idx].filename);
@@ -1126,7 +1126,7 @@ void run_ui(app_state& app) {
         pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
       pan.x = -pan.x;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      reset_render(scene);
+      reset_display(scene);
     }
 
     // selection
