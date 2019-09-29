@@ -279,106 +279,96 @@ bool draw_glwidgets_shape(const opengl_window& win, app_scene& scene, int id) {
   return edited;
 }
 
-#if 0
-inline bool draw_glwidgets_subdiv(const opengl_window& win, app_scene& scene, int id) {
-  auto& ssubdiv   = scene.scene.subdiv[id];
-  auto  subdiv    = yocto_subdiv{};  // copy
-  edited.name             = value.name;
-  edited.filename         = value.filename;
-  edited.subdivisions     = value.subdivisions;
-  edited.catmullclark     = value.catmullclark;
-  edited.smooth           = value.smooth;
-  edited.facevarying      = value.facevarying;
-  edited.shape            = value.shape;
-  edited.displacement_tex = value.displacement_tex;
-  edited.displacement     = value.displacement;
-  auto edited            = 0;
-  if (draw_gltextinput(win, "name", edited.name)) updated = true;
-  if (draw_gltextinput(win, "filename", edited.filename)) updated = true;
-  if (draw_glslider(win, "subdivisions", edited.subdivisions, 0, 10))
-    updated = true;
-  if (draw_glcheckbox(win, "catmullclark", edited.catmullclark)) updated = true;
-  if (draw_glcheckbox(win, "smooth", edited.smooth)) updated = true;
-  if (draw_glcheckbox(win, "facevarying", edited.facevarying)) updated = true;
-  if (draw_glcombobox(win, "shape", edited.shape, scene.textures, true))
-    updated = true;
-  if (draw_glcombobox(win, "displacement_tex", edited.displacement_tex,
-          scene.textures, true))
-    updated = true;
-  if (draw_glslider(win, "displacement", edited.displacement, 0, 1))
-    updated = true;
-  draw_gllabel(win, "points", "%ld", value.points.size());
-  draw_gllabel(win, "lines", "%ld", value.lines.size());
-  draw_gllabel(win, "triangles", "%ld", value.triangles.size());
-  draw_gllabel(win, "quads", "%ld", value.quads.size());
-  draw_gllabel(win, "quads pos", "%ld", value.quadspos.size());
-  draw_gllabel(win, "quads norm", "%ld", value.quadsnorm.size());
-  draw_gllabel(win, "quads texcoord", "%ld", value.quadstexcoord.size());
-  draw_gllabel(win, "pos", "%ld", value.positions.size());
-  draw_gllabel(win, "norm", "%ld", value.normals.size());
-  draw_gllabel(win, "texcoord", "%ld", value.texcoords.size());
-  draw_gllabel(win, "color", "%ld", value.colors.size());
-  draw_gllabel(win, "radius", "%ld", value.radius.size());
-  if (updated) {
-    auto reload = edited.filename != value.filename;
-    if (!reload) {
-      edited.points        = value.points;
-      edited.lines         = value.lines;
-      edited.triangles     = value.triangles;
-      edited.quads         = value.quads;
-      edited.quadspos      = value.quadspos;
-      edited.quadsnorm     = value.quadsnorm;
-      edited.quadstexcoord = value.quadstexcoord;
-      edited.positions     = value.positions;
-      edited.normals       = value.normals;
-      edited.texcoords     = value.texcoords;
-      edited.colors        = value.colors;
-      edited.radius        = value.radius;
+inline bool draw_glwidgets_subdiv(
+    const opengl_window& win, app_scene& scene, int id) {
+  auto& shape        = scene.scene.subdivs[id];
+  auto  old_filename = shape.filename;
+  auto  edited       = 0;
+  edited += draw_gltextinput(win, "name", shape.name);
+  edited += draw_gltextinput(win, "filename", shape.filename);
+  edited += draw_glslider(win, "subdivisions", shape.subdivisions, 0, 10);
+  edited += draw_glcheckbox(win, "catmullclark", shape.catmullclark);
+  edited += draw_glcheckbox(win, "smooth", shape.smooth);
+  edited += draw_glcheckbox(win, "facevarying", shape.facevarying);
+  edited += draw_glcombobox(
+      win, "shape", shape.shape, scene.scene.shapes, true);
+  edited += draw_glcombobox(win, "displacement_tex", shape.displacement_tex,
+      scene.scene.textures, true);
+  edited += draw_glslider(win, "displacement", shape.displacement, 0, 1);
+  draw_gllabel(win, "points", "%ld", shape.points.size());
+  draw_gllabel(win, "lines", "%ld", shape.lines.size());
+  draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
+  draw_gllabel(win, "quads", "%ld", shape.quads.size());
+  draw_gllabel(win, "quads pos", "%ld", shape.quadspos.size());
+  draw_gllabel(win, "quads norm", "%ld", shape.quadsnorm.size());
+  draw_gllabel(win, "quads texcoord", "%ld", shape.quadstexcoord.size());
+  draw_gllabel(win, "pos", "%ld", shape.positions.size());
+  draw_gllabel(win, "norm", "%ld", shape.normals.size());
+  draw_gllabel(win, "texcoord", "%ld", shape.texcoords.size());
+  draw_gllabel(win, "color", "%ld", shape.colors.size());
+  draw_gllabel(win, "radius", "%ld", shape.radius.size());
+  if (edited && old_filename != shape.filename) {
+    try {
+      load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
+          shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+          shape.positions, shape.normals, shape.texcoords, shape.colors,
+          shape.radius, false);
+    } catch (std::exception& e) {
+      push_glmessage("cannot load " + shape.filename);
+      log_glinfo(win, "cannot load " + shape.filename);
+      log_glinfo(win, e.what());
     }
-    edit = {sel.type, sel.index, edited, reload};
+    tesselate_subdiv(scene.scene, shape);
+    refit_bvh(scene.bvh, scene.scene, {}, {id}, scene.bvh_prms);
+    // TODO: update lights
   }
-  return updated;
-}
-#endif
-
-#if 0
-bool draw_glwidgets_instance(const opengl_window& win, app_scene& scene, int id) {
-  auto 
-  auto edited  = value;
-  auto updated = false;
-  if (draw_gltextinput(win, "name", edited.name)) updated = true;
-  if (draw_glslider(win, "frame[0]", edited.frame.x, -1, 1)) updated = true;
-  if (draw_glslider(win, "frame[1]", edited.frame.y, -1, 1)) updated = true;
-  if (draw_glslider(win, "frame[2]", edited.frame.z, -1, 1)) updated = true;
-  if (draw_glslider(win, "frame.o", edited.frame.o, -10, 10)) updated = true;
-  if (draw_glcombobox(win, "shape", edited.shape, scene.shapes, true))
-    updated = true;
-  if (draw_glcombobox(win, "material", edited.material, scene.materials, true))
-    updated = true;
-  if (updated) {
-    edit = {sel.type, sel.index, edited, false};
+  if (edited && old_filename == shape.filename) {
+    tesselate_subdiv(scene.scene, shape);
+    refit_bvh(scene.bvh, scene.scene, {}, {shape.shape}, scene.bvh_prms);
+    // TODO: update lights
   }
-  return updated;
+  return edited;
 }
 
-bool draw_glwidgets_environment(const opengl_window& win, app_scene& scene, int id) {
-  auto edited  = value;
-  auto updated = false;
-  if (draw_gltextinput(win, "name", edited.name)) updated = true;
-  if (draw_glslider(win, "frame[0]", edited.frame.x, -1, 1)) updated = true;
-  if (draw_glslider(win, "frame[1]", edited.frame.y, -1, 1)) updated = true;
-  if (draw_glslider(win, "frame[2]", edited.frame.z, -1, 1)) updated = true;
-  if (draw_glslider(win, "frame.o", edited.frame.o, -10, 10)) updated = true;
-  if (draw_glhdrcoloredit(win, "emission", edited.emission)) updated = true;
-  if (draw_glcombobox(
-          win, "emission texture", edited.emission_tex, scene.textures, true))
-    updated = true;
-  if (updated) {
-    edit = {sel.type, sel.index, edited, false};
-  }
-  return updated;
+bool draw_glwidgets_instance(
+    const opengl_window& win, app_scene& scene, int id) {
+  auto& instance     = scene.scene.instances[id];
+  auto  old_instance = instance;
+  auto  edited       = 0;
+  edited += draw_gltextinput(win, "name", instance.name);
+  edited += draw_glslider(win, "frame[0]", instance.frame.x, -1, 1);
+  edited += draw_glslider(win, "frame[1]", instance.frame.y, -1, 1);
+  edited += draw_glslider(win, "frame[2]", instance.frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
+  edited += draw_glcombobox(
+      win, "shape", instance.shape, scene.scene.shapes, true);
+  edited += draw_glcombobox(
+      win, "material", instance.material, scene.scene.materials, true);
+  if (edited && instance.shape != old_instance.shape)
+    refit_bvh(scene.bvh, scene.scene, {}, {id}, scene.bvh_prms);
+  if (edited && instance.frame != old_instance.frame)
+    refit_bvh(scene.bvh, scene.scene, {}, {id}, scene.bvh_prms);
+  // TODO: update lights
+  return edited;
 }
-#endif
+
+bool draw_glwidgets_environment(
+    const opengl_window& win, app_scene& scene, int id) {
+  auto& environment = scene.scene.environments[id];
+  auto  edited      = 0;
+  edited += draw_gltextinput(win, "name", environment.name);
+  edited += draw_glslider(win, "frame[0]", environment.frame.x, -1, 1);
+  edited += draw_glslider(win, "frame[1]", environment.frame.y, -1, 1);
+  edited += draw_glslider(win, "frame[2]", environment.frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.o", environment.frame.o, -10, 10);
+  edited += draw_glhdrcoloredit(win, "emission", environment.emission);
+  edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
+      scene.scene.textures, true);
+  if (edited) {
+    // TODO: update lights
+  }
+  return edited;
+}
 
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
