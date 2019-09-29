@@ -708,7 +708,7 @@ void save_ply(const string& filename, const ply_model& ply) {
   for (auto& comment : ply.comments) format_values(fs, "comment {}\n", comment);
   for (auto& elem : ply.elements) {
     format_values(
-        fs, "element {} {}\n", elem.name, (unsigned long long)elem.count);
+        fs, "element {} {}\n", elem.name, elem.count);
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
         format_values(
