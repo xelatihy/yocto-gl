@@ -73,80 +73,63 @@ shapes:
   - name: floor
     filename: shapes/test-floor.ply
     preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: teapot
-    filename: shapes/test-teapot.obj
-  - name: sphere-displaced
-    filename: shapes/test-sphere-displaced.obj
-    preset: test-sphere-displaced
-  - name: cube-subdiv
-    filename: shapes/test-cube-subdiv.obj
-    preset: test-cube-subdiv
-  - name: suzanne-subdiv
-    filename: shapes/test-suzanne-subdiv.obj
-    preset: test-suzanne-subdiv
+    material: floor
   - name: arealight1
     filename: shapes/test-arealight1.ply
     preset: test-arealight1
+    material: arealight1
+    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: arealight2
     filename: shapes/test-arealight2.ply
     preset: test-arealight2
+    material: arealight2
+    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: cube-subdiv-uvgrid
+    filename: shapes/test-cube-subdiv.obj
+    preset: test-cube-subdiv
+    material: uvgrid
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: suzanne-subdiv-plastic-sharp
+    filename: shapes/test-suzanne-subdiv.obj
+    preset: test-suzanne-subdiv
+    material: plastic-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: sphere-displaced-matte
+    filename: shapes/test-sphere-displaced.obj
+    preset: test-sphere-displaced
+    material: matte
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: bunny-uvgrid
+    filename: shapes/test-bunny.obj
+    material: uvgrid
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
+  - name: teapot-uvgrid
+    filename: shapes/test-teapot.obj
+    material: uvgrid
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 subdivs:
-  - name: sphere-displaced
+  - name: sphere-displaced-matte
     filename: subdivs/test-sphere-displaced.obj
     preset: test-sphere-displaced
-    shape: sphere-displaced
+    shape: sphere-displaced-matte
     facevarying: true
     displacement: 0.025
     displacement_tex: bumps-displacement
-  - name: cube-subdiv
+  - name: cube-subdiv-uvgrid
     filename: subdivs/test-cube-subdiv.obj
     preset: test-cube-subdiv
-    shape: cube-subdiv
+    shape: cube-subdiv-uvgrid
     subdivisions: 4
     catmullclark: true
     smooth: true
     facevarying: true
-  - name: suzanne-subdiv
+  - name: suzanne-subdiv-plastic-sharp
     filename: subdivs/test-suzanne-subdiv.obj
     preset: test-suzanne-subdiv
-    shape: suzanne-subdiv
+    shape: suzanne-subdiv-plastic-sharp
     subdivisions: 2
     catmullclark: true
     smooth: true
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: arealight1
-    shape: arealight1
-    material: arealight1
-    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: arealight2
-    shape: arealight2
-    material: arealight2
-    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: cube-subdiv_uvgrid
-    shape: cube-subdiv
-    material: uvgrid
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: suzanne-subdiv_plastic-sharp
-    shape: suzanne-subdiv
-    material: plastic-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: sphere-displaced_matte
-    shape: sphere-displaced
-    material: matte
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: bunny_uvgrid
-    shape: bunny
-    material: uvgrid
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: teapot_uvgrid
-    shape: teapot
-    material: uvgrid
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
   - name: sky
     emission: [0.5, 0.5, 0.5]
