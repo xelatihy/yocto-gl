@@ -23,6 +23,16 @@ inline vec2i get_edge(const vec3i& triangle, int i) {
   return vec2i{x, y};
 };
 
+inline vec2i make_edge(int x, int y) {
+  return x < y ? vec2i{x, y} : vec2i{y, x};
+}
+
+inline vec2i make_edge(const vec2i& e) { return make_edge(e.x, e.y); }
+
+inline bool same_edge(const vec2i& a, const vec2i& b) {
+  return make_edge(a) == make_edge(b);
+}
+
 inline int adjacent_face(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacency, int face, const vec2i& edge) {
   // Given a face and an edge, return the adjacent face
@@ -388,6 +398,33 @@ inline Path follow_gradient_field(const vector<vec3i>& triangles,
   return {from, to, lerps};
 }
 
+struct State {
+  // solver used for scalar field computation
+  geodesic_solver solver;
+
+  // mesh data
+  vector<vec3f> positions;
+  vector<vec3f> normals;
+  vector<vec3i> triangles;
+
+  // triangle adjacency used for fast boundary computation
+  vector<vec3i> triangle_graph;
+
+  // editing data
+  vector<int> tags;  // per-triangle region tag
+};
+
+inline int add_triangle(State& state, const vec3i& triangle = {}, int tag = -1,
+    const vec3i& neighbors = {-1, -1, -1}) {
+  assert(state.triangles.size() == state.tags.size());
+  assert(state.triangles.size() == state.triangle_graph.size());
+  int index = state.triangles.size();
+  state.triangles.push_back(triangle);
+  state.tags.push_back(tag);
+  state.triangle_graph.push_back(neighbors);
+  return index;
+}
+
 vector<vec3f> points_from_lerps(
     const vector<vec3f>& positions, const Path& path) {
   auto result = vector<vec3f>();
@@ -407,4 +444,405 @@ vector<vec3f> points_from_lerps(
     //+ 0.0001 * state.normals[path.end]);
   }
   return result;
+}
+
+inline int add_node(
+    geodesic_solver& solver, const vec3f& position, const vec3f& normal) {
+  // assert(solver.positions.size() == solver.graph.size());
+  // assert(solver.normals.size() == solver.graph.size());
+  // solver.positions.push_back(position);
+  // solver.normals.push_back(normal);
+  solver.graph.emplace_back();
+  solver.graph.back().reserve(solver.min_arcs);
+  return (int)solver.graph.size() - 1;
+}
+
+inline void delete_arc(geodesic_solver& solver, int a, int b) {
+  // search and delete b in a's adjacency
+  for (int k = 0; k < solver.graph[a].size(); ++k) {
+    if (solver.graph[a][k].node == b) {
+      solver.graph[a].erase(solver.graph[a].begin() + k);
+      break;
+    }
+    // assert(k != solver.graph[a].size() - 1);
+  }
+  // search and delete a in b's adjacency
+  for (int k = 0; k < solver.graph[b].size(); ++k) {
+    if (solver.graph[b][k].node == a) {
+      solver.graph[b].erase(solver.graph[b].begin() + k);
+      break;
+    }
+    // assert(k != solver.graph[b].size() - 1);
+  }
+}
+
+inline int add_vertex(
+    State& state, const vec3f& position, const vec3f& normal) {
+  assert(state.positions.size() == state.normals.size());
+  int index = state.positions.size();
+  state.positions.push_back(position);
+  state.normals.push_back(normal);
+  add_node(state.solver, position, normal);
+  return index;
+}
+
+inline int add_vertex(State& state, int a, int b, float coeff) {
+  auto position = coeff * state.positions[a] + (1 - coeff) * state.positions[b];
+  auto normal   = normalize(
+      coeff * state.normals[a] + (1 - coeff) * state.normals[b]);
+  return add_vertex(state, position, normal);
+}
+
+inline void connect_opposite_nodes(
+    State& state, int f0, int f1, const vec2i& edge) {
+  if (f0 != -1 and f1 != -1)
+    connect_opposite_nodes(state.solver, state.positions, state.triangles[f0],
+        state.triangles[f1], edge);
+}
+
+inline void disconnect_opposite_nodes(geodesic_solver& solver, const vec3i& f0,
+    const vec3i& f1, const vec2i& edge) {
+  /*
+       a
+      /\
+     /  \
+  b /____\
+    \    /
+     \  /
+      \/
+      c
+  */
+
+  int a = opposite_vertex(f0, edge);
+  int c = opposite_vertex(f1, edge);
+  if (a == -1 or c == -1) return;
+  delete_arc(solver, a, c);
+}
+
+inline void disconnect_triangle(State& state, int face) {
+  for (int k = 0; k < 3; ++k) {
+    auto edge = vec2i{
+        state.triangles[face][k], state.triangles[face][(k + 1) % 3]};
+    int neighbor = state.triangle_graph[face][k];
+    disconnect_opposite_nodes(
+        state.solver, state.triangles[face], state.triangles[neighbor], edge);
+  }
+}
+
+inline int adjacent_face(const State& state, int face, const vec2i& edge) {
+  adjacent_face(state.triangles, state.triangle_graph, face, edge);
+  return -1;
+}
+
+inline void update_adjacency(State& state, const vector<int>& updated_faces) {
+  for (auto face : updated_faces) {
+    //        for (auto [edge, k] : edges(state.triangles[face])) {
+    for (int k : {0, 1, 2}) {
+      vec2i edge = {
+          state.triangles[face][k], state.triangles[face][(k + 1) % 3]};
+
+      int neighbor = state.triangle_graph[face][k];
+      if (neighbor == -1) continue;
+
+      for (int j = 0; j < 3; ++j) {
+        auto neighbor_edge = vec2i{state.triangles[neighbor][j],
+            state.triangles[neighbor][(j + 1) % 3]};
+        //      for (auto[neighbor_edge, j] : edges(state.triangles[neighbor]))
+        //      {
+        if (same_edge(edge, neighbor_edge)) {
+          state.triangle_graph[neighbor][j] = face;
+        }
+      }
+    }
+  }
+}
+
+inline void connect_adjacent_nodes(State& state, int v0, int v1) {
+  auto len = length(state.positions[v0] - state.positions[v1]);
+  connect_nodes(state.solver, v0, v1, len);
+}
+
+inline void disconnect_adjacent_nodes(State& state, int v0, int v1) {
+  if (v0 != -1 and v1 != -1) delete_arc(state.solver, v0, v1);
+}
+
+// Refer to slice_triangle.png to understand the names of the following
+// functions.
+inline void split_triangle(State& state, const vec3i& triangle, int fu, int fl,
+    int fr, int vr, int vl, int erd, int eru, int elu, int eld, int cd) {
+  auto[x, y, z] = triangle;
+
+  disconnect_adjacent_nodes(state, y, z);
+  disconnect_adjacent_nodes(state, z, x);
+
+  state.triangles[fu]      = {vl, vr, z};
+  state.triangle_graph[fu] = {fl, eru, elu};
+
+  state.triangles[fl]      = {x, vr, vl};
+  state.triangle_graph[fl] = {fr, fu, eld};
+
+  state.triangles[fr]      = {x, y, vr};
+  state.triangle_graph[fr] = {cd, erd, fl};
+
+  connect_adjacent_nodes(state, y, vr);
+  connect_adjacent_nodes(state, vr, z);
+  connect_adjacent_nodes(state, z, vl);
+  connect_adjacent_nodes(state, vl, x);
+  connect_adjacent_nodes(state, x, vr);
+  connect_adjacent_nodes(state, vl, vr);
+
+  connect_opposite_nodes(state, fu, fl, {vl, vr});
+  connect_opposite_nodes(state, fu, eru, {z, vr});
+  connect_opposite_nodes(state, fu, elu, {z, vl});
+
+  connect_opposite_nodes(state, fl, eld, {vl, x});
+  connect_opposite_nodes(state, fl, fr, {x, vr});
+
+  connect_opposite_nodes(state, fr, cd, {x, y});
+  connect_opposite_nodes(state, fr, erd, {y, vr});
+}
+
+inline void split_triangle_(State& state, const vec3i& triangle, int face,
+    int fl, int fr, int vr, int vl, int erd, int eru, int elu, int eld,
+    int cd) {
+  auto[x, y, z] = triangle;
+
+  disconnect_adjacent_nodes(state, y, z);
+  disconnect_adjacent_nodes(state, z, x);
+
+  state.triangles[face]      = {vl, vr, z};
+  state.triangle_graph[face] = {fr, eru, elu};
+
+  state.triangles[fl]      = {vl, x, y};
+  state.triangle_graph[fl] = {eld, cd, fr};
+
+  state.triangles[fr]      = {vl, y, vr};
+  state.triangle_graph[fr] = {fl, erd, face};
+
+  connect_adjacent_nodes(state, y, vr);
+  connect_adjacent_nodes(state, vr, z);
+  connect_adjacent_nodes(state, z, vl);
+  connect_adjacent_nodes(state, vl, x);
+  connect_adjacent_nodes(state, y, vl);
+  connect_adjacent_nodes(state, vl, vr);
+
+  connect_opposite_nodes(state, face, fr, {vl, vr});
+  connect_opposite_nodes(state, face, eru, {z, vr});
+  connect_opposite_nodes(state, face, elu, {z, vl});
+
+  connect_opposite_nodes(state, fl, eld, {vl, x});
+  connect_opposite_nodes(state, fl, fr, {y, vl});
+  connect_opposite_nodes(state, fl, cd, {x, y});
+
+  connect_opposite_nodes(state, fr, erd, {y, vr});
+}
+
+inline void split_triangle(State& state, const vec3i& triangle, int fu, int fd,
+    int v, int efd, int erd, int eru, int efu) {
+  auto[x, y, z] = triangle;
+
+  disconnect_adjacent_nodes(state, y, z);
+
+  state.triangles[fu]      = {x, v, z};
+  state.triangle_graph[fu] = {fd, eru, efu};
+
+  state.triangles[fd]      = {x, y, v};
+  state.triangle_graph[fd] = {efd, erd, fu};
+
+  connect_adjacent_nodes(state, v, z);
+  connect_adjacent_nodes(state, z, x);
+  connect_adjacent_nodes(state, x, v);
+  connect_adjacent_nodes(state, x, y);
+  connect_adjacent_nodes(state, y, v);
+
+  connect_opposite_nodes(state, fu, fd, {x, v});
+  connect_opposite_nodes(state, fu, eru, {v, z});
+  connect_opposite_nodes(state, fu, efu, {z, x});
+
+  connect_opposite_nodes(state, fd, efd, {x, y});
+  connect_opposite_nodes(state, fd, erd, {y, v});
+}
+
+inline bool slice_path(State& state, int tag, const Path& path, int tag_left,
+    int tag_right, vector<int>& left_faces, vector<int>& right_faces) {
+  auto& lerps = path.lerps;
+  auto  start = path.start;
+  left_faces.reserve(lerps.size());
+  right_faces.reserve(lerps.size());
+
+  {
+    auto[edge, face, alpha] = lerps[0];
+    int x                   = start;
+    int y                   = edge.x;
+    int z                   = edge.y;
+    //    assert(opposite_vertex(edge, state.triangles[face]) == start);
+
+    disconnect_triangle(state, face);
+
+    auto v   = add_vertex(state, edge.x, edge.y, 1 - alpha);
+    int  efd = adjacent_face(state, face, {x, y});
+    int  efu = adjacent_face(state, face, {x, z});
+    int  eru = -1;
+    int  erd = -1;
+
+    int fd = add_triangle(state);
+    split_triangle(state, {x, y, z}, face, fd, v, efd, erd, eru, efu);
+    // state.tags[fd]   = tag_right;
+    // state.tags[face] = tag_left;
+    right_faces.push_back(fd);
+    left_faces.push_back(face);
+  }
+
+  int last_face_left  = lerps[0].face;
+  int last_face_right = state.triangles.size() - 1;
+
+  for (int i = 1; i < lerps.size() - 1; ++i) {
+    auto[edge, face, alpha] = lerps[i];
+    bool step_right         = lerps[i - 1].edge.x == edge.x;
+
+    // int old_face_left  = lerps[i - 1].face;
+    // int old_face_right = state.triangles.size() - 1;
+    //        if (step_right) std::swap(old_face_left, old_face_right);
+    auto triangle = state.triangles[face];
+
+    if (!step_right) {
+      int x = opposite_vertex(triangle, edge);
+      if (x == -1) return false;
+      assert(x != -1);
+      assert(x == lerps[i - 1].edge.x);
+      int  y  = edge.x;
+      int  z  = edge.y;
+      int  vl = state.positions.size() - 1;
+      auto vr = add_vertex(state, edge.x, edge.y, 1 - alpha);
+
+      disconnect_triangle(state, face);
+      int erd = -1;
+      int eru = -1;
+      int elu = last_face_left;
+      int eld = last_face_right;
+      int cd  = state.triangle_graph[face][find(triangle, x)];
+      //            assert(cd != -1);
+
+      state.triangles[face] = {x, y, z};
+      int fl                = add_triangle(state);
+      int fr                = add_triangle(state);
+
+      split_triangle(
+          state, {x, y, z}, face, fl, fr, vr, vl, erd, eru, elu, eld, cd);
+      // state.tags[face] = tag_left;
+      // state.tags[fl]   = tag_right;
+      // state.tags[fr]   = tag_right;
+      left_faces.push_back(face);
+      right_faces.push_back(fl);
+      right_faces.push_back(fr);
+
+      last_face_left  = face;
+      last_face_right = fr;
+    } else {
+      int x = edge.y;
+      int y = opposite_vertex(triangle, edge);
+      if (y == -1) return false;
+      assert(y != -1);
+      int z = edge.x;
+
+      int  vr = state.positions.size() - 1;
+      auto vl = add_vertex(state, edge.x, edge.y, 1 - alpha);
+
+      disconnect_triangle(state, face);
+      int eld = -1;
+      int elu = -1;
+      int erd = last_face_left;
+      int eru = last_face_right;
+      int cd  = state.triangle_graph[face][find(triangle, x)];
+      //            assert(cd != -1);
+
+      state.triangles[face] = {x, y, z};
+      int fr                = add_triangle(state);
+      int fl                = add_triangle(state);
+
+      // split_triangle_(editing_state& state, const vec3i& triangle, int
+      // fu,
+      //                            int fl, int fr, int vr, int vl, int
+      //                            erd, int eru, int elu, int eld, int
+      //                            cd) {
+      split_triangle_(
+          state, {x, y, z}, face, fl, fr, vr, vl, erd, eru, elu, eld, cd);
+      // state.tags[face] = tag_right;
+      // state.tags[fl]   = tag_left;
+      // state.tags[fr]   = tag_left;
+      right_faces.push_back(face);
+      left_faces.push_back(fl);
+      left_faces.push_back(fr);
+
+      last_face_left  = fl;
+      last_face_right = face;
+    }
+  }
+
+  int end = lerps.back().edge.x;
+  assert(end == path.end);
+
+  if (lerps.back().face != -1) {
+    auto[edge, face, alpha] = lerps.back();
+    //        assert((state.tags[face] != tag) == (arrival == -1));
+
+    //        auto prev_lerp = lerps[lerps.size() - 2];
+    // int  old_face_left  = prev_lerp.face;
+    // int  old_face_right = state.triangles.size() - 1;
+
+    // bool step_right = prev_lerp.edge.x == edge.x;
+    // if (step_right) std::swap(old_face_left, old_face_right);
+    auto tr = state.triangles[face];
+
+    int x = end;
+    int y = tr[(find(tr, x) + 1) % 3];  // prev_lerp.edge.y;
+    int z = tr[(find(tr, x) + 2) % 3];  // prev_lerp.edge.x;
+    // assert(opposite_vertex(edge, state.triangles[face]) == start);
+    disconnect_triangle(state, face);
+
+    {
+      auto v   = state.positions.size() - 1;
+      auto adj = state.triangle_graph[face];
+      // int efd = adjacent_face(state, face, {x, y});
+      // int efu = adjacent_face(state, face, {x, z});
+      int efd               = adj[find(tr, x)];
+      int efu               = adj[find(tr, z)];
+      int eru               = last_face_right;
+      int erd               = last_face_left;
+      state.triangles[face] = {x, y, z};
+
+      connect_adjacent_nodes(state, v, y);
+      //          length(state.positions[v] - state.positions[y]));
+      connect_adjacent_nodes(state, v, z);
+      //          length(state.positions[v] - state.positions[z]));
+
+      int fd = add_triangle(state);
+
+      split_triangle(state, {x, y, z}, face, fd, v, efd, erd, eru, efu);
+      if (state.tags[face] == tag) {
+        // state.tags[fd]   = tag_left;
+        // state.tags[face] = tag_right;
+        left_faces.push_back(fd);
+        right_faces.push_back(face);
+
+      } else {
+        state.tags[fd] = state.tags[face];
+        update_adjacency(state, {face, fd});
+      }
+    }
+  }
+
+  // for (int i = 0; i < state.triangles.size(); ++i) {
+  //     if (state.tags[i] == tag_right) right_faces.push_back(i);
+  //     if (state.tags[i] == tag_left) left_faces.push_back(i);
+  // }
+
+  // for (auto& f : left_faces) state.tags[f] = tag_left;
+  // for (auto& f : right_faces) state.tags[f] = tag_right;
+
+  update_adjacency(state, right_faces);
+  update_adjacency(state, left_faces);
+
+  // assert(state_is_sane(state));
+  return true;
 }
