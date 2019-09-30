@@ -584,6 +584,8 @@ void load_yaml(
         get_yaml_ref(value, shape.material, mmap);
       } else if (key == "frame") {
         get_yaml_value(value, shape.frame);
+      } else if (key == "instance") {
+        get_yaml_value(value, shape.instances.emplace_back());
       } else if (key == "lookat") {
         auto lookat = identity3x3f;
         get_yaml_value(value, lookat);
