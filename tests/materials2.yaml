@@ -77,67 +77,60 @@ shapes:
   - name: floor
     filename: shapes/test-floor.ply
     preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
+    material: floor
   - name: largearealight1
     filename: shapes/test-largearealight1.ply
     preset: test-largearealight1
-  - name: largearealight2
-    filename: shapes/test-largearealight2.ply
-    preset: test-largearealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: largearealight1
-    shape: largearealight1
     material: largearealight1
     lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: largearealight2
-    shape: largearealight2
+    filename: shapes/test-largearealight2.ply
+    preset: test-largearealight2
     material: largearealight2
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: sphere_glass-sharp
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: glass-sharp
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: sphere_glass-rough
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: glass-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: sphere_transparent
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: transparent
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere_thinglass-sharp
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: thinglass-sharp
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: sphere_thinglass-rough
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: thinglass-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
   - name: bunny_glass-sharp
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: glass-sharp
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
   - name: bunny_glass-rough
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: glass-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
   - name: bunny_transparent
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: transparent
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
   - name: bunny_thinglass-sharp
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: thinglass-sharp
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
   - name: bunny_thinglass-rough
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: thinglass-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
 environments:
