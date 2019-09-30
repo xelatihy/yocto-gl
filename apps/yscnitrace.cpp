@@ -143,6 +143,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.add_skyenv   = app.add_skyenv;
   apps.load_workers.push_back(run_async([&app]() {
     load_scene(app.filename, app.scene);
+    tesselate_subdivs(app.scene);
     make_bvh(app.bvh, app.scene, app.bvh_prms);
     make_trace_lights(app.lights, app.scene);
     auto image_size = camera_resolution(
@@ -255,6 +256,8 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", shape.name);
   edited += draw_gltextinput(win, "filename", shape.filename);
+  edited += draw_glcombobox(
+      win, "material", shape.material, app.scene.materials, true);
   draw_gllabel(win, "points", "%ld", shape.points.size());
   draw_gllabel(win, "lines", "%ld", shape.lines.size());
   draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
@@ -332,6 +335,7 @@ inline bool draw_glwidgets_subdiv(
     refit_bvh(app.bvh, app.scene, {}, {shape.shape}, app.bvh_prms);
     // TODO: update lights
   }
+  // TODO: update lights if material has changed
   return edited;
 }
 
@@ -346,8 +350,6 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
   edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
   edited += draw_glcombobox(
       win, "shape", instance.shape, app.scene.shapes, true);
-  edited += draw_glcombobox(
-      win, "material", instance.material, app.scene.materials, true);
   if (edited && instance.shape != old_instance.shape)
     refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
   if (edited && instance.frame != old_instance.frame)

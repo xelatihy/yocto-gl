@@ -249,6 +249,7 @@ void load_island_lights(
       auto shape     = yocto_shape{};
       shape.name     = "shapes/lights/" + name + ".ply";
       shape.filename = "shapes/lights/" + name + ".ply";
+      shape.material = (int)scene.materials.size() - 1;
       auto params    = proc_shape_params{};
       params.type    = proc_shape_params::type_t::quad;
       params.scale =
@@ -260,7 +261,6 @@ void load_island_lights(
       instance.name     = name;
       instance.frame    = frame3f(ljs.at("translationMatrix").get<mat4f>());
       instance.shape    = (int)scene.shapes.size() - 1;
-      instance.material = (int)scene.materials.size() - 1;
       scene.instances.push_back(instance);
     } else if (ljs.at("type") == "dome") {
       auto texture     = yocto_texture{};
@@ -575,7 +575,6 @@ void add_island_instance(yocto_scene& scene, const string& parent_name,
                     std::to_string(name_counter[parent_name]++);
     instance.frame    = frame3f(xform);
     instance.shape    = shape_material.x;
-    instance.material = shape_material.y;
     scene.instances.push_back(instance);
   }
 }
@@ -587,7 +586,6 @@ void add_island_variant_instance(vector<yocto_instance>& instances,
     auto instance     = yocto_instance{};
     instance.frame    = frame3f(xform);
     instance.shape    = shape_material.x;
-    instance.material = shape_material.y;
     instances.push_back(instance);
   }
 }
@@ -714,7 +712,7 @@ void load_island_element(const string& filename, const string& dirname,
       xform = parent_xform * xform;
       for (auto& instance : variant) {
         add_island_instance(scene, parent_name, xform * (mat4f)instance.frame,
-            {{instance.shape, instance.material}});
+            {{instance.shape, -1}});
       }
     }
   }

@@ -73,80 +73,80 @@ shapes:
   - name: floor
     filename: shapes/test-floor.ply
     preset: test-floor
-  - name: sphere
+    material: floor
+  - name: sphere-uvgrid
     filename: shapes/test-sphere.ply
     preset: test-sphere
-  - name: cube
+    material: uvgrid
+  - name: cube-uvgrid
     filename: shapes/test-cube.ply
     preset: test-cube
-  - name: sphere-displaced
+    material: uvgrid
+  - name: sphere-displaced-plastic-rough
     filename: shapes/test-sphere-displaced.obj
     preset: test-sphere-displaced
-  - name: suzanne-subdiv
+    material: plastic-rough
+  - name: suzanne-subdiv-plastic-rough
     filename: shapes/test-suzanne-subdiv.obj
     preset: test-suzanne-subdiv
-  - name: hairball1
+    material: plastic-rough
+  - name: hairball1-hair
     filename: shapes/test-hairball1.ply
     preset: test-hairball1
-  - name: hairball-interior
+    material: hair
+  - name: hairball-interior-hair
     filename: shapes/test-hairball-interior.ply
     preset: test-hairball-interior
+    material: hair
   - name: arealight1
     filename: shapes/test-arealight1.ply
     preset: test-arealight1
+    material: arealight1
   - name: arealight2
     filename: shapes/test-arealight2.ply
     preset: test-arealight2
+    material: arealight2
 subdivs:
-  - name: sphere-displaced
+  - name: sphere-displaced-plastic-rough
     filename: subdivs/test-sphere-displaced.obj
     preset: test-sphere-displaced
-    shape: sphere-displaced
+    shape: sphere-displaced-plastic-rough
     facevarying: true
     displacement: 0.025
     displacement_tex: bumps-displacement
-  - name: suzanne-subdiv
+  - name: suzanne-subdiv-plastic-rough
     filename: subdivs/test-suzanne-subdiv.obj
     preset: test-suzanne-subdiv
-    shape: suzanne-subdiv
+    shape: suzanne-subdiv-plastic-rough
     subdivisions: 2
     catmullclark: true
     smooth: true
 instances:
   - name: floor
     shape: floor
-    material: floor
   - name: arealight1
     shape: arealight1
-    material: arealight1
     lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: arealight2
     shape: arealight2
-    material: arealight2
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_uvgrid
-    shape: sphere
-    material: uvgrid
+  - name: sphere-uvgrid
+    shape: sphere-uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: suzanne-subdiv_plastic-rough
-    shape: suzanne-subdiv
-    material: plastic-rough
+  - name: suzanne-subdiv-plastic-rough
+    shape: suzanne-subdiv-plastic-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: hairball1_hair
-    shape: hairball1
-    material: hair
+  - name: hairball1-hair
+    shape: hairball1-hair
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere-displaced_plastic-rough
-    shape: sphere-displaced
-    material: plastic-rough
+  - name: sphere-displaced-plastic-rough
+    shape: sphere-displaced-plastic-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: cube_uvgrid
-    shape: cube
-    material: uvgrid
+  - name: cube-uvgrid
+    shape: cube-uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: hairball-interior_hair
-    shape: hairball-interior
-    material: hair
+  - name: hairball-interior-hair
+    shape: hairball-interior-hair
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
 environments:
   - name: sky

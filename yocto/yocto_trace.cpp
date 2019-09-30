@@ -785,7 +785,8 @@ static float sample_light_pdf(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction) {
   auto& instance = scene.instances[instance_id];
-  auto& material = scene.materials[instance.material];
+  auto& shape = scene.shapes[instance.shape];
+  auto& material = scene.materials[shape.material];
   if (material.emission == zero3f) return 0;
   auto& cdf = lights.shape_cdfs[instance.shape];
   // check all intersection
@@ -1206,7 +1207,7 @@ static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       return {vec3f{material.roughness}, 1};
     }
     case trace_params::falsecolor_type::material: {
-      auto hashed = std::hash<int>()(instance.material);
+      auto hashed = std::hash<int>()(shape.material);
       auto rng_   = make_rng(trace_default_seed, hashed);
       return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
     }
@@ -1351,7 +1352,7 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
   for (auto idx = 0; idx < scene.instances.size(); idx++) {
     auto& instance = scene.instances[idx];
     auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
+    auto& material = scene.materials[shape.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
     lights.instances.push_back(idx);
@@ -1375,7 +1376,7 @@ void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
   for (auto idx = 0; idx < scene.instances.size(); idx++) {
     auto& instance = scene.instances[idx];
     auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
+    auto& material = scene.materials[shape.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
     lights.instances.push_back(idx);

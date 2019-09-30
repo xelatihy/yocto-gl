@@ -164,6 +164,7 @@ struct yocto_shape {
   // shape data
   string name     = "";
   string filename = "";
+  int    material = -1;
 
   // primitives
   vector<int>   points    = {};
@@ -233,7 +234,6 @@ struct yocto_instance {
   string  name     = "";
   frame3f frame    = identity3x4f;
   int     shape    = -1;
-  int     material = -1;
 };
 
 // Environment map.
