@@ -46,9 +46,6 @@ textures:
   - name: bumps-normal
     filename: textures/test-bumps-normal.png
     preset: test-bumps-normal
-  - name: sky
-    filename: textures/test-sky.hdr
-    preset: test-sky
 materials:
   - name: floor
     diffuse: [0.7, 0.7, 0.7]
@@ -93,49 +90,32 @@ shapes:
   - name: bunny-uvgrid-coated
     filename: shapes/test-bunny.obj
     material: uvgrid-coated
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: sphere-volume-glass
     filename: shapes/test-sphere.ply
     preset: test-sphere
     material: volume-glass
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: bunny-volume-jade
     filename: shapes/test-bunny.obj
     material: volume-jade
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere-plastic-rough-bumped
     filename: shapes/test-sphere.ply
     preset: test-sphere
     material: plastic-rough-bumped
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: bunny-metal-rough
     filename: shapes/test-bunny.obj
     material: metal-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
   - name: arealight1
     filename: shapes/test-arealight1.ply
     preset: test-arealight1
     material: arealight1
+    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: arealight2
     filename: shapes/test-arealight2.ply
     preset: test-arealight2
     material: arealight2
-instances:
-  - name: floor
-    shape: floor
-  - name: arealight1
-    shape: arealight1
-    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: arealight2
-    shape: arealight2
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: bunny-uvgrid-coated
-    shape: bunny-uvgrid-coated
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere-volume-glass
-    shape: sphere-volume-glass
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: bunny-volume-jade
-    shape: bunny-volume-jade
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere-plastic-rough-bumped
-    shape: sphere-plastic-rough-bumped
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: bunny-metal-rough
-    shape: bunny-metal-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
