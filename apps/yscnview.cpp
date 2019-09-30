@@ -76,7 +76,7 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
   for (auto& instance : scene.instances) {
     if (instance.shape < 0) continue;
     auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
+    auto& material = scene.materials[shape.material];
     if (material.emission != zero3f) continue;
     if (lights.positions.size() >= 16) break;
     auto bbox = compute_bounds(shape);
@@ -510,7 +510,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     const drawgl_params& options) {
   auto& shape    = scene.shapes[instance.shape];
   auto& vbos     = state.shapes.at(instance.shape);
-  auto& material = scene.materials[instance.material];
+  auto& material = scene.materials[shape.material];
 
   set_gluniform(state.program, "shape_xform", mat4f(instance.frame));
   set_gluniform(state.program, "shape_xform_invtranspose",
@@ -621,7 +621,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     for (auto& instance : scene.instances) {
       if (instance.shape < 0) continue;
       auto& shape    = scene.shapes[instance.shape];
-      auto& material = scene.materials[instance.material];
+      auto& material = scene.materials[shape.material];
       if (material.emission == zero3f) continue;
       if (lights_pos.size() >= 16) break;
       auto bbox = compute_bounds(shape);
@@ -858,6 +858,8 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", shape.name);
   edited += draw_gltextinput(win, "filename", shape.filename);
+  edited += draw_glcombobox(
+      win, "material", shape.material, scene.scene.materials, true);
   draw_gllabel(win, "points", "%ld", shape.points.size());
   draw_gllabel(win, "lines", "%ld", shape.lines.size());
   draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
@@ -951,8 +953,6 @@ bool draw_glwidgets_instance(
   edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
   edited += draw_glcombobox(
       win, "shape", instance.shape, scene.scene.shapes, true);
-  edited += draw_glcombobox(
-      win, "material", instance.material, scene.scene.materials, true);
   // TODO: update lights
   return edited;
 }

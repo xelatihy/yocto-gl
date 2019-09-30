@@ -693,7 +693,7 @@ vec3f eval_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element, const vec2f& uv,
     const vec3f& direction, bool non_rigid_frame) {
   auto& shape    = scene.shapes[instance.shape];
-  auto& material = scene.materials[instance.material];
+  auto& material = scene.materials[shape.material];
   if (!shape.points.empty()) {
     return -direction;
   } else if (!shape.lines.empty()) {
@@ -725,7 +725,7 @@ vec3f eval_element_normal(const yocto_scene& scene,
 material_point eval_material(const yocto_scene& scene,
     const yocto_instance& instance, int element, const vec2f& uv) {
   auto& shape     = scene.shapes[instance.shape];
-  auto& material  = scene.materials[instance.material];
+  auto& material  = scene.materials[shape.material];
   auto  texcoords = eval_texcoord(shape, element, uv);
   auto  color     = eval_color(shape, element, uv);
   return eval_material(scene, material, texcoords, color);
@@ -1178,6 +1178,11 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
     if (material.voldensity_tex >= 0)
       material.voldensity_tex += offset_voltextures;
   }
+  for (auto shape_id = offset_shapes; shape_id < scene.shapes.size();
+       shape_id++) {
+    auto& shape = scene.shapes[shape_id];
+    if (shape.material >= 0) shape.material += offset_materials;
+  }
   for (auto subdiv_id = offset_subdivs; subdiv_id < scene.subdivs.size();
        subdiv_id++) {
     auto& subdiv = scene.subdivs[subdiv_id];
@@ -1189,7 +1194,6 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
        instance_id < scene.instances.size(); instance_id++) {
     auto& instance = scene.instances[instance_id];
     if (instance.shape >= 0) instance.shape += offset_shapes;
-    if (instance.material >= 0) instance.material += offset_materials;
   }
   for (auto environment_id = offset_environments;
        environment_id < scene.environments.size(); environment_id++) {
@@ -1292,10 +1296,9 @@ void normalize_scaled_color(float& scale, vec3f& color) {
 
 // Add missing tangent space if needed.
 void add_tangent_spaces(yocto_scene& scene) {
-  for (auto& instance : scene.instances) {
-    auto& material = scene.materials[instance.material];
+  for (auto& shape : scene.shapes) {
+    auto& material = scene.materials[shape.material];
     if (material.normal_tex < 0) continue;
-    auto& shape = scene.shapes[instance.shape];
     if (!shape.tangents.empty() || shape.texcoords.empty()) continue;
     if (!shape.triangles.empty()) {
       if (shape.normals.empty()) {
@@ -1314,8 +1317,8 @@ void add_tangent_spaces(yocto_scene& scene) {
 // Add missing materials.
 void add_materials(yocto_scene& scene) {
   auto material_id = -1;
-  for (auto& instance : scene.instances) {
-    if (instance.material >= 0) continue;
+  for (auto& shape : scene.shapes) {
+    if (shape.material >= 0) continue;
     if (material_id < 0) {
       auto material    = yocto_material{};
       material.name    = "default";
@@ -1323,7 +1326,7 @@ void add_materials(yocto_scene& scene) {
       scene.materials.push_back(material);
       material_id = (int)scene.materials.size() - 1;
     }
-    instance.material = material_id;
+    shape.material = material_id;
   }
 }
 
