@@ -83,67 +83,60 @@ shapes:
   - name: floor
     filename: shapes/test-floor.ply
     preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
+    material: floor
   - name: largearealight1
     filename: shapes/test-largearealight1.ply
     preset: test-largearealight1
-  - name: largearealight2
-    filename: shapes/test-largearealight2.ply
-    preset: test-largearealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: largearealight1
-    shape: largearealight1
     material: largearealight1
     lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: largearealight2
-    shape: largearealight2
+    filename: shapes/test-largearealight2.ply
+    preset: test-largearealight2
     material: largearealight2
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: sphere_volume-cloud
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: volume-cloud
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: sphere_volume-glass
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: volume-glass
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: sphere_volume-jade
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: volume-jade
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere_volume-emissive
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: volume-emissive
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: sphere_volume-smoke
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: volume-smoke
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
   - name: bunny_volume-cloud
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: volume-cloud
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
   - name: bunny_volume-glass
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: volume-glass
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
   - name: bunny_volume-jade
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: volume-jade
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
   - name: bunny_volume-emissive
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: volume-emissive
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
   - name: bunny_volume-smoke
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: volume-smoke
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
 environments:
