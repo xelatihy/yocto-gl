@@ -1,0 +1,86 @@
+cameras:
+  - name: default
+    lens: 0.05
+    aperture: 0.0
+    film: [0.036, 0.015]
+    lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+  - name: front
+    lens: 0.05
+    aperture: 0.0
+    film: [0.036, 0.012]
+    lookat: [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
+  - name: back
+    lens: 0.05
+    aperture: 0.0
+    film: [0.036, 0.012]
+    lookat: [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
+  - name: perspective-sharp
+    lens: 0.05
+    aperture: 0.0
+    film: [0.036, 0.015]
+    lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+  - name: perspective-dof
+    lens: 0.05
+    aperture: 0.025
+    film: [0.036, 0.015]
+    lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+  - name: orthographic-sharp
+    lens: 0.05
+    aperture: 0.0
+    film: [0.036, 0.015]
+    orthographic: true
+    lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+  - name: orthographic-dof
+    lens: 0.05
+    aperture: 0.02
+    film: [0.036, 0.015]
+    orthographic: true
+    lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+textures:
+  - name: floor
+    filename: textures/test-floor.png
+    preset: test-floor
+  - name: uvgrid
+    filename: textures/test-uvgrid.png
+    preset: test-uvgrid
+  - name: sky
+    filename: textures/test-sky.hdr
+    preset: test-sky
+materials:
+  - name: floor
+    diffuse: [0.7, 0.7, 0.7]
+    diffuse_tex: floor
+  - name: uvgrid
+    specular: [0.04, 0.04, 0.04]
+    diffuse: [1, 1, 1]
+    roughness: 0.1
+    diffuse_tex: uvgrid
+  - name: arealight1
+    emission: [20, 20, 20]
+  - name: arealight2
+    emission: [20, 20, 20]
+shapes:
+  - name: floor
+    filename: shapes/test-floor.ply
+    preset: test-floor
+    material: floor
+  - name: arealight1
+    filename: shapes/test-arealight1.ply
+    preset: test-arealight1
+    material: arealight1
+    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: arealight2
+    filename: shapes/test-arealight2.ply
+    preset: test-arealight2
+    material: arealight2
+    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: sphere-uvgrid
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
+    material: uvgrid
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+    instances: 
+environments:
+  - name: sky
+    emission: [0.5, 0.5, 0.5]
+    emission_tex: sky
