@@ -313,8 +313,9 @@ inline Path follow_gradient_field(const vector<vec3i>& triangles,
 
   lerps.push_back(
       step_from_point(triangles, positions, adjacency, tags, field, from, -1));
-  assert(
-      opposite_vertex(lerps.back().edge, triangles[lerps.back().face]) == from);
+  //  assert(
+  //      opposite_vertex(lerps.back().edge, triangles[lerps.back().face]) ==
+  //      from);
 
   const int num_steps = 10000;
 
@@ -325,8 +326,10 @@ inline Path follow_gradient_field(const vector<vec3i>& triangles,
                   old_alpha * positions[old_edge.y];
 
     int face = adjacent_face(triangles, adjacency, old_face, old_edge);
-    if (face == -1) return {};
-    assert(face != -1);
+    if (face == -1) {
+      //          assert(face != -1);
+      break;
+    }
 
     if (contains(triangles[face], to)) {
       // for (auto[edge, k] : edges(triangles[face])) {
@@ -383,4 +386,25 @@ inline Path follow_gradient_field(const vector<vec3i>& triangles,
   }
 
   return {from, to, lerps};
+}
+
+vector<vec3f> points_from_lerps(
+    const vector<vec3f>& positions, const Path& path) {
+  auto result = vector<vec3f>();
+  result.reserve(path.lerps.size() + 1);
+  result.push_back(positions[path.start]);
+  // + 0.0001 * state.normals[path.start]);
+  if (path.lerps.empty()) return {};
+  for (int i = 0; i < path.lerps.size() - 1; ++i) {
+    auto[edge, face, x] = path.lerps[i];
+    auto a        = positions[edge.x];  // + 0.0001 * state.normals[edge.x];
+    auto b        = positions[edge.y];  // + 0.0001 * state.normals[edge.y];
+    auto position = (1 - x) * a + x * b;
+    result.push_back(position);
+  }
+  if (path.end != -1) {
+    result.push_back(positions[path.end]);
+    //+ 0.0001 * state.normals[path.end]);
+  }
+  return result;
 }
