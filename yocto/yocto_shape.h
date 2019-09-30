@@ -542,9 +542,9 @@ struct geodesic_solver {
 #endif
 };
 
-inline void connect_nodes(geodesic_solver& solver, int a, int b, float length);
+void connect_nodes(geodesic_solver& solver, int a, int b, float length);
 
-inline void connect_opposite_nodes(geodesic_solver& solver,
+void connect_opposite_nodes(geodesic_solver& solver,
     const vector<vec3f>& positions, const vec3i& tr0, const vec3i& tr1,
     const vec2i& edge);
 

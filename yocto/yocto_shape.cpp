@@ -1787,7 +1787,7 @@ static inline int opposite_vertex(const vec3i& tr, const vec2i& edge) {
   return -1;
 }
 
-inline void connect_nodes(geodesic_solver& solver, int a, int b, float length) {
+void connect_nodes(geodesic_solver& solver, int a, int b, float length) {
   solver.graph[a].push_back({b, length});
   solver.graph[b].push_back({a, length});
 }
@@ -1822,7 +1822,7 @@ static inline float opposite_nodes_arc_length(geodesic_solver& solver,
     return sqrtf(len);
 }
 
-inline void connect_opposite_nodes(geodesic_solver& solver,
+void connect_opposite_nodes(geodesic_solver& solver,
     const vector<vec3f>& positions, const vec3i& tr0, const vec3i& tr1,
     const vec2i& edge) {
   int v0 = opposite_vertex(tr0, edge);
