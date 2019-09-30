@@ -340,7 +340,7 @@ struct obj_shape {
   vector<obj_element> faces     = {};
   vector<obj_element> lines     = {};
   vector<obj_element> points    = {};
-  vector<frame3f> instances = {};
+  vector<frame3f>     instances = {};
 };
 
 // Obj material
@@ -498,8 +498,8 @@ enum struct objx_command { camera, environment, instance };
 
 // Obj instance
 struct obj_instance {
-  string  object     = "";
-  frame3f frame    = identity3x4f;
+  string  object = "";
+  frame3f frame  = identity3x4f;
 };
 
 // Read obj/mtl/objx elements

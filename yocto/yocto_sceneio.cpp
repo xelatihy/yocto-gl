@@ -1042,17 +1042,17 @@ void load_obj(
     }
     // make instances
     if (oshape.instances.empty()) {
-      auto& instance = scene.instances.emplace_back();
-      instance.name  = shape.name;
+      auto& instance    = scene.instances.emplace_back();
+      instance.name     = shape.name;
       instance.material = material;
-      instance.shape = (int)scene.shapes.size() - 1;
+      instance.shape    = (int)scene.shapes.size() - 1;
     } else {
-      for(auto& frame : oshape.instances) {
-        auto& instance = scene.instances.emplace_back();
-        instance.name  = shape.name;
-        instance.frame = frame;
+      for (auto& frame : oshape.instances) {
+        auto& instance    = scene.instances.emplace_back();
+        instance.name     = shape.name;
+        instance.frame    = frame;
         instance.material = material;
-        instance.shape = (int)scene.shapes.size() - 1;
+        instance.shape    = (int)scene.shapes.size() - 1;
       }
     }
   }
