@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/integral_curves.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
@@ -101,7 +102,7 @@ int main(int argc, const char** argv) {
   if (normals) {
     auto timer    = print_timed("computing normals");
     shape.normals = compute_normals(shape);
-    if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
+    if (!shape.quadspos.empty()) shape.quadsnorm= shape.quadspos;
   }
 
   // compute geodesics and store them as colors
