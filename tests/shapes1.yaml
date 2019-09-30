@@ -63,57 +63,40 @@ shapes:
   - name: floor
     filename: shapes/test-floor.ply
     preset: test-floor
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: cube
-    filename: shapes/test-cube.ply
-    preset: test-cube
-  - name: disk
-    filename: shapes/test-disk.ply
-    preset: test-disk
-  - name: uvsphere-flipcap
-    filename: shapes/test-uvsphere-flipcap.ply
-    preset: test-uvsphere-flipcap
-  - name: uvcylinder
-    filename: shapes/test-uvcylinder.ply
-    preset: test-uvcylinder
+    material: floor
   - name: arealight1
     filename: shapes/test-arealight1.ply
     preset: test-arealight1
-  - name: arealight2
-    filename: shapes/test-arealight2.ply
-    preset: test-arealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: arealight1
-    shape: arealight1
     material: arealight1
     lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: arealight2
-    shape: arealight2
+    filename: shapes/test-arealight2.ply
+    preset: test-arealight2
     material: arealight2
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_uvgrid
-    shape: sphere
+  - name: sphere-uvgrid
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: uvsphere-flipcap_uvgrid
-    shape: uvsphere-flipcap
+    filename: shapes/test-uvsphere-flipcap.ply
+    preset: test-uvsphere-flipcap
     material: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: disk_uvgrid
-    shape: disk
+  - name: disk-uvgrid
+    filename: shapes/test-disk.ply
+    preset: test-disk
     material: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: uvcylinder_uvgrid
-    shape: uvcylinder
+  - name: uvcylinder-uvgrid
+    filename: shapes/test-uvcylinder.ply
+    preset: test-uvcylinder
     material: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: cube_uvgrid
-    shape: cube
+  - name: cube-uvgrid
+    filename: shapes/test-cube.ply
+    preset: test-cube
     material: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
