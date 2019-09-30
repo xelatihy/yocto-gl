@@ -79,67 +79,60 @@ shapes:
   - name: floor
     filename: shapes/test-floor.ply
     preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
+    material: floor
   - name: largearealight1
     filename: shapes/test-largearealight1.ply
     preset: test-largearealight1
-  - name: largearealight2
-    filename: shapes/test-largearealight2.ply
-    preset: test-largearealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: largearealight1
-    shape: largearealight1
     material: largearealight1
     lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: largearealight2
-    shape: largearealight2
+    filename: shapes/test-largearealight2.ply
+    preset: test-largearealight2
     material: largearealight2
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: sphere_plastic-sharp-bumped
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: plastic-sharp-bumped
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: sphere_plastic-rough-coated
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: plastic-rough-coated
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: sphere_metal-sharp-bumped
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: metal-sharp-bumped
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere_metal-rough-coated
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: metal-rough-coated
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: sphere_metal-rough
-    shape: sphere
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
     material: metal-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
   - name: bunny_plastic-sharp-bumped
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: plastic-sharp-bumped
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
   - name: bunny_plastic-rough-coated
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: plastic-rough-coated
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
   - name: bunny_metal-sharp-bumped
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: metal-sharp-bumped
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
   - name: bunny_metal-rough-coated
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: metal-rough-coated
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
   - name: bunny_metal-rough
-    shape: bunny
+    filename: shapes/test-bunny.obj
     material: metal-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
 environments:
