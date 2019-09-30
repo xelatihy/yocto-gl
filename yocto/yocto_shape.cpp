@@ -21,9 +21,7 @@ namespace yocto {
 // Compute per-vertex tangents for lines.
 void compute_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
     const vector<vec3f>& positions) {
-  if (tangents.size() != positions.size()) {
-    throw std::out_of_range("array should be the same length");
-  }
+  tangents.resize(positions.size());
   for (auto& tangent : tangents) tangent = zero3f;
   for (auto& l : lines) {
     auto tangent = line_tangent(positions[l.x], positions[l.y]);
@@ -36,9 +34,7 @@ void compute_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
 // Compute per-vertex normals for triangles.
 void compute_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
     const vector<vec3f>& positions) {
-  if (normals.size() != positions.size()) {
-    throw std::out_of_range("array should be the same length");
-  }
+  normals.resize(positions.size());
   for (auto& normal : normals) normal = zero3f;
   for (auto& t : triangles) {
     auto normal = triangle_normal(
@@ -54,9 +50,7 @@ void compute_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
 // Compute per-vertex normals for quads.
 void compute_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
     const vector<vec3f>& positions) {
-  if (normals.size() != positions.size()) {
-    throw std::out_of_range("array should be the same length");
-  }
+  normals.resize(positions.size());
   for (auto& normal : normals) normal = zero3f;
   for (auto& q : quads) {
     auto normal = quad_normal(
