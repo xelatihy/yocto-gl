@@ -72,69 +72,62 @@ shapes:
   - name: floor
     filename: shapes/test-floor.ply
     preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
+    material: floor
+  - name: sphere-plastic-sharp
     filename: shapes/test-sphere.ply
     preset: test-sphere
+    material: plastic-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: sphere-plastic-rough
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
+    material: plastic-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: sphere-matte
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
+    material: matte
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: sphere-metal-sharp
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
+    material: metal-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
+  - name: sphere-metal-rough
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
+    material: metal-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
+  - name: bunny-plastic-sharp
+    filename: shapes/test-bunny.obj
+    material: plastic-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
+  - name: bunny-plastic-rough
+    filename: shapes/test-bunny.obj
+    material: plastic-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
+  - name: bunny-matte
+    filename: shapes/test-bunny.obj
+    material: matte
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
+  - name: bunny-metal-sharp
+    filename: shapes/test-bunny.obj
+    material: metal-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
+  - name: bunny-metal-rough
+    filename: shapes/test-bunny.obj
+    material: metal-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
   - name: largearealight1
     filename: shapes/test-largearealight1.ply
     preset: test-largearealight1
-  - name: largearealight2
-    filename: shapes/test-largearealight2.ply
-    preset: test-largearealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: largearealight1
-    shape: largearealight1
     material: largearealight1
     lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: largearealight2
-    shape: largearealight2
+    filename: shapes/test-largearealight2.ply
+    preset: test-largearealight2
     material: largearealight2
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_plastic-sharp
-    shape: sphere
-    material: plastic-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere_plastic-rough
-    shape: sphere
-    material: plastic-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: sphere_matte
-    shape: sphere
-    material: matte
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere_metal-sharp
-    shape: sphere
-    material: metal-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere_metal-rough
-    shape: sphere
-    material: metal-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: bunny_plastic-sharp
-    shape: bunny
-    material: plastic-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - name: bunny_plastic-rough
-    shape: bunny
-    material: plastic-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - name: bunny_matte
-    shape: bunny
-    material: matte
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - name: bunny_metal-sharp
-    shape: bunny
-    material: metal-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
-  - name: bunny_metal-rough
-    shape: bunny
-    material: metal-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
 environments:
   - name: sky
     emission: [0.5, 0.5, 0.5]
