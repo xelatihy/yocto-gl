@@ -43,6 +43,9 @@ textures:
   - name: uvgrid
     filename: textures/test-uvgrid.png
     preset: test-uvgrid
+  - name: bumps-normal
+    filename: textures/test-bumps-normal.png
+    preset: test-bumps-normal
   - name: sunsky
     filename: textures/test-sunsky.hdr
     preset: test-sunsky
@@ -50,57 +53,73 @@ materials:
   - name: floor
     diffuse: [0.7, 0.7, 0.7]
     diffuse_tex: floor
-  - name: uvgrid
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [1, 1, 1]
-    roughness: 0.1
-    diffuse_tex: uvgrid
-  - name: plastic-sharp
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [0.5, 0.5, 0.7]
-    roughness: 0.01
-  - name: plastic-rough
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [0.5, 0.7, 0.5]
-    roughness: 0.2
-  - name: metal-sharp
-    specular: [0.7, 0.7, 0.7]
-    roughness: 0
   - name: metal-rough
     specular: [0.66, 0.45, 0.34]
     roughness: 0.2
+  - name: plastic-rough-bumped
+    specular: [0.04, 0.04, 0.04]
+    diffuse: [0.5, 0.7, 0.5]
+    roughness: 0.2
+    normal_tex: bumps-normal
+  - name: uvgrid-coated
+    coat: [0.04, 0.04, 0.04]
+    specular: [0.04, 0.04, 0.04]
+    diffuse: [1, 1, 1]
+    roughness: 0.2
+    diffuse_tex: uvgrid
+  - name: volume-jade
+    specular: [0.04, 0.04, 0.04]
+    roughness: 0
+    transmission: [1, 1, 1]
+    voltransmission: [0.5, 0.5, 0.5]
+    volscatter: [0.3, 0.6, 0.3]
+    refract: true
+  - name: volume-glass
+    specular: [0.04, 0.04, 0.04]
+    roughness: 0
+    transmission: [1, 1, 1]
+    voltransmission: [1, 0.5, 0.5]
+    volscale: 0.02
+    refract: true
 shapes:
   - name: floor
     filename: shapes/test-floor.ply
     preset: test-floor
-  - name: bunny
+    material: floor
+  - name: bunny-uvgrid-coated
     filename: shapes/test-bunny.obj
-  - name: sphere
+    material: uvgrid-coated
+  - name: sphere-volume-glass
     filename: shapes/test-sphere.ply
     preset: test-sphere
+    material: volume-glass
+  - name: bunny-volume-jade
+    filename: shapes/test-bunny.obj
+    material: volume-jade
+  - name: sphere-plastic-rough-bumped
+    filename: shapes/test-sphere.ply
+    preset: test-sphere
+    material: plastic-rough-bumped
+  - name: bunny-metal-rough
+    filename: shapes/test-bunny.obj
+    material: metal-rough
 instances:
   - name: floor
     shape: floor
-    material: floor
-  - name: bunny_uvgrid
-    shape: bunny
-    material: uvgrid
+  - name: bunny-uvgrid-coated
+    shape: bunny-uvgrid-coated
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere_plastic-sharp
-    shape: sphere
-    material: plastic-sharp
+  - name: sphere-volume-glass
+    shape: sphere-volume-glass
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: bunny_metal-rough
-    shape: bunny
-    material: metal-rough
+  - name: bunny-volume-jade
+    shape: bunny-volume-jade
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere_plastic-rough
-    shape: sphere
-    material: plastic-rough
+  - name: sphere-plastic-rough-bumped
+    shape: sphere-plastic-rough-bumped
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: bunny_metal-sharp
-    shape: bunny
-    material: metal-sharp
+  - name: bunny-metal-rough
+    shape: bunny-metal-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
   - name: sunsky
