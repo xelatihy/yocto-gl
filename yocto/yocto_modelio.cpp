@@ -707,8 +707,7 @@ void save_ply(const string& filename, const ply_model& ply) {
   format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
   for (auto& comment : ply.comments) format_values(fs, "comment {}\n", comment);
   for (auto& elem : ply.elements) {
-    format_values(
-        fs, "element {} {}\n", elem.name, elem.count);
+    format_values(fs, "element {} {}\n", elem.name, (uint64_t)elem.count);
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
         format_values(
