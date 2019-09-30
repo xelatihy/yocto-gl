@@ -162,10 +162,10 @@ struct yocto_material {
 // has its own topology.
 struct yocto_shape {
   // shape data
-  string name     = "";
-  string filename = "";
-  int    material = -1;
-  frame3f frame = identity3x4f;
+  string  name     = "";
+  string  filename = "";
+  int     material = -1;
+  frame3f frame    = identity3x4f;
 
   // primitives
   vector<int>   points    = {};
@@ -187,8 +187,8 @@ struct yocto_shape {
   vector<vec4f> tangents  = {};
 
   // instances
-  vector<frame3f> instances = {};
-  bool non_rigid_frames = true;
+  vector<frame3f> instances        = {};
+  bool            non_rigid_frames = true;
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -232,12 +232,6 @@ struct yocto_subdiv {
   vector<vec2f> texcoords = {};
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
-};
-
-// Instance of a visible shape in the scene.
-struct yocto_instance {
-  string  name     = "";
-  int     shape    = -1;
 };
 
 // Environment map.
@@ -291,7 +285,6 @@ struct yocto_scene {
   string                    name         = "";
   vector<yocto_camera>      cameras      = {};
   vector<yocto_shape>       shapes       = {};
-  vector<yocto_instance>    instances    = {};
   vector<yocto_material>    materials    = {};
   vector<yocto_texture>     textures     = {};
   vector<yocto_environment> environments = {};
@@ -349,9 +342,8 @@ vec2f compute_animation_range(
 bbox3f compute_bounds(const yocto_shape& shape);
 bbox3f compute_bounds(const yocto_scene& scene);
 
-// Compute shape vertex normals
-vector<vec3f> compute_normals(const yocto_shape& shape);
-void          compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
+// Update shape values
+void update_normals(yocto_shape& normals);
 
 // Apply subdivision and displacement rules.
 void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
@@ -383,6 +375,27 @@ pair<vec3f, vec3f> eval_element_tangents(
     const yocto_shape& shape, int element, const vec2f& uv = zero2f);
 pair<mat3f, bool> eval_element_tangent_basis(
     const yocto_shape& shape, int element, const vec2f& uv = zero2f);
+
+// instance queries
+vec3f eval_position(
+    const yocto_shape& shape, int instance, int element, const vec2f& uv);
+vec3f eval_normal(
+    const yocto_shape& shape, int instance, int element, const vec2f& uv);
+vec2f eval_texcoord(
+    const yocto_shape& shape, int instance, int element, const vec2f& uv);
+vec4f eval_color(
+    const yocto_shape& shape, int instance, int element, const vec2f& uv);
+float eval_radius(
+    const yocto_shape& shape, int instance, int element, const vec2f& uv);
+pair<mat3f, bool> eval_tangent_basis(
+    const yocto_shape& shape, int instance, int element, const vec2f& uv);
+vec3f eval_element_normal(const yocto_shape& shape, int instance, int element);
+pair<vec3f, vec3f> eval_element_tangents(const yocto_shape& shape, int instance,
+    int element, const vec2f& uv = zero2f);
+pair<mat3f, bool>  eval_element_tangent_basis(const yocto_shape& shape,
+     int instance, int element, const vec2f& uv = zero2f);
+vec3f eval_shading_normal(const yocto_scene& scene, const yocto_shape& shape,
+    int element, const vec2f& uv, const vec3f& direction);
 
 // Sample a shape element based on area/length.
 pair<int, vec2f> sample_shape(const yocto_shape& shape,
@@ -444,20 +457,8 @@ struct material_point {
 material_point eval_material(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texcoord,
     const vec4f& shape_color);
-
-// Instance values interpolated using barycentric coordinates.
-// Handles defaults if data is missing.
-vec3f eval_position(const yocto_scene& scene, const yocto_instance& instance,
-    int element, const vec2f& uv);
-vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
-    int element, const vec2f& uv);
-vec3f eval_shading_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element, const vec2f& uv,
-    const vec3f& direction);
-vec3f eval_element_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element);
 material_point eval_material(const yocto_scene& scene,
-    const yocto_instance& instance, int element, const vec2f& uv);
+    const yocto_shape& shape, int element, const vec2f& uv);
 
 // Environment texture coordinates from the incoming direction.
 vec2f eval_texcoord(

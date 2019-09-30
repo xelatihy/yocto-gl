@@ -768,24 +768,22 @@ static vec3f sample_environment(const yocto_scene& scene,
 // Picks a point on a light.
 static vec3f sample_light(const yocto_scene& scene, const trace_lights& lights,
     int instance_id, const vec3f& p, float rel, const vec2f& ruv) {
-  auto& instance = scene.instances[instance_id];
-  auto& shape    = scene.shapes[instance.shape];
-  auto& cdf      = lights.shape_cdfs[instance.shape];
+  auto& shape    = scene.shapes[instance_id];
+  auto& cdf      = lights.shape_cdfs[instance_id];
   auto  sample   = sample_shape(shape, cdf, rel, ruv);
   auto  element  = sample.first;
   auto  uv       = sample.second;
-  return normalize(eval_position(scene, instance, element, uv) - p);
+  return normalize(eval_position(shape, element, uv) - p);
 }
 
 // Sample pdf for a light point.
 static float sample_light_pdf(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction) {
-  auto& instance = scene.instances[instance_id];
-  auto& shape = scene.shapes[instance.shape];
+  auto& shape    = scene.shapes[instance_id];
   auto& material = scene.materials[shape.material];
   if (material.emission == zero3f) return 0;
-  auto& cdf = lights.shape_cdfs[instance.shape];
+  auto& cdf = lights.shape_cdfs[instance_id];
   // check all intersection
   auto pdf           = 0.0f;
   auto next_position = position;
@@ -793,10 +791,9 @@ static float sample_light_pdf(const yocto_scene& scene,
     auto isec = intersect_bvh(bvh, instance_id, {next_position, direction});
     if (!isec.hit) break;
     // accumulate pdf
-    auto& instance      = scene.instances[isec.instance];
-    auto light_position = eval_position(scene, instance, isec.element, isec.uv);
-    auto light_normal   = eval_normal(
-        scene, instance, isec.element, isec.uv);
+    auto& shape      = scene.shapes[isec.instance];
+    auto light_position = eval_position(shape, isec.element, isec.uv);
+    auto light_normal   = eval_normal(shape, isec.element, isec.uv);
     // prob triangle * area triangle = area triangle mesh
     auto area = cdf.back();
     pdf += distance_squared(light_position, position) /
@@ -902,13 +899,13 @@ static pair<vec3f, bool> trace_path(const yocto_scene& scene,
     if (!in_volume) {
       // prepare shading point
       auto  outgoing = -direction;
-      auto& instance = scene.instances[intersection.instance];
+      auto& shape = scene.shapes[intersection.instance];
       auto  position = eval_position(
-          scene, instance, intersection.element, intersection.uv);
-      auto normal   = eval_shading_normal(scene, instance, intersection.element,
-          intersection.uv, direction);
-      auto material = eval_material(
-          scene, instance, intersection.element, intersection.uv);
+          shape, intersection.element, intersection.uv);
+      auto normal = eval_shading_normal(scene,
+          shape, intersection.element, intersection.uv, direction);
+      auto material = eval_material(scene,
+          shape, intersection.element, intersection.uv);
 
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1024,13 +1021,13 @@ static pair<vec3f, bool> trace_naive(const yocto_scene& scene,
     // prepare shading point
     auto  outgoing = -direction;
     auto  incoming = outgoing;
-    auto& instance = scene.instances[intersection.instance];
+    auto& shape = scene.shapes[intersection.instance];
     auto  position = eval_position(
-        scene, instance, intersection.element, intersection.uv);
-    auto normal   = eval_shading_normal(scene, instance, intersection.element,
-        intersection.uv, direction);
+        shape, intersection.element, intersection.uv);
+    auto normal = eval_shading_normal(
+        scene, shape, intersection.element, intersection.uv, direction);
     auto material = eval_material(
-        scene, instance, intersection.element, intersection.uv);
+        scene, shape, intersection.element, intersection.uv);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1096,13 +1093,13 @@ static pair<vec3f, bool> trace_eyelight(const yocto_scene& scene,
 
     // prepare shading point
     auto  outgoing = -direction;
-    auto& instance = scene.instances[intersection.instance];
+    auto& shape = scene.shapes[intersection.instance];
     auto  position = eval_position(
-        scene, instance, intersection.element, intersection.uv);
-    auto normal   = eval_shading_normal(scene, instance, intersection.element,
-        intersection.uv, direction);
+        shape, intersection.element, intersection.uv);
+    auto normal = eval_shading_normal(
+        scene, shape, intersection.element, intersection.uv, direction);
     auto material = eval_material(
-        scene, instance, intersection.element, intersection.uv);
+        scene, shape, intersection.element, intersection.uv);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -1145,18 +1142,16 @@ static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
   }
 
   // get scene elements
-  auto& instance = scene.instances[intersection.instance];
-  auto& shape    = scene.shapes[instance.shape];
-  // auto& material = scene.materials[instance.material];
+  auto& shape = scene.shapes[intersection.instance];
 
   // prepare shading point
   auto outgoing = -direction;
   // auto  position = eval_position(
   //     scene, instance, intersection.element, intersection.uv);
-  auto normal   = eval_shading_normal(scene, instance, intersection.element,
-      intersection.uv, direction);
+  auto normal = eval_shading_normal(
+      scene, shape, intersection.element, intersection.uv, direction);
   auto material = eval_material(
-      scene, instance, intersection.element, intersection.uv);
+      scene, shape, intersection.element, intersection.uv);
 
   switch (params.falsecolor) {
     case trace_params::falsecolor_type::normal: {
@@ -1168,13 +1163,11 @@ static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       return {frontfacing, 1};
     }
     case trace_params::falsecolor_type::gnormal: {
-      auto normal = eval_element_normal(
-          scene, instance, intersection.element);
+      auto normal = eval_element_normal(shape, intersection.element);
       return {normal * 0.5f + 0.5f, 1};
     }
     case trace_params::falsecolor_type::gfrontfacing: {
-      auto normal = eval_element_normal(
-          scene, instance, intersection.element);
+      auto normal = eval_element_normal(shape, intersection.element);
       auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                    : vec3f{1, 0, 0};
       return {frontfacing, 1};
@@ -1214,7 +1207,7 @@ static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
       return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
     }
     case trace_params::falsecolor_type::shape: {
-      auto hashed = std::hash<int>()(instance.shape);
+      auto hashed = std::hash<int>()(intersection.instance);
       auto rng_   = make_rng(trace_default_seed, hashed);
       return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
     }
@@ -1346,14 +1339,14 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
   auto lights = trace_lights{};
   lights.shape_cdfs.resize(scene.shapes.size());
   lights.environment_cdfs.resize(scene.textures.size());
-  for (auto idx = 0; idx < scene.instances.size(); idx++) {
-    auto& instance = scene.instances[idx];
-    auto& shape    = scene.shapes[instance.shape];
+  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+    auto& shape    = scene.shapes[idx];
     auto& material = scene.materials[shape.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
+    if (!shape.instances.empty()) throw std::runtime_error("do not support instanced lights");
     lights.instances.push_back(idx);
-    lights.shape_cdfs[instance.shape] = sample_shape_cdf(shape);
+    lights.shape_cdfs[idx] = sample_shape_cdf(shape);
   }
   for (auto idx = 0; idx < scene.environments.size(); idx++) {
     auto& environment = scene.environments[idx];
@@ -1370,14 +1363,14 @@ void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
   lights = {};
   lights.shape_cdfs.resize(scene.shapes.size());
   lights.environment_cdfs.resize(scene.textures.size());
-  for (auto idx = 0; idx < scene.instances.size(); idx++) {
-    auto& instance = scene.instances[idx];
-    auto& shape    = scene.shapes[instance.shape];
+  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+    auto& shape    = scene.shapes[idx];
     auto& material = scene.materials[shape.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
+    if (!shape.instances.empty()) throw std::runtime_error("do not support instanced lights");
     lights.instances.push_back(idx);
-    sample_shape_cdf(shape, lights.shape_cdfs[instance.shape]);
+    sample_shape_cdf(shape, lights.shape_cdfs[idx]);
   }
   for (auto idx = 0; idx < scene.environments.size(); idx++) {
     auto& environment = scene.environments[idx];

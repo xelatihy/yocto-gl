@@ -74,7 +74,8 @@ struct drawgl_lights {
 void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
   lights = {};
   for (auto& shape : scene.shapes) {
-    if(!shape.instances.empty()) throw std::runtime_error("do not support instances lights");
+    if (!shape.instances.empty())
+      throw std::runtime_error("do not support instances lights");
     auto& material = scene.materials[shape.material];
     if (material.emission != zero3f) continue;
     if (lights.positions.size() >= 16) break;
@@ -504,11 +505,10 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
-    const yocto_instance& instance, bool highlighted,
-    const drawgl_params& options) {
-  auto& shape    = scene.shapes[instance.shape];
-  auto& vbos     = state.shapes.at(instance.shape);
+void draw_glshape(drawgl_state& state, const yocto_scene& scene, int shape_id,
+    bool highlighted, const drawgl_params& options) {
+  auto& shape    = scene.shapes[shape_id];
+  auto& vbos     = state.shapes.at(shape_id);
   auto& material = scene.materials[shape.material];
 
   set_gluniform(state.program, "shape_xform", mat4f(shape.frame));
@@ -575,6 +575,8 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     draw_gltriangles(vbos.quads_buffer, vbos.quads_buffer.num);
   }
 
+  // TODO: fixme handle instances
+
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
         enable_glculling(false);
@@ -617,9 +619,8 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     auto lights_pos  = vector<vec3f>();
     auto lights_ke   = vector<vec3f>();
     auto lights_type = vector<int>();
-    for (auto& instance : scene.instances) {
-      if (instance.shape < 0) continue;
-      auto& shape    = scene.shapes[instance.shape];
+    for (auto& shape : scene.shapes) {
+      if(!shape.instances.empty()) throw std::runtime_error("do not support instances lights");
       auto& material = scene.materials[shape.material];
       if (material.emission == zero3f) continue;
       if (lights_pos.size() >= 16) break;
@@ -657,14 +658,10 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
   }
 
   if (options.wireframe) set_glwireframe(true);
-  for (auto instance_id = 0; instance_id < scene.instances.size();
-       instance_id++) {
-    auto& instance = scene.instances[instance_id];
-    // auto& shape     = scene.shapes[instance.shape];
-    // auto& material  = scene.materials[shape.material];
-    auto highlight = highlighted.first == "instance" &&
-                     highlighted.second == instance_id;
-    draw_glinstance(state, scene, instance, highlight, options);
+  for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
+    auto highlight = highlighted.first == "shape" &&
+                     highlighted.second == shape_id;
+    draw_glshape(state, scene, shape_id, highlight, options);
   }
 
   unbind_opengl_program();
@@ -945,18 +942,6 @@ inline bool draw_glwidgets_subdiv(
   return edited;
 }
 
-bool draw_glwidgets_instance(
-    const opengl_window& win, app_state& scene, int id) {
-  auto& instance     = scene.scene.instances[id];
-  auto  old_instance = instance;
-  auto  edited       = 0;
-  edited += draw_gltextinput(win, "name", instance.name);
-  edited += draw_glcombobox(
-      win, "shape", instance.shape, scene.scene.shapes, true);
-  // TODO: update lights
-  return edited;
-}
-
 bool draw_glwidgets_environment(
     const opengl_window& win, app_state& scene, int id) {
   auto& environment = scene.scene.environments[id];
@@ -982,19 +967,20 @@ void draw_glwidgets(const opengl_window& win) {
   auto          scene_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
-  if (draw_glfiledialog_button(
-          win, "load", true, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
+  if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
+          "./", "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true, get_dirname(save_path),
-          get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
-    auto& app = apps.get_selected();
+  if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
+          get_dirname(save_path), get_filename(save_path),
+          "*.yaml;*.obj;*.pbrt")) {
+    auto& app   = apps.get_selected();
     app.outname = save_path;
     try {
       save_scene(app.outname, app.scene);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
       log_glinfo(win, e.what());
@@ -1064,7 +1050,7 @@ void draw_glwidgets(const opengl_window& win) {
   }
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{"camera", "shape", "environment",
-        "instance", "materials", "textures", "subdivs"};
+        "material", "texture", "subdiv"};
     auto&       app    = apps.get_selected();
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
@@ -1088,10 +1074,6 @@ void draw_glwidgets(const opengl_window& win) {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.subdivs);
       draw_glwidgets_subdiv(win, app, app.selection.second);
-    } else if (app.selection.first == "instance") {
-      draw_glcombobox(
-          win, "selection##2", app.selection.second, app.scene.instances);
-      draw_glwidgets_instance(win, app, app.selection.second);
     } else if (app.selection.first == "environment") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.environments);

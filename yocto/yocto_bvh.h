@@ -171,7 +171,7 @@ struct bvh_shape {
   bvh_span<float> radius    = {};
 
   // instances
-  bvh_span<frame3f> instances  = {};
+  bvh_span<frame3f> instances = {};
 
   // frames
   bool non_rigid_frames = true;
@@ -190,7 +190,7 @@ struct bvh_shape {
 
 struct bvh_scene {
   // shapes
-  vector<bvh_shape>       shapes    = {};
+  vector<bvh_shape> shapes = {};
 
   // nodes
   vector<bvh_node> nodes = {};
@@ -218,15 +218,20 @@ struct bvh_params {
 
 // Initialize bvh data
 void make_points_bvh(bvh_shape& bvh, const frame3f& frame, bvh_span<int> points,
-    bvh_span<vec3f> positions, bvh_span<float> radius, bvh_span<frame3f> instances);
+    bvh_span<vec3f> positions, bvh_span<float> radius,
+    bvh_span<frame3f> instances);
 void make_lines_bvh(bvh_shape& bvh, const frame3f& frame, bvh_span<vec2i> lines,
-    bvh_span<vec3f> positions, bvh_span<float> radius, bvh_span<frame3f> instances);
-void make_triangles_bvh(bvh_shape& bvh, const frame3f& frame, bvh_span<vec3i> triangles,
-    bvh_span<vec3f> positions, bvh_span<float> radius, bvh_span<frame3f> instances);
+    bvh_span<vec3f> positions, bvh_span<float> radius,
+    bvh_span<frame3f> instances);
+void make_triangles_bvh(bvh_shape& bvh, const frame3f& frame,
+    bvh_span<vec3i> triangles, bvh_span<vec3f> positions,
+    bvh_span<float> radius, bvh_span<frame3f> instances);
 void make_quads_bvh(bvh_shape& bvh, const frame3f& frame, bvh_span<vec4i> quads,
-    bvh_span<vec3f> positions, bvh_span<float> radius, bvh_span<frame3f> instances);
-void make_quadspos_bvh(bvh_shape& bvh, const frame3f& frame, bvh_span<vec4i> quadspos,
-    bvh_span<vec3f> positions, bvh_span<float> radius, bvh_span<frame3f> instances);
+    bvh_span<vec3f> positions, bvh_span<float> radius,
+    bvh_span<frame3f> instances);
+void make_quadspos_bvh(bvh_shape& bvh, const frame3f& frame,
+    bvh_span<vec4i> quadspos, bvh_span<vec3f> positions, bvh_span<float> radius,
+    bvh_span<frame3f> instances);
 void make_instances_bvh(bvh_scene& bvh, int num_shapes);
 bvh_shape& get_shape_bvh(bvh_scene& bvh, int idx);
 

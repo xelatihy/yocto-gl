@@ -88,11 +88,11 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::list<app_state>    states;
-  int                     selected = -1;
-  std::list<string>       errors;
-  std::list<app_state>    loading;
-  std::list<future<void>> load_workers;
+  std::list<app_state>                   states;
+  int                                    selected = -1;
+  std::list<string>                      errors;
+  std::list<app_state>                   loading;
+  std::list<future<void>>                load_workers;
   std::deque<std::unique_ptr<app_state>> minchia;
 
   // get image
@@ -345,18 +345,6 @@ inline bool draw_glwidgets_subdiv(
   return edited;
 }
 
-bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
-  auto& instance     = app.scene.instances[id];
-  auto  old_instance = instance;
-  auto  edited       = 0;
-  edited += draw_gltextinput(win, "name", instance.name);
-  edited += draw_glcombobox(
-      win, "shape", instance.shape, app.scene.shapes, true);
-  if (edited && instance.shape != old_instance.shape)
-    refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
-  return edited;
-}
-
 bool draw_glwidgets_environment(
     const opengl_window& win, app_state& app, int id) {
   auto& environment = app.scene.environments[id];
@@ -381,19 +369,20 @@ void draw_glwidgets(const opengl_window& win) {
   auto          scene_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnitrace")) return;
   draw_glmessages(win);
-  if (draw_glfiledialog_button(
-          win, "load", true, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
+  if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
+          "./", "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true, get_dirname(save_path),
-          get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
-    auto& app = apps.get_selected();
+  if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
+          get_dirname(save_path), get_filename(save_path),
+          "*.yaml;*.obj;*.pbrt")) {
+    auto& app   = apps.get_selected();
     app.outname = save_path;
     try {
       save_scene(app.outname, app.scene);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
       log_glinfo(win, e.what());
@@ -401,14 +390,14 @@ void draw_glwidgets(const opengl_window& win) {
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save image", scene_ok, "save image", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
+  if (draw_glfiledialog_button(win, "save image", scene_ok, "save image",
+          save_path, true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto& app = apps.get_selected();
+    auto& app   = apps.get_selected();
     app.outname = save_path;
     try {
       save_image(app.imagename, app.display);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
       log_glinfo(win, e.what());
@@ -496,7 +485,7 @@ void draw_glwidgets(const opengl_window& win) {
   }
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{"camera", "shape", "environment",
-        "instance", "materials", "textures", "subdivs"};
+        "material", "texture", "subdiv"};
     auto&       app    = apps.get_selected();
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
@@ -521,10 +510,6 @@ void draw_glwidgets(const opengl_window& win) {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.subdivs);
       edited += draw_glwidgets_subdiv(win, app, app.selection.second);
-    } else if (app.selection.first == "instance") {
-      draw_glcombobox(
-          win, "selection##2", app.selection.second, app.scene.instances);
-      edited += draw_glwidgets_instance(win, app, app.selection.second);
     } else if (app.selection.first == "environment") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.environments);

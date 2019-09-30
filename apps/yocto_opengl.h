@@ -270,9 +270,8 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter);
 bool draw_glfiledialog_button(const opengl_window& win, const char* button_lbl,
-    bool button_active, const char* lbl,
-    string& path, bool save, const string& dirname, const string& filename,
-    const string& filter);
+    bool button_active, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter);
 
 void draw_gltext(const opengl_window& win, const string& text);
 void draw_gllabel(
