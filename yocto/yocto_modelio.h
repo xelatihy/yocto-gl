@@ -340,6 +340,7 @@ struct obj_shape {
   vector<obj_element> faces     = {};
   vector<obj_element> lines     = {};
   vector<obj_element> points    = {};
+  frame3f             frame     = {};
   vector<frame3f>     instances = {};
 };
 

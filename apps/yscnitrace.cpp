@@ -258,6 +258,10 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   edited += draw_gltextinput(win, "filename", shape.filename);
   edited += draw_glcombobox(
       win, "material", shape.material, app.scene.materials, true);
+  edited += draw_glslider(win, "frame.x", shape.frame.x, -1, 1);
+  edited += draw_glslider(win, "frame.y", shape.frame.y, -1, 1);
+  edited += draw_glslider(win, "frame.z", shape.frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.o", shape.frame.o, -10, 10);
   draw_gllabel(win, "points", "%ld", shape.points.size());
   draw_gllabel(win, "lines", "%ld", shape.lines.size());
   draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
@@ -271,6 +275,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   draw_gllabel(win, "color", "%ld", shape.colors.size());
   draw_gllabel(win, "radius", "%ld", shape.radius.size());
   draw_gllabel(win, "tangsp", "%ld", shape.tangents.size());
+  draw_gllabel(win, "instances", "%ld", shape.instances.size());
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
@@ -285,6 +290,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
     refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
     // TODO: update lights
   }
+  // TODO: refit bvh
   return edited;
 }
 
@@ -344,17 +350,10 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
   auto  old_instance = instance;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", instance.name);
-  edited += draw_glslider(win, "frame[0]", instance.frame.x, -1, 1);
-  edited += draw_glslider(win, "frame[1]", instance.frame.y, -1, 1);
-  edited += draw_glslider(win, "frame[2]", instance.frame.z, -1, 1);
-  edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
   edited += draw_glcombobox(
       win, "shape", instance.shape, app.scene.shapes, true);
   if (edited && instance.shape != old_instance.shape)
     refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
-  if (edited && instance.frame != old_instance.frame)
-    refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
-  // TODO: update lights
   return edited;
 }
 

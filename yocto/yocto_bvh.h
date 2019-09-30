@@ -156,6 +156,9 @@ struct bvh_node {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Applicxation data is not stored explicitly.
 struct bvh_shape {
+  // frame
+  frame3f frame = identity3x4f;
+
   // elements
   bvh_span<int>   points    = {};
   bvh_span<vec2i> lines     = {};
@@ -166,6 +169,12 @@ struct bvh_shape {
   // vertices
   bvh_span<vec3f> positions = {};
   bvh_span<float> radius    = {};
+
+  // instances
+  bvh_span<frame3f> instances  = {};
+
+  // frames
+  bool non_rigid_frames = true;
 
   // nodes
   vector<bvh_node> nodes = {};
@@ -179,15 +188,8 @@ struct bvh_shape {
 #endif
 };
 
-// Instance for a scene BVH.
-struct bvh_instance {
-  frame3f frame = identity3x4f;
-  int     shape = -1;
-};
-
 struct bvh_scene {
-  // instances and shapes
-  bvh_sspan<bvh_instance> instances = {};
+  // shapes
   vector<bvh_shape>       shapes    = {};
 
   // nodes
@@ -215,18 +217,17 @@ struct bvh_params {
 };
 
 // Initialize bvh data
-void make_points_bvh(bvh_shape& bvh, bvh_span<int> points,
-    bvh_span<vec3f> positions, bvh_span<float> radius);
-void make_lines_bvh(bvh_shape& bvh, bvh_span<vec2i> lines,
-    bvh_span<vec3f> positions, bvh_span<float> radius);
-void make_triangles_bvh(bvh_shape& bvh, bvh_span<vec3i> triangles,
-    bvh_span<vec3f> positions, bvh_span<float> radius);
-void make_quads_bvh(bvh_shape& bvh, bvh_span<vec4i> quads,
-    bvh_span<vec3f> positions, bvh_span<float> radius);
-void make_quadspos_bvh(bvh_shape& bvh, bvh_span<vec4i> quadspos,
-    bvh_span<vec3f> positions, bvh_span<float> radius);
-void make_instances_bvh(
-    bvh_scene& bvh, bvh_sspan<bvh_instance> instances, int num_shapes);
+void make_points_bvh(bvh_shape& bvh, const frame3f& frame, bvh_span<int> points,
+    bvh_span<vec3f> positions, bvh_span<float> radius, bvh_span<frame3f> instances);
+void make_lines_bvh(bvh_shape& bvh, const frame3f& frame, bvh_span<vec2i> lines,
+    bvh_span<vec3f> positions, bvh_span<float> radius, bvh_span<frame3f> instances);
+void make_triangles_bvh(bvh_shape& bvh, const frame3f& frame, bvh_span<vec3i> triangles,
+    bvh_span<vec3f> positions, bvh_span<float> radius, bvh_span<frame3f> instances);
+void make_quads_bvh(bvh_shape& bvh, const frame3f& frame, bvh_span<vec4i> quads,
+    bvh_span<vec3f> positions, bvh_span<float> radius, bvh_span<frame3f> instances);
+void make_quadspos_bvh(bvh_shape& bvh, const frame3f& frame, bvh_span<vec4i> quadspos,
+    bvh_span<vec3f> positions, bvh_span<float> radius, bvh_span<frame3f> instances);
+void make_instances_bvh(bvh_scene& bvh, int num_shapes);
 bvh_shape& get_shape_bvh(bvh_scene& bvh, int idx);
 
 // Build the bvh acceleration structure.
@@ -244,12 +245,10 @@ void refit_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
 bool intersect_bvh(const bvh_shape& bvh, const ray3f& ray, int& element,
     vec2f& uv, float& distance, bool find_any = false);
 bool intersect_bvh(const bvh_scene& bvh, const ray3f& ray, int& instance,
-    int& element, vec2f& uv, float& distance, bool find_any = false,
-    bool non_rigid_frames = true);
+    int& element, vec2f& uv, float& distance, bool find_any = false);
 // Intersects a single instance.
 bool intersect_bvh(const bvh_scene& bvh, int instance, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any = false,
-    bool non_rigid_frames = true);
+    int& element, vec2f& uv, float& distance, bool find_any = false);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on

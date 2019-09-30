@@ -443,9 +443,6 @@ pair<vec3f, vec3f> get_subsurface_params(const string& name) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Set non-rigid frames as default
-static const bool trace_non_rigid_frames = true;
-
 // defaults
 static const auto coat_roughness = 0.03f * 0.03f;
 
@@ -799,7 +796,7 @@ static float sample_light_pdf(const yocto_scene& scene,
     auto& instance      = scene.instances[isec.instance];
     auto light_position = eval_position(scene, instance, isec.element, isec.uv);
     auto light_normal   = eval_normal(
-        scene, instance, isec.element, isec.uv, trace_non_rigid_frames);
+        scene, instance, isec.element, isec.uv);
     // prob triangle * area triangle = area triangle mesh
     auto area = cdf.back();
     pdf += distance_squared(light_position, position) /
@@ -909,7 +906,7 @@ static pair<vec3f, bool> trace_path(const yocto_scene& scene,
       auto  position = eval_position(
           scene, instance, intersection.element, intersection.uv);
       auto normal   = eval_shading_normal(scene, instance, intersection.element,
-          intersection.uv, direction, trace_non_rigid_frames);
+          intersection.uv, direction);
       auto material = eval_material(
           scene, instance, intersection.element, intersection.uv);
 
@@ -1031,7 +1028,7 @@ static pair<vec3f, bool> trace_naive(const yocto_scene& scene,
     auto  position = eval_position(
         scene, instance, intersection.element, intersection.uv);
     auto normal   = eval_shading_normal(scene, instance, intersection.element,
-        intersection.uv, direction, trace_non_rigid_frames);
+        intersection.uv, direction);
     auto material = eval_material(
         scene, instance, intersection.element, intersection.uv);
 
@@ -1103,7 +1100,7 @@ static pair<vec3f, bool> trace_eyelight(const yocto_scene& scene,
     auto  position = eval_position(
         scene, instance, intersection.element, intersection.uv);
     auto normal   = eval_shading_normal(scene, instance, intersection.element,
-        intersection.uv, direction, trace_non_rigid_frames);
+        intersection.uv, direction);
     auto material = eval_material(
         scene, instance, intersection.element, intersection.uv);
 
@@ -1157,7 +1154,7 @@ static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
   // auto  position = eval_position(
   //     scene, instance, intersection.element, intersection.uv);
   auto normal   = eval_shading_normal(scene, instance, intersection.element,
-      intersection.uv, direction, trace_non_rigid_frames);
+      intersection.uv, direction);
   auto material = eval_material(
       scene, instance, intersection.element, intersection.uv);
 
@@ -1172,12 +1169,12 @@ static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
     }
     case trace_params::falsecolor_type::gnormal: {
       auto normal = eval_element_normal(
-          scene, instance, intersection.element, true);
+          scene, instance, intersection.element);
       return {normal * 0.5f + 0.5f, 1};
     }
     case trace_params::falsecolor_type::gfrontfacing: {
       auto normal = eval_element_normal(
-          scene, instance, intersection.element, true);
+          scene, instance, intersection.element);
       auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                    : vec3f{1, 0, 0};
       return {frontfacing, 1};

@@ -165,6 +165,7 @@ struct yocto_shape {
   string name     = "";
   string filename = "";
   int    material = -1;
+  frame3f frame = identity3x4f;
 
   // primitives
   vector<int>   points    = {};
@@ -184,6 +185,10 @@ struct yocto_shape {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
+
+  // instances
+  vector<frame3f> instances = {};
+  bool non_rigid_frames = true;
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -232,7 +237,6 @@ struct yocto_subdiv {
 // Instance of a visible shape in the scene.
 struct yocto_instance {
   string  name     = "";
-  frame3f frame    = identity3x4f;
   int     shape    = -1;
 };
 
@@ -254,7 +258,7 @@ struct yocto_scene_node {
   vec3f         scale       = {1, 1, 1};
   vector<float> weights     = {};
   int           camera      = -1;
-  int           instance    = -1;
+  int           shape       = -1;
   int           environment = -1;
 
   // compute properties
@@ -446,12 +450,12 @@ material_point eval_material(const yocto_scene& scene,
 vec3f eval_position(const yocto_scene& scene, const yocto_instance& instance,
     int element, const vec2f& uv);
 vec3f eval_normal(const yocto_scene& scene, const yocto_instance& instance,
-    int element, const vec2f& uv, bool non_rigid_frame = false);
+    int element, const vec2f& uv);
 vec3f eval_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element, const vec2f& uv,
-    const vec3f& direction, bool non_rigid_frame = false);
+    const vec3f& direction);
 vec3f eval_element_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element, bool non_rigid_frame = false);
+    const yocto_instance& instance, int element);
 material_point eval_material(const yocto_scene& scene,
     const yocto_instance& instance, int element, const vec2f& uv);
 

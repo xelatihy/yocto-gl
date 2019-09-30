@@ -73,9 +73,8 @@ struct drawgl_lights {
 
 void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
   lights = {};
-  for (auto& instance : scene.instances) {
-    if (instance.shape < 0) continue;
-    auto& shape    = scene.shapes[instance.shape];
+  for (auto& shape : scene.shapes) {
+    if(!shape.instances.empty()) throw std::runtime_error("do not support instances lights");
     auto& material = scene.materials[shape.material];
     if (material.emission != zero3f) continue;
     if (lights.positions.size() >= 16) break;
@@ -97,7 +96,7 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
       area += shape.positions.size();
     }
     auto ke = material.emission * area;
-    lights.positions.push_back(transform_point(instance.frame, pos));
+    lights.positions.push_back(transform_point(shape.frame, pos));
     lights.emission.push_back(ke);
     lights.types.push_back(0);
   }
@@ -512,9 +511,9 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
   auto& vbos     = state.shapes.at(instance.shape);
   auto& material = scene.materials[shape.material];
 
-  set_gluniform(state.program, "shape_xform", mat4f(instance.frame));
+  set_gluniform(state.program, "shape_xform", mat4f(shape.frame));
   set_gluniform(state.program, "shape_xform_invtranspose",
-      transpose(mat4f(inverse(instance.frame, options.non_rigid_frames))));
+      transpose(mat4f(inverse(shape.frame, options.non_rigid_frames))));
   set_gluniform(state.program, "shape_normal_offset", 0.0f);
   set_gluniform(
       state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
@@ -642,7 +641,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         area += shape.positions.size();
       }
       auto ke = material.emission * area;
-      lights_pos.push_back(transform_point(instance.frame, pos));
+      lights_pos.push_back(transform_point(shape.frame, pos));
       lights_ke.push_back(ke);
       lights_type.push_back(0);
     }
@@ -860,6 +859,10 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
   edited += draw_gltextinput(win, "filename", shape.filename);
   edited += draw_glcombobox(
       win, "material", shape.material, scene.scene.materials, true);
+  edited += draw_glslider(win, "frame.x", shape.frame.x, -1, 1);
+  edited += draw_glslider(win, "frame.y", shape.frame.y, -1, 1);
+  edited += draw_glslider(win, "frame.z", shape.frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.o", shape.frame.o, -10, 10);
   draw_gllabel(win, "points", "%ld", shape.points.size());
   draw_gllabel(win, "lines", "%ld", shape.lines.size());
   draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
@@ -873,6 +876,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
   draw_gllabel(win, "color", "%ld", shape.colors.size());
   draw_gllabel(win, "radius", "%ld", shape.radius.size());
   draw_gllabel(win, "tangsp", "%ld", shape.tangents.size());
+  draw_gllabel(win, "instances", "%ld", shape.instances.size());
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
@@ -947,10 +951,6 @@ bool draw_glwidgets_instance(
   auto  old_instance = instance;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", instance.name);
-  edited += draw_glslider(win, "frame[0]", instance.frame.x, -1, 1);
-  edited += draw_glslider(win, "frame[1]", instance.frame.y, -1, 1);
-  edited += draw_glslider(win, "frame[2]", instance.frame.z, -1, 1);
-  edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
   edited += draw_glcombobox(
       win, "shape", instance.shape, scene.scene.shapes, true);
   // TODO: update lights

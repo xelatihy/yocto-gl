@@ -1807,6 +1807,7 @@ void load_objx(const string& filename, obj_model& obj) {
       environment.emission_map.path = emission_path;
       parse_value(line, environment.frame);
     } else if (cmd == "i") {
+      // TODO: fixme shape frame
       auto object = ""s;
       auto frame  = identity3x4f;
       parse_value(line, object);
@@ -2126,6 +2127,7 @@ void save_objx(const string& filename, const obj_model& obj) {
   }
 
   // instances
+  // TODO: fixme shape frame
   for (auto& shape : obj.shapes) {
     for (auto& frame : shape.instances) {
       format_values(fs, "i {} {}\n", shape.name, frame);
