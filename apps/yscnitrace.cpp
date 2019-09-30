@@ -143,6 +143,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.add_skyenv   = app.add_skyenv;
   apps.load_workers.push_back(run_async([&app]() {
     load_scene(app.filename, app.scene);
+    tesselate_subdivs(app.scene);
     make_bvh(app.bvh, app.scene, app.bvh_prms);
     make_trace_lights(app.lights, app.scene);
     auto image_size = camera_resolution(
