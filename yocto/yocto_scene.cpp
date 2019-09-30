@@ -62,42 +62,6 @@ bbox3f compute_bounds(const yocto_scene& scene) {
   return bbox;
 }
 
-// Compute vertex normals
-vector<vec3f> compute_normals(const yocto_shape& shape) {
-  auto normals = vector<vec3f>{};
-  if (!shape.points.empty()) {
-    normals = vector<vec3f>{shape.positions.size(), {0,0,1}};
-  } else if (!shape.lines.empty()) {
-     normals = compute_tangents(shape.lines, shape.positions);
-  } else if (!shape.triangles.empty()) {
-    normals = compute_normals(shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
-    normals = compute_normals(shape.quads, shape.positions);
-  } else if (!shape.quadspos.empty()) {
-    normals = compute_normals(shape.quadspos, shape.positions);
-  } else {
-    throw std::runtime_error("unknown element type");
-  }
-  for(auto& normal : normals) normal = transform_normal(shape.frame, normal, shape.non_rigid_frames);
-  return normals;
-}
-void compute_normals(vector<vec3f>& normals, const yocto_shape& shape) {
-  if (!shape.points.empty()) {
-    normals.assign(shape.positions.size(), {0, 0, 1});
-  } else if (!shape.lines.empty()) {
-    compute_tangents(normals, shape.lines, shape.positions);
-  } else if (!shape.triangles.empty()) {
-    compute_normals(normals, shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
-    compute_normals(normals, shape.quads, shape.positions);
-  } else if (!shape.quadspos.empty()) {
-    compute_normals(normals, shape.quadspos, shape.positions);
-  } else {
-    throw std::runtime_error("unknown element type");
-  }
-  for(auto& normal : normals) normal = transform_normal(shape.frame, normal, shape.non_rigid_frames);
-}
-
 // Update shape normals
 void update_normals(yocto_shape& shape) {
   if (!shape.points.empty()) {
@@ -117,7 +81,7 @@ void update_normals(yocto_shape& shape) {
 
 // Apply subdivision and displacement rules.
 void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
-    bool update_normals) {
+    bool update_normals_) {
   if (!subdivisions) return;
   if (!shape.points.empty()) {
     throw std::runtime_error("point subdivision not supported");
@@ -157,16 +121,16 @@ void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
     throw std::runtime_error("empty shape");
   }
 
-  if (update_normals) {
+  if (update_normals_) {
     if (!shape.quadspos.empty()) {
       shape.quadsnorm = shape.quadspos;
     }
-    compute_normals(shape.normals, shape);
+    update_normals(shape);
   }
 }
 // Apply displacement to a shape
 void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
-    float scale, bool update_normals) {
+    float scale, bool update_normals_) {
   if (shape.texcoords.empty()) {
     throw std::runtime_error("missing texture coordinates");
     return;
@@ -174,16 +138,18 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
 
   // simple case
   if (shape.quadspos.empty()) {
-    auto normals = shape.normals;
-    if (shape.normals.empty()) compute_normals(normals, shape);
+    auto has_normals = !shape.normals.empty();
+    if (!has_normals) update_normals(shape);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       auto disp = mean(
           xyz(eval_texture(displacement, shape.texcoords[vid], true)));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
-      shape.positions[vid] += normals[vid] * scale * disp;
+      shape.positions[vid] += shape.normals[vid] * scale * disp;
     }
-    if (update_normals || !shape.normals.empty()) {
-      compute_normals(shape.normals, shape);
+    if (update_normals_ || has_normals) {
+      update_normals(shape);
+    } else {
+      shape.normals = {};
     }
   } else {
     // facevarying case
@@ -200,14 +166,17 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
         count[qpos[i]] += 1;
       }
     }
-    auto normals = vector<vec3f>{shape.positions.size()};
-    compute_normals(normals, shape.quadspos, shape.positions);
+    auto has_normals = !shape.normals.empty();
+    if(!has_normals) update_normals(shape);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-      shape.positions[vid] += normals[vid] * offset[vid] / count[vid];
+      shape.positions[vid] += shape.normals[vid] * offset[vid] / count[vid];
     }
-    if (update_normals || !shape.normals.empty()) {
+    if (update_normals_ || !shape.normals.empty()) {
       shape.quadsnorm = shape.quadspos;
-      compute_normals(shape.normals, shape);
+      update_normals(shape);
+    } else {
+      shape.normals = {};
+      shape.quadsnorm = {};
     }
   }
 }
