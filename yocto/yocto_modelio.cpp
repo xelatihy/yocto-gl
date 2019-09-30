@@ -1767,11 +1767,11 @@ void load_objx(const string& filename, obj_model& obj) {
   // open file
   auto fs = open_file(filename, "rt");
 
-  // initialize commands
-  obj.cameras.emplace_back();
-  obj.environments.emplace_back();
-  obj.instances.emplace_back();
-  obj.procedurals.emplace_back();
+  // shape map for instances
+  auto shape_map = unordered_map<string, vector<int>>{};
+  for (auto idx = 0; idx < obj.shapes.size(); idx++) {
+    shape_map[obj.shapes[idx].name].push_back(idx);
+  }
 
   // read the file line by line
   char buffer[4096];
@@ -1788,57 +1788,7 @@ void load_objx(const string& filename, obj_model& obj) {
     if (cmd == "") continue;
 
     // read values
-    if (cmd == "newcam") {
-      obj.cameras.emplace_back();
-      parse_value(line, obj.cameras.back().name);
-    } else if (cmd == "Cframe") {
-      parse_value(line, obj.cameras.back().frame);
-    } else if (cmd == "Cortho") {
-      parse_value(line, obj.cameras.back().ortho);
-    } else if (cmd == "Cwidth") {
-      parse_value(line, obj.cameras.back().width);
-    } else if (cmd == "Cheight") {
-      parse_value(line, obj.cameras.back().height);
-    } else if (cmd == "Clens") {
-      parse_value(line, obj.cameras.back().lens);
-    } else if (cmd == "Cfocus") {
-      parse_value(line, obj.cameras.back().focus);
-    } else if (cmd == "Caperture") {
-      parse_value(line, obj.cameras.back().aperture);
-    } else if (cmd == "newenv") {
-      obj.environments.emplace_back();
-      parse_value(line, obj.environments.back().name);
-    } else if (cmd == "Eframe") {
-      parse_value(line, obj.environments.back().frame);
-    } else if (cmd == "Ee") {
-      parse_value(line, obj.environments.back().emission);
-    } else if (cmd == "map_Ee") {
-      parse_value(line, obj.environments.back().emission_map);
-    } else if (cmd == "newist") {
-      obj.instances.emplace_back();
-      parse_value(line, obj.instances.back().name);
-    } else if (cmd == "Iframe") {
-      parse_value(line, obj.instances.back().frame);
-    } else if (cmd == "Iobj") {
-      parse_value(line, obj.instances.back().object);
-    } else if (cmd == "Imat") {
-      parse_value(line, obj.instances.back().material);
-    } else if (cmd == "newproc") {
-      obj.procedurals.emplace_back();
-      parse_value(line, obj.procedurals.back().name);
-    } else if (cmd == "Pframe") {
-      parse_value(line, obj.procedurals.back().frame);
-    } else if (cmd == "Ptype") {
-      parse_value(line, obj.procedurals.back().type);
-    } else if (cmd == "Pmat") {
-      parse_value(line, obj.procedurals.back().material);
-    } else if (cmd == "Psize") {
-      parse_value(line, obj.procedurals.back().size);
-    } else if (cmd == "Plevel") {
-      parse_value(line, obj.procedurals.back().level);
-    }
-    // backward compatibility
-    else if (cmd == "c") {
+    if (cmd == "c") {
       auto& camera = obj.cameras.emplace_back();
       parse_value(line, camera.name);
       parse_value(line, camera.ortho);
@@ -1858,29 +1808,20 @@ void load_objx(const string& filename, obj_model& obj) {
       environment.emission_map.path = emission_path;
       parse_value(line, environment.frame);
     } else if (cmd == "i") {
-      auto& instance = obj.instances.emplace_back();
-      parse_value(line, instance.name);
-      parse_value(line, instance.object);
-      parse_value(line, instance.material);
-      parse_value(line, instance.frame);
-    } else if (cmd == "po") {
-      auto& procedural = obj.procedurals.emplace_back();
-      parse_value(line, procedural.name);
-      parse_value(line, procedural.type);
-      parse_value(line, procedural.material);
-      parse_value(line, procedural.size);
-      parse_value(line, procedural.level);
-      parse_value(line, procedural.frame);
+      auto object = ""s;
+      auto frame  = identity3x4f;
+      parse_value(line, object);
+      parse_value(line, frame);
+      if (shape_map.find(object) == shape_map.end()) {
+        throw std::runtime_error("cannot find object " + object);
+      }
+      for (auto idx : shape_map.at(object)) {
+        obj.shapes[idx].instances.push_back(frame);
+      }
     } else {
       // unused
     }
   }
-
-  // cleanup unused
-  obj.cameras.erase(obj.cameras.begin());
-  obj.environments.erase(obj.environments.begin());
-  obj.instances.erase(obj.instances.begin());
-  obj.procedurals.erase(obj.procedurals.begin());
 }
 
 // Read obj
@@ -2172,45 +2113,24 @@ void save_objx(const string& filename, const obj_model& obj) {
 
   // cameras
   for (auto& camera : obj.cameras) {
-    format_values(fs, "newcam {}\n", camera.name);
-    format_values(fs, "Cframe {}\n", camera.frame);
-    format_values(fs, "Cortho {}\n", camera.ortho);
-    format_values(fs, "Cwidth {}\n", camera.width);
-    format_values(fs, "Cheight {}\n", camera.height);
-    format_values(fs, "Clens {}\n", camera.lens);
-    format_values(fs, "Cfocus {}\n", camera.focus);
-    format_values(fs, "Caperture {}\n", camera.aperture);
-    format_values(fs, "\n");
+    format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name, camera.ortho,
+        camera.width, camera.height, camera.lens, camera.focus, camera.aperture,
+        camera.frame);
   }
 
   // environments
   for (auto& environment : obj.environments) {
-    format_values(fs, "newenv {}\n", environment.name);
-    format_values(fs, "Eframe {}\n", environment.frame);
-    format_values(fs, "Ee {}\n", environment.emission);
-    if (!environment.emission_map.path.empty())
-      format_values(fs, "map_Ee {}\n", environment.emission_map);
-    format_values(fs, "\n");
+    format_values(fs, "e {} {} {} {}\n", environment.name, environment.emission,
+        environment.emission_map.path.empty() ? "\"\""s
+                                              : environment.emission_map.path,
+        environment.frame);
   }
 
   // instances
-  for (auto& instance : obj.instances) {
-    format_values(fs, "newist {}\n", instance.name);
-    format_values(fs, "Iframe {}\n", instance.frame);
-    format_values(fs, "Iobj {}\n", instance.object);
-    format_values(fs, "Imat {}\n", instance.material);
-    format_values(fs, "\n");
-  }
-
-  // procedurals
-  for (auto& procedural : obj.procedurals) {
-    format_values(fs, "newist {}\n", procedural.name);
-    format_values(fs, "Pframe {}\n", procedural.frame);
-    format_values(fs, "Ptype {}\n", procedural.type);
-    format_values(fs, "Pmat {}\n", procedural.material);
-    format_values(fs, "Psize {}\n", procedural.size);
-    format_values(fs, "Plevel {}\n", procedural.level);
-    format_values(fs, "\n");
+  for (auto& shape : obj.shapes) {
+    for (auto& frame : shape.instances) {
+      format_values(fs, "i {} {}\n", shape.name, frame);
+    }
   }
 }
 
@@ -2277,7 +2197,8 @@ void save_obj(const string& filename, const obj_model& obj) {
 
   // save objx
   if (!obj.cameras.empty() || !obj.environments.empty() ||
-      !obj.instances.empty() || !obj.procedurals.empty())
+      std::any_of(obj.shapes.begin(), obj.shapes.end(),
+          [](auto& shape) { return !shape.instances.empty(); }))
     save_objx(replace_extension(filename, ".objx"), obj);
 }
 
@@ -2778,16 +2699,9 @@ bool read_mtl_command(file_wrapper& fs, mtl_command& command,
 
 // Read objx
 bool read_objx_command(file_wrapper& fs, objx_command& command,
-    obj_camera& camera, obj_environment& environment, obj_instance& instance,
-    obj_procedural& procedural) {
-  camera      = {};
-  environment = {};
-  instance    = {};
-  procedural  = {};
-
+    obj_camera& camera, obj_environment& environment, obj_instance& instance) {
   // read the file line by line
   char buffer[4096];
-  auto pos   = ftell(fs.fs);
   auto found = false;
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
@@ -2802,85 +2716,7 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
     if (cmd == "") continue;
 
     // read values
-    if (cmd == "newcam") {
-      if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
-        return true;
-      } else {
-        command = objx_command::camera;
-        found   = true;
-      }
-      parse_value(line, camera.name);
-    } else if (cmd == "Cframe") {
-      parse_value(line, camera.frame);
-    } else if (cmd == "Cortho") {
-      parse_value(line, camera.ortho);
-    } else if (cmd == "Cwidth") {
-      parse_value(line, camera.width);
-    } else if (cmd == "Cheight") {
-      parse_value(line, camera.height);
-    } else if (cmd == "Clens") {
-      parse_value(line, camera.lens);
-    } else if (cmd == "Cfocus") {
-      parse_value(line, camera.focus);
-    } else if (cmd == "Caperture") {
-      parse_value(line, camera.aperture);
-    } else if (cmd == "newenv") {
-      if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
-        return true;
-      } else {
-        command = objx_command::environment;
-        found   = true;
-      }
-      parse_value(line, environment.name);
-    } else if (cmd == "Eframe") {
-      parse_value(line, environment.frame);
-    } else if (cmd == "Ee") {
-      parse_value(line, environment.emission);
-    } else if (cmd == "map_Ee") {
-      parse_value(line, environment.emission_map);
-    } else if (cmd == "newist") {
-      if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
-        return true;
-      } else {
-        command = objx_command::instance;
-        found   = true;
-      }
-      parse_value(line, instance.name);
-    } else if (cmd == "Iframe") {
-      parse_value(line, instance.frame);
-    } else if (cmd == "Iobj") {
-      parse_value(line, instance.object);
-    } else if (cmd == "Imat") {
-      parse_value(line, instance.material);
-    } else if (cmd == "newproc") {
-      if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
-        return true;
-      } else {
-        command = objx_command::camera;
-        found   = true;
-      }
-      parse_value(line, procedural.name);
-    } else if (cmd == "Pframe") {
-      parse_value(line, procedural.frame);
-    } else if (cmd == "Ptype") {
-      parse_value(line, procedural.type);
-    } else if (cmd == "Pmat") {
-      parse_value(line, procedural.material);
-    } else if (cmd == "Psize") {
-      parse_value(line, procedural.size);
-    } else if (cmd == "Plevel") {
-      parse_value(line, procedural.level);
-    }
-    // backward compatibility
-    else if (cmd == "c") {
-      if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
-        return true;
-      }
+    if (cmd == "c") {
       command = objx_command::camera;
       parse_value(line, camera.name);
       parse_value(line, camera.ortho);
@@ -2892,41 +2728,18 @@ bool read_objx_command(file_wrapper& fs, objx_command& command,
       parse_value(line, camera.frame);
       return true;
     } else if (cmd == "e") {
-      if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
-        return true;
-      }
       command = objx_command::environment;
       parse_value(line, environment.name);
       parse_value(line, environment.emission);
       parse_value(line, environment.emission_map);
       parse_value(line, environment.frame);
+      return true;
     } else if (cmd == "i") {
-      if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
-        return true;
-      }
       command = objx_command::instance;
-      parse_value(line, instance.name);
       parse_value(line, instance.object);
-      parse_value(line, instance.material);
       parse_value(line, instance.frame);
-    } else if (cmd == "po") {
-      if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
-        return true;
-      }
-      command = objx_command::procedural;
-      parse_value(line, procedural.name);
-      parse_value(line, procedural.type);
-      parse_value(line, procedural.material);
-      parse_value(line, procedural.size);
-      parse_value(line, procedural.level);
-      parse_value(line, procedural.frame);
-    } else {
-      // unused
+      return true;
     }
-    pos = ftell(fs.fs);
   }
 
   if (found) return true;
@@ -3042,42 +2855,22 @@ void write_mtl_command(
 
 void write_objx_command(file_wrapper& fs, objx_command command,
     const obj_camera& camera, const obj_environment& environment,
-    const obj_instance& instance, const obj_procedural& procedural) {
+    const obj_instance& instance) {
   switch (command) {
     case objx_command::camera: {
-      format_values(fs, "newcam {}\n", camera.name);
-      format_values(fs, "Cframe {}\n", camera.frame);
-      format_values(fs, "Cortho {}\n", camera.ortho);
-      format_values(fs, "Cwidth {}\n", camera.width);
-      format_values(fs, "Cheight {}\n", camera.height);
-      format_values(fs, "Clens {}\n", camera.lens);
-      format_values(fs, "Cfocus {}\n", camera.focus);
-      format_values(fs, "Caperture {}\n", camera.aperture);
-      format_values(fs, "\n");
+      format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
+          camera.ortho, camera.width, camera.height, camera.lens, camera.focus,
+          camera.aperture, camera.frame);
     } break;
     case objx_command::environment: {
-      format_values(fs, "newenv {}\n", environment.name);
-      format_values(fs, "Eframe {}\n", environment.frame);
-      format_values(fs, "Ee {}\n", environment.emission);
-      if (!environment.emission_map.path.empty())
-        format_values(fs, "map_Ee {}\n", environment.emission_map);
-      format_values(fs, "\n");
+      format_values(fs, "e {} {} {} {}\n", environment.name,
+          environment.emission,
+          environment.emission_map.path.empty() ? "\"\""s
+                                                : environment.emission_map.path,
+          environment.frame);
     } break;
     case objx_command::instance: {
-      format_values(fs, "newist {}\n", instance.name);
-      format_values(fs, "Iframe {}\n", instance.frame);
-      format_values(fs, "Iobj {}\n", instance.object);
-      format_values(fs, "Imat {}\n", instance.material);
-      format_values(fs, "\n");
-    } break;
-    case objx_command::procedural: {
-      format_values(fs, "newist {}\n", procedural.name);
-      format_values(fs, "Pframe {}\n", procedural.frame);
-      format_values(fs, "Ptype {}\n", procedural.type);
-      format_values(fs, "Pmat {}\n", procedural.material);
-      format_values(fs, "Psize {}\n", procedural.size);
-      format_values(fs, "Plevel {}\n", procedural.level);
-      format_values(fs, "\n");
+      format_values(fs, "i {} {}\n", instance.object, instance.frame);
     } break;
   }
 }

@@ -340,6 +340,7 @@ struct obj_shape {
   vector<obj_element> faces     = {};
   vector<obj_element> lines     = {};
   vector<obj_element> points    = {};
+  vector<frame3f>     instances = {};
 };
 
 // Obj material
@@ -418,24 +419,6 @@ struct obj_environment {
   obj_texture_info emission_map = {};
 };
 
-// Obj instance
-struct obj_instance {
-  string  name     = "";
-  frame3f frame    = identity3x4f;
-  string  object   = "";
-  string  material = "";
-};
-
-// Obj peocedural
-struct obj_procedural {
-  string  name     = "";
-  frame3f frame    = identity3x4f;
-  string  type     = "";
-  string  material = "";
-  float   size     = 1;
-  int     level    = 0;
-};
-
 // Obj model
 struct obj_model {
   vector<string>          comments     = {};
@@ -443,8 +426,6 @@ struct obj_model {
   vector<obj_material>    materials    = {};
   vector<obj_camera>      cameras      = {};
   vector<obj_environment> environments = {};
-  vector<obj_instance>    instances    = {};
-  vector<obj_procedural>  procedurals  = {};
 };
 
 // Load and save obj
@@ -513,7 +494,13 @@ enum struct obj_command {
   // clang-format on
 };
 enum struct mtl_command { material };
-enum struct objx_command { camera, environment, instance, procedural };
+enum struct objx_command { camera, environment, instance };
+
+// Obj instance
+struct obj_instance {
+  string  object = "";
+  frame3f frame  = identity3x4f;
+};
 
 // Read obj/mtl/objx elements
 bool read_obj_command(file_wrapper& fs, obj_command& command, string& name,
@@ -521,8 +508,7 @@ bool read_obj_command(file_wrapper& fs, obj_command& command, string& name,
 bool read_mtl_command(file_wrapper& fs, mtl_command& command,
     obj_material& material, bool fliptr = true);
 bool read_objx_command(file_wrapper& fs, objx_command& command,
-    obj_camera& camera, obj_environment& environment, obj_instance& instance,
-    obj_procedural& procedural);
+    obj_camera& camera, obj_environment& environment, obj_instance& instance);
 
 // Write obj/mtl/objx elements
 void write_obj_comment(file_wrapper& fs, const string& comment);
@@ -533,7 +519,7 @@ void write_mtl_command(file_wrapper& fs, mtl_command command,
     obj_material& material, const obj_texture_info& texture = {});
 void write_objx_command(file_wrapper& fs, objx_command command,
     const obj_camera& camera, const obj_environment& environment,
-    const obj_instance& instance, const obj_procedural& procedural);
+    const obj_instance& instance);
 
 }  // namespace yocto
 

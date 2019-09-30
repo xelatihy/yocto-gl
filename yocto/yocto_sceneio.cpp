@@ -998,7 +998,6 @@ void load_obj(
 
   // convert shapes
   auto shape_name_counts = unordered_map<string, int>{};
-  auto shape_map         = unordered_map<string, vector<int>>{{"", {}}};
   for (auto& oshape : obj.shapes) {
     auto& shape = scene.shapes.emplace_back();
     shape.name  = oshape.name;
@@ -1030,22 +1029,31 @@ void load_obj(
     } else {
       throw std::runtime_error("should not have gotten here");
     }
-    // make instance
-    if (obj.instances.empty()) {
-      auto& instance = scene.instances.emplace_back();
-      instance.name  = shape.name;
-      instance.shape = (int)scene.shapes.size() - 1;
-      if (oshape.materials.size() != 1) {
-        throw std::runtime_error("missing material for " + oshape.name);
-      }
-      try {
-        instance.material = material_map.at(oshape.materials.at(0));
-      } catch (...) {
-        throw std::runtime_error(
-            "cannot find material " + oshape.materials.at(0));
-      }
+    // get material
+    if (oshape.materials.size() != 1) {
+      throw std::runtime_error("missing material for " + oshape.name);
+    }
+    auto material = -1;
+    try {
+      material = material_map.at(oshape.materials.at(0));
+    } catch (...) {
+      throw std::runtime_error(
+          "cannot find material " + oshape.materials.at(0));
+    }
+    // make instances
+    if (oshape.instances.empty()) {
+      auto& instance    = scene.instances.emplace_back();
+      instance.name     = shape.name;
+      instance.material = material;
+      instance.shape    = (int)scene.shapes.size() - 1;
     } else {
-      shape_map[oshape.name].push_back((int)scene.shapes.size() - 1);
+      for (auto& frame : oshape.instances) {
+        auto& instance    = scene.instances.emplace_back();
+        instance.name     = shape.name;
+        instance.frame    = frame;
+        instance.material = material;
+        instance.shape    = (int)scene.shapes.size() - 1;
+      }
     }
   }
 
@@ -1057,53 +1065,6 @@ void load_obj(
     environment.frame        = oenvironment.frame;
     environment.emission     = oenvironment.emission;
     environment.emission_tex = get_texture(oenvironment.emission_map);
-  }
-
-  // convert instances
-  if (!obj.instances.empty()) {
-    for (auto& oinstance : obj.instances) {
-      if (shape_map.find(oinstance.object) == shape_map.end())
-        throw std::runtime_error("cannot find object " + oinstance.object);
-      if (material_map.find(oinstance.material) == material_map.end())
-        throw std::runtime_error("cannot find material " + oinstance.material);
-      auto material_id = material_map.at(oinstance.material);
-      for (auto shape_id : shape_map.at(oinstance.object)) {
-        auto& instance = scene.instances.emplace_back();
-        instance.name  = make_safe_name(
-            oinstance.name, "instance", (int)scene.instances.size());
-        instance.frame    = oinstance.frame;
-        instance.shape    = shape_id;
-        instance.material = material_id;
-      }
-    }
-  }
-
-  // convert procedurals
-  for (auto& oprocedural : obj.procedurals) {
-    auto& shape = scene.shapes.emplace_back();
-    shape.name  = make_safe_name(
-        oprocedural.name, "procedural", (int)scene.shapes.size());
-    shape.filename = make_safe_filename(
-        "shapes/ypreset-" + shape.name + ".ply");
-    if (oprocedural.type == "floor") {
-      auto params         = proc_shape_params{};
-      params.type         = proc_shape_params::type_t::floor;
-      params.subdivisions = oprocedural.level;
-      params.scale        = oprocedural.size / 2;
-      params.uvscale      = oprocedural.size;
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
-    } else {
-      throw std::runtime_error("unknown obj procedural");
-    }
-    if (material_map.find(oprocedural.material) == material_map.end())
-      throw std::runtime_error("cannot find material " + oprocedural.material);
-    auto& instance = scene.instances.emplace_back();
-    instance.name  = make_safe_name(
-        oprocedural.name, "instance", (int)scene.instances.size());
-    instance.frame    = oprocedural.frame;
-    instance.shape    = (int)scene.shapes.size() - 1;
-    instance.material = material_map.at(oprocedural.material);
   }
 }
 
@@ -1210,11 +1171,7 @@ static void save_obj(const string& filename, const yocto_scene& scene,
       }
     }
     for (auto& instance : scene.instances) {
-      auto& oinstance    = obj.instances.emplace_back();
-      oinstance.name     = instance.name;
-      oinstance.frame    = instance.frame;
-      oinstance.object   = scene.shapes[instance.shape].name;
-      oinstance.material = scene.materials[instance.material].name;
+      obj.shapes[instance.shape].instances.push_back(instance.frame);
     }
   } else {
     for (auto& instance : scene.instances) {
