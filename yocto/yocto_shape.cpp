@@ -5275,4 +5275,73 @@ bool slice_path(State& state, int tag, const Path& path, int tag_left,
   // assert(state_is_sane(state));
   return true;
 }
+
+static bool flood_tagging(State& state, int tag, int new_tag, vector<int> queue,
+    vector<bool>& visited) {
+  // auto queue = vector<int>();
+  // // auto queue = starting;
+
+  // // Add first neighborhood to queue
+  // for (auto face : starting) {
+  //     state.tags[face] = new_tag;
+  //     // visited[face]    = true;
+  //     queue.push_back(face);
+  // }
+  bool flag = false;
+
+  while (not queue.empty()) {
+    int face = queue.back();
+    queue.pop_back();
+
+    for (int i = 0; i < 3; ++i) {
+      int neighbor = state.triangle_graph[face][i];
+      if (neighbor == -1) continue;
+      if (visited[neighbor]) continue;
+      if (state.tags[neighbor] != tag) continue;
+
+      queue.push_back(neighbor);
+      visited[neighbor]    = true;
+      state.tags[neighbor] = new_tag;
+      flag                 = true;
+    }
+  }
+  return flag;
+}
+vector<int> slice_paths(State& state, const vector<int>& regions, int t0,
+    int t1, const vector<Path>& paths) {
+  auto new_regions      = vector<int>(regions.size() * 2);
+  auto num_old_vertices = state.positions.size();
+  for (int i = 0; i < regions.size(); ++i) {
+    new_regions[2 * i]     = t0;
+    new_regions[2 * i + 1] = t1;
+  }
+  int tag_left  = new_regions[0];
+  int tag_right = new_regions[1];
+
+  int         tag = regions[0];
+  vector<int> left_faces, right_faces;
+
+  for (int i = 0; i < paths.size(); ++i) {
+    int from = paths[i].start;
+    int to   = paths[i].end;
+    if (from == to) continue;
+    slice_path(
+        state, tag, paths[i], tag_left, tag_right, left_faces, right_faces);
+  }
+
+  auto visited = vector<bool>(state.triangles.size(), false);
+  for (auto& t : left_faces) {
+    visited[t]    = true;
+    state.tags[t] = tag_left;
+  }
+  for (auto& t : right_faces) {
+    visited[t]    = true;
+    state.tags[t] = tag_right;
+  }
+
+  flood_tagging(state, tag, tag_left, left_faces, visited);
+  auto found = flood_tagging(state, tag, tag_right, right_faces, visited);
+
+  return new_regions;
+}
 }

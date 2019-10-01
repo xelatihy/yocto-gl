@@ -530,7 +530,7 @@ namespace yocto {
 
 // Data structure used for geodesic computation
 struct geodesic_solver {
-  const int min_arcs = 12;
+  static const int min_arcs = 12;
   struct graph_edge {
     int   node   = -1;
     float length = flt_max;
@@ -875,6 +875,10 @@ Path follow_gradient_field(const vector<vec3i>& triangles,
 
 bool slice_path(State& state, int tag, const Path& path, int tag_left,
     int tag_right, vector<int>& left_faces, vector<int>& right_faces);
+
+vector<int> slice_paths(State& state, const vector<int>& regions, int t0,
+    int t1, const vector<Path>& paths);
+
 }  // namespace yocto::integral_curves
 
 #endif
