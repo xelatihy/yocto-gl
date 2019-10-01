@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/integral_curves.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
@@ -36,6 +37,7 @@ using namespace yocto;
 int main(int argc, const char** argv) {
   // command line parameters
   auto geodesic_source      = -1;
+  auto geodesic_end         = -1;
   auto num_geodesic_samples = 0;
   auto geodesic_scale       = 30.0f;
   auto slice                = false;
@@ -52,6 +54,7 @@ int main(int argc, const char** argv) {
   auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
   add_cli_option(
       cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
+  add_cli_option(cli, "--geodesic-end,-ge", geodesic_end, "Geodesic end");
   add_cli_option(cli, "--num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
   add_cli_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
@@ -101,7 +104,7 @@ int main(int argc, const char** argv) {
   if (normals) {
     auto timer    = print_timed("computing normals");
     shape.normals = compute_normals(shape);
-    if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
+    if (!shape.quadspos.empty()) shape.quadsnorm= shape.quadspos;
   }
 
   // compute geodesics and store them as colors
@@ -118,8 +121,23 @@ int main(int argc, const char** argv) {
     }
     auto field = compute_geodesic_distances(solver, sources);
 
+    auto tags = vector<int>(shape.triangles.size(), 0);
+
+    if (geodesic_end >= 0) {
+      // compute geodesic path and save it as line
+      auto path = follow_gradient_field(shape.triangles, shape.positions,
+          adjacencies, tags, 0, field, geodesic_source, geodesic_end);
+
+      auto& path_shape = shape;
+      path_shape.triangles.clear();
+      path_shape.positions = points_from_lerps(shape.positions, path);
+      for (int i = 1; i < path_shape.positions.size(); ++i) {
+        path_shape.lines.push_back({i - 1, i});
+        path_shape.radius.push_back(0.1);
+      }
+    }
+
     if (slice) {
-      auto tags = vector<int>(shape.triangles.size(), 0);
       meandering_triangles(field, geodesic_scale, 0, 1, 2, shape.triangles,
           tags, shape.positions, shape.normals);
       for (int i = 0; i < shape.triangles.size(); i++) {
