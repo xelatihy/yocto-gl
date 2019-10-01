@@ -89,8 +89,12 @@
 
 #include "yocto_math.h"
 
-#include <functional>
 #include <atomic>
+#include <functional>
+
+#if YOCTO_EMBREE
+#include <embree3/rtcore.h>
+#endif
 
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
@@ -147,9 +151,9 @@ struct bvh_sspan {
 
 #else
 
-template<typename T>
+template <typename T>
 using bvh_span = vector<T>;
-template<typename T>
+template <typename T>
 using bvh_sspan = vector<T>;
 
 #endif
@@ -174,6 +178,22 @@ struct bvh_tree {
   vector<bvh_node> nodes = {};
 };
 
+#ifdef YOCTO_EMBREE
+// Wrapper to Interl's Embree
+struct bvh_embree {
+  bvh_embree() {}
+  bvh_embree(const bvh_embree&);
+  ~bvh_embree();
+
+  bvh_embree& operator=(const bvh_embree&);
+
+  RTCDevice           device    = nullptr;
+  RTCScene            scene     = nullptr;
+  RTCGeometry         shape     = nullptr;
+  vector<RTCGeometry> instances = {};
+};
+#endif
+
 // BVH tree stored as a node array with the tree structure is encoded using
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
@@ -194,11 +214,7 @@ struct bvh_shape {
   bvh_tree bvh = {};
 
 #if YOCTO_EMBREE
-  // Embree opaque data
-  void* embree_bvh       = nullptr;
-  bool  embree_flattened = false;
-  // Cleanup for embree data
-  ~bvh_shape();
+  bvh_embree embree = {};
 #endif
 };
 
@@ -214,10 +230,10 @@ struct bvh_instance {
 
 // Instance for a scene BVH.
 struct bvh_instance {
-  string name = "";
-  frame3f frame = identity3x4f;
-  int     shape = -1;
-  int material = -1;
+  string  name     = "";
+  frame3f frame    = identity3x4f;
+  int     shape    = -1;
+  int     material = -1;
 };
 
 #endif
@@ -230,12 +246,8 @@ struct bvh_scene {
   // nodes
   bvh_tree bvh = {};
 
-#if YOCTO_EMBREE
-  // Embree opaque data
-  void* embree_bvh       = nullptr;
-  bool  embree_flattened = false;
-  // Cleanup for embree data
-  ~bvh_scene();
+ #if YOCTO_EMBREE
+  bvh_embree embree = {};
 #endif
 };
 
@@ -262,9 +274,8 @@ void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius);
 // Make instance bvh
 void make_instances_bvh(bvh_tree& bvh, int num_instances,
-  const function<frame3f(int instance)>& instance_frame,
-  const function<const bvh_tree&(int instance)>& shape_bvh);
-
+    const function<frame3f(int instance)>&         instance_frame,
+    const function<const bvh_tree&(int instance)>& shape_bvh);
 
 // Initialize bvh data
 void make_points_bvh(bvh_shape& bvh, bvh_span<int> points,
