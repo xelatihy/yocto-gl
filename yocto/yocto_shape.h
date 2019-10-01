@@ -832,4 +832,49 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
 
 }  // namespace yocto
 
+namespace yocto::integral_curves {
+
+struct State {
+  // solver used for scalar field computation
+  geodesic_solver solver;
+
+  // mesh data
+  vector<vec3f> positions;
+  vector<vec3f> normals;
+  vector<vec3i> triangles;
+
+  // triangle adjacency used for fast boundary computation
+  vector<vec3i> triangle_graph;
+
+  // editing data
+  vector<int> tags;  // per-triangle region tag
+};
+
+struct lerp_point {
+  vec2i edge;
+  int   face;
+  float alpha;
+
+  lerp_point() {}
+};
+
+// Description of a discrete path along the surface of the mesh.
+struct Path {
+  int                start, end;
+  vector<lerp_point> lerps;
+};
+
+Path follow_gradient_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from);
+
+Path follow_gradient_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from,
+    int to);
+
+bool slice_path(State& state, int tag, const Path& path, int tag_left,
+    int tag_right, vector<int>& left_faces, vector<int>& right_faces);
+}  // namespace yocto::integral_curves
+
 #endif
