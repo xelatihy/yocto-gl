@@ -246,7 +246,7 @@ struct bvh_scene {
   // nodes
   bvh_tree bvh = {};
 
- #if YOCTO_EMBREE
+#if YOCTO_EMBREE
   bvh_embree embree = {};
 #endif
 };
@@ -263,17 +263,36 @@ struct bvh_params {
   std::atomic<bool>* cancel     = nullptr;
 };
 
-// Build shape bvh
+// Make shape bvh
 void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool high_quality, bool parallel);
 void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool high_quality, bool parallel);
 void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool high_quality, bool parallel);
 void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool high_quality, bool parallel);
 // Make instance bvh
 void make_instances_bvh(bvh_tree& bvh, int num_instances,
+    const function<frame3f(int instance)>&         instance_frame,
+    const function<const bvh_tree&(int instance)>& shape_bvh, bool high_quality,
+    bool parallel);
+
+// Updates shape bvh for changes in positions and radia
+void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius);
+void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius);
+void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<float>& radius);
+void update_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<float>& radius);
+// Updates instances bvh for changes in frames and shape bvhs
+void update_instances_bvh(bvh_tree& bvh, int num_instances,
     const function<frame3f(int instance)>&         instance_frame,
     const function<const bvh_tree&(int instance)>& shape_bvh);
 
