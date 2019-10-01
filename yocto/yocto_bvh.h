@@ -173,7 +173,7 @@ struct bvh_node {
 // BVH tree stored as a node array with the tree structure is encoded using
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
-// Applicxation data is not stored explicitly.
+// Application data is not stored explicitly.
 struct bvh_tree {
   vector<bvh_node> nodes = {};
 };
