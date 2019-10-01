@@ -32,7 +32,7 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
-using namespace yocto::integral_curves;
+using namespace yocto::integral_paths;
 
 int main(int argc, const char** argv) {
   // command line parameters

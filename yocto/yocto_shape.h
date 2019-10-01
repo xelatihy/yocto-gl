@@ -829,7 +829,7 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
 
 }  // namespace yocto
 
-namespace yocto::integral_curves {
+namespace yocto::integral_paths {
 
 struct discrete_surface {
   // mesh data

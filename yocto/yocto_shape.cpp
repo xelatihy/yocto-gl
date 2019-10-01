@@ -4470,7 +4470,7 @@ const vector<vec4i> suzanne_quads = vector<vec4i>{{46, 0, 2, 44},
 
 }  // namespace yocto
 
-namespace yocto::integral_curves {
+namespace yocto::integral_paths {
 #include "yocto_shape.h"
 
 using std::vector;
