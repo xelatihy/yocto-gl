@@ -562,7 +562,7 @@ void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
   rtcCommitScene(bvh.scene);
 }
 
-static bool intersect_shape_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
+ bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
@@ -1410,7 +1410,7 @@ bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray, int& element,
 #if YOCTO_EMBREE
   // call Embree if needed
   if (shape.embree.scene) {
-    return intersect_shape_embree_bvh(
+    return intersect_elements_embree_bvh(
         shape.embree, ray, element, uv, distance, find_any);
   }
 #endif

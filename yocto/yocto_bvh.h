@@ -211,6 +211,67 @@ void update_instances_bvh(bvh_tree& bvh, int num_instances,
     const function<frame3f(int instance)>&         instance_frame,
     const function<const bvh_tree&(int instance)>& shape_bvh);
 
+// Find a shape element or scene instances that intersects a ray,
+// returning either the closest or any overlap depending on `find_any`.
+// Returns the point distance, the instance id, the shape element index and
+// the element barycentric coordinates.
+bool intersect_points_bvh(const bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, int& element, vec2f& uv, float& distance,
+    bool find_any = false);
+bool intersect_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, int& element, vec2f& uv, float& distance,
+    bool find_any = false);
+bool intersect_triangles_bvh(const bvh_tree& bvh,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const ray3f& ray, int& element, vec2f& uv, float& distance,
+    bool find_any = false);
+bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const ray3f& ray, int& element, vec2f& uv,
+    float& distance, bool find_any = true);
+bool intersect_instances_bvh(const bvh_tree& bvh,
+    const function<frame3f(int instance)>&   instance_frame,
+    const function<bool(int shape, const ray3f& ray, int& element, vec2f& uv,
+        float& distance, bool find_any)>&    intersect_shape,
+    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
+    bool find_any = false, bool non_rigid_frames = true);
+
+// Find a shape element that overlaps a point within a given distance
+// max distance, returning either the closest or any overlap depending on
+// `find_any`. Returns the point distance, the instance id, the shape element
+// index and the element barycentric coordinates.
+bool overlap_points_bvh(const bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const vec3f& pos, float max_distance, int& element, vec2f& uv,
+    float& distance, bool find_any = false);
+bool overlap_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const vec3f& pos, float max_distance, int& element, vec2f& uv,
+    float& distance, bool find_any = false);
+bool overlap_triangles_bvh(const bvh_tree& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const vec3f& pos, float max_distance, int& element, vec2f& uv,
+    float& distance, bool find_any = false);
+bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const vec3f& pos, float max_distance, int& element, vec2f& uv,
+    float& distance, bool find_any = false);
+bool overlap_instances_bvh(const bvh_tree&          bvh,
+    const function<frame3f(int instance)>&           instance_frame,
+    const function<bool(int shape, const vec3f& pos, float mdist, int& element,
+        vec2f& uv, float& distance, bool find_any)>& overlap_shape,
+    const vec3f& pos, float max_distance, int& instance, int& element,
+    vec2f& uv, float& distance, bool find_any = false,
+    bool non_rigid_frames = true);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// BVH FOR RAY INTERSECTION USING INTEL's EMBREE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 #ifdef YOCTO_EMBREE
 // Wrapper to Interl's Embree
 struct bvh_embree {
@@ -257,10 +318,16 @@ void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
     const function<frame3f(int instance)>&           instance_frame,
     const function<const bvh_embree&(int instance)>& shape_bvh);
 
+// Intersect a ray with either a shapoe or a scene
+bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
+    int& element, vec2f& uv, float& distance, bool find_any);
+bool intersect_instances_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
+    int& element, vec2f& uv, float& distance, bool find_any);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// HIGH-LEVEL VALUE/COPY-BASED BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
+// HIGH-LEVEL BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -335,18 +402,19 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray, int& instance,
     int& element, vec2f& uv, float& distance, bool find_any = false,
     bool non_rigid_frames = true);
 // Intersects a single instance.
-bool intersect_instance_bvh(const bvh_scene& bvh, int instance, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any = false,
-    bool non_rigid_frames = true);
+bool intersect_instance_bvh(const bvh_scene& bvh, int instance,
+    const ray3f& ray, int& element, vec2f& uv, float& distance,
+    bool find_any = false, bool non_rigid_frames = true);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos, float max_distance,
-    int& element, vec2f& uv, float& distance, bool find_any = false);
-bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_distance,
-    int& instance, int& element, vec2f& uv, float& distance,
+bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
+    float max_distance, int& element, vec2f& uv, float& distance,
+    bool find_any = false);
+bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
+    float max_distance, int& instance, int& element, vec2f& uv, float& distance,
     bool find_any = false, bool non_rigid_frames = true);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
