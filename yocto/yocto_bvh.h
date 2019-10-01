@@ -166,6 +166,14 @@ struct bvh_node {
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Applicxation data is not stored explicitly.
+struct bvh_tree {
+  vector<bvh_node> nodes = {};
+};
+
+// BVH tree stored as a node array with the tree structure is encoded using
+// array indices. BVH nodes indices refer to either the node array,
+// for internal nodes, or the primitive arrays, for leaf nodes.
+// Applicxation data is not stored explicitly.
 struct bvh_shape {
   // elements
   bvh_span<int>   points    = {};
@@ -179,7 +187,7 @@ struct bvh_shape {
   bvh_span<float> radius    = {};
 
   // nodes
-  vector<bvh_node> nodes = {};
+  bvh_tree bvh = {};
 
 #if YOCTO_EMBREE
   // Embree opaque data
@@ -216,7 +224,7 @@ struct bvh_scene {
   vector<bvh_shape>       shapes    = {};
 
   // nodes
-  vector<bvh_node> nodes = {};
+  bvh_tree bvh = {};
 
 #if YOCTO_EMBREE
   // Embree opaque data

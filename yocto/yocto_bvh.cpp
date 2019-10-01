@@ -902,8 +902,11 @@ static pair<int, int> split_middle(
 }
 
 // Build BVH nodes
-static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+static void build_bvh_serial(bvh_tree& bvh, vector<bvh_prim>& prims,
     const bvh_params& params) {
+  // get values
+  auto& nodes = bvh.nodes;
+
   // prepare to build nodes
   nodes.clear();
   nodes.reserve(prims.size() * 2);
@@ -961,8 +964,11 @@ static void build_bvh_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 }
 
 // Build BVH nodes
-static void build_bvh_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+static void build_bvh_parallel(bvh_tree& bvh, vector<bvh_prim>& prims,
     const bvh_params& params) {
+  // get valies
+  auto& nodes = bvh.nodes;
+
   // prepare to build nodes
   nodes.clear();
   nodes.reserve(prims.size() * 2);
@@ -1102,9 +1108,9 @@ void build_bvh(bvh_shape& shape, const bvh_params& params) {
 
   // build nodes
   if (params.noparallel) {
-    build_bvh_serial(shape.nodes, prims, params);
+    build_bvh_serial(shape.bvh, prims, params);
   } else {
-    build_bvh_parallel(shape.nodes, prims, params);
+    build_bvh_parallel(shape.bvh, prims, params);
   }
 }
 void build_bvh(bvh_scene& scene, const bvh_params& params) {
@@ -1128,17 +1134,17 @@ void build_bvh(bvh_scene& scene, const bvh_params& params) {
   for (auto idx = 0; idx < prims.size(); idx++) {
     auto& instance = scene.instances[idx];
     auto& sbvh     = scene.shapes[instance.shape];
-    auto  bbox     = sbvh.nodes.empty()
+    auto  bbox     = sbvh.bvh.nodes.empty()
                     ? invalidb3f
-                    : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
+                    : transform_bbox(instance.frame, sbvh.bvh.nodes[0].bbox);
     prims[idx] = {bbox, center(bbox), idx};
   }
 
   // build nodes
   if (params.noparallel) {
-    build_bvh_serial(scene.nodes, prims, params);
+    build_bvh_serial(scene.bvh, prims, params);
   } else {
-    build_bvh_parallel(scene.nodes, prims, params);
+    build_bvh_parallel(scene.bvh, prims, params);
   }
 }
 
@@ -1148,12 +1154,12 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
 #endif
 
   // refit
-  for (auto nodeid = (int)shape.nodes.size() - 1; nodeid >= 0; nodeid--) {
-    auto& node = shape.nodes[nodeid];
+  for (auto nodeid = (int)shape.bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
+    auto& node = shape.bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
     if (node.internal) {
       for (auto i = 0; i < 2; i++) {
-        node.bbox = merge(node.bbox, shape.nodes[node.prims[i]].bbox);
+        node.bbox = merge(node.bbox, shape.bvh.nodes[node.prims[i]].bbox);
       }
     } else if (!shape.points.empty()) {
       for (auto idx = 0; idx < node.num; idx++) {
@@ -1204,20 +1210,20 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_instances,
 #endif
 
   // refit
-  for (auto nodeid = (int)scene.nodes.size() - 1; nodeid >= 0; nodeid--) {
-    auto& node = scene.nodes[nodeid];
+  for (auto nodeid = (int)scene.bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
+    auto& node = scene.bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
     if (node.internal) {
       for (auto i = 0; i < 2; i++) {
-        node.bbox = merge(node.bbox, scene.nodes[node.prims[i]].bbox);
+        node.bbox = merge(node.bbox, scene.bvh.nodes[node.prims[i]].bbox);
       }
     } else {
       for (auto idx = 0; idx < node.num; idx++) {
         auto& instance = scene.instances[node.prims[idx]];
         auto& sbvh     = scene.shapes[instance.shape];
-        auto  bbox     = sbvh.nodes.empty()
+        auto  bbox     = sbvh.bvh.nodes.empty()
                         ? invalidb3f
-                        : transform_bbox(instance.frame, sbvh.nodes[0].bbox);
+                        : transform_bbox(instance.frame, sbvh.bvh.nodes[0].bbox);
         node.bbox = merge(node.bbox, bbox);
       }
     }
@@ -1235,7 +1241,7 @@ bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_, int& element,
 #endif
 
   // check empty
-  if (shape.nodes.empty()) return false;
+  if (shape.bvh.nodes.empty()) return false;
 
   // node stack
   int  node_stack[128];
@@ -1256,7 +1262,7 @@ bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_, int& element,
   // walking stack
   while (node_cur) {
     // grab node
-    auto& node = shape.nodes[node_stack[--node_cur]];
+    auto& node = shape.bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
     // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
@@ -1346,7 +1352,7 @@ bool intersect_bvh(const bvh_scene& scene, const ray3f& ray_, int& instance,
 #endif
 
   // check empty
-  if (scene.nodes.empty()) return false;
+  if (scene.bvh.nodes.empty()) return false;
 
   // node stack
   int  node_stack[128];
@@ -1367,7 +1373,7 @@ bool intersect_bvh(const bvh_scene& scene, const ray3f& ray_, int& instance,
   // walking stack
   while (node_cur) {
     // grab node
-    auto& node = scene.nodes[node_stack[--node_cur]];
+    auto& node = scene.bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
     // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
@@ -1419,7 +1425,7 @@ bool intersect_bvh(const bvh_scene& scene, int instance, const ray3f& ray,
 bool overlap_bvh(const bvh_shape& shape, const vec3f& pos, float max_distance,
     int& element, vec2f& uv, float& distance, bool find_any) {
   // check if empty
-  if (shape.nodes.empty()) return false;
+  if (shape.bvh.nodes.empty()) return false;
 
   // node stack
   int  node_stack[64];
@@ -1432,7 +1438,7 @@ bool overlap_bvh(const bvh_shape& shape, const vec3f& pos, float max_distance,
   // walking stack
   while (node_cur) {
     // grab node
-    auto& node = shape.nodes[node_stack[--node_cur]];
+    auto& node = shape.bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
     if (!distance_check_bbox(pos, max_distance, node.bbox)) continue;
@@ -1513,7 +1519,7 @@ bool overlap_bvh(const bvh_scene& scene, const vec3f& pos, float max_distance,
     int& instance, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
   // check if empty
-  if (scene.nodes.empty()) return false;
+  if (scene.bvh.nodes.empty()) return false;
 
   // node stack
   int  node_stack[64];
@@ -1526,7 +1532,7 @@ bool overlap_bvh(const bvh_scene& scene, const vec3f& pos, float max_distance,
   // walking stack
   while (node_cur) {
     // grab node
-    auto& node = scene.nodes[node_stack[--node_cur]];
+    auto& node = scene.bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
     if (!distance_check_bbox(pos, max_distance, node.bbox)) continue;
