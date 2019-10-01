@@ -455,9 +455,11 @@ float sample_environment_pdf(const yocto_scene& scene,
 void make_bvh(
     bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
   // scene bvh
-  make_instances_bvh(bvh,
-      {&scene.instances[0].frame, (int)scene.instances.size(),
-          sizeof(scene.instances[0])},
+  // make_instances_bvh(bvh,
+  //     {&scene.instances[0].frame, (int)scene.instances.size(),
+  //         sizeof(scene.instances[0])},
+  //     (int)scene.shapes.size());
+  make_instances_bvh(bvh, (vector<bvh_instance>&)scene.instances,
       (int)scene.shapes.size());
   // shape bvhs
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
@@ -515,8 +517,9 @@ void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
     sbvh.radius    = shape.radius;
   }
   if (!scene.instances.empty()) {
-    bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),
-        sizeof(scene.instances[0])};
+    // bvh.instances = {&scene.instances[0].frame, (int)scene.instances.size(),
+    //     sizeof(scene.instances[0])};
+    bvh.instances = (vector<bvh_instance>&)scene.instances;
   } else {
     bvh.instances = {};
   }

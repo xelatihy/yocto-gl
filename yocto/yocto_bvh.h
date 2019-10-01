@@ -99,6 +99,8 @@ namespace yocto {
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
 
+#if 0
+
 // BVH array view
 template <typename T>
 struct bvh_span {
@@ -138,6 +140,15 @@ struct bvh_sspan {
   int         count  = 0;
   int         stride = 0;
 };
+
+#else
+
+template<typename T>
+using bvh_span = vector<T>;
+template<typename T>
+using bvh_sspan = vector<T>;
+
+#endif
 
 // BVH tree node containing its bounds, indices to the BVH arrays of either
 // primitives or internal nodes, the node element type,
@@ -179,11 +190,25 @@ struct bvh_shape {
 #endif
 };
 
+#if 0
+
 // Instance for a scene BVH.
 struct bvh_instance {
   frame3f frame = identity3x4f;
   int     shape = -1;
 };
+
+#else
+
+// Instance for a scene BVH.
+struct bvh_instance {
+  string name = "";
+  frame3f frame = identity3x4f;
+  int     shape = -1;
+  int material = -1;
+};
+
+#endif
 
 struct bvh_scene {
   // instances and shapes
