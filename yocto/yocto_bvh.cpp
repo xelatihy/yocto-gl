@@ -1312,17 +1312,12 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_instances,
 }
 
 // Intersect ray with a bvh.
-bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_, int& element,
-    vec2f& uv, float& distance, bool find_any) {
-#if YOCTO_EMBREE
-  // call Embree if needed
-  if (shape.embree_bvh) {
-    return intersect_embree_bvh(shape, ray_, element, uv, distance, find_any);
-  }
-#endif
-
+template <typename Intersect>
+static bool intersect_elements_bvh(const bvh_tree& bvh,
+    Intersect&& intersect_element, const ray3f& ray_, int& element, vec2f& uv,
+    float& distance, bool find_any) {
   // check empty
-  if (shape.bvh.nodes.empty()) return false;
+  if (bvh.nodes.empty()) return false;
 
   // node stack
   int  node_stack[128];
@@ -1343,7 +1338,7 @@ bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_, int& element,
   // walking stack
   while (node_cur) {
     // grab node
-    auto& node = shape.bvh.nodes[node_stack[--node_cur]];
+    auto& node = bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
     // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
@@ -1361,51 +1356,9 @@ bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_, int& element,
         node_stack[node_cur++] = node.prims[1];
         node_stack[node_cur++] = node.prims[0];
       }
-    } else if (!shape.points.empty()) {
+    } else {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto& p = shape.points[node.prims[idx]];
-        if (intersect_point(
-                ray, shape.positions[p], shape.radius[p], uv, distance)) {
-          hit      = true;
-          element  = node.prims[idx];
-          ray.tmax = distance;
-        }
-      }
-    } else if (!shape.lines.empty()) {
-      for (auto idx = 0; idx < node.num; idx++) {
-        auto& l = shape.lines[node.prims[idx]];
-        if (intersect_line(ray, shape.positions[l.x], shape.positions[l.y],
-                shape.radius[l.x], shape.radius[l.y], uv, distance)) {
-          hit      = true;
-          element  = node.prims[idx];
-          ray.tmax = distance;
-        }
-      }
-    } else if (!shape.triangles.empty()) {
-      for (auto idx = 0; idx < node.num; idx++) {
-        auto& t = shape.triangles[node.prims[idx]];
-        if (intersect_triangle(ray, shape.positions[t.x], shape.positions[t.y],
-                shape.positions[t.z], uv, distance)) {
-          hit      = true;
-          element  = node.prims[idx];
-          ray.tmax = distance;
-        }
-      }
-    } else if (!shape.quads.empty()) {
-      for (auto idx = 0; idx < node.num; idx++) {
-        auto& q = shape.quads[node.prims[idx]];
-        if (intersect_quad(ray, shape.positions[q.x], shape.positions[q.y],
-                shape.positions[q.z], shape.positions[q.w], uv, distance)) {
-          hit      = true;
-          element  = node.prims[idx];
-          ray.tmax = distance;
-        }
-      }
-    } else if (!shape.quadspos.empty()) {
-      for (auto idx = 0; idx < node.num; idx++) {
-        auto& q = shape.quadspos[node.prims[idx]];
-        if (intersect_quad(ray, shape.positions[q.x], shape.positions[q.y],
-                shape.positions[q.z], shape.positions[q.w], uv, distance)) {
+        if (intersect_element(node.prims[idx], ray, uv, distance)) {
           hit      = true;
           element  = node.prims[idx];
           ray.tmax = distance;
@@ -1418,6 +1371,85 @@ bool intersect_bvh(const bvh_shape& shape, const ray3f& ray_, int& element,
   }
 
   return hit;
+}
+
+// Intersect ray with a bvh.
+bool intersect_points_bvh(const bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
+  return intersect_elements_bvh(
+      bvh,
+      [&](int idx, const ray3f& ray, vec2f& uv, float& distance) {
+        auto& p = points[idx];
+        return intersect_point(ray, positions[p], radius[p], uv, distance);
+      },
+      ray, element, uv, distance, find_any);
+}
+bool intersect_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
+  return intersect_elements_bvh(
+      bvh,
+      [&](int idx, const ray3f& ray, vec2f& uv, float& distance) {
+        auto& l = lines[idx];
+        return intersect_line(ray, positions[l.x], positions[l.y], radius[l.x],
+            radius[l.y], uv, distance);
+      },
+      ray, element, uv, distance, find_any);
+}
+bool intersect_triangles_bvh(const bvh_tree& bvh,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
+  return intersect_elements_bvh(
+      bvh,
+      [&](int idx, const ray3f& ray, vec2f& uv, float& distance) {
+        auto& t = triangles[idx];
+        return intersect_triangle(
+            ray, positions[t.x], positions[t.y], positions[t.z], uv, distance);
+      },
+      ray, element, uv, distance, find_any);
+}
+bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const ray3f& ray, int& element, vec2f& uv,
+    float& distance, bool find_any) {
+  return intersect_elements_bvh(
+      bvh,
+      [&](int idx, const ray3f& ray, vec2f& uv, float& distance) {
+        auto& t = quads[idx];
+        return intersect_quad(ray, positions[t.x], positions[t.y],
+            positions[t.z], positions[t.w], uv, distance);
+      },
+      ray, element, uv, distance, find_any);
+}
+
+// Intersect ray with a bvh.
+bool intersect_bvh(const bvh_shape& shape, const ray3f& ray, int& element,
+    vec2f& uv, float& distance, bool find_any) {
+#if YOCTO_EMBREE
+  // call Embree if needed
+  if (shape.embree_bvh) {
+    return intersect_embree_bvh(shape, ray, element, uv, distance, find_any);
+  }
+#endif
+
+  if (!shape.points.empty()) {
+    return intersect_points_bvh(shape.bvh, shape.points, shape.positions,
+        shape.radius, ray, element, uv, distance, find_any);
+  } else if (!shape.lines.empty()) {
+    return intersect_lines_bvh(shape.bvh, shape.lines, shape.positions,
+        shape.radius, ray, element, uv, distance, find_any);
+  } else if (!shape.triangles.empty()) {
+    return intersect_triangles_bvh(shape.bvh, shape.triangles, shape.positions,
+        ray, element, uv, distance, find_any);
+  } else if (!shape.quads.empty()) {
+    return intersect_quads_bvh(shape.bvh, shape.quads, shape.positions, ray,
+        element, uv, distance, find_any);
+  } else if (!shape.quadspos.empty()) {
+    return intersect_quads_bvh(shape.bvh, shape.quadspos, shape.positions, ray,
+        element, uv, distance, find_any);
+  } else {
+    return false;
+  }
 }
 
 // Intersect ray with a bvh.
