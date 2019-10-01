@@ -199,11 +199,11 @@ namespace yocto {
 // Flip vertex normals
 void flip_normals(vector<vec3f>& flipped, const vector<vec3f>& normals) {
   flipped = normals;
-  for (auto& n : flipped) n= -n;
+  for (auto& n : flipped) n = -n;
 }
 vector<vec3f> flip_normals(const vector<vec3f>& normals) {
   auto flipped = normals;
-  for (auto& n : flipped) n= -n;
+  for (auto& n : flipped) n = -n;
   return flipped;
 }
 // Flip face orientation
@@ -244,7 +244,7 @@ vector<vec4i> flip_quads(const vector<vec4i>& quads) {
 void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
     const vec3i& alignment) {
   auto bounds = invalidb3f;
-  for (auto& p : positions) bounds= merge(bounds, p);
+  for (auto& p : positions) bounds = merge(bounds, p);
   auto offset = vec3f{0, 0, 0};
   switch (alignment.x) {
     case 1: offset.x = bounds.min.x; break;
@@ -711,21 +711,21 @@ void split_facevarying(vector<vec4i>& split_quads,
   split_positions.clear();
   if (!positions.empty()) {
     split_positions.resize(vert_map.size());
-    for (auto & [ vert, index ] : vert_map) {
+    for (auto& [vert, index] : vert_map) {
       split_positions[index] = positions[vert.x];
     }
   }
   split_normals.clear();
   if (!normals.empty()) {
     split_normals.resize(vert_map.size());
-    for (auto & [ vert, index ] : vert_map) {
+    for (auto& [vert, index] : vert_map) {
       split_normals[index] = normals[vert.y];
     }
   }
   split_texcoords.clear();
   if (!texcoords.empty()) {
     split_texcoords.resize(vert_map.size());
-    for (auto & [ vert, index ] : vert_map) {
+    for (auto& [vert, index] : vert_map) {
       split_texcoords[index] = texcoords[vert.z];
     }
   }
@@ -799,18 +799,21 @@ pair<vector<vec3f>, vector<int>> weld_vertices(
 pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     float threshold) {
-  auto[wpositions, indices] = weld_vertices(positions, threshold);
-  auto wtriangles           = triangles;
-  for (auto& t : wtriangles) t= {indices[t.x], indices[t.y], indices[t.z]};
+  auto [wpositions, indices] = weld_vertices(positions, threshold);
+  auto wtriangles            = triangles;
+  for (auto& t : wtriangles) t = {indices[t.x], indices[t.y], indices[t.z]};
   return {wtriangles, wpositions};
 }
 pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold) {
-  auto[wpositions, indices] = weld_vertices(positions, threshold);
-  auto wquads               = quads;
+  auto [wpositions, indices] = weld_vertices(positions, threshold);
+  auto wquads                = quads;
   for (auto& q : wquads)
     q = {
-        indices[q.x], indices[q.y], indices[q.z], indices[q.w],
+        indices[q.x],
+        indices[q.y],
+        indices[q.z],
+        indices[q.w],
     };
   return {wquads, wpositions};
 }
@@ -838,7 +841,7 @@ void weld_triangles_inplace(vector<vec3i>& wtriangles,
   auto indices = vector<int>{};
   weld_vertices(wpositions, indices, positions, threshold);
   wtriangles = triangles;
-  for (auto& t : wtriangles) t= {indices[t.x], indices[t.y], indices[t.z]};
+  for (auto& t : wtriangles) t = {indices[t.x], indices[t.y], indices[t.z]};
 }
 void weld_quads_inplace(vector<vec4i>& wquads, vector<vec3f>& wpositions,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
@@ -848,7 +851,10 @@ void weld_quads_inplace(vector<vec4i>& wquads, vector<vec3f>& wpositions,
   wquads = quads;
   for (auto& q : wquads)
     q = {
-        indices[q.x], indices[q.y], indices[q.z], indices[q.w],
+        indices[q.x],
+        indices[q.y],
+        indices[q.z],
+        indices[q.w],
     };
 }
 
@@ -953,7 +959,7 @@ void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert,
     auto nlines = (int)lines.size();
     // create vertices
     auto tvert = vector<T>(nverts + nlines);
-    for (auto i = 0; i < nverts; i++) tvert[i]= vert[i];
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nlines; i++) {
       auto l            = lines[i];
       tvert[nverts + i] = (vert[l.x] + vert[l.y]) / 2;
@@ -997,7 +1003,7 @@ void subdivide_triangles_impl(vector<vec3i>& triangles, vector<T>& vert,
     auto nfaces = (int)triangles.size();
     // create vertices
     auto tvert = vector<T>(nverts + nedges);
-    for (auto i = 0; i < nverts; i++) tvert[i]= vert[i];
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nedges; i++) {
       auto e            = edges[i];
       tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
@@ -1048,7 +1054,7 @@ void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert,
     auto nfaces = (int)quads.size();
     // create vertices
     auto tvert = vector<T>(nverts + nedges + nfaces);
-    for (auto i = 0; i < nverts; i++) tvert[i]= vert[i];
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nedges; i++) {
       auto e            = edges[i];
       tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
@@ -1172,7 +1178,7 @@ void subdivide_catmullclark_impl(vector<vec4i>& quads, vector<T>& vert,
     // split elements ------------------------------------
     // create vertices
     auto tvert = vector<T>(nverts + nedges + nfaces);
-    for (auto i = 0; i < nverts; i++) tvert[i]= vert[i];
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nedges; i++) {
       auto e            = edges[i];
       tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
@@ -1608,7 +1614,7 @@ int sample_points(const vector<float>& cdf, float re) {
 }
 vector<float> sample_points_cdf(int npoints) {
   auto cdf = vector<float>(npoints);
-  for (auto i = 0; i < cdf.size(); i++) cdf[i]= 1 + (i ? cdf[i - 1] : 0);
+  for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
   return cdf;
 }
 void sample_points_cdf(vector<float>& cdf, int npoints) {
@@ -1948,7 +1954,7 @@ void compute_geodesic_distances(vector<float>& field,
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<int>& sources, float max_distance) {
   auto distances = vector<float>(solver.graph.size(), flt_max);
-  for (auto source : sources) distances[source]= 0.0f;
+  for (auto source : sources) distances[source] = 0.0f;
   compute_geodesic_distances(distances, solver, sources, max_distance);
   return distances;
 }
@@ -2707,13 +2713,13 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
 void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float thickness) {
   auto bbox = invalidb3f;
-  for (auto p : positions) bbox= merge(bbox, p);
+  for (auto p : positions) bbox = merge(bbox, p);
   auto center              = yocto::center(bbox);
   auto inner_quads         = quads;
   auto inner_positions     = positions;
   auto inner_normals       = normals;
   auto inner_texturecoords = texcoords;
-  for (auto& p : inner_positions) p= (1 - thickness) * (p - center) + center;
+  for (auto& p : inner_positions) p = (1 - thickness) * (p - center) + center;
   for (auto& n : inner_normals) n = -n;
   merge_quads(quads, positions, normals, texcoords, inner_quads,
       inner_positions, inner_normals, inner_texturecoords);
@@ -3174,7 +3180,7 @@ static void load_ply_shape(const string& filename, vector<int>& points,
       auto pos  = find_ply_property(element, "x", "y", "z");
       auto norm = find_ply_property(element, "nx", "ny", "nz");
       auto uv   = find_ply_property(element, "u", "v");
-      if (uv.x < 0) uv= find_ply_property(element, "s", "t");
+      if (uv.x < 0) uv = find_ply_property(element, "s", "t");
       auto col = find_ply_property(element, "red", "green", "blue", "alpha");
       auto rad = find_ply_property(element, "radius");
       for (auto idx = 0; idx < element.count; idx++) {
@@ -4630,24 +4636,14 @@ static pair<float, bool> step_from_edge_to_edge(const vec3f& point,
   }
 }
 
-static lerp_point make_lerp(vec2i e, int f, float a) {
-  lerp_point lerp;
-  lerp.edge  = e;
-  lerp.face  = f;
-  lerp.alpha = a;
-  //    lerp.loc   = l;
-
-  return lerp;
-}
-
-static lerp_point step_from_point(const vector<vec3i>& triangles,
+static path_vertex step_from_point(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, const vector<float>& field, int vertex,
     int start_face, int tag = -1) {
   auto triangle_fan = get_face_ring(triangles, adjacency, start_face, vertex);
 
   auto best_alignment = 0.0;
-  auto fallback_lerp  = make_lerp((vec2i{-1, -1}), -1, 0);
+  auto fallback_lerp  = path_vertex{vec2i{-1, -1}, -1, 0};
 
   for (int i = 0; i < triangle_fan.size(); ++i) {
     int face = triangle_fan[i];
@@ -4676,13 +4672,13 @@ static lerp_point step_from_point(const vector<vec3i>& triangles,
     if (max(right_dot, left_dot) > best_alignment) {
       best_alignment = max(right_dot, left_dot);
       float alpha    = right_dot > left_dot ? 0.0f + eps : 1.0f - eps;
-      fallback_lerp  = make_lerp(edge, face, alpha);
+      fallback_lerp  = path_vertex{edge, face, alpha};
     }
 
     // Check if gradient direction is in between ac and ab.
     if (is_direction_inbetween(right, left, direction)) {
       float alpha = step_from_point_to_edge(right, left, direction);
-      return make_lerp(edge, face, alpha);
+      return path_vertex{edge, face, alpha};
     }
   }
 
@@ -4690,11 +4686,11 @@ static lerp_point step_from_point(const vector<vec3i>& triangles,
   return fallback_lerp;
 }
 
-Path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path follow_gradient_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from) {
   // TRACE_FUNCTION
-  auto lerps = vector<lerp_point>();
+  auto lerps = vector<path_vertex>();
   {
     auto lerp = step_from_point(
         triangles, positions, adjacency, tags, field, from, -1, tag);
@@ -4705,15 +4701,15 @@ Path follow_gradient_field(const vector<vec3i>& triangles,
   const int num_steps = 10000;
 
   for (int i = 0; i < num_steps; i++) {
-    auto[old_edge, old_face, old_alpha] = lerps.back();
+    auto [old_edge, old_face, old_alpha] = lerps.back();
     assert(old_face != -1);
     vec3f point = (1.0f - old_alpha) * positions[old_edge.x] +
                   old_alpha * positions[old_edge.y];
 
     int face = adjacent_face(triangles, adjacency, old_face, old_edge);
     if (face == -1) {
-      lerps.push_back(make_lerp(vec2i{-1, -1}, face, 0));
-      return Path{from, -1, lerps};
+      lerps.push_back({vec2i{-1, -1}, face, 0});
+      return surface_path{from, -1, lerps};
     }
 
     if (tags[face] != tag) {
@@ -4723,8 +4719,8 @@ Path follow_gradient_field(const vector<vec3i>& triangles,
 
       // @Hack!: We store the tag of the reached region in edge.x
       vec2i edge = {to, tags[face]};
-      lerps.push_back(make_lerp(edge, face, 0));
-      return Path{from, to, lerps};
+      lerps.push_back({edge, face, 0});
+      return surface_path{from, to, lerps};
     }
 
     vec3f direction = gradient_face(triangles, positions, field, face);
@@ -4742,7 +4738,7 @@ Path follow_gradient_field(const vector<vec3i>& triangles,
     auto& b = positions[front_idx];
     auto& c = positions[old_edge.y];
 
-    auto[x, step_right] = step_from_edge_to_edge(point, a, b, c, direction);
+    auto [x, step_right] = step_from_edge_to_edge(point, a, b, c, direction);
 
     vec2i edge = old_edge;
     if (step_right) {
@@ -4752,19 +4748,19 @@ Path follow_gradient_field(const vector<vec3i>& triangles,
       point  = (1 - x) * b + x * c;
       edge.x = front_idx;
     }
-    lerps.push_back(make_lerp(edge, face, x));
+    lerps.push_back({edge, face, x});
   }
 
   assert(0 && "path ended in nowhere");
-  return Path{from, 0, lerps};
+  return surface_path{from, 0, lerps};
 }
 
-Path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path follow_gradient_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
     int to) {
   // TRACE_FUNCTION
-  auto lerps = vector<lerp_point>();
+  auto lerps = vector<path_vertex>();
 
   lerps.push_back(
       step_from_point(triangles, positions, adjacency, tags, field, from, -1));
@@ -4775,7 +4771,7 @@ Path follow_gradient_field(const vector<vec3i>& triangles,
   const int num_steps = 10000;
 
   for (int i = 0; i < num_steps; i++) {
-    auto[old_edge, old_face, old_alpha] = lerps.back();
+    auto [old_edge, old_face, old_alpha] = lerps.back();
     assert(old_face != -1);
     vec3f point = (1.0f - old_alpha) * positions[old_edge.x] +
                   old_alpha * positions[old_edge.y];
@@ -4791,7 +4787,7 @@ Path follow_gradient_field(const vector<vec3i>& triangles,
       for (int k = 0; k < 3; ++k) {
         auto edge = vec2i{triangles[face][k], triangles[face][(k + 1) % 3]};
         if (edge.x == to) {
-          lerps.push_back(make_lerp(edge, face, 0));
+          lerps.push_back({edge, face, 0});
           return {from, to, lerps};
         }
       }
@@ -4820,7 +4816,7 @@ Path follow_gradient_field(const vector<vec3i>& triangles,
     auto& b = positions[front_idx];
     auto& c = positions[old_edge.y];
 
-    auto[x, step_right] = step_from_edge_to_edge(point, a, b, c, direction);
+    auto [x, step_right] = step_from_edge_to_edge(point, a, b, c, direction);
 
     vec2i edge = old_edge;
     if (step_right) {
@@ -4835,7 +4831,7 @@ Path follow_gradient_field(const vector<vec3i>& triangles,
       break;
     }
 
-    lerps.push_back(make_lerp(edge, face, x));
+    lerps.push_back({edge, face, x});
     if (x == 0 and edge.x == to) break;
     if (x == 1 and edge.y == to) break;
   }
@@ -4843,26 +4839,26 @@ Path follow_gradient_field(const vector<vec3i>& triangles,
   return {from, to, lerps};
 }
 
-static int add_triangle(State& state, const vec3i& triangle = {}, int tag = -1,
-    const vec3i& neighbors = {-1, -1, -1}) {
+static int add_triangle(discrete_surface& state, const vec3i& triangle = {},
+    int tag = -1, const vec3i& neighbors = {-1, -1, -1}) {
   assert(state.triangles.size() == state.tags.size());
-  assert(state.triangles.size() == state.triangle_graph.size());
+  assert(state.triangles.size() == state.adjacencies.size());
   int index = state.triangles.size();
   state.triangles.push_back(triangle);
   state.tags.push_back(tag);
-  state.triangle_graph.push_back(neighbors);
+  state.adjacencies.push_back(neighbors);
   return index;
 }
 
 vector<vec3f> points_from_lerps(
-    const vector<vec3f>& positions, const Path& path) {
+    const vector<vec3f>& positions, const surface_path& path) {
   auto result = vector<vec3f>();
   result.reserve(path.lerps.size() + 1);
   result.push_back(positions[path.start]);
   // + 0.0001 * state.normals[path.start]);
   if (path.lerps.empty()) return {};
   for (int i = 0; i < path.lerps.size() - 1; ++i) {
-    auto[edge, face, x] = path.lerps[i];
+    auto [edge, face, x] = path.lerps[i];
     auto a        = positions[edge.x];  // + 0.0001 * state.normals[edge.x];
     auto b        = positions[edge.y];  // + 0.0001 * state.normals[edge.y];
     auto position = (1 - x) * a + x * b;
@@ -4906,7 +4902,7 @@ static void delete_arc(geodesic_solver& solver, int a, int b) {
 }
 
 static int add_vertex(
-    State& state, const vec3f& position, const vec3f& normal) {
+    discrete_surface& state, const vec3f& position, const vec3f& normal) {
   assert(state.positions.size() == state.normals.size());
   int index = state.positions.size();
   state.positions.push_back(position);
@@ -4915,7 +4911,7 @@ static int add_vertex(
   return index;
 }
 
-static int add_vertex(State& state, int a, int b, float coeff) {
+static int add_vertex(discrete_surface& state, int a, int b, float coeff) {
   auto position = coeff * state.positions[a] + (1 - coeff) * state.positions[b];
   auto normal   = normalize(
       coeff * state.normals[a] + (1 - coeff) * state.normals[b]);
@@ -4923,7 +4919,7 @@ static int add_vertex(State& state, int a, int b, float coeff) {
 }
 
 static void connect_opposite_nodes(
-    State& state, int f0, int f1, const vec2i& edge) {
+    discrete_surface& state, int f0, int f1, const vec2i& edge) {
   if (f0 != -1 and f1 != -1)
     connect_opposite_nodes(state.solver, state.positions, state.triangles[f0],
         state.triangles[f1], edge);
@@ -4948,29 +4944,31 @@ static void disconnect_opposite_nodes(geodesic_solver& solver, const vec3i& f0,
   delete_arc(solver, a, c);
 }
 
-static void disconnect_triangle(State& state, int face) {
+static void disconnect_triangle(discrete_surface& state, int face) {
   for (int k = 0; k < 3; ++k) {
     auto edge = vec2i{
         state.triangles[face][k], state.triangles[face][(k + 1) % 3]};
-    int neighbor = state.triangle_graph[face][k];
+    int neighbor = state.adjacencies[face][k];
     disconnect_opposite_nodes(
         state.solver, state.triangles[face], state.triangles[neighbor], edge);
   }
 }
 
-static int adjacent_face(const State& state, int face, const vec2i& edge) {
-  adjacent_face(state.triangles, state.triangle_graph, face, edge);
+static int adjacent_face(
+    const discrete_surface& state, int face, const vec2i& edge) {
+  adjacent_face(state.triangles, state.adjacencies, face, edge);
   return -1;
 }
 
-static void update_adjacency(State& state, const vector<int>& updated_faces) {
+static void update_adjacency(
+    discrete_surface& state, const vector<int>& updated_faces) {
   for (auto face : updated_faces) {
     //        for (auto [edge, k] : edges(state.triangles[face])) {
     for (int k : {0, 1, 2}) {
       vec2i edge = {
           state.triangles[face][k], state.triangles[face][(k + 1) % 3]};
 
-      int neighbor = state.triangle_graph[face][k];
+      int neighbor = state.adjacencies[face][k];
       if (neighbor == -1) continue;
 
       for (int j = 0; j < 3; ++j) {
@@ -4979,39 +4977,40 @@ static void update_adjacency(State& state, const vector<int>& updated_faces) {
         //      for (auto[neighbor_edge, j] : edges(state.triangles[neighbor]))
         //      {
         if (same_edge(edge, neighbor_edge)) {
-          state.triangle_graph[neighbor][j] = face;
+          state.adjacencies[neighbor][j] = face;
         }
       }
     }
   }
 }
 
-static void connect_adjacent_nodes(State& state, int v0, int v1) {
+static void connect_adjacent_nodes(discrete_surface& state, int v0, int v1) {
   auto len = length(state.positions[v0] - state.positions[v1]);
   connect_nodes(state.solver, v0, v1, len);
 }
 
-static void disconnect_adjacent_nodes(State& state, int v0, int v1) {
+static void disconnect_adjacent_nodes(discrete_surface& state, int v0, int v1) {
   if (v0 != -1 and v1 != -1) delete_arc(state.solver, v0, v1);
 }
 
 // Refer to slice_triangle.png to understand the names of the following
 // functions.
-static void split_triangle(State& state, const vec3i& triangle, int fu, int fl,
-    int fr, int vr, int vl, int erd, int eru, int elu, int eld, int cd) {
-  auto[x, y, z] = triangle;
+static void split_triangle(discrete_surface& state, const vec3i& triangle,
+    int fu, int fl, int fr, int vr, int vl, int erd, int eru, int elu, int eld,
+    int cd) {
+  auto [x, y, z] = triangle;
 
   disconnect_adjacent_nodes(state, y, z);
   disconnect_adjacent_nodes(state, z, x);
 
-  state.triangles[fu]      = {vl, vr, z};
-  state.triangle_graph[fu] = {fl, eru, elu};
+  state.triangles[fu]   = {vl, vr, z};
+  state.adjacencies[fu] = {fl, eru, elu};
 
-  state.triangles[fl]      = {x, vr, vl};
-  state.triangle_graph[fl] = {fr, fu, eld};
+  state.triangles[fl]   = {x, vr, vl};
+  state.adjacencies[fl] = {fr, fu, eld};
 
-  state.triangles[fr]      = {x, y, vr};
-  state.triangle_graph[fr] = {cd, erd, fl};
+  state.triangles[fr]   = {x, y, vr};
+  state.adjacencies[fr] = {cd, erd, fl};
 
   connect_adjacent_nodes(state, y, vr);
   connect_adjacent_nodes(state, vr, z);
@@ -5031,22 +5030,22 @@ static void split_triangle(State& state, const vec3i& triangle, int fu, int fl,
   connect_opposite_nodes(state, fr, erd, {y, vr});
 }
 
-static void split_triangle_(State& state, const vec3i& triangle, int face,
-    int fl, int fr, int vr, int vl, int erd, int eru, int elu, int eld,
-    int cd) {
-  auto[x, y, z] = triangle;
+static void split_triangle_(discrete_surface& state, const vec3i& triangle,
+    int face, int fl, int fr, int vr, int vl, int erd, int eru, int elu,
+    int eld, int cd) {
+  auto [x, y, z] = triangle;
 
   disconnect_adjacent_nodes(state, y, z);
   disconnect_adjacent_nodes(state, z, x);
 
-  state.triangles[face]      = {vl, vr, z};
-  state.triangle_graph[face] = {fr, eru, elu};
+  state.triangles[face]   = {vl, vr, z};
+  state.adjacencies[face] = {fr, eru, elu};
 
-  state.triangles[fl]      = {vl, x, y};
-  state.triangle_graph[fl] = {eld, cd, fr};
+  state.triangles[fl]   = {vl, x, y};
+  state.adjacencies[fl] = {eld, cd, fr};
 
-  state.triangles[fr]      = {vl, y, vr};
-  state.triangle_graph[fr] = {fl, erd, face};
+  state.triangles[fr]   = {vl, y, vr};
+  state.adjacencies[fr] = {fl, erd, face};
 
   connect_adjacent_nodes(state, y, vr);
   connect_adjacent_nodes(state, vr, z);
@@ -5066,17 +5065,17 @@ static void split_triangle_(State& state, const vec3i& triangle, int face,
   connect_opposite_nodes(state, fr, erd, {y, vr});
 }
 
-static void split_triangle(State& state, const vec3i& triangle, int fu, int fd,
-    int v, int efd, int erd, int eru, int efu) {
-  auto[x, y, z] = triangle;
+static void split_triangle(discrete_surface& state, const vec3i& triangle,
+    int fu, int fd, int v, int efd, int erd, int eru, int efu) {
+  auto [x, y, z] = triangle;
 
   disconnect_adjacent_nodes(state, y, z);
 
-  state.triangles[fu]      = {x, v, z};
-  state.triangle_graph[fu] = {fd, eru, efu};
+  state.triangles[fu]   = {x, v, z};
+  state.adjacencies[fu] = {fd, eru, efu};
 
-  state.triangles[fd]      = {x, y, v};
-  state.triangle_graph[fd] = {efd, erd, fu};
+  state.triangles[fd]   = {x, y, v};
+  state.adjacencies[fd] = {efd, erd, fu};
 
   connect_adjacent_nodes(state, v, z);
   connect_adjacent_nodes(state, z, x);
@@ -5092,18 +5091,19 @@ static void split_triangle(State& state, const vec3i& triangle, int fu, int fd,
   connect_opposite_nodes(state, fd, erd, {y, v});
 }
 
-bool slice_path(State& state, int tag, const Path& path, int tag_left,
-    int tag_right, vector<int>& left_faces, vector<int>& right_faces) {
+bool slice_path(discrete_surface& state, int tag, const surface_path& path,
+    int tag_left, int tag_right, vector<int>& left_faces,
+    vector<int>& right_faces) {
   auto& lerps = path.lerps;
   auto  start = path.start;
   left_faces.reserve(lerps.size());
   right_faces.reserve(lerps.size());
 
   {
-    auto[edge, face, alpha] = lerps[0];
-    int x                   = start;
-    int y                   = edge.x;
-    int z                   = edge.y;
+    auto [edge, face, alpha] = lerps[0];
+    int x                    = start;
+    int y                    = edge.x;
+    int z                    = edge.y;
     //    assert(opposite_vertex(edge, state.triangles[face]) == start);
 
     disconnect_triangle(state, face);
@@ -5126,8 +5126,8 @@ bool slice_path(State& state, int tag, const Path& path, int tag_left,
   int last_face_right = state.triangles.size() - 1;
 
   for (int i = 1; i < lerps.size() - 1; ++i) {
-    auto[edge, face, alpha] = lerps[i];
-    bool step_right         = lerps[i - 1].edge.x == edge.x;
+    auto [edge, face, alpha] = lerps[i];
+    bool step_right          = lerps[i - 1].edge.x == edge.x;
 
     // int old_face_left  = lerps[i - 1].face;
     // int old_face_right = state.triangles.size() - 1;
@@ -5149,7 +5149,7 @@ bool slice_path(State& state, int tag, const Path& path, int tag_left,
       int eru = -1;
       int elu = last_face_left;
       int eld = last_face_right;
-      int cd  = state.triangle_graph[face][find(triangle, x)];
+      int cd  = state.adjacencies[face][find(triangle, x)];
       //            assert(cd != -1);
 
       state.triangles[face] = {x, y, z};
@@ -5182,7 +5182,7 @@ bool slice_path(State& state, int tag, const Path& path, int tag_left,
       int elu = -1;
       int erd = last_face_left;
       int eru = last_face_right;
-      int cd  = state.triangle_graph[face][find(triangle, x)];
+      int cd  = state.adjacencies[face][find(triangle, x)];
       //            assert(cd != -1);
 
       state.triangles[face] = {x, y, z};
@@ -5212,7 +5212,7 @@ bool slice_path(State& state, int tag, const Path& path, int tag_left,
   assert(end == path.end);
 
   if (lerps.back().face != -1) {
-    auto[edge, face, alpha] = lerps.back();
+    auto [edge, face, alpha] = lerps.back();
     //        assert((state.tags[face] != tag) == (arrival == -1));
 
     //        auto prev_lerp = lerps[lerps.size() - 2];
@@ -5231,7 +5231,7 @@ bool slice_path(State& state, int tag, const Path& path, int tag_left,
 
     {
       auto v   = state.positions.size() - 1;
-      auto adj = state.triangle_graph[face];
+      auto adj = state.adjacencies[face];
       // int efd = adjacent_face(state, face, {x, y});
       // int efu = adjacent_face(state, face, {x, z});
       int efd               = adj[find(tr, x)];
@@ -5276,8 +5276,8 @@ bool slice_path(State& state, int tag, const Path& path, int tag_left,
   return true;
 }
 
-static bool flood_tagging(State& state, int tag, int new_tag, vector<int> queue,
-    vector<bool>& visited) {
+static bool flood_tagging(discrete_surface& state, int tag, int new_tag,
+    vector<int> queue, vector<bool>& visited) {
   // auto queue = vector<int>();
   // // auto queue = starting;
 
@@ -5294,7 +5294,7 @@ static bool flood_tagging(State& state, int tag, int new_tag, vector<int> queue,
     queue.pop_back();
 
     for (int i = 0; i < 3; ++i) {
-      int neighbor = state.triangle_graph[face][i];
+      int neighbor = state.adjacencies[face][i];
       if (neighbor == -1) continue;
       if (visited[neighbor]) continue;
       if (state.tags[neighbor] != tag) continue;
@@ -5307,8 +5307,8 @@ static bool flood_tagging(State& state, int tag, int new_tag, vector<int> queue,
   }
   return flag;
 }
-vector<int> slice_paths(State& state, const vector<int>& regions, int t0,
-    int t1, const vector<Path>& paths) {
+vector<int> slice_paths(discrete_surface& state, const vector<int>& regions,
+    int t0, int t1, const vector<surface_path>& paths) {
   auto new_regions      = vector<int>(regions.size() * 2);
   auto num_old_vertices = state.positions.size();
   for (int i = 0; i < regions.size(); ++i) {
@@ -5340,8 +5340,6 @@ vector<int> slice_paths(State& state, const vector<int>& regions, int t0,
   }
 
   flood_tagging(state, tag, tag_left, left_faces, visited);
-  auto found = flood_tagging(state, tag, tag_right, right_faces, visited);
-
   return new_regions;
 }
-}
+}  // namespace yocto::integral_curves
