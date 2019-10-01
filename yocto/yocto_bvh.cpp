@@ -1220,34 +1220,41 @@ static void update_elements(bvh_tree& bvh, Bounds&& element_bounds) {
   }
 }
 
-static void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
+void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
-  return update_elements(bvh, [&](int idx){
-    auto& p    = points[idx];
+  return update_elements(bvh, [&](int idx) {
+    auto& p = points[idx];
     return point_bounds(positions[p], radius[p]);
   });
 }
-static void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
-  return update_elements(bvh, [&](int idx){
-    auto& l    = lines[idx];
+  return update_elements(bvh, [&](int idx) {
+    auto& l = lines[idx];
     return line_bounds(
         positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
   });
 }
-static void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions) {
-  return update_elements(bvh, [&](int idx){
-    auto& t   = triangles[idx];
+  return update_elements(bvh, [&](int idx) {
+    auto& t = triangles[idx];
     return triangle_bounds(positions[t.x], positions[t.y], positions[t.z]);
   });
 }
-static void update_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
-  return update_elements(bvh, [&](int idx){
-    auto& q    = quads[idx];
+void update_quads_bvh(
+    bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions) {
+  return update_elements(bvh, [&](int idx) {
+    auto& q = quads[idx];
     return quad_bounds(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+  });
+}
+void update_instances_bvh(bvh_tree& bvh, int num_instances,
+    const function<frame3f(int instance)>&         instance_frame,
+    const function<const bvh_tree&(int instance)>& shape_bvh) {
+  return update_elements(bvh, [&](int idx) {
+    return transform_bbox(instance_frame(idx), shape_bvh(idx).nodes[0].bbox);
   });
 }
 
@@ -1264,14 +1271,11 @@ void refit_bvh(bvh_shape& shape, const bvh_params& params) {
     return update_lines_bvh(
         shape.bvh, shape.lines, shape.positions, shape.radius);
   } else if (!shape.triangles.empty()) {
-    return update_triangles_bvh(
-        shape.bvh, shape.triangles, shape.positions);
+    return update_triangles_bvh(shape.bvh, shape.triangles, shape.positions);
   } else if (!shape.quads.empty()) {
-    return update_quads_bvh(
-        shape.bvh, shape.quads, shape.positions);
+    return update_quads_bvh(shape.bvh, shape.quads, shape.positions);
   } else if (!shape.quadspos.empty()) {
-    return update_quads_bvh(
-        shape.bvh, shape.quadspos, shape.positions);
+    return update_quads_bvh(shape.bvh, shape.quadspos, shape.positions);
   } else {
   }
 }
