@@ -902,8 +902,8 @@ static pair<int, int> split_middle(
 }
 
 // Build BVH nodes
-static void build_bvh_serial(bvh_tree& bvh, vector<bvh_prim>& prims,
-    const bvh_params& params) {
+static void build_bvh_serial(
+    bvh_tree& bvh, vector<bvh_prim>& prims, bool high_quality) {
   // get values
   auto& nodes = bvh.nodes;
 
@@ -917,9 +917,6 @@ static void build_bvh_serial(bvh_tree& bvh, vector<bvh_prim>& prims,
 
   // create nodes until the queue is empty
   while (!queue.empty()) {
-    // exit if needed
-    if (params.cancel && *params.cancel) return;
-
     // grab node to work on
     auto next = queue.front();
     queue.pop_front();
@@ -936,9 +933,8 @@ static void build_bvh_serial(bvh_tree& bvh, vector<bvh_prim>& prims,
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] = (params.high_quality)
-                             ? split_sah(prims, start, end)
-                             : split_balanced(prims, start, end);
+      auto [mid, axis] = high_quality ? split_sah(prims, start, end)
+                                      : split_balanced(prims, start, end);
 
       // make an internal node
       node.internal = true;
@@ -964,8 +960,8 @@ static void build_bvh_serial(bvh_tree& bvh, vector<bvh_prim>& prims,
 }
 
 // Build BVH nodes
-static void build_bvh_parallel(bvh_tree& bvh, vector<bvh_prim>& prims,
-    const bvh_params& params) {
+static void build_bvh_parallel(
+    bvh_tree& bvh, vector<bvh_prim>& prims, bool high_quality) {
   // get valies
   auto& nodes = bvh.nodes;
 
@@ -985,12 +981,12 @@ static void build_bvh_parallel(bvh_tree& bvh, vector<bvh_prim>& prims,
 
   // create nodes until the queue is empty
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(std::async(std::launch::async,
-        [&nodes, &prims, &params, &num_processed_prims, &queue_mutex, &queue] {
+    futures.emplace_back(std::async(
+        std::launch::async, [&nodes, &prims, &high_quality,
+                                &num_processed_prims, &queue_mutex, &queue] {
           while (true) {
             // exit if needed
             if (num_processed_prims >= prims.size()) return;
-            if (params.cancel && *params.cancel) return;
 
             // grab node to work on
             auto next = zero3i;
@@ -1020,7 +1016,7 @@ static void build_bvh_parallel(bvh_tree& bvh, vector<bvh_prim>& prims,
             // split into two children
             if (end - start > bvh_max_prims) {
               // get split
-              auto [mid, axis] = (params.high_quality)
+              auto [mid, axis] = high_quality
                                      ? split_sah(prims, start, end)
                                      : split_balanced(prims, start, end);
 
@@ -1054,6 +1050,104 @@ static void build_bvh_parallel(bvh_tree& bvh, vector<bvh_prim>& prims,
   nodes.shrink_to_fit();
 }
 
+// Build shape bvh
+void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool high_quality, bool parallel) {
+  // build primitives
+  auto prims = vector<bvh_prim>(points.size());
+  for (auto idx = 0; idx < prims.size(); idx++) {
+    auto& p    = points[idx];
+    auto  bbox = point_bounds(positions[p], radius[p]);
+    prims[idx] = {bbox, center(bbox), idx};
+  }
+
+  // build nodes
+  if (!parallel) {
+    build_bvh_serial(bvh, prims, high_quality);
+  } else {
+    build_bvh_parallel(bvh, prims, high_quality);
+  }
+}
+void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool high_quality, bool parallel) {
+  // build primitives
+  auto prims = vector<bvh_prim>(lines.size());
+  for (auto idx = 0; idx < prims.size(); idx++) {
+    auto& l    = lines[idx];
+    auto  bbox = line_bounds(
+        positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
+    prims[idx] = {bbox, center(bbox), idx};
+  }
+
+  // build nodes
+  if (!parallel) {
+    build_bvh_serial(bvh, prims, high_quality);
+  } else {
+    build_bvh_parallel(bvh, prims, high_quality);
+  }
+}
+void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool high_quality, bool parallel) {
+  // build primitives
+  auto prims = vector<bvh_prim>(triangles.size());
+  for (auto idx = 0; idx < prims.size(); idx++) {
+    auto& t   = triangles[idx];
+    auto bbox = triangle_bounds(positions[t.x], positions[t.y], positions[t.z]);
+    prims[idx] = {bbox, center(bbox), idx};
+  }
+
+  // build nodes
+  if (!parallel) {
+    build_bvh_serial(bvh, prims, high_quality);
+  } else {
+    build_bvh_parallel(bvh, prims, high_quality);
+  }
+}
+void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    bool high_quality, bool parallel) {
+  // build primitives
+  auto prims = vector<bvh_prim>(quads.size());
+  for (auto idx = 0; idx < prims.size(); idx++) {
+    auto& q    = quads[idx];
+    auto  bbox = quad_bounds(
+        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+    prims[idx] = {bbox, center(bbox), idx};
+  }
+
+  // build nodes
+  if (!parallel) {
+    build_bvh_serial(bvh, prims, high_quality);
+  } else {
+    build_bvh_parallel(bvh, prims, high_quality);
+  }
+}
+// Make instance bvh
+void make_instances_bvh(bvh_tree& bvh, int num_instances,
+    const function<frame3f(int instance)>&         instance_frame,
+    const function<const bvh_tree&(int instance)>& shape_bvh, bool high_quality,
+    bool parallel) {
+  // build primitives
+  auto prims = vector<bvh_prim>(num_instances);
+  for (auto idx = 0; idx < prims.size(); idx++) {
+    auto  frame = instance_frame(idx);
+    auto& sbvh  = shape_bvh(idx);
+    auto  bbox  = sbvh.nodes.empty() ? invalidb3f
+                                   : transform_bbox(frame, sbvh.nodes[0].bbox);
+    prims[idx] = {bbox, center(bbox), idx};
+  }
+
+  // build nodes
+  if (!parallel) {
+    build_bvh_serial(bvh, prims, high_quality);
+  } else {
+    build_bvh_parallel(bvh, prims, high_quality);
+  }
+}
+
 void build_bvh(bvh_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
   // call Embree if needed
@@ -1063,54 +1157,22 @@ void build_bvh(bvh_shape& shape, const bvh_params& params) {
 #endif
 
   // build primitives
-  auto prims = vector<bvh_prim>{};
   if (!shape.points.empty()) {
-    prims = vector<bvh_prim>(shape.points.size());
-    for (auto idx = 0; idx < prims.size(); idx++) {
-      auto& p    = shape.points[idx];
-      auto  bbox = point_bounds(shape.positions[p], shape.radius[p]);
-      prims[idx] = {bbox, center(bbox), idx};
-    }
+    return make_points_bvh(shape.bvh, shape.points, shape.positions,
+        shape.radius, params.high_quality, !params.noparallel);
   } else if (!shape.lines.empty()) {
-    prims = vector<bvh_prim>(shape.lines.size());
-    for (auto idx = 0; idx < prims.size(); idx++) {
-      auto& l    = shape.lines[idx];
-      auto  bbox = line_bounds(shape.positions[l.x], shape.positions[l.y],
-          shape.radius[l.x], shape.radius[l.y]);
-      prims[idx] = {bbox, center(bbox), idx};
-    }
+    return make_lines_bvh(shape.bvh, shape.lines, shape.positions, shape.radius,
+        params.high_quality, !params.noparallel);
   } else if (!shape.triangles.empty()) {
-    prims = vector<bvh_prim>(shape.triangles.size());
-    for (auto idx = 0; idx < prims.size(); idx++) {
-      auto& t    = shape.triangles[idx];
-      auto  bbox = triangle_bounds(
-          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-      prims[idx] = {bbox, center(bbox), idx};
-    }
+    return make_triangles_bvh(shape.bvh, shape.triangles, shape.positions,
+        shape.radius, params.high_quality, !params.noparallel);
   } else if (!shape.quads.empty()) {
-    prims = vector<bvh_prim>(shape.quads.size());
-    for (auto idx = 0; idx < prims.size(); idx++) {
-      auto& q    = shape.quads[idx];
-      auto  bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
-          shape.positions[q.z], shape.positions[q.w]);
-      prims[idx] = {bbox, center(bbox), idx};
-    }
+    return make_quads_bvh(shape.bvh, shape.quads, shape.positions, shape.radius,
+        params.high_quality, !params.noparallel);
   } else if (!shape.quadspos.empty()) {
-    prims = vector<bvh_prim>(shape.quadspos.size());
-    for (auto idx = 0; idx < prims.size(); idx++) {
-      auto& q    = shape.quadspos[idx];
-      auto  bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
-          shape.positions[q.z], shape.positions[q.w]);
-      prims[idx] = {bbox, center(bbox), idx};
-    }
+    return make_quads_bvh(shape.bvh, shape.quadspos, shape.positions,
+        shape.radius, params.high_quality, !params.noparallel);
   } else {
-  }
-
-  // build nodes
-  if (params.noparallel) {
-    build_bvh_serial(shape.bvh, prims, params);
-  } else {
-    build_bvh_parallel(shape.bvh, prims, params);
   }
 }
 void build_bvh(bvh_scene& scene, const bvh_params& params) {
@@ -1130,22 +1192,15 @@ void build_bvh(bvh_scene& scene, const bvh_params& params) {
 #endif
 
   // build primitives
-  auto prims = vector<bvh_prim>(scene.instances.size());
-  for (auto idx = 0; idx < prims.size(); idx++) {
-    auto& instance = scene.instances[idx];
-    auto& sbvh     = scene.shapes[instance.shape];
-    auto  bbox     = sbvh.bvh.nodes.empty()
-                    ? invalidb3f
-                    : transform_bbox(instance.frame, sbvh.bvh.nodes[0].bbox);
-    prims[idx] = {bbox, center(bbox), idx};
-  }
-
-  // build nodes
-  if (params.noparallel) {
-    build_bvh_serial(scene.bvh, prims, params);
-  } else {
-    build_bvh_parallel(scene.bvh, prims, params);
-  }
+  return make_instances_bvh(
+      scene.bvh, (int)scene.instances.size(),
+      [&scene](
+          int instance) -> frame3f { return scene.instances[instance].frame; },
+      [&scene](int instance) -> bvh_tree& {
+        auto shape = scene.instances[instance].shape;
+        return scene.shapes[shape].bvh;
+      },
+      params.high_quality, !params.noparallel);
 }
 
 void refit_bvh(bvh_shape& shape, const bvh_params& params) {
@@ -1221,9 +1276,9 @@ void refit_bvh(bvh_scene& scene, const vector<int>& updated_instances,
       for (auto idx = 0; idx < node.num; idx++) {
         auto& instance = scene.instances[node.prims[idx]];
         auto& sbvh     = scene.shapes[instance.shape];
-        auto  bbox     = sbvh.bvh.nodes.empty()
-                        ? invalidb3f
-                        : transform_bbox(instance.frame, sbvh.bvh.nodes[0].bbox);
+        auto  bbox     = sbvh.bvh.nodes.empty() ? invalidb3f
+                                           : transform_bbox(instance.frame,
+                                                 sbvh.bvh.nodes[0].bbox);
         node.bbox = merge(node.bbox, bbox);
       }
     }

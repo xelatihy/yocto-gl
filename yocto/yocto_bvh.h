@@ -89,12 +89,16 @@
 
 #include "yocto_math.h"
 
+#include <functional>
 #include <atomic>
 
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// using directive
+using std::function;
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
@@ -246,6 +250,21 @@ struct bvh_params {
   bool               noparallel = false;
   std::atomic<bool>* cancel     = nullptr;
 };
+
+// Build shape bvh
+void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius);
+void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius);
+void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<float>& radius);
+void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<float>& radius);
+// Make instance bvh
+void make_instances_bvh(bvh_tree& bvh, int num_instances,
+  const function<frame3f(int instance)>& instance_frame,
+  const function<const bvh_tree&(int instance)>& shape_bvh);
+
 
 // Initialize bvh data
 void make_points_bvh(bvh_shape& bvh, bvh_span<int> points,
