@@ -279,7 +279,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
       log_glinfo(win, "cannot load " + shape.filename);
       log_glinfo(win, e.what());
     }
-    refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
+    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
     // TODO: update lights
   }
   return edited;
@@ -324,12 +324,12 @@ inline bool draw_glwidgets_subdiv(
       log_glinfo(win, e.what());
     }
     tesselate_subdiv(app.scene, shape);
-    refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
+    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
     // TODO: update lights
   }
   if (edited && old_filename == shape.filename) {
     tesselate_subdiv(app.scene, shape);
-    refit_bvh(app.bvh, app.scene, {}, {shape.shape}, app.bvh_prms);
+    update_bvh(app.bvh, app.scene, {}, {shape.shape}, app.bvh_prms);
     // TODO: update lights
   }
   return edited;
@@ -349,9 +349,9 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
   edited += draw_glcombobox(
       win, "material", instance.material, app.scene.materials, true);
   if (edited && instance.shape != old_instance.shape)
-    refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
+    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
   if (edited && instance.frame != old_instance.frame)
-    refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
+    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
   // TODO: update lights
   return edited;
 }
@@ -680,7 +680,7 @@ void run_ui(app_states& apps) {
         auto& camera = app.scene.cameras.at(app.trace_prms.camera);
         auto  ray    = eval_camera(
             camera, ij, app.render.size(), {0.5f, 0.5f}, zero2f);
-        if (auto isec = intersect_bvh(app.bvh, ray); isec.hit) {
+        if (auto isec = intersect_scene_bvh(app.bvh, ray); isec.hit) {
           app.selection = {"instance", isec.instance};
         }
       }
