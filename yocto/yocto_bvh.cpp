@@ -1072,7 +1072,7 @@ void update_instances_bvh(bvh_tree& bvh, int num_instances,
 
 void update_shape_bvh(bvh_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
-  if (params.use_embree) {
+  if (params.embree) {
     if (!shape.points.empty()) {
       throw std::runtime_error("embree does not support points");
     } else if (!shape.lines.empty()) {
@@ -1118,7 +1118,7 @@ void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
     update_shape_bvh(scene.shapes[shape], params);
 
 #if YOCTO_EMBREE
-  if (params.use_embree) {
+  if (params.embree) {
     update_instances_embree_bvh(
         scene.embree, scene.instances.size(),
         [&scene](int instance) -> frame3f {
@@ -1517,21 +1517,21 @@ namespace yocto {
 void make_shape_bvh(bvh_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
   // call Embree if needed
-  if (params.use_embree) {
+  if (params.embree) {
     if (!shape.points.empty()) {
       throw std::runtime_error("embree does not support points");
     } else if (!shape.lines.empty()) {
       return make_lines_embree_bvh(shape.embree, shape.lines, shape.positions,
-          shape.radius, params.high_quality, params.embree_compact);
+          shape.radius, params.high_quality, params.compact);
     } else if (!shape.triangles.empty()) {
       return make_triangles_embree_bvh(shape.embree, shape.triangles,
-          shape.positions, params.high_quality, params.embree_compact);
+          shape.positions, params.high_quality, params.compact);
     } else if (!shape.quads.empty()) {
       return make_quads_embree_bvh(shape.embree, shape.quads, shape.positions,
-          params.high_quality, params.embree_compact);
+          params.high_quality, params.compact);
     } else if (!shape.quadspos.empty()) {
       return make_quads_embree_bvh(shape.embree, shape.quadspos,
-          shape.positions, params.high_quality, params.embree_compact);
+          shape.positions, params.high_quality, params.compact);
     } else {
       throw std::runtime_error("empty shape");
     }
@@ -1565,7 +1565,7 @@ void make_scene_bvh(bvh_scene& scene, const bvh_params& params) {
 
   // embree
 #if YOCTO_EMBREE
-  if (params.use_embree) {
+  if (params.embree) {
     return make_instances_embree_bvh(
         scene.embree, (int)scene.instances.size(),
         [&scene](int instance) -> frame3f {
@@ -2119,21 +2119,21 @@ void make_shape_bvh(
 
 #if YOCTO_EMBREE
   // call Embree if needed
-  if (params.use_embree) {
+  if (params.embree) {
     if (!points.empty()) {
       throw std::runtime_error("embree does not support points");
     } else if (!lines.empty()) {
       return make_lines_embree_bvh(bvh.embree_shapes[shape], lines, positions,
-          radius, params.high_quality, params.embree_compact);
+          radius, params.high_quality, params.compact);
     } else if (!triangles.empty()) {
       return make_triangles_embree_bvh(bvh.embree_shapes[shape], triangles,
-          positions, params.high_quality, params.embree_compact);
+          positions, params.high_quality, params.compact);
     } else if (!quads.empty()) {
       return make_quads_embree_bvh(bvh.embree_shapes[shape], quads, positions,
-          params.high_quality, params.embree_compact);
+          params.high_quality, params.compact);
     } else if (!quadspos.empty()) {
       return make_quads_embree_bvh(bvh.embree_shapes[shape], quadspos,
-          positions, params.high_quality, params.embree_compact);
+          positions, params.high_quality, params.compact);
     } else {
       throw std::runtime_error("empty shape");
     }
@@ -2165,7 +2165,7 @@ void make_shape_bvh(
 void make_scene_bvh(bvh_shared_scene& bvh, const bvh_params& params) {
   bvh.bvh_shapes.resize(bvh.num_shapes);
 #if YOCTO_EMBREE
-  if (params.use_embree) {
+  if (params.embree) {
     bvh.embree_shapes.resize(bvh.num_shapes);
   }
 #endif
@@ -2176,7 +2176,7 @@ void make_scene_bvh(bvh_shared_scene& bvh, const bvh_params& params) {
 
   // embree
 #if YOCTO_EMBREE
-  if (params.use_embree) {
+  if (params.embree) {
     return make_instances_embree_bvh(
         bvh.embree_scene, bvh.num_instances, bvh.instance_frame,
         [&bvh](int instance) -> bvh_embree& {
@@ -2208,7 +2208,7 @@ void update_shape_bvh(
   auto& radius    = bvh.shape_radius(shape);
 
 #if YOCTO_EMBREE
-  if (params.use_embree) {
+  if (params.embree) {
     if (!points.empty()) {
       throw std::runtime_error("embree does not support points");
     } else if (!lines.empty()) {
@@ -2253,7 +2253,7 @@ void update_scene_bvh(bvh_shared_scene& bvh,
   for (auto shape : updated_shapes) update_shape_bvh(bvh, shape, params);
 
 #if YOCTO_EMBREE
-  if (params.use_embree) {
+  if (params.embree) {
     update_instances_embree_bvh(
         bvh.embree_scene, bvh.num_instances, bvh.instance_frame,
         [&bvh](int instance) -> bvh_embree& {
