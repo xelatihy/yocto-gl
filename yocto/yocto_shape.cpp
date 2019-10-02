@@ -3065,7 +3065,7 @@ namespace yocto {
 void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, bool no_vertex_duplication, 
+    vector<vec4f>& colors, vector<float>& radius, 
     bool flip_texcoord) {
   points    = {};
   lines     = {};
@@ -3118,16 +3118,16 @@ void load_shape(const string& filename, vector<int>& points,
       auto has_quads  = has_obj_quads(shape);
       if (!shape.faces.empty() && !has_quads) {
         get_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
-            materials, ematerials, no_vertex_duplication, flip_texcoord);
+            materials, ematerials, flip_texcoord);
       } else if (!shape.faces.empty() && has_quads) {
         get_obj_quads(obj, shape, quads, positions, normals, texcoords,
-            materials, ematerials, no_vertex_duplication, flip_texcoord);
+            materials, ematerials, flip_texcoord);
       } else if (!shape.lines.empty()) {
         get_obj_lines(obj, shape, lines, positions, normals, texcoords,
-            materials, ematerials, no_vertex_duplication, flip_texcoord);
+            materials, ematerials, flip_texcoord);
       } else if (!shape.points.empty()) {
         get_obj_points(obj, shape, points, positions, normals, texcoords,
-            materials, ematerials, no_vertex_duplication, flip_texcoord);
+            materials, ematerials, flip_texcoord);
       } else {
         throw std::runtime_error("should not have gotten here");
       }
