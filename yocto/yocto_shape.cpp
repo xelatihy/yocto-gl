@@ -2088,31 +2088,17 @@ static vec3f gradient_face(const vector<vec3i>& triangles,
   return normalize(result);
 }
 
-const float eps = 0.0001f;
-
-float step_from_point_to_edge(
-    const vec3f& right, const vec3f& left, const vec3f& direction) {
-  vec3f normal = cross(right, left);
-  mat3f inverse_transform;
-  inverse_transform.x = right - left;
-  inverse_transform.y = left;
-  inverse_transform.z = normal;
-  auto transform      = inverse(inverse_transform);
-  auto dir            = transform * direction;
-  return clamp(1 - dir.x / dir.y, 0.0f + eps, 1.0f - eps);
+static float step_from_point_to_edge(const vec3f& right, const vec3f& left,
+    const vec3f& direction, float epsilon = 0.0001f) {
+  auto normal            = cross(right, left);
+  auto inverse_transform = mat3f{right - left, left, normal};
+  auto transform         = inverse(inverse_transform);
+  auto dir               = transform * direction;
+  return clamp(1 - dir.x / dir.y, 0.0f + epsilon, 1.0f - epsilon);
 }
-
-static bool is_direction_inbetween(const vec3f& right, const vec3f& left,
-    const vec3f& direction, float threshold = 0) {
-  vec3f normal      = cross(right, left);
-  auto  cross_right = cross(right, direction);
-  auto  cross_left  = cross(direction, left);
-  return dot(cross_right, normal) > threshold and
-         dot(cross_left, normal) > threshold;
-}
-
 static pair<float, bool> step_from_edge_to_edge(const vec3f& point,
-    const vec3f& a, const vec3f& b, const vec3f& c, const vec3f& direction) {
+    const vec3f& a, const vec3f& b, const vec3f& c, const vec3f& direction,
+    float epsilon = 0.0001f) {
   //      b
   //     /\
   //    /  \
@@ -2120,21 +2106,21 @@ static pair<float, bool> step_from_edge_to_edge(const vec3f& point,
   //  /______\
   // c        a
 
-  vec3f right  = a - point;
-  vec3f left   = c - point;
-  vec3f front  = b - point;
-  vec3f normal = triangle_normal(a, b, c);
+  auto right  = a - point;
+  auto left   = c - point;
+  auto front  = b - point;
+  auto normal = triangle_normal(a, b, c);
 
-  bool right_side = dot(cross(direction, front), normal) > 0;
+  auto right_side = dot(cross(direction, front), normal) > 0;
   if (right_side) {
-    bool below_edge = dot(cross(direction, right), normal) > 0;
-    if (below_edge) return {eps, true};
+    auto below_edge = dot(cross(direction, right), normal) > 0;
+    if (below_edge) return {epsilon, true};
 
     auto x = step_from_point_to_edge(right, front, direction);
     return {x, true};
   } else {
-    bool below_edge = dot(cross(left, direction), normal) > 0;
-    if (below_edge) return {1.0f - eps, false};
+    auto below_edge = dot(cross(left, direction), normal) > 0;
+    if (below_edge) return {1.0f - epsilon, false};
 
     auto x = step_from_point_to_edge(front, left, direction);
     return {x, false};
@@ -2144,12 +2130,21 @@ static pair<float, bool> step_from_edge_to_edge(const vec3f& point,
 static path_vertex step_from_point(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, const vector<float>& field, int vertex,
-    int start_face, int tag = -1) {
+    int start_face, int tag = -1, float epsilon = 0.0001f) {
   auto opposite_edge = [](int vertex, const vec3i& tr) -> vec2i {
     for (int i = 0; i < 3; ++i) {
       if (tr[i] == vertex) return {tr[(i + 1) % 3], tr[(i + 2) % 3]};
     }
     return {-1, -1};
+  };
+  auto is_direction_inbetween = [](const vec3f& right, const vec3f& left,
+                                    const vec3f& direction,
+                                    float        threshold = 0) -> bool {
+    auto normal      = cross(right, left);
+    auto cross_right = cross(right, direction);
+    auto cross_left  = cross(direction, left);
+    return dot(cross_right, normal) > threshold and
+           dot(cross_left, normal) > threshold;
   };
 
   auto triangle_fan = get_face_ring(triangles, adjacency, start_face, vertex);
@@ -2157,16 +2152,11 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
   auto best_alignment = 0.0;
   auto fallback_lerp  = path_vertex{vec2i{-1, -1}, -1, 0};
 
-  for (int i = 0; i < triangle_fan.size(); ++i) {
-    int face = triangle_fan[i];
+  for (auto i = 0; i < triangle_fan.size(); ++i) {
+    auto face = triangle_fan[i];
     if (tag != -1 and tags[face] != tag) continue;
-
     auto edge = opposite_edge(vertex, triangles[face]);
-    //        assert(edge != (vec2i{-1, -1}));
-    if (edge == vec2i{-1, -1}) {
-      printf("edge is {-1, -1}\n");
-      continue;
-    }
+    if (edge == vec2i{-1, -1}) throw std::runtime_error("edge is {-1, -1}\n");
 
     auto a         = positions[vertex];
     auto b         = positions[edge.x];
@@ -2183,18 +2173,17 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
     // most aligned edge as result (fallback_lerp)
     if (max(right_dot, left_dot) > best_alignment) {
       best_alignment = max(right_dot, left_dot);
-      float alpha    = right_dot > left_dot ? 0.0f + eps : 1.0f - eps;
+      auto alpha     = right_dot > left_dot ? 0.0f + epsilon : 1.0f - epsilon;
       fallback_lerp  = path_vertex{edge, face, alpha};
     }
 
     // Check if gradient direction is in between ac and ab.
     if (is_direction_inbetween(right, left, direction)) {
-      float alpha = step_from_point_to_edge(right, left, direction);
+      auto alpha = step_from_point_to_edge(right, left, direction);
       return path_vertex{edge, face, alpha};
     }
   }
 
-  // assert(fallback_lerp.face != -1);
   return fallback_lerp;
 }
 
@@ -2214,50 +2203,48 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     return -1;
   };
 
-  // TRACE_FUNCTION
+  // trace function
   auto lerps = vector<path_vertex>();
-  {
-    auto lerp = step_from_point(
-        triangles, positions, adjacency, tags, field, from, -1, tag);
-    if (lerp.face == -1) return {};
-    lerps.push_back(lerp);
-  }
+  auto lerp  = step_from_point(
+      triangles, positions, adjacency, tags, field, from, -1, tag);
+  if (lerp.face == -1) return {};
+  lerps.push_back(lerp);
 
   const int num_steps = 10000;
 
-  for (int i = 0; i < num_steps; i++) {
+  for (auto i = 0; i < num_steps; i++) {
     auto [old_edge, old_face, old_alpha] = lerps.back();
-    assert(old_face != -1);
-    vec3f point = (1.0f - old_alpha) * positions[old_edge.x] +
-                  old_alpha * positions[old_edge.y];
+    if (old_face == -1) throw std::runtime_error("programmer error");
+    auto point = (1.0f - old_alpha) * positions[old_edge.x] +
+                 old_alpha * positions[old_edge.y];
 
-    int face = adjacent_face(triangles, adjacency, old_face, old_edge);
+    auto face = adjacent_face(triangles, adjacency, old_face, old_edge);
     if (face == -1) {
       lerps.push_back({vec2i{-1, -1}, face, 0});
       return surface_path{from, -1, lerps};
     }
 
     if (tags[face] != tag) {
-      int k  = find_index(triangles[face], old_edge.x);
-      int to = triangles[face][(k + 1) % 3];
+      auto k  = find_index(triangles[face], old_edge.x);
+      auto to = triangles[face][(k + 1) % 3];
       // int   to   = opposite_vertex(old_edge, triangles[face]);
 
       // @Hack!: We store the tag of the reached region in edge.x
-      vec2i edge = {to, tags[face]};
+      auto edge = vec2i{to, tags[face]};
       lerps.push_back({edge, face, 0});
       return surface_path{from, to, lerps};
     }
 
-    vec3f direction = gradient_face(triangles, positions, field, face);
+    auto direction = gradient_face(triangles, positions, field, face);
 
-    int front_idx = opposite_vertex(triangles[face], old_edge);
+    auto front_idx = opposite_vertex(triangles[face], old_edge);
     if (front_idx == -1) {
-      printf("front_idx is -1!\n");
+      throw std::runtime_error("programmer error");
       return {};
     }
 
-    assert(old_alpha > 0);
-    assert(old_alpha < 1);
+    if (old_alpha < 0 || old_alpha > 1)
+      throw std::runtime_error("programmer error");
 
     auto& a = positions[old_edge.x];
     auto& b = positions[front_idx];
@@ -2265,7 +2252,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
 
     auto [x, step_right] = step_from_edge_to_edge(point, a, b, c, direction);
 
-    vec2i edge = old_edge;
+    auto edge = old_edge;
     if (step_right) {
       point  = (1 - x) * a + x * b;
       edge.y = front_idx;
@@ -2276,7 +2263,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     lerps.push_back({edge, face, x});
   }
 
-  assert(0 && "path ended in nowhere");
+  throw std::runtime_error("integral path ended nowhere");
   return surface_path{from, 0, lerps};
 }
 
@@ -2299,9 +2286,6 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
 
   lerps.push_back(
       step_from_point(triangles, positions, adjacency, tags, field, from, -1));
-  //  assert(
-  //      opposite_vertex(lerps.back().edge, triangles[lerps.back().face]) ==
-  //      from);
 
   const int num_steps = 10000;
 
@@ -2311,14 +2295,10 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     vec3f point = (1.0f - old_alpha) * positions[old_edge.x] +
                   old_alpha * positions[old_edge.y];
 
-    int face = adjacent_face(triangles, adjacency, old_face, old_edge);
-    if (face == -1) {
-      //          assert(face != -1);
-      break;
-    }
+    auto face = adjacent_face(triangles, adjacency, old_face, old_edge);
+    if (face == -1) break;
 
     if (contains(triangles[face], to)) {
-      // for (auto[edge, k] : edges(triangles[face])) {
       for (int k = 0; k < 3; ++k) {
         auto edge = vec2i{triangles[face][k], triangles[face][(k + 1) % 3]};
         if (edge.x == to) {
@@ -2327,7 +2307,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
         }
       }
     }
-    vec3f direction = gradient_face(triangles, positions, field, face);
+    auto direction = gradient_face(triangles, positions, field, face);
 
     int front_idx = opposite_vertex(triangles[face], old_edge);
     if (front_idx == -1) {
@@ -2335,9 +2315,9 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
       break;
     }
 
-    assert(old_alpha >= 0);
-    assert(old_alpha <= 1);
-    if (old_alpha == 0 or old_alpha == 1) {
+    if (old_alpha < 0 || old_alpha > 1)
+      throw std::runtime_error("programmer error");
+    if (old_alpha == 0 || old_alpha == 1) {
       int  vertex = old_alpha == 0 ? old_edge.x : old_edge.y;
       auto lerp   = step_from_point(
           triangles, positions, adjacency, tags, field, vertex, old_face);
@@ -2353,7 +2333,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
 
     auto [x, step_right] = step_from_edge_to_edge(point, a, b, c, direction);
 
-    vec2i edge = old_edge;
+    auto edge = old_edge;
     if (step_right) {
       point  = (1 - x) * a + x * b;
       edge.y = front_idx;
@@ -2362,8 +2342,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
       edge.x = front_idx;
     }
     if (opposite_vertex(triangles[face], edge) == -1) {
-      assert(0 && "opposite vertex == -1");
-      break;
+      throw std::runtime_error("opposite vertex == -1");
     }
 
     lerps.push_back({edge, face, x});
@@ -2372,17 +2351,6 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
   }
 
   return {from, to, lerps};
-}
-
-static int add_triangle(discrete_surface& state, const vec3i& triangle = {},
-    int tag = -1, const vec3i& neighbors = {-1, -1, -1}) {
-  assert(state.triangles.size() == state.tags.size());
-  assert(state.triangles.size() == state.adjacencies.size());
-  int index = state.triangles.size();
-  state.triangles.push_back(triangle);
-  state.tags.push_back(tag);
-  state.adjacencies.push_back(neighbors);
-  return index;
 }
 
 vector<vec3f> points_from_lerps(
@@ -2401,20 +2369,8 @@ vector<vec3f> points_from_lerps(
   }
   if (path.end != -1) {
     result.push_back(positions[path.end]);
-    //+ 0.0001 * state.normals[path.end]);
   }
   return result;
-}
-
-static int add_node(
-    geodesic_solver& solver, const vec3f& position, const vec3f& normal) {
-  // assert(solver.positions.size() == solver.graph.size());
-  // assert(solver.normals.size() == solver.graph.size());
-  // solver.positions.push_back(position);
-  // solver.normals.push_back(normal);
-  solver.graph.emplace_back();
-  solver.graph.back().reserve(solver.min_arcs);
-  return (int)solver.graph.size() - 1;
 }
 
 static void delete_arc(geodesic_solver& solver, int a, int b) {
@@ -2434,23 +2390,6 @@ static void delete_arc(geodesic_solver& solver, int a, int b) {
     }
     // assert(k != solver.graph[b].size() - 1);
   }
-}
-
-static int add_vertex(
-    discrete_surface& state, const vec3f& position, const vec3f& normal) {
-  assert(state.positions.size() == state.normals.size());
-  int index = state.positions.size();
-  state.positions.push_back(position);
-  state.normals.push_back(normal);
-  add_node(state.solver, position, normal);
-  return index;
-}
-
-static int add_vertex(discrete_surface& state, int a, int b, float coeff) {
-  auto position = coeff * state.positions[a] + (1 - coeff) * state.positions[b];
-  auto normal   = normalize(
-      coeff * state.normals[a] + (1 - coeff) * state.normals[b]);
-  return add_vertex(state, position, normal);
 }
 
 static void connect_opposite_nodes(
@@ -2480,8 +2419,8 @@ static void disconnect_opposite_nodes(geodesic_solver& solver, const vec3i& f0,
       c
   */
 
-  int a = opposite_vertex(f0, edge);
-  int c = opposite_vertex(f1, edge);
+  auto a = opposite_vertex(f0, edge);
+  auto c = opposite_vertex(f1, edge);
   if (a == -1 or c == -1) return;
   delete_arc(solver, a, c);
 }
@@ -2654,6 +2593,27 @@ bool slice_path(discrete_surface& state, int tag, const surface_path& path,
     if (v.z == x) return 2;
     return -1;
   };
+  auto add_triangle = [](vector<vec3i>& triangles, vector<vec3i>& adjacencies,
+                          vector<int>& tags) -> int {
+    auto index = (int)triangles.size();
+    triangles.push_back(vec3i{});
+    tags.push_back(-1);
+    adjacencies.push_back(vec3i{-1});
+    return index;
+  };
+  auto add_vertex = [](discrete_surface& state, int a, int b,
+                        float coeff) -> int {
+    auto position = coeff * state.positions[a] +
+                    (1 - coeff) * state.positions[b];
+    auto normal = normalize(
+        coeff * state.normals[a] + (1 - coeff) * state.normals[b]);
+    int index = state.positions.size();
+    state.positions.push_back(position);
+    state.normals.push_back(normal);
+    state.solver.graph.emplace_back();
+    state.solver.graph.back().reserve(state.solver.min_arcs);
+    return index;
+  };
 
   auto& lerps = path.lerps;
   auto  start = path.start;
@@ -2662,37 +2622,31 @@ bool slice_path(discrete_surface& state, int tag, const surface_path& path,
 
   {
     auto [edge, face, alpha] = lerps[0];
-    int x                    = start;
-    int y                    = edge.x;
-    int z                    = edge.y;
-    //    assert(opposite_vertex(edge, state.triangles[face]) == start);
+    auto x                   = start;
+    auto y                   = edge.x;
+    auto z                   = edge.y;
 
     disconnect_triangle(state, face);
 
     auto v   = add_vertex(state, edge.x, edge.y, 1 - alpha);
-    int  efd = adjacent_face(state, face, {x, y});
-    int  efu = adjacent_face(state, face, {x, z});
-    int  eru = -1;
-    int  erd = -1;
+    auto efd = adjacent_face(state, face, {x, y});
+    auto efu = adjacent_face(state, face, {x, z});
+    auto eru = -1;
+    auto erd = -1;
 
-    int fd = add_triangle(state);
+    auto fd = add_triangle(state.triangles, state.adjacencies, state.tags);
     split_triangle(state, {x, y, z}, face, fd, v, efd, erd, eru, efu);
-    // state.tags[fd]   = tag_right;
-    // state.tags[face] = tag_left;
     right_faces.push_back(fd);
     left_faces.push_back(face);
   }
 
-  int last_face_left  = lerps[0].face;
-  int last_face_right = state.triangles.size() - 1;
+  auto last_face_left  = lerps[0].face;
+  auto last_face_right = state.triangles.size() - 1;
 
   for (int i = 1; i < lerps.size() - 1; ++i) {
     auto [edge, face, alpha] = lerps[i];
-    bool step_right          = lerps[i - 1].edge.x == edge.x;
+    auto step_right          = lerps[i - 1].edge.x == edge.x;
 
-    // int old_face_left  = lerps[i - 1].face;
-    // int old_face_right = state.triangles.size() - 1;
-    //        if (step_right) std::swap(old_face_left, old_face_right);
     auto triangle = state.triangles[face];
 
     if (!step_right) {
@@ -2714,8 +2668,8 @@ bool slice_path(discrete_surface& state, int tag, const surface_path& path,
       //            assert(cd != -1);
 
       state.triangles[face] = {x, y, z};
-      int fl                = add_triangle(state);
-      int fr                = add_triangle(state);
+      int fl = add_triangle(state.triangles, state.adjacencies, state.tags);
+      int fr = add_triangle(state.triangles, state.adjacencies, state.tags);
 
       split_triangle(
           state, {x, y, z}, face, fl, fr, vr, vl, erd, eru, elu, eld, cd);
@@ -2744,22 +2698,13 @@ bool slice_path(discrete_surface& state, int tag, const surface_path& path,
       int erd = last_face_left;
       int eru = last_face_right;
       int cd  = state.adjacencies[face][find_index(triangle, x)];
-      //            assert(cd != -1);
 
       state.triangles[face] = {x, y, z};
-      int fr                = add_triangle(state);
-      int fl                = add_triangle(state);
+      int fr = add_triangle(state.triangles, state.adjacencies, state.tags);
+      int fl = add_triangle(state.triangles, state.adjacencies, state.tags);
 
-      // split_triangle_(editing_state& state, const vec3i& triangle, int
-      // fu,
-      //                            int fl, int fr, int vr, int vl, int
-      //                            erd, int eru, int elu, int eld, int
-      //                            cd) {
       split_triangle_(
           state, {x, y, z}, face, fl, fr, vr, vl, erd, eru, elu, eld, cd);
-      // state.tags[face] = tag_right;
-      // state.tags[fl]   = tag_left;
-      // state.tags[fr]   = tag_left;
       right_faces.push_back(face);
       left_faces.push_back(fl);
       left_faces.push_back(fr);
@@ -2787,31 +2732,24 @@ bool slice_path(discrete_surface& state, int tag, const surface_path& path,
     int x = end;
     int y = tr[(find_index(tr, x) + 1) % 3];  // prev_lerp.edge.y;
     int z = tr[(find_index(tr, x) + 2) % 3];  // prev_lerp.edge.x;
-    // assert(opposite_vertex(edge, state.triangles[face]) == start);
     disconnect_triangle(state, face);
 
     {
-      auto v   = state.positions.size() - 1;
-      auto adj = state.adjacencies[face];
-      // int efd = adjacent_face(state, face, {x, y});
-      // int efu = adjacent_face(state, face, {x, z});
-      int efd               = adj[find_index(tr, x)];
-      int efu               = adj[find_index(tr, z)];
-      int eru               = last_face_right;
-      int erd               = last_face_left;
+      auto v                = state.positions.size() - 1;
+      auto adj              = state.adjacencies[face];
+      int  efd              = adj[find_index(tr, x)];
+      int  efu              = adj[find_index(tr, z)];
+      int  eru              = last_face_right;
+      int  erd              = last_face_left;
       state.triangles[face] = {x, y, z};
 
       connect_adjacent_nodes(state, v, y);
-      //          length(state.positions[v] - state.positions[y]));
       connect_adjacent_nodes(state, v, z);
-      //          length(state.positions[v] - state.positions[z]));
 
-      int fd = add_triangle(state);
+      int fd = add_triangle(state.triangles, state.adjacencies, state.tags);
 
       split_triangle(state, {x, y, z}, face, fd, v, efd, erd, eru, efu);
       if (state.tags[face] == tag) {
-        // state.tags[fd]   = tag_left;
-        // state.tags[face] = tag_right;
         left_faces.push_back(fd);
         right_faces.push_back(face);
 
@@ -2822,32 +2760,14 @@ bool slice_path(discrete_surface& state, int tag, const surface_path& path,
     }
   }
 
-  // for (int i = 0; i < state.triangles.size(); ++i) {
-  //     if (state.tags[i] == tag_right) right_faces.push_back(i);
-  //     if (state.tags[i] == tag_left) left_faces.push_back(i);
-  // }
-
-  // for (auto& f : left_faces) state.tags[f] = tag_left;
-  // for (auto& f : right_faces) state.tags[f] = tag_right;
-
   update_adjacency(state, right_faces);
   update_adjacency(state, left_faces);
 
-  // assert(state_is_sane(state));
   return true;
 }
 
 static bool flood_tagging(discrete_surface& state, int tag, int new_tag,
     vector<int> queue, vector<bool>& visited) {
-  // auto queue = vector<int>();
-  // // auto queue = starting;
-
-  // // Add first neighborhood to queue
-  // for (auto face : starting) {
-  //     state.tags[face] = new_tag;
-  //     // visited[face]    = true;
-  //     queue.push_back(face);
-  // }
   bool flag = false;
 
   while (not queue.empty()) {
@@ -2870,7 +2790,7 @@ static bool flood_tagging(discrete_surface& state, int tag, int new_tag,
 }
 vector<int> slice_paths(discrete_surface& state, const vector<int>& regions,
     int t0, int t1, const vector<surface_path>& paths) {
-  auto new_regions      = vector<int>(regions.size() * 2);
+  auto new_regions = vector<int>(regions.size() * 2);
   for (int i = 0; i < regions.size(); ++i) {
     new_regions[2 * i]     = t0;
     new_regions[2 * i + 1] = t1;
