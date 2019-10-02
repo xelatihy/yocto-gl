@@ -317,7 +317,7 @@ struct obj_texture_info {
   float  scale = 1;      // scale for bump/displacement
 
   // Properties not explicitly handled.
-  unordered_map<string, vector<float>> props;
+  hash_map<string, vector<float>> props;
 
   obj_texture_info() {}
   obj_texture_info(const char* path) : path{path} {}
@@ -529,7 +529,7 @@ void write_objx_command(file_wrapper& fs, objx_command command,
 // -----------------------------------------------------------------------------
 namespace std {
 
-// Hash functor for vector for use with unordered_map
+// Hash functor for vector for use with hash_map
 template <>
 struct hash<yocto::obj_vertex> {
   size_t operator()(const yocto::obj_vertex& v) const {

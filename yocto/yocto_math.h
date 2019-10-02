@@ -919,7 +919,7 @@ inline void swap(vec4i& a, vec4i& b) { std::swap(a, b); }
 
 namespace std {
 
-// Hash functor for vector for use with unordered_map
+// Hash functor for vector for use with hash_map
 template <>
 struct hash<yocto::vec2i> {
   size_t operator()(const yocto::vec2i& v) const {

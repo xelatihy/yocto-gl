@@ -464,7 +464,7 @@ inline vector<string> split_cli_names(const string& name_) {
 
 inline void add_cli_option(cli_state& cli, const string& name, cli_type type,
     void* value, const string& usage, bool req, const vector<string>& choices) {
-  static auto type_name = unordered_map<cli_type, string>{
+  static auto type_name = hash_map<cli_type, string>{
       {cli_type::string_, "<string>"},
       {cli_type::int_, "<int>"},
       {cli_type::float_, "<float>"},
@@ -576,7 +576,7 @@ inline bool parse_cmdline_value(const string& str, bool& value) {
 
 inline bool parse_cli(cli_state& cli, int argc, const char** argv) {
   // check for errors
-  auto used = unordered_map<string, int>{};
+  auto used = hash_map<string, int>{};
   for (auto& option : cli.options) {
     if (option.name.empty()) throw std::runtime_error("name cannot be empty");
     auto names = split_cli_names(option.name);

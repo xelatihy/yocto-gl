@@ -97,7 +97,105 @@ using std::unordered_map;
 using std::vector;
 using namespace std::literals::string_literals;
 
+// For dictionaries, we use hash tables with a using directive to switch between
+// implementations.
+template <typename K, typename V>
+using hash_map = unordered_map<K, V>;
+
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// TIMING UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// get time in nanoseconds - useful only to compute difference of times
+inline int64_t get_time();
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PYTHON-LIKE ITERATORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Python `range()` equivalent. Construct an object to iterate over a sequence.
+inline auto range(int min, int max);
+inline auto range(int max);
+
+// Python `enumerate()` equivalent. Construct an object that iteraterates over a
+// sequence of elements and numbers them.
+template <typename T>
+inline auto enumerate(const vector<T>& vals);
+template <typename T>
+inline auto enumerate(vector<T>& vals);
+
+// Vector append and concatenation
+template <typename T>
+inline vector<T>& operator+=(vector<T>& a, const vector<T>& b);
+template <typename T>
+inline vector<T>& operator+=(vector<T>& a, const T& b);
+template <typename T>
+inline vector<T> operator+(const vector<T>& a, const vector<T>& b);
+template <typename T>
+inline vector<T> operator+(const vector<T>& a, const T& b);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// CONCURRENCY UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// a simple concurrent queue that locks at every call
+template <typename T>
+struct concurrent_queue {
+  concurrent_queue() {}
+  concurrent_queue(const concurrent_queue& other) = delete;
+  concurrent_queue& operator=(const concurrent_queue& other) = delete;
+
+  bool empty();
+  void clear();
+  void push(const T& value);
+  bool try_pop(T& value);
+
+ private:
+  std::mutex    mutex;
+  std::deque<T> queue;
+};
+
+// Run a task asynchronously
+template <typename Func, typename... Args>
+inline auto run_async(Func&& func, Args&&... args);
+
+// Check if an async task is ready
+inline bool is_valid(const std::future<void>& result);
+inline bool is_running(const std::future<void>& result);
+inline bool is_ready(const std::future<void>& result);
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(int begin, int end, Func&& func);
+template <typename Func>
+inline void parallel_for(int num, Func&& func);
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+inline void parallel_foreach(vector<T>& values, Func&& func);
+template <typename T, typename Func>
+inline void parallel_foreach(const vector<T>& values, Func&& func);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
 // TIMING UTILITIES
@@ -197,35 +295,28 @@ namespace yocto {
 
 // a simple concurrent queue that locks at every call
 template <typename T>
-struct concurrent_queue {
-  concurrent_queue() {}
-  concurrent_queue(const concurrent_queue& other) = delete;
-  concurrent_queue& operator=(const concurrent_queue& other) = delete;
-
-  bool empty() {
-    std::lock_guard<std::mutex> lock(mutex);
-    return queue.empty();
-  }
-  void clear() {
-    std::lock_guard<std::mutex> lock(mutex);
-    queue.clear();
-  }
-  void push(const T& value) {
-    std::lock_guard<std::mutex> lock(mutex);
-    queue.push_back(value);
-  }
-  bool try_pop(T& value) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (queue.empty()) return false;
-    value = queue.front();
-    queue.pop_front();
-    return true;
-  }
-
- private:
-  std::mutex    mutex;
-  std::deque<T> queue;
-};
+bool concurrent_queue<T>::empty() {
+  std::lock_guard<std::mutex> lock(mutex);
+  return queue.empty();
+}
+template <typename T>
+void concurrent_queue<T>::clear() {
+  std::lock_guard<std::mutex> lock(mutex);
+  queue.clear();
+}
+template <typename T>
+void concurrent_queue<T>::push(const T& value) {
+  std::lock_guard<std::mutex> lock(mutex);
+  queue.push_back(value);
+}
+template <typename T>
+bool concurrent_queue<T>::try_pop(T& value) {
+  std::lock_guard<std::mutex> lock(mutex);
+  if (queue.empty()) return false;
+  value = queue.front();
+  queue.pop_front();
+  return true;
+}
 
 // Run a task asynchronously
 template <typename Func, typename... Args>

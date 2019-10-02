@@ -468,7 +468,7 @@ static inline void remove_ply_comment(
 // Load ply
 void load_ply(const string& filename, ply_model& ply) {
   // ply type names
-  static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
+  static auto type_map = hash_map<string, ply_type>{{"char", ply_type::i8},
       {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
       {"uchar", ply_type::u8}, {"ushort", ply_type::u16},
       {"uint", ply_type::u32}, {"ulong", ply_type::u64},
@@ -690,12 +690,12 @@ void save_ply(const string& filename, const ply_model& ply) {
   auto fs = open_file(filename, "wb");
 
   // ply type names
-  static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
+  static auto type_map = hash_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
       {ply_type::u8, "uchar"}, {ply_type::u16, "ushort"},
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
       {ply_type::f32, "float"}, {ply_type::f64, "double"}};
-  static auto format_map = unordered_map<ply_format, string>{
+  static auto format_map = hash_map<ply_format, string>{
       {ply_format::ascii, "ascii"},
       {ply_format::binary_little_endian, "binary_little_endian"},
       {ply_format::binary_big_endian, "binary_big_endian"}};
@@ -1265,7 +1265,7 @@ static inline void parse_ply_prop(string_view& str, ply_type type, VT& value) {
 void read_ply_header(file_wrapper& fs, ply_format& format,
     vector<ply_element>& elements, vector<string>& comments) {
   // ply type names
-  static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
+  static auto type_map = hash_map<string, ply_type>{{"char", ply_type::i8},
       {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
       {"uchar", ply_type::u8}, {"ushort", ply_type::u16},
       {"uint", ply_type::u32}, {"ulong", ply_type::u64},
@@ -1452,7 +1452,7 @@ static inline void write_ply_prop(
 void write_ply_header(file_wrapper& fs, ply_format format,
     const vector<ply_element>& elements, const vector<string>& comments) {
   // ply type names
-  static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
+  static auto type_map = hash_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
       {ply_type::u8, "uchar"}, {ply_type::u16, "ushort"},
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
@@ -1765,7 +1765,7 @@ void load_objx(const string& filename, obj_model& obj) {
   auto fs = open_file(filename, "rt");
 
   // shape map for instances
-  auto shape_map = unordered_map<string, vector<int>>{};
+  auto shape_map = hash_map<string, vector<int>>{};
   for (auto idx = 0; idx < obj.shapes.size(); idx++) {
     shape_map[obj.shapes[idx].name].push_back(idx);
   }
@@ -2216,7 +2216,7 @@ float obj_roughness_to_exponent(float roughness) {
 void get_obj_vertices(const obj_shape& shape, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<int>& vindex,
     bool flipv) {
-  auto vmap = unordered_map<obj_vertex, int>{};
+  auto vmap = hash_map<obj_vertex, int>{};
   vmap.reserve(shape.vertices.size());
   vindex.reserve(shape.vertices.size());
   for (auto& vert : shape.vertices) {
@@ -3387,7 +3387,7 @@ static inline void parse_pbrt_value(string_view& str, int& value) {
 }
 template <typename T>
 static inline void parse_pbrt_value(
-    string_view& str, T& value, unordered_map<string, T>& value_names) {
+    string_view& str, T& value, hash_map<string, T>& value_names) {
   auto value_name = ""s;
   parse_pbrt_value(str, value_name);
   try {
@@ -3447,7 +3447,7 @@ static inline void parse_pbrt_nametype(
 }
 
 static inline pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
-  static const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
+  static const hash_map<string, pair<vec3f, vec3f>> metal_ior_table = {
       {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                   {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
       {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
@@ -3720,7 +3720,7 @@ static void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
 // convert pbrt textures
 static void convert_pbrt_textures(
     vector<pbrt_texture>& textures, bool verbose = false) {
-  auto texture_map = unordered_map<string, int>{};
+  auto texture_map = hash_map<string, int>{};
   for (auto& texture : textures) {
     auto index                = (int)texture_map.size();
     texture_map[texture.name] = index;
@@ -3799,7 +3799,7 @@ static void convert_pbrt_textures(
 static void convert_pbrt_materials(vector<pbrt_material>& materials,
     const vector<pbrt_texture>& textures, bool verbose = false) {
   // add constant textures
-  auto constants = unordered_map<string, vec3f>{};
+  auto constants = hash_map<string, vec3f>{};
   for (auto& texture : textures) {
     if (!texture.filename.empty()) continue;
     constants[texture.name] = texture.constant;
@@ -4247,8 +4247,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   string cur_object = "";
 
   // objects and coords
-  unordered_map<string, pbrt_context> coordsys = {};
-  unordered_map<string, vector<int>>  objects  = {};
+  hash_map<string, pbrt_context> coordsys = {};
+  hash_map<string, vector<int>>  objects  = {};
 
   // helpers
   auto set_transform = [](pbrt_context& ctx, const frame3f& xform) {
@@ -4492,7 +4492,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
 }
 
 inline static void format_value(string& str, const pbrt_value& value) {
-  static auto type_labels = unordered_map<pbrt_value_type, string>{
+  static auto type_labels = hash_map<pbrt_value_type, string>{
       {pbrt_value_type::real, "float"},
       {pbrt_value_type::integer, "integer"},
       {pbrt_value_type::boolean, "bool"},
@@ -4733,7 +4733,7 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
     format_values(fs, "AttributeEnd\n");
   }
 
-  auto arealights_map = unordered_map<string, string>{};
+  auto arealights_map = hash_map<string, string>{};
   for (auto& arealight_ : pbrt.arealights) {
     auto arealight = arealight_;
     if (arealight.type == "") {
@@ -4988,7 +4988,7 @@ void write_pbrt_comment(file_wrapper& fs, const string& comment) {
 }
 
 void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
-  static auto type_labels = unordered_map<pbrt_value_type, string>{
+  static auto type_labels = hash_map<pbrt_value_type, string>{
       {pbrt_value_type::real, "float"},
       {pbrt_value_type::integer, "integer"},
       {pbrt_value_type::boolean, "bool"},
@@ -5477,7 +5477,7 @@ void approximate_fourier_material(pbrt_material::fourier_t& fourier) {
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
 static inline pair<vec3f, vec3f> parse_pbrt_subsurface(const string& name) {
-  static const unordered_map<string, pair<vec3f, vec3f>> params = {
+  static const hash_map<string, pair<vec3f, vec3f>> params = {
       // From "A Practical Model for Subsurface Light Transport"
       // Jensen, Marschner, Levoy, Hanrahan
       // Proc SIGGRAPH 2001
@@ -5605,7 +5605,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
     if (str.size() < substr.size()) return false;
     return str.substr(0, substr.size()) == substr;
   };
-  auto imap = unordered_map<cgltf_image*, int>{};
+  auto imap = hash_map<cgltf_image*, int>{};
   for (auto tid = 0; tid < gltf->images_count; tid++) {
     auto gimg        = &gltf->images[tid];
     auto texture     = gltf_texture{};
@@ -5625,7 +5625,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   };
 
   // convert materials
-  auto mmap = unordered_map<cgltf_material*, int>{{nullptr, -1}};
+  auto mmap = hash_map<cgltf_material*, int>{{nullptr, -1}};
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
     auto gmat             = &gltf->materials[mid];
     mmap[gmat]            = mid;
@@ -5715,7 +5715,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   };
 
   // convert meshes
-  auto smap = unordered_map<cgltf_mesh*, int>{{nullptr, -1}};
+  auto smap = hash_map<cgltf_mesh*, int>{{nullptr, -1}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
     auto gmesh  = &gltf->meshes[mid];
     smap[gmesh] = mid;
@@ -5838,7 +5838,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   }
 
   // convert cameras
-  auto cmap = unordered_map<cgltf_camera*, int>{{nullptr, -1}};
+  auto cmap = hash_map<cgltf_camera*, int>{{nullptr, -1}};
   for (auto cid = 0; cid < gltf->cameras_count; cid++) {
     auto gcam    = &gltf->cameras[cid];
     cmap[gcam]   = cid;
@@ -5860,7 +5860,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   }
 
   // convert nodes
-  auto nmap = unordered_map<cgltf_node*, int>{{nullptr, -1}};
+  auto nmap = hash_map<cgltf_node*, int>{{nullptr, -1}};
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
     auto gnde  = &gltf->nodes[nid];
     nmap[gnde] = nid;
@@ -5931,7 +5931,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
     auto ganm = &gltf->animations[gid];
     auto aid  = 0;
     auto sampler_map =
-        unordered_map<pair<cgltf_animation_sampler*, cgltf_animation_path_type>,
+        hash_map<pair<cgltf_animation_sampler*, cgltf_animation_path_type>,
             int, sampler_map_hash>();
     for (auto cid = 0; cid < ganm->channels_count; cid++) {
       auto gchannel = &ganm->channels[cid];

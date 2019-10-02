@@ -333,14 +333,14 @@ void load_yaml(
   };
   auto type = parsing_type::none;
 
-  auto tmap = unordered_map<string, int>{{"", -1}};
-  auto vmap = unordered_map<string, int>{{"", -1}};
-  auto mmap = unordered_map<string, int>{{"", -1}};
-  auto smap = unordered_map<string, int>{{"", -1}};
+  auto tmap = hash_map<string, int>{{"", -1}};
+  auto vmap = hash_map<string, int>{{"", -1}};
+  auto mmap = hash_map<string, int>{{"", -1}};
+  auto smap = hash_map<string, int>{{"", -1}};
 
   // parse yaml reference
   auto get_yaml_ref = [](const yaml_value& yaml, int& value,
-                          const unordered_map<string, int>& refs) {
+                          const hash_map<string, int>& refs) {
     if (yaml.type != yaml_value_type::string)
       throw std::runtime_error("error parsing yaml value");
     if (yaml.string_ == "") return;
@@ -916,7 +916,7 @@ void load_obj(
   }
 
   // helper to create texture maps
-  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto texture_map = hash_map<string, int>{{"", -1}};
   auto get_texture = [&texture_map, &scene](const obj_texture_info& info) {
     if (info.path == "") return -1;
     auto it = texture_map.find(info.path);
@@ -930,7 +930,7 @@ void load_obj(
   };
 
   // convert materials and textures
-  auto material_map = unordered_map<string, int>{{"", -1}};
+  auto material_map = hash_map<string, int>{{"", -1}};
   for (auto& omat : obj.materials) {
     auto& material = scene.materials.emplace_back();
     material.name  = make_safe_name(
@@ -963,7 +963,7 @@ void load_obj(
   }
 
   // convert shapes
-  auto shape_name_counts = unordered_map<string, int>{};
+  auto shape_name_counts = hash_map<string, int>{};
   for (auto& oshape : obj.shapes) {
     auto& shape = scene.shapes.emplace_back();
     shape.name  = oshape.name;
@@ -1415,7 +1415,7 @@ static void load_pbrt(
   }
 
   // convert textures
-  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto texture_map = hash_map<string, int>{{"", -1}};
   for (auto& ptexture : pbrt.textures) {
     if (ptexture.filename.empty()) continue;
     auto& texture = scene.textures.emplace_back();
@@ -1432,7 +1432,7 @@ static void load_pbrt(
       throw std::runtime_error("cannot find texture " + name);
     return texture_map.at(name);
   };
-  auto material_map = unordered_map<string, int>{{"", -1}};
+  auto material_map = hash_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
     auto& material = scene.materials.emplace_back();
     material.name  = make_safe_name(
@@ -1448,7 +1448,7 @@ static void load_pbrt(
   }
 
   // convert arealights
-  auto arealight_map = unordered_map<string, int>{{"", -1}};
+  auto arealight_map = hash_map<string, int>{{"", -1}};
   for (auto& parealight : pbrt.arealights) {
     auto& material = scene.materials.emplace_back();
     material.name  = make_safe_name(

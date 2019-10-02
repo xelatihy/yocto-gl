@@ -955,7 +955,7 @@ struct filedialog_state {
 bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter) {
-  static auto states = unordered_map<string, filedialog_state>{};
+  static auto states = hash_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
     if (states.find(lbl) == states.end()) {
