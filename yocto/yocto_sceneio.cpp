@@ -1128,24 +1128,22 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   // convert shapes
   if (params.objinstances) {
     for (auto& shape : scene.shapes) {
-      auto& oshape = obj.shapes.emplace_back();
-      oshape.name  = shape.name;
       if (!shape.triangles.empty()) {
-        add_obj_triangles(obj, oshape, shape.triangles, shape.positions,
-            shape.normals, shape.texcoords, {}, true);
+        add_obj_triangles(obj, shape.name, shape.triangles, shape.positions,
+            shape.normals, shape.texcoords, {}, {}, true);
       } else if (!shape.quads.empty()) {
-        add_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, {}, true);
+        add_obj_quads(obj, shape.name, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, {}, {}, true);
       } else if (!shape.lines.empty()) {
-        add_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
-            shape.texcoords, {}, true);
+        add_obj_lines(obj, shape.name, shape.lines, shape.positions, shape.normals,
+            shape.texcoords, {}, {}, true);
       } else if (!shape.points.empty()) {
-        add_obj_points(obj, oshape, shape.points, shape.positions,
-            shape.normals, shape.texcoords, {}, true);
+        add_obj_points(obj, shape.name, shape.points, shape.positions,
+            shape.normals, shape.texcoords, {}, {}, true);
       } else if (!shape.quadspos.empty()) {
-        add_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
+        add_obj_fvquads(obj, shape.name, shape.quadspos, shape.quadsnorm,
             shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords, {}, true);
+            shape.texcoords, {}, {}, true);
       } else {
         throw std::runtime_error("do not support empty shapes");
       }
@@ -1156,27 +1154,25 @@ static void save_obj(const string& filename, const yocto_scene& scene,
   } else {
     for (auto& instance : scene.instances) {
       auto& shape      = scene.shapes[instance.shape];
-      auto& oshape     = obj.shapes.emplace_back();
-      oshape.name      = instance.name;
-      oshape.materials = {scene.materials[instance.material].name};
+      auto materials = vector{scene.materials[instance.material].name};
       auto positions = shape.positions, normals = shape.normals;
       for (auto& p : positions) p = transform_point(instance.frame, p);
       for (auto& n : normals) n = transform_normal(instance.frame, n);
       if (!shape.triangles.empty()) {
-        add_obj_triangles(obj, oshape, shape.triangles, positions, normals,
-            shape.texcoords, {}, true);
+        add_obj_triangles(obj, instance.name, shape.triangles, positions, normals,
+            shape.texcoords, materials, {}, true);
       } else if (!shape.quads.empty()) {
-        add_obj_quads(obj, oshape, shape.quads, positions, normals,
-            shape.texcoords, {}, true);
+        add_obj_quads(obj, instance.name, shape.quads, positions, normals,
+            shape.texcoords, materials, {}, true);
       } else if (!shape.lines.empty()) {
-        add_obj_lines(obj, oshape, shape.lines, positions, normals,
-            shape.texcoords, {}, true);
+        add_obj_lines(obj, instance.name, shape.lines, positions, normals,
+            shape.texcoords, materials, {}, true);
       } else if (!shape.points.empty()) {
-        add_obj_points(obj, oshape, shape.points, positions, normals,
-            shape.texcoords, {}, true);
+        add_obj_points(obj, instance.name, shape.points, positions, normals,
+            shape.texcoords, materials, {}, true);
       } else if (!shape.quadspos.empty()) {
-        add_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, positions, normals, shape.texcoords, {}, true);
+        add_obj_fvquads(obj, instance.name, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, positions, normals, shape.texcoords, materials, {}, true);
       } else {
         throw std::runtime_error("do not support empty shapes");
       }
