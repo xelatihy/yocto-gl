@@ -322,6 +322,10 @@ static inline color_space_params get_color_scape_params(color_space space) {
     case color_space::p3display: return p3display_params;
     default: std::runtime_error("should not have gotten here");
   }
+
+  // return here to silence warnings
+  std::runtime_error("should not have gotten here");
+  return {};
 }
 
 // gamma to linear
