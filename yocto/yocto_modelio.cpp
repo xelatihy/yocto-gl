@@ -690,7 +690,7 @@ void save_ply(const string& filename, const ply_model& ply) {
   auto fs = open_file(filename, "wb");
 
   // ply type names
-  static auto type_map = hash_map<ply_type, string>{{ply_type::i8, "char"},
+  static auto type_map   = hash_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
       {ply_type::u8, "uchar"}, {ply_type::u16, "ushort"},
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
@@ -2243,13 +2243,108 @@ void get_obj_vertices(const obj_shape& shape, vector<vec3f>& positions,
     for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
   }
 }
+bool are_obj_vertices_duplicated(const obj_shape& shape) {
+  for (auto& vert : shape.vertices) {
+    if (vert.normal && vert.normal != vert.position) return true;
+    if (vert.texcoord && vert.texcoord != vert.position) return true;
+  }
+  return false;
+}
+
+// Get obj shape
+void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
+    vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<string>& materials, vector<int>& ematerials) {
+  if (shape.faces.empty()) return;
+  positions = shape.positions;
+  materials = shape.materials;
+  triangles.reserve(shape.faces.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& face : shape.faces) {
+    for (auto c = 2; c < face.size; c++) {
+      triangles.push_back({shape.vertices[cur + 0].position - 1,
+          shape.vertices[cur + c - 1].position - 1,
+          shape.vertices[cur + c].position - 1});
+      if (!materials.empty()) ematerials.push_back(face.material);
+    }
+    cur += face.size;
+  }
+}
+void get_obj_quads(const obj_model& obj, const obj_shape& shape,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<string>& materials,
+    vector<int>& ematerials) {
+  if (shape.faces.empty()) return;
+  positions = shape.positions;
+  materials = shape.materials;
+  quads.reserve(shape.faces.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& face : shape.faces) {
+    if (face.size == 4) {
+      quads.push_back({shape.vertices[cur + 0].position - 1,
+          shape.vertices[cur + 1].position - 1,
+          shape.vertices[cur + 2].position - 1,
+          shape.vertices[cur + 3].position - 1});
+      if (!materials.empty()) ematerials.push_back(face.material);
+    } else {
+      for (auto c = 2; c < face.size; c++) {
+        quads.push_back({shape.vertices[cur + 0].position - 1,
+            shape.vertices[cur + c - 1].position - 1,
+            shape.vertices[cur + c].position - 1,
+            shape.vertices[cur + c].position - 1});
+        if (!materials.empty()) ematerials.push_back(face.material);
+      }
+    }
+    cur += face.size;
+  }
+}
+void get_obj_lines(const obj_model& obj, const obj_shape& shape,
+    vector<vec2i>& lines, vector<vec3f>& positions, vector<string>& materials,
+    vector<int>& ematerials) {
+  if (shape.lines.empty()) return;
+  positions = shape.positions;
+  materials = shape.materials;
+  lines.reserve(shape.lines.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& line : shape.lines) {
+    for (auto c = 1; c < line.size; c++) {
+      lines.push_back({shape.vertices[cur + c - 1].position - 1,
+          shape.vertices[cur + c].position - 1});
+      if (!materials.empty()) ematerials.push_back(line.material);
+    }
+    cur += line.size;
+  }
+}
+void get_obj_points(const obj_model& obj, const obj_shape& shape,
+    vector<int>& points, vector<vec3f>& positions, vector<string>& materials,
+    vector<int>& ematerials) {
+  if (shape.points.empty()) return;
+  positions = shape.positions;
+  materials = shape.materials;
+  points.reserve(shape.points.size());
+  if (!materials.empty()) ematerials.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& point : shape.points) {
+    for (auto c = 0; c < point.size; c++) {
+      points.push_back({shape.vertices[cur + 0].position - 1});
+      if (!materials.empty()) ematerials.push_back(point.material);
+    }
+    cur += point.size;
+  }
+}
 
 // Get obj shape
 void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool flipv) {
+    vector<int>& ematerials, bool no_vertex_duplication, bool flipv) {
   if (shape.faces.empty()) return;
+  if (no_vertex_duplication && are_obj_vertices_duplicated(shape)) {
+    return get_obj_triangles(
+        obj, shape, triangles, positions, materials, ematerials);
+  }
   auto vindex = vector<int>{};
   get_obj_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape.materials;
@@ -2268,8 +2363,11 @@ void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
 void get_obj_quads(const obj_model& obj, const obj_shape& shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool flipv) {
+    vector<int>& ematerials, bool no_vertex_duplication, bool flipv) {
   if (shape.faces.empty()) return;
+  if (no_vertex_duplication && are_obj_vertices_duplicated(shape)) {
+    return get_obj_quads(obj, shape, quads, positions, materials, ematerials);
+  }
   auto vindex = vector<int>{};
   get_obj_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape.materials;
@@ -2294,8 +2392,11 @@ void get_obj_quads(const obj_model& obj, const obj_shape& shape,
 void get_obj_lines(const obj_model& obj, const obj_shape& shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool flipv) {
+    vector<int>& ematerials, bool no_vertex_duplication, bool flipv) {
   if (shape.lines.empty()) return;
+  if (no_vertex_duplication && are_obj_vertices_duplicated(shape)) {
+    return get_obj_lines(obj, shape, lines, positions, materials, ematerials);
+  }
   auto vindex = vector<int>{};
   get_obj_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape.materials;
@@ -2313,8 +2414,11 @@ void get_obj_lines(const obj_model& obj, const obj_shape& shape,
 void get_obj_points(const obj_model& obj, const obj_shape& shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool flipv) {
+    vector<int>& ematerials, bool no_vertex_duplication, bool flipv) {
   if (shape.points.empty()) return;
+  if (no_vertex_duplication && are_obj_vertices_duplicated(shape)) {
+    return get_obj_points(obj, shape, points, positions, materials, ematerials);
+  }
   auto vindex = vector<int>{};
   get_obj_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape.materials;
@@ -2393,10 +2497,14 @@ bool has_obj_quads(const obj_shape& shape) {
 }
 
 // Add obj shape
-void add_obj_triangles(obj_model& obj, obj_shape& shape,
+void add_obj_triangles(obj_model& obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials, bool flipv) {
+    const vector<string>& materials, const vector<int>& ematerials,
+    bool flipv) {
+  auto& shape     = obj.shapes.emplace_back();
+  shape.name      = name;
+  shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -2414,9 +2522,14 @@ void add_obj_triangles(obj_model& obj, obj_shape& shape,
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+void add_obj_quads(obj_model& obj, const string& name,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials,
+    bool flipv) {
+  auto& shape     = obj.shapes.emplace_back();
+  shape.name      = name;
+  shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -2435,9 +2548,14 @@ void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+void add_obj_lines(obj_model& obj, const string& name,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials,
+    bool flipv) {
+  auto& shape     = obj.shapes.emplace_back();
+  shape.name      = name;
+  shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -2455,9 +2573,14 @@ void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+void add_obj_points(obj_model& obj, const string& name,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials,
+    bool flipv) {
+  auto& shape     = obj.shapes.emplace_back();
+  shape.name      = name;
+  shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -2473,11 +2596,15 @@ void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
         {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_fvquads(obj_model& obj, obj_shape& shape,
+void add_obj_fvquads(obj_model& obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials, bool flipv) {
+    const vector<string>& materials, const vector<int>& ematerials,
+    bool flipv) {
+  auto& shape     = obj.shapes.emplace_back();
+  shape.name      = name;
+  shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -6020,6 +6147,203 @@ void load_gltf(const string& filename, gltf_model& scene) {
     }
   }
 #endif
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF CYHAIR
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+struct cyhair_strand {
+  vector<vec3f> positions;
+  vector<float> radius;
+  vector<float> transparency;
+  vector<vec3f> color;
+};
+
+struct cyhair_data {
+  vector<cyhair_strand> strands              = {};
+  float                 default_thickness    = 0;
+  float                 default_transparency = 0;
+  vec3f                 default_color        = zero3f;
+};
+
+static void load_cyhair(const string& filename, cyhair_data& hair) {
+  // open file
+  hair     = {};
+  auto fs_ = open_file(filename, "b");
+  auto fs  = fs_.fs;
+
+  // Bytes 0-3    Must be "HAIR" in ascii code (48 41 49 52)
+  // Bytes 4-7    Number of hair strands as unsigned int
+  // Bytes 8-11    Total number of points of all strands as unsigned int
+  // Bytes 12-15    Bit array of data in the file
+  // Bit-0 is 1 if the file has segments array.
+  // Bit-1 is 1 if the file has points array (this bit must be 1).
+  // Bit-2 is 1 if the file has radius array.
+  // Bit-3 is 1 if the file has transparency array.
+  // Bit-4 is 1 if the file has color array.
+  // Bit-5 to Bit-31 are reserved for future extension (must be 0).
+  // Bytes 16-19    Default number of segments of hair strands as unsigned int
+  // If the file does not have a segments array, this default value is used.
+  // Bytes 20-23    Default radius hair strands as float
+  // If the file does not have a radius array, this default value is used.
+  // Bytes 24-27    Default transparency hair strands as float
+  // If the file does not have a transparency array, this default value is
+  // used. Bytes 28-39    Default color hair strands as float array of size 3
+  // If the file does not have a radius array, this default value is used.
+  // Bytes 40-127    File information as char array of size 88 in ascii
+
+  auto read_value = [](FILE* fs, auto& value) {
+    if (fread(&value, sizeof(value), 1, fs) != 1) {
+      throw std::runtime_error("cannot read from file");
+    }
+  };
+  auto read_values = [](FILE* fs, auto& values) {
+    if (values.empty()) return;
+    if (fread(values.data(), sizeof(values[0]), values.size(), fs) !=
+        values.size()) {
+      throw std::runtime_error("cannot read from file");
+    }
+  };
+
+  // parse header
+  hair = cyhair_data{};
+  struct cyhair_header {
+    char         magic[4]             = {0};
+    unsigned int num_strands          = 0;
+    unsigned int num_points           = 0;
+    unsigned int flags                = 0;
+    unsigned int default_segments     = 0;
+    float        default_thickness    = 0;
+    float        default_transparency = 0;
+    vec3f        default_color        = zero3f;
+    char         info[88]             = {0};
+  };
+  static_assert(sizeof(cyhair_header) == 128);
+  auto header = cyhair_header{};
+  read_value(fs, header);
+  if (header.magic[0] != 'H' || header.magic[1] != 'A' ||
+      header.magic[2] != 'I' || header.magic[3] != 'R')
+    throw std::runtime_error("bad cyhair header");
+
+  // set up data
+  hair.default_thickness    = header.default_thickness;
+  hair.default_transparency = header.default_transparency;
+  hair.default_color        = header.default_color;
+  hair.strands.resize(header.num_strands);
+
+  // get segments length
+  auto segments = vector<unsigned short>();
+  if (header.flags & 1) {
+    segments.resize(header.num_strands);
+    read_values(fs, segments);
+  } else {
+    segments.assign(header.num_strands, header.default_segments);
+  }
+
+  // check segment length
+  auto total_length = 0;
+  for (auto segment : segments) total_length += segment + 1;
+  if (total_length != header.num_points) {
+    throw std::runtime_error("bad cyhair file");
+  }
+
+  // read positions data
+  if (header.flags & 2) {
+    for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+      auto strand_size = (int)segments[strand_id] + 1;
+      hair.strands[strand_id].positions.resize(strand_size);
+      read_values(fs, hair.strands[strand_id].positions);
+    }
+  }
+  // read radius data
+  if (header.flags & 4) {
+    for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+      auto strand_size = (int)segments[strand_id] + 1;
+      hair.strands[strand_id].radius.resize(strand_size);
+      read_values(fs, hair.strands[strand_id].radius);
+    }
+  }
+  // read transparency data
+  if (header.flags & 8) {
+    for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+      auto strand_size = (int)segments[strand_id] + 1;
+      hair.strands[strand_id].transparency.resize(strand_size);
+      read_values(fs, hair.strands[strand_id].transparency);
+    }
+  }
+  // read color data
+  if (header.flags & 16) {
+    for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+      auto strand_size = (int)segments[strand_id] + 1;
+      hair.strands[strand_id].color.resize(strand_size);
+      read_values(fs, hair.strands[strand_id].color);
+    }
+  }
+}
+
+// Compute per-vertex tangents for lines.
+static void compute_cyhair_tangents(vector<vec3f>& tangents,
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
+  if (tangents.size() != positions.size()) {
+    throw std::out_of_range("array should be the same length");
+  }
+  for (auto& tangent : tangents) tangent = zero3f;
+  for (auto& l : lines) {
+    auto tangent = normalize(positions[l.y] - positions[l.x]);
+    auto len     = length(positions[l.y] - positions[l.x]);
+    tangents[l.x] += tangent * len;
+    tangents[l.y] += tangent * len;
+  }
+  for (auto& tangent : tangents) tangent = normalize(tangent);
+}
+
+void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<vec4f>& color, vector<float>& radius, bool flip_texcoord) {
+  // load hair file
+  auto hair = cyhair_data();
+  load_cyhair(filename, hair);
+
+  // generate curve data
+  for (auto& strand : hair.strands) {
+    auto offset = (int)positions.size();
+    for (auto segment = 0; segment < (int)strand.positions.size() - 1;
+         segment++) {
+      lines.push_back({offset + segment, offset + segment + 1});
+    }
+    positions.insert(
+        positions.end(), strand.positions.begin(), strand.positions.end());
+    if (strand.radius.empty()) {
+      radius.insert(
+          radius.end(), strand.positions.size(), hair.default_thickness);
+    } else {
+      radius.insert(radius.end(), strand.radius.begin(), strand.radius.end());
+    }
+    if (strand.color.empty()) {
+      color.insert(color.end(), strand.positions.size(),
+          {hair.default_color.x, hair.default_color.y, hair.default_color.z,
+              1});
+    } else {
+      for (auto i = 0; i < strand.color.size(); i++) {
+        auto scolor = strand.color[i];
+        color.push_back({scolor.x, scolor.y, scolor.z, 1});
+      }
+    }
+  }
+
+  // flip yz
+  for (auto& p : positions) std::swap(p.y, p.z);
+
+  // compute tangents
+  normals.resize(positions.size());
+  compute_cyhair_tangents(normals, lines, positions);
+
+  // fix colors
+  for (auto& c : color) c = {pow(xyz(c), 2.2f), c.w};
 }
 
 }  // namespace yocto

@@ -40,6 +40,7 @@ int main(int argc, const char** argv) {
   auto geodesic_scale       = 30.0f;
   auto slice                = false;
   auto facevarying          = false;
+  auto noduplication        = false;
   auto normals              = false;
   auto rotate               = zero3f;
   auto scale                = vec3f{1};
@@ -57,6 +58,7 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
   add_cli_option(cli, "--slice", slice, "Slice mesh along field isolines");
   add_cli_option(cli, "--facevarying", facevarying, "Preserve facevarying");
+  add_cli_option(cli, "--noduplication", noduplication, "Avoid vertex duplication");
   add_cli_option(cli, "--normals", normals, "Compute smooth normals");
   add_cli_option(cli, "--rotatey", rotate.y, "Rotate around y axis");
   add_cli_option(cli, "--rotatex", rotate.x, "Rotate around x axis");
@@ -76,10 +78,14 @@ int main(int argc, const char** argv) {
   auto shape = yocto_shape{};
   try {
     auto timer = print_timed("loading shape");
-    load_shape(filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, facevarying);
+    if (!facevarying) {
+      load_shape(filename, shape.points, shape.lines, shape.triangles,
+          shape.quads, shape.positions, shape.normals, shape.texcoords,
+          shape.colors, shape.radius, noduplication);
+    } else {
+      load_fvshape(filename, shape.quadspos, shape.quadsnorm,
+          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
+    }
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
@@ -134,9 +140,15 @@ int main(int argc, const char** argv) {
   // save mesh
   try {
     auto timer = print_timed("saving shape");
-    save_shape(output, shape.points, shape.lines, shape.triangles, shape.quads,
-        shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-        shape.normals, shape.texcoords, shape.colors, shape.radius);
+    if (!shape.quadspos.empty()) {
+      save_fvshape(output, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+          shape.positions, shape.normals, shape.texcoords);
+    } else {
+      save_shape(output, shape.points, shape.lines, shape.triangles,
+          shape.quads, 
+          shape.positions, shape.normals, shape.texcoords, shape.colors,
+          shape.radius);
+    }
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
