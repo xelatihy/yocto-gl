@@ -63,10 +63,6 @@
 #define YOCTO_QUADS_AS_TRIANGLES 1
 #endif
 
-#ifndef YOCTO_TRACE_THINSHEET
-#define YOCTO_TRACE_THINSHEET 0
-#endif
-
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -76,8 +72,6 @@
 #include "yocto_bvh.h"
 #include "yocto_random.h"
 #include "yocto_scene.h"
-
-#include <atomic>
 
 // -----------------------------------------------------------------------------
 // PATH TRACING
@@ -189,11 +183,6 @@ void trace_region(image<vec4f>& image, trace_state& state,
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
-
-// Trace statistics for last run used for fine tuning implementation.
-// For now returns number of paths and number of rays.
-pair<uint64_t, uint64_t> get_trace_stats();
-void                     reset_trace_stats();
 
 }  // namespace yocto
 

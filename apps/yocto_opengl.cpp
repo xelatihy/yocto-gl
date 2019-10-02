@@ -33,7 +33,6 @@
 #include "../yocto/yocto_commonio.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cstdarg>
 #include <deque>
 #include <mutex>
