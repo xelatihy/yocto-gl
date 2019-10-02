@@ -59,7 +59,6 @@ namespace yocto {
 struct load_params {
   bool               notextures  = false;
   bool               facevarying = false;
-  std::atomic<bool>* cancel      = nullptr;
   bool               noparallel  = false;
 };
 
@@ -67,7 +66,6 @@ struct load_params {
 struct save_params {
   bool               notextures   = false;
   bool               objinstances = false;
-  std::atomic<bool>* cancel       = nullptr;
   bool               noparallel   = false;
 };
 

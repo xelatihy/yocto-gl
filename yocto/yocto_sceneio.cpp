@@ -147,7 +147,6 @@ void load_textures(
   // load images
   if (params.noparallel) {
     for (auto& texture : scene.textures) {
-      if (params.cancel && *params.cancel) break;
       if (!texture.hdr.empty() || !texture.ldr.empty()) return;
       load_texture(texture, dirname);
     }
@@ -163,7 +162,6 @@ void load_textures(
   // load volumes
   if (params.noparallel) {
     for (auto& texture : scene.voltextures) {
-      if (params.cancel && *params.cancel) break;
       if (!texture.vol.empty()) return;
       load_voltexture(texture, dirname);
     }
@@ -197,7 +195,6 @@ void save_textures(const yocto_scene& scene, const string& dirname,
   // save images
   if (params.noparallel) {
     for (auto& texture : scene.textures) {
-      if (params.cancel && *params.cancel) break;
       save_texture(texture, dirname);
     }
   } else {
@@ -210,7 +207,6 @@ void save_textures(const yocto_scene& scene, const string& dirname,
   // save volumes
   if (params.noparallel) {
     for (auto& texture : scene.voltextures) {
-      if (params.cancel && *params.cancel) break;
       save_voltexture(texture, dirname);
     }
   } else {
@@ -256,7 +252,6 @@ void load_shapes(
   // load shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
-      if (params.cancel && *params.cancel) break;
       if (!shape.positions.empty()) continue;
       load_shape(shape, dirname);
     }
@@ -272,7 +267,6 @@ void load_shapes(
   // load subdivs
   if (params.noparallel) {
     for (auto& subdiv : scene.subdivs) {
-      if (params.cancel && *params.cancel) break;
       if (!subdiv.positions.empty()) continue;
       load_subdiv(subdiv, dirname);
     }
@@ -292,7 +286,6 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
   // save shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
-      if (params.cancel && *params.cancel) break;
       save_shape(shape, dirname);
     }
   } else {
@@ -303,7 +296,6 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
   // save subdivs
   if (params.noparallel) {
     for (auto& subdiv : scene.subdivs) {
-      if (params.cancel && *params.cancel) break;
       save_subdiv(subdiv, dirname);
     }
   } else {

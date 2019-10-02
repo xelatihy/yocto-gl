@@ -149,7 +149,6 @@ struct trace_params {
   bool               envhidden  = false;
   bool               tentfilter = false;
   uint64_t           seed       = trace_default_seed;
-  std::atomic<bool>* cancel     = nullptr;
   bool               noparallel = false;
 };
 
