@@ -2871,7 +2871,6 @@ static bool flood_tagging(discrete_surface& state, int tag, int new_tag,
 vector<int> slice_paths(discrete_surface& state, const vector<int>& regions,
     int t0, int t1, const vector<surface_path>& paths) {
   auto new_regions      = vector<int>(regions.size() * 2);
-  auto num_old_vertices = state.positions.size();
   for (int i = 0; i < regions.size(); ++i) {
     new_regions[2 * i]     = t0;
     new_regions[2 * i + 1] = t1;
