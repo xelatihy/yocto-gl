@@ -530,7 +530,7 @@ namespace yocto {
 
 // Data structure used for geodesic computation
 struct geodesic_solver {
-  const int min_arcs = 12;
+  static const int min_arcs = 12;
   struct graph_edge {
     int   node   = -1;
     float length = flt_max;
@@ -570,9 +570,6 @@ vector<vec4f> distance_to_color(const vector<float>& distances, float scale = 1,
 void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
     float scale = 1, const vec4f& c0 = {1, 1, 1, 1},
     const vec4f& c1 = {1, 0.1, 0.1, 1});
-
-// Sample vertices based on the geodesic distances and trying to get a Poisson
-// distribution
 
 }  // namespace yocto
 
@@ -831,5 +828,52 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
 }
 
 }  // namespace yocto
+
+namespace yocto::integral_paths {
+
+struct discrete_surface {
+  // mesh data
+  vector<vec3f> positions;
+  vector<vec3f> normals;
+  vector<vec3i> triangles;
+
+  // solver used for geodesic distance
+  geodesic_solver solver;
+
+  // triangle adjacency used for fast boundary computation
+  vector<vec3i> adjacencies;
+
+  // per face tag
+  vector<int> tags;
+};
+
+struct path_vertex {
+  vec2i edge;
+  int   face;
+  float alpha;
+};
+
+// Description of a discrete path along the surface of the mesh.
+struct surface_path {
+  int                 start, end;
+  vector<path_vertex> lerps;
+};
+
+surface_path follow_gradient_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from);
+
+surface_path follow_gradient_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from,
+    int to);
+
+bool slice_path(discrete_surface& state, int tag, const surface_path& path, int tag_left,
+    int tag_right, vector<int>& left_faces, vector<int>& right_faces);
+
+vector<int> slice_paths(discrete_surface& state, const vector<int>& regions, int t0,
+    int t1, const vector<surface_path>& paths);
+
+}  // namespace yocto::integral_curves
 
 #endif
