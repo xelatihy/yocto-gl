@@ -76,10 +76,14 @@ int main(int argc, const char** argv) {
   auto shape = yocto_shape{};
   try {
     auto timer = print_timed("loading shape");
-    load_shape(filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, facevarying);
+    if (facevarying) {
+      load_fvshape(filename, shape.quadspos, shape.quadsnorm,
+          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
+    } else {
+      load_shape(filename, shape.points, shape.lines, shape.triangles,
+          shape.quads, shape.positions, shape.normals, shape.texcoords,
+          shape.colors, shape.radius);
+    }
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
@@ -134,9 +138,15 @@ int main(int argc, const char** argv) {
   // save mesh
   try {
     auto timer = print_timed("saving shape");
-    save_shape(output, shape.points, shape.lines, shape.triangles, shape.quads,
-        shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-        shape.normals, shape.texcoords, shape.colors, shape.radius);
+    if (!shape.quadspos.empty()) {
+      save_fvshape(output, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+          shape.positions, shape.normals, shape.texcoords);
+    } else {
+      save_shape(output, shape.points, shape.lines, shape.triangles,
+          shape.quads, 
+          shape.positions, shape.normals, shape.texcoords, shape.colors,
+          shape.radius);
+    }
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }

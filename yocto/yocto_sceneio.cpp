@@ -194,34 +194,6 @@ void save_textures(const yocto_scene& scene, const string& dirname,
   }
 }
 
-void load_shape(yocto_shape& shape, const string& dirname) {
-  load_shape(dirname + shape.filename, shape.points, shape.lines,
-      shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
-      shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
-      shape.colors, shape.radius, false);
-}
-
-void save_shape(const yocto_shape& shape, const string& dirname) {
-  save_shape(dirname + shape.filename, shape.points, shape.lines,
-      shape.triangles, shape.quads, shape.quadspos, shape.quadsnorm,
-      shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
-      shape.colors, shape.radius);
-}
-
-void load_subdiv(yocto_subdiv& subdiv, const string& dirname) {
-  load_shape(dirname + subdiv.filename, subdiv.points, subdiv.lines,
-      subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
-      subdiv.quadstexcoord, subdiv.positions, subdiv.normals, subdiv.texcoords,
-      subdiv.colors, subdiv.radius, subdiv.facevarying);
-}
-
-void save_subdiv(const yocto_subdiv& subdiv, const string& dirname) {
-  save_shape(dirname + subdiv.filename, subdiv.points, subdiv.lines,
-      subdiv.triangles, subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
-      subdiv.quadstexcoord, subdiv.positions, subdiv.normals, subdiv.texcoords,
-      subdiv.colors, subdiv.radius);
-}
-
 // Load json meshes
 void load_shapes(
     yocto_scene& scene, const string& dirname, const load_params& params) {
@@ -229,25 +201,45 @@ void load_shapes(
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
       if (!shape.positions.empty()) continue;
-      load_shape(shape, dirname);
+      load_shape(dirname + shape.filename, shape.points, shape.lines,
+          shape.triangles, shape.quads, shape.positions, shape.normals,
+          shape.texcoords, shape.colors, shape.radius);
     }
   } else {
     parallel_foreach(scene.shapes, [&dirname](yocto_shape& shape) {
       if (!shape.positions.empty()) return;
-      load_shape(shape, dirname);
+      load_shape(dirname + shape.filename, shape.points, shape.lines,
+          shape.triangles, shape.quads, shape.positions, shape.normals,
+          shape.texcoords, shape.colors, shape.radius);
     });
   }
 
   // load subdivs
   if (params.noparallel) {
-    for (auto& subdiv : scene.subdivs) {
-      if (!subdiv.positions.empty()) continue;
-      load_subdiv(subdiv, dirname);
+    for (auto& shape : scene.subdivs) {
+      if (!shape.positions.empty()) continue;
+      if (!shape.facevarying) {
+        load_shape(dirname + shape.filename, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
+      } else {
+        load_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, shape.positions, shape.normals,
+            shape.texcoords);
+      }
     }
   } else {
-    parallel_foreach(scene.subdivs, [&dirname](yocto_subdiv& subdiv) {
-      if (!subdiv.positions.empty()) return;
-      load_subdiv(subdiv, dirname);
+    parallel_foreach(scene.subdivs, [&dirname](yocto_subdiv& shape) {
+      if (!shape.positions.empty()) return;
+      if (!shape.facevarying) {
+        load_shape(dirname + shape.filename, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
+      } else {
+        load_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, shape.positions, shape.normals,
+            shape.texcoords);
+      }
     });
   }
 }
@@ -258,20 +250,53 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
   // save shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
-      save_shape(shape, dirname);
+      if (shape.quadspos.empty()) {
+        save_shape(dirname + shape.filename, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
+      } else {
+        save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, shape.positions, shape.normals,
+            shape.texcoords);
+      }
     }
   } else {
-    parallel_foreach(scene.shapes,
-        [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); });
+    parallel_foreach(scene.shapes, [&dirname](const yocto_shape& shape) {
+      if (shape.quadspos.empty()) {
+        save_shape(dirname + shape.filename, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
+      } else {
+        save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, shape.positions, shape.normals,
+            shape.texcoords);
+      }
+    });
   }
   // save subdivs
   if (params.noparallel) {
-    for (auto& subdiv : scene.subdivs) {
-      save_subdiv(subdiv, dirname);
+    for (auto& shape : scene.subdivs) {
+      if (shape.quadspos.empty()) {
+        save_shape(dirname + shape.filename, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
+      } else {
+        save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, shape.positions, shape.normals,
+            shape.texcoords);
+      }
     }
   } else {
-    parallel_foreach(scene.subdivs, [&dirname](const yocto_subdiv& subdiv) {
-      save_subdiv(subdiv, dirname);
+    parallel_foreach(scene.subdivs, [&dirname](const yocto_subdiv& shape) {
+      if (shape.quadspos.empty()) {
+        save_shape(dirname + shape.filename, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
+      } else {
+        save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
+            shape.quadstexcoord, shape.positions, shape.normals,
+            shape.texcoords);
+      }
     });
   }
 }
@@ -1198,26 +1223,20 @@ static void load_ply_scene(
     const string& filename, yocto_scene& scene, const load_params& params) {
   scene = {};
 
-  try {
-    // load ply mesh
-    scene.shapes.push_back({});
-    auto& shape    = scene.shapes.back();
-    shape.name     = "shape";
-    shape.filename = get_filename(filename);
-    load_shape(filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, false);
+  // load ply mesh
+  scene.shapes.push_back({});
+  auto& shape    = scene.shapes.back();
+  shape.name     = "shape";
+  shape.filename = get_filename(filename);
+  load_shape(filename, shape.points, shape.lines, shape.triangles, shape.quads,
+      shape.positions, shape.normals, shape.texcoords, shape.colors,
+      shape.radius);
 
-    // add instance
-    auto instance  = yocto_instance{};
-    instance.name  = shape.name;
-    instance.shape = 0;
-    scene.instances.push_back(instance);
-
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
-  }
+  // add instance
+  auto instance  = yocto_instance{};
+  instance.name  = shape.name;
+  instance.shape = 0;
+  scene.instances.push_back(instance);
 
   // fix scene
   scene.name = get_basename(filename);
@@ -1231,14 +1250,14 @@ static void save_ply_scene(const string& filename, const yocto_scene& scene,
   if (scene.shapes.empty()) {
     throw std::runtime_error("cannot save empty scene " + filename);
   }
-  try {
-    auto& shape = scene.shapes.front();
+  auto& shape = scene.shapes.front();
+  if (shape.quadspos.empty()) {
     save_shape(filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius);
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
+        shape.quads, shape.positions, shape.normals, shape.texcoords,
+        shape.colors, shape.radius);
+  } else {
+    save_fvshape(filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+        shape.positions, shape.normals, shape.texcoords);
   }
 }
 
@@ -1608,10 +1627,16 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
   // save meshes
   auto dirname = get_dirname(filename);
   for (auto& shape : scene.shapes) {
-    save_shape(replace_extension(dirname + shape.filename, ".ply"),
-        shape.points, shape.lines, shape.triangles, shape.quads, shape.quadspos,
-        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius);
+    if (shape.quadspos.empty()) {
+      save_shape(replace_extension(dirname + shape.filename, ".ply"),
+          shape.points, shape.lines, shape.triangles, shape.quads,
+          shape.positions,
+          shape.normals, shape.texcoords, shape.colors, shape.radius);
+    } else {
+      save_fvshape(replace_extension(dirname + shape.filename, ".ply"),
+          shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+          shape.normals, shape.texcoords);
+    }
   }
 
   // save textures

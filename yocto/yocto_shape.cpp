@@ -3064,22 +3064,17 @@ namespace yocto {
 // Load ply mesh
 void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, bool facevarying, bool flip_texcoord) {
-  points        = {};
-  lines         = {};
-  triangles     = {};
-  quads         = {};
-  quadspos      = {};
-  quadsnorm     = {};
-  quadstexcoord = {};
-  positions     = {};
-  normals       = {};
-  texcoords     = {};
-  colors        = {};
-  radius        = {};
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<vec4f>& colors, vector<float>& radius, bool flip_texcoord) {
+  points    = {};
+  lines     = {};
+  triangles = {};
+  quads     = {};
+  positions = {};
+  normals   = {};
+  texcoords = {};
+  colors    = {};
+  radius    = {};
 
   try {
     auto ext = get_extension(filename);
@@ -3120,10 +3115,10 @@ void load_shape(const string& filename, vector<int>& points,
       auto materials  = vector<string>{};
       auto ematerials = vector<int>{};
       auto has_quads  = has_obj_quads(shape);
-      if (!shape.faces.empty() && !facevarying && !has_quads) {
+      if (!shape.faces.empty() && !has_quads) {
         get_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
             materials, ematerials, flip_texcoord);
-      } else if (!shape.faces.empty() && !facevarying && has_quads) {
+      } else if (!shape.faces.empty() && has_quads) {
         get_obj_quads(obj, shape, quads, positions, normals, texcoords,
             materials, ematerials, flip_texcoord);
       } else if (!shape.lines.empty()) {
@@ -3132,10 +3127,6 @@ void load_shape(const string& filename, vector<int>& points,
       } else if (!shape.points.empty()) {
         get_obj_points(obj, shape, points, positions, normals, texcoords,
             materials, ematerials, flip_texcoord);
-      } else if (!shape.faces.empty() && facevarying) {
-        get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord,
-            positions, normals, texcoords, materials, ematerials,
-            flip_texcoord);
       } else {
         throw std::runtime_error("should not have gotten here");
       }
@@ -3145,62 +3136,37 @@ void load_shape(const string& filename, vector<int>& points,
     } else {
       throw std::runtime_error("unsupported shape type " + ext);
     }
+
+    if (positions.empty())
+      throw std::runtime_error("vertex positions not present");
   } catch (std::exception& e) {
     throw std::runtime_error("cannot load shape " + filename + "\n" + e.what());
   }
-
-  if (positions.empty())
-    throw std::runtime_error("vertex positions not present");
 }
 
 // Save ply mesh
 void save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec4i>& quads, 
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<float>& radius, bool ascii, bool flip_texcoord) {
   try {
     auto ext = get_extension(filename);
     if (ext == ".ply" || ext == ".PLY") {
-      if (!quadspos.empty()) {
-        auto split_quads         = vector<vec4i>{};
-        auto split_positions     = vector<vec3f>{};
-        auto split_normals       = vector<vec3f>{};
-        auto split_texturecoords = vector<vec2f>{};
-        split_facevarying(split_quads, split_positions, split_normals,
-            split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
-            normals, texcoords);
-        return save_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
-            split_positions, split_normals, split_texturecoords, {}, {}, ascii,
-            flip_texcoord);
-      }
-
       // create ply
       auto ply = ply_model{};
-      ply.comments.push_back("Written by Yocto/GL");
-      ply.comments.push_back("https://github.com/xelatihy/yocto-gl");
-
-      // add vertices
       add_ply_positions(ply, positions);
       add_ply_normals(ply, normals);
       add_ply_texcoords(ply, texcoords, flip_texcoord);
       add_ply_colors(ply, colors);
       add_ply_radius(ply, radius);
-
-      // elements
       add_ply_faces(ply, triangles, quads);
       add_ply_lines(ply, lines);
       add_ply_points(ply, points);
-
-      // save ply
       save_ply(filename, ply);
     } else if (ext == ".obj" || ext == ".OBJ") {
-      // Obj model
       auto obj = obj_model{};
-
-      // Add obj data
       auto& shape = obj.shapes.emplace_back();
       if (!triangles.empty()) {
         add_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
@@ -3214,12 +3180,89 @@ void save_shape(const string& filename, const vector<int>& points,
       } else if (!points.empty()) {
         add_obj_points(obj, shape, points, positions, normals, texcoords, {},
             flip_texcoord);
-      } else if (!quadspos.empty()) {
-        add_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord,
-            positions, normals, texcoords, {}, flip_texcoord);
       } else {
         throw std::runtime_error("do not support empty shapes");
       }
+      save_obj(filename, obj);
+    } else {
+      throw std::runtime_error("unsupported shape type " + ext);
+    }
+  } catch (std::exception& e) {
+    throw std::runtime_error("cannot save shape " + filename + "\n" + e.what());
+  }
+}
+
+// Load ply mesh
+void load_fvshape(const string& filename, vector<vec4i>& quadspos,
+    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoord) {
+  quadspos      = {};
+  quadsnorm     = {};
+  quadstexcoord = {};
+  positions     = {};
+  normals       = {};
+  texcoords     = {};
+
+  try {
+    auto ext = get_extension(filename);
+    if (ext == ".ply" || ext == ".PLY") {
+      auto ply = ply_model{};
+      load_ply(filename, ply);
+      positions = get_ply_positions(ply);
+      normals   = get_ply_normals(ply);
+      texcoords = get_ply_texcoords(ply, flip_texcoord);
+      quadspos = get_ply_quads(ply);
+      if (!normals.empty()) quadsnorm = quadspos;
+      if (!texcoords.empty()) quadstexcoord = quadspos;
+    } else if (ext == ".obj" || ext == ".OBJ") {
+      auto obj = obj_model();
+      load_obj(filename, obj, true);
+      if (obj.shapes.empty()) return;
+      if (obj.shapes.size() > 1)
+        throw std::runtime_error("can only support one element type");
+      auto& shape = obj.shapes.front();
+      if (shape.faces.empty()) return;
+      auto materials  = vector<string>{};
+      auto ematerials = vector<int>{};
+      get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
+          normals, texcoords, materials, ematerials, flip_texcoord);
+    } else {
+      throw std::runtime_error("unsupported shape type " + ext);
+    }
+    if (positions.empty())
+      throw std::runtime_error("vertex positions not present");
+  } catch (std::exception& e) {
+    throw std::runtime_error("cannot load shape " + filename + "\n" + e.what());
+  }
+}
+
+// Save ply mesh
+void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, bool ascii, bool flip_texcoord) {
+  try {
+    auto ext = get_extension(filename);
+    if (ext == ".ply" || ext == ".PLY") {
+      auto split_quads         = vector<vec4i>{};
+      auto split_positions     = vector<vec3f>{};
+      auto split_normals       = vector<vec3f>{};
+      auto split_texturecoords = vector<vec2f>{};
+      split_facevarying(split_quads, split_positions, split_normals,
+          split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
+          normals, texcoords);
+      return save_shape(filename, {}, {}, {}, split_quads, 
+          split_positions, split_normals, split_texturecoords, {}, {}, ascii,
+          flip_texcoord);
+    } else if (ext == ".obj" || ext == ".OBJ") {
+      // Obj model
+      auto obj = obj_model{};
+
+      // Add obj data
+      auto& shape = obj.shapes.emplace_back();
+      add_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
+          normals, texcoords, {}, flip_texcoord);
 
       // Save
       save_obj(filename, obj);
