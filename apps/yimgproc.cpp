@@ -28,7 +28,7 @@
 
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
-#include "../yocto/yocto_utils.h"
+#include "../yocto/yocto_ioutils.h"
 using namespace yocto;
 
 namespace yocto {

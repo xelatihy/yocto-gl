@@ -30,7 +30,8 @@
 #include "yocto_modelio.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
-#include "yocto_utils.h"
+#include "yocto_ioutils.h"
+#include "yocto_common.h"
 
 #include <limits.h>
 #include <stdlib.h>

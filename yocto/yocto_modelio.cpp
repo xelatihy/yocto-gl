@@ -42,7 +42,7 @@
 #include "yocto_modelio.h"
 
 #include "yocto_image.h"
-#include "yocto_utils.h"
+#include "yocto_ioutils.h"
 
 #include <algorithm>
 #include <cinttypes>
