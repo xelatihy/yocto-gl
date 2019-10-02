@@ -619,13 +619,6 @@ static bool intersect_instances_embree_bvh(const bvh_embree& bvh,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// BVH primitive with its bbox, its center and the index to the primitive
-struct bvh_prim {
-  bbox3f bbox   = invalidb3f;
-  vec3f  center = zero3f;
-  int    primid = 0;
-};
-
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
 static pair<int, int> split_sah(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
