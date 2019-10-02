@@ -981,4 +981,16 @@ void load_gltf(const string& filename, gltf_model& gltf);
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// CYHAIR DATA
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// CyHair data
+void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<vec4f>& color, vector<float>& radius, bool flip_texcoord = true);
+
+}  // namespace yocto
+
 #endif
