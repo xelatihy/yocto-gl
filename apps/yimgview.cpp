@@ -149,21 +149,20 @@ void draw_glwidgets(const opengl_window& win) {
   auto          image_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yimview")) return;
   draw_glmessages(win);
-  if (draw_glfiledialog_button(win, "load", true, 
-    "load image", load_path, false, "./", "", 
-    "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
+  if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
+          false, "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save", image_ok, "save image", save_path, 
-    true, get_dirname(save_path), get_filename(save_path),
+  if (draw_glfiledialog_button(win, "save", image_ok, "save image", save_path,
+          true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto& app = apps.get_selected();
+    auto& app   = apps.get_selected();
     app.outname = save_path;
     try {
       save_image(app.outname, app.display);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
       log_glinfo(win, e.what());

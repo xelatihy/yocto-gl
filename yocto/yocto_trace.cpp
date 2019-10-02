@@ -792,7 +792,8 @@ static float sample_light_pdf(const yocto_scene& scene,
   auto pdf           = 0.0f;
   auto next_position = position;
   for (auto bounce = 0; bounce < 100; bounce++) {
-    auto isec = intersect_instance_bvh(bvh, instance_id, {next_position, direction});
+    auto isec = intersect_instance_bvh(
+        bvh, instance_id, {next_position, direction});
     if (!isec.hit) break;
     // accumulate pdf
     auto& instance      = scene.instances[isec.instance];

@@ -452,7 +452,7 @@ namespace yocto {
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shared_scene {
   // shapes
-  int num_shapes = 0;
+  int                                       num_shapes = 0;
   function<const vector<int>&(int shape)>   shape_points;
   function<const vector<vec2i>&(int shape)> shape_lines;
   function<const vector<vec3i>&(int shape)> shape_triangles;
@@ -462,7 +462,7 @@ struct bvh_shared_scene {
   function<const vector<float>&(int shape)> shape_radius;
 
   // instances
-  int num_instances = 0;
+  int                             num_instances = 0;
   function<frame3f(int instance)> instance_frame;
   function<int(int instance)>     instance_shape;
 
@@ -480,29 +480,31 @@ struct bvh_shared_scene {
 void make_scene_bvh(bvh_shared_scene& bvh, const bvh_params& params);
 
 // Refit bvh data
-void update_scene_bvh(bvh_shared_scene& bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes, const bvh_params& params);
+void update_scene_bvh(bvh_shared_scene& bvh,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bool intersect_scene_bvh(const bvh_shared_scene& bvh, const ray3f& ray, int& instance,
-    int& element, vec2f& uv, float& distance, bool find_any = false,
-    bool non_rigid_frames = true);
-bool intersect_shape_bvh(const bvh_shared_scene& bvh, int shape, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any = false,
-    bool non_rigid_frames = true);
+bool intersect_scene_bvh(const bvh_shared_scene& bvh, const ray3f& ray,
+    int& instance, int& element, vec2f& uv, float& distance,
+    bool find_any = false, bool non_rigid_frames = true);
+bool intersect_shape_bvh(const bvh_shared_scene& bvh, int shape,
+    const ray3f& ray, int& element, vec2f& uv, float& distance,
+    bool find_any = false, bool non_rigid_frames = true);
 // Intersects a single instance.
 bool intersect_instance_bvh(const bvh_shared_scene& bvh, int instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance,
     bool find_any = false, bool non_rigid_frames = true);
 
-bvh_intersection intersect_scene_bvh(const bvh_shared_scene& bvh, const ray3f& ray,
-    bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_shape_bvh(const bvh_shared_scene& bvh, int shape, const ray3f& ray,
-    bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_instance_bvh(const bvh_shared_scene& bvh, int instance,
+bvh_intersection intersect_scene_bvh(const bvh_shared_scene& bvh,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+bvh_intersection intersect_shape_bvh(const bvh_shared_scene& bvh, int shape,
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+bvh_intersection intersect_instance_bvh(const bvh_shared_scene& bvh,
+    int instance, const ray3f& ray, bool find_any = false,
+    bool non_rigid_frames = true);
 
 }  // namespace yocto
 

@@ -2317,10 +2317,11 @@ bool intersect_scene_bvh(const bvh_shared_scene& bvh, const ray3f& ray,
 bool intersect_instance_bvh(const bvh_shared_scene& bvh, int instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
-  auto frame = bvh.instance_frame(instance);
-  auto shape = bvh.instance_shape(instance);
+  auto frame   = bvh.instance_frame(instance);
+  auto shape   = bvh.instance_shape(instance);
   auto inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
-  return intersect_shape_bvh(bvh, shape, inv_ray, element, uv, distance, find_any);
+  return intersect_shape_bvh(
+      bvh, shape, inv_ray, element, uv, distance, find_any);
 }
 
 bvh_intersection intersect_scene_bvh(const bvh_shared_scene& scene,
