@@ -3065,7 +3065,8 @@ namespace yocto {
 void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, bool flip_texcoord) {
+    vector<vec4f>& colors, vector<float>& radius, bool no_vertex_duplication, 
+    bool flip_texcoord) {
   points    = {};
   lines     = {};
   triangles = {};
@@ -3117,16 +3118,16 @@ void load_shape(const string& filename, vector<int>& points,
       auto has_quads  = has_obj_quads(shape);
       if (!shape.faces.empty() && !has_quads) {
         get_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
-            materials, ematerials, flip_texcoord);
+            materials, ematerials, no_vertex_duplication, flip_texcoord);
       } else if (!shape.faces.empty() && has_quads) {
         get_obj_quads(obj, shape, quads, positions, normals, texcoords,
-            materials, ematerials, flip_texcoord);
+            materials, ematerials, no_vertex_duplication, flip_texcoord);
       } else if (!shape.lines.empty()) {
         get_obj_lines(obj, shape, lines, positions, normals, texcoords,
-            materials, ematerials, flip_texcoord);
+            materials, ematerials, no_vertex_duplication, flip_texcoord);
       } else if (!shape.points.empty()) {
         get_obj_points(obj, shape, points, positions, normals, texcoords,
-            materials, ematerials, flip_texcoord);
+            materials, ematerials, no_vertex_duplication, flip_texcoord);
       } else {
         throw std::runtime_error("should not have gotten here");
       }
@@ -3262,74 +3263,6 @@ void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
           normals, texcoords, {}, {}, flip_texcoord);
 
       // Save
-      save_obj(filename, obj);
-    } else {
-      throw std::runtime_error("unsupported shape type " + ext);
-    }
-  } catch (std::exception& e) {
-    throw std::runtime_error("cannot save shape " + filename + "\n" + e.what());
-  }
-}
-
-// Load ply mesh
-void load_triangles(const string& filename, vector<vec3i>& triangles,
-    vector<vec3f>& positions) {
-  triangles = {};
-  positions = {};
-
-  try {
-    auto ext = get_extension(filename);
-    if (ext == ".ply" || ext == ".PLY") {
-      // open ply
-      auto ply = ply_model{};
-      load_ply(filename, ply);
-
-      // gets vertex
-      positions = get_ply_positions(ply);
-      triangles = get_ply_triangles(ply);
-    } else if (ext == ".obj" || ext == ".OBJ") {
-      // load obj
-      auto obj = obj_model();
-      load_obj(filename, obj, true);
-
-      // get shape
-      if (obj.shapes.empty()) return;
-      if (obj.shapes.size() > 1)
-        throw std::runtime_error("can only support one element type");
-      auto& shape = obj.shapes.front();
-      if (shape.points.empty() && shape.lines.empty() && shape.faces.empty())
-        return;
-
-      // decide what to do and get properties
-      auto materials  = vector<string>{};
-      auto ematerials = vector<int>{};
-      get_obj_triangles(
-          obj, shape, triangles, positions, materials, ematerials);
-    } else {
-      throw std::runtime_error("unsupported shape type " + ext);
-    }
-
-    if (positions.empty())
-      throw std::runtime_error("vertex positions not present");
-  } catch (std::exception& e) {
-    throw std::runtime_error("cannot load shape " + filename + "\n" + e.what());
-  }
-}
-
-// Save ply mesh
-void save_triangles(const string& filename, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, bool ascii) {
-  try {
-    auto ext = get_extension(filename);
-    if (ext == ".ply" || ext == ".PLY") {
-      // create ply
-      auto ply = ply_model{};
-      add_ply_positions(ply, positions);
-      add_ply_triangles(ply, triangles);
-      save_ply(filename, ply);
-    } else if (ext == ".obj" || ext == ".OBJ") {
-      auto  obj   = obj_model{};
-      add_obj_triangles(obj, "", triangles, positions, {}, {});
       save_obj(filename, obj);
     } else {
       throw std::runtime_error("unsupported shape type " + ext);

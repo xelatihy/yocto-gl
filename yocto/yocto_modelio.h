@@ -468,19 +468,6 @@ void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
 bool has_obj_quads(const obj_shape& shape);
-// Vertex only interfaces that ensure no vertex duplication.
-void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
-    vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<string>& materials, vector<int>& ematerials);
-void get_obj_quads(const obj_model& obj, const obj_shape& shape,
-    vector<vec4i>& quads, vector<vec3f>& positions, vector<string>& materials,
-    vector<int>& ematerials);
-void get_obj_lines(const obj_model& obj, const obj_shape& shape,
-    vector<vec2i>& lines, vector<vec3f>& positions, vector<string>& materials,
-    vector<int>& ematerials);
-void get_obj_points(const obj_model& obj, const obj_shape& shape,
-    vector<int>& points, vector<vec3f>& positions, vector<string>& materials,
-    vector<int>& ematerials);
 
 // Add obj shape
 void add_obj_triangles(obj_model& obj, const string& name,
