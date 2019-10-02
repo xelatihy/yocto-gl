@@ -40,7 +40,8 @@ int main(int argc, const char** argv) {
   auto geodesic_scale       = 30.0f;
   auto slice                = false;
   auto facevarying          = false;
-  auto noduplication        = false;
+  auto positiononly        = false;
+  auto trianglesonly        = false;
   auto normals              = false;
   auto rotate               = zero3f;
   auto scale                = vec3f{1};
@@ -58,7 +59,8 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
   add_cli_option(cli, "--slice", slice, "Slice mesh along field isolines");
   add_cli_option(cli, "--facevarying", facevarying, "Preserve facevarying");
-  add_cli_option(cli, "--noduplication", noduplication, "Avoid vertex duplication");
+  add_cli_option(cli, "--positiononly", positiononly, "Remove all but positions");
+  add_cli_option(cli, "--trianglesonly", trianglesonly, "Remove all but triangles");
   add_cli_option(cli, "--normals", normals, "Compute smooth normals");
   add_cli_option(cli, "--rotatey", rotate.y, "Rotate around y axis");
   add_cli_option(cli, "--rotatex", rotate.x, "Rotate around x axis");
@@ -81,13 +83,35 @@ int main(int argc, const char** argv) {
     if (!facevarying) {
       load_shape(filename, shape.points, shape.lines, shape.triangles,
           shape.quads, shape.positions, shape.normals, shape.texcoords,
-          shape.colors, shape.radius, noduplication);
+          shape.colors, shape.radius);
     } else {
       load_fvshape(filename, shape.quadspos, shape.quadsnorm,
           shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
     }
   } catch (const std::exception& e) {
     print_fatal(e.what());
+  }
+
+  // remove data 
+  if(positiononly) {
+    shape.normals = {};
+    shape.texcoords = {};
+    shape.colors = {};
+    shape.radius = {};
+    shape.quadsnorm = {};
+    shape.quadstexcoord = {};
+    if(!shape.quadspos.empty()) swap(shape.quads, shape.quadspos);
+  }
+
+  // convert data 
+  if(trianglesonly) {
+    if(!shape.quadspos.empty()) {
+      print_fatal("cannot convert facevarying data to triangles");
+    }
+    if(!shape.quads.empty()) {
+      shape.triangles = quads_to_triangles(shape.quads);
+      shape.quads = {};
+    }
   }
 
   // transform

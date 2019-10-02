@@ -445,22 +445,22 @@ float obj_roughness_to_exponent(float roughness);
 void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool no_vertex_duplication = false,
+    vector<int>& ematerials, 
     bool flip_texcoord = false);
 void get_obj_quads(const obj_model& obj, const obj_shape& shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool no_vertex_duplication = false,
+    vector<int>& ematerials, 
     bool flip_texcoord = false);
 void get_obj_lines(const obj_model& obj, const obj_shape& shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool no_vertex_duplication = false,
+    vector<int>& ematerials, 
     bool flip_texcoord = false);
 void get_obj_points(const obj_model& obj, const obj_shape& shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
-    vector<int>& ematerials, bool no_vertex_duplication = false,
+    vector<int>& ematerials, 
     bool flip_texcoord = false);
 void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
