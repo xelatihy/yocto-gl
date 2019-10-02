@@ -3066,42 +3066,13 @@ static void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec4f>& color, vector<float>& radius, bool flip_texcoord = true);
 
-// Load/Save a ply mesh
-static void load_ply_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& color,
-    vector<float>& radius, bool flip_texcoord = true);
-static void save_ply_shape(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, bool ascii = false, bool flip_texcoord = true);
-
-// Load/Save an OBJ mesh
-static void load_obj_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
-    bool flip_texcoord = true);
-static void save_obj_shape(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, bool flip_texcoord = true);
-
 // Load ply mesh
 void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, bool preserve_facevarrying) {
+    vector<float>& radius, bool facevarying, bool flip_texcoord) {
   points        = {};
   lines         = {};
   triangles     = {};
@@ -3118,13 +3089,61 @@ void load_shape(const string& filename, vector<int>& points,
   try {
     auto ext = get_extension(filename);
     if (ext == ".ply" || ext == ".PLY") {
-      load_ply_shape(filename, points, lines, triangles, quads, quadspos,
-          quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
-          radius);
+      // open ply
+      auto ply = ply_model{};
+      load_ply(filename, ply);
+
+      // gets vertex
+      positions = get_ply_positions(ply);
+      normals   = get_ply_normals(ply);
+      texcoords = get_ply_texcoords(ply, flip_texcoord);
+      colors    = get_ply_colors(ply);
+      radius    = get_ply_radius(ply);
+
+      // get faces
+      if (has_ply_quads(ply)) {
+        quads = get_ply_quads(ply);
+      } else {
+        triangles = get_ply_triangles(ply);
+      }
+      lines  = get_ply_lines(ply);
+      points = get_ply_points(ply);
     } else if (ext == ".obj" || ext == ".OBJ") {
-      load_obj_shape(filename, points, lines, triangles, quads, quadspos,
-          quadsnorm, quadstexcoord, positions, normals, texcoords,
-          preserve_facevarrying);
+      // load obj
+      auto obj = obj_model();
+      load_obj(filename, obj, true);
+
+      // get shape
+      if (obj.shapes.empty()) return;
+      if (obj.shapes.size() > 1)
+        throw std::runtime_error("can only support one element type");
+      auto& shape = obj.shapes.front();
+      if (shape.points.empty() && shape.lines.empty() && shape.faces.empty())
+        return;
+
+      // decide what to do and get properties
+      auto materials  = vector<string>{};
+      auto ematerials = vector<int>{};
+      auto has_quads  = has_obj_quads(shape);
+      if (!shape.faces.empty() && !facevarying && !has_quads) {
+        get_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
+            materials, ematerials, flip_texcoord);
+      } else if (!shape.faces.empty() && !facevarying && has_quads) {
+        get_obj_quads(obj, shape, quads, positions, normals, texcoords,
+            materials, ematerials, flip_texcoord);
+      } else if (!shape.lines.empty()) {
+        get_obj_lines(obj, shape, lines, positions, normals, texcoords,
+            materials, ematerials, flip_texcoord);
+      } else if (!shape.points.empty()) {
+        get_obj_points(obj, shape, points, positions, normals, texcoords,
+            materials, ematerials, flip_texcoord);
+      } else if (!shape.faces.empty() && facevarying) {
+        get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord,
+            positions, normals, texcoords, materials, ematerials,
+            flip_texcoord);
+      } else {
+        throw std::runtime_error("should not have gotten here");
+      }
     } else if (ext == ".hair" || ext == ".HAIR") {
       load_cyhair_shape(
           filename, lines, positions, normals, texcoords, colors, radius);
@@ -3134,6 +3153,9 @@ void load_shape(const string& filename, vector<int>& points,
   } catch (std::exception& e) {
     throw std::runtime_error("cannot load shape " + filename + "\n" + e.what());
   }
+
+  if (positions.empty())
+    throw std::runtime_error("vertex positions not present");
 }
 
 // Save ply mesh
@@ -3143,16 +3165,69 @@ void save_shape(const string& filename, const vector<int>& points,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, bool ascii) {
+    const vector<float>& radius, bool ascii, bool flip_texcoord) {
   try {
     auto ext = get_extension(filename);
     if (ext == ".ply" || ext == ".PLY") {
-      return save_ply_shape(filename, points, lines, triangles, quads, quadspos,
-          quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
-          radius, ascii);
+      if (!quadspos.empty()) {
+        auto split_quads         = vector<vec4i>{};
+        auto split_positions     = vector<vec3f>{};
+        auto split_normals       = vector<vec3f>{};
+        auto split_texturecoords = vector<vec2f>{};
+        split_facevarying(split_quads, split_positions, split_normals,
+            split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
+            normals, texcoords);
+        return save_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
+            split_positions, split_normals, split_texturecoords, {}, {}, ascii,
+            flip_texcoord);
+      }
+
+      // create ply
+      auto ply = ply_model{};
+      ply.comments.push_back("Written by Yocto/GL");
+      ply.comments.push_back("https://github.com/xelatihy/yocto-gl");
+
+      // add vertices
+      add_ply_positions(ply, positions);
+      add_ply_normals(ply, normals);
+      add_ply_texcoords(ply, texcoords, flip_texcoord);
+      add_ply_colors(ply, colors);
+      add_ply_radius(ply, radius);
+
+      // elements
+      add_ply_faces(ply, triangles, quads);
+      add_ply_lines(ply, lines);
+      add_ply_points(ply, points);
+
+      // save ply
+      save_ply(filename, ply);
     } else if (ext == ".obj" || ext == ".OBJ") {
-      return save_obj_shape(filename, points, lines, triangles, quads, quadspos,
-          quadsnorm, quadstexcoord, positions, normals, texcoords);
+      // Obj model
+      auto obj = obj_model{};
+
+      // Add obj data
+      auto& shape = obj.shapes.emplace_back();
+      if (!triangles.empty()) {
+        add_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
+            {}, flip_texcoord);
+      } else if (!quads.empty()) {
+        add_obj_quads(obj, shape, quads, positions, normals, texcoords, {},
+            flip_texcoord);
+      } else if (!lines.empty()) {
+        add_obj_lines(obj, shape, lines, positions, normals, texcoords, {},
+            flip_texcoord);
+      } else if (!points.empty()) {
+        add_obj_points(obj, shape, points, positions, normals, texcoords, {},
+            flip_texcoord);
+      } else if (!quadspos.empty()) {
+        add_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord,
+            positions, normals, texcoords, {}, flip_texcoord);
+      } else {
+        throw std::runtime_error("do not support empty shapes");
+      }
+
+      // Save
+      save_obj(filename, obj);
     } else {
       throw std::runtime_error("unsupported shape type " + ext);
     }
@@ -3160,675 +3235,6 @@ void save_shape(const string& filename, const vector<int>& points,
     throw std::runtime_error("cannot save shape " + filename + "\n" + e.what());
   }
 }
-
-// #define YOCTO_OLD_YAML
-
-#ifdef YOCTO_OLD_YAML
-
-static void load_ply_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, bool flip_texcoord) {
-  // open ply
-  auto fs = open_file(filename, "rb");
-
-  // load elements
-  auto format   = ply_format{};
-  auto elements = vector<ply_element>{};
-  auto comments = vector<string>{};
-  read_ply_header(fs, format, elements, comments);
-
-  // read values
-  auto values = vector<float>{};
-  auto lists  = vector<vector<int>>{};
-  for (auto& element : elements) {
-    if (element.name == "vertex") {
-      auto pos  = find_ply_property(element, "x", "y", "z");
-      auto norm = find_ply_property(element, "nx", "ny", "nz");
-      auto uv   = find_ply_property(element, "u", "v");
-      if (uv.x < 0) uv = find_ply_property(element, "s", "t");
-      auto col = find_ply_property(element, "red", "green", "blue", "alpha");
-      auto rad = find_ply_property(element, "radius");
-      for (auto idx = 0; idx < element.count; idx++) {
-        read_ply_value(fs, format, element, values, lists);
-        if (pos.x >= 0)
-          positions.push_back({values[pos.x], values[pos.y], values[pos.z]});
-        if (norm.x >= 0)
-          normals.push_back({values[norm.x], values[norm.y], values[norm.z]});
-        if (uv.x >= 0) texcoords.push_back({values[uv.x], values[uv.y]});
-        if (col.x >= 0)
-          colors.push_back(
-              {values[col.x], values[col.y], values[col.z], values[col.w]});
-        if (rad > 0) radius.push_back({values[rad]});
-      }
-    } else if (element.name == "face") {
-      auto indices = find_ply_property(element, "vertex_indices");
-      for (auto idx = 0; idx < element.count; idx++) {
-        read_ply_value(fs, format, element, values, lists);
-        if (indices < 0) continue;
-        auto& face = lists[indices];
-        if (face.size() == 4) {
-          quads.push_back({face[0], face[1], face[2], face[3]});
-        } else {
-          for (auto i = 2; i < face.size(); i++)
-            triangles.push_back({face[0], face[i - 1], face[i]});
-        }
-      }
-    } else if (element.name == "line") {
-      auto indices = find_ply_property(element, "vertex_indices");
-      for (auto idx = 0; idx < element.count; idx++) {
-        read_ply_value(fs, format, element, values, lists);
-        if (indices < 0) continue;
-        auto line = lists[indices];
-        for (auto i = 1; i < line.size(); i++)
-          lines.push_back({line[i - 1], line[i]});
-      }
-    } else {
-      for (auto idx = 0; idx < element.count; idx++)
-        read_ply_value(fs, format, element, values, lists);
-    }
-  }
-
-  if (positions.empty())
-    throw std::runtime_error("vertex positions not present");
-
-  // fix texture coordinated
-  if (flip_texcoord && !texcoords.empty()) {
-    for (auto& uv : texcoords) uv.y = 1 - uv.y;
-  }
-
-  merge_triangles_and_quads(triangles, quads, false);
-}
-
-// Save ply mesh
-static void save_ply_shape(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, bool ascii, bool flip_texcoord) {
-  if (!quadspos.empty()) {
-    auto split_quads         = vector<vec4i>{};
-    auto split_positions     = vector<vec3f>{};
-    auto split_normals       = vector<vec3f>{};
-    auto split_texturecoords = vector<vec2f>{};
-    split_facevarying(split_quads, split_positions, split_normals,
-        split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords);
-    return save_ply_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
-        split_positions, split_normals, split_texturecoords, {}, {}, ascii,
-        flip_texcoord);
-  }
-
-  auto fs = open_file(filename, "wb");
-
-  // format
-  auto format = ply_format::binary_little_endian;
-
-  // comment
-  auto comments = vector<string>{
-      "Written by Yocto/GL", "https://github.com/xelatihy/yocto-gl"};
-
-  // elements
-  auto elements = vector<ply_element>{};
-  if (!positions.empty())
-    elements.push_back(ply_element{"vertex", positions.size()});
-  if (!positions.empty()) {
-    auto& vertex = elements.back();
-    vertex.properties.push_back({"x", false, ply_type::f32});
-    vertex.properties.push_back({"y", false, ply_type::f32});
-    vertex.properties.push_back({"z", false, ply_type::f32});
-  }
-  if (!normals.empty()) {
-    auto& vertex = elements.back();
-    vertex.properties.push_back({"nx", false, ply_type::f32});
-    vertex.properties.push_back({"ny", false, ply_type::f32});
-    vertex.properties.push_back({"nz", false, ply_type::f32});
-  }
-  if (!texcoords.empty()) {
-    auto& vertex = elements.back();
-    vertex.properties.push_back({"u", false, ply_type::f32});
-    vertex.properties.push_back({"v", false, ply_type::f32});
-  }
-  if (!colors.empty()) {
-    auto& vertex = elements.back();
-    vertex.properties.push_back({"red", false, ply_type::f32});
-    vertex.properties.push_back({"green", false, ply_type::f32});
-    vertex.properties.push_back({"blue", false, ply_type::f32});
-    vertex.properties.push_back({"alpha", false, ply_type::f32});
-  }
-  if (!radius.empty()) {
-    auto& vertex = elements.back();
-    vertex.properties.push_back({"radius", false, ply_type::f32});
-  }
-
-  // face date
-  if (!triangles.empty() || !quads.empty()) {
-    elements.push_back({"face", triangles.size() + quads.size()});
-    auto& face = elements.back();
-    face.properties.push_back({"vertex_indices", true, ply_type::i32});
-  }
-  if (!lines.empty()) {
-    elements.push_back({"line", lines.size()});
-    auto& face = elements.back();
-    face.properties.push_back({"vertex_indices", true, ply_type::i32});
-  }
-  if (!points.empty()) {
-    elements.push_back({"point", points.size()});
-    auto& face = elements.back();
-    face.properties.push_back({"vertex_indices", true, ply_type::i32});
-  }
-
-  // write header
-  write_ply_header(fs, format, elements, comments);
-
-  // write values
-  for (auto& element : elements) {
-    if (element.name == "vertex") {
-      auto values = vector<float>(element.properties.size());
-      auto lists  = vector<vector<int>>(element.properties.size());
-      for (auto idx = 0; idx < element.count; idx++) {
-        auto cur = 0;
-        if (!positions.empty()) {
-          values[cur++] = positions[idx].x;
-          values[cur++] = positions[idx].y;
-          values[cur++] = positions[idx].z;
-        }
-        if (!normals.empty()) {
-          values[cur++] = normals[idx].x;
-          values[cur++] = normals[idx].y;
-          values[cur++] = normals[idx].z;
-        }
-        if (!texcoords.empty()) {
-          values[cur++] = texcoords[idx].x;
-          values[cur++] = flip_texcoord ? 1 - texcoords[idx].y
-                                        : texcoords[idx].y;
-        }
-        if (!colors.empty()) {
-          values[cur++] = colors[idx].x;
-          values[cur++] = colors[idx].y;
-          values[cur++] = colors[idx].z;
-          values[cur++] = colors[idx].w;
-        }
-        if (!radius.empty()) {
-          values[cur++] = radius[idx];
-        }
-        write_ply_value(fs, format, element, values, lists);
-      }
-    } else if (element.name == "face") {
-      auto values = vector<float>(element.properties.size());
-      auto lists  = vector<vector<int>>(element.properties.size());
-      values[0]   = (float)3;
-      lists[0].resize(3);
-      for (auto& t : triangles) {
-        lists[0][0] = t.x;
-        lists[0][1] = t.y;
-        lists[0][2] = t.z;
-        write_ply_value(fs, format, element, values, lists);
-      }
-      values[0] = (float)4;
-      lists[0].resize(4);
-      for (auto& q : quads) {
-        if (q.z == q.w) {
-          values[0] = (float)3;
-          lists[0].resize(3);
-          lists[0][0] = q.x;
-          lists[0][1] = q.y;
-          lists[0][2] = q.z;
-        } else {
-          values[0] = (float)4;
-          lists[0].resize(4);
-          lists[0][0] = q.x;
-          lists[0][1] = q.y;
-          lists[0][2] = q.z;
-          lists[0][3] = q.w;
-        }
-        write_ply_value(fs, format, element, values, lists);
-      }
-    } else if (element.name == "line") {
-      auto values = vector<float>(element.properties.size());
-      auto lists  = vector<vector<int>>(element.properties.size());
-      values[0]   = (float)2;
-      lists[0].resize(2);
-      for (auto& l : lines) {
-        lists[0][0] = l.x;
-        lists[0][1] = l.y;
-        write_ply_value(fs, format, element, values, lists);
-      }
-    } else if (element.name == "point") {
-      auto values = vector<float>(element.properties.size());
-      auto lists  = vector<vector<int>>(element.properties.size());
-      values[0]   = (float)1;
-      lists[0].resize(1);
-      for (auto& p : points) {
-        lists[0][0] = p;
-        write_ply_value(fs, format, element, values, lists);
-      }
-    } else {
-      throw std::runtime_error("should not have gotten here");
-    }
-  }
-}
-
-#else
-
-static void load_ply_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, bool flip_texcoord) {
-  // open ply
-  auto ply = ply_model{};
-  load_ply(filename, ply);
-
-  // gets vertex
-  positions = get_ply_positions(ply);
-  normals   = get_ply_normals(ply);
-  texcoords = get_ply_texcoords(ply, flip_texcoord);
-  colors    = get_ply_colors(ply);
-  radius    = get_ply_radius(ply);
-
-  // get faces
-  if (has_ply_quads(ply)) {
-    quads = get_ply_quads(ply);
-  } else {
-    triangles = get_ply_triangles(ply);
-  }
-  lines  = get_ply_lines(ply);
-  points = get_ply_points(ply);
-
-  if (positions.empty())
-    throw std::runtime_error("vertex positions not present");
-}
-
-// Save ply mesh
-static void save_ply_shape(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, bool ascii, bool flip_texcoord) {
-  if (!quadspos.empty()) {
-    auto split_quads         = vector<vec4i>{};
-    auto split_positions     = vector<vec3f>{};
-    auto split_normals       = vector<vec3f>{};
-    auto split_texturecoords = vector<vec2f>{};
-    split_facevarying(split_quads, split_positions, split_normals,
-        split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords);
-    return save_ply_shape(filename, {}, {}, {}, split_quads, {}, {}, {},
-        split_positions, split_normals, split_texturecoords, {}, {}, ascii,
-        flip_texcoord);
-  }
-
-  // create ply
-  auto ply = ply_model{};
-  ply.comments.push_back("Written by Yocto/GL");
-  ply.comments.push_back("https://github.com/xelatihy/yocto-gl");
-
-  // add vertices
-  add_ply_positions(ply, positions);
-  add_ply_normals(ply, normals);
-  add_ply_texcoords(ply, texcoords, flip_texcoord);
-  add_ply_colors(ply, colors);
-  add_ply_radius(ply, radius);
-
-  // elements
-  add_ply_faces(ply, triangles, quads);
-  add_ply_lines(ply, lines);
-  add_ply_points(ply, points);
-
-  // save ply
-  save_ply(filename, ply);
-}
-
-#endif
-
-// #define YOCTO_OLD_OBJ
-
-#ifdef YOCTO_OLD_OBJ
-
-// Load obj mesh
-static void load_obj_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
-    bool flip_texcoord) {
-  // open obj
-  auto fs = open_file(filename);
-
-  // obj vertices
-  std::deque<vec3f> opos      = std::deque<vec3f>();
-  std::deque<vec3f> onorm     = std::deque<vec3f>();
-  std::deque<vec2f> otexcoord = std::deque<vec2f>();
-
-  // vertex maps
-  hash_map<obj_vertex, int> vertex_map = hash_map<obj_vertex, int>();
-
-  // vertex maps
-  hash_map<int, int> pos_map      = hash_map<int, int>();
-  hash_map<int, int> texcoord_map = hash_map<int, int>();
-  hash_map<int, int> norm_map     = hash_map<int, int>();
-
-  // read obj
-  auto element   = obj_command{};
-  auto value     = obj_value{};
-  auto vertices  = vector<obj_vertex>{};
-  auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, element, value, vertices, vert_size)) {
-    if (element == obj_command::vertex) {
-      get_obj_value(value, opos.emplace_back());
-    } else if (element == obj_command::normal) {
-      get_obj_value(value, onorm.emplace_back());
-    } else if (element == obj_command::texcoord) {
-      get_obj_value(value, otexcoord.emplace_back());
-    } else if (element == obj_command::face && facevarying) {
-      for (auto& vert : vertices) {
-        if (!vert.position) continue;
-        auto pos_it = pos_map.find(vert.position);
-        if (pos_it != pos_map.end()) continue;
-        auto nverts = (int)positions.size();
-        pos_map.insert(pos_it, {vert.position, nverts});
-        positions.push_back(opos.at(vert.position - 1));
-      }
-      for (auto& vert : vertices) {
-        if (!vert.texcoord) continue;
-        auto texcoord_it = texcoord_map.find(vert.texcoord);
-        if (texcoord_it != texcoord_map.end()) continue;
-        auto nverts = (int)texcoords.size();
-        texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
-        texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-      }
-      for (auto& vert : vertices) {
-        if (!vert.normal) continue;
-        auto norm_it = norm_map.find(vert.normal);
-        if (norm_it != norm_map.end()) continue;
-        auto nverts = (int)normals.size();
-        norm_map.insert(norm_it, {vert.normal, nverts});
-        normals.push_back(onorm.at(vert.normal - 1));
-      }
-      if (vertices.size() == 4) {
-        if (vertices[0].position) {
-          quadspos.push_back({pos_map.at(vertices[0].position),
-              pos_map.at(vertices[1].position),
-              pos_map.at(vertices[2].position),
-              pos_map.at(vertices[3].position)});
-        }
-        if (vertices[0].texcoord) {
-          quadstexcoord.push_back({texcoord_map.at(vertices[0].texcoord),
-              texcoord_map.at(vertices[1].texcoord),
-              texcoord_map.at(vertices[2].texcoord),
-              texcoord_map.at(vertices[3].texcoord)});
-        }
-        if (vertices[0].normal) {
-          quadsnorm.push_back({norm_map.at(vertices[0].normal),
-              norm_map.at(vertices[1].normal), norm_map.at(vertices[2].normal),
-              norm_map.at(vertices[3].normal)});
-        }
-        // quads_materials.push_back(current_material_id);
-      } else {
-        if (vertices[0].position) {
-          for (auto i = 2; i < vertices.size(); i++)
-            quadspos.push_back({pos_map.at(vertices[0].position),
-                pos_map.at(vertices[1].position),
-                pos_map.at(vertices[i].position),
-                pos_map.at(vertices[i].position)});
-        }
-        if (vertices[0].texcoord) {
-          for (auto i = 2; i < vertices.size(); i++)
-            quadstexcoord.push_back({texcoord_map.at(vertices[0].texcoord),
-                texcoord_map.at(vertices[1].texcoord),
-                texcoord_map.at(vertices[i].texcoord),
-                texcoord_map.at(vertices[i].texcoord)});
-        }
-        if (vertices[0].normal) {
-          for (auto i = 2; i < vertices.size(); i++)
-            quadsnorm.push_back({norm_map.at(vertices[0].normal),
-                norm_map.at(vertices[1].normal),
-                norm_map.at(vertices[i].normal),
-                norm_map.at(vertices[i].normal)});
-        }
-      }
-    } else if (element == obj_command::face && !facevarying) {
-      for (auto& vert : vertices) {
-        auto it = vertex_map.find(vert);
-        if (it != vertex_map.end()) continue;
-        auto nverts = (int)positions.size();
-        vertex_map.insert(it, {vert, nverts});
-        if (vert.position) positions.push_back(opos.at(vert.position - 1));
-        if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-        if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
-      }
-      if (vertices.size() == 4) {
-        quads.push_back({vertex_map.at(vertices[0]), vertex_map.at(vertices[1]),
-            vertex_map.at(vertices[2]), vertex_map.at(vertices[3])});
-      } else {
-        for (auto i = 2; i < vertices.size(); i++)
-          triangles.push_back({vertex_map.at(vertices[0]),
-              vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
-      }
-    } else if (element == obj_command::line) {
-      for (auto& vert : vertices) {
-        auto it = vertex_map.find(vert);
-        if (it != vertex_map.end()) continue;
-        auto nverts = (int)positions.size();
-        vertex_map.insert(it, {vert, nverts});
-        if (vert.position) positions.push_back(opos.at(vert.position - 1));
-        if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-        if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
-      }
-      for (auto i = 1; i < vertices.size(); i++)
-        lines.push_back(
-            {vertex_map.at(vertices[i - 1]), vertex_map.at(vertices[i])});
-    } else if (element == obj_command::point) {
-      for (auto& vert : vertices) {
-        auto it = vertex_map.find(vert);
-        if (it != vertex_map.end()) continue;
-        auto nverts = (int)positions.size();
-        vertex_map.insert(it, {vert, nverts});
-        if (vert.position) positions.push_back(opos.at(vert.position - 1));
-        if (vert.texcoord) texcoords.push_back(otexcoord.at(vert.texcoord - 1));
-        if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
-      }
-      for (auto i = 0; i < vertices.size(); i++)
-        points.push_back(vertex_map.at(vertices[i]));
-    } else {
-      // skip all other commands
-    }
-  }
-
-  if (positions.empty())
-    throw std::runtime_error("vertex positions not present");
-
-  // fix texture coordinated
-  if (flip_texcoord && !texcoords.empty()) {
-    for (auto& uv : texcoords) uv.y = 1 - uv.y;
-  }
-
-  // merging quads and triangles
-  if (!facevarying) {
-    merge_triangles_and_quads(triangles, quads, false);
-  }
-}
-
-// Load ply mesh
-static void save_obj_shape(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, bool flip_texcoord) {
-  auto fs = open_file(filename, "w");
-
-  write_obj_comment(
-      fs, "Written by Yocto/GL\nhttps://github.com/xelatihy/yocto-gl\n");
-
-  for (auto& p : positions)
-    write_obj_command(fs, obj_command::vertex, make_obj_value(p));
-  for (auto& n : normals)
-    write_obj_command(fs, obj_command::normal, make_obj_value(n));
-  for (auto& t : texcoords)
-    write_obj_command(fs, obj_command::texcoord,
-        make_obj_value(vec2f{t.x, flip_texcoord ? 1 - t.y : t.y}));
-
-  auto elems = vector<obj_vertex>{};
-  auto mask = obj_vertex{1, texcoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
-  auto vert = [mask](int i) {
-    return obj_vertex{(i + 1) * mask.position, (i + 1) * mask.texcoord,
-        (i + 1) * mask.normal};
-  };
-  auto fvvert = [mask](int pi, int ti, int ni) {
-    return obj_vertex{(pi + 1) * mask.position, (ti + 1) * mask.texcoord,
-        (ni + 1) * mask.normal};
-  };
-
-  elems.resize(1);
-  for (auto& p : points) {
-    elems[0] = vert(p);
-    write_obj_command(fs, obj_command::point, {}, elems);
-  }
-  elems.resize(2);
-  for (auto& l : lines) {
-    elems[0] = vert(l.x);
-    elems[1] = vert(l.y);
-    write_obj_command(fs, obj_command::line, {}, elems);
-  }
-  elems.resize(3);
-  for (auto& t : triangles) {
-    elems[0] = vert(t.x);
-    elems[1] = vert(t.y);
-    elems[2] = vert(t.z);
-    write_obj_command(fs, obj_command::face, {}, elems);
-  }
-  elems.resize(4);
-  for (auto& q : quads) {
-    elems[0] = vert(q.x);
-    elems[1] = vert(q.y);
-    elems[2] = vert(q.z);
-    if (q.z == q.w) {
-      elems.resize(3);
-    } else {
-      elems.resize(4);
-      elems[3] = vert(q.w);
-    }
-    write_obj_command(fs, obj_command::face, {}, elems);
-  }
-  // auto last_material_id = -1;
-  elems.resize(4);
-  for (auto i = 0; i < quadspos.size(); i++) {
-    //        if (!quads_materials.empty() &&
-    //            quads_materials[i] != last_material_id) {
-    //            last_material_id = quads_materials[i];
-    //            println_values(fs, "usemtl material_{}\n",
-    //            last_material_id);
-    //        }
-    auto qp = quadspos.at(i);
-    auto qt = !quadstexcoord.empty() ? quadstexcoord.at(i)
-                                     : vec4i{-1, -1, -1, -1};
-    auto qn  = !quadsnorm.empty() ? quadsnorm.at(i) : vec4i{-1, -1, -1, -1};
-    elems[0] = fvvert(qp.x, qt.x, qn.x);
-    elems[1] = fvvert(qp.y, qt.y, qn.y);
-    elems[2] = fvvert(qp.z, qt.z, qn.z);
-    if (qp.z == qp.w) {
-      elems.resize(3);
-    } else {
-      elems.resize(4);
-      elems[3] = fvvert(qp.w, qt.w, qn.w);
-    }
-    write_obj_command(fs, obj_command::face, {}, elems);
-  }
-}
-
-#else
-
-// Load obj mesh
-static void load_obj_shape(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, bool facevarying,
-    bool flip_texcoord) {
-  // load obj
-  auto obj = obj_model();
-  load_obj(filename, obj, true);
-
-  // get shape
-  if (obj.shapes.empty()) return;
-  if (obj.shapes.size() > 1)
-    throw std::runtime_error("can only support one element type");
-  auto& shape = obj.shapes.front();
-  if (shape.points.empty() && shape.lines.empty() && shape.faces.empty())
-    return;
-
-  // decide what to do adn get properties
-  auto materials  = vector<string>{};
-  auto ematerials = vector<int>{};
-  auto has_quads  = has_obj_quads(shape);
-  if (!shape.faces.empty() && !facevarying && !has_quads) {
-    get_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
-        materials, ematerials, flip_texcoord);
-  } else if (!shape.faces.empty() && !facevarying && has_quads) {
-    get_obj_quads(obj, shape, quads, positions, normals, texcoords, materials,
-        ematerials, flip_texcoord);
-  } else if (!shape.lines.empty()) {
-    get_obj_lines(obj, shape, lines, positions, normals, texcoords, materials,
-        ematerials, flip_texcoord);
-  } else if (!shape.points.empty()) {
-    get_obj_points(obj, shape, points, positions, normals, texcoords, materials,
-        ematerials, flip_texcoord);
-  } else if (!shape.faces.empty() && facevarying) {
-    get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords, materials, ematerials, flip_texcoord);
-  } else {
-    throw std::runtime_error("should not have gotten here");
-  }
-
-  if (positions.empty())
-    throw std::runtime_error("vertex positions not present");
-}
-
-// Load ply mesh
-static void save_obj_shape(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, bool flip_texcoord) {
-  // Obj model
-  auto obj = obj_model{};
-
-  // Add obj data
-  auto& shape = obj.shapes.emplace_back();
-  if (!triangles.empty()) {
-    add_obj_triangles(obj, shape, triangles, positions, normals, texcoords, {},
-        flip_texcoord);
-  } else if (!quads.empty()) {
-    add_obj_quads(
-        obj, shape, quads, positions, normals, texcoords, {}, flip_texcoord);
-  } else if (!lines.empty()) {
-    add_obj_lines(
-        obj, shape, lines, positions, normals, texcoords, {}, flip_texcoord);
-  } else if (!points.empty()) {
-    add_obj_points(
-        obj, shape, points, positions, normals, texcoords, {}, flip_texcoord);
-  } else if (!quadspos.empty()) {
-    add_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords, {}, flip_texcoord);
-  } else {
-    throw std::runtime_error("do not support empty shapes");
-  }
-
-  // Save
-  save_obj(filename, obj);
-}
-
-#endif
 
 }  // namespace yocto
 

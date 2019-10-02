@@ -324,9 +324,8 @@ void load_island_materials(const string& filename, const string& dirname,
 void load_island_shape(vector<yocto_shape>& shapes,
     vector<yocto_material>& materials, vector<disney_material>& dmaterials,
     hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap,
-    hash_map<string, int>& tmap, yocto_scene& scene,
-    const string& filename, const string& parent_name) {
+    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap,
+    yocto_scene& scene, const string& filename, const string& parent_name) {
   // obj vertices
   std::deque<vec3f> opos  = std::deque<vec3f>();
   std::deque<vec3f> onorm = std::deque<vec3f>();
@@ -485,8 +484,7 @@ void load_island_shape(vector<yocto_shape>& shapes,
 void add_island_shape(yocto_scene& scene, const string& parent_name,
     const string& filename, const string& dirname,
     hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap,
-    hash_map<string, int>&             tmap) {
+    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
   if (smap.find(filename) != smap.end()) return;
   printf("%s\n", filename.c_str());
 
@@ -596,8 +594,7 @@ void add_island_variant_instance(vector<yocto_instance>& instances,
 void load_island_archive(const string& filename, const string& dirname,
     yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
     hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap,
-    hash_map<string, int>&             tmap) {
+    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
@@ -623,10 +620,8 @@ void load_island_archive(const string& filename, const string& dirname,
 
 void load_island_variant_archive(const string& filename, const string& dirname,
     yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
-    vector<yocto_instance>&                 instances,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap,
-    hash_map<string, int>&             tmap) {
+    vector<yocto_instance>& instances, hash_map<string, vector<vec2i>>& smap,
+    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
   // elements
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
@@ -656,8 +651,7 @@ void load_island_variants(const string& filename, const string& dirname,
     yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
     hash_map<string, vector<yocto_instance>>& instances,
     hash_map<string, vector<vec2i>>&          smap,
-    hash_map<string, disney_material>&        mmap,
-    hash_map<string, int>&                    tmap) {
+    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
   printf("%s\n", filename.c_str());
   auto js_ = json{};
   load_json(dirname + filename, js_);
@@ -690,8 +684,7 @@ void load_island_variants(const string& filename, const string& dirname,
 void load_island_element(const string& filename, const string& dirname,
     yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
     hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap,
-    hash_map<string, int>&             tmap) {
+    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
   hash_map<string, vector<yocto_instance>> variants;
   load_island_variants("json/isBayCedarA1/isBayCedarA1.json", dirname, scene,
       parent_name, identity4x4f, variants, smap, mmap, tmap);
@@ -723,10 +716,8 @@ void load_island_element(const string& filename, const string& dirname,
 
 void load_island_curve(const string& filename, const string& dirname,
     yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
-    float start_radius, float end_radius,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap,
-    hash_map<string, int>&             tmap) {
+    float start_radius, float end_radius, hash_map<string, vector<vec2i>>& smap,
+    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
@@ -767,8 +758,7 @@ void load_island_curvetube(const string& filename, const string& dirname,
     yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
     float start_width, float end_width, const string& material_name,
     hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap,
-    hash_map<string, int>&             tmap) {
+    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);

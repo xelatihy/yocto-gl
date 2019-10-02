@@ -190,8 +190,8 @@ namespace yocto {
 // functions below to access this data.
 struct edge_map {
   hash_map<vec2i, int> index  = {};
-  vector<vec2i>             edges  = {};
-  vector<int>               nfaces = {};
+  vector<vec2i>        edges  = {};
+  vector<int>          nfaces = {};
 };
 
 // Initialize an edge map with elements.
@@ -234,9 +234,9 @@ namespace yocto {
 // A sparse grid of cells, containing list of points. Cells are stored in
 // a dictionary to get sparsity. Helpful for nearest neighboor lookups.
 struct hash_grid {
-  float                             cell_size     = 0;
-  float                             cell_inv_size = 0;
-  vector<vec3f>                     positions     = {};
+  float                        cell_size     = 0;
+  float                        cell_inv_size = 0;
+  vector<vec3f>                positions     = {};
   hash_map<vec3i, vector<int>> cells         = {};
 };
 
@@ -588,14 +588,14 @@ void load_shape(const string& filename, vector<int>& points,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, bool facevarying);
+    vector<float>& radius, bool facevarying, bool flip_texcoords = true);
 void save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, bool ascii = false);
+    const vector<float>& radius, bool ascii = false, bool flip_texcoords = true);
 
 }  // namespace yocto
 
