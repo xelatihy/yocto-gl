@@ -97,6 +97,11 @@ using std::unordered_map;
 using std::vector;
 using namespace std::literals::string_literals;
 
+// For dictionaries, we use hash tables with a using directive to switch between
+// implementations. 
+template<typename K, typename V>
+using hash_map = unordered_map<K, V>;
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

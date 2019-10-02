@@ -189,7 +189,7 @@ namespace yocto {
 // We store only bidirectional edges to keep the dictionary small. Use the
 // functions below to access this data.
 struct edge_map {
-  unordered_map<vec2i, int> index  = {};
+  hash_map<vec2i, int> index  = {};
   vector<vec2i>             edges  = {};
   vector<int>               nfaces = {};
 };
@@ -237,7 +237,7 @@ struct hash_grid {
   float                             cell_size     = 0;
   float                             cell_inv_size = 0;
   vector<vec3f>                     positions     = {};
-  unordered_map<vec3i, vector<int>> cells         = {};
+  hash_map<vec3i, vector<int>> cells         = {};
 };
 
 // Create a hash_grid

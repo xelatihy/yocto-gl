@@ -32,7 +32,6 @@
 #include "yocto_shape.h"
 
 #include <assert.h>
-#include <unordered_map>
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES
@@ -1454,7 +1453,7 @@ void trim_memory(yocto_scene& scene) {
 vector<string> validate_scene(const yocto_scene& scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
-    auto used = unordered_map<string, int>();
+    auto used = hash_map<string, int>();
     used.reserve(vals.size());
     for (auto& value : vals) used[value.name] += 1;
     for (auto& [name, used] : used) {
