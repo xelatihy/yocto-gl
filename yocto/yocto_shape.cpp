@@ -1868,7 +1868,7 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   return solver;
 }
 
-void compute_geodesic_distances(vector<float>& field,
+void update_geodesic_distances(vector<float>& field,
     const geodesic_solver& solver, const vector<int>& sources,
     float max_distance) {
   /*
@@ -1951,11 +1951,19 @@ void compute_geodesic_distances(vector<float>& field,
   }
 }
 
+void compute_geodesic_distances(vector<float>& distances, 
+  const geodesic_solver& solver, const vector<int>& sources, 
+  float max_distance) {
+  distances.assign(solver.graph.size(), flt_max);
+  for (auto source : sources) distances[source] = 0.0f;
+  update_geodesic_distances(distances, solver, sources, max_distance);
+}
+
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<int>& sources, float max_distance) {
   auto distances = vector<float>(solver.graph.size(), flt_max);
   for (auto source : sources) distances[source] = 0.0f;
-  compute_geodesic_distances(distances, solver, sources, max_distance);
+  update_geodesic_distances(distances, solver, sources, max_distance);
   return distances;
 }
 
@@ -1974,7 +1982,7 @@ void sample_vertices_poisson(
     verts.push_back(max_index);
     if (verts.size() >= num_samples) break;
     distances[max_index] = 0.0f;
-    compute_geodesic_distances(distances, solver, {max_index}, flt_max);
+    update_geodesic_distances(distances, solver, {max_index}, flt_max);
   }
 }
 vector<int> sample_vertices_poisson(
