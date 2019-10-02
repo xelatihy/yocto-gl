@@ -89,73 +89,125 @@
 #include <cstdio>
 
 // -----------------------------------------------------------------------------
-// CONVERSION TO STRING
+// PRINT/FORMATTING UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Conversion to string for basic and Yocto/Math types
-inline string to_string(int value) { return std::to_string(value); }
-inline string to_string(float value) { return std::to_string(value); }
-inline string to_string(double value) { return std::to_string(value); }
-inline string to_string(const string& value) { return value; }
-inline string to_string(const char* value) { return value; }
-inline string to_string(const vec2f& value) {
-  return to_string(value.x) + " " + to_string(value.y);
-}
-inline string to_string(const vec3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z);
-}
-inline string to_string(const vec4f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.w);
-}
-inline string to_string(const vec2i& value) {
-  return to_string(value.x) + " " + to_string(value.y);
-}
-inline string to_string(const vec3i& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z);
-}
-inline string to_string(const vec4i& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.w);
-}
-inline string to_string(const mat2f& value) {
-  return to_string(value.x) + " " + to_string(value.y);
-}
-inline string to_string(const mat3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z);
-}
-inline string to_string(const mat4f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.w);
-}
-inline string to_string(const frame2f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.o);
-}
-inline string to_string(const frame3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.o);
-}
-inline string to_string(const ray2f& value) {
-  return to_string(value.o) + " " + to_string(value.d) + " " +
-         to_string(value.tmin) + " " + to_string(value.tmax);
-}
-inline string to_string(const ray3f& value) {
-  return to_string(value.o) + " " + to_string(value.d) + " " +
-         to_string(value.tmin) + " " + to_string(value.tmax);
-}
-inline string to_string(const bbox2f& value) {
-  return to_string(value.min) + " " + to_string(value.max);
-}
-inline string to_string(const bbox3f& value) {
-  return to_string(value.min) + " " + to_string(value.max);
-}
+// Print a message to the console
+inline void print_info(const string& msg);
+// Prints a messgae to the console and exit with an error.
+inline void print_fatal(const string& msg);
+
+// Print traces for timing and program debugging
+inline auto print_timed(const string& msg);
+
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration);
+// Format a large integer number in human readable form
+inline string format_num(uint64_t num);
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COMMAND LINE PARSING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Initialize a command line parser.
+struct cli_state;
+inline cli_state make_cli(const string& cmd, const string& usage);
+// check if any error occurred and exit appropriately
+inline bool parse_cli(cli_state& cli, int argc, const char** argv);
+
+// Parse an int, float, string, and bool option or positional argument.
+// Options's names starts with "--" or "-", otherwise they are arguments.
+// The library support using many names for the same option/argument
+// separate by commas. Boolean flags are indicated with a pair of names
+// "--name/--no-name", so that we have both options available.
+inline void add_cli_option(cli_state& cli, const string& name, string& value,
+    const string& usage, bool req = false);
+inline void add_cli_option(cli_state& cli, const string& name, int& value,
+    const string& usage, bool req = false);
+inline void add_cli_option(cli_state& cli, const string& name, float& value,
+    const string& usage, bool req = false);
+inline void add_cli_option(cli_state& cli, const string& name, bool& value,
+    const string& usage, bool req = false);
+// Parse an enum
+inline void add_cli_option(cli_state& cli, const string& name, int& value,
+    const string& usage, const vector<string>& choices, bool req = false);
+// Parse all arguments left on the command line.
+inline void add_cli_option(cli_state& cli, const string& name,
+    vector<string>& value, const string& usage, bool req = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// These utilities are here only for backward compatibility. They should be
+// considered deprecated.
+
+// Utility to normalize a path
+inline string normalize_path(const string& filename);
+
+// Get directory name (including '/').
+inline string get_dirname(const string& filename);
+
+// Get extension (not including '.').
+inline string get_extension(const string& filename);
+
+// Get filename without directory.
+inline string get_filename(const string& filename);
+
+// Get extension.
+inline string get_noextension(const string& filename);
+
+// Get filename without directory and extension.
+inline string get_basename(const string& filename);
+
+// Replaces extensions
+inline string replace_extension(const string& filename, const string& ext);
+
+// Check if a file can be opened for reading.
+inline bool exists_file(const string& filename);
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a text file
+inline void load_text(const string& filename, string& str);
+inline void save_text(const string& filename, const string& str);
+
+// Load/save a binary file
+inline void load_binary(const string& filename, vector<byte>& data);
+inline void save_binary(const string& filename, const vector<byte>& data);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION 
+//
+//
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// FORMATTING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// This is a very crude replacement for `std::format()` that will be used when
+// available on all platforms.
+template<typename ... Args>
+inline string format(const string& fmt, Args&& ... args);
+
+}
 
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
@@ -214,45 +266,9 @@ inline auto print_timed(const string& msg) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// COMMAND LINE PARSING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Initialize a command line parser.
-struct cli_state;
-inline cli_state make_cli(const string& cmd, const string& usage);
-// check if any error occurred and exit appropriately
-inline bool parse_cli(cli_state& cli, int argc, const char** argv);
-
-// Parse an int, float, string, and bool option or positional argument.
-// Options's names starts with "--" or "-", otherwise they are arguments.
-// The library support using many names for the same option/argument
-// separate by commas. Boolean flags are indicated with a pair of names
-// "--name/--no-name", so that we have both options available.
-inline void add_cli_option(cli_state& cli, const string& name, string& value,
-    const string& usage, bool req = false);
-inline void add_cli_option(cli_state& cli, const string& name, int& value,
-    const string& usage, bool req = false);
-inline void add_cli_option(cli_state& cli, const string& name, float& value,
-    const string& usage, bool req = false);
-inline void add_cli_option(cli_state& cli, const string& name, bool& value,
-    const string& usage, bool req = false);
-// Parse an enum
-inline void add_cli_option(cli_state& cli, const string& name, int& value,
-    const string& usage, const vector<string>& choices, bool req = false);
-// Parse all arguments left on the command line.
-inline void add_cli_option(cli_state& cli, const string& name,
-    vector<string>& value, const string& usage, bool req = false);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// These utilities are here only for backward compatibility. They should be
-// considered deprecated.
 
 // Utility to normalize a path
 inline string normalize_path(const string& filename_) {
