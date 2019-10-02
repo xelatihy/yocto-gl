@@ -222,7 +222,7 @@ bool overlap_instances_bvh(const bvh_tree&           bvh,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#ifdef YOCTO_EMBREE
+#if YOCTO_EMBREE
 // Wrapper to Interl's Embree
 struct bvh_embree {
   bvh_embree() {}

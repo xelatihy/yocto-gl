@@ -865,7 +865,11 @@ inline vector<T> convert_ply_property(const ply_property& prop) {
     case ply_type::u64: return convert_ply_property<T>(prop.data_u64);
     case ply_type::f32: return convert_ply_property<T>(prop.data_f32);
     case ply_type::f64: return convert_ply_property<T>(prop.data_f64);
+    default: throw std::runtime_error("should not be here");
   }
+  // return here to silence warnings
+  std::runtime_error("should not have gotten here");
+  return {};
 }
 vector<float> get_ply_values(
     const ply_model& ply, const string& element, const string& property) {
