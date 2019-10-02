@@ -1786,13 +1786,6 @@ void sample_quads(vector<vec3f>& sampled_positions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static inline int opposite_vertex(const vec3i& tr, const vec2i& edge) {
-  for (int i = 0; i < 3; ++i) {
-    if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
-  }
-  return -1;
-}
-
 static inline void connect_nodes(
     geodesic_solver& solver, int a, int b, float length) {
   solver.graph[a].push_back({b, length});
@@ -1832,6 +1825,13 @@ static inline float opposite_nodes_arc_length(geodesic_solver& solver,
 static inline void connect_opposite_nodes(geodesic_solver& solver,
     const vector<vec3f>& positions, const vec3i& tr0, const vec3i& tr1,
     const vec2i& edge) {
+  auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
+    for (int i = 0; i < 3; ++i) {
+      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+    }
+    return -1;
+  };
+
   int v0 = opposite_vertex(tr0, edge);
   int v1 = opposite_vertex(tr1, edge);
   if (v0 == -1 || v1 == -1) return;
@@ -2007,30 +2007,13 @@ namespace yocto {
 
 namespace integral_paths {
 
-static vec2i opposite_edge(int vertex, const vec3i& tr) {
-  for (int i = 0; i < 3; ++i) {
-    if (tr[i] == vertex) return {tr[(i + 1) % 3], tr[(i + 2) % 3]};
-  }
-  return {-1, -1};
-}
-
-static vec2i get_edge(const vec3i& triangle, int i) {
-  auto x = triangle[i], y = triangle[i < 2 ? i + 1 : 0];
-  return vec2i{x, y};
-};
-
-static vec2i make_edge(int x, int y) {
-  return x < y ? vec2i{x, y} : vec2i{y, x};
-}
-
-static vec2i make_edge(const vec2i& e) { return make_edge(e.x, e.y); }
-
-static bool same_edge(const vec2i& a, const vec2i& b) {
-  return make_edge(a) == make_edge(b);
-}
-
 static int adjacent_face(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacency, int face, const vec2i& edge) {
+  auto get_edge = [](const vec3i& triangle, int i) -> vec2i {
+    auto x = triangle[i], y = triangle[i < 2 ? i + 1 : 0];
+    return vec2i{x, y};
+  };
+
   // Given a face and an edge, return the adjacent face
   for (int k = 0; k < 3; ++k) {
     auto e = get_edge(triangles[face], k);
@@ -2040,24 +2023,15 @@ static int adjacent_face(const vector<vec3i>& triangles,
   return -1;
 }
 
-static int find(const vec3i& v, int x) {
-  if (v.x == x) return 0;
-  if (v.y == x) return 1;
-  if (v.z == x) return 2;
-  return -1;
-}
-
-template <typename Type>
-static bool contains(const vector<Type>& v, const Type& value) {
-  return find(v.begin(), v.end(), value) != v.end();
-}
-
-static bool contains(const vec3i& v, int a) {
-  return v.x == a or v.y == a or v.z == a;
-}
-
 static vector<int> get_face_ring(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacency, int face, int vertex) {
+  auto contains = [](const vec3i& v, int a) -> bool {
+    return v.x == a or v.y == a or v.z == a;
+  };
+  auto containsv = [](const vector<int>& v, int a) -> bool {
+    return find(v.begin(), v.end(), a) != v.end();
+  };
+
   auto result = vector<int>();
   result.reserve(12);
 
@@ -2084,7 +2058,7 @@ static vector<int> get_face_ring(const vector<vec3i>& triangles,
       if (edge.x == vertex or edge.y == vertex) {
         int neighbor_face = adjacency[f][k];
         if (neighbor_face == -1) continue;
-        if (not contains(result, neighbor_face)) {
+        if (!containsv(result, neighbor_face)) {
           queue.push_back(neighbor_face);
           result.push_back(neighbor_face);
         }
@@ -2171,6 +2145,13 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, const vector<float>& field, int vertex,
     int start_face, int tag = -1) {
+  auto opposite_edge = [](int vertex, const vec3i& tr) -> vec2i {
+    for (int i = 0; i < 3; ++i) {
+      if (tr[i] == vertex) return {tr[(i + 1) % 3], tr[(i + 2) % 3]};
+    }
+    return {-1, -1};
+  };
+
   auto triangle_fan = get_face_ring(triangles, adjacency, start_face, vertex);
 
   auto best_alignment = 0.0;
@@ -2220,6 +2201,19 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
 surface_path follow_gradient_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from) {
+  auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
+    for (int i = 0; i < 3; ++i) {
+      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+    }
+    return -1;
+  };
+  auto find_index = [](const vec3i& v, int x) -> int {
+    if (v.x == x) return 0;
+    if (v.y == x) return 1;
+    if (v.z == x) return 2;
+    return -1;
+  };
+
   // TRACE_FUNCTION
   auto lerps = vector<path_vertex>();
   {
@@ -2244,7 +2238,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     }
 
     if (tags[face] != tag) {
-      int k  = find(triangles[face], old_edge.x);
+      int k  = find_index(triangles[face], old_edge.x);
       int to = triangles[face][(k + 1) % 3];
       // int   to   = opposite_vertex(old_edge, triangles[face]);
 
@@ -2290,6 +2284,16 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
     int to) {
+  auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
+    for (int i = 0; i < 3; ++i) {
+      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+    }
+    return -1;
+  };
+  auto contains = [](const vec3i& v, int a) -> bool {
+    return v.x == a or v.y == a or v.z == a;
+  };
+
   // TRACE_FUNCTION
   auto lerps = vector<path_vertex>();
 
@@ -2458,6 +2462,13 @@ static void connect_opposite_nodes(
 
 static void disconnect_opposite_nodes(geodesic_solver& solver, const vec3i& f0,
     const vec3i& f1, const vec2i& edge) {
+  auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
+    for (int i = 0; i < 3; ++i) {
+      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+    }
+    return -1;
+  };
+
   /*
        a
       /\
@@ -2493,6 +2504,12 @@ static int adjacent_face(
 
 static void update_adjacency(
     discrete_surface& state, const vector<int>& updated_faces) {
+  auto same_edge = [](vec2i& a, vec2i& b) -> bool {
+    auto ae = a.x < a.y ? vec2i{a.x, a.y} : vec2i{a.y, a.x};
+    auto be = b.x < b.y ? vec2i{b.x, b.y} : vec2i{b.y, b.x};
+    return ae == be;
+  };
+
   for (auto face : updated_faces) {
     //        for (auto [edge, k] : edges(state.triangles[face])) {
     for (int k : {0, 1, 2}) {
@@ -2625,6 +2642,19 @@ static void split_triangle(discrete_surface& state, const vec3i& triangle,
 bool slice_path(discrete_surface& state, int tag, const surface_path& path,
     int tag_left, int tag_right, vector<int>& left_faces,
     vector<int>& right_faces) {
+  auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
+    for (int i = 0; i < 3; ++i) {
+      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+    }
+    return -1;
+  };
+  auto find_index = [](const vec3i& v, int x) -> int {
+    if (v.x == x) return 0;
+    if (v.y == x) return 1;
+    if (v.z == x) return 2;
+    return -1;
+  };
+
   auto& lerps = path.lerps;
   auto  start = path.start;
   left_faces.reserve(lerps.size());
@@ -2680,7 +2710,7 @@ bool slice_path(discrete_surface& state, int tag, const surface_path& path,
       int eru = -1;
       int elu = last_face_left;
       int eld = last_face_right;
-      int cd  = state.adjacencies[face][find(triangle, x)];
+      int cd  = state.adjacencies[face][find_index(triangle, x)];
       //            assert(cd != -1);
 
       state.triangles[face] = {x, y, z};
@@ -2713,7 +2743,7 @@ bool slice_path(discrete_surface& state, int tag, const surface_path& path,
       int elu = -1;
       int erd = last_face_left;
       int eru = last_face_right;
-      int cd  = state.adjacencies[face][find(triangle, x)];
+      int cd  = state.adjacencies[face][find_index(triangle, x)];
       //            assert(cd != -1);
 
       state.triangles[face] = {x, y, z};
@@ -2755,8 +2785,8 @@ bool slice_path(discrete_surface& state, int tag, const surface_path& path,
     auto tr = state.triangles[face];
 
     int x = end;
-    int y = tr[(find(tr, x) + 1) % 3];  // prev_lerp.edge.y;
-    int z = tr[(find(tr, x) + 2) % 3];  // prev_lerp.edge.x;
+    int y = tr[(find_index(tr, x) + 1) % 3];  // prev_lerp.edge.y;
+    int z = tr[(find_index(tr, x) + 2) % 3];  // prev_lerp.edge.x;
     // assert(opposite_vertex(edge, state.triangles[face]) == start);
     disconnect_triangle(state, face);
 
@@ -2765,8 +2795,8 @@ bool slice_path(discrete_surface& state, int tag, const surface_path& path,
       auto adj = state.adjacencies[face];
       // int efd = adjacent_face(state, face, {x, y});
       // int efu = adjacent_face(state, face, {x, z});
-      int efd               = adj[find(tr, x)];
-      int efu               = adj[find(tr, z)];
+      int efd               = adj[find_index(tr, x)];
+      int efu               = adj[find_index(tr, z)];
       int eru               = last_face_right;
       int erd               = last_face_left;
       state.triangles[face] = {x, y, z};
@@ -2874,7 +2904,7 @@ vector<int> slice_paths(discrete_surface& state, const vector<int>& regions,
   return new_regions;
 }
 
-}
+}  // namespace integral_paths
 
 // Trace integral path following the gradient of a scalar field
 surface_path follow_gradient_field(const vector<vec3i>& triangles,
@@ -2903,7 +2933,7 @@ vector<int> slice_paths(discrete_surface& state, const vector<int>& regions,
   return integral_paths::slice_paths(state, regions, t0, t1, paths);
 }
 
-}  // namespace integral_paths
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE EXAMPLES
