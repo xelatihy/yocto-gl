@@ -107,57 +107,6 @@ using std::function;
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
 
-#if 0
-
-// BVH array view
-template <typename T>
-struct bvh_span {
-  bvh_span() : ptr{nullptr}, count{0} {}
-  bvh_span(const T* ptr, int count) : ptr{ptr}, count{count} {}
-  bvh_span(const vector<T>& vec) : ptr{vec.data()}, count{(int)vec.size()} {}
-
-  bool empty() const { return count == 0; }
-  int  size() const { return count; }
-
-  const T& operator[](int idx) const { return ptr[idx]; }
-  const T* data() const { return ptr; }
-  const T* begin() const { return ptr; }
-  const T* end() const { return ptr + count; }
-
- private:
-  const T* ptr   = nullptr;
-  int      count = 0;
-};
-
-// BVH array view with stride
-template <typename T>
-struct bvh_sspan {
-  bvh_sspan() : ptr{nullptr}, count{0}, stride{0} {}
-  bvh_sspan(const void* ptr, int count, int stride)
-      : ptr{ptr}, count{count}, stride{stride} {}
-
-  bool empty() const { return count == 0; }
-  int  size() const { return count; }
-
-  const T& operator[](int idx) const {
-    return *(const T*)((const char*)ptr + (size_t)idx * (size_t)stride);
-  }
-
- private:
-  const void* ptr    = nullptr;
-  int         count  = 0;
-  int         stride = 0;
-};
-
-#else
-
-template <typename T>
-using bvh_span = vector<T>;
-template <typename T>
-using bvh_sspan = vector<T>;
-
-#endif
-
 // BVH tree node containing its bounds, indices to the BVH arrays of either
 // primitives or internal nodes, the node element type,
 // and the split axis. Leaf and internal nodes are identical, except that
@@ -286,7 +235,6 @@ struct bvh_embree {
   RTCGeometry         shape     = nullptr;
   vector<RTCGeometry> instances = {};
 };
-#endif
 
 // Make shape bvh with Intel's Embree
 void make_lines_embree_bvh(bvh_embree& bvh, const vector<vec2i>& lines,
@@ -323,6 +271,7 @@ bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any);
 bool intersect_instances_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any);
+#endif
 
 }  // namespace yocto
 
