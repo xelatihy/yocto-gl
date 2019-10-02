@@ -1868,6 +1868,9 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   return solver;
 }
 
+// `update` is a function that is executed during expansion, every time a node
+// is put into queue. `exit` is a function that tells whether to expand the
+// current node or perform early exit.
 template <typename Update, typename Exit>
 void visit_geodesic_graph(vector<float>& field, const geodesic_solver& solver,
     const vector<int>& sources, Update&& update, Exit&& exit) {
@@ -1961,19 +1964,19 @@ void update_geodesic_distances(vector<float>& distances,
   visit_geodesic_graph(distances, solver, sources, update, exit);
 }
 
+void compute_geodesic_distances(const geodesic_solver& solver,
+    const vector<int>& sources, vector<float>& distances, float max_distance) {
+  distances.assign(solver.graph.size(), flt_max);
+  for (auto source : sources) distances[source] = 0.0f;
+  update_geodesic_distances(distances, solver, sources, max_distance);
+}
+
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<int>& sources, float max_distance) {
   auto distances = vector<float>(solver.graph.size(), flt_max);
   for (auto source : sources) distances[source] = 0.0f;
   update_geodesic_distances(distances, solver, sources, max_distance);
   return distances;
-}
-
-void compute_geodesic_distances(const geodesic_solver& solver,
-    const vector<int>& sources, vector<float>& distances, float max_distance) {
-  distances.assign(solver.graph.size(), flt_max);
-  for (auto source : sources) distances[source] = 0.0f;
-  update_geodesic_distances(distances, solver, sources, max_distance);
 }
 
 // Compute all shortest paths from source vertices to any other vertex.
