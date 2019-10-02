@@ -550,11 +550,21 @@ void            make_geodesic_solver(geodesic_solver& solver,
                const vector<vec3f>& positions);
 
 // Compute geodesic distances
+void update_geodesic_distances(vector<float>& distances,
+    const geodesic_solver& solver, const vector<int>& sources,
+    float max_distance = flt_max);
+
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<int>& sources, float max_distance = flt_max);
-void          compute_geodesic_distances(vector<float>& distances,
-             const geodesic_solver& solver, const vector<int>& sources,
+void          compute_geodesic_distances(const geodesic_solver& solver,
+             const vector<int>& sources, vector<float>& distances,
              float max_distance = flt_max);
+
+// Compute all shortest paths from source vertices to any other vertex.
+// Paths are implicitly represented: each node is assignes its previous node in
+// the path. Graph search early exits when reching end_vertex.
+vector<int> compute_geodesic_paths(const geodesic_solver& solver,
+    const vector<int>& sources, int end_vertex = -1);
 
 // Sample vertices with a Poisson distribution using geodesic distances.
 // Sampling strategy is farthest point sampling (FPS): at every step
@@ -563,6 +573,10 @@ vector<int> sample_vertices_poisson(
     const geodesic_solver& solver, int num_samples);
 void sample_vertices_poisson(
     vector<int>& verts, const geodesic_solver& solver, int num_samples);
+
+// Compute the distance field needed to compute a voronoi diagram
+vector<vector<float>> compute_voronoi_fields(
+    const geodesic_solver& solver, const vector<int>& generators);
 
 // Convert distances to colors
 vector<vec4f> distance_to_color(const vector<float>& distances, float scale = 1,
@@ -609,10 +623,11 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     int to);
 
 // Cuts a mesh along paths
-bool slice_path(discrete_surface& state, int tag, const surface_path& path, int tag_left,
-    int tag_right, vector<int>& left_faces, vector<int>& right_faces);
-vector<int> slice_paths(discrete_surface& state, const vector<int>& regions, int t0,
-    int t1, const vector<surface_path>& paths);
+bool slice_path(discrete_surface& state, int tag, const surface_path& path,
+    int tag_left, int tag_right, vector<int>& left_faces,
+    vector<int>& right_faces);
+vector<int> slice_paths(discrete_surface& state, const vector<int>& regions,
+    int t0, int t1, const vector<surface_path>& paths);
 
 }  // namespace yocto
 

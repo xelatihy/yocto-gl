@@ -107,7 +107,7 @@ int main(int argc, const char** argv) {
   if (normals) {
     auto timer    = print_timed("computing normals");
     shape.normals = compute_normals(shape);
-    if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
+    if (!shape.quadspos.empty()) shape.quadsnorm= shape.quadspos;
   }
 
   // compute geodesics and store them as colors
@@ -132,19 +132,22 @@ int main(int argc, const char** argv) {
         if (tags[i] == 1) shape.triangles[i] = {-1, -1, -1};
       }
     } else {
-      shape.colors = vector<vec4f>{};
-      distance_to_color(shape.colors, field, geodesic_scale);
+      shape.colors = vector<vec4f>(shape.positions.size());
+      for (int i = 0; i < shape.colors.size(); ++i) {
+        shape.colors[i] = vec4f(sinf(geodesic_scale * field[i]));
+      }
+      // distance_to_color(shape.colors, field, geodesic_scale);
     }
   }
 
   if (p0 != -1) {
-    auto state           = discrete_surface{};
-    state.triangles      = shape.triangles;
-    state.positions      = shape.positions;
-    state.normals        = shape.normals;
-    state.tags           = vector<int>(state.triangles.size(), 0);
+    auto state        = discrete_surface{};
+    state.triangles   = shape.triangles;
+    state.positions   = shape.positions;
+    state.normals     = shape.normals;
+    state.tags        = vector<int>(state.triangles.size(), 0);
     state.adjacencies = face_adjacencies(state.triangles);
-    state.solver         = make_geodesic_solver(
+    state.solver      = make_geodesic_solver(
         state.triangles, state.adjacencies, shape.positions);
 
     auto          paths = vector<surface_path>();
