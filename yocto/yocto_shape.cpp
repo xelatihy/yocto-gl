@@ -7,9 +7,9 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_shape.h"
+#include "yocto_commonio.h"
 #include "yocto_modelio.h"
 #include "yocto_random.h"
-#include "yocto_utils.h"
 
 #include <deque>
 
@@ -1951,9 +1951,9 @@ void update_geodesic_distances(vector<float>& field,
   }
 }
 
-void compute_geodesic_distances(vector<float>& distances, 
-  const geodesic_solver& solver, const vector<int>& sources, 
-  float max_distance) {
+void compute_geodesic_distances(vector<float>& distances,
+    const geodesic_solver& solver, const vector<int>& sources,
+    float max_distance) {
   distances.assign(solver.graph.size(), flt_max);
   for (auto source : sources) distances[source] = 0.0f;
   update_geodesic_distances(distances, solver, sources, max_distance);

@@ -63,20 +63,15 @@
 #define YOCTO_QUADS_AS_TRIANGLES 1
 #endif
 
-#ifndef YOCTO_TRACE_THINSHEET
-#define YOCTO_TRACE_THINSHEET 0
-#endif
-
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
 
 #include "yocto_bvh.h"
+#include "yocto_common.h"
 #include "yocto_math.h"
 #include "yocto_random.h"
 #include "yocto_scene.h"
-
-#include <atomic>
 
 // -----------------------------------------------------------------------------
 // PATH TRACING
@@ -137,20 +132,19 @@ struct trace_params {
     element, highlight };
   // clang-format on
 
-  int                camera     = 0;
-  int                resolution = 1280;
-  sampler_type       sampler    = sampler_type::path;
-  falsecolor_type    falsecolor = falsecolor_type::diffuse;
-  int                samples    = 512;
-  int                bounces    = 8;
-  int                batch      = 16;
-  int                region     = 16;
-  float              clamp      = 10;
-  bool               envhidden  = false;
-  bool               tentfilter = false;
-  uint64_t           seed       = trace_default_seed;
-  std::atomic<bool>* cancel     = nullptr;
-  bool               noparallel = false;
+  int             camera     = 0;
+  int             resolution = 1280;
+  sampler_type    sampler    = sampler_type::path;
+  falsecolor_type falsecolor = falsecolor_type::diffuse;
+  int             samples    = 512;
+  int             bounces    = 8;
+  int             batch      = 16;
+  int             region     = 16;
+  float           clamp      = 10;
+  bool            envhidden  = false;
+  bool            tentfilter = false;
+  uint64_t        seed       = trace_default_seed;
+  bool            noparallel = false;
 };
 
 const auto trace_sampler_names = vector<string>{
@@ -189,11 +183,6 @@ void trace_region(image<vec4f>& image, trace_state& state,
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
-
-// Trace statistics for last run used for fine tuning implementation.
-// For now returns number of paths and number of rays.
-pair<uint64_t, uint64_t> get_trace_stats();
-void                     reset_trace_stats();
 
 }  // namespace yocto
 

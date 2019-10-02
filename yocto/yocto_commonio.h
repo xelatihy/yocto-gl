@@ -1,11 +1,11 @@
 //
-// # Yocto/Utils: Tiny collection of utilities to support Yocto/GL
+// # Yocto/CommonIo: Tiny collection of IO utilities to support Yocto/GL
 //
 //
-// Yocto/Utils is a collection of utilities used in writing other Yocto/GL
+// Yocto/IoUtils is a collection of utilities used in writing other Yocto/GL
 // libraries and example applications. We support printing and parsing builting
 // and Yocto/Math values, parsing command line arguments, simple path
-// manipulation, file lading/saving and basic concurrency utilities.
+// manipulation, file lading/saving.
 //
 //
 // ## Printing values
@@ -13,20 +13,6 @@
 // Use `print_info()` to print a message, `print_fatal()` to print and exit,
 // and `print_timed()` to use a RIIA timer. Several overloads of `to_string()`
 // are provided for both the basic types and Yocto/Math types.
-//
-//
-// ## Python-like iterators and collection helpers
-//
-// This library includes a set of functions to help use C++ collections with
-// more ease, inspired by Python. All functions and operators are defined in
-// the yocto namespace so they will not affect the code outside. But within
-// the Yocto/GL collection they are the best way to do this.
-//
-// 1. use `range()` to iterato over an integer sequence
-// 2. use `enumerate()` to iteratare over a vector and number its elements
-// 3. use opeartors + to either concatenate two vectors or a vector and an
-//    element
-// 4. use operators += to append an element or a vector to a given vector
 //
 //
 // ## Command-Line Parsing
@@ -65,16 +51,6 @@
 // 2. load and save binary files with `load_binary()` and `save_binary()`
 //
 //
-// ## Concurrency utilities
-//
-// C++ has very basic supprt for concurrency and most of it is still platform
-// dependent. We provide here very basic support for concurrency utlities
-// built on top of C++ low-level threading and synchronization.
-//
-// 1. use `concurrent_queue()` for communicationing values between threads
-// 2. use `parallel_for()` for basic parallel for loops
-//
-//
 // LICENSE:
 //
 // Copyright (c) 2016 -- 2018 Fabio Pellacini
@@ -106,101 +82,11 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include "yocto_common.h"
 #include "yocto_math.h"
 
-#include <algorithm>
-#include <atomic>
-#include <cctype>
 #include <chrono>
 #include <cstdio>
-#include <deque>
-#include <functional>
-#include <future>
-#include <mutex>
-#include <string>
-#include <thread>
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::atomic;
-using std::deque;
-using std::function;
-using std::future;
-using std::thread;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// CONVERSION TO STRING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Conversion to string for basic and Yocto/Math types
-inline string to_string(int value) { return std::to_string(value); }
-inline string to_string(float value) { return std::to_string(value); }
-inline string to_string(double value) { return std::to_string(value); }
-inline string to_string(const string& value) { return value; }
-inline string to_string(const char* value) { return value; }
-inline string to_string(const vec2f& value) {
-  return to_string(value.x) + " " + to_string(value.y);
-}
-inline string to_string(const vec3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z);
-}
-inline string to_string(const vec4f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.w);
-}
-inline string to_string(const vec2i& value) {
-  return to_string(value.x) + " " + to_string(value.y);
-}
-inline string to_string(const vec3i& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z);
-}
-inline string to_string(const vec4i& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.w);
-}
-inline string to_string(const mat2f& value) {
-  return to_string(value.x) + " " + to_string(value.y);
-}
-inline string to_string(const mat3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z);
-}
-inline string to_string(const mat4f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.w);
-}
-inline string to_string(const frame2f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.o);
-}
-inline string to_string(const frame3f& value) {
-  return to_string(value.x) + " " + to_string(value.y) + " " +
-         to_string(value.z) + " " + to_string(value.o);
-}
-inline string to_string(const ray2f& value) {
-  return to_string(value.o) + " " + to_string(value.d) + " " +
-         to_string(value.tmin) + " " + to_string(value.tmax);
-}
-inline string to_string(const ray3f& value) {
-  return to_string(value.o) + " " + to_string(value.d) + " " +
-         to_string(value.tmin) + " " + to_string(value.tmax);
-}
-inline string to_string(const bbox2f& value) {
-  return to_string(value.min) + " " + to_string(value.max);
-}
-inline string to_string(const bbox3f& value) {
-  return to_string(value.min) + " " + to_string(value.max);
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
@@ -208,137 +94,22 @@ inline string to_string(const bbox3f& value) {
 namespace yocto {
 
 // Print a message to the console
-inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
+inline void print_info(const string& msg);
 // Prints a messgae to the console and exit with an error.
-inline void print_fatal(const string& msg) {
-  printf("%s\n", msg.c_str());
-  exit(1);
-}
-
-// get time in nanoseconds - useful only to compute difference of times
-inline int64_t get_time() {
-  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-
-// Format duration string from nanoseconds
-inline string format_duration(int64_t duration) {
-  auto elapsed = duration / 1000000;  // milliseconds
-  auto hours   = (int)(elapsed / 3600000);
-  elapsed %= 3600000;
-  auto mins = (int)(elapsed / 60000);
-  elapsed %= 60000;
-  auto secs  = (int)(elapsed / 1000);
-  auto msecs = (int)(elapsed % 1000);
-  char buffer[256];
-  sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-  return buffer;
-}
-
-// Format a large integer number in human readable form
-inline string format_num(uint64_t num) {
-  auto rem = num % 1000;
-  auto div = num / 1000;
-  if (div > 0) return format_num(div) + "," + std::to_string(rem);
-  return std::to_string(rem);
-}
+inline void print_fatal(const string& msg);
 
 // Print traces for timing and program debugging
-inline auto print_timed(const string& msg) {
-  struct scoped_timer {
-    int64_t start_time = -1;
-    ~scoped_timer() {
-      printf(" in %s\n", format_duration(get_time() - start_time).c_str());
-    }
-  };
-  printf("%s", msg.c_str());
-  fflush(stdout);
-  // print_info(fmt + " [started]", args...);
-  return scoped_timer{get_time()};
-}
+inline auto print_timed(const string& msg);
+
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration);
+// Format a large integer number in human readable form
+inline string format_num(uint64_t num);
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PYTHON-LIKE ITERATORS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Range object to support Python-like iteration. Use with `range()`.
-struct range_helper {
-  struct iterator {
-    int       pos = 0;
-    iterator& operator++() {
-      pos++;
-      return *this;
-    }
-    bool operator!=(const iterator& other) const { return pos != other.pos; }
-    int  operator*() const { return pos; }
-  };
-  int      begin_ = 0, end_ = 0;
-  iterator begin() const { return {begin_}; }
-  iterator end() const { return {end_}; }
-};
-
-// Python `range()` equivalent. Construct an object to iterate over a sequence.
-inline auto range(int min, int max) { return range_helper{min, max}; }
-inline auto range(int max) { return range(0, max); }
-
-// Enumerate object to support Python-like enumeration. Use with `enumerate()`.
-template <typename T>
-struct enumerate_helper {
-  struct iterator {
-    T*        data = nullptr;
-    int       pos  = 0;
-    iterator& operator++() {
-      pos++;
-      return *this;
-    }
-    bool operator!=(const iterator& other) const { return pos != other.pos; }
-    pair<int&, T&> operator*() const { return {pos, *(data + pos)}; }
-  };
-  T*       data = nullptr;
-  int      size = 0;
-  iterator begin() const { return {data, 0}; }
-  iterator end() const { return {data, size}; }
-};
-
-// Python `enumerate()` equivalent. Construct an object that iteraterates over a
-// sequence of elements and numbers them.
-template <typename T>
-inline auto enumerate(const vector<T>& vals) {
-  return enumerate_helper<const T>{vals.data(), vals.size()};
-}
-template <typename T>
-inline auto enumerate(vector<T>& vals) {
-  return enumerate_helper<T>{vals.data(), vals.size()};
-}
-
-// Vector append and concatenation
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const vector<T>& b) {
-  a.insert(a.end(), b.begin(), b.end());
-  return a;
-}
-template <typename T>
-inline vector<T>& operator+=(vector<T>& a, const T& b) {
-  a.push_back(b);
-  return a;
-}
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const vector<T>& b) {
-  auto c = a;
-  return c += b;
-}
-template <typename T>
-inline vector<T> operator+(const vector<T>& a, const T& b) {
-  auto c = a;
-  return c += b;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMMEDIATE-MODE COMMAND LINE PARSING
+// COMMAND LINE PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -379,9 +150,131 @@ namespace yocto {
 // considered deprecated.
 
 // Utility to normalize a path
+inline string normalize_path(const string& filename);
+
+// Get directory name (including '/').
+inline string get_dirname(const string& filename);
+
+// Get extension (not including '.').
+inline string get_extension(const string& filename);
+
+// Get filename without directory.
+inline string get_filename(const string& filename);
+
+// Get extension.
+inline string get_noextension(const string& filename);
+
+// Get filename without directory and extension.
+inline string get_basename(const string& filename);
+
+// Replaces extensions
+inline string replace_extension(const string& filename, const string& ext);
+
+// Check if a file can be opened for reading.
+inline bool exists_file(const string& filename);
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Load/save a text file
+inline void load_text(const string& filename, string& str);
+inline void save_text(const string& filename, const string& str);
+
+// Load/save a binary file
+inline void load_binary(const string& filename, vector<byte>& data);
+inline void save_binary(const string& filename, const vector<byte>& data);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// FORMATTING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// This is a very crude replacement for `std::format()` that will be used when
+// available on all platforms.
+template <typename... Args>
+inline string format(const string& fmt, Args&&... args);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PRINT/FORMATTING UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Print a message to the console
+inline void print_info(const string& msg) { printf("%s\n", msg.c_str()); }
+// Prints a messgae to the console and exit with an error.
+inline void print_fatal(const string& msg) {
+  printf("%s\n", msg.c_str());
+  exit(1);
+}
+
+// get time in nanoseconds - useful only to compute difference of times
+inline int64_t get_time_() {
+  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration) {
+  auto elapsed = duration / 1000000;  // milliseconds
+  auto hours   = (int)(elapsed / 3600000);
+  elapsed %= 3600000;
+  auto mins = (int)(elapsed / 60000);
+  elapsed %= 60000;
+  auto secs  = (int)(elapsed / 1000);
+  auto msecs = (int)(elapsed % 1000);
+  char buffer[256];
+  sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+  return buffer;
+}
+
+// Format a large integer number in human readable form
+inline string format_num(uint64_t num) {
+  auto rem = num % 1000;
+  auto div = num / 1000;
+  if (div > 0) return format_num(div) + "," + std::to_string(rem);
+  return std::to_string(rem);
+}
+
+// Print traces for timing and program debugging
+inline auto print_timed(const string& msg) {
+  struct scoped_timer {
+    int64_t start_time = -1;
+    ~scoped_timer() {
+      printf(" in %s\n", format_duration(get_time_() - start_time).c_str());
+    }
+  };
+  printf("%s", msg.c_str());
+  fflush(stdout);
+  // print_info(fmt + " [started]", args...);
+  return scoped_timer{get_time_()};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Utility to normalize a path
 inline string normalize_path(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
+
     if (c == '\\') c = '/';
   if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
     throw std::invalid_argument("absolute paths are not supported");
@@ -510,111 +403,6 @@ inline void save_binary(const string& filename, const vector<byte>& data) {
     throw std::runtime_error("cannot write file " + filename);
   }
   fclose(fs);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// CONCURRENCY UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// a simple concurrent queue that locks at every call
-template <typename T>
-struct concurrent_queue {
-  concurrent_queue() {}
-  concurrent_queue(const concurrent_queue& other) = delete;
-  concurrent_queue& operator=(const concurrent_queue& other) = delete;
-
-  bool empty() {
-    std::lock_guard<std::mutex> lock(mutex);
-    return queue.empty();
-  }
-  void clear() {
-    std::lock_guard<std::mutex> lock(mutex);
-    queue.clear();
-  }
-  void push(const T& value) {
-    std::lock_guard<std::mutex> lock(mutex);
-    queue.push_back(value);
-  }
-  bool try_pop(T& value) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (queue.empty()) return false;
-    value = queue.front();
-    queue.pop_front();
-    return true;
-  }
-
- private:
-  std::mutex    mutex;
-  std::deque<T> queue;
-};
-
-// Run a task asynchronously
-inline future<void> run_async(function<void()> task) {
-  return std::async(std::launch::async, task);
-}
-// Check if an async task is ready
-inline bool is_valid(const future<void>& result) { return result.valid(); }
-inline bool is_running(const future<void>& result) {
-  return result.valid() && result.wait_for(std::chrono::microseconds(0)) !=
-                               std::future_status::ready;
-}
-inline bool is_ready(const future<void>& result) {
-  return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
-                               std::future_status::ready;
-}
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(int begin, int end, const Func& func,
-    std::atomic<bool>* cancel = nullptr, bool serial = false) {
-  if (serial) {
-    for (auto idx = begin; idx < end; idx++) {
-      if (cancel && *cancel) break;
-      func(idx);
-    }
-  } else {
-    auto             threads  = vector<thread>{};
-    auto             nthreads = thread::hardware_concurrency();
-    std::atomic<int> next_idx(begin);
-    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      threads.emplace_back([&func, &next_idx, cancel, end]() {
-        while (true) {
-          if (cancel && *cancel) break;
-          auto idx = next_idx.fetch_add(1);
-          if (idx >= end) break;
-          func(idx);
-        }
-      });
-    }
-    for (auto& t : threads) t.join();
-  }
-}
-
-template <typename Func>
-inline void parallel_for(int num, const Func& func,
-    std::atomic<bool>* cancel = nullptr, bool serial = false) {
-  parallel_for(0, num, func, cancel, serial);
-}
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes a reference to a `T`.
-template <typename T, typename Func>
-inline void parallel_foreach(vector<T>& values, const Func& func,
-    std::atomic<bool>* cancel = nullptr, bool serial = false) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
-      cancel, serial);
-}
-template <typename T, typename Func>
-inline void parallel_foreach(const vector<T>& values, const Func& func,
-    std::atomic<bool>* cancel = nullptr, bool serial = false) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
-      cancel, serial);
 }
 
 }  // namespace yocto

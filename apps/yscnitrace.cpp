@@ -26,11 +26,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_common.h"
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
@@ -92,7 +93,7 @@ struct app_states {
   int                                    selected = -1;
   std::list<string>                      errors;
   std::list<app_state>                   loading;
-  std::list<future<void>>                load_workers;
+  std::list<std::future<void>>           load_workers;
   std::deque<std::unique_ptr<app_state>> minchia;
 
   // get image
@@ -747,12 +748,10 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
       app.bvh_prms.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.bvh_prms.use_embree,
+  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.bvh_prms.embree,
       "Use Embree ratracer");
-  add_cli_option(cli, "--bvh-embree-flatten/--no-bvh-embree-flatten",
-      app.bvh_prms.embree_flatten, "Flatten embree scene");
   add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      app.bvh_prms.embree_compact, "Embree runs in compact memory");
+      app.bvh_prms.compact, "Embree runs in compact memory");
 #endif
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);

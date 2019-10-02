@@ -28,10 +28,6 @@
 
 #include "yocto_trace.h"
 
-#include <array>
-#include <future>
-#include <thread>
-
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
@@ -842,10 +838,6 @@ static float sample_lights_pdf(const yocto_scene& scene,
   return pdf;
 }
 
-// Trace stats.
-std::atomic<uint64_t> _trace_npaths{0};
-std::atomic<uint64_t> _trace_nrays{0};
-
 // Sample camera
 static ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
@@ -881,7 +873,6 @@ static pair<vec3f, bool> trace_path(const yocto_scene& scene,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    _trace_nrays += 1;
     auto intersection = intersect_scene_bvh(bvh, {origin, direction});
     if (!intersection.hit) {
       radiance += weight * eval_environment(scene, direction);
@@ -1017,7 +1008,6 @@ static pair<vec3f, bool> trace_naive(const yocto_scene& scene,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    _trace_nrays += 1;
     auto intersection = intersect_scene_bvh(bvh, {origin, direction});
     if (!intersection.hit) {
       radiance += weight * eval_environment(scene, direction);
@@ -1090,7 +1080,6 @@ static pair<vec3f, bool> trace_eyelight(const yocto_scene& scene,
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
-    _trace_nrays += 1;
     auto intersection = intersect_scene_bvh(bvh, {origin, direction});
     if (!intersection.hit) {
       radiance += weight * eval_environment(scene, direction);
@@ -1284,8 +1273,6 @@ void trace_region(image<vec4f>& image, trace_state& state,
     for (auto i = region.min.x; i < region.max.x; i++) {
       auto& pixel = get_trace_pixel(state, i, j);
       for (auto s = 0; s < num_samples; s++) {
-        if (params.cancel && *params.cancel) return;
-        _trace_npaths += 1;
         auto ray = params.tentfilter
                        ? sample_camera_tent(camera, {i, j}, image.size(),
                              rand2f(pixel.rng), rand2f(pixel.rng))
@@ -1404,28 +1391,15 @@ image<vec4f> trace_image(const yocto_scene& scene, const trace_bvh& bvh,
 
   if (params.noparallel) {
     for (auto& region : regions) {
-      if (params.cancel && *params.cancel) break;
       trace_region(
           render, state, scene, bvh, lights, region, params.samples, params);
     }
   } else {
-    auto                futures  = vector<std::future<void>>{};
-    auto                nthreads = std::thread::hardware_concurrency();
-    std::atomic<size_t> next_idx(0);
-    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      futures.emplace_back(std::async(
-          std::launch::async, [&render, &state, &scene, &bvh, &lights, &params,
-                                  &regions, &next_idx]() {
-            while (true) {
-              if (params.cancel && *params.cancel) break;
-              auto idx = next_idx.fetch_add(1);
-              if (idx >= regions.size()) break;
-              trace_region(render, state, scene, bvh, lights, regions[idx],
-                  params.samples, params);
-            }
-          }));
-    }
-    for (auto& f : futures) f.get();
+    parallel_foreach(regions, [&render, &state, &scene, &bvh, &lights, &params](
+                                  const image_region& region) {
+      trace_region(
+          render, state, scene, bvh, lights, region, params.samples, params);
+    });
   }
 
   return render;
@@ -1439,40 +1413,17 @@ int trace_samples(image<vec4f>& render, trace_state& state,
   auto num_samples = min(params.batch, params.samples - current_sample);
   if (params.noparallel) {
     for (auto& region : regions) {
-      if (params.cancel && *params.cancel) break;
       trace_region(
           render, state, scene, bvh, lights, region, params.samples, params);
     }
   } else {
-    auto                futures  = vector<std::future<void>>{};
-    auto                nthreads = std::thread::hardware_concurrency();
-    std::atomic<size_t> next_idx(0);
-    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      futures.emplace_back(std::async(
-          std::launch::async, [&render, &state, &scene, &bvh, &lights, &params,
-                                  &regions, &next_idx, num_samples]() {
-            while (true) {
-              if (params.cancel && *params.cancel) break;
-              auto idx = next_idx.fetch_add(1);
-              if (idx >= regions.size()) break;
-              trace_region(render, state, scene, bvh, lights, regions[idx],
-                  num_samples, params);
-            }
-          }));
-    }
-    for (auto& f : futures) f.get();
+    parallel_foreach(regions, [&render, &state, &scene, &bvh, &lights, &params,
+                                  num_samples](const image_region& region) {
+      trace_region(
+          render, state, scene, bvh, lights, region, num_samples, params);
+    });
   }
   return current_sample + num_samples;
-}
-
-// Trace statistics for last run used for fine tuning implementation.
-// For now returns number of paths and number of rays.
-pair<uint64_t, uint64_t> get_trace_stats() {
-  return {_trace_nrays, _trace_npaths};
-}
-void reset_trace_stats() {
-  _trace_nrays  = 0;
-  _trace_npaths = 0;
 }
 
 }  // namespace yocto

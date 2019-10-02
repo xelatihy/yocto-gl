@@ -77,24 +77,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <array>
-#include <chrono>
-#include <string>
-#include <unordered_map>
-#include <vector>
+#include <functional>  // for std::hash
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Aliased typenames for readability
-using std::array;
-using std::pair;
-using std::string;
-using std::unordered_map;
-using std::vector;
-using namespace std::literals::string_literals;
 
 using byte = unsigned char;
 using uint = unsigned int;
@@ -1333,7 +1321,7 @@ inline quat4f conjugate(const quat4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
 inline quat4f inverse(const quat4f& a) { return conjugate(a) / dot(a, a); }
 inline float  uangle(const quat4f& a, const quat4f& b) {
   auto d = dot(a, b);
-  return d > 1 ? 0 : std::acos(d < -1 ? -1 : d);
+  return d > 1 ? 0 : acos(d < -1 ? -1 : d);
 }
 inline quat4f lerp(const quat4f& a, const quat4f& b, float t) {
   return a * (1 - t) + b * t;
@@ -1688,7 +1676,7 @@ inline mat4f perspective_mat(float fovy, float aspect, float near) {
 }
 
 // Rotation conversions.
-inline pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
+inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
   return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 inline vec4f rotation_quat(const vec3f& axis, float angle) {
@@ -1802,39 +1790,6 @@ inline void update_fpscam(
 
   frame = {rot.x, rot.y, rot.z, pos};
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// TIMER
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// print information and returns a timer that will print the time when
-// destroyed. Use with RIIA for scoped timing.
-struct timer {
-  timer() : start{get_time()} {}
-  int64_t elapsed() { return get_time() - start; }
-  string  elapsedf() {
-    auto duration = get_time() - start;
-    auto elapsed  = duration / 1000000;  // milliseconds
-    auto hours    = (int)(elapsed / 3600000);
-    elapsed %= 3600000;
-    auto mins = (int)(elapsed / 60000);
-    elapsed %= 60000;
-    auto secs  = (int)(elapsed / 1000);
-    auto msecs = (int)(elapsed % 1000);
-    char buffer[256];
-    sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-    return buffer;
-  }
-  static int64_t get_time() {
-    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-  }
-
- private:
-  int64_t start = 0;
-};
 
 }  // namespace yocto
 

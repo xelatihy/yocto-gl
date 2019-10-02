@@ -27,9 +27,9 @@
 //
 
 #include "yocto_scene.h"
+#include "yocto_commonio.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
-#include "yocto_utils.h"
 
 #include <assert.h>
 #include <unordered_map>
@@ -465,7 +465,7 @@ void make_bvh(
     bvh.shapes[shape].quads     = scene.shapes[shape].quads;
     bvh.shapes[shape].quadspos  = scene.shapes[shape].quadspos;
 #if YOCTO_EMBREE
-    if (params.use_embree && params.embree_compact) {
+    if (params.embree && params.compact) {
       bvh.shapes[shape].positions.reserve(
           bvh.shapes[shape].positions.size() + 1);
     }
@@ -494,7 +494,7 @@ void update_bvh(bvh_scene& bvh, const yocto_scene& scene,
     bvh.shapes[shape].quads     = scene.shapes[shape].quads;
     bvh.shapes[shape].quadspos  = scene.shapes[shape].quadspos;
 #if YOCTO_EMBREE
-    if (params.use_embree && params.embree_compact) {
+    if (params.embree && params.compact) {
       bvh.shapes[shape].positions.reserve(
           bvh.shapes[shape].positions.size() + 1);
     }

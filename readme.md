@@ -32,8 +32,10 @@ See each header file for documentation.
    Ply, Obj, Pbrt and Yaml 3d formats
 - `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Obj, pbrt, glTF,
    and a custom, hackable, Yaml format
-- `yocto/yocto_utils.h`: printing utilities, timer, collection utilities, 
-   Python-like operators, concurrency utilities, io utilities
+- `yocto/yocto_common.h`: vocabulary types, container utilities, 
+   Python-like operations, concurrency utilies, timer
+- `yocto/yocto_commonio.h`: printing utilities, file io utilities, 
+  command line parsing
 
 You can see Yocto/GL in action in the following applications written to
 test the library:

@@ -87,9 +87,9 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include "yocto_common.h"
 #include "yocto_math.h"
 
-#include <atomic>
 #include <functional>
 
 #if YOCTO_EMBREE
@@ -113,7 +113,7 @@ const int bvh_max_prims = 4;
 // indices refer to primitives for leaf nodes or other nodes for internal nodes.
 struct bvh_node {
   bbox3f bbox;
-  int start;
+  int    start;
   short  num;
   bool   internal;
   byte   axis;
@@ -124,8 +124,8 @@ struct bvh_node {
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
 struct bvh_tree {
-  vector<bvh_node> nodes = {};
-  vector<int> primitives = {};
+  vector<bvh_node> nodes      = {};
+  vector<int>      primitives = {};
 };
 
 // Make shape bvh
@@ -326,12 +326,10 @@ struct bvh_scene {
 struct bvh_params {
   bool high_quality = false;
 #if YOCTO_EMBREE
-  bool use_embree     = false;
-  bool embree_flatten = false;
-  bool embree_compact = false;
+  bool embree  = false;
+  bool compact = false;
 #endif
-  bool               noparallel = false;
-  std::atomic<bool>* cancel     = nullptr;
+  bool noparallel = false;
 };
 
 // Build the bvh acceleration structure.

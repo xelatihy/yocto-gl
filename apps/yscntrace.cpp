@@ -26,11 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_trace.h"
-#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
 #include <map>
@@ -88,12 +88,10 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
       bvh_prms.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", bvh_prms.use_embree,
+  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", bvh_prms.embree,
       "Use Embree ratracer");
-  add_cli_option(cli, "--bvh-embree-flatten/--no-bvh-fembree-latten",
-      bvh_prms.embree_flatten, "Flatten BVH scene");
   add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      bvh_prms.embree_compact, "Embree runs in compact memory");
+      bvh_prms.compact, "Embree runs in compact memory");
 #endif
   add_cli_option(cli, "--add-skyenv", add_skyenv, "Add sky envmap");
   add_cli_option(cli, "--output-image,-o", imfilename, "Image filename");

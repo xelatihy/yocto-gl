@@ -27,22 +27,16 @@
 //
 
 #include "yocto_sceneio.h"
+#include "yocto_common.h"
+#include "yocto_commonio.h"
 #include "yocto_modelio.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
-#include "yocto_utils.h"
 
 #include <limits.h>
 #include <stdlib.h>
-#include <array>
-#include <atomic>
 #include <cassert>
 #include <deque>
-#include <future>
-#include <memory>
-#include <regex>
-#include <string_view>
-#include <thread>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -146,35 +140,27 @@ void load_textures(
   // load images
   if (params.noparallel) {
     for (auto& texture : scene.textures) {
-      if (params.cancel && *params.cancel) break;
       if (!texture.hdr.empty() || !texture.ldr.empty()) return;
       load_texture(texture, dirname);
     }
   } else {
-    parallel_foreach(
-        scene.textures,
-        [&dirname](yocto_texture& texture) {
-          if (!texture.hdr.empty() || !texture.ldr.empty()) return;
-          load_texture(texture, dirname);
-        },
-        params.cancel);
+    parallel_foreach(scene.textures, [&dirname](yocto_texture& texture) {
+      if (!texture.hdr.empty() || !texture.ldr.empty()) return;
+      load_texture(texture, dirname);
+    });
   }
 
   // load volumes
   if (params.noparallel) {
     for (auto& texture : scene.voltextures) {
-      if (params.cancel && *params.cancel) break;
       if (!texture.vol.empty()) return;
       load_voltexture(texture, dirname);
     }
   } else {
-    parallel_foreach(
-        scene.voltextures,
-        [&dirname](yocto_voltexture& texture) {
-          if (!texture.vol.empty()) return;
-          load_voltexture(texture, dirname);
-        },
-        params.cancel);
+    parallel_foreach(scene.voltextures, [&dirname](yocto_voltexture& texture) {
+      if (!texture.vol.empty()) return;
+      load_voltexture(texture, dirname);
+    });
   }
 }
 
@@ -198,30 +184,24 @@ void save_textures(const yocto_scene& scene, const string& dirname,
   // save images
   if (params.noparallel) {
     for (auto& texture : scene.textures) {
-      if (params.cancel && *params.cancel) break;
       save_texture(texture, dirname);
     }
   } else {
-    parallel_foreach(
-        scene.textures,
-        [&dirname](
-            const yocto_texture& texture) { save_texture(texture, dirname); },
-        params.cancel);
+    parallel_foreach(scene.textures, [&dirname](const yocto_texture& texture) {
+      save_texture(texture, dirname);
+    });
   }
 
   // save volumes
   if (params.noparallel) {
     for (auto& texture : scene.voltextures) {
-      if (params.cancel && *params.cancel) break;
       save_voltexture(texture, dirname);
     }
   } else {
     parallel_foreach(
-        scene.voltextures,
-        [&dirname](const yocto_voltexture& texture) {
+        scene.voltextures, [&dirname](const yocto_voltexture& texture) {
           save_voltexture(texture, dirname);
-        },
-        params.cancel);
+        });
   }
 }
 
@@ -259,35 +239,27 @@ void load_shapes(
   // load shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
-      if (params.cancel && *params.cancel) break;
       if (!shape.positions.empty()) continue;
       load_shape(shape, dirname);
     }
   } else {
-    parallel_foreach(
-        scene.shapes,
-        [&dirname](yocto_shape& shape) {
-          if (!shape.positions.empty()) return;
-          load_shape(shape, dirname);
-        },
-        params.cancel);
+    parallel_foreach(scene.shapes, [&dirname](yocto_shape& shape) {
+      if (!shape.positions.empty()) return;
+      load_shape(shape, dirname);
+    });
   }
 
   // load subdivs
   if (params.noparallel) {
     for (auto& subdiv : scene.subdivs) {
-      if (params.cancel && *params.cancel) break;
       if (!subdiv.positions.empty()) continue;
       load_subdiv(subdiv, dirname);
     }
   } else {
-    parallel_foreach(
-        scene.subdivs,
-        [&dirname](yocto_subdiv& subdiv) {
-          if (!subdiv.positions.empty()) return;
-          load_subdiv(subdiv, dirname);
-        },
-        params.cancel);
+    parallel_foreach(scene.subdivs, [&dirname](yocto_subdiv& subdiv) {
+      if (!subdiv.positions.empty()) return;
+      load_subdiv(subdiv, dirname);
+    });
   }
 }
 
@@ -297,27 +269,21 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
   // save shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
-      if (params.cancel && *params.cancel) break;
       save_shape(shape, dirname);
     }
   } else {
-    parallel_foreach(
-        scene.shapes,
-        [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); },
-        params.cancel);
+    parallel_foreach(scene.shapes,
+        [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); });
   }
   // save subdivs
   if (params.noparallel) {
     for (auto& subdiv : scene.subdivs) {
-      if (params.cancel && *params.cancel) break;
       save_subdiv(subdiv, dirname);
     }
   } else {
-    parallel_foreach(
-        scene.subdivs,
-        [&dirname](
-            const yocto_subdiv& subdiv) { save_subdiv(subdiv, dirname); },
-        params.cancel);
+    parallel_foreach(scene.subdivs, [&dirname](const yocto_subdiv& subdiv) {
+      save_subdiv(subdiv, dirname);
+    });
   }
 }
 
