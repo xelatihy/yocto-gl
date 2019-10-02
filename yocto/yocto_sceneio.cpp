@@ -157,8 +157,7 @@ void load_textures(
         [&dirname](yocto_texture& texture) {
           if (!texture.hdr.empty() || !texture.ldr.empty()) return;
           load_texture(texture, dirname);
-        },
-        params.cancel);
+        });
   }
 
   // load volumes
@@ -174,8 +173,7 @@ void load_textures(
         [&dirname](yocto_voltexture& texture) {
           if (!texture.vol.empty()) return;
           load_voltexture(texture, dirname);
-        },
-        params.cancel);
+        });
   }
 }
 
@@ -206,8 +204,7 @@ void save_textures(const yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.textures,
         [&dirname](
-            const yocto_texture& texture) { save_texture(texture, dirname); },
-        params.cancel);
+            const yocto_texture& texture) { save_texture(texture, dirname); });
   }
 
   // save volumes
@@ -221,8 +218,7 @@ void save_textures(const yocto_scene& scene, const string& dirname,
         scene.voltextures,
         [&dirname](const yocto_voltexture& texture) {
           save_voltexture(texture, dirname);
-        },
-        params.cancel);
+        });
   }
 }
 
@@ -270,8 +266,7 @@ void load_shapes(
         [&dirname](yocto_shape& shape) {
           if (!shape.positions.empty()) return;
           load_shape(shape, dirname);
-        },
-        params.cancel);
+        });
   }
 
   // load subdivs
@@ -287,8 +282,7 @@ void load_shapes(
         [&dirname](yocto_subdiv& subdiv) {
           if (!subdiv.positions.empty()) return;
           load_subdiv(subdiv, dirname);
-        },
-        params.cancel);
+        });
   }
 }
 
@@ -304,8 +298,7 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
   } else {
     parallel_foreach(
         scene.shapes,
-        [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); },
-        params.cancel);
+        [&dirname](const yocto_shape& shape) { save_shape(shape, dirname); });
   }
   // save subdivs
   if (params.noparallel) {
@@ -317,8 +310,7 @@ void save_shapes(const yocto_scene& scene, const string& dirname,
     parallel_foreach(
         scene.subdivs,
         [&dirname](
-            const yocto_subdiv& subdiv) { save_subdiv(subdiv, dirname); },
-        params.cancel);
+            const yocto_subdiv& subdiv) { save_subdiv(subdiv, dirname); });
   }
 }
 

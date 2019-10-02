@@ -251,14 +251,7 @@ inline bool is_ready(const std::future<void>& result) {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
-inline void parallel_for(int begin, int end, Func&& func,
-    std::atomic<bool>* cancel = nullptr, bool serial = false) {
-  if (serial) {
-    for (auto idx = begin; idx < end; idx++) {
-      if (cancel && *cancel) break;
-      func(idx);
-    }
-  } else {
+inline void parallel_for(int begin, int end, Func&& func) {
     auto             futures  = vector<std::future<void>>{};
     auto             nthreads = std::thread::hardware_concurrency();
     std::atomic<int> next_idx(begin);
@@ -272,30 +265,24 @@ inline void parallel_for(int begin, int end, Func&& func,
       }));
     }
     for (auto& f : futures) f.get();
-  }
 }
 
 template <typename Func>
-inline void parallel_for(int num, Func&& func,
-    std::atomic<bool>* cancel = nullptr, bool serial = false) {
-  parallel_for(0, num, std::forward<Func>(func), cancel, serial);
+inline void parallel_for(int num, Func&& func) {
+  parallel_for(0, num, std::forward<Func>(func));
 }
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline void parallel_foreach(vector<T>& values, Func&& func,
-    std::atomic<bool>* cancel = nullptr, bool serial = false) {
+inline void parallel_foreach(vector<T>& values, Func&& func) {
   parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
-      cancel, serial);
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 template <typename T, typename Func>
-inline void parallel_foreach(const vector<T>& values, Func&& func,
-    std::atomic<bool>* cancel = nullptr, bool serial = false) {
+inline void parallel_foreach(const vector<T>& values, Func&& func) {
   parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
-      cancel, serial);
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 
 }  // namespace yocto
