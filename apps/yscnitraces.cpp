@@ -51,7 +51,7 @@ struct app_state {
 
   // scene
   yocto_scene scene      = {};
-  bvh_scene   bvh        = {};
+  trace_bvh   bvh        = {};
   bool        add_skyenv = false;
 
   // rendering state

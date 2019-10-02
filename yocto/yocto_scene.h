@@ -27,7 +27,7 @@
 // 3. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
 // 4. for ray-intersection and closest point queries, use
-//    'make_bvh()`/`refit_bvh()`
+//    'make_bvh()`/`update_bvh()`
 //
 //
 
@@ -360,7 +360,12 @@ void tesselate_subdivs(yocto_scene& scene);
 // Build/refit the bvh acceleration structure.
 void make_bvh(
     bvh_scene& bvh, const yocto_scene& scene, const bvh_params& params);
-void refit_bvh(bvh_scene& bvh, const yocto_scene& scene,
+void update_bvh(bvh_scene& bvh, const yocto_scene& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params);
+void make_bvh(
+    bvh_shared_scene& bvh, const yocto_scene& scene, const bvh_params& params);
+void update_bvh(bvh_shared_scene& bvh, const yocto_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params);
 

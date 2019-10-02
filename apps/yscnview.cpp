@@ -982,19 +982,20 @@ void draw_glwidgets(const opengl_window& win) {
   auto          scene_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
-  if (draw_glfiledialog_button(
-          win, "load", true, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
+  if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
+          "./", "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true, get_dirname(save_path),
-          get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
-    auto& app = apps.get_selected();
+  if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
+          get_dirname(save_path), get_filename(save_path),
+          "*.yaml;*.obj;*.pbrt")) {
+    auto& app   = apps.get_selected();
     app.outname = save_path;
     try {
       save_scene(app.outname, app.scene);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
       log_glinfo(win, e.what());

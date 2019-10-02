@@ -59,7 +59,7 @@ struct app_state {
 
   // scene
   yocto_scene scene      = {};
-  bvh_scene   bvh        = {};
+  trace_bvh   bvh        = {};
   bool        add_skyenv = false;
 
   // rendering state
@@ -88,11 +88,11 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::list<app_state>    states;
-  int                     selected = -1;
-  std::list<string>       errors;
-  std::list<app_state>    loading;
-  std::list<future<void>> load_workers;
+  std::list<app_state>                   states;
+  int                                    selected = -1;
+  std::list<string>                      errors;
+  std::list<app_state>                   loading;
+  std::list<future<void>>                load_workers;
   std::deque<std::unique_ptr<app_state>> minchia;
 
   // get image
@@ -279,7 +279,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
       log_glinfo(win, "cannot load " + shape.filename);
       log_glinfo(win, e.what());
     }
-    refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
+    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
     // TODO: update lights
   }
   return edited;
@@ -324,12 +324,12 @@ inline bool draw_glwidgets_subdiv(
       log_glinfo(win, e.what());
     }
     tesselate_subdiv(app.scene, shape);
-    refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
+    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
     // TODO: update lights
   }
   if (edited && old_filename == shape.filename) {
     tesselate_subdiv(app.scene, shape);
-    refit_bvh(app.bvh, app.scene, {}, {shape.shape}, app.bvh_prms);
+    update_bvh(app.bvh, app.scene, {}, {shape.shape}, app.bvh_prms);
     // TODO: update lights
   }
   return edited;
@@ -349,9 +349,9 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
   edited += draw_glcombobox(
       win, "material", instance.material, app.scene.materials, true);
   if (edited && instance.shape != old_instance.shape)
-    refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
+    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
   if (edited && instance.frame != old_instance.frame)
-    refit_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
+    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
   // TODO: update lights
   return edited;
 }
@@ -380,19 +380,20 @@ void draw_glwidgets(const opengl_window& win) {
   auto          scene_ok = !apps.states.empty() && apps.selected >= 0;
   if (!begin_glwidgets_window(win, "yscnitrace")) return;
   draw_glmessages(win);
-  if (draw_glfiledialog_button(
-          win, "load", true, "load", load_path, false, "./", "", "*.yaml;*.obj;*.pbrt")) {
+  if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
+          "./", "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true, get_dirname(save_path),
-          get_filename(save_path), "*.yaml;*.obj;*.pbrt")) {
-    auto& app = apps.get_selected();
+  if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
+          get_dirname(save_path), get_filename(save_path),
+          "*.yaml;*.obj;*.pbrt")) {
+    auto& app   = apps.get_selected();
     app.outname = save_path;
     try {
       save_scene(app.outname, app.scene);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
       log_glinfo(win, e.what());
@@ -400,14 +401,14 @@ void draw_glwidgets(const opengl_window& win) {
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save image", scene_ok, "save image", save_path, true,
-          get_dirname(save_path), get_filename(save_path),
+  if (draw_glfiledialog_button(win, "save image", scene_ok, "save image",
+          save_path, true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto& app = apps.get_selected();
+    auto& app   = apps.get_selected();
     app.outname = save_path;
     try {
       save_image(app.imagename, app.display);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
       log_glinfo(win, e.what());
@@ -478,7 +479,7 @@ void draw_glwidgets(const opengl_window& win) {
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
       for (auto stat : format_stats(app.scene)) print_info(stat);
-      for (auto stat : format_stats(app.bvh)) print_info(stat);
+      // for (auto stat : format_stats(app.bvh)) print_info(stat);
     }
     auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(
@@ -680,7 +681,7 @@ void run_ui(app_states& apps) {
         auto& camera = app.scene.cameras.at(app.trace_prms.camera);
         auto  ray    = eval_camera(
             camera, ij, app.render.size(), {0.5f, 0.5f}, zero2f);
-        if (auto isec = intersect_bvh(app.bvh, ray); isec.hit) {
+        if (auto isec = intersect_scene_bvh(app.bvh, ray); isec.hit) {
           app.selection = {"instance", isec.instance};
         }
       }

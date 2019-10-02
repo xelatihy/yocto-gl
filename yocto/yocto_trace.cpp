@@ -782,7 +782,7 @@ static vec3f sample_light(const yocto_scene& scene, const trace_lights& lights,
 
 // Sample pdf for a light point.
 static float sample_light_pdf(const yocto_scene& scene,
-    const trace_lights& lights, int instance_id, const bvh_scene& bvh,
+    const trace_lights& lights, int instance_id, const trace_bvh& bvh,
     const vec3f& position, const vec3f& direction) {
   auto& instance = scene.instances[instance_id];
   auto& material = scene.materials[instance.material];
@@ -792,7 +792,8 @@ static float sample_light_pdf(const yocto_scene& scene,
   auto pdf           = 0.0f;
   auto next_position = position;
   for (auto bounce = 0; bounce < 100; bounce++) {
-    auto isec = intersect_bvh(bvh, instance_id, {next_position, direction});
+    auto isec = intersect_instance_bvh(
+        bvh, instance_id, {next_position, direction});
     if (!isec.hit) break;
     // accumulate pdf
     auto& instance      = scene.instances[isec.instance];
@@ -811,7 +812,7 @@ static float sample_light_pdf(const yocto_scene& scene,
 
 // Sample lights wrt solid angle
 static vec3f sample_lights(const yocto_scene& scene, const trace_lights& lights,
-    const bvh_scene& bvh, const vec3f& position, float rl, float rel,
+    const trace_bvh& bvh, const vec3f& position, float rl, float rel,
     const vec2f& ruv) {
   auto light_id = sample_uniform(
       lights.instances.size() + lights.environments.size(), rl);
@@ -827,7 +828,7 @@ static vec3f sample_lights(const yocto_scene& scene, const trace_lights& lights,
 
 // Sample lights pdf
 static float sample_lights_pdf(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
+    const trace_lights& lights, const trace_bvh& bvh, const vec3f& position,
     const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto instance : lights.instances) {
@@ -867,7 +868,7 @@ static ray3f sample_camera_tent(const yocto_camera& camera, const vec2i& ij,
 
 // Recursive path tracing.
 static pair<vec3f, bool> trace_path(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin_,
+    const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin_,
     const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance     = zero3f;
@@ -881,7 +882,7 @@ static pair<vec3f, bool> trace_path(const yocto_scene& scene,
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
     _trace_nrays += 1;
-    auto intersection = intersect_bvh(bvh, {origin, direction});
+    auto intersection = intersect_scene_bvh(bvh, {origin, direction});
     if (!intersection.hit) {
       radiance += weight * eval_environment(scene, direction);
       break;
@@ -1004,7 +1005,7 @@ static pair<vec3f, bool> trace_path(const yocto_scene& scene,
 
 // Recursive path tracing.
 static pair<vec3f, bool> trace_naive(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin_,
+    const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin_,
     const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance  = zero3f;
@@ -1017,7 +1018,7 @@ static pair<vec3f, bool> trace_naive(const yocto_scene& scene,
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
     _trace_nrays += 1;
-    auto intersection = intersect_bvh(bvh, {origin, direction});
+    auto intersection = intersect_scene_bvh(bvh, {origin, direction});
     if (!intersection.hit) {
       radiance += weight * eval_environment(scene, direction);
       break;
@@ -1077,7 +1078,7 @@ static pair<vec3f, bool> trace_naive(const yocto_scene& scene,
 
 // Eyelight for quick previewing.
 static pair<vec3f, bool> trace_eyelight(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin_,
+    const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin_,
     const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance  = zero3f;
@@ -1090,7 +1091,7 @@ static pair<vec3f, bool> trace_eyelight(const yocto_scene& scene,
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
     _trace_nrays += 1;
-    auto intersection = intersect_bvh(bvh, {origin, direction});
+    auto intersection = intersect_scene_bvh(bvh, {origin, direction});
     if (!intersection.hit) {
       radiance += weight * eval_environment(scene, direction);
       break;
@@ -1138,10 +1139,10 @@ static pair<vec3f, bool> trace_eyelight(const yocto_scene& scene,
 
 // False color rendering
 static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& origin,
+    const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin,
     const vec3f& direction, rng_state& rng, const trace_params& params) {
   // intersect next point
-  auto intersection = intersect_bvh(bvh, ray3f{origin, direction});
+  auto intersection = intersect_scene_bvh(bvh, ray3f{origin, direction});
   if (!intersection.hit) {
     return {zero3f, false};
   }
@@ -1239,7 +1240,7 @@ static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
 
 // Trace a single ray from the camera using the given algorithm.
 using trace_sampler_func = pair<vec3f, bool> (*)(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const trace_bvh& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, const trace_params& params);
 static trace_sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
@@ -1275,7 +1276,7 @@ trace_pixel& get_trace_pixel(trace_state& state, int i, int j) {
 
 // Trace a block of samples
 void trace_region(image<vec4f>& image, trace_state& state,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const yocto_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     const image_region& region, int num_samples, const trace_params& params) {
   auto& camera  = scene.cameras.at(params.camera);
   auto  sampler = get_trace_sampler_func(params);
@@ -1393,7 +1394,7 @@ void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
+image<vec4f> trace_image(const yocto_scene& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params) {
   auto image_size = camera_resolution(
       scene.cameras.at(params.camera), params.resolution);
@@ -1432,7 +1433,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Progressively compute an image by calling trace_samples multiple times.
 int trace_samples(image<vec4f>& render, trace_state& state,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const yocto_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     int current_sample, const trace_params& params) {
   auto regions     = make_regions(render.size(), params.region, true);
   auto num_samples = min(params.batch, params.samples - current_sample);

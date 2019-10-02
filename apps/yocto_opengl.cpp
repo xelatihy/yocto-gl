@@ -1006,13 +1006,12 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
   }
 }
 bool draw_glfiledialog_button(const opengl_window& win, const char* button_lbl,
-    bool button_active, const char* lbl,
-    string& path, bool save, const string& dirname, const string& filename,
-    const string& filter) {
-  if(is_glmodal_open(win, lbl)) {
+    bool button_active, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter) {
+  if (is_glmodal_open(win, lbl)) {
     return draw_glfiledialog(win, lbl, path, save, dirname, filename, filter);
   } else {
-    if(draw_glbutton(win, button_lbl, button_active)) {
+    if (draw_glbutton(win, button_lbl, button_active)) {
       open_glmodal(win, lbl);
     }
     return false;

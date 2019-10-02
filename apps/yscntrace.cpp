@@ -133,7 +133,7 @@ int main(int argc, const char* argv[]) {
   if (add_skyenv) add_sky(scene);
 
   // build bvh
-  auto bvh = bvh_scene{};
+  auto bvh = trace_bvh{};
   {
     auto timer = print_timed("building bvh");
     make_bvh(bvh, scene, bvh_prms);
