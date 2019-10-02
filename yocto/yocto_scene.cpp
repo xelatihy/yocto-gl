@@ -29,7 +29,7 @@
 #include "yocto_scene.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
-#include "yocto_ioutils.h"
+#include "yocto_commonio.h"
 
 #include <assert.h>
 #include <unordered_map>

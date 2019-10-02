@@ -30,7 +30,7 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
-#include "../yocto/yocto_ioutils.h"
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_common.h"
 #include "yocto_opengl.h"
 using namespace yocto;

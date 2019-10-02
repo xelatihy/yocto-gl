@@ -1,5 +1,5 @@
 //
-// # Yocto/Utils: Tiny collection of IO utilities to support Yocto/GL
+// # Yocto/CommonIo: Tiny collection of IO utilities to support Yocto/GL
 //
 //
 // Yocto/IoUtils is a collection of utilities used in writing other Yocto/GL

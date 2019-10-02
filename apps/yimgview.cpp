@@ -27,7 +27,7 @@
 //
 
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_ioutils.h"
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_common.h"
 #include "yocto_opengl.h"
 using namespace yocto;

@@ -32,7 +32,7 @@
 #include <algorithm>
 #include <atomic>
 #include <mutex>
-#include "../yocto/yocto_ioutils.h"
+#include "../yocto/yocto_commonio.h"
 
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION

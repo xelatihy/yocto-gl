@@ -40,7 +40,7 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
-#include "../yocto/yocto_ioutils.h"
+#include "../yocto/yocto_commonio.h"
 using namespace yocto;
 
 #include "ext/json.hpp"
