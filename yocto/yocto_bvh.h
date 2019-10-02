@@ -113,10 +113,10 @@ const int bvh_max_prims = 4;
 // indices refer to primitives for leaf nodes or other nodes for internal nodes.
 struct bvh_node {
   bbox3f bbox;
+  int start;
   short  num;
   bool   internal;
   byte   axis;
-  int    prims[bvh_max_prims];
 };
 
 // BVH tree stored as a node array with the tree structure is encoded using
@@ -125,6 +125,7 @@ struct bvh_node {
 // Application data is not stored explicitly.
 struct bvh_tree {
   vector<bvh_node> nodes = {};
+  vector<int> primitives = {};
 };
 
 // Make shape bvh
