@@ -1407,22 +1407,10 @@ image<vec4f> trace_image(const yocto_scene& scene, const trace_bvh& bvh,
           render, state, scene, bvh, lights, region, params.samples, params);
     }
   } else {
-    auto                futures  = vector<std::future<void>>{};
-    auto                nthreads = std::thread::hardware_concurrency();
-    std::atomic<size_t> next_idx(0);
-    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      futures.emplace_back(std::async(
-          std::launch::async, [&render, &state, &scene, &bvh, &lights, &params,
-                                  &regions, &next_idx]() {
-            while (true) {
-              auto idx = next_idx.fetch_add(1);
-              if (idx >= regions.size()) break;
-              trace_region(render, state, scene, bvh, lights, regions[idx],
+    parallel_foreach(regions, [&render, &state, &scene, &bvh, &lights, &params](const image_region& region) {
+              trace_region(render, state, scene, bvh, lights, region,
                   params.samples, params);
-            }
-          }));
-    }
-    for (auto& f : futures) f.get();
+    });
   }
 
   return render;
@@ -1440,22 +1428,11 @@ int trace_samples(image<vec4f>& render, trace_state& state,
           render, state, scene, bvh, lights, region, params.samples, params);
     }
   } else {
-    auto                futures  = vector<std::future<void>>{};
-    auto                nthreads = std::thread::hardware_concurrency();
-    std::atomic<size_t> next_idx(0);
-    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      futures.emplace_back(std::async(
-          std::launch::async, [&render, &state, &scene, &bvh, &lights, &params,
-                                  &regions, &next_idx, num_samples]() {
-            while (true) {
-              auto idx = next_idx.fetch_add(1);
-              if (idx >= regions.size()) break;
-              trace_region(render, state, scene, bvh, lights, regions[idx],
-                  num_samples, params);
-            }
-          }));
-    }
-    for (auto& f : futures) f.get();
+    parallel_foreach(regions, [&render, &state, &scene, &bvh, &lights, &params,
+                                  num_samples](const image_region& region) {
+      trace_region(
+          render, state, scene, bvh, lights, region, num_samples, params);
+    });
   }
   return current_sample + num_samples;
 }
