@@ -395,11 +395,11 @@ bvh_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// HIGH-LEVEL BVH FOR RAY INTERSECTION USING SHARED MEMORY
+// EXPERIMENTAL HIGH-LEVEL BVH FOR RAY INTERSECTION USING SHARED MEMORY
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// BVH data for whole shapes. This interface makes copies of all the data.
+// [EXPERIMENTAL] BVH data for whole scenes. This interface does not copy data.
 struct bvh_shared_scene {
   // shapes
   int                                       num_shapes = 0;
@@ -426,10 +426,10 @@ struct bvh_shared_scene {
 #endif
 };
 
-// Build the bvh acceleration structure.
+// [EXPERIMENTAL] Build the bvh acceleration structure.
 void make_scene_bvh(bvh_shared_scene& bvh, const bvh_params& params);
 
-// Refit bvh data
+// [EXPERIMENTAL] Refit bvh data
 void update_scene_bvh(bvh_shared_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params);
@@ -447,7 +447,7 @@ bool intersect_shape_bvh(const bvh_shared_scene& bvh, int shape,
 bool intersect_instance_bvh(const bvh_shared_scene& bvh, int instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance,
     bool find_any = false, bool non_rigid_frames = true);
-
+// Shortcuts.
 bvh_intersection intersect_scene_bvh(const bvh_shared_scene& bvh,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 bvh_intersection intersect_shape_bvh(const bvh_shared_scene& bvh, int shape,
