@@ -192,7 +192,7 @@ inline void save_binary(const string& filename, const vector<byte>& data);
 // -----------------------------------------------------------------------------
 //
 //
-// IMPLEMENTATION 
+// IMPLEMENTATION
 //
 //
 // -----------------------------------------------------------------------------
@@ -204,10 +204,10 @@ namespace yocto {
 
 // This is a very crude replacement for `std::format()` that will be used when
 // available on all platforms.
-template<typename ... Args>
-inline string format(const string& fmt, Args&& ... args);
+template <typename... Args>
+inline string format(const string& fmt, Args&&... args);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
