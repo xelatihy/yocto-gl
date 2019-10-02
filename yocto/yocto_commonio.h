@@ -83,31 +83,10 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_math.h"
+#include "yocto_common.h"
 
-#include <algorithm>
-#include <atomic>
-#include <cctype>
 #include <chrono>
 #include <cstdio>
-#include <deque>
-#include <functional>
-#include <future>
-#include <mutex>
-#include <string>
-#include <thread>
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::atomic;
-using std::deque;
-using std::function;
-using std::future;
-using std::thread;
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // CONVERSION TO STRING

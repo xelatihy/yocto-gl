@@ -78,12 +78,10 @@
 #include <atomic>
 #include <cctype>
 #include <chrono>
-#include <cstdio>
-#include <deque>
-#include <functional>
 #include <future>
 #include <mutex>
 #include <string>
+#include <deque>
 #include <thread>
 #include <utility>
 
@@ -99,8 +97,6 @@ using std::string;
 using std::unordered_map;
 using std::vector;
 using namespace std::literals::string_literals;
-using std::deque;
-using std::function;
 
 }  // namespace yocto
 

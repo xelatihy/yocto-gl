@@ -78,7 +78,7 @@ struct app_states {
   std::list<app_state>    states       = {};
   int                     selected     = -1;
   std::list<app_state>    loading      = {};
-  std::list<future<void>> load_workers = {};
+  std::list<std::future<void>> load_workers = {};
 
   // get image
   app_state& get_selected() {

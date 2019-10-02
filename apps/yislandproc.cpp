@@ -48,6 +48,7 @@ using namespace yocto;
 
 #include <string_view>
 #include <unordered_set>
+#include <deque>
 
 using std::string_view;
 using std::unordered_set;

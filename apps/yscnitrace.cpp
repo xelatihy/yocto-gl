@@ -93,7 +93,7 @@ struct app_states {
   int                                    selected = -1;
   std::list<string>                      errors;
   std::list<app_state>                   loading;
-  std::list<future<void>>                load_workers;
+  std::list<std::future<void>>                load_workers;
   std::deque<std::unique_ptr<app_state>> minchia;
 
   // get image
