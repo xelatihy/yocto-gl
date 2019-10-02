@@ -146,6 +146,10 @@ void load_scene_async(app_states& apps, const string& filename) {
     load_scene(app.filename, app.scene);
     make_bvh(app.bvh, app.scene, app.bvh_prms);
     make_trace_lights(app.lights, app.scene);
+    if (app.lights.instances.empty() && app.lights.environments.empty() &&
+        is_sampler_lit(app.trace_prms)) {
+      app.trace_prms.sampler = trace_params::sampler_type::eyelight;
+    }
     auto image_size = camera_resolution(
         app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
     app.render.resize(image_size);
