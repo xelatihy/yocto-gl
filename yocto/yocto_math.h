@@ -77,7 +77,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include<functional> // for std::hash
+#include <functional>  // for std::hash
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS

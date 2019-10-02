@@ -26,12 +26,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_common.h"
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "../yocto/yocto_commonio.h"
-#include "../yocto/yocto_common.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
@@ -93,7 +93,7 @@ struct app_states {
   int                                    selected = -1;
   std::list<string>                      errors;
   std::list<app_state>                   loading;
-  std::list<std::future<void>>                load_workers;
+  std::list<std::future<void>>           load_workers;
   std::deque<std::unique_ptr<app_state>> minchia;
 
   // get image

@@ -70,20 +70,19 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <array>
-#include <chrono>
-#include <unordered_map>
-#include <vector>
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cctype>
 #include <chrono>
+#include <deque>
 #include <future>
 #include <mutex>
 #include <string>
-#include <deque>
 #include <thread>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // DICTIONARY TYPES
@@ -229,9 +228,10 @@ struct concurrent_queue {
 };
 
 // Run a task asynchronously
-template<typename Func, typename ... Args>
-inline auto run_async(Func&& func, Args&& ... args) {
-  return std::async(std::launch::async, std::forward<Func>(func), std::forward<Args>(args)...);
+template <typename Func, typename... Args>
+inline auto run_async(Func&& func, Args&&... args) {
+  return std::async(std::launch::async, std::forward<Func>(func),
+      std::forward<Args>(args)...);
 }
 // Check if an async task is ready
 inline bool is_valid(const std::future<void>& result) { return result.valid(); }
@@ -248,19 +248,20 @@ inline bool is_ready(const std::future<void>& result) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(int begin, int end, Func&& func) {
-    auto             futures  = vector<std::future<void>>{};
-    auto             nthreads = std::thread::hardware_concurrency();
-    std::atomic<int> next_idx(begin);
-    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      futures.emplace_back(std::async(std::launch::async, [&func, &next_idx, end]() {
-        while (true) {
-          auto idx = next_idx.fetch_add(1);
-          if (idx >= end) break;
-          func(idx);
-        }
-      }));
-    }
-    for (auto& f : futures) f.get();
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(begin);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, end]() {
+          while (true) {
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= end) break;
+            func(idx);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
 }
 
 template <typename Func>

@@ -1407,9 +1407,10 @@ image<vec4f> trace_image(const yocto_scene& scene, const trace_bvh& bvh,
           render, state, scene, bvh, lights, region, params.samples, params);
     }
   } else {
-    parallel_foreach(regions, [&render, &state, &scene, &bvh, &lights, &params](const image_region& region) {
-              trace_region(render, state, scene, bvh, lights, region,
-                  params.samples, params);
+    parallel_foreach(regions, [&render, &state, &scene, &bvh, &lights, &params](
+                                  const image_region& region) {
+      trace_region(
+          render, state, scene, bvh, lights, region, params.samples, params);
     });
   }
 

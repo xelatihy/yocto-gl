@@ -36,19 +36,19 @@
 // =============================================================================
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_modelio.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
-#include "../yocto/yocto_commonio.h"
 using namespace yocto;
 
 #include "ext/json.hpp"
 #include "ext/sajson.h"
 
+#include <deque>
 #include <string_view>
 #include <unordered_set>
-#include <deque>
 
 using std::string_view;
 using std::unordered_set;

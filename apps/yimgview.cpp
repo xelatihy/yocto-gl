@@ -26,9 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_image.h"
-#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_common.h"
+#include "../yocto/yocto_commonio.h"
+#include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
@@ -75,9 +75,9 @@ struct app_state {
 
 struct app_states {
   // data
-  std::list<app_state>    states       = {};
-  int                     selected     = -1;
-  std::list<app_state>    loading      = {};
+  std::list<app_state>         states       = {};
+  int                          selected     = -1;
+  std::list<app_state>         loading      = {};
   std::list<std::future<void>> load_workers = {};
 
   // get image

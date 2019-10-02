@@ -32,11 +32,11 @@
 #include "../yocto/yocto_common.h"
 #include "../yocto/yocto_commonio.h"
 
-#include <cstdarg>
 #include <algorithm>
 #include <atomic>
-#include <mutex>
+#include <cstdarg>
 #include <deque>
+#include <mutex>
 
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
@@ -828,10 +828,10 @@ bool draw_glmessage(
   }
 }
 
-string        _message_text  = {};
+string             _message_text  = {};
 std::deque<string> _message_queue = {};
-std::mutex    _message_mutex;
-void          push_glmessage(const string& message) {
+std::mutex         _message_mutex;
+void               push_glmessage(const string& message) {
   printf("message %s\n", message.c_str());
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);

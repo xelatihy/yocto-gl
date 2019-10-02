@@ -82,8 +82,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
 #include "yocto_common.h"
+#include "yocto_math.h"
 
 #include <chrono>
 #include <cstdio>
@@ -258,7 +258,7 @@ namespace yocto {
 inline string normalize_path(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
-  
+
     if (c == '\\') c = '/';
   if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
     throw std::invalid_argument("absolute paths are not supported");

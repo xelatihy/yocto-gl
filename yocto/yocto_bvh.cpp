@@ -706,8 +706,10 @@ static pair<int, int> split_balanced(vector<int>& primitives,
   // balanced tree split: find the largest axis of the
   // bounding box and split along this one right in the middle
   mid = (start + end) / 2;
-  std::nth_element(primitives.data() + start, primitives.data() + mid, primitives.data() + end,
-      [axis, &centers](auto a, auto b) { return centers[a][axis] < centers[b][axis]; });
+  std::nth_element(primitives.data() + start, primitives.data() + mid,
+      primitives.data() + end, [axis, &centers](auto a, auto b) {
+        return centers[a][axis] < centers[b][axis];
+      });
 
   // if we were not able to split, just break the primitives in half
   if (mid == start || mid == end) {
@@ -743,8 +745,9 @@ static pair<int, int> split_middle(vector<int>& primitives,
   // split the space in the middle along the largest axis
   auto cmiddle = (cbbox.max + cbbox.min) / 2;
   auto middle  = cmiddle[axis];
-  mid          = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [axis, middle, &centers](auto a) { return centers[a][axis] < middle; }) -
+  mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
+                  [axis, middle, &centers](
+                      auto a) { return centers[a][axis] < middle; }) -
               primitives.data());
 
   // if we were not able to split, just break the primitives in half
@@ -774,7 +777,8 @@ static void build_bvh_serial(
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) centers[idx] = center(bboxes[idx]);
+  for (auto idx = 0; idx < bboxes.size(); idx++)
+    centers[idx] = center(bboxes[idx]);
 
   // queue up first node
   auto queue = std::deque<vec3i>{{0, 0, (int)bboxes.size()}};
@@ -798,9 +802,10 @@ static void build_bvh_serial(
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] = high_quality
-                             ? split_sah(primitives, bboxes, centers, start, end)
-                             : split_balanced(primitives, bboxes, centers, start, end);
+      auto [mid, axis] =
+          high_quality
+              ? split_sah(primitives, bboxes, centers, start, end)
+              : split_balanced(primitives, bboxes, centers, start, end);
 
       // make an internal node
       node.internal = true;
@@ -840,7 +845,8 @@ static void build_bvh_parallel(
 
   // prepare centers
   auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) centers[idx] = center(bboxes[idx]);
+  for (auto idx = 0; idx < bboxes.size(); idx++)
+    centers[idx] = center(bboxes[idx]);
 
   // queue up first node
   auto queue = std::deque<vec3i>{{0, 0, (int)primitives.size()}};
@@ -854,9 +860,9 @@ static void build_bvh_parallel(
 
   // create nodes until the queue is empty
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(std::async(
-        std::launch::async, [&nodes, &primitives, &bboxes, &centers, &high_quality,
-                                &num_processed_prims, &queue_mutex, &queue] {
+    futures.emplace_back(std::async(std::launch::async,
+        [&nodes, &primitives, &bboxes, &centers, &high_quality,
+            &num_processed_prims, &queue_mutex, &queue] {
           while (true) {
             // exit if needed
             if (num_processed_prims >= primitives.size()) return;
@@ -889,9 +895,10 @@ static void build_bvh_parallel(
             // split into two children
             if (end - start > bvh_max_prims) {
               // get split
-              auto [mid, axis] = high_quality
-                                     ? split_sah(primitives, bboxes, centers, start, end)
-                                     : split_balanced(primitives, bboxes, centers, start, end);
+              auto [mid, axis] =
+                  high_quality
+                      ? split_sah(primitives, bboxes, centers, start, end)
+                      : split_balanced(primitives, bboxes, centers, start, end);
 
               // make an internal node
               {
@@ -928,7 +935,7 @@ void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
   // build primitives
   auto bboxes = vector<bbox3f>(points.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& p    = points[idx];
+    auto& p     = points[idx];
     bboxes[idx] = point_bounds(positions[p], radius[p]);
   }
 
@@ -945,7 +952,7 @@ void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
   // build primitives
   auto bboxes = vector<bbox3f>(lines.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& l    = lines[idx];
+    auto& l     = lines[idx];
     bboxes[idx] = line_bounds(
         positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
   }
@@ -963,8 +970,9 @@ void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
   // build primitives
   auto bboxes = vector<bbox3f>(triangles.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& t   = triangles[idx];
-    bboxes[idx] = triangle_bounds(positions[t.x], positions[t.y], positions[t.z]);
+    auto& t     = triangles[idx];
+    bboxes[idx] = triangle_bounds(
+        positions[t.x], positions[t.y], positions[t.z]);
   }
 
   // build nodes
@@ -980,7 +988,7 @@ void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
   // build primitives
   auto bboxes = vector<bbox3f>(quads.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& q    = quads[idx];
+    auto& q     = quads[idx];
     bboxes[idx] = quad_bounds(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
   }
@@ -1002,8 +1010,9 @@ void make_instances_bvh(bvh_tree& bvh, int num_instances,
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto  frame = instance_frame(idx);
     auto& sbvh  = shape_bvh(idx);
-    bboxes[idx]  = sbvh.nodes.empty() ? invalidb3f
-                                   : transform_bbox(frame, sbvh.nodes[0].bbox);
+    bboxes[idx] = sbvh.nodes.empty()
+                      ? invalidb3f
+                      : transform_bbox(frame, sbvh.nodes[0].bbox);
   }
 
   // build nodes

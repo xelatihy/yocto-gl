@@ -137,19 +137,19 @@ struct trace_params {
     element, highlight };
   // clang-format on
 
-  int                camera     = 0;
-  int                resolution = 1280;
-  sampler_type       sampler    = sampler_type::path;
-  falsecolor_type    falsecolor = falsecolor_type::diffuse;
-  int                samples    = 512;
-  int                bounces    = 8;
-  int                batch      = 16;
-  int                region     = 16;
-  float              clamp      = 10;
-  bool               envhidden  = false;
-  bool               tentfilter = false;
-  uint64_t           seed       = trace_default_seed;
-  bool               noparallel = false;
+  int             camera     = 0;
+  int             resolution = 1280;
+  sampler_type    sampler    = sampler_type::path;
+  falsecolor_type falsecolor = falsecolor_type::diffuse;
+  int             samples    = 512;
+  int             bounces    = 8;
+  int             batch      = 16;
+  int             region     = 16;
+  float           clamp      = 10;
+  bool            envhidden  = false;
+  bool            tentfilter = false;
+  uint64_t        seed       = trace_default_seed;
+  bool            noparallel = false;
 };
 
 const auto trace_sampler_names = vector<string>{

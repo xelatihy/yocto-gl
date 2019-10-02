@@ -95,8 +95,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
 #include "yocto_common.h"
+#include "yocto_math.h"
 
 #include <algorithm>
 
