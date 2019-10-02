@@ -70,6 +70,10 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <array>
+#include <chrono>
+#include <unordered_map>
+#include <vector>
 #include <algorithm>
 #include <atomic>
 #include <cctype>
@@ -81,17 +85,22 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 
 // -----------------------------------------------------------------------------
-// USING DIRECTIVES
+// DICTIONARY TYPES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::atomic;
+// Aliased typenames for readability
+using std::array;
+using std::pair;
+using std::string;
+using std::unordered_map;
+using std::vector;
+using namespace std::literals::string_literals;
 using std::deque;
 using std::function;
-using std::future;
-using std::thread;
 
 }  // namespace yocto
 
@@ -224,16 +233,17 @@ struct concurrent_queue {
 };
 
 // Run a task asynchronously
-inline future<void> run_async(function<void()> task) {
-  return std::async(std::launch::async, task);
+template<typename Func, typename ... Args>
+inline auto run_async(Func&& func, Args&& ... args) {
+  return std::async(std::launch::async, std::forward<Func>(func), std::forward<Args>(args)...);
 }
 // Check if an async task is ready
-inline bool is_valid(const future<void>& result) { return result.valid(); }
-inline bool is_running(const future<void>& result) {
+inline bool is_valid(const std::future<void>& result) { return result.valid(); }
+inline bool is_running(const std::future<void>& result) {
   return result.valid() && result.wait_for(std::chrono::microseconds(0)) !=
                                std::future_status::ready;
 }
-inline bool is_ready(const future<void>& result) {
+inline bool is_ready(const std::future<void>& result) {
   return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                std::future_status::ready;
 }
@@ -241,7 +251,7 @@ inline bool is_ready(const future<void>& result) {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
-inline void parallel_for(int begin, int end, const Func& func,
+inline void parallel_for(int begin, int end, Func&& func,
     std::atomic<bool>* cancel = nullptr, bool serial = false) {
   if (serial) {
     for (auto idx = begin; idx < end; idx++) {
@@ -249,40 +259,39 @@ inline void parallel_for(int begin, int end, const Func& func,
       func(idx);
     }
   } else {
-    auto             threads  = vector<thread>{};
-    auto             nthreads = thread::hardware_concurrency();
+    auto             futures  = vector<std::future<void>>{};
+    auto             nthreads = std::thread::hardware_concurrency();
     std::atomic<int> next_idx(begin);
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-      threads.emplace_back([&func, &next_idx, cancel, end]() {
+      futures.emplace_back(std::async(std::launch::async, [&func, &next_idx, end]() {
         while (true) {
-          if (cancel && *cancel) break;
           auto idx = next_idx.fetch_add(1);
           if (idx >= end) break;
           func(idx);
         }
-      });
+      }));
     }
-    for (auto& t : threads) t.join();
+    for (auto& f : futures) f.get();
   }
 }
 
 template <typename Func>
-inline void parallel_for(int num, const Func& func,
+inline void parallel_for(int num, Func&& func,
     std::atomic<bool>* cancel = nullptr, bool serial = false) {
-  parallel_for(0, num, func, cancel, serial);
+  parallel_for(0, num, std::forward<Func>(func), cancel, serial);
 }
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
-inline void parallel_foreach(vector<T>& values, const Func& func,
+inline void parallel_foreach(vector<T>& values, Func&& func,
     std::atomic<bool>* cancel = nullptr, bool serial = false) {
   parallel_for(
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
       cancel, serial);
 }
 template <typename T, typename Func>
-inline void parallel_foreach(const vector<T>& values, const Func& func,
+inline void parallel_foreach(const vector<T>& values, Func&& func,
     std::atomic<bool>* cancel = nullptr, bool serial = false) {
   parallel_for(
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },

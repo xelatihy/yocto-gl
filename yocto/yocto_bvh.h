@@ -88,8 +88,8 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_math.h"
+#include "yocto_common.h"
 
-#include <atomic>
 #include <functional>
 
 #if YOCTO_EMBREE

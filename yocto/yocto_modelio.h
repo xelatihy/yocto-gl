@@ -96,6 +96,7 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_math.h"
+#include "yocto_common.h"
 
 #include <algorithm>
 
