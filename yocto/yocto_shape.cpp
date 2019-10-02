@@ -1868,9 +1868,12 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   return solver;
 }
 
-void update_geodesic_distances(vector<float>& field,
-    const geodesic_solver& solver, const vector<int>& sources,
-    float max_distance) {
+// `update` is a function that is executed during expansion, every time a node
+// is put into queue. `exit` is a function that tells whether to expand the
+// current node or perform early exit.
+template <typename Update, typename Exit>
+void visit_geodesic_graph(vector<float>& field, const geodesic_solver& solver,
+    const vector<int>& sources, Update&& update, Exit&& exit) {
   /*
      This algortithm uses the heuristic Small Label Fisrt and Large Label Last
      https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
@@ -1918,7 +1921,7 @@ void update_geodesic_distances(vector<float>& field,
     cumulative_weight -= field[node];
 
     // Check early exit condition.
-    if (field[node] > max_distance) continue;
+    if (exit(node)) continue;
 
     for (int i = 0; i < solver.graph[node].size(); i++) {
       // Distance of neighbor through this node
@@ -1947,13 +1950,22 @@ void update_geodesic_distances(vector<float>& field,
 
       // Update distance of neighbor.
       field[neighbor] = new_distance;
+      update(node, neighbor, new_distance);
     }
   }
 }
 
-void compute_geodesic_distances(vector<float>& distances, 
-  const geodesic_solver& solver, const vector<int>& sources, 
-  float max_distance) {
+// Compute geodesic distances
+void update_geodesic_distances(vector<float>& distances,
+    const geodesic_solver& solver, const vector<int>& sources,
+    float max_distance) {
+  auto update = [](int node, int neighbor, float new_distance) {};
+  auto exit   = [&](int node) { return distances[node] > max_distance; };
+  visit_geodesic_graph(distances, solver, sources, update, exit);
+}
+
+void compute_geodesic_distances(const geodesic_solver& solver,
+    const vector<int>& sources, vector<float>& distances, float max_distance) {
   distances.assign(solver.graph.size(), flt_max);
   for (auto source : sources) distances[source] = 0.0f;
   update_geodesic_distances(distances, solver, sources, max_distance);
@@ -1965,6 +1977,22 @@ vector<float> compute_geodesic_distances(const geodesic_solver& solver,
   for (auto source : sources) distances[source] = 0.0f;
   update_geodesic_distances(distances, solver, sources, max_distance);
   return distances;
+}
+
+// Compute all shortest paths from source vertices to any other vertex.
+// Paths are implicitly represented: each node is assigned its previous node in
+// the path. Graph search early exits when reching end_vertex.
+vector<int> compute_geodesic_paths(
+    const geodesic_solver& solver, const vector<int>& sources, int end_vertex) {
+  auto parents   = vector<int>(solver.graph.size(), -1);
+  auto distances = vector<float>(solver.graph.size(), flt_max);
+  auto update    = [&parents](int node, int neighbor, float new_distance) {
+    parents[neighbor] = node;
+  };
+  auto exit = [end_vertex](int node) { return node == end_vertex; };
+  for (auto source : sources) distances[source] = 0.0f;
+  visit_geodesic_graph(distances, solver, sources, update, exit);
+  return parents;
 }
 
 // Sample vertices with a Poisson distribution using geodesic distances
@@ -1990,6 +2018,25 @@ vector<int> sample_vertices_poisson(
   auto verts = vector<int>{};
   sample_vertices_poisson(verts, solver, num_samples);
   return verts;
+}
+
+// Compute the distance field needed to compute a voronoi diagram
+vector<vector<float>> compute_voronoi_fields(
+    const geodesic_solver& solver, const vector<int>& generators) {
+  auto fields = vector<vector<float>>(generators.size());
+
+  // Find max distance from a generator to set an early exit condition for the
+  // following distance field computations. This optimization makes computation
+  // time weakly dependant on the number of generators.
+  auto total = compute_geodesic_distances(solver, generators);
+  auto max   = *std::max_element(total.begin(), total.end());
+  // @Speed: use parallel_for
+  for (int i = 0; i < generators.size(); ++i) {
+    fields[i]                = vector<float>(solver.graph.size(), flt_max);
+    fields[i][generators[i]] = 0;
+    fields[i] = compute_geodesic_distances(solver, {generators[i]}, max);
+  };
+  return fields;
 }
 
 void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
