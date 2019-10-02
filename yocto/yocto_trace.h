@@ -86,6 +86,9 @@ namespace yocto {
 // Default trace seed
 const auto trace_default_seed = 961748941ull;
 
+// Trace bvh
+using trace_bvh = bvh_shared_scene;
+
 // Trace lights used during rendering.
 struct trace_lights {
   vector<int>           instances        = {};
@@ -167,21 +170,21 @@ inline bool operator!=(const trace_params& a, const trace_params& b) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
+image<vec4f> trace_image(const yocto_scene& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 int trace_samples(image<vec4f>& image, trace_state& state,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const yocto_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     int current_sample, const trace_params& params);
 
 // Progressively compute an image by calling trace_region multiple times.
 // Compared to `trace_samples` this always runs serially and is helpful
 // when building async applications.
 void trace_region(image<vec4f>& image, trace_state& state,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const yocto_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     const image_region& region, int num_samples, const trace_params& params);
 
 // Check is a sampler requires lights

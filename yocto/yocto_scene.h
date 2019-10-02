@@ -363,6 +363,11 @@ void make_bvh(
 void update_bvh(bvh_scene& bvh, const yocto_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params);
+void make_bvh(
+    bvh_shared_scene& bvh, const yocto_scene& scene, const bvh_params& params);
+void update_bvh(bvh_shared_scene& bvh, const yocto_scene& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params);
 
 // Shape values interpolated by interpoalting vertex values of the `eid` element
 // with its barycentric coordinates `euv`.

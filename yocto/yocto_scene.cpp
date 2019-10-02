@@ -508,6 +508,44 @@ void update_bvh(bvh_scene& bvh, const yocto_scene& scene,
   update_scene_bvh(bvh, updated_instances, updated_shapes, params);
 }
 
+void make_bvh(
+    bvh_shared_scene& bvh, const yocto_scene& scene, const bvh_params& params) {
+  // set values
+  bvh.num_shapes = (int)scene.shapes.size();
+  bvh.shape_points = [&scene](int idx) -> const vector<int>& { return scene.shapes[idx].points; };
+  bvh.shape_lines = [&scene](int idx) -> const vector<vec2i>& { return scene.shapes[idx].lines; };
+  bvh.shape_triangles = [&scene](int idx) -> const vector<vec3i>& { return scene.shapes[idx].triangles; };
+  bvh.shape_quads = [&scene](int idx) -> const vector<vec4i>& { return scene.shapes[idx].quads; };
+  bvh.shape_quadspos = [&scene](int idx) -> const vector<vec4i>& { return scene.shapes[idx].quadspos; };
+  bvh.shape_positions = [&scene](int idx) -> const vector<vec3f>& { return scene.shapes[idx].positions; };
+  bvh.shape_radius = [&scene](int idx) -> const vector<float>& { return scene.shapes[idx].radius; };
+  bvh.num_instances = (int)scene.instances.size();
+  bvh.instance_frame = [&scene](int idx) -> frame3f { return scene.instances[idx].frame; };
+  bvh.instance_shape = [&scene](int idx) -> int { return scene.instances[idx].shape; };
+
+  // build
+  make_scene_bvh(bvh, params);
+}
+
+void update_bvh(bvh_shared_scene& bvh, const yocto_scene& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params) {
+  // set values
+  bvh.num_shapes = (int)scene.shapes.size();
+  bvh.shape_points = [&scene](int idx) -> const vector<int>& { return scene.shapes[idx].points; };
+  bvh.shape_lines = [&scene](int idx) -> const vector<vec2i>& { return scene.shapes[idx].lines; };
+  bvh.shape_triangles = [&scene](int idx) -> const vector<vec3i>& { return scene.shapes[idx].triangles; };
+  bvh.shape_quads = [&scene](int idx) -> const vector<vec4i>& { return scene.shapes[idx].quads; };
+  bvh.shape_quadspos = [&scene](int idx) -> const vector<vec4i>& { return scene.shapes[idx].quadspos; };
+  bvh.shape_positions = [&scene](int idx) -> const vector<vec3f>& { return scene.shapes[idx].positions; };
+  bvh.shape_radius = [&scene](int idx) -> const vector<float>& { return scene.shapes[idx].radius; };
+  bvh.num_instances = (int)scene.instances.size();
+  bvh.instance_frame = [&scene](int idx) -> frame3f { return scene.instances[idx].frame; };
+  bvh.instance_shape = [&scene](int idx) -> int { return scene.instances[idx].shape; };
+
+  update_scene_bvh(bvh, updated_instances, updated_shapes, params);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

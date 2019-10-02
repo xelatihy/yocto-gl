@@ -1371,9 +1371,9 @@ static bool overlap_elements_bvh(const bvh_tree& bvh, Overlap&& overlap_element,
 // Intersect ray with a bvh.
 template <typename Frame, typename Overlap>
 bool overlap_elements_bvh(const bvh_tree& bvh, Frame&& instance_frame,
-    Overlap&& overlap_shape, const vec3f& pos,
-    float max_distance, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames) {
+    Overlap&& overlap_shape, const vec3f& pos, float max_distance,
+    int& instance, int& element, vec2f& uv, float& distance, bool find_any,
+    bool non_rigid_frames) {
   // check if empty
   if (bvh.nodes.empty()) return false;
 
@@ -1401,10 +1401,10 @@ bool overlap_elements_bvh(const bvh_tree& bvh, Frame&& instance_frame,
       node_stack[node_cur++] = node.prims[1];
     } else {
       for (auto idx = 0; idx < node.num; idx++) {
-        auto inv_pos   = transform_point(
+        auto inv_pos = transform_point(
             inverse(instance_frame(node.prims[idx]), non_rigid_frames), pos);
-        if (overlap_shape(node.prims[idx], inv_pos,
-                max_distance, element, uv, distance, find_any)) {
+        if (overlap_shape(node.prims[idx], inv_pos, max_distance, element, uv,
+                distance, find_any)) {
           hit          = true;
           instance     = node.prims[idx];
           max_distance = distance;
@@ -1486,10 +1486,10 @@ bool overlap_instances_bvh(const bvh_tree&           bvh,
     const function<bool(int shape, const vec3f& pos, float mdist, int& element,
         vec2f& uv, float& distance, bool find_any)>& overlap_shape,
     const vec3f& pos, float max_distance, int& instance, int& element,
-    vec2f& uv, float& distance, bool find_any,
-    bool non_rigid_frames) {
-  return overlap_elements_bvh(bvh, instance_frame, overlap_shape, pos, max_distance,
-      instance, element, uv, distance, find_any, non_rigid_frames);
+    vec2f& uv, float& distance, bool find_any, bool non_rigid_frames) {
+  return overlap_elements_bvh(bvh, instance_frame, overlap_shape, pos,
+      max_distance, instance, element, uv, distance, find_any,
+      non_rigid_frames);
 }
 
 }  // namespace yocto
@@ -2076,6 +2076,266 @@ bvh_intersection overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
   intersection.hit  = overlap_scene_bvh(scene, pos, max_distance,
       intersection.instance, intersection.element, intersection.uv,
       intersection.distance, find_any);
+  return intersection;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL BVH FOR RAY INTERSECTION USING SHARED MEMORY
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+void make_shape_bvh(
+    bvh_shared_scene& bvh, int shape, const bvh_params& params) {
+  auto& points    = bvh.shape_points(shape);
+  auto& lines     = bvh.shape_lines(shape);
+  auto& triangles = bvh.shape_triangles(shape);
+  auto& quads     = bvh.shape_quads(shape);
+  auto& quadspos  = bvh.shape_quadspos(shape);
+  auto& positions = bvh.shape_positions(shape);
+  auto& radius    = bvh.shape_radius(shape);
+
+#if YOCTO_EMBREE
+  // call Embree if needed
+  if (params.use_embree) {
+    if (!points.empty()) {
+      throw std::runtime_error("embree does not support points");
+    } else if (!lines.empty()) {
+      return make_lines_embree_bvh(bvh.embree_shapes[shape], lines, positions,
+          radius, params.high_quality, params.embree_compact);
+    } else if (!triangles.empty()) {
+      return make_triangles_embree_bvh(bvh.embree_shapes[shape], triangles,
+          positions, params.high_quality, params.embree_compact);
+    } else if (!quads.empty()) {
+      return make_quads_embree_bvh(bvh.embree_shapes[shape], quads, positions,
+          params.high_quality, params.embree_compact);
+    } else if (!quadspos.empty()) {
+      return make_quads_embree_bvh(bvh.embree_shapes[shape], quadspos,
+          positions, params.high_quality, params.embree_compact);
+    } else {
+      throw std::runtime_error("empty shape");
+    }
+  }
+#endif
+
+  // build primitives
+  if (!points.empty()) {
+    return make_points_bvh(bvh.bvh_shapes[shape], points, positions, radius,
+        params.high_quality, !params.noparallel);
+  } else if (!lines.empty()) {
+    return make_lines_bvh(bvh.bvh_shapes[shape], lines, positions, radius,
+        params.high_quality, !params.noparallel);
+  } else if (!triangles.empty()) {
+    return make_triangles_bvh(bvh.bvh_shapes[shape], triangles, positions,
+        radius, params.high_quality, !params.noparallel);
+  } else if (!quads.empty()) {
+    return make_quads_bvh(bvh.bvh_shapes[shape], quads, positions, radius,
+        params.high_quality, !params.noparallel);
+  } else if (!quadspos.empty()) {
+    return make_quads_bvh(bvh.bvh_shapes[shape], quadspos, positions, radius,
+        params.high_quality, !params.noparallel);
+  } else {
+    throw std::runtime_error("empty shape");
+  }
+}
+
+// Build the bvh acceleration structure.
+void make_scene_bvh(bvh_shared_scene& bvh, const bvh_params& params) {
+  bvh.bvh_shapes.resize(bvh.num_shapes);
+#if YOCTO_EMBREE
+  if (params.use_embree) {
+    bvh.embree_shapes.resize(bvh.num_shapes);
+  }
+#endif
+
+  for (auto idx = 0; idx < bvh.num_shapes; idx++) {
+    make_shape_bvh(bvh, idx, params);
+  }
+
+  // embree
+#if YOCTO_EMBREE
+  if (params.use_embree) {
+    return make_instances_embree_bvh(
+        bvh.embree_scene, bvh.num_instances, bvh.instance_frame,
+        [&bvh](int instance) -> bvh_embree& {
+          auto shape = bvh.instance_shape(instance);
+          return bvh.embree_shapes[shape];
+        },
+        params.high_quality, !params.noparallel);
+  }
+#endif
+
+  // build primitives
+  return make_instances_bvh(
+      bvh.bvh_scene, bvh.num_instances, bvh.instance_frame,
+      [&bvh](int instance) -> bvh_tree& {
+        auto shape = bvh.instance_shape(instance);
+        return bvh.bvh_shapes[shape];
+      },
+      params.high_quality, !params.noparallel);
+}
+
+void update_shape_bvh(
+    bvh_shared_scene& bvh, int shape, const bvh_params& params) {
+  auto& points    = bvh.shape_points(shape);
+  auto& lines     = bvh.shape_lines(shape);
+  auto& triangles = bvh.shape_triangles(shape);
+  auto& quads     = bvh.shape_quads(shape);
+  auto& quadspos  = bvh.shape_quadspos(shape);
+  auto& positions = bvh.shape_positions(shape);
+  auto& radius    = bvh.shape_radius(shape);
+
+#if YOCTO_EMBREE
+  if (params.use_embree) {
+    if (!points.empty()) {
+      throw std::runtime_error("embree does not support points");
+    } else if (!lines.empty()) {
+      return update_lines_embree_bvh(
+          bvh.embree_shapes[shape], lines, positions, radius);
+    } else if (!triangles.empty()) {
+      return update_triangles_embree_bvh(
+          bvh.embree_shapes[shape], triangles, positions);
+    } else if (!quads.empty()) {
+      return update_quads_embree_bvh(
+          bvh.embree_shapes[shape], quads, positions);
+    } else if (!quadspos.empty()) {
+      return update_quads_embree_bvh(
+          bvh.embree_shapes[shape], quadspos, positions);
+    } else {
+      throw std::runtime_error("cannot support empty shapes");
+    }
+  }
+#endif
+
+  // build primitives
+  if (!points.empty()) {
+    return update_points_bvh(bvh.bvh_shapes[shape], points, positions, radius);
+  } else if (!lines.empty()) {
+    return update_lines_bvh(bvh.bvh_shapes[shape], lines, positions, radius);
+  } else if (!triangles.empty()) {
+    return update_triangles_bvh(bvh.bvh_shapes[shape], triangles, positions);
+  } else if (!quads.empty()) {
+    return update_quads_bvh(bvh.bvh_shapes[shape], quads, positions);
+  } else if (!quadspos.empty()) {
+    return update_quads_bvh(bvh.bvh_shapes[shape], quadspos, positions);
+  } else {
+    throw std::runtime_error("cannot support empty shapes");
+  }
+}
+
+// Refit bvh data
+void update_scene_bvh(bvh_shared_scene& bvh,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params) {
+  // update shapes
+  for (auto shape : updated_shapes) update_shape_bvh(bvh, shape, params);
+
+#if YOCTO_EMBREE
+  if (params.use_embree) {
+    update_instances_embree_bvh(
+        bvh.embree_scene, bvh.num_instances, bvh.instance_frame,
+        [&bvh](int instance) -> bvh_embree& {
+          auto shape = bvh.instance_shape(instance);
+          return bvh.embree_shapes[shape];
+        },
+        updated_instances);
+  }
+#endif
+
+  // refit
+  update_instances_bvh(bvh.bvh_scene, bvh.num_instances, bvh.instance_frame,
+      [&bvh](int instance) -> bvh_tree& {
+        auto shape = bvh.instance_shape(instance);
+        return bvh.bvh_shapes[shape];
+      });
+}
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+bool intersect_shape_bvh(const bvh_shared_scene& bvh, int shape,
+    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
+    bool non_rigid_frames) {
+  auto& points    = bvh.shape_points(shape);
+  auto& lines     = bvh.shape_lines(shape);
+  auto& triangles = bvh.shape_triangles(shape);
+  auto& quads     = bvh.shape_quads(shape);
+  auto& quadspos  = bvh.shape_quadspos(shape);
+  auto& positions = bvh.shape_positions(shape);
+  auto& radius    = bvh.shape_radius(shape);
+
+#if YOCTO_EMBREE
+  // call Embree if needed
+  if (!bvh.embree_shapes.empty() && bvh.embree_shapes[shape].scene) {
+    return intersect_elements_embree_bvh(
+        bvh.embree_shapes[shape], ray, element, uv, distance, find_any);
+  }
+#endif
+
+  if (!points.empty()) {
+    return intersect_points_bvh(bvh.bvh_shapes[shape], points, positions,
+        radius, ray, element, uv, distance, find_any);
+  } else if (!lines.empty()) {
+    return intersect_lines_bvh(bvh.bvh_shapes[shape], lines, positions, radius,
+        ray, element, uv, distance, find_any);
+  } else if (!triangles.empty()) {
+    return intersect_triangles_bvh(bvh.bvh_shapes[shape], triangles, positions,
+        ray, element, uv, distance, find_any);
+  } else if (!quads.empty()) {
+    return intersect_quads_bvh(bvh.bvh_shapes[shape], quads, positions, ray,
+        element, uv, distance, find_any);
+  } else if (!quadspos.empty()) {
+    return intersect_quads_bvh(bvh.bvh_shapes[shape], quadspos, positions, ray,
+        element, uv, distance, find_any);
+  } else {
+    return false;
+  }
+}
+bool intersect_scene_bvh(const bvh_shared_scene& bvh, const ray3f& ray,
+    int& instance, int& element, vec2f& uv, float& distance, bool find_any,
+    bool non_rigid_frames) {
+#if YOCTO_EMBREE
+  // call Embree if needed
+  if (bvh.embree_scene.scene) {
+    return intersect_instances_embree_bvh(
+        bvh.embree_scene, ray, instance, element, uv, distance, find_any);
+  }
+#endif
+
+  return intersect_instances_bvh(
+      bvh.bvh_scene, bvh.instance_frame,
+      [&bvh](int idx, const ray3f& ray, int& element, vec2f& uv,
+          float& distance, bool find_any) {
+        auto shape = bvh.instance_shape(idx);
+        return intersect_shape_bvh(
+            bvh, shape, ray, element, uv, distance, find_any);
+      },
+      ray, instance, element, uv, distance, find_any, non_rigid_frames);
+}
+// Intersects a single instance.
+bool intersect_instance_bvh(const bvh_shared_scene& bvh, int instance,
+    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
+    bool non_rigid_frames) {
+  auto frame = bvh.instance_frame(instance);
+  auto shape = bvh.instance_shape(instance);
+  auto inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
+  return intersect_shape_bvh(bvh, shape, inv_ray, element, uv, distance, find_any);
+}
+
+bvh_intersection intersect_scene_bvh(const bvh_shared_scene& scene,
+    const ray3f& ray, bool find_any, bool non_rigid_frames) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
+      intersection.element, intersection.uv, intersection.distance, find_any);
+  return intersection;
+}
+bvh_intersection intersect_instance_bvh(const bvh_shared_scene& scene,
+    int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
+  auto intersection     = bvh_intersection{};
+  intersection.hit      = intersect_instance_bvh(scene, instance, ray,
+      intersection.element, intersection.uv, intersection.distance, find_any);
+  intersection.instance = instance;
   return intersection;
 }
 

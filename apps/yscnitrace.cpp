@@ -59,7 +59,7 @@ struct app_state {
 
   // scene
   yocto_scene scene      = {};
-  bvh_scene   bvh        = {};
+  trace_bvh   bvh        = {};
   bool        add_skyenv = false;
 
   // rendering state
@@ -478,7 +478,7 @@ void draw_glwidgets(const opengl_window& win) {
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
       for (auto stat : format_stats(app.scene)) print_info(stat);
-      for (auto stat : format_stats(app.bvh)) print_info(stat);
+      // for (auto stat : format_stats(app.bvh)) print_info(stat);
     }
     auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(
