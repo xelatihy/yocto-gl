@@ -524,6 +524,11 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to) {
   return rgb;
 }
 
+vec3f convert_color(const vec3f& col, color_space from, color_space to) {
+  if (from == to) return col;
+  return xyz_to_color(color_to_xyz(col, from), to);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -532,7 +537,7 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to) {
 namespace yocto {
 
 // Splits an image into an array of regions
-void make_regions(vector<image_region>& regions, const vec2i& size,
+void make_image_regions(vector<image_region>& regions, const vec2i& size,
     int region_size, bool shuffled) {
   regions.clear();
   for (auto y = 0; y < size.y; y += region_size) {
@@ -546,7 +551,7 @@ void make_regions(vector<image_region>& regions, const vec2i& size,
     shuffle(regions, rng);
   }
 }
-vector<image_region> make_regions(
+vector<image_region> make_image_regions(
     const vec2i& size, int region_size, bool shuffled) {
   auto regions = vector<image_region>{};
   for (auto y = 0; y < size.y; y += region_size) {
@@ -674,18 +679,20 @@ static vec4f tonemap(const vec4f& hdr, const tonemap_params& params) {
 }
 
 // Apply exposure and filmic tone mapping
-image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params) {
+image<vec4f> tonemap_image(
+    const image<vec4f>& hdr, const tonemap_params& params) {
   auto ldr = image<vec4f>{hdr.size()};
   for (auto i = 0ull; i < hdr.count(); i++) ldr[i] = tonemap(hdr[i], params);
   return ldr;
 }
-image<vec4b> tonemapb(const image<vec4f>& hdr, const tonemap_params& params) {
+image<vec4b> tonemap_imageb(
+    const image<vec4f>& hdr, const tonemap_params& params) {
   auto ldr = image<vec4b>{hdr.size()};
   for (auto i = 0ull; i < hdr.count(); i++)
     ldr[i] = float_to_byte(tonemap(hdr[i], params));
   return ldr;
 }
-void tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
+void tonemap_region(image<vec4f>& ldr, const image<vec4f>& hdr,
     const image_region& region, const tonemap_params& params) {
   for (auto j = region.min.y; j < region.max.y; j++)
     for (auto i = region.min.x; i < region.max.x; i++)
@@ -721,14 +728,14 @@ static vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params) {
 }
 
 // Apply exposure and filmic tone mapping
-image<vec4f> colorgrade(
+image<vec4f> colorgrade_image(
     const image<vec4f>& ldr, const colorgrade_params& params) {
   auto corrected = image<vec4f>{ldr.size()};
   for (auto i = 0ull; i < ldr.count(); i++)
     corrected[i] = colorgrade(ldr[i], params);
   return corrected;
 }
-void colorgrade(image<vec4f>& corrected, const image<vec4f>& ldr,
+void colorgrade_region(image<vec4f>& corrected, const image<vec4f>& ldr,
     const image_region& region, const colorgrade_params& params) {
   for (auto j = region.min.y; j < region.max.y; j++)
     for (auto i = region.min.x; i < region.max.x; i++)
@@ -756,7 +763,7 @@ static vec2i resize_size(const vec2i& img_size, const vec2i& size_) {
   return size;
 }
 
-image<vec4f> resize(const image<vec4f>& img, const vec2i& size_) {
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size_) {
   auto size    = resize_size(img.size(), size_);
   auto res_img = image<vec4f>{size};
   stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
@@ -765,7 +772,7 @@ image<vec4f> resize(const image<vec4f>& img, const vec2i& size_) {
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
 }
-image<vec4b> resize(const image<vec4b>& img, const vec2i& size_) {
+image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size_) {
   auto size    = resize_size(img.size(), size_);
   auto res_img = image<vec4b>{size};
   stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
@@ -774,7 +781,7 @@ image<vec4b> resize(const image<vec4b>& img, const vec2i& size_) {
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
 }
-void resize(
+void resize_image(
     image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
   auto size = resize_size(img.size(), size_);
   res_img   = {size};
@@ -783,7 +790,7 @@ void resize(
       res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
-void resize(
+void resize_image(
     image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
   auto size = resize_size(img.size(), size_);
   res_img   = {size};
@@ -793,7 +800,7 @@ void resize(
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
 
-void difference(image<vec4f>& diff, const image<vec4f>& a,
+void image_difference(image<vec4f>& diff, const image<vec4f>& a,
     const image<vec4f>& b, bool display) {
   if (a.size() != b.size())
     throw std::invalid_argument("image haev different sizes");
@@ -806,10 +813,10 @@ void difference(image<vec4f>& diff, const image<vec4f>& a,
     }
   }
 }
-image<vec4f> difference(
+image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool display) {
   auto diff = image<vec4f>{a.size()};
-  difference(diff, a, b, display);
+  image_difference(diff, a, b, display);
   return diff;
 }
 

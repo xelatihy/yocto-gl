@@ -3065,8 +3065,7 @@ namespace yocto {
 void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, 
-    bool flip_texcoord) {
+    vector<vec4f>& colors, vector<float>& radius, bool flip_texcoord) {
   points    = {};
   lines     = {};
   triangles = {};
@@ -3167,15 +3166,15 @@ void save_shape(const string& filename, const vector<int>& points,
       add_ply_points(ply, points);
       save_ply(filename, ply);
     } else if (ext == ".obj" || ext == ".OBJ") {
-      auto  obj   = obj_model{};
+      auto obj = obj_model{};
       if (!triangles.empty()) {
-        add_obj_triangles(obj, "", triangles, positions, normals, texcoords,
-            {}, {},flip_texcoord);
+        add_obj_triangles(obj, "", triangles, positions, normals, texcoords, {},
+            {}, flip_texcoord);
       } else if (!quads.empty()) {
-        add_obj_quads(obj, "", quads, positions, normals, texcoords, {},{},
+        add_obj_quads(obj, "", quads, positions, normals, texcoords, {}, {},
             flip_texcoord);
       } else if (!lines.empty()) {
-        add_obj_lines(obj, "", lines, positions, normals, texcoords, {},{},
+        add_obj_lines(obj, "", lines, positions, normals, texcoords, {}, {},
             flip_texcoord);
       } else if (!points.empty()) {
         add_obj_points(obj, "", points, positions, normals, texcoords, {}, {},

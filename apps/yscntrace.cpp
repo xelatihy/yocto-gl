@@ -172,8 +172,8 @@ int main(int argc, const char* argv[]) {
           save_image(outfilename, logo ? add_logo(render) : render);
         } else {
           save_imageb(
-              outfilename, logo ? add_logo(tonemapb(render, tonemap_prms))
-                                : tonemapb(render, tonemap_prms));
+              outfilename, logo ? add_logo(tonemap_imageb(render, tonemap_prms))
+                                : tonemap_imageb(render, tonemap_prms));
         }
       } catch (const std::exception& e) {
         print_fatal(e.what());
@@ -187,8 +187,9 @@ int main(int argc, const char* argv[]) {
     if (is_hdr_filename(imfilename)) {
       save_image(imfilename, logo ? add_logo(render) : render);
     } else {
-      save_imageb(imfilename, logo ? add_logo(tonemapb(render, tonemap_prms))
-                                   : tonemapb(render, tonemap_prms));
+      save_imageb(
+          imfilename, logo ? add_logo(tonemap_imageb(render, tonemap_prms))
+                           : tonemap_imageb(render, tonemap_prms));
     }
   } catch (const std::exception& e) {
     print_fatal(e.what());

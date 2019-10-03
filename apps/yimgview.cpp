@@ -101,7 +101,7 @@ struct app_states {
 void reset_display(app_state& app) {
   if (app.display.size() != app.source.size()) app.display = app.source;
   app.render_region  = 0;
-  app.render_regions = make_regions(app.source.size(), 256);
+  app.render_regions = make_image_regions(app.source.size(), 256);
 }
 
 // compute min/max
@@ -137,9 +137,9 @@ void load_image_async(app_states& apps, const string& filename) {
   apps.load_workers.push_back(run_async([&app]() {
     load_image(app.filename, app.source);
     compute_stats(app.source_stats, app.source, is_hdr_filename(app.filename));
-    app.display = tonemap(app.source, app.tonemap_prms);
+    app.display = tonemap_image(app.source, app.tonemap_prms);
     if (app.apply_colorgrade)
-      app.display = colorgrade(app.display, app.colorgrade_prms);
+      app.display = colorgrade_image(app.display, app.colorgrade_prms);
     compute_stats(app.display_stats, app.display, false);
   }));
 }
@@ -308,10 +308,11 @@ void update(const opengl_window& win, app_states& app) {
       auto num_regions = min(12, app.render_regions.size() - app.render_region);
       parallel_for(num_regions, [&app](int idx) {
         auto& region = app.render_regions[app.render_region + idx];
-        tonemap(app.display, app.source,
+        tonemap_region(app.display, app.source,
             app.render_regions[app.render_region + idx], app.tonemap_prms);
         if (app.apply_colorgrade) {
-          colorgrade(app.display, app.display, region, app.colorgrade_prms);
+          colorgrade_region(
+              app.display, app.display, region, app.colorgrade_prms);
         }
       });
       if (!app.gl_txt || app.gl_txt.size != app.display.size()) {
