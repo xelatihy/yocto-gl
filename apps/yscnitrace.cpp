@@ -276,7 +276,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.positions, shape.normals, shape.texcoords, 
+          shape.quads, shape.positions, shape.normals, shape.texcoords,
           shape.colors, shape.radius);
     } catch (std::exception& e) {
       push_glmessage("cannot load " + shape.filename);
@@ -319,9 +319,8 @@ inline bool draw_glwidgets_subdiv(
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius);
+          shape.quads, shape.positions, shape.normals, shape.texcoords,
+          shape.colors, shape.radius);
     } catch (std::exception& e) {
       push_glmessage("cannot load " + shape.filename);
       log_glinfo(win, "cannot load " + shape.filename);
@@ -612,8 +611,8 @@ void update(const opengl_window& win, app_states& app) {
           [&app](int region_id) {
             trace_region(app.render, app.state, app.scene, app.bvh, app.lights,
                 app.render_regions[region_id], 1, app.trace_prms);
-            tonemap_region(app.display, app.render, app.render_regions[region_id],
-                app.tonemap_prms);
+            tonemap_region(app.display, app.render,
+                app.render_regions[region_id], app.tonemap_prms);
           });
       if (!app.gl_txt || app.gl_txt.size != app.display.size()) {
         init_gltexture(app.gl_txt, app.display, false, false, false);

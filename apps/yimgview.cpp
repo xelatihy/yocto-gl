@@ -311,7 +311,8 @@ void update(const opengl_window& win, app_states& app) {
         tonemap_region(app.display, app.source,
             app.render_regions[app.render_region + idx], app.tonemap_prms);
         if (app.apply_colorgrade) {
-          colorgrade_region(app.display, app.display, region, app.colorgrade_prms);
+          colorgrade_region(
+              app.display, app.display, region, app.colorgrade_prms);
         }
       });
       if (!app.gl_txt || app.gl_txt.size != app.display.size()) {

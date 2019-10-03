@@ -679,12 +679,14 @@ static vec4f tonemap(const vec4f& hdr, const tonemap_params& params) {
 }
 
 // Apply exposure and filmic tone mapping
-image<vec4f> tonemap_image(const image<vec4f>& hdr, const tonemap_params& params) {
+image<vec4f> tonemap_image(
+    const image<vec4f>& hdr, const tonemap_params& params) {
   auto ldr = image<vec4f>{hdr.size()};
   for (auto i = 0ull; i < hdr.count(); i++) ldr[i] = tonemap(hdr[i], params);
   return ldr;
 }
-image<vec4b> tonemap_imageb(const image<vec4f>& hdr, const tonemap_params& params) {
+image<vec4b> tonemap_imageb(
+    const image<vec4f>& hdr, const tonemap_params& params) {
   auto ldr = image<vec4b>{hdr.size()};
   for (auto i = 0ull; i < hdr.count(); i++)
     ldr[i] = float_to_byte(tonemap(hdr[i], params));

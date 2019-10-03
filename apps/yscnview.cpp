@@ -875,9 +875,8 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, 
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius);
+          shape.quads, shape.positions, shape.normals, shape.texcoords,
+          shape.colors, shape.radius);
     } catch (std::exception& e) {
       push_glmessage("cannot load " + shape.filename);
       log_glinfo(win, "cannot load " + shape.filename);
@@ -920,9 +919,8 @@ inline bool draw_glwidgets_subdiv(
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, 
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius);
+          shape.quads, shape.positions, shape.normals, shape.texcoords,
+          shape.colors, shape.radius);
     } catch (std::exception& e) {
       push_glmessage("cannot load " + shape.filename);
       log_glinfo(win, "cannot load " + shape.filename);

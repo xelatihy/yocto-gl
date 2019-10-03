@@ -836,27 +836,28 @@ vec2i texture_size(const yocto_texture& texture) {
 }
 
 // Evaluate a texture
-vec4f lookup_texture(const yocto_texture& texture, const vec2i& ij,
-    bool ldr_as_linear) {
+vec4f lookup_texture(
+    const yocto_texture& texture, const vec2i& ij, bool ldr_as_linear) {
   if (texture.hdr.empty() && texture.ldr.empty()) return {1, 1, 1, 1};
-  if(!texture.hdr.empty()) {
+  if (!texture.hdr.empty()) {
     return lookup_image(texture.hdr, ij, false);
-  } else if(!texture.ldr.empty()) {
+  } else if (!texture.ldr.empty()) {
     return lookup_image(texture.ldr, ij, !ldr_as_linear);
   } else {
-    return {1,1,1,1};
+    return {1, 1, 1, 1};
   }
 }
 
 // Evaluate a texture
 vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if(!texture.hdr.empty()) {
+  if (!texture.hdr.empty()) {
     return eval_image(texture.hdr, texcoord, no_interpolation, clamp_to_edge);
-  } else if(!texture.ldr.empty()) {
-    return eval_image(texture.ldr, texcoord, ldr_as_linear, no_interpolation, clamp_to_edge);
+  } else if (!texture.ldr.empty()) {
+    return eval_image(
+        texture.ldr, texcoord, ldr_as_linear, no_interpolation, clamp_to_edge);
   } else {
-    return {1,1,1,1};
+    return {1, 1, 1, 1};
   }
 }
 
@@ -874,7 +875,8 @@ float lookup_voltexture(
 float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   if (!texture.vol.empty()) {
-    return eval_volume(texture.vol, texcoord, ldr_as_linear, no_interpolation, clamp_to_edge);
+    return eval_volume(
+        texture.vol, texcoord, ldr_as_linear, no_interpolation, clamp_to_edge);
   } else {
     return 1;
   }
