@@ -580,9 +580,9 @@ vector<vector<float>> compute_voronoi_fields(
     const geodesic_solver& solver, const vector<int>& generators);
 
 // Convert distances to colors
-vector<vec4f> distance_to_color(const vector<float>& distances, float scale = 1,
+vector<vec4f> colors_from_field(const vector<float>& field, float scale = 1,
     const vec4f& c0 = {1, 1, 1, 1}, const vec4f& c1 = {1, 0.1, 0.1, 1});
-void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
+void colors_from_field(vector<vec4f>& colors, const vector<float>& field,
     float scale = 1, const vec4f& c0 = {1, 1, 1, 1},
     const vec4f& c1 = {1, 0.1, 0.1, 1});
 
@@ -595,7 +595,7 @@ struct path_vertex {
 // Description of a discrete path along the surface of the mesh.
 struct surface_path {
   int                 start, end;
-  vector<path_vertex> lerps;
+  vector<path_vertex> vertices;
 };
 
 // Trace integral path following the gradient of a scalar field

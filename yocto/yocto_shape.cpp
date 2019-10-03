@@ -2039,17 +2039,17 @@ vector<vector<float>> compute_voronoi_fields(
   return fields;
 }
 
-void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
+void colors_from_field(vector<vec4f>& colors, const vector<float>& field,
     float scale, const vec4f& c0, const vec4f& c1) {
-  colors.resize(distances.size());
+  colors.resize(field.size());
   for (auto i = 0; i < colors.size(); i++) {
-    colors[i] = ((int64_t)(distances[i] * scale)) % 2 ? c0 : c1;
+    colors[i] = ((int64_t)(field[i] * scale)) % 2 ? c0 : c1;
   }
 }
-vector<vec4f> distance_to_color(const vector<float>& distances, float scale,
-    const vec4f& c0, const vec4f& c1) {
-  auto colors = vector<vec4f>{distances.size()};
-  distance_to_color(colors, distances, scale, c0, c1);
+vector<vec4f> colors_from_field(
+    const vector<float>& field, float scale, const vec4f& c0, const vec4f& c1) {
+  auto colors = vector<vec4f>{field.size()};
+  colors_from_field(colors, field, scale, c0, c1);
   return colors;
 }
 
@@ -2064,14 +2064,11 @@ namespace integral_paths {
 
 static int adjacent_face(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacency, int face, const vec2i& edge) {
-  auto get_edge = [](const vec3i& triangle, int i) -> vec2i {
-    auto x = triangle[i], y = triangle[i < 2 ? i + 1 : 0];
-    return vec2i{x, y};
-  };
-
   // Given a face and an edge, return the adjacent face
   for (int k = 0; k < 3; ++k) {
-    auto e = get_edge(triangles[face], k);
+    auto x = triangles[face][k];
+    auto y = triangles[face][k < 2 ? k + 1 : 0];
+    auto e = vec2i{x, y};
     if (e == edge) return adjacency[face][k];
     if (vec2i{e.y, e.x} == edge) return adjacency[face][k];
   }
@@ -2107,7 +2104,6 @@ static vector<int> get_face_ring(const vector<vec3i>& triangles,
     queue.pop_back();
     result.push_back(f);
 
-    // for (auto[edge, k] : edges(triangles[f])) {
     for (int k = 0; k < 3; ++k) {
       auto edge = vec2i{triangles[f][k], triangles[f][(k + 1) % 3]};
       if (edge.x == vertex or edge.y == vertex) {
@@ -2136,7 +2132,6 @@ static vec3f gradient_face(const vector<vec3i>& triangles,
   auto  ca     = a - c;
 
   auto normal = normalize(cross(ca, ab));
-  // auto normal = cross(ca, ab);
   result += field[tr.x] * cross(normal, bc);
   result += field[tr.y] * cross(normal, ca);
   result += field[tr.z] * cross(normal, ab);
@@ -2282,7 +2277,6 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     if (tags[face] != tag) {
       auto k  = find_index(triangles[face], old_edge.x);
       auto to = triangles[face][(k + 1) % 3];
-      // int   to   = opposite_vertex(old_edge, triangles[face]);
 
       // @Hack!: We store the tag of the reached region in edge.x
       auto edge = vec2i{to, tags[face]};
@@ -2336,7 +2330,6 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     return v.x == a or v.y == a or v.z == a;
   };
 
-  // TRACE_FUNCTION
   auto lerps = vector<path_vertex>();
 
   lerps.push_back(
@@ -2346,7 +2339,6 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
 
   for (int i = 0; i < num_steps; i++) {
     auto [old_edge, old_face, old_alpha] = lerps.back();
-    assert(old_face != -1);
     vec3f point = (1.0f - old_alpha) * positions[old_edge.x] +
                   old_alpha * positions[old_edge.y];
 
@@ -2366,7 +2358,8 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
 
     int front_idx = opposite_vertex(triangles[face], old_edge);
     if (front_idx == -1) {
-      printf("front_idx is -1!\n");
+      
+        throw std::runtime_error("programmer error: front_idx is -1");
       break;
     }
 
@@ -2410,25 +2403,25 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
 
 pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions) {
-  if (path.lerps.empty()) return {};
+  if (path.vertices.empty()) return {};
 
   auto lines     = vector<vec2i>();
   auto positions = vector<vec3f>();
-  lines.reserve(path.lerps.size() + 1);
-  positions.reserve(path.lerps.size() + 1);
+  lines.reserve(path.vertices.size() + 1);
+  positions.reserve(path.vertices.size() + 1);
   positions.push_back(mesh_positions[path.start]);
 
-  for (int i = 0; i < path.lerps.size() - 1; ++i) {
-    auto [edge, face, x] = path.lerps[i];
+  for (int i = 0; i < path.vertices.size() - 1; ++i) {
+    auto [edge, face, x] = path.vertices[i];
     auto p0              = mesh_positions[edge.x];
     auto p1              = mesh_positions[edge.y];
     auto position        = (1 - x) * p0 + x * p1;
     positions.push_back(position);
     lines.push_back({i, i + 1});
   }
-    
+
   if (path.end != -1) {
-    auto n = (int)path.lerps.size();
+    auto n = (int)path.vertices.size();
     lines.push_back({n - 1, n});
     positions.push_back(mesh_positions[path.end]);
   }
