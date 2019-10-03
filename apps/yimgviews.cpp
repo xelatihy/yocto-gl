@@ -26,8 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_common.h"
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
@@ -54,11 +55,11 @@ struct app_state {
 
 void update_display(app_state& app) {
   if (app.display.size() != app.source.size()) app.display = app.source;
-  auto regions = make_regions(app.source.size(), 128);
+  auto regions = make_image_regions(app.source.size(), 128);
   parallel_foreach(regions, [&app](const image_region& region) {
-    tonemap(app.display, app.source, region, app.tonemap_prms);
+    tonemap_region(app.display, app.source, region, app.tonemap_prms);
     if (app.apply_colorgrade) {
-      colorgrade(app.display, app.display, region, app.colorgrade_prms);
+      colorgrade_region(app.display, app.display, region, app.colorgrade_prms);
     }
   });
 }

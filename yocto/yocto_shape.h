@@ -103,6 +103,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include "yocto_common.h"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
@@ -188,9 +189,9 @@ namespace yocto {
 // We store only bidirectional edges to keep the dictionary small. Use the
 // functions below to access this data.
 struct edge_map {
-  unordered_map<vec2i, int> index  = {};
-  vector<vec2i>             edges  = {};
-  vector<int>               nfaces = {};
+  hash_map<vec2i, int> index  = {};
+  vector<vec2i>        edges  = {};
+  vector<int>          nfaces = {};
 };
 
 // Initialize an edge map with elements.
@@ -233,10 +234,10 @@ namespace yocto {
 // A sparse grid of cells, containing list of points. Cells are stored in
 // a dictionary to get sparsity. Helpful for nearest neighboor lookups.
 struct hash_grid {
-  float                             cell_size     = 0;
-  float                             cell_inv_size = 0;
-  vector<vec3f>                     positions     = {};
-  unordered_map<vec3i, vector<int>> cells         = {};
+  float                        cell_size     = 0;
+  float                        cell_inv_size = 0;
+  vector<vec3f>                positions     = {};
+  hash_map<vec3i, vector<int>> cells         = {};
 };
 
 // Create a hash_grid
@@ -579,27 +580,11 @@ vector<vector<float>> compute_voronoi_fields(
     const geodesic_solver& solver, const vector<int>& generators);
 
 // Convert distances to colors
-vector<vec4f> distance_to_color(const vector<float>& distances, float scale = 1,
+vector<vec4f> colors_from_field(const vector<float>& field, float scale = 1,
     const vec4f& c0 = {1, 1, 1, 1}, const vec4f& c1 = {1, 0.1, 0.1, 1});
-void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
+void colors_from_field(vector<vec4f>& colors, const vector<float>& field,
     float scale = 1, const vec4f& c0 = {1, 1, 1, 1},
     const vec4f& c1 = {1, 0.1, 0.1, 1});
-
-struct discrete_surface {
-  // mesh data
-  vector<vec3f> positions;
-  vector<vec3f> normals;
-  vector<vec3i> triangles;
-
-  // solver used for geodesic distance
-  geodesic_solver solver;
-
-  // triangle adjacency used for fast boundary computation
-  vector<vec3i> adjacencies;
-
-  // per face tag
-  vector<int> tags;
-};
 
 struct path_vertex {
   vec2i edge;
@@ -610,7 +595,7 @@ struct path_vertex {
 // Description of a discrete path along the surface of the mesh.
 struct surface_path {
   int                 start, end;
-  vector<path_vertex> lerps;
+  vector<path_vertex> vertices;
 };
 
 // Trace integral path following the gradient of a scalar field
@@ -622,12 +607,8 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
     int to);
 
-// Cuts a mesh along paths
-bool slice_path(discrete_surface& state, int tag, const surface_path& path,
-    int tag_left, int tag_right, vector<int>& left_faces,
-    vector<int>& right_faces);
-vector<int> slice_paths(discrete_surface& state, const vector<int>& regions,
-    int t0, int t1, const vector<surface_path>& paths);
+pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
+    const surface_path& path, const vector<vec3f>& mesh_positions);
 
 }  // namespace yocto
 
@@ -636,20 +617,28 @@ vector<int> slice_paths(discrete_surface& state, const vector<int>& regions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Load/Save a shape
+// Load/save a shape as indexed meshes
 void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, bool facevarying);
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<vec4f>& colors, vector<float>& radius, bool flip_texcoords = true);
 void save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec4f>& colors, const vector<float>& radius,
+    bool ascii = false, bool flip_texcoords = true);
+
+// Load/save a facevarying shape
+void load_fvshape(const string& filename, vector<vec4i>& quadspos,
+    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    bool flip_texcoords = true);
+void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, bool ascii = false);
+    const vector<vec2f>& texcoords, bool ascii = false,
+    bool flip_texcoords = true);
 
 }  // namespace yocto
 

@@ -26,11 +26,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_common.h"
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
-#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
@@ -154,11 +155,11 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::list<app_state>    states;
-  int                     selected = -1;
-  std::list<string>       errors;
-  std::list<app_state>    loading;
-  std::list<future<void>> load_workers;
+  std::list<app_state>         states;
+  int                          selected = -1;
+  std::list<string>            errors;
+  std::list<app_state>         loading;
+  std::list<std::future<void>> load_workers;
 
   // get image
   app_state& get_selected() {
@@ -874,9 +875,8 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius, false);
+          shape.quads, shape.positions, shape.normals, shape.texcoords,
+          shape.colors, shape.radius);
     } catch (std::exception& e) {
       push_glmessage("cannot load " + shape.filename);
       log_glinfo(win, "cannot load " + shape.filename);
@@ -919,9 +919,8 @@ inline bool draw_glwidgets_subdiv(
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius, false);
+          shape.quads, shape.positions, shape.normals, shape.texcoords,
+          shape.colors, shape.radius);
     } catch (std::exception& e) {
       push_glmessage("cannot load " + shape.filename);
       log_glinfo(win, "cannot load " + shape.filename);

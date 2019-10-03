@@ -41,8 +41,8 @@
 
 #include "yocto_modelio.h"
 
+#include "yocto_commonio.h"
 #include "yocto_image.h"
-#include "yocto_utils.h"
 
 #include <algorithm>
 #include <cinttypes>
@@ -468,7 +468,7 @@ static inline void remove_ply_comment(
 // Load ply
 void load_ply(const string& filename, ply_model& ply) {
   // ply type names
-  static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
+  static auto type_map = hash_map<string, ply_type>{{"char", ply_type::i8},
       {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
       {"uchar", ply_type::u8}, {"ushort", ply_type::u16},
       {"uint", ply_type::u32}, {"ulong", ply_type::u64},
@@ -690,12 +690,12 @@ void save_ply(const string& filename, const ply_model& ply) {
   auto fs = open_file(filename, "wb");
 
   // ply type names
-  static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
+  static auto type_map   = hash_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
       {ply_type::u8, "uchar"}, {ply_type::u16, "ushort"},
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
       {ply_type::f32, "float"}, {ply_type::f64, "double"}};
-  static auto format_map = unordered_map<ply_format, string>{
+  static auto format_map = hash_map<ply_format, string>{
       {ply_format::ascii, "ascii"},
       {ply_format::binary_little_endian, "binary_little_endian"},
       {ply_format::binary_big_endian, "binary_big_endian"}};
@@ -865,7 +865,11 @@ inline vector<T> convert_ply_property(const ply_property& prop) {
     case ply_type::u64: return convert_ply_property<T>(prop.data_u64);
     case ply_type::f32: return convert_ply_property<T>(prop.data_f32);
     case ply_type::f64: return convert_ply_property<T>(prop.data_f64);
+    default: throw std::runtime_error("should not be here");
   }
+  // return here to silence warnings
+  std::runtime_error("should not have gotten here");
+  return {};
 }
 vector<float> get_ply_values(
     const ply_model& ply, const string& element, const string& property) {
@@ -1265,7 +1269,7 @@ static inline void parse_ply_prop(string_view& str, ply_type type, VT& value) {
 void read_ply_header(file_wrapper& fs, ply_format& format,
     vector<ply_element>& elements, vector<string>& comments) {
   // ply type names
-  static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
+  static auto type_map = hash_map<string, ply_type>{{"char", ply_type::i8},
       {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
       {"uchar", ply_type::u8}, {"ushort", ply_type::u16},
       {"uint", ply_type::u32}, {"ulong", ply_type::u64},
@@ -1452,7 +1456,7 @@ static inline void write_ply_prop(
 void write_ply_header(file_wrapper& fs, ply_format format,
     const vector<ply_element>& elements, const vector<string>& comments) {
   // ply type names
-  static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
+  static auto type_map = hash_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
       {ply_type::u8, "uchar"}, {ply_type::u16, "ushort"},
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
@@ -1765,7 +1769,7 @@ void load_objx(const string& filename, obj_model& obj) {
   auto fs = open_file(filename, "rt");
 
   // shape map for instances
-  auto shape_map = unordered_map<string, vector<int>>{};
+  auto shape_map = hash_map<string, vector<int>>{};
   for (auto idx = 0; idx < obj.shapes.size(); idx++) {
     shape_map[obj.shapes[idx].name].push_back(idx);
   }
@@ -2216,7 +2220,7 @@ float obj_roughness_to_exponent(float roughness) {
 void get_obj_vertices(const obj_shape& shape, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<int>& vindex,
     bool flipv) {
-  auto vmap = unordered_map<obj_vertex, int>{};
+  auto vmap = hash_map<obj_vertex, int>{};
   vmap.reserve(shape.vertices.size());
   vindex.reserve(shape.vertices.size());
   for (auto& vert : shape.vertices) {
@@ -2389,10 +2393,14 @@ bool has_obj_quads(const obj_shape& shape) {
 }
 
 // Add obj shape
-void add_obj_triangles(obj_model& obj, obj_shape& shape,
+void add_obj_triangles(obj_model& obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials, bool flipv) {
+    const vector<string>& materials, const vector<int>& ematerials,
+    bool flipv) {
+  auto& shape     = obj.shapes.emplace_back();
+  shape.name      = name;
+  shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -2410,9 +2418,14 @@ void add_obj_triangles(obj_model& obj, obj_shape& shape,
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+void add_obj_quads(obj_model& obj, const string& name,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials,
+    bool flipv) {
+  auto& shape     = obj.shapes.emplace_back();
+  shape.name      = name;
+  shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -2431,9 +2444,14 @@ void add_obj_quads(obj_model& obj, obj_shape& shape, const vector<vec4i>& quads,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+void add_obj_lines(obj_model& obj, const string& name,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials,
+    bool flipv) {
+  auto& shape     = obj.shapes.emplace_back();
+  shape.name      = name;
+  shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -2451,9 +2469,14 @@ void add_obj_lines(obj_model& obj, obj_shape& shape, const vector<vec2i>& lines,
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<int>& ematerials, bool flipv) {
+void add_obj_points(obj_model& obj, const string& name,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<string>& materials, const vector<int>& ematerials,
+    bool flipv) {
+  auto& shape     = obj.shapes.emplace_back();
+  shape.name      = name;
+  shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -2469,11 +2492,15 @@ void add_obj_points(obj_model& obj, obj_shape& shape, const vector<int>& points,
         {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_fvquads(obj_model& obj, obj_shape& shape,
+void add_obj_fvquads(obj_model& obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<int>& ematerials, bool flipv) {
+    const vector<string>& materials, const vector<int>& ematerials,
+    bool flipv) {
+  auto& shape     = obj.shapes.emplace_back();
+  shape.name      = name;
+  shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_texcoord(texcoords) : texcoords;
@@ -3387,7 +3414,7 @@ static inline void parse_pbrt_value(string_view& str, int& value) {
 }
 template <typename T>
 static inline void parse_pbrt_value(
-    string_view& str, T& value, unordered_map<string, T>& value_names) {
+    string_view& str, T& value, hash_map<string, T>& value_names) {
   auto value_name = ""s;
   parse_pbrt_value(str, value_name);
   try {
@@ -3447,7 +3474,7 @@ static inline void parse_pbrt_nametype(
 }
 
 static inline pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
-  static const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
+  static const hash_map<string, pair<vec3f, vec3f>> metal_ior_table = {
       {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                   {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
       {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
@@ -3720,7 +3747,7 @@ static void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
 // convert pbrt textures
 static void convert_pbrt_textures(
     vector<pbrt_texture>& textures, bool verbose = false) {
-  auto texture_map = unordered_map<string, int>{};
+  auto texture_map = hash_map<string, int>{};
   for (auto& texture : textures) {
     auto index                = (int)texture_map.size();
     texture_map[texture.name] = index;
@@ -3799,7 +3826,7 @@ static void convert_pbrt_textures(
 static void convert_pbrt_materials(vector<pbrt_material>& materials,
     const vector<pbrt_texture>& textures, bool verbose = false) {
   // add constant textures
-  auto constants = unordered_map<string, vec3f>{};
+  auto constants = hash_map<string, vec3f>{};
   for (auto& texture : textures) {
     if (!texture.filename.empty()) continue;
     constants[texture.name] = texture.constant;
@@ -4247,8 +4274,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   string cur_object = "";
 
   // objects and coords
-  unordered_map<string, pbrt_context> coordsys = {};
-  unordered_map<string, vector<int>>  objects  = {};
+  hash_map<string, pbrt_context> coordsys = {};
+  hash_map<string, vector<int>>  objects  = {};
 
   // helpers
   auto set_transform = [](pbrt_context& ctx, const frame3f& xform) {
@@ -4492,7 +4519,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
 }
 
 inline static void format_value(string& str, const pbrt_value& value) {
-  static auto type_labels = unordered_map<pbrt_value_type, string>{
+  static auto type_labels = hash_map<pbrt_value_type, string>{
       {pbrt_value_type::real, "float"},
       {pbrt_value_type::integer, "integer"},
       {pbrt_value_type::boolean, "bool"},
@@ -4733,7 +4760,7 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
     format_values(fs, "AttributeEnd\n");
   }
 
-  auto arealights_map = unordered_map<string, string>{};
+  auto arealights_map = hash_map<string, string>{};
   for (auto& arealight_ : pbrt.arealights) {
     auto arealight = arealight_;
     if (arealight.type == "") {
@@ -4988,7 +5015,7 @@ void write_pbrt_comment(file_wrapper& fs, const string& comment) {
 }
 
 void write_pbrt_values(file_wrapper& fs, const vector<pbrt_value>& values) {
-  static auto type_labels = unordered_map<pbrt_value_type, string>{
+  static auto type_labels = hash_map<pbrt_value_type, string>{
       {pbrt_value_type::real, "float"},
       {pbrt_value_type::integer, "integer"},
       {pbrt_value_type::boolean, "bool"},
@@ -5477,7 +5504,7 @@ void approximate_fourier_material(pbrt_material::fourier_t& fourier) {
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
 static inline pair<vec3f, vec3f> parse_pbrt_subsurface(const string& name) {
-  static const unordered_map<string, pair<vec3f, vec3f>> params = {
+  static const hash_map<string, pair<vec3f, vec3f>> params = {
       // From "A Practical Model for Subsurface Light Transport"
       // Jensen, Marschner, Levoy, Hanrahan
       // Proc SIGGRAPH 2001
@@ -5605,7 +5632,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
     if (str.size() < substr.size()) return false;
     return str.substr(0, substr.size()) == substr;
   };
-  auto imap = unordered_map<cgltf_image*, int>{};
+  auto imap = hash_map<cgltf_image*, int>{};
   for (auto tid = 0; tid < gltf->images_count; tid++) {
     auto gimg        = &gltf->images[tid];
     auto texture     = gltf_texture{};
@@ -5625,7 +5652,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   };
 
   // convert materials
-  auto mmap = unordered_map<cgltf_material*, int>{{nullptr, -1}};
+  auto mmap = hash_map<cgltf_material*, int>{{nullptr, -1}};
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
     auto gmat             = &gltf->materials[mid];
     mmap[gmat]            = mid;
@@ -5715,7 +5742,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   };
 
   // convert meshes
-  auto smap = unordered_map<cgltf_mesh*, int>{{nullptr, -1}};
+  auto smap = hash_map<cgltf_mesh*, int>{{nullptr, -1}};
   for (auto mid = 0; mid < gltf->meshes_count; mid++) {
     auto gmesh  = &gltf->meshes[mid];
     smap[gmesh] = mid;
@@ -5838,7 +5865,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   }
 
   // convert cameras
-  auto cmap = unordered_map<cgltf_camera*, int>{{nullptr, -1}};
+  auto cmap = hash_map<cgltf_camera*, int>{{nullptr, -1}};
   for (auto cid = 0; cid < gltf->cameras_count; cid++) {
     auto gcam    = &gltf->cameras[cid];
     cmap[gcam]   = cid;
@@ -5860,7 +5887,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   }
 
   // convert nodes
-  auto nmap = unordered_map<cgltf_node*, int>{{nullptr, -1}};
+  auto nmap = hash_map<cgltf_node*, int>{{nullptr, -1}};
   for (auto nid = 0; nid < gltf->nodes_count; nid++) {
     auto gnde  = &gltf->nodes[nid];
     nmap[gnde] = nid;
@@ -5931,7 +5958,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
     auto ganm = &gltf->animations[gid];
     auto aid  = 0;
     auto sampler_map =
-        unordered_map<pair<cgltf_animation_sampler*, cgltf_animation_path_type>,
+        hash_map<pair<cgltf_animation_sampler*, cgltf_animation_path_type>,
             int, sampler_map_hash>();
     for (auto cid = 0; cid < ganm->channels_count; cid++) {
       auto gchannel = &ganm->channels[cid];
@@ -6016,6 +6043,203 @@ void load_gltf(const string& filename, gltf_model& scene) {
     }
   }
 #endif
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF CYHAIR
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+struct cyhair_strand {
+  vector<vec3f> positions;
+  vector<float> radius;
+  vector<float> transparency;
+  vector<vec3f> color;
+};
+
+struct cyhair_data {
+  vector<cyhair_strand> strands              = {};
+  float                 default_thickness    = 0;
+  float                 default_transparency = 0;
+  vec3f                 default_color        = zero3f;
+};
+
+static void load_cyhair(const string& filename, cyhair_data& hair) {
+  // open file
+  hair     = {};
+  auto fs_ = open_file(filename, "b");
+  auto fs  = fs_.fs;
+
+  // Bytes 0-3    Must be "HAIR" in ascii code (48 41 49 52)
+  // Bytes 4-7    Number of hair strands as unsigned int
+  // Bytes 8-11    Total number of points of all strands as unsigned int
+  // Bytes 12-15    Bit array of data in the file
+  // Bit-0 is 1 if the file has segments array.
+  // Bit-1 is 1 if the file has points array (this bit must be 1).
+  // Bit-2 is 1 if the file has radius array.
+  // Bit-3 is 1 if the file has transparency array.
+  // Bit-4 is 1 if the file has color array.
+  // Bit-5 to Bit-31 are reserved for future extension (must be 0).
+  // Bytes 16-19    Default number of segments of hair strands as unsigned int
+  // If the file does not have a segments array, this default value is used.
+  // Bytes 20-23    Default radius hair strands as float
+  // If the file does not have a radius array, this default value is used.
+  // Bytes 24-27    Default transparency hair strands as float
+  // If the file does not have a transparency array, this default value is
+  // used. Bytes 28-39    Default color hair strands as float array of size 3
+  // If the file does not have a radius array, this default value is used.
+  // Bytes 40-127    File information as char array of size 88 in ascii
+
+  auto read_value = [](FILE* fs, auto& value) {
+    if (fread(&value, sizeof(value), 1, fs) != 1) {
+      throw std::runtime_error("cannot read from file");
+    }
+  };
+  auto read_values = [](FILE* fs, auto& values) {
+    if (values.empty()) return;
+    if (fread(values.data(), sizeof(values[0]), values.size(), fs) !=
+        values.size()) {
+      throw std::runtime_error("cannot read from file");
+    }
+  };
+
+  // parse header
+  hair = cyhair_data{};
+  struct cyhair_header {
+    char         magic[4]             = {0};
+    unsigned int num_strands          = 0;
+    unsigned int num_points           = 0;
+    unsigned int flags                = 0;
+    unsigned int default_segments     = 0;
+    float        default_thickness    = 0;
+    float        default_transparency = 0;
+    vec3f        default_color        = zero3f;
+    char         info[88]             = {0};
+  };
+  static_assert(sizeof(cyhair_header) == 128);
+  auto header = cyhair_header{};
+  read_value(fs, header);
+  if (header.magic[0] != 'H' || header.magic[1] != 'A' ||
+      header.magic[2] != 'I' || header.magic[3] != 'R')
+    throw std::runtime_error("bad cyhair header");
+
+  // set up data
+  hair.default_thickness    = header.default_thickness;
+  hair.default_transparency = header.default_transparency;
+  hair.default_color        = header.default_color;
+  hair.strands.resize(header.num_strands);
+
+  // get segments length
+  auto segments = vector<unsigned short>();
+  if (header.flags & 1) {
+    segments.resize(header.num_strands);
+    read_values(fs, segments);
+  } else {
+    segments.assign(header.num_strands, header.default_segments);
+  }
+
+  // check segment length
+  auto total_length = 0;
+  for (auto segment : segments) total_length += segment + 1;
+  if (total_length != header.num_points) {
+    throw std::runtime_error("bad cyhair file");
+  }
+
+  // read positions data
+  if (header.flags & 2) {
+    for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+      auto strand_size = (int)segments[strand_id] + 1;
+      hair.strands[strand_id].positions.resize(strand_size);
+      read_values(fs, hair.strands[strand_id].positions);
+    }
+  }
+  // read radius data
+  if (header.flags & 4) {
+    for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+      auto strand_size = (int)segments[strand_id] + 1;
+      hair.strands[strand_id].radius.resize(strand_size);
+      read_values(fs, hair.strands[strand_id].radius);
+    }
+  }
+  // read transparency data
+  if (header.flags & 8) {
+    for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+      auto strand_size = (int)segments[strand_id] + 1;
+      hair.strands[strand_id].transparency.resize(strand_size);
+      read_values(fs, hair.strands[strand_id].transparency);
+    }
+  }
+  // read color data
+  if (header.flags & 16) {
+    for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
+      auto strand_size = (int)segments[strand_id] + 1;
+      hair.strands[strand_id].color.resize(strand_size);
+      read_values(fs, hair.strands[strand_id].color);
+    }
+  }
+}
+
+// Compute per-vertex tangents for lines.
+static void compute_cyhair_tangents(vector<vec3f>& tangents,
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
+  if (tangents.size() != positions.size()) {
+    throw std::out_of_range("array should be the same length");
+  }
+  for (auto& tangent : tangents) tangent = zero3f;
+  for (auto& l : lines) {
+    auto tangent = normalize(positions[l.y] - positions[l.x]);
+    auto len     = length(positions[l.y] - positions[l.x]);
+    tangents[l.x] += tangent * len;
+    tangents[l.y] += tangent * len;
+  }
+  for (auto& tangent : tangents) tangent = normalize(tangent);
+}
+
+void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<vec4f>& color, vector<float>& radius, bool flip_texcoord) {
+  // load hair file
+  auto hair = cyhair_data();
+  load_cyhair(filename, hair);
+
+  // generate curve data
+  for (auto& strand : hair.strands) {
+    auto offset = (int)positions.size();
+    for (auto segment = 0; segment < (int)strand.positions.size() - 1;
+         segment++) {
+      lines.push_back({offset + segment, offset + segment + 1});
+    }
+    positions.insert(
+        positions.end(), strand.positions.begin(), strand.positions.end());
+    if (strand.radius.empty()) {
+      radius.insert(
+          radius.end(), strand.positions.size(), hair.default_thickness);
+    } else {
+      radius.insert(radius.end(), strand.radius.begin(), strand.radius.end());
+    }
+    if (strand.color.empty()) {
+      color.insert(color.end(), strand.positions.size(),
+          {hair.default_color.x, hair.default_color.y, hair.default_color.z,
+              1});
+    } else {
+      for (auto i = 0; i < strand.color.size(); i++) {
+        auto scolor = strand.color[i];
+        color.push_back({scolor.x, scolor.y, scolor.z, 1});
+      }
+    }
+  }
+
+  // flip yz
+  for (auto& p : positions) std::swap(p.y, p.z);
+
+  // compute tangents
+  normals.resize(positions.size());
+  compute_cyhair_tangents(normals, lines, positions);
+
+  // fix colors
+  for (auto& c : color) c = {pow(xyz(c), 2.2f), c.w};
 }
 
 }  // namespace yocto

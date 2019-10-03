@@ -26,11 +26,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_common.h"
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
-#include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
@@ -86,7 +87,7 @@ void reset_display(app_state& app) {
   app.render_sample  = 0;
   app.render_region  = 0;
   app.state          = make_trace_state(app.render.size(), app.trace_prms.seed);
-  app.render_regions = make_regions(
+  app.render_regions = make_image_regions(
       app.render.size(), app.trace_prms.region, true);
 }
 
@@ -116,7 +117,7 @@ void update(const opengl_window& win, app_state& app) {
     preview_prms.resolution /= app.preview_ratio;
     preview_prms.samples = 1;
     auto preview = trace_image(app.scene, app.bvh, app.lights, preview_prms);
-    preview      = tonemap(preview, app.tonemap_prms);
+    preview      = tonemap_image(preview, app.tonemap_prms);
     for (auto j = 0; j < app.display.size().y; j++) {
       for (auto i = 0; i < app.display.size().x; i++) {
         auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
@@ -137,7 +138,7 @@ void update(const opengl_window& win, app_state& app) {
         [&app](int region_id) {
           trace_region(app.render, app.state, app.scene, app.bvh, app.lights,
               app.render_regions[region_id], 1, app.trace_prms);
-          tonemap(app.display, app.render, app.render_regions[region_id],
+          tonemap_region(app.display, app.render, app.render_regions[region_id],
               app.tonemap_prms);
         });
     if (!app.gl_txt || app.gl_txt.size != app.display.size()) {
@@ -232,12 +233,10 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
       app.bvh_prms.high_quality, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.bvh_prms.use_embree,
+  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.bvh_prms.embree,
       "Use Embree ratracer");
-  add_cli_option(cli, "--bvh-embree-flatten/--no-bvh-embree-flatten",
-      app.bvh_prms.embree_flatten, "Flatten embree scene");
   add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      app.bvh_prms.embree_compact, "Embree runs in compact memory");
+      app.bvh_prms.compact, "Embree runs in compact memory");
 #endif
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
   add_cli_option(cli, "--output,-o", app.imagename, "Image output", false);

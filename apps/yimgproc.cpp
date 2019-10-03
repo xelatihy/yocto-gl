@@ -26,9 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
-#include "../yocto/yocto_utils.h"
 using namespace yocto;
 
 namespace yocto {
@@ -196,13 +196,13 @@ int main(int argc, const char* argv[]) {
       print_fatal(e.what());
     }
     if (img.size() != diff.size()) print_fatal("image sizes are different");
-    img = difference(img, diff, true);
+    img = image_difference(img, diff, true);
   }
 
   // resize
   if (resize_width != 0 || resize_height != 0) {
     auto res = image<vec4f>{};
-    resize(res, img, {resize_width, resize_height});
+    resize_image(res, img, {resize_width, resize_height});
     img = res;
   }
 
@@ -213,7 +213,7 @@ int main(int argc, const char* argv[]) {
 
   // hdr correction
   if (do_tonemap) {
-    img = tonemap(img, tonemap_prms);
+    img = tonemap_image(img, tonemap_prms);
   }
 
   // save
