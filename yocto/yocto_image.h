@@ -162,6 +162,21 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMAGE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Lookup an image at coordinates `ij`
+template<typename T>
+inline T lookup_image(const image<T>& img);
+
+// Evaluates a color image at a point `uv`.
+inline vec4f eval_image(const image<vec4f>& img);
+inline vec4f eval_image(const image<vec4b>& img);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -178,12 +193,12 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-vector<image_region> make_regions(
+vector<image_region> make_image_regions(
     const vec2i& size, int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
 template <typename T>
-inline image<T> get_region(const image<T>& img, const image_region& region) {
+inline image<T> get_image_region(const image<T>& img, const image_region& region) {
   auto clipped = image<T>{region.size()};
   for (auto j = 0; j < region.size().y; j++) {
     for (auto i = 0; i < region.size().x; i++) {
@@ -247,9 +262,9 @@ inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
 }
 
 // Apply exposure and filmic tone mapping
-image<vec4f> tonemap(const image<vec4f>& hdr, const tonemap_params& params);
-image<vec4b> tonemapb(const image<vec4f>& hdr, const tonemap_params& params);
-void         tonemap(image<vec4f>& ldr, const image<vec4f>& hdr,
+image<vec4f> tonemap_image(const image<vec4f>& hdr, const tonemap_params& params);
+image<vec4b> tonemap_imageb(const image<vec4f>& hdr, const tonemap_params& params);
+void         tonemap_region(image<vec4f>& ldr, const image<vec4f>& hdr,
             const image_region& region, const tonemap_params& params);
 
 // minimal color grading
@@ -272,24 +287,24 @@ inline bool operator!=(const colorgrade_params& a, const colorgrade_params& b) {
 }
 
 // color grade an image region
-image<vec4f> colorgrade(
+image<vec4f> colorgrade_image(
     const image<vec4f>& img, const colorgrade_params& params);
-void colorgrade(image<vec4f>& corrected, const image<vec4f>& img,
+void colorgrade_region(image<vec4f>& corrected, const image<vec4f>& img,
     const image_region& region, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
 
 // Resize an image.
-image<vec4f> resize(const image<vec4f>& img, const vec2i& size);
-image<vec4b> resize(const image<vec4b>& img, const vec2i& size);
-void resize(image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
-void resize(image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
+image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size);
+void resize_image(image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
+void resize_image(image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
 
 // Compute the difference between two images
-image<vec4f> difference(
+image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool disply_diff);
-void difference(image<vec4f>& diff, const image<vec4f>& a,
+void image_difference(image<vec4f>& diff, const image<vec4f>& a,
     const image<vec4f>& b, bool disply_diff);
 
 }  // namespace yocto

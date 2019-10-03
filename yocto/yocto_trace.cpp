@@ -1387,7 +1387,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const trace_bvh& bvh,
       scene.cameras.at(params.camera), params.resolution);
   auto render  = image{image_size, zero4f};
   auto state   = make_trace_state(render.size(), params.seed);
-  auto regions = make_regions(render.size(), params.region, true);
+  auto regions = make_image_regions(render.size(), params.region, true);
 
   if (params.noparallel) {
     for (auto& region : regions) {
@@ -1409,7 +1409,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const trace_bvh& bvh,
 int trace_samples(image<vec4f>& render, trace_state& state,
     const yocto_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     int current_sample, const trace_params& params) {
-  auto regions     = make_regions(render.size(), params.region, true);
+  auto regions     = make_image_regions(render.size(), params.region, true);
   auto num_samples = min(params.batch, params.samples - current_sample);
   if (params.noparallel) {
     for (auto& region : regions) {
