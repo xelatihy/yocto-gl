@@ -384,7 +384,7 @@ vector<float> sample_environment_cdf(
     for (auto i = 0; i < texels_cdf.size(); i++) {
       auto ij       = vec2i{i % size.x, i / size.x};
       auto th       = (ij.y + 0.5f) * pif / size.y;
-      auto value    = lookup_texture(texture, ij.x, ij.y);
+      auto value    = lookup_texture(texture, ij);
       texels_cdf[i] = max(xyz(value)) * sin(th);
       if (i) texels_cdf[i] += texels_cdf[i - 1];
     }
@@ -406,7 +406,7 @@ void sample_environment_cdf(const yocto_scene& scene,
     for (auto i = 0; i < texels_cdf.size(); i++) {
       auto ij       = vec2i{i % size.x, i / size.x};
       auto th       = (ij.y + 0.5f) * pif / size.y;
-      auto value    = lookup_texture(texture, ij.x, ij.y);
+      auto value    = lookup_texture(texture, ij);
       texels_cdf[i] = max(xyz(value)) * sin(th);
       if (i) texels_cdf[i] += texels_cdf[i - 1];
     }
@@ -835,17 +835,16 @@ vec2i texture_size(const yocto_texture& texture) {
   }
 }
 
-// Lookup a texture value
-vec4f lookup_texture(
-    const yocto_texture& texture, int i, int j, bool ldr_as_linear) {
-  if (!texture.hdr.empty()) {
-    return texture.hdr[{i, j}];
-  } else if (!texture.ldr.empty() && !ldr_as_linear) {
-    return srgb_to_rgb(byte_to_float(texture.ldr[{i, j}]));
-  } else if (!texture.ldr.empty() && ldr_as_linear) {
-    return byte_to_float(texture.ldr[{i, j}]);
+// Evaluate a texture
+vec4f lookup_texture(const yocto_texture& texture, const vec2i& ij,
+    bool ldr_as_linear) {
+  if (texture.hdr.empty() && texture.ldr.empty()) return {1, 1, 1, 1};
+  if(!texture.hdr.empty()) {
+    return lookup_image(texture.hdr, ij, false);
+  } else if(!texture.ldr.empty()) {
+    return lookup_image(texture.ldr, ij, !ldr_as_linear);
   } else {
-    return zero4f;
+    return {1,1,1,1};
   }
 }
 
@@ -854,34 +853,13 @@ vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
   if (texture.hdr.empty() && texture.ldr.empty()) return {1, 1, 1, 1};
 
-  // get image width/height
-  auto size  = texture_size(texture);
-  auto width = size.x, height = size.y;
-
-  // get coordinates normalized for tiling
-  auto s = 0.0f, t = 0.0f;
-  if (clamp_to_edge) {
-    s = clamp(texcoord.x, 0.0f, 1.0f) * width;
-    t = clamp(texcoord.y, 0.0f, 1.0f) * height;
+  if(!texture.hdr.empty()) {
+    return eval_image(texture.hdr, texcoord, false, no_interpolation, clamp_to_edge);
+  } else if(!texture.ldr.empty()) {
+    return eval_image(texture.ldr, texcoord, !ldr_as_linear, no_interpolation, clamp_to_edge);
   } else {
-    s = fmod(texcoord.x, 1.0f) * width;
-    if (s < 0) s += width;
-    t = fmod(texcoord.y, 1.0f) * height;
-    if (t < 0) t += height;
+    return {1,1,1,1};
   }
-
-  // get image coordinates and residuals
-  auto i = clamp((int)s, 0, width - 1), j = clamp((int)t, 0, height - 1);
-  auto ii = (i + 1) % width, jj = (j + 1) % height;
-  auto u = s - i, v = t - j;
-
-  if (no_interpolation) return lookup_texture(texture, i, j, ldr_as_linear);
-
-  // handle interpolation
-  return lookup_texture(texture, i, j, ldr_as_linear) * (1 - u) * (1 - v) +
-         lookup_texture(texture, i, jj, ldr_as_linear) * (1 - u) * v +
-         lookup_texture(texture, ii, j, ldr_as_linear) * u * (1 - v) +
-         lookup_texture(texture, ii, jj, ldr_as_linear) * u * v;
 }
 
 // Lookup a texture value

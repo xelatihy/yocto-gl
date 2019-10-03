@@ -524,6 +524,11 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to) {
   return rgb;
 }
 
+vec3f convert_color(const vec3f& col, color_space from, color_space to) {
+  if (from == to) return col;
+  return xyz_to_color(color_to_xyz(col, from), to);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -793,7 +798,7 @@ void resize_image(
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
 
-void difference(image<vec4f>& diff, const image<vec4f>& a,
+void image_difference(image<vec4f>& diff, const image<vec4f>& a,
     const image<vec4f>& b, bool display) {
   if (a.size() != b.size())
     throw std::invalid_argument("image haev different sizes");
@@ -806,10 +811,10 @@ void difference(image<vec4f>& diff, const image<vec4f>& a,
     }
   }
 }
-image<vec4f> difference(
+image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool display) {
   auto diff = image<vec4f>{a.size()};
-  difference(diff, a, b, display);
+  image_difference(diff, a, b, display);
   return diff;
 }
 

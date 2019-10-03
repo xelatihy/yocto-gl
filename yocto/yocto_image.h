@@ -101,47 +101,34 @@ namespace yocto {
 template <typename T>
 struct image {
   // constructors
-  image() : extent{0, 0}, pixels{} {}
-  image(const vec2i& size, const T& value = {})
-      : extent{size}, pixels((size_t)size.x * (size_t)size.y, value) {}
-  image(const vec2i& size, const T* value)
-      : extent{size}, pixels(value, value + (size_t)size.x * (size_t)size.y) {}
+  image();
+  image(const vec2i& size, const T& value = {});
+  image(const vec2i& size, const T* value);
 
   // size
-  bool   empty() const { return pixels.empty(); }
-  vec2i  size() const { return extent; }
-  size_t count() const { return pixels.size(); }
-  bool   contains(const vec2i& ij) const {
-    return ij.x > 0 && ij.x < extent.x && ij.y > 0 && ij.y < extent.y;
-  }
-  void resize(const vec2i& size) {
-    if (size == extent) return;
-    extent = size;
-    pixels.resize((size_t)size.x * (size_t)size.y);
-  }
-  void assign(const vec2i& size, const T& value = {}) {
-    extent = size;
-    pixels.assign((size_t)size.x * (size_t)size.y, value);
-  }
-  void shrink_to_fit() { pixels.shrink_to_fit(); }
+  bool   empty() const;
+  vec2i  size() const;
+  size_t count() const;
+  bool   contains(const vec2i& ij) const;
+  void   resize(const vec2i& size);
+  void   assign(const vec2i& size, const T& value = {});
+  void   shrink_to_fit();
 
   // element access
-  T&       operator[](int i) { return pixels[i]; }
-  const T& operator[](int i) const { return pixels[i]; }
-  T& operator[](const vec2i& ij) { return pixels[ij.y * extent.x + ij.x]; }
-  const T& operator[](const vec2i& ij) const {
-    return pixels[ij.y * extent.x + ij.x];
-  }
+  T&       operator[](int i);
+  const T& operator[](int i) const;
+  T&       operator[](const vec2i& ij);
+  const T& operator[](const vec2i& ij) const;
 
   // data access
-  T*       data() { return pixels.data(); }
-  const T* data() const { return pixels.data(); }
+  T*       data();
+  const T* data() const;
 
   // iteration
-  T*       begin() { return pixels.data(); }
-  T*       end() { return pixels.data() + pixels.size(); }
-  const T* begin() const { return pixels.data(); }
-  const T* end() const { return pixels.data() + pixels.size(); }
+  T*       begin();
+  T*       end();
+  const T* begin() const;
+  const T* end() const;
 
  private:
   // data
@@ -151,13 +138,9 @@ struct image {
 
 // equality
 template <typename T>
-inline bool operator==(const image<T>& a, const image<T>& b) {
-  return a.size() == b.size() && a.pixels == b.pixels;
-}
+inline bool operator==(const image<T>& a, const image<T>& b);
 template <typename T>
-inline bool operator!=(const image<T>& a, const image<T>& b) {
-  return a.size() != b.size() || a.pixels != b.pixels;
-}
+inline bool operator!=(const image<T>& a, const image<T>& b);
 
 }  // namespace yocto
 
@@ -167,12 +150,14 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
 namespace yocto {
 
 // Lookup an image at coordinates `ij`
-template<typename T>
-inline T lookup_image(const image<T>& img);
+inline vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_srgb);
+inline vec4f lookup_image(const image<vec4b>& img, const vec2i& ij, bool as_srgb);
 
 // Evaluates a color image at a point `uv`.
-inline vec4f eval_image(const image<vec4f>& img);
-inline vec4f eval_image(const image<vec4b>& img);
+inline vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
+    bool as_srgb, bool no_interpolation = false, bool clamp_to_edge = false);
+inline vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
+    bool as_srgb, bool no_interpolation = false, bool clamp_to_edge = false);
 
 }  // namespace yocto
 
@@ -186,10 +171,10 @@ struct image_region {
   vec2i min = zero2i;
   vec2i max = zero2i;
 
-  image_region() {}
-  image_region(const vec2i& min, const vec2i& max) : min{min}, max{max} {}
+  image_region();
+  image_region(const vec2i& min, const vec2i& max);
 
-  vec2i size() const { return max - min; }
+  vec2i size() const;
 };
 
 // Splits an image into an array of regions
@@ -198,35 +183,14 @@ vector<image_region> make_image_regions(
 
 // Gets pixels in an image region
 template <typename T>
-inline image<T> get_image_region(const image<T>& img, const image_region& region) {
-  auto clipped = image<T>{region.size()};
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-    }
-  }
-  return clipped;
-}
+inline image<T> get_image_region(
+    const image<T>& img, const image_region& region);
 template <typename T>
 inline void set_region(
-    image<T>& img, const image<T>& region, const vec2i& offset) {
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      if (!img.contains({i, j})) continue;
-      img[vec2i{i, j} + offset] = region[{i, j}];
-    }
-  }
-}
+    image<T>& img, const image<T>& region, const vec2i& offset);
 template <typename T>
 inline void get_region(
-    image<T>& clipped, const image<T>& img, const image_region& region) {
-  clipped.resize(region.size());
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-    }
-  }
-}
+    image<T>& clipped, const image<T>& img, const image_region& region);
 
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
@@ -262,10 +226,12 @@ inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
 }
 
 // Apply exposure and filmic tone mapping
-image<vec4f> tonemap_image(const image<vec4f>& hdr, const tonemap_params& params);
-image<vec4b> tonemap_imageb(const image<vec4f>& hdr, const tonemap_params& params);
-void         tonemap_region(image<vec4f>& ldr, const image<vec4f>& hdr,
-            const image_region& region, const tonemap_params& params);
+image<vec4f> tonemap_image(
+    const image<vec4f>& hdr, const tonemap_params& params);
+image<vec4b> tonemap_imageb(
+    const image<vec4f>& hdr, const tonemap_params& params);
+void tonemap_region(image<vec4f>& ldr, const image<vec4f>& hdr,
+    const image_region& region, const tonemap_params& params);
 
 // minimal color grading
 struct colorgrade_params {
@@ -298,8 +264,10 @@ vec3f compute_white_balance(const image<vec4f>& img);
 // Resize an image.
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size);
-void resize_image(image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
-void resize_image(image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
+void         resize_image(
+            image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
+void resize_image(
+    image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
 
 // Compute the difference between two images
 image<vec4f> image_difference(
@@ -413,49 +381,33 @@ namespace yocto {
 template <typename T>
 struct volume {
   // constructors
-  volume() : extent{0, 0, 0}, voxels{} {}
-  volume(const vec3i& size, const T& value)
-      : extent{size}
-      , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
-  volume(const vec3i& size, const T* value)
-      : extent{size}
-      , voxels(
-            value, value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
+  volume();
+  volume(const vec3i& size, const T& value);
+  volume(const vec3i& size, const T* value);
 
   // size
-  bool   empty() const { return voxels.empty(); }
-  vec3i  size() const { return extent; }
-  size_t count() const { return voxels.size(); }
-  void   resize(const vec3i& size) {
-    if (size == extent) return;
-    extent = size;
-    voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
-  }
-  void assign(const vec3i& size, const T& value) {
-    extent = size;
-    voxels.assign((size_t)size.x * (size_t)size.y * (size_t)size.z, value);
-  }
-  void shrink_to_fit() { voxels.shrink_to_fit(); }
+  bool   empty() const;
+  vec3i  size() const;
+  size_t count() const;
+  void   resize(const vec3i& size);
+  void   assign(const vec3i& size, const T& value);
+  void   shrink_to_fit();
 
   // element access
-  T&       operator[](size_t i) { return voxels[i]; }
-  const T& operator[](size_t i) const { return voxels[i]; }
-  T&       operator[](const vec3i& ijk) {
-    return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
-  }
-  const T& operator[](const vec3i& ijk) const {
-    return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
-  }
+  T&       operator[](size_t i);
+  const T& operator[](size_t i) const;
+  T&       operator[](const vec3i& ijk);
+  const T& operator[](const vec3i& ijk) const;
 
   // data access
-  T*       data() { return voxels.data(); }
-  const T* data() const { return voxels.data(); }
+  T*       data();
+  const T* data() const;
 
   // iteration
-  T*       begin() { return voxels.data(); }
-  T*       end() { return voxels.data() + voxels.size(); }
-  const T* begin() const { return voxels.data(); }
-  const T* end() const { return voxels.data() + voxels.size(); }
+  T*       begin();
+  T*       end();
+  const T* begin() const;
+  const T* end() const;
 
  private:
   // data
@@ -465,13 +417,9 @@ struct volume {
 
 // equality
 template <typename T>
-inline bool operator==(const volume<T>& a, const volume<T>& b) {
-  return a.size() == b.size() && a.voxels == b.voxels;
-}
+inline bool operator==(const volume<T>& a, const volume<T>& b);
 template <typename T>
-inline bool operator!=(const volume<T>& a, const volume<T>& b) {
-  return a.size() != b.size() || a.voxels != b.voxels;
-}
+inline bool operator!=(const volume<T>& a, const volume<T>& b);
 
 // make a simple example volume
 void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
@@ -487,6 +435,414 @@ namespace yocto {
 // Loads/saves a 1 channel volume.
 void load_volume(const string& filename, volume<float>& vol);
 void save_volume(const string& filename, const volume<float>& vol);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COLOR CONVERSION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Conversion between flots and bytes
+inline vec4b float_to_byte(const vec4f& a);
+inline vec4f byte_to_float(const vec4b& a);
+
+// Luminance
+inline float luminance(const vec3f& a);
+
+// sRGB non-linear curve
+inline float srgb_to_rgb(float srgb);
+inline float rgb_to_srgb(float rgb);
+inline vec3f srgb_to_rgb(const vec3f& srgb);
+inline vec4f srgb_to_rgb(const vec4f& srgb);
+inline vec3f rgb_to_srgb(const vec3f& rgb);
+inline vec4f rgb_to_srgb(const vec4f& rgb);
+
+// Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
+inline vec3f contrast(const vec3f& rgb, float contrast, float grey);
+// Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
+inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
+// Apply saturation.
+inline vec3f saturate(const vec3f& rgb, float saturation,
+    const vec3f& weights = vec3f{0.333333f});
+
+// Convert between CIE XYZ and RGB
+inline vec3f rgb_to_xyz(const vec3f& rgb);
+inline vec3f xyz_to_rgb(const vec3f& xyz);
+
+// Convert between CIE XYZ and xyY
+inline vec3f xyz_to_xyY(const vec3f& xyz);
+inline vec3f xyY_to_xyz(const vec3f& xyY);
+
+// Approximate color of blackbody radiation from wavelength in nm.
+vec3f blackbody_to_rgb(float temperature);
+
+// Converts between HSV and RGB color spaces.
+vec3f hsv_to_rgb(const vec3f& hsv);
+vec3f rgb_to_hsv(const vec3f& rgb);
+
+// RGB color spaces
+enum struct color_space {
+  rgb,         // default linear space (srgb linear)
+  srgb,        // srgb color space (non-linear)
+  adobe,       // Adobe rgb color space (non-linear)
+  prophoto,    // ProPhoto Kodak rgb color space (non-linear)
+  rec709,      // hdtv color space (non-linear)
+  rec2020,     // uhtv color space (non-linear)
+  rec2100pq,   // hdr color space with perceptual quantizer (non-linear)
+  rec2100hlg,  // hdr color space with hybrid log gamma (non-linear)
+  aces2065,    // ACES storage format (linear)
+  acescg,      // ACES CG computation (linear)
+  acescc,      // ACES color correction (non-linear)
+  acescct,     // ACES color correction 2 (non-linear)
+  p3dci,       // P3 DCI (non-linear)
+  p3d60,       // P3 variation for D60 (non-linear)
+  p3d65,       // P3 variation for D65 (non-linear)
+  p3display,   // Apple display P3
+};
+
+// Conversion between rgb color spaces
+vec3f color_to_xyz(const vec3f& col, color_space from);
+vec3f xyz_to_color(const vec3f& xyz, color_space to);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+//
+//
+// IMPLEMENTATION
+//
+//
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// IMAGE DATA AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Image container ----------------
+
+// constructors
+template <typename T>
+inline image<T>::image() : extent{0, 0}, pixels{} {}
+template <typename T>
+inline image<T>::image(const vec2i& size, const T& value)
+    : extent{size}, pixels((size_t)size.x * (size_t)size.y, value) {}
+template <typename T>
+inline image<T>::image(const vec2i& size, const T* value)
+    : extent{size}, pixels(value, value + (size_t)size.x * (size_t)size.y) {}
+
+// size
+template <typename T>
+inline bool image<T>::empty() const {
+  return pixels.empty();
+}
+template <typename T>
+inline vec2i image<T>::size() const {
+  return extent;
+}
+template <typename T>
+inline size_t image<T>::count() const {
+  return pixels.size();
+}
+template <typename T>
+inline bool image<T>::contains(const vec2i& ij) const {
+  return ij.x > 0 && ij.x < extent.x && ij.y > 0 && ij.y < extent.y;
+}
+template <typename T>
+inline void image<T>::resize(const vec2i& size) {
+  if (size == extent) return;
+  extent = size;
+  pixels.resize((size_t)size.x * (size_t)size.y);
+}
+template <typename T>
+inline void image<T>::assign(const vec2i& size, const T& value) {
+  extent = size;
+  pixels.assign((size_t)size.x * (size_t)size.y, value);
+}
+template <typename T>
+inline void image<T>::shrink_to_fit() {
+  pixels.shrink_to_fit();
+}
+
+// element access
+template <typename T>
+inline T& image<T>::operator[](int i) {
+  return pixels[i];
+}
+template <typename T>
+inline const T& image<T>::operator[](int i) const {
+  return pixels[i];
+}
+template <typename T>
+inline T& image<T>::operator[](const vec2i& ij) {
+  return pixels[ij.y * extent.x + ij.x];
+}
+template <typename T>
+inline const T& image<T>::operator[](const vec2i& ij) const {
+  return pixels[ij.y * extent.x + ij.x];
+}
+
+// data access
+template <typename T>
+inline T* image<T>::data() {
+  return pixels.data();
+}
+template <typename T>
+inline const T* image<T>::data() const {
+  return pixels.data();
+}
+
+// iteration
+template <typename T>
+inline T* image<T>::begin() {
+  return pixels.data();
+}
+template <typename T>
+inline T* image<T>::end() {
+  return pixels.data() + pixels.size();
+}
+template <typename T>
+inline const T* image<T>::begin() const {
+  return pixels.data();
+}
+template <typename T>
+inline const T* image<T>::end() const {
+  return pixels.data() + pixels.size();
+}
+
+// equality
+template <typename T>
+inline bool operator==(const image<T>& a, const image<T>& b) {
+  return a.size() == b.size() && a.pixels == b.pixels;
+}
+template <typename T>
+inline bool operator!=(const image<T>& a, const image<T>& b) {
+  return a.size() != b.size() || a.pixels != b.pixels;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Lookup an image at coordinates `ij`
+inline vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_srgb) {
+  if(as_srgb) {
+    return rgb_to_srgb(img[ij]);
+  } else {
+    return img[ij];
+  }
+}
+inline vec4f lookup_image(
+    const image<vec4b>& img, const vec2i& ij, bool as_srgb) {
+  if (as_srgb) {
+    return byte_to_float(img[ij]);
+  } else {
+    return srgb_to_rgb(byte_to_float(img[ij]));
+  }
+}
+
+// Evaluate a texture
+template <typename T>
+inline vec4f eval_image_generic(const image<T>& img, const vec2f& uv,
+    bool as_srgb, bool no_interpolation, bool clamp_to_edge) {
+  if (img.empty()) return zero4f;
+
+  // get image width/height
+  auto size  = img.size();
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation) return lookup_image(img, {i, j}, as_srgb);
+
+  // handle interpolation
+  return lookup_image(img, {i, j}, as_srgb) * (1 - u) * (1 - v) +
+         lookup_image(img, {i, jj}, as_srgb) * (1 - u) * v +
+         lookup_image(img, {ii, j}, as_srgb) * u * (1 - v) +
+         lookup_image(img, {ii, jj}, as_srgb) * u * v;
+}
+
+// Evaluates a color image at a point `uv`.
+inline vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
+    bool as_srgb, bool no_interpolation, bool clamp_to_edge) {
+  return eval_image_generic(
+      img, uv, as_srgb, no_interpolation, clamp_to_edge);
+}
+inline vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
+    bool as_srgb, bool no_interpolation, bool clamp_to_edge) {
+  return eval_image_generic(
+      img, uv, as_srgb, no_interpolation, clamp_to_edge);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+inline image_region::image_region() {}
+inline image_region::image_region(const vec2i& min, const vec2i& max)
+    : min{min}, max{max} {}
+
+inline vec2i image_region::size() const { return max - min; }
+
+// Gets pixels in an image region
+template <typename T>
+inline image<T> get_image_region(
+    const image<T>& img, const image_region& region) {
+  auto clipped = image<T>{region.size()};
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+    }
+  }
+  return clipped;
+}
+template <typename T>
+inline void set_region(
+    image<T>& img, const image<T>& region, const vec2i& offset) {
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      if (!img.contains({i, j})) continue;
+      img[vec2i{i, j} + offset] = region[{i, j}];
+    }
+  }
+}
+template <typename T>
+inline void get_region(
+    image<T>& clipped, const image<T>& img, const image_region& region) {
+  clipped.resize(region.size());
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+    }
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VOLUME TYPE AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Volume container ----------
+
+// constructors
+template <typename T>
+inline volume<T>::volume() : extent{0, 0, 0}, voxels{} {}
+template <typename T>
+inline volume<T>::volume(const vec3i& size, const T& value)
+    : extent{size}
+    , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
+template <typename T>
+inline volume<T>::volume(const vec3i& size, const T* value)
+    : extent{size}
+    , voxels(value, value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
+
+// size
+template <typename T>
+inline bool volume<T>::empty() const {
+  return voxels.empty();
+}
+template <typename T>
+inline vec3i volume<T>::size() const {
+  return extent;
+}
+template <typename T>
+inline size_t volume<T>::count() const {
+  return voxels.size();
+}
+template <typename T>
+inline void volume<T>::resize(const vec3i& size) {
+  if (size == extent) return;
+  extent = size;
+  voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
+}
+template <typename T>
+inline void volume<T>::assign(const vec3i& size, const T& value) {
+  extent = size;
+  voxels.assign((size_t)size.x * (size_t)size.y * (size_t)size.z, value);
+}
+template <typename T>
+inline void volume<T>::shrink_to_fit() {
+  voxels.shrink_to_fit();
+}
+
+// element access
+template <typename T>
+inline T& volume<T>::operator[](size_t i) {
+  return voxels[i];
+}
+template <typename T>
+inline const T& volume<T>::operator[](size_t i) const {
+  return voxels[i];
+}
+template <typename T>
+inline T& volume<T>::operator[](const vec3i& ijk) {
+  return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
+}
+template <typename T>
+inline const T& volume<T>::operator[](const vec3i& ijk) const {
+  return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
+}
+
+// data access
+template <typename T>
+inline T* volume<T>::data() {
+  return voxels.data();
+}
+template <typename T>
+inline const T* volume<T>::data() const {
+  return voxels.data();
+}
+
+// iteration
+template <typename T>
+inline T* volume<T>::begin() {
+  return voxels.data();
+}
+template <typename T>
+inline T* volume<T>::end() {
+  return voxels.data() + voxels.size();
+}
+template <typename T>
+inline const T* volume<T>::begin() const {
+  return voxels.data();
+}
+template <typename T>
+inline const T* volume<T>::end() const {
+  return voxels.data() + voxels.size();
+}
+
+// equality
+template <typename T>
+inline bool operator==(const volume<T>& a, const volume<T>& b) {
+  return a.size() == b.size() && a.voxels == b.voxels;
+}
+template <typename T>
+inline bool operator!=(const volume<T>& a, const volume<T>& b) {
+  return a.size() != b.size() || a.voxels != b.voxels;
+}
 
 }  // namespace yocto
 
@@ -546,8 +902,8 @@ inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
   return max(zero3f, exp2(adjusted) - epsilon);
 }
 // Apply saturation.
-inline vec3f saturate(const vec3f& rgb, float saturation,
-    const vec3f& weights = vec3f{0.333333f}) {
+inline vec3f saturate(
+    const vec3f& rgb, float saturation, const vec3f& weights) {
   auto grey = dot(weights, rgb);
   return max(zero3f, grey + (rgb - grey) * (saturation * 2));
 }
@@ -581,41 +937,6 @@ inline vec3f xyz_to_xyY(const vec3f& xyz) {
 inline vec3f xyY_to_xyz(const vec3f& xyY) {
   if (xyY.y == 0) return zero3f;
   return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
-}
-
-// Approximate color of blackbody radiation from wavelength in nm.
-vec3f blackbody_to_rgb(float temperature);
-
-// Converts between HSV and RGB color spaces.
-vec3f hsv_to_rgb(const vec3f& hsv);
-vec3f rgb_to_hsv(const vec3f& rgb);
-
-// RGB color spaces
-enum struct color_space {
-  rgb,         // default linear space (srgb linear)
-  srgb,        // srgb color space (non-linear)
-  adobe,       // Adobe rgb color space (non-linear)
-  prophoto,    // ProPhoto Kodak rgb color space (non-linear)
-  rec709,      // hdtv color space (non-linear)
-  rec2020,     // uhtv color space (non-linear)
-  rec2100pq,   // hdr color space with perceptual quantizer (non-linear)
-  rec2100hlg,  // hdr color space with hybrid log gamma (non-linear)
-  aces2065,    // ACES storage format (linear)
-  acescg,      // ACES CG computation (linear)
-  acescc,      // ACES color correction (non-linear)
-  acescct,     // ACES color correction 2 (non-linear)
-  p3dci,       // P3 DCI (non-linear)
-  p3d60,       // P3 variation for D60 (non-linear)
-  p3d65,       // P3 variation for D65 (non-linear)
-  p3display,   // Apple display P3
-};
-
-// Conversion between rgb color spaces
-vec3f        color_to_xyz(const vec3f& col, color_space from);
-vec3f        xyz_to_color(const vec3f& xyz, color_space to);
-inline vec3f convert_color(const vec3f& col, color_space from, color_space to) {
-  if (from == to) return col;
-  return xyz_to_color(color_to_xyz(col, from), to);
 }
 
 }  // namespace yocto
