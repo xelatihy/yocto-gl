@@ -139,7 +139,7 @@ int main(int argc, const char** argv) {
   if (normals) {
     auto timer    = print_timed("computing normals");
     shape.normals = compute_normals(shape);
-    if (!shape.quadspos.empty()) shape.quadsnorm= shape.quadspos;
+    if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
   }
 
   // compute geodesics and store them as colors
@@ -173,40 +173,42 @@ int main(int argc, const char** argv) {
   }
 
   if (p0 != -1) {
-    auto state        = discrete_surface{};
-    state.triangles   = shape.triangles;
-    state.positions   = shape.positions;
-    state.normals     = shape.normals;
-    state.tags        = vector<int>(state.triangles.size(), 0);
-    state.adjacencies = face_adjacencies(state.triangles);
-    state.solver      = make_geodesic_solver(
-        state.triangles, state.adjacencies, shape.positions);
+    auto tags        = vector<int>(shape.triangles.size(), 0);
+    auto adjacencies = face_adjacencies(shape.triangles);
+    auto solver      = make_geodesic_solver(
+        shape.triangles, adjacencies, shape.positions);
 
     auto          paths = vector<surface_path>();
     vector<float> fields[3];
-    fields[0] = compute_geodesic_distances(state.solver, {p0});
-    fields[1] = compute_geodesic_distances(state.solver, {p1});
-    fields[2] = compute_geodesic_distances(state.solver, {p2});
+    fields[0] = compute_geodesic_distances(solver, {p0});
+    fields[1] = compute_geodesic_distances(solver, {p1});
+    fields[2] = compute_geodesic_distances(solver, {p2});
     for (int i = 0; i < 3; ++i) {
       for (auto& f : fields[i]) f = -f;
     }
 
-    paths.push_back(follow_gradient_field(state.triangles, state.positions,
-        state.adjacencies, state.tags, 0, fields[1], p0, p1));
+    paths.push_back(follow_gradient_field(shape.triangles, shape.positions,
+        adjacencies, tags, 0, fields[1], p0, p1));
 
-    paths.push_back(follow_gradient_field(state.triangles, state.positions,
-        state.adjacencies, state.tags, 0, fields[2], p1, p2));
+    paths.push_back(follow_gradient_field(shape.triangles, shape.positions,
+        adjacencies, tags, 0, fields[2], p1, p2));
 
-    paths.push_back(follow_gradient_field(state.triangles, state.positions,
-        state.adjacencies, state.tags, 0, fields[0], p2, p0));
+    paths.push_back(follow_gradient_field(shape.triangles, shape.positions,
+        adjacencies, tags, 0, fields[0], p2, p0));
 
-    slice_paths(state, {0}, 1, 2, paths);
-    shape.triangles = state.triangles;
-    shape.positions = state.positions;
-    shape.normals   = state.normals;
-    for (int i = 0; i < shape.triangles.size(); ++i) {
-      if (state.tags[i] == 2) shape.triangles[i] = {-1, -1, -1};
+    vector<vec2i> lines;
+    vector<vec3f> positions;
+    for (int i = 0; i < 3; i++) {
+      auto [line, pos] = make_lines_from_path(paths[i], shape.positions);
+      for (int k = 0; k < line.size(); k++) {
+        line[k] += (int)lines.size();
+      }
+      lines += line;
+      positions += pos;
     }
+    shape           = {};
+    shape.lines     = lines;
+    shape.positions = positions;
   }
 
   // save mesh
