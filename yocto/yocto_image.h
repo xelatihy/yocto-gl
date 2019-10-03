@@ -149,15 +149,11 @@ inline bool operator!=(const image<T>& a, const image<T>& b);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Lookup an image at coordinates `ij`
-inline vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_srgb);
-inline vec4f lookup_image(const image<vec4b>& img, const vec2i& ij, bool as_srgb);
-
 // Evaluates a color image at a point `uv`.
 inline vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
-    bool as_srgb, bool no_interpolation = false, bool clamp_to_edge = false);
+    bool no_interpolation = false, bool clamp_to_edge = false);
 inline vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
-    bool as_srgb, bool no_interpolation = false, bool clamp_to_edge = false);
+    bool as_linear = false, bool no_interpolation = false, bool clamp_to_edge = false);
 
 }  // namespace yocto
 
@@ -629,16 +625,12 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
 namespace yocto {
 
 // Lookup an image at coordinates `ij`
-inline vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_srgb) {
-  if(as_srgb) {
-    return rgb_to_srgb(img[ij]);
-  } else {
-    return img[ij];
-  }
+inline vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_linear) {
+  return img[ij];
 }
 inline vec4f lookup_image(
-    const image<vec4b>& img, const vec2i& ij, bool as_srgb) {
-  if (as_srgb) {
+    const image<vec4b>& img, const vec2i& ij, bool as_linear) {
+  if (as_linear) {
     return byte_to_float(img[ij]);
   } else {
     return srgb_to_rgb(byte_to_float(img[ij]));
@@ -648,7 +640,7 @@ inline vec4f lookup_image(
 // Evaluate a texture
 template <typename T>
 inline vec4f eval_image_generic(const image<T>& img, const vec2f& uv,
-    bool as_srgb, bool no_interpolation, bool clamp_to_edge) {
+    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
   if (img.empty()) return zero4f;
 
   // get image width/height
@@ -671,25 +663,25 @@ inline vec4f eval_image_generic(const image<T>& img, const vec2f& uv,
   auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
   auto u = s - i, v = t - j;
 
-  if (no_interpolation) return lookup_image(img, {i, j}, as_srgb);
+  if (no_interpolation) return lookup_image(img, {i, j}, as_linear);
 
   // handle interpolation
-  return lookup_image(img, {i, j}, as_srgb) * (1 - u) * (1 - v) +
-         lookup_image(img, {i, jj}, as_srgb) * (1 - u) * v +
-         lookup_image(img, {ii, j}, as_srgb) * u * (1 - v) +
-         lookup_image(img, {ii, jj}, as_srgb) * u * v;
+  return lookup_image(img, {i, j}, as_linear) * (1 - u) * (1 - v) +
+         lookup_image(img, {i, jj}, as_linear) * (1 - u) * v +
+         lookup_image(img, {ii, j}, as_linear) * u * (1 - v) +
+         lookup_image(img, {ii, jj}, as_linear) * u * v;
 }
 
 // Evaluates a color image at a point `uv`.
 inline vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
-    bool as_srgb, bool no_interpolation, bool clamp_to_edge) {
+    bool no_interpolation, bool clamp_to_edge) {
   return eval_image_generic(
-      img, uv, as_srgb, no_interpolation, clamp_to_edge);
+      img, uv, false, no_interpolation, clamp_to_edge);
 }
 inline vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
-    bool as_srgb, bool no_interpolation, bool clamp_to_edge) {
+    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
   return eval_image_generic(
-      img, uv, as_srgb, no_interpolation, clamp_to_edge);
+      img, uv, as_linear, no_interpolation, clamp_to_edge);
 }
 
 }  // namespace yocto

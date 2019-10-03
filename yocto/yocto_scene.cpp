@@ -851,12 +851,10 @@ vec4f lookup_texture(const yocto_texture& texture, const vec2i& ij,
 // Evaluate a texture
 vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (texture.hdr.empty() && texture.ldr.empty()) return {1, 1, 1, 1};
-
   if(!texture.hdr.empty()) {
-    return eval_image(texture.hdr, texcoord, false, no_interpolation, clamp_to_edge);
+    return eval_image(texture.hdr, texcoord, no_interpolation, clamp_to_edge);
   } else if(!texture.ldr.empty()) {
-    return eval_image(texture.ldr, texcoord, !ldr_as_linear, no_interpolation, clamp_to_edge);
+    return eval_image(texture.ldr, texcoord, ldr_as_linear, no_interpolation, clamp_to_edge);
   } else {
     return {1,1,1,1};
   }
