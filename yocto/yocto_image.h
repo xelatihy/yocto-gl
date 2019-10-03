@@ -423,8 +423,20 @@ void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
 void make_volume_preset(volume<float>& vol, const string& type);
 
 }  // namespace yocto
+
 // -----------------------------------------------------------------------------
-// VOLUME IMAGE IO
+// VOLUME SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Evaluates a color image at a point `uv`.
+inline float eval_volume(const image<float>& img, const vec3f& uvw,
+    bool no_interpolation = false, bool clamp_to_edge = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VOLUME IO
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -835,6 +847,62 @@ template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b) {
   return a.size() != b.size() || a.voxels != b.voxels;
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VOLUME SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Lookup volume
+inline float lookup_volume(const volume<float>& vol, const vec3i& ijk, bool as_linear) {
+  return vol[ijk];
+}
+
+// Evaluates a color image at a point `uv`.
+inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
+    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
+  if (vol.empty()) return 0;
+
+  // get coordinates normalized for tiling
+  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().x;
+  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().y;
+  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().z;
+
+  // get image coordinates and residuals
+  auto i  = clamp((int)s, 0, vol.size().x - 1);
+  auto j  = clamp((int)t, 0, vol.size().y - 1);
+  auto k  = clamp((int)r, 0, vol.size().z - 1);
+  auto ii = (i + 1) % vol.size().x, jj = (j + 1) % vol.size().y, kk = (k + 1) % vol.size().z;
+  auto u = s - i, v = t - j, w = r - k;
+
+  // nearest-neighbor interpolation
+  if (no_interpolation) {
+    i = u < 0.5 ? i : min(i + 1, vol.size().x - 1);
+    j = v < 0.5 ? j : min(j + 1, vol.size().y - 1);
+    k = w < 0.5 ? k : min(k + 1, vol.size().z - 1);
+    return lookup_volume(vol, {i, j, k}, ldr_as_linear);
+  }
+
+  // trilinear interpolation
+  return lookup_volume(vol, {i, j, k}, ldr_as_linear) * (1 - u) *
+             (1 - v) * (1 - w) +
+         lookup_volume(vol, {ii, j, k}, ldr_as_linear) * u * (1 - v) *
+             (1 - w) +
+         lookup_volume(vol, {i, jj, k}, ldr_as_linear) * (1 - u) * v *
+             (1 - w) +
+         lookup_volume(vol, {i, j, kk}, ldr_as_linear) * (1 - u) *
+             (1 - v) * w +
+         lookup_volume(vol, {i, jj, kk}, ldr_as_linear) * (1 - u) * v *
+             w +
+         lookup_volume(vol, {ii, j, kk}, ldr_as_linear) * u * (1 - v) *
+             w +
+         lookup_volume(vol, {ii, jj, k}, ldr_as_linear) * u * v *
+             (1 - w) +
+         lookup_volume(vol, {ii, jj, kk}, ldr_as_linear) * u * v * w;
+}
+
 
 }  // namespace yocto
 

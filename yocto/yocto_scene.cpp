@@ -862,9 +862,9 @@ vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
 
 // Lookup a texture value
 float lookup_voltexture(
-    const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear) {
+    const yocto_voltexture& texture, const vec3i& ijk, bool ldr_as_linear) {
   if (!texture.vol.empty()) {
-    return texture.vol[{i, j, k}];
+    return texture.vol[ijk];
   } else {
     return 0;
   }
@@ -873,49 +873,11 @@ float lookup_voltexture(
 // Evaluate a volume texture
 float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
     bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (texture.vol.empty()) return 1;
-
-  // get image width/height
-  auto width  = texture.vol.size().x;
-  auto height = texture.vol.size().y;
-  auto depth  = texture.vol.size().z;
-
-  // get coordinates normalized for tiling
-  auto s = clamp((texcoord.x + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
-  auto t = clamp((texcoord.y + 1.0f) * 0.5f, 0.0f, 1.0f) * height;
-  auto r = clamp((texcoord.z + 1.0f) * 0.5f, 0.0f, 1.0f) * depth;
-
-  // get image coordinates and residuals
-  auto i  = clamp((int)s, 0, width - 1);
-  auto j  = clamp((int)t, 0, height - 1);
-  auto k  = clamp((int)r, 0, depth - 1);
-  auto ii = (i + 1) % width, jj = (j + 1) % height, kk = (k + 1) % depth;
-  auto u = s - i, v = t - j, w = r - k;
-
-  // nearest-neighbor interpolation
-  if (no_interpolation) {
-    i = u < 0.5 ? i : min(i + 1, width - 1);
-    j = v < 0.5 ? j : min(j + 1, height - 1);
-    k = w < 0.5 ? k : min(k + 1, depth - 1);
-    return lookup_voltexture(texture, i, j, k, ldr_as_linear);
+  if (!texture.vol.empty()) {
+    return eval_volume(texture.vol, texcoord, ldr_as_linear, no_interpolation, clamp_to_edge);
+  } else {
+    return 1;
   }
-
-  // trilinear interpolation
-  return lookup_voltexture(texture, i, j, k, ldr_as_linear) * (1 - u) *
-             (1 - v) * (1 - w) +
-         lookup_voltexture(texture, ii, j, k, ldr_as_linear) * u * (1 - v) *
-             (1 - w) +
-         lookup_voltexture(texture, i, jj, k, ldr_as_linear) * (1 - u) * v *
-             (1 - w) +
-         lookup_voltexture(texture, i, j, kk, ldr_as_linear) * (1 - u) *
-             (1 - v) * w +
-         lookup_voltexture(texture, i, jj, kk, ldr_as_linear) * (1 - u) * v *
-             w +
-         lookup_voltexture(texture, ii, j, kk, ldr_as_linear) * u * (1 - v) *
-             w +
-         lookup_voltexture(texture, ii, jj, k, ldr_as_linear) * u * v *
-             (1 - w) +
-         lookup_voltexture(texture, ii, jj, kk, ldr_as_linear) * u * v * w;
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.

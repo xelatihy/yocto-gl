@@ -402,7 +402,7 @@ vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 float lookup_voltexture(
-    const yocto_voltexture& texture, int i, int j, int k, bool ldr_as_linear);
+    const yocto_voltexture& texture, const vec3i& ijk, bool ldr_as_linear);
 float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
