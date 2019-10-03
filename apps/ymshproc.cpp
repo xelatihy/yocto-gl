@@ -36,6 +36,9 @@ using namespace yocto;
 int main(int argc, const char** argv) {
   // command line parameters
   auto geodesic_source      = -1;
+  int  p0                   = -1;
+  int  p1                   = -1;
+  int  p2                   = -1;
   auto num_geodesic_samples = 0;
   auto geodesic_scale       = 30.0f;
   auto slice                = false;
@@ -54,6 +57,9 @@ int main(int argc, const char** argv) {
   auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
   add_cli_option(
       cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
+  add_cli_option(cli, "--path-vertex0,-p0", p0, "Path vertex 0");
+  add_cli_option(cli, "--path-vertex1,-p1", p1, "Path vertex 1");
+  add_cli_option(cli, "--path-vertex2,-p2", p2, "Path vertex 2");
   add_cli_option(cli, "--num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
   add_cli_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
@@ -133,7 +139,7 @@ int main(int argc, const char** argv) {
   if (normals) {
     auto timer    = print_timed("computing normals");
     shape.normals = compute_normals(shape);
-    if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
+    if (!shape.quadspos.empty()) shape.quadsnorm= shape.quadspos;
   }
 
   // compute geodesics and store them as colors
@@ -158,8 +164,48 @@ int main(int argc, const char** argv) {
         if (tags[i] == 1) shape.triangles[i] = {-1, -1, -1};
       }
     } else {
-      shape.colors = vector<vec4f>{};
-      distance_to_color(shape.colors, field, geodesic_scale);
+      shape.colors = vector<vec4f>(shape.positions.size());
+      for (int i = 0; i < shape.colors.size(); ++i) {
+        shape.colors[i] = vec4f(sinf(geodesic_scale * field[i]));
+      }
+      // distance_to_color(shape.colors, field, geodesic_scale);
+    }
+  }
+
+  if (p0 != -1) {
+    auto state        = discrete_surface{};
+    state.triangles   = shape.triangles;
+    state.positions   = shape.positions;
+    state.normals     = shape.normals;
+    state.tags        = vector<int>(state.triangles.size(), 0);
+    state.adjacencies = face_adjacencies(state.triangles);
+    state.solver      = make_geodesic_solver(
+        state.triangles, state.adjacencies, shape.positions);
+
+    auto          paths = vector<surface_path>();
+    vector<float> fields[3];
+    fields[0] = compute_geodesic_distances(state.solver, {p0});
+    fields[1] = compute_geodesic_distances(state.solver, {p1});
+    fields[2] = compute_geodesic_distances(state.solver, {p2});
+    for (int i = 0; i < 3; ++i) {
+      for (auto& f : fields[i]) f = -f;
+    }
+
+    paths.push_back(follow_gradient_field(state.triangles, state.positions,
+        state.adjacencies, state.tags, 0, fields[1], p0, p1));
+
+    paths.push_back(follow_gradient_field(state.triangles, state.positions,
+        state.adjacencies, state.tags, 0, fields[2], p1, p2));
+
+    paths.push_back(follow_gradient_field(state.triangles, state.positions,
+        state.adjacencies, state.tags, 0, fields[0], p2, p0));
+
+    slice_paths(state, {0}, 1, 2, paths);
+    shape.triangles = state.triangles;
+    shape.positions = state.positions;
+    shape.normals   = state.normals;
+    for (int i = 0; i < shape.triangles.size(); ++i) {
+      if (state.tags[i] == 2) shape.triangles[i] = {-1, -1, -1};
     }
   }
 
