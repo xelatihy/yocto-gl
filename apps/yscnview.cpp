@@ -872,50 +872,13 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
   draw_gllabel(win, "color", "%ld", shape.colors.size());
   draw_gllabel(win, "radius", "%ld", shape.radius.size());
   draw_gllabel(win, "tangsp", "%ld", shape.tangents.size());
-  if (edited && old_filename != shape.filename) {
-    try {
-      load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.positions, shape.normals, shape.texcoords,
-          shape.colors, shape.radius);
-    } catch (std::exception& e) {
-      push_glmessage("cannot load " + shape.filename);
-      log_glinfo(win, "cannot load " + shape.filename);
-      log_glinfo(win, e.what());
-    }
-    // TODO: update mesh state
-    // TODO: update lights
-  }
-  return edited;
-}
-
-inline bool draw_glwidgets_subdiv(
-    const opengl_window& win, app_state& scene, int id) {
-  auto& shape        = scene.scene.subdivs[id];
-  auto  old_filename = shape.filename;
-  auto  edited       = 0;
-  edited += draw_gltextinput(win, "name", shape.name);
-  edited += draw_gltextinput(win, "filename", shape.filename);
   edited += draw_glslider(win, "subdivisions", shape.subdivisions, 0, 10);
   edited += draw_glcheckbox(win, "catmullclark", shape.catmullclark);
   edited += draw_glcheckbox(win, "smooth", shape.smooth);
   edited += draw_glcheckbox(win, "facevarying", shape.facevarying);
-  edited += draw_glcombobox(
-      win, "shape", shape.shape, scene.scene.shapes, true);
   edited += draw_glcombobox(win, "displacement_tex", shape.displacement_tex,
       scene.scene.textures, true);
   edited += draw_glslider(win, "displacement", shape.displacement, 0, 1);
-  draw_gllabel(win, "points", "%ld", shape.points.size());
-  draw_gllabel(win, "lines", "%ld", shape.lines.size());
-  draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
-  draw_gllabel(win, "quads", "%ld", shape.quads.size());
-  draw_gllabel(win, "quads pos", "%ld", shape.quadspos.size());
-  draw_gllabel(win, "quads norm", "%ld", shape.quadsnorm.size());
-  draw_gllabel(win, "quads texcoord", "%ld", shape.quadstexcoord.size());
-  draw_gllabel(win, "pos", "%ld", shape.positions.size());
-  draw_gllabel(win, "norm", "%ld", shape.normals.size());
-  draw_gllabel(win, "texcoord", "%ld", shape.texcoords.size());
-  draw_gllabel(win, "color", "%ld", shape.colors.size());
-  draw_gllabel(win, "radius", "%ld", shape.radius.size());
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
@@ -926,12 +889,6 @@ inline bool draw_glwidgets_subdiv(
       log_glinfo(win, "cannot load " + shape.filename);
       log_glinfo(win, e.what());
     }
-    tesselate_subdiv(scene.scene, shape);
-    // TODO: update mesh state
-    // TODO: update lights
-  }
-  if (edited && old_filename == shape.filename) {
-    tesselate_subdiv(scene.scene, shape);
     // TODO: update mesh state
     // TODO: update lights
   }
@@ -1082,12 +1039,8 @@ void draw_glwidgets(const opengl_window& win) {
       draw_glwidgets_material(win, app, app.selection.second);
     } else if (app.selection.first == "shape") {
       draw_glcombobox(
-          win, "selection##2", app.selection.second, app.scene.subdivs);
+          win, "selection##2", app.selection.second, app.scene.shapes);
       draw_glwidgets_shape(win, app, app.selection.second);
-    } else if (app.selection.first == "subdiv") {
-      draw_glcombobox(
-          win, "selection##2", app.selection.second, app.scene.subdivs);
-      draw_glwidgets_subdiv(win, app, app.selection.second);
     } else if (app.selection.first == "instance") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.instances);

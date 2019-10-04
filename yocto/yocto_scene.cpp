@@ -93,48 +93,47 @@ void compute_normals(const yocto_shape& shape, vector<vec3f>& normals) {
 }
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
-    bool update_normals) {
-  if (!subdivisions) return;
+void subdivide_shape(yocto_shape& shape) {
+  if (!shape.subdivisions) return;
   if (!shape.points.empty()) {
     throw std::runtime_error("point subdivision not supported");
   } else if (!shape.lines.empty()) {
     subdivide_lines(shape.lines, shape.positions, shape.normals,
         shape.texcoords, shape.colors, shape.radius, shape.lines,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, subdivisions);
+        shape.radius, shape.subdivisions);
   } else if (!shape.triangles.empty()) {
     subdivide_triangles(shape.triangles, shape.positions, shape.normals,
         shape.texcoords, shape.colors, shape.radius, shape.triangles,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, subdivisions);
-  } else if (!shape.quads.empty() && !catmullclark) {
+        shape.radius, shape.subdivisions);
+  } else if (!shape.quads.empty() && !shape.catmullclark) {
     subdivide_quads(shape.quads, shape.positions, shape.normals,
         shape.texcoords, shape.colors, shape.radius, shape.quads,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, subdivisions);
-  } else if (!shape.quads.empty() && catmullclark) {
+        shape.radius, shape.subdivisions);
+  } else if (!shape.quads.empty() && shape.catmullclark) {
     subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
         shape.texcoords, shape.colors, shape.radius, shape.quads,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, subdivisions);
-  } else if (!shape.quadspos.empty() && !catmullclark) {
+        shape.radius, shape.subdivisions);
+  } else if (!shape.quadspos.empty() && !shape.catmullclark) {
     subdivide_quads(shape.quadspos, shape.positions, shape.quadspos,
-        shape.positions, subdivisions);
+        shape.positions, shape.subdivisions);
     subdivide_quads(shape.quadsnorm, shape.normals, shape.quadsnorm,
-        shape.normals, subdivisions);
+        shape.normals, shape.subdivisions);
     subdivide_quads(shape.quadstexcoord, shape.texcoords, shape.quadstexcoord,
-        shape.texcoords, subdivisions);
-  } else if (!shape.quadspos.empty() && catmullclark) {
+        shape.texcoords, shape.subdivisions);
+  } else if (!shape.quadspos.empty() && shape.catmullclark) {
     subdivide_catmullclark(shape.quadspos, shape.positions, shape.quadspos,
-        shape.positions, subdivisions);
+        shape.positions, shape.subdivisions);
     subdivide_catmullclark(shape.quadstexcoord, shape.texcoords,
-        shape.quadstexcoord, shape.texcoords, subdivisions, true);
+        shape.quadstexcoord, shape.texcoords, shape.subdivisions, true);
   } else {
     throw std::runtime_error("empty shape");
   }
 
-  if (update_normals) {
+  if (shape.smooth) {
     if (!shape.quadspos.empty()) {
       shape.quadsnorm = shape.quadspos;
     }
@@ -142,8 +141,9 @@ void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
   }
 }
 // Apply displacement to a shape
-void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
-    float scale, bool update_normals) {
+void displace_shape(const yocto_scene& scene, yocto_shape& shape) {
+  if (!shape.displacement || shape.displacement_tex < 0) return;
+  auto& displacement = scene.textures[shape.displacement_tex];
   if (shape.texcoords.empty()) {
     throw std::runtime_error("missing texture coordinates");
     return;
@@ -157,9 +157,9 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
       auto disp = mean(
           xyz(eval_texture(displacement, shape.texcoords[vid], true)));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
-      shape.positions[vid] += normals[vid] * scale * disp;
+      shape.positions[vid] += normals[vid] * shape.displacement * disp;
     }
-    if (update_normals || !shape.normals.empty()) {
+    if (shape.smooth || !shape.normals.empty()) {
       compute_normals(shape, shape.normals);
     }
   } else {
@@ -173,7 +173,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
         auto disp = mean(
             xyz(eval_texture(displacement, shape.texcoords[qtxt[i]], true)));
         if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
-        offset[qpos[i]] += scale * disp;
+        offset[qpos[i]] += shape.displacement * disp;
         count[qpos[i]] += 1;
       }
     }
@@ -182,41 +182,47 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       shape.positions[vid] += normals[vid] * offset[vid] / count[vid];
     }
-    if (update_normals || !shape.normals.empty()) {
+    if (shape.smooth || !shape.normals.empty()) {
       shape.quadsnorm = shape.quadspos;
       compute_normals(shape, shape.normals);
     }
   }
 }
 
-void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv) {
-  auto& shape         = scene.shapes[subdiv.shape];
-  shape.positions     = subdiv.positions;
-  shape.normals       = subdiv.normals;
-  shape.texcoords     = subdiv.texcoords;
-  shape.colors        = subdiv.colors;
-  shape.radius        = subdiv.radius;
-  shape.points        = subdiv.points;
-  shape.lines         = subdiv.lines;
-  shape.triangles     = subdiv.triangles;
-  shape.quads         = subdiv.quads;
-  shape.quadspos      = subdiv.quadspos;
-  shape.quadsnorm     = subdiv.quadsnorm;
-  shape.quadstexcoord = subdiv.quadstexcoord;
-  shape.lines         = subdiv.lines;
-  if (subdiv.subdivisions) {
-    subdivide_shape(
-        shape, subdiv.subdivisions, subdiv.catmullclark, subdiv.smooth);
+void copy_shape_data(yocto_shape& dst, const yocto_shape& src) {
+  dst.points        = src.points;
+  dst.lines         = src.lines;
+  dst.triangles     = src.triangles;
+  dst.quads         = src.quads;
+  dst.quadspos      = src.quadspos;
+  dst.quadsnorm     = src.quadsnorm;
+  dst.quadstexcoord = src.quadstexcoord;
+  dst.positions     = src.positions;
+  dst.normals       = src.normals;
+  dst.texcoords     = src.texcoords;
+  dst.colors        = src.colors;
+  dst.radius        = src.radius;
+}
+
+void tesselate_subdiv(yocto_scene& scene, yocto_shape& shape) {
+  if (!shape.subdivisions && !shape.displacement) return;
+  if (shape.subdiv.empty()) {
+    auto& subdiv = shape.subdiv.emplace_back();
+    copy_shape_data(subdiv, shape);
+  } else {
+    copy_shape_data(shape, shape.subdiv.back());
   }
-  if (subdiv.displacement_tex >= 0) {
-    displace_shape(shape, scene.textures[subdiv.displacement_tex],
-        subdiv.displacement, subdiv.smooth);
+  if (shape.subdivisions) {
+    subdivide_shape(shape);
+  }
+  if (shape.displacement && shape.displacement_tex >= 0) {
+    displace_shape(scene, shape);
   }
 }
 
 // Updates tesselation.
 void tesselate_subdivs(yocto_scene& scene) {
-  for (auto& subdiv : scene.subdivs) tesselate_subdiv(scene, subdiv);
+  for (auto& shape : scene.shapes) tesselate_subdiv(scene, shape);
 }
 
 // Update animation transforms
@@ -861,27 +867,6 @@ vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
   }
 }
 
-// Lookup a texture value
-float lookup_voltexture(
-    const yocto_voltexture& texture, const vec3i& ijk, bool ldr_as_linear) {
-  if (!texture.vol.empty()) {
-    return texture.vol[ijk];
-  } else {
-    return 0;
-  }
-}
-
-// Evaluate a volume texture
-float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
-    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (!texture.vol.empty()) {
-    return eval_volume(
-        texture.vol, texcoord, ldr_as_linear, no_interpolation, clamp_to_edge);
-  } else {
-    return 1;
-  }
-}
-
 // Set and evaluate camera parameters. Setters take zeros as default values.
 vec2f camera_fov(const yocto_camera& camera) {
   assert(!camera.orthographic);
@@ -1134,10 +1119,8 @@ namespace yocto {
 void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
   auto offset_cameras      = scene.cameras.size();
   auto offset_textures     = scene.textures.size();
-  auto offset_voltextures  = scene.voltextures.size();
   auto offset_materials    = scene.materials.size();
   auto offset_shapes       = scene.shapes.size();
-  auto offset_subdivs      = scene.subdivs.size();
   auto offset_instances    = scene.instances.size();
   auto offset_environments = scene.environments.size();
   auto offset_nodes        = scene.nodes.size();
@@ -1146,14 +1129,10 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
       scene.cameras.end(), merge.cameras.begin(), merge.cameras.end());
   scene.textures.insert(
       scene.textures.end(), merge.textures.begin(), merge.textures.end());
-  scene.voltextures.insert(scene.voltextures.end(), merge.voltextures.begin(),
-      merge.voltextures.end());
   scene.materials.insert(
       scene.materials.end(), merge.materials.begin(), merge.materials.end());
   scene.shapes.insert(
       scene.shapes.end(), merge.shapes.begin(), merge.shapes.end());
-  scene.subdivs.insert(
-      scene.subdivs.end(), merge.subdivs.begin(), merge.subdivs.end());
   scene.instances.insert(
       scene.instances.end(), merge.instances.begin(), merge.instances.end());
   scene.environments.insert(scene.environments.end(),
@@ -1172,15 +1151,11 @@ void merge_scene(yocto_scene& scene, const yocto_scene& merge) {
       material.transmission_tex += offset_textures;
     if (material.roughness_tex >= 0) material.roughness_tex += offset_textures;
     if (material.normal_tex >= 0) material.normal_tex += offset_textures;
-    if (material.voldensity_tex >= 0)
-      material.voldensity_tex += offset_voltextures;
   }
-  for (auto subdiv_id = offset_subdivs; subdiv_id < scene.subdivs.size();
-       subdiv_id++) {
-    auto& subdiv = scene.subdivs[subdiv_id];
-    if (subdiv.shape >= 0) subdiv.shape += offset_shapes;
-    if (subdiv.displacement_tex >= 0)
-      subdiv.displacement_tex += offset_textures;
+  for (auto shape_id = offset_shapes; shape_id < scene.shapes.size();
+       shape_id++) {
+    auto& shape = scene.shapes[shape_id];
+    if (shape.displacement_tex >= 0) shape.displacement_tex += offset_textures;
   }
   for (auto instance_id = offset_instances;
        instance_id < scene.instances.size(); instance_id++) {
@@ -1232,11 +1207,9 @@ vector<string> format_stats(const yocto_scene& scene, bool verbose) {
   auto stats = vector<string>{};
   stats.push_back("cameras:      " + format(scene.cameras.size()));
   stats.push_back("shapes:       " + format(scene.shapes.size()));
-  stats.push_back("subdivs:      " + format(scene.subdivs.size()));
   stats.push_back("instances:    " + format(scene.instances.size()));
   stats.push_back("environments: " + format(scene.environments.size()));
   stats.push_back("textures:     " + format(scene.textures.size()));
-  stats.push_back("voltextures:  " + format(scene.voltextures.size()));
   stats.push_back("materials:    " + format(scene.materials.size()));
   stats.push_back("nodes:        " + format(scene.nodes.size()));
   stats.push_back("animations:   " + format(scene.animations.size()));
@@ -1263,12 +1236,6 @@ vector<string> format_stats(const yocto_scene& scene, bool verbose) {
       "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
         return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
       })));
-  stats.push_back("volxels1f:    " +
-                  format(accumulate(scene.voltextures, [](auto& texture) {
-                    return (size_t)texture.vol.size().x *
-                           (size_t)texture.vol.size().y *
-                           (size_t)texture.vol.size().z;
-                  })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));
 
@@ -1384,7 +1351,6 @@ void trim_memory(yocto_scene& scene) {
   scene.materials.shrink_to_fit();
   scene.textures.shrink_to_fit();
   scene.environments.shrink_to_fit();
-  scene.voltextures.shrink_to_fit();
   scene.nodes.shrink_to_fit();
   scene.animations.shrink_to_fit();
 }
@@ -1414,9 +1380,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool notextures) {
 
   check_names(scene.cameras, "camera");
   check_names(scene.shapes, "shape");
-  check_names(scene.subdivs, "subdiv");
   check_names(scene.textures, "texture");
-  check_names(scene.voltextures, "voltexture");
   check_names(scene.materials, "material");
   check_names(scene.instances, "instance");
   check_names(scene.environments, "environment");

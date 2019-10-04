@@ -77,8 +77,6 @@ void save_scene(const string& filename, const yocto_scene& scene,
 // Load/save scene textures
 void load_texture(yocto_texture& texture, const string& dirname);
 void save_texture(const yocto_texture& texture, const string& dirname);
-void load_voltexture(yocto_voltexture& texture, const string& dirname);
-void save_voltexture(const yocto_voltexture& texture, const string& dirname);
 void load_textures(
     yocto_scene& scene, const string& dirname, const load_params& params);
 void save_textures(
@@ -87,8 +85,6 @@ void save_textures(
 // Load/save scene shapes
 void load_shape(yocto_shape& shape, const string& dirname);
 void save_shape(const yocto_shape& shape, const string& dirname);
-void load_subdiv(yocto_subdiv& subdiv, const string& dirname);
-void save_subdiv(const yocto_subdiv& subdiv, const string& dirname);
 void load_shapes(
     yocto_scene& scene, const string& dirname, const load_params& params);
 void save_shapes(

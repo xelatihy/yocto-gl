@@ -140,22 +140,6 @@ int main(int argc, const char** argv) {
       sid++;
     }
   }
-  // add missing mesh names if necessary
-  if (!subdiv_directory.empty() && subdiv_directory.back() != '/')
-    subdiv_directory += '/';
-  if (mesh_filenames) {
-    auto sid = 0;
-    for (auto& subdiv : scene.subdivs) {
-      if (!subdiv.quadspos.empty()) {
-        subdiv.filename = subdiv_directory + "subdiv_" + std::to_string(sid) +
-                          ".obj";
-      } else {
-        subdiv.filename = subdiv_directory + "subdiv_" + std::to_string(sid) +
-                          ".ply";
-      }
-      sid++;
-    }
-  }
 
   // make a directory if needed
   auto dirname  = get_dirname(output);
@@ -163,11 +147,7 @@ int main(int argc, const char** argv) {
   if (!dirname.empty()) dirnames.insert(dirname);
   for (auto& shape : scene.shapes)
     dirnames.insert(dirname + get_dirname(shape.filename));
-  for (auto& subdiv : scene.subdivs)
-    dirnames.insert(dirname + get_dirname(subdiv.filename));
   for (auto& texture : scene.textures)
-    dirnames.insert(dirname + get_dirname(texture.filename));
-  for (auto& texture : scene.voltextures)
     dirnames.insert(dirname + get_dirname(texture.filename));
   for (auto& dir : dirnames) {
     if (!mkdir(dir)) {
