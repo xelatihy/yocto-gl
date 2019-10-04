@@ -172,18 +172,14 @@ void fix_names(yocto_scene& scene) {
   };
   fix_names(scene.cameras, "camera");
   fix_names(scene.textures, "texture");
-  fix_names(scene.voltextures, "voltexture");
   fix_names(scene.materials, "material");
   fix_names(scene.shapes, "shape");
-  fix_names(scene.subdivs, "subdiv");
   fix_names(scene.instances, "instance");
   fix_names(scene.environments, "environment");
   fix_names(scene.animations, "animation");
   fix_names(scene.nodes, "node");
   fix_filenames(scene.textures, "texture", "textures/", ".png");
-  fix_filenames(scene.voltextures, "voltexture", "voltextures/", ".yvol");
-  fix_filenames(scene.shapes, "shape", "shapes/", ".png");
-  fix_filenames(scene.subdivs, "subdiv", "subdivs/", ".yvol");
+  fix_filenames(scene.shapes, "shape", "shapes/", ".ply");
 }
 void rename_instances(yocto_scene& scene) {
   auto shape_names = vector<string>(scene.shapes.size());

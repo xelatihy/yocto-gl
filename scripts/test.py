@@ -33,7 +33,7 @@ def tonemap(image='*.yaml'):
             if k in filename: text = msg[k]
         if not text: continue
         img = Image.open(outname)
-        w, h = img.size
+        _, h = img.size
         draw = ImageDraw.Draw(img)
         tw, _ = draw.textsize(text, font=font)
         draw.rectangle([8,h-26-8,8+8+tw,h-8], (0,0,0))
@@ -422,13 +422,23 @@ def make_tests():
                 "name": "uvcylinder", "filename": "shapes/test-uvcylinder.ply", "preset": "test-uvcylinder"
             },
             {
-                "name": "sphere-displaced", "filename": "shapes/test-sphere-displaced.obj", "preset": "test-sphere-displaced"
+                "name": "sphere-displaced", "filename": "shapes/test-sphere-displaced.obj", "preset": "test-sphere-displaced",
+                "facevarying": True,
+                "displacement": 0.025,
+                "displacement_tex": "bumps-displacement"
             },
             {
-                "name": "cube-subdiv", "filename": "shapes/test-cube-subdiv.obj", "preset": "test-cube-subdiv"
+                "name": "cube-subdiv", "filename": "shapes/test-cube-subdiv.obj", "preset": "test-cube-subdiv",
+                "subdivisions": 4,
+                "catmullclark": True,
+                "smooth": True,
+                "facevarying": True
             },
             {
-                "name": "suzanne-subdiv", "filename": "shapes/test-suzanne-subdiv.obj", "preset": "test-suzanne-subdiv"
+                "name": "suzanne-subdiv", "filename": "shapes/test-suzanne-subdiv.obj", "preset": "test-suzanne-subdiv",
+                "subdivisions": 2,
+                "catmullclark": True,
+                "smooth": True
             },
             {
                 "name": "hairball1", "filename": "shapes/test-hairball1.ply", "preset": "test-hairball1"
@@ -454,30 +464,6 @@ def make_tests():
             {
                 "name": "largearealight2", "filename": "shapes/test-largearealight2.ply", "preset": "test-largearealight2"
             }
-        ],
-        "subdivs": [
-            {
-                "name": "sphere-displaced", "filename": "subdivs/test-sphere-displaced.obj", "preset": "test-sphere-displaced",
-                "shape": "sphere-displaced",
-                "facevarying": True,
-                "displacement": 0.025,
-                "displacement_tex": "bumps-displacement"
-            },
-            {
-                "name": "cube-subdiv", "filename": "subdivs/test-cube-subdiv.obj", "preset": "test-cube-subdiv",
-                "shape": "cube-subdiv",
-                "subdivisions": 4,
-                "catmullclark": True,
-                "smooth": True,
-                "facevarying": True
-            },
-            {
-                "name": "suzanne-subdiv", "filename": "subdivs/test-suzanne-subdiv.obj", "preset": "test-suzanne-subdiv",
-                "shape": "suzanne-subdiv",
-                "subdivisions": 2,
-                "catmullclark": True,
-                "smooth": True
-            },
         ],
         "instances": [
             {
@@ -561,7 +547,7 @@ def make_tests():
             }
         ]
     }
-    def make_test(name, shapes, materials, lights, xoffsets=[ -0.4, -0.2, 0, 0.2, 0.4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1], subdivs=[], inrow=True, new_cameras=False):
+    def make_test(name, shapes, materials, lights, xoffsets=[ -0.4, -0.2, 0, 0.2, 0.4 ], yoffsets=[0,0,0,0,0], zoffsets=[0,0,0,0,0], xscales=[1,1,1,1,1], yscales=[1,1,1,1,1], zscales=[1,1,1,1,1], inrow=True, new_cameras=False):
         import copy
         def remove_preset(filename):
             splits = filename.rpartition('::')
@@ -600,20 +586,12 @@ def make_tests():
                 for instance in scene['instances']:
                     if instance['material'] == remove_preset(material['name']): used = True
                 if used: scene['materials'] += [material] 
-            old_subdivs = scene['subdivs']
-            scene['subdivs'] = []
-            for subdiv in old_subdivs:
-                used = False
-                if remove_preset(subdiv['name']) in subdivs:
-                    scene['subdivs'] += [subdiv] 
             old_shapes = scene['shapes']
             scene['shapes'] = []
             for shape in old_shapes:
                 used = False
                 for instance in scene['instances']:
                     if instance['shape'] == remove_preset(shape['name']): used = True
-                for subdiv in scene['subdivs']:
-                    if subdiv['shape'] == remove_preset(shape['name']): used = True
                 if used: scene['shapes'] += [shape] 
             old_textures = scene['textures']
             scene['textures'] = []
@@ -624,8 +602,8 @@ def make_tests():
                     if 'diffuse_tex' in material and material['diffuse_tex'] == remove_preset(texture['name']): used = True
                     if 'normal_tex' in material and material['normal_tex'] == remove_preset(texture['name']): used = True
                     if 'displacement_tex' in material and material['displacement_tex'] == remove_preset(texture['name']): used = True
-                for subdiv in scene['subdivs']:
-                    if 'displacement_tex' in subdiv and subdiv['displacement_tex'] == remove_preset(texture['name']): used = True
+                for shape in scene['shapes']:
+                    if 'displacement_tex' in shape and shape['displacement_tex'] == remove_preset(texture['name']): used = True
                 for environment in scene['environments']:
                     if environment['emission_tex'] == remove_preset(texture['name']): used = True
                 if used: scene['textures'] += [texture] 
@@ -645,17 +623,16 @@ def make_tests():
             write_yaml_objects(f, 'voltextures')
             write_yaml_objects(f, 'materials')
             write_yaml_objects(f, 'shapes')
-            write_yaml_objects(f, 'subdivs')
             write_yaml_objects(f, 'instances')
             write_yaml_objects(f, 'environments')
     make_test('tests/features1.yaml', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ["uvgrid-coated", "volume-glass", "volume-jade", "plastic-rough-bumped", "metal-rough"], mixed_lights)
-    make_test('tests/features2.yaml', ['sphere', 'suzanne-subdiv', 'hairball1', 'sphere-displaced', 'cube', '', '', 'hairball-interior', '', ''], ["uvgrid", "plastic-rough", "hair", "plastic-rough", "uvgrid", '', '', 'hair', '', ''], mixed_lights, subdivs=['suzanne-subdiv', "sphere-displaced"])
+    make_test('tests/features2.yaml', ['sphere', 'suzanne-subdiv', 'hairball1', 'sphere-displaced', 'cube', '', '', 'hairball-interior', '', ''], ["uvgrid", "plastic-rough", "hair", "plastic-rough", "uvgrid", '', '', 'hair', '', ''], mixed_lights)
     make_test('tests/materials1.yaml', ['sphere', 'sphere', 'sphere', 'sphere', 'sphere', 'bunny', 'bunny', 'bunny', 'bunny', 'bunny'], ["plastic-sharp", "plastic-rough", "matte", "metal-sharp", "metal-rough", "plastic-sharp", "plastic-rough", "matte", "metal-sharp", "metal-rough"], mixed_lights1, zoffsets=[ 0, -0.4 ], inrow=False, new_cameras=True)
     make_test('tests/materials2.yaml', ['sphere', 'sphere', 'sphere', 'sphere', 'sphere', 'bunny', 'bunny', 'bunny', 'bunny', 'bunny'], ["glass-sharp", "glass-rough", "transparent", "thinglass-sharp", "thinglass-rough", "glass-sharp", "glass-rough", "transparent", "thinglass-sharp", "thinglass-rough"], mixed_lights1, zoffsets=[ 0, -0.4 ], inrow=False, new_cameras=True)
     make_test('tests/materials3.yaml', ['sphere', 'sphere', 'sphere', 'sphere', 'sphere', 'bunny', 'bunny', 'bunny', 'bunny', 'bunny'], ["plastic-sharp-bumped", "plastic-rough-coated", "metal-sharp-bumped", "metal-rough-coated", "metal-rough", "plastic-sharp-bumped", "plastic-rough-coated", "metal-sharp-bumped", "metal-rough-coated", "metal-rough"], mixed_lights1, zoffsets=[ 0, -0.4 ], inrow=False, new_cameras=True)
     make_test('tests/materials4.yaml', ['sphere', 'sphere', 'sphere', 'sphere', 'sphere', 'bunny', 'bunny', 'bunny', 'bunny', 'bunny'], ["volume-cloud", "volume-glass", "volume-jade", "volume-emissive", "volume-smoke", "volume-cloud", "volume-glass", "volume-jade", "volume-emissive", "volume-smoke"], mixed_lights1, zoffsets=[ 0, -0.4 ], inrow=False, new_cameras=True)
     make_test('tests/shapes1.yaml', ['sphere', "uvsphere-flipcap", "disk", "uvcylinder", "cube"], ["uvgrid"], mixed_lights)
-    make_test('tests/shapes2.yaml', ['cube-subdiv', "suzanne-subdiv", 'sphere-displaced', "bunny", "teapot"], ["uvgrid", "plastic-sharp", "matte", "uvgrid", "uvgrid"], mixed_lights, subdivs=['cube-subdiv', "suzanne-subdiv", "sphere-displaced"])
+    make_test('tests/shapes2.yaml', ['cube-subdiv', "suzanne-subdiv", 'sphere-displaced', "bunny", "teapot"], ["uvgrid", "plastic-sharp", "matte", "uvgrid", "uvgrid"], mixed_lights)
     make_test('tests/shapes3.yaml', ['sphere', "hairball1", "hairball2", "hairball3", "sphere", "", "hairball-interior", "hairball-interior", "hairball-interior", ""], ["matte", "hair", "hair", "hair", "matte"], mixed_lights, xscales=[ 0.5, 1, 1, 1, 0.5 ])
     make_test('tests/arealights1.yaml', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ["uvgrid", "plastic-sharp", "metal-rough", "plastic-rough", "metal-sharp"], area_lights)
     make_test('tests/environments1.yaml', ['bunny', 'sphere', 'bunny', 'sphere', 'bunny'], ["uvgrid", "plastic-sharp", "metal-rough", "plastic-rough", "metal-sharp"], sunsky_lights)

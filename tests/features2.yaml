@@ -82,9 +82,15 @@ shapes:
   - name: sphere-displaced
     filename: shapes/test-sphere-displaced.obj
     preset: test-sphere-displaced
+    facevarying: true
+    displacement: 0.025
+    displacement_tex: bumps-displacement
   - name: suzanne-subdiv
     filename: shapes/test-suzanne-subdiv.obj
     preset: test-suzanne-subdiv
+    subdivisions: 2
+    catmullclark: true
+    smooth: true
   - name: hairball1
     filename: shapes/test-hairball1.ply
     preset: test-hairball1
@@ -97,21 +103,6 @@ shapes:
   - name: arealight2
     filename: shapes/test-arealight2.ply
     preset: test-arealight2
-subdivs:
-  - name: sphere-displaced
-    filename: subdivs/test-sphere-displaced.obj
-    preset: test-sphere-displaced
-    shape: sphere-displaced
-    facevarying: true
-    displacement: 0.025
-    displacement_tex: bumps-displacement
-  - name: suzanne-subdiv
-    filename: subdivs/test-suzanne-subdiv.obj
-    preset: test-suzanne-subdiv
-    shape: suzanne-subdiv
-    subdivisions: 2
-    catmullclark: true
-    smooth: true
 instances:
   - name: floor
     shape: floor

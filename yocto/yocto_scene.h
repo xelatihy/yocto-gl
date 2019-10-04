@@ -108,14 +108,6 @@ struct yocto_texture {
   image<vec4b> ldr      = {};
 };
 
-// Volumetric texture containing a float only volume data. See texture
-// above for other propoerties.
-struct yocto_voltexture {
-  string        name     = "";
-  string        filename = "";
-  volume<float> vol      = {};
-};
-
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
@@ -152,15 +144,12 @@ struct yocto_material {
   int  opacity_tex      = -1;
   int  normal_tex       = -1;
   bool gltf_textures    = false;  // glTF packed textures
-
-  // volume textures
-  int voldensity_tex = -1;
 };
 
 // Shape data represented as an indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
-// Additionally, we support faceavarying primitives where each verftex data
-// has its own topology.
+// Additionally, we support faceavarying primitives where
+// each verftex data has its own topology.
 struct yocto_shape {
   // shape data
   string name     = "";
@@ -184,21 +173,6 @@ struct yocto_shape {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
-};
-
-// Shape data represented as an indexed meshes of elements.
-// This object exists only to allow for further subdivision. The current
-// subdiviion data is stored in the pointed to shape, so the rest of the system
-// does not need to known about subdivs. While this is mostly helpful for
-// subdivision surfaces, we store here all data that we possibly may want to
-// subdivide, for later use.
-struct yocto_subdiv {
-  // shape data
-  string name     = "";
-  string filename = "";
-
-  // tesselated shape
-  int shape = -1;
 
   // subdision properties
   int  subdivisions = 0;
@@ -210,23 +184,8 @@ struct yocto_subdiv {
   float displacement     = 0;
   int   displacement_tex = -1;
 
-  // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-
-  // face-varying primitives
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
-
-  // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
+  // subdivision data
+  vector<yocto_shape> subdiv = {};
 };
 
 // Instance of a visible shape in the scene.
@@ -292,8 +251,6 @@ struct yocto_scene {
   vector<yocto_material>    materials    = {};
   vector<yocto_texture>     textures     = {};
   vector<yocto_environment> environments = {};
-  vector<yocto_subdiv>      subdivs      = {};
-  vector<yocto_voltexture>  voltextures  = {};
   vector<yocto_scene_node>  nodes        = {};
   vector<yocto_animation>   animations   = {};
 };
@@ -355,7 +312,7 @@ void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
     bool compute_normals);
 void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
     float scale, bool compute_normals);
-void tesselate_subdiv(yocto_scene& scene, yocto_subdiv& subdiv);
+void tesselate_subdiv(yocto_scene& scene, yocto_shape& shape);
 void tesselate_subdivs(yocto_scene& scene);
 
 // Build/refit the bvh acceleration structure.
@@ -399,11 +356,6 @@ vec2i texture_size(const yocto_texture& texture);
 vec4f lookup_texture(
     const yocto_texture& texture, const vec2i& ij, bool ldr_as_linear = false);
 vec4f eval_texture(const yocto_texture& texture, const vec2f& texcoord,
-    bool ldr_as_linear = false, bool no_interpolation = false,
-    bool clamp_to_edge = false);
-float lookup_voltexture(
-    const yocto_voltexture& texture, const vec3i& ijk, bool ldr_as_linear);
-float eval_voltexture(const yocto_voltexture& texture, const vec3f& texcoord,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false);
 
