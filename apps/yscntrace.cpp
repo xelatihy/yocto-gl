@@ -118,7 +118,7 @@ int main(int argc, const char* argv[]) {
   // tesselate
   {
     auto timer = print_timed("tesselating");
-    tesselate_subdivs(scene);
+    update_tesselation(scene);
   }
 
   // add components

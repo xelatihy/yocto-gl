@@ -262,7 +262,7 @@ int main(int argc, const char* argv[]) {
   // tesselate
   {
     auto timer = print_timed("tesselating");
-    tesselate_subdivs(app.scene);
+    update_tesselation(app.scene);
   }
 
   // add sky

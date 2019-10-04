@@ -190,7 +190,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.drawgl_prms = app.drawgl_prms;
   apps.load_workers.push_back(run_async([&app]() {
     load_scene(app.filename, app.scene);
-    tesselate_subdivs(app.scene);
+    update_tesselation(app.scene);
     init_drawgl_lights(app.lights, app.scene);
     app.time_range = compute_animation_range(app.scene);
     app.time       = app.time_range.x;

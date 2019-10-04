@@ -304,16 +304,11 @@ bbox3f compute_bounds(const yocto_shape& shape);
 bbox3f compute_bounds(const yocto_scene& scene);
 
 // Compute shape vertex normals
-vector<vec3f> compute_normals(const yocto_shape& shape);
-void          compute_normals(const yocto_shape& shape, vector<vec3f>& normals);
+void update_normals(yocto_shape& shape);
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape& shape, int subdivisions, bool catmullclark,
-    bool compute_normals);
-void displace_shape(yocto_shape& shape, const yocto_texture& displacement,
-    float scale, bool compute_normals);
-void tesselate_subdiv(yocto_scene& scene, yocto_shape& shape);
-void tesselate_subdivs(yocto_scene& scene);
+void update_tesselation(yocto_scene& scene, yocto_shape& shape);
+void update_tesselation(yocto_scene& scene);
 
 // Build/refit the bvh acceleration structure.
 void make_bvh(

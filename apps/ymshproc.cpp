@@ -132,7 +132,7 @@ int main(int argc, const char** argv) {
   // compute normals
   if (normals) {
     auto timer    = print_timed("computing normals");
-    shape.normals = compute_normals(shape);
+    update_normals(shape);
     if (!shape.quadspos.empty()) shape.quadsnorm = shape.quadspos;
   }
 

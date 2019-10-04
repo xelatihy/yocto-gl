@@ -59,34 +59,17 @@ bbox3f compute_bounds(const yocto_scene& scene) {
 }
 
 // Compute vertex normals
-vector<vec3f> compute_normals(const yocto_shape& shape) {
+void update_normals(yocto_shape& shape) {
   if (!shape.points.empty()) {
-    return vector<vec3f>{
-        shape.positions.size(),
-    };
+    shape.normals = vector<vec3f>{shape.positions.size(), {0, 0, 1}};
   } else if (!shape.lines.empty()) {
-    return compute_tangents(shape.lines, shape.positions);
+    shape.normals = compute_tangents(shape.lines, shape.positions);
   } else if (!shape.triangles.empty()) {
-    return compute_normals(shape.triangles, shape.positions);
+    shape.normals = compute_normals(shape.triangles, shape.positions);
   } else if (!shape.quads.empty()) {
-    return compute_normals(shape.quads, shape.positions);
+    shape.normals = compute_normals(shape.quads, shape.positions);
   } else if (!shape.quadspos.empty()) {
-    return compute_normals(shape.quadspos, shape.positions);
-  } else {
-    throw std::runtime_error("unknown element type");
-  }
-}
-void compute_normals(const yocto_shape& shape, vector<vec3f>& normals) {
-  normals.assign(shape.positions.size(), {0, 0, 1});
-  if (!shape.points.empty()) {
-  } else if (!shape.lines.empty()) {
-    compute_tangents(normals, shape.lines, shape.positions);
-  } else if (!shape.triangles.empty()) {
-    compute_normals(normals, shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
-    compute_normals(normals, shape.quads, shape.positions);
-  } else if (!shape.quadspos.empty()) {
-    compute_normals(normals, shape.quadspos, shape.positions);
+    shape.normals = compute_normals(shape.quadspos, shape.positions);
   } else {
     throw std::runtime_error("unknown element type");
   }
@@ -137,7 +120,7 @@ void subdivide_shape(yocto_shape& shape) {
     if (!shape.quadspos.empty()) {
       shape.quadsnorm = shape.quadspos;
     }
-    compute_normals(shape, shape.normals);
+    update_normals(shape);
   }
 }
 // Apply displacement to a shape
@@ -151,17 +134,15 @@ void displace_shape(const yocto_scene& scene, yocto_shape& shape) {
 
   // simple case
   if (shape.quadspos.empty()) {
-    auto normals = shape.normals;
-    if (shape.normals.empty()) compute_normals(shape, normals);
+    auto has_normals = !shape.normals.empty();
+    if (!has_normals) update_normals(shape);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       auto disp = mean(
           xyz(eval_texture(displacement, shape.texcoords[vid], true)));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
-      shape.positions[vid] += normals[vid] * shape.displacement * disp;
+      shape.positions[vid] += shape.normals[vid] * shape.displacement * disp;
     }
-    if (shape.smooth || !shape.normals.empty()) {
-      compute_normals(shape, shape.normals);
-    }
+    if (shape.smooth || has_normals) update_normals(shape);
   } else {
     // facevarying case
     auto offset = vector<float>(shape.positions.size(), 0);
@@ -184,7 +165,7 @@ void displace_shape(const yocto_scene& scene, yocto_shape& shape) {
     }
     if (shape.smooth || !shape.normals.empty()) {
       shape.quadsnorm = shape.quadspos;
-      compute_normals(shape, shape.normals);
+      update_normals(shape);
     }
   }
 }
@@ -204,7 +185,7 @@ void copy_shape_data(yocto_shape& dst, const yocto_shape& src) {
   dst.radius        = src.radius;
 }
 
-void tesselate_subdiv(yocto_scene& scene, yocto_shape& shape) {
+void update_tesselation(yocto_scene& scene, yocto_shape& shape) {
   if (!shape.subdivisions && !shape.displacement) return;
   if (shape.subdiv.empty()) {
     auto& subdiv = shape.subdiv.emplace_back();
@@ -221,8 +202,8 @@ void tesselate_subdiv(yocto_scene& scene, yocto_shape& shape) {
 }
 
 // Updates tesselation.
-void tesselate_subdivs(yocto_scene& scene) {
-  for (auto& shape : scene.shapes) tesselate_subdiv(scene, shape);
+void update_tesselation(yocto_scene& scene) {
+  for (auto& shape : scene.shapes) update_tesselation(scene, shape);
 }
 
 // Update animation transforms

@@ -121,7 +121,7 @@ int main(int argc, const char** argv) {
   // tesselating scene
   {
     auto timer = print_timed("tesselating scene");
-    tesselate_subdivs(scene);
+    update_tesselation(scene);
   }
 
   // add missing mesh names if necessary
