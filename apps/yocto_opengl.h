@@ -266,12 +266,6 @@ bool begin_glwidgets_window(const opengl_window& win, const char* title);
 bool begin_glheader(const opengl_window& win, const char* title);
 void end_glheader(const opengl_window& win);
 
-bool begin_gltabbar(const opengl_window& win, const char* title);
-void end_gltabbar(const opengl_window& win);
-
-bool begin_gltabitem(const opengl_window& win, const char* title);
-void end_gltabitem(const opengl_window& win);
-
 void open_glmodal(const opengl_window& win, const char* lbl);
 void clear_glmodal(const opengl_window& win);
 bool begin_glmodal(const opengl_window& win, const char* lbl);

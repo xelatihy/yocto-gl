@@ -824,26 +824,6 @@ bool begin_glheader(const opengl_window& win, const char* lbl) {
 }
 void end_glheader(const opengl_window& win) { ImGui::PopID(); }
 
-bool begin_gltabbar(const opengl_window& win, const char* lbl) {
-  if (!ImGui::BeginTabBar(lbl)) return false;
-  ImGui::PushID(lbl);
-  return true;
-}
-void end_gltabbar(const opengl_window& win) {
-  ImGui::PopID();
-  ImGui::EndTabBar();
-}
-
-bool begin_gltabitem(const opengl_window& win, const char* lbl) {
-  if (!ImGui::BeginTabItem(lbl)) return false;
-  ImGui::PushID(lbl);
-  return true;
-}
-void end_gltabitem(const opengl_window& win) {
-  ImGui::PopID();
-  ImGui::EndTabItem();
-}
-
 void open_glmodal(const opengl_window& win, const char* lbl) {
   ImGui::OpenPopup(lbl);
 }
