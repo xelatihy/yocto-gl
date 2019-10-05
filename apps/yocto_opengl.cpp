@@ -1082,10 +1082,6 @@ bool draw_glbutton(const opengl_window& win, const char* lbl, bool enabled) {
   }
 }
 
-void draw_gltext(const opengl_window& win, const string& text) {
-  ImGui::Text("%s", text.c_str());
-}
-
 void draw_gllabel(
     const opengl_window& win, const char* lbl, const string& texture) {
   ImGui::LabelText(lbl, "%s", texture.c_str());
@@ -1236,31 +1232,6 @@ bool draw_glhdrcoloredit(
   }
 }
 
-bool begin_gltreenode(const opengl_window& win, const char* lbl) {
-  return ImGui::TreeNode(lbl);
-}
-
-void end_gltreenode(const opengl_window& win) { ImGui::TreePop(); }
-
-bool begin_glselectabletreenode(
-    const opengl_window& win, const char* lbl, bool& selected) {
-  ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow |
-                                  ImGuiTreeNodeFlags_OpenOnDoubleClick;
-  if (selected) node_flags |= ImGuiTreeNodeFlags_Selected;
-  auto open = ImGui::TreeNodeEx(lbl, node_flags, "%s", lbl);
-  if (ImGui::IsItemClicked()) selected = true;
-  return open;
-}
-
-void begin_glselectabletreeleaf(
-    const opengl_window& win, const char* lbl, bool& selected) {
-  ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf |
-                                  ImGuiTreeNodeFlags_NoTreePushOnOpen;
-  if (selected) node_flags |= ImGuiTreeNodeFlags_Selected;
-  ImGui::TreeNodeEx(lbl, node_flags, "%s", lbl);
-  if (ImGui::IsItemClicked()) selected = true;
-}
-
 bool draw_glcombobox(const opengl_window& win, const char* lbl, int& value,
     const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
@@ -1309,16 +1280,6 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
   }
   ImGui::EndCombo();
   return idx != old_idx;
-}
-
-void begin_glchild(
-    const opengl_window& win, const char* lbl, const vec2i& size) {
-  ImGui::PushID(lbl);
-  ImGui::BeginChild(lbl, ImVec2(size.x, size.y), false);
-}
-void end_glchild(const opengl_window& win) {
-  ImGui::EndChild();
-  ImGui::PopID();
 }
 
 void draw_glhistogram(

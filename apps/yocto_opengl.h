@@ -290,7 +290,6 @@ bool draw_glfiledialog_button(const opengl_window& win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
     const string& dirname, const string& filename, const string& filter);
 
-void draw_gltext(const opengl_window& win, const string& text);
 void draw_gllabel(
     const opengl_window& win, const char* lbl, const string& text);
 void draw_gllabel(
@@ -352,14 +351,6 @@ bool draw_glhdrcoloredit(
 bool draw_glhdrcoloredit(
     const opengl_window& win, const char* lbl, vec4f& value);
 
-bool begin_gltreenode(const opengl_window& win, const char* lbl);
-void end_gltreenode(const opengl_window& win);
-
-bool begin_glselectabletreenode(
-    const opengl_window& win, const char* lbl, bool& selected);
-void begin_glselectabletreeleaf(
-    const opengl_window& win, const char* lbl, bool& selected);
-
 bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<string>& labels);
 bool draw_glcombobox(const opengl_window& win, const char* lbl, string& value,
@@ -375,10 +366,6 @@ inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
-
-void begin_glchild(
-    const opengl_window& win, const char* lbl, const vec2i& size);
-void end_glchild(const opengl_window& win);
 
 void draw_glhistogram(
     const opengl_window& win, const char* lbl, const float* values, int count);
