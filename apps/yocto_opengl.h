@@ -111,6 +111,7 @@ namespace yocto {
 
 // OpenGL image data
 struct opengl_image {
+  vec2i size() const { return texture.size; }
   operator bool() const { return (bool)texture; }
   opengl_texture       texture = {};
   opengl_program       program = {};
