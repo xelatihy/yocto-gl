@@ -358,8 +358,6 @@ inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
 }
 
 void draw_glhistogram(
-    const opengl_window& win, const char* lbl, const float* values, int count);
-void draw_glhistogram(
     const opengl_window& win, const char* lbl, const vector<float>& values);
 void draw_glhistogram(
     const opengl_window& win, const char* lbl, const vector<vec2f>& values);
