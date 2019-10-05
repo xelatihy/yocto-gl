@@ -853,41 +853,31 @@ bool draw_glmessage(
   }
 }
 
-string             _message_text  = {};
 std::deque<string> _message_queue = {};
 std::mutex         _message_mutex;
 void               push_glmessage(const string& message) {
-  printf("message %s\n", message.c_str());
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
-  printf("message %s\n", message.c_str());
 }
 void push_glmessage(const opengl_window& win, const string& message) {
-  printf("message %s\n", message.c_str());
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
 bool draw_glmessages(const opengl_window& win) {
   std::lock_guard lock(_message_mutex);
-  if (!_message_queue.empty() && _message_text.empty()) {
-    _message_text = _message_queue.front();
-    _message_queue.pop_front();
+  if (_message_queue.empty()) return false;
+  if (!is_glmodal_open(win, "<message>")) {
     open_glmodal(win, "<message>");
-  }
-  if(_message_text.empty()) return false;
-  if (ImGui::BeginPopupModal("<message>")) {
-    auto open = true;
-    ImGui::Text("%s", _message_text.c_str());
+    return true;
+  } else if (ImGui::BeginPopupModal("<message>")) {
+    ImGui::Text("%s", _message_queue.front().c_str());
     if (ImGui::Button("Ok")) {
       ImGui::CloseCurrentPopup();
-      open = false;
+      _message_queue.pop_front();
     }
     ImGui::EndPopup();
-    if(!open)
-    _message_text = "";
-    return open;
+    return true;
   } else {
-    _message_text = "";
     return false;
   }
 }
