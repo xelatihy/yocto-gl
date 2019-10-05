@@ -169,45 +169,6 @@ void draw_glmesh(opengl_mesh& glmesh, const frame3f& frame, const vec3f& color);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// HIGH-LEVEL OPENGL SCENE DRAWING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// A generoc OpenGL shape
-struct opengl_shape {
-  opengl_arraybuffer   positions_buffer     = {};
-  opengl_arraybuffer   normals_buffer       = {};
-  opengl_arraybuffer   texcoords_buffer     = {};
-  opengl_arraybuffer   colors_buffer        = {};
-  opengl_arraybuffer   tangentspaces_buffer = {};
-  opengl_elementbuffer points_buffer        = {};
-  opengl_elementbuffer lines_buffer         = {};
-  opengl_elementbuffer triangles_buffer     = {};
-  opengl_elementbuffer quads_buffer         = {};
-};
-
-// OpenGL lights
-struct opengl_lights {
-  vector<vec3f> positions = {};
-  vector<vec3f> emission  = {};
-  vector<int>   types     = {};
-
-  bool empty() const { return positions.empty(); }
-};
-
-// A generic OpenGL scene
-struct opengl_scene {
-  opengl_program         program  = {};
-  vector<opengl_shape>   shapes   = {};
-  vector<opengl_texture> textures = {};
-};
-
-// draw scene
-void draw_glscene(opengl_scene& glscene, const opengl_lights& lights);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
