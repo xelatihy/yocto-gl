@@ -370,9 +370,7 @@ void draw_glhistogram(
 void draw_glhistogram(
     const opengl_window& win, const char* lbl, const vector<vec4f>& values);
 
-void log_glinfo(const opengl_window& win, const char* msg);
 void log_glinfo(const opengl_window& win, const string& msg);
-void log_glerror(const opengl_window& win, const char* msg);
 void log_glerror(const opengl_window& win, const string& msg);
 void clear_gllogs(const opengl_window& win);
 void draw_gllog(const opengl_window& win);

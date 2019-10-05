@@ -874,9 +874,22 @@ bool draw_glmessages(const opengl_window& win) {
     _message_queue.pop_front();
     open_glmodal(win, "<message>");
   }
-  auto ret = draw_glmessage(win, "<message>", _message_text);
-  if (!ret) _message_text = "";
-  return ret;
+  if(_message_text.empty()) return false;
+  if (ImGui::BeginPopupModal("<message>")) {
+    auto open = true;
+    ImGui::Text("%s", _message_text.c_str());
+    if (ImGui::Button("Ok")) {
+      ImGui::CloseCurrentPopup();
+      open = false;
+    }
+    ImGui::EndPopup();
+    if(!open)
+    _message_text = "";
+    return open;
+  } else {
+    _message_text = "";
+    return false;
+  }
 }
 
 struct filedialog_state {
@@ -1353,19 +1366,9 @@ struct ImGuiAppLog {
 
 std::mutex  _log_mutex;
 ImGuiAppLog _log_widget;
-void        log_glinfo(const opengl_window& win, const char* msg) {
-  _log_mutex.lock();
-  _log_widget.AddLog(msg, "info");
-  _log_mutex.unlock();
-}
 void log_glinfo(const opengl_window& win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "info");
-  _log_mutex.unlock();
-}
-void log_glerror(const opengl_window& win, const char* msg) {
-  _log_mutex.lock();
-  _log_widget.AddLog(msg, "errn");
   _log_mutex.unlock();
 }
 void log_glerror(const opengl_window& win, const string& msg) {
