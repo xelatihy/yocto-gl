@@ -192,10 +192,12 @@ bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", texture.name);
   edited += draw_gltextinput(win, "filename", texture.filename);
-  draw_gllabel(
-      win, "hdr", std::to_string(texture.hdr.size().x) + " x " + std::to_string(texture.hdr.size().y));
-  draw_gllabel(
-      win, "ldr", std::to_string(texture.ldr.size().x) + " x " + std::to_string(texture.ldr.size().y));
+  draw_gllabel(win, "hdr",
+      std::to_string(texture.hdr.size().x) + " x " +
+          std::to_string(texture.hdr.size().y));
+  draw_gllabel(win, "ldr",
+      std::to_string(texture.ldr.size().x) + " x " +
+          std::to_string(texture.ldr.size().y));
   if (edited && old_filename != texture.filename) {
     try {
       if (is_hdr_filename(texture.filename)) {
@@ -266,7 +268,8 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   draw_gllabel(win, "quads", std::to_string(shape.quads.size()));
   draw_gllabel(win, "quads pos", std::to_string(shape.quadspos.size()));
   draw_gllabel(win, "quads norm", std::to_string(shape.quadsnorm.size()));
-  draw_gllabel(win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
+  draw_gllabel(
+      win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
   draw_gllabel(win, "pos", std::to_string(shape.positions.size()));
   draw_gllabel(win, "norm", std::to_string(shape.normals.size()));
   draw_gllabel(win, "texcoord", std::to_string(shape.texcoords.size()));
@@ -419,8 +422,10 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "filename", app.filename);
     draw_gllabel(win, "outname", app.outname);
     draw_gllabel(win, "imagename", app.imagename);
-    draw_gllabel(win, "image", std::to_string(app.render.size().x) + " x " +
-        std::to_string(app.render.size().y) + " @ " + std::to_string(app.render_sample));
+    draw_gllabel(win, "image",
+        std::to_string(app.render.size().x) + " x " +
+            std::to_string(app.render.size().y) + " @ " +
+            std::to_string(app.render_sample));
     draw_glslider(win, "zoom", app.image_scale, 0.1, 10);
     draw_glcheckbox(win, "zoom to fit", app.zoom_to_fit);
     continue_glline(win);

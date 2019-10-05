@@ -306,7 +306,8 @@ void delete_glarraybuffer(opengl_arraybuffer& buffer) {
 opengl_elementbuffer::opengl_elementbuffer(opengl_elementbuffer&& other) {
   operator=(std::forward<opengl_elementbuffer>(other));
 }
-opengl_elementbuffer& opengl_elementbuffer::operator=(opengl_elementbuffer&& other) {
+opengl_elementbuffer& opengl_elementbuffer::operator=(
+    opengl_elementbuffer&& other) {
   std::swap(buffer_id, other.buffer_id);
   std::swap(num, other.num);
   std::swap(elem_size, elem_size);

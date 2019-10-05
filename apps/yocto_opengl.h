@@ -55,7 +55,7 @@ void set_glblending(bool enabled);
 
 // base object for OpenGL resource. Disables copy contruction.
 struct opengl_program {
-  opengl_program() { }
+  opengl_program() {}
   opengl_program(opengl_program&&);
   opengl_program& operator=(opengl_program&&);
   ~opengl_program();
@@ -76,7 +76,7 @@ void bind_glprogram(opengl_program& program);
 void unbind_opengl_program();
 
 struct opengl_texture {
-  opengl_texture() { }
+  opengl_texture() {}
   opengl_texture(opengl_texture&&);
   opengl_texture& operator=(opengl_texture&&);
   ~opengl_texture();
@@ -116,7 +116,7 @@ inline void init_gltexture(opengl_texture& texture, const image<vec4b>& img,
 void delete_gltexture(opengl_texture& texture);
 
 struct opengl_arraybuffer {
-  opengl_arraybuffer() { }
+  opengl_arraybuffer() {}
   opengl_arraybuffer(opengl_arraybuffer&&);
   opengl_arraybuffer& operator=(opengl_arraybuffer&&);
   ~opengl_arraybuffer();
@@ -128,7 +128,7 @@ struct opengl_arraybuffer {
 };
 
 struct opengl_elementbuffer {
-  opengl_elementbuffer() { }
+  opengl_elementbuffer() {}
   opengl_elementbuffer(opengl_elementbuffer&&);
   opengl_elementbuffer& operator=(opengl_elementbuffer&&);
   ~opengl_elementbuffer();

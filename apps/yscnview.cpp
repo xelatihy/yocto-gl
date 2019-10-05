@@ -805,8 +805,8 @@ bool draw_glwidgets_texture(
   edited += draw_gltextinput(win, "name", texture.name);
   edited += draw_gltextinput(win, "filename", texture.filename);
   draw_gllabel(win, "hdr",
-      std::to_string(texture.hdr.size().x) +
-          " x " + std::to_string(texture.hdr.size().y));
+      std::to_string(texture.hdr.size().x) + " x " +
+          std::to_string(texture.hdr.size().y));
   draw_gllabel(win, "ldr",
       std::to_string(texture.ldr.size().x) + " x " +
           std::to_string(texture.ldr.size().y));
