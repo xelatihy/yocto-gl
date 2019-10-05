@@ -145,23 +145,31 @@ namespace yocto {
 
 // OpenGL image data
 struct opengl_mesh {
-  opengl_arraybuffer   vertex  = {};
-  opengl_elementbuffer element = {};
-  opengl_program       program = {};
+  opengl_arraybuffer   positions = {};
+  opengl_arraybuffer   normals   = {};
+  opengl_arraybuffer   texcoords = {};
+  opengl_arraybuffer   colors    = {};
+  opengl_elementbuffer points    = {};
+  opengl_elementbuffer lines     = {};
+  opengl_elementbuffer triangles = {};
+  opengl_elementbuffer quads     = {};
+  opengl_elementbuffer edges     = {};
+  opengl_program       program   = {};
 };
 
 // update image data
 void update_glmesh(opengl_mesh& glmesh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords = {});
+    const vector<vec2f>& texcoords = {}, const vector<vec4f>& colors = {});
 void update_glmesh(opengl_mesh& glmesh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords = {});
+    const vector<vec2f>& texcoords = {}, const vector<vec4f>& colors = {});
 void update_glmesh(opengl_mesh& glmesh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& tangents,
-    const vector<vec2f>& texcoords = {});
+    const vector<vec2f>& texcoords = {}, const vector<vec4f>& colors = {});
 void update_glmesh(opengl_mesh& glmesh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec2f>& texcoords = {});
+    const vector<vec3f>& positions, const vector<vec2f>& texcoords = {},
+    const vector<vec4f>& colors = {});
 
 // draw mesh
 void draw_glmesh(opengl_mesh& glmesh, const frame3f& frame, const vec3f& color);
@@ -286,12 +294,6 @@ inline void set_glvertexattrib(const opengl_program& program, const char* name,
 void draw_glpoints(const opengl_elementbuffer& buffer, int num);
 void draw_gllines(const opengl_elementbuffer& buffer, int num);
 void draw_gltriangles(const opengl_elementbuffer& buffer, int num);
-
-void draw_glimage(const opengl_texture& texture, int win_width, int win_height,
-    const vec2f& image_center, float image_scale);
-void draw_glimage_background(const opengl_texture& texture, int win_width,
-    int win_height, const vec2f& image_center, float image_scale,
-    float border_size = 2);
 
 }  // namespace yocto
 
