@@ -231,8 +231,9 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "image", get_filename(app.filename));
     draw_gllabel(win, "filename", app.filename);
     draw_gllabel(win, "outname", app.outname);
-    draw_gllabel(
-        win, "image", "%d x %d", app.source.size().x, app.source.size().y);
+    draw_gllabel(win, "image",
+        std::to_string(app.source.size().x) + " x " +
+            std::to_string(app.source.size().y));
     draw_glslider(win, "zoom", app.image_scale, 0.1, 10);
     draw_glcheckbox(win, "zoom to fit", app.zoom_to_fit);
     auto mouse_pos = get_glmouse_pos(win);

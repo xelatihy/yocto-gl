@@ -192,10 +192,12 @@ bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", texture.name);
   edited += draw_gltextinput(win, "filename", texture.filename);
-  draw_gllabel(
-      win, "hdr", "%d x %d", texture.hdr.size().x, texture.hdr.size().y);
-  draw_gllabel(
-      win, "ldr", "%d x %d", texture.ldr.size().x, texture.ldr.size().y);
+  draw_gllabel(win, "hdr",
+      std::to_string(texture.hdr.size().x) + " x " +
+          std::to_string(texture.hdr.size().y));
+  draw_gllabel(win, "ldr",
+      std::to_string(texture.ldr.size().x) + " x " +
+          std::to_string(texture.ldr.size().y));
   if (edited && old_filename != texture.filename) {
     try {
       if (is_hdr_filename(texture.filename)) {
@@ -260,19 +262,20 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", shape.name);
   edited += draw_gltextinput(win, "filename", shape.filename);
-  draw_gllabel(win, "points", "%ld", shape.points.size());
-  draw_gllabel(win, "lines", "%ld", shape.lines.size());
-  draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
-  draw_gllabel(win, "quads", "%ld", shape.quads.size());
-  draw_gllabel(win, "quads pos", "%ld", shape.quadspos.size());
-  draw_gllabel(win, "quads norm", "%ld", shape.quadsnorm.size());
-  draw_gllabel(win, "quads texcoord", "%ld", shape.quadstexcoord.size());
-  draw_gllabel(win, "pos", "%ld", shape.positions.size());
-  draw_gllabel(win, "norm", "%ld", shape.normals.size());
-  draw_gllabel(win, "texcoord", "%ld", shape.texcoords.size());
-  draw_gllabel(win, "color", "%ld", shape.colors.size());
-  draw_gllabel(win, "radius", "%ld", shape.radius.size());
-  draw_gllabel(win, "tangsp", "%ld", shape.tangents.size());
+  draw_gllabel(win, "points", std::to_string(shape.points.size()));
+  draw_gllabel(win, "lines", std::to_string(shape.lines.size()));
+  draw_gllabel(win, "triangles", std::to_string(shape.triangles.size()));
+  draw_gllabel(win, "quads", std::to_string(shape.quads.size()));
+  draw_gllabel(win, "quads pos", std::to_string(shape.quadspos.size()));
+  draw_gllabel(win, "quads norm", std::to_string(shape.quadsnorm.size()));
+  draw_gllabel(
+      win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
+  draw_gllabel(win, "pos", std::to_string(shape.positions.size()));
+  draw_gllabel(win, "norm", std::to_string(shape.normals.size()));
+  draw_gllabel(win, "texcoord", std::to_string(shape.texcoords.size()));
+  draw_gllabel(win, "color", std::to_string(shape.colors.size()));
+  draw_gllabel(win, "radius", std::to_string(shape.radius.size()));
+  draw_gllabel(win, "tangsp", std::to_string(shape.tangents.size()));
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
@@ -419,8 +422,10 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "filename", app.filename);
     draw_gllabel(win, "outname", app.outname);
     draw_gllabel(win, "imagename", app.imagename);
-    draw_gllabel(win, "image", "%d x %d @ %d", app.render.size().x,
-        app.render.size().y, app.render_sample);
+    draw_gllabel(win, "image",
+        std::to_string(app.render.size().x) + " x " +
+            std::to_string(app.render.size().y) + " @ " +
+            std::to_string(app.render_sample));
     draw_glslider(win, "zoom", app.image_scale, 0.1, 10);
     draw_glcheckbox(win, "zoom to fit", app.zoom_to_fit);
     continue_glline(win);

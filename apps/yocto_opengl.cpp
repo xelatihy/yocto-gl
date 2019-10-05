@@ -89,6 +89,18 @@ void set_glblending(bool enabled) {
   }
 }
 
+opengl_program::opengl_program(opengl_program&& other) {
+  operator=(std::forward<opengl_program>(other));
+}
+opengl_program& opengl_program::operator=(opengl_program&& other) {
+  std::swap(program_id, other.program_id);
+  std::swap(vertex_shader_id, other.vertex_shader_id);
+  std::swap(fragment_shader_id, other.fragment_shader_id);
+  std::swap(vertex_array_object_id, other.vertex_array_object_id);
+  return *this;
+}
+opengl_program::~opengl_program() { delete_glprogram(*this); }
+
 void init_glprogram(
     opengl_program& program, const char* vertex, const char* fragment) {
   assert(glGetError() == GL_NO_ERROR);
@@ -148,12 +160,24 @@ void delete_glprogram(opengl_program& program) {
   glDeleteProgram(program.program_id);
   glDeleteShader(program.vertex_shader_id);
   glDeleteShader(program.fragment_shader_id);
-  program = {};
+  program.program_id         = 0;
+  program.vertex_shader_id   = 0;
+  program.fragment_shader_id = 0;
 }
+
+opengl_texture::opengl_texture(opengl_texture&& other) {
+  operator=(std::forward<opengl_texture>(other));
+}
+opengl_texture& opengl_texture::operator=(opengl_texture&& other) {
+  std::swap(texture_id, other.texture_id);
+  std::swap(size, other.size);
+  return *this;
+}
+opengl_texture::~opengl_texture() { delete_gltexture(*this); }
 
 void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
     bool as_srgb, bool linear, bool mipmap) {
-  texture = opengl_texture();
+  if (texture) delete_gltexture(texture);
   assert(glGetError() == GL_NO_ERROR);
   glGenTextures(1, &texture.texture_id);
   texture.size = size;
@@ -229,8 +253,20 @@ void update_gltexture_region(opengl_texture& texture, const image<vec4b>& img,
 void delete_gltexture(opengl_texture& texture) {
   if (!texture) return;
   glDeleteTextures(1, &texture.texture_id);
-  texture = {};
+  texture.texture_id = 0;
+  texture.size       = zero2i;
 }
+
+opengl_arraybuffer::opengl_arraybuffer(opengl_arraybuffer&& other) {
+  operator=(std::forward<opengl_arraybuffer>(other));
+}
+opengl_arraybuffer& opengl_arraybuffer::operator=(opengl_arraybuffer&& other) {
+  std::swap(buffer_id, other.buffer_id);
+  std::swap(num, other.num);
+  std::swap(elem_size, elem_size);
+  return *this;
+}
+opengl_arraybuffer::~opengl_arraybuffer() { delete_glarraybuffer(*this); }
 
 template <typename T>
 void init_glarray_buffer_impl(
@@ -266,8 +302,22 @@ void init_glarraybuffer(
 void delete_glarraybuffer(opengl_arraybuffer& buffer) {
   if (!buffer) return;
   glDeleteBuffers(1, &buffer.buffer_id);
-  buffer = {};
+  buffer.buffer_id = 0;
+  buffer.elem_size = 0;
+  buffer.num       = 0;
 }
+
+opengl_elementbuffer::opengl_elementbuffer(opengl_elementbuffer&& other) {
+  operator=(std::forward<opengl_elementbuffer>(other));
+}
+opengl_elementbuffer& opengl_elementbuffer::operator=(
+    opengl_elementbuffer&& other) {
+  std::swap(buffer_id, other.buffer_id);
+  std::swap(num, other.num);
+  std::swap(elem_size, elem_size);
+  return *this;
+}
+opengl_elementbuffer::~opengl_elementbuffer() { delete_glelementbuffer(*this); }
 
 template <typename T>
 void init_glelementbuffer_impl(
@@ -299,7 +349,9 @@ void init_glelementbuffer(
 void delete_glelementbuffer(opengl_elementbuffer& buffer) {
   if (!buffer) return;
   glDeleteBuffers(1, &buffer.buffer_id);
-  buffer = {};
+  buffer.buffer_id = 0;
+  buffer.elem_size = 0;
+  buffer.num       = 0;
 }
 
 void bind_glprogram(opengl_program& program) {
@@ -779,26 +831,6 @@ bool begin_glheader(const opengl_window& win, const char* lbl) {
 }
 void end_glheader(const opengl_window& win) { ImGui::PopID(); }
 
-bool begin_gltabbar(const opengl_window& win, const char* lbl) {
-  if (!ImGui::BeginTabBar(lbl)) return false;
-  ImGui::PushID(lbl);
-  return true;
-}
-void end_gltabbar(const opengl_window& win) {
-  ImGui::PopID();
-  ImGui::EndTabBar();
-}
-
-bool begin_gltabitem(const opengl_window& win, const char* lbl) {
-  if (!ImGui::BeginTabItem(lbl)) return false;
-  ImGui::PushID(lbl);
-  return true;
-}
-void end_gltabitem(const opengl_window& win) {
-  ImGui::PopID();
-  ImGui::EndTabItem();
-}
-
 void open_glmodal(const opengl_window& win, const char* lbl) {
   ImGui::OpenPopup(lbl);
 }
@@ -827,30 +859,33 @@ bool draw_glmessage(
   }
 }
 
-string             _message_text  = {};
 std::deque<string> _message_queue = {};
 std::mutex         _message_mutex;
 void               push_glmessage(const string& message) {
-  printf("message %s\n", message.c_str());
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
-  printf("message %s\n", message.c_str());
 }
 void push_glmessage(const opengl_window& win, const string& message) {
-  printf("message %s\n", message.c_str());
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
 bool draw_glmessages(const opengl_window& win) {
   std::lock_guard lock(_message_mutex);
-  if (!_message_queue.empty() && _message_text.empty()) {
-    _message_text = _message_queue.front();
-    _message_queue.pop_front();
+  if (_message_queue.empty()) return false;
+  if (!is_glmodal_open(win, "<message>")) {
     open_glmodal(win, "<message>");
+    return true;
+  } else if (ImGui::BeginPopupModal("<message>")) {
+    ImGui::Text("%s", _message_queue.front().c_str());
+    if (ImGui::Button("Ok")) {
+      ImGui::CloseCurrentPopup();
+      _message_queue.pop_front();
+    }
+    ImGui::EndPopup();
+    return true;
+  } else {
+    return false;
   }
-  auto ret = draw_glmessage(win, "<message>", _message_text);
-  if (!ret) _message_text = "";
-  return ret;
 }
 
 struct filedialog_state {
@@ -1037,21 +1072,9 @@ bool draw_glbutton(const opengl_window& win, const char* lbl, bool enabled) {
   }
 }
 
-void draw_gltext(const opengl_window& win, const string& text) {
-  ImGui::Text("%s", text.c_str());
-}
-
 void draw_gllabel(
     const opengl_window& win, const char* lbl, const string& texture) {
   ImGui::LabelText(lbl, "%s", texture.c_str());
-}
-
-void draw_gllabel(
-    const opengl_window& win, const char* lbl, const char* fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  ImGui::LabelTextV(lbl, fmt, args);
-  va_end(args);
 }
 
 void draw_glseparator(const opengl_window& win) { ImGui::Separator(); }
@@ -1191,31 +1214,6 @@ bool draw_glhdrcoloredit(
   }
 }
 
-bool begin_gltreenode(const opengl_window& win, const char* lbl) {
-  return ImGui::TreeNode(lbl);
-}
-
-void end_gltreenode(const opengl_window& win) { ImGui::TreePop(); }
-
-bool begin_glselectabletreenode(
-    const opengl_window& win, const char* lbl, bool& selected) {
-  ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow |
-                                  ImGuiTreeNodeFlags_OpenOnDoubleClick;
-  if (selected) node_flags |= ImGuiTreeNodeFlags_Selected;
-  auto open = ImGui::TreeNodeEx(lbl, node_flags, "%s", lbl);
-  if (ImGui::IsItemClicked()) selected = true;
-  return open;
-}
-
-void begin_glselectabletreeleaf(
-    const opengl_window& win, const char* lbl, bool& selected) {
-  ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf |
-                                  ImGuiTreeNodeFlags_NoTreePushOnOpen;
-  if (selected) node_flags |= ImGuiTreeNodeFlags_Selected;
-  ImGui::TreeNodeEx(lbl, node_flags, "%s", lbl);
-  if (ImGui::IsItemClicked()) selected = true;
-}
-
 bool draw_glcombobox(const opengl_window& win, const char* lbl, int& value,
     const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
@@ -1264,16 +1262,6 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
   }
   ImGui::EndCombo();
   return idx != old_idx;
-}
-
-void begin_glchild(
-    const opengl_window& win, const char* lbl, const vec2i& size) {
-  ImGui::PushID(lbl);
-  ImGui::BeginChild(lbl, ImVec2(size.x, size.y), false);
-}
-void end_glchild(const opengl_window& win) {
-  ImGui::EndChild();
-  ImGui::PopID();
 }
 
 void draw_glhistogram(
@@ -1374,19 +1362,9 @@ struct ImGuiAppLog {
 
 std::mutex  _log_mutex;
 ImGuiAppLog _log_widget;
-void        log_glinfo(const opengl_window& win, const char* msg) {
-  _log_mutex.lock();
-  _log_widget.AddLog(msg, "info");
-  _log_mutex.unlock();
-}
-void log_glinfo(const opengl_window& win, const string& msg) {
+void        log_glinfo(const opengl_window& win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "info");
-  _log_mutex.unlock();
-}
-void log_glerror(const opengl_window& win, const char* msg) {
-  _log_mutex.lock();
-  _log_widget.AddLog(msg, "errn");
   _log_mutex.unlock();
 }
 void log_glerror(const opengl_window& win, const string& msg) {

@@ -53,13 +53,18 @@ void set_glviewport(const vec4i& viewport);
 void set_glwireframe(bool enabled);
 void set_glblending(bool enabled);
 
+// base object for OpenGL resource. Disables copy contruction.
 struct opengl_program {
+  opengl_program() {}
+  opengl_program(opengl_program&&);
+  opengl_program& operator=(opengl_program&&);
+  ~opengl_program();
+  operator bool() const { return (bool)program_id; }
+
   uint program_id             = 0;
   uint vertex_shader_id       = 0;
   uint fragment_shader_id     = 0;
   uint vertex_array_object_id = 0;
-
-  operator bool() const { return (bool)program_id; }
 };
 
 void init_glprogram(
@@ -71,10 +76,14 @@ void bind_glprogram(opengl_program& program);
 void unbind_opengl_program();
 
 struct opengl_texture {
+  opengl_texture() {}
+  opengl_texture(opengl_texture&&);
+  opengl_texture& operator=(opengl_texture&&);
+  ~opengl_texture();
+  operator bool() const { return (bool)texture_id; }
+
   uint  texture_id = 0;
   vec2i size       = {0, 0};
-
-  operator bool() const { return (bool)texture_id; }
 };
 
 void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
@@ -107,19 +116,27 @@ inline void init_gltexture(opengl_texture& texture, const image<vec4b>& img,
 void delete_gltexture(opengl_texture& texture);
 
 struct opengl_arraybuffer {
+  opengl_arraybuffer() {}
+  opengl_arraybuffer(opengl_arraybuffer&&);
+  opengl_arraybuffer& operator=(opengl_arraybuffer&&);
+  ~opengl_arraybuffer();
+  operator bool() const { return (bool)buffer_id; }
+
   uint buffer_id = 0;
   int  num       = 0;
   int  elem_size = 0;
-
-  operator bool() const { return (bool)buffer_id; }
 };
 
 struct opengl_elementbuffer {
+  opengl_elementbuffer() {}
+  opengl_elementbuffer(opengl_elementbuffer&&);
+  opengl_elementbuffer& operator=(opengl_elementbuffer&&);
+  ~opengl_elementbuffer();
+  operator bool() const { return (bool)buffer_id; }
+
   uint buffer_id = 0;
   int  num       = 0;
   int  elem_size = 0;
-
-  operator bool() const { return (bool)buffer_id; }
 };
 
 void init_glarraybuffer(opengl_arraybuffer& buffer, const vector<float>& data,
@@ -249,12 +266,6 @@ bool begin_glwidgets_window(const opengl_window& win, const char* title);
 bool begin_glheader(const opengl_window& win, const char* title);
 void end_glheader(const opengl_window& win);
 
-bool begin_gltabbar(const opengl_window& win, const char* title);
-void end_gltabbar(const opengl_window& win);
-
-bool begin_gltabitem(const opengl_window& win, const char* title);
-void end_gltabitem(const opengl_window& win);
-
 void open_glmodal(const opengl_window& win, const char* lbl);
 void clear_glmodal(const opengl_window& win);
 bool begin_glmodal(const opengl_window& win, const char* lbl);
@@ -264,8 +275,6 @@ bool is_glmodal_open(const opengl_window& win, const char* lbl);
 bool draw_glmessages(const opengl_window& win);
 void push_glmessage(const string& message);
 void push_glmessage(const opengl_window& win, const string& message);
-bool draw_glmessage(
-    const opengl_window& win, const char* lbl, const string& message);
 bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter);
@@ -273,11 +282,8 @@ bool draw_glfiledialog_button(const opengl_window& win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
     const string& dirname, const string& filename, const string& filter);
 
-void draw_gltext(const opengl_window& win, const string& text);
 void draw_gllabel(
     const opengl_window& win, const char* lbl, const string& text);
-void draw_gllabel(
-    const opengl_window& win, const char* lbl, const char* fmt, ...);
 
 bool begin_header_widget(const opengl_window& win, const char* label);
 void end_header_widget(const opengl_window& win);
@@ -335,14 +341,6 @@ bool draw_glhdrcoloredit(
 bool draw_glhdrcoloredit(
     const opengl_window& win, const char* lbl, vec4f& value);
 
-bool begin_gltreenode(const opengl_window& win, const char* lbl);
-void end_gltreenode(const opengl_window& win);
-
-bool begin_glselectabletreenode(
-    const opengl_window& win, const char* lbl, bool& selected);
-void begin_glselectabletreeleaf(
-    const opengl_window& win, const char* lbl, bool& selected);
-
 bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<string>& labels);
 bool draw_glcombobox(const opengl_window& win, const char* lbl, string& value,
@@ -359,12 +357,6 @@ inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 
-void begin_glchild(
-    const opengl_window& win, const char* lbl, const vec2i& size);
-void end_glchild(const opengl_window& win);
-
-void draw_glhistogram(
-    const opengl_window& win, const char* lbl, const float* values, int count);
 void draw_glhistogram(
     const opengl_window& win, const char* lbl, const vector<float>& values);
 void draw_glhistogram(
@@ -374,9 +366,7 @@ void draw_glhistogram(
 void draw_glhistogram(
     const opengl_window& win, const char* lbl, const vector<vec4f>& values);
 
-void log_glinfo(const opengl_window& win, const char* msg);
 void log_glinfo(const opengl_window& win, const string& msg);
-void log_glerror(const opengl_window& win, const char* msg);
 void log_glerror(const opengl_window& win, const string& msg);
 void clear_gllogs(const opengl_window& win);
 void draw_gllog(const opengl_window& win);

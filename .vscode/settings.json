@@ -86,7 +86,11 @@
         "cinttypes": "cpp",
         "strstream": "cpp",
         "__memory": "cpp",
-        "condition_variable": "cpp"
+        "condition_variable": "cpp",
+        "memory_resource": "cpp",
+        "filesystem": "cpp",
+        "list": "cpp",
+        "bit": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Disabled",
     "cmake.buildDirectory": "${workspaceRoot}/build/vscode",
