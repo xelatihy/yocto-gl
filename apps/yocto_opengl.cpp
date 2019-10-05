@@ -160,8 +160,8 @@ void delete_glprogram(opengl_program& program) {
   glDeleteProgram(program.program_id);
   glDeleteShader(program.vertex_shader_id);
   glDeleteShader(program.fragment_shader_id);
-  program.program_id = 0;
-  program.vertex_shader_id = 0;
+  program.program_id         = 0;
+  program.vertex_shader_id   = 0;
   program.fragment_shader_id = 0;
 }
 
@@ -304,7 +304,7 @@ void delete_glarraybuffer(opengl_arraybuffer& buffer) {
   glDeleteBuffers(1, &buffer.buffer_id);
   buffer.buffer_id = 0;
   buffer.elem_size = 0;
-  buffer.num = 0;
+  buffer.num       = 0;
 }
 
 opengl_elementbuffer::opengl_elementbuffer(opengl_elementbuffer&& other) {
@@ -351,7 +351,7 @@ void delete_glelementbuffer(opengl_elementbuffer& buffer) {
   glDeleteBuffers(1, &buffer.buffer_id);
   buffer.buffer_id = 0;
   buffer.elem_size = 0;
-  buffer.num = 0;
+  buffer.num       = 0;
 }
 
 void bind_glprogram(opengl_program& program) {
@@ -1362,7 +1362,7 @@ struct ImGuiAppLog {
 
 std::mutex  _log_mutex;
 ImGuiAppLog _log_widget;
-void log_glinfo(const opengl_window& win, const string& msg) {
+void        log_glinfo(const opengl_window& win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "info");
   _log_mutex.unlock();
