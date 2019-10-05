@@ -151,9 +151,20 @@ void delete_glprogram(opengl_program& program) {
   program = {};
 }
 
+opengl_texture::opengl_texture(opengl_texture&& other) {
+  std::swap(texture_id, other.texture_id);
+  std::swap(size, other.size);
+}
+opengl_texture& opengl_texture::operator=(opengl_texture&& other) {
+  std::swap(texture_id, other.texture_id);
+  std::swap(size, other.size);
+  return *this;
+}
+opengl_texture::~opengl_texture() { delete_gltexture(*this); }
+
 void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
     bool as_srgb, bool linear, bool mipmap) {
-  texture = opengl_texture();
+  if (texture) delete_gltexture(texture);
   assert(glGetError() == GL_NO_ERROR);
   glGenTextures(1, &texture.texture_id);
   texture.size = size;
@@ -229,7 +240,8 @@ void update_gltexture_region(opengl_texture& texture, const image<vec4b>& img,
 void delete_gltexture(opengl_texture& texture) {
   if (!texture) return;
   glDeleteTextures(1, &texture.texture_id);
-  texture = {};
+  texture.texture_id = 0;
+  texture.size       = zero2i;
 }
 
 template <typename T>

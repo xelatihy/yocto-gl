@@ -53,6 +53,13 @@ void set_glviewport(const vec4i& viewport);
 void set_glwireframe(bool enabled);
 void set_glblending(bool enabled);
 
+// base object for OpenGL resource. Disables copy contruction.
+struct opengl_base {
+  opengl_base() { }
+  opengl_base(const opengl_base&) = delete;
+  opengl_base& operator=(const opengl_base&) = delete;
+};
+
 struct opengl_program {
   uint program_id             = 0;
   uint vertex_shader_id       = 0;
@@ -71,10 +78,13 @@ void bind_glprogram(opengl_program& program);
 void unbind_opengl_program();
 
 struct opengl_texture {
+  opengl_texture() { }
+  opengl_texture(opengl_texture&&);
+  opengl_texture& operator=(opengl_texture&&);
+  ~opengl_texture();
+  operator bool() const { return (bool)texture_id; }
   uint  texture_id = 0;
   vec2i size       = {0, 0};
-
-  operator bool() const { return (bool)texture_id; }
 };
 
 void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,

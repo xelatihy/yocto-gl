@@ -529,26 +529,41 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
   set_gluniform(state.program, "mat_rs", material.roughness);
   set_gluniform(state.program, "mat_op", material.opacity);
   set_gluniform(state.program, "mat_double_sided", (int)options.double_sided);
-  set_gluniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
-      material.emission_tex >= 0 ? state.textures.at(material.emission_tex)
-                                 : opengl_texture{},
-      0);
-  set_gluniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
-      material.diffuse_tex >= 0 ? state.textures.at(material.diffuse_tex)
-                                : opengl_texture{},
-      1);
-  set_gluniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
-      material.metallic_tex >= 0 ? state.textures.at(material.metallic_tex)
-                                 : opengl_texture{},
-      2);
-  set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
-      material.roughness_tex >= 0 ? state.textures.at(material.roughness_tex)
-                                  : opengl_texture{},
-      3);
-  set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
-      material.normal_tex >= 0 ? state.textures.at(material.normal_tex)
-                               : opengl_texture{},
-      5);
+  if (material.emission_tex >= 0) {
+    set_gluniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
+        state.textures.at(material.emission_tex), 0);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_ke_txt", "mat_ke_txt_on", opengl_texture{}, 0);
+  }
+  if (material.diffuse_tex >= 0) {
+    set_gluniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
+        state.textures.at(material.diffuse_tex), 1);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_kd_txt", "mat_kd_txt_on", opengl_texture{}, 1);
+  }
+  if (material.metallic_tex >= 0) {
+    set_gluniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
+        state.textures.at(material.metallic_tex), 2);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_ks_txt", "mat_ks_txt_on", opengl_texture{}, 2);
+  }
+  if (material.roughness_tex >= 0) {
+    set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
+        state.textures.at(material.roughness_tex), 3);
+  } else {
+    set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
+        opengl_texture{}, 3);
+  }
+  if (material.normal_tex >= 0) {
+    set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
+        state.textures.at(material.normal_tex), 5);
+  } else {
+    set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
+        opengl_texture{}, 5);
+  }
 
   set_gluniform(state.program, "elem_faceted", (int)shape.normals.empty());
   set_glvertexattrib(state.program, "vert_pos", vbos.positions_buffer, zero3f);
