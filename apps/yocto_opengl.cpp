@@ -160,7 +160,9 @@ void delete_glprogram(opengl_program& program) {
   glDeleteProgram(program.program_id);
   glDeleteShader(program.vertex_shader_id);
   glDeleteShader(program.fragment_shader_id);
-  program = {};
+  program.program_id = 0;
+  program.vertex_shader_id = 0;
+  program.fragment_shader_id = 0;
 }
 
 opengl_texture::opengl_texture(opengl_texture&& other) {
@@ -300,7 +302,9 @@ void init_glarraybuffer(
 void delete_glarraybuffer(opengl_arraybuffer& buffer) {
   if (!buffer) return;
   glDeleteBuffers(1, &buffer.buffer_id);
-  buffer = {};
+  buffer.buffer_id = 0;
+  buffer.elem_size = 0;
+  buffer.num = 0;
 }
 
 opengl_elementbuffer::opengl_elementbuffer(opengl_elementbuffer&& other) {
@@ -345,7 +349,9 @@ void init_glelementbuffer(
 void delete_glelementbuffer(opengl_elementbuffer& buffer) {
   if (!buffer) return;
   glDeleteBuffers(1, &buffer.buffer_id);
-  buffer = {};
+  buffer.buffer_id = 0;
+  buffer.elem_size = 0;
+  buffer.num = 0;
 }
 
 void bind_glprogram(opengl_program& program) {
