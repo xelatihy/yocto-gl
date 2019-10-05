@@ -749,28 +749,6 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
   }
 }
 
-void delete_drawgl_shape(drawgl_shape& glshape) {
-  delete_glarraybuffer(glshape.positions_buffer);
-  delete_glarraybuffer(glshape.normals_buffer);
-  delete_glarraybuffer(glshape.texcoords_buffer);
-  delete_glarraybuffer(glshape.colors_buffer);
-  delete_glarraybuffer(glshape.tangentspaces_buffer);
-  delete_glelementbuffer(glshape.points_buffer);
-  delete_glelementbuffer(glshape.lines_buffer);
-  delete_glelementbuffer(glshape.triangles_buffer);
-  delete_glelementbuffer(glshape.quads_buffer);
-}
-
-// delete state
-void delete_drawgl_state(drawgl_state& state) {
-  if (!state.program) return;
-  delete_glprogram(state.program);
-  for (auto& texture : state.textures) delete_gltexture(texture);
-  for (auto& shape : state.shapes) delete_drawgl_shape(shape);
-  state.textures.clear();
-  state.shapes.clear();
-}
-
 bool draw_glwidgets_camera(const opengl_window& win, app_state& scene, int id) {
   auto& camera = scene.scene.cameras[id];
   auto  edited = 0;

@@ -111,12 +111,12 @@ namespace yocto {
 
 // OpenGL image data
 struct opengl_image {
-  vec2i size() const { return texture.size; }
-  operator bool() const { return (bool)texture; }
-  opengl_texture       texture = {};
-  opengl_program       program = {};
-  opengl_arraybuffer   texcoord  = {};
-  opengl_elementbuffer element = {};
+  vec2i                size() const { return texture.size; }
+                       operator bool() const { return (bool)texture; }
+  opengl_texture       texture  = {};
+  opengl_program       program  = {};
+  opengl_arraybuffer   texcoord = {};
+  opengl_elementbuffer element  = {};
 };
 
 // update image data
@@ -126,15 +126,15 @@ void update_glimage(opengl_image& glimage, const image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // update the image data for a small region
-void update_glimage_region(opengl_image& glimage, const image<vec4f>& img,
-    const image_region& region);
-void update_glimage_region(opengl_image& glimage, const image<vec4b>& img,
-    const image_region& region);
+void update_glimage_region(
+    opengl_image& glimage, const image<vec4f>& img, const image_region& region);
+void update_glimage_region(
+    opengl_image& glimage, const image<vec4b>& img, const image_region& region);
 
 // draw image
 void draw_glimage(opengl_image& glimage, const vec2i& win_size,
-    const vec2f& image_center, float image_scale,
-    bool background, float border_size = 2);
+    const vec2f& image_center, float image_scale, bool background,
+    float border_size = 2);
 
 }  // namespace yocto
 
@@ -152,20 +152,19 @@ struct opengl_mesh {
 
 // update image data
 void update_glmesh(opengl_mesh& glmesh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals, 
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords = {});
 void update_glmesh(opengl_mesh& glmesh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals, 
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords = {});
 void update_glmesh(opengl_mesh& glmesh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& tangents, 
+    const vector<vec3f>& positions, const vector<vec3f>& tangents,
     const vector<vec2f>& texcoords = {});
 void update_glmesh(opengl_mesh& glmesh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec2f>& texcoords = {});
 
 // draw mesh
-void draw_glmesh(opengl_mesh& glmesh, const frame3f& frame, 
-    const vec3f& color);
+void draw_glmesh(opengl_mesh& glmesh, const frame3f& frame, const vec3f& color);
 
 }  // namespace yocto
 
@@ -174,15 +173,37 @@ void draw_glmesh(opengl_mesh& glmesh, const frame3f& frame,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// OpenGL image data
-struct opengl_scene;
+// A generoc OpenGL shape
+struct opengl_shape {
+  opengl_arraybuffer   positions_buffer     = {};
+  opengl_arraybuffer   normals_buffer       = {};
+  opengl_arraybuffer   texcoords_buffer     = {};
+  opengl_arraybuffer   colors_buffer        = {};
+  opengl_arraybuffer   tangentspaces_buffer = {};
+  opengl_elementbuffer points_buffer        = {};
+  opengl_elementbuffer lines_buffer         = {};
+  opengl_elementbuffer triangles_buffer     = {};
+  opengl_elementbuffer quads_buffer         = {};
+};
 
-// update image data
-void update_glscene(opengl_scene& glscene);
-void update_glscene(opengl_scene& glscene);
+// OpenGL lights
+struct opengl_lights {
+  vector<vec3f> positions = {};
+  vector<vec3f> emission  = {};
+  vector<int>   types     = {};
+
+  bool empty() const { return positions.empty(); }
+};
+
+// A generic OpenGL scene
+struct opengl_scene {
+  opengl_program         program  = {};
+  vector<opengl_shape>   shapes   = {};
+  vector<opengl_texture> textures = {};
+};
 
 // draw scene
-void draw_glscene(opengl_scene& glscene);
+void draw_glscene(opengl_scene& glscene, const opengl_lights& lights);
 
 }  // namespace yocto
 
