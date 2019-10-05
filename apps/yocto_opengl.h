@@ -54,19 +54,17 @@ void set_glwireframe(bool enabled);
 void set_glblending(bool enabled);
 
 // base object for OpenGL resource. Disables copy contruction.
-struct opengl_base {
-  opengl_base() { }
-  opengl_base(const opengl_base&) = delete;
-  opengl_base& operator=(const opengl_base&) = delete;
-};
-
 struct opengl_program {
+  opengl_program() { }
+  opengl_program(opengl_program&&);
+  opengl_program& operator=(opengl_program&&);
+  ~opengl_program();
+  operator bool() const { return (bool)program_id; }
+
   uint program_id             = 0;
   uint vertex_shader_id       = 0;
   uint fragment_shader_id     = 0;
   uint vertex_array_object_id = 0;
-
-  operator bool() const { return (bool)program_id; }
 };
 
 void init_glprogram(
@@ -83,6 +81,7 @@ struct opengl_texture {
   opengl_texture& operator=(opengl_texture&&);
   ~opengl_texture();
   operator bool() const { return (bool)texture_id; }
+
   uint  texture_id = 0;
   vec2i size       = {0, 0};
 };
@@ -117,19 +116,27 @@ inline void init_gltexture(opengl_texture& texture, const image<vec4b>& img,
 void delete_gltexture(opengl_texture& texture);
 
 struct opengl_arraybuffer {
+  opengl_arraybuffer() { }
+  opengl_arraybuffer(opengl_arraybuffer&&);
+  opengl_arraybuffer& operator=(opengl_arraybuffer&&);
+  ~opengl_arraybuffer();
+  operator bool() const { return (bool)buffer_id; }
+
   uint buffer_id = 0;
   int  num       = 0;
   int  elem_size = 0;
-
-  operator bool() const { return (bool)buffer_id; }
 };
 
 struct opengl_elementbuffer {
+  opengl_elementbuffer() { }
+  opengl_elementbuffer(opengl_elementbuffer&&);
+  opengl_elementbuffer& operator=(opengl_elementbuffer&&);
+  ~opengl_elementbuffer();
+  operator bool() const { return (bool)buffer_id; }
+
   uint buffer_id = 0;
   int  num       = 0;
   int  elem_size = 0;
-
-  operator bool() const { return (bool)buffer_id; }
 };
 
 void init_glarraybuffer(opengl_arraybuffer& buffer, const vector<float>& data,

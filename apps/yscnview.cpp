@@ -705,7 +705,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
   state.shapes.resize(scene.shapes.size());
   for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
     auto& shape = scene.shapes[shape_id];
-    auto  vbos  = drawgl_shape();
+    auto&  vbos  = state.shapes[shape_id];
     if (shape.quadspos.empty()) {
       if (!shape.positions.empty())
         init_glarraybuffer(vbos.positions_buffer, shape.positions, false);
@@ -746,7 +746,6 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         init_glelementbuffer(vbos.quads_buffer, triangles, false);
       }
     }
-    state.shapes[shape_id] = vbos;
   }
 }
 

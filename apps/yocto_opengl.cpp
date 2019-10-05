@@ -89,6 +89,18 @@ void set_glblending(bool enabled) {
   }
 }
 
+opengl_program::opengl_program(opengl_program&& other) {
+  operator=(std::forward<opengl_program>(other));
+}
+opengl_program& opengl_program::operator=(opengl_program&& other) {
+  std::swap(program_id, other.program_id);
+  std::swap(vertex_shader_id, other.vertex_shader_id);
+  std::swap(fragment_shader_id, other.fragment_shader_id);
+  std::swap(vertex_array_object_id, other.vertex_array_object_id);
+  return *this;
+}
+opengl_program::~opengl_program() { delete_glprogram(*this); }
+
 void init_glprogram(
     opengl_program& program, const char* vertex, const char* fragment) {
   assert(glGetError() == GL_NO_ERROR);
@@ -152,8 +164,7 @@ void delete_glprogram(opengl_program& program) {
 }
 
 opengl_texture::opengl_texture(opengl_texture&& other) {
-  std::swap(texture_id, other.texture_id);
-  std::swap(size, other.size);
+  operator=(std::forward<opengl_texture>(other));
 }
 opengl_texture& opengl_texture::operator=(opengl_texture&& other) {
   std::swap(texture_id, other.texture_id);
@@ -244,6 +255,17 @@ void delete_gltexture(opengl_texture& texture) {
   texture.size       = zero2i;
 }
 
+opengl_arraybuffer::opengl_arraybuffer(opengl_arraybuffer&& other) {
+  operator=(std::forward<opengl_arraybuffer>(other));
+}
+opengl_arraybuffer& opengl_arraybuffer::operator=(opengl_arraybuffer&& other) {
+  std::swap(buffer_id, other.buffer_id);
+  std::swap(num, other.num);
+  std::swap(elem_size, elem_size);
+  return *this;
+}
+opengl_arraybuffer::~opengl_arraybuffer() { delete_glarraybuffer(*this); }
+
 template <typename T>
 void init_glarray_buffer_impl(
     opengl_arraybuffer& buffer, const vector<T>& array, bool dynamic) {
@@ -280,6 +302,17 @@ void delete_glarraybuffer(opengl_arraybuffer& buffer) {
   glDeleteBuffers(1, &buffer.buffer_id);
   buffer = {};
 }
+
+opengl_elementbuffer::opengl_elementbuffer(opengl_elementbuffer&& other) {
+  operator=(std::forward<opengl_elementbuffer>(other));
+}
+opengl_elementbuffer& opengl_elementbuffer::operator=(opengl_elementbuffer&& other) {
+  std::swap(buffer_id, other.buffer_id);
+  std::swap(num, other.num);
+  std::swap(elem_size, elem_size);
+  return *this;
+}
+opengl_elementbuffer::~opengl_elementbuffer() { delete_glelementbuffer(*this); }
 
 template <typename T>
 void init_glelementbuffer_impl(
