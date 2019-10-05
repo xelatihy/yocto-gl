@@ -42,7 +42,62 @@
 struct GLFWwindow;
 
 // -----------------------------------------------------------------------------
-// OPENGL FUNCTIONS
+// HIGH-LEVEL OPENGL IMAGE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// OpenGL image data
+struct opengl_image;
+
+// initialize image data
+void make_glimage(opengl_image& glimage);
+void make_glimage(opengl_image& glimage);
+
+// update image data
+void update_glimage(opengl_image& glimage);
+void update_glimage(opengl_image& glimage);
+
+// draw image
+void draw_glimage();
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL MESH DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// OpenGL image data
+struct opengl_mesh;
+
+// update image data
+void update_glmesh(opengl_mesh& glmesh);
+void update_glmesh(opengl_mesh& glmesh);
+
+// draw scene
+void draw_glmesh(opengl_mesh& glmesh);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL SCENE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// OpenGL image data
+struct opengl_scene;
+
+// update image data
+void update_glscene(opengl_scene& glscene);
+void update_glscene(opengl_scene& glscene);
+
+// draw scene
+void draw_glscene(opengl_scene& glscene);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// LOW-LEVEL OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -84,6 +139,10 @@ struct opengl_texture {
 
   uint  texture_id = 0;
   vec2i size       = {0, 0};
+  bool  mipmap     = false;
+  bool  linear     = false;
+  bool  is_srgb    = false;
+  bool  is_float   = false;
 };
 
 void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
