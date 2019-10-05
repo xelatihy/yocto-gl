@@ -286,8 +286,6 @@ bool draw_glfiledialog_button(const opengl_window& win, const char* button_lbl,
 
 void draw_gllabel(
     const opengl_window& win, const char* lbl, const string& text);
-void draw_gllabel(
-    const opengl_window& win, const char* lbl, const char* fmt, ...);
 
 bool begin_header_widget(const opengl_window& win, const char* label);
 void end_header_widget(const opengl_window& win);

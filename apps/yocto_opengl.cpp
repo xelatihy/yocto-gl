@@ -1067,14 +1067,6 @@ void draw_gllabel(
   ImGui::LabelText(lbl, "%s", texture.c_str());
 }
 
-void draw_gllabel(
-    const opengl_window& win, const char* lbl, const char* fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  ImGui::LabelTextV(lbl, fmt, args);
-  va_end(args);
-}
-
 void draw_glseparator(const opengl_window& win) { ImGui::Separator(); }
 
 void continue_glline(const opengl_window& win) { ImGui::SameLine(); }

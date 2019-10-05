@@ -554,15 +554,15 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
         state.textures.at(material.roughness_tex), 3);
   } else {
-    set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
-        opengl_texture{}, 3);
+    set_gluniform_texture(
+        state.program, "mat_rs_txt", "mat_rs_txt_on", opengl_texture{}, 3);
   }
   if (material.normal_tex >= 0) {
     set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
         state.textures.at(material.normal_tex), 5);
   } else {
-    set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
-        opengl_texture{}, 5);
+    set_gluniform_texture(
+        state.program, "mat_norm_txt", "mat_norm_txt_on", opengl_texture{}, 5);
   }
 
   set_gluniform(state.program, "elem_faceted", (int)shape.normals.empty());
@@ -705,7 +705,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
   state.shapes.resize(scene.shapes.size());
   for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
     auto& shape = scene.shapes[shape_id];
-    auto&  vbos  = state.shapes[shape_id];
+    auto& vbos  = state.shapes[shape_id];
     if (shape.quadspos.empty()) {
       if (!shape.positions.empty())
         init_glarraybuffer(vbos.positions_buffer, shape.positions, false);
@@ -804,10 +804,12 @@ bool draw_glwidgets_texture(
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", texture.name);
   edited += draw_gltextinput(win, "filename", texture.filename);
-  draw_gllabel(
-      win, "hdr", "%d x %d", texture.hdr.size().x, texture.hdr.size().y);
-  draw_gllabel(
-      win, "ldr", "%d x %d", texture.ldr.size().x, texture.ldr.size().y);
+  draw_gllabel(win, "hdr",
+      std::to_string(texture.hdr.size().x) +
+          " x " + std::to_string(texture.hdr.size().y));
+  draw_gllabel(win, "ldr",
+      std::to_string(texture.ldr.size().x) + " x " +
+          std::to_string(texture.ldr.size().y));
   if (edited && old_filename != texture.filename) {
     try {
       if (is_hdr_filename(texture.filename)) {
@@ -873,19 +875,20 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", shape.name);
   edited += draw_gltextinput(win, "filename", shape.filename);
-  draw_gllabel(win, "points", "%ld", shape.points.size());
-  draw_gllabel(win, "lines", "%ld", shape.lines.size());
-  draw_gllabel(win, "triangles", "%ld", shape.triangles.size());
-  draw_gllabel(win, "quads", "%ld", shape.quads.size());
-  draw_gllabel(win, "quads pos", "%ld", shape.quadspos.size());
-  draw_gllabel(win, "quads norm", "%ld", shape.quadsnorm.size());
-  draw_gllabel(win, "quads texcoord", "%ld", shape.quadstexcoord.size());
-  draw_gllabel(win, "pos", "%ld", shape.positions.size());
-  draw_gllabel(win, "norm", "%ld", shape.normals.size());
-  draw_gllabel(win, "texcoord", "%ld", shape.texcoords.size());
-  draw_gllabel(win, "color", "%ld", shape.colors.size());
-  draw_gllabel(win, "radius", "%ld", shape.radius.size());
-  draw_gllabel(win, "tangsp", "%ld", shape.tangents.size());
+  draw_gllabel(win, "points", std::to_string(shape.points.size()));
+  draw_gllabel(win, "lines", std::to_string(shape.lines.size()));
+  draw_gllabel(win, "triangles", std::to_string(shape.triangles.size()));
+  draw_gllabel(win, "quads", std::to_string(shape.quads.size()));
+  draw_gllabel(win, "quads pos", std::to_string(shape.quadspos.size()));
+  draw_gllabel(win, "quads norm", std::to_string(shape.quadsnorm.size()));
+  draw_gllabel(
+      win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
+  draw_gllabel(win, "pos", std::to_string(shape.positions.size()));
+  draw_gllabel(win, "norm", std::to_string(shape.normals.size()));
+  draw_gllabel(win, "texcoord", std::to_string(shape.texcoords.size()));
+  draw_gllabel(win, "color", std::to_string(shape.colors.size()));
+  draw_gllabel(win, "radius", std::to_string(shape.radius.size()));
+  draw_gllabel(win, "tangsp", std::to_string(shape.tangents.size()));
   edited += draw_glslider(win, "subdivisions", shape.subdivisions, 0, 10);
   edited += draw_glcheckbox(win, "catmullclark", shape.catmullclark);
   edited += draw_glcheckbox(win, "smooth", shape.smooth);
