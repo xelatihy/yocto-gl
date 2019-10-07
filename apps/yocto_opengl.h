@@ -246,6 +246,9 @@ struct opengl_scene {
   opengl_program          program   = {};
 };
 
+// Initialize an OpenGL scene
+void make_glscene(opengl_scene& scene);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
