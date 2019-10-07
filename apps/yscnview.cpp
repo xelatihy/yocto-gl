@@ -120,68 +120,25 @@ void load_scene_async(app_states& apps, const string& filename) {
   }));
 }
 
-void update_gllights(opengl_scene& state, const yocto_scene& scene) {
-  state.lights = {};
-  for (auto& instance : scene.instances) {
-    if (state.lights.size() >= 16) break;
-    if (instance.shape < 0) continue;
-    auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
-    if (material.emission == zero3f) continue;
-    auto bbox = compute_bounds(shape);
-    auto pos  = (bbox.max + bbox.min) / 2;
-    auto area = 0.0f;
-    if (!shape.triangles.empty()) {
-      for (auto t : shape.triangles)
-        area += triangle_area(
-            shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-    } else if (!shape.quads.empty()) {
-      for (auto q : shape.quads)
-        area += quad_area(shape.positions[q.x], shape.positions[q.y],
-            shape.positions[q.z], shape.positions[q.w]);
-    } else if (!shape.lines.empty()) {
-      for (auto l : shape.lines)
-        area += line_length(shape.positions[l.x], shape.positions[l.y]);
-    } else {
-      area += shape.positions.size();
-    }
-    auto  ke       = material.emission * area;
-    auto& light    = state.lights.emplace_back();
-    light.position = transform_point(instance.frame, pos);
-    light.emission = ke;
-    light.type     = 0;
-  }
-}
-
-void make_glscene(opengl_scene& glscene, const yocto_scene& scene) {
-  // load program
-  make_glscene(glscene);
-
-  // camera
-  for (auto& camera : scene.cameras) {
-    auto& glcamera  = glscene.cameras.emplace_back();
+void update_glcamera(opengl_camera& glcamera, const yocto_camera& camera) {
     glcamera.frame  = camera.frame;
     glcamera.yfov   = camera_yfov(camera);
     glcamera.asepct = camera_aspect(camera);
     glcamera.near   = 0.001f;
     glcamera.far    = 10000;
-  }
+}
 
-  // textures
-  for (auto& texture : scene.textures) {
-    auto& gltexture = glscene.textures.emplace_back();
-    if (!texture.hdr.empty()) {
+void update_gltexture(opengl_texture& gltexture, const yocto_texture& texture) {
+      if (!texture.hdr.empty()) {
       init_gltexture(gltexture, texture.hdr, true, true, true);
     } else if (!texture.ldr.empty()) {
       init_gltexture(gltexture, texture.ldr, true, true, true);
     } else {
       throw std::runtime_error("bad texture");
     }
-  }
+}
 
-  // materials
-  for (auto& material : scene.materials) {
-    auto& glmaterial        = glscene.materials.emplace_back();
+void update_glmaterial(opengl_material& glmaterial, const yocto_material& material) {
     glmaterial.emission     = material.emission;
     glmaterial.diffuse      = material.diffuse;
     glmaterial.specular     = material.specular;
@@ -193,11 +150,9 @@ void make_glscene(opengl_scene& glscene, const yocto_scene& scene) {
     glmaterial.specular_map = material.specular_tex;
     glmaterial.metallic_map = material.metallic_tex;
     glmaterial.normal_map   = material.normal_tex;
-  }
+}
 
-  // shapes
-  for (auto& shape : scene.shapes) {
-    auto& glshape = glscene.shapes.emplace_back();
+void update_glshape(opengl_shape& glshape, const yocto_shape& shape) {
     if (shape.quadspos.empty()) {
       if (!shape.positions.empty())
         init_glarraybuffer(glshape.positions, shape.positions, false);
@@ -237,14 +192,74 @@ void make_glscene(opengl_scene& glscene, const yocto_scene& scene) {
         init_glelementbuffer(glshape.quads, triangles, false);
       }
     }
+}
+
+void update_glinstance(opengl_instance& glinstance, const yocto_instance& instance) {
+      glinstance.frame    = instance.frame;
+    glinstance.shape    = instance.shape;
+    glinstance.material = instance.material;
+}
+
+void update_gllights(opengl_scene& state, const yocto_scene& scene) {
+  state.lights = {};
+  for (auto& instance : scene.instances) {
+    if (state.lights.size() >= 16) break;
+    if (instance.shape < 0) continue;
+    auto& shape    = scene.shapes[instance.shape];
+    auto& material = scene.materials[instance.material];
+    if (material.emission == zero3f) continue;
+    auto bbox = compute_bounds(shape);
+    auto pos  = (bbox.max + bbox.min) / 2;
+    auto area = 0.0f;
+    if (!shape.triangles.empty()) {
+      for (auto t : shape.triangles)
+        area += triangle_area(
+            shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+    } else if (!shape.quads.empty()) {
+      for (auto q : shape.quads)
+        area += quad_area(shape.positions[q.x], shape.positions[q.y],
+            shape.positions[q.z], shape.positions[q.w]);
+    } else if (!shape.lines.empty()) {
+      for (auto l : shape.lines)
+        area += line_length(shape.positions[l.x], shape.positions[l.y]);
+    } else {
+      area += shape.positions.size();
+    }
+    auto  ke       = material.emission * area;
+    auto& light    = state.lights.emplace_back();
+    light.position = transform_point(instance.frame, pos);
+    light.emission = ke;
+    light.type     = 0;
+  }
+}
+
+void make_glscene(opengl_scene& glscene, const yocto_scene& scene) {
+  // load program
+  make_glscene(glscene);
+
+  // camera
+  for (auto& camera : scene.cameras) {
+    update_glcamera(glscene.cameras.emplace_back(), camera);
+  }
+
+  // textures
+  for (auto& texture : scene.textures) {
+    update_gltexture(glscene.textures.emplace_back(), texture);
+  }
+
+  // materials
+  for (auto& material : scene.materials) {
+    update_glmaterial(glscene.materials.emplace_back(), material);
+  }
+
+  // shapes
+  for (auto& shape : scene.shapes) {
+    update_glshape(glscene.shapes.emplace_back(), shape);
   }
 
   // instances
   for (auto& instance : scene.instances) {
-    auto& glinstance    = glscene.instances.emplace_back();
-    glinstance.frame    = instance.frame;
-    glinstance.shape    = instance.shape;
-    glinstance.material = instance.material;
+    update_glinstance(glscene.instances.emplace_back(), instance);
   }
 }
 
