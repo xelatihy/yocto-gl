@@ -220,7 +220,7 @@ struct opengl_material {
 
 // Opengl instance group
 struct opengl_instance {
-  frame3f frame    = {};
+  frame3f frame    = identity3x4f;
   int     shape    = 0;
   int     material = 0;
 };
