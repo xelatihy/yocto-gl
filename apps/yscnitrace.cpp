@@ -70,11 +70,11 @@ struct app_state {
   image<vec4f> display = {};
 
   // view scene
-  vec2f          image_center   = zero2f;
-  float          image_scale    = 1;
-  bool           zoom_to_fit    = true;
-  bool           navigation_fps = false;
-  opengl_image gl_image         = {};
+  vec2f        image_center   = zero2f;
+  float        image_scale    = 1;
+  bool         zoom_to_fit    = true;
+  bool         navigation_fps = false;
+  opengl_image gl_image       = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};

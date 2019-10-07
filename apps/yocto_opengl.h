@@ -215,25 +215,25 @@ struct opengl_material {
   int   emission_map  = -1;
   int   diffuse_map   = -1;
   int   specular_map  = -1;
-  int   metallic_map = -1;
+  int   metallic_map  = -1;
   int   roughness_map = -1;
-  int   normal_map = -1;
-  bool gltf_textures = false;
+  int   normal_map    = -1;
+  bool  gltf_textures = false;
 };
 
 // Opengl instance group
 struct opengl_instance {
-  frame3f frame    = identity3x4f;
-  int     shape    = 0;
-  int     material = 0;
+  frame3f frame       = identity3x4f;
+  int     shape       = 0;
+  int     material    = 0;
   bool    highlighted = false;
 };
 
 // Opengl light
 struct opengl_light {
-  vec3f position  = zero3f;
-  vec3f emission  = zero3f;
-  int   type      = 0;
+  vec3f position = zero3f;
+  vec3f emission = zero3f;
+  int   type     = 0;
 };
 
 // Opengl scene
@@ -269,8 +269,7 @@ struct draw_glscene_params {
 void make_glscene(opengl_scene& scene);
 
 // Draw an OpenGL scene
-void draw_glscene(opengl_scene& state, 
-    const vec4i& viewport, 
+void draw_glscene(opengl_scene& state, const vec4i& viewport,
     const draw_glscene_params& params);
 
 }  // namespace yocto

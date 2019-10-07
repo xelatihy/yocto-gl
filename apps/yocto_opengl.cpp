@@ -92,7 +92,7 @@ void set_glblending(bool enabled) {
   }
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // HIGH-LEVEL OPENGL IMAGE DRAWING
@@ -116,7 +116,7 @@ void init_glimage_program(opengl_image& glimage) {
           frag_texcoord = texcoord;
       }
       )";
-  #if 0
+#if 0
   auto vert = R"(
           #version 330
           in vec2 texcoord;
@@ -130,7 +130,7 @@ void init_glimage_program(opengl_image& glimage) {
               frag_texcoord = texcoord;
           }
       )";
-  #endif
+#endif
   auto frag =
       R"(
       #version 330
@@ -141,7 +141,7 @@ void init_glimage_program(opengl_image& glimage) {
           frag_color = texture(txt, frag_texcoord);
       }
       )";
-  #if 0
+#if 0
     auto frag = R"(
             #version 330
             in vec2 frag_texcoord;
@@ -158,7 +158,7 @@ void init_glimage_program(opengl_image& glimage) {
                 else frag_color = vec4(0.3,0.3,0.3,1);
             }
         )";
-  #endif
+#endif
 
   init_glprogram(glimage.program, vert, frag);
   init_glarraybuffer(
@@ -197,26 +197,26 @@ void update_glimage(
   }
 }
 
-void update_glimage_region(
-    opengl_image& glimage, const image<vec4f>& img, const image_region& region) {
-  if(!glimage) throw std::runtime_error("glimage is not initialized");
+void update_glimage_region(opengl_image& glimage, const image<vec4f>& img,
+    const image_region& region) {
+  if (!glimage) throw std::runtime_error("glimage is not initialized");
   update_gltexture_region(glimage.texture, img, region, glimage.texture.mipmap);
 }
-void update_glimage_region(
-    opengl_image& glimage, const image<vec4b>& img, const image_region& region) {
-  if(!glimage) throw std::runtime_error("glimage is not initialized");
+void update_glimage_region(opengl_image& glimage, const image<vec4b>& img,
+    const image_region& region) {
+  if (!glimage) throw std::runtime_error("glimage is not initialized");
   update_gltexture_region(glimage.texture, img, region, glimage.texture.mipmap);
 }
 
 // draw image
 void draw_glimage(opengl_image& glimage, const vec2i& win_size,
-    const vec2f& image_center, float image_scale, bool background, 
+    const vec2f& image_center, float image_scale, bool background,
     float border_size) {
   check_glerror();
   bind_glprogram(glimage.program);
   set_gluniform_texture(glimage.program, "txt", glimage.texture, 0);
-  set_gluniform(
-      glimage.program, "window_size", vec2f{(float)win_size.x, (float)win_size.y});
+  set_gluniform(glimage.program, "window_size",
+      vec2f{(float)win_size.x, (float)win_size.y});
   set_gluniform(glimage.program, "image_size",
       vec2f{(float)glimage.texture.size.x, (float)glimage.texture.size.y});
   set_gluniform(glimage.program, "image_center", image_center);
@@ -241,8 +241,8 @@ void make_glscene(opengl_scene& glscene) {
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
 
-static const char* vertex =
-    R"(
+  static const char* vertex =
+      R"(
         #version 330
 
         layout(location = 0) in vec3 vert_pos;            // vertex position (in mesh coordinate frame)
@@ -291,8 +291,8 @@ static const char* vertex =
         }
         )";
 
-static const char* fragment =
-    R"(
+  static const char* fragment =
+      R"(
         #version 330
 
         float pif = 3.14159265;
@@ -653,8 +653,7 @@ void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
 }
 
 // Display a scene
-void draw_glscene(opengl_scene& state, 
-    const vec4i& viewport, 
+void draw_glscene(opengl_scene& state, const vec4i& viewport,
     const draw_glscene_params& params) {
   auto& glcamera    = state.cameras.at(params.camera);
   auto  camera_view = mat4f(inverse(glcamera.frame));

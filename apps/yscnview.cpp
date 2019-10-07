@@ -55,8 +55,8 @@ struct app_state {
   string name      = "";
 
   // options
-  load_params   load_prms   = {};
-  save_params   save_prms   = {};
+  load_params         load_prms   = {};
+  save_params         save_prms   = {};
   draw_glscene_params drawgl_prms = {};
 
   // scene
@@ -98,8 +98,8 @@ struct app_states {
   }
 
   // default options
-  load_params   load_prms   = {};
-  save_params   save_prms   = {};
+  load_params         load_prms   = {};
+  save_params         save_prms   = {};
   draw_glscene_params drawgl_prms = {};
 };
 
@@ -121,83 +121,85 @@ void load_scene_async(app_states& apps, const string& filename) {
 }
 
 void update_glcamera(opengl_camera& glcamera, const yocto_camera& camera) {
-    glcamera.frame  = camera.frame;
-    glcamera.yfov   = camera_yfov(camera);
-    glcamera.asepct = camera_aspect(camera);
-    glcamera.near   = 0.001f;
-    glcamera.far    = 10000;
+  glcamera.frame  = camera.frame;
+  glcamera.yfov   = camera_yfov(camera);
+  glcamera.asepct = camera_aspect(camera);
+  glcamera.near   = 0.001f;
+  glcamera.far    = 10000;
 }
 
 void update_gltexture(opengl_texture& gltexture, const yocto_texture& texture) {
-      if (!texture.hdr.empty()) {
-      init_gltexture(gltexture, texture.hdr, true, true, true);
-    } else if (!texture.ldr.empty()) {
-      init_gltexture(gltexture, texture.ldr, true, true, true);
-    } else {
-      throw std::runtime_error("bad texture");
-    }
+  if (!texture.hdr.empty()) {
+    init_gltexture(gltexture, texture.hdr, true, true, true);
+  } else if (!texture.ldr.empty()) {
+    init_gltexture(gltexture, texture.ldr, true, true, true);
+  } else {
+    throw std::runtime_error("bad texture");
+  }
 }
 
-void update_glmaterial(opengl_material& glmaterial, const yocto_material& material) {
-    glmaterial.emission     = material.emission;
-    glmaterial.diffuse      = material.diffuse;
-    glmaterial.specular     = material.specular;
-    glmaterial.metallic     = material.metallic;
-    glmaterial.roughness    = material.roughness;
-    glmaterial.opacity      = material.opacity;
-    glmaterial.emission_map = material.emission_tex;
-    glmaterial.diffuse_map  = material.diffuse_tex;
-    glmaterial.specular_map = material.specular_tex;
-    glmaterial.metallic_map = material.metallic_tex;
-    glmaterial.normal_map   = material.normal_tex;
+void update_glmaterial(
+    opengl_material& glmaterial, const yocto_material& material) {
+  glmaterial.emission     = material.emission;
+  glmaterial.diffuse      = material.diffuse;
+  glmaterial.specular     = material.specular;
+  glmaterial.metallic     = material.metallic;
+  glmaterial.roughness    = material.roughness;
+  glmaterial.opacity      = material.opacity;
+  glmaterial.emission_map = material.emission_tex;
+  glmaterial.diffuse_map  = material.diffuse_tex;
+  glmaterial.specular_map = material.specular_tex;
+  glmaterial.metallic_map = material.metallic_tex;
+  glmaterial.normal_map   = material.normal_tex;
 }
 
 void update_glshape(opengl_shape& glshape, const yocto_shape& shape) {
-    if (shape.quadspos.empty()) {
-      if (!shape.positions.empty())
-        init_glarraybuffer(glshape.positions, shape.positions, false);
-      if (!shape.normals.empty())
-        init_glarraybuffer(glshape.normals, shape.normals, false);
-      if (!shape.texcoords.empty())
-        init_glarraybuffer(glshape.texcoords, shape.texcoords, false);
-      if (!shape.colors.empty())
-        init_glarraybuffer(glshape.colors, shape.colors, false);
-      if (!shape.tangents.empty())
-        init_glarraybuffer(glshape.tangentsps, shape.tangents, false);
-      if (!shape.points.empty())
-        init_glelementbuffer(glshape.points, shape.points, false);
-      if (!shape.lines.empty())
-        init_glelementbuffer(glshape.lines, shape.lines, false);
-      if (!shape.triangles.empty())
-        init_glelementbuffer(glshape.triangles, shape.triangles, false);
-      if (!shape.quads.empty()) {
-        auto triangles = quads_to_triangles(shape.quads);
-        init_glelementbuffer(glshape.quads, triangles, false);
-      }
-    } else {
-      auto quads     = vector<vec4i>{};
-      auto positions = vector<vec3f>{};
-      auto normals   = vector<vec3f>{};
-      auto texcoords = vector<vec2f>{};
-      split_facevarying(quads, positions, normals, texcoords, shape.quadspos,
-          shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-          shape.texcoords);
-      if (!positions.empty())
-        init_glarraybuffer(glshape.positions, positions, false);
-      if (!normals.empty()) init_glarraybuffer(glshape.normals, normals, false);
-      if (!texcoords.empty())
-        init_glarraybuffer(glshape.texcoords, texcoords, false);
-      if (!quads.empty()) {
-        auto triangles = quads_to_triangles(quads);
-        init_glelementbuffer(glshape.quads, triangles, false);
-      }
+  if (shape.quadspos.empty()) {
+    if (!shape.positions.empty())
+      init_glarraybuffer(glshape.positions, shape.positions, false);
+    if (!shape.normals.empty())
+      init_glarraybuffer(glshape.normals, shape.normals, false);
+    if (!shape.texcoords.empty())
+      init_glarraybuffer(glshape.texcoords, shape.texcoords, false);
+    if (!shape.colors.empty())
+      init_glarraybuffer(glshape.colors, shape.colors, false);
+    if (!shape.tangents.empty())
+      init_glarraybuffer(glshape.tangentsps, shape.tangents, false);
+    if (!shape.points.empty())
+      init_glelementbuffer(glshape.points, shape.points, false);
+    if (!shape.lines.empty())
+      init_glelementbuffer(glshape.lines, shape.lines, false);
+    if (!shape.triangles.empty())
+      init_glelementbuffer(glshape.triangles, shape.triangles, false);
+    if (!shape.quads.empty()) {
+      auto triangles = quads_to_triangles(shape.quads);
+      init_glelementbuffer(glshape.quads, triangles, false);
     }
+  } else {
+    auto quads     = vector<vec4i>{};
+    auto positions = vector<vec3f>{};
+    auto normals   = vector<vec3f>{};
+    auto texcoords = vector<vec2f>{};
+    split_facevarying(quads, positions, normals, texcoords, shape.quadspos,
+        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+        shape.texcoords);
+    if (!positions.empty())
+      init_glarraybuffer(glshape.positions, positions, false);
+    if (!normals.empty()) init_glarraybuffer(glshape.normals, normals, false);
+    if (!texcoords.empty())
+      init_glarraybuffer(glshape.texcoords, texcoords, false);
+    if (!quads.empty()) {
+      auto triangles = quads_to_triangles(quads);
+      init_glelementbuffer(glshape.quads, triangles, false);
+    }
+  }
 }
 
-void update_glinstance(opengl_instance& glinstance, const yocto_instance& instance) {
-      glinstance.frame    = instance.frame;
-    glinstance.shape    = instance.shape;
-    glinstance.material = instance.material;
+void update_glinstance(
+    opengl_instance& glinstance, const yocto_instance& instance) {
+  glinstance.frame    = instance.frame;
+  glinstance.shape    = instance.shape;
+  glinstance.material = instance.material;
 }
 
 void update_gllights(opengl_scene& state, const yocto_scene& scene) {
@@ -285,7 +287,7 @@ bool draw_glwidgets_camera(const opengl_window& win, app_state& scene, int id) {
     camera.focus = length(from - to);
     edited += 1;
   }
-  if(edited) update_glcamera(scene.state.cameras[id], camera);
+  if (edited) update_glcamera(scene.state.cameras[id], camera);
   return edited;
 }
 
@@ -316,7 +318,7 @@ bool draw_glwidgets_texture(
       log_glinfo(win, e.what());
     }
   }
-  if(edited) update_gltexture(scene.state.textures[id], texture);
+  if (edited) update_gltexture(scene.state.textures[id], texture);
   return edited;
 }
 
@@ -359,7 +361,7 @@ bool draw_glwidgets_material(
       win, "normal_tex", material.normal_tex, scene.scene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   // TODO: update lights
-  if(edited) update_glmaterial(scene.state.materials[id], material);
+  if (edited) update_glmaterial(scene.state.materials[id], material);
   return edited;
 }
 
@@ -402,7 +404,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
     }
     // TODO: update lights
   }
-  if(edited) update_glshape(scene.state.shapes[id], shape);
+  if (edited) update_glshape(scene.state.shapes[id], shape);
   return edited;
 }
 
@@ -421,7 +423,7 @@ bool draw_glwidgets_instance(
   edited += draw_glcombobox(
       win, "material", instance.material, scene.scene.materials, true);
   // TODO: update lights
-  if(edited) update_glinstance(scene.state.instances[id], instance);
+  if (edited) update_glinstance(scene.state.instances[id], instance);
   return edited;
 }
 
@@ -532,9 +534,9 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "edit")) {
-    static auto labels = vector<string>{"camera", "shape", "environment",
-        "instance", "material", "texture"};
-    auto&       app    = apps.get_selected();
+    static auto labels = vector<string>{
+        "camera", "shape", "environment", "instance", "material", "texture"};
+    auto& app = apps.get_selected();
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
     if (app.selection.first == "camera") {
@@ -575,8 +577,7 @@ void draw(const opengl_window& win) {
 
   if (!apps.states.empty() && apps.selected >= 0) {
     auto& app = apps.get_selected();
-    draw_glscene(app.state, get_glframebuffer_viewport(win),
-        app.drawgl_prms);
+    draw_glscene(app.state, get_glframebuffer_viewport(win), app.drawgl_prms);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);

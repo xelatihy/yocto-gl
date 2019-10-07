@@ -275,7 +275,8 @@ void draw(const opengl_window& win) {
     if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
     update_imview(app.image_center, app.image_scale, app.display.size(),
         win_size, app.zoom_to_fit);
-    draw_glimage(app.gl_image, win_size, app.image_center, app.image_scale, true);
+    draw_glimage(
+        app.gl_image, win_size, app.image_center, app.image_scale, true);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);

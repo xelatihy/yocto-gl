@@ -47,10 +47,10 @@ struct app_state {
   bool              apply_colorgrade = false;
 
   // viewing properties
-  vec2f          image_center = zero2f;
-  float          image_scale  = 1;
-  bool           zoom_to_fit  = false;
-  opengl_image   gl_image     = {};
+  vec2f        image_center = zero2f;
+  float        image_scale  = 1;
+  bool         zoom_to_fit  = false;
+  opengl_image gl_image     = {};
 };
 
 void update_display(app_state& app) {
@@ -73,8 +73,7 @@ void draw(const opengl_window& win) {
   if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
   update_imview(app.image_center, app.image_scale, app.display.size(), win_size,
       app.zoom_to_fit);
-  draw_glimage(
-      app.gl_image, win_size, app.image_center, app.image_scale, true);
+  draw_glimage(app.gl_image, win_size, app.image_center, app.image_scale, true);
   swap_glbuffers(win);
 }
 

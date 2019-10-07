@@ -62,11 +62,11 @@ struct app_state {
   image<vec4f> display = {};
 
   // view scene
-  vec2f          image_center   = zero2f;
-  float          image_scale    = 1;
-  bool           zoom_to_fit    = true;
-  bool           navigation_fps = false;
-  opengl_image gl_image         = {};
+  vec2f        image_center   = zero2f;
+  float        image_scale    = 1;
+  bool         zoom_to_fit    = true;
+  bool         navigation_fps = false;
+  opengl_image gl_image       = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -97,12 +97,11 @@ void draw(const opengl_window& win) {
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_image || app.gl_image.size() != app.display.size()) 
+  if (!app.gl_image || app.gl_image.size() != app.display.size())
     update_glimage(app.gl_image, app.display, false, false);
   update_imview(app.image_center, app.image_scale, app.display.size(), win_size,
       app.zoom_to_fit);
-  draw_glimage(
-      app.gl_image, win_size, app.image_center, app.image_scale, true);
+  draw_glimage(app.gl_image, win_size, app.image_center, app.image_scale, true);
   swap_glbuffers(win);
 }
 
