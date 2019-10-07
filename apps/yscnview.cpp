@@ -53,11 +53,10 @@ void init_drawgl_lights(opengl_scene& state, const yocto_scene& scene) {
     if (instance.shape < 0) continue;
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
-    if (material.emission != zero3f) continue;
-    auto& light    = state.lights.emplace_back();
-    auto  bbox     = compute_bounds(shape);
-    light.position = (bbox.max + bbox.min) / 2;
-    auto area      = 0.0f;
+    if (material.emission == zero3f) continue;
+    auto bbox = compute_bounds(shape);
+    auto pos  = (bbox.max + bbox.min) / 2;
+    auto area = 0.0f;
     if (!shape.triangles.empty()) {
       for (auto t : shape.triangles)
         area += triangle_area(
@@ -72,7 +71,10 @@ void init_drawgl_lights(opengl_scene& state, const yocto_scene& scene) {
     } else {
       area += shape.positions.size();
     }
-    light.emission = material.emission * area;
+    auto  ke       = material.emission * area;
+    auto& light    = state.lights.emplace_back();
+    light.position = transform_point(instance.frame, pos);
+    light.emission = ke;
     light.type     = 0;
   }
 }
@@ -277,14 +279,13 @@ void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
 void draw_glscene(opengl_scene& state, const yocto_scene& scene,
     const vec4i& viewport, const pair<string, int>& highlighted,
     const drawgl_params& options) {
-  auto& camera      = scene.cameras.at(options.camera);
   auto& glcamera    = state.cameras.at(options.camera);
   auto  camera_view = mat4f(inverse(glcamera.frame));
-  auto  camera_proj = perspective_mat(
-      glcamera.yfov, (float)viewport.z / (float)viewport.w, options.near, options.far);
+  auto  camera_proj = perspective_mat(glcamera.yfov,
+      (float)viewport.z / (float)viewport.w, options.near, options.far);
 
   bind_glprogram(state.program);
-  set_gluniform(state.program, "cam_pos", camera.frame.o);
+  set_gluniform(state.program, "cam_pos", glcamera.frame.o);
   set_gluniform(state.program, "cam_xform_inv", camera_view);
   set_gluniform(state.program, "cam_proj", camera_proj);
   set_gluniform(state.program, "eyelight", (int)options.eyelight);
@@ -292,45 +293,16 @@ void draw_glscene(opengl_scene& state, const yocto_scene& scene,
   set_gluniform(state.program, "gamma", options.gamma);
 
   if (!options.eyelight) {
-    auto lights_pos  = vector<vec3f>();
-    auto lights_ke   = vector<vec3f>();
-    auto lights_type = vector<int>();
-    for (auto& instance : scene.instances) {
-      if (instance.shape < 0) continue;
-      auto& shape    = scene.shapes[instance.shape];
-      auto& material = scene.materials[instance.material];
-      if (material.emission == zero3f) continue;
-      if (lights_pos.size() >= 16) break;
-      auto bbox = compute_bounds(shape);
-      auto pos  = (bbox.max + bbox.min) / 2;
-      auto area = 0.0f;
-      if (!shape.triangles.empty()) {
-        for (auto t : shape.triangles)
-          area += triangle_area(
-              shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-      } else if (!shape.quads.empty()) {
-        for (auto q : shape.quads)
-          area += quad_area(shape.positions[q.x], shape.positions[q.y],
-              shape.positions[q.z], shape.positions[q.w]);
-      } else if (!shape.lines.empty()) {
-        for (auto l : shape.lines)
-          area += line_length(shape.positions[l.x], shape.positions[l.y]);
-      } else {
-        area += shape.positions.size();
-      }
-      auto ke = material.emission * area;
-      lights_pos.push_back(transform_point(instance.frame, pos));
-      lights_ke.push_back(ke);
-      lights_type.push_back(0);
-    }
     set_gluniform(state.program, "lamb", zero3f);
-    set_gluniform(state.program, "lnum", (int)lights_pos.size());
-    for (auto i = 0; i < lights_pos.size(); i++) {
+    set_gluniform(state.program, "lnum", (int)state.lights.size());
+    for (auto i = 0; i < state.lights.size(); i++) {
       auto is = std::to_string(i);
-      set_gluniform(state.program, ("lpos[" + is + "]").c_str(), lights_pos[i]);
-      set_gluniform(state.program, ("lke[" + is + "]").c_str(), lights_ke[i]);
+      set_gluniform(state.program, ("lpos[" + is + "]").c_str(),
+          state.lights[i].position);
       set_gluniform(
-          state.program, ("ltype[" + is + "]").c_str(), (int)lights_type[i]);
+          state.program, ("lke[" + is + "]").c_str(), state.lights[i].emission);
+      set_gluniform(state.program, ("ltype[" + is + "]").c_str(),
+          (int)state.lights[i].type);
     }
   }
 
@@ -354,13 +326,13 @@ void init_opengl_scene(opengl_scene& state, const yocto_scene& scene) {
   // camera
   state.cameras.resize(scene.cameras.size());
   for (auto camera_id = 0; camera_id < scene.cameras.size(); camera_id++) {
-    auto& camera = scene.cameras[camera_id];
-    auto& glcamera = state.cameras[camera_id];
-    glcamera.frame = camera.frame;
-    glcamera.yfov = camera_yfov(camera);
+    auto& camera    = scene.cameras[camera_id];
+    auto& glcamera  = state.cameras[camera_id];
+    glcamera.frame  = camera.frame;
+    glcamera.yfov   = camera_yfov(camera);
     glcamera.asepct = camera_aspect(camera);
-    glcamera.near = 0.001f;
-    glcamera.far  = 10000;
+    glcamera.near   = 0.001f;
+    glcamera.far    = 10000;
   }
 
   // textures
@@ -787,6 +759,7 @@ void update(const opengl_window& win, app_states& apps) {
     apps.states.splice(apps.states.end(), apps.loading, apps.loading.begin());
     apps.load_workers.pop_front();
     init_opengl_scene(apps.states.back().state, apps.states.back().scene);
+    init_drawgl_lights(apps.states.back().state, apps.states.back().scene);
     if (apps.selected < 0) apps.selected = (int)apps.states.size() - 1;
   }
 }
