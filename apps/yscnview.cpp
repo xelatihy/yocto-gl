@@ -170,9 +170,8 @@ void load_scene_async(app_states& apps, const string& filename) {
 }
 
 // Draw a shape
-void draw_glinstance(opengl_scene& state, 
-  const opengl_instance& instance, bool highlighted,
-  const drawgl_params& options) {
+void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
+    const drawgl_params& options) {
   auto& shape    = state.shapes[instance.shape];
   auto& material = state.materials[instance.material];
 
@@ -180,8 +179,8 @@ void draw_glinstance(opengl_scene& state,
   set_gluniform(state.program, "shape_xform_invtranspose",
       transpose(mat4f(inverse(instance.frame, options.non_rigid_frames))));
   set_gluniform(state.program, "shape_normal_offset", 0.0f);
-  set_gluniform(
-      state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
+  set_gluniform(state.program, "highlight",
+      instance.highlighted ? vec4f{1, 1, 0, 1} : zero4f);
 
   auto mtype = 2;
   if (material.gltf_textures) mtype = 3;
@@ -338,10 +337,10 @@ void draw_glscene(opengl_scene& state, const yocto_scene& scene,
   if (options.wireframe) set_glwireframe(true);
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
-    auto& instance = state.instances[instance_id];
-    auto highlight = highlighted.first == "instance" &&
-                     highlighted.second == instance_id;
-    draw_glinstance(state, instance, highlight, options);
+    auto& instance       = state.instances[instance_id];
+    instance.highlighted = highlighted.first == "instance" &&
+                           highlighted.second == instance_id;
+    draw_glinstance(state, instance, options);
   }
 
   unbind_opengl_program();
@@ -367,27 +366,28 @@ void init_opengl_scene(opengl_scene& state, const yocto_scene& scene) {
 
   // materials
   state.materials.resize(scene.materials.size());
-  for (auto material_id = 0; material_id < scene.materials.size(); material_id++) {
-    auto& material = scene.materials[material_id];
-    auto& glmaterial  = state.materials[material_id];
-    glmaterial.emission = material.emission;
-    glmaterial.diffuse = material.diffuse;
-    glmaterial.specular = material.specular;
-    glmaterial.metallic = material.metallic;
-    glmaterial.roughness = material.roughness;
-    glmaterial.opacity = material.opacity;
+  for (auto material_id = 0; material_id < scene.materials.size();
+       material_id++) {
+    auto& material          = scene.materials[material_id];
+    auto& glmaterial        = state.materials[material_id];
+    glmaterial.emission     = material.emission;
+    glmaterial.diffuse      = material.diffuse;
+    glmaterial.specular     = material.specular;
+    glmaterial.metallic     = material.metallic;
+    glmaterial.roughness    = material.roughness;
+    glmaterial.opacity      = material.opacity;
     glmaterial.emission_map = material.emission_tex;
-    glmaterial.diffuse_map = material.diffuse_tex;
+    glmaterial.diffuse_map  = material.diffuse_tex;
     glmaterial.specular_map = material.specular_tex;
     glmaterial.metallic_map = material.metallic_tex;
-    glmaterial.normal_map = material.normal_tex;
+    glmaterial.normal_map   = material.normal_tex;
   }
 
   // shapes
   state.shapes.resize(scene.shapes.size());
   for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
-    auto& shape = scene.shapes[shape_id];
-    auto& glshape  = state.shapes[shape_id];
+    auto& shape   = scene.shapes[shape_id];
+    auto& glshape = state.shapes[shape_id];
     if (shape.quadspos.empty()) {
       if (!shape.positions.empty())
         init_glarraybuffer(glshape.positions, shape.positions, false);
