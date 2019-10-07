@@ -47,10 +47,8 @@ struct app_state {
   bool              apply_colorgrade = false;
 
   // viewing properties
-  vec2f        image_center = zero2f;
-  float        image_scale  = 1;
-  bool         zoom_to_fit  = false;
-  opengl_image gl_image     = {};
+  opengl_image        gl_image  = {};
+  draw_glimage_params draw_prms = {};
 };
 
 void update_display(app_state& app) {
@@ -65,15 +63,14 @@ void update_display(app_state& app) {
 }
 
 void draw(const opengl_window& win) {
-  auto& app      = *(app_state*)get_gluser_pointer(win);
-  auto  win_size = get_glwindow_size(win);
-  auto  fb_view  = get_glframebuffer_viewport(win);
-  set_glviewport(fb_view);
+  auto& app = *(app_state*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
-  update_imview(app.image_center, app.image_scale, app.display.size(), win_size,
-      app.zoom_to_fit);
-  draw_glimage(app.gl_image, win_size, app.image_center, app.image_scale, true);
+  app.draw_prms.window      = get_glwindow_size(win);
+  app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
+  update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
+      app.draw_prms.window, app.draw_prms.fit);
+  draw_glimage(app.gl_image, app.draw_prms);
   swap_glbuffers(win);
 }
 
@@ -92,10 +89,10 @@ void run_ui(app_state& app) {
 
     // handle mouse
     if (mouse_left) {
-      app.image_center += mouse_pos - last_pos;
+      app.draw_prms.center += mouse_pos - last_pos;
     }
     if (mouse_right) {
-      app.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+      app.draw_prms.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
     // draw

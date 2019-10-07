@@ -209,18 +209,18 @@ void update_glimage_region(opengl_image& glimage, const image<vec4b>& img,
 }
 
 // draw image
-void draw_glimage(opengl_image& glimage, const vec2i& win_size,
-    const vec2f& image_center, float image_scale, bool background,
-    float border_size) {
+void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
   check_glerror();
+  set_glviewport(params.framebuffer);
+  clear_glframebuffer(params.background);
   bind_glprogram(glimage.program);
   set_gluniform_texture(glimage.program, "txt", glimage.texture, 0);
   set_gluniform(glimage.program, "window_size",
-      vec2f{(float)win_size.x, (float)win_size.y});
+      vec2f{(float)params.window.x, (float)params.window.y});
   set_gluniform(glimage.program, "image_size",
       vec2f{(float)glimage.texture.size.x, (float)glimage.texture.size.y});
-  set_gluniform(glimage.program, "image_center", image_center);
-  set_gluniform(glimage.program, "image_scale", image_scale);
+  set_gluniform(glimage.program, "image_center", params.center);
+  set_gluniform(glimage.program, "image_scale", params.scale);
   set_glvertexattrib(glimage.program, "texcoord", glimage.texcoord, zero2f);
   draw_gltriangles(glimage.element, 2);
   unbind_opengl_program();

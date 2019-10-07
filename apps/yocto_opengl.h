@@ -119,6 +119,18 @@ struct opengl_image {
   opengl_elementbuffer element  = {};
 };
 
+// OpenGL image drawing params
+struct draw_glimage_params {
+  vec2i window      = {512, 512};
+  vec4i framebuffer = {0, 0, 512, 512};
+  vec2f center      = {0, 0};
+  float scale       = 1;
+  bool  fit         = true;
+  bool  checker     = true;
+  float border_size = 2;
+  vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
+};
+
 // update image data
 void update_glimage(opengl_image& glimage, const image<vec4f>& img,
     bool linear = false, bool mipmap = false);
@@ -132,9 +144,7 @@ void update_glimage_region(
     opengl_image& glimage, const image<vec4b>& img, const image_region& region);
 
 // draw image
-void draw_glimage(opengl_image& glimage, const vec2i& win_size,
-    const vec2f& image_center, float image_scale, bool background,
-    float border_size = 2);
+void draw_glimage(opengl_image& glimage, const draw_glimage_params& params);
 
 }  // namespace yocto
 

@@ -70,11 +70,9 @@ struct app_state {
   image<vec4f> display = {};
 
   // view scene
-  vec2f        image_center   = zero2f;
-  float        image_scale    = 1;
-  bool         zoom_to_fit    = true;
-  bool         navigation_fps = false;
-  opengl_image gl_image       = {};
+  opengl_image        gl_image       = {};
+  draw_glimage_params draw_prms      = {};
+  bool                navigation_fps = false;
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -426,8 +424,8 @@ void draw_glwidgets(const opengl_window& win) {
         std::to_string(app.render.size().x) + " x " +
             std::to_string(app.render.size().y) + " @ " +
             std::to_string(app.render_sample));
-    draw_glslider(win, "zoom", app.image_scale, 0.1, 10);
-    draw_glcheckbox(win, "zoom to fit", app.zoom_to_fit);
+    draw_glslider(win, "zoom", app.draw_prms.scale, 0.1, 10);
+    draw_glcheckbox(win, "zoom to fit", app.draw_prms.fit);
     continue_glline(win);
     draw_glcheckbox(win, "fps", app.navigation_fps);
     if (draw_glbutton(win, "print cams")) {
@@ -441,8 +439,8 @@ void draw_glwidgets(const opengl_window& win) {
       // for (auto stat : format_stats(app.bvh)) print_info(stat);
     }
     auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(
-        mouse_pos, app.image_center, app.image_scale, app.render.size());
+    auto ij        = get_image_coords(mouse_pos, app.draw_prms.center,
+        app.draw_prms.scale, app.render.size());
     draw_gldragger(win, "mouse", ij);
     if (ij.x >= 0 && ij.x < app.render.size().x && ij.y >= 0 &&
         ij.y < app.render.size().y) {
@@ -495,19 +493,17 @@ void draw_glwidgets(const opengl_window& win) {
 }
 
 void draw(const opengl_window& win) {
-  auto& apps     = *(app_states*)get_gluser_pointer(win);
-  auto  win_size = get_glwindow_size(win);
-  auto  fb_view  = get_glframebuffer_viewport(win);
-  set_glviewport(fb_view);
+  auto& apps = *(app_states*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app = apps.get_selected();
+    auto& app                 = apps.get_selected();
+    app.draw_prms.window      = get_glwindow_size(win);
+    app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
     if (!app.gl_image || app.gl_image.size() != app.display.size())
       update_glimage(app.gl_image, app.display, false, false);
-    update_imview(app.image_center, app.image_scale, app.display.size(),
-        win_size, app.zoom_to_fit);
-    draw_glimage(
-        app.gl_image, win_size, app.image_center, app.image_scale, true);
+    update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
+        app.draw_prms.window, app.draw_prms.fit);
+    draw_glimage(app.gl_image, app.draw_prms);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -625,8 +621,8 @@ void run_ui(app_states& apps) {
     if (scene_ok && (mouse_left || mouse_right) && alt_down &&
         !widgets_active) {
       auto& app = apps.get_selected();
-      auto  ij  = get_image_coords(
-          mouse_pos, app.image_center, app.image_scale, app.render.size());
+      auto  ij  = get_image_coords(mouse_pos, app.draw_prms.center,
+          app.draw_prms.scale, app.render.size());
       if (ij.x >= 0 && ij.x < app.render.size().x && ij.y >= 0 &&
           ij.y < app.render.size().y) {
         auto& camera = app.scene.cameras.at(app.trace_prms.camera);

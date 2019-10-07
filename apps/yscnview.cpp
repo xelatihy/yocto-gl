@@ -63,7 +63,7 @@ struct app_state {
   yocto_scene scene = {};
 
   // rendering state
-  opengl_scene state = {};
+  opengl_scene glscene = {};
 
   // view image
   bool   navigation_fps = false;
@@ -287,7 +287,7 @@ bool draw_glwidgets_camera(const opengl_window& win, app_state& scene, int id) {
     camera.focus = length(from - to);
     edited += 1;
   }
-  if (edited) update_glcamera(scene.state.cameras[id], camera);
+  if (edited) update_glcamera(scene.glscene.cameras[id], camera);
   return edited;
 }
 
@@ -318,7 +318,7 @@ bool draw_glwidgets_texture(
       log_glinfo(win, e.what());
     }
   }
-  if (edited) update_gltexture(scene.state.textures[id], texture);
+  if (edited) update_gltexture(scene.glscene.textures[id], texture);
   return edited;
 }
 
@@ -361,7 +361,7 @@ bool draw_glwidgets_material(
       win, "normal_tex", material.normal_tex, scene.scene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   // TODO: update lights
-  if (edited) update_glmaterial(scene.state.materials[id], material);
+  if (edited) update_glmaterial(scene.glscene.materials[id], material);
   return edited;
 }
 
@@ -404,7 +404,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
     }
     // TODO: update lights
   }
-  if (edited) update_glshape(scene.state.shapes[id], shape);
+  if (edited) update_glshape(scene.glscene.shapes[id], shape);
   return edited;
 }
 
@@ -423,7 +423,7 @@ bool draw_glwidgets_instance(
   edited += draw_glcombobox(
       win, "material", instance.material, scene.scene.materials, true);
   // TODO: update lights
-  if (edited) update_glinstance(scene.state.instances[id], instance);
+  if (edited) update_glinstance(scene.glscene.instances[id], instance);
   return edited;
 }
 
@@ -577,7 +577,7 @@ void draw(const opengl_window& win) {
 
   if (!apps.states.empty() && apps.selected >= 0) {
     auto& app = apps.get_selected();
-    draw_glscene(app.state, get_glframebuffer_viewport(win), app.drawgl_prms);
+    draw_glscene(app.glscene, get_glframebuffer_viewport(win), app.drawgl_prms);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -598,8 +598,8 @@ void update(const opengl_window& win, app_states& apps) {
     }
     apps.states.splice(apps.states.end(), apps.loading, apps.loading.begin());
     apps.load_workers.pop_front();
-    make_glscene(apps.states.back().state, apps.states.back().scene);
-    update_gllights(apps.states.back().state, apps.states.back().scene);
+    make_glscene(apps.states.back().glscene, apps.states.back().scene);
+    update_gllights(apps.states.back().glscene, apps.states.back().scene);
     if (apps.selected < 0) apps.selected = (int)apps.states.size() - 1;
   }
 }
@@ -649,7 +649,7 @@ void run_ui(app_states& apps) {
       if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
       if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      update_glcamera(app.state.cameras[app.drawgl_prms.camera], camera);
+      update_glcamera(app.glscene.cameras[app.drawgl_prms.camera], camera);
     }
 
     // animation

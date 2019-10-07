@@ -62,10 +62,8 @@ struct app_state {
   bool              apply_colorgrade = false;
 
   // viewing properties
-  vec2f        image_center = zero2f;
-  float        image_scale  = 1;
-  bool         zoom_to_fit  = false;
-  opengl_image gl_image     = {};
+  opengl_image        gl_image  = {};
+  draw_glimage_params draw_prms = {};
 
   // rendering properties
   int                  render_region  = 0;
@@ -234,11 +232,11 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "image",
         std::to_string(app.source.size().x) + " x " +
             std::to_string(app.source.size().y));
-    draw_glslider(win, "zoom", app.image_scale, 0.1, 10);
-    draw_glcheckbox(win, "zoom to fit", app.zoom_to_fit);
+    draw_glslider(win, "zoom", app.draw_prms.scale, 0.1, 10);
+    draw_glcheckbox(win, "fit", app.draw_prms.fit);
     auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(
-        mouse_pos, app.image_center, app.image_scale, app.source.size());
+    auto ij        = get_image_coords(mouse_pos, app.draw_prms.center,
+        app.draw_prms.scale, app.source.size());
     draw_gldragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
     if (ij.x >= 0 && ij.x < app.source.size().x && ij.y >= 0 &&
@@ -265,18 +263,15 @@ void draw_glwidgets(const opengl_window& win) {
 }
 
 void draw(const opengl_window& win) {
-  auto& apps     = *(app_states*)get_gluser_pointer(win);
-  auto  win_size = get_glwindow_size(win);
-  auto  fb_view  = get_glframebuffer_viewport(win);
-  set_glviewport(fb_view);
-  clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+  auto& apps = *(app_states*)get_gluser_pointer(win);
   if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app = apps.get_selected();
+    auto& app                 = apps.get_selected();
+    app.draw_prms.window      = get_glwindow_size(win);
+    app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
     if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
-    update_imview(app.image_center, app.image_scale, app.display.size(),
-        win_size, app.zoom_to_fit);
-    draw_glimage(
-        app.gl_image, win_size, app.image_center, app.image_scale, true);
+    update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
+        app.draw_prms.window, app.draw_prms.fit);
+    draw_glimage(app.gl_image, app.draw_prms);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -350,11 +345,11 @@ void run_ui(app_states& apps) {
     // handle mouse
     if (mouse_left && !widgets_active) {
       auto& img = apps.get_selected();
-      img.image_center += mouse_pos - last_pos;
+      img.draw_prms.center += mouse_pos - last_pos;
     }
     if (mouse_right && !widgets_active) {
       auto& img = apps.get_selected();
-      img.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+      img.draw_prms.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
     // update
