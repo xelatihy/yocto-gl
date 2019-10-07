@@ -647,8 +647,6 @@ void draw_glscene(opengl_scene& state, const yocto_scene& scene,
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
     auto& instance = state.instances[instance_id];
-    // auto& shape     = scene.shapes[instance.shape];
-    // auto& material  = scene.materials[shape.material];
     auto highlight = highlighted.first == "instance" &&
                      highlighted.second == instance_id;
     draw_glinstance(state, instance, highlight, options);
