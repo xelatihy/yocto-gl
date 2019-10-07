@@ -685,7 +685,7 @@ void init_opengl_scene(opengl_scene& state, const yocto_scene& scene) {
     glmaterial.roughness = material.roughness;
     glmaterial.opacity = material.opacity;
     glmaterial.emission_map = material.emission_tex;
-    glmaterial.diffuse_map = material.emission_tex;
+    glmaterial.diffuse_map = material.diffuse_tex;
     glmaterial.specular_map = material.specular_tex;
     glmaterial.metallic_map = material.metallic_tex;
     glmaterial.normal_map = material.normal_tex;
