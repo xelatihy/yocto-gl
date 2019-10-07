@@ -268,12 +268,6 @@ struct draw_glscene_params {
 // Initialize an OpenGL scene
 void make_glscene(opengl_scene& scene);
 
-// Initialize opengl objects
-void update_glcamera();
-void update_gltexture();
-void update_glshape();
-void update_glinstance();
-
 // Draw an OpenGL scene
 void draw_glscene(opengl_scene& state, 
     const vec4i& viewport, 
