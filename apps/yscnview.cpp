@@ -46,14 +46,7 @@ namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
 };
 
-struct drawgl_state {
-  opengl_program         program  = {};
-  vector<opengl_shape>   shapes   = {};
-  vector<opengl_texture> textures = {};
-  vector<opengl_light>   lights   = {};
-};
-
-void init_drawgl_lights(drawgl_state& state, const yocto_scene& scene) {
+void init_drawgl_lights(opengl_scene& state, const yocto_scene& scene) {
   state.lights = {};
   for (auto& instance : scene.instances) {
     if (state.lights.size() >= 16) break;
@@ -118,7 +111,7 @@ struct app_state {
   yocto_scene scene = {};
 
   // rendering state
-  drawgl_state  state  = {};
+  opengl_scene  state  = {};
 
   // view image
   bool   navigation_fps = false;
@@ -485,7 +478,7 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
+void draw_glinstance(opengl_scene& state, const yocto_scene& scene,
     const yocto_instance& instance, bool highlighted,
     const drawgl_params& options) {
   auto& shape    = scene.shapes[instance.shape];
@@ -592,7 +585,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 }
 
 // Display a scene
-void draw_glscene(drawgl_state& state, const yocto_scene& scene,
+void draw_glscene(opengl_scene& state, const yocto_scene& scene,
     const vec4i& viewport, const pair<string, int>& highlighted,
     const drawgl_params& options) {
   auto& camera      = scene.cameras.at(options.camera);
@@ -667,7 +660,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
   if (options.wireframe) set_glwireframe(false);
 }
 
-void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
+void init_opengl_scene(opengl_scene& state, const yocto_scene& scene) {
   // load textures and vbos
   init_glprogram(state.program, vertex, fragment);
   state.textures.resize(scene.textures.size());
@@ -1061,7 +1054,7 @@ void update(const opengl_window& win, app_states& apps) {
     }
     apps.states.splice(apps.states.end(), apps.loading, apps.loading.begin());
     apps.load_workers.pop_front();
-    init_drawgl_state(apps.states.back().state, apps.states.back().scene);
+    init_opengl_scene(apps.states.back().state, apps.states.back().scene);
     if (apps.selected < 0) apps.selected = (int)apps.states.size() - 1;
   }
 #if 0
