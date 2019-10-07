@@ -351,6 +351,18 @@ void init_opengl_scene(opengl_scene& state, const yocto_scene& scene) {
   // load program
   make_glscene(state);
 
+  // camera
+  state.cameras.resize(scene.cameras.size());
+  for (auto camera_id = 0; camera_id < scene.cameras.size(); camera_id++) {
+    auto& camera = scene.cameras[camera_id];
+    auto& glcamera = state.cameras[camera_id];
+    glcamera.frame = camera.frame;
+    glcamera.yfov = camera_yfov(camera);
+    glcamera.asepct = camera_aspect(camera);
+    glcamera.near = 0.001f;
+    glcamera.far  = 10000;
+  }
+
   // textures
   state.textures.resize(scene.textures.size());
   for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
