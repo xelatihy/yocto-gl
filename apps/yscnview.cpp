@@ -278,10 +278,10 @@ void draw_glscene(opengl_scene& state, const yocto_scene& scene,
     const vec4i& viewport, const pair<string, int>& highlighted,
     const drawgl_params& options) {
   auto& camera      = scene.cameras.at(options.camera);
-  auto  camera_view = mat4f(inverse(camera.frame));
+  auto& glcamera    = state.cameras.at(options.camera);
+  auto  camera_view = mat4f(inverse(glcamera.frame));
   auto  camera_proj = perspective_mat(
-      camera_fov(camera).x * (float)viewport.w / (float)viewport.z,
-      (float)viewport.z / (float)viewport.w, options.near, options.far);
+      glcamera.yfov, (float)viewport.z / (float)viewport.w, options.near, options.far);
 
   bind_glprogram(state.program);
   set_gluniform(state.program, "cam_pos", camera.frame.o);
@@ -862,6 +862,8 @@ void run_ui(app_states& apps) {
       if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
       if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
+      auto& glcamera = app.state.cameras[app.drawgl_prms.camera];
+      glcamera.frame = camera.frame;
     }
 
     // animation
