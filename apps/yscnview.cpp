@@ -645,8 +645,7 @@ void run_ui(app_states& apps) {
       if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
       if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      auto& glcamera = app.state.cameras[app.drawgl_prms.camera];
-      glcamera.frame = camera.frame;
+      update_glcamera(app.state.cameras[app.drawgl_prms.camera], camera);
     }
 
     // animation
