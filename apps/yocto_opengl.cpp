@@ -661,6 +661,9 @@ void draw_glscene(opengl_scene& state,
   auto  camera_proj = perspective_mat(glcamera.yfov,
       (float)viewport.z / (float)viewport.w, params.near, params.far);
 
+  clear_glframebuffer(params.background);
+  set_glviewport(viewport);
+
   bind_glprogram(state.program);
   set_gluniform(state.program, "cam_pos", glcamera.frame.o);
   set_gluniform(state.program, "cam_xform_inv", camera_view);

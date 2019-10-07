@@ -262,10 +262,17 @@ struct draw_glscene_params {
   bool  non_rigid_frames = true;
   float near             = 0.01f;
   float far              = 10000.0f;
+  vec4f background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 // Initialize an OpenGL scene
 void make_glscene(opengl_scene& scene);
+
+// Initialize opengl objects
+void update_glcamera();
+void update_gltexture();
+void update_glshape();
+void update_glinstance();
 
 // Draw an OpenGL scene
 void draw_glscene(opengl_scene& state, 

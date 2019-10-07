@@ -555,8 +555,6 @@ void draw_glwidgets(const opengl_window& win) {
 void draw(const opengl_window& win) {
   auto& apps = *(app_states*)get_gluser_pointer(win);
 
-  clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  set_glviewport(get_glframebuffer_viewport(win));
   if (!apps.states.empty() && apps.selected >= 0) {
     auto& app = apps.get_selected();
     draw_glscene(app.state, get_glframebuffer_viewport(win),
