@@ -789,32 +789,6 @@ void update(const opengl_window& win, app_states& apps) {
     init_opengl_scene(apps.states.back().state, apps.states.back().scene);
     if (apps.selected < 0) apps.selected = (int)apps.states.size() - 1;
   }
-#if 0
-          scn.time_range = compute_animation_range(scn.scene);
-          scn.time       = scn.time_range.x;
-        });
-      } break;
-      case app_task_type::load_element: {
-        log_glinfo(win, "start loading element for " + scn.filename);
-        scn.load_done = false;
-        task.result   = std::async(std::launch::async, [&scn, &task]() {
-          load_element(scn.filename, scn.scene, task.edit);
-        });
-      } break;
-      case app_task_type::save_image: {
-        log_glinfo(win, "start saving " + scn.imagename);
-        task.result = std::async(std::launch::async,
-            []() { throw std::runtime_error("not implemnted yet"); });
-      } break;
-      case app_task_type::save_scene: {
-        log_glinfo(win, "start saving " + scn.outname);
-        task.result = std::async(std::launch::async,
-            [&scn]() { save_scene(scn.outname, scn.scene, scn.save_prms); });
-      } break;
-      case app_task_type::apply_edit: break;
-    }
-  }
-#endif
 }
 
 // run ui loop
