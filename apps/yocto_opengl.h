@@ -192,36 +192,44 @@ struct opengl_camera {
 
 // Opengl shape
 struct opengl_shape {
-  opengl_arraybuffer   positions = {};
-  opengl_arraybuffer   normals   = {};
-  opengl_arraybuffer   texcoords = {};
-  opengl_arraybuffer   colors    = {};
-  opengl_elementbuffer points    = {};
-  opengl_elementbuffer lines     = {};
-  opengl_elementbuffer triangles = {};
-  opengl_elementbuffer quads     = {};
-  opengl_elementbuffer edges     = {};
+  opengl_arraybuffer   positions  = {};
+  opengl_arraybuffer   normals    = {};
+  opengl_arraybuffer   texcoords  = {};
+  opengl_arraybuffer   colors     = {};
+  opengl_arraybuffer   tangentsps = {};
+  opengl_elementbuffer points     = {};
+  opengl_elementbuffer lines      = {};
+  opengl_elementbuffer triangles  = {};
+  opengl_elementbuffer quads      = {};
+  opengl_elementbuffer edges      = {};
 };
 
 // Opengl material
 struct opengl_material {
-    vec3f emission = zero3f;
-    vec3f diffuse = zero3f;
-    vec3f specular = zero3f;
-    float metallic = 0;
-    float roughness = 0;
-    int emission_map = -1;
-    int diffuse_map = -1;
-    int specular_map = -1;
-    int mnetallic_map = -1;
-    int roughness_map = -1;
+  vec3f emission      = zero3f;
+  vec3f diffuse       = zero3f;
+  vec3f specular      = zero3f;
+  float metallic      = 0;
+  float roughness     = 0;
+  int   emission_map  = -1;
+  int   diffuse_map   = -1;
+  int   specular_map  = -1;
+  int   mnetallic_map = -1;
+  int   roughness_map = -1;
 };
 
 // Opengl instance group
 struct opengl_instance {
-  frame3f         frame   = {};
-  int             shape    = 0;
-  int             material = 0;
+  frame3f frame    = {};
+  int     shape    = 0;
+  int     material = 0;
+};
+
+// Opengl light
+struct opengl_light {
+  vec3f positions = zero3f;
+  vec3f emission  = zero3f;
+  int   types     = 0;
 };
 
 // Opengl scene
@@ -231,6 +239,7 @@ struct opengl_scene {
   vector<opengl_shape>    shapes    = {};
   vector<opengl_material> materials = {};
   vector<opengl_texture>  textures  = {};
+  vector<opengl_light>    lights    = {};
   opengl_program          program   = {};
 };
 

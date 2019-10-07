@@ -46,21 +46,9 @@ namespace yocto {
 void print_obj_camera(const yocto_camera& camera);
 };
 
-struct drawgl_shape {
-  opengl_arraybuffer   positions_buffer     = {};
-  opengl_arraybuffer   normals_buffer       = {};
-  opengl_arraybuffer   texcoords_buffer     = {};
-  opengl_arraybuffer   colors_buffer        = {};
-  opengl_arraybuffer   tangentspaces_buffer = {};
-  opengl_elementbuffer points_buffer        = {};
-  opengl_elementbuffer lines_buffer         = {};
-  opengl_elementbuffer triangles_buffer     = {};
-  opengl_elementbuffer quads_buffer         = {};
-};
-
 struct drawgl_state {
   opengl_program         program  = {};
-  vector<drawgl_shape>   shapes   = {};
+  vector<opengl_shape>   shapes   = {};
   vector<opengl_texture> textures = {};
 };
 
@@ -566,30 +554,30 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
   }
 
   set_gluniform(state.program, "elem_faceted", (int)shape.normals.empty());
-  set_glvertexattrib(state.program, "vert_pos", vbos.positions_buffer, zero3f);
-  set_glvertexattrib(state.program, "vert_norm", vbos.normals_buffer, zero3f);
+  set_glvertexattrib(state.program, "vert_pos", vbos.positions, zero3f);
+  set_glvertexattrib(state.program, "vert_norm", vbos.normals, zero3f);
   set_glvertexattrib(
-      state.program, "vert_texcoord", vbos.texcoords_buffer, zero2f);
+      state.program, "vert_texcoord", vbos.texcoords, zero2f);
   set_glvertexattrib(
-      state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
-  set_glvertexattrib(state.program, "vert_tangsp", vbos.tangentspaces_buffer,
+      state.program, "vert_color", vbos.colors, vec4f{1, 1, 1, 1});
+  set_glvertexattrib(state.program, "vert_tangsp", vbos.tangentsps,
       vec4f{0, 0, 1, 1});
 
-  if (vbos.points_buffer) {
+  if (vbos.points) {
     set_gluniform(state.program, "elem_type", 1);
-    draw_glpoints(vbos.points_buffer, vbos.points_buffer.num);
+    draw_glpoints(vbos.points, vbos.points.num);
   }
-  if (vbos.lines_buffer) {
+  if (vbos.lines) {
     set_gluniform(state.program, "elem_type", 2);
-    draw_gllines(vbos.lines_buffer, vbos.lines_buffer.num);
+    draw_gllines(vbos.lines, vbos.lines.num);
   }
-  if (vbos.triangles_buffer) {
+  if (vbos.triangles) {
     set_gluniform(state.program, "elem_type", 3);
-    draw_gltriangles(vbos.triangles_buffer, vbos.triangles_buffer.num);
+    draw_gltriangles(vbos.triangles, vbos.triangles.num);
   }
-  if (vbos.quads_buffer) {
+  if (vbos.quads) {
     set_gluniform(state.program, "elem_type", 3);
-    draw_gltriangles(vbos.quads_buffer, vbos.quads_buffer.num);
+    draw_gltriangles(vbos.quads, vbos.quads.num);
   }
 
 #if 0
@@ -708,24 +696,24 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     auto& vbos  = state.shapes[shape_id];
     if (shape.quadspos.empty()) {
       if (!shape.positions.empty())
-        init_glarraybuffer(vbos.positions_buffer, shape.positions, false);
+        init_glarraybuffer(vbos.positions, shape.positions, false);
       if (!shape.normals.empty())
-        init_glarraybuffer(vbos.normals_buffer, shape.normals, false);
+        init_glarraybuffer(vbos.normals, shape.normals, false);
       if (!shape.texcoords.empty())
-        init_glarraybuffer(vbos.texcoords_buffer, shape.texcoords, false);
+        init_glarraybuffer(vbos.texcoords, shape.texcoords, false);
       if (!shape.colors.empty())
-        init_glarraybuffer(vbos.colors_buffer, shape.colors, false);
+        init_glarraybuffer(vbos.colors, shape.colors, false);
       if (!shape.tangents.empty())
-        init_glarraybuffer(vbos.tangentspaces_buffer, shape.tangents, false);
+        init_glarraybuffer(vbos.tangentsps, shape.tangents, false);
       if (!shape.points.empty())
-        init_glelementbuffer(vbos.points_buffer, shape.points, false);
+        init_glelementbuffer(vbos.points, shape.points, false);
       if (!shape.lines.empty())
-        init_glelementbuffer(vbos.lines_buffer, shape.lines, false);
+        init_glelementbuffer(vbos.lines, shape.lines, false);
       if (!shape.triangles.empty())
-        init_glelementbuffer(vbos.triangles_buffer, shape.triangles, false);
+        init_glelementbuffer(vbos.triangles, shape.triangles, false);
       if (!shape.quads.empty()) {
         auto triangles = quads_to_triangles(shape.quads);
-        init_glelementbuffer(vbos.quads_buffer, triangles, false);
+        init_glelementbuffer(vbos.quads, triangles, false);
       }
     } else {
       auto quads     = vector<vec4i>{};
@@ -736,14 +724,14 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
           shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
           shape.texcoords);
       if (!positions.empty())
-        init_glarraybuffer(vbos.positions_buffer, positions, false);
+        init_glarraybuffer(vbos.positions, positions, false);
       if (!normals.empty())
-        init_glarraybuffer(vbos.normals_buffer, normals, false);
+        init_glarraybuffer(vbos.normals, normals, false);
       if (!texcoords.empty())
-        init_glarraybuffer(vbos.texcoords_buffer, texcoords, false);
+        init_glarraybuffer(vbos.texcoords, texcoords, false);
       if (!quads.empty()) {
         auto triangles = quads_to_triangles(quads);
-        init_glelementbuffer(vbos.quads_buffer, triangles, false);
+        init_glelementbuffer(vbos.quads, triangles, false);
       }
     }
   }
