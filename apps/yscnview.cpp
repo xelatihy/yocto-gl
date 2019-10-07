@@ -50,26 +50,20 @@ struct drawgl_state {
   opengl_program         program  = {};
   vector<opengl_shape>   shapes   = {};
   vector<opengl_texture> textures = {};
+  vector<opengl_light>   lights   = {};
 };
 
-struct drawgl_lights {
-  vector<vec3f> positions = {};
-  vector<vec3f> emission  = {};
-  vector<int>   types     = {};
-
-  bool empty() const { return positions.empty(); }
-};
-
-void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
-  lights = {};
+void init_drawgl_lights(drawgl_state& state, const yocto_scene& scene) {
+  state.lights = {};
   for (auto& instance : scene.instances) {
+    if (state.lights.size() >= 16) break;
     if (instance.shape < 0) continue;
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     if (material.emission != zero3f) continue;
-    if (lights.positions.size() >= 16) break;
+    auto& light = state.lights.emplace_back();
     auto bbox = compute_bounds(shape);
-    auto pos  = (bbox.max + bbox.min) / 2;
+    light.position  = (bbox.max + bbox.min) / 2;
     auto area = 0.0f;
     if (!shape.triangles.empty()) {
       for (auto t : shape.triangles)
@@ -85,10 +79,8 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
     } else {
       area += shape.positions.size();
     }
-    auto ke = material.emission * area;
-    lights.positions.push_back(transform_point(instance.frame, pos));
-    lights.emission.push_back(ke);
-    lights.types.push_back(0);
+    light.emission = material.emission * area;
+    light.type = 0;
   }
 }
 
@@ -127,7 +119,6 @@ struct app_state {
 
   // rendering state
   drawgl_state  state  = {};
-  drawgl_lights lights = {};
 
   // view image
   bool   navigation_fps = false;
@@ -179,7 +170,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   apps.load_workers.push_back(run_async([&app]() {
     load_scene(app.filename, app.scene);
     update_tesselation(app.scene);
-    init_drawgl_lights(app.lights, app.scene);
+    init_drawgl_lights(app.state, app.scene);
     app.time_range = compute_animation_range(app.scene);
     app.time       = app.time_range.x;
   }));

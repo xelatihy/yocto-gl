@@ -227,9 +227,9 @@ struct opengl_instance {
 
 // Opengl light
 struct opengl_light {
-  vec3f positions = zero3f;
+  vec3f position  = zero3f;
   vec3f emission  = zero3f;
-  int   types     = 0;
+  int   type      = 0;
 };
 
 // Opengl scene
