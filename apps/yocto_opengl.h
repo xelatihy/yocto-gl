@@ -211,11 +211,14 @@ struct opengl_material {
   vec3f specular      = zero3f;
   float metallic      = 0;
   float roughness     = 0;
+  float opacity       = 1;
   int   emission_map  = -1;
   int   diffuse_map   = -1;
   int   specular_map  = -1;
   int   metallic_map = -1;
   int   roughness_map = -1;
+  int   normal_map = -1;
+  bool gltf_textures = false;
 };
 
 // Opengl instance group
