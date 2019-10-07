@@ -76,37 +76,45 @@ static void save_pbrt_scene(const string& filename, const yocto_scene& scene,
 // Load a scene
 void load_scene(
     const string& filename, yocto_scene& scene, const load_params& params) {
-  auto ext = get_extension(filename);
-  if (ext == ".yaml" || ext == ".YAML") {
-    load_yaml_scene(filename, scene, params);
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    load_obj_scene(filename, scene, params);
-  } else if (ext == ".gltf" || ext == ".GLTF") {
-    load_gltf_scene(filename, scene, params);
-  } else if (ext == ".pbrt" || ext == ".PBRT") {
-    load_pbrt_scene(filename, scene, params);
-  } else if (ext == ".ply" || ext == ".PLY") {
-    load_ply_scene(filename, scene, params);
-  } else {
-    scene = {};
-    throw std::runtime_error("unsupported scene format " + ext);
+  try {
+    auto ext = get_extension(filename);
+    if (ext == ".yaml" || ext == ".YAML") {
+      load_yaml_scene(filename, scene, params);
+    } else if (ext == ".obj" || ext == ".OBJ") {
+      load_obj_scene(filename, scene, params);
+    } else if (ext == ".gltf" || ext == ".GLTF") {
+      load_gltf_scene(filename, scene, params);
+    } else if (ext == ".pbrt" || ext == ".PBRT") {
+      load_pbrt_scene(filename, scene, params);
+    } else if (ext == ".ply" || ext == ".PLY") {
+      load_ply_scene(filename, scene, params);
+    } else {
+      scene = {};
+      throw std::runtime_error("unsupported scene format " + ext);
+    }
+  } catch (std::exception& e) {
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 }
 
 // Save a scene
 void save_scene(const string& filename, const yocto_scene& scene,
     const save_params& params) {
-  auto ext = get_extension(filename);
-  if (ext == ".yaml" || ext == ".YAML") {
-    save_yaml_scene(filename, scene, params);
-  } else if (ext == ".obj" || ext == ".OBJ") {
-    save_obj_scene(filename, scene, params);
-  } else if (ext == ".pbrt" || ext == ".PBRT") {
-    save_pbrt_scene(filename, scene, params);
-  } else if (ext == ".ply" || ext == ".PLY") {
-    save_ply_scene(filename, scene, params);
-  } else {
-    throw std::runtime_error("unsupported scene format " + ext);
+  try {
+    auto ext = get_extension(filename);
+    if (ext == ".yaml" || ext == ".YAML") {
+      save_yaml_scene(filename, scene, params);
+    } else if (ext == ".obj" || ext == ".OBJ") {
+      save_obj_scene(filename, scene, params);
+    } else if (ext == ".pbrt" || ext == ".PBRT") {
+      save_pbrt_scene(filename, scene, params);
+    } else if (ext == ".ply" || ext == ".PLY") {
+      save_ply_scene(filename, scene, params);
+    } else {
+      throw std::runtime_error("unsupported scene format " + ext);
+    }
+  } catch (std::exception& e) {
+    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
   }
 }
 
