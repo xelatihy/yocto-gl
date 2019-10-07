@@ -47,10 +47,10 @@ struct app_state {
   bool              apply_colorgrade = false;
 
   // viewing properties
-  vec2f          image_center = zero2f;
-  float          image_scale  = 1;
-  bool           zoom_to_fit  = false;
-  opengl_texture gl_txt       = {};
+  vec2f        image_center = zero2f;
+  float        image_scale  = 1;
+  bool         zoom_to_fit  = false;
+  opengl_image gl_image     = {};
 };
 
 void update_display(app_state& app) {
@@ -70,17 +70,10 @@ void draw(const opengl_window& win) {
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_txt) {
-    init_gltexture(app.gl_txt, app.display, false, false, false);
-  }
+  if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
   update_imview(app.image_center, app.image_scale, app.display.size(), win_size,
       app.zoom_to_fit);
-  draw_glimage_background(
-      app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
-  set_glblending(true);
-  draw_glimage(
-      app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
-  set_glblending(false);
+  draw_glimage(app.gl_image, win_size, app.image_center, app.image_scale, true);
   swap_glbuffers(win);
 }
 

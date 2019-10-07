@@ -42,18 +42,11 @@
 struct GLFWwindow;
 
 // -----------------------------------------------------------------------------
-// OPENGL FUNCTIONS
+// LOW-LEVEL OPENGL OBJECTS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void clear_glframebuffer(const vec4f& color, bool clear_depth = true);
-
-void set_glviewport(const vec4i& viewport);
-
-void set_glwireframe(bool enabled);
-void set_glblending(bool enabled);
-
-// base object for OpenGL resource. Disables copy contruction.
+// OpenGL program
 struct opengl_program {
   opengl_program() {}
   opengl_program(opengl_program&&);
@@ -67,14 +60,7 @@ struct opengl_program {
   uint vertex_array_object_id = 0;
 };
 
-void init_glprogram(
-    opengl_program& program, const char* vertex, const char* fragment);
-
-void delete_glprogram(opengl_program& program);
-
-void bind_glprogram(opengl_program& program);
-void unbind_opengl_program();
-
+// OpenGL texture
 struct opengl_texture {
   opengl_texture() {}
   opengl_texture(opengl_texture&&);
@@ -84,7 +70,229 @@ struct opengl_texture {
 
   uint  texture_id = 0;
   vec2i size       = {0, 0};
+  bool  mipmap     = false;
+  bool  linear     = false;
+  bool  is_srgb    = false;
+  bool  is_float   = false;
 };
+
+// OpenGL vertex buffer
+struct opengl_arraybuffer {
+  opengl_arraybuffer() {}
+  opengl_arraybuffer(opengl_arraybuffer&&);
+  opengl_arraybuffer& operator=(opengl_arraybuffer&&);
+  ~opengl_arraybuffer();
+  operator bool() const { return (bool)buffer_id; }
+
+  uint buffer_id = 0;
+  int  num       = 0;
+  int  elem_size = 0;
+};
+
+// OpenGL element buffer
+struct opengl_elementbuffer {
+  opengl_elementbuffer() {}
+  opengl_elementbuffer(opengl_elementbuffer&&);
+  opengl_elementbuffer& operator=(opengl_elementbuffer&&);
+  ~opengl_elementbuffer();
+  operator bool() const { return (bool)buffer_id; }
+
+  uint buffer_id = 0;
+  int  num       = 0;
+  int  elem_size = 0;
+};
+
+};  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL IMAGE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// OpenGL image data
+struct opengl_image {
+  vec2i                size() const { return texture.size; }
+                       operator bool() const { return (bool)texture; }
+  opengl_texture       texture  = {};
+  opengl_program       program  = {};
+  opengl_arraybuffer   texcoord = {};
+  opengl_elementbuffer element  = {};
+};
+
+// update image data
+void update_glimage(opengl_image& glimage, const image<vec4f>& img,
+    bool linear = false, bool mipmap = false);
+void update_glimage(opengl_image& glimage, const image<vec4b>& img,
+    bool linear = false, bool mipmap = false);
+
+// update the image data for a small region
+void update_glimage_region(
+    opengl_image& glimage, const image<vec4f>& img, const image_region& region);
+void update_glimage_region(
+    opengl_image& glimage, const image<vec4b>& img, const image_region& region);
+
+// draw image
+void draw_glimage(opengl_image& glimage, const vec2i& win_size,
+    const vec2f& image_center, float image_scale, bool background,
+    float border_size = 2);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL MESH DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// OpenGL image data
+struct opengl_mesh {
+  opengl_arraybuffer   positions = {};
+  opengl_arraybuffer   normals   = {};
+  opengl_arraybuffer   texcoords = {};
+  opengl_arraybuffer   colors    = {};
+  opengl_elementbuffer points    = {};
+  opengl_elementbuffer lines     = {};
+  opengl_elementbuffer triangles = {};
+  opengl_elementbuffer quads     = {};
+  opengl_elementbuffer edges     = {};
+  opengl_program       program   = {};
+};
+
+// update image data
+void update_glmesh(opengl_mesh& glmesh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords = {}, const vector<vec4f>& colors = {});
+void update_glmesh(opengl_mesh& glmesh, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords = {}, const vector<vec4f>& colors = {});
+void update_glmesh(opengl_mesh& glmesh, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& tangents,
+    const vector<vec2f>& texcoords = {}, const vector<vec4f>& colors = {});
+void update_glmesh(opengl_mesh& glmesh, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec2f>& texcoords = {},
+    const vector<vec4f>& colors = {});
+
+// draw mesh
+void draw_glmesh(opengl_mesh& glmesh, const frame3f& frame, const vec3f& color);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL SCENE RENDERING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Opengl caemra
+struct opengl_camera {
+  frame3f frame  = identity3x4f;
+  float   yfov   = radians(90);
+  float   asepct = 1;
+  float   near   = 0.001;
+  float   far    = 10000;
+};
+
+// Opengl shape
+struct opengl_shape {
+  opengl_arraybuffer   positions  = {};
+  opengl_arraybuffer   normals    = {};
+  opengl_arraybuffer   texcoords  = {};
+  opengl_arraybuffer   colors     = {};
+  opengl_arraybuffer   tangentsps = {};
+  opengl_elementbuffer points     = {};
+  opengl_elementbuffer lines      = {};
+  opengl_elementbuffer triangles  = {};
+  opengl_elementbuffer quads      = {};
+  opengl_elementbuffer edges      = {};
+};
+
+// Opengl material
+struct opengl_material {
+  vec3f emission      = zero3f;
+  vec3f diffuse       = zero3f;
+  vec3f specular      = zero3f;
+  float metallic      = 0;
+  float roughness     = 0;
+  float opacity       = 1;
+  int   emission_map  = -1;
+  int   diffuse_map   = -1;
+  int   specular_map  = -1;
+  int   metallic_map  = -1;
+  int   roughness_map = -1;
+  int   normal_map    = -1;
+  bool  gltf_textures = false;
+};
+
+// Opengl instance group
+struct opengl_instance {
+  frame3f frame       = identity3x4f;
+  int     shape       = 0;
+  int     material    = 0;
+  bool    highlighted = false;
+};
+
+// Opengl light
+struct opengl_light {
+  vec3f position = zero3f;
+  vec3f emission = zero3f;
+  int   type     = 0;
+};
+
+// Opengl scene
+struct opengl_scene {
+  vector<opengl_camera>   cameras   = {};
+  vector<opengl_instance> instances = {};
+  vector<opengl_shape>    shapes    = {};
+  vector<opengl_material> materials = {};
+  vector<opengl_texture>  textures  = {};
+  vector<opengl_light>    lights    = {};
+  opengl_program          program   = {};
+};
+
+// Draw options
+struct draw_glscene_params {
+  int   camera           = 0;
+  int   resolution       = 1280;
+  bool  wireframe        = false;
+  bool  edges            = false;
+  float edge_offset      = 0.01f;
+  bool  eyelight         = false;
+  float exposure         = 0;
+  float gamma            = 2.2f;
+  vec3f ambient          = {0, 0, 0};
+  bool  double_sided     = true;
+  bool  non_rigid_frames = true;
+  float near             = 0.01f;
+  float far              = 10000.0f;
+  vec4f background       = vec4f{0.15f, 0.15f, 0.15f, 1.0f};
+};
+
+// Initialize an OpenGL scene
+void make_glscene(opengl_scene& scene);
+
+// Draw an OpenGL scene
+void draw_glscene(opengl_scene& state, const vec4i& viewport,
+    const draw_glscene_params& params);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// LOW-LEVEL OPENGL FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+void clear_glframebuffer(const vec4f& color, bool clear_depth = true);
+
+void set_glviewport(const vec4i& viewport);
+
+void set_glwireframe(bool enabled);
+void set_glblending(bool enabled);
+
+void init_glprogram(
+    opengl_program& program, const char* vertex, const char* fragment);
+
+void delete_glprogram(opengl_program& program);
+
+void bind_glprogram(opengl_program& program);
+void unbind_opengl_program();
 
 void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
     bool as_srgb, bool linear, bool mipmap);
@@ -114,30 +322,6 @@ inline void init_gltexture(opengl_texture& texture, const image<vec4b>& img,
 }
 
 void delete_gltexture(opengl_texture& texture);
-
-struct opengl_arraybuffer {
-  opengl_arraybuffer() {}
-  opengl_arraybuffer(opengl_arraybuffer&&);
-  opengl_arraybuffer& operator=(opengl_arraybuffer&&);
-  ~opengl_arraybuffer();
-  operator bool() const { return (bool)buffer_id; }
-
-  uint buffer_id = 0;
-  int  num       = 0;
-  int  elem_size = 0;
-};
-
-struct opengl_elementbuffer {
-  opengl_elementbuffer() {}
-  opengl_elementbuffer(opengl_elementbuffer&&);
-  opengl_elementbuffer& operator=(opengl_elementbuffer&&);
-  ~opengl_elementbuffer();
-  operator bool() const { return (bool)buffer_id; }
-
-  uint buffer_id = 0;
-  int  num       = 0;
-  int  elem_size = 0;
-};
 
 void init_glarraybuffer(opengl_arraybuffer& buffer, const vector<float>& data,
     bool dynamic = false);
@@ -209,11 +393,12 @@ void draw_glpoints(const opengl_elementbuffer& buffer, int num);
 void draw_gllines(const opengl_elementbuffer& buffer, int num);
 void draw_gltriangles(const opengl_elementbuffer& buffer, int num);
 
-void draw_glimage(const opengl_texture& texture, int win_width, int win_height,
-    const vec2f& image_center, float image_scale);
-void draw_glimage_background(const opengl_texture& texture, int win_width,
-    int win_height, const vec2f& image_center, float image_scale,
-    float border_size = 2);
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// OPENGL WINDOW
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 struct opengl_window;
 using refresh_glcallback = std::function<void(const opengl_window&)>;
@@ -254,6 +439,13 @@ bool  get_glshift_key(const opengl_window& win);
 
 void process_glevents(const opengl_window& win, bool wait = false);
 void swap_glbuffers(const opengl_window& win);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// OPENGL WIDGETS
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 void init_glwidgets(opengl_window& win, int width = 320, bool left = true);
 bool get_glwidgets_active(const opengl_window& win);

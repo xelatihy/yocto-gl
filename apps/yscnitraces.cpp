@@ -62,11 +62,11 @@ struct app_state {
   image<vec4f> display = {};
 
   // view scene
-  vec2f          image_center   = zero2f;
-  float          image_scale    = 1;
-  bool           zoom_to_fit    = true;
-  bool           navigation_fps = false;
-  opengl_texture gl_txt         = {};
+  vec2f        image_center   = zero2f;
+  float        image_scale    = 1;
+  bool         zoom_to_fit    = true;
+  bool         navigation_fps = false;
+  opengl_image gl_image       = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -97,16 +97,11 @@ void draw(const opengl_window& win) {
   auto  fb_view  = get_glframebuffer_viewport(win);
   set_glviewport(fb_view);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_txt || app.gl_txt.size != app.display.size())
-    init_gltexture(app.gl_txt, app.display, false, false, false);
+  if (!app.gl_image || app.gl_image.size() != app.display.size())
+    update_glimage(app.gl_image, app.display, false, false);
   update_imview(app.image_center, app.image_scale, app.display.size(), win_size,
       app.zoom_to_fit);
-  draw_glimage_background(
-      app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
-  set_glblending(true);
-  draw_glimage(
-      app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
-  set_glblending(false);
+  draw_glimage(app.gl_image, win_size, app.image_center, app.image_scale, true);
   swap_glbuffers(win);
 }
 
@@ -125,10 +120,10 @@ void update(const opengl_window& win, app_state& app) {
         app.display[{i, j}] = preview[{pi, pj}];
       }
     }
-    if (!app.gl_txt || app.gl_txt.size != app.display.size()) {
-      init_gltexture(app.gl_txt, app.display, false, false, false);
+    if (!app.gl_image || app.gl_image.size() != app.display.size()) {
+      update_glimage(app.gl_image, app.display, false, false);
     } else {
-      update_gltexture(app.gl_txt, app.display, false);
+      update_glimage(app.gl_image, app.display, false, false);
     }
     app.render_preview = false;
   } else if (app.render_sample < app.trace_prms.samples) {
@@ -141,12 +136,12 @@ void update(const opengl_window& win, app_state& app) {
           tonemap_region(app.display, app.render, app.render_regions[region_id],
               app.tonemap_prms);
         });
-    if (!app.gl_txt || app.gl_txt.size != app.display.size()) {
-      init_gltexture(app.gl_txt, app.display, false, false, false);
+    if (!app.gl_image || app.gl_image.size() != app.display.size()) {
+      update_glimage(app.gl_image, app.display, false, false);
     } else {
       for (auto idx = 0; idx < num_regions; idx++)
-        update_gltexture_region(app.gl_txt, app.display,
-            app.render_regions[app.render_region + idx], false);
+        update_glimage_region(app.gl_image, app.display,
+            app.render_regions[app.render_region + idx]);
     }
     app.render_region += num_regions;
     if (app.render_region >= app.render_regions.size()) {

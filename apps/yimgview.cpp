@@ -62,10 +62,10 @@ struct app_state {
   bool              apply_colorgrade = false;
 
   // viewing properties
-  vec2f          image_center = zero2f;
-  float          image_scale  = 1;
-  bool           zoom_to_fit  = false;
-  opengl_texture gl_txt       = {};
+  vec2f        image_center = zero2f;
+  float        image_scale  = 1;
+  bool         zoom_to_fit  = false;
+  opengl_image gl_image     = {};
 
   // rendering properties
   int                  render_region  = 0;
@@ -272,16 +272,11 @@ void draw(const opengl_window& win) {
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!apps.states.empty() && apps.selected >= 0) {
     auto& app = apps.get_selected();
-    if (!app.gl_txt || app.gl_txt.size != app.display.size())
-      init_gltexture(app.gl_txt, app.display, false, false, false);
+    if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
     update_imview(app.image_center, app.image_scale, app.display.size(),
         win_size, app.zoom_to_fit);
-    draw_glimage_background(
-        app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
-    set_glblending(true);
     draw_glimage(
-        app.gl_txt, win_size.x, win_size.y, app.image_center, app.image_scale);
-    set_glblending(false);
+        app.gl_image, win_size, app.image_center, app.image_scale, true);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -316,12 +311,12 @@ void update(const opengl_window& win, app_states& app) {
               app.display, app.display, region, app.colorgrade_prms);
         }
       });
-      if (!app.gl_txt || app.gl_txt.size != app.display.size()) {
-        init_gltexture(app.gl_txt, app.display, false, false, false);
+      if (!app.gl_image) {
+        update_glimage(app.gl_image, app.display, false, false);
       } else {
         for (auto idx = 0; idx < num_regions; idx++)
-          update_gltexture_region(app.gl_txt, app.display,
-              app.render_regions[app.render_region + idx], false);
+          update_glimage_region(app.gl_image, app.display,
+              app.render_regions[app.render_region + idx]);
       }
       app.render_region += num_regions;
     } else if (app.render_stats) {

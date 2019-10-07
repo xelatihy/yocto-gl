@@ -52,6 +52,9 @@
 #define CUTE_FILES_IMPLEMENTATION
 #include "ext/cute_files.h"
 
+// -----------------------------------------------------------------------------
+// LOW-LEVEL OPENGL FUNCTIONS
+// -----------------------------------------------------------------------------
 namespace yocto {
 
 void check_glerror() {
@@ -88,6 +91,615 @@ void set_glblending(bool enabled) {
     glDisable(GL_BLEND);
   }
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL IMAGE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// init image program
+void init_glimage_program(opengl_image& glimage) {
+  if (glimage.program) return;
+  auto vert =
+      R"(
+      #version 330
+      in vec2 texcoord;
+      out vec2 frag_texcoord;
+      uniform vec2 window_size, image_size;
+      uniform vec2 image_center;
+      uniform float image_scale;
+      void main() {
+          vec2 pos = (texcoord - vec2(0.5,0.5)) * image_size * image_scale + image_center;
+          gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0, 1);
+          frag_texcoord = texcoord;
+      }
+      )";
+#if 0
+  auto vert = R"(
+          #version 330
+          in vec2 texcoord;
+          out vec2 frag_texcoord;
+          uniform vec2 window_size, image_size, border_size;
+          uniform vec2 image_center;
+          uniform float image_scale;
+          void main() {
+              vec2 pos = (texcoord - vec2(0.5,0.5)) * (image_size + border_size*2) * image_scale + image_center;
+              gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0.1, 1);
+              frag_texcoord = texcoord;
+          }
+      )";
+#endif
+  auto frag =
+      R"(
+      #version 330
+      in vec2 frag_texcoord;
+      out vec4 frag_color;
+      uniform sampler2D txt;
+      void main() {
+          frag_color = texture(txt, frag_texcoord);
+      }
+      )";
+#if 0
+    auto frag = R"(
+            #version 330
+            in vec2 frag_texcoord;
+            out vec4 frag_color;
+            uniform vec2 image_size, border_size;
+            uniform float image_scale;
+            void main() {
+                ivec2 imcoord = ivec2(frag_texcoord * (image_size + border_size*2) - border_size);
+                ivec2 tilecoord = ivec2(frag_texcoord * (image_size + border_size*2) * image_scale - border_size);
+                ivec2 tile = tilecoord / 16;
+                if(imcoord.x <= 0 || imcoord.y <= 0 || 
+                    imcoord.x >= image_size.x || imcoord.y >= image_size.y) frag_color = vec4(0,0,0,1);
+                else if((tile.x + tile.y) % 2 == 0) frag_color = vec4(0.1,0.1,0.1,1);
+                else frag_color = vec4(0.3,0.3,0.3,1);
+            }
+        )";
+#endif
+
+  init_glprogram(glimage.program, vert, frag);
+  init_glarraybuffer(
+      glimage.texcoord, vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
+  init_glelementbuffer(
+      glimage.element, vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
+}
+
+// update image data
+void update_glimage(
+    opengl_image& glimage, const image<vec4f>& img, bool linear, bool mipmap) {
+  init_glimage_program(glimage);
+  if (!glimage.texture) {
+    init_gltexture(glimage.texture, img, false, linear, mipmap);
+  } else if (glimage.texture.size != img.size() ||
+             glimage.texture.linear != linear ||
+             glimage.texture.mipmap != mipmap) {
+    delete_gltexture(glimage.texture);
+    init_gltexture(glimage.texture, img, false, linear, mipmap);
+  } else {
+    update_gltexture(glimage.texture, img, mipmap);
+  }
+}
+void update_glimage(
+    opengl_image& glimage, const image<vec4b>& img, bool linear, bool mipmap) {
+  init_glimage_program(glimage);
+  if (!glimage.texture) {
+    init_gltexture(glimage.texture, img, false, linear, mipmap);
+  } else if (glimage.texture.size != img.size() ||
+             glimage.texture.linear != linear ||
+             glimage.texture.mipmap != mipmap) {
+    delete_gltexture(glimage.texture);
+    init_gltexture(glimage.texture, img, false, linear, mipmap);
+  } else {
+    update_gltexture(glimage.texture, img, mipmap);
+  }
+}
+
+void update_glimage_region(opengl_image& glimage, const image<vec4f>& img,
+    const image_region& region) {
+  if (!glimage) throw std::runtime_error("glimage is not initialized");
+  update_gltexture_region(glimage.texture, img, region, glimage.texture.mipmap);
+}
+void update_glimage_region(opengl_image& glimage, const image<vec4b>& img,
+    const image_region& region) {
+  if (!glimage) throw std::runtime_error("glimage is not initialized");
+  update_gltexture_region(glimage.texture, img, region, glimage.texture.mipmap);
+}
+
+// draw image
+void draw_glimage(opengl_image& glimage, const vec2i& win_size,
+    const vec2f& image_center, float image_scale, bool background,
+    float border_size) {
+  check_glerror();
+  bind_glprogram(glimage.program);
+  set_gluniform_texture(glimage.program, "txt", glimage.texture, 0);
+  set_gluniform(glimage.program, "window_size",
+      vec2f{(float)win_size.x, (float)win_size.y});
+  set_gluniform(glimage.program, "image_size",
+      vec2f{(float)glimage.texture.size.x, (float)glimage.texture.size.y});
+  set_gluniform(glimage.program, "image_center", image_center);
+  set_gluniform(glimage.program, "image_scale", image_scale);
+  set_glvertexattrib(glimage.program, "texcoord", glimage.texcoord, zero2f);
+  draw_gltriangles(glimage.element, 2);
+  unbind_opengl_program();
+  check_glerror();
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Initialize an OpenGL scene
+void make_glscene(opengl_scene& glscene) {
+#ifndef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverlength-strings"
+#endif
+
+  static const char* vertex =
+      R"(
+        #version 330
+
+        layout(location = 0) in vec3 vert_pos;            // vertex position (in mesh coordinate frame)
+        layout(location = 1) in vec3 vert_norm;           // vertex normal (in mesh coordinate frame)
+        layout(location = 2) in vec2 vert_texcoord;       // vertex texcoords
+        layout(location = 3) in vec4 vert_color;          // vertex color
+        layout(location = 4) in vec4 vert_tangsp;         // vertex tangent space
+
+        uniform mat4 shape_xform;                    // shape transform
+        uniform mat4 shape_xform_invtranspose;       // shape transform
+        uniform float shape_normal_offset;           // shape normal offset
+
+        uniform mat4 cam_xform;          // camera xform
+        uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
+        uniform mat4 cam_proj;           // camera projection
+
+        out vec3 pos;                   // [to fragment shader] vertex position (in world coordinate)
+        out vec3 norm;                  // [to fragment shader] vertex normal (in world coordinate)
+        out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
+        out vec4 color;                 // [to fragment shader] vertex color
+        out vec4 tangsp;                // [to fragment shader] vertex tangent space
+
+        // main function
+        void main() {
+            // copy values
+            pos = vert_pos;
+            norm = vert_norm;
+            tangsp = vert_tangsp;
+
+            // normal offset
+            if(shape_normal_offset != 0) {
+                pos += shape_normal_offset * norm;
+            }
+
+            // world projection
+            pos = (shape_xform * vec4(pos,1)).xyz;
+            norm = (shape_xform_invtranspose * vec4(norm,0)).xyz;
+            tangsp.xyz = (shape_xform * vec4(tangsp.xyz,0)).xyz;
+
+            // copy other vertex properties
+            texcoord = vert_texcoord;
+            color = vert_color;
+
+            // clip
+            gl_Position = cam_proj * cam_xform_inv * vec4(pos,1);
+        }
+        )";
+
+  static const char* fragment =
+      R"(
+        #version 330
+
+        float pif = 3.14159265;
+
+        uniform bool eyelight;         // eyelight shading
+        uniform vec3 lamb;             // ambient light
+        uniform int lnum;              // number of lights
+        uniform int ltype[16];         // light type (0 -> point, 1 -> directional)
+        uniform vec3 lpos[16];         // light positions
+        uniform vec3 lke[16];          // light intensities
+
+        void evaluate_light(int lid, vec3 pos, out vec3 cl, out vec3 wi) {
+            cl = vec3(0,0,0);
+            wi = vec3(0,0,0);
+            if(ltype[lid] == 0) {
+                // compute point light color at pos
+                cl = lke[lid] / pow(length(lpos[lid]-pos),2);
+                // compute light direction at pos
+                wi = normalize(lpos[lid]-pos);
+            }
+            else if(ltype[lid] == 1) {
+                // compute light color
+                cl = lke[lid];
+                // compute light direction
+                wi = normalize(lpos[lid]);
+            }
+        }
+
+        vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
+            vec3 n, vec3 wi, vec3 wo) {
+            if(etype == 0) return vec3(0);
+            vec3 wh = normalize(wi+wo);
+            float ns = 2/(rs*rs)-2;
+            float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
+            if(etype == 1) {
+                return ((1+dot(wo,wi))/2) * kd/pif;
+            } else if(etype == 2) {
+                float si = sqrt(1-ndi*ndi);
+                float so = sqrt(1-ndo*ndo);
+                float sh = sqrt(1-ndh*ndh);
+                if(si <= 0) return vec3(0);
+                vec3 diff = si * kd / pif;
+                if(sh<=0) return diff;
+                float d = ((2+ns)/(2*pif)) * pow(si,ns);
+                vec3 spec = si * ks * d / (4*si*so);
+                return diff+spec;
+            } else if(etype == 3 || etype == 4) {
+                if(ndi<=0 || ndo <=0) return vec3(0);
+                vec3 diff = ndi * kd / pif;
+                if(ndh<=0) return diff;
+                if(etype == 4) {
+                    float d = ((2+ns)/(2*pif)) * pow(ndh,ns);
+                    vec3 spec = ndi * ks * d / (4*ndi*ndo);
+                    return diff+spec;
+                } else {
+                    float cos2 = ndh * ndh;
+                    float tan2 = (1 - cos2) / cos2;
+                    float alpha2 = rs * rs;
+                    float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+                    float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+                    float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+                    float g = 1 / (1 + lambda_o + lambda_i);
+                    vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
+                    return diff+spec;
+                }
+            }
+        }
+
+        uniform int elem_type;
+        uniform bool elem_faceted;
+        uniform vec4 highlight;   // highlighted color
+
+        uniform int mat_type;          // material type
+        uniform vec3 mat_ke;           // material ke
+        uniform vec3 mat_kd;           // material kd
+        uniform vec3 mat_ks;           // material ks
+        uniform float mat_rs;          // material rs
+        uniform float mat_op;          // material op
+
+        uniform bool mat_ke_txt_on;    // material ke texture on
+        uniform sampler2D mat_ke_txt;  // material ke texture
+        uniform bool mat_kd_txt_on;    // material kd texture on
+        uniform sampler2D mat_kd_txt;  // material kd texture
+        uniform bool mat_ks_txt_on;    // material ks texture on
+        uniform sampler2D mat_ks_txt;  // material ks texture
+        uniform bool mat_rs_txt_on;    // material rs texture on
+        uniform sampler2D mat_rs_txt;  // material rs texture
+        uniform bool mat_op_txt_on;    // material op texture on
+        uniform sampler2D mat_op_txt;  // material op texture
+
+        uniform bool mat_norm_txt_on;    // material norm texture on
+        uniform sampler2D mat_norm_txt;  // material norm texture
+
+        uniform bool mat_double_sided;   // double sided rendering
+
+        uniform mat4 shape_xform;              // shape transform
+        uniform mat4 shape_xform_invtranspose; // shape transform
+
+        bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
+                           out vec3 kd, out vec3 ks, out float rs, out float op) {
+            if(mat_type == 0) {
+                ke = mat_ke;
+                kd = vec3(0,0,0);
+                ks = vec3(0,0,0);
+                op = 1;
+                return false;
+            }
+
+            ke = color.xyz * mat_ke;
+            kd = color.xyz * mat_kd;
+            ks = color.xyz * mat_ks;
+            rs = mat_rs;
+            op = color.w * mat_op;
+
+            vec4 ke_txt = (mat_ke_txt_on) ? texture(mat_ke_txt,texcoord) : vec4(1,1,1,1);
+            vec4 kd_txt = (mat_kd_txt_on) ? texture(mat_kd_txt,texcoord) : vec4(1,1,1,1);
+            vec4 ks_txt = (mat_ks_txt_on) ? texture(mat_ks_txt,texcoord) : vec4(1,1,1,1);
+            vec4 rs_txt = (mat_rs_txt_on) ? texture(mat_rs_txt,texcoord) : vec4(1,1,1,1);
+            vec4 op_txt = (mat_op_txt_on) ? texture(mat_op_txt,texcoord) : vec4(1,1,1,1);
+
+            // get material color from textures and adjust values
+            if(mat_type == 1) {
+                ke *= ke_txt.xyz;
+                kd *= kd_txt.xyz;
+                ks *= ks_txt.xyz;
+                rs *= rs_txt.y;
+                rs = rs*rs;
+                op *= op_txt.x * kd_txt.w;
+            } else if(mat_type == 2) {
+                ke *= ke_txt.xyz;
+                vec3 kb = kd * kd_txt.xyz;
+                float km = ks.x * ks_txt.z;
+                kd = kb * (1 - km);
+                ks = kb * km + vec3(0.04) * (1 - km);
+                rs *= ks_txt.y;
+                rs = rs*rs;
+                op *= kd_txt.w;
+            } else if(mat_type == 3) {
+                ke *= ke_txt.xyz;
+                kd *= kd_txt.xyz;
+                ks *= ks_txt.xyz;
+                float gs = (1 - rs) * ks_txt.w;
+                rs = 1 - gs;
+                rs = rs*rs;
+                op *= kd_txt.w;
+            }
+
+            return true;
+        }
+
+        vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
+            if(!mat_norm_txt_on) return norm;
+            vec3 tangu = normalize((shape_xform * vec4(normalize(tangsp.xyz),0)).xyz);
+            vec3 tangv = normalize(cross(norm, tangu));
+            if(tangsp.w < 0) tangv = -tangv;
+            vec3 texture = 2 * texture(mat_norm_txt,texcoord).xyz - 1;
+            texture.y = -texture.y;
+            return normalize( tangu * texture.x + tangv * texture.y + norm * texture.z );
+        }
+
+        in vec3 pos;                   // [from vertex shader] position in world space
+        in vec3 norm;                  // [from vertex shader] normal in world space (need normalization)
+        in vec2 texcoord;              // [from vertex shader] texcoord
+        in vec4 color;                 // [from vertex shader] color
+        in vec4 tangsp;                // [from vertex shader] tangent space
+
+        uniform vec3 cam_pos;          // camera position
+        uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
+        uniform mat4 cam_proj;           // camera projection
+
+        uniform float exposure; 
+        uniform float gamma;
+
+        out vec4 frag_color;      
+
+        vec3 triangle_normal(vec3 pos) {
+            vec3 fdx = dFdx(pos); 
+            vec3 fdy = dFdy(pos); 
+            return normalize((shape_xform * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
+        }
+
+        // main
+        void main() {
+            // view vector
+            vec3 wo = normalize(cam_pos - pos);
+
+            // prepare normals
+            vec3 n;
+            if(elem_faceted) {
+                n = triangle_normal(pos);
+            } else {
+                n = normalize(norm);
+            }
+
+            // apply normal map
+            n = apply_normal_map(texcoord, n, tangsp);
+
+            // use faceforward to ensure the normals points toward us
+            if(mat_double_sided) n = faceforward(n,-wo,n);
+
+            // get material color from textures
+            vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
+            bool has_brdf = evaluate_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
+
+            // exit if needed
+            if(brdf_op < 0.005) discard;
+
+            // check const color
+            if(elem_type == 0) {
+                frag_color = vec4(brdf_ke,brdf_op);
+                return;
+            }
+
+            // emission
+            vec3 c = brdf_ke;
+
+            // check early exit
+            if(brdf_kd != vec3(0,0,0) || brdf_ks != vec3(0,0,0)) {
+                // eyelight shading
+                if(eyelight) {
+                    vec3 wi = wo;
+                    c += pif * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+                } else {
+                    // accumulate ambient
+                    c += lamb * brdf_kd;
+                    // foreach light
+                    for(int lid = 0; lid < lnum; lid ++) {
+                        vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
+                        evaluate_light(lid, pos, cl, wi);
+                        c += cl * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+                    }
+                }
+            }
+
+            // final color correction
+            c = pow(c * pow(2,exposure), vec3(1/gamma));
+
+            // highlighting
+            if(highlight.w > 0) {
+                if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
+                    c = highlight.xyz * highlight.w + c * (1-highlight.w);
+            }
+
+            // output final color by setting gl_FragColor
+            frag_color = vec4(c,brdf_op);
+        }
+        )";
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif
+
+  // load program
+  init_glprogram(glscene.program, vertex, fragment);
+}
+
+// Draw a shape
+void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
+    const draw_glscene_params& params) {
+  auto& shape    = state.shapes[instance.shape];
+  auto& material = state.materials[instance.material];
+
+  set_gluniform(state.program, "shape_xform", mat4f(instance.frame));
+  set_gluniform(state.program, "shape_xform_invtranspose",
+      transpose(mat4f(inverse(instance.frame, params.non_rigid_frames))));
+  set_gluniform(state.program, "shape_normal_offset", 0.0f);
+  set_gluniform(state.program, "highlight",
+      instance.highlighted ? vec4f{1, 1, 0, 1} : zero4f);
+
+  auto mtype = 2;
+  if (material.gltf_textures) mtype = 3;
+  set_gluniform(state.program, "mat_type", mtype);
+  set_gluniform(state.program, "mat_ke", material.emission);
+  set_gluniform(state.program, "mat_kd", material.diffuse);
+  set_gluniform(state.program, "mat_ks", vec3f{material.metallic});
+  set_gluniform(state.program, "mat_rs", material.roughness);
+  set_gluniform(state.program, "mat_op", material.opacity);
+  set_gluniform(state.program, "mat_double_sided", (int)params.double_sided);
+  if (material.emission_map >= 0) {
+    set_gluniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
+        state.textures.at(material.emission_map), 0);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_ke_txt", "mat_ke_txt_on", opengl_texture{}, 0);
+  }
+  if (material.diffuse_map >= 0) {
+    set_gluniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
+        state.textures.at(material.diffuse_map), 1);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_kd_txt", "mat_kd_txt_on", opengl_texture{}, 1);
+  }
+  if (material.metallic_map >= 0) {
+    set_gluniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
+        state.textures.at(material.metallic_map), 2);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_ks_txt", "mat_ks_txt_on", opengl_texture{}, 2);
+  }
+  if (material.roughness_map >= 0) {
+    set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
+        state.textures.at(material.roughness_map), 3);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_rs_txt", "mat_rs_txt_on", opengl_texture{}, 3);
+  }
+  if (material.normal_map >= 0) {
+    set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
+        state.textures.at(material.normal_map), 5);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_norm_txt", "mat_norm_txt_on", opengl_texture{}, 5);
+  }
+
+  set_gluniform(state.program, "elem_faceted", (int)!shape.normals);
+  set_glvertexattrib(state.program, "vert_pos", shape.positions, zero3f);
+  set_glvertexattrib(state.program, "vert_norm", shape.normals, zero3f);
+  set_glvertexattrib(state.program, "vert_texcoord", shape.texcoords, zero2f);
+  set_glvertexattrib(
+      state.program, "vert_color", shape.colors, vec4f{1, 1, 1, 1});
+  set_glvertexattrib(
+      state.program, "vert_tangsp", shape.tangentsps, vec4f{0, 0, 1, 1});
+
+  if (shape.points) {
+    set_gluniform(state.program, "elem_type", 1);
+    draw_glpoints(shape.points, shape.points.num);
+  }
+  if (shape.lines) {
+    set_gluniform(state.program, "elem_type", 2);
+    draw_gllines(shape.lines, shape.lines.num);
+  }
+  if (shape.triangles) {
+    set_gluniform(state.program, "elem_type", 3);
+    draw_gltriangles(shape.triangles, shape.triangles.num);
+  }
+  if (shape.quads) {
+    set_gluniform(state.program, "elem_type", 3);
+    draw_gltriangles(shape.quads, shape.quads.num);
+  }
+
+#if 0
+    if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
+        enable_glculling(false);
+        check_glerror();
+        set_gluniform(state.program, "mtype"), 0);
+        glUniform3f(glGetUniformLocation(state.program, "ke"), 0, 0, 0);
+        set_gluniform(state.program, "op"), material.op);
+        set_gluniform(state.program, "shp_normal_offset"), 0.01f);
+        check_glerror();
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
+        glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        check_glerror();
+    }
+#endif
+  if (params.edges) throw std::runtime_error("edges are momentarily disabled");
+
+  // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
+}
+
+// Display a scene
+void draw_glscene(opengl_scene& state, const vec4i& viewport,
+    const draw_glscene_params& params) {
+  auto& glcamera    = state.cameras.at(params.camera);
+  auto  camera_view = mat4f(inverse(glcamera.frame));
+  auto  camera_proj = perspective_mat(glcamera.yfov,
+      (float)viewport.z / (float)viewport.w, params.near, params.far);
+
+  clear_glframebuffer(params.background);
+  set_glviewport(viewport);
+
+  bind_glprogram(state.program);
+  set_gluniform(state.program, "cam_pos", glcamera.frame.o);
+  set_gluniform(state.program, "cam_xform_inv", camera_view);
+  set_gluniform(state.program, "cam_proj", camera_proj);
+  set_gluniform(state.program, "eyelight", (int)params.eyelight);
+  set_gluniform(state.program, "exposure", params.exposure);
+  set_gluniform(state.program, "gamma", params.gamma);
+
+  if (!params.eyelight) {
+    set_gluniform(state.program, "lamb", zero3f);
+    set_gluniform(state.program, "lnum", (int)state.lights.size());
+    for (auto i = 0; i < state.lights.size(); i++) {
+      auto is = std::to_string(i);
+      set_gluniform(state.program, ("lpos[" + is + "]").c_str(),
+          state.lights[i].position);
+      set_gluniform(
+          state.program, ("lke[" + is + "]").c_str(), state.lights[i].emission);
+      set_gluniform(state.program, ("ltype[" + is + "]").c_str(),
+          (int)state.lights[i].type);
+    }
+  }
+
+  if (params.wireframe) set_glwireframe(true);
+  for (auto& instance : state.instances) {
+    draw_glinstance(state, instance, params);
+  }
+
+  unbind_opengl_program();
+  if (params.wireframe) set_glwireframe(false);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// LOW-LEVEL OPENGL FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 opengl_program::opengl_program(opengl_program&& other) {
   operator=(std::forward<opengl_program>(other));
@@ -180,7 +792,10 @@ void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
   if (texture) delete_gltexture(texture);
   assert(glGetError() == GL_NO_ERROR);
   glGenTextures(1, &texture.texture_id);
-  texture.size = size;
+  texture.size     = size;
+  texture.mipmap   = mipmap;
+  texture.is_srgb  = as_srgb;
+  texture.is_float = as_float;
   glBindTexture(GL_TEXTURE_2D, texture.texture_id);
   if (as_float) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
@@ -642,6 +1257,13 @@ void draw_glimage_background(const opengl_texture& texture, int win_width,
   unbind_opengl_program();
 }
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// OPENGL WINDOW
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 void _glfw_refresh_callback(GLFWwindow* glfw) {
   auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
   if (win.refresh_cb) win.refresh_cb(win);
@@ -773,6 +1395,13 @@ void process_glevents(const opengl_window& win, bool wait) {
 }
 
 void swap_glbuffers(const opengl_window& win) { glfwSwapBuffers(win.win); }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// OPENGL WIDGETS
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 void init_glwidgets(opengl_window& win, int width, bool left) {
   // init widgets
