@@ -247,6 +247,23 @@ struct opengl_scene {
   opengl_program          program   = {};
 };
 
+// Draw options
+struct draw_glscene_params {
+  int   camera           = 0;
+  int   resolution       = 1280;
+  bool  wireframe        = false;
+  bool  edges            = false;
+  float edge_offset      = 0.01f;
+  bool  eyelight         = false;
+  float exposure         = 0;
+  float gamma            = 2.2f;
+  vec3f ambient          = {0, 0, 0};
+  bool  double_sided     = true;
+  bool  non_rigid_frames = true;
+  float near             = 0.01f;
+  float far              = 10000.0f;
+};
+
 // Initialize an OpenGL scene
 void make_glscene(opengl_scene& scene);
 
