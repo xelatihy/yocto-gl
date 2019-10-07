@@ -285,6 +285,7 @@ bool draw_glwidgets_camera(const opengl_window& win, app_state& scene, int id) {
     camera.focus = length(from - to);
     edited += 1;
   }
+  if(edited) update_glcamera(scene.state.cameras[id], camera);
   return edited;
 }
 
@@ -314,8 +315,8 @@ bool draw_glwidgets_texture(
       log_glinfo(win, "cannot load " + texture.filename);
       log_glinfo(win, e.what());
     }
-    // TODO: update lights
   }
+  if(edited) update_gltexture(scene.state.textures[id], texture);
   return edited;
 }
 
@@ -358,6 +359,7 @@ bool draw_glwidgets_material(
       win, "normal_tex", material.normal_tex, scene.scene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   // TODO: update lights
+  if(edited) update_glmaterial(scene.state.materials[id], material);
   return edited;
 }
 
@@ -398,9 +400,9 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
       log_glinfo(win, "cannot load " + shape.filename);
       log_glinfo(win, e.what());
     }
-    // TODO: update mesh state
     // TODO: update lights
   }
+  if(edited) update_glshape(scene.state.shapes[id], shape);
   return edited;
 }
 
@@ -419,6 +421,7 @@ bool draw_glwidgets_instance(
   edited += draw_glcombobox(
       win, "material", instance.material, scene.scene.materials, true);
   // TODO: update lights
+  if(edited) update_glinstance(scene.state.instances[id], instance);
   return edited;
 }
 
@@ -530,7 +533,7 @@ void draw_glwidgets(const opengl_window& win) {
   }
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{"camera", "shape", "environment",
-        "instance", "materials", "textures", "subdivs"};
+        "instance", "material", "texture"};
     auto&       app    = apps.get_selected();
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
