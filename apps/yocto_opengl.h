@@ -267,6 +267,11 @@ struct draw_glscene_params {
 // Initialize an OpenGL scene
 void make_glscene(opengl_scene& scene);
 
+// Draw an OpenGL scene
+void draw_glscene(opengl_scene& state, 
+    const vec4i& viewport, 
+    const draw_glscene_params& params);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

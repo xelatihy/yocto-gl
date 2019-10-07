@@ -548,6 +548,150 @@ static const char* fragment =
   init_glprogram(glscene.program, vertex, fragment);
 }
 
+// Draw a shape
+void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
+    const draw_glscene_params& params) {
+  auto& shape    = state.shapes[instance.shape];
+  auto& material = state.materials[instance.material];
+
+  set_gluniform(state.program, "shape_xform", mat4f(instance.frame));
+  set_gluniform(state.program, "shape_xform_invtranspose",
+      transpose(mat4f(inverse(instance.frame, params.non_rigid_frames))));
+  set_gluniform(state.program, "shape_normal_offset", 0.0f);
+  set_gluniform(state.program, "highlight",
+      instance.highlighted ? vec4f{1, 1, 0, 1} : zero4f);
+
+  auto mtype = 2;
+  if (material.gltf_textures) mtype = 3;
+  set_gluniform(state.program, "mat_type", mtype);
+  set_gluniform(state.program, "mat_ke", material.emission);
+  set_gluniform(state.program, "mat_kd", material.diffuse);
+  set_gluniform(state.program, "mat_ks", vec3f{material.metallic});
+  set_gluniform(state.program, "mat_rs", material.roughness);
+  set_gluniform(state.program, "mat_op", material.opacity);
+  set_gluniform(state.program, "mat_double_sided", (int)params.double_sided);
+  if (material.emission_map >= 0) {
+    set_gluniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
+        state.textures.at(material.emission_map), 0);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_ke_txt", "mat_ke_txt_on", opengl_texture{}, 0);
+  }
+  if (material.diffuse_map >= 0) {
+    set_gluniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
+        state.textures.at(material.diffuse_map), 1);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_kd_txt", "mat_kd_txt_on", opengl_texture{}, 1);
+  }
+  if (material.metallic_map >= 0) {
+    set_gluniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
+        state.textures.at(material.metallic_map), 2);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_ks_txt", "mat_ks_txt_on", opengl_texture{}, 2);
+  }
+  if (material.roughness_map >= 0) {
+    set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
+        state.textures.at(material.roughness_map), 3);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_rs_txt", "mat_rs_txt_on", opengl_texture{}, 3);
+  }
+  if (material.normal_map >= 0) {
+    set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
+        state.textures.at(material.normal_map), 5);
+  } else {
+    set_gluniform_texture(
+        state.program, "mat_norm_txt", "mat_norm_txt_on", opengl_texture{}, 5);
+  }
+
+  set_gluniform(state.program, "elem_faceted", (int)!shape.normals);
+  set_glvertexattrib(state.program, "vert_pos", shape.positions, zero3f);
+  set_glvertexattrib(state.program, "vert_norm", shape.normals, zero3f);
+  set_glvertexattrib(state.program, "vert_texcoord", shape.texcoords, zero2f);
+  set_glvertexattrib(
+      state.program, "vert_color", shape.colors, vec4f{1, 1, 1, 1});
+  set_glvertexattrib(
+      state.program, "vert_tangsp", shape.tangentsps, vec4f{0, 0, 1, 1});
+
+  if (shape.points) {
+    set_gluniform(state.program, "elem_type", 1);
+    draw_glpoints(shape.points, shape.points.num);
+  }
+  if (shape.lines) {
+    set_gluniform(state.program, "elem_type", 2);
+    draw_gllines(shape.lines, shape.lines.num);
+  }
+  if (shape.triangles) {
+    set_gluniform(state.program, "elem_type", 3);
+    draw_gltriangles(shape.triangles, shape.triangles.num);
+  }
+  if (shape.quads) {
+    set_gluniform(state.program, "elem_type", 3);
+    draw_gltriangles(shape.quads, shape.quads.num);
+  }
+
+#if 0
+    if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
+        enable_glculling(false);
+        check_glerror();
+        set_gluniform(state.program, "mtype"), 0);
+        glUniform3f(glGetUniformLocation(state.program, "ke"), 0, 0, 0);
+        set_gluniform(state.program, "op"), material.op);
+        set_gluniform(state.program, "shp_normal_offset"), 0.01f);
+        check_glerror();
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
+        glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        check_glerror();
+    }
+#endif
+  if (params.edges) throw std::runtime_error("edges are momentarily disabled");
+
+  // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
+}
+
+// Display a scene
+void draw_glscene(opengl_scene& state, 
+    const vec4i& viewport, 
+    const draw_glscene_params& params) {
+  auto& glcamera    = state.cameras.at(params.camera);
+  auto  camera_view = mat4f(inverse(glcamera.frame));
+  auto  camera_proj = perspective_mat(glcamera.yfov,
+      (float)viewport.z / (float)viewport.w, params.near, params.far);
+
+  bind_glprogram(state.program);
+  set_gluniform(state.program, "cam_pos", glcamera.frame.o);
+  set_gluniform(state.program, "cam_xform_inv", camera_view);
+  set_gluniform(state.program, "cam_proj", camera_proj);
+  set_gluniform(state.program, "eyelight", (int)params.eyelight);
+  set_gluniform(state.program, "exposure", params.exposure);
+  set_gluniform(state.program, "gamma", params.gamma);
+
+  if (!params.eyelight) {
+    set_gluniform(state.program, "lamb", zero3f);
+    set_gluniform(state.program, "lnum", (int)state.lights.size());
+    for (auto i = 0; i < state.lights.size(); i++) {
+      auto is = std::to_string(i);
+      set_gluniform(state.program, ("lpos[" + is + "]").c_str(),
+          state.lights[i].position);
+      set_gluniform(
+          state.program, ("lke[" + is + "]").c_str(), state.lights[i].emission);
+      set_gluniform(state.program, ("ltype[" + is + "]").c_str(),
+          (int)state.lights[i].type);
+    }
+  }
+
+  if (params.wireframe) set_glwireframe(true);
+  for (auto& instance : state.instances) {
+    draw_glinstance(state, instance, params);
+  }
+
+  unbind_opengl_program();
+  if (params.wireframe) set_glwireframe(false);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
