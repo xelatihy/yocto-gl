@@ -276,8 +276,8 @@ void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
 }
 
 // Display a scene
-void draw_glscene(opengl_scene& state, const yocto_scene& scene,
-    const vec4i& viewport, const pair<string, int>& highlighted,
+void draw_glscene(opengl_scene& state, 
+    const vec4i& viewport, 
     const drawgl_params& options) {
   auto& glcamera    = state.cameras.at(options.camera);
   auto  camera_view = mat4f(inverse(glcamera.frame));
@@ -307,11 +307,7 @@ void draw_glscene(opengl_scene& state, const yocto_scene& scene,
   }
 
   if (options.wireframe) set_glwireframe(true);
-  for (auto instance_id = 0; instance_id < scene.instances.size();
-       instance_id++) {
-    auto& instance       = state.instances[instance_id];
-    instance.highlighted = highlighted.first == "instance" &&
-                           highlighted.second == instance_id;
+  for (auto& instance : state.instances) {
     draw_glinstance(state, instance, options);
   }
 
@@ -736,8 +732,8 @@ void draw(const opengl_window& win) {
   set_glviewport(get_glframebuffer_viewport(win));
   if (!apps.states.empty() && apps.selected >= 0) {
     auto& app = apps.get_selected();
-    draw_glscene(app.state, app.scene, get_glframebuffer_viewport(win),
-        app.selection, app.drawgl_prms);
+    draw_glscene(app.state, get_glframebuffer_viewport(win),
+        app.drawgl_prms);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
