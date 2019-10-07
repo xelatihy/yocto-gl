@@ -177,6 +177,66 @@ void draw_glmesh(opengl_mesh& glmesh, const frame3f& frame, const vec3f& color);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL SCENE RENDERING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Opengl caemra
+struct opengl_camera {
+  frame3f frame  = identity3x4f;
+  float   yfov   = radians(90);
+  float   asepct = 1;
+  float   near   = 0.001;
+  float   far    = 10000;
+};
+
+// Opengl shape
+struct opengl_shape {
+  opengl_arraybuffer   positions = {};
+  opengl_arraybuffer   normals   = {};
+  opengl_arraybuffer   texcoords = {};
+  opengl_arraybuffer   colors    = {};
+  opengl_elementbuffer points    = {};
+  opengl_elementbuffer lines     = {};
+  opengl_elementbuffer triangles = {};
+  opengl_elementbuffer quads     = {};
+  opengl_elementbuffer edges     = {};
+};
+
+// Opengl material
+struct opengl_material {
+    vec3f emission = zero3f;
+    vec3f diffuse = zero3f;
+    vec3f specular = zero3f;
+    float metallic = 0;
+    float roughness = 0;
+    int emission_map = -1;
+    int diffuse_map = -1;
+    int specular_map = -1;
+    int mnetallic_map = -1;
+    int roughness_map = -1;
+};
+
+// Opengl instance group
+struct opengl_instance {
+  frame3f         frame   = {};
+  int             shape    = 0;
+  int             material = 0;
+};
+
+// Opengl scene
+struct opengl_scene {
+  vector<opengl_camera>   cameras   = {};
+  vector<opengl_instance> instances = {};
+  vector<opengl_shape>    shapes    = {};
+  vector<opengl_material> materials = {};
+  vector<opengl_texture>  textures  = {};
+  opengl_program          program   = {};
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
