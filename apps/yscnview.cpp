@@ -54,10 +54,10 @@ void init_drawgl_lights(opengl_scene& state, const yocto_scene& scene) {
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     if (material.emission != zero3f) continue;
-    auto& light = state.lights.emplace_back();
-    auto bbox = compute_bounds(shape);
-    light.position  = (bbox.max + bbox.min) / 2;
-    auto area = 0.0f;
+    auto& light    = state.lights.emplace_back();
+    auto  bbox     = compute_bounds(shape);
+    light.position = (bbox.max + bbox.min) / 2;
+    auto area      = 0.0f;
     if (!shape.triangles.empty()) {
       for (auto t : shape.triangles)
         area += triangle_area(
@@ -73,7 +73,7 @@ void init_drawgl_lights(opengl_scene& state, const yocto_scene& scene) {
       area += shape.positions.size();
     }
     light.emission = material.emission * area;
-    light.type = 0;
+    light.type     = 0;
   }
 }
 
@@ -111,7 +111,7 @@ struct app_state {
   yocto_scene scene = {};
 
   // rendering state
-  opengl_scene  state  = {};
+  opengl_scene state = {};
 
   // view image
   bool   navigation_fps = false;
@@ -479,7 +479,7 @@ static const char* fragment =
 
 // Draw a shape
 void draw_glinstance(opengl_scene& state, const yocto_scene& scene,
-    const yocto_instance& instance, bool highlighted,
+    const opengl_instance& instance, bool highlighted,
     const drawgl_params& options) {
   auto& shape    = scene.shapes[instance.shape];
   auto& vbos     = state.shapes.at(instance.shape);
@@ -540,12 +540,11 @@ void draw_glinstance(opengl_scene& state, const yocto_scene& scene,
   set_gluniform(state.program, "elem_faceted", (int)shape.normals.empty());
   set_glvertexattrib(state.program, "vert_pos", vbos.positions, zero3f);
   set_glvertexattrib(state.program, "vert_norm", vbos.normals, zero3f);
-  set_glvertexattrib(
-      state.program, "vert_texcoord", vbos.texcoords, zero2f);
+  set_glvertexattrib(state.program, "vert_texcoord", vbos.texcoords, zero2f);
   set_glvertexattrib(
       state.program, "vert_color", vbos.colors, vec4f{1, 1, 1, 1});
-  set_glvertexattrib(state.program, "vert_tangsp", vbos.tangentsps,
-      vec4f{0, 0, 1, 1});
+  set_glvertexattrib(
+      state.program, "vert_tangsp", vbos.tangentsps, vec4f{0, 0, 1, 1});
 
   if (vbos.points) {
     set_gluniform(state.program, "elem_type", 1);
@@ -648,7 +647,7 @@ void draw_glscene(opengl_scene& state, const yocto_scene& scene,
   if (options.wireframe) set_glwireframe(true);
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
-    auto& instance = scene.instances[instance_id];
+    auto& instance = state.instances[instance_id];
     // auto& shape     = scene.shapes[instance.shape];
     // auto& material  = scene.materials[shape.material];
     auto highlight = highlighted.first == "instance" &&
@@ -663,6 +662,8 @@ void draw_glscene(opengl_scene& state, const yocto_scene& scene,
 void init_opengl_scene(opengl_scene& state, const yocto_scene& scene) {
   // load textures and vbos
   init_glprogram(state.program, vertex, fragment);
+
+  // textures
   state.textures.resize(scene.textures.size());
   for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
     auto& texture = scene.textures[texture_id];
@@ -674,30 +675,48 @@ void init_opengl_scene(opengl_scene& state, const yocto_scene& scene) {
       throw std::runtime_error("bad texture");
     }
   }
+
+  // materials
+  state.materials.resize(scene.materials.size());
+  for (auto material_id = 0; material_id < scene.materials.size(); material_id++) {
+    auto& material = scene.materials[material_id];
+    auto& glmaterial  = state.materials[material_id];
+    glmaterial.emission = material.emission;
+    glmaterial.diffuse = material.diffuse;
+    glmaterial.specular = material.specular;
+    glmaterial.metallic = material.metallic;
+    glmaterial.roughness = material.roughness;
+    glmaterial.emission_map = material.emission_tex;
+    glmaterial.diffuse_map = material.emission_tex;
+    glmaterial.specular_map = material.specular_tex;
+    glmaterial.metallic_map = material.metallic_tex;
+  }
+
+  // shapes
   state.shapes.resize(scene.shapes.size());
   for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
     auto& shape = scene.shapes[shape_id];
-    auto& vbos  = state.shapes[shape_id];
+    auto& glshape  = state.shapes[shape_id];
     if (shape.quadspos.empty()) {
       if (!shape.positions.empty())
-        init_glarraybuffer(vbos.positions, shape.positions, false);
+        init_glarraybuffer(glshape.positions, shape.positions, false);
       if (!shape.normals.empty())
-        init_glarraybuffer(vbos.normals, shape.normals, false);
+        init_glarraybuffer(glshape.normals, shape.normals, false);
       if (!shape.texcoords.empty())
-        init_glarraybuffer(vbos.texcoords, shape.texcoords, false);
+        init_glarraybuffer(glshape.texcoords, shape.texcoords, false);
       if (!shape.colors.empty())
-        init_glarraybuffer(vbos.colors, shape.colors, false);
+        init_glarraybuffer(glshape.colors, shape.colors, false);
       if (!shape.tangents.empty())
-        init_glarraybuffer(vbos.tangentsps, shape.tangents, false);
+        init_glarraybuffer(glshape.tangentsps, shape.tangents, false);
       if (!shape.points.empty())
-        init_glelementbuffer(vbos.points, shape.points, false);
+        init_glelementbuffer(glshape.points, shape.points, false);
       if (!shape.lines.empty())
-        init_glelementbuffer(vbos.lines, shape.lines, false);
+        init_glelementbuffer(glshape.lines, shape.lines, false);
       if (!shape.triangles.empty())
-        init_glelementbuffer(vbos.triangles, shape.triangles, false);
+        init_glelementbuffer(glshape.triangles, shape.triangles, false);
       if (!shape.quads.empty()) {
         auto triangles = quads_to_triangles(shape.quads);
-        init_glelementbuffer(vbos.quads, triangles, false);
+        init_glelementbuffer(glshape.quads, triangles, false);
       }
     } else {
       auto quads     = vector<vec4i>{};
@@ -708,16 +727,26 @@ void init_opengl_scene(opengl_scene& state, const yocto_scene& scene) {
           shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
           shape.texcoords);
       if (!positions.empty())
-        init_glarraybuffer(vbos.positions, positions, false);
-      if (!normals.empty())
-        init_glarraybuffer(vbos.normals, normals, false);
+        init_glarraybuffer(glshape.positions, positions, false);
+      if (!normals.empty()) init_glarraybuffer(glshape.normals, normals, false);
       if (!texcoords.empty())
-        init_glarraybuffer(vbos.texcoords, texcoords, false);
+        init_glarraybuffer(glshape.texcoords, texcoords, false);
       if (!quads.empty()) {
         auto triangles = quads_to_triangles(quads);
-        init_glelementbuffer(vbos.quads, triangles, false);
+        init_glelementbuffer(glshape.quads, triangles, false);
       }
     }
+  }
+
+  // instances
+  state.instances.resize(scene.instances.size());
+  for (auto instance_id = 0; instance_id < scene.instances.size();
+       instance_id++) {
+    auto& instance      = scene.instances[instance_id];
+    auto& glinstance    = state.instances[instance_id];
+    glinstance.frame    = instance.frame;
+    glinstance.shape    = instance.shape;
+    glinstance.material = instance.material;
   }
 }
 

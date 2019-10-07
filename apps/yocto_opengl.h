@@ -214,7 +214,7 @@ struct opengl_material {
   int   emission_map  = -1;
   int   diffuse_map   = -1;
   int   specular_map  = -1;
-  int   mnetallic_map = -1;
+  int   metallic_map = -1;
   int   roughness_map = -1;
 };
 
