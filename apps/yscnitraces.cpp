@@ -62,9 +62,9 @@ struct app_state {
   image<vec4f> display = {};
 
   // view scene
-  opengl_image gl_image       = {};
-  draw_glimage_params draw_prms = {};
-  bool         navigation_fps = false;
+  opengl_image        gl_image       = {};
+  draw_glimage_params draw_prms      = {};
+  bool                navigation_fps = false;
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -90,14 +90,14 @@ void reset_display(app_state& app) {
 }
 
 void draw(const opengl_window& win) {
-  auto& app      = *(app_state*)get_gluser_pointer(win);
+  auto& app = *(app_state*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app.gl_image || app.gl_image.size() != app.display.size())
     update_glimage(app.gl_image, app.display, false, false);
-  app.draw_prms.window = get_glwindow_size(win);
+  app.draw_prms.window      = get_glwindow_size(win);
   app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
-  update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(), app.draw_prms.window,
-      app.draw_prms.fit);
+  update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
+      app.draw_prms.window, app.draw_prms.fit);
   draw_glimage(app.gl_image, app.draw_prms);
   swap_glbuffers(win);
 }

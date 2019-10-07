@@ -70,9 +70,9 @@ struct app_state {
   image<vec4f> display = {};
 
   // view scene
-  opengl_image gl_image       = {};
-  draw_glimage_params draw_prms = {};
-  bool         navigation_fps = false;
+  opengl_image        gl_image       = {};
+  draw_glimage_params draw_prms      = {};
+  bool                navigation_fps = false;
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -439,8 +439,8 @@ void draw_glwidgets(const opengl_window& win) {
       // for (auto stat : format_stats(app.bvh)) print_info(stat);
     }
     auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(
-        mouse_pos, app.draw_prms.center, app.draw_prms.scale, app.render.size());
+    auto ij        = get_image_coords(mouse_pos, app.draw_prms.center,
+        app.draw_prms.scale, app.render.size());
     draw_gldragger(win, "mouse", ij);
     if (ij.x >= 0 && ij.x < app.render.size().x && ij.y >= 0 &&
         ij.y < app.render.size().y) {
@@ -493,11 +493,11 @@ void draw_glwidgets(const opengl_window& win) {
 }
 
 void draw(const opengl_window& win) {
-  auto& apps     = *(app_states*)get_gluser_pointer(win);
+  auto& apps = *(app_states*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app = apps.get_selected();
-    app.draw_prms.window = get_glwindow_size(win);
+    auto& app                 = apps.get_selected();
+    app.draw_prms.window      = get_glwindow_size(win);
     app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
     if (!app.gl_image || app.gl_image.size() != app.display.size())
       update_glimage(app.gl_image, app.display, false, false);
@@ -621,8 +621,8 @@ void run_ui(app_states& apps) {
     if (scene_ok && (mouse_left || mouse_right) && alt_down &&
         !widgets_active) {
       auto& app = apps.get_selected();
-      auto  ij  = get_image_coords(
-          mouse_pos, app.draw_prms.center, app.draw_prms.scale, app.render.size());
+      auto  ij  = get_image_coords(mouse_pos, app.draw_prms.center,
+          app.draw_prms.scale, app.render.size());
       if (ij.x >= 0 && ij.x < app.render.size().x && ij.y >= 0 &&
           ij.y < app.render.size().y) {
         auto& camera = app.scene.cameras.at(app.trace_prms.camera);

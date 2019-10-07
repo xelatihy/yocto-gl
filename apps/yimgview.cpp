@@ -62,7 +62,7 @@ struct app_state {
   bool              apply_colorgrade = false;
 
   // viewing properties
-  opengl_image gl_image     = {};
+  opengl_image        gl_image  = {};
   draw_glimage_params draw_prms = {};
 
   // rendering properties
@@ -235,8 +235,8 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glslider(win, "zoom", app.draw_prms.scale, 0.1, 10);
     draw_glcheckbox(win, "fit", app.draw_prms.fit);
     auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(
-        mouse_pos, app.draw_prms.center, app.draw_prms.scale, app.source.size());
+    auto ij        = get_image_coords(mouse_pos, app.draw_prms.center,
+        app.draw_prms.scale, app.source.size());
     draw_gldragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
     if (ij.x >= 0 && ij.x < app.source.size().x && ij.y >= 0 &&
@@ -263,10 +263,10 @@ void draw_glwidgets(const opengl_window& win) {
 }
 
 void draw(const opengl_window& win) {
-  auto& apps     = *(app_states*)get_gluser_pointer(win);
+  auto& apps = *(app_states*)get_gluser_pointer(win);
   if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app = apps.get_selected();
-    app.draw_prms.window = get_glwindow_size(win);
+    auto& app                 = apps.get_selected();
+    app.draw_prms.window      = get_glwindow_size(win);
     app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
     if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
     update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),

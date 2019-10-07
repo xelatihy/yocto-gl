@@ -121,14 +121,14 @@ struct opengl_image {
 
 // OpenGL image drawing params
 struct draw_glimage_params {
-    vec2i window = {512, 512};
-    vec4i framebuffer = { 0, 0, 512, 512 };
-    vec2f center= {0, 0};
-    float scale = 1;
-    bool fit = true;
-    bool checker = true;
-    float border_size = 2; 
-    vec4f background = {0.15f, 0.15f, 0.15f, 1.0f};
+  vec2i window      = {512, 512};
+  vec4i framebuffer = {0, 0, 512, 512};
+  vec2f center      = {0, 0};
+  float scale       = 1;
+  bool  fit         = true;
+  bool  checker     = true;
+  float border_size = 2;
+  vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 // update image data
