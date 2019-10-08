@@ -76,7 +76,7 @@ struct app_states {
   std::list<app_state>         states       = {};
   int                          selected     = -1;
   std::list<app_state>         loading      = {};
-  std::list<std::future<void>> load_workers = {};
+  std::list<std::future<void>> loaders = {};
 
   // get image
   app_state& get_selected() {
@@ -132,7 +132,7 @@ void load_image_async(app_states& apps, const string& filename) {
   app.tonemap_prms    = app.tonemap_prms;
   app.colorgrade_prms = app.colorgrade_prms;
   apps.selected       = (int)apps.states.size() - 1;
-  apps.load_workers.push_back(run_async([&app]() {
+  apps.loaders.push_back(run_async([&app]() {
     load_image(app.filename, app.source);
     compute_stats(app.source_stats, app.source, is_hdr_filename(app.filename));
     app.display = tonemap_image(app.source, app.tonemap_prms);
@@ -280,9 +280,9 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_states& app) {
-  while (!app.load_workers.empty() && is_ready(app.load_workers.front())) {
+  while (!app.loaders.empty() && is_ready(app.loaders.front())) {
     try {
-      app.load_workers.front().get();
+      app.loaders.front().get();
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load image " + app.loading.front().filename);
       log_glinfo(win, "cannot load image " + app.loading.front().filename);
@@ -290,7 +290,7 @@ void update(const opengl_window& win, app_states& app) {
       break;
     }
     app.states.splice(app.states.end(), app.loading, app.loading.begin());
-    app.load_workers.pop_front();
+    app.loaders.pop_front();
     reset_display(app.states.back());
     if (app.selected < 0) app.selected = (int)app.states.size() - 1;
   }

@@ -81,9 +81,8 @@ struct app_states {
   // data
   std::list<app_state>         states;
   int                          selected = -1;
-  std::list<string>            errors;
   std::list<app_state>         loading;
-  std::list<std::future<void>> load_workers;
+  std::list<std::future<void>> loaders;
 
   // get image
   app_state& get_selected() {
@@ -112,7 +111,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.load_prms   = app.load_prms;
   app.save_prms   = app.save_prms;
   app.drawgl_prms = app.drawgl_prms;
-  apps.load_workers.push_back(run_async([&app]() {
+  apps.loaders.push_back(run_async([&app]() {
     load_scene(app.filename, app.scene);
     update_tesselation(app.scene);
     app.time_range = compute_animation_range(app.scene);
@@ -488,7 +487,7 @@ void draw_glwidgets(const opengl_window& win) {
       win, "scene", apps.selected, (int)apps.states.size(),
       [&apps](int idx) {
         auto it = apps.states.begin();
-        std::advance(it, apps.selected);
+        std::advance(it, idx);
         return it->name.c_str();
       },
       false);
@@ -587,9 +586,9 @@ void draw(const opengl_window& win) {
 
 // update
 void update(const opengl_window& win, app_states& apps) {
-  while (!apps.load_workers.empty() && is_ready(apps.load_workers.front())) {
+  while (!apps.loaders.empty() && is_ready(apps.loaders.front())) {
     try {
-      apps.load_workers.front().get();
+      apps.loaders.front().get();
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load scene " + apps.loading.front().filename);
       log_glinfo(win, "cannot load scene " + apps.loading.front().filename);
@@ -597,7 +596,7 @@ void update(const opengl_window& win, app_states& apps) {
       break;
     }
     apps.states.splice(apps.states.end(), apps.loading, apps.loading.begin());
-    apps.load_workers.pop_front();
+    apps.loaders.pop_front();
     make_glscene(apps.states.back().glscene, apps.states.back().scene);
     update_gllights(apps.states.back().glscene, apps.states.back().scene);
     if (apps.selected < 0) apps.selected = (int)apps.states.size() - 1;

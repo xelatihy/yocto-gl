@@ -89,10 +89,8 @@ struct app_states {
   // data
   std::list<app_state>                   states;
   int                                    selected = -1;
-  std::list<string>                      errors;
   std::list<app_state>                   loading;
-  std::list<std::future<void>>           load_workers;
-  std::deque<std::unique_ptr<app_state>> minchia;
+  std::list<std::future<void>>           loaders;
 
   // get image
   app_state& get_selected() {
@@ -140,7 +138,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.bvh_prms     = app.bvh_prms;
   app.tonemap_prms = app.tonemap_prms;
   app.add_skyenv   = app.add_skyenv;
-  apps.load_workers.push_back(run_async([&app]() {
+  apps.loaders.push_back(run_async([&app]() {
     load_scene(app.filename, app.scene);
     make_bvh(app.bvh, app.scene, app.bvh_prms);
     make_trace_lights(app.lights, app.scene);
@@ -385,7 +383,7 @@ void draw_glwidgets(const opengl_window& win) {
       win, "scene", apps.selected, (int)apps.states.size(),
       [&apps](int idx) {
         auto it = apps.states.begin();
-        std::advance(it, apps.selected);
+        std::advance(it, idx);
         return it->name.c_str();
       },
       false);
@@ -512,9 +510,9 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_states& app) {
-  while (!app.load_workers.empty() && is_ready(app.load_workers.front())) {
+  while (!app.loaders.empty() && is_ready(app.loaders.front())) {
     try {
-      app.load_workers.front().get();
+      app.loaders.front().get();
     } catch (const std::exception& e) {
       push_glmessage(win, "cannot load scene " + app.loading.front().filename);
       log_glinfo(win, "cannot load scene " + app.loading.front().filename);
@@ -522,7 +520,7 @@ void update(const opengl_window& win, app_states& app) {
       break;
     }
     app.states.splice(app.states.end(), app.loading, app.loading.begin());
-    app.load_workers.pop_front();
+    app.loaders.pop_front();
     reset_display(app.states.back());
     if (app.selected < 0) app.selected = (int)app.states.size() - 1;
   }
