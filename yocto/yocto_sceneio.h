@@ -174,9 +174,6 @@ struct scene_shape {
   // displacement information
   float displacement     = 0;
   int   displacement_tex = -1;
-
-  // subdiv cache
-  vector<scene_shape> subdiv = {};
 };
 
 // Instance of a visible shape in the scene.

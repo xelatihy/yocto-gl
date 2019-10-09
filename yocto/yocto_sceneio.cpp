@@ -494,17 +494,13 @@ void copy_shape_data(scene_shape& dst, const scene_shape& src) {
 
 void update_tesselation(scene_model& scene, scene_shape& shape) {
   if (!shape.subdivisions && !shape.displacement) return;
-  if (shape.subdiv.empty()) {
-    auto& subdiv = shape.subdiv.emplace_back();
-    copy_shape_data(subdiv, shape);
-  } else {
-    copy_shape_data(shape, shape.subdiv.back());
-  }
   if (shape.subdivisions) {
     subdivide_shape(shape);
+    shape.subdivisions = 0;
   }
   if (shape.displacement && shape.displacement_tex >= 0) {
     displace_shape(scene, shape);
+    shape.displacement = 0;
   }
 }
 
