@@ -329,14 +329,6 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "specular", "transmission", "roughness", "material", "shape", "instance",
     "element", "highlight"};
 
-// Equality operators
-inline bool operator==(const trace_params& a, const trace_params& b) {
-  return memcmp(&a, &b, sizeof(a)) == 0;
-}
-inline bool operator!=(const trace_params& a, const trace_params& b) {
-  return memcmp(&a, &b, sizeof(a)) != 0;
-}
-
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params);
