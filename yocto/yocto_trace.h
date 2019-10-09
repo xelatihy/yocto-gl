@@ -101,12 +101,8 @@ struct trace_camera {
   float   aperture     = 0;
 };
 
-// Texture containing either an LDR or HDR image. Textures are rendered
-// using linear interpolation (unless `no_interoilation` is set) and
-// weith tiling (unless `clamp_to_edge` is set). HdR images are encoded
-// in linear color space, while LDRs are encoded as sRGB. The latter
-// conversion can be disabled with `ldr_as_linear` for example to render
-// normal maps.
+// Texture containing either an LDR or HDR image. HdR images are encoded
+// in linear color space, while LDRs are encoded as sRGB.
 struct trace_texture {
   image<vec4f> hdr      = {};
   image<vec4b> ldr      = {};
