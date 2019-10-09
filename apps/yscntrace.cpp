@@ -121,9 +121,6 @@ int main(int argc, const char* argv[]) {
     for(auto& error : errors) print_info(error);
   }
 
-  // add sky
-  if (add_skyenv) add_sky(ioscene);
-
   // convert scene
   auto scene = trace_scene{};
   {

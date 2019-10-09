@@ -311,9 +311,6 @@ vec2f compute_animation_range(
 bbox3f compute_bounds(const scene_shape& shape);
 bbox3f compute_bounds(const scene_model& scene);
 
-// Add a sky environment
-void add_sky(scene_model& scene, float sun_angle = pif / 4);
-
 // Print scene statistics.
 vector<string> format_stats(const scene_model& scene, bool verbose = false);
 // Checks for validity of the scene.
