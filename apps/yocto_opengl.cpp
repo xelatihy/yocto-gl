@@ -655,10 +655,15 @@ void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
 // Display a scene
 void draw_glscene(opengl_scene& state, const vec4i& viewport,
     const draw_glscene_params& params) {
-  auto& glcamera    = state.cameras.at(params.camera);
-  auto  camera_view = mat4f(inverse(glcamera.frame));
-  auto  camera_proj = perspective_mat(glcamera.yfov,
-      (float)viewport.z / (float)viewport.w, params.near, params.far);
+  auto& glcamera      = state.cameras.at(params.camera);
+  auto  camera_aspect = (float)viewport.z / (float)viewport.w;
+  auto  camera_yfov =
+      camera_aspect >= 0
+          ? (2 * atan(glcamera.film / (camera_aspect * 2 * glcamera.lens)))
+          : (2 * atan(glcamera.film / (2 * glcamera.lens)));
+  auto camera_view = mat4f(inverse(glcamera.frame));
+  auto camera_proj = perspective_mat(
+      camera_yfov, camera_aspect, params.near, params.far);
 
   clear_glframebuffer(params.background);
   set_glviewport(viewport);

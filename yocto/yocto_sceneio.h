@@ -281,7 +281,6 @@ void save_scene(const string& filename, const scene_model& scene,
 namespace yocto {
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float camera_yfov(const scene_camera& camera);
 vec2i camera_resolution(const scene_camera& camera, int resolution);
 void  set_yperspective(scene_camera& camera, float yfov, float aspect,
      float focus, float film = 0.036f);
