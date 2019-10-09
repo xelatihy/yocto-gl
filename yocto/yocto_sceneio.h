@@ -65,16 +65,17 @@ namespace yocto {
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
-// we specify film size (35mm by default), the lens' focal length, the focus
-// distance and the lens aperture. All values are in meters.
-// Here are some common aspect ratios used in video and still photography.
+// we specify film size (35mm by default), film aspect ration, 
+// the lens' focal length, the focus distance and the lens aperture. 
+// All values are in meters. Here are some common aspect ratios used in video 
+// and still photography.
 // 3:2    on 35 mm:  0.036 x 0.024
 // 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
 // 2.35:1 on 35 mm:  0.036 x 0.01532 or 0.05640 x 0.024
 // 2.39:1 on 35 mm:  0.036 x 0.01506 or 0.05736 x 0.024
 // 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
 // To compute good apertures, one can use the F-stop number from phostography
-// and set the aperture to focal_leangth/f_stop.
+// and set the aperture to focal length over f-stop.
 struct scene_camera {
   string  name         = "";
   frame3f frame        = identity3x4f;
@@ -86,12 +87,8 @@ struct scene_camera {
   float   aperture     = 0;
 };
 
-// Texture containing either an LDR or HDR image. Textures are rendered
-// using linear interpolation (unless `no_interoilation` is set) and
-// weith tiling (unless `clamp_to_edge` is set). HdR images are encoded
-// in linear color space, while LDRs are encoded as sRGB. The latter
-// conversion can be disabled with `ldr_as_linear` for example to render
-// normal maps.
+// Texture containing either an LDR or HDR image. HdR images are encoded
+// in linear color space, while LDRs are encoded as sRGB.
 struct scene_texture {
   string       name     = "";
   string       filename = "";
@@ -137,7 +134,7 @@ struct scene_material {
   bool gltf_textures    = false;  // glTF packed textures
 };
 
-// Shape data represented as an indexed meshes of elements.
+// Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
 // Additionally, we support faceavarying primitives where
 // each verftex data has its own topology.
@@ -282,23 +279,12 @@ namespace yocto {
 void update_tesselation(scene_model& scene, scene_shape& shape);
 void update_tesselation(scene_model& scene);
 
-// Compute shape vertex normals
-void update_normals(scene_shape& shape);
-
 // Update node transforms.
 void update_transforms(scene_model& scene, float time = 0, const string& anim_group = "");
 
-// Compute animation range.
-vec2f compute_animation_range(
-    const scene_model& scene, const string& anim_group = "");
-
-// Computes shape/scene approximate bounds.
-bbox3f compute_bounds(const scene_shape& shape);
-bbox3f compute_bounds(const scene_model& scene);
-
-// Print scene statistics.
+// Return scene statistics as list of strings.
 vector<string> format_stats(const scene_model& scene, bool verbose = false);
-// Checks for validity of the scene.
+// Return validation errors as list of strings.
 vector<string> format_validation(const scene_model& scene, bool notextures = false);
 
 }  // namespace yocto

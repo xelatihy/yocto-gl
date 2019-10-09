@@ -101,6 +101,20 @@ struct app_states {
   draw_glscene_params drawgl_prms = {};
 };
 
+// Compute animation range
+vec2f compute_animation_range(
+    const scene_model& scene, const string& anim_group = "") {
+  if (scene.animations.empty()) return zero2f;
+  auto range = vec2f{+flt_max, -flt_max};
+  for (auto& animation : scene.animations) {
+    if (anim_group != "" && animation.group != anim_group) continue;
+    range.x = min(range.x, animation.times.front());
+    range.y = max(range.y, animation.times.back());
+  }
+  if (range.y < range.x) return zero2f;
+  return range;
+}
+
 void load_scene_async(app_states& apps, const string& filename) {
   auto& app       = apps.loading.emplace_back();
   app.filename    = filename;
@@ -209,7 +223,8 @@ void update_gllights(opengl_scene& state, const scene_model& scene) {
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) continue;
-    auto bbox = compute_bounds(shape);
+    auto bbox = invalidb3f;
+    for(auto& p : shape.positions) bbox = merge(bbox, p);
     auto pos  = (bbox.max + bbox.min) / 2;
     auto area = 0.0f;
     if (!shape.triangles.empty()) {

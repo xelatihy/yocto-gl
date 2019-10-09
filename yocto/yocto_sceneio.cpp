@@ -104,18 +104,14 @@ inline T keyframe_bezier(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Computes a shape bounding box.
-bbox3f compute_bounds(const scene_shape& shape) {
-  auto bbox = invalidb3f;
-  for (auto p : shape.positions) bbox = merge(bbox, p);
-  return bbox;
-}
-
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_bounds(const scene_model& scene) {
-  auto shape_bbox = vector<bbox3f>(scene.shapes.size());
-  for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++)
-    shape_bbox[shape_id] = compute_bounds(scene.shapes[shape_id]);
+  auto shape_bbox = vector<bbox3f>{};
+  for (auto& shape : scene.shapes) {
+    auto& sbvh = shape_bbox.emplace_back();
+    sbvh = invalidb3f;
+    for (auto p : shape.positions) sbvh = merge(sbvh, p);
+  }
   auto bbox = invalidb3f;
   for (auto& instance : scene.instances) {
     bbox = merge(
@@ -124,28 +120,18 @@ bbox3f compute_bounds(const scene_model& scene) {
   return bbox;
 }
 
-// Set and evaluate camera parameters. Setters take zeros as default values.
-float camera_yfov(const scene_camera& camera) {
-  assert(!camera.orthographic);
-  if (camera.aspect >= 1) {
-    return 2 * atan(camera.film / (camera.aspect * 2 * camera.lens));
-  } else {
-    return 2 * atan(camera.film / (2 * camera.lens));
-  }
-}
-
 // Add missing cameras.
 void add_cameras(scene_model& scene) {
   if (!scene.cameras.empty()) return;
   auto& camera = scene.cameras.emplace_back();
-  camera.name = "default";
+  camera.name  = "default";
   // TODO: fix me
   // FIXME: error in camera.lens and camera.film
   camera.orthographic = false;
-  camera.film = 0.036;
-  camera.aperture = 0;
-  camera.lens     = 0.050;
-  auto bbox = compute_bounds(scene);
+  camera.film         = 0.036;
+  camera.aperture     = 0;
+  camera.lens         = 0.050;
+  auto bbox           = compute_bounds(scene);
   auto center         = (bbox.max + bbox.min) / 2;
   auto bbox_radius    = length(bbox.max - bbox.min) / 2;
   auto camera_dir     = camera.frame.o - center;
@@ -558,20 +544,6 @@ void update_transforms(
   }
   for (auto& node : scene.nodes)
     if (node.parent < 0) update_transforms(scene, node);
-}
-
-// Compute animation range
-vec2f compute_animation_range(
-    const scene_model& scene, const string& anim_group) {
-  if (scene.animations.empty()) return zero2f;
-  auto range = vec2f{+flt_max, -flt_max};
-  for (auto& animation : scene.animations) {
-    if (anim_group != "" && animation.group != anim_group) continue;
-    range.x = min(range.x, animation.times.front());
-    range.y = max(range.y, animation.times.back());
-  }
-  if (range.y < range.x) return zero2f;
-  return range;
 }
 
 }  // namespace yocto
@@ -1739,7 +1711,7 @@ static void load_gltf(const string& filename, scene_model& scene) {
     camera.lens   = gcamera.aspect >= 1
                       ? (2 * camera.aspect * tan(gcamera.yfov / 2))
                       : (2 * tan(gcamera.yfov / 2));
-    camera.focus  = 10;
+    camera.focus = 10;
   }
 
   // convert scene nodes
@@ -1806,13 +1778,13 @@ static void load_pbrt(
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
-    auto& camera = scene.cameras.emplace_back();
-    camera.name  = make_safe_name("", "camera", (int)scene.cameras.size());
-    camera.frame = pcamera.frame;
+    auto& camera  = scene.cameras.emplace_back();
+    camera.name   = make_safe_name("", "camera", (int)scene.cameras.size());
+    camera.frame  = pcamera.frame;
     camera.aspect = pcamera.aspect;
-    camera.film = 0.036;
-    camera.lens = pcamera.lens;
-    camera.focus = pcamera.focus;
+    camera.film   = 0.036;
+    camera.lens   = pcamera.lens;
+    camera.focus  = pcamera.focus;
   }
 
   // convert textures
