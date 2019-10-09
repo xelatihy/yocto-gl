@@ -133,27 +133,22 @@ float camera_yfov(const scene_camera& camera) {
     return 2 * atan(camera.film / (2 * camera.lens));
   }
 }
-vec2i camera_resolution(const scene_camera& camera, int resolution) {
-  if (camera.aspect >= 1) {
-    return {resolution, (int)round(resolution / camera.aspect)};
-  } else {
-    return {(int)round(resolution / camera.aspect), resolution};
-  }
-}
 
-// add missing camera
-void set_view(
-    scene_camera& camera, const bbox3f& bbox, const vec3f& view_direction) {
+// Add missing cameras.
+void add_cameras(scene_model& scene) {
+  if (!scene.cameras.empty()) return;
+  auto& camera = scene.cameras.emplace_back();
+  camera.name = "default";
   // TODO: fix me
   // FIXME: error in camera.lens and camera.film
   camera.orthographic = false;
   camera.film = 0.036;
   camera.aperture = 0;
   camera.lens     = 0.050;
+  auto bbox = compute_bounds(scene);
   auto center         = (bbox.max + bbox.min) / 2;
   auto bbox_radius    = length(bbox.max - bbox.min) / 2;
-  auto camera_dir     = (view_direction == zero3f) ? camera.frame.o - center
-                                               : view_direction;
+  auto camera_dir     = camera.frame.o - center;
   if (camera_dir == zero3f) camera_dir = {0, 0, 1};
   auto camera_dist = bbox_radius / camera.film;
   auto from        = camera_dir * (camera_dist * 1) + center;
@@ -161,16 +156,6 @@ void set_view(
   auto up          = vec3f{0, 1, 0};
   camera.frame     = lookat_frame(from, to, up);
   camera.focus     = length(from - to);
-}
-
-// Add missing cameras.
-void add_cameras(scene_model& scene) {
-  if (scene.cameras.empty()) {
-    auto camera = scene_camera{};
-    camera.name = "default";
-    set_view(camera, compute_bounds(scene), {0, 0, 1});
-    scene.cameras.push_back(camera);
-  }
 }
 
 // Add missing materials.

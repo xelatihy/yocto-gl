@@ -278,13 +278,6 @@ void save_scene(const string& filename, const scene_model& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Set and evaluate camera parameters. Setters take zeros as default values.
-vec2i camera_resolution(const scene_camera& camera, int resolution);
-// Sets camera field of view to enclose all the bbox. Camera view direction
-// fiom size and forcal lemgth can be overridden if we pass non zero values.
-void set_view(scene_camera& camera, const bbox3f& bbox,
-    const vec3f& view_direction = zero3f);
-
 // Apply subdivision and displacement rules.
 void update_tesselation(scene_model& scene, scene_shape& shape);
 void update_tesselation(scene_model& scene);
