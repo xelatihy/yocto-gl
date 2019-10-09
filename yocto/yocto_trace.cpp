@@ -26,6 +26,13 @@
 // SOFTWARE.
 //
 
+//
+// TODO: better documentation
+// TODO: inline BVH
+// TODO: inline cdfs
+// TODO: consider removing dependency from image/shape
+//
+
 #include "yocto_trace.h"
 
 // -----------------------------------------------------------------------------
@@ -1319,7 +1326,7 @@ void update_normals(trace_shape& shape) {
 }
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(trace_shape& shape) {
+static void subdivide_shape(trace_shape& shape) {
   if (!shape.subdivisions) return;
   if (!shape.points.empty()) {
     throw std::runtime_error("point subdivision not supported");
@@ -1367,7 +1374,7 @@ void subdivide_shape(trace_shape& shape) {
   }
 }
 // Apply displacement to a shape
-void displace_shape(const trace_scene& scene, trace_shape& shape) {
+static void displace_shape(const trace_scene& scene, trace_shape& shape) {
   if (!shape.displacement || shape.displacement_tex < 0) return;
   auto& displacement = scene.textures[shape.displacement_tex];
   if (shape.texcoords.empty()) {
@@ -1413,34 +1420,15 @@ void displace_shape(const trace_scene& scene, trace_shape& shape) {
   }
 }
 
-void copy_shape_data(trace_shape& dst, const trace_shape& src) {
-  dst.points        = src.points;
-  dst.lines         = src.lines;
-  dst.triangles     = src.triangles;
-  dst.quads         = src.quads;
-  dst.quadspos      = src.quadspos;
-  dst.quadsnorm     = src.quadsnorm;
-  dst.quadstexcoord = src.quadstexcoord;
-  dst.positions     = src.positions;
-  dst.normals       = src.normals;
-  dst.texcoords     = src.texcoords;
-  dst.colors        = src.colors;
-  dst.radius        = src.radius;
-}
-
 void update_tesselation(trace_scene& scene, trace_shape& shape) {
   if (!shape.subdivisions && !shape.displacement) return;
-  if (shape.subdiv.empty()) {
-    auto& subdiv = shape.subdiv.emplace_back();
-    copy_shape_data(subdiv, shape);
-  } else {
-    copy_shape_data(shape, shape.subdiv.back());
-  }
   if (shape.subdivisions) {
     subdivide_shape(shape);
+    shape.subdivisions = 0;
   }
   if (shape.displacement && shape.displacement_tex >= 0) {
     displace_shape(scene, shape);
+    shape.displacement = 0;
   }
 }
 
