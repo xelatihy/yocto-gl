@@ -93,7 +93,6 @@ namespace yocto {
 // To compute good apertures, one can use the F-stop number from phostography
 // and set the aperture to focal_leangth/f_stop.
 struct trace_camera {
-  string  name         = "";
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
   float   lens         = 0.050;
@@ -109,8 +108,6 @@ struct trace_camera {
 // conversion can be disabled with `ldr_as_linear` for example to render
 // normal maps.
 struct trace_texture {
-  string       name     = "";
-  string       filename = "";
   image<vec4f> hdr      = {};
   image<vec4b> ldr      = {};
 };
@@ -120,8 +117,6 @@ struct trace_texture {
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct trace_material {
-  string name = "";
-
   // lobes
   vec3f emission        = {0, 0, 0};
   vec3f diffuse         = {0, 0, 0};
@@ -158,10 +153,6 @@ struct trace_material {
 // Additionally, we support faceavarying primitives where
 // each verftex data has its own topology.
 struct trace_shape {
-  // shape data
-  string name     = "";
-  string filename = "";
-
   // primitives
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
@@ -197,7 +188,6 @@ struct trace_shape {
 
 // Instance of a visible shape in the scene.
 struct trace_instance {
-  string  name     = "";
   frame3f frame    = identity3x4f;
   int     shape    = -1;
   int     material = -1;
@@ -205,7 +195,6 @@ struct trace_instance {
 
 // Environment map.
 struct trace_environment {
-  string  name         = "";
   frame3f frame        = identity3x4f;
   vec3f   emission     = {0, 0, 0};
   int     emission_tex = -1;
@@ -219,7 +208,6 @@ struct trace_environment {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct trace_scene {
-  string                    name         = "";
   vector<trace_camera>      cameras      = {};
   vector<trace_shape>       shapes       = {};
   vector<trace_instance>    instances    = {};

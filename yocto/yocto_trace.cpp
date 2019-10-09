@@ -1383,7 +1383,7 @@ void displace_shape(const trace_scene& scene, trace_shape& shape) {
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       auto disp = mean(
           xyz(eval_texture(displacement, shape.texcoords[vid], true)));
-      if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
+      if (!displacement.ldr.empty()) disp -= 0.5f;
       shape.positions[vid] += shape.normals[vid] * shape.displacement * disp;
     }
     if (shape.smooth || has_normals) update_normals(shape);
@@ -1397,7 +1397,7 @@ void displace_shape(const trace_scene& scene, trace_shape& shape) {
       for (auto i = 0; i < 4; i++) {
         auto disp = mean(
             xyz(eval_texture(displacement, shape.texcoords[qtxt[i]], true)));
-        if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
+        if (!displacement.ldr.empty()) disp -= 0.5f;
         offset[qpos[i]] += shape.displacement * disp;
         count[qpos[i]] += 1;
       }
