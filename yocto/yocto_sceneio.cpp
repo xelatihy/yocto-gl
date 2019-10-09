@@ -26,7 +26,7 @@
 // SOFTWARE.
 //
 
-#include "yocto_sceneio2.h"
+#include "yocto_sceneio.h"
 #include "yocto_commonio.h"
 #include "yocto_modelio.h"
 #include "yocto_random.h"

@@ -28,7 +28,7 @@
 
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
-#include "../yocto/yocto_sceneio2.h"
+#include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 
 #include <unordered_set>
