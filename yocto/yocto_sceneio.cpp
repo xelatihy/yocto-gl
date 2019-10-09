@@ -125,31 +125,28 @@ bbox3f compute_bounds(const scene_model& scene) {
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-vec2f camera_fov(const scene_camera& camera) {
-  assert(!camera.orthographic);
-  return {2 * atan(camera.film.x / (2 * camera.lens)),
-      2 * atan(camera.film.y / (2 * camera.lens))};
-}
 float camera_yfov(const scene_camera& camera) {
   assert(!camera.orthographic);
-  return 2 * atan(camera.film.y / (2 * camera.lens));
-}
-float camera_aspect(const scene_camera& camera) {
-  return camera.film.x / camera.film.y;
+  if (camera.aspect >= 0) {
+    return 2 * atan(camera.film / (camera.aspect * 2 * camera.lens));
+  } else {
+    return camera.fov;
+  }
 }
 vec2i camera_resolution(const scene_camera& camera, int resolution) {
-  if (camera.film.x > camera.film.y) {
-    return {resolution, (int)round(resolution * camera.film.y / camera.film.x)};
+  if (camera.aspect >= 1) {
+    return {resolution, (int)round(resolution / camera.aspect)};
   } else {
-    return {(int)round(resolution * camera.film.x / camera.film.y), resolution};
+    return {(int)round(resolution / camera.aspect), resolution};
   }
 }
 void set_yperspective(
     scene_camera& camera, float fov, float aspect, float focus, float film) {
   camera.orthographic = false;
-  camera.film         = {film, film / aspect};
+  camera.film         = film;
+  camera.aspect       = aspect;
   camera.focus        = focus;
-  auto distance       = camera.film.y / (2 * tan(fov / 2));
+  auto distance       = camera.film / (2 * tan(camera.fov / 2));
   if (focus < flt_max) {
     camera.lens = camera.focus * distance / (camera.focus + distance);
   } else {
@@ -166,7 +163,7 @@ void set_view(
   auto camera_dir     = (view_direction == zero3f) ? camera.frame.o - center
                                                : view_direction;
   if (camera_dir == zero3f) camera_dir = {0, 0, 1};
-  auto fov = min(camera_fov(camera));
+  auto fov = camera.fov;
   if (fov == 0) fov = 45 * pif / 180;
   auto camera_dist = bbox_radius / sin(fov / 2);
   auto from        = camera_dir * (camera_dist * 1) + center;
@@ -1343,7 +1340,8 @@ void load_obj(
     camera.name  = make_safe_name(ocam.name, "cam", (int)scene.cameras.size());
     camera.frame = ocam.frame;
     camera.orthographic = ocam.ortho;
-    camera.film         = {ocam.width, ocam.height};
+    camera.film         = max(ocam.width, ocam.height);
+    camera.aspect       = ocam.width / ocam.height;
     camera.focus        = ocam.focus;
     camera.lens         = ocam.lens;
     camera.aperture     = ocam.aperture;
@@ -1497,8 +1495,8 @@ static void save_obj(const string& filename, const scene_model& scene,
     ocamera.name     = camera.name;
     ocamera.frame    = camera.frame;
     ocamera.ortho    = camera.orthographic;
-    ocamera.width    = camera.film.x;
-    ocamera.height   = camera.film.y;
+    ocamera.width    = camera.film;
+    ocamera.height   = camera.film / camera.aspect;
     ocamera.focus    = camera.focus;
     ocamera.lens     = camera.lens;
     ocamera.aperture = camera.aperture;
@@ -1622,8 +1620,8 @@ static void save_obj_scene(const string& filename, const scene_model& scene,
 
 void print_obj_camera(const scene_camera& camera) {
   printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
-      camera.name.c_str(), (int)camera.orthographic, camera.film.x,
-      camera.film.y, camera.lens, camera.focus, camera.aperture,
+      camera.name.c_str(), (int)camera.orthographic, camera.film,
+      camera.film / camera.aspect, camera.lens, camera.focus, camera.aperture,
       camera.frame.x.x, camera.frame.x.y, camera.frame.x.z, camera.frame.y.x,
       camera.frame.y.y, camera.frame.y.z, camera.frame.z.x, camera.frame.z.y,
       camera.frame.z.z, camera.frame.o.x, camera.frame.o.y, camera.frame.o.z);
@@ -1983,8 +1981,8 @@ static void save_pbrt(const string& filename, const scene_model& scene) {
   auto& camera     = scene.cameras.front();
   auto& pcamera    = pbrt.cameras.emplace_back();
   pcamera.frame    = camera.frame;
-  pcamera.fov      = max(camera_fov(camera));
-  pcamera.aspect   = camera.film.x / camera.film.y;
+  pcamera.fov      = camera.fov;
+  pcamera.aspect   = camera.aspect;
   auto& pfilm      = pbrt.films.emplace_back();
   pfilm.filename   = "out.png";
   pfilm.resolution = {1280, (int)(1280 / pcamera.aspect)};
@@ -2074,7 +2072,8 @@ void make_cornellbox_scene(scene_model& scene) {
   camera.frame            = frame3f{{0, 1, 3.9}};
   camera.lens             = 0.035;
   camera.aperture         = 0.0;
-  camera.film             = {0.024, 0.024};
+  camera.film             = 0.024;
+  camera.aspect           = 1;
   auto& floor_mat         = scene.materials.emplace_back();
   floor_mat.name          = "floor";
   floor_mat.diffuse       = {0.725, 0.71, 0.68};

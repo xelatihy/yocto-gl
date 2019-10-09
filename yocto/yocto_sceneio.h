@@ -81,7 +81,9 @@ struct scene_camera {
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
   float   lens         = 0.050;
-  vec2f   film         = {0.036, 0.024};
+  float   film         = 0.036;
+  float   aspect       = 1.500;
+  float   fov          = 2 * atan(0.036 / (2 * 0.050));
   float   focus        = flt_max;
   float   aperture     = 0;
 };
@@ -279,9 +281,7 @@ void save_scene(const string& filename, const scene_model& scene,
 namespace yocto {
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-vec2f camera_fov(const scene_camera& camera);
 float camera_yfov(const scene_camera& camera);
-float camera_aspect(const scene_camera& camera);
 vec2i camera_resolution(const scene_camera& camera, int resolution);
 void  set_yperspective(scene_camera& camera, float yfov, float aspect,
      float focus, float film = 0.036f);

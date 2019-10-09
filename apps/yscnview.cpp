@@ -121,7 +121,7 @@ void load_scene_async(app_states& apps, const string& filename) {
 void update_glcamera(opengl_camera& glcamera, const scene_camera& camera) {
   glcamera.frame  = camera.frame;
   glcamera.yfov   = camera_yfov(camera);
-  glcamera.asepct = camera_aspect(camera);
+  glcamera.asepct = camera.aspect;
   glcamera.near   = 0.001f;
   glcamera.far    = 10000;
 }

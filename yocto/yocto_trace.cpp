@@ -448,8 +448,10 @@ namespace yocto {
 
 // convert scene objects
 static void update_camera(trace_camera& camera, const scene_camera& iocamera) {
-  camera.frame    = iocamera.frame;
-  camera.film     = iocamera.film;
+  camera.frame = iocamera.frame;
+  camera.film  = iocamera.aspect >= 1
+                    ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
+                    : vec2f{iocamera.film / iocamera.aspect, iocamera.film};
   camera.lens     = iocamera.lens;
   camera.focus    = iocamera.focus;
   camera.aperture = iocamera.aperture;
