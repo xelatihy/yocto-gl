@@ -316,7 +316,7 @@ void trim_memory(scene_model& scene) {
 }
 
 // Checks for validity of the scene.
-vector<string> validate_scene(const scene_model& scene, bool notextures) {
+vector<string> format_validation(const scene_model& scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = hash_map<string, int>();
@@ -349,12 +349,6 @@ vector<string> validate_scene(const scene_model& scene, bool notextures) {
   if (!notextures) check_empty_textures(scene.textures);
 
   return errs;
-}
-
-// Logs validations errors
-void print_validation(const scene_model& scene, bool notextures) {
-  for (auto err : validate_scene(scene, notextures))
-    printf("%s [validation]\n", err.c_str());
 }
 
 // Compute vertex normals

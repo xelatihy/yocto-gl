@@ -66,7 +66,7 @@ namespace yocto {
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
-// we specify fil size (35mm by default), the lens' focal length, the focus
+// we specify film size (35mm by default), the lens' focal length, the focus
 // distance and the lens aperture. All values are in meters.
 // Here are some common aspect ratios used in video and still photography.
 // 3:2    on 35 mm:  0.036 x 0.024
@@ -176,7 +176,6 @@ struct scene_shape {
   int   displacement_tex = -1;
 
   // subdiv cache
-  // TODO: remove
   vector<scene_shape> subdiv = {};
 };
 
@@ -282,16 +281,6 @@ void save_scene(const string& filename, const scene_model& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Print scene statistics.
-vector<string> format_stats(const scene_model& scene, bool verbose = false);
-
-// Compute shape vertex normals
-void update_normals(scene_shape& shape);
-
-// Update node transforms.
-void update_transforms(
-    scene_model& scene, float time = 0, const string& anim_group = "");
-
 // Set and evaluate camera parameters. Setters take zeros as default values.
 vec2f camera_fov(const scene_camera& camera);
 float camera_yfov(const scene_camera& camera);
@@ -308,6 +297,12 @@ void set_view(scene_camera& camera, const bbox3f& bbox,
 void update_tesselation(scene_model& scene, scene_shape& shape);
 void update_tesselation(scene_model& scene);
 
+// Compute shape vertex normals
+void update_normals(scene_shape& shape);
+
+// Update node transforms.
+void update_transforms(scene_model& scene, float time = 0, const string& anim_group = "");
+
 // Compute animation range.
 vec2f compute_animation_range(
     const scene_model& scene, const string& anim_group = "");
@@ -319,11 +314,10 @@ bbox3f compute_bounds(const scene_model& scene);
 // Add a sky environment
 void add_sky(scene_model& scene, float sun_angle = pif / 4);
 
-// Reduce memory usage
-void trim_memory(scene_model& scene);
-
+// Print scene statistics.
+vector<string> format_stats(const scene_model& scene, bool verbose = false);
 // Checks for validity of the scene.
-void print_validation(const scene_model& scene, bool notextures = false);
+vector<string> format_validation(const scene_model& scene, bool notextures = false);
 
 }  // namespace yocto
 

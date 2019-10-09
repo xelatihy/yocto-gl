@@ -117,7 +117,8 @@ int main(int argc, const char* argv[]) {
   // add components
   if (validate) {
     auto timer = print_timed("validating");
-    print_validation(ioscene);
+    auto errors = format_validation(ioscene);
+    for(auto& error : errors) print_info(error);
   }
 
   // add sky
