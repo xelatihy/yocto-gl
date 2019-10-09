@@ -54,6 +54,7 @@ add_library(yocto
     yocto/yocto_trace.h yocto/yocto_trace.cpp
     yocto/yocto_modelio.h yocto/yocto_modelio.cpp 
     yocto/yocto_sceneio.h yocto/yocto_sceneio.cpp
+    yocto/yocto_sceneio2.h yocto/yocto_sceneio2.cpp
 )
 
 if(UNIX AND NOT APPLE)
