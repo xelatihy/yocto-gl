@@ -171,16 +171,6 @@ struct trace_shape {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
-
-  // subdision properties
-  int  subdivisions = 0;
-  bool catmullclark = false;
-  bool smooth       = false;
-  bool facevarying  = false;
-
-  // displacement information
-  float displacement     = 0;
-  int   displacement_tex = -1;
 };
 
 // Instance of a visible shape in the scene.
