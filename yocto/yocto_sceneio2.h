@@ -316,6 +316,15 @@ vec2f compute_animation_range(
 bbox3f compute_bounds(const scene_shape& shape);
 bbox3f compute_bounds(const scene_model& scene);
 
+// Add a sky environment
+void add_sky(scene_model& scene, float sun_angle = pif / 4);
+
+// Reduce memory usage
+void trim_memory(scene_model& scene);
+
+// Checks for validity of the scene.
+void print_validation(const scene_model& scene, bool notextures = false);
+
 }
 
 #endif

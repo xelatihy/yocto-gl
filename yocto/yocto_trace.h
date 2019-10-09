@@ -71,7 +71,173 @@
 #include "yocto_common.h"
 #include "yocto_math.h"
 #include "yocto_random.h"
-#include "yocto_scene.h"
+#include "yocto_shape.h"
+#include "yocto_image.h"
+#include "yocto_sceneio2.h"
+
+// -----------------------------------------------------------------------------
+// SCENE DATA
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Camera based on a simple lens model. The camera is placed using a frame.
+// Camera projection is described in photorgaphics terms. In particular,
+// we specify fil size (35mm by default), the lens' focal length, the focus
+// distance and the lens aperture. All values are in meters.
+// Here are some common aspect ratios used in video and still photography.
+// 3:2    on 35 mm:  0.036 x 0.024
+// 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
+// 2.35:1 on 35 mm:  0.036 x 0.01532 or 0.05640 x 0.024
+// 2.39:1 on 35 mm:  0.036 x 0.01506 or 0.05736 x 0.024
+// 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
+// To compute good apertures, one can use the F-stop number from phostography
+// and set the aperture to focal_leangth/f_stop.
+struct trace_camera {
+  string  name         = "";
+  frame3f frame        = identity3x4f;
+  bool    orthographic = false;
+  float   lens         = 0.050;
+  vec2f   film         = {0.036, 0.024};
+  float   focus        = flt_max;
+  float   aperture     = 0;
+};
+
+// Texture containing either an LDR or HDR image. Textures are rendered
+// using linear interpolation (unless `no_interoilation` is set) and
+// weith tiling (unless `clamp_to_edge` is set). HdR images are encoded
+// in linear color space, while LDRs are encoded as sRGB. The latter
+// conversion can be disabled with `ldr_as_linear` for example to render
+// normal maps.
+struct trace_texture {
+  string       name     = "";
+  string       filename = "";
+  image<vec4f> hdr      = {};
+  image<vec4b> ldr      = {};
+};
+
+// Material for surfaces, lines and triangles.
+// For surfaces, uses a microfacet model with thin sheet transmission.
+// The model is based on OBJ, but contains glTF compatibility.
+// For the documentation on the values, please see the OBJ format.
+struct trace_material {
+  string name = "";
+
+  // lobes
+  vec3f emission        = {0, 0, 0};
+  vec3f diffuse         = {0, 0, 0};
+  vec3f specular        = {0, 0, 0};
+  float roughness       = 0;
+  float metallic        = 0;
+  vec3f coat            = {0, 0, 0};
+  vec3f transmission    = {0, 0, 0};
+  vec3f voltransmission = {0, 0, 0};
+  vec3f volmeanfreepath = {0, 0, 0};
+  vec3f volemission     = {0, 0, 0};
+  vec3f volscatter      = {0, 0, 0};
+  float volanisotropy   = 0;
+  float volscale        = 0.01;
+  float opacity         = 1;
+  bool  refract         = false;
+
+  // textures
+  int  emission_tex     = -1;
+  int  diffuse_tex      = -1;
+  int  specular_tex     = -1;
+  int  metallic_tex     = -1;
+  int  roughness_tex    = -1;
+  int  transmission_tex = -1;
+  int  subsurface_tex   = -1;
+  int  coat_tex         = -1;
+  int  opacity_tex      = -1;
+  int  normal_tex       = -1;
+  bool gltf_textures    = false;  // glTF packed textures
+};
+
+// Shape data represented as an indexed meshes of elements.
+// May contain either points, lines, triangles and quads.
+// Additionally, we support faceavarying primitives where
+// each verftex data has its own topology.
+struct trace_shape {
+  // shape data
+  string name     = "";
+  string filename = "";
+
+  // primitives
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
+
+  // face-varying primitives
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
+
+  // vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
+
+  // subdision properties
+  int  subdivisions = 0;
+  bool catmullclark = false;
+  bool smooth       = false;
+  bool facevarying  = false;
+
+  // displacement information
+  float displacement     = 0;
+  int   displacement_tex = -1;
+
+  // subdivision data
+  vector<trace_shape> subdiv = {};
+};
+
+// Instance of a visible shape in the scene.
+struct trace_instance {
+  string  name     = "";
+  frame3f frame    = identity3x4f;
+  int     shape    = -1;
+  int     material = -1;
+};
+
+// Environment map.
+struct trace_environment {
+  string  name         = "";
+  frame3f frame        = identity3x4f;
+  vec3f   emission     = {0, 0, 0};
+  int     emission_tex = -1;
+};
+
+// Scene comprised an array of objects whose memory is owened by the scene.
+// All members are optional,Scene objects (camera, instances, environments)
+// have transforms defined internally. A scene can optionally contain a
+// node hierarchy where each node might point to a camera, instance or
+// environment. In that case, the element transforms are computed from
+// the hierarchy. Animation is also optional, with keyframe data that
+// updates node transformations only if defined.
+struct trace_scene {
+  string                    name         = "";
+  vector<trace_camera>      cameras      = {};
+  vector<trace_shape>       shapes       = {};
+  vector<trace_instance>    instances    = {};
+  vector<trace_material>    materials    = {};
+  vector<trace_texture>     textures     = {};
+  vector<trace_environment> environments = {};
+};
+
+// TODO: remove these functions and get better interface for picking
+// Generates a ray from the image coordinates `uv` and lens coordinates `luv`.
+ray3f eval_camera(
+    const trace_camera& camera, const vec2f& uv, const vec2f& luv);
+// Generates a ray from a camera for pixel `ij`, the image size `resolution`,
+// the sub-pixel coordinates `puv` and the lens coordinates `luv`.
+ray3f eval_camera(const trace_camera& camera, const vec2i& ij,
+    const vec2i& resolution, const vec2f& puv, const vec2f& luv);
+
+}
 
 // -----------------------------------------------------------------------------
 // PATH TRACING
@@ -84,6 +250,25 @@ const auto trace_default_seed = 961748941ull;
 // Trace bvh
 using trace_bvh = bvh_shared_scene;
 
+// Construct a scene from io
+void make_trace_scene(trace_scene& scene, const scene_model& ioscene);
+
+// Apply subdivision and displacement rules.
+void update_tesselation(trace_scene& scene, trace_shape& shape);
+void update_tesselation(trace_scene& scene);
+
+// Build/refit the bvh acceleration structure.
+void make_bvh(
+    bvh_scene& bvh, const trace_scene& scene, const bvh_params& params);
+void update_bvh(bvh_scene& bvh, const trace_scene& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params);
+void make_bvh(
+    bvh_shared_scene& bvh, const trace_scene& scene, const bvh_params& params);
+void update_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params);
+
 // Trace lights used during rendering.
 struct trace_lights {
   vector<int>           instances        = {};
@@ -95,8 +280,8 @@ struct trace_lights {
 };
 
 // Initialize lights.
-trace_lights make_trace_lights(const yocto_scene& scene);
-void         make_trace_lights(trace_lights& lights, const yocto_scene& scene);
+trace_lights make_trace_lights(const trace_scene& scene);
+void         make_trace_lights(trace_lights& lights, const trace_scene& scene);
 
 // State of a pixel during tracing
 struct trace_pixel {
@@ -115,6 +300,7 @@ trace_state make_trace_state(
     const vec2i& image_size, uint64_t random_seed = trace_default_seed);
 void make_trace_state(trace_state& state, const vec2i& image_size,
     uint64_t random_seed = trace_default_seed);
+vec2i camera_resolution(const trace_camera& camera, int resolution);
 
 // Options for trace functions
 struct trace_params {
@@ -164,21 +350,21 @@ inline bool operator!=(const trace_params& a, const trace_params& b) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const trace_bvh& bvh,
+image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 int trace_samples(image<vec4f>& image, trace_state& state,
-    const yocto_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
+    const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     int current_sample, const trace_params& params);
 
 // Progressively compute an image by calling trace_region multiple times.
 // Compared to `trace_samples` this always runs serially and is helpful
 // when building async applications.
 void trace_region(image<vec4f>& image, trace_state& state,
-    const yocto_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
+    const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     const image_region& region, int num_samples, const trace_params& params);
 
 // Check is a sampler requires lights

@@ -212,6 +212,20 @@ void add_radius(scene_model& scene, float radius = 0.001f) {
   }
 }
 
+// Add a sky environment
+void add_sky(scene_model& scene, float sun_angle) {
+  auto texture     = scene_texture{};
+  texture.name     = "sky";
+  texture.filename = "textures/sky.hdr";
+  make_sunsky(texture.hdr, {1024, 512}, sun_angle);
+  scene.textures.push_back(texture);
+  auto environment         = scene_environment{};
+  environment.name         = "sky";
+  environment.emission     = {1, 1, 1};
+  environment.emission_tex = (int)scene.textures.size() - 1;
+  scene.environments.push_back(environment);
+}
+
 vector<string> format_stats(const scene_model& scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
@@ -299,6 +313,48 @@ void trim_memory(scene_model& scene) {
   scene.environments.shrink_to_fit();
   scene.nodes.shrink_to_fit();
   scene.animations.shrink_to_fit();
+}
+
+// Checks for validity of the scene.
+vector<string> validate_scene(const scene_model& scene, bool notextures) {
+  auto errs        = vector<string>();
+  auto check_names = [&errs](const auto& vals, const string& base) {
+    auto used = hash_map<string, int>();
+    used.reserve(vals.size());
+    for (auto& value : vals) used[value.name] += 1;
+    for (auto& [name, used] : used) {
+      if (name == "") {
+        errs.push_back("empty " + base + " name");
+      } else if (used > 1) {
+        errs.push_back("duplicated " + base + " name " + name);
+      }
+    }
+  };
+  auto check_empty_textures = [&errs](const vector<scene_texture>& vals) {
+    for (auto& value : vals) {
+      if (value.hdr.empty() && value.ldr.empty()) {
+        errs.push_back("empty texture " + value.name);
+      }
+    }
+  };
+
+  check_names(scene.cameras, "camera");
+  check_names(scene.shapes, "shape");
+  check_names(scene.textures, "texture");
+  check_names(scene.materials, "material");
+  check_names(scene.instances, "instance");
+  check_names(scene.environments, "environment");
+  check_names(scene.nodes, "node");
+  check_names(scene.animations, "animation");
+  if (!notextures) check_empty_textures(scene.textures);
+
+  return errs;
+}
+
+// Logs validations errors
+void print_validation(const scene_model& scene, bool notextures) {
+  for (auto err : validate_scene(scene, notextures))
+    printf("%s [validation]\n", err.c_str());
 }
 
 // Compute vertex normals

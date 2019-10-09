@@ -28,8 +28,7 @@
 
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
-#include "../yocto/yocto_scene.h"
-#include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_sceneio2.h"
 #include "../yocto/yocto_trace.h"
 using namespace yocto;
 
@@ -107,12 +106,28 @@ int main(int argc, const char* argv[]) {
   }
 
   // scene loading
-  auto scene = yocto_scene{};
+  auto ioscene = scene_model{};
   try {
     auto timer = print_timed("loading scene");
-    load_scene(filename, scene, load_prms);
+    load_scene(filename, ioscene, load_prms);
   } catch (const std::exception& e) {
     print_fatal(e.what());
+  }
+
+  // add components
+  if (validate) {
+    auto timer = print_timed("validating");
+    print_validation(ioscene);
+  }
+
+  // add sky
+  if (add_skyenv) add_sky(ioscene);
+
+  // convert scene
+  auto scene = trace_scene{};
+  {
+    auto timer = print_timed("converting");
+    make_trace_scene(scene, ioscene);
   }
 
   // tesselate
@@ -120,15 +135,6 @@ int main(int argc, const char* argv[]) {
     auto timer = print_timed("tesselating");
     update_tesselation(scene);
   }
-
-  // add components
-  if (validate) {
-    auto timer = print_timed("validating");
-    print_validation(scene);
-  }
-
-  // add sky
-  if (add_skyenv) add_sky(scene);
 
   // build bvh
   auto bvh = trace_bvh{};

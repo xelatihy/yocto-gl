@@ -28,8 +28,7 @@
 
 #include "../yocto/yocto_common.h"
 #include "../yocto/yocto_commonio.h"
-#include "../yocto/yocto_scene.h"
-#include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_sceneio2.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
@@ -51,7 +50,7 @@ struct app_state {
   int            preview_ratio = 8;
 
   // scene
-  yocto_scene scene      = {};
+  trace_scene scene      = {};
   trace_bvh   bvh        = {};
   bool        add_skyenv = false;
 
@@ -246,7 +245,10 @@ int main(int argc, const char* argv[]) {
   // scene loading
   try {
     auto timer = print_timed("loading scene");
-    load_scene(app.filename, app.scene, app.load_prms);
+    auto ioscene = scene_model{};
+    load_scene(app.filename, ioscene, app.load_prms);
+    if (app.add_skyenv) add_sky(ioscene);
+    make_trace_scene(app.scene, ioscene);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
@@ -256,9 +258,6 @@ int main(int argc, const char* argv[]) {
     auto timer = print_timed("tesselating");
     update_tesselation(app.scene);
   }
-
-  // add sky
-  if (app.add_skyenv) add_sky(app.scene);
 
   // build bvh
   {
