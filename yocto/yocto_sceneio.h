@@ -56,7 +56,6 @@
 namespace yocto {
 
 //
-// TODO: camera fov
 // TODO: update transforms -> should be compute transforms?
 // TODO: update tesselation -> should be compute tesselation
 // TODO: displace in yocto_shape
@@ -83,7 +82,6 @@ struct scene_camera {
   float   lens         = 0.050;
   float   film         = 0.036;
   float   aspect       = 1.500;
-  float   fov          = 2 * atan(0.036 / (2 * 0.050));
   float   focus        = flt_max;
   float   aperture     = 0;
 };
@@ -282,8 +280,6 @@ namespace yocto {
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 vec2i camera_resolution(const scene_camera& camera, int resolution);
-void  set_yperspective(scene_camera& camera, float yfov, float aspect,
-     float focus, float film = 0.036f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_view(scene_camera& camera, const bbox3f& bbox,

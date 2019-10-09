@@ -127,10 +127,10 @@ bbox3f compute_bounds(const scene_model& scene) {
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float camera_yfov(const scene_camera& camera) {
   assert(!camera.orthographic);
-  if (camera.aspect >= 0) {
+  if (camera.aspect >= 1) {
     return 2 * atan(camera.film / (camera.aspect * 2 * camera.lens));
   } else {
-    return camera.fov;
+    return 2 * atan(camera.film / (2 * camera.lens));
   }
 }
 vec2i camera_resolution(const scene_camera& camera, int resolution) {
@@ -140,38 +140,27 @@ vec2i camera_resolution(const scene_camera& camera, int resolution) {
     return {(int)round(resolution / camera.aspect), resolution};
   }
 }
-void set_yperspective(
-    scene_camera& camera, float fov, float aspect, float focus, float film) {
-  camera.orthographic = false;
-  camera.film         = film;
-  camera.aspect       = aspect;
-  camera.focus        = focus;
-  auto distance       = camera.film / (2 * tan(camera.fov / 2));
-  if (focus < flt_max) {
-    camera.lens = camera.focus * distance / (camera.focus + distance);
-  } else {
-    camera.lens = distance;
-  }
-}
 
 // add missing camera
 void set_view(
     scene_camera& camera, const bbox3f& bbox, const vec3f& view_direction) {
+  // TODO: fix me
+  // FIXME: error in camera.lens and camera.film
   camera.orthographic = false;
+  camera.film = 0.036;
+  camera.aperture = 0;
+  camera.lens     = 0.050;
   auto center         = (bbox.max + bbox.min) / 2;
   auto bbox_radius    = length(bbox.max - bbox.min) / 2;
   auto camera_dir     = (view_direction == zero3f) ? camera.frame.o - center
                                                : view_direction;
   if (camera_dir == zero3f) camera_dir = {0, 0, 1};
-  auto fov = camera.fov;
-  if (fov == 0) fov = 45 * pif / 180;
-  auto camera_dist = bbox_radius / sin(fov / 2);
+  auto camera_dist = bbox_radius / camera.film;
   auto from        = camera_dir * (camera_dist * 1) + center;
   auto to          = center;
   auto up          = vec3f{0, 1, 0};
   camera.frame     = lookat_frame(from, to, up);
   camera.focus     = length(from - to);
-  camera.aperture  = 0;
 }
 
 // Add missing cameras.
@@ -1758,9 +1747,14 @@ static void load_gltf(const string& filename, scene_model& scene) {
   // convert cameras
   auto cameras = vector<scene_camera>{};
   for (auto& gcamera : gltf.cameras) {
-    auto& camera = cameras.emplace_back();
-    camera.name  = gcamera.name;
-    set_yperspective(camera, gcamera.yfov, gcamera.aspect, 10);
+    auto& camera  = cameras.emplace_back();
+    camera.name   = gcamera.name;
+    camera.aspect = gcamera.aspect;
+    camera.film   = 0.036;
+    camera.lens   = gcamera.aspect >= 1
+                      ? (2 * camera.aspect * tan(gcamera.yfov / 2))
+                      : (2 * tan(gcamera.yfov / 2));
+    camera.focus  = 10;
   }
 
   // convert scene nodes
@@ -1830,15 +1824,10 @@ static void load_pbrt(
     auto& camera = scene.cameras.emplace_back();
     camera.name  = make_safe_name("", "camera", (int)scene.cameras.size());
     camera.frame = pcamera.frame;
-    if (pcamera.aspect >= 1) {
-      set_yperspective(camera, radians(pcamera.fov), pcamera.aspect,
-          clamp(pcamera.focus, 1.0e-2f, 1.0e4f));
-    } else {
-      auto yfov = 2 * atan(tan(radians(pcamera.fov) / 2) / pcamera.aspect);
-      set_yperspective(
-          camera, yfov, pcamera.aspect, clamp(pcamera.focus, 1.0e-2f, 1.0e4f));
-      camera.aperture = pcamera.aperture;
-    }
+    camera.aspect = pcamera.aspect;
+    camera.film = 0.036;
+    camera.lens = pcamera.lens;
+    camera.focus = pcamera.focus;
   }
 
   // convert textures
@@ -1985,7 +1974,7 @@ static void save_pbrt(const string& filename, const scene_model& scene) {
   auto& camera     = scene.cameras.front();
   auto& pcamera    = pbrt.cameras.emplace_back();
   pcamera.frame    = camera.frame;
-  pcamera.fov      = camera.fov;
+  pcamera.lens     = camera.lens;
   pcamera.aspect   = camera.aspect;
   auto& pfilm      = pbrt.films.emplace_back();
   pfilm.filename   = "out.png";
