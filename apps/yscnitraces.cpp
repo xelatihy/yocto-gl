@@ -243,11 +243,10 @@ int main(int argc, const char* argv[]) {
   }
 
   // scene loading
+  auto ioscene = scene_model{};
   try {
     auto timer   = print_timed("loading scene");
-    auto ioscene = scene_model{};
     load_scene(app.filename, ioscene, app.load_prms);
-    make_trace_scene(app.scene, ioscene);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
@@ -255,7 +254,13 @@ int main(int argc, const char* argv[]) {
   // tesselate
   {
     auto timer = print_timed("tesselating");
-    update_tesselation(app.scene);
+    update_tesselation(ioscene);
+  }
+
+  // conversion
+  {
+    auto timer = print_timed("converting");
+    make_trace_scene(app.scene, ioscene);
   }
 
   // build bvh

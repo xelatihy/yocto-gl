@@ -238,10 +238,6 @@ using trace_bvh = bvh_shared_scene;
 // Construct a scene from io
 void make_trace_scene(trace_scene& scene, const scene_model& ioscene);
 
-// Apply subdivision and displacement rules.
-void update_tesselation(trace_scene& scene, trace_shape& shape);
-void update_tesselation(trace_scene& scene);
-
 // Build/refit the bvh acceleration structure.
 void make_bvh(
     bvh_scene& bvh, const trace_scene& scene, const bvh_params& params);

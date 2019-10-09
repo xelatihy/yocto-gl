@@ -121,17 +121,17 @@ int main(int argc, const char* argv[]) {
     for(auto& error : errors) print_info(error);
   }
 
+  // tesselate
+  {
+    auto timer = print_timed("tesselating");
+    update_tesselation(ioscene);
+  }
+
   // convert scene
   auto scene = trace_scene{};
   {
     auto timer = print_timed("converting");
     make_trace_scene(scene, ioscene);
-  }
-
-  // tesselate
-  {
-    auto timer = print_timed("tesselating");
-    update_tesselation(scene);
   }
 
   // build bvh
