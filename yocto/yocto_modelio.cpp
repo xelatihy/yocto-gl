@@ -3,9 +3,7 @@
 //
 
 //
-// TODO: fov/aspect lens/film everywhere
 // TODO: pbrt design, split elements from approximations
-// TODO: add uvdisk and uvsphere to pbrt shape loading
 // TODO: remove obj instances
 // TODO: remove obj procedurals
 // TODO: simplify objx parsing using single line commands
@@ -1935,7 +1933,6 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
       parse_value_or_empty(line, mname);
     } else if (cmd == "s") {
       if (geom_only) continue;
-      // TODO: smoothing
     } else if (cmd == "mtllib") {
       if (geom_only) continue;
       auto mtllib = ""s;
@@ -3646,7 +3643,6 @@ static inline void parse_pbrt_params(
       value.type = pbrt_value_type::color;
       parse_pbrt_pvalues(str, value.value3f, value.vector3f);
     } else if (type == "xyz") {
-      // TODO: xyz conversion
       value.type = pbrt_value_type::color;
       parse_pbrt_pvalues(str, value.value3f, value.vector3f);
       throw std::runtime_error("xyz conversion");
