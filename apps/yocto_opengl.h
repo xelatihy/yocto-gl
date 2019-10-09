@@ -34,7 +34,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_math.h"
+#include "../yocto/yocto_image.h"
 
 #include <functional>
 

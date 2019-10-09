@@ -50,7 +50,6 @@ add_library(yocto
     yocto/yocto_bvh.h yocto/yocto_bvh.cpp
     yocto/yocto_shape.h yocto/yocto_shape.cpp 
     yocto/yocto_image.h yocto/yocto_image.cpp
-    yocto/yocto_scene.h yocto/yocto_scene.cpp
     yocto/yocto_trace.h yocto/yocto_trace.cpp
     yocto/yocto_modelio.h yocto/yocto_modelio.cpp 
     yocto/yocto_sceneio2.h yocto/yocto_sceneio2.cpp
