@@ -1057,7 +1057,6 @@ vector<float> sample_shape_cdf(const trace_shape& shape) {
 // Sample a shape based on a distribution.
 pair<int, vec2f> sample_shape(const trace_shape& shape,
     const vector<float>& cdf, float re, const vec2f& ruv) {
-  // TODO: implement sampling without cdf
   if (cdf.empty()) return {};
   if (!shape.triangles.empty()) {
     return sample_triangles(cdf, re, ruv);
