@@ -244,7 +244,7 @@ int main(int argc, const char* argv[]) {
 
   // scene loading
   try {
-    auto timer = print_timed("loading scene");
+    auto timer   = print_timed("loading scene");
     auto ioscene = scene_model{};
     load_scene(app.filename, ioscene, app.load_prms);
     if (app.add_skyenv) add_sky(ioscene);

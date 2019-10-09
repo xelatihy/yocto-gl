@@ -46,9 +46,9 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
 #include "yocto_common.h"
 #include "yocto_image.h"
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // SCENE DATA
@@ -243,7 +243,7 @@ struct scene_model {
   vector<scene_material>    materials    = {};
   vector<scene_texture>     textures     = {};
   vector<scene_environment> environments = {};
-  vector<scene_node>  nodes        = {};
+  vector<scene_node>        nodes        = {};
   vector<scene_animation>   animations   = {};
 };
 
@@ -325,6 +325,6 @@ void trim_memory(scene_model& scene);
 // Checks for validity of the scene.
 void print_validation(const scene_model& scene, bool notextures = false);
 
-}
+}  // namespace yocto
 
 #endif

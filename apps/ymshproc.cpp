@@ -77,29 +77,28 @@ int main(int argc, const char** argv) {
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // mesh data
-  auto positions = vector<vec3f>{};
-  auto normals = vector<vec3f>{};
-  auto texcoords = vector<vec2f>{};
-  auto colors = vector<vec4f>{};
-  auto radius = vector<float>{};
-  auto points = vector<int>{};
-  auto lines = vector<vec2i>{};
-  auto triangles = vector<vec3i>{};
-  auto quads = vector<vec4i>{};
-  auto quadspos = vector<vec4i>{};
-  auto quadsnorm = vector<vec4i>{};
+  auto positions     = vector<vec3f>{};
+  auto normals       = vector<vec3f>{};
+  auto texcoords     = vector<vec2f>{};
+  auto colors        = vector<vec4f>{};
+  auto radius        = vector<float>{};
+  auto points        = vector<int>{};
+  auto lines         = vector<vec2i>{};
+  auto triangles     = vector<vec3i>{};
+  auto quads         = vector<vec4i>{};
+  auto quadspos      = vector<vec4i>{};
+  auto quadsnorm     = vector<vec4i>{};
   auto quadstexcoord = vector<vec4i>{};
 
   // load mesh
   try {
     auto timer = print_timed("loading shape");
     if (!facevarying) {
-      load_shape(filename, points, lines, triangles,
-          quads, positions, normals, texcoords,
-          colors, radius);
+      load_shape(filename, points, lines, triangles, quads, positions, normals,
+          texcoords, colors, radius);
     } else {
-      load_fvshape(filename, quadspos, quadsnorm,
-          quadstexcoord, positions, normals, texcoords);
+      load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
+          normals, texcoords);
     }
   } catch (const std::exception& e) {
     print_fatal(e.what());
@@ -143,27 +142,26 @@ int main(int argc, const char** argv) {
   // compute normals
   if (smooth) {
     auto timer = print_timed("computing normals");
-  if (!points.empty()) {
-    normals = vector<vec3f>{positions.size(), {0, 0, 1}};
-  } else if (!lines.empty()) {
-    normals = compute_tangents(lines, positions);
-  } else if (!triangles.empty()) {
-    normals = compute_normals(triangles, positions);
-  } else if (!quads.empty()) {
-    normals = compute_normals(quads, positions);
-  } else if (!quadspos.empty()) {
-    normals = compute_normals(quadspos, positions);
-    if (!quadspos.empty()) quadsnorm = quadspos;
-  }
+    if (!points.empty()) {
+      normals = vector<vec3f>{positions.size(), {0, 0, 1}};
+    } else if (!lines.empty()) {
+      normals = compute_tangents(lines, positions);
+    } else if (!triangles.empty()) {
+      normals = compute_normals(triangles, positions);
+    } else if (!quads.empty()) {
+      normals = compute_normals(quads, positions);
+    } else if (!quadspos.empty()) {
+      normals = compute_normals(quadspos, positions);
+      if (!quadspos.empty()) quadsnorm = quadspos;
+    }
   }
 
   // compute geodesics and store them as colors
   if (geodesic_source >= 0 || num_geodesic_samples > 0) {
     auto timer       = print_timed("computing geodesics");
     auto adjacencies = face_adjacencies(triangles);
-    auto solver      = make_geodesic_solver(
-        triangles, adjacencies, positions);
-    auto sources = vector<int>();
+    auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
+    auto sources     = vector<int>();
     if (geodesic_source >= 0) {
       sources = {geodesic_source};
     } else {
@@ -173,8 +171,8 @@ int main(int argc, const char** argv) {
 
     if (slice) {
       auto tags = vector<int>(triangles.size(), 0);
-      meandering_triangles(field, geodesic_scale, 0, 1, 2, triangles,
-          tags, positions, normals);
+      meandering_triangles(
+          field, geodesic_scale, 0, 1, 2, triangles, tags, positions, normals);
       for (int i = 0; i < triangles.size(); i++) {
         if (tags[i] == 1) triangles[i] = {-1, -1, -1};
       }
@@ -188,12 +186,11 @@ int main(int argc, const char** argv) {
   try {
     auto timer = print_timed("saving shape");
     if (!quadspos.empty()) {
-      save_fvshape(output, quadspos, quadsnorm, quadstexcoord,
-          positions, normals, texcoords);
+      save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions,
+          normals, texcoords);
     } else {
-      save_shape(output, points, lines, triangles,
-          quads, positions, normals, texcoords,
-          colors, radius);
+      save_shape(output, points, lines, triangles, quads, positions, normals,
+          texcoords, colors, radius);
     }
   } catch (const std::exception& e) {
     print_fatal(e.what());

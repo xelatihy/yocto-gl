@@ -69,11 +69,11 @@
 
 #include "yocto_bvh.h"
 #include "yocto_common.h"
+#include "yocto_image.h"
 #include "yocto_math.h"
 #include "yocto_random.h"
-#include "yocto_shape.h"
-#include "yocto_image.h"
 #include "yocto_sceneio2.h"
+#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // SCENE DATA
@@ -237,7 +237,7 @@ ray3f eval_camera(
 ray3f eval_camera(const trace_camera& camera, const vec2i& ij,
     const vec2i& resolution, const vec2f& puv, const vec2f& luv);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PATH TRACING
@@ -298,8 +298,8 @@ struct trace_state {
 // Initialize state of the renderer.
 trace_state make_trace_state(
     const vec2i& image_size, uint64_t random_seed = trace_default_seed);
-void make_trace_state(trace_state& state, const vec2i& image_size,
-    uint64_t random_seed = trace_default_seed);
+void  make_trace_state(trace_state& state, const vec2i& image_size,
+     uint64_t random_seed = trace_default_seed);
 vec2i camera_resolution(const trace_camera& camera, int resolution);
 
 // Options for trace functions

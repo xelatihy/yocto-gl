@@ -441,61 +441,65 @@ namespace yocto {
 
 // convert scene objects
 static void update_camera(trace_camera& camera, const scene_camera& iocamera) {
-  camera.frame = iocamera.frame;
-  camera.film = iocamera.film;
-  camera.lens = iocamera.lens;
-  camera.focus = iocamera.focus;
+  camera.frame    = iocamera.frame;
+  camera.film     = iocamera.film;
+  camera.lens     = iocamera.lens;
+  camera.focus    = iocamera.focus;
   camera.aperture = iocamera.aperture;
 }
-static void update_texture(trace_texture& texture, const scene_texture& iotexture) {
+static void update_texture(
+    trace_texture& texture, const scene_texture& iotexture) {
   texture.hdr = iotexture.hdr;
   texture.ldr = iotexture.ldr;
 }
-static void update_material(trace_material& material, const scene_material& iomaterial) {
-  material.emission = iomaterial.emission;
-  material.diffuse = iomaterial.diffuse;
-  material.specular = iomaterial.specular;
-  material.transmission = iomaterial.transmission;
-  material.roughness = iomaterial.roughness;
-  material.opacity = iomaterial.opacity;
-  material.refract = iomaterial.refract;
-  material.volemission = iomaterial.volemission;
-  material.voltransmission = iomaterial.voltransmission;
-  material.volmeanfreepath = iomaterial.volmeanfreepath;
-  material.volscatter = iomaterial.volscatter;
-  material.volscale = iomaterial.volscale;
-  material.volanisotropy = iomaterial.volanisotropy;
-  material.emission_tex = iomaterial.emission_tex;
-  material.diffuse_tex = iomaterial.diffuse_tex;
-  material.specular_tex = iomaterial.specular_tex;
+static void update_material(
+    trace_material& material, const scene_material& iomaterial) {
+  material.emission         = iomaterial.emission;
+  material.diffuse          = iomaterial.diffuse;
+  material.specular         = iomaterial.specular;
+  material.transmission     = iomaterial.transmission;
+  material.roughness        = iomaterial.roughness;
+  material.opacity          = iomaterial.opacity;
+  material.refract          = iomaterial.refract;
+  material.volemission      = iomaterial.volemission;
+  material.voltransmission  = iomaterial.voltransmission;
+  material.volmeanfreepath  = iomaterial.volmeanfreepath;
+  material.volscatter       = iomaterial.volscatter;
+  material.volscale         = iomaterial.volscale;
+  material.volanisotropy    = iomaterial.volanisotropy;
+  material.emission_tex     = iomaterial.emission_tex;
+  material.diffuse_tex      = iomaterial.diffuse_tex;
+  material.specular_tex     = iomaterial.specular_tex;
   material.transmission_tex = iomaterial.transmission_tex;
-  material.roughness_tex = iomaterial.roughness_tex;
-  material.opacity_tex = iomaterial.opacity_tex;
-  material.subsurface_tex = iomaterial.subsurface_tex;
+  material.roughness_tex    = iomaterial.roughness_tex;
+  material.opacity_tex      = iomaterial.opacity_tex;
+  material.subsurface_tex   = iomaterial.subsurface_tex;
 }
 static void update_shape(trace_shape& shape, const scene_shape& ioshape) {
-  shape.points = ioshape.points;
-  shape.lines = ioshape.lines;
-  shape.triangles = ioshape.triangles;
-  shape.quads = ioshape.quads;
-  shape.quadspos = ioshape.quadspos;
-  shape.quadsnorm = ioshape.quadsnorm;
+  shape.points        = ioshape.points;
+  shape.lines         = ioshape.lines;
+  shape.triangles     = ioshape.triangles;
+  shape.quads         = ioshape.quads;
+  shape.quadspos      = ioshape.quadspos;
+  shape.quadsnorm     = ioshape.quadsnorm;
   shape.quadstexcoord = ioshape.quadstexcoord;
-  shape.positions = ioshape.positions;
-  shape.normals = ioshape.normals;
-  shape.texcoords = ioshape.texcoords;
-  shape.colors = ioshape.colors;
-  shape.radius = ioshape.radius;
-  shape.tangents = ioshape.tangents;
+  shape.positions     = ioshape.positions;
+  shape.normals       = ioshape.normals;
+  shape.texcoords     = ioshape.texcoords;
+  shape.colors        = ioshape.colors;
+  shape.radius        = ioshape.radius;
+  shape.tangents      = ioshape.tangents;
 }
-static void update_instance(trace_instance& instance, const scene_instance& ioinstance) {
-  instance.frame = ioinstance.frame;
-  instance.shape = ioinstance.shape;
+static void update_instance(
+    trace_instance& instance, const scene_instance& ioinstance) {
+  instance.frame    = ioinstance.frame;
+  instance.shape    = ioinstance.shape;
   instance.material = ioinstance.material;
 }
-static void update_environment(trace_environment& environment, const scene_environment& ioenvironment) {
-  environment.frame = ioenvironment.frame;
-  environment.emission = ioenvironment.emission;
+static void update_environment(
+    trace_environment& environment, const scene_environment& ioenvironment) {
+  environment.frame        = ioenvironment.frame;
+  environment.emission     = ioenvironment.emission;
   environment.emission_tex = ioenvironment.emission_tex;
 }
 
@@ -503,22 +507,22 @@ static void update_environment(trace_environment& environment, const scene_envir
 void make_trace_scene(trace_scene& scene, const scene_model& ioscene) {
   scene = {};
 
-  for(auto& iocamera : ioscene.cameras) {
+  for (auto& iocamera : ioscene.cameras) {
     update_camera(scene.cameras.emplace_back(), iocamera);
   }
-  for(auto& iotexture : ioscene.textures) {
+  for (auto& iotexture : ioscene.textures) {
     update_texture(scene.textures.emplace_back(), iotexture);
   }
-  for(auto& iomaterial : ioscene.materials) {
+  for (auto& iomaterial : ioscene.materials) {
     update_material(scene.materials.emplace_back(), iomaterial);
   }
-  for(auto& ioshape : ioscene.shapes) {
+  for (auto& ioshape : ioscene.shapes) {
     update_shape(scene.shapes.emplace_back(), ioshape);
   }
-  for(auto& ioinstance : ioscene.instances) {
+  for (auto& ioinstance : ioscene.instances) {
     update_instance(scene.instances.emplace_back(), ioinstance);
   }
-  for(auto& ioenvironment : ioscene.environments) {
+  for (auto& ioenvironment : ioscene.environments) {
     update_environment(scene.environments.emplace_back(), ioenvironment);
   }
 }
@@ -694,7 +698,6 @@ pair<mat3f, bool> eval_tangent_basis(
   }
 }
 
-
 // Check texture size
 vec2i texture_size(const trace_texture& texture) {
   if (!texture.hdr.empty()) {
@@ -725,8 +728,7 @@ vec4f eval_texture(const trace_texture& texture, const vec2f& texcoord,
   if (!texture.hdr.empty()) {
     return eval_image(texture.hdr, texcoord, false, false);
   } else if (!texture.ldr.empty()) {
-    return eval_image(
-        texture.ldr, texcoord, ldr_as_linear, false, false);
+    return eval_image(texture.ldr, texcoord, ldr_as_linear, false, false);
   } else {
     return {1, 1, 1, 1};
   }
@@ -1156,7 +1158,7 @@ float sample_environment_pdf(const trace_scene& scene,
   }
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE INTERSECTION
@@ -1293,7 +1295,7 @@ void update_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
   update_scene_bvh(bvh, updated_instances, updated_shapes, params);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR TESSELATION
@@ -1448,7 +1450,7 @@ void update_tesselation(trace_scene& scene) {
   for (auto& shape : scene.shapes) update_tesselation(scene, shape);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING

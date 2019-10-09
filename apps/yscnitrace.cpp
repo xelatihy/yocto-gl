@@ -58,10 +58,10 @@ struct app_state {
   int            preview_ratio = 8;
 
   // scene
-  scene_model ioscene      = {};
-  trace_scene trscene      = {};
-  trace_bvh   bvh          = {};
-  bool        add_skyenv   = false;
+  scene_model ioscene    = {};
+  trace_scene trscene    = {};
+  trace_bvh   bvh        = {};
+  bool        add_skyenv = false;
 
   // rendering state
   trace_lights lights  = {};
@@ -87,10 +87,10 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::list<app_state>                   states;
-  int                                    selected = -1;
-  std::list<app_state>                   loading;
-  std::list<std::future<void>>           loaders;
+  std::list<app_state>         states;
+  int                          selected = -1;
+  std::list<app_state>         loading;
+  std::list<std::future<void>> loaders;
 
   // get image
   app_state& get_selected() {
@@ -244,14 +244,14 @@ bool draw_glwidgets_material(const opengl_window& win, app_state& app, int id) {
       win, "specular_tex", material.specular_tex, app.ioscene.textures, true);
   edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
       app.ioscene.textures, true);
-  edited += draw_glcombobox(
-      win, "subsurface_tex", material.subsurface_tex, app.ioscene.textures, true);
+  edited += draw_glcombobox(win, "subsurface_tex", material.subsurface_tex,
+      app.ioscene.textures, true);
   edited += draw_glcombobox(
       win, "roughness_tex", material.roughness_tex, app.ioscene.textures, true);
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, app.ioscene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
-    // TODO: update values
+  // TODO: update values
   // TODO: update lights
   return edited;
 }
@@ -311,7 +311,7 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
     update_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
   if (edited && instance.frame != old_instance.frame)
     update_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
-    // TODO: update values
+  // TODO: update values
   // TODO: update lights
   return edited;
 }
@@ -399,7 +399,8 @@ void draw_glwidgets(const opengl_window& win) {
     auto  edited  = 0;
     auto& app     = apps.get_selected();
     auto& tparams = app.trace_prms;
-    edited += draw_glcombobox(win, "camera", tparams.camera, app.ioscene.cameras);
+    edited += draw_glcombobox(
+        win, "camera", tparams.camera, app.ioscene.cameras);
     edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_glcombobox(
@@ -538,8 +539,9 @@ void update(const opengl_window& win, app_states& app) {
       auto preview_prms = app.trace_prms;
       preview_prms.resolution /= app.preview_ratio;
       preview_prms.samples = 1;
-      auto preview = trace_image(app.trscene, app.bvh, app.lights, preview_prms);
-      preview      = tonemap_image(preview, app.tonemap_prms);
+      auto preview         = trace_image(
+          app.trscene, app.bvh, app.lights, preview_prms);
+      preview = tonemap_image(preview, app.tonemap_prms);
       for (auto j = 0; j < app.display.size().y; j++) {
         for (auto i = 0; i < app.display.size().x; i++) {
           auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
@@ -559,8 +561,8 @@ void update(const opengl_window& win, app_states& app) {
           128, app.render_regions.size() - app.render_region);
       parallel_for(app.render_region, app.render_region + num_regions,
           [&app](int region_id) {
-            trace_region(app.render, app.state, app.trscene, app.bvh, app.lights,
-                app.render_regions[region_id], 1, app.trace_prms);
+            trace_region(app.render, app.state, app.trscene, app.bvh,
+                app.lights, app.render_regions[region_id], 1, app.trace_prms);
             tonemap_region(app.display, app.render,
                 app.render_regions[region_id], app.tonemap_prms);
           });

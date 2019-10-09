@@ -426,12 +426,13 @@ void subdivide_shape(scene_shape& shape) {
 void displace_shape(const scene_model& scene, scene_shape& shape) {
   // Evaluate a texture
   auto eval_texture = [](const scene_texture& texture, const vec2f& texcoord,
-      bool ldr_as_linear, bool no_interpolation = false, bool clamp_to_edge = false) -> vec4f {
+                          bool ldr_as_linear, bool no_interpolation = false,
+                          bool clamp_to_edge = false) -> vec4f {
     if (!texture.hdr.empty()) {
       return eval_image(texture.hdr, texcoord, no_interpolation, clamp_to_edge);
     } else if (!texture.ldr.empty()) {
-      return eval_image(
-          texture.ldr, texcoord, ldr_as_linear, no_interpolation, clamp_to_edge);
+      return eval_image(texture.ldr, texcoord, ldr_as_linear, no_interpolation,
+          clamp_to_edge);
     } else {
       return {1, 1, 1, 1};
     }
@@ -612,7 +613,7 @@ vec2f compute_animation_range(
   return range;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
