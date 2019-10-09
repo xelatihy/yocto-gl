@@ -28,8 +28,7 @@
 
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
-#include "../yocto/yocto_scene.h"
-#include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_sceneio2.h"
 using namespace yocto;
 
 #include <unordered_set>
@@ -87,7 +86,7 @@ int main(int argc, const char** argv) {
   save_prms.objinstances = obj_instances;
 
   // load scene
-  auto scene = yocto_scene{};
+  auto scene = scene_model{};
   try {
     auto timer = print_timed("loading scene");
     load_scene(filename, scene, load_prms);
