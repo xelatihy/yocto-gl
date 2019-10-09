@@ -913,6 +913,8 @@ void load_yaml(
         get_yaml_value(value, camera.orthographic);
       } else if (key == "lens") {
         get_yaml_value(value, camera.lens);
+      } else if (key == "aspect") {
+        get_yaml_value(value, camera.aspect);
       } else if (key == "film") {
         get_yaml_value(value, camera.film);
       } else if (key == "focus") {
@@ -1143,6 +1145,8 @@ static void save_yaml(const string& filename, const scene_model& scene,
           make_yaml_value(camera.orthographic));
     write_yaml_property(
         fs, "cameras", "lens", false, make_yaml_value(camera.lens));
+    write_yaml_property(
+        fs, "cameras", "aspect", false, make_yaml_value(camera.aspect));
     write_yaml_property(
         fs, "cameras", "film", false, make_yaml_value(camera.film));
     write_yaml_property(

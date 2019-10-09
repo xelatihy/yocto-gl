@@ -96,42 +96,42 @@ def make_tests():
                 "name": "default",
                 "lens": 0.05,
                 "aperture": 0.0,
-                "film": [0.036, 0.015],
+                "aspect": 2.4,
                 "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0,1,0]
             },
             {
                 "name": "front",
                 "lens": 0.05,
+                "aspect": 3,
                 "aperture": 0.0,
-                "film": [0.036, 0.012],
                 "lookat": [0, 0.575, 1.4, 0, 0.05, 0, 0,1,0]
             },
             {
                 "name": "back",
                 "lens": 0.05,
                 "aperture": 0.0,
-                "film": [0.036, 0.012],
+                "aspect": 3,
                 "lookat": [0, 0.575, -1.4, 0, 0.05, 0, 0,1,0]
             },
             {
                 "name": "perspective-sharp",
                 "lens": 0.05,
                 "aperture": 0.0,
-                "film": [0.036, 0.015],
+                "aspect": 2.4,
                 "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0,1,0]
             },
             {
                 "name": "perspective-dof",
                 "lens": 0.05,
                 "aperture": 0.025,
-                "film": [0.036, 0.015],
+                "aspect": 2.4,
                 "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0,1,0]
             },
             {
                 "name": "orthographic-sharp",
                 "lens": 0.05,
                 "aperture": 0.0,
-                "film": [0.036, 0.015],
+                "aspect": 2.4,
                 "orthographic": True,
                 "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0,1,0]
             },
@@ -139,7 +139,7 @@ def make_tests():
                 "name": "orthographic-dof",
                 "lens": 0.05,
                 "aperture": 0.02,
-                "film": [0.036, 0.015],
+                "aspect": 2.4,
                 "orthographic": True,
                 "lookat": [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0,1,0]
             },
@@ -149,42 +149,42 @@ def make_tests():
                 "name": "default",
                 "lens": 0.1,
                 "aperture": 0.0,
-                "film": [0.036, 0.015],
+                "aspect": 2.4,
                 "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0,1,0]
             },
             {
                 "name": "front",
                 "lens": 0.1,
                 "aperture": 0.0,
-                "film": [0.036, 0.012],
+                "aspect": 3,
                 "lookat": [0, 1.75, 3, 0, 0.175, 0, 0,1,0]
             },
             {
                 "name": "back",
                 "lens": 0.1,
                 "aperture": 0.0,
-                "film": [0.036, 0.012],
+                "aspect": 3,
                 "lookat": [0, 1.5, -3.25, 0, -0.05, 0, 0,1,0]
             },
             {
                 "name": "perspective-sharp",
                 "lens": 0.1,
                 "aperture": 0.0,
-                "film": [0.036, 0.015],
+                "aspect": 2.4,
                 "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0,1,0]
             },
             {
                 "name": "perspective-dof",
                 "lens": 0.1,
                 "aperture": 0.05,
-                "film": [0.036, 0.015],
+                "aspect": 2.4,
                 "lookat": [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0,1,0]
             },
             {
                 "name": "orthographic-sharp",
                 "lens": 0.03,
                 "aperture": 0.0,
-                "film": [0.036, 0.015],
+                "aspect": 2.4,
                 "orthographic": True,
                 "lookat": [-0.5, 1, 2, -0.05, 0.15, 0, 0,1,0]
             },
@@ -192,7 +192,7 @@ def make_tests():
                 "name": "orthographic-dof",
                 "lens": 0.03,
                 "aperture": 0.02,
-                "film": [0.036, 0.015],
+                "aspect": 2.4,
                 "orthographic": True,
                 "lookat": [-0.5, 1, 2, -0.05, 0.15, 0, 0,1,0]
             },
