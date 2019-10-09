@@ -53,7 +53,6 @@ add_library(yocto
     yocto/yocto_scene.h yocto/yocto_scene.cpp
     yocto/yocto_trace.h yocto/yocto_trace.cpp
     yocto/yocto_modelio.h yocto/yocto_modelio.cpp 
-    yocto/yocto_sceneio.h yocto/yocto_sceneio.cpp
     yocto/yocto_sceneio2.h yocto/yocto_sceneio2.cpp
 )
 
