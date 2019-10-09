@@ -55,6 +55,15 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+//
+// TODO: camera fov
+// TODO: update transforms -> should be compute transforms?
+// TODO: update tesselation -> should be compute tesselation
+// TODO: displace in yocto_shape
+// TODO: remove subdiv from shape
+// TODO: move out animation utlities
+//
+
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
 // we specify fil size (35mm by default), the lens' focal length, the focus
@@ -165,6 +174,10 @@ struct scene_shape {
   // displacement information
   float displacement     = 0;
   int   displacement_tex = -1;
+
+  // subdiv cache
+  // TODO: remove
+  vector<scene_shape> subdiv = {};
 };
 
 // Instance of a visible shape in the scene.
@@ -263,5 +276,46 @@ void save_scene(const string& filename, const scene_model& scene,
     const save_params& params = {});
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Print scene statistics.
+vector<string> format_stats(const scene_model& scene, bool verbose = false);
+
+// Compute shape vertex normals
+void update_normals(scene_shape& shape);
+
+// Update node transforms.
+void update_transforms(
+    scene_model& scene, float time = 0, const string& anim_group = "");
+
+// Set and evaluate camera parameters. Setters take zeros as default values.
+vec2f camera_fov(const scene_camera& camera);
+float camera_yfov(const scene_camera& camera);
+float camera_aspect(const scene_camera& camera);
+vec2i camera_resolution(const scene_camera& camera, int resolution);
+void  set_yperspective(scene_camera& camera, float yfov, float aspect,
+     float focus, float film = 0.036f);
+// Sets camera field of view to enclose all the bbox. Camera view direction
+// fiom size and forcal lemgth can be overridden if we pass non zero values.
+void set_view(scene_camera& camera, const bbox3f& bbox,
+    const vec3f& view_direction = zero3f);
+
+// Apply subdivision and displacement rules.
+void update_tesselation(scene_model& scene, scene_shape& shape);
+void update_tesselation(scene_model& scene);
+
+// Compute animation range.
+vec2f compute_animation_range(
+    const scene_model& scene, const string& anim_group = "");
+
+// Computes shape/scene approximate bounds.
+bbox3f compute_bounds(const scene_shape& shape);
+bbox3f compute_bounds(const scene_model& scene);
+
+}
 
 #endif

@@ -29,8 +29,7 @@
 #include "../yocto/yocto_common.h"
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_scene.h"
-#include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_sceneio2.h"
 #include "../yocto/yocto_shape.h"
 #include "yocto_opengl.h"
 using namespace yocto;
@@ -43,7 +42,7 @@ using namespace yocto;
 #endif
 
 namespace yocto {
-void print_obj_camera(const yocto_camera& camera);
+void print_obj_camera(const scene_camera& camera);
 };
 
 // Application state
@@ -60,7 +59,7 @@ struct app_state {
   draw_glscene_params drawgl_prms = {};
 
   // scene
-  yocto_scene scene = {};
+  scene_model scene = {};
 
   // rendering state
   opengl_scene glscene = {};
@@ -119,7 +118,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   }));
 }
 
-void update_glcamera(opengl_camera& glcamera, const yocto_camera& camera) {
+void update_glcamera(opengl_camera& glcamera, const scene_camera& camera) {
   glcamera.frame  = camera.frame;
   glcamera.yfov   = camera_yfov(camera);
   glcamera.asepct = camera_aspect(camera);
@@ -127,7 +126,7 @@ void update_glcamera(opengl_camera& glcamera, const yocto_camera& camera) {
   glcamera.far    = 10000;
 }
 
-void update_gltexture(opengl_texture& gltexture, const yocto_texture& texture) {
+void update_gltexture(opengl_texture& gltexture, const scene_texture& texture) {
   if (!texture.hdr.empty()) {
     init_gltexture(gltexture, texture.hdr, true, true, true);
   } else if (!texture.ldr.empty()) {
@@ -138,7 +137,7 @@ void update_gltexture(opengl_texture& gltexture, const yocto_texture& texture) {
 }
 
 void update_glmaterial(
-    opengl_material& glmaterial, const yocto_material& material) {
+    opengl_material& glmaterial, const scene_material& material) {
   glmaterial.emission     = material.emission;
   glmaterial.diffuse      = material.diffuse;
   glmaterial.specular     = material.specular;
@@ -152,7 +151,7 @@ void update_glmaterial(
   glmaterial.normal_map   = material.normal_tex;
 }
 
-void update_glshape(opengl_shape& glshape, const yocto_shape& shape) {
+void update_glshape(opengl_shape& glshape, const scene_shape& shape) {
   if (shape.quadspos.empty()) {
     if (!shape.positions.empty())
       init_glarraybuffer(glshape.positions, shape.positions, false);
@@ -195,13 +194,13 @@ void update_glshape(opengl_shape& glshape, const yocto_shape& shape) {
 }
 
 void update_glinstance(
-    opengl_instance& glinstance, const yocto_instance& instance) {
+    opengl_instance& glinstance, const scene_instance& instance) {
   glinstance.frame    = instance.frame;
   glinstance.shape    = instance.shape;
   glinstance.material = instance.material;
 }
 
-void update_gllights(opengl_scene& state, const yocto_scene& scene) {
+void update_gllights(opengl_scene& state, const scene_model& scene) {
   state.lights = {};
   for (auto& instance : scene.instances) {
     if (state.lights.size() >= 16) break;
@@ -234,7 +233,7 @@ void update_gllights(opengl_scene& state, const yocto_scene& scene) {
   }
 }
 
-void make_glscene(opengl_scene& glscene, const yocto_scene& scene) {
+void make_glscene(opengl_scene& glscene, const scene_model& scene) {
   // load program
   make_glscene(glscene);
 

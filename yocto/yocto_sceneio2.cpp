@@ -38,6 +38,527 @@
 #include <deque>
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF ANIMATION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Find the first keyframe value that is greater than the argument.
+inline int keyframe_index(const vector<float>& times, const float& time) {
+  for (auto i = 0; i < times.size(); i++)
+    if (times[i] > time) return i;
+  return (int)times.size();
+}
+
+// Evaluates a keyframed value using step interpolation.
+template <typename T>
+inline T keyframe_step(
+    const vector<float>& times, const vector<T>& vals, float time) {
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  return vals.at(idx - 1);
+}
+
+// Evaluates a keyframed value using linear interpolation.
+template <typename T>
+inline vec4f keyframe_slerp(
+    const vector<float>& times, const vector<vec4f>& vals, float time) {
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+  return slerp(vals.at(idx - 1), vals.at(idx), t);
+}
+
+// Evaluates a keyframed value using linear interpolation.
+template <typename T>
+inline T keyframe_linear(
+    const vector<float>& times, const vector<T>& vals, float time) {
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+  return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
+}
+
+// Evaluates a keyframed value using Bezier interpolation.
+template <typename T>
+inline T keyframe_bezier(
+    const vector<float>& times, const vector<T>& vals, float time) {
+  if (time <= times.front()) return vals.front();
+  if (time >= times.back()) return vals.back();
+  time     = clamp(time, times.front(), times.back() - 0.001f);
+  auto idx = keyframe_index(times, time);
+  auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+  return interpolate_bezier(
+      vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Computes a shape bounding box.
+bbox3f compute_bounds(const scene_shape& shape) {
+  auto bbox = invalidb3f;
+  for (auto p : shape.positions) bbox = merge(bbox, p);
+  return bbox;
+}
+
+// Updates the scene and scene's instances bounding boxes
+bbox3f compute_bounds(const scene_model& scene) {
+  auto shape_bbox = vector<bbox3f>(scene.shapes.size());
+  for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++)
+    shape_bbox[shape_id] = compute_bounds(scene.shapes[shape_id]);
+  auto bbox = invalidb3f;
+  for (auto& instance : scene.instances) {
+    bbox = merge(
+        bbox, transform_bbox(instance.frame, shape_bbox[instance.shape]));
+  }
+  return bbox;
+}
+
+// Set and evaluate camera parameters. Setters take zeros as default values.
+vec2f camera_fov(const scene_camera& camera) {
+  assert(!camera.orthographic);
+  return {2 * atan(camera.film.x / (2 * camera.lens)),
+      2 * atan(camera.film.y / (2 * camera.lens))};
+}
+float camera_yfov(const scene_camera& camera) {
+  assert(!camera.orthographic);
+  return 2 * atan(camera.film.y / (2 * camera.lens));
+}
+float camera_aspect(const scene_camera& camera) {
+  return camera.film.x / camera.film.y;
+}
+vec2i camera_resolution(const scene_camera& camera, int resolution) {
+  if (camera.film.x > camera.film.y) {
+    return {resolution, (int)round(resolution * camera.film.y / camera.film.x)};
+  } else {
+    return {(int)round(resolution * camera.film.x / camera.film.y), resolution};
+  }
+}
+void set_yperspective(
+    scene_camera& camera, float fov, float aspect, float focus, float film) {
+  camera.orthographic = false;
+  camera.film         = {film, film / aspect};
+  camera.focus        = focus;
+  auto distance       = camera.film.y / (2 * tan(fov / 2));
+  if (focus < flt_max) {
+    camera.lens = camera.focus * distance / (camera.focus + distance);
+  } else {
+    camera.lens = distance;
+  }
+}
+
+// add missing camera
+void set_view(
+    scene_camera& camera, const bbox3f& bbox, const vec3f& view_direction) {
+  camera.orthographic = false;
+  auto center         = (bbox.max + bbox.min) / 2;
+  auto bbox_radius    = length(bbox.max - bbox.min) / 2;
+  auto camera_dir     = (view_direction == zero3f) ? camera.frame.o - center
+                                               : view_direction;
+  if (camera_dir == zero3f) camera_dir = {0, 0, 1};
+  auto fov = min(camera_fov(camera));
+  if (fov == 0) fov = 45 * pif / 180;
+  auto camera_dist = bbox_radius / sin(fov / 2);
+  auto from        = camera_dir * (camera_dist * 1) + center;
+  auto to          = center;
+  auto up          = vec3f{0, 1, 0};
+  camera.frame     = lookat_frame(from, to, up);
+  camera.focus     = length(from - to);
+  camera.aperture  = 0;
+}
+
+// Add missing cameras.
+void add_cameras(scene_model& scene) {
+  if (scene.cameras.empty()) {
+    auto camera = scene_camera{};
+    camera.name = "default";
+    set_view(camera, compute_bounds(scene), {0, 0, 1});
+    scene.cameras.push_back(camera);
+  }
+}
+
+// Add missing materials.
+void add_materials(scene_model& scene) {
+  auto material_id = -1;
+  for (auto& instance : scene.instances) {
+    if (instance.material >= 0) continue;
+    if (material_id < 0) {
+      auto material    = scene_material{};
+      material.name    = "default";
+      material.diffuse = {0.2f, 0.2f, 0.2f};
+      scene.materials.push_back(material);
+      material_id = (int)scene.materials.size() - 1;
+    }
+    instance.material = material_id;
+  }
+}
+
+// Add missing radius.
+void add_radius(scene_model& scene, float radius = 0.001f) {
+  for (auto& shape : scene.shapes) {
+    if (shape.points.empty() && shape.lines.empty()) continue;
+    if (!shape.radius.empty()) continue;
+    shape.radius.assign(shape.positions.size(), radius);
+  }
+}
+
+vector<string> format_stats(const scene_model& scene, bool verbose) {
+  auto accumulate = [](const auto& values, const auto& func) -> size_t {
+    auto sum = (size_t)0;
+    for (auto& value : values) sum += func(value);
+    return sum;
+  };
+  auto format = [](auto num) {
+    auto str = std::to_string(num);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+  auto format3 = [](auto num) {
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
+               std::to_string(num.z);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+
+  auto bbox = compute_bounds(scene);
+
+  auto stats = vector<string>{};
+  stats.push_back("cameras:      " + format(scene.cameras.size()));
+  stats.push_back("shapes:       " + format(scene.shapes.size()));
+  stats.push_back("instances:    " + format(scene.instances.size()));
+  stats.push_back("environments: " + format(scene.environments.size()));
+  stats.push_back("textures:     " + format(scene.textures.size()));
+  stats.push_back("materials:    " + format(scene.materials.size()));
+  stats.push_back("nodes:        " + format(scene.nodes.size()));
+  stats.push_back("animations:   " + format(scene.animations.size()));
+  stats.push_back(
+      "points:       " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.points.size(); })));
+  stats.push_back(
+      "lines:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.lines.size(); })));
+  stats.push_back("triangles:    " +
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.triangles.size(); })));
+  stats.push_back(
+      "quads:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.quads.size(); })));
+  stats.push_back("fvquads:      " +
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.quadspos.size(); })));
+  stats.push_back(
+      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.ldr.size().x * (size_t)texture.ldr.size().x;
+      })));
+  stats.push_back(
+      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
+      })));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
+
+  return stats;
+}
+
+// Reduce memory usage
+void trim_memory(scene_model& scene) {
+  for (auto& shape : scene.shapes) {
+    shape.points.shrink_to_fit();
+    shape.lines.shrink_to_fit();
+    shape.triangles.shrink_to_fit();
+    shape.quads.shrink_to_fit();
+    shape.quadspos.shrink_to_fit();
+    shape.quadsnorm.shrink_to_fit();
+    shape.quadstexcoord.shrink_to_fit();
+    shape.positions.shrink_to_fit();
+    shape.normals.shrink_to_fit();
+    shape.texcoords.shrink_to_fit();
+    shape.colors.shrink_to_fit();
+    shape.radius.shrink_to_fit();
+    shape.tangents.shrink_to_fit();
+  }
+  for (auto& texture : scene.textures) {
+    texture.ldr.shrink_to_fit();
+    texture.hdr.shrink_to_fit();
+  }
+  scene.cameras.shrink_to_fit();
+  scene.shapes.shrink_to_fit();
+  scene.instances.shrink_to_fit();
+  scene.materials.shrink_to_fit();
+  scene.textures.shrink_to_fit();
+  scene.environments.shrink_to_fit();
+  scene.nodes.shrink_to_fit();
+  scene.animations.shrink_to_fit();
+}
+
+// Compute vertex normals
+void update_normals(scene_shape& shape) {
+  if (!shape.points.empty()) {
+    shape.normals = vector<vec3f>{shape.positions.size(), {0, 0, 1}};
+  } else if (!shape.lines.empty()) {
+    shape.normals = compute_tangents(shape.lines, shape.positions);
+  } else if (!shape.triangles.empty()) {
+    shape.normals = compute_normals(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    shape.normals = compute_normals(shape.quads, shape.positions);
+  } else if (!shape.quadspos.empty()) {
+    shape.normals = compute_normals(shape.quadspos, shape.positions);
+  } else {
+    throw std::runtime_error("unknown element type");
+  }
+}
+
+// Apply subdivision and displacement rules.
+void subdivide_shape(scene_shape& shape) {
+  if (!shape.subdivisions) return;
+  if (!shape.points.empty()) {
+    throw std::runtime_error("point subdivision not supported");
+  } else if (!shape.lines.empty()) {
+    subdivide_lines(shape.lines, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius, shape.lines,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, shape.subdivisions);
+  } else if (!shape.triangles.empty()) {
+    subdivide_triangles(shape.triangles, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius, shape.triangles,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, shape.subdivisions);
+  } else if (!shape.quads.empty() && !shape.catmullclark) {
+    subdivide_quads(shape.quads, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius, shape.quads,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, shape.subdivisions);
+  } else if (!shape.quads.empty() && shape.catmullclark) {
+    subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius, shape.quads,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.radius, shape.subdivisions);
+  } else if (!shape.quadspos.empty() && !shape.catmullclark) {
+    subdivide_quads(shape.quadspos, shape.positions, shape.quadspos,
+        shape.positions, shape.subdivisions);
+    subdivide_quads(shape.quadsnorm, shape.normals, shape.quadsnorm,
+        shape.normals, shape.subdivisions);
+    subdivide_quads(shape.quadstexcoord, shape.texcoords, shape.quadstexcoord,
+        shape.texcoords, shape.subdivisions);
+  } else if (!shape.quadspos.empty() && shape.catmullclark) {
+    subdivide_catmullclark(shape.quadspos, shape.positions, shape.quadspos,
+        shape.positions, shape.subdivisions);
+    subdivide_catmullclark(shape.quadstexcoord, shape.texcoords,
+        shape.quadstexcoord, shape.texcoords, shape.subdivisions, true);
+  } else {
+    throw std::runtime_error("empty shape");
+  }
+
+  if (shape.smooth) {
+    if (!shape.quadspos.empty()) {
+      shape.quadsnorm = shape.quadspos;
+    }
+    update_normals(shape);
+  }
+}
+// Apply displacement to a shape
+void displace_shape(const scene_model& scene, scene_shape& shape) {
+  // Evaluate a texture
+  auto eval_texture = [](const scene_texture& texture, const vec2f& texcoord,
+      bool ldr_as_linear, bool no_interpolation = false, bool clamp_to_edge = false) -> vec4f {
+    if (!texture.hdr.empty()) {
+      return eval_image(texture.hdr, texcoord, no_interpolation, clamp_to_edge);
+    } else if (!texture.ldr.empty()) {
+      return eval_image(
+          texture.ldr, texcoord, ldr_as_linear, no_interpolation, clamp_to_edge);
+    } else {
+      return {1, 1, 1, 1};
+    }
+  };
+
+  if (!shape.displacement || shape.displacement_tex < 0) return;
+  auto& displacement = scene.textures[shape.displacement_tex];
+  if (shape.texcoords.empty()) {
+    throw std::runtime_error("missing texture coordinates");
+    return;
+  }
+
+  // simple case
+  if (shape.quadspos.empty()) {
+    auto has_normals = !shape.normals.empty();
+    if (!has_normals) update_normals(shape);
+    for (auto vid = 0; vid < shape.positions.size(); vid++) {
+      auto disp = mean(
+          xyz(eval_texture(displacement, shape.texcoords[vid], true)));
+      if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
+      shape.positions[vid] += shape.normals[vid] * shape.displacement * disp;
+    }
+    if (shape.smooth || has_normals) update_normals(shape);
+  } else {
+    // facevarying case
+    auto offset = vector<float>(shape.positions.size(), 0);
+    auto count  = vector<int>(shape.positions.size(), 0);
+    for (auto fid = 0; fid < shape.quadspos.size(); fid++) {
+      auto qpos = shape.quadspos[fid];
+      auto qtxt = shape.quadstexcoord[fid];
+      for (auto i = 0; i < 4; i++) {
+        auto disp = mean(
+            xyz(eval_texture(displacement, shape.texcoords[qtxt[i]], true)));
+        if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
+        offset[qpos[i]] += shape.displacement * disp;
+        count[qpos[i]] += 1;
+      }
+    }
+    auto normals = vector<vec3f>{shape.positions.size()};
+    compute_normals(normals, shape.quadspos, shape.positions);
+    for (auto vid = 0; vid < shape.positions.size(); vid++) {
+      shape.positions[vid] += normals[vid] * offset[vid] / count[vid];
+    }
+    if (shape.smooth || !shape.normals.empty()) {
+      shape.quadsnorm = shape.quadspos;
+      update_normals(shape);
+    }
+  }
+}
+
+void copy_shape_data(scene_shape& dst, const scene_shape& src) {
+  dst.points        = src.points;
+  dst.lines         = src.lines;
+  dst.triangles     = src.triangles;
+  dst.quads         = src.quads;
+  dst.quadspos      = src.quadspos;
+  dst.quadsnorm     = src.quadsnorm;
+  dst.quadstexcoord = src.quadstexcoord;
+  dst.positions     = src.positions;
+  dst.normals       = src.normals;
+  dst.texcoords     = src.texcoords;
+  dst.colors        = src.colors;
+  dst.radius        = src.radius;
+}
+
+void update_tesselation(scene_model& scene, scene_shape& shape) {
+  if (!shape.subdivisions && !shape.displacement) return;
+  if (shape.subdiv.empty()) {
+    auto& subdiv = shape.subdiv.emplace_back();
+    copy_shape_data(subdiv, shape);
+  } else {
+    copy_shape_data(shape, shape.subdiv.back());
+  }
+  if (shape.subdivisions) {
+    subdivide_shape(shape);
+  }
+  if (shape.displacement && shape.displacement_tex >= 0) {
+    displace_shape(scene, shape);
+  }
+}
+
+// Updates tesselation.
+void update_tesselation(scene_model& scene) {
+  for (auto& shape : scene.shapes) update_tesselation(scene, shape);
+}
+
+// Update animation transforms
+void update_transforms(scene_model& scene, scene_animation& animation,
+    float time, const string& anim_group) {
+  if (anim_group != "" && anim_group != animation.group) return;
+
+  if (!animation.translations.empty()) {
+    auto value = vec3f{0, 0, 0};
+    switch (animation.interpolation) {
+      case scene_animation::interpolation_type::step:
+        value = keyframe_step(animation.times, animation.translations, time);
+        break;
+      case scene_animation::interpolation_type::linear:
+        value = keyframe_linear(animation.times, animation.translations, time);
+        break;
+      case scene_animation::interpolation_type::bezier:
+        value = keyframe_bezier(animation.times, animation.translations, time);
+        break;
+      default: throw std::runtime_error("should not have been here");
+    }
+    for (auto target : animation.targets)
+      scene.nodes[target].translation = value;
+  }
+  if (!animation.rotations.empty()) {
+    auto value = vec4f{0, 0, 0, 1};
+    switch (animation.interpolation) {
+      case scene_animation::interpolation_type::step:
+        value = keyframe_step(animation.times, animation.rotations, time);
+        break;
+      case scene_animation::interpolation_type::linear:
+        value = keyframe_linear(animation.times, animation.rotations, time);
+        break;
+      case scene_animation::interpolation_type::bezier:
+        value = keyframe_bezier(animation.times, animation.rotations, time);
+        break;
+    }
+    for (auto target : animation.targets) scene.nodes[target].rotation = value;
+  }
+  if (!animation.scales.empty()) {
+    auto value = vec3f{1, 1, 1};
+    switch (animation.interpolation) {
+      case scene_animation::interpolation_type::step:
+        value = keyframe_step(animation.times, animation.scales, time);
+        break;
+      case scene_animation::interpolation_type::linear:
+        value = keyframe_linear(animation.times, animation.scales, time);
+        break;
+      case scene_animation::interpolation_type::bezier:
+        value = keyframe_bezier(animation.times, animation.scales, time);
+        break;
+    }
+    for (auto target : animation.targets) scene.nodes[target].scale = value;
+  }
+}
+
+// Update node transforms
+void update_transforms(scene_model& scene, scene_node& node,
+    const frame3f& parent = identity3x4f) {
+  auto frame = parent * node.local * translation_frame(node.translation) *
+               rotation_frame(node.rotation) * scaling_frame(node.scale);
+  if (node.instance >= 0) scene.instances[node.instance].frame = frame;
+  if (node.camera >= 0) scene.cameras[node.camera].frame = frame;
+  if (node.environment >= 0) scene.environments[node.environment].frame = frame;
+  for (auto child : node.children)
+    update_transforms(scene, scene.nodes[child], frame);
+}
+
+// Update node transforms
+void update_transforms(
+    scene_model& scene, float time, const string& anim_group) {
+  for (auto& agr : scene.animations)
+    update_transforms(scene, agr, time, anim_group);
+  for (auto& node : scene.nodes) node.children.clear();
+  for (auto node_id = 0; node_id < scene.nodes.size(); node_id++) {
+    auto& node = scene.nodes[node_id];
+    if (node.parent >= 0) scene.nodes[node.parent].children.push_back(node_id);
+  }
+  for (auto& node : scene.nodes)
+    if (node.parent < 0) update_transforms(scene, node);
+}
+
+// Compute animation range
+vec2f compute_animation_range(
+    const scene_model& scene, const string& anim_group) {
+  if (scene.animations.empty()) return zero2f;
+  auto range = vec2f{+flt_max, -flt_max};
+  for (auto& animation : scene.animations) {
+    if (anim_group != "" && animation.group != anim_group) continue;
+    range.x = min(range.x, animation.times.front());
+    range.y = max(range.y, animation.times.back());
+  }
+  if (range.y < range.x) return zero2f;
+  return range;
+}
+
+}
+
+// -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -256,189 +777,6 @@ static inline string make_safe_filename(const string& filename_) {
     if (c == ' ') c = '_';
   }
   return filename;
-}
-
-// Computes a shape bounding box.
-static bbox3f compute_bounds(const scene_shape& shape) {
-  auto bbox = invalidb3f;
-  for (auto p : shape.positions) bbox = merge(bbox, p);
-  return bbox;
-}
-
-// Updates the scene and scene's instances bounding boxes
-static bbox3f compute_bounds(const scene_model& scene) {
-  auto shape_bbox = vector<bbox3f>(scene.shapes.size());
-  for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++)
-    shape_bbox[shape_id] = compute_bounds(scene.shapes[shape_id]);
-  auto bbox = invalidb3f;
-  for (auto& instance : scene.instances) {
-    bbox = merge(
-        bbox, transform_bbox(instance.frame, shape_bbox[instance.shape]));
-  }
-  return bbox;
-}
-
-static vec2f camera_fov(const scene_camera& camera) {
-  assert(!camera.orthographic);
-  return {2 * atan(camera.film.x / (2 * camera.lens)),
-      2 * atan(camera.film.y / (2 * camera.lens))};
-}
-
-static void set_yperspective(
-    scene_camera& camera, float fov, float aspect, float focus, float film = 0.036) {
-  camera.orthographic = false;
-  camera.film         = {film, film / aspect};
-  camera.focus        = focus;
-  auto distance       = camera.film.y / (2 * tan(fov / 2));
-  if (focus < flt_max) {
-    camera.lens = camera.focus * distance / (camera.focus + distance);
-  } else {
-    camera.lens = distance;
-  }
-}
-
-// add missing camera
-static void set_view(
-    scene_camera& camera, const bbox3f& bbox, const vec3f& view_direction) {
-  camera.orthographic = false;
-  auto center         = (bbox.max + bbox.min) / 2;
-  auto bbox_radius    = length(bbox.max - bbox.min) / 2;
-  auto camera_dir     = (view_direction == zero3f) ? camera.frame.o - center
-                                               : view_direction;
-  if (camera_dir == zero3f) camera_dir = {0, 0, 1};
-  auto fov = min(camera_fov(camera));
-  if (fov == 0) fov = 45 * pif / 180;
-  auto camera_dist = bbox_radius / sin(fov / 2);
-  auto from        = camera_dir * (camera_dist * 1) + center;
-  auto to          = center;
-  auto up          = vec3f{0, 1, 0};
-  camera.frame     = lookat_frame(from, to, up);
-  camera.focus     = length(from - to);
-  camera.aperture  = 0;
-}
-
-// Add missing cameras.
-static void add_cameras(scene_model& scene) {
-  if (scene.cameras.empty()) {
-    auto camera = scene_camera{};
-    camera.name = "default";
-    set_view(camera, compute_bounds(scene), {0, 0, 1});
-    scene.cameras.push_back(camera);
-  }
-}
-
-// Add missing materials.
-static void add_materials(scene_model& scene) {
-  auto material_id = -1;
-  for (auto& instance : scene.instances) {
-    if (instance.material >= 0) continue;
-    if (material_id < 0) {
-      auto material    = scene_material{};
-      material.name    = "default";
-      material.diffuse = {0.2f, 0.2f, 0.2f};
-      scene.materials.push_back(material);
-      material_id = (int)scene.materials.size() - 1;
-    }
-    instance.material = material_id;
-  }
-}
-
-// Add missing radius.
-static void add_radius(scene_model& scene, float radius = 0.001f) {
-  for (auto& shape : scene.shapes) {
-    if (shape.points.empty() && shape.lines.empty()) continue;
-    if (!shape.radius.empty()) continue;
-    shape.radius.assign(shape.positions.size(), radius);
-  }
-}
-
-static vector<string> format_stats(const scene_model& scene, bool verbose = false) {
-  auto accumulate = [](const auto& values, const auto& func) -> size_t {
-    auto sum = (size_t)0;
-    for (auto& value : values) sum += func(value);
-    return sum;
-  };
-  auto format = [](auto num) {
-    auto str = std::to_string(num);
-    while (str.size() < 13) str = " " + str;
-    return str;
-  };
-  auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
-    while (str.size() < 13) str = " " + str;
-    return str;
-  };
-
-  auto bbox = compute_bounds(scene);
-
-  auto stats = vector<string>{};
-  stats.push_back("cameras:      " + format(scene.cameras.size()));
-  stats.push_back("shapes:       " + format(scene.shapes.size()));
-  stats.push_back("instances:    " + format(scene.instances.size()));
-  stats.push_back("environments: " + format(scene.environments.size()));
-  stats.push_back("textures:     " + format(scene.textures.size()));
-  stats.push_back("materials:    " + format(scene.materials.size()));
-  stats.push_back("nodes:        " + format(scene.nodes.size()));
-  stats.push_back("animations:   " + format(scene.animations.size()));
-  stats.push_back(
-      "points:       " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.points.size(); })));
-  stats.push_back(
-      "lines:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.lines.size(); })));
-  stats.push_back("triangles:    " +
-                  format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.triangles.size(); })));
-  stats.push_back(
-      "quads:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.quads.size(); })));
-  stats.push_back("fvquads:      " +
-                  format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.quadspos.size(); })));
-  stats.push_back(
-      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.ldr.size().x * (size_t)texture.ldr.size().x;
-      })));
-  stats.push_back(
-      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
-      })));
-  stats.push_back("center:       " + format3(center(bbox)));
-  stats.push_back("size:         " + format3(size(bbox)));
-
-  return stats;
-}
-
-// Reduce memory usage
-static void trim_memory(scene_model& scene) {
-  for (auto& shape : scene.shapes) {
-    shape.points.shrink_to_fit();
-    shape.lines.shrink_to_fit();
-    shape.triangles.shrink_to_fit();
-    shape.quads.shrink_to_fit();
-    shape.quadspos.shrink_to_fit();
-    shape.quadsnorm.shrink_to_fit();
-    shape.quadstexcoord.shrink_to_fit();
-    shape.positions.shrink_to_fit();
-    shape.normals.shrink_to_fit();
-    shape.texcoords.shrink_to_fit();
-    shape.colors.shrink_to_fit();
-    shape.radius.shrink_to_fit();
-    shape.tangents.shrink_to_fit();
-  }
-  for (auto& texture : scene.textures) {
-    texture.ldr.shrink_to_fit();
-    texture.hdr.shrink_to_fit();
-  }
-  scene.cameras.shrink_to_fit();
-  scene.shapes.shrink_to_fit();
-  scene.instances.shrink_to_fit();
-  scene.materials.shrink_to_fit();
-  scene.textures.shrink_to_fit();
-  scene.environments.shrink_to_fit();
-  scene.nodes.shrink_to_fit();
-  scene.animations.shrink_to_fit();
 }
 
 }  // namespace yocto
