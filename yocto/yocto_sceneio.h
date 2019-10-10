@@ -278,8 +278,6 @@ namespace yocto {
 // Apply subdivision and displacement rules.
 scene_shape subdivide_shape(const scene_shape& shape);
 scene_shape displace_shape(const scene_model& scene, const scene_shape& shape);
-void update_tesselation(scene_model& scene, scene_shape& shape);
-void update_tesselation(scene_model& scene);
 
 // Update node transforms.
 void update_transforms(scene_model& scene, float time = 0, const string& anim_group = "");

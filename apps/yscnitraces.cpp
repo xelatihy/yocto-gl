@@ -251,12 +251,6 @@ int main(int argc, const char* argv[]) {
     print_fatal(e.what());
   }
 
-  // tesselate
-  {
-    auto timer = print_timed("tesselating");
-    update_tesselation(ioscene);
-  }
-
   // conversion
   {
     auto timer = print_timed("converting");

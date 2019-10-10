@@ -448,15 +448,6 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
   return subdiv;
 }
 
-// Updates tesselation.
-void update_tesselation(scene_model& scene) {
-  for (auto& shape : scene.shapes) {
-    if (shape.subdivisions) shape = subdivide_shape(shape);
-    if (shape.displacement && shape.displacement_tex < 0)
-      shape = displace_shape(scene, shape);
-  }
-}
-
 // Update animation transforms
 void update_transforms(scene_model& scene, scene_animation& animation,
     float time, const string& anim_group) {

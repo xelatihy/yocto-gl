@@ -118,12 +118,6 @@ int main(int argc, const char** argv) {
     }
   }
 
-  // tesselating scene
-  {
-    auto timer = print_timed("tesselating scene");
-    update_tesselation(scene);
-  }
-
   // add missing mesh names if necessary
   if (!shape_directory.empty() && shape_directory.back() != '/')
     shape_directory += '/';
