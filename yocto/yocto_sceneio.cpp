@@ -109,7 +109,7 @@ bbox3f compute_bounds(const scene_model& scene) {
   auto shape_bbox = vector<bbox3f>{};
   for (auto& shape : scene.shapes) {
     auto& sbvh = shape_bbox.emplace_back();
-    sbvh = invalidb3f;
+    sbvh       = invalidb3f;
     for (auto p : shape.positions) sbvh = merge(sbvh, p);
   }
   auto bbox = invalidb3f;
@@ -308,73 +308,68 @@ vector<string> format_validation(const scene_model& scene, bool notextures) {
   return errs;
 }
 
-// Compute vertex normals
-void update_normals(scene_shape& shape) {
-  if (!shape.points.empty()) {
-    shape.normals = vector<vec3f>{shape.positions.size(), {0, 0, 1}};
-  } else if (!shape.lines.empty()) {
-    shape.normals = compute_tangents(shape.lines, shape.positions);
-  } else if (!shape.triangles.empty()) {
-    shape.normals = compute_normals(shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
-    shape.normals = compute_normals(shape.quads, shape.positions);
-  } else if (!shape.quadspos.empty()) {
-    shape.normals = compute_normals(shape.quadspos, shape.positions);
-  } else {
-    throw std::runtime_error("unknown element type");
-  }
-}
-
 // Apply subdivision and displacement rules.
-void subdivide_shape(scene_shape& shape) {
-  if (!shape.subdivisions) return;
+scene_shape subdivide_shape(const scene_shape& shape) {
+  if (!shape.subdivisions) return shape;
+  auto subdiv = shape;
+  subdiv.subdivisions = 0;
   if (!shape.points.empty()) {
     throw std::runtime_error("point subdivision not supported");
   } else if (!shape.lines.empty()) {
-    subdivide_lines(shape.lines, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, shape.lines,
+    subdivide_lines(subdiv.lines, subdiv.positions, subdiv.normals,
+        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.lines,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius, shape.subdivisions);
+    if (shape.smooth)
+      subdiv.normals = compute_tangents(subdiv.lines, subdiv.positions);
   } else if (!shape.triangles.empty()) {
-    subdivide_triangles(shape.triangles, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, shape.triangles,
+    subdivide_triangles(subdiv.triangles, subdiv.positions, subdiv.normals,
+        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.triangles,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius, shape.subdivisions);
+    if (shape.smooth)
+      subdiv.normals = compute_normals(subdiv.triangles, subdiv.positions);
   } else if (!shape.quads.empty() && !shape.catmullclark) {
-    subdivide_quads(shape.quads, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, shape.quads,
+    subdivide_quads(subdiv.quads, subdiv.positions, subdiv.normals,
+        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.quads,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius, shape.subdivisions);
+    if (subdiv.smooth)
+      subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
   } else if (!shape.quads.empty() && shape.catmullclark) {
-    subdivide_catmullclark(shape.quads, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius, shape.quads,
+    subdivide_catmullclark(subdiv.quads, subdiv.positions, subdiv.normals,
+        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.quads,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius, shape.subdivisions);
+    if (subdiv.smooth)
+      subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
   } else if (!shape.quadspos.empty() && !shape.catmullclark) {
-    subdivide_quads(shape.quadspos, shape.positions, shape.quadspos,
+    subdivide_quads(subdiv.quadspos, subdiv.positions, subdiv.quadspos,
         shape.positions, shape.subdivisions);
-    subdivide_quads(shape.quadsnorm, shape.normals, shape.quadsnorm,
+    subdivide_quads(subdiv.quadsnorm, subdiv.normals, subdiv.quadsnorm,
         shape.normals, shape.subdivisions);
-    subdivide_quads(shape.quadstexcoord, shape.texcoords, shape.quadstexcoord,
+    subdivide_quads(subdiv.quadstexcoord, subdiv.texcoords, subdiv.quadstexcoord,
         shape.texcoords, shape.subdivisions);
+    if (subdiv.smooth) {
+      subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
+      subdiv.quadsnorm = subdiv.quadspos;
+    }
   } else if (!shape.quadspos.empty() && shape.catmullclark) {
-    subdivide_catmullclark(shape.quadspos, shape.positions, shape.quadspos,
-        shape.positions, shape.subdivisions);
-    subdivide_catmullclark(shape.quadstexcoord, shape.texcoords,
+    subdivide_catmullclark(subdiv.quadspos, subdiv.positions, shape.quadspos,
+        shape.positions, subdiv.subdivisions);
+    subdivide_catmullclark(subdiv.quadstexcoord, subdiv.texcoords,
         shape.quadstexcoord, shape.texcoords, shape.subdivisions, true);
+    if (shape.smooth) {
+      subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
+      subdiv.quadsnorm = subdiv.quadspos;
+    }
   } else {
     throw std::runtime_error("empty shape");
   }
-
-  if (shape.smooth) {
-    if (!shape.quadspos.empty()) {
-      shape.quadsnorm = shape.quadspos;
-    }
-    update_normals(shape);
-  }
+  return subdiv;
 }
 // Apply displacement to a shape
-void displace_shape(const scene_model& scene, scene_shape& shape) {
+scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
   // Evaluate a texture
   auto eval_texture = [](const scene_texture& texture, const vec2f& texcoord,
                           bool ldr_as_linear, bool no_interpolation = false,
@@ -389,25 +384,41 @@ void displace_shape(const scene_model& scene, scene_shape& shape) {
     }
   };
 
-  if (!shape.displacement || shape.displacement_tex < 0) return;
+  if (!shape.displacement || shape.displacement_tex < 0) return shape;
   auto& displacement = scene.textures[shape.displacement_tex];
   if (shape.texcoords.empty()) {
     throw std::runtime_error("missing texture coordinates");
-    return;
+    return {};
   }
 
+  auto subdiv = shape;
+  subdiv.displacement = 0;
+  subdiv.displacement_tex = -1;
+
   // simple case
-  if (shape.quadspos.empty()) {
-    auto has_normals = !shape.normals.empty();
-    if (!has_normals) update_normals(shape);
+  if (!shape.triangles.empty()) {
+    auto normals = shape.normals;
+    if(normals.empty()) normals = compute_normals(shape.triangles, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       auto disp = mean(
           xyz(eval_texture(displacement, shape.texcoords[vid], true)));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
-      shape.positions[vid] += shape.normals[vid] * shape.displacement * disp;
+      subdiv.positions[vid] += normals[vid] * shape.displacement * disp;
     }
-    if (shape.smooth || has_normals) update_normals(shape);
-  } else {
+    if(shape.smooth || !shape.normals.empty())
+    subdiv.normals = compute_normals(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    auto normals = shape.normals;
+    if(normals.empty()) normals = compute_normals(shape.triangles, shape.positions);
+    for (auto vid = 0; vid < shape.positions.size(); vid++) {
+      auto disp = mean(
+          xyz(eval_texture(displacement, shape.texcoords[vid], true)));
+      if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
+      subdiv.positions[vid] += shape.normals[vid] * shape.displacement * disp;
+    }
+    if(shape.smooth || !shape.normals.empty())
+    subdiv.normals = compute_normals(shape.quads, shape.positions);
+  } else if (!shape.quadspos.empty()) {
     // facevarying case
     auto offset = vector<float>(shape.positions.size(), 0);
     auto count  = vector<int>(shape.positions.size(), 0);
@@ -425,38 +436,24 @@ void displace_shape(const scene_model& scene, scene_shape& shape) {
     auto normals = vector<vec3f>{shape.positions.size()};
     compute_normals(normals, shape.quadspos, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-      shape.positions[vid] += normals[vid] * offset[vid] / count[vid];
+      subdiv.positions[vid] += normals[vid] * offset[vid] / count[vid];
     }
     if (shape.smooth || !shape.normals.empty()) {
-      shape.quadsnorm = shape.quadspos;
-      update_normals(shape);
+      subdiv.quadsnorm = shape.quadspos;
+      subdiv.normals = compute_normals(shape.quadspos, shape.positions);
     }
   }
-}
-
-void copy_shape_data(scene_shape& dst, const scene_shape& src) {
-  dst.points        = src.points;
-  dst.lines         = src.lines;
-  dst.triangles     = src.triangles;
-  dst.quads         = src.quads;
-  dst.quadspos      = src.quadspos;
-  dst.quadsnorm     = src.quadsnorm;
-  dst.quadstexcoord = src.quadstexcoord;
-  dst.positions     = src.positions;
-  dst.normals       = src.normals;
-  dst.texcoords     = src.texcoords;
-  dst.colors        = src.colors;
-  dst.radius        = src.radius;
+  return subdiv;
 }
 
 void update_tesselation(scene_model& scene, scene_shape& shape) {
   if (!shape.subdivisions && !shape.displacement) return;
   if (shape.subdivisions) {
-    subdivide_shape(shape);
+    shape = subdivide_shape(shape);
     shape.subdivisions = 0;
   }
   if (shape.displacement && shape.displacement_tex >= 0) {
-    displace_shape(scene, shape);
+    shape = displace_shape(scene, shape);
     shape.displacement = 0;
   }
 }
