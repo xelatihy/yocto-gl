@@ -276,6 +276,8 @@ void save_scene(const string& filename, const scene_model& scene,
 namespace yocto {
 
 // Apply subdivision and displacement rules.
+scene_shape subdivide_shape(const scene_shape& shape);
+scene_shape displace_shape(const scene_model& scene, const scene_shape& shape);
 void update_tesselation(scene_model& scene, scene_shape& shape);
 void update_tesselation(scene_model& scene);
 

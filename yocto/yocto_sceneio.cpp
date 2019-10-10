@@ -311,7 +311,7 @@ vector<string> format_validation(const scene_model& scene, bool notextures) {
 // Apply subdivision and displacement rules.
 scene_shape subdivide_shape(const scene_shape& shape) {
   if (!shape.subdivisions) return shape;
-  auto subdiv = shape;
+  auto subdiv         = shape;
   subdiv.subdivisions = 0;
   if (!shape.points.empty()) {
     throw std::runtime_error("point subdivision not supported");
@@ -348,8 +348,8 @@ scene_shape subdivide_shape(const scene_shape& shape) {
         shape.positions, shape.subdivisions);
     subdivide_quads(subdiv.quadsnorm, subdiv.normals, subdiv.quadsnorm,
         shape.normals, shape.subdivisions);
-    subdivide_quads(subdiv.quadstexcoord, subdiv.texcoords, subdiv.quadstexcoord,
-        shape.texcoords, shape.subdivisions);
+    subdivide_quads(subdiv.quadstexcoord, subdiv.texcoords,
+        subdiv.quadstexcoord, shape.texcoords, shape.subdivisions);
     if (subdiv.smooth) {
       subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
       subdiv.quadsnorm = subdiv.quadspos;
@@ -391,33 +391,35 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
     return {};
   }
 
-  auto subdiv = shape;
-  subdiv.displacement = 0;
+  auto subdiv             = shape;
+  subdiv.displacement     = 0;
   subdiv.displacement_tex = -1;
 
   // simple case
   if (!shape.triangles.empty()) {
     auto normals = shape.normals;
-    if(normals.empty()) normals = compute_normals(shape.triangles, shape.positions);
+    if (normals.empty())
+      normals = compute_normals(shape.triangles, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       auto disp = mean(
           xyz(eval_texture(displacement, shape.texcoords[vid], true)));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       subdiv.positions[vid] += normals[vid] * shape.displacement * disp;
     }
-    if(shape.smooth || !shape.normals.empty())
-    subdiv.normals = compute_normals(shape.triangles, shape.positions);
+    if (shape.smooth || !shape.normals.empty())
+      subdiv.normals = compute_normals(shape.triangles, shape.positions);
   } else if (!shape.quads.empty()) {
     auto normals = shape.normals;
-    if(normals.empty()) normals = compute_normals(shape.triangles, shape.positions);
+    if (normals.empty())
+      normals = compute_normals(shape.triangles, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       auto disp = mean(
           xyz(eval_texture(displacement, shape.texcoords[vid], true)));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       subdiv.positions[vid] += shape.normals[vid] * shape.displacement * disp;
     }
-    if(shape.smooth || !shape.normals.empty())
-    subdiv.normals = compute_normals(shape.quads, shape.positions);
+    if (shape.smooth || !shape.normals.empty())
+      subdiv.normals = compute_normals(shape.quads, shape.positions);
   } else if (!shape.quadspos.empty()) {
     // facevarying case
     auto offset = vector<float>(shape.positions.size(), 0);
@@ -440,27 +442,19 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
     }
     if (shape.smooth || !shape.normals.empty()) {
       subdiv.quadsnorm = shape.quadspos;
-      subdiv.normals = compute_normals(shape.quadspos, shape.positions);
+      subdiv.normals   = compute_normals(shape.quadspos, shape.positions);
     }
   }
   return subdiv;
 }
 
-void update_tesselation(scene_model& scene, scene_shape& shape) {
-  if (!shape.subdivisions && !shape.displacement) return;
-  if (shape.subdivisions) {
-    shape = subdivide_shape(shape);
-    shape.subdivisions = 0;
-  }
-  if (shape.displacement && shape.displacement_tex >= 0) {
-    shape = displace_shape(scene, shape);
-    shape.displacement = 0;
-  }
-}
-
 // Updates tesselation.
 void update_tesselation(scene_model& scene) {
-  for (auto& shape : scene.shapes) update_tesselation(scene, shape);
+  for (auto& shape : scene.shapes) {
+    if (shape.subdivisions) shape = subdivide_shape(shape);
+    if (shape.displacement && shape.displacement_tex < 0)
+      shape = displace_shape(scene, shape);
+  }
 }
 
 // Update animation transforms
