@@ -484,8 +484,9 @@ static void update_material(
   material.opacity_tex      = iomaterial.opacity_tex;
   material.subsurface_tex   = iomaterial.subsurface_tex;
 }
-static void update_shape(trace_shape& shape, const scene_shape& ioshape, const scene_model& ioscene) {
-  if(ioshape.subdivisions || ioshape.displacement) {
+static void update_shape(trace_shape& shape, const scene_shape& ioshape,
+    const scene_model& ioscene) {
+  if (ioshape.subdivisions || ioshape.displacement) {
     auto subdiv = ioshape;
     if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
     if (subdiv.displacement && subdiv.displacement_tex < 0)

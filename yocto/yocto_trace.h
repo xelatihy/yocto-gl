@@ -104,8 +104,8 @@ struct trace_camera {
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
 struct trace_texture {
-  image<vec4f> hdr      = {};
-  image<vec4b> ldr      = {};
+  image<vec4f> hdr = {};
+  image<vec4b> ldr = {};
 };
 
 // Material for surfaces, lines and triangles.

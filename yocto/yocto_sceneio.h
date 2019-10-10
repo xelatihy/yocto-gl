@@ -65,9 +65,9 @@ namespace yocto {
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
-// we specify film size (35mm by default), film aspect ration, 
-// the lens' focal length, the focus distance and the lens aperture. 
-// All values are in meters. Here are some common aspect ratios used in video 
+// we specify film size (35mm by default), film aspect ration,
+// the lens' focal length, the focus distance and the lens aperture.
+// All values are in meters. Here are some common aspect ratios used in video
 // and still photography.
 // 3:2    on 35 mm:  0.036 x 0.024
 // 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
@@ -279,14 +279,16 @@ namespace yocto {
 scene_shape subdivide_shape(const scene_shape& shape);
 scene_shape displace_shape(const scene_model& scene, const scene_shape& shape);
 
-// Update node transforms. Eventually this will be deprecated as we do not 
+// Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
-void update_transforms(scene_model& scene, float time = 0, const string& anim_group = "");
+void update_transforms(
+    scene_model& scene, float time = 0, const string& anim_group = "");
 
 // Return scene statistics as list of strings.
 vector<string> format_stats(const scene_model& scene, bool verbose = false);
 // Return validation errors as list of strings.
-vector<string> format_validation(const scene_model& scene, bool notextures = false);
+vector<string> format_validation(
+    const scene_model& scene, bool notextures = false);
 
 }  // namespace yocto
 

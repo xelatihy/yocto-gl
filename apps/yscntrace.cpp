@@ -116,9 +116,9 @@ int main(int argc, const char* argv[]) {
 
   // add components
   if (validate) {
-    auto timer = print_timed("validating");
+    auto timer  = print_timed("validating");
     auto errors = format_validation(ioscene);
-    for(auto& error : errors) print_info(error);
+    for (auto& error : errors) print_info(error);
   }
 
   // convert scene

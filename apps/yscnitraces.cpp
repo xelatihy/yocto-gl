@@ -245,7 +245,7 @@ int main(int argc, const char* argv[]) {
   // scene loading
   auto ioscene = scene_model{};
   try {
-    auto timer   = print_timed("loading scene");
+    auto timer = print_timed("loading scene");
     load_scene(app.filename, ioscene, app.load_prms);
   } catch (const std::exception& e) {
     print_fatal(e.what());
