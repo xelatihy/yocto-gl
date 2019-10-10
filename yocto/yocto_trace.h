@@ -211,6 +211,16 @@ ray3f eval_camera(const trace_camera& camera, const vec2i& ij,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SCENE CREATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Construct a scene from io
+void make_trace_scene(trace_scene& scene, const scene_model& ioscene);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // PATH TRACING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -220,9 +230,6 @@ const auto trace_default_seed = 961748941ull;
 
 // Trace bvh
 using trace_bvh = bvh_shared_scene;
-
-// Construct a scene from io
-void make_trace_scene(trace_scene& scene, const scene_model& ioscene);
 
 // Build/refit the bvh acceleration structure.
 void make_bvh(
