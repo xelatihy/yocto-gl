@@ -270,7 +270,15 @@ void make_glscene(opengl_scene& glscene, const scene_model& scene) {
 
   // shapes
   for (auto& shape : scene.shapes) {
-    update_glshape(glscene.shapes.emplace_back(), shape);
+    if(shape.subdivisions || shape.displacement || shape.displacement_tex >= 0) {
+      auto subdiv = shape;
+      if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
+      if (subdiv.displacement && subdiv.displacement_tex < 0)
+        subdiv = displace_shape(scene, subdiv);
+        update_glshape(glscene.shapes.emplace_back(), subdiv);
+    } else {
+      update_glshape(glscene.shapes.emplace_back(), shape);
+    }
   }
 
   // instances

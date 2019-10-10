@@ -484,7 +484,14 @@ static void update_material(
   material.opacity_tex      = iomaterial.opacity_tex;
   material.subsurface_tex   = iomaterial.subsurface_tex;
 }
-static void update_shape(trace_shape& shape, const scene_shape& ioshape) {
+static void update_shape(trace_shape& shape, const scene_shape& ioshape, const scene_model& ioscene) {
+  if(ioshape.subdivisions || ioshape.displacement) {
+    auto subdiv = ioshape;
+    if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
+    if (subdiv.displacement && subdiv.displacement_tex < 0)
+      subdiv = displace_shape(ioscene, subdiv);
+    return update_shape(shape, subdiv, ioscene);
+  }
   shape.points        = ioshape.points;
   shape.lines         = ioshape.lines;
   shape.triangles     = ioshape.triangles;
@@ -526,7 +533,7 @@ void make_trace_scene(trace_scene& scene, const scene_model& ioscene) {
     update_material(scene.materials.emplace_back(), iomaterial);
   }
   for (auto& ioshape : ioscene.shapes) {
-    update_shape(scene.shapes.emplace_back(), ioshape);
+    update_shape(scene.shapes.emplace_back(), ioshape, ioscene);
   }
   for (auto& ioinstance : ioscene.instances) {
     update_instance(scene.instances.emplace_back(), ioinstance);
