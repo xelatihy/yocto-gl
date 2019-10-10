@@ -279,7 +279,8 @@ namespace yocto {
 scene_shape subdivide_shape(const scene_shape& shape);
 scene_shape displace_shape(const scene_model& scene, const scene_shape& shape);
 
-// Update node transforms.
+// Update node transforms. Eventually this will be deprecated as we do not 
+// support animation in this manner long term.
 void update_transforms(scene_model& scene, float time = 0, const string& anim_group = "");
 
 // Return scene statistics as list of strings.
