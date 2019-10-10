@@ -167,9 +167,6 @@ struct trace_shape {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
-
-  // sampling data
-  vector<float> element_cdf = {};
 };
 
 // Instance of a visible shape in the scene.
@@ -184,7 +181,6 @@ struct trace_environment {
   frame3f frame        = identity3x4f;
   vec3f   emission     = {0, 0, 0};
   int     emission_tex = -1;
-  vector<float> element_cdf = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -251,13 +247,15 @@ void update_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
 struct trace_lights {
   vector<int>           instances        = {};
   vector<int>           environments     = {};
+  vector<vector<float>> shape_cdfs       = {};
+  vector<vector<float>> environment_cdfs = {};
 
   bool empty() const { return instances.empty() && environments.empty(); }
 };
 
 // Initialize lights.
-trace_lights make_trace_lights(trace_scene& scene);
-void         make_trace_lights(trace_lights& lights, trace_scene& scene);
+trace_lights make_trace_lights(const trace_scene& scene);
+void         make_trace_lights(trace_lights& lights, const trace_scene& scene);
 
 // State of a pixel during tracing
 struct trace_pixel {
