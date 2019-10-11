@@ -545,7 +545,7 @@ namespace yocto {
 
 // Data structure used for geodesic computation
 struct geodesic_solver {
-  const int min_arcs = 12;
+  static const int min_arcs = 12;
   struct graph_edge {
     int   node   = -1;
     float length = flt_max;
@@ -565,11 +565,21 @@ void            make_geodesic_solver(geodesic_solver& solver,
                const vector<vec3f>& positions);
 
 // Compute geodesic distances
+void update_geodesic_distances(vector<float>& distances,
+    const geodesic_solver& solver, const vector<int>& sources,
+    float max_distance = flt_max);
+
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<int>& sources, float max_distance = flt_max);
-void          compute_geodesic_distances(vector<float>& distances,
-             const geodesic_solver& solver, const vector<int>& sources,
+void          compute_geodesic_distances(const geodesic_solver& solver,
+             const vector<int>& sources, vector<float>& distances,
              float max_distance = flt_max);
+
+// Compute all shortest paths from source vertices to any other vertex.
+// Paths are implicitly represented: each node is assignes its previous node in
+// the path. Graph search early exits when reching end_vertex.
+vector<int> compute_geodesic_paths(const geodesic_solver& solver,
+    const vector<int>& sources, int end_vertex = -1);
 
 // Sample vertices with a Poisson distribution using geodesic distances.
 // Sampling strategy is farthest point sampling (FPS): at every step
@@ -579,15 +589,40 @@ vector<int> sample_vertices_poisson(
 void sample_vertices_poisson(
     vector<int>& verts, const geodesic_solver& solver, int num_samples);
 
+// Compute the distance field needed to compute a voronoi diagram
+vector<vector<float>> compute_voronoi_fields(
+    const geodesic_solver& solver, const vector<int>& generators);
+
 // Convert distances to colors
-vector<vec4f> distance_to_color(const vector<float>& distances, float scale = 1,
+vector<vec4f> colors_from_field(const vector<float>& field, float scale = 1,
     const vec4f& c0 = {1, 1, 1, 1}, const vec4f& c1 = {1, 0.1, 0.1, 1});
-void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
+void colors_from_field(vector<vec4f>& colors, const vector<float>& field,
     float scale = 1, const vec4f& c0 = {1, 1, 1, 1},
     const vec4f& c1 = {1, 0.1, 0.1, 1});
 
-// Sample vertices based on the geodesic distances and trying to get a Poisson
-// distribution
+struct path_vertex {
+  vec2i edge;
+  int   face;
+  float alpha;
+};
+
+// Description of a discrete path along the surface of the mesh.
+struct surface_path {
+  int                 start, end;
+  vector<path_vertex> vertices;
+};
+
+// Trace integral path following the gradient of a scalar field
+surface_path follow_gradient_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from);
+surface_path follow_gradient_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from,
+    int to);
+
+pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
+    const surface_path& path, const vector<vec3f>& mesh_positions);
 
 }  // namespace yocto
 
