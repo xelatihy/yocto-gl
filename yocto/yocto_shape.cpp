@@ -2197,7 +2197,7 @@ static vector<int> get_face_ring(const vector<vec3i>& triangles,
   auto queue = vector<int>();
   queue.push_back(face);
 
-  while (not queue.empty()) {
+  while (!queue.empty()) {
     int f = queue.back();
     queue.pop_back();
     result.push_back(f);
@@ -2456,8 +2456,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
 
     int front_idx = opposite_vertex(triangles[face], old_edge);
     if (front_idx == -1) {
-      
-        throw std::runtime_error("programmer error: front_idx is -1");
+      throw std::runtime_error("programmer error: front_idx is -1");
       break;
     }
 
