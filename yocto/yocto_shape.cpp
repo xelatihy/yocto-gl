@@ -2291,7 +2291,7 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
     auto normal      = cross(right, left);
     auto cross_right = cross(right, direction);
     auto cross_left  = cross(direction, left);
-    return dot(cross_right, normal) > threshold and
+    return dot(cross_right, normal) > threshold &&
            dot(cross_left, normal) > threshold;
   };
 
