@@ -212,17 +212,31 @@ void          get_boundary(const edge_map& emap, vector<vec2i>& edges);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);
 vector<vec2i> get_edges(const vector<vec4i>& quads);
 
-// Get face adjacencies
+// Build adjacencies between faces (sorted counter-clockwise)
 vector<vec3i> face_adjacencies(const vector<vec3i>& triangles);
 void          face_adjacencies(
              vector<vec3i>& adjacencies, const vector<vec3i>& triangles);
 
-// Get ordered boundaries
+// Build adjacencies between vertices (sorted counter-clockwise)
+vector<vector<int>> vertex_adjacencies(
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
+void vertex_adjacencies(vector<vector<int>>& result,
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
+
+// Compute boundaries as a list of loops (sorted counter-clockwise)
 vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacency, int num_vertices);
 void                ordered_boundaries(vector<vector<int>>& boundaries,
                    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
                    int num_vertices);
+
+// Build adjacencies between each vertex and its adjacent faces.
+// Adjacencies are sorted counter-clockwise and have same starting points as
+// vertex_adjacencies()
+vector<vector<int>> vertex_to_faces_adjacencies(
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
+void vertex_to_faces_adjacencies(vector<vector<int>>& result,
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
 
 }  // namespace yocto
 
