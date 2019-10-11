@@ -1884,13 +1884,6 @@ void sample_quads(vector<vec3f>& sampled_positions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static inline int opposite_vertex(const vec3i& tr, const vec2i& edge) {
-  for (int i = 0; i < 3; ++i) {
-    if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
-  }
-  return -1;
-}
-
 static inline void connect_nodes(
     geodesic_solver& solver, int a, int b, float length) {
   solver.graph[a].push_back({b, length});
@@ -1930,6 +1923,13 @@ static inline float opposite_nodes_arc_length(geodesic_solver& solver,
 static inline void connect_opposite_nodes(geodesic_solver& solver,
     const vector<vec3f>& positions, const vec3i& tr0, const vec3i& tr1,
     const vec2i& edge) {
+  auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
+    for (int i = 0; i < 3; ++i) {
+      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+    }
+    return -1;
+  };
+
   int v0 = opposite_vertex(tr0, edge);
   int v1 = opposite_vertex(tr1, edge);
   if (v0 == -1 || v1 == -1) return;
@@ -1966,9 +1966,12 @@ geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
   return solver;
 }
 
-void update_geodesic_distances(vector<float>& field,
-    const geodesic_solver& solver, const vector<int>& sources,
-    float max_distance) {
+// `update` is a function that is executed during expansion, every time a node
+// is put into queue. `exit` is a function that tells whether to expand the
+// current node or perform early exit.
+template <typename Update, typename Exit>
+void visit_geodesic_graph(vector<float>& field, const geodesic_solver& solver,
+    const vector<int>& sources, Update&& update, Exit&& exit) {
   /*
      This algortithm uses the heuristic Small Label Fisrt and Large Label Last
      https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
@@ -2016,7 +2019,7 @@ void update_geodesic_distances(vector<float>& field,
     cumulative_weight -= field[node];
 
     // Check early exit condition.
-    if (field[node] > max_distance) continue;
+    if (exit(node)) continue;
 
     for (int i = 0; i < solver.graph[node].size(); i++) {
       // Distance of neighbor through this node
@@ -2045,13 +2048,22 @@ void update_geodesic_distances(vector<float>& field,
 
       // Update distance of neighbor.
       field[neighbor] = new_distance;
+      update(node, neighbor, new_distance);
     }
   }
 }
 
-void compute_geodesic_distances(vector<float>& distances,
+// Compute geodesic distances
+void update_geodesic_distances(vector<float>& distances,
     const geodesic_solver& solver, const vector<int>& sources,
     float max_distance) {
+  auto update = [](int node, int neighbor, float new_distance) {};
+  auto exit   = [&](int node) { return distances[node] > max_distance; };
+  visit_geodesic_graph(distances, solver, sources, update, exit);
+}
+
+void compute_geodesic_distances(const geodesic_solver& solver,
+    const vector<int>& sources, vector<float>& distances, float max_distance) {
   distances.assign(solver.graph.size(), flt_max);
   for (auto source : sources) distances[source] = 0.0f;
   update_geodesic_distances(distances, solver, sources, max_distance);
@@ -2063,6 +2075,22 @@ vector<float> compute_geodesic_distances(const geodesic_solver& solver,
   for (auto source : sources) distances[source] = 0.0f;
   update_geodesic_distances(distances, solver, sources, max_distance);
   return distances;
+}
+
+// Compute all shortest paths from source vertices to any other vertex.
+// Paths are implicitly represented: each node is assigned its previous node in
+// the path. Graph search early exits when reching end_vertex.
+vector<int> compute_geodesic_paths(
+    const geodesic_solver& solver, const vector<int>& sources, int end_vertex) {
+  auto parents   = vector<int>(solver.graph.size(), -1);
+  auto distances = vector<float>(solver.graph.size(), flt_max);
+  auto update    = [&parents](int node, int neighbor, float new_distance) {
+    parents[neighbor] = node;
+  };
+  auto exit = [end_vertex](int node) { return node == end_vertex; };
+  for (auto source : sources) distances[source] = 0.0f;
+  visit_geodesic_graph(distances, solver, sources, update, exit);
+  return parents;
 }
 
 // Sample vertices with a Poisson distribution using geodesic distances
@@ -2090,18 +2118,434 @@ vector<int> sample_vertices_poisson(
   return verts;
 }
 
-void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
+// Compute the distance field needed to compute a voronoi diagram
+vector<vector<float>> compute_voronoi_fields(
+    const geodesic_solver& solver, const vector<int>& generators) {
+  auto fields = vector<vector<float>>(generators.size());
+
+  // Find max distance from a generator to set an early exit condition for the
+  // following distance field computations. This optimization makes computation
+  // time weakly dependant on the number of generators.
+  auto total = compute_geodesic_distances(solver, generators);
+  auto max   = *std::max_element(total.begin(), total.end());
+  // @Speed: use parallel_for
+  for (int i = 0; i < generators.size(); ++i) {
+    fields[i]                = vector<float>(solver.graph.size(), flt_max);
+    fields[i][generators[i]] = 0;
+    fields[i] = compute_geodesic_distances(solver, {generators[i]}, max);
+  };
+  return fields;
+}
+
+void colors_from_field(vector<vec4f>& colors, const vector<float>& field,
     float scale, const vec4f& c0, const vec4f& c1) {
-  colors.resize(distances.size());
+  colors.resize(field.size());
   for (auto i = 0; i < colors.size(); i++) {
-    colors[i] = ((int64_t)(distances[i] * scale)) % 2 ? c0 : c1;
+    colors[i] = ((int64_t)(field[i] * scale)) % 2 ? c0 : c1;
   }
 }
-vector<vec4f> distance_to_color(const vector<float>& distances, float scale,
-    const vec4f& c0, const vec4f& c1) {
-  auto colors = vector<vec4f>{distances.size()};
-  distance_to_color(colors, distances, scale, c0, c1);
+vector<vec4f> colors_from_field(
+    const vector<float>& field, float scale, const vec4f& c0, const vec4f& c1) {
+  auto colors = vector<vec4f>{field.size()};
+  colors_from_field(colors, field, scale, c0, c1);
   return colors;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF INTEGRAL PATHS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+namespace integral_paths {
+
+static int adjacent_face(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacency, int face, const vec2i& edge) {
+  // Given a face and an edge, return the adjacent face
+  for (int k = 0; k < 3; ++k) {
+    auto x = triangles[face][k];
+    auto y = triangles[face][k < 2 ? k + 1 : 0];
+    auto e = vec2i{x, y};
+    if (e == edge) return adjacency[face][k];
+    if (vec2i{e.y, e.x} == edge) return adjacency[face][k];
+  }
+  return -1;
+}
+
+static vector<int> get_face_ring(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacency, int face, int vertex) {
+  auto contains = [](const vec3i& v, int a) -> bool {
+    return v.x == a or v.y == a or v.z == a;
+  };
+  auto containsv = [](const vector<int>& v, int a) -> bool {
+    return find(v.begin(), v.end(), a) != v.end();
+  };
+
+  auto result = vector<int>();
+  result.reserve(12);
+
+  if (face == -1) {
+    for (int i = 0; i < triangles.size(); ++i) {
+      if (contains(triangles[i], vertex)) {
+        face = i;
+        break;
+      }
+    }
+  }
+
+  auto queue = vector<int>();
+  queue.push_back(face);
+
+  while (not queue.empty()) {
+    int f = queue.back();
+    queue.pop_back();
+    result.push_back(f);
+
+    for (int k = 0; k < 3; ++k) {
+      auto edge = vec2i{triangles[f][k], triangles[f][(k + 1) % 3]};
+      if (edge.x == vertex or edge.y == vertex) {
+        int neighbor_face = adjacency[f][k];
+        if (neighbor_face == -1) continue;
+        if (!containsv(result, neighbor_face)) {
+          queue.push_back(neighbor_face);
+          result.push_back(neighbor_face);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+static vec3f gradient_face(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<float>& field, int face) {
+  auto  result = zero3f;
+  auto& tr     = triangles[face];
+  auto& a      = positions[tr.x];
+  auto& b      = positions[tr.y];
+  auto& c      = positions[tr.z];
+  auto  ab     = b - a;
+  auto  bc     = c - b;
+  auto  ca     = a - c;
+
+  auto normal = normalize(cross(ca, ab));
+  result += field[tr.x] * cross(normal, bc);
+  result += field[tr.y] * cross(normal, ca);
+  result += field[tr.z] * cross(normal, ab);
+  return normalize(result);
+}
+
+static float step_from_point_to_edge(const vec3f& right, const vec3f& left,
+    const vec3f& direction, float epsilon = 0.0001f) {
+  auto normal            = cross(right, left);
+  auto inverse_transform = mat3f{right - left, left, normal};
+  auto transform         = inverse(inverse_transform);
+  auto dir               = transform * direction;
+  return clamp(1 - dir.x / dir.y, 0.0f + epsilon, 1.0f - epsilon);
+}
+static pair<float, bool> step_from_edge_to_edge(const vec3f& point,
+    const vec3f& a, const vec3f& b, const vec3f& c, const vec3f& direction,
+    float epsilon = 0.0001f) {
+  //      b
+  //     /\
+  //    /  \
+  //   /    \
+  //  /______\
+  // c        a
+
+  auto right  = a - point;
+  auto left   = c - point;
+  auto front  = b - point;
+  auto normal = triangle_normal(a, b, c);
+
+  auto right_side = dot(cross(direction, front), normal) > 0;
+  if (right_side) {
+    auto below_edge = dot(cross(direction, right), normal) > 0;
+    if (below_edge) return {epsilon, true};
+
+    auto x = step_from_point_to_edge(right, front, direction);
+    return {x, true};
+  } else {
+    auto below_edge = dot(cross(left, direction), normal) > 0;
+    if (below_edge) return {1.0f - epsilon, false};
+
+    auto x = step_from_point_to_edge(front, left, direction);
+    return {x, false};
+  }
+}
+
+static path_vertex step_from_point(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, const vector<float>& field, int vertex,
+    int start_face, int tag = -1, float epsilon = 0.0001f) {
+  auto opposite_edge = [](int vertex, const vec3i& tr) -> vec2i {
+    for (int i = 0; i < 3; ++i) {
+      if (tr[i] == vertex) return {tr[(i + 1) % 3], tr[(i + 2) % 3]};
+    }
+    return {-1, -1};
+  };
+  auto is_direction_inbetween = [](const vec3f& right, const vec3f& left,
+                                    const vec3f& direction,
+                                    float        threshold = 0) -> bool {
+    auto normal      = cross(right, left);
+    auto cross_right = cross(right, direction);
+    auto cross_left  = cross(direction, left);
+    return dot(cross_right, normal) > threshold and
+           dot(cross_left, normal) > threshold;
+  };
+
+  auto triangle_fan = get_face_ring(triangles, adjacency, start_face, vertex);
+
+  auto best_alignment = 0.0;
+  auto fallback_lerp  = path_vertex{vec2i{-1, -1}, -1, 0};
+
+  for (auto i = 0; i < triangle_fan.size(); ++i) {
+    auto face = triangle_fan[i];
+    if (tag != -1 and tags[face] != tag) continue;
+    auto edge = opposite_edge(vertex, triangles[face]);
+    if (edge == vec2i{-1, -1}) throw std::runtime_error("edge is {-1, -1}\n");
+
+    auto a         = positions[vertex];
+    auto b         = positions[edge.x];
+    auto c         = positions[edge.y];
+    auto left      = c - a;
+    auto right     = b - a;
+    auto direction = gradient_face(triangles, positions, field, face);
+
+    auto right_dot = dot(normalize(right), direction);
+    auto left_dot  = dot(normalize(left), direction);
+
+    // Look for the most aligned edge with the gradient
+    // direction. If no other face is suitable for selection, we return the
+    // most aligned edge as result (fallback_lerp)
+    if (max(right_dot, left_dot) > best_alignment) {
+      best_alignment = max(right_dot, left_dot);
+      auto alpha     = right_dot > left_dot ? 0.0f + epsilon : 1.0f - epsilon;
+      fallback_lerp  = path_vertex{edge, face, alpha};
+    }
+
+    // Check if gradient direction is in between ac and ab.
+    if (is_direction_inbetween(right, left, direction)) {
+      auto alpha = step_from_point_to_edge(right, left, direction);
+      return path_vertex{edge, face, alpha};
+    }
+  }
+
+  return fallback_lerp;
+}
+
+surface_path follow_gradient_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from) {
+  auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
+    for (int i = 0; i < 3; ++i) {
+      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+    }
+    return -1;
+  };
+  auto find_index = [](const vec3i& v, int x) -> int {
+    if (v.x == x) return 0;
+    if (v.y == x) return 1;
+    if (v.z == x) return 2;
+    return -1;
+  };
+
+  // trace function
+  auto lerps = vector<path_vertex>();
+  auto lerp  = step_from_point(
+      triangles, positions, adjacency, tags, field, from, -1, tag);
+  if (lerp.face == -1) return {};
+  lerps.push_back(lerp);
+
+  const int num_steps = 10000;
+
+  for (auto i = 0; i < num_steps; i++) {
+    auto [old_edge, old_face, old_alpha] = lerps.back();
+    if (old_face == -1) throw std::runtime_error("programmer error");
+    auto point = (1.0f - old_alpha) * positions[old_edge.x] +
+                 old_alpha * positions[old_edge.y];
+
+    auto face = adjacent_face(triangles, adjacency, old_face, old_edge);
+    if (face == -1) {
+      lerps.push_back({vec2i{-1, -1}, face, 0});
+      return surface_path{from, -1, lerps};
+    }
+
+    if (tags[face] != tag) {
+      auto k  = find_index(triangles[face], old_edge.x);
+      auto to = triangles[face][(k + 1) % 3];
+
+      // @Hack!: We store the tag of the reached region in edge.x
+      auto edge = vec2i{to, tags[face]};
+      lerps.push_back({edge, face, 0});
+      return surface_path{from, to, lerps};
+    }
+
+    auto direction = gradient_face(triangles, positions, field, face);
+
+    auto front_idx = opposite_vertex(triangles[face], old_edge);
+    if (front_idx == -1) {
+      throw std::runtime_error("programmer error");
+      return {};
+    }
+
+    if (old_alpha < 0 || old_alpha > 1)
+      throw std::runtime_error("programmer error");
+
+    auto& a = positions[old_edge.x];
+    auto& b = positions[front_idx];
+    auto& c = positions[old_edge.y];
+
+    auto [x, step_right] = step_from_edge_to_edge(point, a, b, c, direction);
+
+    auto edge = old_edge;
+    if (step_right) {
+      point  = (1 - x) * a + x * b;
+      edge.y = front_idx;
+    } else {
+      point  = (1 - x) * b + x * c;
+      edge.x = front_idx;
+    }
+    lerps.push_back({edge, face, x});
+  }
+
+  throw std::runtime_error("integral path ended nowhere");
+  return surface_path{from, 0, lerps};
+}
+
+surface_path follow_gradient_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from,
+    int to) {
+  auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
+    for (int i = 0; i < 3; ++i) {
+      if (tr[i] != edge.x && tr[i] != edge.y) return tr[i];
+    }
+    return -1;
+  };
+  auto contains = [](const vec3i& v, int a) -> bool {
+    return v.x == a or v.y == a or v.z == a;
+  };
+
+  auto lerps = vector<path_vertex>();
+
+  lerps.push_back(
+      step_from_point(triangles, positions, adjacency, tags, field, from, -1));
+
+  const int num_steps = 10000;
+
+  for (int i = 0; i < num_steps; i++) {
+    auto [old_edge, old_face, old_alpha] = lerps.back();
+    vec3f point = (1.0f - old_alpha) * positions[old_edge.x] +
+                  old_alpha * positions[old_edge.y];
+
+    auto face = adjacent_face(triangles, adjacency, old_face, old_edge);
+    if (face == -1) break;
+
+    if (contains(triangles[face], to)) {
+      for (int k = 0; k < 3; ++k) {
+        auto edge = vec2i{triangles[face][k], triangles[face][(k + 1) % 3]};
+        if (edge.x == to) {
+          lerps.push_back({edge, face, 0});
+          return {from, to, lerps};
+        }
+      }
+    }
+    auto direction = gradient_face(triangles, positions, field, face);
+
+    int front_idx = opposite_vertex(triangles[face], old_edge);
+    if (front_idx == -1) {
+      
+        throw std::runtime_error("programmer error: front_idx is -1");
+      break;
+    }
+
+    if (old_alpha < 0 || old_alpha > 1)
+      throw std::runtime_error("programmer error");
+    if (old_alpha == 0 || old_alpha == 1) {
+      int  vertex = old_alpha == 0 ? old_edge.x : old_edge.y;
+      auto lerp   = step_from_point(
+          triangles, positions, adjacency, tags, field, vertex, old_face);
+      lerps.push_back(lerp);
+      if (lerp.alpha == 0 and lerp.edge.x == to) break;
+      if (lerp.alpha == 1 and lerp.edge.y == to) break;
+      continue;
+    }
+
+    auto& a = positions[old_edge.x];
+    auto& b = positions[front_idx];
+    auto& c = positions[old_edge.y];
+
+    auto [x, step_right] = step_from_edge_to_edge(point, a, b, c, direction);
+
+    auto edge = old_edge;
+    if (step_right) {
+      point  = (1 - x) * a + x * b;
+      edge.y = front_idx;
+    } else {
+      point  = (1 - x) * b + x * c;
+      edge.x = front_idx;
+    }
+    if (opposite_vertex(triangles[face], edge) == -1) {
+      throw std::runtime_error("opposite vertex == -1");
+    }
+
+    lerps.push_back({edge, face, x});
+    if (x == 0 and edge.x == to) break;
+    if (x == 1 and edge.y == to) break;
+  }
+
+  return {from, to, lerps};
+}
+
+pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
+    const surface_path& path, const vector<vec3f>& mesh_positions) {
+  if (path.vertices.empty()) return {};
+
+  auto lines     = vector<vec2i>();
+  auto positions = vector<vec3f>();
+  lines.reserve(path.vertices.size() + 1);
+  positions.reserve(path.vertices.size() + 1);
+  positions.push_back(mesh_positions[path.start]);
+
+  for (int i = 0; i < path.vertices.size() - 1; ++i) {
+    auto [edge, face, x] = path.vertices[i];
+    auto p0              = mesh_positions[edge.x];
+    auto p1              = mesh_positions[edge.y];
+    auto position        = (1 - x) * p0 + x * p1;
+    positions.push_back(position);
+    lines.push_back({i, i + 1});
+  }
+
+  if (path.end != -1) {
+    auto n = (int)path.vertices.size();
+    lines.push_back({n - 1, n});
+    positions.push_back(mesh_positions[path.end]);
+  }
+  return {lines, positions};
+}
+
+}  // namespace integral_paths
+
+// Trace integral path following the gradient of a scalar field
+surface_path follow_gradient_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from) {
+  return integral_paths::follow_gradient_field(
+      triangles, positions, adjacency, tags, tag, field, from);
+}
+surface_path follow_gradient_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from,
+    int to) {
+  return integral_paths::follow_gradient_field(
+      triangles, positions, adjacency, tags, tag, field, from, to);
+}
+
+pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
+    const surface_path& path, const vector<vec3f>& mesh_positions) {
+  return integral_paths::make_lines_from_path(path, mesh_positions);
 }
 
 }  // namespace yocto
