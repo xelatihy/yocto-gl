@@ -456,8 +456,7 @@ void update_camera(trace_camera& camera, const scene_camera& iocamera) {
   camera.focus    = iocamera.focus;
   camera.aperture = iocamera.aperture;
 }
-void update_texture(
-    trace_texture& texture, const scene_texture& iotexture) {
+void update_texture(trace_texture& texture, const scene_texture& iotexture) {
   texture.hdr = iotexture.hdr;
   texture.ldr = iotexture.ldr;
 }
