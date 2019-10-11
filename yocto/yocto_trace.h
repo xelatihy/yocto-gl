@@ -218,6 +218,19 @@ namespace yocto {
 // Construct a scene from io
 void make_trace_scene(trace_scene& scene, const scene_model& ioscene);
 
+// Update a value from io
+void update_camera(trace_camera& camera, const scene_camera& iocamera);
+void update_texture(
+    trace_texture& texture, const scene_texture& iotexture);
+void update_material(
+    trace_material& material, const scene_material& iomaterial);
+void update_shape(trace_shape& shape, const scene_shape& ioshape,
+    const scene_model& ioscene);
+void update_instance(
+    trace_instance& instance, const scene_instance& ioinstance);
+void update_environment(
+    trace_environment& environment, const scene_environment& ioenvironment);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

@@ -447,7 +447,7 @@ pair<vec3f, vec3f> get_subsurface_params(const string& name) {
 namespace yocto {
 
 // convert scene objects
-static void update_camera(trace_camera& camera, const scene_camera& iocamera) {
+void update_camera(trace_camera& camera, const scene_camera& iocamera) {
   camera.frame = iocamera.frame;
   camera.film  = iocamera.aspect >= 1
                     ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
@@ -456,12 +456,12 @@ static void update_camera(trace_camera& camera, const scene_camera& iocamera) {
   camera.focus    = iocamera.focus;
   camera.aperture = iocamera.aperture;
 }
-static void update_texture(
+void update_texture(
     trace_texture& texture, const scene_texture& iotexture) {
   texture.hdr = iotexture.hdr;
   texture.ldr = iotexture.ldr;
 }
-static void update_material(
+void update_material(
     trace_material& material, const scene_material& iomaterial) {
   material.emission         = iomaterial.emission;
   material.diffuse          = iomaterial.diffuse;
@@ -484,7 +484,7 @@ static void update_material(
   material.opacity_tex      = iomaterial.opacity_tex;
   material.subsurface_tex   = iomaterial.subsurface_tex;
 }
-static void update_shape(trace_shape& shape, const scene_shape& ioshape,
+void update_shape(trace_shape& shape, const scene_shape& ioshape,
     const scene_model& ioscene) {
   if (ioshape.subdivisions || ioshape.displacement) {
     auto subdiv = ioshape;
@@ -507,13 +507,13 @@ static void update_shape(trace_shape& shape, const scene_shape& ioshape,
   shape.radius        = ioshape.radius;
   shape.tangents      = ioshape.tangents;
 }
-static void update_instance(
+void update_instance(
     trace_instance& instance, const scene_instance& ioinstance) {
   instance.frame    = ioinstance.frame;
   instance.shape    = ioinstance.shape;
   instance.material = ioinstance.material;
 }
-static void update_environment(
+void update_environment(
     trace_environment& environment, const scene_environment& ioenvironment) {
   environment.frame        = ioenvironment.frame;
   environment.emission     = ioenvironment.emission;
