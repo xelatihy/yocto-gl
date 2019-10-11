@@ -489,7 +489,7 @@ static void update_shape(trace_shape& shape, const scene_shape& ioshape,
   if (ioshape.subdivisions || ioshape.displacement) {
     auto subdiv = ioshape;
     if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
-    if (subdiv.displacement && subdiv.displacement_tex < 0)
+    if (subdiv.displacement && subdiv.displacement_tex >= 0)
       subdiv = displace_shape(ioscene, subdiv);
     return update_shape(shape, subdiv, ioscene);
   }
