@@ -158,17 +158,15 @@ int main(int num_args, const char* args[]) {
   auto data = my_data{};
 
   // Create callbacks that interface with yimshproc
-  auto init = [&data](app_state& app) {
-    // my_init(data, app);
-  };
+  auto init         = [&data](app_state& app) { my_init(data, app); };
   auto key_callback = [&data](app_state& app, int key, int s, int a, int m) {
-    // my_keycallback(data, app, key, s, a, m);
+    my_keycallback(data, app, key, s, a, m);
   };
   auto click_callback = [&data](app_state& app, int face, vec2f uv, float d) {
-    // my_click_callback(data, app, face, uv, d);
+    my_click_callback(data, app, face, uv, d);
   };
   auto draw_glwidgets = [&data](app_state& app, const opengl_window& win) {
-    // my_draw_glwidgets(data, app, win);
+    my_draw_glwidgets(data, app, win);
   };
 
   yimshproc(input_filename, init, key_callback, click_callback, draw_glwidgets);
