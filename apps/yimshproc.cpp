@@ -42,14 +42,8 @@ void my_keycallback(my_data& data, app_state& app, int key, int scancode,
   }
 }
 
-void my_click_callback(
-    my_data& data, app_state& app, int face, const vec2f& uv, float distance) {
-  auto uvw = vec3f{uv.x, uv.y, 1 - uv.x - uv.y};
-  int  k   = 0;
-  if (uvw.x > uvw.y and uvw.x > uvw.z) k = 1;
-  if (uvw.y > uvw.x and uvw.y > uvw.z) k = 2;
-  auto vertex = app.shape.triangles[face][k];
-
+void my_click_callback(my_data& data, app_state& app, int face, const vec2f& uv,
+    int vertex, float distance) {
   printf("clicked vertex: %d\n", vertex);
   data.vertex_selection.push_back(vertex);
 
@@ -67,25 +61,10 @@ void my_draw_glwidgets(
       data.scalar_field = compute_geodesic_distances(
           data.solver, data.vertex_selection);
 
-      // We should make this function public from yocto_shape
-      auto compute_gradient = [](const vector<vec3i>&  triangles,
-                                  const vector<vec3f>& positions,
-                                  const vector<float>& field, int face) {
-        auto& t      = triangles[face];
-        auto  xy     = positions[t.y] - positions[t.x];
-        auto  yz     = positions[t.z] - positions[t.y];
-        auto  zx     = positions[t.x] - positions[t.z];
-        auto  normal = normalize(cross(zx, xy));
-        auto  result = zero3f;
-        result += field[t.x] * cross(normal, yz);
-        result += field[t.y] * cross(normal, zx);
-        result += field[t.z] * cross(normal, xy);
-        return result;
-      };
       data.vector_field = vector<vec3f>(app.shape.triangles.size());
       for (int i = 0; i < app.shape.triangles.size(); ++i) {
         data.vector_field[i] = compute_gradient(
-            app.shape.triangles, app.shape.positions, data.scalar_field, i);
+            app.shape.triangles[i], app.shape.positions, data.scalar_field);
       }
       update_glvector_field(app, data.vector_field, 100);
     }
@@ -158,12 +137,15 @@ int main(int num_args, const char* args[]) {
   auto data = my_data{};
 
   // Create callbacks that interface with yimshproc
-  auto init         = [&data](app_state& app) { my_init(data, app); };
+  auto init = [&data](app_state& app) {
+    auto timer = print_timed("Init my data");
+    my_init(data, app);
+  };
   auto key_callback = [&data](app_state& app, int key, int s, int a, int m) {
     my_keycallback(data, app, key, s, a, m);
   };
-  auto click_callback = [&data](app_state& app, int face, vec2f uv, float d) {
-    my_click_callback(data, app, face, uv, d);
+  auto click_callback = [&data](app_state& a, int f, vec2f uv, int v, float d) {
+    my_click_callback(data, a, f, uv, v, d);
   };
   auto draw_glwidgets = [&data](app_state& app, const opengl_window& win) {
     my_draw_glwidgets(data, app, win);

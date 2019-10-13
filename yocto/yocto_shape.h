@@ -624,6 +624,9 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
 vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions);
 
+vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
+    const vector<float>& field);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

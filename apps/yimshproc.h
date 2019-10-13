@@ -12,17 +12,17 @@ using namespace yocto;
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
-  std::function<void(app_state&)>                       init           = {};
-  std::function<void(app_state&, int, int, int, int)>   key_callback   = {};
-  std::function<void(app_state&, int, vec2f, float)>    click_callback = {};
-  std::function<void(app_state&, const opengl_window&)> draw_glwidgets = {};
+  std::function<void(app_state&)>                         init;
+  std::function<void(app_state&, int, int, int, int)>     key_callback;
+  std::function<void(app_state&, int, vec2f, int, float)> click_callback;
+  std::function<void(app_state&, const opengl_window&)>   draw_glwidgets;
+
+  // Geometry data
+  yocto_shape shape;
 
   // OpenGL data
   opengl_scene        scene          = {};
   draw_glscene_params opengl_options = {};
-
-  // Geometry data
-  yocto_shape shape;
 
   // Interaction data
   float        time       = 0;
@@ -330,7 +330,12 @@ void mouse_button_callback(
         app.shape.positions, ray, face, uv, distance);
 
     if (hit) {
-      app.click_callback(app, face, uv, distance);
+      auto uvw = vec3f{uv.x, uv.y, 1 - uv.x - uv.y};
+      int  k   = 0;
+      if (uvw.x > uvw.y and uvw.x > uvw.z) k = 1;
+      if (uvw.y > uvw.x and uvw.y > uvw.z) k = 2;
+      auto vertex = app.shape.triangles[face][k];
+      app.click_callback(app, face, uv, vertex, distance);
     }
   }
 }
@@ -410,7 +415,7 @@ void run_app(app_state& app) {
 void yimshproc(const string&                                  input_filename,
     std::function<void(app_state&)>                           init,
     std::function<void(app_state&, int, int, int, int)>       key_callback,
-    std::function<void(app_state&, int, vec2f, float)>        click_callback,
+    std::function<void(app_state&, int, vec2f, int, float)>   click_callback,
     std::function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
   auto app = app_state{};
 
