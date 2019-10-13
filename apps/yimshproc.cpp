@@ -100,7 +100,7 @@ void my_draw_glwidgets(
             app.shape.positions, data.face_adjacency,
             vector<int>(app.shape.triangles.size(), 0), 0, field, from, to);
 
-        positions += get_positions_from_path(path, app.shape.positions);
+        positions += make_positions_from_path(path, app.shape.positions);
       }
       update_glpolyline(app, positions);
     }
@@ -123,16 +123,7 @@ void my_draw_glwidgets(
   }
 
   if (draw_glbutton(win, "Clear")) {
-    for (int i = 0; i < app.scene.shapes.size(); i++) {
-      if (i == app.glshape_id) continue;
-      if (i == app.gledges_id) continue;
-      delete_glshape(app.scene.shapes[i]);
-    }
-
-    app.vertex_selection.clear();
-    delete_glarraybuffer(app.glshape().colors);
-    init_glarraybuffer(app.glshape().colors,
-        vector<vec4f>(app.shape.positions.size(), {1, 1, 1, 1}));
+    clear(app);
   }
 }
 

@@ -199,8 +199,10 @@ int main(int argc, const char** argv) {
     vector<vec2i> lines;
     vector<vec3f> positions;
     for (int i = 0; i < 3; i++) {
-      auto [line, pos] = make_lines_from_path(paths[i], shape.positions);
+      auto pos = make_positions_from_path(paths[i], shape.positions);
+      auto line = vector<vec2i>(pos.size() - 1);
       for (int k = 0; k < line.size(); k++) {
+          line[k] = {k, k+1};
         line[k] += (int)lines.size();
       }
       lines += line;

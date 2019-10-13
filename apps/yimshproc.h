@@ -7,6 +7,7 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
+// @Issue: We need glfw here to set missing callbacks in yocto_opengl.h
 #include <GLFW/glfw3.h>
 
 struct app_state {
@@ -39,142 +40,7 @@ struct app_state {
   opengl_shape& glpolyline() { return scene.shapes[glpolyline_id]; }
 };
 
-void init_camera(app_state& app) {
-  app.camera = yocto_camera{};
-  auto from  = vec3f{0, 0.5, 1.5};
-  auto to    = vec3f{0, 0, 0};
-  auto up    = vec3f{0, 1, 0};
-  // camera.frame     = lookat_frame(from, to, up);
-  // camera.yfov      = radians(45);
-
-  app.camera.lens         = 0.02f;
-  app.camera.orthographic = false;
-  app.camera.aperture     = 0;
-  app.camera.frame        = lookat_frame(from, to, up);
-  app.camera.film         = {0.036f, 0.015f};
-  app.camera.focus        = length(to - from);
-  app.camera_focus        = app.camera.focus;
-}
-
-void update_glpolyline(app_state& app, const vector<vec3f>& vertices) {
-  auto& glshape = app.glpolyline();
-  delete_glarraybuffer(glshape.positions);
-  delete_glelementbuffer(glshape.lines);
-  if (vertices.size()) {
-    auto elements = vector<vec2i>(vertices.size() - 1);
-    for (int i = 0; i < elements.size(); i++) elements[i] = {i, i + 1};
-    init_glarraybuffer(glshape.positions, vertices, false);
-    init_glelementbuffer(glshape.lines, elements, false);
-  }
-}
-
-void update_glpoints(app_state& app, const vector<vec3f>& points) {
-  auto& glshape = app.glpoints();
-  delete_glarraybuffer(glshape.positions);
-  delete_glelementbuffer(glshape.points);
-  if (points.size()) {
-    auto elements = vector<int>(points.size());
-    for (int i = 0; i < elements.size(); i++) elements[i] = i;
-    init_glarraybuffer(glshape.positions, points, false);
-    init_glarraybuffer(
-        glshape.normals, vector<vec3f>(points.size(), {0, 0, 1}), false);
-    init_glelementbuffer(glshape.points, elements, false);
-  }
-}
-
-void update_glvector_field(
-    app_state& app, const vector<vec3f>& vector_field, float scale = 0.01) {
-  auto perface   = vector_field.size() == app.shape.triangles.size();
-  auto pervertex = vector_field.size() == app.shape.positions.size();
-
-  if (!perface && !pervertex) {
-    throw std::runtime_error("input vector field has wrong size\n");
-  }
-
-  auto& glshape = app.glvector_field();
-  delete_glarraybuffer(glshape.positions);
-  delete_glelementbuffer(glshape.lines);
-  auto size = perface ? app.shape.triangles.size() : app.shape.positions.size();
-  auto positions = vector<vec3f>(size * 2);
-
-  // Per-face vector field
-  if (perface) {
-    for (int i = 0; i < app.shape.triangles.size(); i++) {
-      auto x      = app.shape.positions[app.shape.triangles[i].x];
-      auto y      = app.shape.positions[app.shape.triangles[i].y];
-      auto z      = app.shape.positions[app.shape.triangles[i].z];
-      auto normal = triangle_normal(x, y, z);
-      normal *= 0.0001;
-      auto center          = (x + y + z) / 3;
-      auto from            = center + normal;
-      auto to              = from + (scale * vector_field[i]) + normal;
-      positions[i * 2]     = from;
-      positions[i * 2 + 1] = to;
-    }
-  } else {
-    for (int i = 0; i < app.shape.positions.size(); i++) {
-      auto from            = app.shape.positions[i];
-      auto to              = from + scale * vector_field[i];
-      positions[i * 2]     = from;
-      positions[i * 2 + 1] = to;
-    }
-  }
-  init_glarraybuffer(glshape.positions, positions, false);
-
-  auto elements = vector<vec2i>(size);
-  for (int i = 0; i < elements.size(); i++) {
-    elements[i] = {2 * i, 2 * i + 1};
-  }
-  init_glelementbuffer(glshape.lines, elements, false);
-}
-
-void update_gledges(app_state& app) {
-  auto& glshape = app.gledges();
-  delete_glarraybuffer(app.gledges().positions);
-  delete_glelementbuffer(app.gledges().lines);
-
-  auto positions = app.shape.positions;
-  for (int i = 0; i < positions.size(); i++) {
-    positions[i] += app.shape.normals[i] * 0.0001;
-  }
-  init_glarraybuffer(glshape.positions, positions, false);
-
-  auto elements = vector<vec2i>();
-  elements.reserve(app.shape.triangles.size() * 3);
-  for (int i = 0; i < app.shape.triangles.size(); i++) {
-    for (int k = 0; k < 3; k++) {
-      auto a = app.shape.triangles[i][k];
-      auto b = app.shape.triangles[i][(k + 1) % 3];
-      if (a < b) {
-        elements.push_back({a, b});
-      }
-    }
-  }
-  init_glelementbuffer(glshape.lines, elements, false);
-}
-
-vector<vec3f> get_positions_from_path(
-    const surface_path& path, const vector<vec3f>& mesh_positions) {
-  if (path.vertices.empty()) return {};
-
-  auto positions = vector<vec3f>();
-  positions.reserve(path.vertices.size() + 1);
-  positions.push_back(mesh_positions[path.start]);
-
-  for (int i = 0; i < path.vertices.size() - 1; ++i) {
-    auto [edge, face, x] = path.vertices[i];
-    auto p0              = mesh_positions[edge.x];
-    auto p1              = mesh_positions[edge.y];
-    auto position        = (1 - x) * p0 + x * p1;
-    positions.push_back(position);
-  }
-
-  if (path.end != -1) {
-    positions.push_back(mesh_positions[path.end]);
-  }
-  return positions;
-}
-
+// @Issue: Maybe this in yocto_opengl.h?
 void delete_glshape(opengl_shape& glshape) {
   delete_glarraybuffer(glshape.positions);
   delete_glarraybuffer(glshape.normals);
@@ -188,10 +54,14 @@ void delete_glshape(opengl_shape& glshape) {
   delete_glelementbuffer(glshape.edges);
 }
 
-// This function must be called every time the geometry is updated
 void update_glshape(app_state& app) {
+  // @Issue: This app is specialized for a model that is a triangle mesh.
+  //    Loading a generic shape is unsafe, maybe we should load only
+  //    triangle meshes here...
+
   auto& glshape = app.glshape();
   auto& shape   = app.shape;
+  delete_glshape(glshape);
   if (shape.quadspos.empty()) {
     if (!shape.positions.empty())
       init_glarraybuffer(glshape.positions, shape.positions, false);
@@ -232,6 +102,97 @@ void update_glshape(app_state& app) {
     }
   }
 }
+void update_glpolyline(app_state& app, const vector<vec3f>& vertices) {
+  auto& glshape = app.glpolyline();
+  delete_glshape(glshape);
+  if (vertices.size()) {
+    auto elements = vector<vec2i>(vertices.size() - 1);
+    for (int i = 0; i < elements.size(); i++) elements[i] = {i, i + 1};
+    init_glarraybuffer(glshape.positions, vertices, false);
+    init_glelementbuffer(glshape.lines, elements, false);
+  }
+}
+
+void update_glpoints(app_state& app, const vector<vec3f>& points) {
+  auto& glshape = app.glpoints();
+  delete_glshape(glshape);
+  if (points.size()) {
+    auto elements = vector<int>(points.size());
+    for (int i = 0; i < elements.size(); i++) elements[i] = i;
+    init_glarraybuffer(glshape.positions, points, false);
+    init_glarraybuffer(
+        glshape.normals, vector<vec3f>(points.size(), {0, 0, 1}), false);
+    init_glelementbuffer(glshape.points, elements, false);
+  }
+}
+
+void update_glvector_field(
+    app_state& app, const vector<vec3f>& vector_field, float scale = 0.01) {
+  auto perface   = vector_field.size() == app.shape.triangles.size();
+  auto pervertex = vector_field.size() == app.shape.positions.size();
+
+  if (!perface && !pervertex) {
+    throw std::runtime_error("input vector field has wrong size\n");
+  }
+
+  auto& glshape = app.glvector_field();
+  delete_glshape(glshape);
+  auto size = perface ? app.shape.triangles.size() : app.shape.positions.size();
+  auto positions = vector<vec3f>(size * 2);
+
+  // Per-face vector field
+  if (perface) {
+    for (int i = 0; i < app.shape.triangles.size(); i++) {
+      auto x      = app.shape.positions[app.shape.triangles[i].x];
+      auto y      = app.shape.positions[app.shape.triangles[i].y];
+      auto z      = app.shape.positions[app.shape.triangles[i].z];
+      auto normal = triangle_normal(x, y, z);
+      normal *= 0.0001;
+      auto center          = (x + y + z) / 3;
+      auto from            = center + normal;
+      auto to              = from + (scale * vector_field[i]) + normal;
+      positions[i * 2]     = from;
+      positions[i * 2 + 1] = to;
+    }
+  } else {
+    for (int i = 0; i < app.shape.positions.size(); i++) {
+      auto from            = app.shape.positions[i];
+      auto to              = from + scale * vector_field[i];
+      positions[i * 2]     = from;
+      positions[i * 2 + 1] = to;
+    }
+  }
+  init_glarraybuffer(glshape.positions, positions, false);
+
+  auto elements = vector<vec2i>(size);
+  for (int i = 0; i < elements.size(); i++) {
+    elements[i] = {2 * i, 2 * i + 1};
+  }
+  init_glelementbuffer(glshape.lines, elements, false);
+}
+
+void update_gledges(app_state& app) {
+  auto& glshape = app.gledges();
+  delete_glshape(glshape);
+  auto positions = app.shape.positions;
+  for (int i = 0; i < positions.size(); i++) {
+    positions[i] += app.shape.normals[i] * 0.0001;
+  }
+  init_glarraybuffer(glshape.positions, positions, false);
+
+  auto elements = vector<vec2i>();
+  elements.reserve(app.shape.triangles.size() * 3);
+  for (int i = 0; i < app.shape.triangles.size(); i++) {
+    for (int k = 0; k < 3; k++) {
+      auto a = app.shape.triangles[i][k];
+      auto b = app.shape.triangles[i][(k + 1) % 3];
+      if (a < b) {
+        elements.push_back({a, b});
+      }
+    }
+  }
+  init_glelementbuffer(glshape.lines, elements, false);
+}
 
 void update_glcamera(opengl_camera& glcamera, const yocto_camera& camera) {
   glcamera.frame  = camera.frame;
@@ -241,8 +202,20 @@ void update_glcamera(opengl_camera& glcamera, const yocto_camera& camera) {
   glcamera.far    = 10000;
 }
 
-// This function must be called every time the geometry is updated
-void update_bvh(app_state& app) {
+void init_camera(app_state& app, const vec3f& from = vec3f{0, 0.5, 1.5},
+    const vec3f& to = {0, 0, 0}) {
+  app.camera              = yocto_camera{};
+  auto up                 = vec3f{0, 1, 0};
+  app.camera.lens         = 0.02f;
+  app.camera.orthographic = false;
+  app.camera.aperture     = 0;
+  app.camera.frame        = lookat_frame(from, to, up);
+  app.camera.film         = {0.036f, 0.015f};
+  app.camera.focus        = length(to - from);
+  app.camera_focus        = app.camera.focus;
+}
+
+void init_bvh(app_state& app) {
   make_triangles_bvh(app.bvh, app.shape.triangles, app.shape.positions,
       app.shape.radius, false, false);
 }
@@ -306,6 +279,17 @@ void hide_edges(app_state& app) {
 void show_edges(app_state& app) {
   app.show_edges                            = true;
   app.scene.instances[app.gledges_id].shape = app.gledges_id;
+}
+void clear(app_state& app) {
+  for (int i = 0; i < app.scene.shapes.size(); i++) {
+    if (i == app.glshape_id) continue;
+    if (i == app.gledges_id) continue;
+    delete_glshape(app.scene.shapes[i]);
+  }
+  app.vertex_selection.clear();
+  delete_glarraybuffer(app.glshape().colors);
+  init_glarraybuffer(app.glshape().colors,
+      vector<vec4f>(app.shape.positions.size(), {1, 1, 1, 1}));
 }
 
 vec2f get_opengl_mouse_pos_normalized(const opengl_window& win) {
@@ -446,12 +430,12 @@ void yimshproc(const string&                                  input_filename,
         app.shape.normals, app.shape.texcoords, app.shape.colors,
         app.shape.radius);
 
-    update_bvh(app);
+    init_bvh(app);
     init_camera(app);
   }
   app.init           = init;
   app.key_callback   = key_callback;
-  app.draw_glwidgets = draw_glwidgets;  // @Cleanup: win not needed for widgets
+  app.draw_glwidgets = draw_glwidgets;  // @Issue: win not needed for widgets
 
   app.init(app);
   run_app(app);

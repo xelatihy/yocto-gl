@@ -2456,8 +2456,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
 
     int front_idx = opposite_vertex(triangles[face], old_edge);
     if (front_idx == -1) {
-      
-        throw std::runtime_error("programmer error: front_idx is -1");
+      throw std::runtime_error("programmer error: front_idx is -1");
       break;
     }
 
@@ -2499,13 +2498,11 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
   return {from, to, lerps};
 }
 
-pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
+vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions) {
   if (path.vertices.empty()) return {};
 
-  auto lines     = vector<vec2i>();
   auto positions = vector<vec3f>();
-  lines.reserve(path.vertices.size() + 1);
   positions.reserve(path.vertices.size() + 1);
   positions.push_back(mesh_positions[path.start]);
 
@@ -2515,15 +2512,12 @@ pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
     auto p1              = mesh_positions[edge.y];
     auto position        = (1 - x) * p0 + x * p1;
     positions.push_back(position);
-    lines.push_back({i, i + 1});
   }
 
   if (path.end != -1) {
-    auto n = (int)path.vertices.size();
-    lines.push_back({n - 1, n});
     positions.push_back(mesh_positions[path.end]);
   }
-  return {lines, positions};
+  return positions;
 }
 
 }  // namespace integral_paths
@@ -2543,9 +2537,9 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
       triangles, positions, adjacency, tags, tag, field, from, to);
 }
 
-pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
+vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions) {
-  return integral_paths::make_lines_from_path(path, mesh_positions);
+  return integral_paths::make_positions_from_path(path, mesh_positions);
 }
 
 }  // namespace yocto
