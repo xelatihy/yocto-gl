@@ -7,7 +7,9 @@ struct my_data {
   geodesic_solver     solver;
   vector<float>       scalar_field;
   vector<vec3f>       vector_field;
-  int                 num_samples = 500;
+
+  int         num_samples      = 500;
+  vector<int> vertex_selection = {};
 };
 
 void my_init(my_data& data, app_state& app) {
@@ -35,18 +37,35 @@ void my_keycallback(my_data& data, app_state& app, int key, int scancode,
     update_glcamera(app.scene.cameras[0], app.camera);
   }
 
-  if (key == GLFW_KEY_A) {
-    printf("A pressed!\n");
-    // characters...
+  if (key == GLFW_KEY_Z) {
+    printf("Z pressed!\n");
   }
+}
+
+void my_click_callback(
+    my_data& data, app_state& app, int face, const vec2f& uv, float distance) {
+  auto uvw = vec3f{uv.x, uv.y, 1 - uv.x - uv.y};
+  int  k   = 0;
+  if (uvw.x > uvw.y and uvw.x > uvw.z) k = 1;
+  if (uvw.y > uvw.x and uvw.y > uvw.z) k = 2;
+  auto vertex = app.shape.triangles[face][k];
+
+  printf("clicked vertex: %d\n", vertex);
+  data.vertex_selection.push_back(vertex);
+
+  auto positions = vector<vec3f>(data.vertex_selection.size());
+  for (int i = 0; i < positions.size(); ++i) {
+    positions[i] = app.shape.positions[data.vertex_selection[i]];
+  }
+  update_glpoints(app, positions);
 }
 
 void my_draw_glwidgets(
     my_data& data, app_state& app, const opengl_window& win) {
   if (draw_glbutton(win, "Geodesic gradient field")) {
-    if (app.vertex_selection.size() > 1) {
+    if (data.vertex_selection.size() > 1) {
       data.scalar_field = compute_geodesic_distances(
-          data.solver, app.vertex_selection);
+          data.solver, data.vertex_selection);
 
       // We should make this function public from yocto_shape
       auto compute_gradient = [](const vector<vec3i>&  triangles,
@@ -73,9 +92,9 @@ void my_draw_glwidgets(
   }
 
   if (draw_glbutton(win, "Geodesic distance field")) {
-    if (app.vertex_selection.size()) {
+    if (data.vertex_selection.size()) {
       data.scalar_field = compute_geodesic_distances(
-          data.solver, app.vertex_selection);
+          data.solver, data.vertex_selection);
       auto colors = vector<vec4f>(data.scalar_field.size());
       for (int i = 0; i < colors.size(); ++i) {
         colors[i]   = vec4f(data.scalar_field[i]);
@@ -86,12 +105,12 @@ void my_draw_glwidgets(
   }
 
   if (draw_glbutton(win, "Compute geodesic path")) {
-    if (app.vertex_selection.size() > 1) {
+    if (data.vertex_selection.size() > 1) {
       auto positions = vector<vec3f>();
-      auto n         = app.vertex_selection.size();
+      auto n         = data.vertex_selection.size();
       for (int i = 0; i < n - (n < 3); ++i) {
-        auto from  = app.vertex_selection[i];
-        auto to    = app.vertex_selection[(i + 1) % n];
+        auto from  = data.vertex_selection[i];
+        auto to    = data.vertex_selection[(i + 1) % n];
         auto field = compute_geodesic_distances(data.solver, {to});
         for (auto& f : field) f = -f;
 
@@ -107,11 +126,11 @@ void my_draw_glwidgets(
   }
 
   if (draw_glslider(win, "Sample points", data.num_samples, 0, 10000)) {
-    app.vertex_selection = sample_vertices_poisson(
+    data.vertex_selection = sample_vertices_poisson(
         data.solver, data.num_samples);
-    auto positions = vector<vec3f>(app.vertex_selection.size());
+    auto positions = vector<vec3f>(data.vertex_selection.size());
     for (int i = 0; i < positions.size(); ++i)
-      positions[i] = app.shape.positions[app.vertex_selection[i]];
+      positions[i] = app.shape.positions[data.vertex_selection[i]];
     update_glpoints(app, positions);
   }
 
@@ -123,6 +142,7 @@ void my_draw_glwidgets(
   }
 
   if (draw_glbutton(win, "Clear")) {
+    data.vertex_selection.clear();
     clear(app);
   }
 }
@@ -138,13 +158,18 @@ int main(int num_args, const char* args[]) {
   auto data = my_data{};
 
   // Create callbacks that interface with yimshproc
-  auto init         = [&data](app_state& app) { my_init(data, app); };
+  auto init = [&data](app_state& app) {
+    // my_init(data, app);
+  };
   auto key_callback = [&data](app_state& app, int key, int s, int a, int m) {
-    my_keycallback(data, app, key, s, a, m);
+    // my_keycallback(data, app, key, s, a, m);
+  };
+  auto click_callback = [&data](app_state& app, int face, vec2f uv, float d) {
+    // my_click_callback(data, app, face, uv, d);
   };
   auto draw_glwidgets = [&data](app_state& app, const opengl_window& win) {
-    my_draw_glwidgets(data, app, win);
+    // my_draw_glwidgets(data, app, win);
   };
 
-  yimshproc(input_filename, init, key_callback, draw_glwidgets);
+  yimshproc(input_filename, init, key_callback, click_callback, draw_glwidgets);
 }

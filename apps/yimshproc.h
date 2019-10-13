@@ -7,13 +7,14 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-// @Issue: We need glfw here to set missing callbacks in yocto_opengl.h
+// @Issue: We need glfw here to set callbacks that are missing in yocto_opengl.h
 #include <GLFW/glfw3.h>
 
 struct app_state {
-  // Callbacks available to user to build its own behaviors.
+  // Callbacks available for user to build its own behaviors
   std::function<void(app_state&)>                       init           = {};
   std::function<void(app_state&, int, int, int, int)>   key_callback   = {};
+  std::function<void(app_state&, int, vec2f, float)>    click_callback = {};
   std::function<void(app_state&, const opengl_window&)> draw_glwidgets = {};
 
   // OpenGL data
@@ -23,10 +24,9 @@ struct app_state {
   // Geometry data
   yocto_shape shape;
 
-  // Interacion data
-  float        time             = 0;
-  vector<int>  vertex_selection = {};
-  bool         show_edges       = false;
+  // Interaction data
+  float        time       = 0;
+  bool         show_edges = false;
   yocto_camera camera;
   float        camera_focus;
   bvh_tree     bvh;
@@ -102,6 +102,7 @@ void update_glshape(app_state& app) {
     }
   }
 }
+
 void update_glpolyline(app_state& app, const vector<vec3f>& vertices) {
   auto& glshape = app.glpolyline();
   delete_glshape(glshape);
@@ -220,58 +221,6 @@ void init_bvh(app_state& app) {
       app.shape.radius, false, false);
 }
 
-void init_opengl_scene(app_state& app) {
-  make_glscene(app.scene);
-  update_glcamera(app.scene.cameras.emplace_back(), app.camera);
-
-  // materials[0] is the material of the model
-  auto shape_material      = opengl_material{};
-  shape_material.diffuse   = {1, 0.2, 0};
-  shape_material.roughness = 0.3;
-  app.scene.materials.push_back(shape_material);
-
-  // materials[1] is the material for the lines and points
-  auto lines_material      = opengl_material{};
-  lines_material.emission  = {1, 1, 1};
-  lines_material.roughness = 0.0;
-  app.scene.materials.push_back(lines_material);
-
-  // shapes[0] is the model
-  app.glshape_id = app.scene.shapes.size();
-  app.scene.shapes.push_back({});
-  update_glshape(app);
-
-  // shapes[1] are the points
-  app.glpoints_id = app.scene.shapes.size();
-  app.scene.shapes.push_back({});
-
-  // shapes[2] is the vector field
-  app.glvector_field_id = app.scene.shapes.size();
-  app.scene.shapes.push_back({});
-
-  app.gledges_id = app.scene.shapes.size();
-  app.scene.shapes.push_back({});
-  update_gledges(app);
-
-  app.glpolyline_id = app.scene.shapes.size();
-  app.scene.shapes.push_back({});
-
-  app.scene.instances = vector<opengl_instance>(5);
-  for (int i = 0; i < app.scene.instances.size(); ++i) {
-    app.scene.instances[i].shape    = i;
-    app.scene.instances[i].material = i ? 1 : 0;
-  }
-
-  // hide edges
-  app.show_edges                            = false;
-  app.scene.instances[app.gledges_id].shape = -1;
-
-  // lights
-  app.scene.lights.push_back({{5, 5, 5}, {30, 30, 30}, 0});
-  app.scene.lights.push_back({{-5, 5, 5}, {30, 30, 30}, 0});
-  app.scene.lights.push_back({{0, 5, -5}, {30, 30, 30}, 0});
-}
-
 void hide_edges(app_state& app) {
   app.show_edges                            = false;
   app.scene.instances[app.gledges_id].shape = -1;
@@ -280,13 +229,66 @@ void show_edges(app_state& app) {
   app.show_edges                            = true;
   app.scene.instances[app.gledges_id].shape = app.gledges_id;
 }
+
+void init_opengl_scene(app_state& app) {
+  make_glscene(app.scene);
+  update_glcamera(app.scene.cameras.emplace_back(), app.camera);
+
+  auto shape_material      = opengl_material{};
+  shape_material.diffuse   = {1, 0.2, 0};
+  shape_material.roughness = 0.3;
+  app.scene.materials.push_back(shape_material);
+
+  // @Issue: Right now we're missing APIs to color things easily.
+  auto lines_material      = opengl_material{};
+  lines_material.emission  = {1, 1, 1};
+  lines_material.roughness = 0.0;
+  app.scene.materials.push_back(lines_material);
+
+  // The model
+  app.glshape_id = app.scene.shapes.size();
+  app.scene.shapes.push_back({});
+  update_glshape(app);
+
+  // The points
+  app.glpoints_id = app.scene.shapes.size();
+  app.scene.shapes.push_back({});
+
+  // The vector field
+  app.glvector_field_id = app.scene.shapes.size();
+  app.scene.shapes.push_back({});
+
+  // The edges
+  app.gledges_id = app.scene.shapes.size();
+  app.scene.shapes.push_back({});
+  update_gledges(app);
+
+  // The polyline
+  app.glpolyline_id = app.scene.shapes.size();
+  app.scene.shapes.push_back({});
+
+  // Add instances.
+  app.scene.instances = vector<opengl_instance>(5);
+  for (int i = 0; i < app.scene.instances.size(); ++i) {
+    app.scene.instances[i].shape    = i;
+    app.scene.instances[i].material = i ? 1 : 0;
+  }
+
+  // hide edges
+  if (not app.show_edges) hide_edges(app);
+
+  // Add lights
+  app.scene.lights.push_back({{5, 5, 5}, {30, 30, 30}, 0});
+  app.scene.lights.push_back({{-5, 5, 5}, {30, 30, 30}, 0});
+  app.scene.lights.push_back({{0, 5, -5}, {30, 30, 30}, 0});
+}
+
 void clear(app_state& app) {
   for (int i = 0; i < app.scene.shapes.size(); i++) {
     if (i == app.glshape_id) continue;
     if (i == app.gledges_id) continue;
     delete_glshape(app.scene.shapes[i]);
   }
-  app.vertex_selection.clear();
   delete_glarraybuffer(app.glshape().colors);
   init_glarraybuffer(app.glshape().colors,
       vector<vec4f>(app.shape.positions.size(), {1, 1, 1, 1}));
@@ -317,6 +319,8 @@ void mouse_button_callback(
   auto press       = action == GLFW_PRESS;
   auto mouse       = get_opengl_mouse_pos_normalized(*win);
   auto right_click = button == GLFW_MOUSE_BUTTON_RIGHT;
+
+  // Ray trace camera ray
   if (right_click && press) {
     auto  ray = eval_camera(app.camera, mouse, {0.5, 0.5});
     int   face;
@@ -326,22 +330,7 @@ void mouse_button_callback(
         app.shape.positions, ray, face, uv, distance);
 
     if (hit) {
-      int vertex = -1;
-      if (face >= 0 && face < app.shape.triangles.size()) {
-        auto xyz = vec3f{uv.x, uv.y, 1 - uv.x - uv.y};
-        int  i   = 0;
-        if (xyz.x > xyz.y and xyz.x > xyz.z) i = 1;
-        if (xyz.y > xyz.x and xyz.y > xyz.z) i = 2;
-        vertex = app.shape.triangles[face][i];
-      }
-      printf("clicked vertex: %d\n", vertex);
-      app.vertex_selection.push_back(vertex);
-
-      auto positions = vector<vec3f>(app.vertex_selection.size());
-      for (int i = 0; i < positions.size(); ++i) {
-        positions[i] = app.shape.positions[app.vertex_selection[i]];
-      }
-      update_glpoints(app, positions);
+      app.click_callback(app, face, uv, distance);
     }
   }
 }
@@ -421,22 +410,43 @@ void run_app(app_state& app) {
 void yimshproc(const string&                                  input_filename,
     std::function<void(app_state&)>                           init,
     std::function<void(app_state&, int, int, int, int)>       key_callback,
+    std::function<void(app_state&, int, vec2f, float)>        click_callback,
     std::function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
   auto app = app_state{};
-  {
-    // init shape
-    load_shape(input_filename, app.shape.points, app.shape.lines,
-        app.shape.triangles, app.shape.quads, app.shape.positions,
-        app.shape.normals, app.shape.texcoords, app.shape.colors,
-        app.shape.radius);
 
-    init_bvh(app);
-    init_camera(app);
-  }
+  // init shape
+  load_shape(input_filename, app.shape.points, app.shape.lines,
+      app.shape.triangles, app.shape.quads, app.shape.positions,
+      app.shape.normals, app.shape.texcoords, app.shape.colors,
+      app.shape.radius);
+  init_bvh(app);
+  init_camera(app);
+
   app.init           = init;
   app.key_callback   = key_callback;
+  app.click_callback = click_callback;
   app.draw_glwidgets = draw_glwidgets;  // @Issue: win not needed for widgets
 
   app.init(app);
   run_app(app);
 }
+
+// @Issue: Initialize from yocto_shape?
+#if 0
+void yimshproc(yocto_shape&& shape, std::function<void(app_state&)> init,
+    std::function<void(app_state&, int, int, int, int)>       key_callback,
+    std::function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
+  auto app = app_state{};
+
+  app.shape = shape;
+  init_bvh(app);
+  init_camera(app);
+
+  app.init           = init;
+  app.key_callback   = key_callback;
+  app.draw_glwidgets = draw_glwidgets;
+
+  app.init(app);
+  run_app(app);
+}
+#endif
