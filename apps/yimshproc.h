@@ -10,38 +10,28 @@ using namespace yocto;
 #include <GLFW/glfw3.h>
 
 struct app_state {
-  string input_filename  = "model.obj";
-  string output_filename = "model.obj";
-
-  // Callback for user to build its own behaviors.
+  // Callbacks available to user to build its own behaviors.
   std::function<void(app_state&)>                       init           = {};
   std::function<void(app_state&, int, int, int, int)>   key_callback   = {};
   std::function<void(app_state&, const opengl_window&)> draw_glwidgets = {};
 
+  // OpenGL data
   opengl_scene        scene          = {};
   draw_glscene_params opengl_options = {};
 
-  float       time             = 0;
-  vector<int> vertex_selection = {};
+  // Geometry data
+  yocto_shape shape;
 
-  yocto_shape         shape;
-  vector<vec3i>       face_adjacency;
-  vector<vector<int>> vertex_adjacency;
-  geodesic_solver     solver;
-  vector<float>       scalar_field;
-  vector<vec3f>       vector_field;
-  bool                show_edges  = false;
-  int                 num_samples = 500;
-
+  // Interacion data
+  float        time             = 0;
+  vector<int>  vertex_selection = {};
+  bool         show_edges       = false;
   yocto_camera camera;
   float        camera_focus;
   bvh_tree     bvh;
 
-  int           glshape_id        = -1;
-  int           glpoints_id       = -1;
-  int           glvector_field_id = -1;
-  int           gledges_id        = -1;
-  int           glpolyline_id     = -1;
+  // Internal handles
+  int glshape_id, glpoints_id, glvector_field_id, gledges_id, glpolyline_id;
   opengl_shape& glshape() { return scene.shapes[glshape_id]; }
   opengl_shape& glpoints() { return scene.shapes[glpoints_id]; }
   opengl_shape& glvector_field() { return scene.shapes[glvector_field_id]; }
@@ -80,8 +70,8 @@ void update_glpolyline(app_state& app, const vector<vec3f>& vertices) {
 
 void update_glpoints(app_state& app, const vector<vec3f>& points) {
   auto& glshape = app.glpoints();
-  // delete_glarraybuffer(glshape.positions);
-  // delete_glelementbuffer(glshape.points);
+  delete_glarraybuffer(glshape.positions);
+  delete_glelementbuffer(glshape.points);
   if (points.size()) {
     auto elements = vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
@@ -309,6 +299,15 @@ void init_opengl_scene(app_state& app) {
   app.scene.lights.push_back({{0, 5, -5}, {30, 30, 30}, 0});
 }
 
+void hide_edges(app_state& app) {
+  app.show_edges                            = false;
+  app.scene.instances[app.gledges_id].shape = -1;
+}
+void show_edges(app_state& app) {
+  app.show_edges                            = true;
+  app.scene.instances[app.gledges_id].shape = app.gledges_id;
+}
+
 vec2f get_opengl_mouse_pos_normalized(const opengl_window& win) {
   // Get mouse position normalized in [0, 1]^2
   double mouse_x, mouse_y;
@@ -330,10 +329,6 @@ void mouse_button_callback(
     GLFWwindow* window, int button, int action, int mods) {
   auto  win = (opengl_window*)glfwGetWindowUserPointer(window);
   auto& app = *(app_state*)win->user_ptr;
-
-  auto is_key_pressed = [](opengl_window* win, int key) {
-    return glfwGetKey(win->win, key) == GLFW_PRESS;
-  };
 
   auto press       = action == GLFW_PRESS;
   auto mouse       = get_opengl_mouse_pos_normalized(*win);
@@ -439,46 +434,17 @@ void run_app(app_state& app) {
   delete_glwindow(win);
 }
 
-// void init_app(app_state& app, const string& input_filename) {
-//   app.input_filename = input_filename;
-
-//   // init shape
-//   load_shape(app.input_filename, app.shape.points, app.shape.lines,
-//       app.shape.triangles, app.shape.quads, app.shape.positions,
-//       app.shape.normals, app.shape.texcoords, app.shape.colors,
-//       app.shape.radius);
-
-//   // init data
-//   app.face_adjacency   = face_adjacencies(app.shape.triangles);
-//   app.vertex_adjacency = vertex_adjacencies(
-//       app.shape.triangles, app.face_adjacency);
-//   app.solver = make_geodesic_solver(
-//       app.shape.triangles, app.face_adjacency, app.shape.positions);
-
-//   update_bvh(app);
-//   init_camera(app);
-// }
-
 void yimshproc(const string&                                  input_filename,
     std::function<void(app_state&)>                           init,
     std::function<void(app_state&, int, int, int, int)>       key_callback,
     std::function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
   auto app = app_state{};
   {
-    app.input_filename = input_filename;
-
     // init shape
-    load_shape(app.input_filename, app.shape.points, app.shape.lines,
+    load_shape(input_filename, app.shape.points, app.shape.lines,
         app.shape.triangles, app.shape.quads, app.shape.positions,
         app.shape.normals, app.shape.texcoords, app.shape.colors,
         app.shape.radius);
-
-    // init data
-    app.face_adjacency   = face_adjacencies(app.shape.triangles);
-    app.vertex_adjacency = vertex_adjacencies(
-        app.shape.triangles, app.face_adjacency);
-    app.solver = make_geodesic_solver(
-        app.shape.triangles, app.face_adjacency, app.shape.positions);
 
     update_bvh(app);
     init_camera(app);
