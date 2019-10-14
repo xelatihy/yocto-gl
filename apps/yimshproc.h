@@ -8,12 +8,12 @@
 using namespace yocto;
 
 // @Issue: We need glfw here to set callbacks that are missing in yocto_opengl.h
-#include <GLFW/glfw3.h>
+// #include <GLFW/glfw3.h>
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
   std::function<void(app_state&)>                         init;
-  std::function<void(app_state&, int, int, int, int)>     key_callback;
+  std::function<void(app_state&, int, bool)>              key_callback;
   std::function<void(app_state&, int, vec2f, int, float)> click_callback;
   std::function<void(app_state&, const opengl_window&)>   draw_glwidgets;
 
@@ -294,31 +294,31 @@ void clear(app_state& app) {
       vector<vec4f>(app.shape.positions.size(), {1, 1, 1, 1}));
 }
 
-vec2f get_opengl_mouse_pos_normalized(const opengl_window& win) {
-  // Get mouse position normalized in [0, 1]^2
-  double mouse_x, mouse_y;
-  glfwGetCursorPos(win.win, &mouse_x, &mouse_y);
-  int width, height;
-  glfwGetWindowSize(win.win, &width, &height);
-  return vec2f{(float)(mouse_x / width), (float)(mouse_y / height)};
-}
+// vec2f get_opengl_mouse_pos_normalized(const opengl_window& win) {
+//   // Get mouse position normalized in [0, 1]^2
+//   double mouse_x, mouse_y;
+//   glfwGetCursorPos(win.win, &mouse_x, &mouse_y);
+//   int width, height;
+//   glfwGetWindowSize(win.win, &width, &height);
+//   return vec2f{(float)(mouse_x / width), (float)(mouse_y / height)};
+// }
 
-void key_callback(
-    GLFWwindow* window, int key, int scancode, int action, int mods) {
+void key_callback(const opengl_window& win, int key, bool pressing) {
+  // GLFWwindow* window, int key, int scancode, int action, int mods) {
   // ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
-  auto  win = (opengl_window*)glfwGetWindowUserPointer(window);
-  auto& app = *(app_state*)win->user_ptr;
-  app.key_callback(app, key, scancode, action, mods);
+  // auto  win = (opengl_window*)glfwGetWindowUserPointer(window);
+  // auto& app = *(app_state*)win->user_ptr;
+  // app.key_callback(app, key, scancode, action, mods);
+  auto& app = *(app_state*)get_gluser_pointer(win);
+  app.key_callback(app, key, pressing);
 }
 
-void mouse_button_callback(
-    GLFWwindow* window, int button, int action, int mods) {
-  auto  win = (opengl_window*)glfwGetWindowUserPointer(window);
-  auto& app = *(app_state*)win->user_ptr;
+void click_callback(const opengl_window& win, bool left_click, bool press) {
+  auto& app = *(app_state*)get_gluser_pointer(win);
 
-  auto press       = action == GLFW_PRESS;
-  auto mouse       = get_opengl_mouse_pos_normalized(*win);
-  auto right_click = button == GLFW_MOUSE_BUTTON_RIGHT;
+  // auto press       = action == 1;  // GLFW_PRESS;
+  auto mouse       = get_glmouse_pos_normalized(win, false);
+  auto right_click = !left_click;  // GLFW_MOUSE_BUTTON_RIGHT;
 
   // Ray trace camera ray
   if (right_click && press) {
@@ -340,9 +340,11 @@ void mouse_button_callback(
   }
 }
 
-void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-  auto  win  = (opengl_window*)glfwGetWindowUserPointer(window);
-  auto& app  = *(app_state*)win->user_ptr;
+void scroll_callback(const opengl_window& win, float yoffset) {
+  // auto  win  = (opengl_window*)glfwGetWindowUserPointer(window);
+  // auto& app  = *(app_state*)win->user_ptr;
+  auto& app = *(app_state*)get_gluser_pointer(win);
+
   float zoom = yoffset > 0 ? 0.1 : -0.1;
   update_turntable(app.camera.frame, app.camera.focus, zero2f, zoom, zero2f);
   update_glcamera(app.scene.cameras[0], app.camera);
@@ -365,9 +367,12 @@ void run_app(app_state& app) {
   init_glwindow(win, {1280 + 320, 720}, "yimshproc", &app, draw);
   init_opengl_scene(app);
 
-  glfwSetMouseButtonCallback(win.win, mouse_button_callback);
-  glfwSetScrollCallback(win.win, mouse_scroll_callback);
-  glfwSetKeyCallback(win.win, key_callback);
+  // glfwSetMouseButtonCallback(win.win, mouse_button_callback);
+  // glfwSetScrollCallback(win.win, mouse_scroll_callback);
+  // glfwSetKeyCallback(win.win, key_callback);
+  set_click_glcallback(win, click_callback);
+  set_scroll_glcallback(win, scroll_callback);
+  set_key_glcallback(win, key_callback);
 
   // init widget
   init_glwidgets(win);
@@ -414,7 +419,7 @@ void run_app(app_state& app) {
 
 void yimshproc(const string&                                  input_filename,
     std::function<void(app_state&)>                           init,
-    std::function<void(app_state&, int, int, int, int)>       key_callback,
+    std::function<void(app_state&, int, bool)>                key_callback,
     std::function<void(app_state&, int, vec2f, int, float)>   click_callback,
     std::function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
   auto app = app_state{};

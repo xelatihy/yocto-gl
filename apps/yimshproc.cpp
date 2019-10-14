@@ -20,24 +20,26 @@ void my_init(my_data& data, app_state& app) {
       app.shape.triangles, data.face_adjacency, app.shape.positions);
 }
 
-void my_keycallback(my_data& data, app_state& app, int key, int scancode,
-    int action, int mods) {
-  bool pressing = action == GLFW_PRESS;
-
+void my_keycallback(my_data& data, app_state& app, int key, bool pressing) {
+  // bool pressing = 0;  // action == GLFW_PRESS;
   // ignore release
   if (not pressing) return;
+  printf("press: %c [%d]\n", (char)key, key);
 
-  if (key == GLFW_KEY_ENTER) {
+  auto enter = 257;
+  auto esc   = 256;
+
+  if (key == enter) {
     printf("Enter pressed!\n");
   }
 
-  if (key == GLFW_KEY_ESCAPE) {
+  if (key == esc) {
     printf("Esc pressed!\n");
     init_camera(app);
     update_glcamera(app.scene.cameras[0], app.camera);
   }
 
-  if (key == GLFW_KEY_Z) {
+  if (key == 'z') {
     printf("Z pressed!\n");
   }
 }
@@ -141,8 +143,8 @@ int main(int num_args, const char* args[]) {
     auto timer = print_timed("Init my data");
     my_init(data, app);
   };
-  auto key_callback = [&data](app_state& app, int key, int s, int a, int m) {
-    my_keycallback(data, app, key, s, a, m);
+  auto key_callback = [&data](app_state& app, int key, bool pressing) {
+    my_keycallback(data, app, key, pressing);
   };
   auto click_callback = [&data](app_state& a, int f, vec2f uv, int v, float d) {
     my_click_callback(data, a, f, uv, v, d);
