@@ -2176,7 +2176,7 @@ static int adjacent_face(const vector<vec3i>& triangles,
 static vector<int> get_face_ring(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacency, int face, int vertex) {
   auto contains = [](const vec3i& v, int a) -> bool {
-    return v.x == a or v.y == a or v.z == a;
+    return v.x == a || v.y == a || v.z == a;
   };
   auto containsv = [](const vector<int>& v, int a) -> bool {
     return find(v.begin(), v.end(), a) != v.end();
@@ -2197,14 +2197,14 @@ static vector<int> get_face_ring(const vector<vec3i>& triangles,
   auto queue = vector<int>();
   queue.push_back(face);
 
-  while (not queue.empty()) {
+  while (!queue.empty()) {
     int f = queue.back();
     queue.pop_back();
     result.push_back(f);
 
     for (int k = 0; k < 3; ++k) {
       auto edge = vec2i{triangles[f][k], triangles[f][(k + 1) % 3]};
-      if (edge.x == vertex or edge.y == vertex) {
+      if (edge.x == vertex || edge.y == vertex) {
         int neighbor_face = adjacency[f][k];
         if (neighbor_face == -1) continue;
         if (!containsv(result, neighbor_face)) {
@@ -2291,7 +2291,7 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
     auto normal      = cross(right, left);
     auto cross_right = cross(right, direction);
     auto cross_left  = cross(direction, left);
-    return dot(cross_right, normal) > threshold and
+    return dot(cross_right, normal) > threshold &&
            dot(cross_left, normal) > threshold;
   };
 
@@ -2302,7 +2302,7 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
 
   for (auto i = 0; i < triangle_fan.size(); ++i) {
     auto face = triangle_fan[i];
-    if (tag != -1 and tags[face] != tag) continue;
+    if (tag != -1 && tags[face] != tag) continue;
     auto edge = opposite_edge(vertex, triangles[face]);
     if (edge == vec2i{-1, -1}) throw std::runtime_error("edge is {-1, -1}\n");
 
@@ -2425,7 +2425,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     return -1;
   };
   auto contains = [](const vec3i& v, int a) -> bool {
-    return v.x == a or v.y == a or v.z == a;
+    return v.x == a || v.y == a || v.z == a;
   };
 
   auto lerps = vector<path_vertex>();
@@ -2456,8 +2456,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
 
     int front_idx = opposite_vertex(triangles[face], old_edge);
     if (front_idx == -1) {
-      
-        throw std::runtime_error("programmer error: front_idx is -1");
+      throw std::runtime_error("programmer error: front_idx is -1");
       break;
     }
 
@@ -2468,8 +2467,8 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
       auto lerp   = step_from_point(
           triangles, positions, adjacency, tags, field, vertex, old_face);
       lerps.push_back(lerp);
-      if (lerp.alpha == 0 and lerp.edge.x == to) break;
-      if (lerp.alpha == 1 and lerp.edge.y == to) break;
+      if (lerp.alpha == 0 && lerp.edge.x == to) break;
+      if (lerp.alpha == 1 && lerp.edge.y == to) break;
       continue;
     }
 
@@ -2492,8 +2491,8 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
     }
 
     lerps.push_back({edge, face, x});
-    if (x == 0 and edge.x == to) break;
-    if (x == 1 and edge.y == to) break;
+    if (x == 0 && edge.x == to) break;
+    if (x == 1 && edge.y == to) break;
   }
 
   return {from, to, lerps};

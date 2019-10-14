@@ -658,7 +658,7 @@ void draw_glscene(opengl_scene& state, const vec4i& viewport,
   auto& glcamera    = state.cameras.at(params.camera);
   auto  camera_view = mat4f(inverse(glcamera.frame));
   auto  camera_proj = perspective_mat(glcamera.yfov,
-      (float)viewport.z / (float)viewport.w, params.near, params.far);
+      ((float)viewport.z) / ((float)viewport.w), params.near, params.far);
 
   clear_glframebuffer(params.background);
   set_glviewport(viewport);
@@ -1632,8 +1632,7 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
       state.set_dirname(dir_buffer);
     }
     auto current_item = -1;
-    if (ImGui::ListBox(
-            "entries", &current_item,
+    if (ImGui::ListBox("entries", &current_item,
             [](void* data, int idx, const char** out_text) -> bool {
               auto& state = *(filedialog_state*)data;
               *out_text   = state.entries[idx].first.c_str();
