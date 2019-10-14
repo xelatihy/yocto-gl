@@ -2218,24 +2218,6 @@ static vector<int> get_face_ring(const vector<vec3i>& triangles,
   return result;
 }
 
-static vec3f gradient_face(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& field, int face) {
-  auto  result = zero3f;
-  auto& tr     = triangles[face];
-  auto& a      = positions[tr.x];
-  auto& b      = positions[tr.y];
-  auto& c      = positions[tr.z];
-  auto  ab     = b - a;
-  auto  bc     = c - b;
-  auto  ca     = a - c;
-
-  auto normal = normalize(cross(ca, ab));
-  result += field[tr.x] * cross(normal, bc);
-  result += field[tr.y] * cross(normal, ca);
-  result += field[tr.z] * cross(normal, ab);
-  return normalize(result);
-}
-
 static float step_from_point_to_edge(const vec3f& right, const vec3f& left,
     const vec3f& direction, float epsilon = 0.0001f) {
   auto normal            = cross(right, left);
@@ -2311,7 +2293,8 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
     auto c         = positions[edge.y];
     auto left      = c - a;
     auto right     = b - a;
-    auto direction = gradient_face(triangles, positions, field, face);
+    auto direction = normalize(
+        compute_gradient(triangles[face], positions, field));
 
     auto right_dot = dot(normalize(right), direction);
     auto left_dot  = dot(normalize(left), direction);
@@ -2382,7 +2365,8 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
       return surface_path{from, to, lerps};
     }
 
-    auto direction = gradient_face(triangles, positions, field, face);
+    auto direction = normalize(
+        compute_gradient(triangles[face], positions, field));
 
     auto front_idx = opposite_vertex(triangles[face], old_edge);
     if (front_idx == -1) {
@@ -2452,7 +2436,8 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
         }
       }
     }
-    auto direction = gradient_face(triangles, positions, field, face);
+    auto direction = normalize(
+        compute_gradient(triangles[face], positions, field));
 
     int front_idx = opposite_vertex(triangles[face], old_edge);
     if (front_idx == -1) {
@@ -2498,13 +2483,11 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
   return {from, to, lerps};
 }
 
-pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
+vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions) {
   if (path.vertices.empty()) return {};
 
-  auto lines     = vector<vec2i>();
   auto positions = vector<vec3f>();
-  lines.reserve(path.vertices.size() + 1);
   positions.reserve(path.vertices.size() + 1);
   positions.push_back(mesh_positions[path.start]);
 
@@ -2514,15 +2497,12 @@ pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
     auto p1              = mesh_positions[edge.y];
     auto position        = (1 - x) * p0 + x * p1;
     positions.push_back(position);
-    lines.push_back({i, i + 1});
   }
 
   if (path.end != -1) {
-    auto n = (int)path.vertices.size();
-    lines.push_back({n - 1, n});
     positions.push_back(mesh_positions[path.end]);
   }
-  return {lines, positions};
+  return positions;
 }
 
 }  // namespace integral_paths
@@ -2542,9 +2522,22 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
       triangles, positions, adjacency, tags, tag, field, from, to);
 }
 
-pair<vector<vec2i>, vector<vec3f>> make_lines_from_path(
+vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions) {
-  return integral_paths::make_lines_from_path(path, mesh_positions);
+  return integral_paths::make_positions_from_path(path, mesh_positions);
+}
+
+vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
+    const vector<float>& field) {
+  auto xy     = positions[triangle.y] - positions[triangle.x];
+  auto yz     = positions[triangle.z] - positions[triangle.y];
+  auto zx     = positions[triangle.x] - positions[triangle.z];
+  auto normal = normalize(cross(zx, xy));
+  auto result = zero3f;
+  result += field[triangle.x] * cross(normal, yz);
+  result += field[triangle.y] * cross(normal, zx);
+  result += field[triangle.z] * cross(normal, xy);
+  return result;
 }
 
 }  // namespace yocto

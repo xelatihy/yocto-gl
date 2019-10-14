@@ -551,6 +551,10 @@ void make_glscene(opengl_scene& glscene) {
 // Draw a shape
 void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
     const draw_glscene_params& params) {
+  if (instance.shape < 0 || instance.shape > state.shapes.size()) return;
+  if (instance.material < 0 || instance.material > state.materials.size())
+    return;
+
   auto& shape    = state.shapes[instance.shape];
   auto& material = state.materials[instance.material];
 
@@ -1306,6 +1310,8 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
   // init gl extensions
   if (!gladLoadGL())
     throw std::runtime_error("cannot initialize OpenGL extensions");
+
+  glPointSize(10);
 }
 
 void delete_glwindow(opengl_window& win) {
