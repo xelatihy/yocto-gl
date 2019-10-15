@@ -187,22 +187,22 @@ int main(int argc, const char** argv) {
       for (auto& f : fields[i]) f = -f;
     }
 
-    paths.push_back(follow_gradient_field(shape.triangles, shape.positions,
+    paths.push_back(integrate_field(shape.triangles, shape.positions,
         adjacencies, tags, 0, fields[1], p0, p1));
 
-    paths.push_back(follow_gradient_field(shape.triangles, shape.positions,
+    paths.push_back(integrate_field(shape.triangles, shape.positions,
         adjacencies, tags, 0, fields[2], p1, p2));
 
-    paths.push_back(follow_gradient_field(shape.triangles, shape.positions,
+    paths.push_back(integrate_field(shape.triangles, shape.positions,
         adjacencies, tags, 0, fields[0], p2, p0));
 
     vector<vec2i> lines;
     vector<vec3f> positions;
     for (int i = 0; i < 3; i++) {
-      auto pos = make_positions_from_path(paths[i], shape.positions);
+      auto pos  = make_positions_from_path(paths[i], shape.positions);
       auto line = vector<vec2i>(pos.size() - 1);
       for (int k = 0; k < line.size(); k++) {
-          line[k] = {k, k+1};
+        line[k] = {k, k + 1};
         line[k] += (int)lines.size();
       }
       lines += line;

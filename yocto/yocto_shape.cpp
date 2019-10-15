@@ -2318,7 +2318,7 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
   return fallback_lerp;
 }
 
-surface_path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from) {
   auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
@@ -2398,7 +2398,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
   return surface_path{from, 0, lerps};
 }
 
-surface_path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
     int to) {
@@ -2508,23 +2508,36 @@ vector<vec3f> make_positions_from_path(
 }  // namespace integral_paths
 
 // Trace integral path following the gradient of a scalar field
-surface_path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from) {
-  return integral_paths::follow_gradient_field(
+  return integral_paths::integrate_field(
       triangles, positions, adjacency, tags, tag, field, from);
 }
-surface_path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
     int to) {
-  return integral_paths::follow_gradient_field(
+  return integral_paths::integrate_field(
       triangles, positions, adjacency, tags, tag, field, from, to);
 }
 
 vector<vec3f> make_positions_from_path(
     const surface_path& path, const vector<vec3f>& mesh_positions) {
   return integral_paths::make_positions_from_path(path, mesh_positions);
+}
+
+vec3f compute_gradient(const vec3f& p0, const vec3f& p1, const vec3f& p2,
+    float f0, float f1, float f2) {
+  auto p0p1   = p1 - p0;
+  auto p1p2   = p2 - p1;
+  auto p2p0   = p0 - p2;
+  auto normal = normalize(cross(p2p0, p0p1));
+  auto result = zero3f;
+  result += f0 * cross(normal, p1p2);
+  result += f1 * cross(normal, p2p0);
+  result += f2 * cross(normal, p0p1);
+  return result;
 }
 
 vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
