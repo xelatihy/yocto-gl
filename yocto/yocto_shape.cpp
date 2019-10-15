@@ -2527,19 +2527,6 @@ vector<vec3f> make_positions_from_path(
   return integral_paths::make_positions_from_path(path, mesh_positions);
 }
 
-vec3f compute_gradient(const vec3f& p0, const vec3f& p1, const vec3f& p2,
-    float f0, float f1, float f2) {
-  auto p0p1   = p1 - p0;
-  auto p1p2   = p2 - p1;
-  auto p2p0   = p0 - p2;
-  auto normal = normalize(cross(p2p0, p0p1));
-  auto result = zero3f;
-  result += f0 * cross(normal, p1p2);
-  result += f1 * cross(normal, p2p0);
-  result += f2 * cross(normal, p0p1);
-  return result;
-}
-
 vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
     const vector<float>& field) {
   auto xy     = positions[triangle.y] - positions[triangle.x];

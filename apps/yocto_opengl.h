@@ -36,13 +36,6 @@
 
 #include "../yocto/yocto_scene.h"
 
-// #ifdef __APPLE__
-// #define GL_SILENCE_DEPRECATION
-// #endif
-// #include "ext/glad/glad.h"
-
-// #include <GLFW/glfw3.h>
-
 #include <functional>
 
 // forward declaration
