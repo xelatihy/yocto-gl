@@ -613,10 +613,10 @@ struct surface_path {
 };
 
 // Trace integral path following the gradient of a scalar field
-surface_path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from);
-surface_path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
     int to);

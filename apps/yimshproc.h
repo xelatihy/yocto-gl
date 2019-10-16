@@ -7,13 +7,10 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-// @Issue: We need glfw here to set callbacks that are missing in yocto_opengl.h
-#include <GLFW/glfw3.h>
-
 struct app_state {
   // Callbacks available for user to build its own behaviors
   std::function<void(app_state&)>                         init;
-  std::function<void(app_state&, int, int, int, int)>     key_callback;
+  std::function<void(app_state&, int, bool)>              key_callback;
   std::function<void(app_state&, int, vec2f, int, float)> click_callback;
   std::function<void(app_state&, const opengl_window&)>   draw_glwidgets;
 
@@ -245,25 +242,25 @@ void init_opengl_scene(app_state& app) {
   lines_material.roughness = 0.0;
   app.scene.materials.push_back(lines_material);
 
-  // The model
+  // The model.
   app.glshape_id = app.scene.shapes.size();
   app.scene.shapes.push_back({});
   update_glshape(app);
 
-  // The points
+  // The points.
   app.glpoints_id = app.scene.shapes.size();
   app.scene.shapes.push_back({});
 
-  // The vector field
+  // The vector field.
   app.glvector_field_id = app.scene.shapes.size();
   app.scene.shapes.push_back({});
 
-  // The edges
+  // The edges.
   app.gledges_id = app.scene.shapes.size();
   app.scene.shapes.push_back({});
   update_gledges(app);
 
-  // The polyline
+  // The polyline.
   app.glpolyline_id = app.scene.shapes.size();
   app.scene.shapes.push_back({});
 
@@ -274,10 +271,10 @@ void init_opengl_scene(app_state& app) {
     app.scene.instances[i].material = i ? 1 : 0;
   }
 
-  // hide edges
+  // Hide edges.
   if (not app.show_edges) hide_edges(app);
 
-  // Add lights
+  // Add lights.
   app.scene.lights.push_back({{5, 5, 5}, {30, 30, 30}, 0});
   app.scene.lights.push_back({{-5, 5, 5}, {30, 30, 30}, 0});
   app.scene.lights.push_back({{0, 5, -5}, {30, 30, 30}, 0});
@@ -294,34 +291,17 @@ void clear(app_state& app) {
       vector<vec4f>(app.shape.positions.size(), {1, 1, 1, 1}));
 }
 
-vec2f get_opengl_mouse_pos_normalized(const opengl_window& win) {
-  // Get mouse position normalized in [0, 1]^2
-  double mouse_x, mouse_y;
-  glfwGetCursorPos(win.win, &mouse_x, &mouse_y);
-  int width, height;
-  glfwGetWindowSize(win.win, &width, &height);
-  return vec2f{(float)(mouse_x / width), (float)(mouse_y / height)};
+void key_callback(const opengl_window& win, int key, bool pressing) {
+  auto& app = *(app_state*)get_gluser_pointer(win);
+  app.key_callback(app, key, pressing);
 }
 
-void key_callback(
-    GLFWwindow* window, int key, int scancode, int action, int mods) {
-  // ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
-  auto  win = (opengl_window*)glfwGetWindowUserPointer(window);
-  auto& app = *(app_state*)win->user_ptr;
-  app.key_callback(app, key, scancode, action, mods);
-}
+void click_callback(const opengl_window& win, bool left_click, bool press) {
+  auto& app   = *(app_state*)get_gluser_pointer(win);
+  auto  mouse = get_glmouse_pos_normalized(win, false);
 
-void mouse_button_callback(
-    GLFWwindow* window, int button, int action, int mods) {
-  auto  win = (opengl_window*)glfwGetWindowUserPointer(window);
-  auto& app = *(app_state*)win->user_ptr;
-
-  auto press       = action == GLFW_PRESS;
-  auto mouse       = get_opengl_mouse_pos_normalized(*win);
-  auto right_click = button == GLFW_MOUSE_BUTTON_RIGHT;
-
-  // Ray trace camera ray
-  if (right_click && press) {
+  // Ray trace camera ray.
+  if (!left_click && press) {
     auto  ray = eval_camera(app.camera, mouse, {0.5, 0.5});
     int   face;
     vec2f uv;
@@ -332,23 +312,21 @@ void mouse_button_callback(
     if (hit) {
       auto uvw = vec3f{uv.x, uv.y, 1 - uv.x - uv.y};
       int  k   = 0;
-      if (uvw.x > uvw.y and uvw.x > uvw.z) k = 1;
-      if (uvw.y > uvw.x and uvw.y > uvw.z) k = 2;
+      if (uvw.x > uvw.y && uvw.x > uvw.z) k = 1;
+      if (uvw.y > uvw.x && uvw.y > uvw.z) k = 2;
       auto vertex = app.shape.triangles[face][k];
       app.click_callback(app, face, uv, vertex, distance);
     }
   }
 }
 
-void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-  auto  win  = (opengl_window*)glfwGetWindowUserPointer(window);
-  auto& app  = *(app_state*)win->user_ptr;
+void scroll_callback(const opengl_window& win, float yoffset) {
+  auto& app  = *(app_state*)get_gluser_pointer(win);
   float zoom = yoffset > 0 ? 0.1 : -0.1;
   update_turntable(app.camera.frame, app.camera.focus, zero2f, zoom, zero2f);
   update_glcamera(app.scene.cameras[0], app.camera);
 }
 
-// draw with shading
 void draw(const opengl_window& win) {
   auto& app = *(app_state*)get_gluser_pointer(win);
   draw_glscene(
@@ -360,21 +338,20 @@ void draw(const opengl_window& win) {
 }
 
 void run_app(app_state& app) {
-  // window
+  // Init window.
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yimshproc", &app, draw);
   init_opengl_scene(app);
 
-  glfwSetMouseButtonCallback(win.win, mouse_button_callback);
-  glfwSetScrollCallback(win.win, mouse_scroll_callback);
-  glfwSetKeyCallback(win.win, key_callback);
+  set_click_glcallback(win, click_callback);
+  set_scroll_glcallback(win, scroll_callback);
+  set_key_glcallback(win, key_callback);
 
-  // init widget
   init_glwidgets(win);
 
-  // loop
   auto mouse_pos = zero2f, last_pos = zero2f;
 
+  // Render loop.
   while (!should_glwindow_close(win)) {
     last_pos            = mouse_pos;
     mouse_pos           = get_glmouse_pos(win);
@@ -384,37 +361,32 @@ void run_app(app_state& app) {
     auto shift_down     = get_glshift_key(win);
     auto widgets_active = get_glwidgets_active(win);
 
-    // handle mouse and keyboard for navigation
+    // Handle mouse and keyboard for navigation.
     if ((mouse_left || mouse_right) && !alt_down && !widgets_active) {
-      // auto& camera = app.scene.cameras.at(app.opengl_options.camera);
       auto& camera = app.camera;
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
       auto  rotate = zero2f;
       if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
-      // if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
       if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
       rotate.y = -rotate.y;
       pan.x    = -pan.x;
       update_turntable(camera.frame, app.camera.focus, rotate, dolly, pan);
-      // update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       update_glcamera(app.scene.cameras[0], camera);
     }
 
-    // draw
     draw(win);
 
-    // event hadling
+    // Event handling.
     process_glevents(win);
   }
 
-  // clear
   delete_glwindow(win);
 }
 
 void yimshproc(const string&                                  input_filename,
     std::function<void(app_state&)>                           init,
-    std::function<void(app_state&, int, int, int, int)>       key_callback,
+    std::function<void(app_state&, int, bool)>                key_callback,
     std::function<void(app_state&, int, vec2f, int, float)>   click_callback,
     std::function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
   auto app = app_state{};
@@ -435,23 +407,3 @@ void yimshproc(const string&                                  input_filename,
   app.init(app);
   run_app(app);
 }
-
-// @Issue: Initialize from yocto_shape?
-#if 0
-void yimshproc(yocto_shape&& shape, std::function<void(app_state&)> init,
-    std::function<void(app_state&, int, int, int, int)>       key_callback,
-    std::function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
-  auto app = app_state{};
-
-  app.shape = shape;
-  init_bvh(app);
-  init_camera(app);
-
-  app.init           = init;
-  app.key_callback   = key_callback;
-  app.draw_glwidgets = draw_glwidgets;
-
-  app.init(app);
-  run_app(app);
-}
-#endif

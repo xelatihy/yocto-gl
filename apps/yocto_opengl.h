@@ -414,12 +414,18 @@ struct opengl_window;
 using refresh_glcallback = std::function<void(const opengl_window&)>;
 using drop_glcallback =
     std::function<void(const opengl_window&, const vector<string>&)>;
+using key_glcallback    = std::function<void(const opengl_window&, int, bool)>;
+using click_glcallback  = std::function<void(const opengl_window&, bool, bool)>;
+using scroll_glcallback = std::function<void(const opengl_window&, float)>;
 
 struct opengl_window {
   GLFWwindow*        win           = nullptr;
   void*              user_ptr      = nullptr;
   refresh_glcallback refresh_cb    = {};
   drop_glcallback    drop_cb       = {};
+  key_glcallback     key_cb        = {};
+  click_glcallback   click_cb      = {};
+  scroll_glcallback  scroll_cb     = {};
   int                widgets_width = 0;
   bool               widgets_left  = true;
 };
@@ -429,6 +435,9 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
 void delete_glwindow(opengl_window& win);
 
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb);
+void set_key_glcallback(opengl_window& win, key_glcallback cb);
+void set_click_glcallback(opengl_window& win, click_glcallback cb);
+void set_scroll_glcallback(opengl_window& win, scroll_glcallback cb);
 
 void* get_gluser_pointer(const opengl_window& win);
 
@@ -442,10 +451,13 @@ bool should_glwindow_close(const opengl_window& win);
 void set_glwindow_close(const opengl_window& win, bool close);
 
 vec2f get_glmouse_pos(const opengl_window& win, bool ignore_widgets = true);
-bool  get_glmouse_left(const opengl_window& win);
-bool  get_glmouse_right(const opengl_window& win);
-bool  get_glalt_key(const opengl_window& win);
-bool  get_glshift_key(const opengl_window& win);
+vec2f get_glmouse_pos_normalized(
+    const opengl_window& win, bool ignore_widgets = true);
+
+bool get_glmouse_left(const opengl_window& win);
+bool get_glmouse_right(const opengl_window& win);
+bool get_glalt_key(const opengl_window& win);
+bool get_glshift_key(const opengl_window& win);
 
 void process_glevents(const opengl_window& win, bool wait = false);
 void swap_glbuffers(const opengl_window& win);
@@ -554,8 +566,7 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
 template <typename T>
 inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {
-  return draw_glcombobox(
-      win, lbl, idx, (int)vals.size(),
+  return draw_glcombobox(win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 

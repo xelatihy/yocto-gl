@@ -2318,7 +2318,7 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
   return fallback_lerp;
 }
 
-surface_path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from) {
   auto opposite_vertex = [](const vec3i& tr, const vec2i& edge) -> int {
@@ -2398,7 +2398,7 @@ surface_path follow_gradient_field(const vector<vec3i>& triangles,
   return surface_path{from, 0, lerps};
 }
 
-surface_path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
     int to) {
@@ -2508,17 +2508,17 @@ vector<vec3f> make_positions_from_path(
 }  // namespace integral_paths
 
 // Trace integral path following the gradient of a scalar field
-surface_path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from) {
-  return integral_paths::follow_gradient_field(
+  return integral_paths::integrate_field(
       triangles, positions, adjacency, tags, tag, field, from);
 }
-surface_path follow_gradient_field(const vector<vec3i>& triangles,
+surface_path integrate_field(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, int tag, const vector<float>& field, int from,
     int to) {
-  return integral_paths::follow_gradient_field(
+  return integral_paths::integrate_field(
       triangles, positions, adjacency, tags, tag, field, from, to);
 }
 
