@@ -198,15 +198,6 @@ struct trace_scene {
   vector<trace_environment> environments = {};
 };
 
-// TODO: remove these functions and get better interface for picking
-// Generates a ray from the image coordinates `uv` and lens coordinates `luv`.
-ray3f eval_camera(
-    const trace_camera& camera, const vec2f& uv, const vec2f& luv);
-// Generates a ray from a camera for pixel `ij`, the image size `resolution`,
-// the sub-pixel coordinates `puv` and the lens coordinates `luv`.
-ray3f eval_camera(const trace_camera& camera, const vec2i& ij,
-    const vec2i& resolution, const vec2f& puv, const vec2f& luv);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
