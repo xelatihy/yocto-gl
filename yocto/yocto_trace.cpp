@@ -1074,12 +1074,6 @@ pair<int, vec2f> sample_shape(const trace_shape& shape,
   }
 }
 
-float sample_shape_pdf(const trace_shape& shape, const vector<float>& cdf,
-    int element, const vec2f& uv) {
-  // prob triangle * area triangle = area triangle mesh
-  return 1 / cdf.back();
-}
-
 // Update environment CDF for sampling.
 vector<float> sample_environment_cdf(
     const trace_scene& scene, const trace_environment& environment) {
@@ -2169,14 +2163,15 @@ void trace_region(image<vec4f>& image, trace_state& state,
 }
 
 // Init a sequence of random number generators.
-trace_state make_trace_state(const vec2i& image_size, uint64_t seed) {
+trace_state make_trace_state(const trace_scene& scene, const trace_params& params) {
+  auto image_size = camera_resolution(scene.cameras[params.camera], params.resolution);
   auto state = trace_state{image_size,
       vector<trace_pixel>(image_size.x * image_size.y, trace_pixel{})};
   auto rng   = make_rng(1301081);
   for (auto j = 0; j < state.image_size.y; j++) {
     for (auto i = 0; i < state.image_size.x; i++) {
       auto& pixel = get_trace_pixel(state, i, j);
-      pixel.rng   = make_rng(seed, rand1i(rng, 1 << 31) / 2 + 1);
+      pixel.rng   = make_rng(params.seed, rand1i(rng, 1 << 31) / 2 + 1);
     }
   }
   return state;
@@ -2210,10 +2205,8 @@ void make_trace_lights(trace_lights& lights, const trace_scene& scene) {
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params) {
-  auto image_size = camera_resolution(
-      scene.cameras.at(params.camera), params.resolution);
-  auto render  = image{image_size, zero4f};
-  auto state   = make_trace_state(render.size(), params.seed);
+  auto state   = make_trace_state(scene, params);
+  auto render  = image{state.image_size, zero4f};
   auto regions = make_image_regions(render.size(), params.region, true);
 
   if (params.noparallel) {

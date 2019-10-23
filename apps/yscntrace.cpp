@@ -150,10 +150,8 @@ int main(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  auto image_size = camera_resolution(
-      scene.cameras[trace_prms.camera], trace_prms.resolution);
-  auto render = image{image_size, zero4f};
-  auto state  = make_trace_state(image_size, trace_prms.seed);
+  auto state  = make_trace_state(scene, trace_prms);
+  auto render = image{state.image_size, zero4f};
 
   // render
   for (auto sample = 0; sample < trace_prms.samples;

@@ -76,14 +76,12 @@ struct app_state {
 };
 
 void reset_display(app_state& app) {
-  auto image_size = camera_resolution(
-      app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-  app.render.resize(image_size);
-  app.display.resize(image_size);
+  app.state          = make_trace_state(app.scene, app.trace_prms);
+  app.render.resize(app.state.image_size);
+  app.display.resize(app.state.image_size);
   app.render_preview = true;
   app.render_sample  = 0;
   app.render_region  = 0;
-  app.state          = make_trace_state(app.render.size(), app.trace_prms.seed);
   app.render_regions = make_image_regions(
       app.render.size(), app.trace_prms.region, true);
 }
@@ -277,10 +275,8 @@ int main(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  auto image_size = camera_resolution(
-      app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-  app.render  = image{image_size, zero4f};
-  app.state   = make_trace_state(image_size, app.trace_prms.seed);
+  app.state   = make_trace_state(app.scene, app.trace_prms);
+  app.render  = image{app.state.image_size, zero4f};
   app.display = app.render;
   reset_display(app);
 

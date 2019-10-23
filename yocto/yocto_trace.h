@@ -265,11 +265,6 @@ struct trace_state {
   vector<trace_pixel> pixels     = {};
 };
 
-// Initialize state of the renderer.
-trace_state make_trace_state(
-    const vec2i& image_size, uint64_t random_seed = trace_default_seed);
-vec2i camera_resolution(const trace_camera& camera, int resolution);
-
 // Options for trace functions
 struct trace_params {
   // clang-format off
@@ -308,6 +303,9 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "transmission", "roughness", "material", "shape", "instance",
     "element", "highlight"};
+
+// Initialize state of the renderer.
+trace_state make_trace_state(const trace_scene& scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
