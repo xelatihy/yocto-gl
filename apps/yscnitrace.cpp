@@ -139,7 +139,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   apps.loaders.push_back(run_async([&app]() {
     load_scene(app.filename, app.ioscene);
     app.trscene = make_trace_scene(app.ioscene);
-    app.bvh = make_bvh(app.trscene, app.bvh_prms);
+    app.bvh = make_trace_bvh(app.trscene, app.bvh_prms);
     app.lights = make_trace_lights(app.trscene);
     if (app.lights.instances.empty() && app.lights.environments.empty() &&
         is_sampler_lit(app.trace_prms)) {
@@ -176,7 +176,7 @@ bool draw_glwidgets_camera(const opengl_window& win, app_state& app, int id) {
     camera.focus = length(from - to);
     edited += 1;
   }
-  if (edited) update_camera(app.trscene.cameras.at(id), camera);
+  if (edited) update_trace_camera(app.trscene.cameras.at(id), camera);
   return edited;
 }
 
@@ -208,7 +208,7 @@ bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
     }
     // TODO: update lights
   }
-  if (edited) update_texture(app.trscene.textures.at(id), texture);
+  if (edited) update_trace_texture(app.trscene.textures.at(id), texture);
   return edited;
 }
 
@@ -250,7 +250,7 @@ bool draw_glwidgets_material(const opengl_window& win, app_state& app, int id) {
       win, "normal_tex", material.normal_tex, app.ioscene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   // TODO: update lights
-  if (edited) update_material(app.trscene.materials.at(id), material);
+  if (edited) update_trace_material(app.trscene.materials.at(id), material);
   return edited;
 }
 
@@ -284,11 +284,11 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
       log_glinfo(win, "cannot load " + shape.filename);
       log_glinfo(win, e.what());
     }
-    update_shape(app.trscene.shapes.at(id), shape, app.ioscene);
-    update_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
+    update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
+    update_trace_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
     app.lights = make_trace_lights(app.trscene);
   } else if (edited) {
-    update_shape(app.trscene.shapes.at(id), shape, app.ioscene);
+    update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
   }
   return edited;
 }
@@ -306,11 +306,11 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
       win, "shape", instance.shape, app.ioscene.shapes, true);
   edited += draw_glcombobox(
       win, "material", instance.material, app.ioscene.materials, true);
-  if (edited) update_instance(app.trscene.instances.at(id), instance);
+  if (edited) update_trace_instance(app.trscene.instances.at(id), instance);
   if (edited && instance.shape != old_instance.shape)
-    update_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
+    update_trace_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
   if (edited && instance.frame != old_instance.frame)
-    update_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
+    update_trace_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
   // TODO: update lights
   return edited;
 }
@@ -327,7 +327,7 @@ bool draw_glwidgets_environment(
   edited += draw_glhdrcoloredit(win, "emission", environment.emission);
   edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
       app.ioscene.textures, true);
-  if (edited) update_environment(app.trscene.environments.at(id), environment);
+  if (edited) update_trace_environment(app.trscene.environments.at(id), environment);
   if (edited) app.lights = make_trace_lights(app.trscene);
   return edited;
 }
@@ -619,7 +619,7 @@ void run_ui(app_states& apps) {
         pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
       pan.x = -pan.x;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      update_camera(app.trscene.cameras.at(app.trace_prms.camera), camera);
+      update_trace_camera(app.trscene.cameras.at(app.trace_prms.camera), camera);
       // TODO: update
       reset_display(app);
     }

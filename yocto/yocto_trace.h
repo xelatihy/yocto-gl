@@ -204,15 +204,15 @@ namespace yocto {
 trace_scene make_trace_scene(const scene_model& ioscene);
 
 // Update a value from io
-void update_camera(trace_camera& camera, const scene_camera& iocamera);
-void update_texture(trace_texture& texture, const scene_texture& iotexture);
-void update_material(
+void update_trace_camera(trace_camera& camera, const scene_camera& iocamera);
+void update_trace_texture(trace_texture& texture, const scene_texture& iotexture);
+void update_trace_material(
     trace_material& material, const scene_material& iomaterial);
-void update_shape(
+void update_trace_shape(
     trace_shape& shape, const scene_shape& ioshape, const scene_model& ioscene);
-void update_instance(
+void update_trace_instance(
     trace_instance& instance, const scene_instance& ioinstance);
-void update_environment(
+void update_trace_environment(
     trace_environment& environment, const scene_environment& ioenvironment);
 
 }  // namespace yocto
@@ -229,8 +229,8 @@ const auto trace_default_seed = 961748941ull;
 using trace_bvh = bvh_shared_scene;
 
 // Build/refit the bvh acceleration structure.
-trace_bvh make_bvh(const trace_scene& scene, const bvh_params& params);
-void update_bvh(trace_bvh& bvh, const trace_scene& scene,
+trace_bvh make_trace_bvh(const trace_scene& scene, const bvh_params& params);
+void update_trace_bvh(trace_bvh& bvh, const trace_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params);
 

@@ -448,7 +448,7 @@ pair<vec3f, vec3f> get_subsurface_params(const string& name) {
 namespace yocto {
 
 // convert scene objects
-void update_camera(trace_camera& camera, const scene_camera& iocamera) {
+void update_trace_camera(trace_camera& camera, const scene_camera& iocamera) {
   camera.frame = iocamera.frame;
   camera.film  = iocamera.aspect >= 1
                     ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
@@ -457,11 +457,11 @@ void update_camera(trace_camera& camera, const scene_camera& iocamera) {
   camera.focus    = iocamera.focus;
   camera.aperture = iocamera.aperture;
 }
-void update_texture(trace_texture& texture, const scene_texture& iotexture) {
+void update_trace_texture(trace_texture& texture, const scene_texture& iotexture) {
   texture.hdr = iotexture.hdr;
   texture.ldr = iotexture.ldr;
 }
-void update_material(
+void update_trace_material(
     trace_material& material, const scene_material& iomaterial) {
   material.emission         = iomaterial.emission;
   material.diffuse          = iomaterial.diffuse;
@@ -484,14 +484,14 @@ void update_material(
   material.opacity_tex      = iomaterial.opacity_tex;
   material.subsurface_tex   = iomaterial.subsurface_tex;
 }
-void update_shape(trace_shape& shape, const scene_shape& ioshape,
+void update_trace_shape(trace_shape& shape, const scene_shape& ioshape,
     const scene_model& ioscene) {
   if (ioshape.subdivisions || ioshape.displacement) {
     auto subdiv = ioshape;
     if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
     if (subdiv.displacement && subdiv.displacement_tex >= 0)
       subdiv = displace_shape(ioscene, subdiv);
-    return update_shape(shape, subdiv, ioscene);
+    return update_trace_shape(shape, subdiv, ioscene);
   }
   shape.points        = ioshape.points;
   shape.lines         = ioshape.lines;
@@ -507,13 +507,13 @@ void update_shape(trace_shape& shape, const scene_shape& ioshape,
   shape.radius        = ioshape.radius;
   shape.tangents      = ioshape.tangents;
 }
-void update_instance(
+void update_trace_instance(
     trace_instance& instance, const scene_instance& ioinstance) {
   instance.frame    = ioinstance.frame;
   instance.shape    = ioinstance.shape;
   instance.material = ioinstance.material;
 }
-void update_environment(
+void update_trace_environment(
     trace_environment& environment, const scene_environment& ioenvironment) {
   environment.frame        = ioenvironment.frame;
   environment.emission     = ioenvironment.emission;
@@ -525,22 +525,22 @@ trace_scene make_trace_scene(const scene_model& ioscene) {
   auto scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
-    update_camera(scene.cameras.emplace_back(), iocamera);
+    update_trace_camera(scene.cameras.emplace_back(), iocamera);
   }
   for (auto& iotexture : ioscene.textures) {
-    update_texture(scene.textures.emplace_back(), iotexture);
+    update_trace_texture(scene.textures.emplace_back(), iotexture);
   }
   for (auto& iomaterial : ioscene.materials) {
-    update_material(scene.materials.emplace_back(), iomaterial);
+    update_trace_material(scene.materials.emplace_back(), iomaterial);
   }
   for (auto& ioshape : ioscene.shapes) {
-    update_shape(scene.shapes.emplace_back(), ioshape, ioscene);
+    update_trace_shape(scene.shapes.emplace_back(), ioshape, ioscene);
   }
   for (auto& ioinstance : ioscene.instances) {
-    update_instance(scene.instances.emplace_back(), ioinstance);
+    update_trace_instance(scene.instances.emplace_back(), ioinstance);
   }
   for (auto& ioenvironment : ioscene.environments) {
-    update_environment(scene.environments.emplace_back(), ioenvironment);
+    update_trace_environment(scene.environments.emplace_back(), ioenvironment);
   }
 
   return scene;
@@ -1299,10 +1299,10 @@ void update_shared_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
   update_scene_bvh(bvh, updated_instances, updated_shapes, params);
 }
 
-trace_bvh make_bvh(const trace_scene& scene, const bvh_params& params) {
+trace_bvh make_trace_bvh(const trace_scene& scene, const bvh_params& params) {
   return make_shared_bvh(scene, params);
 }
-void update_bvh(trace_bvh& bvh, const trace_scene& scene,
+void update_trace_bvh(trace_bvh& bvh, const trace_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params) {
   update_shared_bvh(bvh, scene, updated_instances, updated_shapes, params);
