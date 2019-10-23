@@ -67,7 +67,7 @@
 // 1. initialize the random number generator with `make_rng()`
 // 2. if necessary, you can reseed the rng with `seed_rng()`
 // 3. generate random integers in an interval with `rand1i()`
-// 4. generate random floats and double in the [0,1) range with `rand1f()`,
+// 4. generate random floats and double in the [0,1) range with `rand1f()`, 
 //    `rand2f()`, `rand3f()`, `rand1d()`
 //
 //
@@ -76,21 +76,21 @@
 // We support generation of Perlin noise based on the stb libraries.
 //
 // 1. use `perlin_noise()` to generate Perlin noise with optional wrapping
-// 2. use `perlin_ridge()`, `perlin_fbm()` and `perlin_turbulence()` for fractal
+// 2. use `perlin_ridge()`, `perlin_fbm()` and `perlin_turbulence()` for fractal 
 //    noises
 //
 //
 // ## Monte Carlo helpers
 //
-// We include many method to generate random points and directions. These may be
+// We include many method to generate random points and directions. These may be 
 // used in path tracing or procedural generation.
 //
-// 1. use `sample_XXX()` to warp random numbers in [0,1)^k domains to the
-//   desired domain; in particular we support `sample_hemisphere()`,
-//   `sample_sphere()`, `sample_hemisphere_cos()`,
-//   `sample_hemisphere_cospower()`. `sample_disk()`. `sample_cylinder()`.
+// 1. use `sample_XXX()` to warp random numbers in [0,1)^k domains to the 
+//   desired domain; in particular we support `sample_hemisphere()`, 
+//   `sample_sphere()`, `sample_hemisphere_cos()`, 
+//   `sample_hemisphere_cospower()`. `sample_disk()`. `sample_cylinder()`. 
 //   `sample_triangle()`, `sample_quad()`
-// 2. use `sample_discrete()` to sample from a descreet distribution
+// 2. use `sample_discrete()` to sample from a descreet distribution 
 // 3. use `sample_XXX_pdf()` to compute the PDF of the sampling functions
 //
 //
@@ -163,11 +163,11 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <algorithm>
 #include <cmath>
-#include <functional>
 #include <limits>
 #include <vector>
+#include <algorithm>
+#include <functional>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -1824,9 +1824,10 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass zero2f here.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);
+inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
@@ -1899,9 +1900,10 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 }
 
 // Quad tangent and bitangent from uv.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
+inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv) {
 #if YOCTO_QUADS_AS_TRIANGLES
   if (current_uv.x + current_uv.y <= 1) {
     return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);

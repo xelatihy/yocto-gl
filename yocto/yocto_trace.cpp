@@ -31,11 +31,10 @@
 // TODO: inline BVH
 // TODO: inline cdfs
 // TODO: consider removing dependency from image/shape
-// TODO: better quad sampling
 //
 
 #include "yocto_trace.h"
-// #include "yocto_shape.h"
+#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
@@ -1042,35 +1041,33 @@ vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
 void sample_shape_cdf(const trace_shape& shape, vector<float>& cdf) {
   cdf.clear();
   if (!shape.triangles.empty()) {
-    cdf = vector<float>(shape.triangles.size());
-    for (auto i = 0; i < cdf.size(); i++) {
-      auto t = shape.triangles[i];
-      auto w = triangle_area(
-          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-      cdf[i] = w + (i ? cdf[i - 1] : 0);
-    }
+    sample_triangles_cdf(cdf, shape.triangles, shape.positions);
   } else if (!shape.quads.empty()) {
-    cdf = vector<float>(shape.quads.size());
-    for (auto i = 0; i < cdf.size(); i++) {
-      auto t = shape.quads[i];
-      auto w = quad_area(shape.positions[t.x], shape.positions[t.y],
-          shape.positions[t.z], shape.positions[t.w]);
-      cdf[i] = w + (i ? cdf[i - 1] : 0);
-    }
-  } else if (!shape.quadspos.empty()) {
-    cdf = vector<float>(shape.quadspos.size());
-    for (auto i = 0; i < cdf.size(); i++) {
-      auto t = shape.quadspos[i];
-      auto w = quad_area(shape.positions[t.x], shape.positions[t.y],
-          shape.positions[t.z], shape.positions[t.w]);
-      cdf[i] = w + (i ? cdf[i - 1] : 0);
-    }
+    sample_quads_cdf(cdf, shape.quads, shape.positions);
   } else if (!shape.lines.empty()) {
-    throw std::runtime_error("line sampling not supported");
+    sample_lines_cdf(cdf, shape.lines, shape.positions);
   } else if (!shape.points.empty()) {
-    throw std::runtime_error("point sampling not supported");
+    sample_points_cdf(cdf, shape.points.size());
+  } else if (!shape.quadspos.empty()) {
+    sample_quads_cdf(cdf, shape.quadspos, shape.positions);
   } else {
     throw std::runtime_error("empty shape");
+  }
+}
+vector<float> sample_shape_cdf(const trace_shape& shape) {
+  if (!shape.triangles.empty()) {
+    return sample_triangles_cdf(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return sample_quads_cdf(shape.quads, shape.positions);
+  } else if (!shape.lines.empty()) {
+    return sample_lines_cdf(shape.lines, shape.positions);
+  } else if (!shape.points.empty()) {
+    return sample_points_cdf(shape.points.size());
+  } else if (!shape.quadspos.empty()) {
+    return sample_quads_cdf(shape.quadspos, shape.positions);
+  } else {
+    throw std::runtime_error("empty shape");
+    return {};
   }
 }
 
@@ -1079,15 +1076,15 @@ pair<int, vec2f> sample_shape(const trace_shape& shape,
     const vector<float>& cdf, float re, const vec2f& ruv) {
   if (cdf.empty()) return {};
   if (!shape.triangles.empty()) {
-    return {sample_discrete(cdf, re), sample_triangle(ruv)};
+    return sample_triangles(cdf, re, ruv);
   } else if (!shape.quads.empty()) {
-    return {sample_discrete(cdf, re), ruv};
-  } else if (!shape.quadspos.empty()) {
-    return {sample_discrete(cdf, re), ruv};
+    return sample_quads(cdf, re, ruv);
   } else if (!shape.lines.empty()) {
-    throw std::runtime_error("line sampling not supported");
+    return {sample_lines(cdf, re, ruv.x).first, ruv};
   } else if (!shape.points.empty()) {
-    throw std::runtime_error("point sampling not supported");
+    return {sample_points(cdf, re), ruv};
+  } else if (!shape.quadspos.empty()) {
+    return sample_quads(cdf, re, ruv);
   } else {
     return {0, zero2f};
   }
@@ -2214,6 +2211,30 @@ void make_trace_state(
 }
 
 // Init trace lights
+trace_lights make_trace_lights(const trace_scene& scene) {
+  auto lights = trace_lights{};
+  lights.shape_cdfs.resize(scene.shapes.size());
+  lights.environment_cdfs.resize(scene.textures.size());
+  for (auto idx = 0; idx < scene.instances.size(); idx++) {
+    auto& instance = scene.instances[idx];
+    auto& shape    = scene.shapes[instance.shape];
+    auto& material = scene.materials[instance.material];
+    if (material.emission == zero3f) continue;
+    if (shape.triangles.empty() && shape.quads.empty()) continue;
+    lights.instances.push_back(idx);
+    lights.shape_cdfs[instance.shape] = sample_shape_cdf(shape);
+  }
+  for (auto idx = 0; idx < scene.environments.size(); idx++) {
+    auto& environment = scene.environments[idx];
+    if (environment.emission == zero3f) continue;
+    lights.environments.push_back(idx);
+    if (environment.emission_tex >= 0) {
+      lights.environment_cdfs[environment.emission_tex] =
+          sample_environment_cdf(scene, environment);
+    }
+  }
+  return lights;
+}
 void make_trace_lights(trace_lights& lights, const trace_scene& scene) {
   lights = {};
   lights.shape_cdfs.resize(scene.shapes.size());
