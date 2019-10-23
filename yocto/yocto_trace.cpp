@@ -2181,18 +2181,6 @@ trace_state make_trace_state(const vec2i& image_size, uint64_t seed) {
   }
   return state;
 }
-void make_trace_state(
-    trace_state& state, const vec2i& image_size, uint64_t seed) {
-  state    = trace_state{image_size,
-      vector<trace_pixel>(image_size.x * image_size.y, trace_pixel{})};
-  auto rng = make_rng(1301081);
-  for (auto j = 0; j < state.image_size.y; j++) {
-    for (auto i = 0; i < state.image_size.x; i++) {
-      auto& pixel = get_trace_pixel(state, i, j);
-      pixel.rng   = make_rng(seed, rand1i(rng, 1 << 31) / 2 + 1);
-    }
-  }
-}
 
 // Init trace lights
 void make_trace_lights(trace_lights& lights, const trace_scene& scene) {
