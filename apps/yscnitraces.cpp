@@ -264,7 +264,7 @@ int main(int argc, const char* argv[]) {
   // init renderer
   {
     auto timer = print_timed("building lights");
-    make_trace_lights(app.lights, app.scene);
+    app.lights = make_trace_lights(app.scene);
   }
 
   // fix renderer type if no lights

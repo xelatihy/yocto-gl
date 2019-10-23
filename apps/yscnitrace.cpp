@@ -140,7 +140,7 @@ void load_scene_async(app_states& apps, const string& filename) {
     load_scene(app.filename, app.ioscene);
     make_trace_scene(app.trscene, app.ioscene);
     make_bvh(app.bvh, app.trscene, app.bvh_prms);
-    make_trace_lights(app.lights, app.trscene);
+    app.lights = make_trace_lights(app.trscene);
     if (app.lights.instances.empty() && app.lights.environments.empty() &&
         is_sampler_lit(app.trace_prms)) {
       app.trace_prms.sampler = trace_sampler_type::eyelight;
@@ -286,7 +286,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
     }
     update_shape(app.trscene.shapes.at(id), shape, app.ioscene);
     update_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
-    make_trace_lights(app.lights, app.trscene);
+    app.lights = make_trace_lights(app.trscene);
   } else if (edited) {
     update_shape(app.trscene.shapes.at(id), shape, app.ioscene);
   }
@@ -328,7 +328,7 @@ bool draw_glwidgets_environment(
   edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
       app.ioscene.textures, true);
   if (edited) update_environment(app.trscene.environments.at(id), environment);
-  if (edited) make_trace_lights(app.lights, app.trscene);
+  if (edited) app.lights = make_trace_lights(app.trscene);
   return edited;
 }
 

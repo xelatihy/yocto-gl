@@ -303,7 +303,7 @@ trace_state make_trace_state(
     const trace_scene& scene, const trace_params& params);
 
 // Initialize lights.
-void make_trace_lights(trace_lights& lights, const trace_scene& scene);
+trace_lights make_trace_lights(const trace_scene& scene);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,

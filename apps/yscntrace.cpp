@@ -138,7 +138,7 @@ int main(int argc, const char* argv[]) {
   auto lights = trace_lights{};
   {
     auto timer = print_timed("building lights");
-    make_trace_lights(lights, scene);
+    lights = make_trace_lights(scene);
   }
 
   // fix renderer type if no lights

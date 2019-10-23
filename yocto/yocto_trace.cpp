@@ -2173,8 +2173,8 @@ trace_state make_trace_state(
 }
 
 // Init trace lights
-void make_trace_lights(trace_lights& lights, const trace_scene& scene) {
-  lights = {};
+trace_lights make_trace_lights(const trace_scene& scene) {
+  auto lights = trace_lights{};
   lights.shape_cdfs.resize(scene.shapes.size());
   lights.environment_cdfs.resize(scene.textures.size());
   for (auto idx = 0; idx < scene.instances.size(); idx++) {
@@ -2195,6 +2195,7 @@ void make_trace_lights(trace_lights& lights, const trace_scene& scene) {
           lights.environment_cdfs[environment.emission_tex]);
     }
   }
+  return lights;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
