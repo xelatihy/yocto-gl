@@ -163,14 +163,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <float.h>
-#include <limits.h>
-#include <math.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include <cmath>
+#include <limits>
 #include <vector>
 #include <algorithm>
 #include <functional>
@@ -188,11 +182,11 @@ using std::vector;
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
 
-inline const auto int_max = INT_MAX;
-inline const auto int_min = INT_MIN;
-inline const auto flt_max = FLT_MAX;
-inline const auto flt_min = -FLT_MAX;
-inline const auto flt_eps = FLT_EPSILON;
+inline const auto int_max = std::numeric_limits<int>::max();
+inline const auto int_min = std::numeric_limits<int>::lowest();
+inline const auto flt_max = std::numeric_limits<float>::max();
+inline const auto flt_min = std::numeric_limits<float>::lowest();
+inline const auto flt_eps = std::numeric_limits<float>::epsilon();
 
 inline float abs(float a) { return a < 0 ? -a : a; }
 inline float min(float a, float b) { return (a < b) ? a : b; }
