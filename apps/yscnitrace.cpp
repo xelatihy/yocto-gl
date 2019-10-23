@@ -114,7 +114,7 @@ struct app_states {
 };
 
 void reset_display(app_state& app) {
-  app.state          = make_trace_state(app.trscene, app.trace_prms);
+  app.state = make_trace_state(app.trscene, app.trace_prms);
   app.render.resize(app.state.size());
   app.display.resize(app.state.size());
   app.render_preview = true;
@@ -143,7 +143,7 @@ void load_scene_async(app_states& apps, const string& filename) {
     make_trace_lights(app.lights, app.trscene);
     if (app.lights.instances.empty() && app.lights.environments.empty() &&
         is_sampler_lit(app.trace_prms)) {
-      app.trace_prms.sampler = trace_params::sampler_type::eyelight;
+      app.trace_prms.sampler = trace_sampler_type::eyelight;
     }
     app.state = make_trace_state(app.trscene, app.trace_prms);
     app.render.resize(app.state.size());
@@ -664,15 +664,14 @@ int main(int argc, const char* argv[]) {
   auto filenames       = vector<string>{};
 
   // names for enums
-  auto sampler_namemap = std::map<string, trace_params::sampler_type>{};
+  auto sampler_namemap = std::map<string, trace_sampler_type>{};
   for (auto type = 0; type < trace_sampler_names.size(); type++) {
-    sampler_namemap[trace_sampler_names[type]] =
-        (trace_params::sampler_type)type;
+    sampler_namemap[trace_sampler_names[type]] = (trace_sampler_type)type;
   }
-  auto falsecolor_namemap = std::map<string, trace_params::falsecolor_type>{};
+  auto falsecolor_namemap = std::map<string, trace_falsecolor_type>{};
   for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
     falsecolor_namemap[trace_falsecolor_names[type]] =
-        (trace_params::falsecolor_type)type;
+        (trace_falsecolor_type)type;
   }
 
   // parse command line

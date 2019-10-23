@@ -76,7 +76,7 @@ struct app_state {
 };
 
 void reset_display(app_state& app) {
-  app.state          = make_trace_state(app.scene, app.trace_prms);
+  app.state = make_trace_state(app.scene, app.trace_prms);
   app.render.resize(app.state.size());
   app.display.resize(app.state.size());
   app.render_preview = true;
@@ -271,7 +271,7 @@ int main(int argc, const char* argv[]) {
   if (app.lights.instances.empty() && app.lights.environments.empty() &&
       is_sampler_lit(app.trace_prms)) {
     print_info("no lights presents, switching to eyelight shader");
-    app.trace_prms.sampler = trace_params::sampler_type::eyelight;
+    app.trace_prms.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers

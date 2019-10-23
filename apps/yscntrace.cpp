@@ -49,15 +49,14 @@ int main(int argc, const char* argv[]) {
   auto filename     = "scene.json"s;
 
   // names for enums
-  auto sampler_namemap = std::map<string, trace_params::sampler_type>{};
+  auto sampler_namemap = std::map<string, trace_sampler_type>{};
   for (auto type = 0; type < trace_sampler_names.size(); type++) {
-    sampler_namemap[trace_sampler_names[type]] =
-        (trace_params::sampler_type)type;
+    sampler_namemap[trace_sampler_names[type]] = (trace_sampler_type)type;
   }
-  auto falsecolor_namemap = std::map<string, trace_params::falsecolor_type>{};
+  auto falsecolor_namemap = std::map<string, trace_falsecolor_type>{};
   for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
     falsecolor_namemap[trace_falsecolor_names[type]] =
-        (trace_params::falsecolor_type)type;
+        (trace_falsecolor_type)type;
   }
 
   // parse command line
@@ -146,7 +145,7 @@ int main(int argc, const char* argv[]) {
   if (lights.instances.empty() && lights.environments.empty() &&
       is_sampler_lit(trace_prms)) {
     print_info("no lights presents, switching to eyelight shader");
-    trace_prms.sampler = trace_params::sampler_type::eyelight;
+    trace_prms.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers

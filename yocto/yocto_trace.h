@@ -259,35 +259,37 @@ struct trace_pixel {
 };
 using trace_state = image<trace_pixel>;
 
+// Type of tracing algorithm
+enum struct trace_sampler_type {
+  path,        // path tracing
+  naive,       // naive path tracing
+  eyelight,    // eyelight rendering
+  falsecolor,  // false color rendering
+};
+// Type of false color visualization
+enum struct trace_falsecolor_type {
+  // clang-format off
+  normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
+  diffuse, specular, transmission, roughness, material, shape, instance, 
+  element, highlight
+  // clang-format on
+};
+
 // Options for trace functions
 struct trace_params {
-  // clang-format off
-  // Type of tracing algorithm to use
-  enum struct sampler_type {
-    path,        // path tracing
-    naive,       // naive path tracing
-    eyelight,    // eyelight rendering
-    falsecolor,  // false color rendering
-  };
-  enum struct falsecolor_type {
-    normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
-    diffuse, specular, transmission, roughness, material, shape, instance, 
-    element, highlight };
-  // clang-format on
-
-  int             camera     = 0;
-  int             resolution = 1280;
-  sampler_type    sampler    = sampler_type::path;
-  falsecolor_type falsecolor = falsecolor_type::diffuse;
-  int             samples    = 512;
-  int             bounces    = 8;
-  int             batch      = 16;
-  int             region     = 16;
-  float           clamp      = 10;
-  bool            envhidden  = false;
-  bool            tentfilter = false;
-  uint64_t        seed       = trace_default_seed;
-  bool            noparallel = false;
+  int                   camera     = 0;
+  int                   resolution = 1280;
+  trace_sampler_type    sampler    = trace_sampler_type::path;
+  trace_falsecolor_type falsecolor = trace_falsecolor_type::diffuse;
+  int                   samples    = 512;
+  int                   bounces    = 8;
+  int                   batch      = 16;
+  int                   region     = 16;
+  float                 clamp      = 10;
+  bool                  envhidden  = false;
+  bool                  tentfilter = false;
+  uint64_t              seed       = trace_default_seed;
+  bool                  noparallel = false;
 };
 
 const auto trace_sampler_names = vector<string>{
@@ -299,7 +301,8 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "element", "highlight"};
 
 // Initialize state of the renderer.
-trace_state make_trace_state(const trace_scene& scene, const trace_params& params);
+trace_state make_trace_state(
+    const trace_scene& scene, const trace_params& params);
 
 // Initialize lights.
 void make_trace_lights(trace_lights& lights, const trace_scene& scene);
