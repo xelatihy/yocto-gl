@@ -551,6 +551,10 @@ void make_glscene(opengl_scene& glscene) {
 // Draw a shape
 void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
     const draw_glscene_params& params) {
+  if (instance.shape < 0 || instance.shape > state.shapes.size()) return;
+  if (instance.material < 0 || instance.material > state.materials.size())
+    return;
+
   auto& shape    = state.shapes[instance.shape];
   auto& material = state.materials[instance.material];
 
@@ -1283,6 +1287,23 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
   }
 }
 
+void _glfw_key_callback(
+    GLFWwindow* glfw, int key, int scancode, int action, int mods) {
+  auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
+  if (win.key_cb) win.key_cb(win, key, (bool)action);
+}
+
+void _glfw_click_callback(GLFWwindow* glfw, int button, int action, int mods) {
+  auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
+  if (win.click_cb)
+    win.click_cb(win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action);
+}
+
+void _glfw_scroll_callback(GLFWwindow* glfw, double xoffset, double yoffset) {
+  auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
+  if (win.scroll_cb) win.scroll_cb(win, (float)yoffset);
+}
+
 void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
     void* user_pointer, refresh_glcallback refresh_cb) {
   // init glfw
@@ -1311,6 +1332,8 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
   // init gl extensions
   if (!gladLoadGL())
     throw std::runtime_error("cannot initialize OpenGL extensions");
+
+  glPointSize(10);
 }
 
 void delete_glwindow(opengl_window& win) {
@@ -1324,6 +1347,21 @@ void* get_gluser_pointer(const opengl_window& win) { return win.user_ptr; }
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb) {
   win.drop_cb = drop_cb;
   glfwSetDropCallback(win.win, _glfw_drop_callback);
+}
+
+void set_key_glcallback(opengl_window& win, key_glcallback cb) {
+  win.key_cb = cb;
+  glfwSetKeyCallback(win.win, _glfw_key_callback);
+}
+
+void set_click_glcallback(opengl_window& win, click_glcallback cb) {
+  win.click_cb = cb;
+  glfwSetMouseButtonCallback(win.win, _glfw_click_callback);
+}
+
+void set_scroll_glcallback(opengl_window& win, scroll_glcallback cb) {
+  win.scroll_cb = cb;
+  glfwSetScrollCallback(win.win, _glfw_scroll_callback);
 }
 
 vec2i get_glframebuffer_size(const opengl_window& win, bool ignore_widgets) {
@@ -1373,6 +1411,21 @@ vec2f get_glmouse_pos(const opengl_window& win, bool ignore_widgets) {
     pos.x -= win.widgets_width;
   }
   return pos;
+}
+
+vec2f get_glmouse_pos_normalized(
+    const opengl_window& win, bool ignore_widgets) {
+  double mouse_posx, mouse_posy;
+  glfwGetCursorPos(win.win, &mouse_posx, &mouse_posy);
+  auto pos = vec2f{(float)mouse_posx, (float)mouse_posy};
+  int  width, height;
+  glfwGetWindowSize(win.win, &width, &height);
+
+  if (ignore_widgets && win.widgets_width && win.widgets_left) {
+    pos.x -= win.widgets_width;
+    width -= win.widgets_width;
+  }
+  return {pos.x / width, pos.y / height};
 }
 
 bool get_glmouse_left(const opengl_window& win) {
@@ -1637,8 +1690,7 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
       state.set_dirname(dir_buffer);
     }
     auto current_item = -1;
-    if (ImGui::ListBox(
-            "entries", &current_item,
+    if (ImGui::ListBox("entries", &current_item,
             [](void* data, int idx, const char** out_text) -> bool {
               auto& state = *(filedialog_state*)data;
               *out_text   = state.entries[idx].first.c_str();

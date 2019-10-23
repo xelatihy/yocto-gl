@@ -34,6 +34,9 @@ using namespace yocto;
 int main(int argc, const char** argv) {
   // command line parameters
   auto geodesic_source      = -1;
+  int  p0                   = -1;
+  int  p1                   = -1;
+  int  p2                   = -1;
   auto num_geodesic_samples = 0;
   auto geodesic_scale       = 30.0f;
   auto slice                = false;
@@ -52,6 +55,9 @@ int main(int argc, const char** argv) {
   auto cli = make_cli("ymshproc", "Applies operations on a triangle mesh");
   add_cli_option(
       cli, "--geodesic-source,-g", geodesic_source, "Geodesic source");
+  add_cli_option(cli, "--path-vertex0,-p0", p0, "Path vertex 0");
+  add_cli_option(cli, "--path-vertex1,-p1", p1, "Path vertex 1");
+  add_cli_option(cli, "--path-vertex2,-p2", p2, "Path vertex 2");
   add_cli_option(cli, "--num-geodesic-samples", num_geodesic_samples,
       "Number of sampled geodesic sources");
   add_cli_option(cli, "--geodesic-scale", geodesic_scale, "Geodesic scale");
@@ -177,9 +183,58 @@ int main(int argc, const char** argv) {
         if (tags[i] == 1) triangles[i] = {-1, -1, -1};
       }
     } else {
-      colors = vector<vec4f>{};
-      distance_to_color(colors, field, geodesic_scale);
+      colors = vector<vec4f>(positions.size());
+      for (int i = 0; i < colors.size(); ++i) {
+        colors[i] = vec4f(sinf(geodesic_scale * field[i]));
+      }
+      // distance_to_color(shape.colors, field, geodesic_scale);
     }
+  }
+
+  if (p0 != -1) {
+    auto tags        = vector<int>(triangles.size(), 0);
+    auto adjacencies = face_adjacencies(triangles);
+    auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
+
+    auto          paths = vector<surface_path>();
+    vector<float> fields[3];
+    fields[0] = compute_geodesic_distances(solver, {p0});
+    fields[1] = compute_geodesic_distances(solver, {p1});
+    fields[2] = compute_geodesic_distances(solver, {p2});
+    for (int i = 0; i < 3; ++i) {
+      for (auto& f : fields[i]) f = -f;
+    }
+
+    paths.push_back(integrate_field(
+        triangles, positions, adjacencies, tags, 0, fields[1], p0, p1));
+
+    paths.push_back(integrate_field(
+        triangles, positions, adjacencies, tags, 0, fields[2], p1, p2));
+
+    paths.push_back(integrate_field(
+        triangles, positions, adjacencies, tags, 0, fields[0], p2, p0));
+
+    auto plines     = vector<vec2i>{};
+    auto ppositions = vector<vec3f>{};
+    for (int i = 0; i < 3; i++) {
+      auto pos  = make_positions_from_path(paths[i], positions);
+      auto line = vector<vec2i>(pos.size() - 1);
+      for (int k = 0; k < line.size(); k++) {
+        line[k] = {k, k + 1};
+        line[k] += (int)lines.size();
+      }
+      plines += line;
+      ppositions += pos;
+    }
+    points    = {};
+    lines     = plines;
+    triangles = {};
+    quads     = {};
+    positions = ppositions;
+    normals   = {};
+    texcoords = {};
+    colors    = {};
+    radius    = {};
   }
 
   // save mesh

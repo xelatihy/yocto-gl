@@ -212,17 +212,31 @@ void          get_boundary(const edge_map& emap, vector<vec2i>& edges);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);
 vector<vec2i> get_edges(const vector<vec4i>& quads);
 
-// Get face adjacencies
+// Build adjacencies between faces (sorted counter-clockwise)
 vector<vec3i> face_adjacencies(const vector<vec3i>& triangles);
 void          face_adjacencies(
              vector<vec3i>& adjacencies, const vector<vec3i>& triangles);
 
-// Get ordered boundaries
+// Build adjacencies between vertices (sorted counter-clockwise)
+vector<vector<int>> vertex_adjacencies(
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
+void vertex_adjacencies(vector<vector<int>>& result,
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
+
+// Compute boundaries as a list of loops (sorted counter-clockwise)
 vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacency, int num_vertices);
 void                ordered_boundaries(vector<vector<int>>& boundaries,
                    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
                    int num_vertices);
+
+// Build adjacencies between each vertex and its adjacent faces.
+// Adjacencies are sorted counter-clockwise and have same starting points as
+// vertex_adjacencies()
+vector<vector<int>> vertex_to_faces_adjacencies(
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
+void vertex_to_faces_adjacencies(vector<vector<int>>& result,
+    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
 
 }  // namespace yocto
 
@@ -531,7 +545,7 @@ namespace yocto {
 
 // Data structure used for geodesic computation
 struct geodesic_solver {
-  const int min_arcs = 12;
+  static const int min_arcs = 12;
   struct graph_edge {
     int   node   = -1;
     float length = flt_max;
@@ -551,11 +565,21 @@ void            make_geodesic_solver(geodesic_solver& solver,
                const vector<vec3f>& positions);
 
 // Compute geodesic distances
+void update_geodesic_distances(vector<float>& distances,
+    const geodesic_solver& solver, const vector<int>& sources,
+    float max_distance = flt_max);
+
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<int>& sources, float max_distance = flt_max);
-void          compute_geodesic_distances(vector<float>& distances,
-             const geodesic_solver& solver, const vector<int>& sources,
+void          compute_geodesic_distances(const geodesic_solver& solver,
+             const vector<int>& sources, vector<float>& distances,
              float max_distance = flt_max);
+
+// Compute all shortest paths from source vertices to any other vertex.
+// Paths are implicitly represented: each node is assignes its previous node in
+// the path. Graph search early exits when reching end_vertex.
+vector<int> compute_geodesic_paths(const geodesic_solver& solver,
+    const vector<int>& sources, int end_vertex = -1);
 
 // Sample vertices with a Poisson distribution using geodesic distances.
 // Sampling strategy is farthest point sampling (FPS): at every step
@@ -565,15 +589,43 @@ vector<int> sample_vertices_poisson(
 void sample_vertices_poisson(
     vector<int>& verts, const geodesic_solver& solver, int num_samples);
 
+// Compute the distance field needed to compute a voronoi diagram
+vector<vector<float>> compute_voronoi_fields(
+    const geodesic_solver& solver, const vector<int>& generators);
+
 // Convert distances to colors
-vector<vec4f> distance_to_color(const vector<float>& distances, float scale = 1,
+vector<vec4f> colors_from_field(const vector<float>& field, float scale = 1,
     const vec4f& c0 = {1, 1, 1, 1}, const vec4f& c1 = {1, 0.1, 0.1, 1});
-void distance_to_color(vector<vec4f>& colors, const vector<float>& distances,
+void colors_from_field(vector<vec4f>& colors, const vector<float>& field,
     float scale = 1, const vec4f& c0 = {1, 1, 1, 1},
     const vec4f& c1 = {1, 0.1, 0.1, 1});
 
-// Sample vertices based on the geodesic distances and trying to get a Poisson
-// distribution
+struct path_vertex {
+  vec2i edge;
+  int   face;
+  float alpha;
+};
+
+// Description of a discrete path along the surface of the mesh.
+struct surface_path {
+  int                 start, end;
+  vector<path_vertex> vertices;
+};
+
+// Trace integral path following the gradient of a scalar field
+surface_path integrate_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from);
+surface_path integrate_field(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3i>& adjacency,
+    const vector<int>& tags, int tag, const vector<float>& field, int from,
+    int to);
+
+vector<vec3f> make_positions_from_path(
+    const surface_path& path, const vector<vec3f>& mesh_positions);
+
+vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
+    const vector<float>& field);
 
 }  // namespace yocto
 
