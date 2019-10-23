@@ -1172,7 +1172,6 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
   };
 
   // compute sun luminance
-  // TODO: how this relates to zenith intensity?
   auto sun_ko     = vec3f{0.48f, 0.75f, 0.14f};
   auto sun_kg     = vec3f{0.1f, 0.0f, 0.0f};
   auto sun_kwa    = vec3f{0.02f, 0.0f, 0.0f};

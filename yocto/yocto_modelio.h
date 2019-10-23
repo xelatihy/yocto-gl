@@ -656,7 +656,7 @@ struct pbrt_camera {
   // camera approximation
   float width    = 0;
   float height   = 0;
-  float fov      = 0;
+  float lens     = 0;
   float aspect   = 0;
   float focus    = 0;
   float aperture = 0;

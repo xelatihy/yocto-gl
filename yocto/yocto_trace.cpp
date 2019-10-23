@@ -26,7 +26,15 @@
 // SOFTWARE.
 //
 
+//
+// TODO: better documentation
+// TODO: inline BVH
+// TODO: inline cdfs
+// TODO: consider removing dependency from image/shape
+//
+
 #include "yocto_trace.h"
+#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
@@ -435,6 +443,877 @@ pair<vec3f, vec3f> get_subsurface_params(const string& name) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR SCENE CONVERSION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// convert scene objects
+void update_camera(trace_camera& camera, const scene_camera& iocamera) {
+  camera.frame = iocamera.frame;
+  camera.film  = iocamera.aspect >= 1
+                    ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
+                    : vec2f{iocamera.film / iocamera.aspect, iocamera.film};
+  camera.lens     = iocamera.lens;
+  camera.focus    = iocamera.focus;
+  camera.aperture = iocamera.aperture;
+}
+void update_texture(trace_texture& texture, const scene_texture& iotexture) {
+  texture.hdr = iotexture.hdr;
+  texture.ldr = iotexture.ldr;
+}
+void update_material(
+    trace_material& material, const scene_material& iomaterial) {
+  material.emission         = iomaterial.emission;
+  material.diffuse          = iomaterial.diffuse;
+  material.specular         = iomaterial.specular;
+  material.transmission     = iomaterial.transmission;
+  material.roughness        = iomaterial.roughness;
+  material.opacity          = iomaterial.opacity;
+  material.refract          = iomaterial.refract;
+  material.volemission      = iomaterial.volemission;
+  material.voltransmission  = iomaterial.voltransmission;
+  material.volmeanfreepath  = iomaterial.volmeanfreepath;
+  material.volscatter       = iomaterial.volscatter;
+  material.volscale         = iomaterial.volscale;
+  material.volanisotropy    = iomaterial.volanisotropy;
+  material.emission_tex     = iomaterial.emission_tex;
+  material.diffuse_tex      = iomaterial.diffuse_tex;
+  material.specular_tex     = iomaterial.specular_tex;
+  material.transmission_tex = iomaterial.transmission_tex;
+  material.roughness_tex    = iomaterial.roughness_tex;
+  material.opacity_tex      = iomaterial.opacity_tex;
+  material.subsurface_tex   = iomaterial.subsurface_tex;
+}
+void update_shape(trace_shape& shape, const scene_shape& ioshape,
+    const scene_model& ioscene) {
+  if (ioshape.subdivisions || ioshape.displacement) {
+    auto subdiv = ioshape;
+    if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
+    if (subdiv.displacement && subdiv.displacement_tex >= 0)
+      subdiv = displace_shape(ioscene, subdiv);
+    return update_shape(shape, subdiv, ioscene);
+  }
+  shape.points        = ioshape.points;
+  shape.lines         = ioshape.lines;
+  shape.triangles     = ioshape.triangles;
+  shape.quads         = ioshape.quads;
+  shape.quadspos      = ioshape.quadspos;
+  shape.quadsnorm     = ioshape.quadsnorm;
+  shape.quadstexcoord = ioshape.quadstexcoord;
+  shape.positions     = ioshape.positions;
+  shape.normals       = ioshape.normals;
+  shape.texcoords     = ioshape.texcoords;
+  shape.colors        = ioshape.colors;
+  shape.radius        = ioshape.radius;
+  shape.tangents      = ioshape.tangents;
+}
+void update_instance(
+    trace_instance& instance, const scene_instance& ioinstance) {
+  instance.frame    = ioinstance.frame;
+  instance.shape    = ioinstance.shape;
+  instance.material = ioinstance.material;
+}
+void update_environment(
+    trace_environment& environment, const scene_environment& ioenvironment) {
+  environment.frame        = ioenvironment.frame;
+  environment.emission     = ioenvironment.emission;
+  environment.emission_tex = ioenvironment.emission_tex;
+}
+
+// Construct a scene from io
+void make_trace_scene(trace_scene& scene, const scene_model& ioscene) {
+  scene = {};
+
+  for (auto& iocamera : ioscene.cameras) {
+    update_camera(scene.cameras.emplace_back(), iocamera);
+  }
+  for (auto& iotexture : ioscene.textures) {
+    update_texture(scene.textures.emplace_back(), iotexture);
+  }
+  for (auto& iomaterial : ioscene.materials) {
+    update_material(scene.materials.emplace_back(), iomaterial);
+  }
+  for (auto& ioshape : ioscene.shapes) {
+    update_shape(scene.shapes.emplace_back(), ioshape, ioscene);
+  }
+  for (auto& ioinstance : ioscene.instances) {
+    update_instance(scene.instances.emplace_back(), ioinstance);
+  }
+  for (auto& ioenvironment : ioscene.environments) {
+    update_environment(scene.environments.emplace_back(), ioenvironment);
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR SCENE EVALUATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Material values packed into a convenience structure.
+struct material_point {
+  vec3f emission      = {0, 0, 0};
+  vec3f diffuse       = {0, 0, 0};
+  vec3f specular      = {0, 0, 0};
+  vec3f coat          = {0, 0, 0};
+  vec3f transmission  = {0, 0, 0};
+  float roughness     = 0;
+  vec3f voldensity    = {0, 0, 0};
+  vec3f volemission   = {0, 0, 0};
+  vec3f volscatter    = {0, 0, 0};
+  float volanisotropy = 0;
+  float opacity       = 1;
+  float eta           = 1;
+  bool  refract       = false;
+};
+
+// Shape element normal.
+vec3f eval_element_normal(const trace_shape& shape, int element) {
+  auto norm = zero3f;
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
+    norm   = triangle_normal(
+        shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+  } else if (!shape.quads.empty()) {
+    auto q = shape.quads[element];
+    norm   = quad_normal(shape.positions[q.x], shape.positions[q.y],
+        shape.positions[q.z], shape.positions[q.w]);
+  } else if (!shape.lines.empty()) {
+    auto l = shape.lines[element];
+    norm   = line_tangent(shape.positions[l.x], shape.positions[l.y]);
+  } else if (!shape.quadspos.empty()) {
+    auto q = shape.quadspos[element];
+    norm   = quad_normal(shape.positions[q.x], shape.positions[q.y],
+        shape.positions[q.z], shape.positions[q.w]);
+  } else {
+    throw std::runtime_error("empty shape");
+    norm = {0, 0, 1};
+  }
+  return norm;
+}
+
+// Shape element normal.
+pair<vec3f, vec3f> eval_element_tangents(
+    const trace_shape& shape, int element, const vec2f& uv) {
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
+    if (shape.texcoords.empty()) {
+      return triangle_tangents_fromuv(shape.positions[t.x],
+          shape.positions[t.y], shape.positions[t.z], {0, 0}, {1, 0}, {0, 1});
+    } else {
+      return triangle_tangents_fromuv(shape.positions[t.x],
+          shape.positions[t.y], shape.positions[t.z], shape.texcoords[t.x],
+          shape.texcoords[t.y], shape.texcoords[t.z]);
+    }
+  } else if (!shape.quads.empty()) {
+    auto q = shape.quads[element];
+    if (shape.texcoords.empty()) {
+      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w], {0, 0}, {1, 0}, {0, 1},
+          {1, 1}, uv);
+    } else {
+      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w], shape.texcoords[q.x],
+          shape.texcoords[q.y], shape.texcoords[q.z], shape.texcoords[q.w], uv);
+    }
+  } else if (!shape.quadspos.empty()) {
+    auto q = shape.quadspos[element];
+    if (shape.texcoords.empty()) {
+      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w], {0, 0}, {1, 0}, {0, 1},
+          {1, 1}, uv);
+    } else {
+      auto qt = shape.quadstexcoord[element];
+      return quad_tangents_fromuv(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w], shape.texcoords[qt.x],
+          shape.texcoords[qt.y], shape.texcoords[qt.z], shape.texcoords[qt.w],
+          uv);
+    }
+  } else {
+    return {zero3f, zero3f};
+  }
+}
+pair<mat3f, bool> eval_element_tangent_basis(
+    const trace_shape& shape, int element, const vec2f& uv) {
+  auto z        = eval_element_normal(shape, element);
+  auto tangents = eval_element_tangents(shape, element, uv);
+  auto x        = orthonormalize(tangents.first, z);
+  auto y        = normalize(cross(z, x));
+  return {{x, y, z}, dot(y, tangents.second) < 0};
+}
+
+// Shape value interpolated using barycentric coordinates
+template <typename T>
+T eval_shape_elem(const trace_shape& shape,
+    const vector<vec4i>& facevarying_quads, const vector<T>& vals, int element,
+    const vec2f& uv) {
+  if (vals.empty()) return {};
+  if (!shape.triangles.empty()) {
+    auto t = shape.triangles[element];
+    return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], uv);
+  } else if (!shape.quads.empty()) {
+    auto q = shape.quads[element];
+    if (q.w == q.z)
+      return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
+    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
+  } else if (!shape.lines.empty()) {
+    auto l = shape.lines[element];
+    return interpolate_line(vals[l.x], vals[l.y], uv.x);
+  } else if (!shape.points.empty()) {
+    return vals[shape.points[element]];
+  } else if (!shape.quadspos.empty()) {
+    auto q = facevarying_quads[element];
+    if (q.w == q.z)
+      return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
+    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
+  } else {
+    return {};
+  }
+}
+
+// Shape values interpolated using barycentric coordinates
+vec3f eval_position(const trace_shape& shape, int element, const vec2f& uv) {
+  return eval_shape_elem(shape, shape.quadspos, shape.positions, element, uv);
+}
+vec3f eval_normal(const trace_shape& shape, int element, const vec2f& uv) {
+  if (shape.normals.empty()) return eval_element_normal(shape, element);
+  return normalize(
+      eval_shape_elem(shape, shape.quadsnorm, shape.normals, element, uv));
+}
+vec2f eval_texcoord(const trace_shape& shape, int element, const vec2f& uv) {
+  if (shape.texcoords.empty()) return uv;
+  return eval_shape_elem(
+      shape, shape.quadstexcoord, shape.texcoords, element, uv);
+}
+vec4f eval_color(const trace_shape& shape, int element, const vec2f& uv) {
+  if (shape.colors.empty()) return {1, 1, 1, 1};
+  return eval_shape_elem(shape, {}, shape.colors, element, uv);
+}
+float eval_radius(const trace_shape& shape, int element, const vec2f& uv) {
+  if (shape.radius.empty()) return 0.001f;
+  return eval_shape_elem(shape, {}, shape.radius, element, uv);
+}
+vec4f eval_tangent_space(
+    const trace_shape& shape, int element, const vec2f& uv) {
+  if (shape.tangents.empty()) return zero4f;
+  return eval_shape_elem(shape, {}, shape.tangents, element, uv);
+}
+pair<mat3f, bool> eval_tangent_basis(
+    const trace_shape& shape, int element, const vec2f& uv) {
+  auto z = eval_normal(shape, element, uv);
+  if (shape.tangents.empty()) {
+    auto tangents = eval_element_tangents(shape, element, uv);
+    auto x        = orthonormalize(tangents.first, z);
+    auto y        = normalize(cross(z, x));
+    return {{x, y, z}, dot(y, tangents.second) < 0};
+  } else {
+    auto tangsp = eval_shape_elem(shape, {}, shape.tangents, element, uv);
+    auto x      = orthonormalize(xyz(tangsp), z);
+    auto y      = normalize(cross(z, x));
+    return {{x, y, z}, tangsp.w < 0};
+  }
+}
+
+// Check texture size
+vec2i texture_size(const trace_texture& texture) {
+  if (!texture.hdr.empty()) {
+    return texture.hdr.size();
+  } else if (!texture.ldr.empty()) {
+    return texture.ldr.size();
+  } else {
+    return zero2i;
+  }
+}
+
+// Evaluate a texture
+vec4f lookup_texture(
+    const trace_texture& texture, const vec2i& ij, bool ldr_as_linear = false) {
+  if (texture.hdr.empty() && texture.ldr.empty()) return {1, 1, 1, 1};
+  if (!texture.hdr.empty()) {
+    return lookup_image(texture.hdr, ij, false);
+  } else if (!texture.ldr.empty()) {
+    return lookup_image(texture.ldr, ij, !ldr_as_linear);
+  } else {
+    return {1, 1, 1, 1};
+  }
+}
+
+// Evaluate a texture
+vec4f eval_texture(const trace_texture& texture, const vec2f& texcoord,
+    bool ldr_as_linear = false) {
+  if (!texture.hdr.empty()) {
+    return eval_image(texture.hdr, texcoord, false, false);
+  } else if (!texture.ldr.empty()) {
+    return eval_image(texture.ldr, texcoord, ldr_as_linear, false, false);
+  } else {
+    return {1, 1, 1, 1};
+  }
+}
+
+// Generates a ray from a camera for image plane coordinate uv and
+// the lens coordinates luv.
+ray3f eval_perspective_camera(
+    const trace_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+  auto distance = camera.lens;
+  if (camera.focus < flt_max) {
+    distance = camera.lens * camera.focus / (camera.focus - camera.lens);
+  }
+  if (camera.aperture) {
+    auto e = vec3f{(lens_uv.x - 0.5f) * camera.aperture,
+        (lens_uv.y - 0.5f) * camera.aperture, 0};
+    auto q = vec3f{camera.film.x * (0.5f - image_uv.x),
+        camera.film.y * (image_uv.y - 0.5f), distance};
+    // distance of the image of the point
+    auto distance1 = camera.lens * distance / (distance - camera.lens);
+    auto q1        = -q * distance1 / distance;
+    auto d         = normalize(q1 - e);
+    // auto q1 = - normalize(q) * camera.focus / normalize(q).z;
+    auto ray = ray3f{
+        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+    return ray;
+  } else {
+    auto e   = zero3f;
+    auto q   = vec3f{camera.film.x * (0.5f - image_uv.x),
+        camera.film.y * (image_uv.y - 0.5f), distance};
+    auto q1  = -q;
+    auto d   = normalize(q1 - e);
+    auto ray = ray3f{
+        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+    return ray;
+  }
+}
+
+// Generates a ray from a camera for image plane coordinate uv and
+// the lens coordinates luv.
+ray3f eval_orthographic_camera(
+    const trace_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+  if (camera.aperture) {
+    auto scale = 1 / camera.lens;
+    auto q     = vec3f{camera.film.x * (0.5f - image_uv.x) * scale,
+        camera.film.y * (image_uv.y - 0.5f) * scale, scale};
+    auto q1    = vec3f{-q.x, -q.y, -camera.focus};
+    auto e = vec3f{-q.x, -q.y, 0} + vec3f{(lens_uv.x - 0.5f) * camera.aperture,
+                                        (lens_uv.y - 0.5f) * camera.aperture,
+                                        0};
+    auto d = normalize(q1 - e);
+    auto ray = ray3f{
+        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+    return ray;
+  } else {
+    auto scale = 1 / camera.lens;
+    auto q     = vec3f{camera.film.x * (0.5f - image_uv.x) * scale,
+        camera.film.y * (image_uv.y - 0.5f) * scale, scale};
+    auto q1    = -q;
+    auto e     = vec3f{-q.x, -q.y, 0};
+    auto d     = normalize(q1 - e);
+    auto ray   = ray3f{
+        transform_point(camera.frame, e), transform_direction(camera.frame, d)};
+    return ray;
+  }
+}
+
+vec2i camera_resolution(const trace_camera& camera, int resolution) {
+  if (camera.film.x > camera.film.y) {
+    return {resolution, (int)round(resolution * camera.film.y / camera.film.x)};
+  } else {
+    return {(int)round(resolution * camera.film.x / camera.film.y), resolution};
+  }
+}
+
+// Generates a ray from a camera for image plane coordinate uv and
+// the lens coordinates luv.
+ray3f eval_camera(
+    const trace_camera& camera, const vec2f& uv, const vec2f& luv) {
+  if (camera.orthographic)
+    return eval_orthographic_camera(camera, uv, luv);
+  else
+    return eval_perspective_camera(camera, uv, luv);
+}
+
+// Generates a ray from a camera.
+ray3f eval_camera(const trace_camera& camera, const vec2i& image_ij,
+    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
+  auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
+      (image_ij.y + pixel_uv.y) / image_size.y};
+  return eval_camera(camera, image_uv, lens_uv);
+}
+
+// Generates a ray from a camera.
+ray3f eval_camera(const trace_camera& camera, int idx, const vec2i& image_size,
+    const vec2f& pixel_uv, const vec2f& lens_uv) {
+  auto image_ij = vec2i{idx % image_size.x, idx / image_size.x};
+  auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
+      (image_ij.y + pixel_uv.y) / image_size.y};
+  return eval_camera(camera, image_uv, lens_uv);
+}
+
+// Evaluates the microfacet_brdf at a location.
+material_point eval_material(const trace_scene& scene,
+    const trace_material& material, const vec2f& texcoord,
+    const vec4f& shape_color) {
+  // autoxiliary functions: delete is moving to yocto_trace
+  auto reflectivity_to_eta = [](const vec3f& reflectivity) -> vec3f {
+    return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
+  };
+
+  auto point = material_point{};
+  // factors
+  point.emission       = material.emission * xyz(shape_color);
+  point.diffuse        = material.diffuse * xyz(shape_color);
+  point.specular       = material.specular;
+  auto metallic        = material.metallic;
+  point.roughness      = material.roughness;
+  point.coat           = material.coat;
+  point.transmission   = material.transmission;
+  point.refract        = material.refract && material.transmission != zero3f;
+  auto voltransmission = material.voltransmission;
+  auto volmeanfreepath = material.volmeanfreepath;
+  point.volemission    = material.volemission;
+  point.volscatter     = material.volscatter;
+  point.volanisotropy  = material.volanisotropy;
+  auto volscale        = material.volscale;
+  point.opacity        = material.opacity * shape_color.w;
+
+  // textures
+  if (material.emission_tex >= 0) {
+    auto& emission_tex = scene.textures[material.emission_tex];
+    point.emission *= xyz(eval_texture(emission_tex, texcoord));
+  }
+  if (material.diffuse_tex >= 0) {
+    auto& diffuse_tex = scene.textures[material.diffuse_tex];
+    auto  base_txt    = eval_texture(diffuse_tex, texcoord);
+    point.diffuse *= xyz(base_txt);
+    point.opacity *= base_txt.w;
+  }
+  if (material.metallic_tex >= 0) {
+    auto& metallic_tex = scene.textures[material.metallic_tex];
+    auto  metallic_txt = eval_texture(metallic_tex, texcoord);
+    metallic *= metallic_txt.z;
+    if (material.gltf_textures) {
+      point.roughness *= metallic_txt.x;
+    }
+  }
+  if (material.specular_tex >= 0) {
+    auto& specular_tex = scene.textures[material.specular_tex];
+    auto  specular_txt = eval_texture(specular_tex, texcoord);
+    point.specular *= xyz(specular_txt);
+    if (material.gltf_textures) {
+      auto glossiness = 1 - point.roughness;
+      glossiness *= specular_txt.w;
+      point.roughness = 1 - glossiness;
+    }
+  }
+  if (material.roughness_tex >= 0) {
+    auto& roughness_tex = scene.textures[material.roughness_tex];
+    point.roughness *= eval_texture(roughness_tex, texcoord).x;
+  }
+  if (material.transmission_tex >= 0) {
+    auto& transmission_tex = scene.textures[material.transmission_tex];
+    point.transmission *= xyz(eval_texture(transmission_tex, texcoord));
+  }
+  if (material.subsurface_tex >= 0) {
+    auto& subsurface_tex = scene.textures[material.subsurface_tex];
+    point.volscatter *= xyz(eval_texture(subsurface_tex, texcoord));
+  }
+  if (material.opacity_tex >= 0) {
+    auto& opacity_tex = scene.textures[material.opacity_tex];
+    point.opacity *= mean(xyz(eval_texture(opacity_tex, texcoord)));
+  }
+  if (material.coat_tex >= 0) {
+    auto& coat_tex = scene.textures[material.coat_tex];
+    point.coat *= xyz(eval_texture(coat_tex, texcoord));
+  }
+  if (metallic) {
+    point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;
+    point.diffuse  = metallic * point.diffuse * (1 - metallic);
+  }
+  if (point.transmission != zero3f) {
+    point.eta = mean(reflectivity_to_eta(point.specular));
+  }
+  if (point.diffuse != zero3f || point.roughness) {
+    point.roughness = point.roughness * point.roughness;
+    point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
+  }
+  if (point.opacity > 0.999f) point.opacity = 1;
+  if (voltransmission != zero3f || volmeanfreepath != zero3f) {
+    if (voltransmission != zero3f) {
+      point.voldensity = -log(clamp(voltransmission, 0.0001f, 1.0f)) / volscale;
+    } else {
+      point.voldensity = 1 / (volmeanfreepath * volscale);
+    }
+  } else {
+    point.voldensity = zero3f;
+  }
+  return point;
+}
+
+// Instance values interpolated using barycentric coordinates.
+vec3f eval_position(const trace_scene& scene, const trace_instance& instance,
+    int element, const vec2f& uv) {
+  return transform_point(
+      instance.frame, eval_position(scene.shapes[instance.shape], element, uv));
+}
+vec3f eval_normal(const trace_scene& scene, const trace_instance& instance,
+    int element, const vec2f& uv, bool non_rigid_frame) {
+  auto normal = eval_normal(scene.shapes[instance.shape], element, uv);
+  return transform_normal(instance.frame, normal, non_rigid_frame);
+}
+vec3f eval_shading_normal(const trace_scene& scene,
+    const trace_instance& instance, int element, const vec2f& uv,
+    const vec3f& direction, bool non_rigid_frame) {
+  auto& shape    = scene.shapes[instance.shape];
+  auto& material = scene.materials[instance.material];
+  if (!shape.points.empty()) {
+    return -direction;
+  } else if (!shape.lines.empty()) {
+    auto normal = eval_normal(scene, instance, element, uv, non_rigid_frame);
+    return orthonormalize(-direction, normal);
+  } else if (material.normal_tex < 0) {
+    auto normal = eval_normal(scene, instance, element, uv, non_rigid_frame);
+    if (material.refract) return normal;
+    return dot(direction, normal) < 0 ? normal : -normal;
+  } else {
+    auto& normal_tex = scene.textures[material.normal_tex];
+    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex,
+                                  eval_texcoord(shape, element, uv), true));
+    auto  basis      = eval_tangent_basis(shape, element, uv);
+    normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
+    auto normal = normalize(basis.first * normalmap);
+    normal      = transform_normal(instance.frame, normal, non_rigid_frame);
+    if (material.refract) return normal;
+    return dot(direction, normal) < 0 ? normal : -normal;
+  }
+}
+// Instance element values.
+vec3f eval_element_normal(const trace_scene& scene,
+    const trace_instance& instance, int element, bool non_rigid_frame) {
+  auto normal = eval_element_normal(scene.shapes[instance.shape], element);
+  return transform_normal(instance.frame, normal, non_rigid_frame);
+}
+// Instance material
+material_point eval_material(const trace_scene& scene,
+    const trace_instance& instance, int element, const vec2f& uv) {
+  auto& shape     = scene.shapes[instance.shape];
+  auto& material  = scene.materials[instance.material];
+  auto  texcoords = eval_texcoord(shape, element, uv);
+  auto  color     = eval_color(shape, element, uv);
+  return eval_material(scene, material, texcoords, color);
+}
+
+// Environment texture coordinates from the direction.
+vec2f eval_texcoord(
+    const trace_environment& environment, const vec3f& direction) {
+  auto wl = transform_direction(inverse(environment.frame), direction);
+  auto environment_uv = vec2f{
+      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+  if (environment_uv.x < 0) environment_uv.x += 1;
+  return environment_uv;
+}
+// Evaluate the environment direction.
+vec3f eval_direction(
+    const trace_environment& environment, const vec2f& environment_uv) {
+  return transform_direction(environment.frame,
+      {cos(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif),
+          cos(environment_uv.y * pif),
+          sin(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif)});
+}
+// Evaluate the environment color.
+vec3f eval_environment(const trace_scene& scene,
+    const trace_environment& environment, const vec3f& direction) {
+  auto emission = environment.emission;
+  if (environment.emission_tex >= 0) {
+    auto& emission_tex = scene.textures[environment.emission_tex];
+    emission *= xyz(
+        eval_texture(emission_tex, eval_texcoord(environment, direction)));
+  }
+  return emission;
+}
+// Evaluate all environment color.
+vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
+  auto emission = zero3f;
+  for (auto& environment : scene.environments)
+    emission += eval_environment(scene, environment, direction);
+  return emission;
+}
+
+// Generate a distribution for sampling a shape uniformly based on area/length.
+void sample_shape_cdf(const trace_shape& shape, vector<float>& cdf) {
+  cdf.clear();
+  if (!shape.triangles.empty()) {
+    sample_triangles_cdf(cdf, shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    sample_quads_cdf(cdf, shape.quads, shape.positions);
+  } else if (!shape.lines.empty()) {
+    sample_lines_cdf(cdf, shape.lines, shape.positions);
+  } else if (!shape.points.empty()) {
+    sample_points_cdf(cdf, shape.points.size());
+  } else if (!shape.quadspos.empty()) {
+    sample_quads_cdf(cdf, shape.quadspos, shape.positions);
+  } else {
+    throw std::runtime_error("empty shape");
+  }
+}
+vector<float> sample_shape_cdf(const trace_shape& shape) {
+  if (!shape.triangles.empty()) {
+    return sample_triangles_cdf(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return sample_quads_cdf(shape.quads, shape.positions);
+  } else if (!shape.lines.empty()) {
+    return sample_lines_cdf(shape.lines, shape.positions);
+  } else if (!shape.points.empty()) {
+    return sample_points_cdf(shape.points.size());
+  } else if (!shape.quadspos.empty()) {
+    return sample_quads_cdf(shape.quadspos, shape.positions);
+  } else {
+    throw std::runtime_error("empty shape");
+    return {};
+  }
+}
+
+// Sample a shape based on a distribution.
+pair<int, vec2f> sample_shape(const trace_shape& shape,
+    const vector<float>& cdf, float re, const vec2f& ruv) {
+  if (cdf.empty()) return {};
+  if (!shape.triangles.empty()) {
+    return sample_triangles(cdf, re, ruv);
+  } else if (!shape.quads.empty()) {
+    return sample_quads(cdf, re, ruv);
+  } else if (!shape.lines.empty()) {
+    return {sample_lines(cdf, re, ruv.x).first, ruv};
+  } else if (!shape.points.empty()) {
+    return {sample_points(cdf, re), ruv};
+  } else if (!shape.quadspos.empty()) {
+    return sample_quads(cdf, re, ruv);
+  } else {
+    return {0, zero2f};
+  }
+}
+
+float sample_shape_pdf(const trace_shape& shape, const vector<float>& cdf,
+    int element, const vec2f& uv) {
+  // prob triangle * area triangle = area triangle mesh
+  return 1 / cdf.back();
+}
+
+// Update environment CDF for sampling.
+vector<float> sample_environment_cdf(
+    const trace_scene& scene, const trace_environment& environment) {
+  if (environment.emission_tex < 0) return {};
+  auto& texture    = scene.textures[environment.emission_tex];
+  auto  size       = texture_size(texture);
+  auto  texels_cdf = vector<float>(size.x * size.y);
+  if (size != zero2i) {
+    for (auto i = 0; i < texels_cdf.size(); i++) {
+      auto ij       = vec2i{i % size.x, i / size.x};
+      auto th       = (ij.y + 0.5f) * pif / size.y;
+      auto value    = lookup_texture(texture, ij);
+      texels_cdf[i] = max(xyz(value)) * sin(th);
+      if (i) texels_cdf[i] += texels_cdf[i - 1];
+    }
+  } else {
+    throw std::runtime_error("empty texture");
+  }
+  return texels_cdf;
+}
+void sample_environment_cdf(const trace_scene& scene,
+    const trace_environment& environment, vector<float>& texels_cdf) {
+  if (environment.emission_tex < 0) {
+    texels_cdf.clear();
+    return;
+  }
+  auto& texture = scene.textures[environment.emission_tex];
+  auto  size    = texture_size(texture);
+  texels_cdf.resize(size.x * size.y);
+  if (size != zero2i) {
+    for (auto i = 0; i < texels_cdf.size(); i++) {
+      auto ij       = vec2i{i % size.x, i / size.x};
+      auto th       = (ij.y + 0.5f) * pif / size.y;
+      auto value    = lookup_texture(texture, ij);
+      texels_cdf[i] = max(xyz(value)) * sin(th);
+      if (i) texels_cdf[i] += texels_cdf[i - 1];
+    }
+  } else {
+    throw std::runtime_error("empty texture");
+  }
+}
+
+// Sample an environment based on texels
+vec3f sample_environment(const trace_scene& scene,
+    const trace_environment& environment, const vector<float>& texels_cdf,
+    float re, const vec2f& ruv) {
+  if (!texels_cdf.empty() && environment.emission_tex >= 0) {
+    auto& texture = scene.textures[environment.emission_tex];
+    auto  idx     = sample_discrete(texels_cdf, re);
+    auto  size    = texture_size(texture);
+    auto  u       = (idx % size.x + 0.5f) / size.x;
+    auto  v       = (idx / size.x + 0.5f) / size.y;
+    return eval_direction(environment, {u, v});
+  } else {
+    return sample_sphere(ruv);
+  }
+}
+
+// Sample an environment based on texels
+float sample_environment_pdf(const trace_scene& scene,
+    const trace_environment& environment, const vector<float>& texels_cdf,
+    const vec3f& direction) {
+  if (!texels_cdf.empty() && environment.emission_tex >= 0) {
+    auto& texture  = scene.textures[environment.emission_tex];
+    auto  size     = texture_size(texture);
+    auto  texcoord = eval_texcoord(environment, direction);
+    auto  i        = (int)(texcoord.x * size.x);
+    auto  j        = (int)(texcoord.y * size.y);
+    auto  idx      = j * size.x + i;
+    auto  prob     = sample_discrete_pdf(texels_cdf, idx) / texels_cdf.back();
+    auto  angle    = (2 * pif / size.x) * (pif / size.y) *
+                 sin(pif * (j + 0.5f) / size.y);
+    return prob / angle;
+  } else {
+    return sample_sphere_pdf(direction);
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE INTERSECTION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+void make_bvh(
+    bvh_scene& bvh, const trace_scene& scene, const bvh_params& params) {
+  // set values
+  bvh.shapes.resize(scene.shapes.size());
+  for (auto shape = 0; shape < scene.shapes.size(); shape++) {
+    bvh.shapes[shape].positions = scene.shapes[shape].positions;
+    bvh.shapes[shape].radius    = scene.shapes[shape].radius;
+    bvh.shapes[shape].points    = scene.shapes[shape].points;
+    bvh.shapes[shape].lines     = scene.shapes[shape].lines;
+    bvh.shapes[shape].triangles = scene.shapes[shape].triangles;
+    bvh.shapes[shape].quads     = scene.shapes[shape].quads;
+    bvh.shapes[shape].quadspos  = scene.shapes[shape].quadspos;
+#if YOCTO_EMBREE
+    if (params.embree && params.compact) {
+      bvh.shapes[shape].positions.reserve(
+          bvh.shapes[shape].positions.size() + 1);
+    }
+#endif
+  }
+  bvh.instances.resize(scene.instances.size());
+  for (auto instance = 0; instance < scene.instances.size(); instance++) {
+    bvh.instances[instance] = {
+        scene.instances[instance].frame, scene.instances[instance].shape};
+  }
+
+  // build
+  make_scene_bvh(bvh, params);
+}
+
+void update_bvh(bvh_scene& bvh, const trace_scene& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params) {
+  // set values
+  for (auto shape = 0; shape < updated_shapes.size(); shape++) {
+    bvh.shapes[shape].positions = scene.shapes[shape].positions;
+    bvh.shapes[shape].radius    = scene.shapes[shape].radius;
+    bvh.shapes[shape].points    = scene.shapes[shape].points;
+    bvh.shapes[shape].lines     = scene.shapes[shape].lines;
+    bvh.shapes[shape].triangles = scene.shapes[shape].triangles;
+    bvh.shapes[shape].quads     = scene.shapes[shape].quads;
+    bvh.shapes[shape].quadspos  = scene.shapes[shape].quadspos;
+#if YOCTO_EMBREE
+    if (params.embree && params.compact) {
+      bvh.shapes[shape].positions.reserve(
+          bvh.shapes[shape].positions.size() + 1);
+    }
+#endif
+  }
+  for (auto instance = 0; instance < updated_instances.size(); instance++) {
+    bvh.instances[instance] = {
+        scene.instances[instance].frame, scene.instances[instance].shape};
+  }
+
+  update_scene_bvh(bvh, updated_instances, updated_shapes, params);
+}
+
+void make_bvh(
+    bvh_shared_scene& bvh, const trace_scene& scene, const bvh_params& params) {
+  // set values
+  bvh.num_shapes   = (int)scene.shapes.size();
+  bvh.shape_points = [&scene](int idx) -> const vector<int>& {
+    return scene.shapes[idx].points;
+  };
+  bvh.shape_lines = [&scene](int idx) -> const vector<vec2i>& {
+    return scene.shapes[idx].lines;
+  };
+  bvh.shape_triangles = [&scene](int idx) -> const vector<vec3i>& {
+    return scene.shapes[idx].triangles;
+  };
+  bvh.shape_quads = [&scene](int idx) -> const vector<vec4i>& {
+    return scene.shapes[idx].quads;
+  };
+  bvh.shape_quadspos = [&scene](int idx) -> const vector<vec4i>& {
+    return scene.shapes[idx].quadspos;
+  };
+  bvh.shape_positions = [&scene](int idx) -> const vector<vec3f>& {
+    return scene.shapes[idx].positions;
+  };
+  bvh.shape_radius = [&scene](int idx) -> const vector<float>& {
+    return scene.shapes[idx].radius;
+  };
+  bvh.num_instances  = (int)scene.instances.size();
+  bvh.instance_frame = [&scene](int idx) -> frame3f {
+    return scene.instances[idx].frame;
+  };
+  bvh.instance_shape = [&scene](int idx) -> int {
+    return scene.instances[idx].shape;
+  };
+
+  // build
+  make_scene_bvh(bvh, params);
+}
+
+void update_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params) {
+  // set values
+  bvh.num_shapes   = (int)scene.shapes.size();
+  bvh.shape_points = [&scene](int idx) -> const vector<int>& {
+    return scene.shapes[idx].points;
+  };
+  bvh.shape_lines = [&scene](int idx) -> const vector<vec2i>& {
+    return scene.shapes[idx].lines;
+  };
+  bvh.shape_triangles = [&scene](int idx) -> const vector<vec3i>& {
+    return scene.shapes[idx].triangles;
+  };
+  bvh.shape_quads = [&scene](int idx) -> const vector<vec4i>& {
+    return scene.shapes[idx].quads;
+  };
+  bvh.shape_quadspos = [&scene](int idx) -> const vector<vec4i>& {
+    return scene.shapes[idx].quadspos;
+  };
+  bvh.shape_positions = [&scene](int idx) -> const vector<vec3f>& {
+    return scene.shapes[idx].positions;
+  };
+  bvh.shape_radius = [&scene](int idx) -> const vector<float>& {
+    return scene.shapes[idx].radius;
+  };
+  bvh.num_instances  = (int)scene.instances.size();
+  bvh.instance_frame = [&scene](int idx) -> frame3f {
+    return scene.instances[idx].frame;
+  };
+  bvh.instance_shape = [&scene](int idx) -> int {
+    return scene.instances[idx].shape;
+  };
+
+  update_scene_bvh(bvh, updated_instances, updated_shapes, params);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -727,7 +1606,7 @@ static float sample_volscattering_pdf(const material_point& material,
 }
 
 // Sample pdf for an environment.
-static float sample_environment_pdf(const yocto_scene& scene,
+static float sample_environment_pdf(const trace_scene& scene,
     const trace_lights& lights, int environment_id, const vec3f& incoming) {
   auto& environment = scene.environments[environment_id];
   if (environment.emission_tex >= 0) {
@@ -747,7 +1626,7 @@ static float sample_environment_pdf(const yocto_scene& scene,
 }
 
 // Picks a point on an environment.
-static vec3f sample_environment(const yocto_scene& scene,
+static vec3f sample_environment(const trace_scene& scene,
     const trace_lights& lights, int environment_id, float rel,
     const vec2f& ruv) {
   auto& environment = scene.environments[environment_id];
@@ -765,7 +1644,7 @@ static vec3f sample_environment(const yocto_scene& scene,
 }
 
 // Picks a point on a light.
-static vec3f sample_light(const yocto_scene& scene, const trace_lights& lights,
+static vec3f sample_light(const trace_scene& scene, const trace_lights& lights,
     int instance_id, const vec3f& p, float rel, const vec2f& ruv) {
   auto& instance = scene.instances[instance_id];
   auto& shape    = scene.shapes[instance.shape];
@@ -777,7 +1656,7 @@ static vec3f sample_light(const yocto_scene& scene, const trace_lights& lights,
 }
 
 // Sample pdf for a light point.
-static float sample_light_pdf(const yocto_scene& scene,
+static float sample_light_pdf(const trace_scene& scene,
     const trace_lights& lights, int instance_id, const trace_bvh& bvh,
     const vec3f& position, const vec3f& direction) {
   auto& instance = scene.instances[instance_id];
@@ -807,7 +1686,7 @@ static float sample_light_pdf(const yocto_scene& scene,
 }
 
 // Sample lights wrt solid angle
-static vec3f sample_lights(const yocto_scene& scene, const trace_lights& lights,
+static vec3f sample_lights(const trace_scene& scene, const trace_lights& lights,
     const trace_bvh& bvh, const vec3f& position, float rl, float rel,
     const vec2f& ruv) {
   auto light_id = sample_uniform(
@@ -823,7 +1702,7 @@ static vec3f sample_lights(const yocto_scene& scene, const trace_lights& lights,
 }
 
 // Sample lights pdf
-static float sample_lights_pdf(const yocto_scene& scene,
+static float sample_lights_pdf(const trace_scene& scene,
     const trace_lights& lights, const trace_bvh& bvh, const vec3f& position,
     const vec3f& direction) {
   auto pdf = 0.0f;
@@ -839,12 +1718,12 @@ static float sample_lights_pdf(const yocto_scene& scene,
 }
 
 // Sample camera
-static ray3f sample_camera(const yocto_camera& camera, const vec2i& ij,
+static ray3f sample_camera(const trace_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
   return eval_camera(camera, ij, image_size, puv, sample_disk(luv));
 }
 
-static ray3f sample_camera_tent(const yocto_camera& camera, const vec2i& ij,
+static ray3f sample_camera_tent(const trace_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
   const auto width  = 2.0f;
   const auto offset = 0.5f;
@@ -859,7 +1738,7 @@ static ray3f sample_camera_tent(const yocto_camera& camera, const vec2i& ij,
 }
 
 // Recursive path tracing.
-static pair<vec3f, bool> trace_path(const yocto_scene& scene,
+static pair<vec3f, bool> trace_path(const trace_scene& scene,
     const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin_,
     const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
@@ -995,7 +1874,7 @@ static pair<vec3f, bool> trace_path(const yocto_scene& scene,
 }
 
 // Recursive path tracing.
-static pair<vec3f, bool> trace_naive(const yocto_scene& scene,
+static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin_,
     const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
@@ -1067,7 +1946,7 @@ static pair<vec3f, bool> trace_naive(const yocto_scene& scene,
 }
 
 // Eyelight for quick previewing.
-static pair<vec3f, bool> trace_eyelight(const yocto_scene& scene,
+static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
     const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin_,
     const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
@@ -1127,7 +2006,7 @@ static pair<vec3f, bool> trace_eyelight(const yocto_scene& scene,
 }
 
 // False color rendering
-static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
+static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
     const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin,
     const vec3f& direction, rng_state& rng, const trace_params& params) {
   // intersect next point
@@ -1228,7 +2107,7 @@ static pair<vec3f, bool> trace_falsecolor(const yocto_scene& scene,
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using trace_sampler_func = pair<vec3f, bool> (*)(const yocto_scene& scene,
+using trace_sampler_func = pair<vec3f, bool> (*)(const trace_scene& scene,
     const trace_bvh& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, const trace_params& params);
 static trace_sampler_func get_trace_sampler_func(const trace_params& params) {
@@ -1265,7 +2144,7 @@ trace_pixel& get_trace_pixel(trace_state& state, int i, int j) {
 
 // Trace a block of samples
 void trace_region(image<vec4f>& image, trace_state& state,
-    const yocto_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
+    const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     const image_region& region, int num_samples, const trace_params& params) {
   auto& camera  = scene.cameras.at(params.camera);
   auto  sampler = get_trace_sampler_func(params);
@@ -1332,7 +2211,7 @@ void make_trace_state(
 }
 
 // Init trace lights
-trace_lights make_trace_lights(const yocto_scene& scene) {
+trace_lights make_trace_lights(const trace_scene& scene) {
   auto lights = trace_lights{};
   lights.shape_cdfs.resize(scene.shapes.size());
   lights.environment_cdfs.resize(scene.textures.size());
@@ -1356,7 +2235,7 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
   }
   return lights;
 }
-void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
+void make_trace_lights(trace_lights& lights, const trace_scene& scene) {
   lights = {};
   lights.shape_cdfs.resize(scene.shapes.size());
   lights.environment_cdfs.resize(scene.textures.size());
@@ -1381,7 +2260,7 @@ void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const trace_bvh& bvh,
+image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params) {
   auto image_size = camera_resolution(
       scene.cameras.at(params.camera), params.resolution);
@@ -1407,7 +2286,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const trace_bvh& bvh,
 
 // Progressively compute an image by calling trace_samples multiple times.
 int trace_samples(image<vec4f>& render, trace_state& state,
-    const yocto_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
+    const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
     int current_sample, const trace_params& params) {
   auto regions     = make_image_regions(render.size(), params.region, true);
   auto num_samples = min(params.batch, params.samples - current_sample);

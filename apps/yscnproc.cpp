@@ -28,7 +28,6 @@
 
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
-#include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 
@@ -87,7 +86,7 @@ int main(int argc, const char** argv) {
   save_prms.objinstances = obj_instances;
 
   // load scene
-  auto scene = yocto_scene{};
+  auto scene = scene_model{};
   try {
     auto timer = print_timed("loading scene");
     load_scene(filename, scene, load_prms);
@@ -97,8 +96,9 @@ int main(int argc, const char** argv) {
 
   // validate scene
   if (validate) {
-    auto timer = print_timed("validating scene");
-    print_validation(scene);
+    auto timer  = print_timed("validating scene");
+    auto errors = format_validation(scene);
+    for (auto& error : errors) print_info(error);
   }
 
   // print info
@@ -116,12 +116,6 @@ int main(int argc, const char** argv) {
         texture.filename = replace_extension(texture.filename, ".png");
       }
     }
-  }
-
-  // tesselating scene
-  {
-    auto timer = print_timed("tesselating scene");
-    update_tesselation(scene);
   }
 
   // add missing mesh names if necessary

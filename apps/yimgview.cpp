@@ -73,10 +73,10 @@ struct app_state {
 
 struct app_states {
   // data
-  std::list<app_state>         states       = {};
-  int                          selected     = -1;
-  std::list<app_state>         loading      = {};
-  std::list<std::future<void>> loaders = {};
+  std::list<app_state>         states   = {};
+  int                          selected = -1;
+  std::list<app_state>         loading  = {};
+  std::list<std::future<void>> loaders  = {};
 
   // get image
   app_state& get_selected() {

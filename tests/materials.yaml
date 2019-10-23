@@ -2,38 +2,38 @@ cameras:
   - name: default
     lens: 0.05
     aperture: 0.0
-    film: [0.036, 0.015]
+    aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
   - name: front
     lens: 0.05
+    aspect: 3
     aperture: 0.0
-    film: [0.036, 0.012]
     lookat: [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
   - name: back
     lens: 0.05
     aperture: 0.0
-    film: [0.036, 0.012]
+    aspect: 3
     lookat: [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
   - name: perspective-sharp
     lens: 0.05
     aperture: 0.0
-    film: [0.036, 0.015]
+    aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
   - name: perspective-dof
     lens: 0.05
     aperture: 0.025
-    film: [0.036, 0.015]
+    aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
   - name: orthographic-sharp
     lens: 0.05
     aperture: 0.0
-    film: [0.036, 0.015]
+    aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
   - name: orthographic-dof
     lens: 0.05
     aperture: 0.02
-    film: [0.036, 0.015]
+    aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
 textures:

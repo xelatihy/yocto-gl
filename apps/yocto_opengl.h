@@ -34,7 +34,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_image.h"
+#include "../yocto/yocto_math.h"
 
 #include <functional>
 
@@ -194,8 +195,9 @@ namespace yocto {
 // Opengl caemra
 struct opengl_camera {
   frame3f frame  = identity3x4f;
-  float   yfov   = radians(90);
+  float   lens   = 0.050;
   float   asepct = 1;
+  float   film   = 0.036;
   float   near   = 0.001;
   float   far    = 10000;
 };

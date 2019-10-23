@@ -1,9 +1,9 @@
 #include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_common.h"
 #include "../yocto/yocto_commonio.h"
-#include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
@@ -15,7 +15,7 @@ struct app_state {
   std::function<void(app_state&, const opengl_window&)>   draw_glwidgets;
 
   // Geometry data
-  yocto_shape shape;
+  scene_shape shape;
 
   // OpenGL data
   opengl_scene        scene          = {};
@@ -24,7 +24,7 @@ struct app_state {
   // Interaction data
   float        time       = 0;
   bool         show_edges = false;
-  yocto_camera camera;
+  scene_camera camera;
   float        camera_focus;
   bvh_tree     bvh;
 
@@ -192,23 +192,24 @@ void update_gledges(app_state& app) {
   init_glelementbuffer(glshape.lines, elements, false);
 }
 
-void update_glcamera(opengl_camera& glcamera, const yocto_camera& camera) {
+void update_glcamera(opengl_camera& glcamera, const scene_camera& camera) {
   glcamera.frame  = camera.frame;
-  glcamera.yfov   = camera_yfov(camera);
-  glcamera.asepct = camera_aspect(camera);
+  glcamera.lens   = camera.lens;
+  glcamera.asepct = camera.aspect;
   glcamera.near   = 0.001f;
   glcamera.far    = 10000;
 }
 
 void init_camera(app_state& app, const vec3f& from = vec3f{0, 0.5, 1.5},
     const vec3f& to = {0, 0, 0}) {
-  app.camera              = yocto_camera{};
+  app.camera              = scene_camera{};
   auto up                 = vec3f{0, 1, 0};
   app.camera.lens         = 0.02f;
   app.camera.orthographic = false;
   app.camera.aperture     = 0;
   app.camera.frame        = lookat_frame(from, to, up);
-  app.camera.film         = {0.036f, 0.015f};
+  app.camera.film         = 0.036f;
+  app.camera.aspect       = 0.036f / 0.015f;
   app.camera.focus        = length(to - from);
   app.camera_focus        = app.camera.focus;
 }
@@ -302,11 +303,15 @@ void click_callback(const opengl_window& win, bool left_click, bool press) {
 
   // Ray trace camera ray.
   if (!left_click && press) {
-    auto  ray = eval_camera(app.camera, mouse, {0.5, 0.5});
-    int   face;
-    vec2f uv;
-    float distance;
-    auto  hit = intersect_triangles_bvh(app.bvh, app.shape.triangles,
+    auto ray      = camera_ray(app.camera.frame, app.camera.lens,
+        app.camera.aspect >= 1
+            ? vec2f{app.camera.film, app.camera.film / app.camera.aspect}
+            : vec2f{app.camera.film * app.camera.aspect, app.camera.film},
+        mouse + 0.5f);
+    auto face     = 0;
+    auto uv       = zero2f;
+    auto distance = 0.0f;
+    auto hit      = intersect_triangles_bvh(app.bvh, app.shape.triangles,
         app.shape.positions, ray, face, uv, distance);
 
     if (hit) {

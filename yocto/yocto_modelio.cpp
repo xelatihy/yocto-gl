@@ -3,10 +3,6 @@
 //
 
 //
-// TODO: fov/aspect lens/film everywhere
-// TODO: pbrt design, split elements from approximations
-// TODO: add uvdisk and uvsphere to pbrt shape loading
-// TODO: remove obj instances
 // TODO: remove obj procedurals
 // TODO: simplify objx parsing using single line commands
 //
@@ -1935,7 +1931,6 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
       parse_value_or_empty(line, mname);
     } else if (cmd == "s") {
       if (geom_only) continue;
-      // TODO: smoothing
     } else if (cmd == "mtllib") {
       if (geom_only) continue;
       auto mtllib = ""s;
@@ -3646,7 +3641,6 @@ static inline void parse_pbrt_params(
       value.type = pbrt_value_type::color;
       parse_pbrt_pvalues(str, value.value3f, value.vector3f);
     } else if (type == "xyz") {
-      // TODO: xyz conversion
       value.type = pbrt_value_type::color;
       parse_pbrt_pvalues(str, value.value3f, value.vector3f);
       throw std::runtime_error("xyz conversion");
@@ -3722,7 +3716,8 @@ static void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
     camera.frame   = inverse((frame3f)camera.frame);
     camera.frame.z = -camera.frame.z;
     if (camera.type == "perspective") {
-      camera.fov = get_pbrt_value(values, "fov", 90.0f);
+      auto fov    = get_pbrt_value(values, "fov", 90.0f);
+      camera.lens = 2 * tan(fov / 2) * 0.036;
       // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
       camera.aspect = get_pbrt_value(values, "frameaspectratio", film_aspect);
       camera.focus  = get_pbrt_value(values, "focaldistance", 10.0f);
@@ -3734,7 +3729,7 @@ static void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
       lensfile        = lensfile.substr(lensfile.find('.') + 1);
       lensfile        = lensfile.substr(0, lensfile.size() - 2);
       auto lens       = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
-      camera.fov      = 2 * atan(0.036f / (2 * lens));
+      camera.lens     = 2 * atan(0.036f / (2 * lens));
       camera.aperture = get_pbrt_value(values, "aperturediameter", 0.0f);
       camera.focus    = get_pbrt_value(values, "focusdistance", 10.0f);
       camera.aspect   = film_aspect;
@@ -4612,7 +4607,8 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
     auto camera = camera_;
     if (camera.type == "") {
       camera.type = "perspective";
-      camera.values.push_back(make_pbrt_value("fov", camera.fov * 180 / pif));
+      camera.values.push_back(make_pbrt_value(
+          "fov", 2 * tan(0.036f / (2 * camera.lens)) * 180 / pif));
     }
     format_values(fs, "LookAt {} {} {}\n", camera.frame.o,
         camera.frame.o - camera.frame.z, camera.frame.y);
@@ -4754,7 +4750,6 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
     }
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)environment.frame);
-    // TODO: should we correct frames?
     format_values(
         fs, "LightSource \"{}\" {}\n", environment.type, environment.values);
     format_values(fs, "AttributeEnd\n");
