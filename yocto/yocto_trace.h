@@ -233,15 +233,6 @@ trace_bvh make_bvh(const trace_scene& scene, const bvh_params& params);
 void update_bvh(trace_bvh& bvh, const trace_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params);
-bvh_scene make_standalone_bvh(const trace_scene& scene, const bvh_params& params);
-void update_standalone_bvh(bvh_scene& bvh, const trace_scene& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params);
-bvh_shared_scene make_shared_bvh(
-    const trace_scene& scene, const bvh_params& params);
-void update_shared_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params);
 
 // Trace lights used during rendering.
 struct trace_lights {
