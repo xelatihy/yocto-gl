@@ -81,10 +81,6 @@
 #ifndef _YOCTO_SHAPE_H_
 #define _YOCTO_SHAPE_H_
 
-#ifndef YOCTO_QUADS_AS_TRIANGLES
-#define YOCTO_QUADS_AS_TRIANGLES 1
-#endif
-
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
