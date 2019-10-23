@@ -1039,121 +1039,6 @@ vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
   return emission;
 }
 
-// Generate a distribution for sampling a shape uniformly based on area/length.
-void sample_shape_cdf(const trace_shape& shape, vector<float>& cdf) {
-  cdf.clear();
-  if (!shape.triangles.empty()) {
-    sample_triangles_cdf(cdf, shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
-    sample_quads_cdf(cdf, shape.quads, shape.positions);
-  } else if (!shape.lines.empty()) {
-    sample_lines_cdf(cdf, shape.lines, shape.positions);
-  } else if (!shape.points.empty()) {
-    sample_points_cdf(cdf, shape.points.size());
-  } else if (!shape.quadspos.empty()) {
-    sample_quads_cdf(cdf, shape.quadspos, shape.positions);
-  } else {
-    throw std::runtime_error("empty shape");
-  }
-}
-
-// Sample a shape based on a distribution.
-pair<int, vec2f> sample_shape(const trace_shape& shape,
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-  if (cdf.empty()) return {};
-  if (!shape.triangles.empty()) {
-    return sample_triangles(cdf, re, ruv);
-  } else if (!shape.quads.empty()) {
-    return sample_quads(cdf, re, ruv);
-  } else if (!shape.lines.empty()) {
-    return {sample_lines(cdf, re, ruv.x).first, ruv};
-  } else if (!shape.points.empty()) {
-    return {sample_points(cdf, re), ruv};
-  } else if (!shape.quadspos.empty()) {
-    return sample_quads(cdf, re, ruv);
-  } else {
-    return {0, zero2f};
-  }
-}
-
-// Update environment CDF for sampling.
-vector<float> sample_environment_cdf(
-    const trace_scene& scene, const trace_environment& environment) {
-  if (environment.emission_tex < 0) return {};
-  auto& texture    = scene.textures[environment.emission_tex];
-  auto  size       = texture_size(texture);
-  auto  texels_cdf = vector<float>(size.x * size.y);
-  if (size != zero2i) {
-    for (auto i = 0; i < texels_cdf.size(); i++) {
-      auto ij       = vec2i{i % size.x, i / size.x};
-      auto th       = (ij.y + 0.5f) * pif / size.y;
-      auto value    = lookup_texture(texture, ij);
-      texels_cdf[i] = max(xyz(value)) * sin(th);
-      if (i) texels_cdf[i] += texels_cdf[i - 1];
-    }
-  } else {
-    throw std::runtime_error("empty texture");
-  }
-  return texels_cdf;
-}
-void sample_environment_cdf(const trace_scene& scene,
-    const trace_environment& environment, vector<float>& texels_cdf) {
-  if (environment.emission_tex < 0) {
-    texels_cdf.clear();
-    return;
-  }
-  auto& texture = scene.textures[environment.emission_tex];
-  auto  size    = texture_size(texture);
-  texels_cdf.resize(size.x * size.y);
-  if (size != zero2i) {
-    for (auto i = 0; i < texels_cdf.size(); i++) {
-      auto ij       = vec2i{i % size.x, i / size.x};
-      auto th       = (ij.y + 0.5f) * pif / size.y;
-      auto value    = lookup_texture(texture, ij);
-      texels_cdf[i] = max(xyz(value)) * sin(th);
-      if (i) texels_cdf[i] += texels_cdf[i - 1];
-    }
-  } else {
-    throw std::runtime_error("empty texture");
-  }
-}
-
-// Sample an environment based on texels
-vec3f sample_environment(const trace_scene& scene,
-    const trace_environment& environment, const vector<float>& texels_cdf,
-    float re, const vec2f& ruv) {
-  if (!texels_cdf.empty() && environment.emission_tex >= 0) {
-    auto& texture = scene.textures[environment.emission_tex];
-    auto  idx     = sample_discrete(texels_cdf, re);
-    auto  size    = texture_size(texture);
-    auto  u       = (idx % size.x + 0.5f) / size.x;
-    auto  v       = (idx / size.x + 0.5f) / size.y;
-    return eval_direction(environment, {u, v});
-  } else {
-    return sample_sphere(ruv);
-  }
-}
-
-// Sample an environment based on texels
-float sample_environment_pdf(const trace_scene& scene,
-    const trace_environment& environment, const vector<float>& texels_cdf,
-    const vec3f& direction) {
-  if (!texels_cdf.empty() && environment.emission_tex >= 0) {
-    auto& texture  = scene.textures[environment.emission_tex];
-    auto  size     = texture_size(texture);
-    auto  texcoord = eval_texcoord(environment, direction);
-    auto  i        = (int)(texcoord.x * size.x);
-    auto  j        = (int)(texcoord.y * size.y);
-    auto  idx      = j * size.x + i;
-    auto  prob     = sample_discrete_pdf(texels_cdf, idx) / texels_cdf.back();
-    auto  angle    = (2 * pif / size.x) * (pif / size.y) *
-                 sin(pif * (j + 0.5f) / size.y);
-    return prob / angle;
-  } else {
-    return sample_sphere_pdf(direction);
-  }
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1602,6 +1487,27 @@ static float sample_volscattering_pdf(const material_point& material,
   return eval_phasefunction(dot(outgoing, incoming), material.volanisotropy);
 }
 
+// Update environment CDF for sampling.
+static vector<float> sample_environment_cdf(
+    const trace_scene& scene, const trace_environment& environment) {
+  if (environment.emission_tex < 0) return {};
+  auto& texture    = scene.textures[environment.emission_tex];
+  auto  size       = texture_size(texture);
+  auto  texels_cdf = vector<float>(size.x * size.y);
+  if (size != zero2i) {
+    for (auto i = 0; i < texels_cdf.size(); i++) {
+      auto ij       = vec2i{i % size.x, i / size.x};
+      auto th       = (ij.y + 0.5f) * pif / size.y;
+      auto value    = lookup_texture(texture, ij);
+      texels_cdf[i] = max(xyz(value)) * sin(th);
+      if (i) texels_cdf[i] += texels_cdf[i - 1];
+    }
+  } else {
+    throw std::runtime_error("empty texture");
+  }
+  return texels_cdf;
+}
+
 // Sample pdf for an environment.
 static float sample_environment_pdf(const trace_scene& scene,
     const trace_lights& lights, int environment_id, const vec3f& incoming) {
@@ -1637,6 +1543,42 @@ static vec3f sample_environment(const trace_scene& scene,
     return eval_direction(environment, {u, v});
   } else {
     return sample_sphere(ruv);
+  }
+}
+
+// Generate a distribution for sampling a shape uniformly based on area/length.
+static vector<float> sample_shape_cdf(const trace_shape& shape) {
+  if (!shape.triangles.empty()) {
+    return sample_triangles_cdf(shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return sample_quads_cdf(shape.quads, shape.positions);
+  } else if (!shape.lines.empty()) {
+    return sample_lines_cdf(shape.lines, shape.positions);
+  } else if (!shape.points.empty()) {
+    return sample_points_cdf(shape.points.size());
+  } else if (!shape.quadspos.empty()) {
+    return sample_quads_cdf(shape.quadspos, shape.positions);
+  } else {
+    throw std::runtime_error("empty shape");
+  }
+}
+
+// Sample a shape based on a distribution.
+static pair<int, vec2f> sample_shape(const trace_shape& shape,
+    const vector<float>& cdf, float re, const vec2f& ruv) {
+  if (cdf.empty()) return {};
+  if (!shape.triangles.empty()) {
+    return sample_triangles(cdf, re, ruv);
+  } else if (!shape.quads.empty()) {
+    return sample_quads(cdf, re, ruv);
+  } else if (!shape.lines.empty()) {
+    return {sample_lines(cdf, re, ruv.x).first, ruv};
+  } else if (!shape.points.empty()) {
+    return {sample_points(cdf, re), ruv};
+  } else if (!shape.quadspos.empty()) {
+    return sample_quads(cdf, re, ruv);
+  } else {
+    return {0, zero2f};
   }
 }
 
@@ -2203,15 +2145,15 @@ trace_lights make_trace_lights(const trace_scene& scene) {
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
     lights.instances.push_back(idx);
-    sample_shape_cdf(shape, lights.shape_cdfs[instance.shape]);
+    lights.shape_cdfs[instance.shape] = sample_shape_cdf(shape);
   }
   for (auto idx = 0; idx < scene.environments.size(); idx++) {
     auto& environment = scene.environments[idx];
     if (environment.emission == zero3f) continue;
     lights.environments.push_back(idx);
     if (environment.emission_tex >= 0) {
-      sample_environment_cdf(scene, environment,
-          lights.environment_cdfs[environment.emission_tex]);
+      lights.environment_cdfs[environment.emission_tex] = 
+      sample_environment_cdf(scene, environment);
     }
   }
   return lights;
