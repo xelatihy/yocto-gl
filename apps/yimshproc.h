@@ -303,13 +303,15 @@ void click_callback(const opengl_window& win, bool left_click, bool press) {
 
   // Ray trace camera ray.
   if (!left_click && press) {
-    // auto  ray = eval_camera(app.camera, mouse, {0.5, 0.5}, zero2f);
-    // TODO: enable picking
-    auto ray = ray3f{};
-    int   face;
-    vec2f uv;
-    float distance;
-    auto  hit = intersect_triangles_bvh(app.bvh, app.shape.triangles,
+    auto ray      = camera_ray(app.camera.frame, app.camera.lens,
+        app.camera.aspect >= 1
+            ? vec2f{app.camera.film, app.camera.film / app.camera.aspect}
+            : vec2f{app.camera.film * app.camera.aspect, app.camera.film},
+        mouse + 0.5f);
+    auto face     = 0;
+    auto uv       = zero2f;
+    auto distance = 0.0f;
+    auto hit      = intersect_triangles_bvh(app.bvh, app.shape.triangles,
         app.shape.positions, ray, face, uv, distance);
 
     if (hit) {
