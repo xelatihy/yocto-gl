@@ -2115,11 +2115,6 @@ bool is_sampler_lit(const trace_params& params) {
   }
 }
 
-// Get trace pixel
-trace_pixel& get_trace_pixel(trace_state& state, int i, int j) {
-  return state.pixels[j * state.image_size.x + i];
-}
-
 // Trace a block of samples
 void trace_region(image<vec4f>& image, trace_state& state,
     const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
@@ -2128,7 +2123,7 @@ void trace_region(image<vec4f>& image, trace_state& state,
   auto  sampler = get_trace_sampler_func(params);
   for (auto j = region.min.y; j < region.max.y; j++) {
     for (auto i = region.min.x; i < region.max.x; i++) {
-      auto& pixel = get_trace_pixel(state, i, j);
+      auto& pixel = state[{i, j}];
       for (auto s = 0; s < num_samples; s++) {
         auto ray = params.tentfilter
                        ? sample_camera_tent(camera, {i, j}, image.size(),
@@ -2165,13 +2160,11 @@ void trace_region(image<vec4f>& image, trace_state& state,
 // Init a sequence of random number generators.
 trace_state make_trace_state(const trace_scene& scene, const trace_params& params) {
   auto image_size = camera_resolution(scene.cameras[params.camera], params.resolution);
-  auto state = trace_state{image_size,
-      vector<trace_pixel>(image_size.x * image_size.y, trace_pixel{})};
+  auto state = trace_state{image_size, trace_pixel{}};
   auto rng   = make_rng(1301081);
-  for (auto j = 0; j < state.image_size.y; j++) {
-    for (auto i = 0; i < state.image_size.x; i++) {
-      auto& pixel = get_trace_pixel(state, i, j);
-      pixel.rng   = make_rng(params.seed, rand1i(rng, 1 << 31) / 2 + 1);
+  for (auto j = 0; j < state.size().y; j++) {
+    for (auto i = 0; i < state.size().x; i++) {
+      state[{i, j}].rng = make_rng(params.seed, rand1i(rng, 1 << 31) / 2 + 1);
     }
   }
   return state;
@@ -2206,7 +2199,7 @@ void make_trace_lights(trace_lights& lights, const trace_scene& scene) {
 image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
     const trace_lights& lights, const trace_params& params) {
   auto state   = make_trace_state(scene, params);
-  auto render  = image{state.image_size, zero4f};
+  auto render  = image{state.size(), zero4f};
   auto regions = make_image_regions(render.size(), params.region, true);
 
   if (params.noparallel) {

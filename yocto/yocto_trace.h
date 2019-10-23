@@ -250,9 +250,6 @@ struct trace_lights {
   bool empty() const { return instances.empty() && environments.empty(); }
 };
 
-// Initialize lights.
-void make_trace_lights(trace_lights& lights, const trace_scene& scene);
-
 // State of a pixel during tracing
 struct trace_pixel {
   vec3f     radiance = zero3f;
@@ -260,10 +257,7 @@ struct trace_pixel {
   int       samples  = 0;
   rng_state rng      = {};
 };
-struct trace_state {
-  vec2i               image_size = {0, 0};
-  vector<trace_pixel> pixels     = {};
-};
+using trace_state = image<trace_pixel>;
 
 // Options for trace functions
 struct trace_params {
@@ -306,6 +300,9 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
 
 // Initialize state of the renderer.
 trace_state make_trace_state(const trace_scene& scene, const trace_params& params);
+
+// Initialize lights.
+void make_trace_lights(trace_lights& lights, const trace_scene& scene);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,

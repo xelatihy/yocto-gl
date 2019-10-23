@@ -115,8 +115,8 @@ struct app_states {
 
 void reset_display(app_state& app) {
   app.state          = make_trace_state(app.trscene, app.trace_prms);
-  app.render.resize(app.state.image_size);
-  app.display.resize(app.state.image_size);
+  app.render.resize(app.state.size());
+  app.display.resize(app.state.size());
   app.render_preview = true;
   app.render_sample  = 0;
   app.render_region  = 0;
@@ -146,8 +146,8 @@ void load_scene_async(app_states& apps, const string& filename) {
       app.trace_prms.sampler = trace_params::sampler_type::eyelight;
     }
     app.state = make_trace_state(app.trscene, app.trace_prms);
-    app.render.resize(app.state.image_size);
-    app.display.resize(app.state.image_size);
+    app.render.resize(app.state.size());
+    app.display.resize(app.state.size());
     app.name = get_filename(app.filename) + " [" +
                std::to_string(app.render.size().x) + "x" +
                std::to_string(app.render.size().y) + " @ 0]";

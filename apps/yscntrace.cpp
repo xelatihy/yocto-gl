@@ -151,7 +151,7 @@ int main(int argc, const char* argv[]) {
 
   // allocate buffers
   auto state  = make_trace_state(scene, trace_prms);
-  auto render = image{state.image_size, zero4f};
+  auto render = image{state.size(), zero4f};
 
   // render
   for (auto sample = 0; sample < trace_prms.samples;
