@@ -34,6 +34,7 @@
 //
 
 #include "yocto_trace.h"
+#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS

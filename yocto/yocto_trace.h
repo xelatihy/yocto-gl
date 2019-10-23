@@ -73,7 +73,6 @@
 #include "yocto_math.h"
 #include "yocto_random.h"
 #include "yocto_sceneio.h"
-#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // SCENE DATA
