@@ -153,9 +153,10 @@ int main(int argc, const char* argv[]) {
   for (auto sample = 0; sample < trace_prms.samples;
        sample += trace_prms.batch) {
     auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
-    auto timer    = print_timed("rendering samples " + std::to_string(sample) +
+    auto batch_timer    = print_timed("rendering samples " + std::to_string(sample) +
                              "/" + std::to_string(trace_prms.samples));
     trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
+    print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
@@ -175,7 +176,7 @@ int main(int argc, const char* argv[]) {
 
   // save image
   try {
-    auto timer = print_timed("saving image");
+    auto save_timer = print_timed("saving image");
     if (is_hdr_filename(imfilename)) {
       save_image(imfilename, logo ? add_logo(render) : render);
     } else {
@@ -183,6 +184,7 @@ int main(int argc, const char* argv[]) {
           imfilename, logo ? add_logo(tonemap_imageb(render, tonemap_prms))
                            : tonemap_imageb(render, tonemap_prms));
     }
+    print_elapsed(save_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }

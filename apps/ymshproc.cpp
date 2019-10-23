@@ -98,7 +98,7 @@ int main(int argc, const char** argv) {
 
   // load mesh
   try {
-    auto timer = print_timed("loading shape");
+    auto load_timer = print_timed("loading shape");
     if (!facevarying) {
       load_shape(filename, points, lines, triangles, quads, positions, normals,
           texcoords, colors, radius);
@@ -106,6 +106,7 @@ int main(int argc, const char** argv) {
       load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
           normals, texcoords);
     }
+    print_elapsed(load_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
@@ -135,7 +136,7 @@ int main(int argc, const char** argv) {
   // transform
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
-    auto timer = print_timed("transforming shape");
+    auto transform_timer = print_timed("transforming shape");
     auto xform = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
@@ -143,11 +144,12 @@ int main(int argc, const char** argv) {
     for (auto& p : positions) p = transform_point(xform, p);
     for (auto& n : normals)
       n = transform_normal(xform, n, max(scale) != min(scale));
+      print_elapsed(transform_timer);
   }
 
   // compute normals
   if (smooth) {
-    auto timer = print_timed("computing normals");
+    auto smooth_timer = print_timed("computing normals");
     if (!points.empty()) {
       normals = vector<vec3f>{positions.size(), {0, 0, 1}};
     } else if (!lines.empty()) {
@@ -160,11 +162,12 @@ int main(int argc, const char** argv) {
       normals = compute_normals(quadspos, positions);
       if (!quadspos.empty()) quadsnorm = quadspos;
     }
+      print_elapsed(smooth_timer);
   }
 
   // compute geodesics and store them as colors
   if (geodesic_source >= 0 || num_geodesic_samples > 0) {
-    auto timer       = print_timed("computing geodesics");
+    auto geodesic_timer       = print_timed("computing geodesics");
     auto adjacencies = face_adjacencies(triangles);
     auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
     auto sources     = vector<int>();
@@ -189,6 +192,7 @@ int main(int argc, const char** argv) {
       }
       // distance_to_color(shape.colors, field, geodesic_scale);
     }
+    print_elapsed(geodesic_timer);
   }
 
   if (p0 != -1) {
@@ -239,7 +243,7 @@ int main(int argc, const char** argv) {
 
   // save mesh
   try {
-    auto timer = print_timed("saving shape");
+    auto save_timer = print_timed("saving shape");
     if (!quadspos.empty()) {
       save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions,
           normals, texcoords);
@@ -247,6 +251,7 @@ int main(int argc, const char** argv) {
       save_shape(output, points, lines, triangles, quads, positions, normals,
           texcoords, colors, radius);
     }
+    print_elapsed(save_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }

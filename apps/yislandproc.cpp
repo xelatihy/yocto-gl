@@ -1082,16 +1082,18 @@ int main(int argc, const char** argv) {
   // load scene
   auto scene = scene_model{};
   try {
-    auto timer = print_timed("loading scene");
+    auto load_timer = print_timed("loading scene");
     load_island_scene(filename, scene, load_prms);
+    print_elapsed(load_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
 
   // validate scene
   if (validate) {
-    auto timer  = print_timed("validating scene");
+    auto validate_timer  = print_timed("validating scene");
     auto errors = format_validation(scene);
+    print_elapsed(validate_timer);
     for (auto& error : errors) print_info(error);
   }
 
@@ -1132,11 +1134,12 @@ int main(int argc, const char** argv) {
 
   // save scene
   try {
-    auto timer           = print_timed("saving scene");
+    auto save_timer           = print_timed("saving scene");
     save_prms.notextures = false;
     save_prms.noparallel = false;
     // save_prms.ply_instances = true;
     save_scene(output, scene, save_prms);
+    print_elapsed(save_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }

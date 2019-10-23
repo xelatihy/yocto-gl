@@ -10,9 +10,11 @@
 //
 // ## Printing values
 //
-// Use `print_info()` to print a message, `print_fatal()` to print and exit,
-// and `print_timed()` to use a RIIA timer. Several overloads of `to_string()`
-// are provided for both the basic types and Yocto/Math types.
+// Use `print_info()` to print a message, `print_fatal()` to print and exit.
+// To time a block of code use `print_timed()` to use an RIIA timer or 
+// call `print_elapsed()` to print the elapsed time as needed. 
+// Several overloads of `to_string()` are provided for both the basic types 
+// and Yocto/Math types.
 //
 //
 // ## Command-Line Parsing
