@@ -59,10 +59,6 @@
 #ifndef _YOCTO_TRACE_H_
 #define _YOCTO_TRACE_H_
 
-#ifndef YOCTO_QUADS_AS_TRIANGLES
-#define YOCTO_QUADS_AS_TRIANGLES 1
-#endif
-
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
