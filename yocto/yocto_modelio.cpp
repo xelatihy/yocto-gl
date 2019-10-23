@@ -3,8 +3,6 @@
 //
 
 //
-// TODO: pbrt design, split elements from approximations
-// TODO: remove obj instances
 // TODO: remove obj procedurals
 // TODO: simplify objx parsing using single line commands
 //
@@ -4752,7 +4750,6 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
     }
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)environment.frame);
-    // TODO: should we correct frames?
     format_values(
         fs, "LightSource \"{}\" {}\n", environment.type, environment.values);
     format_values(fs, "AttributeEnd\n");

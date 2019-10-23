@@ -1322,7 +1322,6 @@ void load_obj(
     material.coat_tex         = get_texture(omat.reflection_map);
     material.opacity_tex      = get_texture(omat.opacity_map);
     material.normal_tex       = get_texture(omat.normal_map);
-    // TODO: refract, subsurface_map, vol_scatter
     material_map[omat.name] = (int)scene.materials.size() - 1;
   }
 
