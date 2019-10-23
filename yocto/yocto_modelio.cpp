@@ -4671,7 +4671,7 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
         material.type = "glass";
         material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
         material.values.push_back(
-            make_pbrt_value("roughness", mean(material.roughness) * mean(material.roughness)));
+            make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
         material.values.push_back(make_pbrt_value(
             "eta", mean(reflectivity_to_eta(material.specular))));
         material.values.push_back(make_pbrt_value("remaproughness", false));
@@ -4680,7 +4680,7 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
         material.type = "metal";
         material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
         material.values.push_back(
-            make_pbrt_value("roughness", mean(material.roughness) * mean(material.roughness)));
+            make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
         material.values.push_back(
             make_pbrt_value("eta", reflectivity_to_eta(material.specular)));
         material.values.push_back(make_pbrt_value("remaproughness", false));
@@ -4695,7 +4695,7 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
         if (material.specular != zero3f) {
           material.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
           material.values.push_back(
-              make_pbrt_value("roughness", mean(material.roughness) * mean(material.roughness)));
+              make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
           material.values.push_back(make_pbrt_value(
               "eta", mean(reflectivity_to_eta(material.specular))));
           material.values.push_back(make_pbrt_value("remaproughness", false));

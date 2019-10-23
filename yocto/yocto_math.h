@@ -174,37 +174,20 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// type aliases
 using byte = unsigned char;
 using uint = unsigned int;
 using std::pair;
 using std::vector;
 
-// generic std functions
-using std::sqrt;
-using std::sin;
-using std::cos;
-using std::tan;
-using std::asin;
-using std::acos;
-using std::atan;
-using std::log;
-using std::exp;
-using std::log2;
-using std::exp2;
-using std::pow;
-using std::isfinite;
+inline const double pi  = 3.14159265358979323846;
+inline const float  pif = (float)pi;
 
-// constants
-inline const auto pi  = 3.14159265358979323846;
-inline const auto  pif = (float)pi;
 inline const auto int_max = std::numeric_limits<int>::max();
 inline const auto int_min = std::numeric_limits<int>::lowest();
 inline const auto flt_max = std::numeric_limits<float>::max();
 inline const auto flt_min = std::numeric_limits<float>::lowest();
 inline const auto flt_eps = std::numeric_limits<float>::epsilon();
 
-// generic functions
 inline float abs(float a) { return a < 0 ? -a : a; }
 inline float min(float a, float b) { return (a < b) ? a : b; }
 inline float max(float a, float b) { return (a > b) ? a : b; }
@@ -221,6 +204,19 @@ inline float gain(float a, float gain) {
   return (a < 0.5f) ? bias(a * 2, gain) / 2
                     : bias(a * 2 - 1, 1 - gain) / 2 + 0.5f;
 }
+inline float sqrt(float a) { return sqrtf(a); }
+inline float sin(float a) { return sinf(a); }
+inline float cos(float a) { return cosf(a); }
+inline float tan(float a) { return tanf(a); }
+inline float asin(float a) { return asinf(a); }
+inline float acos(float a) { return acosf(a); }
+inline float atan(float a) { return atanf(a); }
+inline float log(float a) { return logf(a); }
+inline float exp(float a) { return expf(a); }
+inline float log2(float a) { return log2f(a); }
+inline float exp2(float a) { return exp2f(a); }
+inline float pow(float a, float b) { return powf(a, b); }
+inline float isfinite(float a) { return ::isfinite(a); }
 inline void  swap(float& a, float& b) { std::swap(a, b); }
 
 inline int  abs(int a) { return a < 0 ? -a : a; }
@@ -2083,7 +2079,7 @@ inline vec3f sample_triangle(
   auto uv = sample_triangle(ruv);
   return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
-// Pdf for uniform triangle sampling, i.e. 1 / triangle area.
+// Pdf for uniform triangle sampling, i.e. triangle area.
 inline float sample_triangle_pdf(
     const vec3f& p0, const vec3f& p1, const vec3f& p2) {
   return 2 / length(cross(p1 - p0, p2 - p0));
