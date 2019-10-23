@@ -257,7 +257,7 @@ int main(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  make_bvh(app.bvh, app.scene, app.bvh_prms);
+  app.bvh = make_bvh(app.scene, app.bvh_prms);
   print_elapsed(bvh_timer);
 
   // init renderer

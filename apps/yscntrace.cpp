@@ -129,8 +129,7 @@ int main(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  auto bvh = bvh_shared_scene{};
-  make_bvh(bvh, scene, bvh_prms);
+  auto bvh = make_bvh(scene, bvh_prms);
   print_elapsed(bvh_timer);
 
   // init renderer

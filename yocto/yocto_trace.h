@@ -229,14 +229,17 @@ const auto trace_default_seed = 961748941ull;
 using trace_bvh = bvh_shared_scene;
 
 // Build/refit the bvh acceleration structure.
-void make_bvh(
-    bvh_scene& bvh, const trace_scene& scene, const bvh_params& params);
-void update_bvh(bvh_scene& bvh, const trace_scene& scene,
+trace_bvh make_bvh(const trace_scene& scene, const bvh_params& params);
+void update_bvh(trace_bvh& bvh, const trace_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params);
-void make_bvh(
-    bvh_shared_scene& bvh, const trace_scene& scene, const bvh_params& params);
-void update_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
+bvh_scene make_standalone_bvh(const trace_scene& scene, const bvh_params& params);
+void update_standalone_bvh(bvh_scene& bvh, const trace_scene& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params);
+bvh_shared_scene make_shared_bvh(
+    const trace_scene& scene, const bvh_params& params);
+void update_shared_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params);
 

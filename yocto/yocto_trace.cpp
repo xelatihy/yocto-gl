@@ -1161,8 +1161,10 @@ float sample_environment_pdf(const trace_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void make_bvh(
-    bvh_scene& bvh, const trace_scene& scene, const bvh_params& params) {
+bvh_scene make_standalone_bvh(
+    const trace_scene& scene, const bvh_params& params) {
+  auto bvh = bvh_scene{};
+
   // set values
   bvh.shapes.resize(scene.shapes.size());
   for (auto shape = 0; shape < scene.shapes.size(); shape++) {
@@ -1188,9 +1190,11 @@ void make_bvh(
 
   // build
   make_scene_bvh(bvh, params);
+
+  return bvh;
 }
 
-void update_bvh(bvh_scene& bvh, const trace_scene& scene,
+void update_standalone_bvh(bvh_scene& bvh, const trace_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params) {
   // set values
@@ -1217,8 +1221,10 @@ void update_bvh(bvh_scene& bvh, const trace_scene& scene,
   update_scene_bvh(bvh, updated_instances, updated_shapes, params);
 }
 
-void make_bvh(
-    bvh_shared_scene& bvh, const trace_scene& scene, const bvh_params& params) {
+bvh_shared_scene make_shared_bvh(
+    const trace_scene& scene, const bvh_params& params) {
+  auto bvh = bvh_shared_scene{};
+
   // set values
   bvh.num_shapes   = (int)scene.shapes.size();
   bvh.shape_points = [&scene](int idx) -> const vector<int>& {
@@ -1252,9 +1258,11 @@ void make_bvh(
 
   // build
   make_scene_bvh(bvh, params);
+
+  return bvh;
 }
 
-void update_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
+void update_shared_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params) {
   // set values
@@ -1289,6 +1297,15 @@ void update_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
   };
 
   update_scene_bvh(bvh, updated_instances, updated_shapes, params);
+}
+
+trace_bvh make_bvh(const trace_scene& scene, const bvh_params& params) {
+  return make_shared_bvh(scene, params);
+}
+void update_bvh(trace_bvh& bvh, const trace_scene& scene,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const bvh_params& params) {
+  update_shared_bvh(bvh, scene, updated_instances, updated_shapes, params);
 }
 
 }  // namespace yocto

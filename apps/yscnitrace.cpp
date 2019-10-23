@@ -139,7 +139,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   apps.loaders.push_back(run_async([&app]() {
     load_scene(app.filename, app.ioscene);
     app.trscene = make_trace_scene(app.ioscene);
-    make_bvh(app.bvh, app.trscene, app.bvh_prms);
+    app.bvh = make_bvh(app.trscene, app.bvh_prms);
     app.lights = make_trace_lights(app.trscene);
     if (app.lights.instances.empty() && app.lights.environments.empty() &&
         is_sampler_lit(app.trace_prms)) {
