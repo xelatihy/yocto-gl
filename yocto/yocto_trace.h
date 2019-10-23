@@ -251,7 +251,6 @@ struct trace_lights {
 };
 
 // Initialize lights.
-trace_lights make_trace_lights(const trace_scene& scene);
 void         make_trace_lights(trace_lights& lights, const trace_scene& scene);
 
 // State of a pixel during tracing
