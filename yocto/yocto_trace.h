@@ -201,7 +201,7 @@ struct trace_scene {
 namespace yocto {
 
 // Construct a scene from io
-void make_trace_scene(trace_scene& scene, const scene_model& ioscene);
+trace_scene make_trace_scene(const scene_model& ioscene);
 
 // Update a value from io
 void update_camera(trace_camera& camera, const scene_camera& iocamera);

@@ -107,39 +107,36 @@ int main(int argc, const char* argv[]) {
   // scene loading
   auto ioscene = scene_model{};
   try {
-    auto timer = print_timed("loading scene");
+    auto load_timer = print_timed("loading scene");
     load_scene(filename, ioscene, load_prms);
+    print_elapsed(load_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
 
   // add components
   if (validate) {
-    auto timer  = print_timed("validating");
+    auto validate_timer  = print_timed("validating");
     auto errors = format_validation(ioscene);
     for (auto& error : errors) print_info(error);
+    print_elapsed(validate_timer);
   }
 
   // convert scene
-  auto scene = trace_scene{};
-  {
-    auto timer = print_timed("converting");
-    make_trace_scene(scene, ioscene);
-  }
+  auto convert_timer = print_timed("converting");
+  auto scene = make_trace_scene(ioscene);
+  print_elapsed(convert_timer);
 
   // build bvh
-  auto bvh = trace_bvh{};
-  {
-    auto timer = print_timed("building bvh");
-    make_bvh(bvh, scene, bvh_prms);
-  }
+  auto bvh_timer = print_timed("building bvh");
+  auto bvh = bvh_shared_scene{};
+  make_bvh(bvh, scene, bvh_prms);
+  print_elapsed(bvh_timer);
 
   // init renderer
-  auto lights = trace_lights{};
-  {
-    auto timer = print_timed("building lights");
-    lights = make_trace_lights(scene);
-  }
+  auto lights_timer = print_timed("building lights");
+  auto lights = make_trace_lights(scene);
+  print_elapsed(lights_timer);
 
   // fix renderer type if no lights
   if (lights.instances.empty() && lights.environments.empty() &&

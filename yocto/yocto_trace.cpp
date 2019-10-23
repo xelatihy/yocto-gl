@@ -521,8 +521,8 @@ void update_environment(
 }
 
 // Construct a scene from io
-void make_trace_scene(trace_scene& scene, const scene_model& ioscene) {
-  scene = {};
+trace_scene make_trace_scene(const scene_model& ioscene) {
+  auto scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
     update_camera(scene.cameras.emplace_back(), iocamera);
@@ -542,6 +542,8 @@ void make_trace_scene(trace_scene& scene, const scene_model& ioscene) {
   for (auto& ioenvironment : ioscene.environments) {
     update_environment(scene.environments.emplace_back(), ioenvironment);
   }
+
+  return scene;
 }
 
 }  // namespace yocto

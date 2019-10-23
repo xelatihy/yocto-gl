@@ -243,29 +243,27 @@ int main(int argc, const char* argv[]) {
   // scene loading
   auto ioscene = scene_model{};
   try {
-    auto timer = print_timed("loading scene");
+    auto load_timer = print_timed("loading scene");
     load_scene(app.filename, ioscene, app.load_prms);
+    print_elapsed(load_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
 
   // conversion
-  {
-    auto timer = print_timed("converting");
-    make_trace_scene(app.scene, ioscene);
-  }
+  auto convert_timer = print_timed("converting");
+  app.scene = make_trace_scene(ioscene);
+  print_elapsed(convert_timer);
 
   // build bvh
-  {
-    auto timer = print_timed("building bvh");
-    make_bvh(app.bvh, app.scene, app.bvh_prms);
-  }
+  auto bvh_timer = print_timed("building bvh");
+  make_bvh(app.bvh, app.scene, app.bvh_prms);
+  print_elapsed(bvh_timer);
 
   // init renderer
-  {
-    auto timer = print_timed("building lights");
-    app.lights = make_trace_lights(app.scene);
-  }
+  auto lights_timer = print_timed("building lights");
+  app.lights = make_trace_lights(app.scene);
+  print_elapsed(lights_timer);
 
   // fix renderer type if no lights
   if (app.lights.instances.empty() && app.lights.environments.empty() &&

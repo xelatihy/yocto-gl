@@ -98,8 +98,14 @@ inline void print_info(const string& msg);
 // Prints a messgae to the console and exit with an error.
 inline void print_fatal(const string& msg);
 
+// Timer that prints as scope end. Create with `print_timed` and print with `print_elapsed`.
+struct print_timer {
+  int64_t start_time = -1;
+  ~print_timer(); // print time if scope ends
+};
 // Print traces for timing and program debugging
-inline auto print_timed(const string& msg);
+inline print_timer print_timed(const string& msg);
+inline void print_elapsed(print_timer& timer);
 
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
@@ -250,17 +256,18 @@ inline string format_num(uint64_t num) {
 }
 
 // Print traces for timing and program debugging
-inline auto print_timed(const string& msg) {
-  struct scoped_timer {
-    int64_t start_time = -1;
-    ~scoped_timer() {
-      printf(" in %s\n", format_duration(get_time_() - start_time).c_str());
-    }
-  };
+inline print_timer print_timed(const string& msg) {
   printf("%s", msg.c_str());
   fflush(stdout);
   // print_info(fmt + " [started]", args...);
-  return scoped_timer{get_time_()};
+  return print_timer{get_time_()};
+}
+inline void print_elapsed(print_timer& timer) {
+  if(timer.start_time < 0) return;
+  printf(" in %s\n", format_duration(get_time_() - timer.start_time).c_str());  
+}
+inline print_timer::~print_timer() {
+  print_elapsed(*this);
 }
 
 }  // namespace yocto
