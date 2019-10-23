@@ -4,6 +4,9 @@
 // Yocto/Math provides the basic math primitives used in grahics, including
 // small-sized vectors and matrixes, frames, bounding boxes and transforms.
 //
+//
+// ## Small vectors, matrices and frames
+//
 // We provide common operations for small vectors and matrices typically used
 // in graphics. In particular, we support 1-4 dimensional vectors
 // coordinates in float and int coordinates (`vec1f`, `vec2f`, `vec3f`, `vec4f`,
@@ -20,10 +23,19 @@
 // This is equivalent to a rigid transform written as a column-major affine
 // matrix. Transform operations are fater with this representation.
 //
-// We represent bounding boxes in 2-3 dimensions with `bbox2f`, `bbox3f`
+//
+// ## Rays and bounding boxes
+//
+// We represent rays in 2-3 dimensions with `ray2f`, `ray3f`.
+// Each ray support initialization and evaluation.
+//
+// We represent bounding boxes in 2-3 dimensions with `bbox2f`, `bbox3f`.
 // Each bounding box support construction from points and other bounding box.
 // We provide operations to compute bounds for points, lines, triangles and
 // quads.
+//
+//
+// ## Transforms
 //
 // For both matrices and frames we support transform operations for points,
 // vectors and directions (`transform_point()`, `transform_vector()`,
@@ -32,9 +44,19 @@
 // `translation_mat()` or `translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
-// Finally, we include a `timer` for benchmarking with high precision and
-// a few common path manipulations ghat will be remove once C++ filesystem
-// support will be more common.
+//
+// ## Geometry functions
+//
+// The library supports basic geomtry functions such as computing
+// line/triangle/quad normals and areas, picking points on triangles
+// and the like. In these functions triangles are parameterized with us written
+// w.r.t the (p1-p0) and (p2-p0) axis respectively. Quads are internally handled
+// as pairs of two triangles p0,p1,p3 and p2,p3,p1, with the u/v coordinates
+// of the second triangle corrected as 1-u and 1-v to produce a quad
+// parametrization where u and v go from 0 to 1. Degenerate quads with p2==p3
+// represent triangles correctly, an this convention is used throught the
+// library. This is equivalent to Intel's Embree.
+//
 //
 
 //
@@ -86,6 +108,7 @@ namespace yocto {
 
 using byte = unsigned char;
 using uint = unsigned int;
+using std::pair;
 
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
@@ -1676,7 +1699,7 @@ inline mat4f perspective_mat(float fovy, float aspect, float near) {
 }
 
 // Rotation conversions.
-inline std::pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
+inline pair<vec3f, float> rotation_axisangle(const vec4f& quat) {
   return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 inline vec4f rotation_quat(const vec3f& axis, float angle) {
@@ -1689,6 +1712,146 @@ inline vec4f rotation_quat(const vec4f& axisangle) {
   return rotation_quat(
       vec3f{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// GEOMETRY UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Line properties.
+inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
+  return normalize(p1 - p0);
+}
+inline float line_length(const vec3f& p0, const vec3f& p1) {
+  return length(p1 - p0);
+}
+
+// Triangle properties.
+inline vec3f triangle_normal(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+  return normalize(cross(p1 - p0, p2 - p0));
+}
+inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+  return length(cross(p1 - p0, p2 - p0)) / 2;
+}
+
+// Quad propeties.
+inline vec3f quad_normal(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+  return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
+}
+inline float quad_area(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+  return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
+}
+
+// Triangle tangent and bitangent from uv
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2);
+
+// Quad tangent and bitangent from uv. Note that we pass a current_uv since
+// internally we may want to split the quad in two and we need to known where
+// to do it. If not interested in the split, just pass zero2f here.
+inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv);
+
+// Interpolates values over a line parameterized from a to b by u. Same as lerp.
+template <typename T>
+inline T interpolate_line(const T& p0, const T& p1, float u) {
+  return p0 * (1 - u) + p1 * u;
+}
+// Interpolates values over a triangle parameterized by u and v along the
+// (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
+template <typename T>
+inline T interpolate_triangle(
+    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
+  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+}
+// Interpolates values over a quad parameterized by u and v along the
+// (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
+template <typename T>
+inline T interpolate_quad(
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
+#if YOCTO_QUADS_AS_TRIANGLES
+  if (uv.x + uv.y <= 1) {
+    return interpolate_triangle(p0, p1, p3, uv);
+  } else {
+    return interpolate_triangle(p2, p3, p1, 1 - uv);
+  }
+#else
+  return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
+         p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
+#endif
+}
+
+// Interpolates values along a cubic Bezier segment parametrized by u.
+template <typename T>
+inline T interpolate_bezier(
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+  return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
+         p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
+}
+// Computes the derivative of a cubic Bezier segment parametrized by u.
+template <typename T>
+inline T interpolate_bezier_derivative(
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+  return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
+         (p3 - p2) * 3 * u * u;
+}
+
+// Triangle tangent and bitangent from uv
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2) {
+  // Follows the definition in http://www.terathon.com/code/tangent.html and
+  // https://gist.github.com/aras-p/2843984
+  // normal points up from texture space
+  auto p   = p1 - p0;
+  auto q   = p2 - p0;
+  auto s   = vec2f{uv1.x - uv0.x, uv2.x - uv0.x};
+  auto t   = vec2f{uv1.y - uv0.y, uv2.y - uv0.y};
+  auto div = s.x * t.y - s.y * t.x;
+
+  if (div != 0) {
+    auto tu = vec3f{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
+                  t.y * p.z - t.x * q.z} /
+              div;
+    auto tv = vec3f{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
+                  s.x * q.z - s.y * p.z} /
+              div;
+    return {tu, tv};
+  } else {
+    return {{1, 0, 0}, {0, 1, 0}};
+  }
+}
+
+// Quad tangent and bitangent from uv.
+inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0,
+    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3,
+    const vec2f& current_uv) {
+#if YOCTO_QUADS_AS_TRIANGLES
+  if (current_uv.x + current_uv.y <= 1) {
+    return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
+  } else {
+    return triangle_tangents_fromuv(p2, p3, p1, uv2, uv3, uv1);
+  }
+#else
+  return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
+#endif
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// USER INTERFACE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
@@ -1792,15 +1955,14 @@ inline void update_fpscam(
 }
 
 // Generate a ray from a camera
-inline ray3f camera_ray(const frame3f& frame, float lens,
-    const vec2f& film, const vec2f& image_uv) {
-  auto e        = zero3f;
-  auto q        = vec3f{film.x * (0.5f - image_uv.x),
-      film.y * (image_uv.y - 0.5f), lens};
-  auto q1       = -q;
-  auto d        = normalize(q1 - e);
-  auto ray      = ray3f{
-      transform_point(frame, e), transform_direction(frame, d)};
+inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
+    const vec2f& image_uv) {
+  auto e = zero3f;
+  auto q = vec3f{
+      film.x * (0.5f - image_uv.x), film.y * (image_uv.y - 0.5f), lens};
+  auto q1  = -q;
+  auto d   = normalize(q1 - e);
+  auto ray = ray3f{transform_point(frame, e), transform_direction(frame, d)};
   return ray;
 }
 
