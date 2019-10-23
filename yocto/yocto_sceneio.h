@@ -7,7 +7,6 @@
 // To speed up testing, we also support a binary format that is a dump of
 // the current scene. This format should not be use for archival though.
 //
-// Error reporting is done through exceptions using the `io_error` exception.
 //
 // ## Scene Loading and Saving
 //
