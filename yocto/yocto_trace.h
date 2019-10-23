@@ -67,7 +67,6 @@
 #include "yocto_common.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
-#include "yocto_random.h"
 #include "yocto_sceneio.h"
 
 // -----------------------------------------------------------------------------
