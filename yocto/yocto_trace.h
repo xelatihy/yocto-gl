@@ -275,9 +275,12 @@ namespace yocto {
 const auto trace_default_seed = 961748941ull;
 
 // Trace lights used during rendering.
+struct trace_light {
+  int instance = -1;
+  int environment = -1;
+};
 struct trace_lights {
-  vector<int>           instances        = {};
-  vector<int>           environments     = {};
+  vector<trace_light>   lights        = {};
   vector<vector<float>> shape_cdfs       = {};
   vector<vector<float>> environment_cdfs = {};
 };

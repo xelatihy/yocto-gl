@@ -141,7 +141,7 @@ void load_scene_async(app_states& apps, const string& filename) {
     app.trscene = make_trace_scene(app.ioscene);
     app.bvh = make_trace_bvh(app.trscene, app.bvh_prms);
     app.lights = make_trace_lights(app.trscene);
-    if (app.lights.instances.empty() && app.lights.environments.empty() &&
+    if (app.lights.lights.empty() &&
         is_sampler_lit(app.trace_prms)) {
       app.trace_prms.sampler = trace_sampler_type::eyelight;
     }

@@ -138,8 +138,7 @@ int main(int argc, const char* argv[]) {
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (lights.instances.empty() && lights.environments.empty() &&
-      is_sampler_lit(trace_prms)) {
+  if (lights.lights.empty() && is_sampler_lit(trace_prms)) {
     print_info("no lights presents, switching to eyelight shader");
     trace_prms.sampler = trace_sampler_type::eyelight;
   }
