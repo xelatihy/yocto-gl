@@ -636,7 +636,7 @@ void run_ui(app_states& apps) {
         auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /
                 vec2f{(float)app.render.size().x, (float)app.render.size().y});
-        if (auto isec = intersect_scene_bvh(app.bvh, ray); isec.hit) {
+        if (auto isec = intersect_scene_bvh(app.trscene, app.bvh, ray); isec.hit) {
           app.selection = {"instance", isec.instance};
         }
       }

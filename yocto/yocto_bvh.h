@@ -153,9 +153,9 @@ void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
 void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius);
 void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions);
 void update_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions);
 // Updates instances bvh for changes in frames and shape bvhs
 void update_instances_bvh(bvh_tree& bvh, int num_instances,
     const function<frame3f(int instance)>&         instance_frame,
@@ -242,10 +242,10 @@ void make_lines_embree_bvh(bvh_embree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     bool high_quality, bool compact);
 void make_triangles_embree_bvh(bvh_embree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& radius,
+    const vector<vec3f>& positions, 
     bool high_quality, bool compact);
 void make_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius,
+    const vector<vec3f>& positions, 
     bool high_quality, bool compact);
 // Make instance bvh with Intel's Embree
 void make_instances_embree_bvh(bvh_embree& bvh, int num_instances,
@@ -257,10 +257,9 @@ void make_instances_embree_bvh(bvh_embree& bvh, int num_instances,
 void update_lines_embree_bvh(bvh_embree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius);
 void update_triangles_embree_bvh(bvh_embree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<float>& radius);
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
 void update_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions);
 // Updates instances bvh for changes in frames and shape bvhs with Intel's
 // Embree
 void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
@@ -271,7 +270,7 @@ void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
 bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any);
 bool intersect_instances_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any);
+    int& instance, int& element, vec2f& uv, float& distance, bool find_any);
 #endif
 
 }  // namespace yocto

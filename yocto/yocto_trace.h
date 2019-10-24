@@ -218,21 +218,48 @@ void update_trace_environment(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PATH TRACING
+// INTERSECTION
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Default trace seed
-const auto trace_default_seed = 961748941ull;
-
-// Trace bvh
-using trace_bvh = bvh_shared_scene;
+// Intersection bvh
+struct trace_bvh {
+  vector<bvh_tree> shape_bvhs = {};
+  bvh_tree scene_bvh = {};
+#if YOCTO_EMBREE
+  vector<bvh_embree> shape_ebvhs = {};
+  bvh_embree scene_ebvh = {};
+  bool embree = false;
+#endif
+};
 
 // Build/refit the bvh acceleration structure.
 trace_bvh make_trace_bvh(const trace_scene& scene, const bvh_params& params);
 void update_trace_bvh(trace_bvh& bvh, const trace_scene& scene,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const bvh_params& params);
+
+// Intersection
+bool intersect_scene_bvh(const trace_scene& scene, const trace_bvh& bvh,
+    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
+    bool find_any, bool non_rigid_frames = true);
+bool intersect_instance_bvh(const trace_scene& scene, const trace_bvh& bvh, 
+  int instance_id, const ray3f& ray, int& element, vec2f& uv, float& distance, 
+  bool find_any, bool non_rigid_frames = true);
+bvh_intersection intersect_scene_bvh(const trace_scene& scene, const trace_bvh& bvh, 
+  const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+bvh_intersection intersect_instance_bvh(const trace_scene& scene, const trace_bvh& bvh,
+  int instance, const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PATH TRACING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Default trace seed
+const auto trace_default_seed = 961748941ull;
 
 // Trace lights used during rendering.
 struct trace_lights {
