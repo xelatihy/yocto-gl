@@ -233,6 +233,19 @@ struct trace_bvh {
 #endif
 };
 
+// Results of intersect_xxx and overlap_xxx functions that include hit flag,
+// instance id, shape element id, shape element uv and intersection distance.
+// The values are all set for scene intersection. Shape intersection does not
+// set the instance id and element intersections do not set shape element id
+// and the instance id. Results values are set only if hit is true.
+struct trace_intersection {
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
+};
+
 // Build/refit the bvh acceleration structure.
 trace_bvh make_trace_bvh(const trace_scene& scene, const bvh_params& params);
 void update_trace_bvh(trace_bvh& bvh, const trace_scene& scene,
@@ -246,9 +259,9 @@ bool intersect_scene_bvh(const trace_scene& scene, const trace_bvh& bvh,
 bool intersect_instance_bvh(const trace_scene& scene, const trace_bvh& bvh, 
   int instance_id, const ray3f& ray, int& element, vec2f& uv, float& distance, 
   bool find_any, bool non_rigid_frames = true);
-bvh_intersection intersect_scene_bvh(const trace_scene& scene, const trace_bvh& bvh, 
+trace_intersection intersect_scene_bvh(const trace_scene& scene, const trace_bvh& bvh, 
   const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_instance_bvh(const trace_scene& scene, const trace_bvh& bvh,
+trace_intersection intersect_instance_bvh(const trace_scene& scene, const trace_bvh& bvh,
   int instance, const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
