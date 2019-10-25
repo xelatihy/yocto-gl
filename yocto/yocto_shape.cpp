@@ -9,7 +9,6 @@
 #include "yocto_shape.h"
 #include "yocto_commonio.h"
 #include "yocto_modelio.h"
-#include "yocto_random.h"
 
 #include <deque>
 

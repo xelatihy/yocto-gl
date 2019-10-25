@@ -51,11 +51,9 @@ struct app_state {
 
   // scene
   trace_scene scene      = {};
-  trace_bvh   bvh        = {};
   bool        add_skyenv = false;
 
   // rendering state
-  trace_lights lights  = {};
   trace_state  state   = {};
   image<vec4f> render  = {};
   image<vec4f> display = {};
@@ -76,14 +74,12 @@ struct app_state {
 };
 
 void reset_display(app_state& app) {
-  auto image_size = camera_resolution(
-      app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-  app.render.resize(image_size);
-  app.display.resize(image_size);
+  app.state = make_trace_state(app.scene, app.trace_prms);
+  app.render.resize(app.state.size());
+  app.display.resize(app.state.size());
   app.render_preview = true;
   app.render_sample  = 0;
   app.render_region  = 0;
-  app.state          = make_trace_state(app.render.size(), app.trace_prms.seed);
   app.render_regions = make_image_regions(
       app.render.size(), app.trace_prms.region, true);
 }
@@ -107,8 +103,8 @@ void update(const opengl_window& win, app_state& app) {
     auto preview_prms = app.trace_prms;
     preview_prms.resolution /= app.preview_ratio;
     preview_prms.samples = 1;
-    auto preview = trace_image(app.scene, app.bvh, app.lights, preview_prms);
-    preview      = tonemap_image(preview, app.tonemap_prms);
+    auto preview         = trace_image(app.scene, preview_prms);
+    preview              = tonemap_image(preview, app.tonemap_prms);
     for (auto j = 0; j < app.display.size().y; j++) {
       for (auto i = 0; i < app.display.size().x; i++) {
         auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
@@ -127,7 +123,7 @@ void update(const opengl_window& win, app_state& app) {
     auto num_regions = min(128, app.render_regions.size() - app.render_region);
     parallel_for(app.render_region, app.render_region + num_regions,
         [&app](int region_id) {
-          trace_region(app.render, app.state, app.scene, app.bvh, app.lights,
+          trace_region(app.render, app.state, app.scene,
               app.render_regions[region_id], 1, app.trace_prms);
           tonemap_region(app.display, app.render, app.render_regions[region_id],
               app.tonemap_prms);
@@ -245,42 +241,37 @@ int main(int argc, const char* argv[]) {
   // scene loading
   auto ioscene = scene_model{};
   try {
-    auto timer = print_timed("loading scene");
+    auto load_timer = print_timed("loading scene");
     load_scene(app.filename, ioscene, app.load_prms);
+    print_elapsed(load_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
 
   // conversion
-  {
-    auto timer = print_timed("converting");
-    make_trace_scene(app.scene, ioscene);
-  }
+  auto convert_timer = print_timed("converting");
+  app.scene          = make_trace_scene(ioscene);
+  print_elapsed(convert_timer);
 
   // build bvh
-  {
-    auto timer = print_timed("building bvh");
-    make_bvh(app.bvh, app.scene, app.bvh_prms);
-  }
+  auto bvh_timer = print_timed("building bvh");
+  init_scene_bvh(app.scene, app.bvh_prms);
+  print_elapsed(bvh_timer);
 
   // init renderer
-  {
-    auto timer = print_timed("building lights");
-    make_trace_lights(app.lights, app.scene);
-  }
+  auto lights_timer = print_timed("building lights");
+  init_lights(app.scene);
+  print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (app.lights.instances.empty() && app.lights.environments.empty() &&
-      is_sampler_lit(app.trace_prms)) {
+  if (app.scene.lights.empty() && is_sampler_lit(app.trace_prms)) {
     print_info("no lights presents, switching to eyelight shader");
-    app.trace_prms.sampler = trace_params::sampler_type::eyelight;
+    app.trace_prms.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  auto image_size = camera_resolution(
-      app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-  app.render  = image{image_size, zero4f};
-  app.state   = make_trace_state(image_size, app.trace_prms.seed);
+  app.state   = make_trace_state(app.scene, app.trace_prms);
+  app.render  = image{app.state.size(), zero4f};
   app.display = app.render;
   reset_display(app);
 

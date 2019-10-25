@@ -32,7 +32,6 @@
 
 #include "yocto_image.h"
 #include "yocto_commonio.h"
-#include "yocto_random.h"
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #pragma GCC diagnostic push

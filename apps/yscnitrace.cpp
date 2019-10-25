@@ -60,11 +60,9 @@ struct app_state {
   // scene
   scene_model ioscene    = {};
   trace_scene trscene    = {};
-  trace_bvh   bvh        = {};
   bool        add_skyenv = false;
 
   // rendering state
-  trace_lights lights  = {};
   trace_state  state   = {};
   image<vec4f> render  = {};
   image<vec4f> display = {};
@@ -114,14 +112,12 @@ struct app_states {
 };
 
 void reset_display(app_state& app) {
-  auto image_size = camera_resolution(
-      app.trscene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-  app.render.resize(image_size);
-  app.display.resize(image_size);
+  app.state = make_trace_state(app.trscene, app.trace_prms);
+  app.render.resize(app.state.size());
+  app.display.resize(app.state.size());
   app.render_preview = true;
   app.render_sample  = 0;
   app.render_region  = 0;
-  app.state          = make_trace_state(app.render.size(), app.trace_prms.seed);
   app.render_regions = make_image_regions(
       app.render.size(), app.trace_prms.region, true);
 }
@@ -140,17 +136,15 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.add_skyenv   = app.add_skyenv;
   apps.loaders.push_back(run_async([&app]() {
     load_scene(app.filename, app.ioscene);
-    make_trace_scene(app.trscene, app.ioscene);
-    make_bvh(app.bvh, app.trscene, app.bvh_prms);
-    make_trace_lights(app.lights, app.trscene);
-    if (app.lights.instances.empty() && app.lights.environments.empty() &&
-        is_sampler_lit(app.trace_prms)) {
-      app.trace_prms.sampler = trace_params::sampler_type::eyelight;
+    app.trscene = make_trace_scene(app.ioscene);
+    init_scene_bvh(app.trscene, app.bvh_prms);
+    init_lights(app.trscene);
+    if (app.trscene.lights.empty() && is_sampler_lit(app.trace_prms)) {
+      app.trace_prms.sampler = trace_sampler_type::eyelight;
     }
-    auto image_size = camera_resolution(
-        app.trscene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-    app.render.resize(image_size);
-    app.display.resize(image_size);
+    app.state = make_trace_state(app.trscene, app.trace_prms);
+    app.render.resize(app.state.size());
+    app.display.resize(app.state.size());
     app.name = get_filename(app.filename) + " [" +
                std::to_string(app.render.size().x) + "x" +
                std::to_string(app.render.size().y) + " @ 0]";
@@ -179,7 +173,7 @@ bool draw_glwidgets_camera(const opengl_window& win, app_state& app, int id) {
     camera.focus = length(from - to);
     edited += 1;
   }
-  if (edited) update_camera(app.trscene.cameras.at(id), camera);
+  if (edited) update_trace_camera(app.trscene.cameras.at(id), camera);
   return edited;
 }
 
@@ -211,7 +205,7 @@ bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
     }
     // TODO: update lights
   }
-  if (edited) update_texture(app.trscene.textures.at(id), texture);
+  if (edited) update_trace_texture(app.trscene.textures.at(id), texture);
   return edited;
 }
 
@@ -253,7 +247,7 @@ bool draw_glwidgets_material(const opengl_window& win, app_state& app, int id) {
       win, "normal_tex", material.normal_tex, app.ioscene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   // TODO: update lights
-  if (edited) update_material(app.trscene.materials.at(id), material);
+  if (edited) update_trace_material(app.trscene.materials.at(id), material);
   return edited;
 }
 
@@ -287,11 +281,11 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
       log_glinfo(win, "cannot load " + shape.filename);
       log_glinfo(win, e.what());
     }
-    update_shape(app.trscene.shapes.at(id), shape, app.ioscene);
-    update_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
-    make_trace_lights(app.lights, app.trscene);
+    update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
+    update_scene_bvh(app.trscene, {}, {id}, app.bvh_prms);
+    init_lights(app.trscene);
   } else if (edited) {
-    update_shape(app.trscene.shapes.at(id), shape, app.ioscene);
+    update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
   }
   return edited;
 }
@@ -309,11 +303,11 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
       win, "shape", instance.shape, app.ioscene.shapes, true);
   edited += draw_glcombobox(
       win, "material", instance.material, app.ioscene.materials, true);
-  if (edited) update_instance(app.trscene.instances.at(id), instance);
+  if (edited) update_trace_instance(app.trscene.instances.at(id), instance);
   if (edited && instance.shape != old_instance.shape)
-    update_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
+    update_scene_bvh(app.trscene, {}, {id}, app.bvh_prms);
   if (edited && instance.frame != old_instance.frame)
-    update_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
+    update_scene_bvh(app.trscene, {}, {id}, app.bvh_prms);
   // TODO: update lights
   return edited;
 }
@@ -330,8 +324,9 @@ bool draw_glwidgets_environment(
   edited += draw_glhdrcoloredit(win, "emission", environment.emission);
   edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
       app.ioscene.textures, true);
-  if (edited) update_environment(app.trscene.environments.at(id), environment);
-  if (edited) make_trace_lights(app.lights, app.trscene);
+  if (edited)
+    update_trace_environment(app.trscene.environments.at(id), environment);
+  if (edited) init_lights(app.trscene);
   return edited;
 }
 
@@ -539,9 +534,8 @@ void update(const opengl_window& win, app_states& app) {
       auto preview_prms = app.trace_prms;
       preview_prms.resolution /= app.preview_ratio;
       preview_prms.samples = 1;
-      auto preview         = trace_image(
-          app.trscene, app.bvh, app.lights, preview_prms);
-      preview = tonemap_image(preview, app.tonemap_prms);
+      auto preview         = trace_image(app.trscene, preview_prms);
+      preview              = tonemap_image(preview, app.tonemap_prms);
       for (auto j = 0; j < app.display.size().y; j++) {
         for (auto i = 0; i < app.display.size().x; i++) {
           auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
@@ -561,8 +555,8 @@ void update(const opengl_window& win, app_states& app) {
           128, app.render_regions.size() - app.render_region);
       parallel_for(app.render_region, app.render_region + num_regions,
           [&app](int region_id) {
-            trace_region(app.render, app.state, app.trscene, app.bvh,
-                app.lights, app.render_regions[region_id], 1, app.trace_prms);
+            trace_region(app.render, app.state, app.trscene,
+                app.render_regions[region_id], 1, app.trace_prms);
             tonemap_region(app.display, app.render,
                 app.render_regions[region_id], app.tonemap_prms);
           });
@@ -622,7 +616,8 @@ void run_ui(app_states& apps) {
         pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
       pan.x = -pan.x;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      update_camera(app.trscene.cameras.at(app.trace_prms.camera), camera);
+      update_trace_camera(
+          app.trscene.cameras.at(app.trace_prms.camera), camera);
       // TODO: update
       reset_display(app);
     }
@@ -636,9 +631,10 @@ void run_ui(app_states& apps) {
       if (ij.x >= 0 && ij.x < app.render.size().x && ij.y >= 0 &&
           ij.y < app.render.size().y) {
         auto& camera = app.trscene.cameras.at(app.trace_prms.camera);
-        auto  ray    = eval_camera(
-            camera, ij, app.render.size(), {0.5f, 0.5f}, zero2f);
-        if (auto isec = intersect_scene_bvh(app.bvh, ray); isec.hit) {
+        auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
+            vec2f{ij.x + 0.5f, ij.y + 0.5f} /
+                vec2f{(float)app.render.size().x, (float)app.render.size().y});
+        if (auto isec = intersect_scene_bvh(app.trscene, ray); isec.hit) {
           app.selection = {"instance", isec.instance};
         }
       }
@@ -666,15 +662,14 @@ int main(int argc, const char* argv[]) {
   auto filenames       = vector<string>{};
 
   // names for enums
-  auto sampler_namemap = std::map<string, trace_params::sampler_type>{};
+  auto sampler_namemap = std::map<string, trace_sampler_type>{};
   for (auto type = 0; type < trace_sampler_names.size(); type++) {
-    sampler_namemap[trace_sampler_names[type]] =
-        (trace_params::sampler_type)type;
+    sampler_namemap[trace_sampler_names[type]] = (trace_sampler_type)type;
   }
-  auto falsecolor_namemap = std::map<string, trace_params::falsecolor_type>{};
+  auto falsecolor_namemap = std::map<string, trace_falsecolor_type>{};
   for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
     falsecolor_namemap[trace_falsecolor_names[type]] =
-        (trace_params::falsecolor_type)type;
+        (trace_falsecolor_type)type;
   }
 
   // parse command line

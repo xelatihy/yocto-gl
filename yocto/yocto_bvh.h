@@ -153,9 +153,9 @@ void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
 void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius);
 void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& radius);
-void update_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions);
+void update_quads_bvh(
+    bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
 // Updates instances bvh for changes in frames and shape bvhs
 void update_instances_bvh(bvh_tree& bvh, int num_instances,
     const function<frame3f(int instance)>&         instance_frame,
@@ -242,11 +242,9 @@ void make_lines_embree_bvh(bvh_embree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     bool high_quality, bool compact);
 void make_triangles_embree_bvh(bvh_embree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    bool high_quality, bool compact);
+    const vector<vec3f>& positions, bool high_quality, bool compact);
 void make_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    bool high_quality, bool compact);
+    const vector<vec3f>& positions, bool high_quality, bool compact);
 // Make instance bvh with Intel's Embree
 void make_instances_embree_bvh(bvh_embree& bvh, int num_instances,
     const function<frame3f(int instance)>&           instance_frame,
@@ -257,21 +255,21 @@ void make_instances_embree_bvh(bvh_embree& bvh, int num_instances,
 void update_lines_embree_bvh(bvh_embree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius);
 void update_triangles_embree_bvh(bvh_embree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<float>& radius);
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
 void update_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions);
 // Updates instances bvh for changes in frames and shape bvhs with Intel's
 // Embree
 void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
     const function<frame3f(int instance)>&           instance_frame,
-    const function<const bvh_embree&(int instance)>& shape_bvh);
+    const function<const bvh_embree&(int instance)>& shape_bvh,
+    const vector<int>&                               updated_instances);
 
 // Intersect a ray with either a shapoe or a scene
 bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any);
 bool intersect_instances_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any);
+    int& instance, int& element, vec2f& uv, float& distance, bool find_any);
 #endif
 
 }  // namespace yocto
@@ -333,8 +331,8 @@ struct bvh_params {
 };
 
 // Build the bvh acceleration structure.
-void make_shape_bvh(bvh_shape& bvh, const bvh_params& params);
-void make_scene_bvh(bvh_scene& bvh, const bvh_params& params);
+void init_shape_bvh(bvh_shape& bvh, const bvh_params& params);
+void init_scene_bvh(bvh_scene& bvh, const bvh_params& params);
 
 // Refit bvh data
 void update_shape_bvh(bvh_shape& bvh, const bvh_params& params);
@@ -389,70 +387,6 @@ bvh_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
     float max_distance, bool find_any = false);
 bvh_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
     float max_distance, bool find_any = false, bool non_rigid_frames = true);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// EXPERIMENTAL HIGH-LEVEL BVH FOR RAY INTERSECTION USING SHARED MEMORY
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// [EXPERIMENTAL] BVH data for whole scenes. This interface does not copy data.
-struct bvh_shared_scene {
-  // shapes
-  int                                       num_shapes = 0;
-  function<const vector<int>&(int shape)>   shape_points;
-  function<const vector<vec2i>&(int shape)> shape_lines;
-  function<const vector<vec3i>&(int shape)> shape_triangles;
-  function<const vector<vec4i>&(int shape)> shape_quads;
-  function<const vector<vec4i>&(int shape)> shape_quadspos;
-  function<const vector<vec3f>&(int shape)> shape_positions;
-  function<const vector<float>&(int shape)> shape_radius;
-
-  // instances
-  int                             num_instances = 0;
-  function<frame3f(int instance)> instance_frame;
-  function<int(int instance)>     instance_shape;
-
-  // nodes
-  bvh_tree         bvh_scene  = {};
-  vector<bvh_tree> bvh_shapes = {};
-
-#if YOCTO_EMBREE
-  bvh_embree         embree_scene  = {};
-  vector<bvh_embree> embree_shapes = {};
-#endif
-};
-
-// [EXPERIMENTAL] Build the bvh acceleration structure.
-void make_scene_bvh(bvh_shared_scene& bvh, const bvh_params& params);
-
-// [EXPERIMENTAL] Refit bvh data
-void update_scene_bvh(bvh_shared_scene& bvh,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params);
-
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-bool intersect_scene_bvh(const bvh_shared_scene& bvh, const ray3f& ray,
-    int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any = false, bool non_rigid_frames = true);
-bool intersect_shape_bvh(const bvh_shared_scene& bvh, int shape,
-    const ray3f& ray, int& element, vec2f& uv, float& distance,
-    bool find_any = false, bool non_rigid_frames = true);
-// Intersects a single instance.
-bool intersect_instance_bvh(const bvh_shared_scene& bvh, int instance,
-    const ray3f& ray, int& element, vec2f& uv, float& distance,
-    bool find_any = false, bool non_rigid_frames = true);
-// Shortcuts.
-bvh_intersection intersect_scene_bvh(const bvh_shared_scene& bvh,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_shape_bvh(const bvh_shared_scene& bvh, int shape,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_instance_bvh(const bvh_shared_scene& bvh,
-    int instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
 
 }  // namespace yocto
 

@@ -141,6 +141,7 @@ int main(int num_args, const char* args[]) {
   auto init = [&data](app_state& app) {
     auto timer = print_timed("init my data");
     my_init(data, app);
+    print_elapsed(timer);
   };
   auto key_callback = [&data](app_state& app, int key, bool pressing) {
     my_keycallback(data, app, key, pressing);

@@ -49,15 +49,14 @@ int main(int argc, const char* argv[]) {
   auto filename     = "scene.json"s;
 
   // names for enums
-  auto sampler_namemap = std::map<string, trace_params::sampler_type>{};
+  auto sampler_namemap = std::map<string, trace_sampler_type>{};
   for (auto type = 0; type < trace_sampler_names.size(); type++) {
-    sampler_namemap[trace_sampler_names[type]] =
-        (trace_params::sampler_type)type;
+    sampler_namemap[trace_sampler_names[type]] = (trace_sampler_type)type;
   }
-  auto falsecolor_namemap = std::map<string, trace_params::falsecolor_type>{};
+  auto falsecolor_namemap = std::map<string, trace_falsecolor_type>{};
   for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
     falsecolor_namemap[trace_falsecolor_names[type]] =
-        (trace_params::falsecolor_type)type;
+        (trace_falsecolor_type)type;
   }
 
   // parse command line
@@ -108,60 +107,55 @@ int main(int argc, const char* argv[]) {
   // scene loading
   auto ioscene = scene_model{};
   try {
-    auto timer = print_timed("loading scene");
+    auto load_timer = print_timed("loading scene");
     load_scene(filename, ioscene, load_prms);
+    print_elapsed(load_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
 
   // add components
   if (validate) {
-    auto timer  = print_timed("validating");
-    auto errors = format_validation(ioscene);
+    auto validate_timer = print_timed("validating");
+    auto errors         = format_validation(ioscene);
     for (auto& error : errors) print_info(error);
+    print_elapsed(validate_timer);
   }
 
   // convert scene
-  auto scene = trace_scene{};
-  {
-    auto timer = print_timed("converting");
-    make_trace_scene(scene, ioscene);
-  }
+  auto convert_timer = print_timed("converting");
+  auto scene         = make_trace_scene(ioscene);
+  print_elapsed(convert_timer);
 
   // build bvh
-  auto bvh = trace_bvh{};
-  {
-    auto timer = print_timed("building bvh");
-    make_bvh(bvh, scene, bvh_prms);
-  }
+  auto bvh_timer = print_timed("building bvh");
+  init_scene_bvh(scene, bvh_prms);
+  print_elapsed(bvh_timer);
 
   // init renderer
-  auto lights = trace_lights{};
-  {
-    auto timer = print_timed("building lights");
-    make_trace_lights(lights, scene);
-  }
+  auto lights_timer = print_timed("building lights");
+  init_lights(scene);
+  print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (lights.instances.empty() && lights.environments.empty() &&
-      is_sampler_lit(trace_prms)) {
+  if (scene.lights.empty() && is_sampler_lit(trace_prms)) {
     print_info("no lights presents, switching to eyelight shader");
-    trace_prms.sampler = trace_params::sampler_type::eyelight;
+    trace_prms.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  auto image_size = camera_resolution(
-      scene.cameras[trace_prms.camera], trace_prms.resolution);
-  auto render = image{image_size, zero4f};
-  auto state  = make_trace_state(image_size, trace_prms.seed);
+  auto state  = make_trace_state(scene, trace_prms);
+  auto render = image{state.size(), zero4f};
 
   // render
   for (auto sample = 0; sample < trace_prms.samples;
        sample += trace_prms.batch) {
-    auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
-    auto timer    = print_timed("rendering samples " + std::to_string(sample) +
-                             "/" + std::to_string(trace_prms.samples));
-    trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
+    auto nsamples    = min(trace_prms.batch, trace_prms.samples - sample);
+    auto batch_timer = print_timed("rendering samples " +
+                                   std::to_string(sample) + "/" +
+                                   std::to_string(trace_prms.samples));
+    trace_samples(render, state, scene, sample, trace_prms);
+    print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
@@ -181,7 +175,7 @@ int main(int argc, const char* argv[]) {
 
   // save image
   try {
-    auto timer = print_timed("saving image");
+    auto save_timer = print_timed("saving image");
     if (is_hdr_filename(imfilename)) {
       save_image(imfilename, logo ? add_logo(render) : render);
     } else {
@@ -189,6 +183,7 @@ int main(int argc, const char* argv[]) {
           imfilename, logo ? add_logo(tonemap_imageb(render, tonemap_prms))
                            : tonemap_imageb(render, tonemap_prms));
     }
+    print_elapsed(save_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }

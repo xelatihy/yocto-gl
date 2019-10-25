@@ -59,10 +59,6 @@
 #ifndef _YOCTO_TRACE_H_
 #define _YOCTO_TRACE_H_
 
-#ifndef YOCTO_QUADS_AS_TRIANGLES
-#define YOCTO_QUADS_AS_TRIANGLES 1
-#endif
-
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -71,7 +67,6 @@
 #include "yocto_common.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
-#include "yocto_random.h"
 #include "yocto_sceneio.h"
 
 // -----------------------------------------------------------------------------
@@ -166,6 +161,12 @@ struct trace_shape {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
+
+  // computed properties
+  bvh_tree bvh = {};
+#if YOCTO_EMBREE
+  bvh_embree embree = {};
+#endif
 };
 
 // Instance of a visible shape in the scene.
@@ -182,6 +183,13 @@ struct trace_environment {
   int     emission_tex = -1;
 };
 
+// Trace lights used during rendering. These are created automatically.
+struct trace_light {
+  int           instance    = -1;
+  int           environment = -1;
+  vector<float> elem_cdf    = {};
+};
+
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a
@@ -196,16 +204,15 @@ struct trace_scene {
   vector<trace_material>    materials    = {};
   vector<trace_texture>     textures     = {};
   vector<trace_environment> environments = {};
-};
 
-// TODO: remove these functions and get better interface for picking
-// Generates a ray from the image coordinates `uv` and lens coordinates `luv`.
-ray3f eval_camera(
-    const trace_camera& camera, const vec2f& uv, const vec2f& luv);
-// Generates a ray from a camera for pixel `ij`, the image size `resolution`,
-// the sub-pixel coordinates `puv` and the lens coordinates `luv`.
-ray3f eval_camera(const trace_camera& camera, const vec2i& ij,
-    const vec2i& resolution, const vec2f& puv, const vec2f& luv);
+  // computed properties
+  vector<trace_light> lights = {};
+  bvh_tree            bvh    = {};
+#if YOCTO_EMBREE
+  bvh_embree embree     = {};
+  bool       use_embree = false;
+#endif
+};
 
 }  // namespace yocto
 
@@ -215,19 +222,57 @@ ray3f eval_camera(const trace_camera& camera, const vec2i& ij,
 namespace yocto {
 
 // Construct a scene from io
-void make_trace_scene(trace_scene& scene, const scene_model& ioscene);
+trace_scene make_trace_scene(const scene_model& ioscene);
 
 // Update a value from io
-void update_camera(trace_camera& camera, const scene_camera& iocamera);
-void update_texture(trace_texture& texture, const scene_texture& iotexture);
-void update_material(
+void update_trace_camera(trace_camera& camera, const scene_camera& iocamera);
+void update_trace_texture(
+    trace_texture& texture, const scene_texture& iotexture);
+void update_trace_material(
     trace_material& material, const scene_material& iomaterial);
-void update_shape(
+void update_trace_shape(
     trace_shape& shape, const scene_shape& ioshape, const scene_model& ioscene);
-void update_instance(
+void update_trace_instance(
     trace_instance& instance, const scene_instance& ioinstance);
-void update_environment(
+void update_trace_environment(
     trace_environment& environment, const scene_environment& ioenvironment);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// INTERSECTION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Build the bvh acceleration structure.
+void init_shape_bvh(trace_shape& bvh, const bvh_params& params);
+void init_scene_bvh(trace_scene& bvh, const bvh_params& params);
+
+// Refit bvh data
+void update_shape_bvh(trace_shape& bvh, const bvh_params& params);
+void update_scene_bvh(trace_scene& bvh, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes, const bvh_params& params);
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray,
+    int& element, vec2f& uv, float& distance, bool find_any = false);
+bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
+    int& instance, int& element, vec2f& uv, float& distance,
+    bool find_any = false, bool non_rigid_frames = true);
+// Intersects a single instance.
+bool intersect_instance_bvh(const trace_scene& scene, int instance,
+    const ray3f& ray, int& element, vec2f& uv, float& distance,
+    bool find_any = false, bool non_rigid_frames = true);
+
+// Short version of intersect functions
+bvh_intersection intersect_shape_bvh(
+    const trace_shape& shape, const ray3f& ray, bool find_any = false);
+bvh_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
+    bool find_any = false, bool non_rigid_frames = true);
+bvh_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
 
@@ -239,35 +284,6 @@ namespace yocto {
 // Default trace seed
 const auto trace_default_seed = 961748941ull;
 
-// Trace bvh
-using trace_bvh = bvh_shared_scene;
-
-// Build/refit the bvh acceleration structure.
-void make_bvh(
-    bvh_scene& bvh, const trace_scene& scene, const bvh_params& params);
-void update_bvh(bvh_scene& bvh, const trace_scene& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params);
-void make_bvh(
-    bvh_shared_scene& bvh, const trace_scene& scene, const bvh_params& params);
-void update_bvh(bvh_shared_scene& bvh, const trace_scene& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params);
-
-// Trace lights used during rendering.
-struct trace_lights {
-  vector<int>           instances        = {};
-  vector<int>           environments     = {};
-  vector<vector<float>> shape_cdfs       = {};
-  vector<vector<float>> environment_cdfs = {};
-
-  bool empty() const { return instances.empty() && environments.empty(); }
-};
-
-// Initialize lights.
-trace_lights make_trace_lights(const trace_scene& scene);
-void         make_trace_lights(trace_lights& lights, const trace_scene& scene);
-
 // State of a pixel during tracing
 struct trace_pixel {
   vec3f     radiance = zero3f;
@@ -275,47 +291,39 @@ struct trace_pixel {
   int       samples  = 0;
   rng_state rng      = {};
 };
-struct trace_state {
-  vec2i               image_size = {0, 0};
-  vector<trace_pixel> pixels     = {};
-};
+using trace_state = image<trace_pixel>;
 
-// Initialize state of the renderer.
-trace_state make_trace_state(
-    const vec2i& image_size, uint64_t random_seed = trace_default_seed);
-void  make_trace_state(trace_state& state, const vec2i& image_size,
-     uint64_t random_seed = trace_default_seed);
-vec2i camera_resolution(const trace_camera& camera, int resolution);
+// Type of tracing algorithm
+enum struct trace_sampler_type {
+  path,        // path tracing
+  naive,       // naive path tracing
+  eyelight,    // eyelight rendering
+  falsecolor,  // false color rendering
+};
+// Type of false color visualization
+enum struct trace_falsecolor_type {
+  // clang-format off
+  normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
+  diffuse, specular, transmission, roughness, material, shape, instance, 
+  element, highlight
+  // clang-format on
+};
 
 // Options for trace functions
 struct trace_params {
-  // clang-format off
-  // Type of tracing algorithm to use
-  enum struct sampler_type {
-    path,        // path tracing
-    naive,       // naive path tracing
-    eyelight,    // eyelight rendering
-    falsecolor,  // false color rendering
-  };
-  enum struct falsecolor_type {
-    normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
-    diffuse, specular, transmission, roughness, material, shape, instance, 
-    element, highlight };
-  // clang-format on
-
-  int             camera     = 0;
-  int             resolution = 1280;
-  sampler_type    sampler    = sampler_type::path;
-  falsecolor_type falsecolor = falsecolor_type::diffuse;
-  int             samples    = 512;
-  int             bounces    = 8;
-  int             batch      = 16;
-  int             region     = 16;
-  float           clamp      = 10;
-  bool            envhidden  = false;
-  bool            tentfilter = false;
-  uint64_t        seed       = trace_default_seed;
-  bool            noparallel = false;
+  int                   camera     = 0;
+  int                   resolution = 1280;
+  trace_sampler_type    sampler    = trace_sampler_type::path;
+  trace_falsecolor_type falsecolor = trace_falsecolor_type::diffuse;
+  int                   samples    = 512;
+  int                   bounces    = 8;
+  int                   batch      = 16;
+  int                   region     = 16;
+  float                 clamp      = 10;
+  bool                  envhidden  = false;
+  bool                  tentfilter = false;
+  uint64_t              seed       = trace_default_seed;
+  bool                  noparallel = false;
 };
 
 const auto trace_sampler_names = vector<string>{
@@ -326,23 +334,28 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "specular", "transmission", "roughness", "material", "shape", "instance",
     "element", "highlight"};
 
+// Initialize state of the renderer.
+trace_state make_trace_state(
+    const trace_scene& scene, const trace_params& params);
+
+// Initialize lights.
+void init_lights(trace_scene& scene);
+
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
-    const trace_lights& lights, const trace_params& params);
+image<vec4f> trace_image(const trace_scene& scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 int trace_samples(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
-    int current_sample, const trace_params& params);
+    const trace_scene& scene, int current_sample, const trace_params& params);
 
 // Progressively compute an image by calling trace_region multiple times.
 // Compared to `trace_samples` this always runs serially and is helpful
 // when building async applications.
 void trace_region(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
-    const image_region& region, int num_samples, const trace_params& params);
+    const trace_scene& scene, const image_region& region, int num_samples,
+    const trace_params& params);
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
