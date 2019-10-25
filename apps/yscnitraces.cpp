@@ -73,7 +73,7 @@ struct app_state {
 };
 
 void reset_display(app_state& app) {
-  app.state = make_trace_state(app.scene, app.trace_prms);
+  app.state = make_state(app.scene, app.trace_prms);
   app.render.resize(app.state.size());
   app.display.resize(app.state.size());
   app.render_preview = true;
@@ -253,7 +253,7 @@ int main(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_scene_bvh(app.scene, app.trace_prms);
+  init_bvh(app.scene, app.trace_prms);
   print_elapsed(bvh_timer);
 
   // init renderer
@@ -268,7 +268,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  app.state   = make_trace_state(app.scene, app.trace_prms);
+  app.state   = make_state(app.scene, app.trace_prms);
   app.render  = image{app.state.size(), zero4f};
   app.display = app.render;
   reset_display(app);

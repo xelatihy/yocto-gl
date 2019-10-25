@@ -110,7 +110,7 @@ struct app_states {
 };
 
 void reset_display(app_state& app) {
-  app.state = make_trace_state(app.trscene, app.trace_prms);
+  app.state = make_state(app.trscene, app.trace_prms);
   app.render.resize(app.state.size());
   app.display.resize(app.state.size());
   app.render_preview = true;
@@ -134,12 +134,12 @@ void load_scene_async(app_states& apps, const string& filename) {
   apps.loaders.push_back(run_async([&app]() {
     load_scene(app.filename, app.ioscene);
     app.trscene = make_trace_scene(app.ioscene);
-    init_scene_bvh(app.trscene, app.trace_prms);
+    init_bvh(app.trscene, app.trace_prms);
     init_lights(app.trscene);
     if (app.trscene.lights.empty() && is_sampler_lit(app.trace_prms)) {
       app.trace_prms.sampler = trace_sampler_type::eyelight;
     }
-    app.state = make_trace_state(app.trscene, app.trace_prms);
+    app.state = make_state(app.trscene, app.trace_prms);
     app.render.resize(app.state.size());
     app.display.resize(app.state.size());
     app.name = get_filename(app.filename) + " [" +
@@ -279,7 +279,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
       log_glinfo(win, e.what());
     }
     update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
-    update_scene_bvh(app.trscene, {}, {id}, app.trace_prms);
+    update_bvh(app.trscene, {}, {id}, app.trace_prms);
     init_lights(app.trscene);
   } else if (edited) {
     update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
@@ -302,9 +302,9 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
       win, "material", instance.material, app.ioscene.materials, true);
   if (edited) update_trace_instance(app.trscene.instances.at(id), instance);
   if (edited && instance.shape != old_instance.shape)
-    update_scene_bvh(app.trscene, {}, {id}, app.trace_prms);
+    update_bvh(app.trscene, {}, {id}, app.trace_prms);
   if (edited && instance.frame != old_instance.frame)
-    update_scene_bvh(app.trscene, {}, {id}, app.trace_prms);
+    update_bvh(app.trscene, {}, {id}, app.trace_prms);
   // TODO: update lights
   return edited;
 }

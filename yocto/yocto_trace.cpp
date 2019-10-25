@@ -1090,7 +1090,7 @@ static RTCDevice     trace_embree_device() {
 }
 
 // Initialize Embree BVH
-static void init_shape_embree_bvh(
+static void init_embree_bvh(
     trace_shape& shape, const trace_params& params) {
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
@@ -1202,7 +1202,7 @@ static void init_shape_embree_bvh(
       escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); }};
 }
 
-static void init_scene_embree_bvh(
+static void init_embree_bvh(
     trace_scene& scene, const trace_params& params) {
   // scene bvh
   auto edevice = trace_embree_device();
@@ -1622,11 +1622,11 @@ static void update_bvh(trace_bvh& bvh, const vector<bbox3f>& bboxes) {
   }
 }
 
-static void init_shape_bvh(trace_shape& shape, const trace_params& params) {
+static void init_bvh(trace_shape& shape, const trace_params& params) {
 #if YOCTO_EMBREE
   // call Embree if needed
   if (params.embree_bvh) {
-    return init_shape_embree_bvh(shape, params);
+    return init_embree_bvh(shape, params);
   }
 #endif
 
@@ -1676,15 +1676,15 @@ static void init_shape_bvh(trace_shape& shape, const trace_params& params) {
   }
 }
 
-void init_scene_bvh(trace_scene& scene, const trace_params& params) {
+void init_bvh(trace_scene& scene, const trace_params& params) {
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-    init_shape_bvh(scene.shapes[idx], params);
+    init_bvh(scene.shapes[idx], params);
   }
 
   // embree
 #if YOCTO_EMBREE
   if (params.embree_bvh) {
-    return init_scene_embree_bvh(scene, params);
+    return init_embree_bvh(scene, params);
   }
 #endif
 
@@ -2898,7 +2898,7 @@ void trace_region(image<vec4f>& image, trace_state& state,
 }
 
 // Init a sequence of random number generators.
-trace_state make_trace_state(
+trace_state make_state(
     const trace_scene& scene, const trace_params& params) {
   auto image_size = camera_resolution(
       scene.cameras[params.camera], params.resolution);
@@ -2933,7 +2933,7 @@ void init_lights(trace_scene& scene) {
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
-  auto state   = make_trace_state(scene, params);
+  auto state   = make_state(scene, params);
   auto render  = image{state.size(), zero4f};
   auto regions = make_image_regions(render.size(), params.region, true);
 

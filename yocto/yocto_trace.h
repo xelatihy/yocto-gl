@@ -326,17 +326,17 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "element", "highlight"};
 
 // Initialize state of the renderer.
-trace_state make_trace_state(
+trace_state make_state(
     const trace_scene& scene, const trace_params& params);
 
 // Initialize lights.
 void init_lights(trace_scene& scene);
 
 // Build the bvh acceleration structure.
-void init_scene_bvh(trace_scene& bvh, const trace_params& params);
+void init_bvh(trace_scene& bvh, const trace_params& params);
 
 // Refit bvh data
-void update_scene_bvh(trace_scene& bvh, const vector<int>& updated_instances,
+void update_bvh(trace_scene& bvh, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.

@@ -127,7 +127,7 @@ int main(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_scene_bvh(scene, trace_prms);
+  init_bvh(scene, trace_prms);
   print_elapsed(bvh_timer);
 
   // init renderer
@@ -142,7 +142,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  auto state  = make_trace_state(scene, trace_prms);
+  auto state  = make_state(scene, trace_prms);
   auto render = image{state.size(), zero4f};
 
   // render
