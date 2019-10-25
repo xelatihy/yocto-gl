@@ -90,8 +90,6 @@
 #include "yocto_common.h"
 #include "yocto_math.h"
 
-#include <functional>
-
 #if YOCTO_EMBREE
 #include <embree3/rtcore.h>
 #endif
@@ -100,9 +98,6 @@
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// using directive
-using std::function;
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
@@ -232,11 +227,6 @@ void make_triangles_embree_bvh(bvh_embree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, bool high_quality, bool compact);
 void make_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, bool high_quality, bool compact);
-// Make instance bvh with Intel's Embree
-void make_instances_embree_bvh(bvh_embree& bvh, int num_instances,
-    const function<frame3f(int instance)>&           instance_frame,
-    const function<const bvh_embree&(int instance)>& shape_bvh,
-    bool high_quality, bool compact);
 
 // Updates shape bvh for changes in positions and radia with Intel's Embree
 void update_lines_embree_bvh(bvh_embree& bvh, const vector<vec2i>& lines,
@@ -245,12 +235,6 @@ void update_triangles_embree_bvh(bvh_embree& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
 void update_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions);
-// Updates instances bvh for changes in frames and shape bvhs with Intel's
-// Embree
-void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
-    const function<frame3f(int instance)>&           instance_frame,
-    const function<const bvh_embree&(int instance)>& shape_bvh,
-    const vector<int>&                               updated_instances);
 
 // Intersect a ray with either a shape or a scene
 bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,

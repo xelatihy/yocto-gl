@@ -195,30 +195,6 @@ void make_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
   rtcAttachGeometryByID(bvh.scene, bvh.shape, 0);
   rtcCommitScene(bvh.scene);
 }
-// Build a BVH using Embree.
-void make_instances_embree_bvh(bvh_embree& bvh, int num_instances,
-    const function<frame3f(int instance)>&           instance_frame,
-    const function<const bvh_embree&(int instance)>& shape_bvh,
-    bool high_quality, bool compact) {
-  // scene bvh
-  bvh.device = get_embree_device();
-  bvh.scene  = rtcNewScene(bvh.device);
-  if (compact) rtcSetSceneFlags(bvh.scene, RTC_SCENE_FLAG_COMPACT);
-  if (high_quality) rtcSetSceneBuildQuality(bvh.scene, RTC_BUILD_QUALITY_HIGH);
-  for (auto instance_id = 0; instance_id < num_instances; instance_id++) {
-    auto  frame = instance_frame(instance_id);
-    auto& sbvh  = shape_bvh(instance_id);
-    if (!sbvh.scene) throw std::runtime_error("bvh not built");
-    bvh.instances.push_back(
-        rtcNewGeometry(bvh.device, RTC_GEOMETRY_TYPE_INSTANCE));
-    rtcSetGeometryInstancedScene(bvh.instances.back(), sbvh.scene);
-    rtcSetGeometryTransform(
-        bvh.instances.back(), 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
-    rtcCommitGeometry(bvh.instances.back());
-    rtcAttachGeometryByID(bvh.scene, bvh.instances.back(), instance_id);
-  }
-  rtcCommitScene(bvh.scene);
-}
 
 // Refit a BVH using Embree. Calls `udpate_bvh()` if Embree is not
 // available.
@@ -233,23 +209,6 @@ void update_triangles_embree_bvh(bvh_embree& bvh,
 void update_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions) {
   throw std::runtime_error("not yet implemented");
-}
-void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
-    const function<frame3f(int instance)>&           instance_frame,
-    const function<const bvh_embree&(int instance)>& shape_bvh,
-    const vector<int>&                               updated_instances) {
-  // scene bvh
-  for (auto instance_id : updated_instances) {
-    auto  frame = instance_frame(instance_id);
-    auto& sbvh  = shape_bvh(instance_id);
-    if (!sbvh.scene) throw std::runtime_error("bvh not built");
-    auto embree_geom = rtcGetGeometry(bvh.scene, instance_id);
-    rtcSetGeometryInstancedScene(embree_geom, sbvh.scene);
-    rtcSetGeometryTransform(
-        embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
-    rtcCommitGeometry(embree_geom);
-  }
-  rtcCommitScene(bvh.scene);
 }
 
 bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
@@ -706,28 +665,6 @@ void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     build_bvh_parallel(bvh, bboxes, high_quality);
   }
 }
-// Make instance bvh
-void make_instances_bvh(bvh_tree& bvh, int num_instances,
-    const function<frame3f(int instance)>&         instance_frame,
-    const function<const bvh_tree&(int instance)>& shape_bvh, bool high_quality,
-    bool parallel) {
-  // build primitives
-  auto bboxes = vector<bbox3f>(num_instances);
-  for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto  frame = instance_frame(idx);
-    auto& sbvh  = shape_bvh(idx);
-    bboxes[idx] = sbvh.nodes.empty()
-                      ? invalidb3f
-                      : transform_bbox(frame, sbvh.nodes[0].bbox);
-  }
-
-  // build nodes
-  if (!parallel) {
-    build_bvh_serial(bvh, bboxes, high_quality);
-  } else {
-    build_bvh_parallel(bvh, bboxes, high_quality);
-  }
-}
 
 void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
@@ -775,22 +712,6 @@ void update_quads_bvh(
     auto& q     = quads[idx];
     bboxes[idx] = quad_bounds(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-  }
-
-  // update nodes
-  update_bvh(bvh, bboxes);
-}
-void update_instances_bvh(bvh_tree& bvh, int num_instances,
-    const function<frame3f(int instance)>&         instance_frame,
-    const function<const bvh_tree&(int instance)>& shape_bvh) {
-  // build primitives
-  auto bboxes = vector<bbox3f>(num_instances);
-  for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto  frame = instance_frame(idx);
-    auto& sbvh  = shape_bvh(idx);
-    bboxes[idx] = sbvh.nodes.empty()
-                      ? invalidb3f
-                      : transform_bbox(frame, sbvh.nodes[0].bbox);
   }
 
   // update nodes
@@ -1468,15 +1389,8 @@ void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
 
 #if YOCTO_EMBREE
   if (params.embree) {
-    update_instances_embree_bvh(
-        scene.embree, scene.instances.size(),
-        [&scene](int instance) -> frame3f {
-          return scene.instances[instance].frame;
-        },
-        [&scene](int instance) -> bvh_embree& {
-          auto shape = scene.instances[instance].shape;
-          return scene.shapes[shape].embree;
-        },
+    update_scene_embree_bvh(
+        scene,
         updated_instances);
   }
 #endif
