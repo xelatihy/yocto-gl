@@ -1588,29 +1588,61 @@ void init_scene_embree_bvh(bvh_scene& scene, const bvh_params& params) {
   }
   rtcCommitScene(scene.embree.scene);
 }
+
+bool intersect_shape_embree_bvh(const bvh_shape& shape, const ray3f& ray,
+    int& element, vec2f& uv, float& distance, bool find_any) {
+  RTCRayHit embree_ray;
+  embree_ray.ray.org_x     = ray.o.x;
+  embree_ray.ray.org_y     = ray.o.y;
+  embree_ray.ray.org_z     = ray.o.z;
+  embree_ray.ray.dir_x     = ray.d.x;
+  embree_ray.ray.dir_y     = ray.d.y;
+  embree_ray.ray.dir_z     = ray.d.z;
+  embree_ray.ray.tnear     = ray.tmin;
+  embree_ray.ray.tfar      = ray.tmax;
+  embree_ray.ray.flags     = 0;
+  embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
+  embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+  RTCIntersectContext embree_ctx;
+  rtcInitIntersectContext(&embree_ctx);
+  rtcIntersect1(shape.embree.scene, &embree_ctx, &embree_ray);
+  if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
+  element  = (int)embree_ray.hit.primID;
+  uv       = {embree_ray.hit.u, embree_ray.hit.v};
+  distance = embree_ray.ray.tfar;
+  return true;
+}
+bool intersect_scene_embree_bvh(const bvh_scene& scene, const ray3f& ray,
+    int& instance, int& element, vec2f& uv, float& distance, bool find_any) {
+  RTCRayHit embree_ray;
+  embree_ray.ray.org_x     = ray.o.x;
+  embree_ray.ray.org_y     = ray.o.y;
+  embree_ray.ray.org_z     = ray.o.z;
+  embree_ray.ray.dir_x     = ray.d.x;
+  embree_ray.ray.dir_y     = ray.d.y;
+  embree_ray.ray.dir_z     = ray.d.z;
+  embree_ray.ray.tnear     = ray.tmin;
+  embree_ray.ray.tfar      = ray.tmax;
+  embree_ray.ray.flags     = 0;
+  embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
+  embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+  RTCIntersectContext embree_ctx;
+  rtcInitIntersectContext(&embree_ctx);
+  rtcIntersect1(scene.embree.scene, &embree_ctx, &embree_ray);
+  if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
+  instance = (int)embree_ray.hit.instID[0];
+  element  = (int)embree_ray.hit.primID;
+  uv       = {embree_ray.hit.u, embree_ray.hit.v};
+  distance = embree_ray.ray.tfar;
+  return true;
+}
 #endif
 
 void init_shape_bvh(bvh_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
   // call Embree if needed
   if (params.embree) {
-    if (!shape.points.empty()) {
-      throw std::runtime_error("embree does not support points");
-    } else if (!shape.lines.empty()) {
-      return make_lines_embree_bvh(shape.embree, shape.lines, shape.positions,
-          shape.radius, params.high_quality, params.compact);
-    } else if (!shape.triangles.empty()) {
-      return make_triangles_embree_bvh(shape.embree, shape.triangles,
-          shape.positions, params.high_quality, params.compact);
-    } else if (!shape.quads.empty()) {
-      return make_quads_embree_bvh(shape.embree, shape.quads, shape.positions,
-          params.high_quality, params.compact);
-    } else if (!shape.quadspos.empty()) {
-      return make_quads_embree_bvh(shape.embree, shape.quadspos,
-          shape.positions, params.high_quality, params.compact);
-    } else {
-      throw std::runtime_error("empty shape");
-    }
+    return init_shape_embree_bvh(shape, params);
   }
 #endif
 
@@ -1669,16 +1701,7 @@ void init_scene_bvh(bvh_scene& scene, const bvh_params& params) {
   // embree
 #if YOCTO_EMBREE
   if (params.embree) {
-    return make_instances_embree_bvh(
-        scene.embree, (int)scene.instances.size(),
-        [&scene](int instance) -> frame3f {
-          return scene.instances[instance].frame;
-        },
-        [&scene](int instance) -> bvh_embree& {
-          auto shape = scene.instances[instance].shape;
-          return scene.shapes[shape].embree;
-        },
-        params.high_quality, !params.noparallel);
+    return init_scene_embree_bvh(scene, params);
   }
 #endif
 
@@ -1779,8 +1802,8 @@ bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray, int& element,
 #if YOCTO_EMBREE
   // call Embree if needed
   if (shape.embree.scene) {
-    return intersect_elements_embree_bvh(
-        shape.embree, ray, element, uv, distance, find_any);
+    return intersect_shape_embree_bvh(
+        shape, ray, element, uv, distance, find_any);
   }
 #endif
 
@@ -1811,8 +1834,8 @@ bool intersect_scene_bvh(const bvh_scene& scene, const ray3f& ray,
 #if YOCTO_EMBREE
   // call Embree if needed
   if (scene.embree.scene) {
-    return intersect_instances_embree_bvh(
-        scene.embree, ray, instance, element, uv, distance, find_any);
+    return intersect_scene_embree_bvh(
+        scene, ray, instance, element, uv, distance, find_any);
   }
 #endif
 
