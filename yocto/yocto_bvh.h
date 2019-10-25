@@ -352,15 +352,4 @@ bvh_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
 
 }  // namespace yocto
 
-// -----------------------------------------------------------------------------
-// BVH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Print bvh statistics.
-vector<string> format_stats(const bvh_shape& bvh);
-vector<string> format_stats(const bvh_scene& bvh);
-
-}  // namespace yocto
-
 #endif
