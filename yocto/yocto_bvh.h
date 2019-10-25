@@ -90,8 +90,6 @@
 #include "yocto_common.h"
 #include "yocto_math.h"
 
-#include <functional>
-
 #if YOCTO_EMBREE
 #include <embree3/rtcore.h>
 #endif
@@ -100,9 +98,6 @@
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// using directive
-using std::function;
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
@@ -141,11 +136,6 @@ void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
 void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius,
     bool high_quality, bool parallel);
-// Make instance bvh
-void make_instances_bvh(bvh_tree& bvh, int num_instances,
-    const function<frame3f(int instance)>&         instance_frame,
-    const function<const bvh_tree&(int instance)>& shape_bvh, bool high_quality,
-    bool parallel);
 
 // Updates shape bvh for changes in positions and radia
 void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
@@ -156,10 +146,6 @@ void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions);
 void update_quads_bvh(
     bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
-// Updates instances bvh for changes in frames and shape bvhs
-void update_instances_bvh(bvh_tree& bvh, int num_instances,
-    const function<frame3f(int instance)>&         instance_frame,
-    const function<const bvh_tree&(int instance)>& shape_bvh);
 
 // Find a shape element or scene instances that intersects a ray,
 // returning either the closest or any overlap depending on `find_any`.
@@ -180,12 +166,6 @@ bool intersect_triangles_bvh(const bvh_tree& bvh,
 bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const ray3f& ray, int& element, vec2f& uv,
     float& distance, bool find_any = true);
-bool intersect_instances_bvh(const bvh_tree& bvh,
-    const function<frame3f(int instance)>&   instance_frame,
-    const function<bool(int shape, const ray3f& ray, int& element, vec2f& uv,
-        float& distance, bool find_any)>&    intersect_shape,
-    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any = false, bool non_rigid_frames = true);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
@@ -207,13 +187,6 @@ bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius,
     const vec3f& pos, float max_distance, int& element, vec2f& uv,
     float& distance, bool find_any = false);
-bool overlap_instances_bvh(const bvh_tree&           bvh,
-    const function<frame3f(int instance)>&           instance_frame,
-    const function<bool(int shape, const vec3f& pos, float mdist, int& element,
-        vec2f& uv, float& distance, bool find_any)>& overlap_shape,
-    const vec3f& pos, float max_distance, int& instance, int& element,
-    vec2f& uv, float& distance, bool find_any = false,
-    bool non_rigid_frames = true);
 
 }  // namespace yocto
 
@@ -245,11 +218,6 @@ void make_triangles_embree_bvh(bvh_embree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, bool high_quality, bool compact);
 void make_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, bool high_quality, bool compact);
-// Make instance bvh with Intel's Embree
-void make_instances_embree_bvh(bvh_embree& bvh, int num_instances,
-    const function<frame3f(int instance)>&           instance_frame,
-    const function<const bvh_embree&(int instance)>& shape_bvh,
-    bool high_quality, bool compact);
 
 // Updates shape bvh for changes in positions and radia with Intel's Embree
 void update_lines_embree_bvh(bvh_embree& bvh, const vector<vec2i>& lines,
@@ -258,14 +226,8 @@ void update_triangles_embree_bvh(bvh_embree& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
 void update_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions);
-// Updates instances bvh for changes in frames and shape bvhs with Intel's
-// Embree
-void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
-    const function<frame3f(int instance)>&           instance_frame,
-    const function<const bvh_embree&(int instance)>& shape_bvh,
-    const vector<int>&                               updated_instances);
 
-// Intersect a ray with either a shapoe or a scene
+// Intersect a ray with either a shape or a scene
 bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any);
 bool intersect_instances_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
@@ -300,14 +262,14 @@ struct bvh_shape {
 #endif
 };
 
+// instance
+struct bvh_instance {
+  frame3f frame = identity3x4f;
+  int     shape = -1;
+};
+
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_scene {
-  // instance
-  struct bvh_instance {
-    frame3f frame = identity3x4f;
-    int     shape = -1;
-  };
-
   // instances and shapes
   vector<bvh_instance> instances = {};
   vector<bvh_shape>    shapes    = {};
@@ -387,94 +349,6 @@ bvh_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
     float max_distance, bool find_any = false);
 bvh_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
     float max_distance, bool find_any = false, bool non_rigid_frames = true);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// BVH UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Print bvh statistics.
-vector<string> format_stats(const bvh_shape& bvh);
-vector<string> format_stats(const bvh_scene& bvh);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// RAY INTERSECTION AND CLOSEST POINT FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Intersect a ray with a point (approximate).
-// Based on http://geomalgorithms.com/a02-lines.html.
-bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist);
-
-// Intersect a ray with a line (approximate).
-// Based on http://geomalgorithms.com/a05-intersect-1.html and
-// http://geomalgorithms.com/a07-distance.html#
-//     dist3D_Segment_to_Segment
-bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    float r0, float r1, vec2f& uv, float& dist);
-
-// Intersect a ray with a triangle.
-bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, vec2f& uv, float& dist);
-
-// Intersect a ray with a quad represented as two triangles (0,1,3) and
-// (2,3,1), with the uv coordinates of the second triangle corrected by u =
-// 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
-// to 1. This is equivalent to Intel's Embree.
-bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist);
-
-// Intersect a ray with a axis-aligned bounding box.
-bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
-
-// Intersect a ray with a axis-aligned bounding box, implemented as
-// "Robust BVH Ray Traversal" by T. Ize published at
-// http://jcgt.org/published/0002/02/02/paper.pdf
-bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox);
-
-// Intersect a ray with a axis-aligned bounding box, implemented as
-// "A Ray-Box Intersection Algorithm and Efficient Dynamic Voxel Rendering" at
-// http://jcgt.org/published/0007/03/04/
-// but using the Wald implementation
-bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox);
-
-// Check if a point overlaps a position within a max distance.
-bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p0, float r0,
-    vec2f& uv, float& dist);
-
-// Find closest line point to a position.
-float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
-
-// Check if a line overlaps a position within a max distance.
-bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, vec2f& uv, float& dist);
-
-// Find closest triangle point to a position.
-vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
-
-// Check if a triangle overlaps a position within a max distance.
-bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, vec2f& uv,
-    float& dist);
-
-// Check if a quad overlaps a position within a max distance.
-bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
-    float r2, float r3, vec2f& uv, float& dist);
-
-// Check if a bounding box overlaps a position within a max distance.
-bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
-
-// Check if two bounding boxes overlap.
-bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 
 }  // namespace yocto
 
