@@ -927,6 +927,23 @@ static void build_bvh_parallel(
   nodes.shrink_to_fit();
 }
 
+// Update bvh
+static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
+  for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
+    auto& node = bvh.nodes[nodeid];
+    node.bbox  = invalidb3f;
+    if (node.internal) {
+      for (auto idx = 0; idx < 2; idx++) {
+        node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
+      }
+    } else {
+      for (auto idx = 0; idx < node.num; idx++) {
+        node.bbox = merge(node.bbox, bboxes[bvh.primitives[node.start + idx]]);
+      }
+    }
+  }
+}
+
 // Build shape bvh
 void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
@@ -1022,60 +1039,72 @@ void make_instances_bvh(bvh_tree& bvh, int num_instances,
   }
 }
 
-template <typename Bounds>
-static void update_elements(bvh_tree& bvh, Bounds&& element_bounds) {
-  for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
-    auto& node = bvh.nodes[nodeid];
-    node.bbox  = invalidb3f;
-    if (node.internal) {
-      for (auto idx = 0; idx < 2; idx++) {
-        node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
-      }
-    } else {
-      for (auto idx = 0; idx < node.num; idx++) {
-        node.bbox = merge(
-            node.bbox, element_bounds(bvh.primitives[node.start + idx]));
-      }
-    }
-  }
-}
-
 void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
-  return update_elements(bvh, [&](int idx) {
-    auto& p = points[idx];
-    return point_bounds(positions[p], radius[p]);
-  });
+  // build primitives
+  auto bboxes = vector<bbox3f>(points.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) {
+    auto& p     = points[idx];
+    bboxes[idx] = point_bounds(positions[p], radius[p]);
+  }
+
+  // update nodes
+  update_bvh(bvh, bboxes);
 }
 void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
-  return update_elements(bvh, [&](int idx) {
-    auto& l = lines[idx];
-    return line_bounds(
+  // build primitives
+  auto bboxes = vector<bbox3f>(lines.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) {
+    auto& l     = lines[idx];
+    bboxes[idx] = line_bounds(
         positions[l.x], positions[l.y], radius[l.x], radius[l.y]);
-  });
+  }
+
+  // update nodes
+  update_bvh(bvh, bboxes);
 }
 void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions) {
-  return update_elements(bvh, [&](int idx) {
-    auto& t = triangles[idx];
-    return triangle_bounds(positions[t.x], positions[t.y], positions[t.z]);
-  });
+  // build primitives
+  auto bboxes = vector<bbox3f>(triangles.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) {
+    auto& t     = triangles[idx];
+    bboxes[idx] = triangle_bounds(
+        positions[t.x], positions[t.y], positions[t.z]);
+  }
+
+  // update nodes
+  update_bvh(bvh, bboxes);
 }
 void update_quads_bvh(
     bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions) {
-  return update_elements(bvh, [&](int idx) {
-    auto& q = quads[idx];
-    return quad_bounds(
+  // build primitives
+  auto bboxes = vector<bbox3f>(quads.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) {
+    auto& q     = quads[idx];
+    bboxes[idx] = quad_bounds(
         positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-  });
+  }
+
+  // update nodes
+  update_bvh(bvh, bboxes);
 }
 void update_instances_bvh(bvh_tree& bvh, int num_instances,
     const function<frame3f(int instance)>&         instance_frame,
     const function<const bvh_tree&(int instance)>& shape_bvh) {
-  return update_elements(bvh, [&](int idx) {
-    return transform_bbox(instance_frame(idx), shape_bvh(idx).nodes[0].bbox);
-  });
+  // build primitives
+  auto bboxes = vector<bbox3f>(num_instances);
+  for (auto idx = 0; idx < bboxes.size(); idx++) {
+    auto  frame = instance_frame(idx);
+    auto& sbvh  = shape_bvh(idx);
+    bboxes[idx] = sbvh.nodes.empty()
+                      ? invalidb3f
+                      : transform_bbox(frame, sbvh.nodes[0].bbox);
+  }
+
+  // update nodes
+  update_bvh(bvh, bboxes);
 }
 
 // Intersect ray with a bvh.
