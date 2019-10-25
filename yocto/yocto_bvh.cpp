@@ -355,9 +355,6 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Embree cleanup is momentarily disabled since it is not clear from the
-// documentation the sharing policy as it applied to us.
-
 #if YOCTO_EMBREE
 // copies
 bvh_embree::bvh_embree(const bvh_embree& other) { *this = other; }
@@ -1478,6 +1475,101 @@ bool overlap_instances_bvh(const bvh_tree&           bvh,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+#if YOCTO_EMBREE
+// Initialize Embree BVH
+void init_shape_embree_bvh(bvh_shape& shape, const bvh_params& params) {
+  shape.embree.device = get_embree_device();
+  shape.embree.scene  = rtcNewScene(shape.embree.device);
+  if (params.compact)
+    rtcSetSceneFlags(shape.embree.scene, RTC_SCENE_FLAG_COMPACT);
+  if (params.high_quality)
+    rtcSetSceneBuildQuality(shape.embree.scene, RTC_BUILD_QUALITY_HIGH);
+  if (!shape.points.empty()) {
+    throw std::runtime_error("embree does not support points");
+  } else if (!shape.lines.empty()) {
+    auto elines     = vector<int>{};
+    auto epositions = vector<vec4f>{};
+    auto last_index = -1;
+    for (auto& l : shape.lines) {
+      if (last_index == l.x) {
+        elines.push_back((int)epositions.size() - 1);
+        epositions.push_back({shape.positions[l.y], shape.radius[l.y]});
+      } else {
+        elines.push_back((int)epositions.size());
+        epositions.push_back({shape.positions[l.x], shape.radius[l.x]});
+        epositions.push_back({shape.positions[l.y], shape.radius[l.y]});
+      }
+      last_index = l.y;
+    }
+    shape.embree.shape = rtcNewGeometry(
+        get_embree_device(), RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
+    rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
+    auto embree_positions = rtcSetNewGeometryBuffer(shape.embree.shape,
+        RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4, epositions.size());
+    auto embree_lines     = rtcSetNewGeometryBuffer(shape.embree.shape,
+        RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
+    memcpy(embree_positions, epositions.data(), epositions.size() * 16);
+    memcpy(embree_lines, elines.data(), elines.size() * 4);
+  } else if (!shape.triangles.empty()) {
+    shape.embree.shape = rtcNewGeometry(get_embree_device(), RTC_GEOMETRY_TYPE_TRIANGLE);
+    rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
+    if (params.compact) {
+      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_VERTEX, 0,
+          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4, shape.positions.size());
+      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_INDEX, 0,
+          RTC_FORMAT_UINT3, shape.triangles.data(), 0, 3 * 4, shape.triangles.size());
+    } else {
+      auto embree_positions = rtcSetNewGeometryBuffer(shape.embree.shape,
+          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
+          shape.positions.size());
+      auto embree_triangles = rtcSetNewGeometryBuffer(shape.embree.shape,
+          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4, shape.triangles.size());
+      memcpy(embree_positions, shape.positions.data(), shape.positions.size() * 12);
+      memcpy(embree_triangles, shape.triangles.data(), shape.triangles.size() * 12);
+    }
+  } else if (!shape.quads.empty()) {
+    shape.embree.shape = rtcNewGeometry(get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+    rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
+    if (params.compact) {
+      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_VERTEX, 0,
+          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4, shape.positions.size());
+      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_INDEX, 0,
+          RTC_FORMAT_UINT4, shape.quads.data(), 0, 4 * 4, shape.quads.size());
+    } else {
+      auto embree_positions = rtcSetNewGeometryBuffer(shape.embree.shape,
+          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
+          shape.positions.size());
+      auto embree_quads     = rtcSetNewGeometryBuffer(shape.embree.shape,
+          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, shape.quads.size());
+      memcpy(embree_positions, shape.positions.data(), shape.positions.size() * 12);
+      memcpy(embree_quads, shape.quads.data(), shape.quads.size() * 16);
+    }
+  } else if (!shape.quadspos.empty()) {
+    shape.embree.shape = rtcNewGeometry(get_embree_device(), RTC_GEOMETRY_TYPE_QUAD);
+    rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
+    if (params.compact) {
+      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_VERTEX, 0,
+          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4, shape.positions.size());
+      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_INDEX, 0,
+          RTC_FORMAT_UINT4, shape.quadspos.data(), 0, 4 * 4, shape.quadspos.size());
+    } else {
+      auto embree_positions = rtcSetNewGeometryBuffer(shape.embree.shape,
+          RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
+          shape.positions.size());
+      auto embree_quads     = rtcSetNewGeometryBuffer(shape.embree.shape,
+          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, shape.quadspos.size());
+      memcpy(embree_positions, shape.positions.data(), shape.positions.size() * 12);
+      memcpy(embree_quads, shape.quadspos.data(), shape.quadspos.size() * 16);
+    }
+  } else {
+    throw std::runtime_error("empty shapes not supported");
+  }
+  rtcCommitGeometry(shape.embree.shape);
+  rtcAttachGeometryByID(shape.embree.scene, shape.embree.shape, 0);
+  rtcCommitScene(shape.embree.scene);
+}
+#endif
+
 void init_shape_bvh(bvh_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
   // call Embree if needed
@@ -1503,26 +1595,53 @@ void init_shape_bvh(bvh_shape& shape, const bvh_params& params) {
 #endif
 
   // build primitives
+  auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
-    return make_points_bvh(shape.bvh, shape.points, shape.positions,
-        shape.radius, params.high_quality, !params.noparallel);
+    bboxes = vector<bbox3f>(shape.points.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& p     = shape.points[idx];
+      bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
+    }
   } else if (!shape.lines.empty()) {
-    return make_lines_bvh(shape.bvh, shape.lines, shape.positions, shape.radius,
-        params.high_quality, !params.noparallel);
+    bboxes = vector<bbox3f>(shape.lines.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& l     = shape.lines[idx];
+      bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
+          shape.radius[l.x], shape.radius[l.y]);
+    }
   } else if (!shape.triangles.empty()) {
-    return make_triangles_bvh(shape.bvh, shape.triangles, shape.positions,
-        shape.radius, params.high_quality, !params.noparallel);
+    bboxes = vector<bbox3f>(shape.triangles.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& t     = shape.triangles[idx];
+      bboxes[idx] = triangle_bounds(
+          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+    }
   } else if (!shape.quads.empty()) {
-    return make_quads_bvh(shape.bvh, shape.quads, shape.positions, shape.radius,
-        params.high_quality, !params.noparallel);
+    bboxes = vector<bbox3f>(shape.quads.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& q     = shape.quads[idx];
+      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w]);
+    }
   } else if (!shape.quadspos.empty()) {
-    return make_quads_bvh(shape.bvh, shape.quadspos, shape.positions,
-        shape.radius, params.high_quality, !params.noparallel);
+    bboxes = vector<bbox3f>(shape.quads.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& q     = shape.quads[idx];
+      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w]);
+    }
+  }
+
+  // build nodes
+  if (params.noparallel) {
+    build_bvh_serial(shape.bvh, bboxes, params.high_quality);
   } else {
-    throw std::runtime_error("empty shape");
+    build_bvh_parallel(shape.bvh, bboxes, params.high_quality);
   }
 }
+
 void init_scene_bvh(bvh_scene& scene, const bvh_params& params) {
+  // Make shape bvh
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
     init_shape_bvh(scene.shapes[idx], params);
   }
@@ -1543,16 +1662,22 @@ void init_scene_bvh(bvh_scene& scene, const bvh_params& params) {
   }
 #endif
 
-  // build primitives
-  return make_instances_bvh(
-      scene.bvh, (int)scene.instances.size(),
-      [&scene](
-          int instance) -> frame3f { return scene.instances[instance].frame; },
-      [&scene](int instance) -> bvh_tree& {
-        auto shape = scene.instances[instance].shape;
-        return scene.shapes[shape].bvh;
-      },
-      params.high_quality, !params.noparallel);
+  // instance bboxes
+  auto bboxes = vector<bbox3f>(scene.instances.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) {
+    auto& instance = scene.instances[idx];
+    auto& shape    = scene.shapes[instance.shape];
+    bboxes[idx]    = shape.bvh.nodes.empty()
+                      ? invalidb3f
+                      : transform_bbox(instance.frame, shape.bvh.nodes[0].bbox);
+  }
+
+  // build nodes
+  if (params.noparallel) {
+    build_bvh_serial(scene.bvh, bboxes, params.high_quality);
+  } else {
+    build_bvh_parallel(scene.bvh, bboxes, params.high_quality);
+  }
 }
 
 void update_shape_bvh(bvh_shape& shape, const bvh_params& params) {
