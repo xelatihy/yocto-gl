@@ -245,19 +245,15 @@ void update_trace_environment(
 namespace yocto {
 
 // Build the bvh acceleration structure.
-void init_shape_bvh(trace_shape& bvh, const bvh_params& params);
 void init_scene_bvh(trace_scene& bvh, const bvh_params& params);
 
 // Refit bvh data
-void update_shape_bvh(trace_shape& bvh, const bvh_params& params);
 void update_scene_bvh(trace_scene& bvh, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const bvh_params& params);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any = false);
 bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
     int& instance, int& element, vec2f& uv, float& distance,
     bool find_any = false, bool non_rigid_frames = true);
