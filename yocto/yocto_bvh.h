@@ -180,12 +180,6 @@ bool intersect_triangles_bvh(const bvh_tree& bvh,
 bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const ray3f& ray, int& element, vec2f& uv,
     float& distance, bool find_any = true);
-bool intersect_instances_bvh(const bvh_tree& bvh,
-    const function<frame3f(int instance)>&   instance_frame,
-    const function<bool(int shape, const ray3f& ray, int& element, vec2f& uv,
-        float& distance, bool find_any)>&    intersect_shape,
-    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any = false, bool non_rigid_frames = true);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
@@ -207,13 +201,6 @@ bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius,
     const vec3f& pos, float max_distance, int& element, vec2f& uv,
     float& distance, bool find_any = false);
-bool overlap_instances_bvh(const bvh_tree&           bvh,
-    const function<frame3f(int instance)>&           instance_frame,
-    const function<bool(int shape, const vec3f& pos, float mdist, int& element,
-        vec2f& uv, float& distance, bool find_any)>& overlap_shape,
-    const vec3f& pos, float max_distance, int& instance, int& element,
-    vec2f& uv, float& distance, bool find_any = false,
-    bool non_rigid_frames = true);
 
 }  // namespace yocto
 
@@ -265,7 +252,7 @@ void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
     const function<const bvh_embree&(int instance)>& shape_bvh,
     const vector<int>&                               updated_instances);
 
-// Intersect a ray with either a shapoe or a scene
+// Intersect a ray with either a shape or a scene
 bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any);
 bool intersect_instances_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
@@ -300,14 +287,14 @@ struct bvh_shape {
 #endif
 };
 
+// instance
+struct bvh_instance {
+frame3f frame = identity3x4f;
+int     shape = -1;
+};
+
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_scene {
-  // instance
-  struct bvh_instance {
-    frame3f frame = identity3x4f;
-    int     shape = -1;
-  };
-
   // instances and shapes
   vector<bvh_instance> instances = {};
   vector<bvh_shape>    shapes    = {};

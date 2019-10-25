@@ -978,16 +978,6 @@ bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
       ray, element, uv, distance, find_any);
 }
 
-bool intersect_instances_bvh(const bvh_tree& bvh,
-    const function<frame3f(int instance)>&   instance_frame,
-    const function<bool(int shape, const ray3f& ray, int& element, vec2f& uv,
-        float& distance, bool find_any)>&    intersect_shape,
-    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames) {
-  return intersect_elements_bvh(bvh, instance_frame, intersect_shape, ray,
-      instance, element, uv, distance, find_any, non_rigid_frames);
-}
-
 // Intersect ray with a bvh.
 template <typename Overlap>
 static bool overlap_elements_bvh(const bvh_tree& bvh, Overlap&& overlap_element,
@@ -1149,16 +1139,6 @@ bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
             radius[q.z], radius[q.w], uv, distance);
       },
       pos, max_distance, element, uv, distance, find_any);
-}
-bool overlap_instances_bvh(const bvh_tree&           bvh,
-    const function<frame3f(int instance)>&           instance_frame,
-    const function<bool(int shape, const vec3f& pos, float mdist, int& element,
-        vec2f& uv, float& distance, bool find_any)>& overlap_shape,
-    const vec3f& pos, float max_distance, int& instance, int& element,
-    vec2f& uv, float& distance, bool find_any, bool non_rigid_frames) {
-  return overlap_elements_bvh(bvh, instance_frame, overlap_shape, pos,
-      max_distance, instance, element, uv, distance, find_any,
-      non_rigid_frames);
 }
 
 }  // namespace yocto
