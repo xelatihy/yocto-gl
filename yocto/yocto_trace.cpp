@@ -1226,7 +1226,7 @@ static void init_embree_bvh(
       escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); }};
 }
 
-static void update_scene_embree_bvh(
+static void update_embree_bvh(
     trace_scene& scene, const vector<int>& updated_instances) {
   // scene bvh
   auto escene = (RTCScene)scene.embree_bvh.get();
@@ -1706,7 +1706,7 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
   }
 }
 
-static void update_shape_bvh(trace_shape& shape, const trace_params& params) {
+static void update_bvh(trace_shape& shape, const trace_params& params) {
 #if YOCTO_EMBREE
   if (params.embree_bvh) {
     throw std::runtime_error("embree shape update not implemented");
@@ -1755,15 +1755,15 @@ static void update_shape_bvh(trace_shape& shape, const trace_params& params) {
   update_bvh(shape.bvh, bboxes);
 }
 
-void update_scene_bvh(trace_scene& scene, const vector<int>& updated_instances,
+void update_bvh(trace_scene& scene, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const trace_params& params) {
   // update shapes
   for (auto shape : updated_shapes)
-    update_shape_bvh(scene.shapes[shape], params);
+    update_bvh(scene.shapes[shape], params);
 
 #if YOCTO_EMBREE
   if (params.embree_bvh) {
-    update_scene_embree_bvh(scene, updated_instances);
+    update_embree_bvh(scene, updated_instances);
   }
 #endif
 
