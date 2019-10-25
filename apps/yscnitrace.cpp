@@ -60,7 +60,6 @@ struct app_state {
   // scene
   scene_model ioscene    = {};
   trace_scene trscene    = {};
-  trace_bvh   bvh        = {};
   bool        add_skyenv = false;
 
   // rendering state
@@ -138,7 +137,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   apps.loaders.push_back(run_async([&app]() {
     load_scene(app.filename, app.ioscene);
     app.trscene = make_trace_scene(app.ioscene);
-    app.bvh = make_trace_bvh(app.trscene, app.bvh_prms);
+    init_scene_bvh(app.trscene, app.bvh_prms);
     init_lights(app.trscene);
     if (app.trscene.lights.empty() &&
         is_sampler_lit(app.trace_prms)) {
@@ -284,7 +283,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
       log_glinfo(win, e.what());
     }
     update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
-    update_trace_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
+    update_scene_bvh(app.trscene, {}, {id}, app.bvh_prms);
     init_lights(app.trscene);
   } else if (edited) {
     update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
@@ -307,9 +306,9 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
       win, "material", instance.material, app.ioscene.materials, true);
   if (edited) update_trace_instance(app.trscene.instances.at(id), instance);
   if (edited && instance.shape != old_instance.shape)
-    update_trace_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
+    update_scene_bvh(app.trscene, {}, {id}, app.bvh_prms);
   if (edited && instance.frame != old_instance.frame)
-    update_trace_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
+    update_scene_bvh(app.trscene, {}, {id}, app.bvh_prms);
   // TODO: update lights
   return edited;
 }
@@ -536,7 +535,7 @@ void update(const opengl_window& win, app_states& app) {
       preview_prms.resolution /= app.preview_ratio;
       preview_prms.samples = 1;
       auto preview         = trace_image(
-          app.trscene, app.bvh, preview_prms);
+          app.trscene, preview_prms);
       preview = tonemap_image(preview, app.tonemap_prms);
       for (auto j = 0; j < app.display.size().y; j++) {
         for (auto i = 0; i < app.display.size().x; i++) {
@@ -557,7 +556,7 @@ void update(const opengl_window& win, app_states& app) {
           128, app.render_regions.size() - app.render_region);
       parallel_for(app.render_region, app.render_region + num_regions,
           [&app](int region_id) {
-            trace_region(app.render, app.state, app.trscene, app.bvh,
+            trace_region(app.render, app.state, app.trscene, 
                 app.render_regions[region_id], 1, app.trace_prms);
             tonemap_region(app.display, app.render,
                 app.render_regions[region_id], app.tonemap_prms);
@@ -635,7 +634,7 @@ void run_ui(app_states& apps) {
         auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /
                 vec2f{(float)app.render.size().x, (float)app.render.size().y});
-        if (auto isec = intersect_scene_bvh(app.trscene, app.bvh, ray); isec.hit) {
+        if (auto isec = intersect_scene_bvh(app.trscene, ray); isec.hit) {
           app.selection = {"instance", isec.instance};
         }
       }

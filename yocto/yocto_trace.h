@@ -161,6 +161,12 @@ struct trace_shape {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
+
+  // computed properties
+  bvh_tree bvh = {};
+#if YOCTO_EMBREE
+  bvh_embree embree = {};
+#endif
 };
 
 // Instance of a visible shape in the scene.
@@ -201,6 +207,11 @@ struct trace_scene {
 
   // computed properties
   vector<trace_light> lights = {};
+  bvh_tree bvh = {};
+#if YOCTO_EMBREE
+  bvh_embree embree = {};
+  bool       use_embree      = false;
+#endif
 };
 
 }  // namespace yocto
@@ -233,49 +244,35 @@ void update_trace_environment(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Intersection bvh
-struct trace_bvh {
-  vector<bvh_tree> shape_bvhs = {};
-  bvh_tree         scene_bvh  = {};
-#if YOCTO_EMBREE
-  vector<bvh_embree> shape_ebvhs = {};
-  bvh_embree         scene_ebvh  = {};
-  bool               embree      = false;
-#endif
-};
+// Build the bvh acceleration structure.
+void init_shape_bvh(trace_shape& bvh, const bvh_params& params);
+void init_scene_bvh(trace_scene& bvh, const bvh_params& params);
 
-// Results of intersect_xxx and overlap_xxx functions that include hit flag,
-// instance id, shape element id, shape element uv and intersection distance.
-// The values are all set for scene intersection. Shape intersection does not
-// set the instance id and element intersections do not set shape element id
-// and the instance id. Results values are set only if hit is true.
-struct trace_intersection {
-  int   instance = -1;
-  int   element  = -1;
-  vec2f uv       = {0, 0};
-  float distance = 0;
-  bool  hit      = false;
-};
+// Refit bvh data
+void update_shape_bvh(trace_shape& bvh, const bvh_params& params);
+void update_scene_bvh(trace_scene& bvh, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes, const bvh_params& params);
 
-// Build/refit the bvh acceleration structure.
-trace_bvh make_trace_bvh(const trace_scene& scene, const bvh_params& params);
-void      update_trace_bvh(trace_bvh& bvh, const trace_scene& scene,
-         const vector<int>& updated_instances, const vector<int>& updated_shapes,
-         const bvh_params& params);
-
-// Intersection
-bool intersect_scene_bvh(const trace_scene& scene, const trace_bvh& bvh,
-    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames = true);
-bool intersect_instance_bvh(const trace_scene& scene, const trace_bvh& bvh,
-    int instance_id, const ray3f& ray, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames = true);
-trace_intersection intersect_scene_bvh(const trace_scene& scene,
-    const trace_bvh& bvh, const ray3f& ray, bool find_any = false,
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray, int& element,
+    vec2f& uv, float& distance, bool find_any = false);
+bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray, int& instance,
+    int& element, vec2f& uv, float& distance, bool find_any = false,
     bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_scene& scene,
-    const trace_bvh& bvh, int instance, const ray3f& ray, bool find_any = false,
-    bool non_rigid_frames = true);
+// Intersects a single instance.
+bool intersect_instance_bvh(const trace_scene& scene, int instance,
+    const ray3f& ray, int& element, vec2f& uv, float& distance,
+    bool find_any = false, bool non_rigid_frames = true);
+
+// Short version of intersect functions
+bvh_intersection intersect_shape_bvh(
+    const trace_shape& shape, const ray3f& ray, bool find_any = false);
+bvh_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
+    bool find_any = false, bool non_rigid_frames = true);
+bvh_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
 
@@ -345,22 +342,22 @@ trace_state make_trace_state(
 void init_lights(trace_scene& scene);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
-    const trace_params& params);
+image<vec4f> trace_image(
+    const trace_scene& scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 int trace_samples(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const trace_bvh& bvh,
-    int current_sample, const trace_params& params);
+    const trace_scene& scene, int current_sample,
+    const trace_params& params);
 
 // Progressively compute an image by calling trace_region multiple times.
 // Compared to `trace_samples` this always runs serially and is helpful
 // when building async applications.
 void trace_region(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const trace_bvh& bvh, 
-    const image_region& region, int num_samples, const trace_params& params);
+    const trace_scene& scene, const image_region& region,
+    int num_samples, const trace_params& params);
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);

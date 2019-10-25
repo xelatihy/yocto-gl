@@ -1079,79 +1079,6 @@ void update_instances_bvh(bvh_tree& bvh, int num_instances,
   });
 }
 
-void update_shape_bvh(bvh_shape& shape, const bvh_params& params) {
-#if YOCTO_EMBREE
-  if (params.embree) {
-    if (!shape.points.empty()) {
-      throw std::runtime_error("embree does not support points");
-    } else if (!shape.lines.empty()) {
-      return update_lines_embree_bvh(
-          shape.embree, shape.lines, shape.positions, shape.radius);
-    } else if (!shape.triangles.empty()) {
-      return update_triangles_embree_bvh(
-          shape.embree, shape.triangles, shape.positions);
-    } else if (!shape.quads.empty()) {
-      return update_quads_embree_bvh(
-          shape.embree, shape.quads, shape.positions);
-    } else if (!shape.quadspos.empty()) {
-      return update_quads_embree_bvh(
-          shape.embree, shape.quadspos, shape.positions);
-    } else {
-      throw std::runtime_error("cannot support empty shapes");
-    }
-  }
-#endif
-
-  // build primitives
-  if (!shape.points.empty()) {
-    return update_points_bvh(
-        shape.bvh, shape.points, shape.positions, shape.radius);
-  } else if (!shape.lines.empty()) {
-    return update_lines_bvh(
-        shape.bvh, shape.lines, shape.positions, shape.radius);
-  } else if (!shape.triangles.empty()) {
-    return update_triangles_bvh(shape.bvh, shape.triangles, shape.positions);
-  } else if (!shape.quads.empty()) {
-    return update_quads_bvh(shape.bvh, shape.quads, shape.positions);
-  } else if (!shape.quadspos.empty()) {
-    return update_quads_bvh(shape.bvh, shape.quadspos, shape.positions);
-  } else {
-    throw std::runtime_error("cannot support empty shapes");
-  }
-}
-
-void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes, const bvh_params& params) {
-  // update shapes
-  for (auto shape : updated_shapes)
-    update_shape_bvh(scene.shapes[shape], params);
-
-#if YOCTO_EMBREE
-  if (params.embree) {
-    update_instances_embree_bvh(
-        scene.embree, scene.instances.size(),
-        [&scene](int instance) -> frame3f {
-          return scene.instances[instance].frame;
-        },
-        [&scene](int instance) -> bvh_embree& {
-          auto shape = scene.instances[instance].shape;
-          return scene.shapes[shape].embree;
-        },
-        updated_instances);
-  }
-#endif
-
-  // refit
-  update_instances_bvh(
-      scene.bvh, scene.instances.size(),
-      [&scene](
-          int instance) -> frame3f { return scene.instances[instance].frame; },
-      [&scene](int instance) -> bvh_tree& {
-        auto shape = scene.instances[instance].shape;
-        return scene.shapes[shape].bvh;
-      });
-}
-
 // Intersect ray with a bvh.
 template <typename Intersect>
 static bool intersect_elements_bvh(const bvh_tree& bvh,
@@ -1523,7 +1450,7 @@ bool overlap_instances_bvh(const bvh_tree&           bvh,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void make_shape_bvh(bvh_shape& shape, const bvh_params& params) {
+void init_shape_bvh(bvh_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
   // call Embree if needed
   if (params.embree) {
@@ -1567,9 +1494,9 @@ void make_shape_bvh(bvh_shape& shape, const bvh_params& params) {
     throw std::runtime_error("empty shape");
   }
 }
-void make_scene_bvh(bvh_scene& scene, const bvh_params& params) {
+void init_scene_bvh(bvh_scene& scene, const bvh_params& params) {
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-    make_shape_bvh(scene.shapes[idx], params);
+    init_shape_bvh(scene.shapes[idx], params);
   }
 
   // embree
@@ -1598,6 +1525,79 @@ void make_scene_bvh(bvh_scene& scene, const bvh_params& params) {
         return scene.shapes[shape].bvh;
       },
       params.high_quality, !params.noparallel);
+}
+
+void update_shape_bvh(bvh_shape& shape, const bvh_params& params) {
+#if YOCTO_EMBREE
+  if (params.embree) {
+    if (!shape.points.empty()) {
+      throw std::runtime_error("embree does not support points");
+    } else if (!shape.lines.empty()) {
+      return update_lines_embree_bvh(
+          shape.embree, shape.lines, shape.positions, shape.radius);
+    } else if (!shape.triangles.empty()) {
+      return update_triangles_embree_bvh(
+          shape.embree, shape.triangles, shape.positions);
+    } else if (!shape.quads.empty()) {
+      return update_quads_embree_bvh(
+          shape.embree, shape.quads, shape.positions);
+    } else if (!shape.quadspos.empty()) {
+      return update_quads_embree_bvh(
+          shape.embree, shape.quadspos, shape.positions);
+    } else {
+      throw std::runtime_error("cannot support empty shapes");
+    }
+  }
+#endif
+
+  // build primitives
+  if (!shape.points.empty()) {
+    return update_points_bvh(
+        shape.bvh, shape.points, shape.positions, shape.radius);
+  } else if (!shape.lines.empty()) {
+    return update_lines_bvh(
+        shape.bvh, shape.lines, shape.positions, shape.radius);
+  } else if (!shape.triangles.empty()) {
+    return update_triangles_bvh(shape.bvh, shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return update_quads_bvh(shape.bvh, shape.quads, shape.positions);
+  } else if (!shape.quadspos.empty()) {
+    return update_quads_bvh(shape.bvh, shape.quadspos, shape.positions);
+  } else {
+    throw std::runtime_error("cannot support empty shapes");
+  }
+}
+
+void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes, const bvh_params& params) {
+  // update shapes
+  for (auto shape : updated_shapes)
+    update_shape_bvh(scene.shapes[shape], params);
+
+#if YOCTO_EMBREE
+  if (params.embree) {
+    update_instances_embree_bvh(
+        scene.embree, scene.instances.size(),
+        [&scene](int instance) -> frame3f {
+          return scene.instances[instance].frame;
+        },
+        [&scene](int instance) -> bvh_embree& {
+          auto shape = scene.instances[instance].shape;
+          return scene.shapes[shape].embree;
+        },
+        updated_instances);
+  }
+#endif
+
+  // refit
+  update_instances_bvh(
+      scene.bvh, scene.instances.size(),
+      [&scene](
+          int instance) -> frame3f { return scene.instances[instance].frame; },
+      [&scene](int instance) -> bvh_tree& {
+        auto shape = scene.instances[instance].shape;
+        return scene.shapes[shape].bvh;
+      });
 }
 
 // Intersect ray with a bvh.

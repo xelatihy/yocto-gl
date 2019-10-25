@@ -264,7 +264,8 @@ void update_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
 // Embree
 void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
     const function<frame3f(int instance)>&           instance_frame,
-    const function<const bvh_embree&(int instance)>& shape_bvh);
+    const function<const bvh_embree&(int instance)>& shape_bvh,
+    const vector<int>& updated_instances);
 
 // Intersect a ray with either a shapoe or a scene
 bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
@@ -332,8 +333,8 @@ struct bvh_params {
 };
 
 // Build the bvh acceleration structure.
-void make_shape_bvh(bvh_shape& bvh, const bvh_params& params);
-void make_scene_bvh(bvh_scene& bvh, const bvh_params& params);
+void init_shape_bvh(bvh_shape& bvh, const bvh_params& params);
+void init_scene_bvh(bvh_scene& bvh, const bvh_params& params);
 
 // Refit bvh data
 void update_shape_bvh(bvh_shape& bvh, const bvh_params& params);

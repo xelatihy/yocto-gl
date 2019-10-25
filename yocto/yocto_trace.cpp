@@ -1043,193 +1043,185 @@ vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SCENE INTERSECTION
+// IMPLEMENTATION FOR SHAPE/SCENE BVH
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+void init_shape_bvh(trace_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
-trace_bvh make_trace_embree_bvh(
-    const trace_scene& scene, const bvh_params& params) {
-  auto bvh = trace_bvh{};
-
-  for (auto& shape : scene.shapes) {
-    auto& sbvh = bvh.shape_ebvhs.emplace_back();
+  // call Embree if needed
+  if (params.embree) {
     if (!shape.points.empty()) {
       throw std::runtime_error("embree does not support points");
     } else if (!shape.lines.empty()) {
-      make_lines_embree_bvh(sbvh, shape.lines, shape.positions, shape.radius,
-          params.high_quality, params.compact);
+      return make_lines_embree_bvh(shape.embree, shape.lines, shape.positions,
+          shape.radius, params.high_quality, params.compact);
     } else if (!shape.triangles.empty()) {
-      make_triangles_embree_bvh(sbvh, shape.triangles, shape.positions,
-          params.high_quality, params.compact);
+      return make_triangles_embree_bvh(shape.embree, shape.triangles,
+          shape.positions, params.high_quality, params.compact);
     } else if (!shape.quads.empty()) {
-      make_quads_embree_bvh(sbvh, shape.quads, shape.positions,
+      return make_quads_embree_bvh(shape.embree, shape.quads, shape.positions,
           params.high_quality, params.compact);
     } else if (!shape.quadspos.empty()) {
-      make_quads_embree_bvh(sbvh, shape.quadspos, shape.positions,
-          params.high_quality, params.compact);
+      return make_quads_embree_bvh(shape.embree, shape.quadspos,
+          shape.positions, params.high_quality, params.compact);
     } else {
       throw std::runtime_error("empty shape");
     }
   }
-
-  make_instances_embree_bvh(
-      bvh.scene_ebvh, scene.instances.size(),
-      [&scene](
-          int instance) -> frame3f { return scene.instances[instance].frame; },
-      [&scene, &bvh](int instance) -> bvh_embree& {
-        return bvh.shape_ebvhs[scene.instances[instance].shape];
-      },
-      params.high_quality, !params.noparallel);
-
-  return bvh;
-}
 #endif
 
-trace_bvh make_trace_bvh(const trace_scene& scene, const bvh_params& params) {
+  // build primitives
+  if (!shape.points.empty()) {
+    return make_points_bvh(shape.bvh, shape.points, shape.positions,
+        shape.radius, params.high_quality, !params.noparallel);
+  } else if (!shape.lines.empty()) {
+    return make_lines_bvh(shape.bvh, shape.lines, shape.positions, shape.radius,
+        params.high_quality, !params.noparallel);
+  } else if (!shape.triangles.empty()) {
+    return make_triangles_bvh(shape.bvh, shape.triangles, shape.positions,
+        shape.radius, params.high_quality, !params.noparallel);
+  } else if (!shape.quads.empty()) {
+    return make_quads_bvh(shape.bvh, shape.quads, shape.positions, shape.radius,
+        params.high_quality, !params.noparallel);
+  } else if (!shape.quadspos.empty()) {
+    return make_quads_bvh(shape.bvh, shape.quadspos, shape.positions,
+        shape.radius, params.high_quality, !params.noparallel);
+  } else {
+    throw std::runtime_error("empty shape");
+  }
+}
+void init_scene_bvh(trace_scene& scene, const bvh_params& params) {
+  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+    init_shape_bvh(scene.shapes[idx], params);
+  }
+
   // embree
 #if YOCTO_EMBREE
   if (params.embree) {
-    return make_trace_embree_bvh(scene, params);
+    return make_instances_embree_bvh(
+        scene.embree, (int)scene.instances.size(),
+        [&scene](int instance) -> frame3f {
+          return scene.instances[instance].frame;
+        },
+        [&scene](int instance) -> bvh_embree& {
+          auto shape = scene.instances[instance].shape;
+          return scene.shapes[shape].embree;
+        },
+        params.high_quality, !params.noparallel);
   }
 #endif
 
-  auto bvh = trace_bvh{};
-
-  // build shapes
-  for (auto& shape : scene.shapes) {
-    auto& sbvh = bvh.shape_bvhs.emplace_back();
-    if (!shape.points.empty()) {
-      make_points_bvh(sbvh, shape.points, shape.positions, shape.radius,
-          params.high_quality, !params.noparallel);
-    } else if (!shape.lines.empty()) {
-      make_lines_bvh(sbvh, shape.lines, shape.positions, shape.radius,
-          params.high_quality, !params.noparallel);
-    } else if (!shape.triangles.empty()) {
-      make_triangles_bvh(sbvh, shape.triangles, shape.positions, shape.radius,
-          params.high_quality, !params.noparallel);
-    } else if (!shape.quads.empty()) {
-      make_quads_bvh(sbvh, shape.quads, shape.positions, shape.radius,
-          params.high_quality, !params.noparallel);
-    } else if (!shape.quadspos.empty()) {
-      make_quads_bvh(sbvh, shape.quadspos, shape.positions, shape.radius,
-          params.high_quality, !params.noparallel);
-    } else {
-      throw std::runtime_error("empty shape");
-    }
-  }
-
-  // build instances
-  make_instances_bvh(
-      bvh.scene_bvh, scene.instances.size(),
+  // build primitives
+  return make_instances_bvh(
+      scene.bvh, (int)scene.instances.size(),
       [&scene](
           int instance) -> frame3f { return scene.instances[instance].frame; },
-      [&scene, &bvh](int instance) -> bvh_tree& {
-        return bvh.shape_bvhs[scene.instances[instance].shape];
+      [&scene](int instance) -> bvh_tree& {
+        auto shape = scene.instances[instance].shape;
+        return scene.shapes[shape].bvh;
       },
       params.high_quality, !params.noparallel);
-
-  return bvh;
 }
 
+void update_shape_bvh(trace_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
-void update_trace_embree_bvh(trace_bvh& bvh, const trace_scene& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params) {
-  for (auto shape_id : updated_shapes) {
-    auto& shape = scene.shapes[shape_id];
-    auto& ebvh  = bvh.shape_ebvhs[shape_id];
+  if (params.embree) {
     if (!shape.points.empty()) {
       throw std::runtime_error("embree does not support points");
     } else if (!shape.lines.empty()) {
       return update_lines_embree_bvh(
-          ebvh, shape.lines, shape.positions, shape.radius);
+          shape.embree, shape.lines, shape.positions, shape.radius);
     } else if (!shape.triangles.empty()) {
       return update_triangles_embree_bvh(
-          ebvh, shape.triangles, shape.positions);
+          shape.embree, shape.triangles, shape.positions);
     } else if (!shape.quads.empty()) {
-      return update_quads_embree_bvh(ebvh, shape.quads, shape.positions);
+      return update_quads_embree_bvh(
+          shape.embree, shape.quads, shape.positions);
     } else if (!shape.quadspos.empty()) {
-      return update_quads_embree_bvh(ebvh, shape.quadspos, shape.positions);
+      return update_quads_embree_bvh(
+          shape.embree, shape.quadspos, shape.positions);
     } else {
       throw std::runtime_error("cannot support empty shapes");
     }
+  }
+#endif
+
+  // build primitives
+  if (!shape.points.empty()) {
+    return update_points_bvh(
+        shape.bvh, shape.points, shape.positions, shape.radius);
+  } else if (!shape.lines.empty()) {
+    return update_lines_bvh(
+        shape.bvh, shape.lines, shape.positions, shape.radius);
+  } else if (!shape.triangles.empty()) {
+    return update_triangles_bvh(shape.bvh, shape.triangles, shape.positions);
+  } else if (!shape.quads.empty()) {
+    return update_quads_bvh(shape.bvh, shape.quads, shape.positions);
+  } else if (!shape.quadspos.empty()) {
+    return update_quads_bvh(shape.bvh, shape.quadspos, shape.positions);
+  } else {
+    throw std::runtime_error("cannot support empty shapes");
   }
 }
-#endif
 
-void update_trace_bvh(trace_bvh& bvh, const trace_scene& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params) {
-  // embree
+void update_scene_bvh(trace_scene& scene, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes, const bvh_params& params) {
+  // update shapes
+  for (auto shape : updated_shapes)
+    update_shape_bvh(scene.shapes[shape], params);
+
 #if YOCTO_EMBREE
   if (params.embree) {
-    return update_trace_bvh(
-        bvh, scene, updated_instances, updated_shapes, params);
+    update_instances_embree_bvh(
+        scene.embree, scene.instances.size(),
+        [&scene](int instance) -> frame3f {
+          return scene.instances[instance].frame;
+        },
+        [&scene](int instance) -> bvh_embree& {
+          auto shape = scene.instances[instance].shape;
+          return scene.shapes[shape].embree;
+        },
+        updated_instances);
   }
 #endif
 
-  for (auto shape_id : updated_shapes) {
-    auto& shape = scene.shapes[shape_id];
-    auto& sbvh  = bvh.shape_bvhs[shape_id];
-    if (!shape.points.empty()) {
-      update_points_bvh(sbvh, shape.points, shape.positions, shape.radius);
-    } else if (!shape.lines.empty()) {
-      update_lines_bvh(sbvh, shape.lines, shape.positions, shape.radius);
-    } else if (!shape.triangles.empty()) {
-      update_triangles_bvh(sbvh, shape.triangles, shape.positions);
-    } else if (!shape.quads.empty()) {
-      update_quads_bvh(sbvh, shape.quads, shape.positions);
-    } else if (!shape.quadspos.empty()) {
-      update_quads_bvh(sbvh, shape.quadspos, shape.positions);
-    } else {
-      throw std::runtime_error("cannot support empty shapes");
-    }
-  }
-
+  // refit
   update_instances_bvh(
-      bvh.scene_bvh, scene.instances.size(),
+      scene.bvh, scene.instances.size(),
       [&scene](
           int instance) -> frame3f { return scene.instances[instance].frame; },
-      [&scene, &bvh](int instance) -> bvh_tree& {
-        return bvh.shape_bvhs[scene.instances[instance].shape];
+      [&scene](int instance) -> bvh_tree& {
+        auto shape = scene.instances[instance].shape;
+        return scene.shapes[shape].bvh;
       });
 }
 
-#if YOCTO_EMBREE
-
-#endif
-
-// Intersect a ray with a bvh
-bool intersect_shape_bvh(const trace_scene& scene, const trace_bvh& bvh,
-    int shape_id, const ray3f& ray, int& element, vec2f& uv, float& distance,
-    bool find_any) {
+// Intersect ray with a bvh.
+bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray, int& element,
+    vec2f& uv, float& distance, bool find_any) {
 #if YOCTO_EMBREE
   // call Embree if needed
-  if (bvh.embree) {
-    auto& sbvh = bvh.shape_ebvhs[shape_id];
+  if (shape.embree.scene) {
     return intersect_elements_embree_bvh(
-        sbvh, ray, element, uv, distance, find_any);
+        shape.embree, ray, element, uv, distance, find_any);
   }
 #endif
 
-  auto& shape = scene.shapes[shape_id];
-  auto& sbvh  = bvh.shape_bvhs[shape_id];
-
   if (!shape.points.empty()) {
-    return intersect_points_bvh(sbvh, shape.points, shape.positions,
+    return intersect_points_bvh(shape.bvh, shape.points, shape.positions,
         shape.radius, ray, element, uv, distance, find_any);
   } else if (!shape.lines.empty()) {
-    return intersect_lines_bvh(sbvh, shape.lines, shape.positions, shape.radius,
-        ray, element, uv, distance, find_any);
+    return intersect_lines_bvh(shape.bvh, shape.lines, shape.positions,
+        shape.radius, ray, element, uv, distance, find_any);
   } else if (!shape.triangles.empty()) {
-    return intersect_triangles_bvh(sbvh, shape.triangles, shape.positions, ray,
-        element, uv, distance, find_any);
+    return intersect_triangles_bvh(shape.bvh, shape.triangles, shape.positions,
+        ray, element, uv, distance, find_any);
   } else if (!shape.quads.empty()) {
-    return intersect_quads_bvh(sbvh, shape.quads, shape.positions, ray, element,
-        uv, distance, find_any);
+    return intersect_quads_bvh(shape.bvh, shape.quads, shape.positions, ray,
+        element, uv, distance, find_any);
   } else if (!shape.quadspos.empty()) {
-    return intersect_quads_bvh(sbvh, shape.quadspos, shape.positions, ray,
+    return intersect_quads_bvh(shape.bvh, shape.quadspos, shape.positions, ray,
         element, uv, distance, find_any);
   } else {
     return false;
@@ -1237,58 +1229,61 @@ bool intersect_shape_bvh(const trace_scene& scene, const trace_bvh& bvh,
 }
 
 // Intersect ray with a bvh.
-bool intersect_scene_bvh(const trace_scene& scene, const trace_bvh& bvh,
-    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames) {
+bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
+    int& instance, int& element, vec2f& uv, float& distance, bool find_any,
+    bool non_rigid_frames) {
 #if YOCTO_EMBREE
   // call Embree if needed
-  if (bvh.embree) {
+  if (scene.embree.scene) {
     return intersect_instances_embree_bvh(
-        bvh.scene_ebvh, ray, instance, element, uv, distance, find_any);
+        scene.embree, ray, instance, element, uv, distance, find_any);
   }
 #endif
 
   return intersect_instances_bvh(
-      bvh.scene_bvh, [&scene](int idx) { return scene.instances[idx].frame; },
-      [&scene, &bvh](int idx, const ray3f& ray, int& element, vec2f& uv,
+      scene.bvh, [&scene](int idx) { return scene.instances[idx].frame; },
+      [&scene](int idx, const ray3f& ray, int& element, vec2f& uv,
           float& distance, bool find_any) {
         auto& instance = scene.instances[idx];
         return intersect_shape_bvh(
-            scene, bvh, instance.shape, ray, element, uv, distance, find_any);
+            scene.shapes[instance.shape], ray, element, uv, distance, find_any);
       },
       ray, instance, element, uv, distance, find_any, non_rigid_frames);
 }
 // Intersect ray with a bvh.
-bool intersect_instance_bvh(const trace_scene& scene, const trace_bvh& bvh,
-    int instance_id, const ray3f& ray, int& element, vec2f& uv, float& distance,
-    bool find_any, bool non_rigid_frames) {
-  auto& instance = scene.instances[instance_id];
-  auto  inv_ray = transform_ray(inverse(instance.frame, non_rigid_frames), ray);
+bool intersect_instance_bvh(const trace_scene& scene, int instance,
+    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
+    bool non_rigid_frames) {
+  auto& instance_ = scene.instances[instance];
+  auto inv_ray = transform_ray(inverse(instance_.frame, non_rigid_frames), ray);
   return intersect_shape_bvh(
-      scene, bvh, instance.shape, inv_ray, element, uv, distance, find_any);
+      scene.shapes[instance_.shape], inv_ray, element, uv, distance, find_any);
 }
 
-trace_intersection intersect_scene_bvh(const trace_scene& scene,
-    const trace_bvh& bvh, const ray3f& ray, bool find_any,
-    bool non_rigid_frames) {
-  auto intersection = trace_intersection{};
-  intersection.hit = intersect_scene_bvh(scene, bvh, ray, intersection.instance,
-      intersection.element, intersection.uv, intersection.distance, find_any,
-      non_rigid_frames);
+bvh_intersection intersect_shape_bvh(
+    const trace_shape& shape, const ray3f& ray, bool find_any) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = intersect_shape_bvh(shape, ray, intersection.element,
+      intersection.uv, intersection.distance, find_any);
   return intersection;
 }
-trace_intersection intersect_instance_bvh(const trace_scene& scene,
-    const trace_bvh& bvh, int instance, const ray3f& ray, bool find_any,
-    bool non_rigid_frames) {
-  auto intersection     = trace_intersection{};
-  intersection.hit      = intersect_instance_bvh(scene, bvh, instance, ray,
-      intersection.element, intersection.uv, intersection.distance, find_any,
-      non_rigid_frames);
+bvh_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
+    bool find_any, bool non_rigid_frames) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
+      intersection.element, intersection.uv, intersection.distance, find_any);
+  return intersection;
+}
+bvh_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
+    const ray3f& ray, bool find_any, bool non_rigid_frames) {
+  auto intersection     = bvh_intersection{};
+  intersection.hit      = intersect_instance_bvh(scene, instance, ray,
+      intersection.element, intersection.uv, intersection.distance, find_any);
   intersection.instance = instance;
   return intersection;
 }
 
-}  // namespace yocto
+}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
@@ -1640,8 +1635,8 @@ static pair<int, vec2f> sample_shape(const trace_shape& shape,
 }
 
 // Picks a point on a light.
-static vec3f sample_light(const trace_scene& scene, 
-    const trace_light& light, const vec3f& p, float rel, const vec2f& ruv) {
+static vec3f sample_light(const trace_scene& scene, const trace_light& light,
+    const vec3f& p, float rel, const vec2f& ruv) {
   if (light.instance >= 0) {
     auto& instance = scene.instances[light.instance];
     auto& shape    = scene.shapes[instance.shape];
@@ -1670,8 +1665,7 @@ static vec3f sample_light(const trace_scene& scene,
 
 // Sample pdf for a light point.
 static float sample_light_pdf(const trace_scene& scene,
-    const trace_light& light, const trace_bvh& bvh,
-    const vec3f& position, const vec3f& direction) {
+    const trace_light& light, const vec3f& position, const vec3f& direction) {
   if (light.instance >= 0) {
     auto& instance = scene.instances[light.instance];
     auto& material = scene.materials[instance.material];
@@ -1682,7 +1676,7 @@ static float sample_light_pdf(const trace_scene& scene,
     auto next_position = position;
     for (auto bounce = 0; bounce < 100; bounce++) {
       auto isec = intersect_instance_bvh(
-          scene, bvh, light.instance, {next_position, direction});
+          scene, light.instance, {next_position, direction});
       if (!isec.hit) break;
       // accumulate pdf
       auto& instance       = scene.instances[isec.instance];
@@ -1720,21 +1714,18 @@ static float sample_light_pdf(const trace_scene& scene,
 }
 
 // Sample lights wrt solid angle
-static vec3f sample_lights(const trace_scene& scene, 
-    const trace_bvh& bvh, const vec3f& position, float rl, float rel,
-    const vec2f& ruv) {
+static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
+    float rl, float rel, const vec2f& ruv) {
   auto light_id = sample_uniform(scene.lights.size(), rl);
-  return sample_light(scene,
-      scene.lights[light_id], position, rel, ruv);
+  return sample_light(scene, scene.lights[light_id], position, rel, ruv);
 }
 
 // Sample lights pdf
-static float sample_lights_pdf(const trace_scene& scene,
-    const trace_bvh& bvh, const vec3f& position,
-    const vec3f& direction) {
+static float sample_lights_pdf(
+    const trace_scene& scene, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto& light : scene.lights) {
-    pdf += sample_light_pdf(scene, light, bvh, position, direction);
+    pdf += sample_light_pdf(scene, light, position, direction);
   }
   pdf *= sample_uniform_pdf(scene.lights.size());
   return pdf;
@@ -1762,8 +1753,8 @@ static ray3f sample_camera_tent(const trace_camera& camera, const vec2i& ij,
 
 // Recursive path tracing.
 static pair<vec3f, bool> trace_path(const trace_scene& scene,
-    const trace_bvh& bvh, const vec3f& origin_,
-    const vec3f& direction_, rng_state& rng, const trace_params& params) {
+    const vec3f& origin_, const vec3f& direction_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance     = zero3f;
   auto weight       = vec3f{1, 1, 1};
@@ -1775,7 +1766,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, bvh, {origin, direction});
+    auto intersection = intersect_scene_bvh(scene, {origin, direction});
     if (!intersection.hit) {
       radiance += weight * eval_environment(scene, direction);
       break;
@@ -1824,14 +1815,13 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
           incoming = sample_brdf(
               material, normal, outgoing, rand1f(rng), rand2f(rng));
         } else {
-          incoming = sample_lights(scene, bvh, position, rand1f(rng),
-              rand1f(rng), rand2f(rng));
+          incoming = sample_lights(
+              scene, position, rand1f(rng), rand1f(rng), rand2f(rng));
         }
         weight *=
             eval_brdfcos(material, normal, outgoing, incoming) /
             (0.5f * sample_brdf_pdf(material, normal, outgoing, incoming) +
-                0.5f *
-                    sample_lights_pdf(scene, bvh, position, incoming));
+                0.5f * sample_lights_pdf(scene, position, incoming));
       } else {
         incoming = sample_delta(material, normal, outgoing, rand1f(rng));
         weight *= eval_delta(material, normal, outgoing, incoming) /
@@ -1869,13 +1859,12 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
         incoming = sample_volscattering(
             material, outgoing, rand1f(rng), rand2f(rng));
       } else {
-        incoming = sample_lights(scene, bvh, position, rand1f(rng),
-            rand1f(rng), rand2f(rng));
+        incoming = sample_lights(
+            scene, position, rand1f(rng), rand1f(rng), rand2f(rng));
       }
-      weight *=
-          eval_volscattering(material, outgoing, incoming) /
-          (0.5f * sample_volscattering_pdf(material, outgoing, incoming) +
-              0.5f * sample_lights_pdf(scene, bvh, position, incoming));
+      weight *= eval_volscattering(material, outgoing, incoming) /
+                (0.5f * sample_volscattering_pdf(material, outgoing, incoming) +
+                    0.5f * sample_lights_pdf(scene, position, incoming));
 
       // setup next iteration
       origin    = position;
@@ -1898,8 +1887,8 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
 
 // Recursive path tracing.
 static pair<vec3f, bool> trace_naive(const trace_scene& scene,
-    const trace_bvh& bvh, const vec3f& origin_,
-    const vec3f& direction_, rng_state& rng, const trace_params& params) {
+    const vec3f& origin_, const vec3f& direction_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance  = zero3f;
   auto weight    = vec3f{1, 1, 1};
@@ -1910,7 +1899,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, bvh, {origin, direction});
+    auto intersection = intersect_scene_bvh(scene, {origin, direction});
     if (!intersection.hit) {
       radiance += weight * eval_environment(scene, direction);
       break;
@@ -1970,8 +1959,8 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
 
 // Eyelight for quick previewing.
 static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
-    const trace_bvh& bvh, const vec3f& origin_,
-    const vec3f& direction_, rng_state& rng, const trace_params& params) {
+    const vec3f& origin_, const vec3f& direction_, rng_state& rng,
+    const trace_params& params) {
   // initialize
   auto radiance  = zero3f;
   auto weight    = vec3f{1, 1, 1};
@@ -1982,7 +1971,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, bvh, {origin, direction});
+    auto intersection = intersect_scene_bvh(scene, {origin, direction});
     if (!intersection.hit) {
       radiance += weight * eval_environment(scene, direction);
       break;
@@ -2030,10 +2019,10 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
 
 // False color rendering
 static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
-    const trace_bvh& bvh, const vec3f& origin,
-    const vec3f& direction, rng_state& rng, const trace_params& params) {
+    const vec3f& origin, const vec3f& direction, rng_state& rng,
+    const trace_params& params) {
   // intersect next point
-  auto intersection = intersect_scene_bvh(scene, bvh, ray3f{origin, direction});
+  auto intersection = intersect_scene_bvh(scene, ray3f{origin, direction});
   if (!intersection.hit) {
     return {zero3f, false};
   }
@@ -2131,8 +2120,8 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
 
 // Trace a single ray from the camera using the given algorithm.
 using trace_sampler_func = pair<vec3f, bool> (*)(const trace_scene& scene,
-    const trace_bvh& bvh, const vec3f& position,
-    const vec3f& direction, rng_state& rng, const trace_params& params);
+    const vec3f& position, const vec3f& direction, rng_state& rng,
+    const trace_params& params);
 static trace_sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
     case trace_sampler_type::path: return trace_path;
@@ -2162,8 +2151,8 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_region(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const trace_bvh& bvh,
-    const image_region& region, int num_samples, const trace_params& params) {
+    const trace_scene& scene, const image_region& region, int num_samples,
+    const trace_params& params) {
   auto& camera  = scene.cameras.at(params.camera);
   auto  sampler = get_trace_sampler_func(params);
   for (auto j = region.min.y; j < region.max.y; j++) {
@@ -2175,8 +2164,7 @@ void trace_region(image<vec4f>& image, trace_state& state,
                              rand2f(pixel.rng), rand2f(pixel.rng))
                        : sample_camera(camera, {i, j}, image.size(),
                              rand2f(pixel.rng), rand2f(pixel.rng));
-        auto [radiance, hit] = sampler(
-            scene, bvh, ray.o, ray.d, pixel.rng, params);
+        auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
         if (!hit) {
           if (params.envhidden || scene.environments.empty()) {
             radiance = zero3f;
@@ -2231,28 +2219,26 @@ void init_lights(trace_scene& scene) {
   for (auto idx = 0; idx < scene.environments.size(); idx++) {
     auto& environment = scene.environments[idx];
     if (environment.emission == zero3f) continue;
-    scene.lights.push_back({-1, idx, sample_environment_cdf(scene, environment)});
+    scene.lights.push_back(
+        {-1, idx, sample_environment_cdf(scene, environment)});
   }
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
-    const trace_params& params) {
+image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
   auto state   = make_trace_state(scene, params);
   auto render  = image{state.size(), zero4f};
   auto regions = make_image_regions(render.size(), params.region, true);
 
   if (params.noparallel) {
     for (auto& region : regions) {
-      trace_region(
-          render, state, scene, bvh, region, params.samples, params);
+      trace_region(render, state, scene, region, params.samples, params);
     }
   } else {
-    parallel_foreach(regions, [&render, &state, &scene, &bvh, &params](
-                                  const image_region& region) {
-      trace_region(
-          render, state, scene, bvh, region, params.samples, params);
-    });
+    parallel_foreach(regions,
+        [&render, &state, &scene, &params](const image_region& region) {
+          trace_region(render, state, scene, region, params.samples, params);
+        });
   }
 
   return render;
@@ -2260,20 +2246,17 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
 
 // Progressively compute an image by calling trace_samples multiple times.
 int trace_samples(image<vec4f>& render, trace_state& state,
-    const trace_scene& scene, const trace_bvh& bvh,
-    int current_sample, const trace_params& params) {
+    const trace_scene& scene, int current_sample, const trace_params& params) {
   auto regions     = make_image_regions(render.size(), params.region, true);
   auto num_samples = min(params.batch, params.samples - current_sample);
   if (params.noparallel) {
     for (auto& region : regions) {
-      trace_region(
-          render, state, scene, bvh, region, params.samples, params);
+      trace_region(render, state, scene, region, params.samples, params);
     }
   } else {
-    parallel_foreach(regions, [&render, &state, &scene, &bvh, &params,
-                                  num_samples](const image_region& region) {
-      trace_region(
-          render, state, scene, bvh, region, num_samples, params);
+    parallel_foreach(regions, [&render, &state, &scene, &params, num_samples](
+                                  const image_region& region) {
+      trace_region(render, state, scene, region, num_samples, params);
     });
   }
   return current_sample + num_samples;

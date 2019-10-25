@@ -129,7 +129,7 @@ int main(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  auto bvh = make_trace_bvh(scene, bvh_prms);
+  init_scene_bvh(scene, bvh_prms);
   print_elapsed(bvh_timer);
 
   // init renderer
@@ -153,7 +153,7 @@ int main(int argc, const char* argv[]) {
     auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
     auto batch_timer    = print_timed("rendering samples " + std::to_string(sample) +
                              "/" + std::to_string(trace_prms.samples));
-    trace_samples(render, state, scene, bvh, sample, trace_prms);
+    trace_samples(render, state, scene, sample, trace_prms);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
