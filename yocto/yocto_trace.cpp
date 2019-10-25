@@ -1964,17 +1964,17 @@ static bool intersect_instance_bvh(const trace_scene& scene, int instance,
       scene.shapes[instance_.shape], inv_ray, element, uv, distance, find_any);
 }
 
-bvh_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
+trace_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
     bool find_any, bool non_rigid_frames) {
-  auto intersection = bvh_intersection{};
+  auto intersection = trace_intersection{};
   intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
       intersection.element, intersection.uv, intersection.distance, find_any,
       non_rigid_frames);
   return intersection;
 }
-bvh_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
+trace_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
-  auto intersection     = bvh_intersection{};
+  auto intersection     = trace_intersection{};
   intersection.hit      = intersect_instance_bvh(scene, instance, ray,
       intersection.element, intersection.uv, intersection.distance, find_any,
       non_rigid_frames);

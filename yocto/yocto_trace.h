@@ -251,12 +251,23 @@ void init_scene_bvh(trace_scene& bvh, const bvh_params& params);
 void update_scene_bvh(trace_scene& bvh, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const bvh_params& params);
 
+// Results of intersect functions that include hit flag, the instance id, 
+// the shape element id, the shape element uv and intersection distance.
+// Results values are set only if hit is true.
+struct trace_intersection {
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
+};
+
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bvh_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
+trace_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
     bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
+trace_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
