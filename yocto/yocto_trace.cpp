@@ -1474,7 +1474,7 @@ static void build_bvh_serial(
       node.bbox = merge(node.bbox, bboxes[primitives[i]]);
 
     // split into two children
-    if (end - start > bvh_max_prims) {
+    if (end - start > trace_bvh_max_prims) {
       // get split
       auto [mid, axis] =
           high_quality
@@ -1567,7 +1567,7 @@ static void build_bvh_parallel(
               node.bbox = merge(node.bbox, bboxes[primitives[i]]);
 
             // split into two children
-            if (end - start > bvh_max_prims) {
+            if (end - start > trace_bvh_max_prims) {
               // get split
               auto [mid, axis] =
                   high_quality
