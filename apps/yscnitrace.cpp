@@ -52,7 +52,6 @@ struct app_state {
   // options
   load_params    load_prms     = {};
   save_params    save_prms     = {};
-  bvh_params     bvh_prms      = {};
   trace_params   trace_prms    = {};
   tonemap_params tonemap_prms  = {};
   int            preview_ratio = 8;
@@ -105,7 +104,6 @@ struct app_states {
   // default options
   load_params    load_prms    = {};
   save_params    save_prms    = {};
-  bvh_params     bvh_prms     = {};
   trace_params   trace_prms   = {};
   tonemap_params tonemap_prms = {};
   bool           add_skyenv   = false;
@@ -131,13 +129,12 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.load_prms    = app.load_prms;
   app.save_prms    = app.save_prms;
   app.trace_prms   = app.trace_prms;
-  app.bvh_prms     = app.bvh_prms;
   app.tonemap_prms = app.tonemap_prms;
   app.add_skyenv   = app.add_skyenv;
   apps.loaders.push_back(run_async([&app]() {
     load_scene(app.filename, app.ioscene);
     app.trscene = make_trace_scene(app.ioscene);
-    init_scene_bvh(app.trscene, app.bvh_prms);
+    init_scene_bvh(app.trscene, app.trace_prms);
     init_lights(app.trscene);
     if (app.trscene.lights.empty() && is_sampler_lit(app.trace_prms)) {
       app.trace_prms.sampler = trace_sampler_type::eyelight;
@@ -282,7 +279,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
       log_glinfo(win, e.what());
     }
     update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
-    update_scene_bvh(app.trscene, {}, {id}, app.bvh_prms);
+    update_scene_bvh(app.trscene, {}, {id}, app.trace_prms);
     init_lights(app.trscene);
   } else if (edited) {
     update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
@@ -305,9 +302,9 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
       win, "material", instance.material, app.ioscene.materials, true);
   if (edited) update_trace_instance(app.trscene.instances.at(id), instance);
   if (edited && instance.shape != old_instance.shape)
-    update_scene_bvh(app.trscene, {}, {id}, app.bvh_prms);
+    update_scene_bvh(app.trscene, {}, {id}, app.trace_prms);
   if (edited && instance.frame != old_instance.frame)
-    update_scene_bvh(app.trscene, {}, {id}, app.bvh_prms);
+    update_scene_bvh(app.trscene, {}, {id}, app.trace_prms);
   // TODO: update lights
   return edited;
 }
@@ -697,12 +694,12 @@ int main(int argc, const char* argv[]) {
       cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
   add_cli_option(cli, "--srgb/--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
   add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
-      app.bvh_prms.high_quality, "Use high quality bvh mode");
+      app.trace_prms.highquality_bvh, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.bvh_prms.embree,
+  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.trace_prms.embree_bvh,
       "Use Embree ratracer");
   add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      app.bvh_prms.compact, "Embree runs in compact memory");
+      app.trace_prms.compact_bvh, "Embree runs in compact memory");
 #endif
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
@@ -710,7 +707,6 @@ int main(int argc, const char* argv[]) {
 
   // fix parallel code
   if (no_parallel) {
-    app.bvh_prms.noparallel   = true;
     app.load_prms.noparallel  = true;
     app.save_prms.noparallel  = true;
     app.trace_prms.noparallel = true;

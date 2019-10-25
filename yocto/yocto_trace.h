@@ -63,16 +63,40 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_bvh.h"
 #include "yocto_common.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
 #include "yocto_sceneio.h"
 
+#if YOCTO_EMBREE
+#include <memory>
+#endif
+
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// BVH tree node containing its bounds, indices to the BVH arrays of either
+// primitives or internal nodes, the node element type,
+// and the split axis. Leaf and internal nodes are identical, except that
+// indices refer to primitives for leaf nodes or other nodes for internal nodes.
+struct trace_bvh_node {
+  bbox3f bbox;
+  int    start;
+  short  num;
+  bool   internal;
+  byte   axis;
+};
+
+// BVH tree stored as a node array with the tree structure is encoded using
+// array indices. BVH nodes indices refer to either the node array,
+// for internal nodes, or the primitive arrays, for leaf nodes.
+// Application data is not stored explicitly.
+struct trace_bvh {
+  vector<trace_bvh_node> nodes      = {};
+  vector<int>            primitives = {};
+};
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
@@ -163,9 +187,9 @@ struct trace_shape {
   vector<vec4f> tangents  = {};
 
   // computed properties
-  bvh_tree bvh = {};
+  trace_bvh bvh = {};
 #if YOCTO_EMBREE
-  bvh_embree embree = {};
+  std::shared_ptr<void> embree_bvh = {};
 #endif
 };
 
@@ -207,10 +231,9 @@ struct trace_scene {
 
   // computed properties
   vector<trace_light> lights = {};
-  bvh_tree            bvh    = {};
+  trace_bvh           bvh    = {};
 #if YOCTO_EMBREE
-  bvh_embree embree     = {};
-  bool       use_embree = false;
+  std::shared_ptr<void> embree_bvh = {};
 #endif
 };
 
@@ -236,28 +259,6 @@ void update_trace_instance(
     trace_instance& instance, const scene_instance& ioinstance);
 void update_trace_environment(
     trace_environment& environment, const scene_environment& ioenvironment);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// INTERSECTION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Build the bvh acceleration structure.
-void init_scene_bvh(trace_scene& bvh, const bvh_params& params);
-
-// Refit bvh data
-void update_scene_bvh(trace_scene& bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes, const bvh_params& params);
-
-// Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance , the instance id,
-// the shape element index and the element barycentric coordinates.
-bvh_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
-    bool find_any = false, bool non_rigid_frames = true);
-bvh_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
-    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 
 }  // namespace yocto
 
@@ -296,19 +297,24 @@ enum struct trace_falsecolor_type {
 
 // Options for trace functions
 struct trace_params {
-  int                   camera     = 0;
-  int                   resolution = 1280;
-  trace_sampler_type    sampler    = trace_sampler_type::path;
-  trace_falsecolor_type falsecolor = trace_falsecolor_type::diffuse;
-  int                   samples    = 512;
-  int                   bounces    = 8;
-  int                   batch      = 16;
-  int                   region     = 16;
-  float                 clamp      = 10;
-  bool                  envhidden  = false;
-  bool                  tentfilter = false;
-  uint64_t              seed       = trace_default_seed;
-  bool                  noparallel = false;
+  int                   camera          = 0;
+  int                   resolution      = 1280;
+  trace_sampler_type    sampler         = trace_sampler_type::path;
+  trace_falsecolor_type falsecolor      = trace_falsecolor_type::diffuse;
+  int                   samples         = 512;
+  int                   bounces         = 8;
+  int                   batch           = 16;
+  int                   region          = 16;
+  float                 clamp           = 10;
+  bool                  envhidden       = false;
+  bool                  tentfilter      = false;
+  uint64_t              seed            = trace_default_seed;
+  bool                  highquality_bvh = false;
+#if YOCTO_EMBREE
+  bool embree_bvh  = false;
+  bool compact_bvh = false;
+#endif
+  bool noparallel = false;
 };
 
 const auto trace_sampler_names = vector<string>{
@@ -325,6 +331,13 @@ trace_state make_trace_state(
 
 // Initialize lights.
 void init_lights(trace_scene& scene);
+
+// Build the bvh acceleration structure.
+void init_scene_bvh(trace_scene& bvh, const trace_params& params);
+
+// Refit bvh data
+void update_scene_bvh(trace_scene& bvh, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_params& params);
@@ -344,6 +357,33 @@ void trace_region(image<vec4f>& image, trace_state& state,
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// INTERSECTION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Results of intersect functions that include hit flag, the instance id,
+// the shape element id, the shape element uv and intersection distance.
+// Results values are set only if hit is true.
+struct trace_intersection {
+  int   instance = -1;
+  int   element  = -1;
+  vec2f uv       = {0, 0};
+  float distance = 0;
+  bool  hit      = false;
+};
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
+trace_intersection intersect_scene_bvh(const trace_scene& scene,
+    const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+trace_intersection intersect_instance_bvh(const trace_scene& scene,
+    int instance, const ray3f& ray, bool find_any = false,
+    bool non_rigid_frames = true);
 
 }  // namespace yocto
 
