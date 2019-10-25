@@ -191,7 +191,7 @@ bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// BVH FOR RAY INTERSECTION USING INTEL's EMBREE
+// HIGH-LEVEL BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -209,37 +209,7 @@ struct bvh_embree {
   RTCGeometry         shape     = nullptr;
   vector<RTCGeometry> instances = {};
 };
-
-// Make shape bvh with Intel's Embree
-void make_lines_embree_bvh(bvh_embree& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    bool high_quality, bool compact);
-void make_triangles_embree_bvh(bvh_embree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, bool high_quality, bool compact);
-void make_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, bool high_quality, bool compact);
-
-// Updates shape bvh for changes in positions and radia with Intel's Embree
-void update_lines_embree_bvh(bvh_embree& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius);
-void update_triangles_embree_bvh(bvh_embree& bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-void update_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
-
-// Intersect a ray with either a shape or a scene
-bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any);
-bool intersect_instances_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
-    int& instance, int& element, vec2f& uv, float& distance, bool find_any);
 #endif
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// HIGH-LEVEL BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
-// -----------------------------------------------------------------------------
-namespace yocto {
 
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shape {
