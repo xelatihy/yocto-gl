@@ -75,10 +75,6 @@
 #ifndef _YOCTO_BVH_H_
 #define _YOCTO_BVH_H_
 
-#ifndef YOCTO_EMBREE
-#define YOCTO_EMBREE 1
-#endif
-
 #ifndef YOCTO_QUADS_AS_TRIANGLES
 #define YOCTO_QUADS_AS_TRIANGLES 1
 #endif
@@ -89,6 +85,10 @@
 
 #include "yocto_common.h"
 #include "yocto_math.h"
+
+#if YOCTO_EMBREE
+#include <memory>
+#endif
 
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
