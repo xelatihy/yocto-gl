@@ -154,8 +154,8 @@ void update_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius);
 void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions);
-void update_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
+void update_quads_bvh(
+    bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
 // Updates instances bvh for changes in frames and shape bvhs
 void update_instances_bvh(bvh_tree& bvh, int num_instances,
     const function<frame3f(int instance)>&         instance_frame,
@@ -242,11 +242,9 @@ void make_lines_embree_bvh(bvh_embree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
     bool high_quality, bool compact);
 void make_triangles_embree_bvh(bvh_embree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, 
-    bool high_quality, bool compact);
+    const vector<vec3f>& positions, bool high_quality, bool compact);
 void make_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, 
-    bool high_quality, bool compact);
+    const vector<vec3f>& positions, bool high_quality, bool compact);
 // Make instance bvh with Intel's Embree
 void make_instances_embree_bvh(bvh_embree& bvh, int num_instances,
     const function<frame3f(int instance)>&           instance_frame,
@@ -265,7 +263,7 @@ void update_quads_embree_bvh(bvh_embree& bvh, const vector<vec4i>& quads,
 void update_instances_embree_bvh(bvh_embree& bvh, int num_instances,
     const function<frame3f(int instance)>&           instance_frame,
     const function<const bvh_embree&(int instance)>& shape_bvh,
-    const vector<int>& updated_instances);
+    const vector<int>&                               updated_instances);
 
 // Intersect a ray with either a shapoe or a scene
 bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,

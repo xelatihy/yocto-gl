@@ -97,8 +97,8 @@ int main(int argc, const char** argv) {
 
   // validate scene
   if (validate) {
-    auto validate_timer  = print_timed("validating scene");
-    auto errors = format_validation(scene);
+    auto validate_timer = print_timed("validating scene");
+    auto errors         = format_validation(scene);
     print_elapsed(validate_timer);
     for (auto& error : errors) print_info(error);
   }

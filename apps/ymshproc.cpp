@@ -137,14 +137,14 @@ int main(int argc, const char** argv) {
   if (uscale != 1) scale *= uscale;
   if (translate != zero3f || rotate != zero3f || scale != vec3f{1}) {
     auto transform_timer = print_timed("transforming shape");
-    auto xform = translation_frame(translate) * scaling_frame(scale) *
+    auto xform           = translation_frame(translate) * scaling_frame(scale) *
                  rotation_frame({1, 0, 0}, radians(rotate.x)) *
                  rotation_frame({0, 0, 1}, radians(rotate.z)) *
                  rotation_frame({0, 1, 0}, radians(rotate.y));
     for (auto& p : positions) p = transform_point(xform, p);
     for (auto& n : normals)
       n = transform_normal(xform, n, max(scale) != min(scale));
-      print_elapsed(transform_timer);
+    print_elapsed(transform_timer);
   }
 
   // compute normals
@@ -162,15 +162,15 @@ int main(int argc, const char** argv) {
       normals = compute_normals(quadspos, positions);
       if (!quadspos.empty()) quadsnorm = quadspos;
     }
-      print_elapsed(smooth_timer);
+    print_elapsed(smooth_timer);
   }
 
   // compute geodesics and store them as colors
   if (geodesic_source >= 0 || num_geodesic_samples > 0) {
-    auto geodesic_timer       = print_timed("computing geodesics");
-    auto adjacencies = face_adjacencies(triangles);
-    auto solver      = make_geodesic_solver(triangles, adjacencies, positions);
-    auto sources     = vector<int>();
+    auto geodesic_timer = print_timed("computing geodesics");
+    auto adjacencies    = face_adjacencies(triangles);
+    auto solver  = make_geodesic_solver(triangles, adjacencies, positions);
+    auto sources = vector<int>();
     if (geodesic_source >= 0) {
       sources = {geodesic_source};
     } else {

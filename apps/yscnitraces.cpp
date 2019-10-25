@@ -103,8 +103,8 @@ void update(const opengl_window& win, app_state& app) {
     auto preview_prms = app.trace_prms;
     preview_prms.resolution /= app.preview_ratio;
     preview_prms.samples = 1;
-    auto preview = trace_image(app.scene, preview_prms);
-    preview      = tonemap_image(preview, app.tonemap_prms);
+    auto preview         = trace_image(app.scene, preview_prms);
+    preview              = tonemap_image(preview, app.tonemap_prms);
     for (auto j = 0; j < app.display.size().y; j++) {
       for (auto i = 0; i < app.display.size().x; i++) {
         auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
@@ -123,7 +123,7 @@ void update(const opengl_window& win, app_state& app) {
     auto num_regions = min(128, app.render_regions.size() - app.render_region);
     parallel_for(app.render_region, app.render_region + num_regions,
         [&app](int region_id) {
-          trace_region(app.render, app.state, app.scene, 
+          trace_region(app.render, app.state, app.scene,
               app.render_regions[region_id], 1, app.trace_prms);
           tonemap_region(app.display, app.render, app.render_regions[region_id],
               app.tonemap_prms);
@@ -250,7 +250,7 @@ int main(int argc, const char* argv[]) {
 
   // conversion
   auto convert_timer = print_timed("converting");
-  app.scene = make_trace_scene(ioscene);
+  app.scene          = make_trace_scene(ioscene);
   print_elapsed(convert_timer);
 
   // build bvh

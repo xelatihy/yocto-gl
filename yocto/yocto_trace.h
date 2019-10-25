@@ -207,10 +207,10 @@ struct trace_scene {
 
   // computed properties
   vector<trace_light> lights = {};
-  bvh_tree bvh = {};
+  bvh_tree            bvh    = {};
 #if YOCTO_EMBREE
-  bvh_embree embree = {};
-  bool       use_embree      = false;
+  bvh_embree embree     = {};
+  bool       use_embree = false;
 #endif
 };
 
@@ -256,11 +256,11 @@ void update_scene_bvh(trace_scene& bvh, const vector<int>& updated_instances,
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray, int& element,
-    vec2f& uv, float& distance, bool find_any = false);
-bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray, int& instance,
-    int& element, vec2f& uv, float& distance, bool find_any = false,
-    bool non_rigid_frames = true);
+bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray,
+    int& element, vec2f& uv, float& distance, bool find_any = false);
+bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
+    int& instance, int& element, vec2f& uv, float& distance,
+    bool find_any = false, bool non_rigid_frames = true);
 // Intersects a single instance.
 bool intersect_instance_bvh(const trace_scene& scene, int instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance,
@@ -342,22 +342,20 @@ trace_state make_trace_state(
 void init_lights(trace_scene& scene);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(
-    const trace_scene& scene, const trace_params& params);
+image<vec4f> trace_image(const trace_scene& scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 int trace_samples(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, int current_sample,
-    const trace_params& params);
+    const trace_scene& scene, int current_sample, const trace_params& params);
 
 // Progressively compute an image by calling trace_region multiple times.
 // Compared to `trace_samples` this always runs serially and is helpful
 // when building async applications.
 void trace_region(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const image_region& region,
-    int num_samples, const trace_params& params);
+    const trace_scene& scene, const image_region& region, int num_samples,
+    const trace_params& params);
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);

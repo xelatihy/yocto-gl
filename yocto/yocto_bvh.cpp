@@ -585,9 +585,8 @@ bool intersect_elements_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
   distance = embree_ray.ray.tfar;
   return true;
 }
-bool intersect_instances_embree_bvh(const bvh_embree& bvh,
-    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any) {
+bool intersect_instances_embree_bvh(const bvh_embree& bvh, const ray3f& ray,
+    int& instance, int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
   embree_ray.ray.org_y     = ray.o.y;

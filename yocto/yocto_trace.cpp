@@ -1198,8 +1198,8 @@ void update_scene_bvh(trace_scene& scene, const vector<int>& updated_instances,
 }
 
 // Intersect ray with a bvh.
-bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray, int& element,
-    vec2f& uv, float& distance, bool find_any) {
+bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray,
+    int& element, vec2f& uv, float& distance, bool find_any) {
 #if YOCTO_EMBREE
   // call Embree if needed
   if (shape.embree.scene) {
@@ -1283,7 +1283,7 @@ bvh_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
   return intersection;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING

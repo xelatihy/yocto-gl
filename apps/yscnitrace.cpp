@@ -139,8 +139,7 @@ void load_scene_async(app_states& apps, const string& filename) {
     app.trscene = make_trace_scene(app.ioscene);
     init_scene_bvh(app.trscene, app.bvh_prms);
     init_lights(app.trscene);
-    if (app.trscene.lights.empty() &&
-        is_sampler_lit(app.trace_prms)) {
+    if (app.trscene.lights.empty() && is_sampler_lit(app.trace_prms)) {
       app.trace_prms.sampler = trace_sampler_type::eyelight;
     }
     app.state = make_trace_state(app.trscene, app.trace_prms);
@@ -325,7 +324,8 @@ bool draw_glwidgets_environment(
   edited += draw_glhdrcoloredit(win, "emission", environment.emission);
   edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
       app.ioscene.textures, true);
-  if (edited) update_trace_environment(app.trscene.environments.at(id), environment);
+  if (edited)
+    update_trace_environment(app.trscene.environments.at(id), environment);
   if (edited) init_lights(app.trscene);
   return edited;
 }
@@ -534,9 +534,8 @@ void update(const opengl_window& win, app_states& app) {
       auto preview_prms = app.trace_prms;
       preview_prms.resolution /= app.preview_ratio;
       preview_prms.samples = 1;
-      auto preview         = trace_image(
-          app.trscene, preview_prms);
-      preview = tonemap_image(preview, app.tonemap_prms);
+      auto preview         = trace_image(app.trscene, preview_prms);
+      preview              = tonemap_image(preview, app.tonemap_prms);
       for (auto j = 0; j < app.display.size().y; j++) {
         for (auto i = 0; i < app.display.size().x; i++) {
           auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
@@ -556,7 +555,7 @@ void update(const opengl_window& win, app_states& app) {
           128, app.render_regions.size() - app.render_region);
       parallel_for(app.render_region, app.render_region + num_regions,
           [&app](int region_id) {
-            trace_region(app.render, app.state, app.trscene, 
+            trace_region(app.render, app.state, app.trscene,
                 app.render_regions[region_id], 1, app.trace_prms);
             tonemap_region(app.display, app.render,
                 app.render_regions[region_id], app.tonemap_prms);
@@ -617,7 +616,8 @@ void run_ui(app_states& apps) {
         pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
       pan.x = -pan.x;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      update_trace_camera(app.trscene.cameras.at(app.trace_prms.camera), camera);
+      update_trace_camera(
+          app.trscene.cameras.at(app.trace_prms.camera), camera);
       // TODO: update
       reset_display(app);
     }

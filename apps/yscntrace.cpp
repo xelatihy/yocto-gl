@@ -116,15 +116,15 @@ int main(int argc, const char* argv[]) {
 
   // add components
   if (validate) {
-    auto validate_timer  = print_timed("validating");
-    auto errors = format_validation(ioscene);
+    auto validate_timer = print_timed("validating");
+    auto errors         = format_validation(ioscene);
     for (auto& error : errors) print_info(error);
     print_elapsed(validate_timer);
   }
 
   // convert scene
   auto convert_timer = print_timed("converting");
-  auto scene = make_trace_scene(ioscene);
+  auto scene         = make_trace_scene(ioscene);
   print_elapsed(convert_timer);
 
   // build bvh
@@ -150,9 +150,10 @@ int main(int argc, const char* argv[]) {
   // render
   for (auto sample = 0; sample < trace_prms.samples;
        sample += trace_prms.batch) {
-    auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
-    auto batch_timer    = print_timed("rendering samples " + std::to_string(sample) +
-                             "/" + std::to_string(trace_prms.samples));
+    auto nsamples    = min(trace_prms.batch, trace_prms.samples - sample);
+    auto batch_timer = print_timed("rendering samples " +
+                                   std::to_string(sample) + "/" +
+                                   std::to_string(trace_prms.samples));
     trace_samples(render, state, scene, sample, trace_prms);
     print_elapsed(batch_timer);
     if (save_batch) {

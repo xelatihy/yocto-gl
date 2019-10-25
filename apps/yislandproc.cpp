@@ -1091,8 +1091,8 @@ int main(int argc, const char** argv) {
 
   // validate scene
   if (validate) {
-    auto validate_timer  = print_timed("validating scene");
-    auto errors = format_validation(scene);
+    auto validate_timer = print_timed("validating scene");
+    auto errors         = format_validation(scene);
     print_elapsed(validate_timer);
     for (auto& error : errors) print_info(error);
   }
@@ -1134,7 +1134,7 @@ int main(int argc, const char** argv) {
 
   // save scene
   try {
-    auto save_timer           = print_timed("saving scene");
+    auto save_timer      = print_timed("saving scene");
     save_prms.notextures = false;
     save_prms.noparallel = false;
     // save_prms.ply_instances = true;
