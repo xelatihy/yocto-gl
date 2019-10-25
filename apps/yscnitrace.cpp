@@ -64,7 +64,6 @@ struct app_state {
   bool        add_skyenv = false;
 
   // rendering state
-  trace_lights lights  = {};
   trace_state  state   = {};
   image<vec4f> render  = {};
   image<vec4f> display = {};
@@ -140,8 +139,8 @@ void load_scene_async(app_states& apps, const string& filename) {
     load_scene(app.filename, app.ioscene);
     app.trscene = make_trace_scene(app.ioscene);
     app.bvh = make_trace_bvh(app.trscene, app.bvh_prms);
-    app.lights = make_trace_lights(app.trscene);
-    if (app.lights.lights.empty() &&
+    init_lights(app.trscene);
+    if (app.trscene.lights.empty() &&
         is_sampler_lit(app.trace_prms)) {
       app.trace_prms.sampler = trace_sampler_type::eyelight;
     }
@@ -286,7 +285,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
     }
     update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
     update_trace_bvh(app.bvh, app.trscene, {}, {id}, app.bvh_prms);
-    app.lights = make_trace_lights(app.trscene);
+    init_lights(app.trscene);
   } else if (edited) {
     update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
   }
@@ -328,7 +327,7 @@ bool draw_glwidgets_environment(
   edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
       app.ioscene.textures, true);
   if (edited) update_trace_environment(app.trscene.environments.at(id), environment);
-  if (edited) app.lights = make_trace_lights(app.trscene);
+  if (edited) init_lights(app.trscene);
   return edited;
 }
 
@@ -537,7 +536,7 @@ void update(const opengl_window& win, app_states& app) {
       preview_prms.resolution /= app.preview_ratio;
       preview_prms.samples = 1;
       auto preview         = trace_image(
-          app.trscene, app.bvh, app.lights, preview_prms);
+          app.trscene, app.bvh, preview_prms);
       preview = tonemap_image(preview, app.tonemap_prms);
       for (auto j = 0; j < app.display.size().y; j++) {
         for (auto i = 0; i < app.display.size().x; i++) {
@@ -559,7 +558,7 @@ void update(const opengl_window& win, app_states& app) {
       parallel_for(app.render_region, app.render_region + num_regions,
           [&app](int region_id) {
             trace_region(app.render, app.state, app.trscene, app.bvh,
-                app.lights, app.render_regions[region_id], 1, app.trace_prms);
+                app.render_regions[region_id], 1, app.trace_prms);
             tonemap_region(app.display, app.render,
                 app.render_regions[region_id], app.tonemap_prms);
           });

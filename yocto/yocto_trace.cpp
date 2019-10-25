@@ -1640,12 +1640,12 @@ static pair<int, vec2f> sample_shape(const trace_shape& shape,
 }
 
 // Picks a point on a light.
-static vec3f sample_light(const trace_scene& scene, const trace_lights& lights,
+static vec3f sample_light(const trace_scene& scene, 
     const trace_light& light, const vec3f& p, float rel, const vec2f& ruv) {
   if (light.instance >= 0) {
     auto& instance = scene.instances[light.instance];
     auto& shape    = scene.shapes[instance.shape];
-    auto& cdf      = lights.shape_cdfs[instance.shape];
+    auto& cdf      = light.elem_cdf;
     auto  sample   = sample_shape(shape, cdf, rel, ruv);
     auto  element  = sample.first;
     auto  uv       = sample.second;
@@ -1653,7 +1653,7 @@ static vec3f sample_light(const trace_scene& scene, const trace_lights& lights,
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
-      auto& cdf          = lights.environment_cdfs[environment.emission_tex];
+      auto& cdf          = light.elem_cdf;
       auto& emission_tex = scene.textures[environment.emission_tex];
       auto  idx          = sample_discrete(cdf, rel);
       auto  size         = texture_size(emission_tex);
@@ -1670,13 +1670,13 @@ static vec3f sample_light(const trace_scene& scene, const trace_lights& lights,
 
 // Sample pdf for a light point.
 static float sample_light_pdf(const trace_scene& scene,
-    const trace_lights& lights, const trace_light& light, const trace_bvh& bvh,
+    const trace_light& light, const trace_bvh& bvh,
     const vec3f& position, const vec3f& direction) {
   if (light.instance >= 0) {
     auto& instance = scene.instances[light.instance];
     auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) return 0;
-    auto& cdf = lights.shape_cdfs[instance.shape];
+    auto& cdf = light.elem_cdf;
     // check all intersection
     auto pdf           = 0.0f;
     auto next_position = position;
@@ -1701,7 +1701,7 @@ static float sample_light_pdf(const trace_scene& scene,
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
-      auto& cdf          = lights.environment_cdfs[environment.emission_tex];
+      auto& cdf          = light.elem_cdf;
       auto& emission_tex = scene.textures[environment.emission_tex];
       auto  size         = texture_size(emission_tex);
       auto  texcoord     = eval_texcoord(environment, direction);
@@ -1720,23 +1720,23 @@ static float sample_light_pdf(const trace_scene& scene,
 }
 
 // Sample lights wrt solid angle
-static vec3f sample_lights(const trace_scene& scene, const trace_lights& lights,
+static vec3f sample_lights(const trace_scene& scene, 
     const trace_bvh& bvh, const vec3f& position, float rl, float rel,
     const vec2f& ruv) {
-  auto light_id = sample_uniform(lights.lights.size(), rl);
-  return sample_light(
-      scene, lights, lights.lights[light_id], position, rel, ruv);
+  auto light_id = sample_uniform(scene.lights.size(), rl);
+  return sample_light(scene,
+      scene.lights[light_id], position, rel, ruv);
 }
 
 // Sample lights pdf
 static float sample_lights_pdf(const trace_scene& scene,
-    const trace_lights& lights, const trace_bvh& bvh, const vec3f& position,
+    const trace_bvh& bvh, const vec3f& position,
     const vec3f& direction) {
   auto pdf = 0.0f;
-  for (auto& light : lights.lights) {
-    pdf += sample_light_pdf(scene, lights, light, bvh, position, direction);
+  for (auto& light : scene.lights) {
+    pdf += sample_light_pdf(scene, light, bvh, position, direction);
   }
-  pdf *= sample_uniform_pdf(lights.lights.size());
+  pdf *= sample_uniform_pdf(scene.lights.size());
   return pdf;
 }
 
@@ -1762,7 +1762,7 @@ static ray3f sample_camera_tent(const trace_camera& camera, const vec2i& ij,
 
 // Recursive path tracing.
 static pair<vec3f, bool> trace_path(const trace_scene& scene,
-    const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin_,
+    const trace_bvh& bvh, const vec3f& origin_,
     const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance     = zero3f;
@@ -1824,14 +1824,14 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
           incoming = sample_brdf(
               material, normal, outgoing, rand1f(rng), rand2f(rng));
         } else {
-          incoming = sample_lights(scene, lights, bvh, position, rand1f(rng),
+          incoming = sample_lights(scene, bvh, position, rand1f(rng),
               rand1f(rng), rand2f(rng));
         }
         weight *=
             eval_brdfcos(material, normal, outgoing, incoming) /
             (0.5f * sample_brdf_pdf(material, normal, outgoing, incoming) +
                 0.5f *
-                    sample_lights_pdf(scene, lights, bvh, position, incoming));
+                    sample_lights_pdf(scene, bvh, position, incoming));
       } else {
         incoming = sample_delta(material, normal, outgoing, rand1f(rng));
         weight *= eval_delta(material, normal, outgoing, incoming) /
@@ -1869,13 +1869,13 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
         incoming = sample_volscattering(
             material, outgoing, rand1f(rng), rand2f(rng));
       } else {
-        incoming = sample_lights(scene, lights, bvh, position, rand1f(rng),
+        incoming = sample_lights(scene, bvh, position, rand1f(rng),
             rand1f(rng), rand2f(rng));
       }
       weight *=
           eval_volscattering(material, outgoing, incoming) /
           (0.5f * sample_volscattering_pdf(material, outgoing, incoming) +
-              0.5f * sample_lights_pdf(scene, lights, bvh, position, incoming));
+              0.5f * sample_lights_pdf(scene, bvh, position, incoming));
 
       // setup next iteration
       origin    = position;
@@ -1898,7 +1898,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
 
 // Recursive path tracing.
 static pair<vec3f, bool> trace_naive(const trace_scene& scene,
-    const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin_,
+    const trace_bvh& bvh, const vec3f& origin_,
     const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance  = zero3f;
@@ -1970,7 +1970,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
 
 // Eyelight for quick previewing.
 static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
-    const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin_,
+    const trace_bvh& bvh, const vec3f& origin_,
     const vec3f& direction_, rng_state& rng, const trace_params& params) {
   // initialize
   auto radiance  = zero3f;
@@ -2030,7 +2030,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
 
 // False color rendering
 static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
-    const trace_bvh& bvh, const trace_lights& lights, const vec3f& origin,
+    const trace_bvh& bvh, const vec3f& origin,
     const vec3f& direction, rng_state& rng, const trace_params& params) {
   // intersect next point
   auto intersection = intersect_scene_bvh(scene, bvh, ray3f{origin, direction});
@@ -2131,7 +2131,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
 
 // Trace a single ray from the camera using the given algorithm.
 using trace_sampler_func = pair<vec3f, bool> (*)(const trace_scene& scene,
-    const trace_bvh& bvh, const trace_lights& lights, const vec3f& position,
+    const trace_bvh& bvh, const vec3f& position,
     const vec3f& direction, rng_state& rng, const trace_params& params);
 static trace_sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
@@ -2162,7 +2162,7 @@ bool is_sampler_lit(const trace_params& params) {
 
 // Trace a block of samples
 void trace_region(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
+    const trace_scene& scene, const trace_bvh& bvh,
     const image_region& region, int num_samples, const trace_params& params) {
   auto& camera  = scene.cameras.at(params.camera);
   auto  sampler = get_trace_sampler_func(params);
@@ -2176,7 +2176,7 @@ void trace_region(image<vec4f>& image, trace_state& state,
                        : sample_camera(camera, {i, j}, image.size(),
                              rand2f(pixel.rng), rand2f(pixel.rng));
         auto [radiance, hit] = sampler(
-            scene, bvh, lights, ray.o, ray.d, pixel.rng, params);
+            scene, bvh, ray.o, ray.d, pixel.rng, params);
         if (!hit) {
           if (params.envhidden || scene.environments.empty()) {
             radiance = zero3f;
@@ -2218,34 +2218,26 @@ trace_state make_trace_state(
 }
 
 // Init trace lights
-trace_lights make_trace_lights(const trace_scene& scene) {
-  auto lights = trace_lights{};
-  lights.shape_cdfs.resize(scene.shapes.size());
-  lights.environment_cdfs.resize(scene.textures.size());
+void init_lights(trace_scene& scene) {
+  scene.lights.clear();
   for (auto idx = 0; idx < scene.instances.size(); idx++) {
     auto& instance = scene.instances[idx];
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
-    lights.lights.push_back({idx, 0});
-    lights.shape_cdfs[instance.shape] = sample_shape_cdf(shape);
+    scene.lights.push_back({idx, -1, sample_shape_cdf(shape)});
   }
   for (auto idx = 0; idx < scene.environments.size(); idx++) {
     auto& environment = scene.environments[idx];
     if (environment.emission == zero3f) continue;
-    lights.lights.push_back({idx, 0});
-    if (environment.emission_tex >= 0) {
-      lights.environment_cdfs[environment.emission_tex] =
-          sample_environment_cdf(scene, environment);
-    }
+    scene.lights.push_back({-1, idx, sample_environment_cdf(scene, environment)});
   }
-  return lights;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
-    const trace_lights& lights, const trace_params& params) {
+    const trace_params& params) {
   auto state   = make_trace_state(scene, params);
   auto render  = image{state.size(), zero4f};
   auto regions = make_image_regions(render.size(), params.region, true);
@@ -2253,13 +2245,13 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
   if (params.noparallel) {
     for (auto& region : regions) {
       trace_region(
-          render, state, scene, bvh, lights, region, params.samples, params);
+          render, state, scene, bvh, region, params.samples, params);
     }
   } else {
-    parallel_foreach(regions, [&render, &state, &scene, &bvh, &lights, &params](
+    parallel_foreach(regions, [&render, &state, &scene, &bvh, &params](
                                   const image_region& region) {
       trace_region(
-          render, state, scene, bvh, lights, region, params.samples, params);
+          render, state, scene, bvh, region, params.samples, params);
     });
   }
 
@@ -2268,20 +2260,20 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
 
 // Progressively compute an image by calling trace_samples multiple times.
 int trace_samples(image<vec4f>& render, trace_state& state,
-    const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
+    const trace_scene& scene, const trace_bvh& bvh,
     int current_sample, const trace_params& params) {
   auto regions     = make_image_regions(render.size(), params.region, true);
   auto num_samples = min(params.batch, params.samples - current_sample);
   if (params.noparallel) {
     for (auto& region : regions) {
       trace_region(
-          render, state, scene, bvh, lights, region, params.samples, params);
+          render, state, scene, bvh, region, params.samples, params);
     }
   } else {
-    parallel_foreach(regions, [&render, &state, &scene, &bvh, &lights, &params,
+    parallel_foreach(regions, [&render, &state, &scene, &bvh, &params,
                                   num_samples](const image_region& region) {
       trace_region(
-          render, state, scene, bvh, lights, region, num_samples, params);
+          render, state, scene, bvh, region, num_samples, params);
     });
   }
   return current_sample + num_samples;

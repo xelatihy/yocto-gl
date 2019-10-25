@@ -134,11 +134,11 @@ int main(int argc, const char* argv[]) {
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  auto lights = make_trace_lights(scene);
+  init_lights(scene);
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (lights.lights.empty() && is_sampler_lit(trace_prms)) {
+  if (scene.lights.empty() && is_sampler_lit(trace_prms)) {
     print_info("no lights presents, switching to eyelight shader");
     trace_prms.sampler = trace_sampler_type::eyelight;
   }
@@ -153,7 +153,7 @@ int main(int argc, const char* argv[]) {
     auto nsamples = min(trace_prms.batch, trace_prms.samples - sample);
     auto batch_timer    = print_timed("rendering samples " + std::to_string(sample) +
                              "/" + std::to_string(trace_prms.samples));
-    trace_samples(render, state, scene, bvh, lights, sample, trace_prms);
+    trace_samples(render, state, scene, bvh, sample, trace_prms);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,

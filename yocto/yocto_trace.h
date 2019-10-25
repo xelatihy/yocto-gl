@@ -177,6 +177,13 @@ struct trace_environment {
   int     emission_tex = -1;
 };
 
+// Trace lights used during rendering. These are created automatically.
+struct trace_light {
+  int           instance    = -1;
+  int           environment = -1;
+  vector<float> elem_cdf    = {};
+};
+
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a
@@ -191,6 +198,9 @@ struct trace_scene {
   vector<trace_material>    materials    = {};
   vector<trace_texture>     textures     = {};
   vector<trace_environment> environments = {};
+
+  // computed properties
+  vector<trace_light> lights = {};
 };
 
 }  // namespace yocto
@@ -205,7 +215,8 @@ trace_scene make_trace_scene(const scene_model& ioscene);
 
 // Update a value from io
 void update_trace_camera(trace_camera& camera, const scene_camera& iocamera);
-void update_trace_texture(trace_texture& texture, const scene_texture& iotexture);
+void update_trace_texture(
+    trace_texture& texture, const scene_texture& iotexture);
 void update_trace_material(
     trace_material& material, const scene_material& iomaterial);
 void update_trace_shape(
@@ -225,11 +236,11 @@ namespace yocto {
 // Intersection bvh
 struct trace_bvh {
   vector<bvh_tree> shape_bvhs = {};
-  bvh_tree scene_bvh = {};
+  bvh_tree         scene_bvh  = {};
 #if YOCTO_EMBREE
   vector<bvh_embree> shape_ebvhs = {};
-  bvh_embree scene_ebvh = {};
-  bool embree = false;
+  bvh_embree         scene_ebvh  = {};
+  bool               embree      = false;
 #endif
 };
 
@@ -248,21 +259,23 @@ struct trace_intersection {
 
 // Build/refit the bvh acceleration structure.
 trace_bvh make_trace_bvh(const trace_scene& scene, const bvh_params& params);
-void update_trace_bvh(trace_bvh& bvh, const trace_scene& scene,
-    const vector<int>& updated_instances, const vector<int>& updated_shapes,
-    const bvh_params& params);
+void      update_trace_bvh(trace_bvh& bvh, const trace_scene& scene,
+         const vector<int>& updated_instances, const vector<int>& updated_shapes,
+         const bvh_params& params);
 
 // Intersection
 bool intersect_scene_bvh(const trace_scene& scene, const trace_bvh& bvh,
     const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
     bool find_any, bool non_rigid_frames = true);
-bool intersect_instance_bvh(const trace_scene& scene, const trace_bvh& bvh, 
-  int instance_id, const ray3f& ray, int& element, vec2f& uv, float& distance, 
-  bool find_any, bool non_rigid_frames = true);
-trace_intersection intersect_scene_bvh(const trace_scene& scene, const trace_bvh& bvh, 
-  const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_scene& scene, const trace_bvh& bvh,
-  int instance, const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
+bool intersect_instance_bvh(const trace_scene& scene, const trace_bvh& bvh,
+    int instance_id, const ray3f& ray, int& element, vec2f& uv, float& distance,
+    bool find_any, bool non_rigid_frames = true);
+trace_intersection intersect_scene_bvh(const trace_scene& scene,
+    const trace_bvh& bvh, const ray3f& ray, bool find_any = false,
+    bool non_rigid_frames = true);
+trace_intersection intersect_instance_bvh(const trace_scene& scene,
+    const trace_bvh& bvh, int instance, const ray3f& ray, bool find_any = false,
+    bool non_rigid_frames = true);
 
 }  // namespace yocto
 
@@ -273,17 +286,6 @@ namespace yocto {
 
 // Default trace seed
 const auto trace_default_seed = 961748941ull;
-
-// Trace lights used during rendering.
-struct trace_light {
-  int instance = -1;
-  int environment = -1;
-};
-struct trace_lights {
-  vector<trace_light>   lights        = {};
-  vector<vector<float>> shape_cdfs       = {};
-  vector<vector<float>> environment_cdfs = {};
-};
 
 // State of a pixel during tracing
 struct trace_pixel {
@@ -340,24 +342,24 @@ trace_state make_trace_state(
     const trace_scene& scene, const trace_params& params);
 
 // Initialize lights.
-trace_lights make_trace_lights(const trace_scene& scene);
+void init_lights(trace_scene& scene);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_bvh& bvh,
-    const trace_lights& lights, const trace_params& params);
+    const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 int trace_samples(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
+    const trace_scene& scene, const trace_bvh& bvh,
     int current_sample, const trace_params& params);
 
 // Progressively compute an image by calling trace_region multiple times.
 // Compared to `trace_samples` this always runs serially and is helpful
 // when building async applications.
 void trace_region(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const trace_bvh& bvh, const trace_lights& lights,
+    const trace_scene& scene, const trace_bvh& bvh, 
     const image_region& region, int num_samples, const trace_params& params);
 
 // Check is a sampler requires lights

@@ -55,7 +55,6 @@ struct app_state {
   bool        add_skyenv = false;
 
   // rendering state
-  trace_lights lights  = {};
   trace_state  state   = {};
   image<vec4f> render  = {};
   image<vec4f> display = {};
@@ -105,7 +104,7 @@ void update(const opengl_window& win, app_state& app) {
     auto preview_prms = app.trace_prms;
     preview_prms.resolution /= app.preview_ratio;
     preview_prms.samples = 1;
-    auto preview = trace_image(app.scene, app.bvh, app.lights, preview_prms);
+    auto preview = trace_image(app.scene, app.bvh, preview_prms);
     preview      = tonemap_image(preview, app.tonemap_prms);
     for (auto j = 0; j < app.display.size().y; j++) {
       for (auto i = 0; i < app.display.size().x; i++) {
@@ -125,7 +124,7 @@ void update(const opengl_window& win, app_state& app) {
     auto num_regions = min(128, app.render_regions.size() - app.render_region);
     parallel_for(app.render_region, app.render_region + num_regions,
         [&app](int region_id) {
-          trace_region(app.render, app.state, app.scene, app.bvh, app.lights,
+          trace_region(app.render, app.state, app.scene, app.bvh, 
               app.render_regions[region_id], 1, app.trace_prms);
           tonemap_region(app.display, app.render, app.render_regions[region_id],
               app.tonemap_prms);
@@ -262,11 +261,11 @@ int main(int argc, const char* argv[]) {
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  app.lights = make_trace_lights(app.scene);
+  init_lights(app.scene);
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (app.lights.lights.empty() && is_sampler_lit(app.trace_prms)) {
+  if (app.scene.lights.empty() && is_sampler_lit(app.trace_prms)) {
     print_info("no lights presents, switching to eyelight shader");
     app.trace_prms.sampler = trace_sampler_type::eyelight;
   }
