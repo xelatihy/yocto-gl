@@ -1434,6 +1434,9 @@ static pair<int, int> split_middle(vector<int>& primitives,
   return {mid, axis};
 }
 
+// Maximum number of primitives per BVH node.
+const int bvh_max_prims = 4;
+
 // Build BVH nodes
 static void build_bvh_serial(
     trace_bvh& bvh, vector<bbox3f>& bboxes, bool high_quality) {
@@ -1474,7 +1477,7 @@ static void build_bvh_serial(
       node.bbox = merge(node.bbox, bboxes[primitives[i]]);
 
     // split into two children
-    if (end - start > trace_bvh_max_prims) {
+    if (end - start > bvh_max_prims) {
       // get split
       auto [mid, axis] =
           high_quality
@@ -1567,7 +1570,7 @@ static void build_bvh_parallel(
               node.bbox = merge(node.bbox, bboxes[primitives[i]]);
 
             // split into two children
-            if (end - start > trace_bvh_max_prims) {
+            if (end - start > bvh_max_prims) {
               // get split
               auto [mid, axis] =
                   high_quality
