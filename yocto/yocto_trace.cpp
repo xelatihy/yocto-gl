@@ -1048,6 +1048,24 @@ vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
 namespace yocto {
 
 #if YOCTO_EMBREE
+// copies
+trace_bvh_embree::trace_bvh_embree(const trace_bvh_embree& other) { *this = other; }
+trace_bvh_embree& trace_bvh_embree::operator=(const trace_bvh_embree& other) {
+  shape  = other.shape;
+  scene  = other.scene;
+  device = other.device;
+  if (shape) rtcRetainGeometry(shape);
+  if (scene) rtcRetainScene(scene);
+  if (device) rtcRetainDevice(device);
+  return *this;
+}
+// cleanup
+trace_bvh_embree::~trace_bvh_embree() {
+  if (shape) rtcReleaseGeometry(shape);
+  if (scene) rtcReleaseScene(scene);
+  if (device) rtcReleaseDevice(device);
+}
+
 // Get Embree device
 std::atomic<ssize_t> trace_embree_memory = 0;
 static RTCDevice     trace_embree_device() {
