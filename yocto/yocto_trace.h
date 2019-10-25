@@ -254,17 +254,6 @@ void update_scene_bvh(trace_scene& bvh, const vector<int>& updated_instances,
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
-    int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any = false, bool non_rigid_frames = true);
-// Intersects a single instance.
-bool intersect_instance_bvh(const trace_scene& scene, int instance,
-    const ray3f& ray, int& element, vec2f& uv, float& distance,
-    bool find_any = false, bool non_rigid_frames = true);
-
-// Short version of intersect functions
-bvh_intersection intersect_shape_bvh(
-    const trace_shape& shape, const ray3f& ray, bool find_any = false);
 bvh_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
     bool find_any = false, bool non_rigid_frames = true);
 bvh_intersection intersect_instance_bvh(const trace_scene& scene, int instance,

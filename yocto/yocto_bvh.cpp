@@ -1282,6 +1282,21 @@ void init_scene_embree_bvh(bvh_scene& scene, const bvh_params& params) {
   rtcCommitScene(scene.embree.scene);
 }
 
+void update_scene_embree_bvh(bvh_scene& scene, const vector<int>& updated_instances) {
+  // scene bvh
+  for (auto instance_id : updated_instances) {
+    auto& instance = scene.instances[instance_id];
+    auto& sbvh  = scene.shapes[instance.shape].embree;
+    if (!sbvh.scene) throw std::runtime_error("bvh not built");
+    auto embree_geom = rtcGetGeometry(scene.embree.scene, instance_id);
+    rtcSetGeometryInstancedScene(embree_geom, sbvh.scene);
+    rtcSetGeometryTransform(
+        embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+    rtcCommitGeometry(embree_geom);
+  }
+  rtcCommitScene(scene.embree.scene);
+}
+
 bool intersect_shape_embree_bvh(const bvh_shape& shape, const ray3f& ray,
     int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
@@ -1419,42 +1434,50 @@ void init_scene_bvh(bvh_scene& scene, const bvh_params& params) {
 void update_shape_bvh(bvh_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
   if (params.embree) {
-    if (!shape.points.empty()) {
-      throw std::runtime_error("embree does not support points");
-    } else if (!shape.lines.empty()) {
-      return update_lines_embree_bvh(
-          shape.embree, shape.lines, shape.positions, shape.radius);
-    } else if (!shape.triangles.empty()) {
-      return update_triangles_embree_bvh(
-          shape.embree, shape.triangles, shape.positions);
-    } else if (!shape.quads.empty()) {
-      return update_quads_embree_bvh(
-          shape.embree, shape.quads, shape.positions);
-    } else if (!shape.quadspos.empty()) {
-      return update_quads_embree_bvh(
-          shape.embree, shape.quadspos, shape.positions);
-    } else {
-      throw std::runtime_error("cannot support empty shapes");
-    }
+    throw std::runtime_error("embree shape refit not supported");
   }
 #endif
 
   // build primitives
+  auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
-    return update_points_bvh(
-        shape.bvh, shape.points, shape.positions, shape.radius);
+    bboxes = vector<bbox3f>(shape.points.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& p     = shape.points[idx];
+      bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
+    }
   } else if (!shape.lines.empty()) {
-    return update_lines_bvh(
-        shape.bvh, shape.lines, shape.positions, shape.radius);
+    bboxes = vector<bbox3f>(shape.lines.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& l     = shape.lines[idx];
+      bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
+          shape.radius[l.x], shape.radius[l.y]);
+    }
   } else if (!shape.triangles.empty()) {
-    return update_triangles_bvh(shape.bvh, shape.triangles, shape.positions);
+    bboxes = vector<bbox3f>(shape.triangles.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& t     = shape.triangles[idx];
+      bboxes[idx] = triangle_bounds(
+          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+    }
   } else if (!shape.quads.empty()) {
-    return update_quads_bvh(shape.bvh, shape.quads, shape.positions);
+    bboxes = vector<bbox3f>(shape.quads.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& q     = shape.quads[idx];
+      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w]);
+    }
   } else if (!shape.quadspos.empty()) {
-    return update_quads_bvh(shape.bvh, shape.quadspos, shape.positions);
-  } else {
-    throw std::runtime_error("cannot support empty shapes");
+    bboxes = vector<bbox3f>(shape.quads.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& q     = shape.quads[idx];
+      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w]);
+    }
   }
+
+  // update nodes
+  update_bvh(shape.bvh, bboxes);
 }
 
 void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
@@ -1478,15 +1501,16 @@ void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
   }
 #endif
 
-  // refit
-  update_instances_bvh(
-      scene.bvh, scene.instances.size(),
-      [&scene](
-          int instance) -> frame3f { return scene.instances[instance].frame; },
-      [&scene](int instance) -> bvh_tree& {
-        auto shape = scene.instances[instance].shape;
-        return scene.shapes[shape].bvh;
-      });
+  // build primitives
+  auto bboxes = vector<bbox3f>(scene.instances.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) {
+    auto& instance = scene.instances[idx];
+    auto& sbvh = scene.shapes[instance.shape].bvh;
+    bboxes[idx] = transform_bbox(instance.frame, sbvh.nodes[0].bbox);
+  }
+
+  // update nodes
+  update_bvh(scene.bvh, bboxes);
 }
 
 // Intersect ray with a bvh.
