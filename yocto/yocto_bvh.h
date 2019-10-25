@@ -136,11 +136,6 @@ void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
 void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius,
     bool high_quality, bool parallel);
-// Make instance bvh
-void make_instances_bvh(bvh_tree& bvh, int num_instances,
-    const function<frame3f(int instance)>&         instance_frame,
-    const function<const bvh_tree&(int instance)>& shape_bvh, bool high_quality,
-    bool parallel);
 
 // Updates shape bvh for changes in positions and radia
 void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
@@ -151,10 +146,6 @@ void update_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions);
 void update_quads_bvh(
     bvh_tree& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
-// Updates instances bvh for changes in frames and shape bvhs
-void update_instances_bvh(bvh_tree& bvh, int num_instances,
-    const function<frame3f(int instance)>&         instance_frame,
-    const function<const bvh_tree&(int instance)>& shape_bvh);
 
 // Find a shape element or scene instances that intersects a ray,
 // returning either the closest or any overlap depending on `find_any`.
