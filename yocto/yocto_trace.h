@@ -102,22 +102,6 @@ struct trace_bvh {
   vector<int>            primitives = {};
 };
 
-#if YOCTO_EMBREE
-// Wrapper to Interl's Embree
-struct trace_bvh_embree {
-  trace_bvh_embree() {}
-  trace_bvh_embree(const trace_bvh_embree&);
-  ~trace_bvh_embree();
-
-  trace_bvh_embree& operator=(const trace_bvh_embree&);
-
-  RTCDevice           device    = nullptr;
-  RTCScene            scene     = nullptr;
-  RTCGeometry         shape     = nullptr;
-  vector<RTCGeometry> instances = {};
-};
-#endif
-
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
 // we specify fil size (35mm by default), the lens' focal length, the focus

@@ -90,10 +90,6 @@
 #include "yocto_common.h"
 #include "yocto_math.h"
 
-#if YOCTO_EMBREE
-#include <embree3/rtcore.h>
-#endif
-
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
@@ -204,22 +200,6 @@ bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#if YOCTO_EMBREE
-// Wrapper to Interl's Embree
-struct bvh_embree {
-  bvh_embree() {}
-  bvh_embree(const bvh_embree&);
-  ~bvh_embree();
-
-  bvh_embree& operator=(const bvh_embree&);
-
-  RTCDevice           device    = nullptr;
-  RTCScene            scene     = nullptr;
-  RTCGeometry         shape     = nullptr;
-  vector<RTCGeometry> instances = {};
-};
-#endif
-
 // BVH data for whole shapes. This interface makes copies of all the data.
 struct bvh_shape {
   // elements
@@ -235,9 +215,8 @@ struct bvh_shape {
 
   // nodes
   bvh_tree bvh = {};
-
 #if YOCTO_EMBREE
-  bvh_embree embree = {};
+  std::shared_ptr<void> embree_bvh = {};
 #endif
 };
 
@@ -255,9 +234,8 @@ struct bvh_scene {
 
   // nodes
   bvh_tree bvh = {};
-
 #if YOCTO_EMBREE
-  bvh_embree embree = {};
+  std::shared_ptr<void> embree_bvh = {};
 #endif
 };
 
