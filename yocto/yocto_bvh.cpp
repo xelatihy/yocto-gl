@@ -1171,7 +1171,6 @@ void init_shape_embree_bvh(bvh_shape& shape, const bvh_params& params) {
   rtcAttachGeometryByID(shape.embree.scene, shape.embree.shape, 0);
   rtcCommitScene(shape.embree.scene);
 }
-
 void init_scene_embree_bvh(bvh_scene& scene, const bvh_params& params) {
   // scene bvh
   scene.embree.device = bvh_embree_device();
