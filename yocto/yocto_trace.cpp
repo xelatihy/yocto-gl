@@ -1048,10 +1048,48 @@ vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
 namespace yocto {
 
 #if YOCTO_EMBREE
-#if 0
+// Get Embree device
+std::atomic<ssize_t> trace_embree_memory = 0;
+static RTCDevice     trace_embree_device() {
+  static RTCDevice device = nullptr;
+  if (!device) {
+    device = rtcNewDevice("");
+    rtcSetDeviceErrorFunction(
+        device,
+        [](void* ctx, RTCError code, const char* str) {
+          switch (code) {
+            case RTC_ERROR_UNKNOWN:
+              throw std::runtime_error("RTC_ERROR_UNKNOWN: "s + str);
+            case RTC_ERROR_INVALID_ARGUMENT:
+              throw std::runtime_error("RTC_ERROR_INVALID_ARGUMENT: "s + str);
+            case RTC_ERROR_INVALID_OPERATION:
+              throw std::runtime_error("RTC_ERROR_INVALID_OPERATION: "s + str);
+            case RTC_ERROR_OUT_OF_MEMORY:
+              throw std::runtime_error("RTC_ERROR_OUT_OF_MEMORY: "s + str);
+            case RTC_ERROR_UNSUPPORTED_CPU:
+              throw std::runtime_error("RTC_ERROR_UNSUPPORTED_CPU: "s + str);
+            case RTC_ERROR_CANCELLED:
+              throw std::runtime_error("RTC_ERROR_CANCELLED: "s + str);
+            default: throw std::runtime_error("invalid error code");
+          }
+        },
+        nullptr);
+    rtcSetDeviceMemoryMonitorFunction(
+        device,
+        [](void* userPtr, ssize_t bytes, bool post) {
+          trace_embree_memory += bytes;
+          return true;
+        },
+        nullptr);
+  }
+  rtcRetainDevice(device);
+  return device;
+}
+
 // Initialize Embree BVH
-void init_shape_embree_bvh(bvh_shape& shape, const bvh_params& params) {
-  shape.embree.device = get_embree_device();
+static void init_shape_embree_bvh(
+    trace_shape& shape, const bvh_params& params) {
+  shape.embree.device = trace_embree_device();
   shape.embree.scene  = rtcNewScene(shape.embree.device);
   if (params.compact)
     rtcSetSceneFlags(shape.embree.scene, RTC_SCENE_FLAG_COMPACT);
@@ -1084,28 +1122,36 @@ void init_shape_embree_bvh(bvh_shape& shape, const bvh_params& params) {
     memcpy(embree_positions, epositions.data(), epositions.size() * 16);
     memcpy(embree_lines, elines.data(), elines.size() * 4);
   } else if (!shape.triangles.empty()) {
-    shape.embree.shape = rtcNewGeometry(shape.embree.device, RTC_GEOMETRY_TYPE_TRIANGLE);
+    shape.embree.shape = rtcNewGeometry(
+        shape.embree.device, RTC_GEOMETRY_TYPE_TRIANGLE);
     rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
     if (params.compact) {
       rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4, shape.positions.size());
+          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
+          shape.positions.size());
       rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT3, shape.triangles.data(), 0, 3 * 4, shape.triangles.size());
+          RTC_FORMAT_UINT3, shape.triangles.data(), 0, 3 * 4,
+          shape.triangles.size());
     } else {
       auto embree_positions = rtcSetNewGeometryBuffer(shape.embree.shape,
           RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
           shape.positions.size());
       auto embree_triangles = rtcSetNewGeometryBuffer(shape.embree.shape,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4, shape.triangles.size());
-      memcpy(embree_positions, shape.positions.data(), shape.positions.size() * 12);
-      memcpy(embree_triangles, shape.triangles.data(), shape.triangles.size() * 12);
+          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
+          shape.triangles.size());
+      memcpy(embree_positions, shape.positions.data(),
+          shape.positions.size() * 12);
+      memcpy(embree_triangles, shape.triangles.data(),
+          shape.triangles.size() * 12);
     }
   } else if (!shape.quads.empty()) {
-    shape.embree.shape = rtcNewGeometry(shape.embree.device, RTC_GEOMETRY_TYPE_QUAD);
+    shape.embree.shape = rtcNewGeometry(
+        shape.embree.device, RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
     if (params.compact) {
       rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4, shape.positions.size());
+          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
+          shape.positions.size());
       rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_INDEX, 0,
           RTC_FORMAT_UINT4, shape.quads.data(), 0, 4 * 4, shape.quads.size());
     } else {
@@ -1113,25 +1159,32 @@ void init_shape_embree_bvh(bvh_shape& shape, const bvh_params& params) {
           RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
           shape.positions.size());
       auto embree_quads     = rtcSetNewGeometryBuffer(shape.embree.shape,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, shape.quads.size());
-      memcpy(embree_positions, shape.positions.data(), shape.positions.size() * 12);
+          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
+          shape.quads.size());
+      memcpy(embree_positions, shape.positions.data(),
+          shape.positions.size() * 12);
       memcpy(embree_quads, shape.quads.data(), shape.quads.size() * 16);
     }
   } else if (!shape.quadspos.empty()) {
-    shape.embree.shape = rtcNewGeometry(shape.embree.device, RTC_GEOMETRY_TYPE_QUAD);
+    shape.embree.shape = rtcNewGeometry(
+        shape.embree.device, RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
     if (params.compact) {
       rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_VERTEX, 0,
-          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4, shape.positions.size());
+          RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
+          shape.positions.size());
       rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_INDEX, 0,
-          RTC_FORMAT_UINT4, shape.quadspos.data(), 0, 4 * 4, shape.quadspos.size());
+          RTC_FORMAT_UINT4, shape.quadspos.data(), 0, 4 * 4,
+          shape.quadspos.size());
     } else {
       auto embree_positions = rtcSetNewGeometryBuffer(shape.embree.shape,
           RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
           shape.positions.size());
       auto embree_quads     = rtcSetNewGeometryBuffer(shape.embree.shape,
-          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, shape.quadspos.size());
-      memcpy(embree_positions, shape.positions.data(), shape.positions.size() * 12);
+          RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
+          shape.quadspos.size());
+      memcpy(embree_positions, shape.positions.data(),
+          shape.positions.size() * 12);
       memcpy(embree_quads, shape.quadspos.data(), shape.quadspos.size() * 16);
     }
   } else {
@@ -1142,33 +1195,38 @@ void init_shape_embree_bvh(bvh_shape& shape, const bvh_params& params) {
   rtcCommitScene(shape.embree.scene);
 }
 
-void init_scene_embree_bvh(bvh_scene& scene, const bvh_params& params) {
+static void init_scene_embree_bvh(
+    trace_scene& scene, const bvh_params& params) {
   // scene bvh
-  scene.embree.device = get_embree_device();
+  scene.embree.device = trace_embree_device();
   scene.embree.scene  = rtcNewScene(scene.embree.device);
-  if (params.compact) rtcSetSceneFlags(scene.embree.scene, RTC_SCENE_FLAG_COMPACT);
-  if (params.high_quality) rtcSetSceneBuildQuality(scene.embree.scene, RTC_BUILD_QUALITY_HIGH);
-  for (auto instance_id = 0; instance_id < scene.instances.size(); instance_id++) {
+  if (params.compact)
+    rtcSetSceneFlags(scene.embree.scene, RTC_SCENE_FLAG_COMPACT);
+  if (params.high_quality)
+    rtcSetSceneBuildQuality(scene.embree.scene, RTC_BUILD_QUALITY_HIGH);
+  for (auto instance_id = 0; instance_id < scene.instances.size();
+       instance_id++) {
     auto& instance = scene.instances[instance_id];
-    auto& sbvh  = scene.shapes[instance.shape].embree;
+    auto& sbvh     = scene.shapes[instance.shape].embree;
     if (!sbvh.scene) throw std::runtime_error("bvh not built");
     scene.embree.instances.push_back(
         rtcNewGeometry(scene.embree.device, RTC_GEOMETRY_TYPE_INSTANCE));
     rtcSetGeometryInstancedScene(scene.embree.instances.back(), sbvh.scene);
-    rtcSetGeometryTransform(scene.embree.instances.back(), 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+    rtcSetGeometryTransform(scene.embree.instances.back(), 0,
+        RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(scene.embree.instances.back());
-    rtcAttachGeometryByID(scene.embree.scene, scene.embree.instances.back(), instance_id);
+    rtcAttachGeometryByID(
+        scene.embree.scene, scene.embree.instances.back(), instance_id);
   }
   rtcCommitScene(scene.embree.scene);
 }
 
-#endif
-
-static void update_scene_embree_bvh(trace_scene& scene, const vector<int>& updated_instances) {
+static void update_scene_embree_bvh(
+    trace_scene& scene, const vector<int>& updated_instances) {
   // scene bvh
   for (auto instance_id : updated_instances) {
     auto& instance = scene.instances[instance_id];
-    auto& sbvh  = scene.shapes[instance.shape].embree;
+    auto& sbvh     = scene.shapes[instance.shape].embree;
     if (!sbvh.scene) throw std::runtime_error("bvh not built");
     auto embree_geom = rtcGetGeometry(scene.embree.scene, instance_id);
     rtcSetGeometryInstancedScene(embree_geom, sbvh.scene);
@@ -1179,8 +1237,8 @@ static void update_scene_embree_bvh(trace_scene& scene, const vector<int>& updat
   rtcCommitScene(scene.embree.scene);
 }
 
-static bool intersect_shape_embree_bvh(const trace_shape& shape, const ray3f& ray,
-    int& element, vec2f& uv, float& distance, bool find_any) {
+static bool intersect_shape_embree_bvh(const trace_shape& shape,
+    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
   embree_ray.ray.org_y     = ray.o.y;
@@ -1203,8 +1261,9 @@ static bool intersect_shape_embree_bvh(const trace_shape& shape, const ray3f& ra
   return true;
 }
 
-static bool intersect_scene_embree_bvh(const trace_scene& scene, const ray3f& ray,
-    int& instance, int& element, vec2f& uv, float& distance, bool find_any) {
+static bool intersect_scene_embree_bvh(const trace_scene& scene,
+    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
+    bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
   embree_ray.ray.org_y     = ray.o.y;
@@ -1229,48 +1288,383 @@ static bool intersect_scene_embree_bvh(const trace_scene& scene, const ray3f& ra
 }
 #endif
 
+// Splits a BVH node using the SAH heuristic. Returns split position and axis.
+static pair<int, int> split_sah(vector<int>& primitives,
+    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
+    int end) {
+  // initialize split axis and position
+  auto split_axis = 0;
+  auto mid        = (start + end) / 2;
+
+  // compute primintive bounds and size
+  auto cbbox = invalidb3f;
+  for (auto i = start; i < end; i++)
+    cbbox = merge(cbbox, centers[primitives[i]]);
+  auto csize = cbbox.max - cbbox.min;
+  if (csize == zero3f) return {mid, split_axis};
+
+  // consider N bins, compute their cost and keep the minimum
+  const int nbins    = 16;
+  auto      middle   = 0.0f;
+  auto      min_cost = flt_max;
+  auto      area     = [](auto& b) {
+    auto size = b.max - b.min;
+    return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
+           2 * size.y * size.z;
+  };
+  for (auto saxis = 0; saxis < 3; saxis++) {
+    for (auto b = 1; b < nbins; b++) {
+      auto split     = cbbox.min[saxis] + b * csize[saxis] / nbins;
+      auto left_bbox = invalidb3f, right_bbox = invalidb3f;
+      auto left_nprims = 0, right_nprims = 0;
+      for (auto i = start; i < end; i++) {
+        if (centers[primitives[i]][saxis] < split) {
+          left_bbox = merge(left_bbox, bboxes[primitives[i]]);
+          left_nprims += 1;
+        } else {
+          right_bbox = merge(right_bbox, bboxes[primitives[i]]);
+          right_nprims += 1;
+        }
+      }
+      auto cost = 1 + left_nprims * area(left_bbox) / area(cbbox) +
+                  right_nprims * area(right_bbox) / area(cbbox);
+      if (cost < min_cost) {
+        min_cost   = cost;
+        middle     = split;
+        split_axis = saxis;
+      }
+    }
+  }
+  // split
+  mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
+                  [split_axis, middle, &centers](
+                      auto a) { return centers[a][split_axis] < middle; }) -
+              primitives.data());
+
+  // if we were not able to split, just break the primitives in half
+  if (mid == start || mid == end) {
+    throw std::runtime_error("bad bvh split");
+    split_axis = 0;
+    mid        = (start + end) / 2;
+  }
+
+  return {mid, split_axis};
+}
+
+// Splits a BVH node using the balance heuristic. Returns split position and
+// axis.
+static pair<int, int> split_balanced(vector<int>& primitives,
+    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
+    int end) {
+  // initialize split axis and position
+  auto axis = 0;
+  auto mid  = (start + end) / 2;
+
+  // compute primintive bounds and size
+  auto cbbox = invalidb3f;
+  for (auto i = start; i < end; i++)
+    cbbox = merge(cbbox, centers[primitives[i]]);
+  auto csize = cbbox.max - cbbox.min;
+  if (csize == zero3f) return {mid, axis};
+
+  // split along largest
+  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
+  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
+  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
+
+  // balanced tree split: find the largest axis of the
+  // bounding box and split along this one right in the middle
+  mid = (start + end) / 2;
+  std::nth_element(primitives.data() + start, primitives.data() + mid,
+      primitives.data() + end, [axis, &centers](auto a, auto b) {
+        return centers[a][axis] < centers[b][axis];
+      });
+
+  // if we were not able to split, just break the primitives in half
+  if (mid == start || mid == end) {
+    throw std::runtime_error("bad bvh split");
+    axis = 0;
+    mid  = (start + end) / 2;
+  }
+
+  return {mid, axis};
+}
+
+// Splits a BVH node using the middle heutirtic. Returns split position and
+// axis.
+static pair<int, int> split_middle(vector<int>& primitives,
+    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
+    int end) {
+  // initialize split axis and position
+  auto axis = 0;
+  auto mid  = (start + end) / 2;
+
+  // compute primintive bounds and size
+  auto cbbox = invalidb3f;
+  for (auto i = start; i < end; i++)
+    cbbox = merge(cbbox, centers[primitives[i]]);
+  auto csize = cbbox.max - cbbox.min;
+  if (csize == zero3f) return {mid, axis};
+
+  // split along largest
+  if (csize.x >= csize.y && csize.x >= csize.z) axis = 0;
+  if (csize.y >= csize.x && csize.y >= csize.z) axis = 1;
+  if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
+
+  // split the space in the middle along the largest axis
+  auto cmiddle = (cbbox.max + cbbox.min) / 2;
+  auto middle  = cmiddle[axis];
+  mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
+                  [axis, middle, &centers](
+                      auto a) { return centers[a][axis] < middle; }) -
+              primitives.data());
+
+  // if we were not able to split, just break the primitives in half
+  if (mid == start || mid == end) {
+    throw std::runtime_error("bad bvh split");
+    axis = 0;
+    mid  = (start + end) / 2;
+  }
+
+  return {mid, axis};
+}
+
+// Build BVH nodes
+static void build_bvh_serial(
+    bvh_tree& bvh, vector<bbox3f>& bboxes, bool high_quality) {
+  // get values
+  auto& nodes      = bvh.nodes;
+  auto& primitives = bvh.primitives;
+
+  // prepare to build nodes
+  nodes.clear();
+  nodes.reserve(bboxes.size() * 2);
+
+  // prepare primitives
+  bvh.primitives.resize(bboxes.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
+
+  // prepare centers
+  auto centers = vector<vec3f>(bboxes.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++)
+    centers[idx] = center(bboxes[idx]);
+
+  // queue up first node
+  auto queue = std::deque<vec3i>{{0, 0, (int)bboxes.size()}};
+  nodes.emplace_back();
+
+  // create nodes until the queue is empty
+  while (!queue.empty()) {
+    // grab node to work on
+    auto next = queue.front();
+    queue.pop_front();
+    auto nodeid = next.x, start = next.y, end = next.z;
+
+    // grab node
+    auto& node = nodes[nodeid];
+
+    // compute bounds
+    node.bbox = invalidb3f;
+    for (auto i = start; i < end; i++)
+      node.bbox = merge(node.bbox, bboxes[primitives[i]]);
+
+    // split into two children
+    if (end - start > bvh_max_prims) {
+      // get split
+      auto [mid, axis] =
+          high_quality
+              ? split_sah(primitives, bboxes, centers, start, end)
+              : split_balanced(primitives, bboxes, centers, start, end);
+
+      // make an internal node
+      node.internal = true;
+      node.axis     = axis;
+      node.num      = 2;
+      node.start    = (int)nodes.size();
+      nodes.emplace_back();
+      nodes.emplace_back();
+      queue.push_back({node.start + 0, start, mid});
+      queue.push_back({node.start + 1, mid, end});
+    } else {
+      // Make a leaf node
+      node.internal = false;
+      node.num      = end - start;
+      node.start    = start;
+    }
+  }
+
+  // cleanup
+  nodes.shrink_to_fit();
+}
+
+// Build BVH nodes
+static void build_bvh_parallel(
+    bvh_tree& bvh, vector<bbox3f>& bboxes, bool high_quality) {
+  // get values
+  auto& nodes      = bvh.nodes;
+  auto& primitives = bvh.primitives;
+
+  // prepare to build nodes
+  nodes.clear();
+  nodes.reserve(bboxes.size() * 2);
+
+  // prepare primitives
+  bvh.primitives.resize(bboxes.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
+
+  // prepare centers
+  auto centers = vector<vec3f>(bboxes.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++)
+    centers[idx] = center(bboxes[idx]);
+
+  // queue up first node
+  auto queue = std::deque<vec3i>{{0, 0, (int)primitives.size()}};
+  nodes.emplace_back();
+
+  // synchronization
+  std::atomic<int>          num_processed_prims(0);
+  std::mutex                queue_mutex;
+  vector<std::future<void>> futures;
+  auto                      nthreads = std::thread::hardware_concurrency();
+
+  // create nodes until the queue is empty
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(std::async(std::launch::async,
+        [&nodes, &primitives, &bboxes, &centers, &high_quality,
+            &num_processed_prims, &queue_mutex, &queue] {
+          while (true) {
+            // exit if needed
+            if (num_processed_prims >= primitives.size()) return;
+
+            // grab node to work on
+            auto next = zero3i;
+            {
+              std::lock_guard<std::mutex> lock{queue_mutex};
+              if (!queue.empty()) {
+                next = queue.front();
+                queue.pop_front();
+              }
+            }
+
+            // wait a bit if needed
+            if (next == zero3i) {
+              std::this_thread::sleep_for(std::chrono::microseconds(10));
+              continue;
+            }
+
+            // grab node
+            auto  nodeid = next.x, start = next.y, end = next.z;
+            auto& node = nodes[nodeid];
+
+            // compute bounds
+            node.bbox = invalidb3f;
+            for (auto i = start; i < end; i++)
+              node.bbox = merge(node.bbox, bboxes[primitives[i]]);
+
+            // split into two children
+            if (end - start > bvh_max_prims) {
+              // get split
+              auto [mid, axis] =
+                  high_quality
+                      ? split_sah(primitives, bboxes, centers, start, end)
+                      : split_balanced(primitives, bboxes, centers, start, end);
+
+              // make an internal node
+              {
+                std::lock_guard<std::mutex> lock{queue_mutex};
+                node.internal = true;
+                node.axis     = axis;
+                node.num      = 2;
+                node.start    = (int)nodes.size();
+                nodes.emplace_back();
+                nodes.emplace_back();
+                queue.push_back({node.start + 0, start, mid});
+                queue.push_back({node.start + 1, mid, end});
+              }
+            } else {
+              // Make a leaf node
+              node.internal = false;
+              node.num      = end - start;
+              node.start    = start;
+              num_processed_prims += node.num;
+            }
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+
+  // cleanup
+  nodes.shrink_to_fit();
+}
+
+// Update bvh
+static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
+  for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
+    auto& node = bvh.nodes[nodeid];
+    node.bbox  = invalidb3f;
+    if (node.internal) {
+      for (auto idx = 0; idx < 2; idx++) {
+        node.bbox = merge(node.bbox, bvh.nodes[node.start + idx].bbox);
+      }
+    } else {
+      for (auto idx = 0; idx < node.num; idx++) {
+        node.bbox = merge(node.bbox, bboxes[bvh.primitives[node.start + idx]]);
+      }
+    }
+  }
+}
+
 static void init_shape_bvh(trace_shape& shape, const bvh_params& params) {
 #if YOCTO_EMBREE
   // call Embree if needed
   if (params.embree) {
-    if (!shape.points.empty()) {
-      throw std::runtime_error("embree does not support points");
-    } else if (!shape.lines.empty()) {
-      return make_lines_embree_bvh(shape.embree, shape.lines, shape.positions,
-          shape.radius, params.high_quality, params.compact);
-    } else if (!shape.triangles.empty()) {
-      return make_triangles_embree_bvh(shape.embree, shape.triangles,
-          shape.positions, params.high_quality, params.compact);
-    } else if (!shape.quads.empty()) {
-      return make_quads_embree_bvh(shape.embree, shape.quads, shape.positions,
-          params.high_quality, params.compact);
-    } else if (!shape.quadspos.empty()) {
-      return make_quads_embree_bvh(shape.embree, shape.quadspos,
-          shape.positions, params.high_quality, params.compact);
-    } else {
-      throw std::runtime_error("empty shape");
-    }
+    return init_shape_embree_bvh(shape, params);
   }
 #endif
 
   // build primitives
+  auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
-    return make_points_bvh(shape.bvh, shape.points, shape.positions,
-        shape.radius, params.high_quality, !params.noparallel);
+    bboxes = vector<bbox3f>(shape.points.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& p     = shape.points[idx];
+      bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
+    }
   } else if (!shape.lines.empty()) {
-    return make_lines_bvh(shape.bvh, shape.lines, shape.positions, shape.radius,
-        params.high_quality, !params.noparallel);
+    bboxes = vector<bbox3f>(shape.lines.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& l     = shape.lines[idx];
+      bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
+          shape.radius[l.x], shape.radius[l.y]);
+    }
   } else if (!shape.triangles.empty()) {
-    return make_triangles_bvh(shape.bvh, shape.triangles, shape.positions,
-        shape.radius, params.high_quality, !params.noparallel);
+    bboxes = vector<bbox3f>(shape.triangles.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& t     = shape.triangles[idx];
+      bboxes[idx] = triangle_bounds(
+          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+    }
   } else if (!shape.quads.empty()) {
-    return make_quads_bvh(shape.bvh, shape.quads, shape.positions, shape.radius,
-        params.high_quality, !params.noparallel);
+    bboxes = vector<bbox3f>(shape.quads.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& q     = shape.quads[idx];
+      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w]);
+    }
   } else if (!shape.quadspos.empty()) {
-    return make_quads_bvh(shape.bvh, shape.quadspos, shape.positions,
-        shape.radius, params.high_quality, !params.noparallel);
+    bboxes = vector<bbox3f>(shape.quads.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& q     = shape.quads[idx];
+      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w]);
+    }
+  }
+
+  // build nodes
+  if (params.noparallel) {
+    build_bvh_serial(shape.bvh, bboxes, params.high_quality);
   } else {
-    throw std::runtime_error("empty shape");
+    build_bvh_parallel(shape.bvh, bboxes, params.high_quality);
   }
 }
 
@@ -1282,29 +1676,26 @@ void init_scene_bvh(trace_scene& scene, const bvh_params& params) {
   // embree
 #if YOCTO_EMBREE
   if (params.embree) {
-    return make_instances_embree_bvh(
-        scene.embree, (int)scene.instances.size(),
-        [&scene](int instance) -> frame3f {
-          return scene.instances[instance].frame;
-        },
-        [&scene](int instance) -> bvh_embree& {
-          auto shape = scene.instances[instance].shape;
-          return scene.shapes[shape].embree;
-        },
-        params.high_quality, !params.noparallel);
+    return init_scene_embree_bvh(scene, params);
   }
 #endif
 
-  // build primitives
-  return make_instances_bvh(
-      scene.bvh, (int)scene.instances.size(),
-      [&scene](
-          int instance) -> frame3f { return scene.instances[instance].frame; },
-      [&scene](int instance) -> bvh_tree& {
-        auto shape = scene.instances[instance].shape;
-        return scene.shapes[shape].bvh;
-      },
-      params.high_quality, !params.noparallel);
+  // instance bboxes
+  auto bboxes = vector<bbox3f>(scene.instances.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) {
+    auto& instance = scene.instances[idx];
+    auto& shape    = scene.shapes[instance.shape];
+    bboxes[idx]    = shape.bvh.nodes.empty()
+                      ? invalidb3f
+                      : transform_bbox(instance.frame, shape.bvh.nodes[0].bbox);
+  }
+
+  // build nodes
+  if (params.noparallel) {
+    build_bvh_serial(scene.bvh, bboxes, params.high_quality);
+  } else {
+    build_bvh_parallel(scene.bvh, bboxes, params.high_quality);
+  }
 }
 
 static void update_shape_bvh(trace_shape& shape, const bvh_params& params) {
@@ -1315,21 +1706,45 @@ static void update_shape_bvh(trace_shape& shape, const bvh_params& params) {
 #endif
 
   // build primitives
+  auto bboxes = vector<bbox3f>{};
   if (!shape.points.empty()) {
-    return update_points_bvh(
-        shape.bvh, shape.points, shape.positions, shape.radius);
+    bboxes = vector<bbox3f>(shape.points.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& p     = shape.points[idx];
+      bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
+    }
   } else if (!shape.lines.empty()) {
-    return update_lines_bvh(
-        shape.bvh, shape.lines, shape.positions, shape.radius);
+    bboxes = vector<bbox3f>(shape.lines.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& l     = shape.lines[idx];
+      bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
+          shape.radius[l.x], shape.radius[l.y]);
+    }
   } else if (!shape.triangles.empty()) {
-    return update_triangles_bvh(shape.bvh, shape.triangles, shape.positions);
+    bboxes = vector<bbox3f>(shape.triangles.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& t     = shape.triangles[idx];
+      bboxes[idx] = triangle_bounds(
+          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+    }
   } else if (!shape.quads.empty()) {
-    return update_quads_bvh(shape.bvh, shape.quads, shape.positions);
+    bboxes = vector<bbox3f>(shape.quads.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& q     = shape.quads[idx];
+      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w]);
+    }
   } else if (!shape.quadspos.empty()) {
-    return update_quads_bvh(shape.bvh, shape.quadspos, shape.positions);
-  } else {
-    throw std::runtime_error("cannot support empty shapes");
+    bboxes = vector<bbox3f>(shape.quads.size());
+    for (auto idx = 0; idx < bboxes.size(); idx++) {
+      auto& q     = shape.quads[idx];
+      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+          shape.positions[q.z], shape.positions[q.w]);
+    }
   }
+
+  // update nodes
+  update_bvh(shape.bvh, bboxes);
 }
 
 void update_scene_bvh(trace_scene& scene, const vector<int>& updated_instances,
@@ -1344,20 +1759,21 @@ void update_scene_bvh(trace_scene& scene, const vector<int>& updated_instances,
   }
 #endif
 
-  // refit
-  update_instances_bvh(
-      scene.bvh, scene.instances.size(),
-      [&scene](
-          int instance) -> frame3f { return scene.instances[instance].frame; },
-      [&scene](int instance) -> bvh_tree& {
-        auto shape = scene.instances[instance].shape;
-        return scene.shapes[shape].bvh;
-      });
+  // build primitives
+  auto bboxes = vector<bbox3f>(scene.instances.size());
+  for (auto idx = 0; idx < bboxes.size(); idx++) {
+    auto& instance = scene.instances[idx];
+    auto& sbvh = scene.shapes[instance.shape].bvh;
+    bboxes[idx] = transform_bbox(instance.frame, sbvh.nodes[0].bbox);
+  }
+
+  // update nodes
+  update_bvh(scene.bvh, bboxes);
 }
 
 // Intersect ray with a bvh.
-static bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray_, int& element,
-    vec2f& uv, float& distance, bool find_any) {
+static bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray_,
+    int& element, vec2f& uv, float& distance, bool find_any) {
 #if YOCTO_EMBREE
   // call Embree if needed
   if (shape.embree.scene) {
@@ -1522,8 +1938,8 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
         auto& instance_ = scene.instances[scene.bvh.primitives[idx]];
         auto  inv_ray   = transform_ray(
             inverse(instance_.frame, non_rigid_frames), ray);
-        if (intersect_shape_bvh(scene.shapes[instance_.shape], inv_ray, element, uv,
-                distance, find_any)) {
+        if (intersect_shape_bvh(scene.shapes[instance_.shape], inv_ray, element,
+                uv, distance, find_any)) {
           hit      = true;
           instance = scene.bvh.primitives[idx];
           ray.tmax = distance;
@@ -1552,14 +1968,16 @@ bvh_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
     bool find_any, bool non_rigid_frames) {
   auto intersection = bvh_intersection{};
   intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
-      intersection.element, intersection.uv, intersection.distance, find_any, non_rigid_frames);
+      intersection.element, intersection.uv, intersection.distance, find_any,
+      non_rigid_frames);
   return intersection;
 }
 bvh_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection     = bvh_intersection{};
   intersection.hit      = intersect_instance_bvh(scene, instance, ray,
-      intersection.element, intersection.uv, intersection.distance, find_any, non_rigid_frames);
+      intersection.element, intersection.uv, intersection.distance, find_any,
+      non_rigid_frames);
   intersection.instance = instance;
   return intersection;
 }
