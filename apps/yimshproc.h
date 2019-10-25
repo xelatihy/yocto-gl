@@ -303,24 +303,23 @@ void click_callback(const opengl_window& win, bool left_click, bool press) {
 
   // Ray trace camera ray.
   if (!left_click && press) {
-    auto ray      = camera_ray(app.camera.frame, app.camera.lens,
+    auto ray          = camera_ray(app.camera.frame, app.camera.lens,
         app.camera.aspect >= 1
             ? vec2f{app.camera.film, app.camera.film / app.camera.aspect}
             : vec2f{app.camera.film * app.camera.aspect, app.camera.film},
         mouse + 0.5f);
-    auto face     = 0;
-    auto uv       = zero2f;
-    auto distance = 0.0f;
-    auto hit      = intersect_triangles_bvh(app.bvh, app.shape.triangles,
-        app.shape.positions, ray, face, uv, distance);
+    auto intersection = intersect_triangles_bvh(
+        app.bvh, app.shape.triangles, app.shape.positions, ray);
 
-    if (hit) {
-      auto uvw = vec3f{uv.x, uv.y, 1 - uv.x - uv.y};
+    if (intersection.hit) {
+      auto uvw = vec3f{intersection.uv.x, intersection.uv.y,
+          1 - intersection.uv.x - intersection.uv.y};
       int  k   = 0;
       if (uvw.x > uvw.y && uvw.x > uvw.z) k = 1;
       if (uvw.y > uvw.x && uvw.y > uvw.z) k = 2;
-      auto vertex = app.shape.triangles[face][k];
-      app.click_callback(app, face, uv, vertex, distance);
+      auto vertex = app.shape.triangles[intersection.element][k];
+      app.click_callback(app, intersection.element, intersection.uv, vertex,
+          intersection.distance);
     }
   }
 }

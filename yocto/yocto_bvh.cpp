@@ -823,88 +823,27 @@ static bool intersect_elements_bvh(const bvh_tree& bvh,
   return hit;
 }
 
-template <typename Frame, typename Intersect>
-static bool intersect_elements_bvh(const bvh_tree& bvh, Frame&& instance_frame,
-    Intersect&& intersect_shape, const ray3f& ray_, int& instance, int& element,
-    vec2f& uv, float& distance, bool find_any, bool non_rigid_frames) {
-  // check empty
-  if (bvh.nodes.empty()) return false;
-
-  // node stack
-  int  node_stack[128];
-  auto node_cur          = 0;
-  node_stack[node_cur++] = 0;
-
-  // shared variables
-  auto hit = false;
-
-  // copy ray to modify it
-  auto ray = ray_;
-
-  // prepare ray for fast queries
-  auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-  auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-      (ray_dinv.z < 0) ? 1 : 0};
-
-  // walking stack
-  while (node_cur) {
-    // grab node
-    auto& node = bvh.nodes[node_stack[--node_cur]];
-
-    // intersect bbox
-    // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
-    if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
-
-    // intersect node, switching based on node type
-    // for each type, iterate over the the primitive list
-    if (node.internal) {
-      // for internal nodes, attempts to proceed along the
-      // split axis from smallest to largest nodes
-      if (ray_dsign[node.axis]) {
-        node_stack[node_cur++] = node.start + 0;
-        node_stack[node_cur++] = node.start + 1;
-      } else {
-        node_stack[node_cur++] = node.start + 1;
-        node_stack[node_cur++] = node.start + 0;
-      }
-    } else {
-      for (auto idx = 0; idx < node.num; idx++) {
-        auto primitive = bvh.primitives[node.start + idx];
-        auto inv_ray   = transform_ray(
-            inverse(instance_frame(primitive), non_rigid_frames), ray);
-        if (intersect_shape(
-                primitive, inv_ray, element, uv, distance, find_any)) {
-          hit      = true;
-          instance = primitive;
-          ray.tmax = distance;
-        }
-      }
-    }
-
-    // check for early exit
-    if (find_any && hit) return hit;
-  }
-
-  return hit;
-}
-
 // Intersect ray with a bvh.
-bool intersect_points_bvh(const bvh_tree& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
-  return intersect_elements_bvh(
+bvh_intersection intersect_points_bvh(const bvh_tree& bvh,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<float>& radius, const ray3f& ray, bool find_any) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = intersect_elements_bvh(
       bvh,
       [&points, &positions, &radius](
           int idx, const ray3f& ray, vec2f& uv, float& distance) {
         auto& p = points[idx];
         return intersect_point(ray, positions[p], radius[p], uv, distance);
       },
-      ray, element, uv, distance, find_any);
+      ray, intersection.element, intersection.uv, intersection.distance,
+      find_any);
+  return intersection;
 }
-bool intersect_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
-  return intersect_elements_bvh(
+bvh_intersection intersect_lines_bvh(const bvh_tree& bvh,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<float>& radius, const ray3f& ray, bool find_any) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = intersect_elements_bvh(
       bvh,
       [&lines, &positions, &radius](
           int idx, const ray3f& ray, vec2f& uv, float& distance) {
@@ -912,12 +851,15 @@ bool intersect_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
         return intersect_line(ray, positions[l.x], positions[l.y], radius[l.x],
             radius[l.y], uv, distance);
       },
-      ray, element, uv, distance, find_any);
+      ray, intersection.element, intersection.uv, intersection.distance,
+      find_any);
+  return intersection;
 }
-bool intersect_triangles_bvh(const bvh_tree& bvh,
+bvh_intersection intersect_triangles_bvh(const bvh_tree& bvh,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any) {
-  return intersect_elements_bvh(
+    const ray3f& ray, bool find_any) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = intersect_elements_bvh(
       bvh,
       [&triangles, &positions](
           int idx, const ray3f& ray, vec2f& uv, float& distance) {
@@ -925,12 +867,15 @@ bool intersect_triangles_bvh(const bvh_tree& bvh,
         return intersect_triangle(
             ray, positions[t.x], positions[t.y], positions[t.z], uv, distance);
       },
-      ray, element, uv, distance, find_any);
+      ray, intersection.element, intersection.uv, intersection.distance,
+      find_any);
+  return intersection;
 }
-bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const ray3f& ray, int& element, vec2f& uv,
-    float& distance, bool find_any) {
-  return intersect_elements_bvh(
+bvh_intersection intersect_quads_bvh(const bvh_tree& bvh,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const ray3f& ray, bool find_any) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = intersect_elements_bvh(
       bvh,
       [&quads, &positions](
           int idx, const ray3f& ray, vec2f& uv, float& distance) {
@@ -938,7 +883,9 @@ bool intersect_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
         return intersect_quad(ray, positions[t.x], positions[t.y],
             positions[t.z], positions[t.w], uv, distance);
       },
-      ray, element, uv, distance, find_any);
+      ray, intersection.element, intersection.uv, intersection.distance,
+      find_any);
+  return intersection;
 }
 
 // Intersect ray with a bvh.
@@ -989,67 +936,16 @@ static bool overlap_elements_bvh(const bvh_tree& bvh, Overlap&& overlap_element,
   return hit;
 }
 
-// Intersect ray with a bvh.
-template <typename Frame, typename Overlap>
-bool overlap_elements_bvh(const bvh_tree& bvh, Frame&& instance_frame,
-    Overlap&& overlap_shape, const vec3f& pos, float max_distance,
-    int& instance, int& element, vec2f& uv, float& distance, bool find_any,
-    bool non_rigid_frames) {
-  // check if empty
-  if (bvh.nodes.empty()) return false;
-
-  // node stack
-  int  node_stack[64];
-  auto node_cur          = 0;
-  node_stack[node_cur++] = 0;
-
-  // hit
-  auto hit = false;
-
-  // walking stack
-  while (node_cur) {
-    // grab node
-    auto& node = bvh.nodes[node_stack[--node_cur]];
-
-    // intersect bbox
-    if (!distance_check_bbox(pos, max_distance, node.bbox)) continue;
-
-    // intersect node, switching based on node type
-    // for each type, iterate over the the primitive list
-    if (node.internal) {
-      // internal node
-      node_stack[node_cur++] = node.start + 0;
-      node_stack[node_cur++] = node.start + 1;
-    } else {
-      for (auto idx = 0; idx < node.num; idx++) {
-        auto primitive = bvh.primitives[node.start + idx];
-        auto inv_pos   = transform_point(
-            inverse(instance_frame(primitive), non_rigid_frames), pos);
-        if (overlap_shape(primitive, inv_pos, max_distance, element, uv,
-                distance, find_any)) {
-          hit          = true;
-          instance     = primitive;
-          max_distance = distance;
-        }
-      }
-    }
-
-    // check for early exit
-    if (find_any && hit) return hit;
-  }
-
-  return hit;
-}
-
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bool overlap_points_bvh(const bvh_tree& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const vec3f& pos, float max_distance, int& element, vec2f& uv,
-    float& distance, bool find_any) {
-  return overlap_elements_bvh(
+bvh_intersection overlap_points_bvh(const bvh_tree& bvh,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<float>& radius, const vec3f& pos, float max_distance,
+    bool find_any) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = overlap_elements_bvh(
       bvh,
       [&points, &positions, &radius](int idx, const vec3f& pos,
           float max_distance, vec2f& uv, float& distance) {
@@ -1057,13 +953,16 @@ bool overlap_points_bvh(const bvh_tree& bvh, const vector<int>& points,
         return overlap_point(
             pos, max_distance, positions[p], radius[p], uv, distance);
       },
-      pos, max_distance, element, uv, distance, find_any);
+      pos, max_distance, intersection.element, intersection.uv,
+      intersection.distance, find_any);
+  return intersection;
 }
-bool overlap_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const vec3f& pos, float max_distance, int& element, vec2f& uv,
-    float& distance, bool find_any) {
-  return overlap_elements_bvh(
+bvh_intersection overlap_lines_bvh(const bvh_tree& bvh,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<float>& radius, const vec3f& pos, float max_distance,
+    bool find_any) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = overlap_elements_bvh(
       bvh,
       [&lines, &positions, &radius](int idx, const vec3f& pos,
           float max_distance, vec2f& uv, float& distance) {
@@ -1071,13 +970,16 @@ bool overlap_lines_bvh(const bvh_tree& bvh, const vector<vec2i>& lines,
         return overlap_line(pos, max_distance, positions[l.x], positions[l.y],
             radius[l.x], radius[l.y], uv, distance);
       },
-      pos, max_distance, element, uv, distance, find_any);
+      pos, max_distance, intersection.element, intersection.uv,
+      intersection.distance, find_any);
+  return intersection;
 }
-bool overlap_triangles_bvh(const bvh_tree& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const vec3f& pos, float max_distance, int& element, vec2f& uv,
-    float& distance, bool find_any) {
-  return overlap_elements_bvh(
+bvh_intersection overlap_triangles_bvh(const bvh_tree& bvh,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<float>& radius, const vec3f& pos, float max_distance,
+    bool find_any) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = overlap_elements_bvh(
       bvh,
       [&triangles, &positions, &radius](int idx, const vec3f& pos,
           float max_distance, vec2f& uv, float& distance) {
@@ -1086,13 +988,16 @@ bool overlap_triangles_bvh(const bvh_tree& bvh, const vector<vec3i>& triangles,
             positions[t.y], positions[t.z], radius[t.x], radius[t.y],
             radius[t.z], uv, distance);
       },
-      pos, max_distance, element, uv, distance, find_any);
+      pos, max_distance, intersection.element, intersection.uv,
+      intersection.distance, find_any);
+  return intersection;
 }
-bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const vec3f& pos, float max_distance, int& element, vec2f& uv,
-    float& distance, bool find_any) {
-  return overlap_elements_bvh(
+bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<float>& radius, const vec3f& pos, float max_distance,
+    bool find_any) {
+  auto intersection = bvh_intersection{};
+  intersection.hit  = overlap_elements_bvh(
       bvh,
       [&quads, &positions, &radius](int idx, const vec3f& pos,
           float max_distance, vec2f& uv, float& distance) {
@@ -1101,7 +1006,9 @@ bool overlap_quads_bvh(const bvh_tree& bvh, const vector<vec4i>& quads,
             positions[q.z], positions[q.w], radius[q.x], radius[q.y],
             radius[q.z], radius[q.w], uv, distance);
       },
-      pos, max_distance, element, uv, distance, find_any);
+      pos, max_distance, intersection.element, intersection.uv,
+      intersection.distance, find_any);
+  return intersection;
 }
 
 }  // namespace yocto
@@ -1270,7 +1177,7 @@ void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
 }
 
 // Intersect ray with a bvh.
-bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray_,
+static bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray_,
     int& element, vec2f& uv, float& distance, bool find_any) {
 #if YOCTO_EMBREE
   // call Embree if needed
@@ -1380,7 +1287,7 @@ bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh.
-bool intersect_scene_bvh(const bvh_scene& scene, const ray3f& ray_,
+static bool intersect_scene_bvh(const bvh_scene& scene, const ray3f& ray_,
     int& instance, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
 #if YOCTO_EMBREE
@@ -1453,7 +1360,7 @@ bool intersect_scene_bvh(const bvh_scene& scene, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh.
-bool intersect_instance_bvh(const bvh_scene& scene, int instance,
+static bool intersect_instance_bvh(const bvh_scene& scene, int instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
   auto& instance_ = scene.instances[instance];
@@ -1463,7 +1370,7 @@ bool intersect_instance_bvh(const bvh_scene& scene, int instance,
 }
 
 // Intersect ray with a bvh.
-bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
+static bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
     float max_distance, int& element, vec2f& uv, float& distance,
     bool find_any) {
   // check if empty
@@ -1562,7 +1469,7 @@ bool overlap_shape_bvh(const bvh_shape& shape, const vec3f& pos,
 }
 
 // Intersect ray with a bvh.
-bool overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
+static bool overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
     float max_distance, int& instance, int& element, vec2f& uv, float& distance,
     bool find_any, bool non_rigid_frames) {
   // check if empty
@@ -1684,14 +1591,16 @@ bvh_intersection intersect_scene_bvh(const bvh_scene& scene, const ray3f& ray,
     bool find_any, bool non_rigid_frames) {
   auto intersection = bvh_intersection{};
   intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
-      intersection.element, intersection.uv, intersection.distance, find_any);
+      intersection.element, intersection.uv, intersection.distance, find_any,
+      non_rigid_frames);
   return intersection;
 }
 bvh_intersection intersect_instance_bvh(const bvh_scene& scene, int instance,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection     = bvh_intersection{};
   intersection.hit      = intersect_instance_bvh(scene, instance, ray,
-      intersection.element, intersection.uv, intersection.distance, find_any);
+      intersection.element, intersection.uv, intersection.distance, find_any,
+      non_rigid_frames);
   intersection.instance = instance;
   return intersection;
 }
@@ -1708,7 +1617,7 @@ bvh_intersection overlap_scene_bvh(const bvh_scene& scene, const vec3f& pos,
   auto intersection = bvh_intersection{};
   intersection.hit  = overlap_scene_bvh(scene, pos, max_distance,
       intersection.instance, intersection.element, intersection.uv,
-      intersection.distance, find_any);
+      intersection.distance, find_any, non_rigid_frames);
   return intersection;
 }
 
