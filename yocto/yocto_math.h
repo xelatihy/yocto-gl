@@ -2396,8 +2396,8 @@ inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 }
 
 // Intersect a ray with a triangle
-inline bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, vec2f& uv, float& dist) {
+inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist) {
   // compute triangle edges
   auto edge1 = p1 - p0;
   auto edge2 = p2 - p0;
@@ -2488,8 +2488,8 @@ inline bool intersect_bbox(
 namespace yocto {
 
 // TODO: documentation
-inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
-    vec2f& uv, float& dist) {
+inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
+    float r, vec2f& uv, float& dist) {
   auto d2 = dot(pos - p, pos - p);
   if (d2 > (dist_max + r) * (dist_max + r)) return false;
   uv   = {0, 0};
@@ -2498,7 +2498,8 @@ inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, floa
 }
 
 // TODO: documentation
-inline float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1) {
+inline float closestuv_line(
+    const vec3f& pos, const vec3f& p0, const vec3f& p1) {
   auto ab = p1 - p0;
   auto d  = dot(ab, ab);
   // Project c onto ab, computing parameterized position d(t) = a + t*(b –

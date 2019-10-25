@@ -264,8 +264,8 @@ struct bvh_shape {
 
 // instance
 struct bvh_instance {
-frame3f frame = identity3x4f;
-int     shape = -1;
+  frame3f frame = identity3x4f;
+  int     shape = -1;
 };
 
 // BVH data for whole shapes. This interface makes copies of all the data.

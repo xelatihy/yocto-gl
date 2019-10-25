@@ -1763,8 +1763,8 @@ void update_scene_bvh(trace_scene& scene, const vector<int>& updated_instances,
   auto bboxes = vector<bbox3f>(scene.instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& instance = scene.instances[idx];
-    auto& sbvh = scene.shapes[instance.shape].bvh;
-    bboxes[idx] = transform_bbox(instance.frame, sbvh.nodes[0].bbox);
+    auto& sbvh     = scene.shapes[instance.shape].bvh;
+    bboxes[idx]    = transform_bbox(instance.frame, sbvh.nodes[0].bbox);
   }
 
   // update nodes
