@@ -253,7 +253,7 @@ struct trace_scene {
   vector<trace_light> lights = {};
   trace_bvh           bvh    = {};
 #if YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh    = {};
+  std::shared_ptr<void> embree_bvh = {};
 #endif
 };
 

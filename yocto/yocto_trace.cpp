@@ -1218,30 +1218,32 @@ static void init_shape_embree_bvh(
     throw std::runtime_error("empty shapes not supported");
   }
   rtcCommitScene(escene);
-  shape.embree_bvh = std::shared_ptr<void>{ escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); } };
+  shape.embree_bvh = std::shared_ptr<void>{
+      escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); }};
 }
 
 static void init_scene_embree_bvh(
     trace_scene& scene, const bvh_params& params) {
   // scene bvh
   auto edevice = trace_embree_device();
-  auto escene = rtcNewScene(edevice);
+  auto escene  = rtcNewScene(edevice);
   if (params.compact) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.high_quality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
-    auto& instance = scene.instances[instance_id];
-    auto& shape    = scene.shapes[instance.shape];
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
+    auto& instance  = scene.instances[instance_id];
+    auto& shape     = scene.shapes[instance.shape];
+    auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
-    rtcSetGeometryTransform(egeometry, 0,
-        RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+    rtcSetGeometryTransform(
+        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
     rtcCommitGeometry(egeometry);
     rtcAttachGeometryByID(escene, egeometry, instance_id);
   }
   rtcCommitScene(escene);
-  scene.embree_bvh = std::shared_ptr<void>{ escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); } };
+  scene.embree_bvh = std::shared_ptr<void>{
+      escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); }};
 }
 
 static void update_scene_embree_bvh(
@@ -1249,9 +1251,9 @@ static void update_scene_embree_bvh(
   // scene bvh
   auto escene = (RTCScene)scene.embree_bvh.get();
   for (auto instance_id : updated_instances) {
-    auto& instance = scene.instances[instance_id];
-    auto& shape    = scene.shapes[instance.shape];
-    auto egeometry = rtcGetGeometry(escene, instance_id);
+    auto& instance  = scene.instances[instance_id];
+    auto& shape     = scene.shapes[instance.shape];
+    auto  egeometry = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
