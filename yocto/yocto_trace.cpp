@@ -1218,7 +1218,7 @@ static void init_shape_embree_bvh(
     throw std::runtime_error("empty shapes not supported");
   }
   rtcCommitScene(escene);
-  shape.embree_bvh = shared_ptr<void>{ escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); } };
+  shape.embree_bvh = std::shared_ptr<void>{ escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); } };
 }
 
 static void init_scene_embree_bvh(
@@ -1241,7 +1241,7 @@ static void init_scene_embree_bvh(
     rtcAttachGeometryByID(escene, egeometry, instance_id);
   }
   rtcCommitScene(escene);
-  scene.embree_bvh = shared_ptr<void>{ escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); } };
+  scene.embree_bvh = std::shared_ptr<void>{ escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); } };
 }
 
 static void update_scene_embree_bvh(

@@ -69,15 +69,14 @@
 #include "yocto_math.h"
 #include "yocto_sceneio.h"
 
+#if YOCTO_EMBREE
 #include <memory>
+#endif
 
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Using directives
-using std::shared_ptr;
 
 // Maximum number of primitives per BVH node.
 const int trace_bvh_max_prims = 4;
@@ -210,7 +209,7 @@ struct trace_shape {
   // computed properties
   trace_bvh bvh = {};
 #if YOCTO_EMBREE
-  shared_ptr<void> embree_bvh = {};
+  std::shared_ptr<void> embree_bvh = {};
 #endif
 };
 
@@ -254,7 +253,7 @@ struct trace_scene {
   vector<trace_light> lights = {};
   trace_bvh           bvh    = {};
 #if YOCTO_EMBREE
-  shared_ptr<void> embree_bvh    = {};
+  std::shared_ptr<void> embree_bvh    = {};
 #endif
 };
 
