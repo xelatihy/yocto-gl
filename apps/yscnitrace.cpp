@@ -707,7 +707,6 @@ int main(int argc, const char* argv[]) {
 
   // fix parallel code
   if (no_parallel) {
-    app.bvh_prms.noparallel   = true;
     app.load_prms.noparallel  = true;
     app.save_prms.noparallel  = true;
     app.trace_prms.noparallel = true;

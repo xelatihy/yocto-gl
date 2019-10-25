@@ -1091,11 +1091,11 @@ static RTCDevice     trace_embree_device() {
 
 // Initialize Embree BVH
 static void init_shape_embree_bvh(
-    trace_shape& shape, const bvh_params& params) {
+    trace_shape& shape, const trace_params& params) {
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
-  if (params.compact) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.high_quality)
+  if (params.compact_bvh) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  if (params.highquality_bvh)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   if (!shape.points.empty()) {
     throw std::runtime_error("embree does not support points");
@@ -1128,7 +1128,7 @@ static void init_shape_embree_bvh(
   } else if (!shape.triangles.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_TRIANGLE);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.compact) {
+    if (params.compact_bvh) {
       rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
           RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
           shape.positions.size());
@@ -1152,7 +1152,7 @@ static void init_shape_embree_bvh(
   } else if (!shape.quads.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.compact) {
+    if (params.compact_bvh) {
       rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
           RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
           shape.positions.size());
@@ -1174,7 +1174,7 @@ static void init_shape_embree_bvh(
   } else if (!shape.quadspos.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.compact) {
+    if (params.compact_bvh) {
       rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
           RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
           shape.positions.size());
@@ -1203,12 +1203,12 @@ static void init_shape_embree_bvh(
 }
 
 static void init_scene_embree_bvh(
-    trace_scene& scene, const bvh_params& params) {
+    trace_scene& scene, const trace_params& params) {
   // scene bvh
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
-  if (params.compact) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.high_quality)
+  if (params.compact_bvh) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  if (params.highquality_bvh)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
@@ -1619,10 +1619,10 @@ static void update_bvh(trace_bvh& bvh, const vector<bbox3f>& bboxes) {
   }
 }
 
-static void init_shape_bvh(trace_shape& shape, const bvh_params& params) {
+static void init_shape_bvh(trace_shape& shape, const trace_params& params) {
 #if YOCTO_EMBREE
   // call Embree if needed
-  if (params.embree) {
+  if (params.embree_bvh) {
     return init_shape_embree_bvh(shape, params);
   }
 #endif
@@ -1667,20 +1667,20 @@ static void init_shape_bvh(trace_shape& shape, const bvh_params& params) {
 
   // build nodes
   if (params.noparallel) {
-    build_bvh_serial(shape.bvh, bboxes, params.high_quality);
+    build_bvh_serial(shape.bvh, bboxes, params.highquality_bvh);
   } else {
-    build_bvh_parallel(shape.bvh, bboxes, params.high_quality);
+    build_bvh_parallel(shape.bvh, bboxes, params.highquality_bvh);
   }
 }
 
-void init_scene_bvh(trace_scene& scene, const bvh_params& params) {
+void init_scene_bvh(trace_scene& scene, const trace_params& params) {
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
     init_shape_bvh(scene.shapes[idx], params);
   }
 
   // embree
 #if YOCTO_EMBREE
-  if (params.embree) {
+  if (params.embree_bvh) {
     return init_scene_embree_bvh(scene, params);
   }
 #endif
@@ -1697,15 +1697,15 @@ void init_scene_bvh(trace_scene& scene, const bvh_params& params) {
 
   // build nodes
   if (params.noparallel) {
-    build_bvh_serial(scene.bvh, bboxes, params.high_quality);
+    build_bvh_serial(scene.bvh, bboxes, params.highquality_bvh);
   } else {
-    build_bvh_parallel(scene.bvh, bboxes, params.high_quality);
+    build_bvh_parallel(scene.bvh, bboxes, params.highquality_bvh);
   }
 }
 
-static void update_shape_bvh(trace_shape& shape, const bvh_params& params) {
+static void update_shape_bvh(trace_shape& shape, const trace_params& params) {
 #if YOCTO_EMBREE
-  if (params.embree) {
+  if (params.embree_bvh) {
     throw std::runtime_error("embree shape update not implemented");
   }
 #endif
@@ -1753,13 +1753,13 @@ static void update_shape_bvh(trace_shape& shape, const bvh_params& params) {
 }
 
 void update_scene_bvh(trace_scene& scene, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes, const bvh_params& params) {
+    const vector<int>& updated_shapes, const trace_params& params) {
   // update shapes
   for (auto shape : updated_shapes)
     update_shape_bvh(scene.shapes[shape], params);
 
 #if YOCTO_EMBREE
-  if (params.embree) {
+  if (params.embree_bvh) {
     update_scene_embree_bvh(scene, updated_instances);
   }
 #endif
