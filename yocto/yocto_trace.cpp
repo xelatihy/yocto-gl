@@ -36,6 +36,10 @@
 #include "yocto_trace.h"
 #include "yocto_shape.h"
 
+#if YOCTO_EMBREE
+#include <embree3/rtcore.h>
+#endif
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
@@ -1049,7 +1053,9 @@ namespace yocto {
 
 #if YOCTO_EMBREE
 // copies
-trace_bvh_embree::trace_bvh_embree(const trace_bvh_embree& other) { *this = other; }
+trace_bvh_embree::trace_bvh_embree(const trace_bvh_embree& other) {
+  *this = other;
+}
 trace_bvh_embree& trace_bvh_embree::operator=(const trace_bvh_embree& other) {
   shape  = other.shape;
   scene  = other.scene;
@@ -1100,19 +1106,17 @@ static RTCDevice     trace_embree_device() {
         },
         nullptr);
   }
-  rtcRetainDevice(device);
   return device;
 }
 
 // Initialize Embree BVH
 static void init_shape_embree_bvh(
     trace_shape& shape, const bvh_params& params) {
-  shape.embree.device = trace_embree_device();
-  shape.embree.scene  = rtcNewScene(shape.embree.device);
-  if (params.compact)
-    rtcSetSceneFlags(shape.embree.scene, RTC_SCENE_FLAG_COMPACT);
+  auto edevice = trace_embree_device();
+  auto escene  = rtcNewScene(edevice);
+  if (params.compact) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.high_quality)
-    rtcSetSceneBuildQuality(shape.embree.scene, RTC_BUILD_QUALITY_HIGH);
+    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   if (!shape.points.empty()) {
     throw std::runtime_error("embree does not support points");
   } else if (!shape.lines.empty()) {
@@ -1130,31 +1134,32 @@ static void init_shape_embree_bvh(
       }
       last_index = l.y;
     }
-    shape.embree.shape = rtcNewGeometry(
-        shape.embree.device, RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
-    rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
-    auto embree_positions = rtcSetNewGeometryBuffer(shape.embree.shape,
+    auto egeometry = rtcNewGeometry(
+        edevice, RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE);
+    rtcSetGeometryVertexAttributeCount(egeometry, 1);
+    auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
         RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT4, 4 * 4, epositions.size());
-    auto embree_lines     = rtcSetNewGeometryBuffer(shape.embree.shape,
-        RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
+    auto embree_lines     = rtcSetNewGeometryBuffer(
+        egeometry, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, 4, elines.size());
     memcpy(embree_positions, epositions.data(), epositions.size() * 16);
     memcpy(embree_lines, elines.data(), elines.size() * 4);
+    rtcCommitGeometry(egeometry);
+    rtcAttachGeometryByID(escene, egeometry, 0);
   } else if (!shape.triangles.empty()) {
-    shape.embree.shape = rtcNewGeometry(
-        shape.embree.device, RTC_GEOMETRY_TYPE_TRIANGLE);
-    rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
+    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_TRIANGLE);
+    rtcSetGeometryVertexAttributeCount(egeometry, 1);
     if (params.compact) {
-      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_VERTEX, 0,
+      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
           RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
           shape.positions.size());
-      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_INDEX, 0,
+      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
           RTC_FORMAT_UINT3, shape.triangles.data(), 0, 3 * 4,
           shape.triangles.size());
     } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(shape.embree.shape,
+      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
           RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
           shape.positions.size());
-      auto embree_triangles = rtcSetNewGeometryBuffer(shape.embree.shape,
+      auto embree_triangles = rtcSetNewGeometryBuffer(egeometry,
           RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
           shape.triangles.size());
       memcpy(embree_positions, shape.positions.data(),
@@ -1162,97 +1167,97 @@ static void init_shape_embree_bvh(
       memcpy(embree_triangles, shape.triangles.data(),
           shape.triangles.size() * 12);
     }
+    rtcCommitGeometry(egeometry);
+    rtcAttachGeometryByID(escene, egeometry, 0);
   } else if (!shape.quads.empty()) {
-    shape.embree.shape = rtcNewGeometry(
-        shape.embree.device, RTC_GEOMETRY_TYPE_QUAD);
-    rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
+    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
+    rtcSetGeometryVertexAttributeCount(egeometry, 1);
     if (params.compact) {
-      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_VERTEX, 0,
+      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
           RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
           shape.positions.size());
-      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_INDEX, 0,
+      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
           RTC_FORMAT_UINT4, shape.quads.data(), 0, 4 * 4, shape.quads.size());
     } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(shape.embree.shape,
+      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
           RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
           shape.positions.size());
-      auto embree_quads     = rtcSetNewGeometryBuffer(shape.embree.shape,
+      auto embree_quads     = rtcSetNewGeometryBuffer(egeometry,
           RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
           shape.quads.size());
       memcpy(embree_positions, shape.positions.data(),
           shape.positions.size() * 12);
       memcpy(embree_quads, shape.quads.data(), shape.quads.size() * 16);
     }
+    rtcCommitGeometry(egeometry);
+    rtcAttachGeometryByID(escene, egeometry, 0);
   } else if (!shape.quadspos.empty()) {
-    shape.embree.shape = rtcNewGeometry(
-        shape.embree.device, RTC_GEOMETRY_TYPE_QUAD);
-    rtcSetGeometryVertexAttributeCount(shape.embree.shape, 1);
+    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
+    rtcSetGeometryVertexAttributeCount(egeometry, 1);
     if (params.compact) {
-      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_VERTEX, 0,
+      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
           RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
           shape.positions.size());
-      rtcSetSharedGeometryBuffer(shape.embree.shape, RTC_BUFFER_TYPE_INDEX, 0,
+      rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_INDEX, 0,
           RTC_FORMAT_UINT4, shape.quadspos.data(), 0, 4 * 4,
           shape.quadspos.size());
     } else {
-      auto embree_positions = rtcSetNewGeometryBuffer(shape.embree.shape,
+      auto embree_positions = rtcSetNewGeometryBuffer(egeometry,
           RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
           shape.positions.size());
-      auto embree_quads     = rtcSetNewGeometryBuffer(shape.embree.shape,
+      auto embree_quads     = rtcSetNewGeometryBuffer(egeometry,
           RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
           shape.quadspos.size());
       memcpy(embree_positions, shape.positions.data(),
           shape.positions.size() * 12);
       memcpy(embree_quads, shape.quadspos.data(), shape.quadspos.size() * 16);
     }
+    rtcCommitGeometry(egeometry);
+    rtcAttachGeometryByID(escene, egeometry, 0);
   } else {
     throw std::runtime_error("empty shapes not supported");
   }
-  rtcCommitGeometry(shape.embree.shape);
-  rtcAttachGeometryByID(shape.embree.scene, shape.embree.shape, 0);
-  rtcCommitScene(shape.embree.scene);
+  rtcCommitScene(escene);
+  shape.embree_bvh = shared_ptr<void>{ escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); } };
 }
 
 static void init_scene_embree_bvh(
     trace_scene& scene, const bvh_params& params) {
   // scene bvh
-  scene.embree.device = trace_embree_device();
-  scene.embree.scene  = rtcNewScene(scene.embree.device);
-  if (params.compact)
-    rtcSetSceneFlags(scene.embree.scene, RTC_SCENE_FLAG_COMPACT);
+  auto edevice = trace_embree_device();
+  auto escene = rtcNewScene(edevice);
+  if (params.compact) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.high_quality)
-    rtcSetSceneBuildQuality(scene.embree.scene, RTC_BUILD_QUALITY_HIGH);
+    rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
     auto& instance = scene.instances[instance_id];
-    auto& sbvh     = scene.shapes[instance.shape].embree;
-    if (!sbvh.scene) throw std::runtime_error("bvh not built");
-    scene.embree.instances.push_back(
-        rtcNewGeometry(scene.embree.device, RTC_GEOMETRY_TYPE_INSTANCE));
-    rtcSetGeometryInstancedScene(scene.embree.instances.back(), sbvh.scene);
-    rtcSetGeometryTransform(scene.embree.instances.back(), 0,
+    auto& shape    = scene.shapes[instance.shape];
+    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
+    rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
+    rtcSetGeometryTransform(egeometry, 0,
         RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
-    rtcCommitGeometry(scene.embree.instances.back());
-    rtcAttachGeometryByID(
-        scene.embree.scene, scene.embree.instances.back(), instance_id);
+    rtcCommitGeometry(egeometry);
+    rtcAttachGeometryByID(escene, egeometry, instance_id);
   }
-  rtcCommitScene(scene.embree.scene);
+  rtcCommitScene(escene);
+  scene.embree_bvh = shared_ptr<void>{ escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); } };
 }
 
 static void update_scene_embree_bvh(
     trace_scene& scene, const vector<int>& updated_instances) {
   // scene bvh
+  auto escene = (RTCScene)scene.embree_bvh.get();
   for (auto instance_id : updated_instances) {
     auto& instance = scene.instances[instance_id];
-    auto& sbvh     = scene.shapes[instance.shape].embree;
-    if (!sbvh.scene) throw std::runtime_error("bvh not built");
-    auto embree_geom = rtcGetGeometry(scene.embree.scene, instance_id);
-    rtcSetGeometryInstancedScene(embree_geom, sbvh.scene);
+    auto& shape    = scene.shapes[instance.shape];
+    auto egeometry = rtcGetGeometry(escene, instance_id);
+    rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
     rtcSetGeometryTransform(
-        embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
-    rtcCommitGeometry(embree_geom);
+        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+    rtcCommitGeometry(egeometry);
   }
-  rtcCommitScene(scene.embree.scene);
+  rtcCommitScene(escene);
 }
 
 static bool intersect_shape_embree_bvh(const trace_shape& shape,
@@ -1271,7 +1276,7 @@ static bool intersect_shape_embree_bvh(const trace_shape& shape,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1(shape.embree.scene, &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)shape.embree_bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
   element  = (int)embree_ray.hit.primID;
   uv       = {embree_ray.hit.u, embree_ray.hit.v};
@@ -1296,7 +1301,7 @@ static bool intersect_scene_embree_bvh(const trace_scene& scene,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1(scene.embree.scene, &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)scene.embree_bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
   instance = (int)embree_ray.hit.instID[0];
   element  = (int)embree_ray.hit.primID;
@@ -1794,7 +1799,7 @@ static bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray_,
     int& element, vec2f& uv, float& distance, bool find_any) {
 #if YOCTO_EMBREE
   // call Embree if needed
-  if (shape.embree.scene) {
+  if (shape.embree_bvh) {
     return intersect_shape_embree_bvh(
         shape, ray_, element, uv, distance, find_any);
   }
@@ -1905,7 +1910,7 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
     bool non_rigid_frames) {
 #if YOCTO_EMBREE
   // call Embree if needed
-  if (scene.embree.scene) {
+  if (scene.embree_bvh) {
     return intersect_scene_embree_bvh(
         scene, ray_, instance, element, uv, distance, find_any);
   }
@@ -1982,16 +1987,16 @@ static bool intersect_instance_bvh(const trace_scene& scene, int instance,
       scene.shapes[instance_.shape], inv_ray, element, uv, distance, find_any);
 }
 
-trace_intersection intersect_scene_bvh(const trace_scene& scene, const ray3f& ray,
-    bool find_any, bool non_rigid_frames) {
+trace_intersection intersect_scene_bvh(const trace_scene& scene,
+    const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = trace_intersection{};
   intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
       intersection.element, intersection.uv, intersection.distance, find_any,
       non_rigid_frames);
   return intersection;
 }
-trace_intersection intersect_instance_bvh(const trace_scene& scene, int instance,
-    const ray3f& ray, bool find_any, bool non_rigid_frames) {
+trace_intersection intersect_instance_bvh(const trace_scene& scene,
+    int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection     = trace_intersection{};
   intersection.hit      = intersect_instance_bvh(scene, instance, ray,
       intersection.element, intersection.uv, intersection.distance, find_any,
