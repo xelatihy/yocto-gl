@@ -1431,7 +1431,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
 
 // Build BVH nodes
 static void build_bvh_serial(
-    bvh_tree& bvh, vector<bbox3f>& bboxes, bool high_quality) {
+    trace_bvh_tree& bvh, vector<bbox3f>& bboxes, bool high_quality) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -1499,7 +1499,7 @@ static void build_bvh_serial(
 
 // Build BVH nodes
 static void build_bvh_parallel(
-    bvh_tree& bvh, vector<bbox3f>& bboxes, bool high_quality) {
+    trace_bvh_tree& bvh, vector<bbox3f>& bboxes, bool high_quality) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -1598,7 +1598,7 @@ static void build_bvh_parallel(
 }
 
 // Update bvh
-static void update_bvh(bvh_tree& bvh, const vector<bbox3f>& bboxes) {
+static void update_bvh(trace_bvh_tree& bvh, const vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
     auto& node = bvh.nodes[nodeid];
     node.bbox  = invalidb3f;
