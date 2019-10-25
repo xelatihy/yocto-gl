@@ -44,7 +44,6 @@ struct app_state {
   // options
   load_params    load_prms     = {};
   save_params    save_prms     = {};
-  bvh_params     bvh_prms      = {};
   trace_params   trace_prms    = {};
   tonemap_params tonemap_prms  = {};
   int            preview_ratio = 8;
@@ -218,12 +217,12 @@ int main(int argc, const char* argv[]) {
       cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
   add_cli_option(cli, "--srgb/--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
   add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
-      app.bvh_prms.high_quality, "Use high quality bvh mode");
+      app.trace_prms.highquality_bvh, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.bvh_prms.embree,
+  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.trace_prms.embree_bvh,
       "Use Embree ratracer");
   add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      app.bvh_prms.compact, "Embree runs in compact memory");
+      app.trace_prms.compact_bvh, "Embree runs in compact memory");
 #endif
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
   add_cli_option(cli, "--output,-o", app.imagename, "Image output", false);
@@ -232,7 +231,6 @@ int main(int argc, const char* argv[]) {
 
   // fix parallel code
   if (no_parallel) {
-    app.bvh_prms.noparallel   = true;
     app.load_prms.noparallel  = true;
     app.save_prms.noparallel  = true;
     app.trace_prms.noparallel = true;
@@ -255,7 +253,7 @@ int main(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_scene_bvh(app.scene, app.bvh_prms);
+  init_scene_bvh(app.scene, app.trace_prms);
   print_elapsed(bvh_timer);
 
   // init renderer

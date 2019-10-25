@@ -37,7 +37,6 @@ using namespace yocto;
 int main(int argc, const char* argv[]) {
   // options
   auto load_prms    = load_params{};
-  auto bvh_prms     = bvh_params{};
   auto trace_prms   = trace_params{};
   auto tonemap_prms = tonemap_params{};
   auto noparallel   = false;
@@ -84,12 +83,12 @@ int main(int argc, const char* argv[]) {
       cli, "--filmic/--no-filmic", tonemap_prms.filmic, "Hdr filmic");
   add_cli_option(cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Hdr srgb");
   add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
-      bvh_prms.high_quality, "Use high quality bvh mode");
+      trace_prms.highquality_bvh, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", bvh_prms.embree,
+  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", trace_prms.embree_bvh,
       "Use Embree ratracer");
   add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      bvh_prms.compact, "Embree runs in compact memory");
+      trace_prms.compact_bvh, "Embree runs in compact memory");
 #endif
   add_cli_option(cli, "--add-skyenv", add_skyenv, "Add sky envmap");
   add_cli_option(cli, "--output-image,-o", imfilename, "Image filename");
@@ -100,7 +99,6 @@ int main(int argc, const char* argv[]) {
 
   // fix parallel code
   if (noparallel) {
-    bvh_prms.noparallel  = true;
     load_prms.noparallel = true;
   }
 
@@ -129,7 +127,7 @@ int main(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_scene_bvh(scene, bvh_prms);
+  init_scene_bvh(scene, trace_prms);
   print_elapsed(bvh_timer);
 
   // init renderer
