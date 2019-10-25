@@ -98,7 +98,7 @@ struct trace_bvh_node {
 // array indices. BVH nodes indices refer to either the node array,
 // for internal nodes, or the primitive arrays, for leaf nodes.
 // Application data is not stored explicitly.
-struct trace_bvh_tree {
+struct trace_bvh {
   vector<trace_bvh_node> nodes      = {};
   vector<int>            primitives = {};
 };
@@ -208,7 +208,7 @@ struct trace_shape {
   vector<vec4f> tangents  = {};
 
   // computed properties
-  trace_bvh_tree bvh = {};
+  trace_bvh bvh = {};
 #if YOCTO_EMBREE
   trace_bvh_embree embree = {};
 #endif
@@ -252,7 +252,7 @@ struct trace_scene {
 
   // computed properties
   vector<trace_light> lights = {};
-  trace_bvh_tree            bvh    = {};
+  trace_bvh            bvh    = {};
 #if YOCTO_EMBREE
   trace_bvh_embree embree     = {};
   bool       use_embree = false;
