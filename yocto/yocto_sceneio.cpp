@@ -1308,7 +1308,7 @@ namespace yocto {
 void load_obj(
     const string& filename, scene_model& scene, const load_params& params) {
   // load obj
-  auto obj = yobj::obj_model{};
+  auto obj = yobj::model{};
   load_obj(filename, obj, false, true, true);
 
   // convert cameras
@@ -1347,7 +1347,7 @@ void load_obj(
     material.emission         = omat.emission;
     material.diffuse          = omat.diffuse;
     material.specular         = omat.specular;
-    material.roughness        = yobj::obj_exponent_to_roughness(omat.exponent);
+    material.roughness        = yobj::exponent_to_roughness(omat.exponent);
     material.metallic         = omat.pbr_metallic;
     material.coat             = omat.reflection;
     material.transmission     = omat.transmission;
@@ -1463,7 +1463,7 @@ static void load_obj_scene(
 
 static void save_obj(const string& filename, const scene_model& scene,
     const save_params& params) {
-  auto obj = yobj::obj_model{};
+  auto obj = yobj::model{};
 
   // convert cameras
   for (auto& camera : scene.cameras) {
@@ -1494,7 +1494,7 @@ static void save_obj(const string& filename, const scene_model& scene,
     omaterial.emission          = material.emission;
     omaterial.diffuse           = material.diffuse;
     omaterial.specular          = material.specular;
-    omaterial.exponent          = yobj::obj_roughness_to_exponent(material.roughness);
+    omaterial.exponent          = yobj::roughness_to_exponent(material.roughness);
     omaterial.pbr_metallic      = material.metallic;
     omaterial.reflection        = material.coat;
     omaterial.transmission      = material.transmission;

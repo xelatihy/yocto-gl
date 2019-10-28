@@ -71,7 +71,6 @@ struct texture_info {
   unordered_map<string, vector<float>> props;
 
   texture_info() {}
-  texture_info(const char* path) : path{path} {}
   texture_info(const string& path) : path{path} {}
 };
 
@@ -172,7 +171,7 @@ struct environment {
 };
 
 // Obj model
-struct obj_model {
+struct model {
   vector<string>          comments     = {};
   vector<shape>       shapes       = {};
   vector<material>    materials    = {};
@@ -181,36 +180,36 @@ struct obj_model {
 };
 
 // Load and save obj
-inline void load_obj(const string& filename, obj_model& obj,
+inline void load_obj(const string& filename, model& obj,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-inline void save_obj(const string& filename, const obj_model& obj);
+inline void save_obj(const string& filename, const model& obj);
 
 // convert between roughness and exponent
-inline float obj_exponent_to_roughness(float exponent);
-inline float obj_roughness_to_exponent(float roughness);
+inline float exponent_to_roughness(float exponent);
+inline float roughness_to_exponent(float roughness);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-inline void get_obj_triangles(const obj_model& obj, const shape& shape,
+inline void get_obj_triangles(const model& obj, const shape& shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-inline void get_obj_quads(const obj_model& obj, const shape& shape,
+inline void get_obj_quads(const model& obj, const shape& shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-inline void get_obj_lines(const obj_model& obj, const shape& shape,
+inline void get_obj_lines(const model& obj, const shape& shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-inline void get_obj_points(const obj_model& obj, const shape& shape,
+inline void get_obj_points(const model& obj, const shape& shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-inline void get_obj_fvquads(const obj_model& obj, const shape& shape,
+inline void get_obj_fvquads(const model& obj, const shape& shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
@@ -218,27 +217,27 @@ inline void get_obj_fvquads(const obj_model& obj, const shape& shape,
 inline bool has_obj_quads(const shape& shape);
 
 // Add obj shape
-inline void add_obj_triangles(obj_model& obj, const string& name,
+inline void add_obj_triangles(model& obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void add_obj_quads(obj_model& obj, const string& name,
+inline void add_obj_quads(model& obj, const string& name,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void add_obj_lines(obj_model& obj, const string& name,
+inline void add_obj_lines(model& obj, const string& name,
     const vector<vec2i>& lines, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void add_obj_points(obj_model& obj, const string& name,
+inline void add_obj_points(model& obj, const string& name,
     const vector<int>& points, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-inline void add_obj_fvquads(obj_model& obj, const string& name,
+inline void add_obj_fvquads(model& obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
@@ -588,7 +587,7 @@ inline void parse_obj_value(string_view& str, texture_info& info) {
 
 // Read obj
 inline void load_mtl(
-    const string& filename, obj_model& obj, bool fliptr = true) {
+    const string& filename, model& obj, bool fliptr = true) {
   // open file
   auto fs = open_obj(filename, "rt");
 
@@ -704,7 +703,7 @@ inline void load_mtl(
 }
 
 // Read obj
-inline void load_objx(const string& filename, obj_model& obj) {
+inline void load_objx(const string& filename, model& obj) {
   // open file
   auto fs = open_obj(filename, "rt");
 
@@ -766,7 +765,7 @@ inline void load_objx(const string& filename, obj_model& obj) {
 }
 
 // Read obj
-inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
+inline void load_obj(const string& filename, model& obj, bool geom_only,
     bool split_elements, bool split_materials) {
   // open file
   auto fs = open_obj(filename, "rt");
@@ -950,7 +949,7 @@ inline void format_obj_value(string& str, const vertex& value) {
 }
 
 // Save obj
-inline void save_mtl(const string& filename, const obj_model& obj) {
+inline void save_mtl(const string& filename, const model& obj) {
   // open file
   auto fs = open_obj(filename, "wt");
 
@@ -1040,7 +1039,7 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
 }
 
 // Save obj
-inline void save_objx(const string& filename, const obj_model& obj) {
+inline void save_objx(const string& filename, const model& obj) {
   // open file
   auto fs = open_obj(filename, "wt");
 
@@ -1079,7 +1078,7 @@ inline void save_objx(const string& filename, const obj_model& obj) {
 }
 
 // Save obj
-inline void save_obj(const string& filename, const obj_model& obj) {
+inline void save_obj(const string& filename, const model& obj) {
   // open file
   auto fs = open_obj(filename, "wt");
 
@@ -1148,14 +1147,14 @@ inline void save_obj(const string& filename, const obj_model& obj) {
 }
 
 // convert between roughness and exponent
-inline float obj_exponent_to_roughness(float exponent) {
+inline float exponent_to_roughness(float exponent) {
   auto roughness = exponent;
   roughness      = pow(2 / (roughness + 2), 1 / 4.0f);
   if (roughness < 0.01f) roughness = 0;
   if (roughness > 0.99f) roughness = 1;
   return roughness;
 }
-inline float obj_roughness_to_exponent(float roughness) {
+inline float roughness_to_exponent(float roughness) {
   return (int)clamp(
       2 / pow(clamp(roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2, 0.0f, 1.0e9f);
 }
@@ -1194,7 +1193,7 @@ inline vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-inline void get_obj_triangles(const obj_model& obj, const shape& shape,
+inline void get_obj_triangles(const model& obj, const shape& shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -1214,7 +1213,7 @@ inline void get_obj_triangles(const obj_model& obj, const shape& shape,
     cur += face.size;
   }
 }
-inline void get_obj_quads(const obj_model& obj, const shape& shape,
+inline void get_obj_quads(const model& obj, const shape& shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -1240,7 +1239,7 @@ inline void get_obj_quads(const obj_model& obj, const shape& shape,
     cur += face.size;
   }
 }
-inline void get_obj_lines(const obj_model& obj, const shape& shape,
+inline void get_obj_lines(const model& obj, const shape& shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -1259,7 +1258,7 @@ inline void get_obj_lines(const obj_model& obj, const shape& shape,
     cur += line.size;
   }
 }
-inline void get_obj_points(const obj_model& obj, const shape& shape,
+inline void get_obj_points(const model& obj, const shape& shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -1278,7 +1277,7 @@ inline void get_obj_points(const obj_model& obj, const shape& shape,
     cur += point.size;
   }
 }
-inline void get_obj_fvquads(const obj_model& obj, const shape& shape,
+inline void get_obj_fvquads(const model& obj, const shape& shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
@@ -1342,7 +1341,7 @@ inline bool has_obj_quads(const shape& shape) {
 }
 
 // Add obj shape
-inline void add_obj_triangles(obj_model& obj, const string& name,
+inline void add_obj_triangles(model& obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
@@ -1367,7 +1366,7 @@ inline void add_obj_triangles(obj_model& obj, const string& name,
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void add_obj_quads(obj_model& obj, const string& name,
+inline void add_obj_quads(model& obj, const string& name,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
@@ -1393,7 +1392,7 @@ inline void add_obj_quads(obj_model& obj, const string& name,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void add_obj_lines(obj_model& obj, const string& name,
+inline void add_obj_lines(model& obj, const string& name,
     const vector<vec2i>& lines, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
@@ -1418,7 +1417,7 @@ inline void add_obj_lines(obj_model& obj, const string& name,
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void add_obj_points(obj_model& obj, const string& name,
+inline void add_obj_points(model& obj, const string& name,
     const vector<int>& points, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
@@ -1441,7 +1440,7 @@ inline void add_obj_points(obj_model& obj, const string& name,
         {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-inline void add_obj_fvquads(obj_model& obj, const string& name,
+inline void add_obj_fvquads(model& obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
