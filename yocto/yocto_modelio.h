@@ -1,7 +1,7 @@
 //
 // # Yocto/ModelIO: L<ow-level library for OBJ/Pbrt/Yaml parsing and writing
 //
-// Yocto/ModelIO is a collection of simple parsers for 
+// Yocto/ModelIO is a collection of simple parsers for
 // Wavefront Obj, Pbrt, and Yaml formats. The prasers are designed for large
 // files and do keep a copy of the model in memory.
 // Yocto/ModelIO provides fast/low-level access to model data and requires some

@@ -175,17 +175,18 @@ inline vec2i get_ply_list_minxmax(
     const ply_model& ply, const string& element, const string& property);
 
 // Get ply properties for meshes
-inline vector<vec3f>       get_ply_positions(const ply_model& ply);
-inline vector<vec3f>       get_ply_normals(const ply_model& ply);
-inline vector<vec2f>       get_ply_texcoords(const ply_model& ply, bool flipv = false);
-inline vector<vec4f>       get_ply_colors(const ply_model& ply);
-inline vector<float>       get_ply_radius(const ply_model& ply);
-vector<vector<int>> get_ply_faces(const ply_model& ply);
-inline vector<vec2i>       get_ply_lines(const ply_model& ply);
-inline vector<int>         get_ply_points(const ply_model& ply);
-inline vector<vec3i>       get_ply_triangles(const ply_model& ply);
-inline vector<vec4i>       get_ply_quads(const ply_model& ply);
-inline bool                has_ply_quads(const ply_model& ply);
+inline vector<vec3f> get_ply_positions(const ply_model& ply);
+inline vector<vec3f> get_ply_normals(const ply_model& ply);
+inline vector<vec2f> get_ply_texcoords(
+    const ply_model& ply, bool flipv = false);
+inline vector<vec4f> get_ply_colors(const ply_model& ply);
+inline vector<float> get_ply_radius(const ply_model& ply);
+vector<vector<int>>  get_ply_faces(const ply_model& ply);
+inline vector<vec2i> get_ply_lines(const ply_model& ply);
+inline vector<int>   get_ply_points(const ply_model& ply);
+inline vector<vec3i> get_ply_triangles(const ply_model& ply);
+inline vector<vec4i> get_ply_quads(const ply_model& ply);
+inline bool          has_ply_quads(const ply_model& ply);
 
 // Add ply properties
 inline void add_ply_values(ply_model& ply, const vector<float>& values,
@@ -227,7 +228,7 @@ inline void add_ply_quads(ply_model& ply, const vector<vec4i>& values);
 inline void add_ply_lines(ply_model& ply, const vector<vec2i>& values);
 inline void add_ply_points(ply_model& ply, const vector<int>& values);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW_LEVEL PLY LOADING AND SAVING
@@ -250,8 +251,8 @@ struct ply_file {
 
 // open a file
 inline ply_file open_ply(const string& filename, const string& mode = "rt");
-inline void         open_ply(
-            ply_file& fs, const string& filename, const string& mode = "rt");
+inline void     open_ply(
+        ply_file& fs, const string& filename, const string& mode = "rt");
 inline void close_ply(ply_file& fs);
 
 // Read Ply functions
@@ -275,13 +276,14 @@ inline void write_ply_value(ply_file& fs, ply_format format,
     vector<vector<int>>& lists);
 
 // Helpers to get element and property indices
-inline int    find_ply_element(const vector<ply_element>& elements, const string& name);
-inline int    find_ply_property(const ply_element& element, const string& name);
-inline vec2i  find_ply_property(
+inline int find_ply_element(
+    const vector<ply_element>& elements, const string& name);
+inline int   find_ply_property(const ply_element& element, const string& name);
+inline vec2i find_ply_property(
     const ply_element& element, const string& name1, const string& name2);
-inline vec3i  find_ply_property(const ply_element& element, const string& name1,
+inline vec3i find_ply_property(const ply_element& element, const string& name1,
     const string& name2, const string& name3);
-inline vec4i  find_ply_property(const ply_element& element, const string& name1,
+inline vec4i find_ply_property(const ply_element& element, const string& name1,
     const string& name2, const string& name3, const string& name4);
 
 }  // namespace yocto
@@ -356,8 +358,7 @@ inline void write_ply_value(ply_file& fs, const T& value) {
     throw std::runtime_error("cannot write to " + fs.filename);
 }
 template <typename T>
-inline void write_ply_value(
-    ply_file& fs, const T& value_, bool big_endian) {
+inline void write_ply_value(ply_file& fs, const T& value_, bool big_endian) {
   auto value = big_endian ? swap_ply_endian(value_) : value_;
   if (fwrite(&value, sizeof(value), 1, fs.fs) != 1)
     throw std::runtime_error("cannot write to " + fs.filename);
@@ -384,7 +385,7 @@ inline void read_ply_value(ply_file& fs, T& value, bool big_endian) {
   if (big_endian) value = swap_ply_endian(value);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
@@ -402,8 +403,7 @@ inline void skip_ply_whitespace(string_view& str) {
   while (!str.empty() && is_ply_space(str.front())) str.remove_prefix(1);
 }
 
-inline void remove_ply_comment(
-    string_view& str, char comment_char = '#') {
+inline void remove_ply_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_ply_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
@@ -526,7 +526,7 @@ inline void parse_ply_value(string_view& str, size_t& value) {
 }
 #endif
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL PRINTING
@@ -534,12 +534,8 @@ inline void parse_ply_value(string_view& str, size_t& value) {
 namespace yocto {
 
 // Formats values to string
-inline void format_ply_value(string& str, const string& value) {
-  str += value;
-}
-inline void format_ply_value(string& str, const char* value) {
-  str += value;
-}
+inline void format_ply_value(string& str, const string& value) { str += value; }
+inline void format_ply_value(string& str, const char* value) { str += value; }
 inline void format_ply_value(string& str, int8_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
@@ -660,7 +656,7 @@ inline void format_ply_value(ply_file& fs, const T& value) {
     throw std::runtime_error("cannor write to " + fs.filename);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PLY CONVERSION
@@ -907,7 +903,8 @@ inline void save_ply(const string& filename, const ply_model& ply) {
   format_ply_values(fs, "format {} 1.0\n", format_map.at(ply.format));
   format_ply_values(fs, "comment Written by Yocto/GL\n");
   format_ply_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
-  for (auto& comment : ply.comments) format_ply_values(fs, "comment {}\n", comment);
+  for (auto& comment : ply.comments)
+    format_ply_values(fs, "comment {}\n", comment);
   for (auto& elem : ply.elements) {
     format_ply_values(fs, "element {} {}\n", elem.name, (uint64_t)elem.count);
     for (auto& prop : elem.properties) {
@@ -915,7 +912,8 @@ inline void save_ply(const string& filename, const ply_model& ply) {
         format_ply_values(
             fs, "property list uchar {} {}\n", type_map[prop.type], prop.name);
       } else {
-        format_ply_values(fs, "property {} {}\n", type_map[prop.type], prop.name);
+        format_ply_values(
+            fs, "property {} {}\n", type_map[prop.type], prop.name);
       }
     }
   }
@@ -928,7 +926,8 @@ inline void save_ply(const string& filename, const ply_model& ply) {
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
-          if (prop.is_list) format_ply_values(fs, "{} ", (int)prop.ldata_u8[idx]);
+          if (prop.is_list)
+            format_ply_values(fs, "{} ", (int)prop.ldata_u8[idx]);
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
@@ -1246,7 +1245,8 @@ inline bool has_ply_quads(const ply_model& ply) {
 }
 
 // Add ply properties
-inline void add_ply_element(ply_model& ply, const string& element, size_t count) {
+inline void add_ply_element(
+    ply_model& ply, const string& element, size_t count) {
   for (auto& elem : ply.elements) {
     if (elem.name == element) return;
   }
@@ -1335,8 +1335,8 @@ inline void add_ply_lists(ply_model& ply, const vector<byte>& sizes,
   prop.data_i32 = values;
   prop.ldata_u8 = sizes;
 }
-inline void add_ply_lists(ply_model& ply, const int* values, size_t count, int size,
-    const string& element, const string& property) {
+inline void add_ply_lists(ply_model& ply, const int* values, size_t count,
+    int size, const string& element, const string& property) {
   if (!values) return;
   add_ply_property(ply, element, property, count, ply_type::i32, true);
   auto& prop = get_ply_property(ply, element, property);
@@ -1680,14 +1680,15 @@ inline void write_ply_header(ply_file& fs, ply_format format,
       write_ply_text(fs, "format binary_big_endian 1.0\n");
       break;
   }
-  for (auto& comment : comments) write_ply_text(fs, "comment " + comment + "\n");
+  for (auto& comment : comments)
+    write_ply_text(fs, "comment " + comment + "\n");
   for (auto& elem : elements) {
     write_ply_text(
         fs, "element " + elem.name + " " + std::to_string(elem.count) + "\n");
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
         write_ply_text(fs, "property list uchar " + type_map[prop.type] + " " +
-                           prop.name + "\n");
+                               prop.name + "\n");
       } else {
         write_ply_text(
             fs, "property " + type_map[prop.type] + " " + prop.name + "\n");
@@ -1754,17 +1755,18 @@ inline void read_ply_value(ply_file& fs, ply_format format,
   read_ply_value_generic(fs, format, element, values, lists);
 }
 
-inline int  find_ply_element(const vector<ply_element>& elements, const string& name) {
+inline int find_ply_element(
+    const vector<ply_element>& elements, const string& name) {
   for (auto idx = 0; idx < elements.size(); idx++)
     if (elements[idx].name == name) return idx;
   return -1;
 }
-inline int  find_ply_property(const ply_element& element, const string& name) {
+inline int find_ply_property(const ply_element& element, const string& name) {
   for (auto idx = 0; idx < element.properties.size(); idx++)
     if (element.properties[idx].name == name) return idx;
   return -1;
 }
-inline vec2i  find_ply_property(
+inline vec2i find_ply_property(
     const ply_element& element, const string& name1, const string& name2) {
   auto ids = vec2i{
       find_ply_property(element, name1),
@@ -1773,7 +1775,7 @@ inline vec2i  find_ply_property(
   if (ids.x < 0 || ids.y < 0) return vec2i{-1};
   return ids;
 }
-inline vec3i  find_ply_property(const ply_element& element, const string& name1,
+inline vec3i find_ply_property(const ply_element& element, const string& name1,
     const string& name2, const string& name3) {
   auto ids = vec3i{
       find_ply_property(element, name1),
@@ -1783,7 +1785,7 @@ inline vec3i  find_ply_property(const ply_element& element, const string& name1,
   if (ids.x < 0 || ids.y < 0 || ids.z < 0) return vec3i{-1};
   return ids;
 }
-inline vec4i  find_ply_property(const ply_element& element, const string& name1,
+inline vec4i find_ply_property(const ply_element& element, const string& name1,
     const string& name2, const string& name3, const string& name4) {
   auto ids = vec4i{
       find_ply_property(element, name1),

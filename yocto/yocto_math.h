@@ -38,10 +38,10 @@
 //
 // ## Images
 //
-// Yocto/Math contains a simple image container that can be used to store 
+// Yocto/Math contains a simple image container that can be used to store
 // generic images. The container is similar in spirit to `std::vector`.
 // We provide only minimal image functions including lookup and sampling.
-// 
+//
 //
 // ## Transforms
 //
@@ -69,7 +69,7 @@
 // ## Color funtions
 //
 // This library support a small number of color operations helpful in writing
-// graphics applications. In particular, we support color conversion to/from 
+// graphics applications. In particular, we support color conversion to/from
 // linear rgb, srgb, hsv, xyz, byte to flot color conversions and a few color
 // manipulations like contrast and saturation.
 //
@@ -2120,7 +2120,7 @@ inline vec3f rgb_to_hsv(const vec3f& rgb);
 // Approximate color of blackbody radiation from wavelength in nm.
 inline vec3f blackbody_to_rgb(float temperature);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // RAY-PRIMITIVE INTERSECTION FUNCTIONS
@@ -2134,8 +2134,8 @@ inline bool intersect_point(
 inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     float r0, float r1, vec2f& uv, float& dist);
 // Intersect a ray with a triangle
-inline bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, vec2f& uv, float& dist);
+inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist);
 // Intersect a ray with a quad.
 inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist);
@@ -2153,8 +2153,8 @@ inline bool intersect_bbox(
 namespace yocto {
 
 // TODO: documentation
-inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
-    vec2f& uv, float& dist);
+inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
+    float r, vec2f& uv, float& dist);
 // TODO: documentation
 inline float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
 // TODO: documentation

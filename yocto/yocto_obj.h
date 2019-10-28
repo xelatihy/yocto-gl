@@ -181,8 +181,9 @@ struct obj_model {
 };
 
 // Load and save obj
-inline void load_obj(const string& filename, obj_model& obj, bool geom_only = false,
-    bool split_elements = true, bool split_materials = false);
+inline void load_obj(const string& filename, obj_model& obj,
+    bool geom_only = false, bool split_elements = true,
+    bool split_materials = false);
 inline void save_obj(const string& filename, const obj_model& obj);
 
 // convert between roughness and exponent
@@ -244,7 +245,7 @@ inline void add_obj_fvquads(obj_model& obj, const string& name,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL INTERFACE
@@ -267,8 +268,8 @@ struct obj_file {
 
 // open a file
 inline obj_file open_obj(const string& filename, const string& mode = "rt");
-inline void         open_obj(
-            obj_file& fs, const string& filename, const string& mode = "rt");
+inline void     open_obj(
+        obj_file& fs, const string& filename, const string& mode = "rt");
 inline void close_obj(obj_file& fs);
 
 // Obj/Mtl/Objx command
@@ -389,7 +390,7 @@ inline void write_ply_text(obj_file& fs, const char* value) {
     throw std::runtime_error("cannot write to " + fs.filename);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
@@ -407,8 +408,7 @@ inline void skip_obj_whitespace(string_view& str) {
   while (!str.empty() && is_obj_space(str.front())) str.remove_prefix(1);
 }
 
-inline void remove_obj_comment(
-    string_view& str, char comment_char = '#') {
+inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_obj_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
@@ -542,7 +542,7 @@ inline void parse_obj_value_or_empty(string_view& str, T& value) {
   }
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL PRINTING
@@ -550,12 +550,8 @@ inline void parse_obj_value_or_empty(string_view& str, T& value) {
 namespace yocto {
 
 // Formats values to string
-inline void format_obj_value(string& str, const string& value) {
-  str += value;
-}
-inline void format_obj_value(string& str, const char* value) {
-  str += value;
-}
+inline void format_obj_value(string& str, const string& value) { str += value; }
+inline void format_obj_value(string& str, const char* value) { str += value; }
 inline void format_obj_value(string& str, int8_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
@@ -676,7 +672,7 @@ inline void format_obj_value(obj_file& fs, const T& value) {
     throw std::runtime_error("cannor write to " + fs.filename);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
@@ -729,7 +725,8 @@ inline void parse_obj_value(string_view& str, obj_texture_info& info) {
 }
 
 // Read obj
-inline void load_mtl(const string& filename, obj_model& obj, bool fliptr = true) {
+inline void load_mtl(
+    const string& filename, obj_model& obj, bool fliptr = true) {
   // open file
   auto fs = open_obj(filename, "rt");
 
@@ -1120,7 +1117,8 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
     if (material.transmission != zero3f)
       format_obj_values(fs, "Kt {}\n", material.transmission);
     format_obj_values(fs, "Ns {}\n", (int)material.exponent);
-    if (material.opacity != 1) format_obj_values(fs, "d {}\n", material.opacity);
+    if (material.opacity != 1)
+      format_obj_values(fs, "d {}\n", material.opacity);
     if (!material.emission_map.path.empty())
       format_obj_values(fs, "map_Ke {}\n", material.emission_map);
     if (!material.diffuse_map.path.empty())
@@ -1145,7 +1143,8 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
       format_obj_values(fs, "Pr {}\n", material.pbr_roughness);
     if (material.pbr_metallic)
       format_obj_values(fs, "Pm {}\n", material.pbr_metallic);
-    if (material.pbr_sheen) format_obj_values(fs, "Ps {}\n", material.pbr_sheen);
+    if (material.pbr_sheen)
+      format_obj_values(fs, "Ps {}\n", material.pbr_sheen);
     if (material.pbr_clearcoat)
       format_obj_values(fs, "Pc {}\n", material.pbr_clearcoat);
     if (material.pbr_coatroughness)
@@ -1170,7 +1169,8 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
       format_obj_values(fs, "Vs {}\n", material.vol_scattering);
     if (material.vol_anisotropy)
       format_obj_values(fs, "Vg {}\n", material.vol_anisotropy);
-    if (material.vol_scale) format_obj_values(fs, "Vr {}\n", material.vol_scale);
+    if (material.vol_scale)
+      format_obj_values(fs, "Vr {}\n", material.vol_scale);
     if (!material.vol_scattering_map.path.empty())
       format_obj_values(fs, "map_Vs {}\n", material.vol_scattering_map);
     format_obj_values(fs, "\n");
@@ -1194,14 +1194,15 @@ inline void save_objx(const string& filename, const obj_model& obj) {
 
   // cameras
   for (auto& camera : obj.cameras) {
-    format_obj_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name, camera.ortho,
-        camera.width, camera.height, camera.lens, camera.focus, camera.aperture,
-        camera.frame);
+    format_obj_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
+        camera.ortho, camera.width, camera.height, camera.lens, camera.focus,
+        camera.aperture, camera.frame);
   }
 
   // environments
   for (auto& environment : obj.environments) {
-    format_obj_values(fs, "e {} {} {} {}\n", environment.name, environment.emission,
+    format_obj_values(fs, "e {} {} {} {}\n", environment.name,
+        environment.emission,
         environment.emission_map.path.empty() ? "\"\""s
                                               : environment.emission_map.path,
         environment.frame);
@@ -1252,7 +1253,8 @@ inline void save_obj(const string& filename, const obj_model& obj) {
       auto  cur_material = -1, cur_vertex = 0;
       for (auto& element : elements) {
         if (!shape.materials.empty() && cur_material != element.material) {
-          format_obj_values(fs, "usemtl {}\n", shape.materials[element.material]);
+          format_obj_values(
+              fs, "usemtl {}\n", shape.materials[element.material]);
           cur_material = element.material;
         }
         format_obj_values(fs, "{}", label);
@@ -1685,8 +1687,8 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
 }
 
 // Read mtl
-inline bool read_mtl_command(obj_file& fs, mtl_command& command,
-    obj_material& material, bool fliptr) {
+inline bool read_mtl_command(
+    obj_file& fs, mtl_command& command, obj_material& material, bool fliptr) {
   material = {};
 
   // read the file line by line
@@ -1856,8 +1858,7 @@ inline bool read_objx_command(obj_file& fs, objx_command& command,
   return false;
 }
 
-inline vector<string> split_obj_string(
-    const string& str, const string& delim) {
+inline vector<string> split_obj_string(const string& str, const string& delim) {
   auto tokens = vector<string>{};
   auto last = (size_t)0, next = (size_t)0;
   while ((next = str.find(delim, last)) != string::npos) {
