@@ -96,7 +96,7 @@
 // -----------------------------------------------------------------------------
 // SIMPLE PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yocto::ply {
+namespace yocto {
 
 // Type of ply file. For best performance, choose binary_little_endian when
 // writing ply files.
@@ -228,12 +228,12 @@ inline void add_ply_quads(ply_model& ply, const vector<vec4i>& values);
 inline void add_ply_lines(ply_model& ply, const vector<vec2i>& values);
 inline void add_ply_points(ply_model& ply, const vector<int>& values);
 
-}  // namespace yocto::ply
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW_LEVEL PLY LOADING AND SAVING
 // -----------------------------------------------------------------------------
-namespace yocto::ply {
+namespace yocto {
 
 // A class that wraps a C file ti handle safe opening/closgin with RIIA.
 struct ply_file {
@@ -286,7 +286,7 @@ inline vec3i find_ply_property(const ply_element& element, const string& name1,
 inline vec4i find_ply_property(const ply_element& element, const string& name1,
     const string& name2, const string& name3, const string& name4);
 
-}  // namespace yocto::ply
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 //
@@ -301,7 +301,7 @@ inline vec4i find_ply_property(const ply_element& element, const string& name1,
 // -----------------------------------------------------------------------------
 // LOW-LEVEL FILE HANDLING
 // -----------------------------------------------------------------------------
-namespace yocto::ply {
+namespace yocto {
 
 // copnstrucyor and destructors
 inline ply_file::ply_file(ply_file&& other) {
@@ -385,12 +385,12 @@ inline void read_ply_value(ply_file& fs, T& value, bool big_endian) {
   if (big_endian) value = swap_ply_endian(value);
 }
 
-}  // namespace yocto::ply
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
 // -----------------------------------------------------------------------------
-namespace yocto::ply {
+namespace yocto {
 
 using std::string_view;
 
@@ -512,12 +512,12 @@ inline void parse_ply_value(string_view& str, size_t& value) {
 }
 #endif
 
-}  // namespace yocto::ply
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL PRINTING
 // -----------------------------------------------------------------------------
-namespace yocto::ply {
+namespace yocto {
 
 // Formats values to string
 inline void format_ply_value(string& str, const string& value) { str += value; }
@@ -605,12 +605,12 @@ inline void format_ply_value(ply_file& fs, const T& value) {
     throw std::runtime_error("cannor write to " + fs.filename);
 }
 
-}  // namespace yocto::ply
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PLY CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto::ply {
+namespace yocto {
 
 // Load ply
 inline void load_ply(const string& filename, ply_model& ply) {
@@ -1746,6 +1746,6 @@ inline vec4i find_ply_property(const ply_element& element, const string& name1,
   return ids;
 }
 
-}  // namespace yocto::ply
+}  // namespace yocto
 
 #endif
