@@ -65,7 +65,6 @@
 
 #include "yocto_image.h"
 #include "yocto_math.h"
-#include "yocto_sceneio.h"
 
 #if YOCTO_EMBREE
 #include <memory>
@@ -235,29 +234,6 @@ struct trace_scene {
   std::shared_ptr<void> embree_bvh = {};
 #endif
 };
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// SCENE CREATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Construct a scene from io
-trace_scene make_trace_scene(const scene_model& ioscene);
-
-// Update a value from io
-void update_trace_camera(trace_camera& camera, const scene_camera& iocamera);
-void update_trace_texture(
-    trace_texture& texture, const scene_texture& iotexture);
-void update_trace_material(
-    trace_material& material, const scene_material& iomaterial);
-void update_trace_shape(
-    trace_shape& shape, const scene_shape& ioshape, const scene_model& ioscene);
-void update_trace_instance(
-    trace_instance& instance, const scene_instance& ioinstance);
-void update_trace_environment(
-    trace_environment& environment, const scene_environment& ioenvironment);
 
 }  // namespace yocto
 

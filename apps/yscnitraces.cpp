@@ -72,6 +72,97 @@ struct app_state {
   vector<image_region> render_regions = {};
 };
 
+// construct a scene from io
+trace_scene make_trace_scene(const scene_model& ioscene) {
+  auto tesselate = [](const scene_model& ioscene, const scene_shape& shape) {
+    if (!shape.subdivisions && !shape.displacement) return scene_shape{};
+    auto subdiv = shape;
+    if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
+    if (subdiv.displacement && subdiv.displacement_tex >= 0)
+      subdiv = displace_shape(ioscene, subdiv);
+    return subdiv;
+  };
+
+  auto scene = trace_scene{};
+
+  for (auto& iocamera : ioscene.cameras) {
+    auto& camera = scene.cameras.emplace_back();
+    camera.frame = iocamera.frame;
+    camera.film  = iocamera.aspect >= 1
+                      ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
+                      : vec2f{iocamera.film / iocamera.aspect, iocamera.film};
+    camera.lens     = iocamera.lens;
+    camera.focus    = iocamera.focus;
+    camera.aperture = iocamera.aperture;
+  }
+
+  for (auto& iotexture : ioscene.textures) {
+    auto& texture = scene.textures.emplace_back();
+    texture.hdr   = iotexture.hdr;
+    texture.ldr   = iotexture.ldr;
+  }
+
+  for (auto& iomaterial : ioscene.materials) {
+    auto& material            = scene.materials.emplace_back();
+    material.emission         = iomaterial.emission;
+    material.diffuse          = iomaterial.diffuse;
+    material.specular         = iomaterial.specular;
+    material.transmission     = iomaterial.transmission;
+    material.roughness        = iomaterial.roughness;
+    material.opacity          = iomaterial.opacity;
+    material.refract          = iomaterial.refract;
+    material.volemission      = iomaterial.volemission;
+    material.voltransmission  = iomaterial.voltransmission;
+    material.volmeanfreepath  = iomaterial.volmeanfreepath;
+    material.volscatter       = iomaterial.volscatter;
+    material.volscale         = iomaterial.volscale;
+    material.volanisotropy    = iomaterial.volanisotropy;
+    material.emission_tex     = iomaterial.emission_tex;
+    material.diffuse_tex      = iomaterial.diffuse_tex;
+    material.specular_tex     = iomaterial.specular_tex;
+    material.transmission_tex = iomaterial.transmission_tex;
+    material.roughness_tex    = iomaterial.roughness_tex;
+    material.opacity_tex      = iomaterial.opacity_tex;
+    material.subsurface_tex   = iomaterial.subsurface_tex;
+  }
+
+  for (auto& ioshape_ : ioscene.shapes) {
+    auto& ioshape = (ioshape_.subdivisions || ioshape_.displacement)
+                        ? ioshape_
+                        : tesselate(ioscene, ioshape_);
+    auto& shape         = scene.shapes.emplace_back();
+    shape.points        = ioshape.points;
+    shape.lines         = ioshape.lines;
+    shape.triangles     = ioshape.triangles;
+    shape.quads         = ioshape.quads;
+    shape.quadspos      = ioshape.quadspos;
+    shape.quadsnorm     = ioshape.quadsnorm;
+    shape.quadstexcoord = ioshape.quadstexcoord;
+    shape.positions     = ioshape.positions;
+    shape.normals       = ioshape.normals;
+    shape.texcoords     = ioshape.texcoords;
+    shape.colors        = ioshape.colors;
+    shape.radius        = ioshape.radius;
+    shape.tangents      = ioshape.tangents;
+  }
+
+  for (auto& ioinstance : ioscene.instances) {
+    auto& instance    = scene.instances.emplace_back();
+    instance.frame    = ioinstance.frame;
+    instance.shape    = ioinstance.shape;
+    instance.material = ioinstance.material;
+  }
+
+  for (auto& ioenvironment : ioscene.environments) {
+    auto& environment        = scene.environments.emplace_back();
+    environment.frame        = ioenvironment.frame;
+    environment.emission     = ioenvironment.emission;
+    environment.emission_tex = ioenvironment.emission_tex;
+  }
+
+  return scene;
+}
+
 void reset_display(app_state& app) {
   app.state = make_state(app.scene, app.trace_prms);
   app.render.resize(app.state.size());
