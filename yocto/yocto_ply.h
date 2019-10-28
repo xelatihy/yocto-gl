@@ -401,20 +401,22 @@ inline bool is_ply_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_ply_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-inline void skip_ply_whitespace(string_view& str) {
+[[nodiscard]] inline string_view skip_ply_whitespace(string_view str) {
   while (!str.empty() && is_ply_space(str.front())) str.remove_prefix(1);
+  return str;
 }
 
-inline void remove_ply_comment(string_view& str, char comment_char = '#') {
+[[nodiscard]] inline string_view remove_ply_comment(string_view str, char comment_char = '#') {
   while (!str.empty() && is_ply_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
+  return str;
 }
 
 // Parse values from a string
 inline void parse_ply_value(string_view& str, string_view& value) {
-  skip_ply_whitespace(str);
+  str = str = skip_ply_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
   if (str.front() != '"') {
     auto cpy = str;
@@ -642,15 +644,15 @@ inline void load_ply(const string& filename, ply_model& ply) {
   // read header ---------------------------------------------
   char buffer[4096];
   while (read_ply_line(fs, buffer, sizeof(buffer))) {
-    // line
-    auto line = string_view{buffer};
-    remove_ply_comment(line);
-    skip_ply_whitespace(line);
-    if (line.empty()) continue;
+    // str
+    auto str = string_view{buffer};
+    str = remove_ply_comment(str);
+    str = skip_ply_whitespace(str);
+    if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    parse_ply_value(line, cmd);
+    parse_ply_value(str, cmd);
     if (cmd == "") continue;
 
     // check magic number
@@ -665,7 +667,7 @@ inline void load_ply(const string& filename, ply_model& ply) {
       if (!first_line) throw std::runtime_error{"bad ply file"};
     } else if (cmd == "format") {
       auto fmt = string_view{};
-      parse_ply_value(line, fmt);
+      parse_ply_value(str, fmt);
       if (fmt == "ascii") {
         ply.format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -676,29 +678,29 @@ inline void load_ply(const string& filename, ply_model& ply) {
         throw std::runtime_error{"unknown ply format"};
       }
     } else if (cmd == "comment") {
-      skip_ply_whitespace(line);
-      ply.comments.push_back(string{line});
+      str = skip_ply_whitespace(str);
+      ply.comments.push_back(string{str});
     } else if (cmd == "obj_info") {
-      skip_ply_whitespace(line);
-      // comment is the rest of the line
+      str = skip_ply_whitespace(str);
+      // comment is the rest of the str
     } else if (cmd == "element") {
       auto& elem = ply.elements.emplace_back();
-      parse_ply_value(line, elem.name);
-      parse_ply_value(line, elem.count);
+      parse_ply_value(str, elem.name);
+      parse_ply_value(str, elem.count);
     } else if (cmd == "property") {
       if (ply.elements.empty()) throw std::runtime_error{"bad ply header"};
       auto& prop  = ply.elements.back().properties.emplace_back();
       auto  tname = ""s;
-      parse_ply_value(line, tname);
+      parse_ply_value(str, tname);
       if (tname == "list") {
         prop.is_list = true;
-        parse_ply_value(line, tname);
+        parse_ply_value(str, tname);
         if (type_map.find(tname) == type_map.end())
           throw std::runtime_error{"unknown ply type " + tname};
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
           throw std::runtime_error{"unsupported list size type " + tname};
-        parse_ply_value(line, tname);
+        parse_ply_value(str, tname);
         if (type_map.find(tname) == type_map.end())
           throw std::runtime_error{"unknown ply type " + tname};
         prop.type = type_map.at(tname);
@@ -708,7 +710,7 @@ inline void load_ply(const string& filename, ply_model& ply) {
           throw std::runtime_error{"unknown ply type " + tname};
         prop.type = type_map.at(tname);
       }
-      parse_ply_value(line, prop.name);
+      parse_ply_value(str, prop.name);
     } else if (cmd == "end_header") {
       end_header = true;
       break;
@@ -746,41 +748,41 @@ inline void load_ply(const string& filename, ply_model& ply) {
       for (auto idx = 0; idx < elem.count; idx++) {
         if (!read_ply_line(fs, buffer, sizeof(buffer)))
           throw std::runtime_error("cannot read ply");
-        auto line = string_view{buffer};
+        auto str = string_view{buffer};
         for (auto& prop : elem.properties) {
-          if (prop.is_list) parse_ply_value(line, prop.ldata_u8.emplace_back());
+          if (prop.is_list) parse_ply_value(str, prop.ldata_u8.emplace_back());
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                parse_ply_value(line, prop.data_i8.emplace_back());
+                parse_ply_value(str, prop.data_i8.emplace_back());
                 break;
               case ply_type::i16:
-                parse_ply_value(line, prop.data_i16.emplace_back());
+                parse_ply_value(str, prop.data_i16.emplace_back());
                 break;
               case ply_type::i32:
-                parse_ply_value(line, prop.data_i32.emplace_back());
+                parse_ply_value(str, prop.data_i32.emplace_back());
                 break;
               case ply_type::i64:
-                parse_ply_value(line, prop.data_i64.emplace_back());
+                parse_ply_value(str, prop.data_i64.emplace_back());
                 break;
               case ply_type::u8:
-                parse_ply_value(line, prop.data_u8.emplace_back());
+                parse_ply_value(str, prop.data_u8.emplace_back());
                 break;
               case ply_type::u16:
-                parse_ply_value(line, prop.data_u16.emplace_back());
+                parse_ply_value(str, prop.data_u16.emplace_back());
                 break;
               case ply_type::u32:
-                parse_ply_value(line, prop.data_u32.emplace_back());
+                parse_ply_value(str, prop.data_u32.emplace_back());
                 break;
               case ply_type::u64:
-                parse_ply_value(line, prop.data_u64.emplace_back());
+                parse_ply_value(str, prop.data_u64.emplace_back());
                 break;
               case ply_type::f32:
-                parse_ply_value(line, prop.data_f32.emplace_back());
+                parse_ply_value(str, prop.data_f32.emplace_back());
                 break;
               case ply_type::f64:
-                parse_ply_value(line, prop.data_f64.emplace_back());
+                parse_ply_value(str, prop.data_f64.emplace_back());
                 break;
             }
           }
@@ -1174,8 +1176,8 @@ inline vector<vec4i> get_ply_quads(const ply_model& ply) {
   return quads;
 }
 inline vector<vec2i> get_ply_lines(const ply_model& ply) {
-  auto indices = get_ply_list_values(ply, "line", "vertex_indices");
-  auto sizes   = get_ply_list_sizes(ply, "line", "vertex_indices");
+  auto indices = get_ply_list_values(ply, "str", "vertex_indices");
+  auto sizes   = get_ply_list_sizes(ply, "str", "vertex_indices");
   auto lines   = vector<vec2i>{};
   lines.reserve(sizes.size());
   auto cur = 0;
@@ -1374,7 +1376,7 @@ inline void add_ply_quads(ply_model& ply, const vector<vec4i>& values) {
   return add_ply_faces(ply, {}, values);
 }
 inline void add_ply_lines(ply_model& ply, const vector<vec2i>& values) {
-  return add_ply_lists(ply, values, "line", "vertex_indices");
+  return add_ply_lists(ply, values, "str", "vertex_indices");
 }
 inline void add_ply_points(ply_model& ply, const vector<int>& values) {
   return add_ply_lists(ply, values, "point", "vertex_indices");
@@ -1448,18 +1450,18 @@ inline void read_ply_header(ply_file& fs, ply_format& format,
   // prepare elements
   elements.clear();
 
-  // read the file header line by line
+  // read the file header str by str
   char buffer[4096];
   while (read_ply_line(fs, buffer, sizeof(buffer))) {
-    // line
-    auto line = string_view{buffer};
-    remove_ply_comment(line);
-    skip_ply_whitespace(line);
-    if (line.empty()) continue;
+    // str
+    auto str = string_view{buffer};
+    str = remove_ply_comment(str);
+    str = skip_ply_whitespace(str);
+    if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    parse_ply_value(line, cmd);
+    parse_ply_value(str, cmd);
     if (cmd == "") continue;
 
     // check magic number
@@ -1474,7 +1476,7 @@ inline void read_ply_header(ply_file& fs, ply_format& format,
       if (!first_line) throw std::runtime_error{"bad ply file"};
     } else if (cmd == "format") {
       auto fmt = string_view{};
-      parse_ply_value(line, fmt);
+      parse_ply_value(str, fmt);
       if (fmt == "ascii") {
         format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -1485,29 +1487,29 @@ inline void read_ply_header(ply_file& fs, ply_format& format,
         throw std::runtime_error{"unknown ply format"};
       }
     } else if (cmd == "comment") {
-      skip_ply_whitespace(line);
-      comments.push_back(string{line});
+      str = skip_ply_whitespace(str);
+      comments.push_back(string{str});
     } else if (cmd == "obj_info") {
-      skip_ply_whitespace(line);
-      // comment is the rest of the line
+      str = skip_ply_whitespace(str);
+      // comment is the rest of the str
     } else if (cmd == "element") {
       auto& elem = elements.emplace_back();
-      parse_ply_value(line, elem.name);
-      parse_ply_value(line, elem.count);
+      parse_ply_value(str, elem.name);
+      parse_ply_value(str, elem.count);
     } else if (cmd == "property") {
       if (elements.empty()) throw std::runtime_error{"bad ply header"};
       auto& prop  = elements.back().properties.emplace_back();
       auto  tname = ""s;
-      parse_ply_value(line, tname);
+      parse_ply_value(str, tname);
       if (tname == "list") {
         prop.is_list = true;
-        parse_ply_value(line, tname);
+        parse_ply_value(str, tname);
         if (type_map.find(tname) == type_map.end())
           throw std::runtime_error{"unknown ply type " + tname};
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
           throw std::runtime_error{"unsupported list size type " + tname};
-        parse_ply_value(line, tname);
+        parse_ply_value(str, tname);
         if (type_map.find(tname) == type_map.end())
           throw std::runtime_error{"unknown ply type " + tname};
         prop.type = type_map.at(tname);
@@ -1517,7 +1519,7 @@ inline void read_ply_header(ply_file& fs, ply_format& format,
           throw std::runtime_error{"unknown ply type " + tname};
         prop.type = type_map.at(tname);
       }
-      parse_ply_value(line, prop.name);
+      parse_ply_value(str, prop.name);
     } else if (cmd == "end_header") {
       end_header = true;
       break;
@@ -1546,18 +1548,18 @@ inline void read_ply_value_generic(ply_file& fs, ply_format format,
     char buffer[4096];
     if (!read_ply_line(fs, buffer, sizeof(buffer)))
       throw std::runtime_error("cannot read ply");
-    auto line = string_view{buffer};
+    auto str = string_view{buffer};
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop  = element.properties[pidx];
       auto& value = values[pidx];
       auto& list  = lists[pidx];
       if (!prop.is_list) {
-        parse_ply_prop(line, prop.type, value);
+        parse_ply_prop(str, prop.type, value);
       } else {
-        parse_ply_prop(line, ply_type::u8, value);
+        parse_ply_prop(str, ply_type::u8, value);
         list.resize((int)value);
         for (auto i = 0; i < (int)value; i++)
-          parse_ply_prop(line, prop.type, list[i]);
+          parse_ply_prop(str, prop.type, list[i]);
       }
     }
   } else {
