@@ -453,13 +453,13 @@ inline void parse_obj_value(string_view& str, T* values, int num) {
 }
 
 inline void parse_obj_value(string_view& str, vec2f& value) {
-  for (auto i = 0; i < 2; i++) parse_obj_value(str, (&value.x)[i]);
+  for (auto i = 0; i < 2; i++) parse_obj_value(str, value[i]);
 }
 inline void parse_obj_value(string_view& str, vec3f& value) {
-  for (auto i = 0; i < 3; i++) parse_obj_value(str, (&value.x)[i]);
+  for (auto i = 0; i < 3; i++) parse_obj_value(str, value[i]);
 }
 inline void parse_obj_value(string_view& str, frame3f& value) {
-  for (auto i = 0; i < 12; i++) parse_obj_value(str, (&value.x.x)[i]);
+  for (auto i = 0; i < 4; i++) parse_obj_value(str, value[i]);
 }
 
 // Parse values from a string
@@ -493,21 +493,13 @@ inline void format_obj_value(string& str, float value) {
   str += buf;
 }
 inline void format_obj_value(string& str, const vec2f& value) {
-  char buf[256];
-  sprintf(buf, "%g %g", value.x, value.y);
-  str += buf;
+  for(auto i = 0; i < 2; i ++) format_obj_value(str, value[i]);
 }
 inline void format_obj_value(string& str, const vec3f& value) {
-  char buf[256];
-  sprintf(buf, "%g %g %g", value.x, value.y, value.z);
-  str += buf;
+  for(auto i = 0; i < 3; i ++) format_obj_value(str, value[i]);
 }
 inline void format_obj_value(string& str, const frame3f& value) {
-  char buf[512];
-  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y,
-      value.x.z, value.y.x, value.y.y, value.y.z, value.z.x, value.z.y,
-      value.z.z, value.o.x, value.o.y, value.o.z);
-  str += buf;
+  for(auto i = 0; i < 4; i ++) format_obj_value(str, value[i]);
 }
 
 // Foramt to file

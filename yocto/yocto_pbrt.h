@@ -505,44 +505,9 @@ namespace yocto {
 // Formats values to string
 inline void format_pbrt_value(string& str, const string& value) { str += value; }
 inline void format_pbrt_value(string& str, const char* value) { str += value; }
-inline void format_pbrt_value(string& str, int8_t value) {
+inline void format_pbrt_value(string& str, int value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_pbrt_value(string& str, int16_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_pbrt_value(string& str, int32_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_pbrt_value(string& str, int64_t value) {
-  char buf[256];
-  sprintf(buf, "%lld", (long long)value);
-  str += buf;
-}
-inline void format_pbrt_value(string& str, uint8_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-inline void format_pbrt_value(string& str, uint16_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-inline void format_pbrt_value(string& str, uint32_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-inline void format_pbrt_value(string& str, uint64_t value) {
-  char buf[256];
-  sprintf(buf, "%llu", (unsigned long long)value);
   str += buf;
 }
 inline void format_pbrt_value(string& str, float value) {
@@ -550,47 +515,17 @@ inline void format_pbrt_value(string& str, float value) {
   sprintf(buf, "%g", value);
   str += buf;
 }
-inline void format_pbrt_value(string& str, double value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
 inline void format_pbrt_value(string& str, const vec2f& value) {
-  char buf[256];
-  sprintf(buf, "%g %g", value.x, value.y);
-  str += buf;
+  for(auto i = 0; i < 2; i ++) format_pbrt_value(str, value[i]);
 }
 inline void format_pbrt_value(string& str, const vec3f& value) {
-  char buf[256];
-  sprintf(buf, "%g %g %g", value.x, value.y, value.z);
-  str += buf;
+  for(auto i = 0; i < 3; i ++) format_pbrt_value(str, value[i]);
 }
-#if 0
-inline void format_pbrt_value(string& str, const vec2i& value) {
-  char buf[256];
-  sprintf(buf, "%d %d", value.x, value.y);
-  str += buf;
-}
-inline void format_pbrt_value(string& str, const vec3i& value) {
-  char buf[256];
-  sprintf(buf, "%d %d %d", value.x, value.y, value.z);
-  str += buf;
-}
-#endif
-inline void format_pbrt_value(string& str, const frame3f& value) {
-  char buf[512];
-  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y,
-      value.x.z, value.y.x, value.y.y, value.y.z, value.z.x, value.z.y,
-      value.z.z, value.o.x, value.o.y, value.o.z);
-  str += buf;
+inline void format_pbrt_value(string& str, const vec4f& value) {
+  for(auto i = 0; i < 4; i ++) format_pbrt_value(str, value[i]);
 }
 inline void format_pbrt_value(string& str, const mat4f& value) {
-  char buf[512];
-  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", value.x.x,
-      value.x.y, value.x.z, value.x.w, value.y.x, value.y.y, value.y.z,
-      value.y.w, value.z.x, value.z.y, value.z.z, value.z.w, value.w.x,
-      value.w.y, value.w.z, value.w.w);
-  str += buf;
+  for(auto i = 0; i < 4; i ++) format_pbrt_value(str, value[i]);
 }
 
 // Foramt to file
