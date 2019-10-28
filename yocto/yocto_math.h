@@ -164,13 +164,13 @@
 // -----------------------------------------------------------------------------
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <functional>
 #include <limits>
-#include <vector>
 #include <string>
 #include <unordered_map>
-#include <array>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -179,11 +179,11 @@ namespace yocto {
 
 using byte = unsigned char;
 using uint = unsigned int;
-using std::pair;
-using std::vector;
-using std::string;
 using std::array;
+using std::pair;
+using std::string;
 using std::unordered_map;
+using std::vector;
 using namespace std::string_literals;
 
 inline const double pi  = 3.14159265358979323846;

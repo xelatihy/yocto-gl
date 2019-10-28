@@ -84,11 +84,11 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <string>
-#include <vector>
-#include <unordered_map>
 #include <chrono>
 #include <cstdio>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -96,11 +96,11 @@
 namespace yocto {
 
 using byte = unsigned char;
-using std::vector;
 using std::string;
 using std::unordered_map;
+using std::vector;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES

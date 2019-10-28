@@ -301,8 +301,7 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "element", "highlight"};
 
 // Initialize state of the renderer.
-trace_state make_state(
-    const trace_scene& scene, const trace_params& params);
+trace_state make_state(const trace_scene& scene, const trace_params& params);
 
 // Initialize lights.
 void init_lights(trace_scene& scene);

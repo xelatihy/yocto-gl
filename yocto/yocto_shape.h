@@ -171,8 +171,8 @@ namespace yocto {
 // functions below to access this data.
 struct edge_map {
   unordered_map<vec2i, int> index  = {};
-  vector<vec2i>        edges  = {};
-  vector<int>          nfaces = {};
+  vector<vec2i>             edges  = {};
+  vector<int>               nfaces = {};
 };
 
 // Initialize an edge map with elements.
@@ -229,9 +229,9 @@ namespace yocto {
 // A sparse grid of cells, containing list of points. Cells are stored in
 // a dictionary to get sparsity. Helpful for nearest neighboor lookups.
 struct hash_grid {
-  float                        cell_size     = 0;
-  float                        cell_inv_size = 0;
-  vector<vec3f>                positions     = {};
+  float                             cell_size     = 0;
+  float                             cell_inv_size = 0;
+  vector<vec3f>                     positions     = {};
   unordered_map<vec3i, vector<int>> cells         = {};
 };
 

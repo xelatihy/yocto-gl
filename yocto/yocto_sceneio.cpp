@@ -32,11 +32,11 @@
 #include "yocto_shape.h"
 
 #include <atomic>
-#include <future>
+#include <cassert>
 #include <climits>
 #include <cstdlib>
-#include <cassert>
 #include <deque>
+#include <future>
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF CONCURRENCY UTILITIES
@@ -76,7 +76,7 @@ inline void parallel_foreach(const vector<T>& values, Func&& func) {
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES

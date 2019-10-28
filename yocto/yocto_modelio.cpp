@@ -686,7 +686,7 @@ void save_ply(const string& filename, const ply_model& ply) {
   auto fs = open_file(filename, "wb");
 
   // ply type names
-  static auto type_map   = unordered_map<ply_type, string>{{ply_type::i8, "char"},
+  static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
       {ply_type::u8, "uchar"}, {ply_type::u16, "ushort"},
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
