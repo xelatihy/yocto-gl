@@ -34,12 +34,12 @@
 //
 
 #include "yocto_trace.h"
-#include "yocto_shape.h"
+// #include "yocto_shape.h"
 
-#include <deque>
-#include <mutex>
 #include <atomic>
+#include <deque>
 #include <future>
+#include <mutex>
 
 #if YOCTO_EMBREE
 #include <embree3/rtcore.h>
@@ -87,7 +87,7 @@ inline void parallel_foreach(const vector<T>& values, Func&& func) {
       0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
@@ -1032,8 +1032,7 @@ static RTCDevice     trace_embree_device() {
 }
 
 // Initialize Embree BVH
-static void init_embree_bvh(
-    trace_shape& shape, const trace_params& params) {
+static void init_embree_bvh(trace_shape& shape, const trace_params& params) {
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
   if (params.compact_bvh) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
@@ -1144,8 +1143,7 @@ static void init_embree_bvh(
       escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); }};
 }
 
-static void init_embree_bvh(
-    trace_scene& scene, const trace_params& params) {
+static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
   // scene bvh
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
@@ -1700,8 +1698,7 @@ static void update_bvh(trace_shape& shape, const trace_params& params) {
 void update_bvh(trace_scene& scene, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const trace_params& params) {
   // update shapes
-  for (auto shape : updated_shapes)
-    update_bvh(scene.shapes[shape], params);
+  for (auto shape : updated_shapes) update_bvh(scene.shapes[shape], params);
 
 #if YOCTO_EMBREE
   if (params.embree_bvh) {
@@ -2250,36 +2247,25 @@ static vector<float> sample_environment_cdf(
 // Generate a distribution for sampling a shape uniformly based on area/length.
 static vector<float> sample_shape_cdf(const trace_shape& shape) {
   if (!shape.triangles.empty()) {
-    return sample_triangles_cdf(shape.triangles, shape.positions);
+    auto cdf = vector<float>(shape.triangles.size());
+    for (auto idx = 0; idx < cdf.size(); idx++) {
+      auto& t  = shape.triangles[idx];
+      cdf[idx] = triangle_area(
+          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+      if (idx) cdf[idx] += cdf[idx - 1];
+    }
+    return cdf;
   } else if (!shape.quads.empty()) {
-    return sample_quads_cdf(shape.quads, shape.positions);
-  } else if (!shape.lines.empty()) {
-    return sample_lines_cdf(shape.lines, shape.positions);
-  } else if (!shape.points.empty()) {
-    return sample_points_cdf(shape.points.size());
-  } else if (!shape.quadspos.empty()) {
-    return sample_quads_cdf(shape.quadspos, shape.positions);
+    auto cdf = vector<float>(shape.quads.size());
+    for (auto idx = 0; idx < cdf.size(); idx++) {
+      auto& t  = shape.quads[idx];
+      cdf[idx] = quad_area(shape.positions[t.x], shape.positions[t.y],
+          shape.positions[t.z], shape.positions[t.w]);
+      if (idx) cdf[idx] += cdf[idx - 1];
+    }
+    return cdf;
   } else {
-    throw std::runtime_error("empty shape");
-  }
-}
-
-// Sample a shape based on a distribution.
-static pair<int, vec2f> sample_shape(const trace_shape& shape,
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-  if (cdf.empty()) return {};
-  if (!shape.triangles.empty()) {
-    return sample_triangles(cdf, re, ruv);
-  } else if (!shape.quads.empty()) {
-    return sample_quads(cdf, re, ruv);
-  } else if (!shape.lines.empty()) {
-    return {sample_lines(cdf, re, ruv.x).first, ruv};
-  } else if (!shape.points.empty()) {
-    return {sample_points(cdf, re), ruv};
-  } else if (!shape.quadspos.empty()) {
-    return sample_quads(cdf, re, ruv);
-  } else {
-    return {0, zero2f};
+    throw std::runtime_error("lights only support triangles and quads");
   }
 }
 
@@ -2290,9 +2276,17 @@ static vec3f sample_light(const trace_scene& scene, const trace_light& light,
     auto& instance = scene.instances[light.instance];
     auto& shape    = scene.shapes[instance.shape];
     auto& cdf      = light.elem_cdf;
-    auto  sample   = sample_shape(shape, cdf, rel, ruv);
-    auto  element  = sample.first;
-    auto  uv       = sample.second;
+    auto  element  = sample_discrete(cdf, rel);
+    auto  uv       = zero2f;
+    if (!shape.triangles.empty()) {
+      uv = sample_triangle(ruv);
+    } else if (!shape.quads.empty()) {
+      uv = ruv;
+    } else if (!shape.quadspos.empty()) {
+      uv = ruv;
+    } else {
+      throw std::runtime_error("lights are only triangles or quads");
+    }
     return normalize(eval_position(scene, instance, element, uv) - p);
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
@@ -2840,8 +2834,7 @@ void trace_region(image<vec4f>& image, trace_state& state,
 }
 
 // Init a sequence of random number generators.
-trace_state make_state(
-    const trace_scene& scene, const trace_params& params) {
+trace_state make_state(const trace_scene& scene, const trace_params& params) {
   auto image_size = camera_resolution(
       scene.cameras[params.camera], params.resolution);
   auto state = trace_state{image_size, trace_pixel{}};
