@@ -381,16 +381,97 @@ inline bool read_obj_line(obj_file& fs, char* buffer, size_t size) {
   return ok;
 }
 
-inline void write_ply_text(obj_file& fs, const string& value) {
+inline void write_obj_text(obj_file& fs, const string& value) {
   if (fputs(value.c_str(), fs.fs) < 0)
     throw std::runtime_error("cannot write to " + fs.filename);
 }
-inline void write_ply_text(obj_file& fs, const char* value) {
+inline void write_obj_text(obj_file& fs, const char* value) {
   if (fputs(value, fs.fs) < 0)
     throw std::runtime_error("cannot write to " + fs.filename);
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF PATH HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Utility to normalize a path
+static inline string normalize_obj_path(const string& filename_) {
+  auto filename = filename_;
+  for (auto& c : filename)
+
+    if (c == '\\') c = '/';
+  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+      filename[3] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  auto pos = (size_t)0;
+  while ((pos = filename.find("//")) != filename.npos)
+    filename = filename.substr(0, pos) + filename.substr(pos + 1);
+  return filename;
+}
+
+// Get directory name (including '/').
+static inline string get_obj_dirname(const string& filename_) {
+  auto filename = normalize_obj_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return "";
+  return filename.substr(0, pos + 1);
+}
+
+// Get extension (not including '.').
+static inline string get_obj_extension(const string& filename_) {
+  auto filename = normalize_obj_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return "";
+  return filename.substr(pos);
+}
+
+// Get filename without directory.
+static inline string get_obj_filename(const string& filename_) {
+  auto filename = normalize_obj_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return filename;
+  return filename.substr(pos + 1);
+}
+
+// Get extension.
+static inline string get_obj_noextension(const string& filename_) {
+  auto filename = normalize_obj_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return filename;
+  return filename.substr(0, pos);
+}
+
+// Get filename without directory and extension.
+static inline string get_obj_basename(const string& filename) {
+  return get_obj_noextension(get_obj_filename(filename));
+}
+
+// Replaces extensions
+static inline string replace_obj_extension(const string& filename, const string& ext) {
+  return get_obj_noextension(filename) + ext;
+}
+
+// Check if a file can be opened for reading.
+static inline bool exists_obj_file(const string& filename) {
+  auto fs = fopen(filename.c_str(), "r");
+  if (fs) {
+    fclose(fs);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+}
 
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
@@ -576,7 +657,7 @@ inline void parse_obj_value(string_view& str, obj_texture_info& info) {
   if (tokens.empty()) throw std::runtime_error("cannot parse value");
 
   // texture name
-  info.path = normalize_path(tokens.back());
+  info.path = normalize_obj_path(tokens.back());
 
   // texture params
   auto last = string();
@@ -918,14 +999,14 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
   if (geom_only) return;
 
   // load materials
-  auto dirname = get_dirname(filename);
+  auto dirname = get_obj_dirname(filename);
   for (auto& mtllib : mtllibs) {
     load_mtl(dirname + mtllib, obj);
   }
 
   // load extensions
-  auto extfilename = replace_extension(filename, ".objx");
-  if (exists_file(extfilename)) {
+  auto extfilename = replace_obj_extension(filename, ".objx");
+  if (exists_obj_file(extfilename)) {
     load_objx(extfilename, obj);
   }
 }
@@ -1096,7 +1177,7 @@ inline void save_obj(const string& filename, const obj_model& obj) {
   // save material library
   if (!obj.materials.empty()) {
     format_obj_values(
-        fs, "mtllib {}\n\n", replace_extension(get_filename(filename), ".mtl"));
+        fs, "mtllib {}\n\n", replace_obj_extension(get_obj_filename(filename), ".mtl"));
   }
 
   // save objects
@@ -1138,13 +1219,13 @@ inline void save_obj(const string& filename, const obj_model& obj) {
 
   // save mtl
   if (!obj.materials.empty())
-    save_mtl(replace_extension(filename, ".mtl"), obj);
+    save_mtl(replace_obj_extension(filename, ".mtl"), obj);
 
   // save objx
   if (!obj.cameras.empty() || !obj.environments.empty() ||
       std::any_of(obj.shapes.begin(), obj.shapes.end(),
           [](auto& shape) { return !shape.instances.empty(); }))
-    save_objx(replace_extension(filename, ".objx"), obj);
+    save_objx(replace_obj_extension(filename, ".objx"), obj);
 }
 
 // convert between roughness and exponent
