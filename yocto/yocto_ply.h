@@ -1,5 +1,5 @@
 //
-// # Yocto/Ply: Tiny library for PLY parsing and writing
+// # Yocto/Ply: Tiny library for Ply parsing and writing
 //
 // Yocto/Ply is a tiny library for loading and saving Stanford Ply. Yocto/Ply
 // supports two interfaces: a simple interface where all Ply data is loaded
@@ -181,7 +181,7 @@ inline vector<vec2f> get_ply_texcoords(
     const ply_model& ply, bool flipv = false);
 inline vector<vec4f> get_ply_colors(const ply_model& ply);
 inline vector<float> get_ply_radius(const ply_model& ply);
-vector<vector<int>>  get_ply_faces(const ply_model& ply);
+inline vector<vector<int>>  get_ply_faces(const ply_model& ply);
 inline vector<vec2i> get_ply_lines(const ply_model& ply);
 inline vector<int>   get_ply_points(const ply_model& ply);
 inline vector<vec3i> get_ply_triangles(const ply_model& ply);
