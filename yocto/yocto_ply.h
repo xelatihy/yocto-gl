@@ -243,6 +243,8 @@ struct ply_file {
   ply_file& operator=(const ply_file&) = delete;
   ~ply_file();
 
+  operator bool() const { return (bool)fs; }
+
   FILE*  fs       = nullptr;
   string filename = "";
   string mode     = "rt";
@@ -635,6 +637,7 @@ inline void load_ply(const string& filename, ply_model& ply) {
 
   // open file
   auto fs = open_ply(filename, "rb");
+  if(!fs) throw std::runtime_error("cannot open " + filename);
 
   // read header ---------------------------------------------
   char buffer[4096];
@@ -835,6 +838,7 @@ inline void load_ply(const string& filename, ply_model& ply) {
 // Save ply
 inline void save_ply(const string& filename, const ply_model& ply) {
   auto fs = open_ply(filename, "wb");
+  if(!fs) throw std::runtime_error("cannot open " + filename);
 
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},

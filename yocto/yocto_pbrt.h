@@ -267,6 +267,8 @@ struct pbrt_file {
   pbrt_file& operator=(const pbrt_file&) = delete;
   ~pbrt_file();
 
+  operator bool() const { return (bool)fs; }
+
   FILE*  fs       = nullptr;
   string filename = "";
   string mode     = "rt";
@@ -1565,6 +1567,7 @@ struct pbrt_context {
 inline void load_pbrt(const string& filename, pbrt_model& pbrt) {
   auto files = vector<pbrt_file>{};
   open_pbrt(files.emplace_back(), filename);
+  if(!files.back()) throw std::runtime_error("cannot open " + filename);
 
   // parser state
   auto   stack      = vector<pbrt_context>{};
@@ -1795,6 +1798,7 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt) {
         parse_pbrt_param(str, includename);
         open_pbrt(
             files.emplace_back(), get_pbrt_dirname(filename) + includename);
+        if(!files.back()) throw std::runtime_error("cannot open " + filename);
       } else {
         throw std::runtime_error("unknown command " + cmd);
       }

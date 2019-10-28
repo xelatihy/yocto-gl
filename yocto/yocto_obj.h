@@ -260,6 +260,8 @@ struct obj_file {
   obj_file& operator=(const obj_file&) = delete;
   ~obj_file();
 
+  operator bool() const { return (bool)fs; }
+
   FILE*  fs       = nullptr;
   string filename = "";
   string mode     = "rt";
@@ -673,6 +675,7 @@ inline void load_mtl(
     const string& filename, obj_model& obj, bool fliptr = true) {
   // open file
   auto fs = open_obj(filename, "rt");
+  if(!fs) throw std::runtime_error("cannot open " + filename);
 
   // init parsing
   obj.materials.emplace_back();
@@ -789,6 +792,7 @@ inline void load_mtl(
 inline void load_objx(const string& filename, obj_model& obj) {
   // open file
   auto fs = open_obj(filename, "rt");
+  if(!fs) throw std::runtime_error("cannot open " + filename);
 
   // shape map for instances
   auto shape_map = unordered_map<string, vector<int>>{};
@@ -852,6 +856,7 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
     bool split_elements, bool split_materials) {
   // open file
   auto fs = open_obj(filename, "rt");
+  if(!fs) throw std::runtime_error("cannot open " + filename);
 
   // parsing state
   auto opositions = vector<vec3f>{};
@@ -1035,6 +1040,7 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 inline void save_mtl(const string& filename, const obj_model& obj) {
   // open file
   auto fs = open_obj(filename, "wt");
+  if(!fs) throw std::runtime_error("cannot open " + filename);
 
   // save comments
   format_obj_values(fs, "#\n");
@@ -1125,6 +1131,7 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
 inline void save_objx(const string& filename, const obj_model& obj) {
   // open file
   auto fs = open_obj(filename, "wt");
+  if(!fs) throw std::runtime_error("cannot open " + filename);
 
   // save comments
   format_obj_values(fs, "#\n");
@@ -1164,6 +1171,7 @@ inline void save_objx(const string& filename, const obj_model& obj) {
 inline void save_obj(const string& filename, const obj_model& obj) {
   // open file
   auto fs = open_obj(filename, "wt");
+  if(!fs) throw std::runtime_error("cannot open " + filename);
 
   // save comments
   format_obj_values(fs, "#\n");

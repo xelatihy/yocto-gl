@@ -914,6 +914,8 @@ struct yaml_file {
   yaml_file& operator=(const yaml_file&) = delete;
   ~yaml_file();
 
+  operator bool() const { return (bool)fs; }
+
   FILE*  fs       = nullptr;
   string filename = "";
   string mode     = "rt";
@@ -1224,6 +1226,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
 // Load/save yaml
 void load_yaml(const string& filename, yaml_model& yaml) {
   auto fs = open_yaml(filename, "rt");
+  if(!fs) throw std::runtime_error("cannot open " + filename);
 
   // read the file line by line
   auto group = ""s;
@@ -1353,6 +1356,7 @@ static inline void format_yaml_value(string& str, const yaml_value& value) {
 
 void save_yaml(const string& filename, const yaml_model& yaml) {
   auto fs = open_yaml(filename, "wt");
+  if(!fs) throw std::runtime_error("cannot open " + filename);
 
   // save comments
   format_yaml_values(fs, "#\n");
