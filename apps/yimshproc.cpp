@@ -99,7 +99,8 @@ void my_draw_glwidgets(
         auto path = integrate_field(app.shape.triangles, app.shape.positions,
             data.face_adjacency, dummy_tags, 0, field, from, to);
 
-        positions += make_positions_from_path(path, app.shape.positions);
+        auto ppositions = make_positions_from_path(path, app.shape.positions);
+        positions.insert(positions.end(), ppositions.begin(), ppositions.end());
       }
       update_glpolyline(app, positions);
     }

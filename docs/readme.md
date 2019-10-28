@@ -53,28 +53,27 @@ See each header file for documentation.
    bounding boxes, transforms, timer
 - `yocto/yocto_random.{h}`: random number generation, Perlin noise, Monte Carlo
    integration utilities
-- `yocto/yocto_shape.{h,cpp}`:  various utilities for manipulating 
-   triangle meshes, quads meshes and line sets, computation of normals and 
-   tangents, linear and Catmull-Clark subdivision, mesh loading and saving, 
-   procedural shapes generation, geometry utilities 
-- `yocto/yocto_bvh.{h,cpp}`: ray intersection and closest point queries of 
-   triangle meshes, quads meshes, line sets and instances scenes using a 
+- `yocto/yocto_shape.{h,cpp}`:  various utilities for manipulating
+   triangle meshes, quads meshes and line sets, computation of normals and
+   tangents, linear and Catmull-Clark subdivision, mesh loading and saving,
+   procedural shapes generation, geometry utilities
+- `yocto/yocto_bvh.{h,cpp}`: ray intersection and closest point queries of
+   triangle meshes, quads meshes, line sets and instances scenes using a
    two-level bounding volume hierarchy
-- `yocto/yocto_image.{h,cpp}`: simple image data type, image resizing, 
-   tonemapping, color correction, image loading and saving, 
+- `yocto/yocto_image.{h,cpp}`: simple image data type, image resizing,
+   tonemapping, color correction, image loading and saving,
    procedural images, procedural sun-sky, color conversion utilities
 - `yocto/yocto_trace.{h,cpp}`: path tracing of surfaces and hairs supporting
    area and environment illumination, microfacet GGX and subsurface scattering,
    multiple importance sampling
-- `yocto/yocto_scene.{h,cpp}`: simple scene storage, evaluation of scene 
+- `yocto/yocto_scene.{h,cpp}`: simple scene storage, evaluation of scene
    properties
-- `yocto/yocto_modelio.{h,cpp}`: low level parsing and wiring for 
-   Ply, Obj, Pbrt and Yaml 3d formats
+- `yocto/yocto_ply.h`: parsing and wiring for Ply format
+- `yocto/yocto_obj.h`: parsing and wiring for Obj format
+- `yocto/yocto_pbrt.h`: parsing and wiring for Pbrt format
 - `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Obj, pbrt, glTF,
    and a custom, hackable, Yaml format
-- `yocto/yocto_common.h`: vocabulary types, container utilities, 
-   Python-like operations, concurrency utilies, timer
-- `yocto/yocto_commonio.h`: printing utilities, file io utilities, 
+- `yocto/yocto_cmdline.h`: printing utilities, file io utilities,
   command line parsing
 
 You can see Yocto/GL in action in the following applications written to

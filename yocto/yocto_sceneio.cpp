@@ -27,10 +27,11 @@
 //
 
 #include "yocto_sceneio.h"
-#include "yocto_commonio.h"
-#include "yocto_modelio.h"
-#include "yocto_shape.h"
 #include "yocto_image.h"
+#include "yocto_obj.h"
+#include "yocto_pbrt.h"
+#include "yocto_ply.h"
+#include "yocto_shape.h"
 
 #include <atomic>
 #include <cassert>
@@ -38,6 +39,80 @@
 #include <cstdlib>
 #include <deque>
 #include <future>
+
+#define CGLTF_IMPLEMENTATION
+#include "ext/cgltf.h"
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF PATH HELPERS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Utility to normalize a path
+static inline string normalize_path(const string& filename_) {
+  auto filename = filename_;
+  for (auto& c : filename)
+
+    if (c == '\\') c = '/';
+  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+      filename[3] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  auto pos = (size_t)0;
+  while ((pos = filename.find("//")) != filename.npos)
+    filename = filename.substr(0, pos) + filename.substr(pos + 1);
+  return filename;
+}
+
+// Get directory name (including '/').
+static inline string get_dirname(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return "";
+  return filename.substr(0, pos + 1);
+}
+
+// Get extension (not including '.').
+static inline string get_extension(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return "";
+  return filename.substr(pos);
+}
+
+// Get filename without directory.
+static inline string get_filename(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return filename;
+  return filename.substr(pos + 1);
+}
+
+// Get extension.
+static inline string get_noextension(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return filename;
+  return filename.substr(0, pos);
+}
+
+// Get filename without directory and extension.
+static inline string get_basename(const string& filename) {
+  return get_noextension(get_filename(filename));
+}
+
+// Replaces extensions
+static inline string replace_extension(
+    const string& filename, const string& ext) {
+  return get_noextension(filename) + ext;
+}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF CONCURRENCY UTILITIES
@@ -796,6 +871,617 @@ static inline string make_safe_filename(const string& filename_) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// LOW-LEVEL YAML DECLARATIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::string_view;
+using namespace std::literals::string_view_literals;
+
+// Yaml value type
+enum struct yaml_value_type { number, boolean, string, array };
+
+// Yaml value
+struct yaml_value {
+  yaml_value_type   type    = yaml_value_type::number;
+  double            number  = 0;
+  bool              boolean = false;
+  string            string_ = "";
+  array<double, 16> array_  = {};
+};
+
+// Yaml element
+struct yaml_element {
+  string                           name       = "";
+  vector<pair<string, yaml_value>> key_values = {};
+};
+
+// Yaml model
+struct yaml_model {
+  vector<string>       comments = {};
+  vector<yaml_element> elements = {};
+};
+
+// Load/save yaml
+void load_yaml(const string& filename, yaml_model& yaml);
+void save_yaml(const string& filename, const yaml_model& yaml);
+
+// A class that wraps a C file ti handle safe opening/closgin with RIIA.
+struct yaml_file {
+  yaml_file() {}
+  yaml_file(yaml_file&& other);
+  yaml_file(const yaml_file&) = delete;
+  yaml_file& operator=(const yaml_file&) = delete;
+  ~yaml_file();
+
+  FILE*  fs       = nullptr;
+  string filename = "";
+  string mode     = "rt";
+  int    linenum  = 0;
+};
+
+// open a file
+yaml_file open_yaml(const string& filename, const string& mode = "rt");
+void      open_yaml(
+         yaml_file& fs, const string& filename, const string& mode = "rt");
+void close_yaml(yaml_file& fs);
+
+// Load Yaml properties
+bool read_yaml_property(
+    yaml_file& fs, string& group, string& key, bool& newobj, yaml_value& value);
+
+// Write Yaml properties
+void write_yaml_comment(yaml_file& fs, const string& comment);
+void write_yaml_property(yaml_file& fs, const string& object, const string& key,
+    bool newobj, const yaml_value& value);
+void write_yaml_object(yaml_file& fs, const string& object);
+
+// type-cheked yaml value access
+void get_yaml_value(const yaml_value& yaml, string& value);
+void get_yaml_value(const yaml_value& yaml, bool& value);
+void get_yaml_value(const yaml_value& yaml, int& value);
+void get_yaml_value(const yaml_value& yaml, float& value);
+void get_yaml_value(const yaml_value& yaml, vec2f& value);
+void get_yaml_value(const yaml_value& yaml, vec3f& value);
+void get_yaml_value(const yaml_value& yaml, mat3f& value);
+void get_yaml_value(const yaml_value& yaml, frame3f& value);
+
+// yaml value construction
+yaml_value make_yaml_value(const string& value);
+yaml_value make_yaml_value(bool value);
+yaml_value make_yaml_value(int value);
+yaml_value make_yaml_value(float value);
+yaml_value make_yaml_value(const vec2f& value);
+yaml_value make_yaml_value(const vec3f& value);
+yaml_value make_yaml_value(const mat3f& value);
+yaml_value make_yaml_value(const frame3f& value);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// LOW-LEVEL YAML IMPLEMENTATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// copnstrucyor and destructors
+inline yaml_file::yaml_file(yaml_file&& other) {
+  this->fs       = other.fs;
+  this->filename = other.filename;
+  other.fs       = nullptr;
+}
+inline yaml_file::~yaml_file() {
+  if (fs) fclose(fs);
+  fs = nullptr;
+}
+
+// Opens a file returing a handle with RIIA
+inline void open_yaml(
+    yaml_file& fs, const string& filename, const string& mode) {
+  close_yaml(fs);
+  fs.filename = filename;
+  fs.mode     = mode;
+  fs.fs       = fopen(filename.c_str(), mode.c_str());
+  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
+}
+inline yaml_file open_yaml(const string& filename, const string& mode) {
+  auto fs = yaml_file{};
+  open_yaml(fs, filename, mode);
+  return fs;
+}
+inline void close_yaml(yaml_file& fs) {
+  if (fs.fs) fclose(fs.fs);
+  fs.fs = nullptr;
+}
+
+// Read a line
+static inline bool read_yaml_line(yaml_file& fs, char* buffer, size_t size) {
+  auto ok = fgets(buffer, size, fs.fs) != nullptr;
+  if (ok) fs.linenum += 1;
+  return ok;
+}
+
+static inline bool is_yaml_space(char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+static inline bool is_yaml_newline(char c) { return c == '\r' || c == '\n'; }
+static inline bool is_yaml_digit(char c) { return c >= '0' && c <= '9'; }
+static inline bool is_yaml_alpha(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+static inline void skip_yaml_whitespace(string_view& str) {
+  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
+}
+static inline void trim_yaml_whitespace(string_view& str) {
+  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
+  while (!str.empty() && is_yaml_space(str.back())) str.remove_suffix(1);
+}
+
+static inline bool is_yaml_whitespace(string_view str) {
+  while (!str.empty()) {
+    if (!is_yaml_space(str.front())) return false;
+    str.remove_prefix(1);
+  }
+  return true;
+}
+
+static inline void remove_yaml_comment(
+    string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_yaml_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
+}
+
+static inline void parse_yaml_varname(string_view& str, string_view& value) {
+  skip_yaml_whitespace(str);
+  if (str.empty()) throw std::runtime_error("cannot parse value");
+  if (!is_yaml_alpha(str.front()))
+    throw std::runtime_error("cannot parse value");
+  auto pos = 0;
+  while (
+      is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
+    pos += 1;
+    if (pos >= str.size()) break;
+  }
+  value = str.substr(0, pos);
+  str.remove_prefix(pos);
+}
+static inline void parse_yaml_varname(string_view& str, string& value) {
+  auto view = ""sv;
+  parse_yaml_varname(str, view);
+  value = string{view};
+}
+
+inline void parse_yaml_value(string_view& str, string_view& value) {
+  skip_yaml_whitespace(str);
+  if (str.empty()) throw std::runtime_error("cannot parse value");
+  if (str.front() != '"') {
+    auto cpy = str;
+    while (!cpy.empty() && !is_yaml_space(cpy.front())) cpy.remove_prefix(1);
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+  } else {
+    if (str.front() != '"') throw std::runtime_error("cannot parse value");
+    str.remove_prefix(1);
+    if (str.empty()) throw std::runtime_error("cannot parse value");
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    if (cpy.empty()) throw std::runtime_error("cannot parse value");
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    str.remove_prefix(1);
+  }
+}
+inline void parse_yaml_value(string_view& str, string& value) {
+  auto valuev = ""sv;
+  parse_yaml_value(str, valuev);
+  value = string{valuev};
+}
+inline void parse_yaml_value(string_view& str, int& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = (int)strtol(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+inline void parse_yaml_value(string_view& str, float& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = strtof(str.data(), &end);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+inline void parse_yaml_value(string_view& str, double& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = strtod(str.data(), &end);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+
+// parse yaml value
+void get_yaml_value(const yaml_value& yaml, string& value) {
+  if (yaml.type != yaml_value_type::string)
+    throw std::runtime_error("error parsing yaml value");
+  value = yaml.string_;
+}
+void get_yaml_value(const yaml_value& yaml, bool& value) {
+  if (yaml.type != yaml_value_type::boolean)
+    throw std::runtime_error("error parsing yaml value");
+  value = yaml.boolean;
+}
+void get_yaml_value(const yaml_value& yaml, int& value) {
+  if (yaml.type != yaml_value_type::number)
+    throw std::runtime_error("error parsing yaml value");
+  value = (int)yaml.number;
+}
+void get_yaml_value(const yaml_value& yaml, float& value) {
+  if (yaml.type != yaml_value_type::number)
+    throw std::runtime_error("error parsing yaml value");
+  value = (float)yaml.number;
+}
+void get_yaml_value(const yaml_value& yaml, vec2f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 2)
+    throw std::runtime_error("error parsing yaml value");
+  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
+}
+void get_yaml_value(const yaml_value& yaml, vec3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 3)
+    throw std::runtime_error("error parsing yaml value");
+  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
+}
+void get_yaml_value(const yaml_value& yaml, mat3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 9)
+    throw std::runtime_error("error parsing yaml value");
+  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+}
+void get_yaml_value(const yaml_value& yaml, frame3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 12)
+    throw std::runtime_error("error parsing yaml value");
+  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+}
+
+// construction
+yaml_value make_yaml_value(const string& value) {
+  return {yaml_value_type::string, 0, false, value};
+}
+yaml_value make_yaml_value(bool value) {
+  return {yaml_value_type::boolean, 0, value};
+}
+yaml_value make_yaml_value(int value) {
+  return {yaml_value_type::number, (double)value};
+}
+yaml_value make_yaml_value(float value) {
+  return {yaml_value_type::number, (double)value};
+}
+yaml_value make_yaml_value(const vec2f& value) {
+  return {
+      yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
+}
+yaml_value make_yaml_value(const vec3f& value) {
+  return {yaml_value_type::array, 3, false, "",
+      {(double)value.x, (double)value.y, (double)value.z}};
+}
+yaml_value make_yaml_value(const mat3f& value) {
+  auto yaml = yaml_value{yaml_value_type::array, 9};
+  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+yaml_value make_yaml_value(const frame3f& value) {
+  auto yaml = yaml_value{yaml_value_type::array, 12};
+  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+
+void parse_yaml_value(string_view& str, yaml_value& value) {
+  trim_yaml_whitespace(str);
+  if (str.empty()) throw std::runtime_error("bad yaml");
+  if (str.front() == '[') {
+    str.remove_prefix(1);
+    value.type   = yaml_value_type::array;
+    value.number = 0;
+    while (!str.empty()) {
+      skip_yaml_whitespace(str);
+      if (str.empty()) throw std::runtime_error("bad yaml");
+      if (str.front() == ']') {
+        str.remove_prefix(1);
+        break;
+      }
+      if (value.number >= 16) throw std::runtime_error("array too large");
+      parse_yaml_value(str, value.array_[(int)value.number]);
+      value.number += 1;
+      skip_yaml_whitespace(str);
+      if (str.front() == ',') {
+        str.remove_prefix(1);
+        continue;
+      } else if (str.front() == ']') {
+        str.remove_prefix(1);
+        break;
+      } else {
+        throw std::runtime_error("bad yaml");
+      }
+    }
+  } else if (is_yaml_digit(str.front()) || str.front() == '-' ||
+             str.front() == '+') {
+    value.type = yaml_value_type::number;
+    parse_yaml_value(str, value.number);
+  } else {
+    value.type = yaml_value_type::string;
+    parse_yaml_value(str, value.string_);
+    if (value.string_ == "true" || value.string_ == "false") {
+      value.type    = yaml_value_type::boolean;
+      value.boolean = value.string_ == "true";
+    }
+  }
+  skip_yaml_whitespace(str);
+  if (!str.empty() && !is_yaml_whitespace(str))
+    throw std::runtime_error("bad yaml");
+}
+
+// Load/save yaml
+void load_yaml(const string& filename, yaml_model& yaml) {
+  auto fs = open_yaml(filename, "rt");
+
+  // read the file line by line
+  auto group = ""s;
+  auto key   = ""s;
+  auto value = yaml_value{};
+  char buffer[4096];
+  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_yaml_comment(line);
+    if (line.empty()) continue;
+    if (is_yaml_whitespace(line)) continue;
+
+    // peek commands
+    if (is_yaml_space(line.front())) {
+      // indented property
+      if (group == "") throw std::runtime_error("bad yaml");
+      skip_yaml_whitespace(line);
+      if (line.empty()) throw std::runtime_error("bad yaml");
+      if (line.front() == '-') {
+        auto& element = yaml.elements.emplace_back();
+        element.name  = group;
+        line.remove_prefix(1);
+        skip_yaml_whitespace(line);
+      } else if (yaml.elements.empty() || yaml.elements.back().name != group) {
+        auto& element = yaml.elements.emplace_back();
+        element.name  = group;
+      }
+      parse_yaml_varname(line, key);
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
+      line.remove_prefix(1);
+      parse_yaml_value(line, value);
+      yaml.elements.back().key_values.push_back({key, value});
+    } else if (is_yaml_alpha(line.front())) {
+      // new group
+      parse_yaml_varname(line, key);
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
+      line.remove_prefix(1);
+      if (!line.empty() && !is_yaml_whitespace(line)) {
+        group = "";
+        if (yaml.elements.empty() || yaml.elements.back().name != group) {
+          auto& element = yaml.elements.emplace_back();
+          element.name  = group;
+        }
+        parse_yaml_value(line, value);
+        yaml.elements.back().key_values.push_back({key, value});
+      } else {
+        group = key;
+        key   = "";
+      }
+    } else {
+      throw std::runtime_error("bad yaml");
+    }
+  }
+}
+
+static inline void format_yaml_value(string& str, const string& value) {
+  str += value;
+}
+static inline void format_yaml_value(string& str, const char* value) {
+  str += value;
+}
+static inline void format_yaml_value(string& str, double value) {
+  char buf[256];
+  sprintf(buf, "%g", value);
+  str += buf;
+}
+
+static inline void format_yaml_values(string& str, const string& fmt) {
+  auto pos = fmt.find("{}");
+  if (pos != string::npos) throw std::runtime_error("bad format string");
+  str += fmt;
+}
+template <typename Arg, typename... Args>
+static inline void format_yaml_values(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+  auto pos = fmt.find("{}");
+  if (pos == string::npos) throw std::runtime_error("bad format string");
+  str += fmt.substr(0, pos);
+  format_yaml_value(str, arg);
+  format_yaml_values(str, fmt.substr(pos + 2), args...);
+}
+
+template <typename... Args>
+static inline void format_yaml_values(
+    yaml_file& fs, const string& fmt, const Args&... args) {
+  auto str = ""s;
+  format_yaml_values(str, fmt, args...);
+  if (fputs(str.c_str(), fs.fs) < 0)
+    throw std::runtime_error("cannor write to " + fs.filename);
+}
+template <typename T>
+static inline void format_yaml_value(yaml_file& fs, const T& value) {
+  auto str = ""s;
+  format_yaml_value(str, value);
+  if (fputs(str.c_str(), fs.fs) < 0)
+    throw std::runtime_error("cannor write to " + fs.filename);
+}
+
+static inline void format_yaml_value(string& str, const yaml_value& value) {
+  switch (value.type) {
+    case yaml_value_type::number: format_yaml_value(str, value.number); break;
+    case yaml_value_type::boolean:
+      format_yaml_value(str, value.boolean ? "true" : "false");
+      break;
+    case yaml_value_type::string:
+      if (value.string_.empty() || is_yaml_digit(value.string_.front())) {
+        format_yaml_values(str, "\"{}\"", value.string_);
+      } else {
+        format_yaml_values(str, "{}", value.string_);
+      }
+      break;
+    case yaml_value_type::array:
+      format_yaml_value(str, "[ ");
+      for (auto i = 0; i < value.number; i++) {
+        if (i) format_yaml_value(str, ", ");
+        format_yaml_value(str, value.array_[i]);
+      }
+      format_yaml_value(str, " ]");
+      break;
+  }
+}
+
+void save_yaml(const string& filename, const yaml_model& yaml) {
+  auto fs = open_yaml(filename, "wt");
+
+  // save comments
+  format_yaml_values(fs, "#\n");
+  format_yaml_values(fs, "# Written by Yocto/GL\n");
+  format_yaml_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+  format_yaml_values(fs, "#\n\n");
+  for (auto& comment : yaml.comments) {
+    format_yaml_values(fs, "# {}\n", comment);
+  }
+  format_yaml_values(fs, "\n");
+
+  auto group = ""s;
+  for (auto& element : yaml.elements) {
+    if (group != element.name) {
+      group = element.name;
+      if (group != "") {
+        format_yaml_values(fs, "\n{}:\n", group);
+      } else {
+        format_yaml_values(fs, "\n");
+      }
+      auto first = true;
+      for (auto& [key, value] : element.key_values) {
+        if (group != "") {
+          format_yaml_values(
+              fs, "  {} {}: {}\n", first ? "-" : " ", key, value);
+          first = false;
+        } else {
+          format_yaml_values(fs, "{}: {}\n", key, value);
+        }
+      }
+    }
+  }
+}
+
+bool read_yaml_property(yaml_file& fs, string& group, string& key, bool& newobj,
+    yaml_value& value) {
+  // read the file line by line
+  char buffer[4096];
+  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_yaml_comment(line);
+    if (line.empty()) continue;
+    if (is_yaml_whitespace(line)) continue;
+
+    // peek commands
+    if (is_yaml_space(line.front())) {
+      // indented property
+      if (group == "") throw std::runtime_error("bad yaml");
+      skip_yaml_whitespace(line);
+      if (line.empty()) throw std::runtime_error("bad yaml");
+      if (line.front() == '-') {
+        newobj = true;
+        line.remove_prefix(1);
+        skip_yaml_whitespace(line);
+      } else {
+        newobj = false;
+      }
+      parse_yaml_varname(line, key);
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
+      line.remove_prefix(1);
+      parse_yaml_value(line, value);
+      return true;
+    } else if (is_yaml_alpha(line.front())) {
+      // new group
+      parse_yaml_varname(line, key);
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
+      line.remove_prefix(1);
+      if (!line.empty() && !is_yaml_whitespace(line)) {
+        group = "";
+        parse_yaml_value(line, value);
+        return true;
+      } else {
+        group = key;
+        key   = "";
+        return true;
+      }
+    } else {
+      throw std::runtime_error("bad yaml");
+    }
+  }
+  return false;
+}
+
+static inline vector<string> split_yaml_string(
+    const string& str, const string& delim) {
+  auto tokens = vector<string>{};
+  auto last = (size_t)0, next = (size_t)0;
+  while ((next = str.find(delim, last)) != string::npos) {
+    tokens.push_back(str.substr(last, next - last));
+    last = next + delim.size();
+  }
+  if (last < str.size()) tokens.push_back(str.substr(last));
+  return tokens;
+}
+
+void write_yaml_comment(yaml_file& fs, const string& comment) {
+  auto lines = split_yaml_string(comment, "\n");
+  for (auto& line : lines) {
+    format_yaml_values(fs, "# {}\n", line);
+  }
+  format_yaml_values(fs, "\n");
+}
+
+// Save yaml property
+void write_yaml_property(yaml_file& fs, const string& object, const string& key,
+    bool newobj, const yaml_value& value) {
+  if (key.empty()) {
+    format_yaml_values(fs, "\n{}:\n", object);
+  } else {
+    if (!object.empty()) {
+      format_yaml_values(fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value);
+    } else {
+      format_yaml_values(fs, "{}: {}\n", key, value);
+    }
+  }
+}
+
+void write_yaml_object(yaml_file& fs, const string& object) {
+  format_yaml_values(fs, "\n{}:\n", object);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // YAML SUPPORT
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -803,7 +1489,7 @@ namespace yocto {
 void load_yaml(
     const string& filename, scene_model& scene, const load_params& params) {
   // open file
-  auto fs = open_file(filename);
+  auto fs = open_yaml(filename);
 
   // parse state
   enum struct parsing_type {
@@ -1090,7 +1776,7 @@ static void load_yaml_scene(
 static void save_yaml(const string& filename, const scene_model& scene,
     bool ply_instances = false, const string& instances_name = "") {
   // open file
-  auto fs = open_file(filename, "w");
+  auto fs = open_yaml(filename, "w");
 
   // write_yaml_comment(fs, get_save_scene_message(scene, ""));
 
@@ -1647,6 +2333,536 @@ static void save_ply_scene(const string& filename, const scene_model& scene,
     save_fvshape(filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
         shape.positions, shape.normals, shape.texcoords);
   }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SIMPLE GLTF LOADER DECLARATIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+struct gltf_camera {
+  string name   = "";
+  bool   ortho  = false;
+  float  yfov   = 45 * pif / 180;
+  float  aspect = 1;
+};
+struct gltf_texture {
+  string name     = "";
+  string filename = "";
+};
+struct gltf_material {
+  string name            = "";
+  vec3f  emission        = zero3f;
+  int    emission_tex    = -1;
+  int    normal_tex      = -1;
+  bool   has_metalrough  = false;
+  vec4f  mr_base         = zero4f;
+  float  mr_metallic     = 0;
+  float  mr_roughness    = 1;
+  int    mr_base_tex     = -1;
+  int    mr_metallic_tex = -1;
+  bool   has_specgloss   = false;
+  vec4f  sg_diffuse      = zero4f;
+  vec3f  sg_specular     = zero3f;
+  float  sg_glossiness   = 1;
+  int    sg_diffuse_tex  = -1;
+  int    sg_specular_tex = -1;
+};
+struct gltf_primitive {
+  int           material  = -1;
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
+  vector<vec3i> triangles = {};
+  vector<vec2i> lines     = {};
+  vector<int>   points    = {};
+};
+struct gltf_mesh {
+  string                 name       = "";
+  vector<gltf_primitive> primitives = {};
+};
+struct gltf_node {
+  string      name        = "";
+  frame3f     frame       = {};
+  vec3f       translation = zero3f;
+  vec4f       rotation    = vec4f{0, 0, 0, 1};
+  vec3f       scale       = vec3f{1};
+  frame3f     local       = identity3x4f;
+  int         camera      = -1;
+  int         mesh        = -1;
+  int         parent      = -1;
+  vector<int> children    = {};
+};
+struct gltf_scene {
+  string      name  = "";
+  vector<int> nodes = {};
+};
+struct gltf_model {
+  vector<gltf_camera>   cameras   = {};
+  vector<gltf_mesh>     meshes    = {};
+  vector<gltf_texture>  textures  = {};
+  vector<gltf_material> materials = {};
+  vector<gltf_node>     nodes     = {};
+  vector<gltf_scene>    scenes    = {};
+};
+
+void load_gltf(const string& filename, gltf_model& gltf);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SIMPLE GLTF LOADER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+void update_transforms(
+    gltf_model& scene, gltf_node& node, const frame3f& parent = identity3x4f) {
+  auto frame = parent * node.local * translation_frame(node.translation) *
+               rotation_frame(node.rotation) * scaling_frame(node.scale);
+  for (auto child : node.children)
+    update_transforms(scene, scene.nodes[child], frame);
+}
+
+// convert gltf to scene
+void load_gltf(const string& filename, gltf_model& scene) {
+  // load gltf
+  auto params = cgltf_options{};
+  memset(&params, 0, sizeof(params));
+  auto data   = (cgltf_data*)nullptr;
+  auto result = cgltf_parse_file(&params, filename.c_str(), &data);
+  if (result != cgltf_result_success) {
+    throw std::runtime_error("could not load " + filename);
+  }
+  auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
+      data, cgltf_free};
+  auto dirname = get_dirname(filename);
+  if (dirname != "") dirname += "/";
+  if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
+      cgltf_result_success) {
+    throw std::runtime_error("could not load gltf buffers " + filename);
+  }
+
+  // convert textures
+  auto _startswith = [](string_view str, string_view substr) {
+    if (str.size() < substr.size()) return false;
+    return str.substr(0, substr.size()) == substr;
+  };
+  auto imap = unordered_map<cgltf_image*, int>{};
+  for (auto tid = 0; tid < gltf->images_count; tid++) {
+    auto gimg        = &gltf->images[tid];
+    auto texture     = gltf_texture{};
+    texture.name     = gimg->name ? gimg->name : "";
+    texture.filename = (_startswith(gimg->uri, "data:"))
+                           ? string("[glTF-static inline].png")
+                           : gimg->uri;
+    scene.textures.push_back(texture);
+    imap[gimg] = tid;
+  }
+
+  // add a texture
+  auto get_texture = [&imap](const cgltf_texture_view& ginfo) {
+    if (!ginfo.texture || !ginfo.texture->image) return -1;
+    auto gtxt = ginfo.texture;
+    return imap.at(gtxt->image);
+  };
+
+  // convert materials
+  auto mmap = unordered_map<cgltf_material*, int>{{nullptr, -1}};
+  for (auto mid = 0; mid < gltf->materials_count; mid++) {
+    auto gmat             = &gltf->materials[mid];
+    mmap[gmat]            = mid;
+    auto& material        = scene.materials.emplace_back();
+    material.name         = gmat->name ? gmat->name : "";
+    material.emission     = {gmat->emissive_factor[0], gmat->emissive_factor[1],
+        gmat->emissive_factor[2]};
+    material.emission_tex = get_texture(gmat->emissive_texture);
+    if (gmat->has_pbr_specular_glossiness) {
+      material.has_specgloss = true;
+      auto gsg               = &gmat->pbr_specular_glossiness;
+      material.sg_diffuse    = vec4f{gsg->diffuse_factor[0],
+          gsg->diffuse_factor[1], gsg->diffuse_factor[2],
+          gsg->diffuse_factor[3]};
+      material.sg_specular = {gsg->specular_factor[0], gsg->specular_factor[1],
+          gsg->specular_factor[2]};
+      material.sg_glossiness   = gsg->glossiness_factor;
+      material.sg_diffuse_tex  = get_texture(gsg->diffuse_texture);
+      material.sg_specular_tex = get_texture(gsg->specular_glossiness_texture);
+    } else if (gmat->has_pbr_metallic_roughness) {
+      material.has_metalrough  = true;
+      auto gmr                 = &gmat->pbr_metallic_roughness;
+      material.mr_base         = vec4f{gmr->base_color_factor[0],
+          gmr->base_color_factor[1], gmr->base_color_factor[2],
+          gmr->base_color_factor[3]};
+      material.mr_metallic     = gmr->metallic_factor;
+      material.mr_roughness    = gmr->roughness_factor;
+      material.mr_base_tex     = get_texture(gmr->base_color_texture);
+      material.mr_metallic_tex = get_texture(gmr->metallic_roughness_texture);
+    }
+    material.normal_tex = get_texture(gmat->normal_texture);
+  }
+
+  // get values from accessors
+  auto accessor_values =
+      [](const cgltf_accessor* gacc,
+          bool normalize = false) -> vector<std::array<double, 4>> {
+    auto gview       = gacc->buffer_view;
+    auto data        = (byte*)gview->buffer->data;
+    auto offset      = gacc->offset + gview->offset;
+    auto stride      = gview->stride;
+    auto compTypeNum = gacc->component_type;
+    auto count       = gacc->count;
+    auto type        = gacc->type;
+    auto ncomp       = 0;
+    if (type == cgltf_type_scalar) ncomp = 1;
+    if (type == cgltf_type_vec2) ncomp = 2;
+    if (type == cgltf_type_vec3) ncomp = 3;
+    if (type == cgltf_type_vec4) ncomp = 4;
+    auto compSize = 1;
+    if (compTypeNum == cgltf_component_type_r_16 ||
+        compTypeNum == cgltf_component_type_r_16u) {
+      compSize = 2;
+    }
+    if (compTypeNum == cgltf_component_type_r_32u ||
+        compTypeNum == cgltf_component_type_r_32f) {
+      compSize = 4;
+    }
+    if (!stride) stride = compSize * ncomp;
+    auto vals = vector<std::array<double, 4>>(count, {{0.0, 0.0, 0.0, 1.0}});
+    for (auto i = 0; i < count; i++) {
+      auto d = data + offset + i * stride;
+      for (auto c = 0; c < ncomp; c++) {
+        if (compTypeNum == cgltf_component_type_r_8) {  // char
+          vals[i][c] = (double)(*(char*)d);
+          if (normalize) vals[i][c] /= SCHAR_MAX;
+        } else if (compTypeNum == cgltf_component_type_r_8u) {  // byte
+          vals[i][c] = (double)(*(byte*)d);
+          if (normalize) vals[i][c] /= UCHAR_MAX;
+        } else if (compTypeNum == cgltf_component_type_r_16) {  // short
+          vals[i][c] = (double)(*(short*)d);
+          if (normalize) vals[i][c] /= SHRT_MAX;
+        } else if (compTypeNum ==
+                   cgltf_component_type_r_16u) {  // unsigned short
+          vals[i][c] = (double)(*(unsigned short*)d);
+          if (normalize) vals[i][c] /= USHRT_MAX;
+        } else if (compTypeNum == cgltf_component_type_r_32u) {  // unsigned int
+          vals[i][c] = (double)(*(unsigned int*)d);
+          if (normalize) vals[i][c] /= UINT_MAX;
+        } else if (compTypeNum == cgltf_component_type_r_32f) {  // float
+          vals[i][c] = (*(float*)d);
+        }
+        d += compSize;
+      }
+    }
+    return vals;
+  };
+
+  // convert meshes
+  auto smap = unordered_map<cgltf_mesh*, int>{{nullptr, -1}};
+  for (auto mid = 0; mid < gltf->meshes_count; mid++) {
+    auto gmesh  = &gltf->meshes[mid];
+    smap[gmesh] = mid;
+    auto& mesh  = scene.meshes.emplace_back();
+    mesh.name   = gmesh->name ? gmesh->name : "";
+    for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
+      auto gprim = &gmesh->primitives[sid];
+      if (!gprim->attributes_count) continue;
+      auto& shape = mesh.primitives.emplace_back();
+      for (auto aid = 0; aid < gprim->attributes_count; aid++) {
+        auto gattr    = &gprim->attributes[aid];
+        auto semantic = string(gattr->name ? gattr->name : "");
+        auto gacc     = gattr->data;
+        auto vals     = accessor_values(gacc);
+        if (semantic == "POSITION") {
+          shape.positions.reserve(vals.size());
+          for (auto i = 0; i < vals.size(); i++)
+            shape.positions.push_back(
+                {(float)vals[i][0], (float)vals[i][1], (float)vals[i][2]});
+        } else if (semantic == "NORMAL") {
+          shape.normals.reserve(vals.size());
+          for (auto i = 0; i < vals.size(); i++)
+            shape.normals.push_back(
+                {(float)vals[i][0], (float)vals[i][1], (float)vals[i][2]});
+        } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
+          shape.texcoords.reserve(vals.size());
+          for (auto i = 0; i < vals.size(); i++)
+            shape.texcoords.push_back({(float)vals[i][0], (float)vals[i][1]});
+        } else if (semantic == "COLOR" || semantic == "COLOR_0") {
+          shape.colors.reserve(vals.size());
+          for (auto i = 0; i < vals.size(); i++)
+            shape.colors.push_back({(float)vals[i][0], (float)vals[i][1],
+                (float)vals[i][2], (float)vals[i][3]});
+        } else if (semantic == "TANGENT") {
+          shape.tangents.reserve(vals.size());
+          for (auto i = 0; i < vals.size(); i++)
+            shape.tangents.push_back({(float)vals[i][0], (float)vals[i][1],
+                (float)vals[i][2], (float)vals[i][3]});
+          for (auto& t : shape.tangents) t.w = -t.w;
+        } else if (semantic == "RADIUS") {
+          shape.radius.reserve(vals.size());
+          for (auto i = 0; i < vals.size(); i++)
+            shape.radius.push_back((float)vals[i][0]);
+        } else {
+          // ignore
+        }
+      }
+      // indices
+      if (!gprim->indices) {
+        if (gprim->type == cgltf_primitive_type_triangles) {
+          shape.triangles.reserve(shape.positions.size() / 3);
+          for (auto i = 0; i < shape.positions.size() / 3; i++)
+            shape.triangles.push_back({i * 3 + 0, i * 3 + 1, i * 3 + 2});
+        } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
+          shape.triangles.reserve(shape.positions.size() - 2);
+          for (auto i = 2; i < shape.positions.size(); i++)
+            shape.triangles.push_back({0, i - 1, i});
+        } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
+          shape.triangles.reserve(shape.positions.size() - 2);
+          for (auto i = 2; i < shape.positions.size(); i++)
+            shape.triangles.push_back({i - 2, i - 1, i});
+        } else if (gprim->type == cgltf_primitive_type_lines) {
+          shape.lines.reserve(shape.positions.size() / 2);
+          for (auto i = 0; i < shape.positions.size() / 2; i++)
+            shape.lines.push_back({i * 2 + 0, i * 2 + 1});
+        } else if (gprim->type == cgltf_primitive_type_line_loop) {
+          shape.lines.reserve(shape.positions.size());
+          for (auto i = 1; i < shape.positions.size(); i++)
+            shape.lines.push_back({i - 1, i});
+          shape.lines.back() = {(int)shape.positions.size() - 1, 0};
+        } else if (gprim->type == cgltf_primitive_type_line_strip) {
+          shape.lines.reserve(shape.positions.size() - 1);
+          for (auto i = 1; i < shape.positions.size(); i++)
+            shape.lines.push_back({i - 1, i});
+        } else if (gprim->type == cgltf_primitive_type_points) {
+          // points
+          throw std::runtime_error("points not supported");
+        } else {
+          throw std::runtime_error("unknown primitive type");
+        }
+      } else {
+        auto indices = accessor_values(gprim->indices);
+        if (gprim->type == cgltf_primitive_type_triangles) {
+          shape.triangles.reserve(indices.size() / 3);
+          for (auto i = 0; i < indices.size() / 3; i++)
+            shape.triangles.push_back({(int)indices[i * 3 + 0][0],
+                (int)indices[i * 3 + 1][0], (int)indices[i * 3 + 2][0]});
+        } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
+          shape.triangles.reserve(indices.size() - 2);
+          for (auto i = 2; i < indices.size(); i++)
+            shape.triangles.push_back({(int)indices[0][0],
+                (int)indices[i - 1][0], (int)indices[i][0]});
+        } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
+          shape.triangles.reserve(indices.size() - 2);
+          for (auto i = 2; i < indices.size(); i++)
+            shape.triangles.push_back({(int)indices[i - 2][0],
+                (int)indices[i - 1][0], (int)indices[i][0]});
+        } else if (gprim->type == cgltf_primitive_type_lines) {
+          shape.lines.reserve(indices.size() / 2);
+          for (auto i = 0; i < indices.size() / 2; i++)
+            shape.lines.push_back(
+                {(int)indices[i * 2 + 0][0], (int)indices[i * 2 + 1][0]});
+        } else if (gprim->type == cgltf_primitive_type_line_loop) {
+          shape.lines.reserve(indices.size());
+          for (auto i = 1; i < indices.size(); i++)
+            shape.lines.push_back({(int)indices[i - 1][0], (int)indices[i][0]});
+          shape.lines.back() = {
+              (int)indices[indices.size() - 1][0], (int)indices[0][0]};
+        } else if (gprim->type == cgltf_primitive_type_line_strip) {
+          shape.lines.reserve(indices.size() - 1);
+          for (auto i = 1; i < indices.size(); i++)
+            shape.lines.push_back({(int)indices[i - 1][0], (int)indices[i][0]});
+        } else if (gprim->type == cgltf_primitive_type_points) {
+          throw std::runtime_error("points not supported");
+        } else {
+          throw std::runtime_error("unknown primitive type");
+        }
+      }
+    }
+  }
+
+  // convert cameras
+  auto cmap = unordered_map<cgltf_camera*, int>{{nullptr, -1}};
+  for (auto cid = 0; cid < gltf->cameras_count; cid++) {
+    auto gcam    = &gltf->cameras[cid];
+    cmap[gcam]   = cid;
+    auto& camera = scene.cameras.emplace_back();
+    camera.name  = gcam->name ? gcam->name : "";
+    camera.ortho = gcam->type == cgltf_camera_type_orthographic;
+    if (camera.ortho) {
+      // throw std::runtime_error("orthographic not supported well");
+      auto ortho    = &gcam->orthographic;
+      camera.yfov   = ortho->ymag;
+      camera.aspect = ortho->xmag / ortho->ymag;
+    } else {
+      auto persp    = &gcam->perspective;
+      camera.yfov   = persp->yfov;
+      camera.aspect = persp->aspect_ratio;
+    }
+    scene.cameras.push_back(camera);
+    cmap[gcam] = (int)scene.cameras.size() - 1;
+  }
+
+  // convert nodes
+  auto nmap = unordered_map<cgltf_node*, int>{{nullptr, -1}};
+  for (auto nid = 0; nid < gltf->nodes_count; nid++) {
+    auto gnde  = &gltf->nodes[nid];
+    nmap[gnde] = nid;
+    auto& node = scene.nodes.emplace_back();
+    node.name  = gnde->name ? gnde->name : "";
+    if (gnde->camera) node.camera = cmap.at(gnde->camera);
+    if (gnde->mesh) node.mesh = smap.at(gnde->mesh);
+    if (gnde->has_translation) {
+      node.translation = {
+          gnde->translation[0], gnde->translation[1], gnde->translation[2]};
+    }
+    if (gnde->has_rotation) {
+      node.rotation = {gnde->rotation[0], gnde->rotation[1], gnde->rotation[2],
+          gnde->rotation[3]};
+    }
+    if (gnde->has_scale) {
+      node.scale = {gnde->scale[0], gnde->scale[1], gnde->scale[2]};
+    }
+    if (gnde->has_matrix) {
+      auto m     = gnde->matrix;
+      node.local = frame3f(
+          mat4f{{m[0], m[1], m[2], m[3]}, {m[4], m[5], m[6], m[7]},
+              {m[8], m[9], m[10], m[11]}, {m[12], m[13], m[14], m[15]}});
+    }
+  }
+
+  // set up parent pointers
+  for (auto nid = 0; nid < gltf->nodes_count; nid++) {
+    auto gnde = &gltf->nodes[nid];
+    if (!gnde->children_count) continue;
+    for (auto cid = 0; cid < gnde->children_count; cid++) {
+      scene.nodes[nid].children.push_back(nmap.at(gnde->children[cid]));
+      scene.nodes[nmap.at(gnde->children[cid])].parent = nid;
+    }
+  }
+
+  // set up scenes
+  for (auto sid = 0; sid < gltf->scenes_count; sid++) {
+    auto  gscn = &gltf->scenes[sid];
+    auto& scn  = scene.scenes.emplace_back();
+    scn.name   = gscn->name ? gscn->name : "";
+    for (auto nid = 0; nid < gscn->nodes_count; nid++) {
+      scn.nodes.push_back(nmap.at(gscn->nodes[nid]));
+    }
+  }
+
+  // update transforms
+  for (auto& node : scene.nodes)
+    if (node.parent < 0) update_transforms(scene, node);
+
+#if 0
+  // hasher for later
+  struct sampler_map_hash {
+    size_t operator()(
+        const pair<cgltf_animation_sampler*, cgltf_animation_path_type>& value)
+        const {
+      auto hasher1 = std::hash<cgltf_animation_sampler*>();
+      auto hasher2 = std::hash<int>();
+      auto h       = (size_t)0;
+      h ^= hasher1(value.first) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      h ^= hasher2(value.second) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      return h;
+    }
+  };
+
+  // convert animations
+  for (auto gid = 0; gid < gltf->animations_count; gid++) {
+    auto ganm = &gltf->animations[gid];
+    auto aid  = 0;
+    auto sampler_map =
+        unordered_map<pair<cgltf_animation_sampler*, cgltf_animation_path_type>,
+            int, sampler_map_hash>();
+    for (auto cid = 0; cid < ganm->channels_count; cid++) {
+      auto gchannel = &ganm->channels[cid];
+      auto path     = gchannel->target_path;
+      if (sampler_map.find({gchannel->sampler, path}) == sampler_map.end()) {
+        auto gsampler  = gchannel->sampler;
+        auto animation = gltf_animation{};
+        animation.uri  = (ganm->name ? ganm->name : "anim") +
+                        std::to_string(aid++);
+        animation.group = ganm->name ? ganm->name : "";
+        auto input_view = accessor_values(gsampler->input);
+        animation.times.resize(input_view.size());
+        for (auto i = 0; i < input_view.size(); i++)
+          animation.times[i] = input_view[i][0];
+        switch (gsampler->interpolation) {
+          case cgltf_interpolation_type_linear:
+            animation.interpolation =
+                gltf_animation::interpolation_type::linear;
+            break;
+          case cgltf_interpolation_type_step:
+            animation.interpolation = gltf_animation::interpolation_type::step;
+            break;
+          case cgltf_interpolation_type_cubic_spline:
+            animation.interpolation =
+                gltf_animation::interpolation_type::bezier;
+            break;
+        }
+        auto output_view = accessor_values(gsampler->output);
+        switch (path) {
+          case cgltf_animation_path_type_translation: {
+            animation.translations.reserve(output_view.size());
+            for (auto i = 0; i < output_view.size(); i++)
+              animation.translations.push_back({(float)output_view[i][0],
+                  (float)output_view[i][1], (float)output_view[i][2]});
+          } break;
+          case cgltf_animation_path_type_rotation: {
+            animation.rotations.reserve(output_view.size());
+            for (auto i = 0; i < output_view.size(); i++)
+              animation.rotations.push_back(
+                  {(float)output_view[i][0], (float)output_view[i][1],
+                      (float)output_view[i][2], (float)output_view[i][3]});
+          } break;
+          case cgltf_animation_path_type_scale: {
+            animation.scales.reserve(output_view.size());
+            for (auto i = 0; i < output_view.size(); i++)
+              animation.scales.push_back({(float)output_view[i][0],
+                  (float)output_view[i][1], (float)output_view[i][2]});
+          } break;
+          case cgltf_animation_path_type_weights: {
+            throw std::runtime_error("weights not supported for now");
+                    // // get a node that it refers to
+                    // auto ncomp = 0;
+                    // auto gnode = gltf->get(gchannel->target->node);
+                    // auto gmesh = gltf->get(gnode->mesh);
+                    // if (gmesh) {
+                    //     for (auto gshp : gmesh->primitives) {
+                    //         ncomp = max((int)gshp->targets.size(), ncomp);
+                    //     }
+                    // }
+                    // if (ncomp) {
+                    //     auto values = vector<float>();
+                    //     values.reserve(output_view.size());
+                    //     for (auto i = 0; i < output_view.size(); i++)
+                    //         values.push_back(output_view.get(i));
+                    //     animation.weights.resize(values.size() / ncomp);
+                    //     for (auto i = 0; i < animation.weights.size(); i++) {
+                    //         animation.weights[i].resize(ncomp);
+                    //         for (auto j = 0; j < ncomp; j++)
+                    //             animation.weights[i][j] = values[i * ncomp + j];
+                    //     }
+                    // }
+          } break;
+          default: {
+            throw std::runtime_error("bad gltf animation");
+          }
+        }
+        sampler_map[{gchannel->sampler, path}] = (int)scene.animations.size();
+        scene.animations.push_back(animation);
+      }
+      scene.animations[sampler_map.at({gchannel->sampler, path})]
+          .targets.push_back(nmap.at(gchannel->target_node));
+    }
+  }
+#endif
 }
 
 }  // namespace yocto

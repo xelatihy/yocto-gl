@@ -29,9 +29,6 @@
 
 #include "yocto_opengl.h"
 
-#include "../yocto/yocto_common.h"
-#include "../yocto/yocto_commonio.h"
-
 #include <algorithm>
 #include <cstdarg>
 #include <deque>
@@ -1575,6 +1572,35 @@ bool draw_glmessages(const opengl_window& win) {
   }
 }
 
+// Utility to normalize a path
+static inline string normalize_path(const string& filename_) {
+  auto filename = filename_;
+  for (auto& c : filename)
+
+    if (c == '\\') c = '/';
+  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+      filename[3] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  auto pos = (size_t)0;
+  while ((pos = filename.find("//")) != filename.npos)
+    filename = filename.substr(0, pos) + filename.substr(pos + 1);
+  return filename;
+}
+
+// Get extension (not including '.').
+static inline string get_extension(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return "";
+  return filename.substr(pos);
+}
+
 struct filedialog_state {
   string                     dirname       = "";
   string                     filename      = "";
@@ -1677,7 +1703,7 @@ struct filedialog_state {
 bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter) {
-  static auto states = hash_map<string, filedialog_state>{};
+  static auto states = unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
     if (states.find(lbl) == states.end()) {
