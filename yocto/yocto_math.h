@@ -2061,13 +2061,13 @@ namespace yocto {
 inline bool intersect_point(
     const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist);
 // Intersect a ray with a line
-bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     float r0, float r1, vec2f& uv, float& dist);
 // Intersect a ray with a triangle
-bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+inline bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     const vec3f& p2, vec2f& uv, float& dist);
 // Intersect a ray with a quad.
-bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist);
 
 // Intersect a ray with a axis-aligned bounding box
@@ -2083,22 +2083,22 @@ inline bool intersect_bbox(
 namespace yocto {
 
 // TODO: documentation
-bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
+inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
     vec2f& uv, float& dist);
 // TODO: documentation
-float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
+inline float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
 // TODO: documentation
-bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
+inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, float r0, float r1, vec2f& uv, float& dist);
 // TODO: documentation
-vec2f closestuv_triangle(
+inline vec2f closestuv_triangle(
     const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
 // TODO: documentation
-bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
+inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, vec2f& uv,
     float& dist);
 // TODO: documentation
-bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
+inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
     float r2, float r3, vec2f& uv, float& dist);
 
