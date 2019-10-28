@@ -722,14 +722,14 @@ inline void load_mtl(
 
   // initialize parsing
   auto parse_error = [&filename](string_view str) {
-    if (str.data()) return true;
+    if (str.data()) return false;
     throw std::runtime_error("cannot parse " + filename);
-    return false;
+    return true;
   };
-  auto read_error = [&filename](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
-    throw std::runtime_error("cannot parse " + filename);
-    return false;
+  auto read_error = [](obj_file& fs) {
+    if(!ferror(fs.fs)) return false;
+    throw std::runtime_error("cannot parse " + fs.filename);
+    return true;
   };
 
   // read the file str by str
@@ -895,14 +895,14 @@ inline void load_objx(const string& filename, obj_model& obj) {
 
   // initialize parsing
   auto parse_error = [&filename](string_view str) {
-    if (str.data()) return true;
+    if (str.data()) return false;
     throw std::runtime_error("cannot parse " + filename);
-    return false;
+    return true;
   };
-  auto read_error = [&filename](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
-    throw std::runtime_error("cannot parse " + filename);
-    return false;
+  auto read_error = [](obj_file& fs) {
+    if(!ferror(fs.fs)) return false;
+    throw std::runtime_error("cannot parse " + fs.filename);
+    return true;
   };
 
   // read the file str by str
@@ -986,14 +986,14 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
 
   // initialize parsing
   auto parse_error = [&filename](string_view str) {
-    if (str.data()) return true;
+    if (str.data()) return false;
     throw std::runtime_error("cannot parse " + filename);
-    return false;
+    return true;
   };
-  auto read_error = [&filename](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
-    throw std::runtime_error("cannot parse " + filename);
-    return false;
+  auto read_error = [](obj_file& fs) {
+    if(!ferror(fs.fs)) return false;
+    throw std::runtime_error("cannot parse " + fs.filename);
+    return true;
   };
 
   // read the file str by str
@@ -1726,14 +1726,14 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
     vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // initialize parsing
   auto parse_error = [&fs](string_view str) {
-    if (str.data()) return true;
+    if (str.data()) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
-    return false;
+    return true;
   };
   auto read_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
-    return false;
+    return true;
   };
 
   // read the file str by str
@@ -1839,14 +1839,14 @@ inline bool read_mtl_command(
 
   // initialize parsing
   auto parse_error = [&fs](string_view str) {
-    if (str.data()) return true;
+    if (str.data()) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
-    return false;
+    return true;
   };
   auto read_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
-    return false;
+    return true;
   };
 
   // read the file str by str
@@ -2011,14 +2011,14 @@ inline bool read_objx_command(obj_file& fs, objx_command& command,
     obj_camera& camera, obj_environment& environment, obj_instance& instance) {
   // initialize parsing
   auto parse_error = [&fs](string_view str) {
-    if (str.data()) return true;
+    if (str.data()) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
-    return false;
+    return true;
   };
   auto read_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
-    return false;
+    return true;
   };
 
   // read the file str by str
