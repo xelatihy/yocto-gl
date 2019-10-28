@@ -168,6 +168,7 @@
 #include <functional>
 #include <limits>
 #include <vector>
+#include <string>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -178,6 +179,8 @@ using byte = unsigned char;
 using uint = unsigned int;
 using std::pair;
 using std::vector;
+using std::string;
+using namespace std::string_literals;
 
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;
