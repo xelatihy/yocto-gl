@@ -47,7 +47,7 @@
 // -----------------------------------------------------------------------------
 // SIMPLE PBRT LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::ypbrt {
 
 // Pbrt value type
 enum struct pbrt_value_type {
@@ -257,7 +257,7 @@ inline void save_pbrt(const string& filename, const pbrt_model& pbrt);
 // -----------------------------------------------------------------------------
 // LOW-LEVEL INTERFACE
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::ypbrt {
 
 // A class that wraps a C file ti handle safe opening/closgin with RIIA.
 struct pbrt_file {
@@ -363,7 +363,7 @@ inline pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& value
 inline pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
     pbrt_value_type type = pbrt_value_type::integer);
 
-}  // namespace yocto
+}  // namespace yocto::ypbrt
 
 // -----------------------------------------------------------------------------
 //
@@ -378,7 +378,7 @@ inline pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value
 // -----------------------------------------------------------------------------
 // LOW-LEVEL FILE HANDLING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::ypbrt {
 
 // copnstrucyor and destructors
 inline pbrt_file ::pbrt_file (pbrt_file && other) {
@@ -424,12 +424,12 @@ inline void write_ply_text(pbrt_file & fs, const char* value) {
     throw std::runtime_error("cannot write to " + fs.filename);
 }
 
-}  // namespace yocto
+}  // namespace yocto::ypbrt
 
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::ypbrt {
 
 using std::string_view;
 
@@ -489,12 +489,12 @@ inline bool read_pbrt_cmdline(pbrt_file& fs, string& cmd, int& line_num) {
   return found;
 }
 
-}  // namespace yocto
+}  // namespace yocto::ypbrt
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL PRINTING
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::ypbrt {
 
 // Formats values to string
 inline void format_pbrt_value(string& str, const string& value) { str += value; }
@@ -554,12 +554,12 @@ inline void format_pbrt_value(pbrt_file & fs, const T& value) {
     throw std::runtime_error("cannor write to " + fs.filename);
 }
 
-}  // namespace yocto
+}  // namespace yocto::ypbrt
 
 // -----------------------------------------------------------------------------
 // PBRT CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto {
+namespace yocto::ypbrt {
 
 // parse a quoted string
 inline void parse_pbrt_value(string_view& str, string_view& value) {
@@ -2810,6 +2810,6 @@ inline pair<vec3f, vec3f> parse_pbrt_subsurface(const string& name) {
 }
 #endif
 
-}  // namespace yocto
+}  // namespace yocto::ypbrt
 
 #endif
