@@ -10,8 +10,6 @@
 #include "yocto_commonio.h"
 #include "yocto_modelio.h"
 
-#include <deque>
-
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
