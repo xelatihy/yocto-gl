@@ -338,7 +338,7 @@ void load_island_shape(vector<scene_shape>& shapes,
   bool   split_next = false;
 
   // Add  vertices to the current shape
-  auto add_fvverts = [&](const vector<yobj::vertex>& verts) {
+  auto add_fvverts = [&](const vector<yobj::obj_vertex>& verts) {
     for (auto& vert : verts) {
       if (!vert.position) continue;
       auto pos_it = pos_map.find(vert.position);
@@ -411,8 +411,8 @@ void load_island_shape(vector<scene_shape>& shapes,
   auto command   = yobj::obj_command{};
   auto value     = vec3f{};
   auto name      = ""s;
-  auto verts     = vector<yobj::vertex>{};
-  auto vert_size = yobj::vertex{};
+  auto verts     = vector<yobj::obj_vertex>{};
+  auto vert_size = yobj::obj_vertex{};
   while (read_obj_command(fs, command, name, value, verts, vert_size)) {
     switch (command) {
       case yobj::obj_command::vertex: opos.push_back(value); break;
