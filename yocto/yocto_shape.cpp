@@ -3663,9 +3663,6 @@ void load_shape(const string& filename, vector<int>& points,
       } else {
         throw std::runtime_error("should not have gotten here");
       }
-    } else if (ext == ".hair" || ext == ".HAIR") {
-      load_cyhair_shape(
-          filename, lines, positions, normals, texcoords, colors, radius);
     } else {
       throw std::runtime_error("unsupported shape type " + ext);
     }

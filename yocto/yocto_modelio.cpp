@@ -6042,6 +6042,8 @@ void load_gltf(const string& filename, gltf_model& scene) {
 
 }  // namespace yocto
 
+#if 0
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF CYHAIR
 // -----------------------------------------------------------------------------
@@ -6238,3 +6240,5 @@ void load_cyhair_shape(const string& filename, vector<vec2i>& lines,
 }
 
 }  // namespace yocto
+
+#endif
