@@ -577,13 +577,13 @@ inline void format_obj_value(string& str, float value) {
   str += buf;
 }
 inline void format_obj_value(string& str, const vec2f& value) {
-  for (auto i = 0; i < 2; i++) format_obj_value(str, value[i]);
+  for (auto i = 0; i < 2; i++) { if(i) str += " "; format_obj_value(str, value[i]); }
 }
 inline void format_obj_value(string& str, const vec3f& value) {
-  for (auto i = 0; i < 3; i++) format_obj_value(str, value[i]);
+  for (auto i = 0; i < 3; i++) { if(i) str += " "; format_obj_value(str, value[i]); }
 }
 inline void format_obj_value(string& str, const frame3f& value) {
-  for (auto i = 0; i < 4; i++) format_obj_value(str, value[i]);
+  for (auto i = 0; i < 4; i++) { if(i) str += " "; format_obj_value(str, value[i]); }
 }
 
 // Foramt to file

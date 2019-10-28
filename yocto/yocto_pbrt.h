@@ -604,16 +604,16 @@ inline void format_pbrt_value(string& str, float value) {
   str += buf;
 }
 inline void format_pbrt_value(string& str, const vec2f& value) {
-  for (auto i = 0; i < 2; i++) format_pbrt_value(str, value[i]);
+  for (auto i = 0; i < 2; i++) { if(i) str += " "; format_pbrt_value(str, value[i]); }
 }
 inline void format_pbrt_value(string& str, const vec3f& value) {
-  for (auto i = 0; i < 3; i++) format_pbrt_value(str, value[i]);
+  for (auto i = 0; i < 3; i++) { if(i) str += " "; format_pbrt_value(str, value[i]); }
 }
 inline void format_pbrt_value(string& str, const vec4f& value) {
-  for (auto i = 0; i < 4; i++) format_pbrt_value(str, value[i]);
+  for (auto i = 0; i < 4; i++) { if(i) str += " "; format_pbrt_value(str, value[i]); }
 }
 inline void format_pbrt_value(string& str, const mat4f& value) {
-  for (auto i = 0; i < 4; i++) format_pbrt_value(str, value[i]);
+  for (auto i = 0; i < 4; i++) { if(i) str += " "; format_pbrt_value(str, value[i]); }
 }
 
 // Foramt to file
