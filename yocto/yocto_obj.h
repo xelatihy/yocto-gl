@@ -1,9 +1,9 @@
 //
 // # Yocto/Obj: Tiny library for Obj parsing and writing
 //
-// Yocto/Ply is a tiny library for loading and saving Stanford Ply. Yocto/Ply
-// supports two interfaces: a simple interface where all Ply data is loaded
-// and saved at once and a low-level interface where Ply values are read
+// Yocto/Obj is a tiny library for loading and saving Wavefront Obj. Yocto/Obj
+// supports two interfaces: a simple interface where all Obj data is loaded
+// and saved at once and a low-level interface where Obj values are read
 // and written one at a time.
 // Error reporting is done by throwing `std::runtime_error` exceptions.
 //
