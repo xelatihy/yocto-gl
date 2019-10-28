@@ -834,6 +834,26 @@ struct yaml_model {
 void load_yaml(const string& filename, yaml_model& yaml);
 void save_yaml(const string& filename, const yaml_model& yaml);
 
+// A class that wraps a C file ti handle safe opening/closgin with RIIA.
+struct yaml_file {
+  yaml_file() {}
+  yaml_file(yaml_file&& other);
+  yaml_file(const yaml_file&) = delete;
+  yaml_file& operator=(const yaml_file&) = delete;
+  ~yaml_file();
+
+  FILE*  fs       = nullptr;
+  string filename = "";
+  string mode     = "rt";
+  int    linenum  = 0;
+};
+
+// open a file
+yaml_file open_yaml(const string& filename, const string& mode = "rt");
+void         open_yaml(
+            yaml_file& fs, const string& filename, const string& mode = "rt");
+void close_yaml(yaml_file& fs);
+
 // Load Yaml properties
 bool read_yaml_property(file_wrapper& fs, string& group, string& key,
     bool& newobj, yaml_value& value);
