@@ -29,8 +29,8 @@
 #include "yocto_sceneio.h"
 #include "yocto_image.h"
 #include "yocto_obj.h"
-#include "yocto_ply.h"
 #include "yocto_pbrt.h"
+#include "yocto_ply.h"
 #include "yocto_shape.h"
 
 #include <atomic>
@@ -107,11 +107,12 @@ static inline string get_basename(const string& filename) {
 }
 
 // Replaces extensions
-static inline string replace_extension(const string& filename, const string& ext) {
+static inline string replace_extension(
+    const string& filename, const string& ext) {
   return get_noextension(filename) + ext;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF CONCURRENCY UTILITIES
@@ -921,18 +922,18 @@ struct yaml_file {
 
 // open a file
 yaml_file open_yaml(const string& filename, const string& mode = "rt");
-void         open_yaml(
-            yaml_file& fs, const string& filename, const string& mode = "rt");
+void      open_yaml(
+         yaml_file& fs, const string& filename, const string& mode = "rt");
 void close_yaml(yaml_file& fs);
 
 // Load Yaml properties
-bool read_yaml_property(yaml_file& fs, string& group, string& key,
-    bool& newobj, yaml_value& value);
+bool read_yaml_property(
+    yaml_file& fs, string& group, string& key, bool& newobj, yaml_value& value);
 
 // Write Yaml properties
 void write_yaml_comment(yaml_file& fs, const string& comment);
-void write_yaml_property(yaml_file& fs, const string& object,
-    const string& key, bool newobj, const yaml_value& value);
+void write_yaml_property(yaml_file& fs, const string& object, const string& key,
+    bool newobj, const yaml_value& value);
 void write_yaml_object(yaml_file& fs, const string& object);
 
 // type-cheked yaml value access
@@ -955,7 +956,7 @@ yaml_value make_yaml_value(const vec3f& value);
 yaml_value make_yaml_value(const mat3f& value);
 yaml_value make_yaml_value(const frame3f& value);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL YAML IMPLEMENTATION
@@ -974,7 +975,8 @@ inline yaml_file::~yaml_file() {
 }
 
 // Opens a file returing a handle with RIIA
-inline void open_yaml(yaml_file& fs, const string& filename, const string& mode) {
+inline void open_yaml(
+    yaml_file& fs, const string& filename, const string& mode) {
   close_yaml(fs);
   fs.filename = filename;
   fs.mode     = mode;
@@ -1034,9 +1036,11 @@ static inline void remove_yaml_comment(
 static inline void parse_yaml_varname(string_view& str, string_view& value) {
   skip_yaml_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
-  if (!is_yaml_alpha(str.front())) throw std::runtime_error("cannot parse value");
+  if (!is_yaml_alpha(str.front()))
+    throw std::runtime_error("cannot parse value");
   auto pos = 0;
-  while (is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
+  while (
+      is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
     pos += 1;
     if (pos >= str.size()) break;
   }
@@ -1213,7 +1217,8 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
     }
   }
   skip_yaml_whitespace(str);
-  if (!str.empty() && !is_yaml_whitespace(str)) throw std::runtime_error("bad yaml");
+  if (!str.empty() && !is_yaml_whitespace(str))
+    throw std::runtime_error("bad yaml");
 }
 
 // Load/save yaml
@@ -1371,7 +1376,8 @@ void save_yaml(const string& filename, const yaml_model& yaml) {
       auto first = true;
       for (auto& [key, value] : element.key_values) {
         if (group != "") {
-          format_yaml_values(fs, "  {} {}: {}\n", first ? "-" : " ", key, value);
+          format_yaml_values(
+              fs, "  {} {}: {}\n", first ? "-" : " ", key, value);
           first = false;
         } else {
           format_yaml_values(fs, "{}: {}\n", key, value);
@@ -1381,8 +1387,8 @@ void save_yaml(const string& filename, const yaml_model& yaml) {
   }
 }
 
-bool read_yaml_property(yaml_file& fs, string& group, string& key,
-    bool& newobj, yaml_value& value) {
+bool read_yaml_property(yaml_file& fs, string& group, string& key, bool& newobj,
+    yaml_value& value) {
   // read the file line by line
   char buffer[4096];
   while (read_yaml_line(fs, buffer, sizeof(buffer))) {
@@ -1456,8 +1462,8 @@ void write_yaml_comment(yaml_file& fs, const string& comment) {
 }
 
 // Save yaml property
-void write_yaml_property(yaml_file& fs, const string& object,
-    const string& key, bool newobj, const yaml_value& value) {
+void write_yaml_property(yaml_file& fs, const string& object, const string& key,
+    bool newobj, const yaml_value& value) {
   if (key.empty()) {
     format_yaml_values(fs, "\n{}:\n", object);
   } else {
@@ -1473,7 +1479,7 @@ void write_yaml_object(yaml_file& fs, const string& object) {
   format_yaml_values(fs, "\n{}:\n", object);
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // YAML SUPPORT

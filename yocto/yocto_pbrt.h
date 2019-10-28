@@ -4,8 +4,8 @@
 // Yocto/Pbrt is a tiny library for loading and saving Pbrt file. Yocto/Pbrt
 // supports two interfaces: a simple interface where all Pbrt data is loaded
 // and saved at once and a low-level interface where Pbrt commands are read
-// and written one at a time. In the high-level interface we provice a 
-// simplified representation for Pbrt types such as cameras, mnaterials and 
+// and written one at a time. In the high-level interface we provice a
+// simplified representation for Pbrt types such as cameras, mnaterials and
 // shapes.
 // Error reporting is done by throwing `std::runtime_error` exceptions.
 //
@@ -252,7 +252,7 @@ struct pbrt_model {
 inline void load_pbrt(const string& filename, pbrt_model& pbrt);
 inline void save_pbrt(const string& filename, const pbrt_model& pbrt);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL INTERFACE
@@ -275,8 +275,8 @@ struct pbrt_file {
 
 // open a file
 inline pbrt_file open_pbrt(const string& filename, const string& mode = "rt");
-inline void     open_pbrt(
-        pbrt_file& fs, const string& filename, const string& mode = "rt");
+inline void      open_pbrt(
+         pbrt_file& fs, const string& filename, const string& mode = "rt");
 inline void close_pbrt(pbrt_file& fs);
 
 // Pbrt command
@@ -294,10 +294,11 @@ enum struct pbrt_command {
 };
 
 // Read pbrt commands
-inline bool read_pbrt_command(pbrt_file& fs, pbrt_command& command, string& name,
-    string& type, frame3f& xform, vector<pbrt_value>& values);
-inline bool read_pbrt_command(pbrt_file& fs, pbrt_command& command, string& name,
-    string& type, frame3f& xform, vector<pbrt_value>& values, string& buffer);
+inline bool read_pbrt_command(pbrt_file& fs, pbrt_command& command,
+    string& name, string& type, frame3f& xform, vector<pbrt_value>& values);
+inline bool read_pbrt_command(pbrt_file& fs, pbrt_command& command,
+    string& name, string& type, frame3f& xform, vector<pbrt_value>& values,
+    string& buffer);
 
 // Write pbrt commands
 inline void write_pbrt_comment(pbrt_file& fs, const string& comment);
@@ -356,11 +357,12 @@ inline pbrt_value make_pbrt_value(const string& name, const vec2f& value,
     pbrt_value_type type = pbrt_value_type::point2);
 inline pbrt_value make_pbrt_value(const string& name, const vec3f& value,
     pbrt_value_type type = pbrt_value_type::color);
-inline pbrt_value make_pbrt_value(const string& name, const vector<vec2f>& value,
-    pbrt_value_type type = pbrt_value_type::point2);
-inline pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& value,
-    pbrt_value_type type = pbrt_value_type::point);
-inline pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
+inline pbrt_value make_pbrt_value(const string& name,
+    const vector<vec2f>& value, pbrt_value_type type = pbrt_value_type::point2);
+inline pbrt_value make_pbrt_value(const string& name,
+    const vector<vec3f>& value, pbrt_value_type type = pbrt_value_type::point);
+inline pbrt_value make_pbrt_value(const string& name,
+    const vector<vec3i>&                        value,
     pbrt_value_type type = pbrt_value_type::integer);
 
 }  // namespace yocto
@@ -439,7 +441,8 @@ static inline string get_pbrt_basename(const string& filename) {
 }
 
 // Replaces extensions
-static inline string replace_pbrt_extension(const string& filename, const string& ext) {
+static inline string replace_pbrt_extension(
+    const string& filename, const string& ext) {
   return get_pbrt_noextension(filename) + ext;
 }
 
@@ -454,7 +457,7 @@ static inline bool exists_pbrt_file(const string& filename) {
   }
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL FILE HANDLING
@@ -462,45 +465,46 @@ static inline bool exists_pbrt_file(const string& filename) {
 namespace yocto {
 
 // copnstrucyor and destructors
-inline pbrt_file ::pbrt_file (pbrt_file && other) {
+inline pbrt_file ::pbrt_file(pbrt_file&& other) {
   this->fs       = other.fs;
   this->filename = other.filename;
   other.fs       = nullptr;
 }
-inline pbrt_file ::~pbrt_file () {
+inline pbrt_file ::~pbrt_file() {
   if (fs) fclose(fs);
   fs = nullptr;
 }
 
 // Opens a file returing a handle with RIIA
-inline void open_pbrt(pbrt_file & fs, const string& filename, const string& mode) {
+inline void open_pbrt(
+    pbrt_file& fs, const string& filename, const string& mode) {
   close_pbrt(fs);
   fs.filename = filename;
   fs.mode     = mode;
   fs.fs       = fopen(filename.c_str(), mode.c_str());
   if (!fs.fs) throw std::runtime_error("could not open file " + filename);
 }
-inline pbrt_file  open_pbrt(const string& filename, const string& mode) {
-  auto fs = pbrt_file {};
+inline pbrt_file open_pbrt(const string& filename, const string& mode) {
+  auto fs = pbrt_file{};
   open_pbrt(fs, filename, mode);
   return fs;
 }
-inline void close_pbrt(pbrt_file & fs) {
+inline void close_pbrt(pbrt_file& fs) {
   if (fs.fs) fclose(fs.fs);
   fs.fs = nullptr;
 }
 
-inline bool read_pbrt_line(pbrt_file & fs, char* buffer, size_t size) {
+inline bool read_pbrt_line(pbrt_file& fs, char* buffer, size_t size) {
   auto ok = fgets(buffer, size, fs.fs) != nullptr;
   if (ok) fs.linenum += 1;
   return ok;
 }
 
-inline void write_ply_text(pbrt_file & fs, const string& value) {
+inline void write_ply_text(pbrt_file& fs, const string& value) {
   if (fputs(value.c_str(), fs.fs) < 0)
     throw std::runtime_error("cannot write to " + fs.filename);
 }
-inline void write_ply_text(pbrt_file & fs, const char* value) {
+inline void write_ply_text(pbrt_file& fs, const char* value) {
   if (fputs(value, fs.fs) < 0)
     throw std::runtime_error("cannot write to " + fs.filename);
 }
@@ -523,8 +527,7 @@ inline void skip_pbrt_whitespace(string_view& str) {
   while (!str.empty() && is_pbrt_space(str.front())) str.remove_prefix(1);
 }
 
-inline void remove_pbrt_comment(
-    string_view& str, char comment_char = '#') {
+inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_pbrt_newline(str.back())) str.remove_suffix(1);
   auto cpy       = str;
   auto in_string = false;
@@ -584,7 +587,9 @@ inline bool read_pbrt_cmdline(pbrt_file& fs, string& cmd, int& line_num) {
 namespace yocto {
 
 // Formats values to string
-inline void format_pbrt_value(string& str, const string& value) { str += value; }
+inline void format_pbrt_value(string& str, const string& value) {
+  str += value;
+}
 inline void format_pbrt_value(string& str, const char* value) { str += value; }
 inline void format_pbrt_value(string& str, int value) {
   char buf[256];
@@ -597,16 +602,16 @@ inline void format_pbrt_value(string& str, float value) {
   str += buf;
 }
 inline void format_pbrt_value(string& str, const vec2f& value) {
-  for(auto i = 0; i < 2; i ++) format_pbrt_value(str, value[i]);
+  for (auto i = 0; i < 2; i++) format_pbrt_value(str, value[i]);
 }
 inline void format_pbrt_value(string& str, const vec3f& value) {
-  for(auto i = 0; i < 3; i ++) format_pbrt_value(str, value[i]);
+  for (auto i = 0; i < 3; i++) format_pbrt_value(str, value[i]);
 }
 inline void format_pbrt_value(string& str, const vec4f& value) {
-  for(auto i = 0; i < 4; i ++) format_pbrt_value(str, value[i]);
+  for (auto i = 0; i < 4; i++) format_pbrt_value(str, value[i]);
 }
 inline void format_pbrt_value(string& str, const mat4f& value) {
-  for(auto i = 0; i < 4; i ++) format_pbrt_value(str, value[i]);
+  for (auto i = 0; i < 4; i++) format_pbrt_value(str, value[i]);
 }
 
 // Foramt to file
@@ -627,14 +632,14 @@ inline void format_pbrt_values(
 
 template <typename... Args>
 inline void format_pbrt_values(
-    pbrt_file & fs, const string& fmt, const Args&... args) {
+    pbrt_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_pbrt_values(str, fmt, args...);
   if (fputs(str.c_str(), fs.fs) < 0)
     throw std::runtime_error("cannor write to " + fs.filename);
 }
 template <typename T>
-inline void format_pbrt_value(pbrt_file & fs, const T& value) {
+inline void format_pbrt_value(pbrt_file& fs, const T& value) {
   auto str = ""s;
   format_pbrt_value(str, value);
   if (fputs(str.c_str(), fs.fs) < 0)
@@ -747,8 +752,7 @@ inline void parse_pbrt_param(string_view& str, T& value) {
 }
 
 // parse a quoted string
-inline void parse_pbrt_nametype(
-    string_view& str_, string& name, string& type) {
+inline void parse_pbrt_nametype(string_view& str_, string& name, string& type) {
   auto value = ""s;
   parse_pbrt_value(str_, value);
   auto str  = string_view{value};
@@ -852,8 +856,7 @@ inline pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
   return metal_ior_table.at(name);
 }
 
-inline void parse_pbrt_params(
-    string_view& str, vector<pbrt_value>& values) {
+inline void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
   auto parse_pbrt_pvalues = [](string_view& str, auto& value, auto& values) {
     values.clear();
     skip_pbrt_whitespace(str);
@@ -964,10 +967,12 @@ inline void parse_pbrt_params(
           if (filenamep == "SHPS") {
             value.value3f = {1, 1, 1};
           } else if (get_pbrt_extension(filenamep) == ".eta") {
-            auto eta = get_pbrt_etak(replace_pbrt_extension(filenamep, "")).first;
+            auto eta =
+                get_pbrt_etak(replace_pbrt_extension(filenamep, "")).first;
             value.value3f = {eta.x, eta.y, eta.z};
           } else if (get_pbrt_extension(filenamep) == ".k") {
-            auto k = get_pbrt_etak(replace_pbrt_extension(filenamep, "")).second;
+            auto k =
+                get_pbrt_etak(replace_pbrt_extension(filenamep, "")).second;
             value.value3f = {k.x, k.y, k.z};
           } else {
             throw std::runtime_error("unknown spectrum file " + filename);
@@ -1366,10 +1371,9 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
 
 // Make a triangle shape from a quad grid
 template <typename PositionFunc, typename NormalFunc>
-inline void make_pbrt_shape(vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps, const PositionFunc& position_func,
-    const NormalFunc& normal_func) {
+inline void make_pbrt_shape(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const PositionFunc& position_func, const NormalFunc& normal_func) {
   auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
   auto tid = [steps](int i, int j, int c) { return (j * steps.x + i) * 2 + c; };
   positions.resize((steps.x + 1) * (steps.y + 1));
@@ -1393,9 +1397,9 @@ inline void make_pbrt_shape(vector<vec3i>& triangles,
 }
 
 // pbrt sphere
-inline void make_pbrt_sphere(vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps, float radius) {
+inline void make_pbrt_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float radius) {
   make_pbrt_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1408,9 +1412,9 @@ inline void make_pbrt_sphere(vector<vec3i>& triangles,
         return vec3f{cos(pt.x) * cos(pt.y), sin(pt.x) * cos(pt.y), sin(pt.y)};
       });
 }
-inline void make_pbrt_disk(vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps, float radius) {
+inline void make_pbrt_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float radius) {
   make_pbrt_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1421,9 +1425,9 @@ inline void make_pbrt_disk(vector<vec3i>& triangles,
         return vec3f{0, 0, 1};
       });
 }
-inline void make_pbrt_quad(vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps, float radius) {
+inline void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    float radius) {
   make_pbrt_shape(
       triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
@@ -1789,7 +1793,8 @@ inline void load_pbrt(const string& filename, pbrt_model& pbrt) {
       } else if (cmd == "Include") {
         auto includename = ""s;
         parse_pbrt_param(str, includename);
-        open_pbrt(files.emplace_back(), get_pbrt_dirname(filename) + includename);
+        open_pbrt(
+            files.emplace_back(), get_pbrt_dirname(filename) + includename);
       } else {
         throw std::runtime_error("unknown command " + cmd);
       }
@@ -1881,7 +1886,8 @@ inline static void format_pbrt_value(string& str, const pbrt_value& value) {
   }
 }
 
-inline static void format_pbrt_value(string& str, const vector<pbrt_value>& values) {
+inline static void format_pbrt_value(
+    string& str, const vector<pbrt_value>& values) {
   for (auto& value : values) {
     str += " ";
     format_pbrt_value(str, value);
@@ -1933,7 +1939,8 @@ inline void save_pbrt(const string& filename, const pbrt_model& pbrt) {
   }
   for (auto& filter_ : pbrt.filters) {
     auto filter = filter_;
-    format_pbrt_values(fs, "PixelFilter \"{}\" {}\n", filter.type, filter.values);
+    format_pbrt_values(
+        fs, "PixelFilter \"{}\" {}\n", filter.type, filter.values);
   }
   for (auto& accelerator_ : pbrt.accelerators) {
     auto accelerator = accelerator_;
@@ -2011,8 +2018,9 @@ inline void save_pbrt(const string& filename, const pbrt_model& pbrt) {
         }
       }
     }
-    format_pbrt_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
-        material.name, material.type, material.values);
+    format_pbrt_values(fs,
+        "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n", material.name,
+        material.type, material.values);
   }
 
   for (auto& medium_ : pbrt.mediums) {
@@ -2060,8 +2068,8 @@ inline void save_pbrt(const string& filename, const pbrt_model& pbrt) {
       arealight.type = "diffuse";
       arealight.values.push_back(make_pbrt_value("L", arealight.emission));
     }
-    format_pbrt_values(arealights_map[arealight.name], "AreaLightSource \"{}\" {}\n",
-        arealight.type, arealight.values);
+    format_pbrt_values(arealights_map[arealight.name],
+        "AreaLightSource \"{}\" {}\n", arealight.type, arealight.values);
   }
 
   auto object_id = 0;
@@ -2084,7 +2092,8 @@ inline void save_pbrt(const string& filename, const pbrt_model& pbrt) {
       }
     }
     auto object = "object" + std::to_string(object_id++);
-    if (shape.is_instanced) format_pbrt_values(fs, "ObjectBegin \"{}\"\n", object);
+    if (shape.is_instanced)
+      format_pbrt_values(fs, "ObjectBegin \"{}\"\n", object);
     format_pbrt_values(fs, "AttributeBegin\n");
     format_pbrt_values(fs, "Transform {}\n", (mat4f)shape.frame);
     format_pbrt_values(fs, "NamedMaterial \"{}\"\n", shape.material);
@@ -2105,8 +2114,9 @@ inline void save_pbrt(const string& filename, const pbrt_model& pbrt) {
 }
 
 // Read pbrt commands
-inline bool read_pbrt_command(pbrt_file& fs, pbrt_command& command, string& name,
-    string& type, frame3f& xform, vector<pbrt_value>& values, string& line) {
+inline bool read_pbrt_command(pbrt_file& fs, pbrt_command& command,
+    string& name, string& type, frame3f& xform, vector<pbrt_value>& values,
+    string& line) {
   // parse command by command
   auto line_num = 0;
   while (read_pbrt_cmdline(fs, line, line_num)) {
@@ -2291,14 +2301,15 @@ inline bool read_pbrt_command(pbrt_file& fs, pbrt_command& command, string& name
   }
   return false;
 }
-inline bool read_pbrt_command(pbrt_file& fs, pbrt_command& command, string& name,
-    string& type, frame3f& xform, vector<pbrt_value>& values) {
+inline bool read_pbrt_command(pbrt_file& fs, pbrt_command& command,
+    string& name, string& type, frame3f& xform, vector<pbrt_value>& values) {
   auto command_buffer = ""s;
   return read_pbrt_command(
       fs, command, name, type, xform, values, command_buffer);
 }
 
-inline vector<string> split_pbrt_string(const string& str, const string& delim) {
+inline vector<string> split_pbrt_string(
+    const string& str, const string& delim) {
   auto tokens = vector<string>{};
   auto last = (size_t)0, next = (size_t)0;
   while ((next = str.find(delim, last)) != string::npos) {
@@ -2334,7 +2345,8 @@ inline void write_pbrt_values(pbrt_file& fs, const vector<pbrt_value>& values) {
       {pbrt_value_type::spectrum, "spectrum"},
   };
   for (auto& value : values) {
-    format_pbrt_values(fs, " \"{} {}\" ", type_labels.at(value.type), value.name);
+    format_pbrt_values(
+        fs, " \"{} {}\" ", type_labels.at(value.type), value.name);
     switch (value.type) {
       case pbrt_value_type::real:
         if (!value.vector1f.empty()) {
@@ -2399,7 +2411,9 @@ inline void write_pbrt_command(pbrt_file& fs, pbrt_command command,
     const string& name, const string& type, const frame3f& xform,
     const vector<pbrt_value>& values, bool texture_float) {
   switch (command) {
-    case pbrt_command::world_begin: format_pbrt_values(fs, "WorldBegin\n"); break;
+    case pbrt_command::world_begin:
+      format_pbrt_values(fs, "WorldBegin\n");
+      break;
     case pbrt_command::world_end: format_pbrt_values(fs, "WorldEnd\n"); break;
     case pbrt_command::attribute_begin:
       format_pbrt_values(fs, "AttributeBegin\n");
@@ -2506,7 +2520,8 @@ inline void write_pbrt_command(pbrt_file& fs, pbrt_command command,
         else
           interior.push_back(c);
       }
-      format_pbrt_values(fs, "MediumInterface \"{}\" \"{}\"\n", interior, exterior);
+      format_pbrt_values(
+          fs, "MediumInterface \"{}\" \"{}\"\n", interior, exterior);
     } break;
     case pbrt_command::active_transform:
       format_pbrt_values(fs, "ActiveTransform \"{}\"\n", name);

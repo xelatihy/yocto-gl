@@ -456,7 +456,8 @@ static inline string get_obj_basename(const string& filename) {
 }
 
 // Replaces extensions
-static inline string replace_obj_extension(const string& filename, const string& ext) {
+static inline string replace_obj_extension(
+    const string& filename, const string& ext) {
   return get_obj_noextension(filename) + ext;
 }
 
@@ -471,7 +472,7 @@ static inline bool exists_obj_file(const string& filename) {
   }
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
@@ -574,13 +575,13 @@ inline void format_obj_value(string& str, float value) {
   str += buf;
 }
 inline void format_obj_value(string& str, const vec2f& value) {
-  for(auto i = 0; i < 2; i ++) format_obj_value(str, value[i]);
+  for (auto i = 0; i < 2; i++) format_obj_value(str, value[i]);
 }
 inline void format_obj_value(string& str, const vec3f& value) {
-  for(auto i = 0; i < 3; i ++) format_obj_value(str, value[i]);
+  for (auto i = 0; i < 3; i++) format_obj_value(str, value[i]);
 }
 inline void format_obj_value(string& str, const frame3f& value) {
-  for(auto i = 0; i < 4; i ++) format_obj_value(str, value[i]);
+  for (auto i = 0; i < 4; i++) format_obj_value(str, value[i]);
 }
 
 // Foramt to file
@@ -1176,8 +1177,8 @@ inline void save_obj(const string& filename, const obj_model& obj) {
 
   // save material library
   if (!obj.materials.empty()) {
-    format_obj_values(
-        fs, "mtllib {}\n\n", replace_obj_extension(get_obj_filename(filename), ".mtl"));
+    format_obj_values(fs, "mtllib {}\n\n",
+        replace_obj_extension(get_obj_filename(filename), ".mtl"));
   }
 
   // save objects

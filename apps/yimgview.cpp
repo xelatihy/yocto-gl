@@ -31,8 +31,8 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-#include <list>
 #include <future>
+#include <list>
 
 struct image_stats {
   vec4f         min       = zero4f;
@@ -305,8 +305,8 @@ void draw(const opengl_window& win) {
 
 void update(const opengl_window& win, app_states& app) {
   auto is_ready = [](const std::future<void>& result) -> bool {
-  return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
-                               std::future_status::ready;
+    return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
+                                 std::future_status::ready;
   };
 
   while (!app.loaders.empty() && is_ready(app.loaders.front())) {

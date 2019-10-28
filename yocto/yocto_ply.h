@@ -179,14 +179,14 @@ inline vector<vec3f> get_ply_positions(const ply_model& ply);
 inline vector<vec3f> get_ply_normals(const ply_model& ply);
 inline vector<vec2f> get_ply_texcoords(
     const ply_model& ply, bool flipv = false);
-inline vector<vec4f> get_ply_colors(const ply_model& ply);
-inline vector<float> get_ply_radius(const ply_model& ply);
-inline vector<vector<int>>  get_ply_faces(const ply_model& ply);
-inline vector<vec2i> get_ply_lines(const ply_model& ply);
-inline vector<int>   get_ply_points(const ply_model& ply);
-inline vector<vec3i> get_ply_triangles(const ply_model& ply);
-inline vector<vec4i> get_ply_quads(const ply_model& ply);
-inline bool          has_ply_quads(const ply_model& ply);
+inline vector<vec4f>       get_ply_colors(const ply_model& ply);
+inline vector<float>       get_ply_radius(const ply_model& ply);
+inline vector<vector<int>> get_ply_faces(const ply_model& ply);
+inline vector<vec2i>       get_ply_lines(const ply_model& ply);
+inline vector<int>         get_ply_points(const ply_model& ply);
+inline vector<vec3i>       get_ply_triangles(const ply_model& ply);
+inline vector<vec4i>       get_ply_quads(const ply_model& ply);
+inline bool                has_ply_quads(const ply_model& ply);
 
 // Add ply properties
 inline void add_ply_values(ply_model& ply, const vector<float>& values,

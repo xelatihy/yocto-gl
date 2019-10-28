@@ -1764,7 +1764,6 @@ static inline string normalize_path(const string& filename_) {
   return filename;
 }
 
-
 // Get filename without directory.
 static inline string get_filename(const string& filename_) {
   auto filename = normalize_path(filename_);
