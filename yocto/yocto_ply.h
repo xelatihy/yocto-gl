@@ -230,7 +230,7 @@ inline void add_ply_points(ply_model& ply, const vector<int>& values);
 }
 
 // -----------------------------------------------------------------------------
-// FILE AND PROPERTY HANDLING
+// LOW_LEVEL PLY LOADING AND SAVING
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -330,6 +330,12 @@ inline void close_ply(ply_file& fs) {
   fs.fs = nullptr;
 }
 
+inline bool read_ply_line(ply_file& fs, char* buffer, size_t size) {
+  auto ok = fgets(buffer, size, fs.fs) != nullptr;
+  if (ok) fs.linenum += 1;
+  return ok;
+}
+
 template <typename T>
 inline T swap_ply_endian(T value) {
   // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
@@ -391,11 +397,6 @@ using std::string_view;
 inline bool is_ply_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_ply_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-inline bool read_ply_line(ply_file& fs, char* buffer, size_t size) {
-  auto ok = fgets(buffer, size, fs.fs) != nullptr;
-  if (ok) fs.linenum += 1;
-  return ok;
 }
 inline void skip_ply_whitespace(string_view& str) {
   while (!str.empty() && is_ply_space(str.front())) str.remove_prefix(1);

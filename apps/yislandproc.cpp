@@ -41,6 +41,7 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_obj.h"
 using namespace yocto;
 
 #include "ext/json.hpp"
@@ -405,7 +406,7 @@ void load_island_shape(vector<scene_shape>& shapes,
     norm_map.reserve(1024 * 1024);
   };
 
-  auto fs = open_file(filename);
+  auto fs = open_obj(filename);
 
   auto command   = obj_command{};
   auto value     = vec3f{};

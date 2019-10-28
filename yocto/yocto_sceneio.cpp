@@ -32,6 +32,7 @@
 #include "yocto_shape.h"
 #include "yocto_image.h"
 #include "yocto_ply.h"
+#include "yocto_obj.h"
 
 #include <atomic>
 #include <cassert>
