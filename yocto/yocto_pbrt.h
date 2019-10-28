@@ -383,7 +383,7 @@ inline pbrt_value make_pbrt_value(const string& name,
 namespace yocto {
 
 // Utility to normalize a path
-static inline string normalize_pbrt_path(const string& filename_) {
+inline string normalize_pbrt_path(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
 
@@ -404,7 +404,7 @@ static inline string normalize_pbrt_path(const string& filename_) {
 }
 
 // Get directory name (including '/').
-static inline string get_pbrt_dirname(const string& filename_) {
+inline string get_pbrt_dirname(const string& filename_) {
   auto filename = normalize_pbrt_path(filename_);
   auto pos      = filename.rfind('/');
   if (pos == string::npos) return "";
@@ -412,7 +412,7 @@ static inline string get_pbrt_dirname(const string& filename_) {
 }
 
 // Get extension (not including '.').
-static inline string get_pbrt_extension(const string& filename_) {
+inline string get_pbrt_extension(const string& filename_) {
   auto filename = normalize_pbrt_path(filename_);
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return "";
@@ -420,7 +420,7 @@ static inline string get_pbrt_extension(const string& filename_) {
 }
 
 // Get filename without directory.
-static inline string get_pbrt_filename(const string& filename_) {
+inline string get_pbrt_filename(const string& filename_) {
   auto filename = normalize_pbrt_path(filename_);
   auto pos      = filename.rfind('/');
   if (pos == string::npos) return filename;
@@ -428,7 +428,7 @@ static inline string get_pbrt_filename(const string& filename_) {
 }
 
 // Get extension.
-static inline string get_pbrt_noextension(const string& filename_) {
+inline string get_pbrt_noextension(const string& filename_) {
   auto filename = normalize_pbrt_path(filename_);
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return filename;
@@ -436,18 +436,18 @@ static inline string get_pbrt_noextension(const string& filename_) {
 }
 
 // Get filename without directory and extension.
-static inline string get_pbrt_basename(const string& filename) {
+inline string get_pbrt_basename(const string& filename) {
   return get_pbrt_noextension(get_pbrt_filename(filename));
 }
 
 // Replaces extensions
-static inline string replace_pbrt_extension(
+inline string replace_pbrt_extension(
     const string& filename, const string& ext) {
   return get_pbrt_noextension(filename) + ext;
 }
 
 // Check if a file can be opened for reading.
-static inline bool exists_pbrt_file(const string& filename) {
+inline bool exists_pbrt_file(const string& filename) {
   auto fs = fopen(filename.c_str(), "r");
   if (fs) {
     fclose(fs);

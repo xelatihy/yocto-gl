@@ -398,7 +398,7 @@ inline void write_obj_text(obj_file& fs, const char* value) {
 namespace yocto {
 
 // Utility to normalize a path
-static inline string normalize_obj_path(const string& filename_) {
+inline string normalize_obj_path(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
 
@@ -419,7 +419,7 @@ static inline string normalize_obj_path(const string& filename_) {
 }
 
 // Get directory name (including '/').
-static inline string get_obj_dirname(const string& filename_) {
+inline string get_obj_dirname(const string& filename_) {
   auto filename = normalize_obj_path(filename_);
   auto pos      = filename.rfind('/');
   if (pos == string::npos) return "";
@@ -427,7 +427,7 @@ static inline string get_obj_dirname(const string& filename_) {
 }
 
 // Get extension (not including '.').
-static inline string get_obj_extension(const string& filename_) {
+inline string get_obj_extension(const string& filename_) {
   auto filename = normalize_obj_path(filename_);
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return "";
@@ -435,7 +435,7 @@ static inline string get_obj_extension(const string& filename_) {
 }
 
 // Get filename without directory.
-static inline string get_obj_filename(const string& filename_) {
+inline string get_obj_filename(const string& filename_) {
   auto filename = normalize_obj_path(filename_);
   auto pos      = filename.rfind('/');
   if (pos == string::npos) return filename;
@@ -443,7 +443,7 @@ static inline string get_obj_filename(const string& filename_) {
 }
 
 // Get extension.
-static inline string get_obj_noextension(const string& filename_) {
+inline string get_obj_noextension(const string& filename_) {
   auto filename = normalize_obj_path(filename_);
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return filename;
@@ -451,18 +451,18 @@ static inline string get_obj_noextension(const string& filename_) {
 }
 
 // Get filename without directory and extension.
-static inline string get_obj_basename(const string& filename) {
+inline string get_obj_basename(const string& filename) {
   return get_obj_noextension(get_obj_filename(filename));
 }
 
 // Replaces extensions
-static inline string replace_obj_extension(
+inline string replace_obj_extension(
     const string& filename, const string& ext) {
   return get_obj_noextension(filename) + ext;
 }
 
 // Check if a file can be opened for reading.
-static inline bool exists_obj_file(const string& filename) {
+inline bool exists_obj_file(const string& filename) {
   auto fs = fopen(filename.c_str(), "r");
   if (fs) {
     fclose(fs);
