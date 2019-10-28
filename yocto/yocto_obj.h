@@ -47,7 +47,7 @@
 // -----------------------------------------------------------------------------
 // SIMPLE OBJ LOADER AND WRITER
 // -----------------------------------------------------------------------------
-namespace yocto::obj {
+namespace yocto::yobj {
 
 // OBJ vertex
 struct obj_vertex {
@@ -245,12 +245,12 @@ inline void add_obj_fvquads(obj_model& obj, const string& name,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
 
-}  // namespace yocto::obj
+}  // namespace yocto::yobj
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL INTERFACE
 // -----------------------------------------------------------------------------
-namespace yocto::obj {
+namespace yocto::yobj {
 
 // A class that wraps a C file ti handle safe opening/closgin with RIIA.
 struct obj_file {
@@ -309,7 +309,7 @@ inline void write_objx_command(obj_file& fs, objx_command command,
     const obj_camera& camera, const obj_environment& environment,
     const obj_instance& instance);
 
-}  // namespace yocto::obj
+}  // namespace yocto::yobj
 
 // -----------------------------------------------------------------------------
 // HELPER FOR DICTIONARIES
@@ -318,8 +318,8 @@ namespace std {
 
 // Hash functor for vector for use with hash_map
 template <>
-struct hash<yocto::obj::obj_vertex> {
-  size_t operator()(const yocto::obj::obj_vertex& v) const {
+struct hash<yocto::yobj::obj_vertex> {
+  size_t operator()(const yocto::yobj::obj_vertex& v) const {
     static const std::hash<int> hasher = std::hash<int>();
     auto                        h      = (size_t)0;
     h ^= hasher(v.position) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -344,7 +344,7 @@ struct hash<yocto::obj::obj_vertex> {
 // -----------------------------------------------------------------------------
 // LOW-LEVEL FILE HANDLING
 // -----------------------------------------------------------------------------
-namespace yocto::obj {
+namespace yocto::yobj {
 
 // copnstrucyor and destructors
 inline obj_file::obj_file(obj_file&& other) {
@@ -390,12 +390,12 @@ inline void write_ply_text(obj_file& fs, const char* value) {
     throw std::runtime_error("cannot write to " + fs.filename);
 }
 
-}  // namespace yocto::obj
+}  // namespace yocto::yobj
 
 // -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
 // -----------------------------------------------------------------------------
-namespace yocto::obj {
+namespace yocto::yobj {
 
 using std::string_view;
 
@@ -472,12 +472,12 @@ inline void parse_obj_value_or_empty(string_view& str, string& value) {
   }
 }
 
-}  // namespace yocto::obj
+}  // namespace yocto::yobj
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL PRINTING
 // -----------------------------------------------------------------------------
-namespace yocto::obj {
+namespace yocto::yobj {
 
 // Formats values to string
 inline void format_obj_value(string& str, const string& value) { str += value; }
@@ -534,12 +534,12 @@ inline void format_obj_value(obj_file& fs, const T& value) {
     throw std::runtime_error("cannor write to " + fs.filename);
 }
 
-}  // namespace yocto::obj
+}  // namespace yocto::yobj
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace yocto::obj {
+namespace yocto::yobj {
 
 inline void parse_obj_value(string_view& str, obj_vertex& value) {
   value = obj_vertex{0, 0, 0};
@@ -1466,7 +1466,7 @@ inline void add_obj_fvquads(obj_model& obj, const string& name,
     shape.faces.push_back({(uint8_t)nv,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
-}  // namespace yocto::obj
+}  // namespace yocto::yobj
 
 // Read obj
 inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
@@ -1859,6 +1859,6 @@ inline void write_objx_command(obj_file& fs, objx_command command,
   }
 }
 
-}  // namespace yocto::obj
+}  // namespace yocto::yobj
 
 #endif
