@@ -35,7 +35,7 @@ See each header file for documentation.
    and a custom, hackable, Yaml format
 - `yocto/yocto_common.h`: vocabulary types, container utilities, 
    Python-like operations, concurrency utilies, timer
-- `yocto/yocto_commonio.h`: printing utilities, file io utilities, 
+- `yocto/yocto_cmdline.h`: printing utilities, file io utilities, 
   command line parsing
 
 You can see Yocto/GL in action in the following applications written to
