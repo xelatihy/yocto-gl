@@ -85,8 +85,9 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_common.h"
 #include "yocto_math.h"
+
+#include <unordered_map>
 
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
@@ -165,6 +166,10 @@ void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
 // EDGEA AND ADJACENCIES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Hash map
+template<typename K, typename V>
+using hash_map = std::unordered_map<K, V>;
 
 // Dictionary to store edge information. `index` is the index to the edge
 // array, `edges` the array of edges and `nfaces` the number of adjacent faces.
