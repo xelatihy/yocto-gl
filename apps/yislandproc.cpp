@@ -338,7 +338,7 @@ void load_island_shape(vector<scene_shape>& shapes,
   bool   split_next = false;
 
   // Add  vertices to the current shape
-  auto add_fvverts = [&](const vector<yobj::obj_vertex>& verts) {
+  auto add_fvverts = [&](const vector<obj::obj_vertex>& verts) {
     for (auto& vert : verts) {
       if (!vert.position) continue;
       auto pos_it = pos_map.find(vert.position);
@@ -406,21 +406,21 @@ void load_island_shape(vector<scene_shape>& shapes,
     norm_map.reserve(1024 * 1024);
   };
 
-  auto fs = yobj::open_obj(filename);
+  auto fs = obj::open_obj(filename);
 
-  auto command   = yobj::obj_command{};
+  auto command   = obj::obj_command{};
   auto value     = vec3f{};
   auto name      = ""s;
-  auto verts     = vector<yobj::obj_vertex>{};
-  auto vert_size = yobj::obj_vertex{};
+  auto verts     = vector<obj::obj_vertex>{};
+  auto vert_size = obj::obj_vertex{};
   while (read_obj_command(fs, command, name, value, verts, vert_size)) {
     switch (command) {
-      case yobj::obj_command::vertex: opos.push_back(value); break;
-      case yobj::obj_command::normal: onorm.push_back(value); break;
-      case yobj::obj_command::texcoord:
+      case obj::obj_command::vertex: opos.push_back(value); break;
+      case obj::obj_command::normal: onorm.push_back(value); break;
+      case obj::obj_command::texcoord:
         throw std::runtime_error("texture coord not supported");
         break;
-      case yobj::obj_command::face: {
+      case obj::obj_command::face: {
         split_shape();
         add_fvverts(verts);
         if (verts.size() == 4) {
@@ -466,11 +466,11 @@ void load_island_shape(vector<scene_shape>& shapes,
           }
         }
       } break;
-      case yobj::obj_command::group: {
+      case obj::obj_command::group: {
         gname      = name;
         split_next = true;
       } break;
-      case yobj::obj_command::usemtl: {
+      case obj::obj_command::usemtl: {
         mname      = name;
         split_next = true;
       } break;
