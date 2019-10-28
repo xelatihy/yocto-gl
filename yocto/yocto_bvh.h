@@ -83,7 +83,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_common.h"
 #include "yocto_math.h"
 
 #if YOCTO_EMBREE

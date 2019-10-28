@@ -31,10 +31,52 @@
 #include "yocto_modelio.h"
 #include "yocto_shape.h"
 
-#include <limits.h>
-#include <stdlib.h>
+#include <atomic>
 #include <cassert>
+#include <climits>
+#include <cstdlib>
 #include <deque>
+#include <future>
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF CONCURRENCY UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(int begin, int end, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(begin);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, end]() {
+          while (true) {
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= end) break;
+            func(idx);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+inline void parallel_foreach(vector<T>& values, Func&& func) {
+  parallel_for(
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
+}
+template <typename T, typename Func>
+inline void parallel_foreach(const vector<T>& values, Func&& func) {
+  parallel_for(
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
+}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF ANIMATION UTILITIES
@@ -275,7 +317,7 @@ void trim_memory(scene_model& scene) {
 vector<string> format_validation(const scene_model& scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
-    auto used = hash_map<string, int>();
+    auto used = unordered_map<string, int>();
     used.reserve(vals.size());
     for (auto& value : vals) used[value.name] += 1;
     for (auto& [name, used] : used) {
@@ -770,14 +812,14 @@ void load_yaml(
   };
   auto type = parsing_type::none;
 
-  auto tmap = hash_map<string, int>{{"", -1}};
-  auto vmap = hash_map<string, int>{{"", -1}};
-  auto mmap = hash_map<string, int>{{"", -1}};
-  auto smap = hash_map<string, int>{{"", -1}};
+  auto tmap = unordered_map<string, int>{{"", -1}};
+  auto vmap = unordered_map<string, int>{{"", -1}};
+  auto mmap = unordered_map<string, int>{{"", -1}};
+  auto smap = unordered_map<string, int>{{"", -1}};
 
   // parse yaml reference
   auto get_yaml_ref = [](const yaml_value& yaml, int& value,
-                          const hash_map<string, int>& refs) {
+                          const unordered_map<string, int>& refs) {
     if (yaml.type != yaml_value_type::string)
       throw std::runtime_error("error parsing yaml value");
     if (yaml.string_ == "") return;
@@ -1279,7 +1321,7 @@ void load_obj(
   }
 
   // helper to create texture maps
-  auto texture_map = hash_map<string, int>{{"", -1}};
+  auto texture_map = unordered_map<string, int>{{"", -1}};
   auto get_texture = [&texture_map, &scene](const obj_texture_info& info) {
     if (info.path == "") return -1;
     auto it = texture_map.find(info.path);
@@ -1293,7 +1335,7 @@ void load_obj(
   };
 
   // convert materials and textures
-  auto material_map = hash_map<string, int>{{"", -1}};
+  auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& omat : obj.materials) {
     auto& material = scene.materials.emplace_back();
     material.name  = make_safe_name(
@@ -1325,7 +1367,7 @@ void load_obj(
   }
 
   // convert shapes
-  auto shape_name_counts = hash_map<string, int>{};
+  auto shape_name_counts = unordered_map<string, int>{};
   for (auto& oshape : obj.shapes) {
     auto& shape = scene.shapes.emplace_back();
     shape.name  = oshape.name;
@@ -1768,7 +1810,7 @@ static void load_pbrt(
   }
 
   // convert textures
-  auto texture_map = hash_map<string, int>{{"", -1}};
+  auto texture_map = unordered_map<string, int>{{"", -1}};
   for (auto& ptexture : pbrt.textures) {
     if (ptexture.filename.empty()) continue;
     auto& texture = scene.textures.emplace_back();
@@ -1785,7 +1827,7 @@ static void load_pbrt(
       throw std::runtime_error("cannot find texture " + name);
     return texture_map.at(name);
   };
-  auto material_map = hash_map<string, int>{{"", -1}};
+  auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
     auto& material = scene.materials.emplace_back();
     material.name  = make_safe_name(
@@ -1801,7 +1843,7 @@ static void load_pbrt(
   }
 
   // convert arealights
-  auto arealight_map = hash_map<string, int>{{"", -1}};
+  auto arealight_map = unordered_map<string, int>{{"", -1}};
   for (auto& parealight : pbrt.arealights) {
     auto& material = scene.materials.emplace_back();
     material.name  = make_safe_name(

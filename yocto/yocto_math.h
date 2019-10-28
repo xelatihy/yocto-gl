@@ -164,9 +164,12 @@
 // -----------------------------------------------------------------------------
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -176,8 +179,12 @@ namespace yocto {
 
 using byte = unsigned char;
 using uint = unsigned int;
+using std::array;
 using std::pair;
+using std::string;
+using std::unordered_map;
 using std::vector;
+using namespace std::string_literals;
 
 inline const double pi  = 3.14159265358979323846;
 inline const float  pif = (float)pi;

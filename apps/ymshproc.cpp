@@ -227,8 +227,8 @@ int main(int argc, const char** argv) {
         line[k] = {k, k + 1};
         line[k] += (int)lines.size();
       }
-      plines += line;
-      ppositions += pos;
+      plines.insert(plines.end(), line.begin(), line.end());
+      ppositions.insert(ppositions.end(), pos.begin(), pos.end());
     }
     points    = {};
     lines     = plines;

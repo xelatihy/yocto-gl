@@ -85,7 +85,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_common.h"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
@@ -171,9 +170,9 @@ namespace yocto {
 // We store only bidirectional edges to keep the dictionary small. Use the
 // functions below to access this data.
 struct edge_map {
-  hash_map<vec2i, int> index  = {};
-  vector<vec2i>        edges  = {};
-  vector<int>          nfaces = {};
+  unordered_map<vec2i, int> index  = {};
+  vector<vec2i>             edges  = {};
+  vector<int>               nfaces = {};
 };
 
 // Initialize an edge map with elements.
@@ -230,10 +229,10 @@ namespace yocto {
 // A sparse grid of cells, containing list of points. Cells are stored in
 // a dictionary to get sparsity. Helpful for nearest neighboor lookups.
 struct hash_grid {
-  float                        cell_size     = 0;
-  float                        cell_inv_size = 0;
-  vector<vec3f>                positions     = {};
-  hash_map<vec3i, vector<int>> cells         = {};
+  float                             cell_size     = 0;
+  float                             cell_inv_size = 0;
+  vector<vec3f>                     positions     = {};
+  unordered_map<vec3i, vector<int>> cells         = {};
 };
 
 // Create a hash_grid

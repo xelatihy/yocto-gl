@@ -28,17 +28,63 @@
 
 //
 // TODO: better documentation
-// TODO: inline BVH
-// TODO: inline cdfs
-// TODO: consider removing dependency from image/shape
+// TODO: consider removing dependency from image
 //
 
 #include "yocto_trace.h"
-#include "yocto_shape.h"
+
+#include <atomic>
+#include <deque>
+#include <future>
+#include <mutex>
 
 #if YOCTO_EMBREE
 #include <embree3/rtcore.h>
 #endif
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR PARALLEL SUPPORT FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::atomic;
+using std::deque;
+using std::future;
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(int begin, int end, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(begin);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, end]() {
+          while (true) {
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= end) break;
+            func(idx);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+inline void parallel_foreach(vector<T>& values, Func&& func) {
+  parallel_for(
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
+}
+template <typename T, typename Func>
+inline void parallel_foreach(const vector<T>& values, Func&& func) {
+  parallel_for(
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
+}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
@@ -264,7 +310,7 @@ float eval_phasefunction(float cos_theta, float g) {
 
 // Tabulated ior for metals
 // https://github.com/tunabrain/tungsten
-const hash_map<string, pair<vec3f, vec3f>> metal_ior_table = {
+const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
     {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                 {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
     {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
@@ -355,7 +401,7 @@ pair<vec3f, vec3f> get_conductor_eta(const string& name) {
 }
 
 // Stores sigma_prime_s, sigma_a
-static hash_map<string, pair<vec3f, vec3f>> subsurface_params_table = {
+static unordered_map<string, pair<vec3f, vec3f>> subsurface_params_table = {
     // From "A Practical Model for Subsurface Light Transport"
     // Jensen, Marschner, Levoy, Hanrahan
     // Proc SIGGRAPH 2001
@@ -442,113 +488,6 @@ pair<vec3f, vec3f> get_subsurface_params(const string& name) {
   if (subsurface_params_table.find(name) == subsurface_params_table.end())
     return {zero3f, zero3f};
   return subsurface_params_table.at(name);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR SCENE CONVERSION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// convert scene objects
-void update_trace_camera(trace_camera& camera, const scene_camera& iocamera) {
-  camera.frame = iocamera.frame;
-  camera.film  = iocamera.aspect >= 1
-                    ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
-                    : vec2f{iocamera.film / iocamera.aspect, iocamera.film};
-  camera.lens     = iocamera.lens;
-  camera.focus    = iocamera.focus;
-  camera.aperture = iocamera.aperture;
-}
-void update_trace_texture(
-    trace_texture& texture, const scene_texture& iotexture) {
-  texture.hdr = iotexture.hdr;
-  texture.ldr = iotexture.ldr;
-}
-void update_trace_material(
-    trace_material& material, const scene_material& iomaterial) {
-  material.emission         = iomaterial.emission;
-  material.diffuse          = iomaterial.diffuse;
-  material.specular         = iomaterial.specular;
-  material.transmission     = iomaterial.transmission;
-  material.roughness        = iomaterial.roughness;
-  material.opacity          = iomaterial.opacity;
-  material.refract          = iomaterial.refract;
-  material.volemission      = iomaterial.volemission;
-  material.voltransmission  = iomaterial.voltransmission;
-  material.volmeanfreepath  = iomaterial.volmeanfreepath;
-  material.volscatter       = iomaterial.volscatter;
-  material.volscale         = iomaterial.volscale;
-  material.volanisotropy    = iomaterial.volanisotropy;
-  material.emission_tex     = iomaterial.emission_tex;
-  material.diffuse_tex      = iomaterial.diffuse_tex;
-  material.specular_tex     = iomaterial.specular_tex;
-  material.transmission_tex = iomaterial.transmission_tex;
-  material.roughness_tex    = iomaterial.roughness_tex;
-  material.opacity_tex      = iomaterial.opacity_tex;
-  material.subsurface_tex   = iomaterial.subsurface_tex;
-}
-void update_trace_shape(trace_shape& shape, const scene_shape& ioshape,
-    const scene_model& ioscene) {
-  if (ioshape.subdivisions || ioshape.displacement) {
-    auto subdiv = ioshape;
-    if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
-    if (subdiv.displacement && subdiv.displacement_tex >= 0)
-      subdiv = displace_shape(ioscene, subdiv);
-    return update_trace_shape(shape, subdiv, ioscene);
-  }
-  shape.points        = ioshape.points;
-  shape.lines         = ioshape.lines;
-  shape.triangles     = ioshape.triangles;
-  shape.quads         = ioshape.quads;
-  shape.quadspos      = ioshape.quadspos;
-  shape.quadsnorm     = ioshape.quadsnorm;
-  shape.quadstexcoord = ioshape.quadstexcoord;
-  shape.positions     = ioshape.positions;
-  shape.normals       = ioshape.normals;
-  shape.texcoords     = ioshape.texcoords;
-  shape.colors        = ioshape.colors;
-  shape.radius        = ioshape.radius;
-  shape.tangents      = ioshape.tangents;
-}
-void update_trace_instance(
-    trace_instance& instance, const scene_instance& ioinstance) {
-  instance.frame    = ioinstance.frame;
-  instance.shape    = ioinstance.shape;
-  instance.material = ioinstance.material;
-}
-void update_trace_environment(
-    trace_environment& environment, const scene_environment& ioenvironment) {
-  environment.frame        = ioenvironment.frame;
-  environment.emission     = ioenvironment.emission;
-  environment.emission_tex = ioenvironment.emission_tex;
-}
-
-// Construct a scene from io
-trace_scene make_trace_scene(const scene_model& ioscene) {
-  auto scene = trace_scene{};
-
-  for (auto& iocamera : ioscene.cameras) {
-    update_trace_camera(scene.cameras.emplace_back(), iocamera);
-  }
-  for (auto& iotexture : ioscene.textures) {
-    update_trace_texture(scene.textures.emplace_back(), iotexture);
-  }
-  for (auto& iomaterial : ioscene.materials) {
-    update_trace_material(scene.materials.emplace_back(), iomaterial);
-  }
-  for (auto& ioshape : ioscene.shapes) {
-    update_trace_shape(scene.shapes.emplace_back(), ioshape, ioscene);
-  }
-  for (auto& ioinstance : ioscene.instances) {
-    update_trace_instance(scene.instances.emplace_back(), ioinstance);
-  }
-  for (auto& ioenvironment : ioscene.environments) {
-    update_trace_environment(scene.environments.emplace_back(), ioenvironment);
-  }
-
-  return scene;
 }
 
 }  // namespace yocto
@@ -1090,8 +1029,7 @@ static RTCDevice     trace_embree_device() {
 }
 
 // Initialize Embree BVH
-static void init_embree_bvh(
-    trace_shape& shape, const trace_params& params) {
+static void init_embree_bvh(trace_shape& shape, const trace_params& params) {
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
   if (params.compact_bvh) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
@@ -1202,8 +1140,7 @@ static void init_embree_bvh(
       escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); }};
 }
 
-static void init_embree_bvh(
-    trace_scene& scene, const trace_params& params) {
+static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
   // scene bvh
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
@@ -1758,8 +1695,7 @@ static void update_bvh(trace_shape& shape, const trace_params& params) {
 void update_bvh(trace_scene& scene, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const trace_params& params) {
   // update shapes
-  for (auto shape : updated_shapes)
-    update_bvh(scene.shapes[shape], params);
+  for (auto shape : updated_shapes) update_bvh(scene.shapes[shape], params);
 
 #if YOCTO_EMBREE
   if (params.embree_bvh) {
@@ -2308,36 +2244,25 @@ static vector<float> sample_environment_cdf(
 // Generate a distribution for sampling a shape uniformly based on area/length.
 static vector<float> sample_shape_cdf(const trace_shape& shape) {
   if (!shape.triangles.empty()) {
-    return sample_triangles_cdf(shape.triangles, shape.positions);
+    auto cdf = vector<float>(shape.triangles.size());
+    for (auto idx = 0; idx < cdf.size(); idx++) {
+      auto& t  = shape.triangles[idx];
+      cdf[idx] = triangle_area(
+          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+      if (idx) cdf[idx] += cdf[idx - 1];
+    }
+    return cdf;
   } else if (!shape.quads.empty()) {
-    return sample_quads_cdf(shape.quads, shape.positions);
-  } else if (!shape.lines.empty()) {
-    return sample_lines_cdf(shape.lines, shape.positions);
-  } else if (!shape.points.empty()) {
-    return sample_points_cdf(shape.points.size());
-  } else if (!shape.quadspos.empty()) {
-    return sample_quads_cdf(shape.quadspos, shape.positions);
+    auto cdf = vector<float>(shape.quads.size());
+    for (auto idx = 0; idx < cdf.size(); idx++) {
+      auto& t  = shape.quads[idx];
+      cdf[idx] = quad_area(shape.positions[t.x], shape.positions[t.y],
+          shape.positions[t.z], shape.positions[t.w]);
+      if (idx) cdf[idx] += cdf[idx - 1];
+    }
+    return cdf;
   } else {
-    throw std::runtime_error("empty shape");
-  }
-}
-
-// Sample a shape based on a distribution.
-static pair<int, vec2f> sample_shape(const trace_shape& shape,
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-  if (cdf.empty()) return {};
-  if (!shape.triangles.empty()) {
-    return sample_triangles(cdf, re, ruv);
-  } else if (!shape.quads.empty()) {
-    return sample_quads(cdf, re, ruv);
-  } else if (!shape.lines.empty()) {
-    return {sample_lines(cdf, re, ruv.x).first, ruv};
-  } else if (!shape.points.empty()) {
-    return {sample_points(cdf, re), ruv};
-  } else if (!shape.quadspos.empty()) {
-    return sample_quads(cdf, re, ruv);
-  } else {
-    return {0, zero2f};
+    throw std::runtime_error("lights only support triangles and quads");
   }
 }
 
@@ -2348,9 +2273,17 @@ static vec3f sample_light(const trace_scene& scene, const trace_light& light,
     auto& instance = scene.instances[light.instance];
     auto& shape    = scene.shapes[instance.shape];
     auto& cdf      = light.elem_cdf;
-    auto  sample   = sample_shape(shape, cdf, rel, ruv);
-    auto  element  = sample.first;
-    auto  uv       = sample.second;
+    auto  element  = sample_discrete(cdf, rel);
+    auto  uv       = zero2f;
+    if (!shape.triangles.empty()) {
+      uv = sample_triangle(ruv);
+    } else if (!shape.quads.empty()) {
+      uv = ruv;
+    } else if (!shape.quadspos.empty()) {
+      uv = ruv;
+    } else {
+      throw std::runtime_error("lights are only triangles or quads");
+    }
     return normalize(eval_position(scene, instance, element, uv) - p);
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
@@ -2898,8 +2831,7 @@ void trace_region(image<vec4f>& image, trace_state& state,
 }
 
 // Init a sequence of random number generators.
-trace_state make_state(
-    const trace_scene& scene, const trace_params& params) {
+trace_state make_state(const trace_scene& scene, const trace_params& params) {
   auto image_size = camera_resolution(
       scene.cameras[params.camera], params.resolution);
   auto state = trace_state{image_size, trace_pixel{}};
