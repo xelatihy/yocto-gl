@@ -278,7 +278,7 @@ void load_island_lights(
 }
 
 void load_island_materials(const string& filename, const string& dirname,
-    hash_map<string, disney_material>& mmap) {
+    unordered_map<string, disney_material>& mmap) {
   auto tjs = json{};
   load_json(dirname + "textures/textures.json", tjs);
   auto js = json{};
@@ -318,16 +318,16 @@ void load_island_materials(const string& filename, const string& dirname,
 
 void load_island_shape(vector<scene_shape>& shapes,
     vector<scene_material>& materials, vector<disney_material>& dmaterials,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap,
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap, unordered_map<string, int>& tmap,
     scene_model& scene, const string& filename, const string& parent_name) {
   // obj vertices
   std::deque<vec3f> opos  = std::deque<vec3f>();
   std::deque<vec3f> onorm = std::deque<vec3f>();
 
   // vertex maps
-  hash_map<int, int> pos_map  = hash_map<int, int>();
-  hash_map<int, int> norm_map = hash_map<int, int>();
+  unordered_map<int, int> pos_map  = unordered_map<int, int>();
+  unordered_map<int, int> norm_map = unordered_map<int, int>();
 
   // last material and group name
   string gname      = ""s;
@@ -478,8 +478,8 @@ void load_island_shape(vector<scene_shape>& shapes,
 
 void add_island_shape(scene_model& scene, const string& parent_name,
     const string& filename, const string& dirname,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap, unordered_map<string, int>& tmap) {
   if (smap.find(filename) != smap.end()) return;
   printf("%s\n", filename.c_str());
 
@@ -562,7 +562,7 @@ void add_island_shape(scene_model& scene, const string& parent_name,
 
 void add_island_instance(scene_model& scene, const string& parent_name,
     const mat4f& xform, const vector<vec2i>& shapes) {
-  static auto name_counter = hash_map<string, int>{};
+  static auto name_counter = unordered_map<string, int>{};
   for (auto shape_material : shapes) {
     auto instance = scene_instance{};
     instance.name = parent_name + "/" + parent_name + "-" +
@@ -588,8 +588,8 @@ void add_island_variant_instance(vector<scene_instance>& instances,
 
 void load_island_archive(const string& filename, const string& dirname,
     scene_model& scene, const string& parent_name, const mat4f& parent_xform,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap, unordered_map<string, int>& tmap) {
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
@@ -615,8 +615,8 @@ void load_island_archive(const string& filename, const string& dirname,
 
 void load_island_variant_archive(const string& filename, const string& dirname,
     scene_model& scene, const string& parent_name, const mat4f& parent_xform,
-    vector<scene_instance>& instances, hash_map<string, vector<vec2i>>& smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    vector<scene_instance>& instances, unordered_map<string, vector<vec2i>>& smap,
+    unordered_map<string, disney_material>& mmap, unordered_map<string, int>& tmap) {
   // elements
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
@@ -644,9 +644,9 @@ void load_island_variant_archive(const string& filename, const string& dirname,
 
 void load_island_variants(const string& filename, const string& dirname,
     scene_model& scene, const string& parent_name, const mat4f& parent_xform,
-    hash_map<string, vector<scene_instance>>& instances,
-    hash_map<string, vector<vec2i>>&          smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    unordered_map<string, vector<scene_instance>>& instances,
+    unordered_map<string, vector<vec2i>>&          smap,
+    unordered_map<string, disney_material>& mmap, unordered_map<string, int>& tmap) {
   printf("%s\n", filename.c_str());
   auto js_ = json{};
   load_json(dirname + filename, js_);
@@ -678,9 +678,9 @@ void load_island_variants(const string& filename, const string& dirname,
 
 void load_island_element(const string& filename, const string& dirname,
     scene_model& scene, const string& parent_name, const mat4f& parent_xform,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
-  hash_map<string, vector<scene_instance>> variants;
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap, unordered_map<string, int>& tmap) {
+  unordered_map<string, vector<scene_instance>> variants;
   load_island_variants("json/isBayCedarA1/isBayCedarA1.json", dirname, scene,
       parent_name, identity4x4f, variants, smap, mmap, tmap);
 
@@ -711,8 +711,8 @@ void load_island_element(const string& filename, const string& dirname,
 
 void load_island_curve(const string& filename, const string& dirname,
     scene_model& scene, const string& parent_name, const mat4f& parent_xform,
-    float start_radius, float end_radius, hash_map<string, vector<vec2i>>& smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    float start_radius, float end_radius, unordered_map<string, vector<vec2i>>& smap,
+    unordered_map<string, disney_material>& mmap, unordered_map<string, int>& tmap) {
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
@@ -752,8 +752,8 @@ void load_island_curve(const string& filename, const string& dirname,
 void load_island_curvetube(const string& filename, const string& dirname,
     scene_model& scene, const string& parent_name, const mat4f& parent_xform,
     float start_width, float end_width, const string& material_name,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap, unordered_map<string, int>& tmap) {
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
@@ -833,8 +833,8 @@ void load_island_curvetube(const string& filename, const string& dirname,
 }
 
 void load_island_elements(const string& filename, const string& dirname,
-    scene_model& scene, hash_map<string, vector<vec2i>>& smap,
-    hash_map<string, int>& tmap) {
+    scene_model& scene, unordered_map<string, vector<vec2i>>& smap,
+    unordered_map<string, int>& tmap) {
   // instancing model
   // - main shape: "geomObjFile" and "name" properties
   // - main instance: "transform"
@@ -863,7 +863,7 @@ void load_island_elements(const string& filename, const string& dirname,
   }
 
   // materials
-  auto mmap = hash_map<string, disney_material>{};
+  auto mmap = unordered_map<string, disney_material>{};
   load_island_materials(js.at("matFile"), dirname, mmap);
 
   // main instance
@@ -944,8 +944,8 @@ void load_island_scene(
     for (auto filename : js.at("cameras").get<vector<string>>()) {
       load_island_cameras(filename, dirname, scene);
     }
-    auto smap = hash_map<string, vector<vec2i>>{};
-    auto tmap = hash_map<string, int>{};
+    auto smap = unordered_map<string, vector<vec2i>>{};
+    auto tmap = unordered_map<string, int>{};
     for (auto filename : js.at("elements").get<vector<string>>()) {
       load_island_elements(filename, dirname, scene, smap, tmap);
     }
@@ -967,7 +967,7 @@ void load_island_scene(
   }
 
   // fix names
-  auto parent_shape_map = hash_map<string, vec2i>{};
+  auto parent_shape_map = unordered_map<string, vec2i>{};
   for (auto id = 0; id < scene.shapes.size(); id++) {
     auto parent_name = get_dirname(scene.shapes[id].filename).substr(7);
     parent_name      = parent_name.substr(0, parent_name.size() - 1);
@@ -992,7 +992,7 @@ void load_island_scene(
       parent_shape_map[parent_name].x += 1;
     }
   }
-  auto parent_texture_map = hash_map<string, vec2i>{};
+  auto parent_texture_map = unordered_map<string, vec2i>{};
   for (auto id = 0; id < scene.textures.size(); id++) {
     auto parent_name = get_dirname(scene.textures[id].filename).substr(9);
     parent_name      = parent_name.substr(0, parent_name.size() - 1);
