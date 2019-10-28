@@ -855,14 +855,14 @@ void         open_yaml(
 void close_yaml(yaml_file& fs);
 
 // Load Yaml properties
-bool read_yaml_property(file_wrapper& fs, string& group, string& key,
+bool read_yaml_property(yaml_file& fs, string& group, string& key,
     bool& newobj, yaml_value& value);
 
 // Write Yaml properties
-void write_yaml_comment(file_wrapper& fs, const string& comment);
-void write_yaml_property(file_wrapper& fs, const string& object,
+void write_yaml_comment(yaml_file& fs, const string& comment);
+void write_yaml_property(yaml_file& fs, const string& object,
     const string& key, bool newobj, const yaml_value& value);
-void write_yaml_object(file_wrapper& fs, const string& object);
+void write_yaml_object(yaml_file& fs, const string& object);
 
 // type-cheked yaml value access
 void get_yaml_value(const yaml_value& yaml, string& value);
@@ -891,8 +891,37 @@ yaml_value make_yaml_value(const frame3f& value);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// copnstrucyor and destructors
+inline yaml_file::yaml_file(yaml_file&& other) {
+  this->fs       = other.fs;
+  this->filename = other.filename;
+  other.fs       = nullptr;
+}
+inline yaml_file::~yaml_file() {
+  if (fs) fclose(fs);
+  fs = nullptr;
+}
+
+// Opens a file returing a handle with RIIA
+inline void open_yaml(yaml_file& fs, const string& filename, const string& mode) {
+  close_yaml(fs);
+  fs.filename = filename;
+  fs.mode     = mode;
+  fs.fs       = fopen(filename.c_str(), mode.c_str());
+  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
+}
+inline yaml_file open_yaml(const string& filename, const string& mode) {
+  auto fs = yaml_file{};
+  open_yaml(fs, filename, mode);
+  return fs;
+}
+inline void close_yaml(yaml_file& fs) {
+  if (fs.fs) fclose(fs.fs);
+  fs.fs = nullptr;
+}
+
 // Read a line
-static inline bool read_yaml_line(file_wrapper& fs, char* buffer, size_t size) {
+static inline bool read_yaml_line(yaml_file& fs, char* buffer, size_t size) {
   auto ok = fgets(buffer, size, fs.fs) != nullptr;
   if (ok) fs.linenum += 1;
   return ok;
@@ -1118,7 +1147,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
 
 // Load/save yaml
 void load_yaml(const string& filename, yaml_model& yaml) {
-  auto fs = open_file(filename, "rt");
+  auto fs = open_yaml(filename, "rt");
 
   // read the file line by line
   auto group = ""s;
@@ -1208,14 +1237,14 @@ static inline void format_yaml_values(
 
 template <typename... Args>
 static inline void format_yaml_values(
-    file_wrapper& fs, const string& fmt, const Args&... args) {
+    yaml_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_yaml_values(str, fmt, args...);
   if (fputs(str.c_str(), fs.fs) < 0)
     throw std::runtime_error("cannor write to " + fs.filename);
 }
 template <typename T>
-static inline void format_yaml_value(file_wrapper& fs, const T& value) {
+static inline void format_yaml_value(yaml_file& fs, const T& value) {
   auto str = ""s;
   format_yaml_value(str, value);
   if (fputs(str.c_str(), fs.fs) < 0)
@@ -1247,7 +1276,7 @@ static inline void format_yaml_value(string& str, const yaml_value& value) {
 }
 
 void save_yaml(const string& filename, const yaml_model& yaml) {
-  auto fs = open_file(filename, "wt");
+  auto fs = open_yaml(filename, "wt");
 
   // save comments
   format_yaml_values(fs, "#\n");
@@ -1281,7 +1310,7 @@ void save_yaml(const string& filename, const yaml_model& yaml) {
   }
 }
 
-bool read_yaml_property(file_wrapper& fs, string& group, string& key,
+bool read_yaml_property(yaml_file& fs, string& group, string& key,
     bool& newobj, yaml_value& value) {
   // read the file line by line
   char buffer[4096];
@@ -1347,7 +1376,7 @@ static inline vector<string> split_yaml_string(
   return tokens;
 }
 
-void write_yaml_comment(file_wrapper& fs, const string& comment) {
+void write_yaml_comment(yaml_file& fs, const string& comment) {
   auto lines = split_yaml_string(comment, "\n");
   for (auto& line : lines) {
     format_yaml_values(fs, "# {}\n", line);
@@ -1356,7 +1385,7 @@ void write_yaml_comment(file_wrapper& fs, const string& comment) {
 }
 
 // Save yaml property
-void write_yaml_property(file_wrapper& fs, const string& object,
+void write_yaml_property(yaml_file& fs, const string& object,
     const string& key, bool newobj, const yaml_value& value) {
   if (key.empty()) {
     format_yaml_values(fs, "\n{}:\n", object);
@@ -1369,7 +1398,7 @@ void write_yaml_property(file_wrapper& fs, const string& object,
   }
 }
 
-void write_yaml_object(file_wrapper& fs, const string& object) {
+void write_yaml_object(yaml_file& fs, const string& object) {
   format_yaml_values(fs, "\n{}:\n", object);
 }
 
@@ -1383,7 +1412,7 @@ namespace yocto {
 void load_yaml(
     const string& filename, scene_model& scene, const load_params& params) {
   // open file
-  auto fs = open_file(filename);
+  auto fs = open_yaml(filename);
 
   // parse state
   enum struct parsing_type {
@@ -1670,7 +1699,7 @@ static void load_yaml_scene(
 static void save_yaml(const string& filename, const scene_model& scene,
     bool ply_instances = false, const string& instances_name = "") {
   // open file
-  auto fs = open_file(filename, "w");
+  auto fs = open_yaml(filename, "w");
 
   // write_yaml_comment(fs, get_save_scene_message(scene, ""));
 
