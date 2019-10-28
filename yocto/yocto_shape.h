@@ -15,34 +15,27 @@
 // shape smoothing, shape subdivision (including Catmull-Clark subdivs), and
 // example shape creation.
 //
-// 1. compute line tangents, and triangle and quad areas and normals with
-//    `line_tangent()`, `triamgle_normal()`, `quad_normal()` and
-//    `line_length()`, `triangle_area()` and `quad_normal()`
-// 2. interpolate values over primitives with `interpolate_line()`,
-//    `interpolate_triangle()` and `interpolate_quad()`
-// 3. evaluate Bezier curves and derivatives with `interpolate_bezier()` and
-//    `interpolate_bezier_derivative()`
-// 4. compute smooth normals and tangents with `compute_normals()`
+// 1. compute smooth normals and tangents with `compute_normals()`
 //   `compute_tangents()`
-// 5. compute tangent frames from texture coordinates with
+// 2. compute tangent frames from texture coordinates with
 //    `compute_tangent_spaces()`
-// 6. compute skinning with `compute_skinning()` and
+// 3. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
-// 6. create shapes with `make_proc_image()`, `make_hair()`,
+// 4. create shapes with `make_proc_image()`, `make_hair()`,
 // `make_points()`
-// 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
-// 8. shape sampling with `sample_points()`, `sample_lines()`,
+// 5. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
+// 6. shape sampling with `sample_points()`, `sample_lines()`,
 //    `sample_triangles()`; initialize the sampling CDFs with
 //    `sample_points_cdf()`, `sample_lines_cdf()`,
 //    `sample_triangles_cdf()`
-// 9.  sample a could of point over a surface with `sample_triangles()`
-// 10. get edges and boundaries with `get_edges()`
-// 11. convert quads to triangles with `quads_to_triangles()`
-// 12. convert face varying to vertex shared representations with
+// 7.  sample a could of point over a surface with `sample_triangles()`
+// 8. get edges and boundaries with `get_edges()`
+// 9. convert quads to triangles with `quads_to_triangles()`
+// 10. convert face varying to vertex shared representations with
 //     `convert_face_varying()`
-// 13. subdivide elements by edge splits with `subdivide_lines()`,
+// 11. subdivide elements by edge splits with `subdivide_lines()`,
 //     `subdivide_triangles()`, `subdivide_quads()`, `subdivide_beziers()`
-// 14. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
+// 12. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
 //
 //
 // ## Shape IO

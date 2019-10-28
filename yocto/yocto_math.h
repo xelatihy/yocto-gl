@@ -2,8 +2,8 @@
 // # Yocto/Math: Tiny library for math support in graphics applications.
 //
 // Yocto/Math provides the basic math primitives used in grahics, including
-// small-sized vectors and matrixes, frames, bounding boxes, transforms,
-// geometry functions, random number generation, noise.
+// small-sized vectors and matrixes, frames, bounding boxes, images, transforms,
+// color and geometry functions, random number generation, noise.
 //
 //
 // ## Small vectors, matrices and frames
