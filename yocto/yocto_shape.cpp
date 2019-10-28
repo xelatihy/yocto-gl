@@ -8,7 +8,6 @@
 
 #include "yocto_shape.h"
 #include "yocto_commonio.h"
-#include "yocto_modelio.h"
 #include "yocto_obj.h"
 #include "yocto_ply.h"
 

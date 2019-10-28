@@ -38,10 +38,9 @@
 
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_modelio.h"
-#include "../yocto/yocto_obj.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_obj.h"
 using namespace yocto;
 
 #include "ext/json.hpp"
