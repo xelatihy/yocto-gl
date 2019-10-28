@@ -278,7 +278,7 @@ inline void close_obj(obj_file& fs);
 enum struct obj_command {
   // clang-format off
   vertex, normal, texcoord,         // data in value
-  face, str, point,                // data in vertices
+  face, line, point,                // data in vertices
   object, group, usemtl, smoothing, // data in name
   mtllib, objxlib,                  // data in name
   // clang-format on
@@ -483,33 +483,25 @@ namespace yocto {
 
 using std::string_view;
 
-// an object that keeps the state of the parser
-struct scan_result {
-  string_view str = {};
-  bool ok = false;
-};
-
 // utilities
 inline bool is_obj_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_obj_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-[[nodiscard]] inline string_view skip_obj_whitespace(string_view str) {
+inline void skip_obj_whitespace(string_view& str) {
   while (!str.empty() && is_obj_space(str.front())) str.remove_prefix(1);
-  return str;
 }
 
-[[nodiscard]] inline string_view remove_obj_comment(string_view& str, char comment_char = '#') {
+inline void remove_obj_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_obj_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
-  return str;
 }
 
 // Parse values from a string
 inline void parse_obj_value(string_view& str, string_view& value) {
-  str = skip_obj_whitespace(str);
+  skip_obj_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
   auto cpy = str;
   while (!cpy.empty() && !is_obj_space(cpy.front())) cpy.remove_prefix(1);
@@ -556,7 +548,7 @@ inline void parse_obj_value(string_view& str, frame3f& value) {
 
 // Parse values from a string
 inline void parse_obj_value_or_empty(string_view& str, string& value) {
-  str = skip_obj_whitespace(str);
+  skip_obj_whitespace(str);
   if (str.empty()) {
     value = "";
   } else {
@@ -658,12 +650,12 @@ inline void parse_obj_value(string_view& str, obj_texture_info& info) {
 
   // get tokens
   auto tokens = vector<string>();
-  str = skip_obj_whitespace(str);
+  skip_obj_whitespace(str);
   while (!str.empty()) {
     auto token = ""s;
     parse_obj_value(str, token);
     tokens.push_back(token);
-    str = skip_obj_whitespace(str);
+    skip_obj_whitespace(str);
   }
   if (tokens.empty()) throw std::runtime_error("cannot parse value");
 
@@ -688,39 +680,39 @@ inline void load_mtl(
   // init parsing
   obj.materials.emplace_back();
 
-  // read the file str by str
+  // read the file line by line
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    str = remove_obj_comment(str);
-    str = skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    parse_obj_value(str, cmd);
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "newmtl") {
       obj.materials.emplace_back();
-      parse_obj_value(str, obj.materials.back().name);
+      parse_obj_value(line, obj.materials.back().name);
     } else if (cmd == "illum") {
-      parse_obj_value(str, obj.materials.back().illum);
+      parse_obj_value(line, obj.materials.back().illum);
     } else if (cmd == "Ke") {
-      parse_obj_value(str, obj.materials.back().emission);
+      parse_obj_value(line, obj.materials.back().emission);
     } else if (cmd == "Ka") {
-      parse_obj_value(str, obj.materials.back().ambient);
+      parse_obj_value(line, obj.materials.back().ambient);
     } else if (cmd == "Kd") {
-      parse_obj_value(str, obj.materials.back().diffuse);
+      parse_obj_value(line, obj.materials.back().diffuse);
     } else if (cmd == "Ks") {
-      parse_obj_value(str, obj.materials.back().specular);
+      parse_obj_value(line, obj.materials.back().specular);
     } else if (cmd == "Kt") {
-      parse_obj_value(str, obj.materials.back().transmission);
+      parse_obj_value(line, obj.materials.back().transmission);
     } else if (cmd == "Tf") {
       obj.materials.back().transmission = vec3f{-1};
-      parse_obj_value(str, obj.materials.back().transmission);
+      parse_obj_value(line, obj.materials.back().transmission);
       if (obj.materials.back().transmission.y < 0)
         obj.materials.back().transmission = vec3f{
             obj.materials.back().transmission.x};
@@ -728,65 +720,65 @@ inline void load_mtl(
         obj.materials.back().transmission = 1 -
                                             obj.materials.back().transmission;
     } else if (cmd == "Tr") {
-      parse_obj_value(str, obj.materials.back().opacity);
+      parse_obj_value(line, obj.materials.back().opacity);
       if (fliptr)
         obj.materials.back().opacity = 1 - obj.materials.back().opacity;
     } else if (cmd == "Ns") {
-      parse_obj_value(str, obj.materials.back().exponent);
+      parse_obj_value(line, obj.materials.back().exponent);
     } else if (cmd == "d") {
-      parse_obj_value(str, obj.materials.back().opacity);
+      parse_obj_value(line, obj.materials.back().opacity);
     } else if (cmd == "map_Ke") {
-      parse_obj_value(str, obj.materials.back().emission_map);
+      parse_obj_value(line, obj.materials.back().emission_map);
     } else if (cmd == "map_Ka") {
-      parse_obj_value(str, obj.materials.back().ambient_map);
+      parse_obj_value(line, obj.materials.back().ambient_map);
     } else if (cmd == "map_Kd") {
-      parse_obj_value(str, obj.materials.back().diffuse_map);
+      parse_obj_value(line, obj.materials.back().diffuse_map);
     } else if (cmd == "map_Ks") {
-      parse_obj_value(str, obj.materials.back().specular_map);
+      parse_obj_value(line, obj.materials.back().specular_map);
     } else if (cmd == "map_Tr") {
-      parse_obj_value(str, obj.materials.back().transmission_map);
+      parse_obj_value(line, obj.materials.back().transmission_map);
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      parse_obj_value(str, obj.materials.back().opacity_map);
+      parse_obj_value(line, obj.materials.back().opacity_map);
     } else if (cmd == "map_bump" || cmd == "bump") {
-      parse_obj_value(str, obj.materials.back().bump_map);
+      parse_obj_value(line, obj.materials.back().bump_map);
     } else if (cmd == "map_disp" || cmd == "disp") {
-      parse_obj_value(str, obj.materials.back().displacement_map);
+      parse_obj_value(line, obj.materials.back().displacement_map);
     } else if (cmd == "map_norm" || cmd == "norm") {
-      parse_obj_value(str, obj.materials.back().normal_map);
+      parse_obj_value(line, obj.materials.back().normal_map);
     } else if (cmd == "Pm") {
-      parse_obj_value(str, obj.materials.back().pbr_metallic);
+      parse_obj_value(line, obj.materials.back().pbr_metallic);
     } else if (cmd == "Pr") {
-      parse_obj_value(str, obj.materials.back().pbr_roughness);
+      parse_obj_value(line, obj.materials.back().pbr_roughness);
     } else if (cmd == "Ps") {
-      parse_obj_value(str, obj.materials.back().pbr_sheen);
+      parse_obj_value(line, obj.materials.back().pbr_sheen);
     } else if (cmd == "Pc") {
-      parse_obj_value(str, obj.materials.back().pbr_clearcoat);
+      parse_obj_value(line, obj.materials.back().pbr_clearcoat);
     } else if (cmd == "Pcr") {
-      parse_obj_value(str, obj.materials.back().pbr_coatroughness);
+      parse_obj_value(line, obj.materials.back().pbr_coatroughness);
     } else if (cmd == "map_Pm") {
-      parse_obj_value(str, obj.materials.back().pbr_metallic_map);
+      parse_obj_value(line, obj.materials.back().pbr_metallic_map);
     } else if (cmd == "map_Pr") {
-      parse_obj_value(str, obj.materials.back().pbr_roughness_map);
+      parse_obj_value(line, obj.materials.back().pbr_roughness_map);
     } else if (cmd == "map_Ps") {
-      parse_obj_value(str, obj.materials.back().pbr_sheen_map);
+      parse_obj_value(line, obj.materials.back().pbr_sheen_map);
     } else if (cmd == "map_Pc") {
-      parse_obj_value(str, obj.materials.back().pbr_clearcoat_map);
+      parse_obj_value(line, obj.materials.back().pbr_clearcoat_map);
     } else if (cmd == "map_Pcr") {
-      parse_obj_value(str, obj.materials.back().pbr_coatroughness_map);
+      parse_obj_value(line, obj.materials.back().pbr_coatroughness_map);
     } else if (cmd == "Vt") {
-      parse_obj_value(str, obj.materials.back().vol_transmission);
+      parse_obj_value(line, obj.materials.back().vol_transmission);
     } else if (cmd == "Vp") {
-      parse_obj_value(str, obj.materials.back().vol_meanfreepath);
+      parse_obj_value(line, obj.materials.back().vol_meanfreepath);
     } else if (cmd == "Ve") {
-      parse_obj_value(str, obj.materials.back().vol_emission);
+      parse_obj_value(line, obj.materials.back().vol_emission);
     } else if (cmd == "Vs") {
-      parse_obj_value(str, obj.materials.back().vol_scattering);
+      parse_obj_value(line, obj.materials.back().vol_scattering);
     } else if (cmd == "Vg") {
-      parse_obj_value(str, obj.materials.back().vol_anisotropy);
+      parse_obj_value(line, obj.materials.back().vol_anisotropy);
     } else if (cmd == "Vr") {
-      parse_obj_value(str, obj.materials.back().vol_scale);
+      parse_obj_value(line, obj.materials.back().vol_scale);
     } else if (cmd == "map_Vs") {
-      parse_obj_value(str, obj.materials.back().vol_scattering_map);
+      parse_obj_value(line, obj.materials.back().vol_scattering_map);
     } else {
       continue;
     }
@@ -808,45 +800,45 @@ inline void load_objx(const string& filename, obj_model& obj) {
     shape_map[obj.shapes[idx].name].push_back(idx);
   }
 
-  // read the file str by str
+  // read the file line by line
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    str = remove_obj_comment(str);
-    str = skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    parse_obj_value(str, cmd);
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // read values
     if (cmd == "c") {
       auto& camera = obj.cameras.emplace_back();
-      parse_obj_value(str, camera.name);
-      parse_obj_value(str, camera.ortho);
-      parse_obj_value(str, camera.width);
-      parse_obj_value(str, camera.height);
-      parse_obj_value(str, camera.lens);
-      parse_obj_value(str, camera.focus);
-      parse_obj_value(str, camera.aperture);
-      parse_obj_value(str, camera.frame);
+      parse_obj_value(line, camera.name);
+      parse_obj_value(line, camera.ortho);
+      parse_obj_value(line, camera.width);
+      parse_obj_value(line, camera.height);
+      parse_obj_value(line, camera.lens);
+      parse_obj_value(line, camera.focus);
+      parse_obj_value(line, camera.aperture);
+      parse_obj_value(line, camera.frame);
     } else if (cmd == "e") {
       auto& environment = obj.environments.emplace_back();
-      parse_obj_value(str, environment.name);
-      parse_obj_value(str, environment.emission);
+      parse_obj_value(line, environment.name);
+      parse_obj_value(line, environment.emission);
       auto emission_path = ""s;
-      parse_obj_value(str, emission_path);
+      parse_obj_value(line, emission_path);
       if (emission_path == "\"\"") emission_path = "";
       environment.emission_map.path = emission_path;
-      parse_obj_value(str, environment.frame);
+      parse_obj_value(line, environment.frame);
     } else if (cmd == "i") {
       auto object = ""s;
       auto frame  = identity3x4f;
-      parse_obj_value(str, object);
-      parse_obj_value(str, frame);
+      parse_obj_value(line, object);
+      parse_obj_value(line, frame);
       if (shape_map.find(object) == shape_map.end()) {
         throw std::runtime_error("cannot find object " + object);
       }
@@ -880,29 +872,29 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
   obj = {};
   obj.shapes.emplace_back();
 
-  // read the file str by str
+  // read the file line by line
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    str = remove_obj_comment(str);
-    str = skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    parse_obj_value(str, cmd);
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "v") {
-      parse_obj_value(str, opositions.emplace_back());
+      parse_obj_value(line, opositions.emplace_back());
       vert_size.position += 1;
     } else if (cmd == "vn") {
-      parse_obj_value(str, onormals.emplace_back());
+      parse_obj_value(line, onormals.emplace_back());
       vert_size.normal += 1;
     } else if (cmd == "vt") {
-      parse_obj_value(str, otexcoords.emplace_back());
+      parse_obj_value(line, otexcoords.emplace_back());
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       // split if split_elements and different primitives
@@ -942,10 +934,10 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
         element.material = (uint8_t)mat_idx;
       }
       // parse vertices
-      str = skip_obj_whitespace(str);
-      while (!str.empty()) {
+      skip_obj_whitespace(line);
+      while (!line.empty()) {
         auto vert = obj_vertex{};
-        parse_obj_value(str, vert);
+        parse_obj_value(line, vert);
         if (!vert.position) break;
         if (vert.position < 0)
           vert.position = vert_size.position + vert.position + 1;
@@ -954,11 +946,11 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
         shape.vertices.push_back(vert);
         element.size += 1;
-        str = skip_obj_whitespace(str);
+        skip_obj_whitespace(line);
       }
     } else if (cmd == "o" || cmd == "g") {
       if (geom_only) continue;
-      parse_obj_value_or_empty(str, cmd == "o" ? oname : gname);
+      parse_obj_value_or_empty(line, cmd == "o" ? oname : gname);
       if (!obj.shapes.back().vertices.empty()) {
         obj.shapes.emplace_back();
         obj.shapes.back().name = oname + gname;
@@ -967,13 +959,13 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
       }
     } else if (cmd == "usemtl") {
       if (geom_only) continue;
-      parse_obj_value_or_empty(str, mname);
+      parse_obj_value_or_empty(line, mname);
     } else if (cmd == "s") {
       if (geom_only) continue;
     } else if (cmd == "mtllib") {
       if (geom_only) continue;
       auto mtllib = ""s;
-      parse_obj_value(str, mtllib);
+      parse_obj_value(line, mtllib);
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
       }
@@ -1349,12 +1341,12 @@ inline void get_obj_lines(const obj_model& obj, const obj_shape& shape,
   lines.reserve(shape.lines.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
-  for (auto& str : shape.lines) {
-    for (auto c = 1; c < str.size; c++) {
+  for (auto& line : shape.lines) {
+    for (auto c = 1; c < line.size; c++) {
       lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
-      if (!materials.empty()) ematerials.push_back(str.material);
+      if (!materials.empty()) ematerials.push_back(line.material);
     }
-    cur += str.size;
+    cur += line.size;
   }
 }
 inline void get_obj_points(const obj_model& obj, const obj_shape& shape,
@@ -1504,12 +1496,12 @@ inline void add_obj_lines(obj_model& obj, const string& name,
   shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
   shape.vertices.reserve(lines.size() * 2);
   for (auto idx = 0; idx < lines.size(); idx++) {
-    auto& str = lines[idx];
+    auto& line = lines[idx];
     for (auto c = 0; c < 2; c++) {
       shape.vertices.push_back({
-          positions.empty() ? 0 : str[c] + 1,
-          texcoords.empty() ? 0 : str[c] + 1,
-          normals.empty() ? 0 : str[c] + 1,
+          positions.empty() ? 0 : line[c] + 1,
+          texcoords.empty() ? 0 : line[c] + 1,
+          normals.empty() ? 0 : line[c] + 1,
       });
     }
     shape.lines.push_back(
@@ -1569,43 +1561,43 @@ inline void add_obj_fvquads(obj_model& obj, const string& name,
 // Read obj
 inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
     vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size) {
-  // read the file str by str
+  // read the file line by line
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    str = remove_obj_comment(str);
-    str = skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    parse_obj_value(str, cmd);
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "v") {
       command = obj_command::vertex;
-      parse_obj_value(str, value);
+      parse_obj_value(line, value);
       vert_size.position += 1;
       return true;
     } else if (cmd == "vn") {
       command = obj_command::normal;
-      parse_obj_value(str, value);
+      parse_obj_value(line, value);
       vert_size.normal += 1;
       return true;
     } else if (cmd == "vt") {
       command = obj_command::texcoord;
-      parse_obj_value(str, (vec2f&)value);
+      parse_obj_value(line, (vec2f&)value);
       value.z = 0;
       vert_size.texcoord += 1;
       return true;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       vertices.clear();
-      str = skip_obj_whitespace(str);
-      while (!str.empty()) {
+      skip_obj_whitespace(line);
+      while (!line.empty()) {
         auto vert = obj_vertex{};
-        parse_obj_value(str, vert);
+        parse_obj_value(line, vert);
         if (!vert.position) break;
         if (vert.position < 0)
           vert.position = vert_size.position + vert.position + 1;
@@ -1613,31 +1605,31 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
           vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
         vertices.push_back(vert);
-        str = skip_obj_whitespace(str);
+        skip_obj_whitespace(line);
       }
       if (cmd == "f") command = obj_command::face;
-      if (cmd == "l") command = obj_command::str;
+      if (cmd == "l") command = obj_command::line;
       if (cmd == "p") command = obj_command::point;
       return true;
     } else if (cmd == "o") {
       command = obj_command::object;
-      parse_obj_value_or_empty(str, name);
+      parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "usemtl") {
       command = obj_command::usemtl;
-      parse_obj_value_or_empty(str, name);
+      parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "g") {
       command = obj_command::group;
-      parse_obj_value_or_empty(str, name);
+      parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "s") {
       command = obj_command::smoothing;
-      parse_obj_value_or_empty(str, name);
+      parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "mtllib") {
       command = obj_command::mtllib;
-      parse_obj_value(str, name);
+      parse_obj_value(line, name);
       return true;
     } else {
       // unused
@@ -1651,20 +1643,20 @@ inline bool read_mtl_command(
     obj_file& fs, mtl_command& command, obj_material& material, bool fliptr) {
   material = {};
 
-  // read the file str by str
+  // read the file line by line
   auto pos   = ftell(fs.fs);
   auto found = false;
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    str = remove_obj_comment(str);
-    str = skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    parse_obj_value(str, cmd);
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
@@ -1676,84 +1668,84 @@ inline bool read_mtl_command(
       } else {
         found = true;
       }
-      parse_obj_value(str, material.name);
+      parse_obj_value(line, material.name);
     } else if (cmd == "illum") {
-      parse_obj_value(str, material.illum);
+      parse_obj_value(line, material.illum);
     } else if (cmd == "Ke") {
-      parse_obj_value(str, material.emission);
+      parse_obj_value(line, material.emission);
     } else if (cmd == "Ka") {
-      parse_obj_value(str, material.ambient);
+      parse_obj_value(line, material.ambient);
     } else if (cmd == "Kd") {
-      parse_obj_value(str, material.diffuse);
+      parse_obj_value(line, material.diffuse);
     } else if (cmd == "Ks") {
-      parse_obj_value(str, material.specular);
+      parse_obj_value(line, material.specular);
     } else if (cmd == "Kt") {
-      parse_obj_value(str, material.transmission);
+      parse_obj_value(line, material.transmission);
     } else if (cmd == "Tf") {
       material.transmission = vec3f{-1};
-      parse_obj_value(str, material.transmission);
+      parse_obj_value(line, material.transmission);
       if (material.transmission.y < 0)
         material.transmission = vec3f{material.transmission.x};
       if (fliptr) material.transmission = 1 - material.transmission;
     } else if (cmd == "Tr") {
-      parse_obj_value(str, material.opacity);
+      parse_obj_value(line, material.opacity);
       if (fliptr) material.opacity = 1 - material.opacity;
     } else if (cmd == "Ns") {
-      parse_obj_value(str, material.exponent);
+      parse_obj_value(line, material.exponent);
     } else if (cmd == "d") {
-      parse_obj_value(str, material.opacity);
+      parse_obj_value(line, material.opacity);
     } else if (cmd == "map_Ke") {
-      parse_obj_value(str, material.emission_map);
+      parse_obj_value(line, material.emission_map);
     } else if (cmd == "map_Ka") {
-      parse_obj_value(str, material.ambient_map);
+      parse_obj_value(line, material.ambient_map);
     } else if (cmd == "map_Kd") {
-      parse_obj_value(str, material.diffuse_map);
+      parse_obj_value(line, material.diffuse_map);
     } else if (cmd == "map_Ks") {
-      parse_obj_value(str, material.specular_map);
+      parse_obj_value(line, material.specular_map);
     } else if (cmd == "map_Tr") {
-      parse_obj_value(str, material.transmission_map);
+      parse_obj_value(line, material.transmission_map);
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      parse_obj_value(str, material.opacity_map);
+      parse_obj_value(line, material.opacity_map);
     } else if (cmd == "map_bump" || cmd == "bump") {
-      parse_obj_value(str, material.bump_map);
+      parse_obj_value(line, material.bump_map);
     } else if (cmd == "map_disp" || cmd == "disp") {
-      parse_obj_value(str, material.displacement_map);
+      parse_obj_value(line, material.displacement_map);
     } else if (cmd == "map_norm" || cmd == "norm") {
-      parse_obj_value(str, material.normal_map);
+      parse_obj_value(line, material.normal_map);
     } else if (cmd == "Pm") {
-      parse_obj_value(str, material.pbr_metallic);
+      parse_obj_value(line, material.pbr_metallic);
     } else if (cmd == "Pr") {
-      parse_obj_value(str, material.pbr_roughness);
+      parse_obj_value(line, material.pbr_roughness);
     } else if (cmd == "Ps") {
-      parse_obj_value(str, material.pbr_sheen);
+      parse_obj_value(line, material.pbr_sheen);
     } else if (cmd == "Pc") {
-      parse_obj_value(str, material.pbr_clearcoat);
+      parse_obj_value(line, material.pbr_clearcoat);
     } else if (cmd == "Pcr") {
-      parse_obj_value(str, material.pbr_coatroughness);
+      parse_obj_value(line, material.pbr_coatroughness);
     } else if (cmd == "map_Pm") {
-      parse_obj_value(str, material.pbr_metallic_map);
+      parse_obj_value(line, material.pbr_metallic_map);
     } else if (cmd == "map_Pr") {
-      parse_obj_value(str, material.pbr_roughness_map);
+      parse_obj_value(line, material.pbr_roughness_map);
     } else if (cmd == "map_Ps") {
-      parse_obj_value(str, material.pbr_sheen_map);
+      parse_obj_value(line, material.pbr_sheen_map);
     } else if (cmd == "map_Pc") {
-      parse_obj_value(str, material.pbr_clearcoat_map);
+      parse_obj_value(line, material.pbr_clearcoat_map);
     } else if (cmd == "map_Pcr") {
-      parse_obj_value(str, material.pbr_coatroughness_map);
+      parse_obj_value(line, material.pbr_coatroughness_map);
     } else if (cmd == "Vt") {
-      parse_obj_value(str, material.vol_transmission);
+      parse_obj_value(line, material.vol_transmission);
     } else if (cmd == "Vp") {
-      parse_obj_value(str, material.vol_meanfreepath);
+      parse_obj_value(line, material.vol_meanfreepath);
     } else if (cmd == "Ve") {
-      parse_obj_value(str, material.vol_emission);
+      parse_obj_value(line, material.vol_emission);
     } else if (cmd == "Vs") {
-      parse_obj_value(str, material.vol_scattering);
+      parse_obj_value(line, material.vol_scattering);
     } else if (cmd == "Vg") {
-      parse_obj_value(str, material.vol_anisotropy);
+      parse_obj_value(line, material.vol_anisotropy);
     } else if (cmd == "Vr") {
-      parse_obj_value(str, material.vol_scale);
+      parse_obj_value(line, material.vol_scale);
     } else if (cmd == "map_Vs") {
-      parse_obj_value(str, material.vol_scattering_map);
+      parse_obj_value(line, material.vol_scattering_map);
     } else {
       continue;
     }
@@ -1771,44 +1763,44 @@ inline bool read_mtl_command(
 // Read objx
 inline bool read_objx_command(obj_file& fs, objx_command& command,
     obj_camera& camera, obj_environment& environment, obj_instance& instance) {
-  // read the file str by str
+  // read the file line by line
   char buffer[4096];
   auto found = false;
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    str = remove_obj_comment(str);
-    str = skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    parse_obj_value(str, cmd);
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // read values
     if (cmd == "c") {
       command = objx_command::camera;
-      parse_obj_value(str, camera.name);
-      parse_obj_value(str, camera.ortho);
-      parse_obj_value(str, camera.width);
-      parse_obj_value(str, camera.height);
-      parse_obj_value(str, camera.lens);
-      parse_obj_value(str, camera.focus);
-      parse_obj_value(str, camera.aperture);
-      parse_obj_value(str, camera.frame);
+      parse_obj_value(line, camera.name);
+      parse_obj_value(line, camera.ortho);
+      parse_obj_value(line, camera.width);
+      parse_obj_value(line, camera.height);
+      parse_obj_value(line, camera.lens);
+      parse_obj_value(line, camera.focus);
+      parse_obj_value(line, camera.aperture);
+      parse_obj_value(line, camera.frame);
       return true;
     } else if (cmd == "e") {
       command = objx_command::environment;
-      parse_obj_value(str, environment.name);
-      parse_obj_value(str, environment.emission);
-      parse_obj_value(str, environment.emission_map);
-      parse_obj_value(str, environment.frame);
+      parse_obj_value(line, environment.name);
+      parse_obj_value(line, environment.emission);
+      parse_obj_value(line, environment.emission_map);
+      parse_obj_value(line, environment.frame);
       return true;
     } else if (cmd == "i") {
       command = objx_command::instance;
-      parse_obj_value(str, instance.object);
-      parse_obj_value(str, instance.frame);
+      parse_obj_value(line, instance.object);
+      parse_obj_value(line, instance.frame);
       return true;
     }
   }
@@ -1832,8 +1824,8 @@ inline vector<string> split_obj_string(const string& str, const string& delim) {
 // Write obj elements
 inline void write_obj_comment(obj_file& fs, const string& comment) {
   auto lines = split_obj_string(comment, "\n");
-  for (auto& str : lines) {
-    format_obj_values(fs, "# {}\n", str);
+  for (auto& line : lines) {
+    format_obj_values(fs, "# {}\n", line);
   }
   format_obj_values(fs, "\n");
 }
@@ -1846,10 +1838,10 @@ inline void write_obj_command(obj_file& fs, obj_command command,
     case obj_command::normal: format_obj_values(fs, "vn {}\n", value); break;
     case obj_command::texcoord: format_obj_values(fs, "vt {}\n", value); break;
     case obj_command::face:
-    case obj_command::str:
+    case obj_command::line:
     case obj_command::point:
       if (command == obj_command::face) format_obj_values(fs, "f ");
-      if (command == obj_command::str) format_obj_values(fs, "l ");
+      if (command == obj_command::line) format_obj_values(fs, "l ");
       if (command == obj_command::point) format_obj_values(fs, "p ");
       for (auto& vert : vertices) format_obj_values(fs, " {}", vert);
       format_obj_values(fs, "\n");
