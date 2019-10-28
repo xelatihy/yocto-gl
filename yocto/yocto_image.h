@@ -121,14 +121,6 @@ struct tonemap_params {
   bool  srgb        = true;
 };
 
-// Equality operators
-inline bool operator==(const tonemap_params& a, const tonemap_params& b) {
-  return memcmp(&a, &b, sizeof(a)) == 0;
-}
-inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
-  return memcmp(&a, &b, sizeof(a)) != 0;
-}
-
 // Apply exposure and filmic tone mapping
 image<vec4f> tonemap_image(
     const image<vec4f>& hdr, const tonemap_params& params);
@@ -147,14 +139,6 @@ struct colorgrade_params {
   vec3f midtones_color   = {1, 1, 1};
   vec3f highlights_color = {1, 1, 1};
 };
-
-// Equality operators
-inline bool operator==(const colorgrade_params& a, const colorgrade_params& b) {
-  return memcmp(&a, &b, sizeof(a)) == 0;
-}
-inline bool operator!=(const colorgrade_params& a, const colorgrade_params& b) {
-  return memcmp(&a, &b, sizeof(a)) != 0;
-}
 
 // color grade an image region
 image<vec4f> colorgrade_image(
@@ -277,73 +261,6 @@ void         make_image_preset(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// VOLUME TYPE AND UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Volume container.
-template <typename T>
-struct volume {
-  // constructors
-  volume();
-  volume(const vec3i& size, const T& value);
-  volume(const vec3i& size, const T* value);
-
-  // size
-  bool   empty() const;
-  vec3i  size() const;
-  size_t count() const;
-  void   resize(const vec3i& size);
-  void   assign(const vec3i& size, const T& value);
-  void   shrink_to_fit();
-
-  // element access
-  T&       operator[](size_t i);
-  const T& operator[](size_t i) const;
-  T&       operator[](const vec3i& ijk);
-  const T& operator[](const vec3i& ijk) const;
-
-  // data access
-  T*       data();
-  const T* data() const;
-
-  // iteration
-  T*       begin();
-  T*       end();
-  const T* begin() const;
-  const T* end() const;
-
- private:
-  // data
-  vec3i         extent = zero3i;
-  vector<float> voxels = {};
-};
-
-// equality
-template <typename T>
-inline bool operator==(const volume<T>& a, const volume<T>& b);
-template <typename T>
-inline bool operator!=(const volume<T>& a, const volume<T>& b);
-
-// make a simple example volume
-void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
-    float exponent = 6);
-void make_volume_preset(volume<float>& vol, const string& type);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// VOLUME SAMPLING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Evaluates a color image at a point `uv`.
-inline float eval_volume(const image<float>& img, const vec3f& uvw,
-    bool no_interpolation = false, bool clamp_to_edge = false);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // VOLUME IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -351,6 +268,18 @@ namespace yocto {
 // Loads/saves a 1 channel volume.
 void load_volume(const string& filename, volume<float>& vol);
 void save_volume(const string& filename, const volume<float>& vol);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EXAMPLE VOLUMES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// make a simple example volume
+void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
+    float exponent = 6);
+void make_volume_preset(volume<float>& vol, const string& type);
 
 }  // namespace yocto
 
@@ -382,171 +311,6 @@ enum struct color_space {
 // Conversion between rgb color spaces
 vec3f color_to_xyz(const vec3f& col, color_space from);
 vec3f xyz_to_color(const vec3f& xyz, color_space to);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// VOLUME TYPE AND UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Volume container ----------
-
-// constructors
-template <typename T>
-inline volume<T>::volume() : extent{0, 0, 0}, voxels{} {}
-template <typename T>
-inline volume<T>::volume(const vec3i& size, const T& value)
-    : extent{size}
-    , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
-template <typename T>
-inline volume<T>::volume(const vec3i& size, const T* value)
-    : extent{size}
-    , voxels(value, value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
-
-// size
-template <typename T>
-inline bool volume<T>::empty() const {
-  return voxels.empty();
-}
-template <typename T>
-inline vec3i volume<T>::size() const {
-  return extent;
-}
-template <typename T>
-inline size_t volume<T>::count() const {
-  return voxels.size();
-}
-template <typename T>
-inline void volume<T>::resize(const vec3i& size) {
-  if (size == extent) return;
-  extent = size;
-  voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
-}
-template <typename T>
-inline void volume<T>::assign(const vec3i& size, const T& value) {
-  extent = size;
-  voxels.assign((size_t)size.x * (size_t)size.y * (size_t)size.z, value);
-}
-template <typename T>
-inline void volume<T>::shrink_to_fit() {
-  voxels.shrink_to_fit();
-}
-
-// element access
-template <typename T>
-inline T& volume<T>::operator[](size_t i) {
-  return voxels[i];
-}
-template <typename T>
-inline const T& volume<T>::operator[](size_t i) const {
-  return voxels[i];
-}
-template <typename T>
-inline T& volume<T>::operator[](const vec3i& ijk) {
-  return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
-}
-template <typename T>
-inline const T& volume<T>::operator[](const vec3i& ijk) const {
-  return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
-}
-
-// data access
-template <typename T>
-inline T* volume<T>::data() {
-  return voxels.data();
-}
-template <typename T>
-inline const T* volume<T>::data() const {
-  return voxels.data();
-}
-
-// iteration
-template <typename T>
-inline T* volume<T>::begin() {
-  return voxels.data();
-}
-template <typename T>
-inline T* volume<T>::end() {
-  return voxels.data() + voxels.size();
-}
-template <typename T>
-inline const T* volume<T>::begin() const {
-  return voxels.data();
-}
-template <typename T>
-inline const T* volume<T>::end() const {
-  return voxels.data() + voxels.size();
-}
-
-// equality
-template <typename T>
-inline bool operator==(const volume<T>& a, const volume<T>& b) {
-  return a.size() == b.size() && a.voxels == b.voxels;
-}
-template <typename T>
-inline bool operator!=(const volume<T>& a, const volume<T>& b) {
-  return a.size() != b.size() || a.voxels != b.voxels;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// VOLUME SAMPLING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Lookup volume
-inline float lookup_volume(
-    const volume<float>& vol, const vec3i& ijk, bool as_linear) {
-  return vol[ijk];
-}
-
-// Evaluates a color image at a point `uv`.
-inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
-    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (vol.empty()) return 0;
-
-  // get coordinates normalized for tiling
-  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().x;
-  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().y;
-  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().z;
-
-  // get image coordinates and residuals
-  auto i  = clamp((int)s, 0, vol.size().x - 1);
-  auto j  = clamp((int)t, 0, vol.size().y - 1);
-  auto k  = clamp((int)r, 0, vol.size().z - 1);
-  auto ii = (i + 1) % vol.size().x, jj = (j + 1) % vol.size().y,
-       kk = (k + 1) % vol.size().z;
-  auto u = s - i, v = t - j, w = r - k;
-
-  // nearest-neighbor interpolation
-  if (no_interpolation) {
-    i = u < 0.5 ? i : min(i + 1, vol.size().x - 1);
-    j = v < 0.5 ? j : min(j + 1, vol.size().y - 1);
-    k = w < 0.5 ? k : min(k + 1, vol.size().z - 1);
-    return lookup_volume(vol, {i, j, k}, ldr_as_linear);
-  }
-
-  // trilinear interpolation
-  return lookup_volume(vol, {i, j, k}, ldr_as_linear) * (1 - u) * (1 - v) *
-             (1 - w) +
-         lookup_volume(vol, {ii, j, k}, ldr_as_linear) * u * (1 - v) * (1 - w) +
-         lookup_volume(vol, {i, jj, k}, ldr_as_linear) * (1 - u) * v * (1 - w) +
-         lookup_volume(vol, {i, j, kk}, ldr_as_linear) * (1 - u) * (1 - v) * w +
-         lookup_volume(vol, {i, jj, kk}, ldr_as_linear) * (1 - u) * v * w +
-         lookup_volume(vol, {ii, j, kk}, ldr_as_linear) * u * (1 - v) * w +
-         lookup_volume(vol, {ii, jj, k}, ldr_as_linear) * u * v * (1 - w) +
-         lookup_volume(vol, {ii, jj, kk}, ldr_as_linear) * u * v * w;
-}
 
 }  // namespace yocto
 
