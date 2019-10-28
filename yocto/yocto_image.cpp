@@ -1311,7 +1311,7 @@ void add_logo(
   set_region(wlogo, logo, offset);
 }
 
-void make_image_preset(image<vec4f>& img, const string& type) {
+bool make_image_preset(image<vec4f>& img, const string& type) {
   auto size = vec2i{1024, 1024};
   if (type.find("sky") != type.npos) size = {2048, 1024};
   if (type.find("images2") != type.npos) size = {2048, 1024};
@@ -1321,69 +1321,84 @@ void make_image_preset(image<vec4f>& img, const string& type) {
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.7, 0.7, 0.7, 1};
     make_proc_image(img, params);
+    return true;
   } else if (type == "checker") {
     auto params   = proc_image_params{};
     params.type   = proc_image_params::type_t::checker;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.7, 0.7, 0.7, 1};
     make_proc_image(img, params);
+    return true;
   } else if (type == "bumps") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
     make_proc_image(img, params);
+    return true;
   } else if (type == "uvramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::uvramp;
     make_proc_image(img, params);
+    return true;
   } else if (type == "gammaramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::gammaramp;
     make_proc_image(img, params);
+    return true;
   } else if (type == "blackbodyramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::blackbody;
     make_proc_image(img, params);
+    return true;
   } else if (type == "uvgrid") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::uvgrid;
     make_proc_image(img, params);
+    return true;
   } else if (type == "sky") {
     make_sunsky(
         img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    return true;
   } else if (type == "sunsky") {
     make_sunsky(
         img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    return true;
   } else if (type == "noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
     make_proc_image(img, params);
+    return true;
   } else if (type == "fbm") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::fbm;
     make_proc_image(img, params);
+    return true;
   } else if (type == "ridge") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::ridge;
     make_proc_image(img, params);
+    return true;
   } else if (type == "turbulence") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::turbulence;
     make_proc_image(img, params);
+    return true;
   } else if (type == "bump-normal") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
     make_proc_image(img, params);
     auto bump = img;
     bump_to_normal(img, bump, 0.05f);
+    return true;
   } else if (type == "logo-medium") {
     make_logo(img, "logo-medium");
+    return true;
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       sub_imgs.at(i).resize(img.size());
-      make_image_preset(sub_imgs.at(i), sub_types.at(i));
+      if(!make_image_preset(sub_imgs.at(i), sub_types.at(i)))     return true;
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
@@ -1396,11 +1411,12 @@ void make_image_preset(image<vec4f>& img, const string& type) {
       set_region(img, sub_img, {pos, 0});
       pos += sub_img.size().x;
     }
+    return true;
   } else if (type == "images2") {
     auto sub_types = vector<string>{"sky", "sunsky"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      make_image_preset(sub_imgs.at(i), sub_types.at(i));
+      if(!make_image_preset(sub_imgs.at(i), sub_types.at(i)))     return true;
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
@@ -1413,6 +1429,7 @@ void make_image_preset(image<vec4f>& img, const string& type) {
       set_region(img, sub_img, {pos, 0});
       pos += sub_img.size().x;
     }
+    return true;
   } else if (type == "test-floor") {
     auto params    = proc_image_params{};
     params.type    = proc_image_params::type_t::grid;
@@ -1420,99 +1437,115 @@ void make_image_preset(image<vec4f>& img, const string& type) {
     params.color1  = vec4f{0.5, 0.5, 0.5, 1};
     params.borderw = 0.0025;
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-grid") {
     auto params   = proc_image_params{};
     params.type   = proc_image_params::type_t::grid;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.5, 0.5, 0.5, 1};
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-checker") {
     auto params   = proc_image_params{};
     params.type   = proc_image_params::type_t::checker;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.5, 0.5, 0.5, 1};
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-bumps") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-uvramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::uvramp;
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-gammaramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::gammaramp;
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-blackbodyramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::blackbody;
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-uvgrid") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::uvgrid;
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-sky") {
     make_sunsky(
         img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    return true;
   } else if (type == "test-sunsky") {
     make_sunsky(
         img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    return true;
   } else if (type == "test-noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-fbm") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::fbm;
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-bumps-normal") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
     make_proc_image(img, params);
     auto bump = img;
-    bump_to_normal(img, bump, 0.05f);
+    bump_to_normal(img, bump, 0.05f);    return true;
   } else if (type == "test-bumps-displacement") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
     make_proc_image(img, params);
+    return true;
   } else if (type == "test-fbm-displacement") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::fbm;
     make_proc_image(img, params);
+    return true;
   } else {
-    throw std::invalid_argument("unknown image preset " + type);
+    return false;
   }
 }
 image<vec4f> make_image_preset(const string& type) {
   auto img = image<vec4f>{};
-  make_image_preset(img, type);
+  if(!make_image_preset(img, type)) return {};
   return img;
 }
 
-void make_image_preset(image<vec4b>& img, const string& type) {
+bool make_image_preset(image<vec4b>& img, const string& type) {
   auto imgf = image<vec4f>{};
-  make_image_preset(imgf, type);
+  if(!make_image_preset(imgf, type)) return false;
   if (type.find("-normal") == type.npos &&
       type.find("-displacement") == type.npos) {
     rgb_to_srgb(img, imgf);
   } else {
     float_to_byte(img, imgf);
   }
+  return true;
 }
 
-void make_image_preset(
+bool make_image_preset(
     image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
   if (type.find("sky") == type.npos) {
     auto imgf = image<vec4f>{};
-    make_image_preset(imgf, type);
+    if(!make_image_preset(imgf, type)) return false;
     if (type.find("-normal") == type.npos) {
       rgb_to_srgb(ldr, imgf);
     } else {
       float_to_byte(ldr, imgf);
     }
+    return true;
   } else {
-    make_image_preset(hdr, type);
+    return make_image_preset(hdr, type);
   }
 }
 
@@ -1727,22 +1760,6 @@ static inline bool save_pfm(
   return true;
 }
 
-// load exr image weith tiny exr
-static inline const char* get_tinyexr_error(int error) {
-  switch (error) {
-    case TINYEXR_ERROR_INVALID_MAGIC_NUMBER: return "INVALID_MAGIC_NUMBER";
-    case TINYEXR_ERROR_INVALID_EXR_VERSION: return "INVALID_EXR_VERSION";
-    case TINYEXR_ERROR_INVALID_ARGUMENT: return "INVALID_ARGUMENT";
-    case TINYEXR_ERROR_INVALID_DATA: return "INVALID_DATA";
-    case TINYEXR_ERROR_INVALID_FILE: return "INVALID_FILE";
-    // case TINYEXR_ERROR_INVALID_PARAMETER: return "INVALID_PARAMETER";
-    case TINYEXR_ERROR_CANT_OPEN_FILE: return "CANT_OPEN_FILE";
-    case TINYEXR_ERROR_UNSUPPORTED_FORMAT: return "UNSUPPORTED_FORMAT";
-    case TINYEXR_ERROR_INVALID_HEADER: return "INVALID_HEADER";
-    default: throw std::runtime_error("unknown tinyexr error");
-  }
-}
-
 // Utility to normalize a path
 static inline string normalize_path(const string& filename_) {
   auto filename = filename_;
@@ -1802,12 +1819,12 @@ bool is_hdr_filename(const string& filename) {
 // Loads an hdr image.
 image<vec4f> load_image(const string& filename) {
   auto img = image<vec4f>{};
-  load_image(filename, img);
+  if(!load_image(filename, img)) return {};
   return img;
 }
 
 // Loads an hdr image.
-void load_image(const string& filename, image<vec4f>& img) {
+bool load_image(const string& filename, image<vec4f>& img) {
   auto ext = get_extension(filename);
   if (ext == ".ypreset") {
     return make_image_preset(img, get_basename(filename));
@@ -1815,64 +1832,63 @@ void load_image(const string& filename, image<vec4f>& img) {
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (auto error = LoadEXR(
-            &pixels, &width, &height, filename.c_str(), nullptr);
-        error < 0)
-      throw std::runtime_error("error loading image " + filename + "("s +
-                               get_tinyexr_error(error) + ")"s);
-    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0) return false;
+    if (!pixels) return false;
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
+    return true;
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    if (!pixels) return false;
     img = image{{width, height}, (const vec4f*)pixels};
     delete[] pixels;
+    return true;
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    if (!pixels) return false;
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
+    return true;
   } else if (!is_hdr_filename(filename)) {
-    img = srgb_to_rgb(load_imageb(filename));
+    auto imgb = image<vec4b>{};
+    if(!load_imageb(filename, imgb)) return false;
+    img = srgb_to_rgb(imgb);
+    return true;
   } else {
-    throw std::runtime_error("unsupported image format " + ext);
+    return false;
   }
 }
 
 // Saves an hdr image.
-void save_image(const string& filename, const image<vec4f>& img) {
+bool save_image(const string& filename, const image<vec4f>& img) {
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data()))
-      throw std::runtime_error("error saving image " + filename);
+    return stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data());
   } else if (ext == ".pfm" || ext == ".PFM") {
-    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data()))
-      throw std::runtime_error("error saving image " + filename);
+    return save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data());
   } else if (ext == ".exr" || ext == ".EXR") {
-    if (SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
-            filename.c_str()) < 0)
-      throw std::runtime_error("error saving image " + filename);
+    return SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
+            filename.c_str()) >= 0;
   } else if (!is_hdr_filename(filename)) {
-    save_imageb(filename, rgb_to_srgbb(img));
+    return save_imageb(filename, rgb_to_srgbb(img));
   } else {
-    throw std::runtime_error("unsupported image format " + ext);
+    return false;
   }
 }
 
 // Loads an ldr image.
 image<vec4b> load_imageb(const string& filename) {
   auto img = image<vec4b>{};
-  load_imageb(filename, img);
+  if(!load_imageb(filename, img)) return {};
   return img;
 }
 
 // Loads an ldr image.
-void load_imageb(const string& filename, image<vec4b>& img) {
+bool load_imageb(const string& filename, image<vec4b>& img) {
   auto ext = get_extension(filename);
   if (ext == ".ypreset") {
     return make_image_preset(img, get_basename(filename));
@@ -1881,39 +1897,39 @@ void load_imageb(const string& filename, image<vec4b>& img) {
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) throw std::runtime_error("error loading image " + filename);
+    if (!pixels) return false;
     img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
+    return true;
   } else if (is_hdr_filename(filename)) {
-    img = rgb_to_srgbb(load_image(filename));
+    auto imgf = image<vec4f>{};
+    if(!load_image(filename, imgf)) return false;
+    img = rgb_to_srgbb(imgf);
+    return true;
   } else {
-    throw std::runtime_error("unsupported image format " + ext);
+    return false;
   }
 }
 
 // Saves an ldr image.
-void save_imageb(const string& filename, const image<vec4b>& img) {
+bool save_imageb(const string& filename, const image<vec4b>& img) {
   auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
-    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data(), img.size().x * 4))
-      throw std::runtime_error("error saving image " + filename);
+    return stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data(), img.size().x * 4);
   } else if (ext == ".jpg" || ext == ".JPG") {
-    if (!stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75))
-      throw std::runtime_error("error saving image " + filename);
+    return stbi_write_jpg(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75);
   } else if (ext == ".tga" || ext == ".TGA") {
-    if (!stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data()))
-      throw std::runtime_error("error saving image " + filename);
+    return stbi_write_tga(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data());
   } else if (ext == ".bmp" || ext == ".BMP") {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data()))
-      throw std::runtime_error("error saving image " + filename);
+    return stbi_write_bmp(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data());
   } else if (is_hdr_filename(filename)) {
-    save_image(filename, srgb_to_rgb(img));
+    return save_image(filename, srgb_to_rgb(img));
   } else {
-    throw std::runtime_error("unsupported image format " + ext);
+    return false;
   }
 }
 

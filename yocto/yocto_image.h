@@ -175,11 +175,11 @@ bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channels float/byte image in linear color space.
 image<vec4f> load_image(const string& filename);
-void         load_image(const string& filename, image<vec4f>& img);
-void         save_image(const string& filename, const image<vec4f>& img);
+bool         load_image(const string& filename, image<vec4f>& img);
+bool         save_image(const string& filename, const image<vec4f>& img);
 image<vec4b> load_imageb(const string& filename);
-void         load_imageb(const string& filename, image<vec4b>& img);
-void         save_imageb(const string& filename, const image<vec4b>& img);
+bool         load_imageb(const string& filename, image<vec4b>& img);
+bool         save_imageb(const string& filename, const image<vec4b>& img);
 
 }  // namespace yocto
 
@@ -253,9 +253,9 @@ void add_logo(image<vec4b>& with_logo, const image<vec4b>& img,
 
 // Make an image preset, useful for testing. See implementation for types.
 image<vec4f> make_image_preset(const string& type);
-void         make_image_preset(image<vec4f>& img, const string& type);
-void         make_image_preset(image<vec4b>& img, const string& type);
-void         make_image_preset(
+bool         make_image_preset(image<vec4f>& img, const string& type);
+bool         make_image_preset(image<vec4b>& img, const string& type);
+bool         make_image_preset(
             image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto

@@ -742,11 +742,11 @@ bool save_scene(const string& filename, const scene_model& scene, string& error,
   return true;
 }
 
-void load_texture(scene_texture& texture, const string& dirname) {
+bool load_texture(scene_texture& texture, const string& dirname) {
   if (is_hdr_filename(texture.filename)) {
-    load_image(dirname + texture.filename, texture.hdr);
+    return load_image(dirname + texture.filename, texture.hdr);
   } else {
-    load_imageb(dirname + texture.filename, texture.ldr);
+    return load_imageb(dirname + texture.filename, texture.ldr);
   }
 }
 
@@ -758,21 +758,21 @@ void load_textures(
   if (params.noparallel) {
     for (auto& texture : scene.textures) {
       if (!texture.hdr.empty() || !texture.ldr.empty()) return;
-      load_texture(texture, dirname);
+      if(!load_texture(texture, dirname)) throw std::runtime_error("cannot load image " + dirname + texture.filename);
     }
   } else {
     parallel_foreach(scene.textures, [&dirname](scene_texture& texture) {
       if (!texture.hdr.empty() || !texture.ldr.empty()) return;
-      load_texture(texture, dirname);
+      if(!load_texture(texture, dirname)) throw std::runtime_error("cannot load image " + dirname + texture.filename);
     });
   }
 }
 
-void save_texture(const scene_texture& texture, const string& dirname) {
+bool save_texture(const scene_texture& texture, const string& dirname) {
   if (!texture.hdr.empty()) {
-    save_image(dirname + texture.filename, texture.hdr);
+    return save_image(dirname + texture.filename, texture.hdr);
   } else {
-    save_imageb(dirname + texture.filename, texture.ldr);
+    return save_imageb(dirname + texture.filename, texture.ldr);
   }
 }
 
@@ -784,11 +784,11 @@ void save_textures(const scene_model& scene, const string& dirname,
   // save images
   if (params.noparallel) {
     for (auto& texture : scene.textures) {
-      save_texture(texture, dirname);
+      if(!save_texture(texture, dirname)) throw std::runtime_error("cannot load image " + dirname + texture.filename);
     }
   } else {
     parallel_foreach(scene.textures, [&dirname](const scene_texture& texture) {
-      save_texture(texture, dirname);
+      if(!save_texture(texture, dirname)) throw std::runtime_error("cannot load image " + dirname + texture.filename);
     });
   }
 }
