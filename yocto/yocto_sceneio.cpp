@@ -1799,7 +1799,7 @@ namespace yocto {
 static void load_pbrt(
     const string& filename, scene_model& scene, const load_params& params) {
   // load pbrt
-  auto pbrt = ypbrt::pbrt_model{};
+  auto pbrt = pbrt_model{};
   load_pbrt(filename, pbrt);
 
   // convert cameras
@@ -1948,7 +1948,7 @@ static void load_pbrt_scene(
 
 // Convert a scene to pbrt format
 static void save_pbrt(const string& filename, const scene_model& scene) {
-  auto pbrt = ypbrt::pbrt_model{};
+  auto pbrt = pbrt_model{};
 
   // embed data
   for (auto stat : format_stats(scene)) pbrt.comments.push_back(stat);

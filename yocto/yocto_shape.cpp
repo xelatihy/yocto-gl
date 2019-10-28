@@ -3615,7 +3615,7 @@ void load_shape(const string& filename, vector<int>& points,
     auto ext = get_extension(filename);
     if (ext == ".ply" || ext == ".PLY") {
       // open ply
-      auto ply = yply::ply_model{};
+      auto ply = ply::ply_model{};
       load_ply(filename, ply);
 
       // gets vertex
@@ -3687,7 +3687,7 @@ void save_shape(const string& filename, const vector<int>& points,
     auto ext = get_extension(filename);
     if (ext == ".ply" || ext == ".PLY") {
       // create ply
-      auto ply = yply::ply_model{};
+      auto ply = ply::ply_model{};
       add_ply_positions(ply, positions);
       add_ply_normals(ply, normals);
       add_ply_texcoords(ply, texcoords, flip_texcoord);
@@ -3738,7 +3738,7 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
   try {
     auto ext = get_extension(filename);
     if (ext == ".ply" || ext == ".PLY") {
-      auto ply = yply::ply_model{};
+      auto ply = ply::ply_model{};
       load_ply(filename, ply);
       positions = get_ply_positions(ply);
       normals   = get_ply_normals(ply);
