@@ -95,7 +95,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_common.h"
 #include "yocto_math.h"
 
 #include <algorithm>
@@ -317,7 +316,7 @@ struct obj_texture_info {
   float  scale = 1;      // scale for bump/displacement
 
   // Properties not explicitly handled.
-  hash_map<string, vector<float>> props;
+  unordered_map<string, vector<float>> props;
 
   obj_texture_info() {}
   obj_texture_info(const char* path) : path{path} {}

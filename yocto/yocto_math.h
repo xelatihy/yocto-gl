@@ -169,6 +169,8 @@
 #include <limits>
 #include <vector>
 #include <string>
+#include <unordered_map>
+#include <array>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -180,6 +182,8 @@ using uint = unsigned int;
 using std::pair;
 using std::vector;
 using std::string;
+using std::array;
+using std::unordered_map;
 using namespace std::string_literals;
 
 inline const double pi  = 3.14159265358979323846;
