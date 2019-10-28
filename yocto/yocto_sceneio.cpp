@@ -1390,6 +1390,12 @@ void save_yaml(const string& filename, const yaml_model& yaml) {
   auto fs = open_yaml(filename, "wt");
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
+  auto write_error = [&filename](yaml_file& fs) {
+    if (!ferror(fs.fs)) return false;
+    throw std::runtime_error("cannot parse " + filename);
+    return true;
+  };
+
   // save comments
   format_yaml_values(fs, "#\n");
   format_yaml_values(fs, "# Written by Yocto/GL\n");
@@ -1399,6 +1405,7 @@ void save_yaml(const string& filename, const yaml_model& yaml) {
     format_yaml_values(fs, "# {}\n", comment);
   }
   format_yaml_values(fs, "\n");
+  if(write_error(fs)) return;
 
   auto group = ""s;
   for (auto& element : yaml.elements) {
@@ -1420,6 +1427,7 @@ void save_yaml(const string& filename, const yaml_model& yaml) {
         }
       }
     }
+    if(write_error(fs)) return;
   }
 }
 
@@ -1520,6 +1528,12 @@ void write_yaml_comment(yaml_file& fs, const string& comment) {
 // Save yaml property
 void write_yaml_property(yaml_file& fs, const string& object, const string& key,
     bool newobj, const yaml_value& value) {
+  auto write_error = [](yaml_file& fs) {
+    if (!ferror(fs.fs)) return false;
+    throw std::runtime_error("cannot parse " + fs.filename);
+    return true;
+  };
+
   if (key.empty()) {
     format_yaml_values(fs, "\n{}:\n", object);
   } else {
@@ -1529,6 +1543,8 @@ void write_yaml_property(yaml_file& fs, const string& object, const string& key,
       format_yaml_values(fs, "{}: {}\n", key, value);
     }
   }
+
+  if(write_error(fs)) return;
 }
 
 void write_yaml_object(yaml_file& fs, const string& object) {
