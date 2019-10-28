@@ -1179,9 +1179,9 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
   auto write_error = [&filename](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + filename);
-    return false;
+    return true;
   };
 
   // save comments
@@ -1279,9 +1279,9 @@ inline void save_objx(const string& filename, const obj_model& obj) {
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
   auto write_error = [&filename](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + filename);
-    return false;
+    return true;
   };
 
   // save comments
@@ -1328,9 +1328,9 @@ inline void save_obj(const string& filename, const obj_model& obj) {
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
   auto write_error = [&filename](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + filename);
-    return false;
+    return true;
   };
 
   // save comments
@@ -2122,10 +2122,10 @@ inline void write_obj_command(obj_file& fs, obj_command command,
 
 inline void write_mtl_command(
     obj_file& fs, mtl_command command, const obj_material& material) {
-  auto write_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
+  auto write_error = [&](obj_file& fs) {
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
-    return false;
+    return true;
   };
 
   // write material
@@ -2204,10 +2204,10 @@ inline void write_mtl_command(
 inline void write_objx_command(obj_file& fs, objx_command command,
     const obj_camera& camera, const obj_environment& environment,
     const obj_instance& instance) {
-  auto write_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return true;
+  auto write_error = [&](obj_file& fs) {
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
-    return false;
+    return true;
   };
 
   switch (command) {
