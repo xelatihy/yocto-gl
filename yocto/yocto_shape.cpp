@@ -3635,7 +3635,7 @@ void load_shape(const string& filename, vector<int>& points,
       points = get_ply_points(ply);
     } else if (ext == ".obj" || ext == ".OBJ") {
       // load obj
-      auto obj = yobj::model();
+      auto obj = yobj::obj_model();
       load_obj(filename, obj, true);
 
       // get shape
@@ -3698,7 +3698,7 @@ void save_shape(const string& filename, const vector<int>& points,
       add_ply_points(ply, points);
       save_ply(filename, ply);
     } else if (ext == ".obj" || ext == ".OBJ") {
-      auto obj = yobj::model{};
+      auto obj = yobj::obj_model{};
       if (!triangles.empty()) {
         add_obj_triangles(obj, "", triangles, positions, normals, texcoords, {},
             {}, flip_texcoord);
@@ -3747,7 +3747,7 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
       if (!normals.empty()) quadsnorm = quadspos;
       if (!texcoords.empty()) quadstexcoord = quadspos;
     } else if (ext == ".obj" || ext == ".OBJ") {
-      auto obj = yobj::model();
+      auto obj = yobj::obj_model();
       load_obj(filename, obj, true);
       if (obj.shapes.empty()) return;
       if (obj.shapes.size() > 1)
@@ -3787,7 +3787,7 @@ void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
           split_normals, split_texturecoords, {}, {}, ascii, flip_texcoord);
     } else if (ext == ".obj" || ext == ".OBJ") {
       // Obj model
-      auto obj = yobj::model{};
+      auto obj = yobj::obj_model{};
 
       // Add obj data
       add_obj_fvquads(obj, "", quadspos, quadsnorm, quadstexcoord, positions,
