@@ -1144,16 +1144,15 @@ int main(int argc, const char** argv) {
   }
 
   // save scene
-  try {
-    auto save_timer      = print_timed("saving scene");
-    save_prms.notextures = false;
-    save_prms.noparallel = false;
-    // save_prms.ply_instances = true;
-    save_scene(output, scene, save_prms);
-    print_elapsed(save_timer);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  auto save_timer      = print_timed("saving scene");
+  auto save_error = ""s;
+  save_prms.notextures = false;
+  save_prms.noparallel = false;
+  // save_prms.ply_instances = true;
+  if(!save_scene(output, scene, save_error, save_prms)) {
+    print_fatal(save_error);
   }
+  print_elapsed(save_timer);
 
   // done
   return 0;

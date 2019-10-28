@@ -683,8 +683,8 @@ static void save_pbrt_scene(const string& filename, const scene_model& scene,
     const save_params& params);
 
 // Load a scene
-void load_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+bool load_scene(
+    const string& filename, scene_model& scene, string& error, const load_params& params) {
   try {
     auto ext = get_extension(filename);
     if (ext == ".yaml" || ext == ".YAML") {
@@ -702,12 +702,14 @@ void load_scene(
       throw std::runtime_error("unsupported scene format " + ext);
     }
   } catch (std::exception& e) {
-    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
+    error = "cannot load scene " + filename + "\n" + e.what();
+    return false;
   }
+  return true;
 }
 
 // Save a scene
-void save_scene(const string& filename, const scene_model& scene,
+bool save_scene(const string& filename, const scene_model& scene, string& error,
     const save_params& params) {
   try {
     auto ext = get_extension(filename);
@@ -723,8 +725,10 @@ void save_scene(const string& filename, const scene_model& scene,
       throw std::runtime_error("unsupported scene format " + ext);
     }
   } catch (std::exception& e) {
-    throw std::runtime_error("cannot load scene " + filename + "\n" + e.what());
+    error = "cannot save scene " + filename + "\n" + e.what();
+    return false;
   }
+  return true;
 }
 
 void load_texture(scene_texture& texture, const string& dirname) {

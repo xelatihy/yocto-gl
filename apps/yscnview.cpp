@@ -73,6 +73,9 @@ struct app_state {
 
   // editing
   pair<string, int> selection = {"camera", 0};
+
+  // error
+  string error = "";
 };
 
 // Application state
@@ -81,7 +84,7 @@ struct app_states {
   std::list<app_state>         states;
   int                          selected = -1;
   std::list<app_state>         loading;
-  std::list<std::future<void>> loaders;
+  std::list<std::future<bool>> loaders;
 
   // get image
   app_state& get_selected() {
@@ -124,10 +127,11 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.load_prms   = app.load_prms;
   app.save_prms   = app.save_prms;
   app.drawgl_prms = app.drawgl_prms;
-  apps.loaders.push_back(std::async(std::launch::async, [&app]() {
-    load_scene(app.filename, app.scene);
+  apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
+    if(!load_scene(app.filename, app.scene, app.error)) return false;
     app.time_range = compute_animation_range(app.scene);
     app.time       = app.time_range.x;
+    return true;
   }));
 }
 
@@ -484,12 +488,11 @@ void draw_glwidgets(const opengl_window& win) {
           "*.yaml;*.obj;*.pbrt")) {
     auto& app   = apps.get_selected();
     app.outname = save_path;
-    try {
-      save_scene(app.outname, app.scene);
-    } catch (std::exception& e) {
+    auto save_error = ""s;
+    if(!save_scene(app.outname, app.scene, save_error)) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
-      log_glinfo(win, e.what());
+      log_glinfo(win, save_error);
     }
     save_path = "";
   }
@@ -608,18 +611,16 @@ void draw(const opengl_window& win) {
 
 // update
 void update(const opengl_window& win, app_states& apps) {
-  auto is_ready = [](const std::future<void>& result) -> bool {
+  auto is_ready = [](const std::future<bool>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
   };
 
   while (!apps.loaders.empty() && is_ready(apps.loaders.front())) {
-    try {
-      apps.loaders.front().get();
-    } catch (const std::exception& e) {
+    if(!apps.loaders.front().get()) {
       push_glmessage(win, "cannot load scene " + apps.loading.front().filename);
       log_glinfo(win, "cannot load scene " + apps.loading.front().filename);
-      log_glinfo(win, e.what());
+      log_glinfo(win, apps.loading.front().error);
       break;
     }
     apps.states.splice(apps.states.end(), apps.loading, apps.loading.begin());
