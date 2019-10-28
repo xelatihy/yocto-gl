@@ -30,7 +30,7 @@
 #include "yocto_opengl.h"
 
 #include "../yocto/yocto_common.h"
-#include "../yocto/yocto_commonio.h"
+#include "../yocto/yocto_cmdline.h"
 
 #include <algorithm>
 #include <cstdarg>

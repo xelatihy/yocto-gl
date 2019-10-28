@@ -1,11 +1,10 @@
 //
-// # Yocto/CommonIo: Tiny collection of IO utilities to support Yocto/GL
+// # Yocto/Cmdline: Tiny collection of utilities for writing command-line apps
 //
 //
-// Yocto/IoUtils is a collection of utilities used in writing other Yocto/GL
-// libraries and example applications. We support printing and parsing builting
-// and Yocto/Math values, parsing command line arguments, simple path
-// manipulation, file lading/saving.
+// Yocto/Cmdline is a collection of utilities used in writing Yocto/GL example 
+// applications. We support printing and parsing builting and Yocto/Math values, 
+// parsing command line arguments, simple path manipulation, file lading/saving.
 //
 //
 // ## Printing values
