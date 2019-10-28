@@ -455,12 +455,6 @@ inline void remove_pbrt_comment(
   str.remove_suffix(cpy.size());
 }
 
-inline bool read_pbrt_line(obj_file& fs, char* buffer, size_t size) {
-  auto ok = fgets(buffer, size, fs.fs) != nullptr;
-  if (ok) fs.linenum += 1;
-  return ok;
-}
-
 // Read a pbrt command from file
 inline bool read_pbrt_cmdline(pbrt_file& fs, string& cmd, int& line_num) {
   char buffer[4096];

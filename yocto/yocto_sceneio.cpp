@@ -1308,7 +1308,7 @@ namespace yocto {
 void load_obj(
     const string& filename, scene_model& scene, const load_params& params) {
   // load obj
-  auto obj = obj_model{};
+  auto obj = obj::obj_model{};
   load_obj(filename, obj, false, true, true);
 
   // convert cameras
@@ -1326,7 +1326,7 @@ void load_obj(
 
   // helper to create texture maps
   auto texture_map = unordered_map<string, int>{{"", -1}};
-  auto get_texture = [&texture_map, &scene](const obj_texture_info& info) {
+  auto get_texture = [&texture_map, &scene](const obj::obj_texture_info& info) {
     if (info.path == "") return -1;
     auto it = texture_map.find(info.path);
     if (it != texture_map.end()) return it->second;
@@ -1347,7 +1347,7 @@ void load_obj(
     material.emission         = omat.emission;
     material.diffuse          = omat.diffuse;
     material.specular         = omat.specular;
-    material.roughness        = obj_exponent_to_roughness(omat.exponent);
+    material.roughness        = obj::obj_exponent_to_roughness(omat.exponent);
     material.metallic         = omat.pbr_metallic;
     material.coat             = omat.reflection;
     material.transmission     = omat.transmission;
@@ -1463,7 +1463,7 @@ static void load_obj_scene(
 
 static void save_obj(const string& filename, const scene_model& scene,
     const save_params& params) {
-  auto obj = obj_model{};
+  auto obj = obj::obj_model{};
 
   // convert cameras
   for (auto& camera : scene.cameras) {
@@ -1480,8 +1480,8 @@ static void save_obj(const string& filename, const scene_model& scene,
 
   // textures
   auto get_texture = [&scene](int tex) {
-    if (tex < 0) return obj_texture_info{};
-    auto info = obj_texture_info{};
+    if (tex < 0) return obj::obj_texture_info{};
+    auto info = obj::obj_texture_info{};
     info.path = scene.textures[tex].filename;
     return info;
   };
@@ -1494,7 +1494,7 @@ static void save_obj(const string& filename, const scene_model& scene,
     omaterial.emission          = material.emission;
     omaterial.diffuse           = material.diffuse;
     omaterial.specular          = material.specular;
-    omaterial.exponent          = obj_roughness_to_exponent(material.roughness);
+    omaterial.exponent          = obj::obj_roughness_to_exponent(material.roughness);
     omaterial.pbr_metallic      = material.metallic;
     omaterial.reflection        = material.coat;
     omaterial.transmission      = material.transmission;
