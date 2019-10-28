@@ -128,7 +128,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.save_prms   = app.save_prms;
   app.drawgl_prms = app.drawgl_prms;
   apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
-    if(!load_scene(app.filename, app.scene, app.error)) return false;
+    if (!load_scene(app.filename, app.scene, app.error)) return false;
     app.time_range = compute_animation_range(app.scene);
     app.time       = app.time_range.x;
     return true;
@@ -486,10 +486,10 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
-    auto& app   = apps.get_selected();
-    app.outname = save_path;
+    auto& app       = apps.get_selected();
+    app.outname     = save_path;
     auto save_error = ""s;
-    if(!save_scene(app.outname, app.scene, save_error)) {
+    if (!save_scene(app.outname, app.scene, save_error)) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
       log_glinfo(win, save_error);
@@ -617,7 +617,7 @@ void update(const opengl_window& win, app_states& apps) {
   };
 
   while (!apps.loaders.empty() && is_ready(apps.loaders.front())) {
-    if(!apps.loaders.front().get()) {
+    if (!apps.loaders.front().get()) {
       push_glmessage(win, "cannot load scene " + apps.loading.front().filename);
       log_glinfo(win, "cannot load scene " + apps.loading.front().filename);
       log_glinfo(win, apps.loading.front().error);

@@ -86,9 +86,9 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::list<app_state>          states;
-  int                             selected = -1;
-  std::list<app_state>          loading;
+  std::list<app_state>         states;
+  int                          selected = -1;
+  std::list<app_state>         loading;
   std::list<std::future<bool>> loaders;
 
   // get image
@@ -259,7 +259,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.tonemap_prms = app.tonemap_prms;
   app.add_skyenv   = app.add_skyenv;
   apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
-    if(!load_scene(app.filename, app.ioscene, app.error)) return false;
+    if (!load_scene(app.filename, app.ioscene, app.error)) return false;
     app.trscene = make_trace_scene(app.ioscene);
     init_bvh(app.trscene, app.trace_prms);
     init_lights(app.trscene);
@@ -470,10 +470,10 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
-    auto& app   = apps.get_selected();
-    app.outname = save_path;
+    auto& app       = apps.get_selected();
+    app.outname     = save_path;
     auto save_error = ""s;
-    if(!save_scene(app.outname, app.ioscene, save_error)) {
+    if (!save_scene(app.outname, app.ioscene, save_error)) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
       log_glinfo(win, save_error);
@@ -644,7 +644,7 @@ void update(const opengl_window& win, app_states& app) {
   };
 
   while (!app.loaders.empty() && is_ready(app.loaders.front())) {
-    if(!app.loaders.front().get()) {
+    if (!app.loaders.front().get()) {
       push_glmessage(win, "cannot load scene " + app.loading.front().filename);
       log_glinfo(win, "cannot load scene " + app.loading.front().filename);
       log_glinfo(win, app.loading.front().error);
