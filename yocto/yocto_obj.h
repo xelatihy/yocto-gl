@@ -50,19 +50,19 @@
 namespace yocto::yobj {
 
 // OBJ vertex
-struct obj_vertex {
+struct vertex {
   int position = 0;
   int texcoord = 0;
   int normal   = 0;
 };
 
-inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
+inline bool operator==(const vertex& a, const vertex& b) {
   return a.position == b.position && a.texcoord == b.texcoord &&
          a.normal == b.normal;
 }
 
 // Obj texture information.
-struct obj_texture_info {
+struct texture_info {
   string path  = "";     // file path
   bool   clamp = false;  // clamp to edge
   float  scale = 1;      // scale for bump/displacement
@@ -70,33 +70,33 @@ struct obj_texture_info {
   // Properties not explicitly handled.
   unordered_map<string, vector<float>> props;
 
-  obj_texture_info() {}
-  obj_texture_info(const char* path) : path{path} {}
-  obj_texture_info(const string& path) : path{path} {}
+  texture_info() {}
+  texture_info(const char* path) : path{path} {}
+  texture_info(const string& path) : path{path} {}
 };
 
 // Obj element
-struct obj_element {
+struct element {
   uint8_t size     = 0;
   uint8_t material = 0;
 };
 
 // Obj shape
-struct obj_shape {
+struct shape {
   string              name      = "";
   vector<vec3f>       positions = {};
   vector<vec3f>       normals   = {};
   vector<vec2f>       texcoords = {};
   vector<string>      materials = {};
-  vector<obj_vertex>  vertices  = {};
-  vector<obj_element> faces     = {};
-  vector<obj_element> lines     = {};
-  vector<obj_element> points    = {};
+  vector<vertex>  vertices  = {};
+  vector<element> faces     = {};
+  vector<element> lines     = {};
+  vector<element> points    = {};
   vector<frame3f>     instances = {};
 };
 
 // Obj material
-struct obj_material {
+struct material {
   // material name and type
   string name  = "";
   int    illum = 0;
@@ -113,17 +113,17 @@ struct obj_material {
   float opacity      = 1;
 
   // material textures
-  obj_texture_info emission_map     = {};
-  obj_texture_info ambient_map      = {};
-  obj_texture_info diffuse_map      = {};
-  obj_texture_info specular_map     = {};
-  obj_texture_info reflection_map   = {};
-  obj_texture_info transmission_map = {};
-  obj_texture_info exponent_map     = {};
-  obj_texture_info opacity_map      = {};
-  obj_texture_info bump_map         = {};
-  obj_texture_info normal_map       = {};
-  obj_texture_info displacement_map = {};
+  texture_info emission_map     = {};
+  texture_info ambient_map      = {};
+  texture_info diffuse_map      = {};
+  texture_info specular_map     = {};
+  texture_info reflection_map   = {};
+  texture_info transmission_map = {};
+  texture_info exponent_map     = {};
+  texture_info opacity_map      = {};
+  texture_info bump_map         = {};
+  texture_info normal_map       = {};
+  texture_info displacement_map = {};
 
   // pbrt extension values
   float pbr_roughness     = 0;
@@ -133,11 +133,11 @@ struct obj_material {
   float pbr_coatroughness = 0;
 
   // pbr extension textures
-  obj_texture_info pbr_roughness_map     = {};
-  obj_texture_info pbr_metallic_map      = {};
-  obj_texture_info pbr_sheen_map         = {};
-  obj_texture_info pbr_clearcoat_map     = {};
-  obj_texture_info pbr_coatroughness_map = {};
+  texture_info pbr_roughness_map     = {};
+  texture_info pbr_metallic_map      = {};
+  texture_info pbr_sheen_map         = {};
+  texture_info pbr_clearcoat_map     = {};
+  texture_info pbr_coatroughness_map = {};
 
   // volume extension colors and values
   vec3f vol_emission     = zero3f;
@@ -148,11 +148,11 @@ struct obj_material {
   float vol_scale        = 0.01;
 
   // volument textures
-  obj_texture_info vol_scattering_map = {};
+  texture_info vol_scattering_map = {};
 };
 
 // Obj camera
-struct obj_camera {
+struct camera {
   string  name     = "";
   frame3f frame    = identity3x4f;
   bool    ortho    = false;
@@ -164,20 +164,20 @@ struct obj_camera {
 };
 
 // Obj environment
-struct obj_environment {
+struct environment {
   string           name         = "";
   frame3f          frame        = identity3x4f;
   vec3f            emission     = zero3f;
-  obj_texture_info emission_map = {};
+  texture_info emission_map = {};
 };
 
 // Obj model
 struct obj_model {
   vector<string>          comments     = {};
-  vector<obj_shape>       shapes       = {};
-  vector<obj_material>    materials    = {};
-  vector<obj_camera>      cameras      = {};
-  vector<obj_environment> environments = {};
+  vector<shape>       shapes       = {};
+  vector<material>    materials    = {};
+  vector<camera>      cameras      = {};
+  vector<environment> environments = {};
 };
 
 // Load and save obj
@@ -194,28 +194,28 @@ inline float obj_roughness_to_exponent(float roughness);
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-inline void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
+inline void get_obj_triangles(const obj_model& obj, const shape& shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-inline void get_obj_quads(const obj_model& obj, const obj_shape& shape,
+inline void get_obj_quads(const obj_model& obj, const shape& shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-inline void get_obj_lines(const obj_model& obj, const obj_shape& shape,
+inline void get_obj_lines(const obj_model& obj, const shape& shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-inline void get_obj_points(const obj_model& obj, const obj_shape& shape,
+inline void get_obj_points(const obj_model& obj, const shape& shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-inline void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
+inline void get_obj_fvquads(const obj_model& obj, const shape& shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
-inline bool has_obj_quads(const obj_shape& shape);
+inline bool has_obj_quads(const shape& shape);
 
 // Add obj shape
 inline void add_obj_triangles(obj_model& obj, const string& name,
@@ -292,21 +292,21 @@ struct obj_instance {
 
 // Read obj/mtl/objx elements
 inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
-    vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size);
+    vec3f& value, vector<vertex>& vertices, vertex& vert_size);
 inline bool read_mtl_command(obj_file& fs, mtl_command& command,
-    obj_material& material, bool fliptr = true);
+    material& material, bool fliptr = true);
 inline bool read_objx_command(obj_file& fs, objx_command& command,
-    obj_camera& camera, obj_environment& environment, obj_instance& instance);
+    camera& camera, environment& environment, obj_instance& instance);
 
 // Write obj/mtl/objx elements
 inline void write_obj_comment(obj_file& fs, const string& comment);
 inline void write_obj_command(obj_file& fs, obj_command command,
     const string& name, const vec3f& value,
-    const vector<obj_vertex>& vertices = {});
+    const vector<vertex>& vertices = {});
 inline void write_mtl_command(obj_file& fs, mtl_command command,
-    obj_material& material, const obj_texture_info& texture = {});
+    material& material, const texture_info& texture = {});
 inline void write_objx_command(obj_file& fs, objx_command command,
-    const obj_camera& camera, const obj_environment& environment,
+    const camera& camera, const environment& environment,
     const obj_instance& instance);
 
 }  // namespace yocto::yobj
@@ -318,8 +318,8 @@ namespace std {
 
 // Hash functor for vector for use with hash_map
 template <>
-struct hash<yocto::yobj::obj_vertex> {
-  size_t operator()(const yocto::yobj::obj_vertex& v) const {
+struct hash<yocto::yobj::vertex> {
+  size_t operator()(const yocto::yobj::vertex& v) const {
     static const std::hash<int> hasher = std::hash<int>();
     auto                        h      = (size_t)0;
     h ^= hasher(v.position) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -541,8 +541,8 @@ inline void format_obj_value(obj_file& fs, const T& value) {
 // -----------------------------------------------------------------------------
 namespace yocto::yobj {
 
-inline void parse_obj_value(string_view& str, obj_vertex& value) {
-  value = obj_vertex{0, 0, 0};
+inline void parse_obj_value(string_view& str, vertex& value) {
+  value = vertex{0, 0, 0};
   parse_obj_value(str, value.position);
   if (!str.empty() && str.front() == '/') {
     str.remove_prefix(1);
@@ -560,9 +560,9 @@ inline void parse_obj_value(string_view& str, obj_vertex& value) {
 }
 
 // Input for OBJ textures
-inline void parse_obj_value(string_view& str, obj_texture_info& info) {
+inline void parse_obj_value(string_view& str, texture_info& info) {
   // initialize
-  info = obj_texture_info();
+  info = texture_info();
 
   // get tokens
   auto tokens = vector<string>();
@@ -775,7 +775,7 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
   auto opositions = vector<vec3f>{};
   auto onormals   = vector<vec3f>{};
   auto otexcoords = vector<vec2f>{};
-  auto vert_size  = obj_vertex{};
+  auto vert_size  = vertex{};
   auto oname      = ""s;
   auto gname      = ""s;
   auto mname      = ""s;
@@ -849,7 +849,7 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
       // parse vertices
       skip_obj_whitespace(line);
       while (!line.empty()) {
-        auto vert = obj_vertex{};
+        auto vert = vertex{};
         parse_obj_value(line, vert);
         if (!vert.position) break;
         if (vert.position < 0)
@@ -931,10 +931,10 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
 }
 
 // Format values
-inline void format_obj_value(string& str, const obj_texture_info& value) {
+inline void format_obj_value(string& str, const texture_info& value) {
   str += value.path.empty() ? "" : value.path;
 }
-inline void format_obj_value(string& str, const obj_vertex& value) {
+inline void format_obj_value(string& str, const vertex& value) {
   format_obj_value(str, value.position);
   if (value.texcoord) {
     str += "/";
@@ -1100,14 +1100,14 @@ inline void save_obj(const string& filename, const obj_model& obj) {
   }
 
   // save objects
-  auto vert_size = obj_vertex{0, 0, 0};
+  auto vert_size = vertex{0, 0, 0};
   for (auto& shape : obj.shapes) {
     format_obj_values(fs, "o {}\n", shape.name);
     for (auto& p : shape.positions) format_obj_values(fs, "v {}\n", p);
     for (auto& n : shape.normals) format_obj_values(fs, "vn {}\n", n);
     for (auto& t : shape.texcoords) format_obj_values(fs, "vt {}\n", t);
     auto element_labels = vector<string>{"f", "l", "p"};
-    auto element_groups = vector<const vector<obj_element>*>{
+    auto element_groups = vector<const vector<element>*>{
         &shape.faces, &shape.lines, &shape.points};
     for (auto element_idx = 0; element_idx < 3; element_idx++) {
       auto& label        = element_labels[element_idx];
@@ -1161,10 +1161,10 @@ inline float obj_roughness_to_exponent(float roughness) {
 }
 
 // Get obj vertices
-inline void get_obj_vertices(const obj_shape& shape, vector<vec3f>& positions,
+inline void get_obj_vertices(const shape& shape, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<int>& vindex,
     bool flipv) {
-  auto vmap = unordered_map<obj_vertex, int>{};
+  auto vmap = unordered_map<vertex, int>{};
   vmap.reserve(shape.vertices.size());
   vindex.reserve(shape.vertices.size());
   for (auto& vert : shape.vertices) {
@@ -1194,7 +1194,7 @@ inline vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-inline void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
+inline void get_obj_triangles(const obj_model& obj, const shape& shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -1214,7 +1214,7 @@ inline void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
     cur += face.size;
   }
 }
-inline void get_obj_quads(const obj_model& obj, const obj_shape& shape,
+inline void get_obj_quads(const obj_model& obj, const shape& shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -1240,7 +1240,7 @@ inline void get_obj_quads(const obj_model& obj, const obj_shape& shape,
     cur += face.size;
   }
 }
-inline void get_obj_lines(const obj_model& obj, const obj_shape& shape,
+inline void get_obj_lines(const obj_model& obj, const shape& shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -1259,7 +1259,7 @@ inline void get_obj_lines(const obj_model& obj, const obj_shape& shape,
     cur += line.size;
   }
 }
-inline void get_obj_points(const obj_model& obj, const obj_shape& shape,
+inline void get_obj_points(const obj_model& obj, const shape& shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
@@ -1278,7 +1278,7 @@ inline void get_obj_points(const obj_model& obj, const obj_shape& shape,
     cur += point.size;
   }
 }
-inline void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
+inline void get_obj_fvquads(const obj_model& obj, const shape& shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
@@ -1335,7 +1335,7 @@ inline void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
   }
 }
 
-inline bool has_obj_quads(const obj_shape& shape) {
+inline bool has_obj_quads(const shape& shape) {
   for (auto& face : shape.faces)
     if (face.size == 4) return true;
   return false;
@@ -1470,7 +1470,7 @@ inline void add_obj_fvquads(obj_model& obj, const string& name,
 
 // Read obj
 inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
-    vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size) {
+    vec3f& value, vector<vertex>& vertices, vertex& vert_size) {
   // read the file line by line
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
@@ -1506,7 +1506,7 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
       vertices.clear();
       skip_obj_whitespace(line);
       while (!line.empty()) {
-        auto vert = obj_vertex{};
+        auto vert = vertex{};
         parse_obj_value(line, vert);
         if (!vert.position) break;
         if (vert.position < 0)
@@ -1550,7 +1550,7 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
 
 // Read mtl
 inline bool read_mtl_command(
-    obj_file& fs, mtl_command& command, obj_material& material, bool fliptr) {
+    obj_file& fs, mtl_command& command, material& material, bool fliptr) {
   material = {};
 
   // read the file line by line
@@ -1672,7 +1672,7 @@ inline bool read_mtl_command(
 
 // Read objx
 inline bool read_objx_command(obj_file& fs, objx_command& command,
-    obj_camera& camera, obj_environment& environment, obj_instance& instance) {
+    camera& camera, environment& environment, obj_instance& instance) {
   // read the file line by line
   char buffer[4096];
   auto found = false;
@@ -1742,7 +1742,7 @@ inline void write_obj_comment(obj_file& fs, const string& comment) {
 
 inline void write_obj_command(obj_file& fs, obj_command command,
     const string& name, const vec3f& value,
-    const vector<obj_vertex>& vertices) {
+    const vector<vertex>& vertices) {
   switch (command) {
     case obj_command::vertex: format_obj_values(fs, "v {}\n", value); break;
     case obj_command::normal: format_obj_values(fs, "vn {}\n", value); break;
@@ -1766,7 +1766,7 @@ inline void write_obj_command(obj_file& fs, obj_command command,
 }
 
 inline void write_mtl_command(
-    obj_file& fs, mtl_command command, const obj_material& material) {
+    obj_file& fs, mtl_command command, const material& material) {
   // write material
   format_obj_values(fs, "newmtl {}\n", material.name);
   format_obj_values(fs, "illum {}\n", material.illum);
@@ -1838,7 +1838,7 @@ inline void write_mtl_command(
 }
 
 inline void write_objx_command(obj_file& fs, objx_command command,
-    const obj_camera& camera, const obj_environment& environment,
+    const camera& camera, const environment& environment,
     const obj_instance& instance) {
   switch (command) {
     case objx_command::camera: {

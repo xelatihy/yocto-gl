@@ -1326,7 +1326,7 @@ void load_obj(
 
   // helper to create texture maps
   auto texture_map = unordered_map<string, int>{{"", -1}};
-  auto get_texture = [&texture_map, &scene](const yobj::obj_texture_info& info) {
+  auto get_texture = [&texture_map, &scene](const yobj::texture_info& info) {
     if (info.path == "") return -1;
     auto it = texture_map.find(info.path);
     if (it != texture_map.end()) return it->second;
@@ -1480,8 +1480,8 @@ static void save_obj(const string& filename, const scene_model& scene,
 
   // textures
   auto get_texture = [&scene](int tex) {
-    if (tex < 0) return yobj::obj_texture_info{};
-    auto info = yobj::obj_texture_info{};
+    if (tex < 0) return yobj::texture_info{};
+    auto info = yobj::texture_info{};
     info.path = scene.textures[tex].filename;
     return info;
   };
