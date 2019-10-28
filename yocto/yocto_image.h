@@ -22,12 +22,14 @@
 // 4-channels byte images (assumed to be in sRGB).
 //
 //
-// 1. resize images with `resize()`
-// 2. tonemap images with `tonemap()` that convert from linear HDR to
+// 1. store images using the image<T> structure
+// 2. load and save images with `load_image()` and `save_image()`
+// 3. resize images with `resize()`
+// 4. tonemap images with `tonemap()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
-// 3. make various image examples with the `make_proc_image()` functions
-// 4. create procedural sun-sky images with `make_sunsky()`
-// 5. many color conversion functions are available in the code below
+// 5. make various image examples with the `make_proc_image()` functions
+// 6. create procedural sun-sky images with `make_sunsky()`
+// 7. many color conversion functions are available in the code below
 //
 //
 
@@ -53,6 +55,30 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+//
+//
+//
+//  LICENSE for blackbody code
+//
+// Copyright (c) 2015 Neil Bartlett
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 //
 
@@ -140,6 +166,24 @@ void image_difference(image<vec4f>& diff, const image<vec4f>& a,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMAGE IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Check if an image is HDR based on filename.
+bool is_hdr_filename(const string& filename);
+
+// Loads/saves a 4 channels float/byte image in linear color space.
+image<vec4f> load_image(const string& filename);
+void         load_image(const string& filename, image<vec4f>& img);
+void         save_image(const string& filename, const image<vec4f>& img);
+image<vec4b> load_imageb(const string& filename);
+void         load_imageb(const string& filename, image<vec4b>& img);
+void         save_imageb(const string& filename, const image<vec4b>& img);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // EXAMPLE IMAGES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -213,6 +257,17 @@ void         make_image_preset(image<vec4f>& img, const string& type);
 void         make_image_preset(image<vec4b>& img, const string& type);
 void         make_image_preset(
             image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VOLUME IO
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Loads/saves a 1 channel volume.
+void load_volume(const string& filename, volume<float>& vol);
+void save_volume(const string& filename, const volume<float>& vol);
 
 }  // namespace yocto
 
