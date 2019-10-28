@@ -419,75 +419,20 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
 inline void parse_obj_value(string_view& str, string_view& value) {
   skip_obj_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
-  if (str.front() != '"') {
-    auto cpy = str;
-    while (!cpy.empty() && !is_obj_space(cpy.front())) cpy.remove_prefix(1);
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-  } else {
-    if (str.front() != '"') throw std::runtime_error("cannot parse value");
-    str.remove_prefix(1);
-    if (str.empty()) throw std::runtime_error("cannot parse value");
-    auto cpy = str;
-    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
-    if (cpy.empty()) throw std::runtime_error("cannot parse value");
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-    str.remove_prefix(1);
-  }
+  auto cpy = str;
+  while (!cpy.empty() && !is_obj_space(cpy.front())) cpy.remove_prefix(1);
+  value = str;
+  value.remove_suffix(cpy.size());
+  str.remove_prefix(str.size() - cpy.size());
 }
 inline void parse_obj_value(string_view& str, string& value) {
   auto valuev = string_view{};
   parse_obj_value(str, valuev);
   value = string{valuev};
 }
-inline void parse_obj_value(string_view& str, int8_t& value) {
-  char* end = nullptr;
-  value     = (int8_t)strtol(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_obj_value(string_view& str, int16_t& value) {
-  char* end = nullptr;
-  value     = (int16_t)strtol(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_obj_value(string_view& str, int32_t& value) {
+inline void parse_obj_value(string_view& str, int& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_obj_value(string_view& str, int64_t& value) {
-  char* end = nullptr;
-  value     = (int64_t)strtoll(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_obj_value(string_view& str, uint8_t& value) {
-  char* end = nullptr;
-  value     = (uint8_t)strtoul(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_obj_value(string_view& str, uint16_t& value) {
-  char* end = nullptr;
-  value     = (uint16_t)strtoul(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_obj_value(string_view& str, uint32_t& value) {
-  char* end = nullptr;
-  value     = (uint32_t)strtoul(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-inline void parse_obj_value(string_view& str, uint64_t& value) {
-  char* end = nullptr;
-  value     = (uint64_t)strtoull(str.data(), &end, 10);
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
@@ -502,41 +447,26 @@ inline void parse_obj_value(string_view& str, float& value) {
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
-inline void parse_obj_value(string_view& str, double& value) {
-  char* end = nullptr;
-  value     = strtod(str.data(), &end);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
 template <typename T>
 inline void parse_obj_value(string_view& str, T* values, int num) {
   for (auto i = 0; i < num; i++) parse_obj_value(str, values[i]);
 }
 
 inline void parse_obj_value(string_view& str, vec2f& value) {
-  parse_obj_value(str, &value.x, 2);
+  for (auto i = 0; i < 2; i++) parse_obj_value(str, (&value.x)[i]);
 }
 inline void parse_obj_value(string_view& str, vec3f& value) {
-  parse_obj_value(str, &value.x, 3);
+  for (auto i = 0; i < 3; i++) parse_obj_value(str, (&value.x)[i]);
 }
 inline void parse_obj_value(string_view& str, frame3f& value) {
-  parse_obj_value(str, &value.x.x, 12);
+  for (auto i = 0; i < 12; i++) parse_obj_value(str, (&value.x.x)[i]);
 }
-#ifdef __APPLE__
-inline void parse_obj_value(string_view& str, size_t& value) {
-  char* end = nullptr;
-  value     = (size_t)strtoull(str.data(), &end, 10);
-  if (str == end) throw std::runtime_error("cannot parse value");
-  str.remove_prefix(end - str.data());
-}
-#endif
 
 // Parse values from a string
-template <typename T>
-inline void parse_obj_value_or_empty(string_view& str, T& value) {
+inline void parse_obj_value_or_empty(string_view& str, string& value) {
   skip_obj_whitespace(str);
   if (str.empty()) {
-    value = T{};
+    value = "";
   } else {
     parse_obj_value(str, value);
   }
@@ -552,52 +482,12 @@ namespace yocto {
 // Formats values to string
 inline void format_obj_value(string& str, const string& value) { str += value; }
 inline void format_obj_value(string& str, const char* value) { str += value; }
-inline void format_obj_value(string& str, int8_t value) {
+inline void format_obj_value(string& str, int value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_obj_value(string& str, int16_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_obj_value(string& str, int32_t value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-inline void format_obj_value(string& str, int64_t value) {
-  char buf[256];
-  sprintf(buf, "%lld", (long long)value);
-  str += buf;
-}
-inline void format_obj_value(string& str, uint8_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-inline void format_obj_value(string& str, uint16_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-inline void format_obj_value(string& str, uint32_t value) {
-  char buf[256];
-  sprintf(buf, "%u", (unsigned)value);
-  str += buf;
-}
-inline void format_obj_value(string& str, uint64_t value) {
-  char buf[256];
-  sprintf(buf, "%llu", (unsigned long long)value);
   str += buf;
 }
 inline void format_obj_value(string& str, float value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
-inline void format_obj_value(string& str, double value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
@@ -612,31 +502,11 @@ inline void format_obj_value(string& str, const vec3f& value) {
   sprintf(buf, "%g %g %g", value.x, value.y, value.z);
   str += buf;
 }
-#if 0
-inline void format_obj_value(string& str, const vec2i& value) {
-  char buf[256];
-  sprintf(buf, "%d %d", value.x, value.y);
-  str += buf;
-}
-inline void format_obj_value(string& str, const vec3i& value) {
-  char buf[256];
-  sprintf(buf, "%d %d %d", value.x, value.y, value.z);
-  str += buf;
-}
-#endif
 inline void format_obj_value(string& str, const frame3f& value) {
   char buf[512];
   sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y,
       value.x.z, value.y.x, value.y.y, value.y.z, value.z.x, value.z.y,
       value.z.z, value.o.x, value.o.y, value.o.z);
-  str += buf;
-}
-inline void format_obj_value(string& str, const mat4f& value) {
-  char buf[512];
-  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", value.x.x,
-      value.x.y, value.x.z, value.x.w, value.y.x, value.y.y, value.y.z,
-      value.y.w, value.z.x, value.z.y, value.z.z, value.z.w, value.w.x,
-      value.w.y, value.w.z, value.w.w);
   str += buf;
 }
 
