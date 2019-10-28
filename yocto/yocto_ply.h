@@ -898,9 +898,9 @@ inline void save_ply(const string& filename, const ply_model& ply) {
       {ply_format::binary_big_endian, "binary_big_endian"}};
 
   auto write_error = [&filename](ply_file& fs) {
-    if(!ferror(fs.fs)) return true;
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + filename);
-    return false;
+    return true;
   };
 
   // header
@@ -1701,10 +1701,10 @@ inline void write_ply_header(ply_file& fs, ply_format format,
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
       {ply_type::f32, "float"}, {ply_type::f64, "double"}};
 
-  auto write_error = [](ply_file& fs) {
-    if(!ferror(fs.fs)) return true;
+  auto write_error = [&](ply_file& fs) {
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
-    return false;
+    return true;
   };
 
   write_ply_text(fs, "ply\n");
@@ -1741,9 +1741,9 @@ template <typename VT, typename LT>
 inline void write_ply_value_generic(ply_file& fs, ply_format format,
     const ply_element& element, vector<VT>& values, vector<vector<LT>>& lists) {
   auto write_error = [](ply_file& fs) {
-    if(!ferror(fs.fs)) return true;
+    if(!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
-    return false;
+    return true;
   };
 
   if (format == ply_format::ascii) {
