@@ -28,6 +28,7 @@
 
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_math.h"
+#include "../yocto/yocto_image.h"
 #include "../yocto/yocto_sceneio.h"
 using namespace yocto;
 

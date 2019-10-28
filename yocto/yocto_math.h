@@ -1573,6 +1573,91 @@ struct ray3f {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMAGE DATA AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Image container.
+template <typename T>
+struct image {
+  // constructors
+  image();
+  image(const vec2i& size, const T& value = {});
+  image(const vec2i& size, const T* value);
+
+  // size
+  bool   empty() const;
+  vec2i  size() const;
+  size_t count() const;
+  bool   contains(const vec2i& ij) const;
+  void   resize(const vec2i& size);
+  void   assign(const vec2i& size, const T& value = {});
+  void   shrink_to_fit();
+
+  // element access
+  T&       operator[](int i);
+  const T& operator[](int i) const;
+  T&       operator[](const vec2i& ij);
+  const T& operator[](const vec2i& ij) const;
+
+  // data access
+  T*       data();
+  const T* data() const;
+
+  // iteration
+  T*       begin();
+  T*       end();
+  const T* begin() const;
+  const T* end() const;
+
+ private:
+  // data
+  vec2i     extent = zero2i;
+  vector<T> pixels = {};
+};
+
+// equality
+template <typename T>
+inline bool operator==(const image<T>& a, const image<T>& b);
+template <typename T>
+inline bool operator!=(const image<T>& a, const image<T>& b);
+
+// Evaluates a color image at a point `uv`.
+inline vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
+    bool no_interpolation = false, bool clamp_to_edge = false);
+inline vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
+    bool as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false);
+
+// Image region
+struct image_region {
+  vec2i min = zero2i;
+  vec2i max = zero2i;
+
+  image_region();
+  image_region(const vec2i& min, const vec2i& max);
+
+  vec2i size() const;
+};
+
+// Splits an image into an array of regions
+vector<image_region> make_image_regions(
+    const vec2i& size, int region_size = 32, bool shuffled = false);
+
+// Gets pixels in an image region
+template <typename T>
+inline image<T> get_image_region(
+    const image<T>& img, const image_region& region);
+template <typename T>
+inline void set_region(
+    image<T>& img, const image<T>& region, const vec2i& offset);
+template <typename T>
+inline void get_region(
+    image<T>& clipped, const image<T>& img, const image_region& region);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // TRANSFORMS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1921,6 +2006,51 @@ inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// COLOR OPERATIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Conversion between flots and bytes
+inline vec4b float_to_byte(const vec4f& a);
+inline vec4f byte_to_float(const vec4b& a);
+
+// Luminance
+inline float luminance(const vec3f& a);
+
+// sRGB non-linear curve
+inline float srgb_to_rgb(float srgb);
+inline float rgb_to_srgb(float rgb);
+inline vec3f srgb_to_rgb(const vec3f& srgb);
+inline vec4f srgb_to_rgb(const vec4f& srgb);
+inline vec3f rgb_to_srgb(const vec3f& rgb);
+inline vec4f rgb_to_srgb(const vec4f& rgb);
+
+// Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
+inline vec3f contrast(const vec3f& rgb, float contrast, float grey);
+// Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
+inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
+// Apply saturation.
+inline vec3f saturate(const vec3f& rgb, float saturation,
+    const vec3f& weights = vec3f{0.333333f});
+
+// Convert between CIE XYZ and RGB
+inline vec3f rgb_to_xyz(const vec3f& rgb);
+inline vec3f xyz_to_rgb(const vec3f& xyz);
+
+// Convert between CIE XYZ and xyY
+inline vec3f xyz_to_xyY(const vec3f& xyz);
+inline vec3f xyY_to_xyz(const vec3f& xyY);
+
+// Converts between HSV and RGB color spaces.
+inline vec3f hsv_to_rgb(const vec3f& hsv);
+inline vec3f rgb_to_hsv(const vec3f& rgb);
+
+// Approximate color of blackbody radiation from wavelength in nm.
+inline vec3f blackbody_to_rgb(float temperature);
+
+}
 
 // -----------------------------------------------------------------------------
 // RAY-PRIMITIVE INTERSECTION FUNCTIONS
@@ -2329,6 +2459,421 @@ inline ray3f camera_ray(const frame3f& frame, float lens, const vec2f& film,
 //
 //
 // -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// COLOR CONVERSION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Conversion between flots and bytes
+inline vec4b float_to_byte(const vec4f& a) {
+  return {(byte)clamp(int(a.x * 256), 0, 255),
+      (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),
+      (byte)clamp(int(a.w * 256), 0, 255)};
+}
+inline vec4f byte_to_float(const vec4b& a) {
+  return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
+}
+
+// Luminance
+inline float luminance(const vec3f& a) {
+  return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
+}
+
+// sRGB non-linear curve
+inline float srgb_to_rgb(float srgb) {
+  return (srgb <= 0.04045) ? srgb / 12.92f
+                           : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
+}
+inline float rgb_to_srgb(float rgb) {
+  return (rgb <= 0.0031308f) ? 12.92f * rgb
+                             : (1 + 0.055f) * pow(rgb, 1 / 2.4f) - 0.055f;
+}
+inline vec3f srgb_to_rgb(const vec3f& srgb) {
+  return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
+}
+inline vec4f srgb_to_rgb(const vec4f& srgb) {
+  return {
+      srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
+}
+inline vec3f rgb_to_srgb(const vec3f& rgb) {
+  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
+}
+inline vec4f rgb_to_srgb(const vec4f& rgb) {
+  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
+}
+
+// Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
+inline vec3f contrast(const vec3f& rgb, float contrast, float grey) {
+  return max(zero3f, grey + (rgb - grey) * (contrast * 2));
+}
+// Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
+inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
+  auto epsilon  = (float)0.0001;
+  auto log_grey = log2(grey);
+  auto log_ldr  = log2(rgb + epsilon);
+  auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
+  return max(zero3f, exp2(adjusted) - epsilon);
+}
+// Apply saturation.
+inline vec3f saturate(
+    const vec3f& rgb, float saturation, const vec3f& weights) {
+  auto grey = dot(weights, rgb);
+  return max(zero3f, grey + (rgb - grey) * (saturation * 2));
+}
+
+// Convert between CIE XYZ and RGB
+inline vec3f rgb_to_xyz(const vec3f& rgb) {
+  // https://en.wikipedia.org/wiki/SRGB
+  static const auto mat = mat3f{
+      {0.4124, 0.2126, 0.0193},
+      {0.3576, 0.7152, 0.1192},
+      {0.1805, 0.0722, 0.9504},
+  };
+  return mat * rgb;
+}
+inline vec3f xyz_to_rgb(const vec3f& xyz) {
+  // https://en.wikipedia.org/wiki/SRGB
+  static const auto mat = mat3f{
+      {+3.2406, -0.9689, +0.0557},
+      {-1.5372, +1.8758, -0.2040},
+      {-0.4986, +0.0415, +1.0570},
+  };
+  return mat * xyz;
+}
+
+// Convert between CIE XYZ and xyY
+inline vec3f xyz_to_xyY(const vec3f& xyz) {
+  if (xyz == zero3f) return zero3f;
+  return {
+      xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
+}
+inline vec3f xyY_to_xyz(const vec3f& xyY) {
+  if (xyY.y == 0) return zero3f;
+  return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
+}
+
+// Convert HSV to RGB
+inline vec3f hsv_to_rgb(const vec3f& hsv) {
+  // from Imgui.cpp
+  auto h = hsv.x, s = hsv.y, v = hsv.z;
+  if (hsv.y == 0) return {v, v, v};
+
+  h       = fmod(h, 1.0f) / (60.0f / 360.0f);
+  int   i = (int)h;
+  float f = h - (float)i;
+  float p = v * (1 - s);
+  float q = v * (1 - s * f);
+  float t = v * (1 - s * (1 - f));
+
+  switch (i) {
+    case 0: return {v, t, p};
+    case 1: return {q, v, p};
+    case 2: return {p, v, t};
+    case 3: return {p, q, v};
+    case 4: return {t, p, v};
+    case 5: return {v, p, q};
+    default: return {v, p, q};
+  }
+}
+
+inline vec3f rgb_to_hsv(const vec3f& rgb) {
+  // from Imgui.cpp
+  auto r = rgb.x, g = rgb.y, b = rgb.z;
+  auto K = 0.f;
+  if (g < b) {
+    swap(g, b);
+    K = -1;
+  }
+  if (r < g) {
+    swap(r, g);
+    K = -2 / 6.0f - K;
+  }
+
+  auto chroma = r - (g < b ? g : b);
+  return {abs(K + (g - b) / (6 * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
+}
+
+// Approximate color of blackbody radiation from wavelength in nm.
+inline vec3f blackbody_to_rgb(float temperature) {
+  // https://github.com/neilbartlett/color-temperature
+  auto rgb = zero3f;
+  if ((temperature / 100) < 66) {
+    rgb.x = 255;
+  } else {
+    // a + b x + c Log[x] /.
+    // {a -> 351.97690566805693`,
+    // b -> 0.114206453784165`,
+    // c -> -40.25366309332127
+    // x -> (kelvin/100) - 55}
+    rgb.x = (temperature / 100) - 55;
+    rgb.x = 351.97690566805693f + 0.114206453784165f * rgb.x -
+            40.25366309332127f * log(rgb.x);
+    if (rgb.x < 0) rgb.x = 0;
+    if (rgb.x > 255) rgb.x = 255;
+  }
+
+  if ((temperature / 100) < 66) {
+    // a + b x + c Log[x] /.
+    // {a -> -155.25485562709179`,
+    // b -> -0.44596950469579133`,
+    // c -> 104.49216199393888`,
+    // x -> (kelvin/100) - 2}
+    rgb.y = (temperature / 100) - 2;
+    rgb.y = -155.25485562709179f - 0.44596950469579133f * rgb.y +
+            104.49216199393888f * log(rgb.y);
+    if (rgb.y < 0) rgb.y = 0;
+    if (rgb.y > 255) rgb.y = 255;
+  } else {
+    // a + b x + c Log[x] /.
+    // {a -> 325.4494125711974`,
+    // b -> 0.07943456536662342`,
+    // c -> -28.0852963507957`,
+    // x -> (kelvin/100) - 50}
+    rgb.y = (temperature / 100) - 50;
+    rgb.y = 325.4494125711974f + 0.07943456536662342f * rgb.y -
+            28.0852963507957f * log(rgb.y);
+    if (rgb.y < 0) rgb.y = 0;
+    if (rgb.y > 255) rgb.y = 255;
+  }
+
+  if ((temperature / 100) >= 66) {
+    rgb.z = 255;
+  } else {
+    if ((temperature / 100) <= 20) {
+      rgb.z = 0;
+    } else {
+      // a + b x + c Log[x] /.
+      // {a -> -254.76935184120902`,
+      // b -> 0.8274096064007395`,
+      // c -> 115.67994401066147`,
+      // x -> kelvin/100 - 10}
+      rgb.z = (temperature / 100) - 10;
+      rgb.z = -254.76935184120902f + 0.8274096064007395f * rgb.z +
+              115.67994401066147f * log(rgb.z);
+      if (rgb.z < 0) rgb.z = 0;
+      if (rgb.z > 255) rgb.z = 255;
+    }
+  }
+
+  return srgb_to_rgb(rgb / 255);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE DATA AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// constructors
+template <typename T>
+inline image<T>::image() : extent{0, 0}, pixels{} {}
+template <typename T>
+inline image<T>::image(const vec2i& size, const T& value)
+    : extent{size}, pixels((size_t)size.x * (size_t)size.y, value) {}
+template <typename T>
+inline image<T>::image(const vec2i& size, const T* value)
+    : extent{size}, pixels(value, value + (size_t)size.x * (size_t)size.y) {}
+
+// size
+template <typename T>
+inline bool image<T>::empty() const {
+  return pixels.empty();
+}
+template <typename T>
+inline vec2i image<T>::size() const {
+  return extent;
+}
+template <typename T>
+inline size_t image<T>::count() const {
+  return pixels.size();
+}
+template <typename T>
+inline bool image<T>::contains(const vec2i& ij) const {
+  return ij.x > 0 && ij.x < extent.x && ij.y > 0 && ij.y < extent.y;
+}
+template <typename T>
+inline void image<T>::resize(const vec2i& size) {
+  if (size == extent) return;
+  extent = size;
+  pixels.resize((size_t)size.x * (size_t)size.y);
+}
+template <typename T>
+inline void image<T>::assign(const vec2i& size, const T& value) {
+  extent = size;
+  pixels.assign((size_t)size.x * (size_t)size.y, value);
+}
+template <typename T>
+inline void image<T>::shrink_to_fit() {
+  pixels.shrink_to_fit();
+}
+
+// element access
+template <typename T>
+inline T& image<T>::operator[](int i) {
+  return pixels[i];
+}
+template <typename T>
+inline const T& image<T>::operator[](int i) const {
+  return pixels[i];
+}
+template <typename T>
+inline T& image<T>::operator[](const vec2i& ij) {
+  return pixels[ij.y * extent.x + ij.x];
+}
+template <typename T>
+inline const T& image<T>::operator[](const vec2i& ij) const {
+  return pixels[ij.y * extent.x + ij.x];
+}
+
+// data access
+template <typename T>
+inline T* image<T>::data() {
+  return pixels.data();
+}
+template <typename T>
+inline const T* image<T>::data() const {
+  return pixels.data();
+}
+
+// iteration
+template <typename T>
+inline T* image<T>::begin() {
+  return pixels.data();
+}
+template <typename T>
+inline T* image<T>::end() {
+  return pixels.data() + pixels.size();
+}
+template <typename T>
+inline const T* image<T>::begin() const {
+  return pixels.data();
+}
+template <typename T>
+inline const T* image<T>::end() const {
+  return pixels.data() + pixels.size();
+}
+
+// equality
+template <typename T>
+inline bool operator==(const image<T>& a, const image<T>& b) {
+  return a.size() == b.size() && a.pixels == b.pixels;
+}
+template <typename T>
+inline bool operator!=(const image<T>& a, const image<T>& b) {
+  return a.size() != b.size() || a.pixels != b.pixels;
+}
+
+inline image_region::image_region() {}
+inline image_region::image_region(const vec2i& min, const vec2i& max)
+    : min{min}, max{max} {}
+
+inline vec2i image_region::size() const { return max - min; }
+
+// Gets pixels in an image region
+template <typename T>
+inline image<T> get_image_region(
+    const image<T>& img, const image_region& region) {
+  auto clipped = image<T>{region.size()};
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+    }
+  }
+  return clipped;
+}
+
+template <typename T>
+inline void set_region(
+    image<T>& img, const image<T>& region, const vec2i& offset) {
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      if (!img.contains({i, j})) continue;
+      img[vec2i{i, j} + offset] = region[{i, j}];
+    }
+  }
+}
+
+template <typename T>
+inline void get_region(
+    image<T>& clipped, const image<T>& img, const image_region& region) {
+  clipped.resize(region.size());
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+    }
+  }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Lookup an image at coordinates `ij`
+inline vec4f lookup_image(
+    const image<vec4f>& img, const vec2i& ij, bool as_linear) {
+  return img[ij];
+}
+inline vec4f lookup_image(
+    const image<vec4b>& img, const vec2i& ij, bool as_linear) {
+  if (as_linear) {
+    return byte_to_float(img[ij]);
+  } else {
+    return srgb_to_rgb(byte_to_float(img[ij]));
+  }
+}
+
+// Evaluate a texture
+template <typename T>
+inline vec4f eval_image_generic(const image<T>& img, const vec2f& uv,
+    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
+  if (img.empty()) return zero4f;
+
+  // get image width/height
+  auto size = img.size();
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation) return lookup_image(img, {i, j}, as_linear);
+
+  // handle interpolation
+  return lookup_image(img, {i, j}, as_linear) * (1 - u) * (1 - v) +
+         lookup_image(img, {i, jj}, as_linear) * (1 - u) * v +
+         lookup_image(img, {ii, j}, as_linear) * u * (1 - v) +
+         lookup_image(img, {ii, jj}, as_linear) * u * v;
+}
+
+// Evaluates a color image at a point `uv`.
+inline vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
+    bool no_interpolation, bool clamp_to_edge) {
+  return eval_image_generic(img, uv, false, no_interpolation, clamp_to_edge);
+}
+inline vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
+    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
+  return eval_image_generic(
+      img, uv, as_linear, no_interpolation, clamp_to_edge);
+}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENRTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
