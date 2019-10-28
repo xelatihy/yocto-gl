@@ -727,7 +727,7 @@ inline void load_mtl(
     return true;
   };
   auto read_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
     return true;
   };
@@ -875,7 +875,7 @@ inline void load_mtl(
   }
 
   // check error
-  if(read_error(fs)) return;
+  if (read_error(fs)) return;
 
   // remove placeholder material
   obj.materials.erase(obj.materials.begin());
@@ -900,7 +900,7 @@ inline void load_objx(const string& filename, obj_model& obj) {
     return true;
   };
   auto read_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
     return true;
   };
@@ -960,7 +960,7 @@ inline void load_objx(const string& filename, obj_model& obj) {
   }
 
   // check error
-  if(read_error(fs)) return;
+  if (read_error(fs)) return;
 }
 
 // Read obj
@@ -991,7 +991,7 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
     return true;
   };
   auto read_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
     return true;
   };
@@ -1108,7 +1108,7 @@ inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
   }
 
   // check error
-  if(read_error(fs)) return;
+  if (read_error(fs)) return;
 
   // convert vertex data
   auto ipositions = vector<int>{};
@@ -1179,7 +1179,7 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
   auto write_error = [&filename](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + filename);
     return true;
   };
@@ -1269,7 +1269,7 @@ inline void save_mtl(const string& filename, const obj_model& obj) {
   }
 
   // check error
-  if(write_error(fs)) return;
+  if (write_error(fs)) return;
 }
 
 // Save obj
@@ -1279,7 +1279,7 @@ inline void save_objx(const string& filename, const obj_model& obj) {
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
   auto write_error = [&filename](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + filename);
     return true;
   };
@@ -1318,7 +1318,7 @@ inline void save_objx(const string& filename, const obj_model& obj) {
   }
 
   // check error
-  if(write_error(fs)) return;
+  if (write_error(fs)) return;
 }
 
 // Save obj
@@ -1328,7 +1328,7 @@ inline void save_obj(const string& filename, const obj_model& obj) {
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
   auto write_error = [&filename](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + filename);
     return true;
   };
@@ -1397,7 +1397,7 @@ inline void save_obj(const string& filename, const obj_model& obj) {
     save_objx(replace_obj_extension(filename, ".objx"), obj);
 
   // check error
-  if(write_error(fs)) return;
+  if (write_error(fs)) return;
 }
 
 // convert between roughness and exponent
@@ -1731,7 +1731,7 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
     return true;
   };
   auto read_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
     return true;
   };
@@ -1768,8 +1768,8 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
       return true;
     } else if (cmd == "vt") {
       command = obj_command::texcoord;
-      str = parse_obj_value(str, (vec2f&)value);
-      if(parse_error(str)) return false;
+      str     = parse_obj_value(str, (vec2f&)value);
+      if (parse_error(str)) return false;
       value.z = 0;
       vert_size.texcoord += 1;
       if (parse_error(str)) return false;
@@ -1797,22 +1797,22 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
       return true;
     } else if (cmd == "o") {
       command = obj_command::object;
-      str = parse_obj_value_or_empty(str, name);
+      str     = parse_obj_value_or_empty(str, name);
       if (parse_error(str)) return false;
       return true;
     } else if (cmd == "usemtl") {
       command = obj_command::usemtl;
-      str = parse_obj_value_or_empty(str, name);
+      str     = parse_obj_value_or_empty(str, name);
       if (parse_error(str)) return false;
       return true;
     } else if (cmd == "g") {
       command = obj_command::group;
-      str = parse_obj_value_or_empty(str, name);
+      str     = parse_obj_value_or_empty(str, name);
       if (parse_error(str)) return false;
       return true;
     } else if (cmd == "s") {
       command = obj_command::smoothing;
-      str = parse_obj_value_or_empty(str, name);
+      str     = parse_obj_value_or_empty(str, name);
       if (parse_error(str)) return false;
       return true;
     } else if (cmd == "mtllib") {
@@ -1827,7 +1827,7 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
   }
 
   // check error
-  if(read_error(fs)) return false;
+  if (read_error(fs)) return false;
 
   return false;
 }
@@ -1844,7 +1844,7 @@ inline bool read_mtl_command(
     return true;
   };
   auto read_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
     return true;
   };
@@ -2001,7 +2001,7 @@ inline bool read_mtl_command(
   }
 
   // check error
-  if(read_error(fs)) return false;
+  if (read_error(fs)) return false;
 
   return false;
 }
@@ -2016,7 +2016,7 @@ inline bool read_objx_command(obj_file& fs, objx_command& command,
     return true;
   };
   auto read_error = [](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
     return true;
   };
@@ -2041,27 +2041,27 @@ inline bool read_objx_command(obj_file& fs, objx_command& command,
     if (cmd == "c") {
       command = objx_command::camera;
       str     = parse_obj_value(str, camera.name);
-      str = parse_obj_value(str, camera.ortho);
-      str = parse_obj_value(str, camera.width);
-      str = parse_obj_value(str, camera.height);
-      str = parse_obj_value(str, camera.lens);
-      str = parse_obj_value(str, camera.focus);
-      str = parse_obj_value(str, camera.aperture);
-      str = parse_obj_value(str, camera.frame);
+      str     = parse_obj_value(str, camera.ortho);
+      str     = parse_obj_value(str, camera.width);
+      str     = parse_obj_value(str, camera.height);
+      str     = parse_obj_value(str, camera.lens);
+      str     = parse_obj_value(str, camera.focus);
+      str     = parse_obj_value(str, camera.aperture);
+      str     = parse_obj_value(str, camera.frame);
       if (parse_error(str)) return false;
       return true;
     } else if (cmd == "e") {
       command = objx_command::environment;
       str     = parse_obj_value(str, environment.name);
-      str = parse_obj_value(str, environment.emission);
-      str = parse_obj_value(str, environment.emission_map);
-      str = parse_obj_value(str, environment.frame);
+      str     = parse_obj_value(str, environment.emission);
+      str     = parse_obj_value(str, environment.emission_map);
+      str     = parse_obj_value(str, environment.frame);
       if (parse_error(str)) return false;
       return true;
     } else if (cmd == "i") {
       command = objx_command::instance;
       str     = parse_obj_value(str, instance.object);
-      str = parse_obj_value(str, instance.frame);
+      str     = parse_obj_value(str, instance.frame);
       if (parse_error(str)) return false;
       return true;
     }
@@ -2070,7 +2070,7 @@ inline bool read_objx_command(obj_file& fs, objx_command& command,
   if (found) return true;
 
   // check error
-  if(read_error(fs)) return false;
+  if (read_error(fs)) return false;
 
   return false;
 }
@@ -2123,7 +2123,7 @@ inline void write_obj_command(obj_file& fs, obj_command command,
 inline void write_mtl_command(
     obj_file& fs, mtl_command command, const obj_material& material) {
   auto write_error = [&](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
     return true;
   };
@@ -2198,14 +2198,14 @@ inline void write_mtl_command(
   format_obj_values(fs, "\n");
 
   // check error
-  if(write_error(fs)) return;
+  if (write_error(fs)) return;
 }
 
 inline void write_objx_command(obj_file& fs, objx_command command,
     const obj_camera& camera, const obj_environment& environment,
     const obj_instance& instance) {
   auto write_error = [&](obj_file& fs) {
-    if(!ferror(fs.fs)) return false;
+    if (!ferror(fs.fs)) return false;
     throw std::runtime_error("cannot parse " + fs.filename);
     return true;
   };
@@ -2229,7 +2229,7 @@ inline void write_objx_command(obj_file& fs, objx_command command,
   }
 
   // check error
-  if(write_error(fs)) return;
+  if (write_error(fs)) return;
 }
 
 }  // namespace yocto
