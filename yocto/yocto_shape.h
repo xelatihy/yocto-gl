@@ -167,16 +167,12 @@ void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Hash map
-template<typename K, typename V>
-using hash_map = std::unordered_map<K, V>;
-
 // Dictionary to store edge information. `index` is the index to the edge
 // array, `edges` the array of edges and `nfaces` the number of adjacent faces.
 // We store only bidirectional edges to keep the dictionary small. Use the
 // functions below to access this data.
 struct edge_map {
-  hash_map<vec2i, int> index  = {};
+  unordered_map<vec2i, int> index  = {};
   vector<vec2i>        edges  = {};
   vector<int>          nfaces = {};
 };
@@ -238,7 +234,7 @@ struct hash_grid {
   float                        cell_size     = 0;
   float                        cell_inv_size = 0;
   vector<vec3f>                positions     = {};
-  hash_map<vec3i, vector<int>> cells         = {};
+  unordered_map<vec3i, vector<int>> cells         = {};
 };
 
 // Create a hash_grid

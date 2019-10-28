@@ -313,7 +313,7 @@ float eval_phasefunction(float cos_theta, float g) {
 
 // Tabulated ior for metals
 // https://github.com/tunabrain/tungsten
-const hash_map<string, pair<vec3f, vec3f>> metal_ior_table = {
+const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
     {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
                 {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
     {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
@@ -404,7 +404,7 @@ pair<vec3f, vec3f> get_conductor_eta(const string& name) {
 }
 
 // Stores sigma_prime_s, sigma_a
-static hash_map<string, pair<vec3f, vec3f>> subsurface_params_table = {
+static unordered_map<string, pair<vec3f, vec3f>> subsurface_params_table = {
     // From "A Practical Model for Subsurface Light Transport"
     // Jensen, Marschner, Levoy, Hanrahan
     // Proc SIGGRAPH 2001
