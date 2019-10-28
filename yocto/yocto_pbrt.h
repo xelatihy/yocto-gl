@@ -525,11 +525,12 @@ inline bool is_pbrt_newline(char c) { return c == '\r' || c == '\n'; }
 inline bool is_pbrt_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-inline void skip_pbrt_whitespace(string_view& str) {
+[[nodiscard]] inline string_view skip_pbrt_whitespace(string_view str) {
   while (!str.empty() && is_pbrt_space(str.front())) str.remove_prefix(1);
+  return str;
 }
 
-inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
+[[nodiscard]] inline string_view remove_pbrt_comment(string_view str, char comment_char = '#') {
   while (!str.empty() && is_pbrt_newline(str.back())) str.remove_suffix(1);
   auto cpy       = str;
   auto in_string = false;
@@ -539,6 +540,7 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
     cpy.remove_prefix(1);
   }
   str.remove_suffix(cpy.size());
+  return str;
 }
 
 inline bool read_pbrt_line(obj_file& fs, char* buffer, size_t size) {
@@ -556,13 +558,13 @@ inline bool read_pbrt_cmdline(pbrt_file& fs, string& cmd, int& line_num) {
   while (read_pbrt_line(fs, buffer, sizeof(buffer))) {
     // line
     line_num += 1;
-    auto line = string_view{buffer};
-    remove_pbrt_comment(line);
-    skip_pbrt_whitespace(line);
-    if (line.empty()) continue;
+    auto str = string_view{buffer};
+    str = remove_pbrt_comment(str);
+    str = skip_pbrt_whitespace(str);
+    if (str.empty()) continue;
 
     // check if command
-    auto is_cmd = line[0] >= 'A' && line[0] <= 'Z';
+    auto is_cmd = str[0] >= 'A' && str[0] <= 'Z';
     if (is_cmd) {
       if (found) {
         fseek(fs.fs, pos, SEEK_SET);
@@ -574,7 +576,7 @@ inline bool read_pbrt_cmdline(pbrt_file& fs, string& cmd, int& line_num) {
     } else if (!found) {
       throw std::runtime_error("bad pbrt command");
     }
-    cmd += line;
+    cmd += str;
     cmd += " ";
     pos = ftell(fs.fs);
   }
@@ -657,7 +659,7 @@ namespace yocto {
 
 // parse a quoted string
 inline void parse_pbrt_value(string_view& str, string_view& value) {
-  skip_pbrt_whitespace(str);
+  str = skip_pbrt_whitespace(str);
   if (str.front() != '"') throw std::runtime_error("cannot parse value");
   str.remove_prefix(1);
   if (str.empty()) throw std::runtime_error("cannot parse value");
@@ -678,7 +680,7 @@ inline void parse_pbrt_value(string_view& str, string& value) {
 
 // parse a quoted string
 inline void parse_pbrt_command(string_view& str, string& value) {
-  skip_pbrt_whitespace(str);
+  str = skip_pbrt_whitespace(str);
   if (!isalpha((int)str.front())) {
     throw std::runtime_error("bad command");
   }
@@ -695,7 +697,7 @@ inline void parse_pbrt_command(string_view& str, string& value) {
 
 // parse a number
 inline void parse_pbrt_value(string_view& str, float& value) {
-  skip_pbrt_whitespace(str);
+  str = skip_pbrt_whitespace(str);
   if (str.empty()) throw std::runtime_error("number expected");
   auto next = (char*)nullptr;
   value     = strtof(str.data(), &next);
@@ -705,7 +707,7 @@ inline void parse_pbrt_value(string_view& str, float& value) {
 
 // parse a number
 inline void parse_pbrt_value(string_view& str, int& value) {
-  skip_pbrt_whitespace(str);
+  str = skip_pbrt_whitespace(str);
   if (str.empty()) throw std::runtime_error("number expected");
   auto next = (char*)nullptr;
   value     = strtol(str.data(), &next, 10);
@@ -741,12 +743,12 @@ inline void parse_pbrt_value(string_view& str, mat4f& value) {
 // parse pbrt value with optional parens
 template <typename T>
 inline void parse_pbrt_param(string_view& str, T& value) {
-  skip_pbrt_whitespace(str);
+  str = skip_pbrt_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
   parse_pbrt_value(str, value);
   if (parens) {
-    skip_pbrt_whitespace(str);
+    str = skip_pbrt_whitespace(str);
     if (!str.empty() && str.front() == '[')
       throw std::runtime_error("bad pbrt param");
     str.remove_prefix(1);
@@ -861,16 +863,16 @@ inline pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
 inline void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
   auto parse_pbrt_pvalues = [](string_view& str, auto& value, auto& values) {
     values.clear();
-    skip_pbrt_whitespace(str);
+    str = skip_pbrt_whitespace(str);
     if (str.empty()) throw std::runtime_error("bad pbrt value");
     if (str.front() == '[') {
       str.remove_prefix(1);
-      skip_pbrt_whitespace(str);
+      str = skip_pbrt_whitespace(str);
       if (str.empty()) throw std::runtime_error("bad pbrt value");
       while (!str.empty()) {
         auto& val = values.empty() ? value : values.emplace_back();
         parse_pbrt_value(str, val);
-        skip_pbrt_whitespace(str);
+        str = skip_pbrt_whitespace(str);
         if (str.empty()) break;
         if (str.front() == ']') break;
         if (values.empty()) values.push_back(value);
@@ -884,12 +886,12 @@ inline void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
   };
 
   values.clear();
-  skip_pbrt_whitespace(str);
+  str = skip_pbrt_whitespace(str);
   while (!str.empty()) {
     auto& value = values.emplace_back();
     auto  type  = ""s;
     parse_pbrt_nametype(str, value.name, type);
-    skip_pbrt_whitespace(str);
+    str = skip_pbrt_whitespace(str);
     if (str.empty()) throw std::runtime_error("expected value");
     if (type == "float") {
       value.type = pbrt_value_type::real;
@@ -950,12 +952,12 @@ inline void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
     } else if (type == "spectrum") {
       auto is_string = false;
       auto str1      = str;
-      skip_pbrt_whitespace(str1);
+      str1 = skip_pbrt_whitespace(str1);
       if (!str1.empty() && str1.front() == '"')
         is_string = true;
       else if (!str1.empty() && str1.front() == '[') {
         str1.remove_prefix(1);
-        skip_pbrt_whitespace(str1);
+        str1 = skip_pbrt_whitespace(str1);
         if (!str1.empty() && str1.front() == '"') is_string = true;
       }
       if (is_string) {
@@ -989,7 +991,7 @@ inline void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
     } else {
       throw std::runtime_error("unknown pbrt type");
     }
-    skip_pbrt_whitespace(str);
+    str = skip_pbrt_whitespace(str);
   }
 }
 
