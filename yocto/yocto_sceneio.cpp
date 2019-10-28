@@ -801,26 +801,26 @@ void load_shapes(
     for (auto& shape : scene.shapes) {
       if (!shape.positions.empty()) continue;
       if (!shape.facevarying) {
-        load_shape(dirname + shape.filename, shape.points, shape.lines,
+        if(!load_shape(dirname + shape.filename, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+            shape.texcoords, shape.colors, shape.radius)) throw std::runtime_error("cannot load " + dirname + shape.filename);
       } else {
-        load_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
+        if(!load_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
             shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords);
+            shape.texcoords)) throw std::runtime_error("cannot load " + dirname + shape.filename);
       }
     }
   } else {
     parallel_foreach(scene.shapes, [&dirname](scene_shape& shape) {
       if (!shape.positions.empty()) return;
       if (!shape.facevarying) {
-        load_shape(dirname + shape.filename, shape.points, shape.lines,
+        if(!load_shape(dirname + shape.filename, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+            shape.texcoords, shape.colors, shape.radius)) throw std::runtime_error("cannot load " + dirname + shape.filename);
       } else {
-        load_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
+        if(!load_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
             shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords);
+            shape.texcoords)) throw std::runtime_error("cannot load " + dirname + shape.filename);
       }
     });
   }
@@ -833,25 +833,25 @@ void save_shapes(const scene_model& scene, const string& dirname,
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
       if (shape.quadspos.empty()) {
-        save_shape(dirname + shape.filename, shape.points, shape.lines,
+        if(!save_shape(dirname + shape.filename, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+            shape.texcoords, shape.colors, shape.radius)) throw std::runtime_error("cannot save " + dirname + shape.filename);
       } else {
-        save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
+        if(!save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
             shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords);
+            shape.texcoords)) throw std::runtime_error("cannot load " + dirname + shape.filename);
       }
     }
   } else {
     parallel_foreach(scene.shapes, [&dirname](const scene_shape& shape) {
       if (shape.quadspos.empty()) {
-        save_shape(dirname + shape.filename, shape.points, shape.lines,
+        if(!save_shape(dirname + shape.filename, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+            shape.texcoords, shape.colors, shape.radius)) throw std::runtime_error("cannot load " + dirname + shape.filename);
       } else {
-        save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
+        if(!save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
             shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords);
+            shape.texcoords)) throw std::runtime_error("cannot load " + dirname + shape.filename);
       }
     });
   }
@@ -2396,9 +2396,9 @@ static void load_ply_scene(
   auto& shape    = scene.shapes.back();
   shape.name     = "shape";
   shape.filename = get_filename(filename);
-  load_shape(filename, shape.points, shape.lines, shape.triangles, shape.quads,
+  if(!load_shape(filename, shape.points, shape.lines, shape.triangles, shape.quads,
       shape.positions, shape.normals, shape.texcoords, shape.colors,
-      shape.radius);
+      shape.radius)) throw std::runtime_error("cannot load " + filename);
 
   // add instance
   auto instance  = scene_instance{};
