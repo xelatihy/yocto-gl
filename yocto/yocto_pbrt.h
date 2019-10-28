@@ -329,21 +329,13 @@ inline void get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value);
 inline void get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value);
 template <typename T>
 inline void get_pbrt_value(
-    const vector<pbrt_value>& pbrt, const string& name, T& value, T def) {
+    const vector<pbrt_value>& pbrt, const string& name, T& value) {
   for (auto& p : pbrt) {
     if (p.name == name) {
       get_pbrt_value(p, value);
       return;
     }
   }
-  value = def;
-}
-template <typename T>
-inline T get_pbrt_value(
-    const vector<pbrt_value>& pbrt, const string& name, T def) {
-  auto value = T{};
-  get_pbrt_value(pbrt, name, value, def);
-  return value;
 }
 
 // pbrt value construction
@@ -1055,11 +1047,11 @@ inline void convert_pbrt_films(vector<pbrt_film>& films, bool verbose = false) {
   for (auto& film : films) {
     auto& values = film.values;
     if (film.type == "image") {
-      film.resolution = {
-          get_pbrt_value(values, "xresolution", 512),
-          get_pbrt_value(values, "yresolution", 512),
-      };
-      film.filename = get_pbrt_value(values, "filename", "out.png"s);
+      film.resolution = {512, 512};
+      get_pbrt_value(values, "xresolution", film.resolution.x),
+          get_pbrt_value(values, "yresolution", film.resolution.y),
+          film.filename = "out.png"s;
+      get_pbrt_value(values, "filename", film.filename);
     } else {
       throw std::runtime_error("unsupported Film type " + film.type);
     }
@@ -1078,23 +1070,30 @@ inline void convert_pbrt_cameras(vector<pbrt_camera>& cameras,
     camera.frame   = inverse((frame3f)camera.frame);
     camera.frame.z = -camera.frame.z;
     if (camera.type == "perspective") {
-      auto fov    = get_pbrt_value(values, "fov", 90.0f) * pif / 180;
+      auto fov = 90.0f;
+      get_pbrt_value(values, "fov", fov);
+      fov *= pif / 180;
       camera.lens = 2 * tan(fov / 2) * 0.036;
       // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
-      camera.aspect = get_pbrt_value(values, "frameaspectratio", film_aspect);
-      camera.focus  = get_pbrt_value(values, "focaldistance", 10.0f);
+      camera.aspect = film_aspect;
+      get_pbrt_value(values, "frameaspectratio", camera.aspect);
+      camera.focus = 10.0f;
+      get_pbrt_value(values, "focaldistance", camera.focus);
       if (!camera.aspect) camera.aspect = 1;
       if (!camera.focus) camera.focus = 10;
     } else if (camera.type == "realistic") {
-      auto lensfile   = get_pbrt_value(values, "lensfile", ""s);
+      auto lensfile = ""s;
+      get_pbrt_value(values, "lensfile", lensfile);
       lensfile        = lensfile.substr(0, lensfile.size() - 4);
       lensfile        = lensfile.substr(lensfile.find('.') + 1);
       lensfile        = lensfile.substr(0, lensfile.size() - 2);
       auto lens       = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
       camera.lens     = 2 * atan(0.036f / (2 * lens));
-      camera.aperture = get_pbrt_value(values, "aperturediameter", 0.0f);
-      camera.focus    = get_pbrt_value(values, "focusdistance", 10.0f);
-      camera.aspect   = film_aspect;
+      camera.aperture = 0.0f;
+      get_pbrt_value(values, "aperturediameter", camera.aperture);
+      camera.focus = 10.0f;
+      get_pbrt_value(values, "focusdistance", camera.focus);
+      camera.aspect = film_aspect;
     } else {
       throw std::runtime_error("unsupported Camera type " + camera.type);
     }
@@ -1125,9 +1124,11 @@ inline void convert_pbrt_textures(
   for (auto& texture : textures) {
     auto& values = texture.values;
     if (texture.type == "imagemap") {
-      texture.filename = get_pbrt_value(values, "filename", ""s);
+      texture.filename = "";
+      get_pbrt_value(values, "filename", texture.filename);
     } else if (texture.type == "constant") {
-      texture.constant = get_pbrt_value(values, "value", vec3f{1});
+      texture.constant = vec3f{1};
+      get_pbrt_value(values, "value", texture.constant);
     } else if (texture.type == "bilerp") {
       make_placeholder(texture, {1, 0, 0});
     } else if (texture.type == "checkerboard") {
@@ -1148,8 +1149,9 @@ inline void convert_pbrt_textures(
     } else if (texture.type == "marble") {
       make_placeholder(texture, vec3f{0.5});
     } else if (texture.type == "mix") {
-      auto tex1 = get_pbrt_value(values, "tex1", pair{vec3f{0}, ""s});
-      auto tex2 = get_pbrt_value(values, "tex2", pair{vec3f{1}, ""s});
+      auto tex1 = pair{vec3f{0}, ""s}, tex2 = pair{vec3f{1}, ""s};
+      get_pbrt_value(values, "tex1", tex1);
+      get_pbrt_value(values, "tex2", tex2);
       if (!get_filename(tex1.second).empty()) {
         texture.filename = get_filename(tex1.second);
       } else if (!get_filename(tex2.second).empty()) {
@@ -1158,8 +1160,9 @@ inline void convert_pbrt_textures(
         make_placeholder(texture);
       }
     } else if (texture.type == "scale") {
-      auto tex1 = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
-      auto tex2 = get_pbrt_value(values, "tex2", pair{vec3f{1}, ""s});
+      auto tex1 = pair{vec3f{1}, ""s}, tex2 = pair{vec3f{1}, ""s};
+      get_pbrt_value(values, "tex1", tex2);
+      get_pbrt_value(values, "tex2", tex1);
       if (!get_filename(tex1.second).empty()) {
         texture.filename = get_filename(tex1.second);
       } else if (!get_filename(tex2.second).empty()) {
@@ -1193,7 +1196,8 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
   auto get_scaled_texture = [&](const vector<pbrt_value>& values,
                                 const string& name, vec3f& color,
                                 string& texture, const vec3f& def) {
-    auto textured = get_pbrt_value(values, name, pair{def, ""s});
+    auto textured = pair{def, ""s};
+    get_pbrt_value(values, name, textured);
     if (textured.second == "") {
       color   = textured.first;
       texture = "";
@@ -1208,11 +1212,13 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
 
   auto get_pbrt_roughness = [&](const vector<pbrt_value>& values,
                                 vec2f& roughness, float def = 0.1) {
-    auto roughness_ = get_pbrt_value(
-        values, "roughness", pair{vec3f{def}, ""s});
-    auto uroughness     = get_pbrt_value(values, "uroughness", roughness_);
-    auto vroughness     = get_pbrt_value(values, "vroughness", roughness_);
-    auto remaproughness = get_pbrt_value(values, "remaproughness", true);
+    auto roughness_ = pair{vec3f{def}, ""s};
+    get_pbrt_value(values, "roughness", roughness_);
+    auto uroughness = roughness_, vroughness = roughness_;
+    auto remaproughness = true;
+    get_pbrt_value(values, "uroughness", uroughness);
+    get_pbrt_value(values, "vroughness", vroughness);
+    get_pbrt_value(values, "remaproughness", remaproughness);
 
     roughness = zero2f;
     if (uroughness.first == zero3f || vroughness.first == zero3f) return;
@@ -1257,6 +1263,7 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
           values, "Ks", material.specular, material.specular_map, vec3f{0.25});
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
+      material.roughness = vec2f{0.1f};
       get_pbrt_roughness(values, material.roughness, 0.1);
       material.sspecular = material.specular *
                            eta_to_reflectivity(material.eta);
@@ -1288,6 +1295,7 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
           vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
       get_scaled_texture(values, "k", material.etak, material.etak_map,
           vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
+      material.roughness = vec2f{0.01f};
       get_pbrt_roughness(values, material.roughness, 0.01);
       material.sspecular = material.specular *
                            eta_to_reflectivity(material.eta, material.etak);
@@ -1298,6 +1306,7 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
           values, "Ks", material.specular, material.specular_map, vec3f{0.5});
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
+      material.roughness = vec2f{0.1f};
       get_pbrt_roughness(values, material.roughness, 0.1);
       material.sspecular = material.specular *
                            eta_to_reflectivity(material.eta);
@@ -1308,6 +1317,7 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
           material.transmission_map, vec3f{1});
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
+      material.roughness = vec2f{0};
       get_pbrt_roughness(values, material.roughness, 0);
       material.sspecular = material.specular *
                            eta_to_reflectivity(material.eta);
@@ -1329,6 +1339,7 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
           values, "Kr", material.specular, material.specular_map, vec3f{1});
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
+      material.roughness = vec2f{0};
       get_pbrt_roughness(values, material.roughness, 0);
       material.sspecular = material.specular *
                            eta_to_reflectivity(material.eta);
@@ -1340,10 +1351,12 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
           material.transmission_map, vec3f{1});
       get_scaled_texture(
           values, "eta", material.eta, material.eta_map, vec3f{1.5});
+      material.roughness = vec2f{0};
       get_pbrt_roughness(values, material.roughness, 0);
       material.sspecular = material.specular *
                            eta_to_reflectivity(material.eta);
-      auto scale        = get_pbrt_value(values, "scale", 1.0f);
+      auto scale = 1.0f;
+      get_pbrt_value(values, "scale", scale);
       material.volscale = 1 / scale;
       auto sigma_a = zero3f, sigma_s = zero3f;
       auto sigma_a_tex = ""s, sigma_s_tex = ""s;
@@ -1355,9 +1368,10 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
       material.volscatter      = sigma_s / (sigma_a + sigma_s);
       if (verbose) printf("subsurface material not properly supported\n");
     } else if (material.type == "mix") {
-      auto namedmaterial1 = get_pbrt_value(values, "namedmaterial1", ""s);
-      auto namedmaterial2 = get_pbrt_value(values, "namedmaterial2", ""s);
-      auto matname        = (!namedmaterial1.empty()) ? namedmaterial1
+      auto namedmaterial1 = ""s, namedmaterial2 = ""s;
+      get_pbrt_value(values, "namedmaterial1", namedmaterial1);
+      get_pbrt_value(values, "namedmaterial2", namedmaterial2);
+      auto matname = (!namedmaterial1.empty()) ? namedmaterial1
                                                : namedmaterial2;
       auto matit = std::find_if(materials.begin(), materials.end(),
           [&matname](auto& material) { return material.name == matname; });
@@ -1368,7 +1382,8 @@ inline void convert_pbrt_materials(vector<pbrt_material>& materials,
       material.name   = saved_name;
       if (verbose) printf("mix material not properly supported\n");
     } else if (material.type == "fourier") {
-      auto bsdffile = get_pbrt_value(values, "bsdffile", ""s);
+      auto bsdffile = ""s;
+      get_pbrt_value(values, "bsdffile", bsdffile);
       if (bsdffile.rfind("/") != string::npos)
         bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
       if (bsdffile == "paint.bsdf") {
@@ -1503,24 +1518,33 @@ inline void convert_pbrt_shapes(
   for (auto& shape : shapes) {
     auto& values = shape.values;
     if (shape.type == "trianglemesh") {
-      get_pbrt_value(values, "P", shape.positions, {});
-      get_pbrt_value(values, "N", shape.normals, {});
-      get_pbrt_value(values, "uv", shape.texcoords, {});
+      shape.positions = {};
+      shape.normals   = {};
+      shape.texcoords = {};
+      shape.triangles = {};
+      get_pbrt_value(values, "P", shape.positions);
+      get_pbrt_value(values, "N", shape.normals);
+      get_pbrt_value(values, "uv", shape.texcoords);
       for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
-      get_pbrt_value(values, "indices", shape.triangles, {});
+      get_pbrt_value(values, "indices", shape.triangles);
     } else if (shape.type == "loopsubdiv") {
-      get_pbrt_value(values, "P", shape.positions, {});
-      get_pbrt_value(values, "indices", shape.triangles, {});
+      shape.positions = {};
+      shape.triangles = {};
+      get_pbrt_value(values, "P", shape.positions);
+      get_pbrt_value(values, "indices", shape.triangles);
       shape.normals.resize(shape.positions.size());
       // compute_normals(shape.normals, shape.triangles, shape.positions);
     } else if (shape.type == "plymesh") {
-      shape.filename = get_pbrt_value(values, "filename", ""s);
+      shape.filename = ""s;
+      get_pbrt_value(values, "filename", shape.filename);
     } else if (shape.type == "sphere") {
-      auto radius = get_pbrt_value(values, "radius", 1.0f);
+      auto radius = 1.0f;
+      get_pbrt_value(values, "radius", radius);
       make_pbrt_sphere(shape.triangles, shape.positions, shape.normals,
           shape.texcoords, {32, 16}, radius);
     } else if (shape.type == "disk") {
-      auto radius = get_pbrt_value(values, "radius", 1.0f);
+      auto radius = 1.0f;
+      get_pbrt_value(values, "radius", radius);
       make_pbrt_disk(shape.triangles, shape.positions, shape.normals,
           shape.texcoords, {32, 1}, radius);
     } else {
@@ -1535,8 +1559,10 @@ inline void convert_pbrt_arealights(
   for (auto& light : lights) {
     auto& values = light.values;
     if (light.type == "diffuse") {
-      light.emission = get_pbrt_value(values, "L", vec3f{1, 1, 1}) *
-                       get_pbrt_value(values, "scale", vec3f{1, 1, 1});
+      auto l = vec3f{1}, scale = vec3f{1};
+      get_pbrt_value(values, "L", l);
+      get_pbrt_value(values, "scale", scale);
+      light.emission = l * scale;
     } else {
       throw std::runtime_error("unsupported arealight type " + light.type);
     }
@@ -1549,10 +1575,14 @@ inline void convert_pbrt_lights(
   for (auto& light : lights) {
     auto& values = light.values;
     if (light.type == "distant") {
-      light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
-                       get_pbrt_value(values, "L", vec3f{1, 1, 1});
-      light.from          = get_pbrt_value(values, "from", vec3f{0, 0, 0});
-      light.to            = get_pbrt_value(values, "to", vec3f{0, 0, 1});
+      auto l = vec3f{1}, scale = vec3f{1};
+      get_pbrt_value(values, "L", l);
+      get_pbrt_value(values, "scale", scale);
+      light.emission = l * scale;
+      light.from     = zero3f;
+      light.to       = vec3f{0, 0, 1};
+      get_pbrt_value(values, "from", light.from);
+      get_pbrt_value(values, "to", light.to);
       light.distant       = true;
       auto distant_dist   = 100;
       auto size           = distant_dist * sin(5 * pif / 180);
@@ -1571,9 +1601,12 @@ inline void convert_pbrt_lights(
           light.area_normals, texcoords, {4, 2}, size);
     } else if (light.type == "point" || light.type == "goniometric" ||
                light.type == "spot") {
-      light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
-                       get_pbrt_value(values, "I", vec3f{1, 1, 1});
-      light.from          = get_pbrt_value(values, "from", vec3f{0, 0, 0});
+      auto i = vec3f{1}, scale = vec3f{1};
+      get_pbrt_value(values, "I", i);
+      get_pbrt_value(values, "scale", scale);
+      light.emission = i * scale;
+      light.from     = zero3f;
+      get_pbrt_value(values, "from", light.from);
       light.area_emission = light.emission;
       light.area_frame    = light.frame * translation_frame(light.from);
       light.area_frend    = light.frend * translation_frame(light.from);
@@ -1591,9 +1624,12 @@ inline void convert_pbrt_environments(vector<pbrt_environment>& environments,
   for (auto& light : environments) {
     auto& values = light.values;
     if (light.type == "infinite") {
-      light.emission = get_pbrt_value(values, "scale", vec3f{1, 1, 1}) *
-                       get_pbrt_value(values, "L", vec3f{1, 1, 1});
-      light.filename = get_pbrt_value(values, "mapname", ""s);
+      auto l = vec3f{1}, scale = vec3f{1};
+      get_pbrt_value(values, "L", l);
+      get_pbrt_value(values, "scale", scale);
+      light.emission = scale * l;
+      light.filename = ""s;
+      get_pbrt_value(values, "mapname", light.filename);
       // environment.frame =
       // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
       // * stack.back().frame;
