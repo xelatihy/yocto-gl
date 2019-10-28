@@ -799,6 +799,563 @@ static inline string make_safe_filename(const string& filename_) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// LOW-LEVEL YAML DECLARATIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::string_view;
+using namespace std::literals::string_view_literals;
+
+// Yaml value type
+enum struct yaml_value_type { number, boolean, string, array };
+
+// Yaml value
+struct yaml_value {
+  yaml_value_type   type    = yaml_value_type::number;
+  double            number  = 0;
+  bool              boolean = false;
+  string            string_ = "";
+  array<double, 16> array_  = {};
+};
+
+// Yaml element
+struct yaml_element {
+  string                           name       = "";
+  vector<pair<string, yaml_value>> key_values = {};
+};
+
+// Yaml model
+struct yaml_model {
+  vector<string>       comments = {};
+  vector<yaml_element> elements = {};
+};
+
+// Load/save yaml
+void load_yaml(const string& filename, yaml_model& yaml);
+void save_yaml(const string& filename, const yaml_model& yaml);
+
+// Load Yaml properties
+bool read_yaml_property(file_wrapper& fs, string& group, string& key,
+    bool& newobj, yaml_value& value);
+
+// Write Yaml properties
+void write_yaml_comment(file_wrapper& fs, const string& comment);
+void write_yaml_property(file_wrapper& fs, const string& object,
+    const string& key, bool newobj, const yaml_value& value);
+void write_yaml_object(file_wrapper& fs, const string& object);
+
+// type-cheked yaml value access
+void get_yaml_value(const yaml_value& yaml, string& value);
+void get_yaml_value(const yaml_value& yaml, bool& value);
+void get_yaml_value(const yaml_value& yaml, int& value);
+void get_yaml_value(const yaml_value& yaml, float& value);
+void get_yaml_value(const yaml_value& yaml, vec2f& value);
+void get_yaml_value(const yaml_value& yaml, vec3f& value);
+void get_yaml_value(const yaml_value& yaml, mat3f& value);
+void get_yaml_value(const yaml_value& yaml, frame3f& value);
+
+// yaml value construction
+yaml_value make_yaml_value(const string& value);
+yaml_value make_yaml_value(bool value);
+yaml_value make_yaml_value(int value);
+yaml_value make_yaml_value(float value);
+yaml_value make_yaml_value(const vec2f& value);
+yaml_value make_yaml_value(const vec3f& value);
+yaml_value make_yaml_value(const mat3f& value);
+yaml_value make_yaml_value(const frame3f& value);
+
+}
+
+// -----------------------------------------------------------------------------
+// LOW-LEVEL YAML IMPLEMENTATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Read a line
+static inline bool read_yaml_line(file_wrapper& fs, char* buffer, size_t size) {
+  auto ok = fgets(buffer, size, fs.fs) != nullptr;
+  if (ok) fs.linenum += 1;
+  return ok;
+}
+
+static inline bool is_yaml_space(char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+static inline bool is_yaml_newline(char c) { return c == '\r' || c == '\n'; }
+static inline bool is_yaml_digit(char c) { return c >= '0' && c <= '9'; }
+static inline bool is_yaml_alpha(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+static inline void skip_yaml_whitespace(string_view& str) {
+  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
+}
+static inline void trim_yaml_whitespace(string_view& str) {
+  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
+  while (!str.empty() && is_yaml_space(str.back())) str.remove_suffix(1);
+}
+
+static inline bool is_yaml_whitespace(string_view str) {
+  while (!str.empty()) {
+    if (!is_yaml_space(str.front())) return false;
+    str.remove_prefix(1);
+  }
+  return true;
+}
+
+static inline void remove_yaml_comment(
+    string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_yaml_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
+}
+
+static inline void parse_yaml_varname(string_view& str, string_view& value) {
+  skip_yaml_whitespace(str);
+  if (str.empty()) throw std::runtime_error("cannot parse value");
+  if (!is_yaml_alpha(str.front())) throw std::runtime_error("cannot parse value");
+  auto pos = 0;
+  while (is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
+    pos += 1;
+    if (pos >= str.size()) break;
+  }
+  value = str.substr(0, pos);
+  str.remove_prefix(pos);
+}
+static inline void parse_yaml_varname(string_view& str, string& value) {
+  auto view = ""sv;
+  parse_yaml_varname(str, view);
+  value = string{view};
+}
+
+inline void parse_yaml_value(string_view& str, string_view& value) {
+  skip_yaml_whitespace(str);
+  if (str.empty()) throw std::runtime_error("cannot parse value");
+  if (str.front() != '"') {
+    auto cpy = str;
+    while (!cpy.empty() && !is_yaml_space(cpy.front())) cpy.remove_prefix(1);
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+  } else {
+    if (str.front() != '"') throw std::runtime_error("cannot parse value");
+    str.remove_prefix(1);
+    if (str.empty()) throw std::runtime_error("cannot parse value");
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    if (cpy.empty()) throw std::runtime_error("cannot parse value");
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    str.remove_prefix(1);
+  }
+}
+inline void parse_yaml_value(string_view& str, string& value) {
+  auto valuev = ""sv;
+  parse_yaml_value(str, valuev);
+  value = string{valuev};
+}
+inline void parse_yaml_value(string_view& str, int& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = (int)strtol(str.data(), &end, 10);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+inline void parse_yaml_value(string_view& str, float& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = strtof(str.data(), &end);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+inline void parse_yaml_value(string_view& str, double& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = strtod(str.data(), &end);
+  if (str == end) throw std::runtime_error("cannot parse value");
+  str.remove_prefix(end - str.data());
+}
+
+// parse yaml value
+void get_yaml_value(const yaml_value& yaml, string& value) {
+  if (yaml.type != yaml_value_type::string)
+    throw std::runtime_error("error parsing yaml value");
+  value = yaml.string_;
+}
+void get_yaml_value(const yaml_value& yaml, bool& value) {
+  if (yaml.type != yaml_value_type::boolean)
+    throw std::runtime_error("error parsing yaml value");
+  value = yaml.boolean;
+}
+void get_yaml_value(const yaml_value& yaml, int& value) {
+  if (yaml.type != yaml_value_type::number)
+    throw std::runtime_error("error parsing yaml value");
+  value = (int)yaml.number;
+}
+void get_yaml_value(const yaml_value& yaml, float& value) {
+  if (yaml.type != yaml_value_type::number)
+    throw std::runtime_error("error parsing yaml value");
+  value = (float)yaml.number;
+}
+void get_yaml_value(const yaml_value& yaml, vec2f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 2)
+    throw std::runtime_error("error parsing yaml value");
+  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
+}
+void get_yaml_value(const yaml_value& yaml, vec3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 3)
+    throw std::runtime_error("error parsing yaml value");
+  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
+}
+void get_yaml_value(const yaml_value& yaml, mat3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 9)
+    throw std::runtime_error("error parsing yaml value");
+  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+}
+void get_yaml_value(const yaml_value& yaml, frame3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 12)
+    throw std::runtime_error("error parsing yaml value");
+  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+}
+
+// construction
+yaml_value make_yaml_value(const string& value) {
+  return {yaml_value_type::string, 0, false, value};
+}
+yaml_value make_yaml_value(bool value) {
+  return {yaml_value_type::boolean, 0, value};
+}
+yaml_value make_yaml_value(int value) {
+  return {yaml_value_type::number, (double)value};
+}
+yaml_value make_yaml_value(float value) {
+  return {yaml_value_type::number, (double)value};
+}
+yaml_value make_yaml_value(const vec2f& value) {
+  return {
+      yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
+}
+yaml_value make_yaml_value(const vec3f& value) {
+  return {yaml_value_type::array, 3, false, "",
+      {(double)value.x, (double)value.y, (double)value.z}};
+}
+yaml_value make_yaml_value(const mat3f& value) {
+  auto yaml = yaml_value{yaml_value_type::array, 9};
+  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+yaml_value make_yaml_value(const frame3f& value) {
+  auto yaml = yaml_value{yaml_value_type::array, 12};
+  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+
+void parse_yaml_value(string_view& str, yaml_value& value) {
+  trim_yaml_whitespace(str);
+  if (str.empty()) throw std::runtime_error("bad yaml");
+  if (str.front() == '[') {
+    str.remove_prefix(1);
+    value.type   = yaml_value_type::array;
+    value.number = 0;
+    while (!str.empty()) {
+      skip_yaml_whitespace(str);
+      if (str.empty()) throw std::runtime_error("bad yaml");
+      if (str.front() == ']') {
+        str.remove_prefix(1);
+        break;
+      }
+      if (value.number >= 16) throw std::runtime_error("array too large");
+      parse_yaml_value(str, value.array_[(int)value.number]);
+      value.number += 1;
+      skip_yaml_whitespace(str);
+      if (str.front() == ',') {
+        str.remove_prefix(1);
+        continue;
+      } else if (str.front() == ']') {
+        str.remove_prefix(1);
+        break;
+      } else {
+        throw std::runtime_error("bad yaml");
+      }
+    }
+  } else if (is_yaml_digit(str.front()) || str.front() == '-' ||
+             str.front() == '+') {
+    value.type = yaml_value_type::number;
+    parse_yaml_value(str, value.number);
+  } else {
+    value.type = yaml_value_type::string;
+    parse_yaml_value(str, value.string_);
+    if (value.string_ == "true" || value.string_ == "false") {
+      value.type    = yaml_value_type::boolean;
+      value.boolean = value.string_ == "true";
+    }
+  }
+  skip_yaml_whitespace(str);
+  if (!str.empty() && !is_yaml_whitespace(str)) throw std::runtime_error("bad yaml");
+}
+
+// Load/save yaml
+void load_yaml(const string& filename, yaml_model& yaml) {
+  auto fs = open_file(filename, "rt");
+
+  // read the file line by line
+  auto group = ""s;
+  auto key   = ""s;
+  auto value = yaml_value{};
+  char buffer[4096];
+  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_yaml_comment(line);
+    if (line.empty()) continue;
+    if (is_yaml_whitespace(line)) continue;
+
+    // peek commands
+    if (is_yaml_space(line.front())) {
+      // indented property
+      if (group == "") throw std::runtime_error("bad yaml");
+      skip_yaml_whitespace(line);
+      if (line.empty()) throw std::runtime_error("bad yaml");
+      if (line.front() == '-') {
+        auto& element = yaml.elements.emplace_back();
+        element.name  = group;
+        line.remove_prefix(1);
+        skip_yaml_whitespace(line);
+      } else if (yaml.elements.empty() || yaml.elements.back().name != group) {
+        auto& element = yaml.elements.emplace_back();
+        element.name  = group;
+      }
+      parse_yaml_varname(line, key);
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
+      line.remove_prefix(1);
+      parse_yaml_value(line, value);
+      yaml.elements.back().key_values.push_back({key, value});
+    } else if (is_yaml_alpha(line.front())) {
+      // new group
+      parse_yaml_varname(line, key);
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
+      line.remove_prefix(1);
+      if (!line.empty() && !is_yaml_whitespace(line)) {
+        group = "";
+        if (yaml.elements.empty() || yaml.elements.back().name != group) {
+          auto& element = yaml.elements.emplace_back();
+          element.name  = group;
+        }
+        parse_yaml_value(line, value);
+        yaml.elements.back().key_values.push_back({key, value});
+      } else {
+        group = key;
+        key   = "";
+      }
+    } else {
+      throw std::runtime_error("bad yaml");
+    }
+  }
+}
+
+static inline void format_yaml_value(string& str, const string& value) {
+  str += value;
+}
+static inline void format_yaml_value(string& str, const char* value) {
+  str += value;
+}
+static inline void format_yaml_value(string& str, double value) {
+  char buf[256];
+  sprintf(buf, "%g", value);
+  str += buf;
+}
+
+static inline void format_yaml_values(string& str, const string& fmt) {
+  auto pos = fmt.find("{}");
+  if (pos != string::npos) throw std::runtime_error("bad format string");
+  str += fmt;
+}
+template <typename Arg, typename... Args>
+static inline void format_yaml_values(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+  auto pos = fmt.find("{}");
+  if (pos == string::npos) throw std::runtime_error("bad format string");
+  str += fmt.substr(0, pos);
+  format_yaml_value(str, arg);
+  format_yaml_values(str, fmt.substr(pos + 2), args...);
+}
+
+template <typename... Args>
+static inline void format_yaml_values(
+    file_wrapper& fs, const string& fmt, const Args&... args) {
+  auto str = ""s;
+  format_yaml_values(str, fmt, args...);
+  if (fputs(str.c_str(), fs.fs) < 0)
+    throw std::runtime_error("cannor write to " + fs.filename);
+}
+template <typename T>
+static inline void format_yaml_value(file_wrapper& fs, const T& value) {
+  auto str = ""s;
+  format_yaml_value(str, value);
+  if (fputs(str.c_str(), fs.fs) < 0)
+    throw std::runtime_error("cannor write to " + fs.filename);
+}
+
+static inline void format_yaml_value(string& str, const yaml_value& value) {
+  switch (value.type) {
+    case yaml_value_type::number: format_yaml_value(str, value.number); break;
+    case yaml_value_type::boolean:
+      format_yaml_value(str, value.boolean ? "true" : "false");
+      break;
+    case yaml_value_type::string:
+      if (value.string_.empty() || is_yaml_digit(value.string_.front())) {
+        format_yaml_values(str, "\"{}\"", value.string_);
+      } else {
+        format_yaml_values(str, "{}", value.string_);
+      }
+      break;
+    case yaml_value_type::array:
+      format_yaml_value(str, "[ ");
+      for (auto i = 0; i < value.number; i++) {
+        if (i) format_yaml_value(str, ", ");
+        format_yaml_value(str, value.array_[i]);
+      }
+      format_yaml_value(str, " ]");
+      break;
+  }
+}
+
+void save_yaml(const string& filename, const yaml_model& yaml) {
+  auto fs = open_file(filename, "wt");
+
+  // save comments
+  format_yaml_values(fs, "#\n");
+  format_yaml_values(fs, "# Written by Yocto/GL\n");
+  format_yaml_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+  format_yaml_values(fs, "#\n\n");
+  for (auto& comment : yaml.comments) {
+    format_yaml_values(fs, "# {}\n", comment);
+  }
+  format_yaml_values(fs, "\n");
+
+  auto group = ""s;
+  for (auto& element : yaml.elements) {
+    if (group != element.name) {
+      group = element.name;
+      if (group != "") {
+        format_yaml_values(fs, "\n{}:\n", group);
+      } else {
+        format_yaml_values(fs, "\n");
+      }
+      auto first = true;
+      for (auto& [key, value] : element.key_values) {
+        if (group != "") {
+          format_yaml_values(fs, "  {} {}: {}\n", first ? "-" : " ", key, value);
+          first = false;
+        } else {
+          format_yaml_values(fs, "{}: {}\n", key, value);
+        }
+      }
+    }
+  }
+}
+
+bool read_yaml_property(file_wrapper& fs, string& group, string& key,
+    bool& newobj, yaml_value& value) {
+  // read the file line by line
+  char buffer[4096];
+  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_yaml_comment(line);
+    if (line.empty()) continue;
+    if (is_yaml_whitespace(line)) continue;
+
+    // peek commands
+    if (is_yaml_space(line.front())) {
+      // indented property
+      if (group == "") throw std::runtime_error("bad yaml");
+      skip_yaml_whitespace(line);
+      if (line.empty()) throw std::runtime_error("bad yaml");
+      if (line.front() == '-') {
+        newobj = true;
+        line.remove_prefix(1);
+        skip_yaml_whitespace(line);
+      } else {
+        newobj = false;
+      }
+      parse_yaml_varname(line, key);
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
+      line.remove_prefix(1);
+      parse_yaml_value(line, value);
+      return true;
+    } else if (is_yaml_alpha(line.front())) {
+      // new group
+      parse_yaml_varname(line, key);
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':')
+        throw std::runtime_error("bad yaml");
+      line.remove_prefix(1);
+      if (!line.empty() && !is_yaml_whitespace(line)) {
+        group = "";
+        parse_yaml_value(line, value);
+        return true;
+      } else {
+        group = key;
+        key   = "";
+        return true;
+      }
+    } else {
+      throw std::runtime_error("bad yaml");
+    }
+  }
+  return false;
+}
+
+static inline vector<string> split_yaml_string(
+    const string& str, const string& delim) {
+  auto tokens = vector<string>{};
+  auto last = (size_t)0, next = (size_t)0;
+  while ((next = str.find(delim, last)) != string::npos) {
+    tokens.push_back(str.substr(last, next - last));
+    last = next + delim.size();
+  }
+  if (last < str.size()) tokens.push_back(str.substr(last));
+  return tokens;
+}
+
+void write_yaml_comment(file_wrapper& fs, const string& comment) {
+  auto lines = split_yaml_string(comment, "\n");
+  for (auto& line : lines) {
+    format_yaml_values(fs, "# {}\n", line);
+  }
+  format_yaml_values(fs, "\n");
+}
+
+// Save yaml property
+void write_yaml_property(file_wrapper& fs, const string& object,
+    const string& key, bool newobj, const yaml_value& value) {
+  if (key.empty()) {
+    format_yaml_values(fs, "\n{}:\n", object);
+  } else {
+    if (!object.empty()) {
+      format_yaml_values(fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value);
+    } else {
+      format_yaml_values(fs, "{}: {}\n", key, value);
+    }
+  }
+}
+
+void write_yaml_object(file_wrapper& fs, const string& object) {
+  format_yaml_values(fs, "\n{}:\n", object);
+}
+
+}
+
+// -----------------------------------------------------------------------------
 // YAML SUPPORT
 // -----------------------------------------------------------------------------
 namespace yocto {
