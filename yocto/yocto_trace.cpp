@@ -28,13 +28,10 @@
 
 //
 // TODO: better documentation
-// TODO: inline BVH
-// TODO: inline cdfs
-// TODO: consider removing dependency from image/shape
+// TODO: consider removing dependency from image
 //
 
 #include "yocto_trace.h"
-// #include "yocto_shape.h"
 
 #include <atomic>
 #include <deque>
