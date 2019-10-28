@@ -36,6 +36,13 @@
 // quads.
 //
 //
+// ## Images
+//
+// Yocto/Math contains a simple image container that can be used to store 
+// generic images. The container is similar in spirit to `std::vector`.
+// We provide only minimal image functions including lookup and sampling.
+// 
+//
 // ## Transforms
 //
 // For both matrices and frames we support transform operations for points,
@@ -57,6 +64,14 @@
 // parametrization where u and v go from 0 to 1. Degenerate quads with p2==p3
 // represent triangles correctly, an this convention is used throught the
 // library. This is equivalent to Intel's Embree.
+//
+//
+// ## Color funtions
+//
+// This library support a small number of color operations helpful in writing
+// graphics applications. In particular, we support color conversion to/from 
+// linear rgb, srgb, hsv, xyz, byte to flot color conversions and a few color
+// manipulations like contrast and saturation.
 //
 //
 // ## Random Number Generation
