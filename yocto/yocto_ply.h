@@ -944,10 +944,10 @@ inline void save_ply(const string& filename, const ply_model& ply) {
                 format_ply_values(fs, "{} ", prop.data_i64[cur[idx]++]);
                 break;
               case ply_type::u8:
-                format_ply_values(fs, "{} ", prop.data_i8[cur[idx]++]);
+                format_ply_values(fs, "{} ", prop.data_u8[cur[idx]++]);
                 break;
               case ply_type::u16:
-                format_ply_values(fs, "{} ", prop.data_i16[cur[idx]++]);
+                format_ply_values(fs, "{} ", prop.data_u16[cur[idx]++]);
                 break;
               case ply_type::u32:
                 format_ply_values(fs, "{} ", prop.data_u32[cur[idx]++]);
@@ -956,10 +956,10 @@ inline void save_ply(const string& filename, const ply_model& ply) {
                 format_ply_values(fs, "{} ", prop.data_u64[cur[idx]++]);
                 break;
               case ply_type::f32:
-                format_ply_values(fs, "{}", prop.data_f32[cur[idx]++]);
+                format_ply_values(fs, "{} ", prop.data_f32[cur[idx]++]);
                 break;
               case ply_type::f64:
-                format_ply_values(fs, "{}", prop.data_f64[cur[idx]++]);
+                format_ply_values(fs, "{} ", prop.data_f64[cur[idx]++]);
                 break;
             }
           }
@@ -991,10 +991,10 @@ inline void save_ply(const string& filename, const ply_model& ply) {
                 write_ply_value(fs, prop.data_i64[cur[pidx]++], big_endian);
                 break;
               case ply_type::u8:
-                write_ply_value(fs, prop.data_i8[cur[pidx]++], big_endian);
+                write_ply_value(fs, prop.data_u8[cur[pidx]++], big_endian);
                 break;
               case ply_type::u16:
-                write_ply_value(fs, prop.data_i16[cur[pidx]++], big_endian);
+                write_ply_value(fs, prop.data_u16[cur[pidx]++], big_endian);
                 break;
               case ply_type::u32:
                 write_ply_value(fs, prop.data_u32[cur[pidx]++], big_endian);
