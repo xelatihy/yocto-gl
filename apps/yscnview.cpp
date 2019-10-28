@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_common.h"
 #include "../yocto/yocto_cmdline.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_sceneio.h"
@@ -35,6 +34,7 @@
 using namespace yocto;
 
 #include <list>
+#include <future>
 
 #ifdef _WIN32
 #undef near
@@ -124,7 +124,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.load_prms   = app.load_prms;
   app.save_prms   = app.save_prms;
   app.drawgl_prms = app.drawgl_prms;
-  apps.loaders.push_back(run_async([&app]() {
+  apps.loaders.push_back(std::async(std::launch::async, [&app]() {
     load_scene(app.filename, app.scene);
     app.time_range = compute_animation_range(app.scene);
     app.time       = app.time_range.x;
@@ -608,6 +608,11 @@ void draw(const opengl_window& win) {
 
 // update
 void update(const opengl_window& win, app_states& apps) {
+  auto is_ready = [](const std::future<void>& result) -> bool {
+  return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
+                               std::future_status::ready;
+  };
+
   while (!apps.loaders.empty() && is_ready(apps.loaders.front())) {
     try {
       apps.loaders.front().get();

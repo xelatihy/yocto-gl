@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_common.h"
 #include "../yocto/yocto_cmdline.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
@@ -35,7 +34,7 @@
 using namespace yocto;
 
 #include <list>
-#include <map>
+#include <future>
 
 namespace yocto {
 void print_obj_camera(const scene_camera& camera);
@@ -108,6 +107,31 @@ struct app_states {
   tonemap_params tonemap_prms = {};
   bool           add_skyenv   = false;
 };
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(int begin, int end, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(begin);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, end]() {
+          while (true) {
+            auto idx = next_idx.fetch_add(1);
+            if (idx >= end) break;
+            func(idx);
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
+template <typename Func>
+inline void parallel_for(int num, Func&& func) {
+  parallel_for(0, num, std::forward<Func>(func));
+}
 
 // convert scene objects
 void update_trace_camera(trace_camera& camera, const scene_camera& iocamera) {
@@ -231,7 +255,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.trace_prms   = app.trace_prms;
   app.tonemap_prms = app.tonemap_prms;
   app.add_skyenv   = app.add_skyenv;
-  apps.loaders.push_back(run_async([&app]() {
+  apps.loaders.push_back(std::async(std::launch::async, [&app]() {
     load_scene(app.filename, app.ioscene);
     app.trscene = make_trace_scene(app.ioscene);
     init_bvh(app.trscene, app.trace_prms);
@@ -611,6 +635,11 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_states& app) {
+  auto is_ready = [](const std::future<void>& result) -> bool {
+  return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
+                               std::future_status::ready;
+  };
+
   while (!app.loaders.empty() && is_ready(app.loaders.front())) {
     try {
       app.loaders.front().get();
@@ -757,17 +786,6 @@ int main(int argc, const char* argv[]) {
   app.trace_prms.batch = 1;
   auto no_parallel     = false;
   auto filenames       = vector<string>{};
-
-  // names for enums
-  auto sampler_namemap = std::map<string, trace_sampler_type>{};
-  for (auto type = 0; type < trace_sampler_names.size(); type++) {
-    sampler_namemap[trace_sampler_names[type]] = (trace_sampler_type)type;
-  }
-  auto falsecolor_namemap = std::map<string, trace_falsecolor_type>{};
-  for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
-    falsecolor_namemap[trace_falsecolor_names[type]] =
-        (trace_falsecolor_type)type;
-  }
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");
