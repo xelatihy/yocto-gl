@@ -503,20 +503,6 @@ inline void parse_ply_value(string_view& str, double& value) {
   if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
 }
-template <typename T>
-inline void parse_ply_value(string_view& str, T* values, int num) {
-  for (auto i = 0; i < num; i++) parse_ply_value(str, values[i]);
-}
-
-inline void parse_ply_value(string_view& str, vec2f& value) {
-  parse_ply_value(str, &value.x, 2);
-}
-inline void parse_ply_value(string_view& str, vec3f& value) {
-  parse_ply_value(str, &value.x, 3);
-}
-inline void parse_ply_value(string_view& str, frame3f& value) {
-  parse_ply_value(str, &value.x.x, 12);
-}
 #ifdef __APPLE__
 inline void parse_ply_value(string_view& str, size_t& value) {
   char* end = nullptr;
@@ -584,43 +570,6 @@ inline void format_ply_value(string& str, float value) {
 inline void format_ply_value(string& str, double value) {
   char buf[256];
   sprintf(buf, "%g", value);
-  str += buf;
-}
-inline void format_ply_value(string& str, const vec2f& value) {
-  char buf[256];
-  sprintf(buf, "%g %g", value.x, value.y);
-  str += buf;
-}
-inline void format_ply_value(string& str, const vec3f& value) {
-  char buf[256];
-  sprintf(buf, "%g %g %g", value.x, value.y, value.z);
-  str += buf;
-}
-#if 0
-inline void format_ply_value(string& str, const vec2i& value) {
-  char buf[256];
-  sprintf(buf, "%d %d", value.x, value.y);
-  str += buf;
-}
-inline void format_ply_value(string& str, const vec3i& value) {
-  char buf[256];
-  sprintf(buf, "%d %d %d", value.x, value.y, value.z);
-  str += buf;
-}
-#endif
-inline void format_ply_value(string& str, const frame3f& value) {
-  char buf[512];
-  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g", value.x.x, value.x.y,
-      value.x.z, value.y.x, value.y.y, value.y.z, value.z.x, value.z.y,
-      value.z.z, value.o.x, value.o.y, value.o.z);
-  str += buf;
-}
-inline void format_ply_value(string& str, const mat4f& value) {
-  char buf[512];
-  sprintf(buf, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g", value.x.x,
-      value.x.y, value.x.z, value.x.w, value.y.x, value.y.y, value.y.z,
-      value.y.w, value.z.x, value.z.y, value.z.z, value.z.w, value.w.x,
-      value.w.y, value.w.z, value.w.w);
   str += buf;
 }
 
