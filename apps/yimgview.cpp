@@ -160,7 +160,7 @@ void load_image_async(app_states& apps, const string& filename) {
   app.colorgrade_prms = app.colorgrade_prms;
   apps.selected       = (int)apps.states.size() - 1;
   apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
-    if(!load_image(app.filename, app.source)) {
+    if (!load_image(app.filename, app.source)) {
       app.error = "cannot load " + app.filename;
       return false;
     }
@@ -317,7 +317,7 @@ void update(const opengl_window& win, app_states& app) {
   };
 
   while (!app.loaders.empty() && is_ready(app.loaders.front())) {
-    if(!app.loaders.front().get()) {
+    if (!app.loaders.front().get()) {
       push_glmessage(win, "cannot load image " + app.loading.front().filename);
       log_glinfo(win, "cannot load image " + app.loading.front().filename);
       log_glinfo(win, app.loading.front().error);

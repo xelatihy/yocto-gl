@@ -1398,7 +1398,7 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
       sub_imgs.at(i).resize(img.size());
-      if(!make_image_preset(sub_imgs.at(i), sub_types.at(i)))     return true;
+      if (!make_image_preset(sub_imgs.at(i), sub_types.at(i))) return true;
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
@@ -1416,7 +1416,7 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
     auto sub_types = vector<string>{"sky", "sunsky"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      if(!make_image_preset(sub_imgs.at(i), sub_types.at(i)))     return true;
+      if (!make_image_preset(sub_imgs.at(i), sub_types.at(i))) return true;
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
@@ -1500,7 +1500,8 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
     params.type = proc_image_params::type_t::bumps;
     make_proc_image(img, params);
     auto bump = img;
-    bump_to_normal(img, bump, 0.05f);    return true;
+    bump_to_normal(img, bump, 0.05f);
+    return true;
   } else if (type == "test-bumps-displacement") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
@@ -1517,13 +1518,13 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
 }
 image<vec4f> make_image_preset(const string& type) {
   auto img = image<vec4f>{};
-  if(!make_image_preset(img, type)) return {};
+  if (!make_image_preset(img, type)) return {};
   return img;
 }
 
 bool make_image_preset(image<vec4b>& img, const string& type) {
   auto imgf = image<vec4f>{};
-  if(!make_image_preset(imgf, type)) return false;
+  if (!make_image_preset(imgf, type)) return false;
   if (type.find("-normal") == type.npos &&
       type.find("-displacement") == type.npos) {
     rgb_to_srgb(img, imgf);
@@ -1537,7 +1538,7 @@ bool make_image_preset(
     image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
   if (type.find("sky") == type.npos) {
     auto imgf = image<vec4f>{};
-    if(!make_image_preset(imgf, type)) return false;
+    if (!make_image_preset(imgf, type)) return false;
     if (type.find("-normal") == type.npos) {
       rgb_to_srgb(ldr, imgf);
     } else {
@@ -1819,7 +1820,7 @@ bool is_hdr_filename(const string& filename) {
 // Loads an hdr image.
 image<vec4f> load_image(const string& filename) {
   auto img = image<vec4f>{};
-  if(!load_image(filename, img)) return {};
+  if (!load_image(filename, img)) return {};
   return img;
 }
 
@@ -1832,7 +1833,8 @@ bool load_image(const string& filename, image<vec4f>& img) {
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0) return false;
+    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
+      return false;
     if (!pixels) return false;
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
@@ -1853,7 +1855,7 @@ bool load_image(const string& filename, image<vec4f>& img) {
     return true;
   } else if (!is_hdr_filename(filename)) {
     auto imgb = image<vec4b>{};
-    if(!load_imageb(filename, imgb)) return false;
+    if (!load_imageb(filename, imgb)) return false;
     img = srgb_to_rgb(imgb);
     return true;
   } else {
@@ -1865,14 +1867,14 @@ bool load_image(const string& filename, image<vec4f>& img) {
 bool save_image(const string& filename, const image<vec4f>& img) {
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
-    return stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data());
+    return stbi_write_hdr(
+        filename.c_str(), img.size().x, img.size().y, 4, (float*)img.data());
   } else if (ext == ".pfm" || ext == ".PFM") {
-    return save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data());
+    return save_pfm(
+        filename.c_str(), img.size().x, img.size().y, 4, (float*)img.data());
   } else if (ext == ".exr" || ext == ".EXR") {
     return SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
-            filename.c_str()) >= 0;
+               filename.c_str()) >= 0;
   } else if (!is_hdr_filename(filename)) {
     return save_imageb(filename, rgb_to_srgbb(img));
   } else {
@@ -1883,7 +1885,7 @@ bool save_image(const string& filename, const image<vec4f>& img) {
 // Loads an ldr image.
 image<vec4b> load_imageb(const string& filename) {
   auto img = image<vec4b>{};
-  if(!load_imageb(filename, img)) return {};
+  if (!load_imageb(filename, img)) return {};
   return img;
 }
 
@@ -1903,7 +1905,7 @@ bool load_imageb(const string& filename, image<vec4b>& img) {
     return true;
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{};
-    if(!load_image(filename, imgf)) return false;
+    if (!load_image(filename, imgf)) return false;
     img = rgb_to_srgbb(imgf);
     return true;
   } else {
@@ -1916,16 +1918,16 @@ bool save_imageb(const string& filename, const image<vec4b>& img) {
   auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
     return stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data(), img.size().x * 4);
+        img.data(), img.size().x * 4);
   } else if (ext == ".jpg" || ext == ".JPG") {
     return stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75);
+        filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75);
   } else if (ext == ".tga" || ext == ".TGA") {
     return stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data());
+        filename.c_str(), img.size().x, img.size().y, 4, img.data());
   } else if (ext == ".bmp" || ext == ".BMP") {
     return stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data());
+        filename.c_str(), img.size().x, img.size().y, 4, img.data());
   } else if (is_hdr_filename(filename)) {
     return save_image(filename, srgb_to_rgb(img));
   } else {

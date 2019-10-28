@@ -154,14 +154,14 @@ int main(int argc, const char* argv[]) {
 
   // load
   auto img = image<vec4f>();
-  if(!load_image(filename, img)) {
+  if (!load_image(filename, img)) {
     print_fatal("cannor load " + filename);
   }
 
   // set alpha
   if (alpha_filename != "") {
     auto alpha = image<vec4f>();
-    if(!load_image(alpha_filename, alpha)) {
+    if (!load_image(alpha_filename, alpha)) {
       print_fatal("cannor load " + alpha_filename);
     }
     if (img.size() != alpha.size()) print_fatal("bad image size");
@@ -172,7 +172,7 @@ int main(int argc, const char* argv[]) {
   // set alpha
   if (coloralpha_filename != "") {
     auto alpha = image<vec4f>();
-    if(!load_image(coloralpha_filename, alpha)) {
+    if (!load_image(coloralpha_filename, alpha)) {
       print_fatal("cannor load " + coloralpha_filename);
     }
     if (img.size() != alpha.size()) print_fatal("bad image size");
@@ -184,7 +184,7 @@ int main(int argc, const char* argv[]) {
   // diff
   if (diff_filename != "") {
     auto diff = image<vec4f>();
-    if(!load_image(diff_filename, diff)) {
+    if (!load_image(diff_filename, diff)) {
       print_fatal("cannor load " + diff_filename);
     }
     if (img.size() != diff.size()) print_fatal("image sizes are different");
@@ -209,15 +209,16 @@ int main(int argc, const char* argv[]) {
   }
 
   // save
-    if (do_tonemap && tonemap_prms.srgb) {
-      if(!save_image(output, logo ? add_logo(srgb_to_rgb(img)) : srgb_to_rgb(img))) {
-        print_fatal("cannor save " + output);
-      }
-    } else {
-      if(!save_image(output, logo ? add_logo(img) : img))  {
-    print_fatal("cannor save " + output);
-  }
+  if (do_tonemap && tonemap_prms.srgb) {
+    if (!save_image(
+            output, logo ? add_logo(srgb_to_rgb(img)) : srgb_to_rgb(img))) {
+      print_fatal("cannor save " + output);
     }
+  } else {
+    if (!save_image(output, logo ? add_logo(img) : img)) {
+      print_fatal("cannor save " + output);
+    }
+  }
 
   // check diff
   if (diff_filename != "" && diff_signal) {
