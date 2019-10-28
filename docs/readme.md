@@ -73,8 +73,6 @@ See each header file for documentation.
 - `yocto/yocto_pbrt.h`: parsing and wiring for Pbrt format
 - `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Obj, pbrt, glTF,
    and a custom, hackable, Yaml format
-- `yocto/yocto_common.h`: vocabulary types, container utilities, 
-   Python-like operations, concurrency utilies, timer
 - `yocto/yocto_cmdline.h`: printing utilities, file io utilities, 
   command line parsing
 
