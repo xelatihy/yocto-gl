@@ -155,7 +155,7 @@ int main(int argc, const char* argv[]) {
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load image
-  load_image(app.filename, app.source);
+  if(!load_image(app.filename, app.source)) print_fatal("cannot load " + app.filename);
   update_display(app);
 
   // run ui
