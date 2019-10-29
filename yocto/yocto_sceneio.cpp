@@ -857,7 +857,7 @@ bool load_shapes(
         ok = false;
       }
     });
-    return !ok;
+    return ok;
   }
 }
 
