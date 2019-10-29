@@ -653,33 +653,33 @@ void update_transforms(
 namespace yocto {
 
 // Load/save a scene in the builtin YAML format.
-static void load_yaml_scene(
-    const string& filename, scene_model& scene, const load_params& params);
-static void save_yaml_scene(const string& filename, const scene_model& scene,
+static bool load_yaml_scene(
+    const string& filename, scene_model& scene, string& error, const load_params& params);
+static bool save_yaml_scene(const string& filename, const scene_model& scene, string& error,
     const save_params& params);
 
 // Load/save a scene from/to OBJ.
-static void load_obj_scene(
-    const string& filename, scene_model& scene, const load_params& params);
-static void save_obj_scene(const string& filename, const scene_model& scene,
+static bool load_obj_scene(
+    const string& filename, scene_model& scene, string& error,const load_params& params);
+static bool save_obj_scene(const string& filename, const scene_model& scene, string& error,
     const save_params& params);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static void load_ply_scene(
-    const string& filename, scene_model& scene, const load_params& params);
-static void save_ply_scene(const string& filename, const scene_model& scene,
+static bool load_ply_scene(
+    const string& filename, scene_model& scene, string& error,const load_params& params);
+static bool save_ply_scene(const string& filename, const scene_model& scene, string& error,
     const save_params& params);
 
 // Load/save a scene from/to glTF.
-static void load_gltf_scene(
-    const string& filename, scene_model& scene, const load_params& params);
+static bool load_gltf_scene(
+    const string& filename, scene_model& scene, string& error,const load_params& params);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static void load_pbrt_scene(
-    const string& filename, scene_model& scene, const load_params& params);
-static void save_pbrt_scene(const string& filename, const scene_model& scene,
+static bool load_pbrt_scene(
+    const string& filename, scene_model& scene, string& error,const load_params& params);
+static bool save_pbrt_scene(const string& filename, const scene_model& scene, string& error,
     const save_params& params);
 
 bool load_scene(
@@ -696,24 +696,20 @@ bool save_scene(const string& filename, const scene_model& scene,
 // Load a scene
 bool load_scene(const string& filename, scene_model& scene, string& error,
     const load_params& params) {
-  try {
-    auto ext = get_extension(filename);
-    if (ext == ".yaml" || ext == ".YAML") {
-      load_yaml_scene(filename, scene, params);
-    } else if (ext == ".obj" || ext == ".OBJ") {
-      load_obj_scene(filename, scene, params);
-    } else if (ext == ".gltf" || ext == ".GLTF") {
-      load_gltf_scene(filename, scene, params);
-    } else if (ext == ".pbrt" || ext == ".PBRT") {
-      load_pbrt_scene(filename, scene, params);
-    } else if (ext == ".ply" || ext == ".PLY") {
-      load_ply_scene(filename, scene, params);
-    } else {
-      scene = {};
-      throw std::runtime_error("unsupported scene format " + ext);
-    }
-  } catch (std::exception& e) {
-    error = "cannot load scene " + filename + "\n" + e.what();
+  auto ext = get_extension(filename);
+  if (ext == ".yaml" || ext == ".YAML") {
+    return load_yaml_scene(filename, scene, error, params);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    return load_obj_scene(filename, scene, error, params);
+  } else if (ext == ".gltf" || ext == ".GLTF") {
+    return load_gltf_scene(filename, scene, error, params);
+  } else if (ext == ".pbrt" || ext == ".PBRT") {
+    return load_pbrt_scene(filename, scene, error, params);
+  } else if (ext == ".ply" || ext == ".PLY") {
+    return load_ply_scene(filename, scene, error, params);
+  } else {
+    scene = {};
+    error = "unsupported scene format " + ext;
     return false;
   }
   return true;
@@ -722,24 +718,19 @@ bool load_scene(const string& filename, scene_model& scene, string& error,
 // Save a scene
 bool save_scene(const string& filename, const scene_model& scene, string& error,
     const save_params& params) {
-  try {
-    auto ext = get_extension(filename);
-    if (ext == ".yaml" || ext == ".YAML") {
-      save_yaml_scene(filename, scene, params);
-    } else if (ext == ".obj" || ext == ".OBJ") {
-      save_obj_scene(filename, scene, params);
-    } else if (ext == ".pbrt" || ext == ".PBRT") {
-      save_pbrt_scene(filename, scene, params);
-    } else if (ext == ".ply" || ext == ".PLY") {
-      save_ply_scene(filename, scene, params);
-    } else {
-      throw std::runtime_error("unsupported scene format " + ext);
-    }
-  } catch (std::exception& e) {
-    error = "cannot save scene " + filename + "\n" + e.what();
+  auto ext = get_extension(filename);
+  if (ext == ".yaml" || ext == ".YAML") {
+    return save_yaml_scene(filename, scene, error, params);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    return save_obj_scene(filename, scene, error, params);
+  } else if (ext == ".pbrt" || ext == ".PBRT") {
+    return save_pbrt_scene(filename, scene, error, params);
+  } else if (ext == ".ply" || ext == ".PLY") {
+    return save_ply_scene(filename, scene, error, params);
+  } else {
+    error = "unsupported scene format " + ext;
     return false;
   }
-  return true;
 }
 
 bool load_texture(scene_texture& texture, const string& dirname) {
@@ -747,28 +738,6 @@ bool load_texture(scene_texture& texture, const string& dirname) {
     return load_image(dirname + texture.filename, texture.hdr);
   } else {
     return load_imageb(dirname + texture.filename, texture.ldr);
-  }
-}
-
-void load_textures(
-    scene_model& scene, const string& dirname, const load_params& params) {
-  if (params.notextures) return;
-
-  // load images
-  if (params.noparallel) {
-    for (auto& texture : scene.textures) {
-      if (!texture.hdr.empty() || !texture.ldr.empty()) return;
-      if (!load_texture(texture, dirname))
-        throw std::runtime_error(
-            "cannot load image " + dirname + texture.filename);
-    }
-  } else {
-    parallel_foreach(scene.textures, [&dirname](scene_texture& texture) {
-      if (!texture.hdr.empty() || !texture.ldr.empty()) return;
-      if (!load_texture(texture, dirname))
-        throw std::runtime_error(
-            "cannot load image " + dirname + texture.filename);
-    });
   }
 }
 
@@ -780,96 +749,142 @@ bool save_texture(const scene_texture& texture, const string& dirname) {
   }
 }
 
+bool load_textures(
+    scene_model& scene, const string& dirname, string& error, const load_params& params) {
+  if (params.notextures) return true;
+
+  // load images
+  if (params.noparallel) {
+    for (auto& texture : scene.textures) {
+      if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
+      if (!load_texture(texture, dirname)) {
+        error = "cannot load " + dirname + texture.filename;
+        return false;
+      }
+    }
+    return true;
+  } else {
+    auto mutex = std::mutex{};
+    auto ok = std::atomic<bool>{true};
+    parallel_foreach(scene.textures, [&dirname, &mutex, &ok, &error](scene_texture& texture) {
+      if(!ok) return;
+      if (!texture.hdr.empty() || !texture.ldr.empty()) return;
+      if (!load_texture(texture, dirname))  {
+        auto lock = std::lock_guard{mutex};
+        error = "cannot load " + dirname + texture.filename;
+        ok = false;
+      }
+    });
+    return ok;
+  }
+}
+
 // helper to save textures
-void save_textures(const scene_model& scene, const string& dirname,
+bool save_textures(const scene_model& scene, const string& dirname, string& error,
     const save_params& params) {
-  if (params.notextures) return;
+  if (params.notextures) return true;
 
   // save images
   if (params.noparallel) {
     for (auto& texture : scene.textures) {
-      if (!save_texture(texture, dirname))
-        throw std::runtime_error(
-            "cannot load image " + dirname + texture.filename);
+      if (!save_texture(texture, dirname)) {
+        error = "cannot save " + dirname + texture.filename;
+        return false;
+      }
     }
+    return true;
   } else {
-    parallel_foreach(scene.textures, [&dirname](const scene_texture& texture) {
-      if (!save_texture(texture, dirname))
-        throw std::runtime_error(
-            "cannot load image " + dirname + texture.filename);
+    auto mutex = std::mutex{};
+    auto ok = std::atomic<bool>{true};
+    parallel_foreach(scene.textures, [&dirname, &ok, &mutex, &error](const scene_texture& texture) {
+      if(!ok) return;
+      if (!save_texture(texture, dirname)) {
+        auto lock = std::lock_guard{mutex};
+        error = "cannot save " + dirname + texture.filename;
+        ok = false;
+      }
     });
+    return ok;
+  }
+}
+
+bool load_shape(scene_shape& shape, const string& dirname) {
+  if (!shape.facevarying) {
+    return load_shape(dirname + shape.filename, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
+  } else {
+    return load_fvshape(dirname + shape.filename, shape.quadspos,
+            shape.quadsnorm, shape.quadstexcoord, shape.positions,
+            shape.normals, shape.texcoords);
+  }
+}
+
+bool save_shape(const scene_shape& shape, const string& dirname) {
+  if (shape.quadspos.empty()) {
+    return save_shape(dirname + shape.filename, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
+  } else {
+    return save_fvshape(dirname + shape.filename, shape.quadspos,
+            shape.quadsnorm, shape.quadstexcoord, shape.positions,
+            shape.normals, shape.texcoords);
   }
 }
 
 // Load json meshes
-void load_shapes(
-    scene_model& scene, const string& dirname, const load_params& params) {
+bool load_shapes(
+    scene_model& scene, const string& dirname, string& error, const load_params& params) {
   // load shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
       if (!shape.positions.empty()) continue;
-      if (!shape.facevarying) {
-        if (!load_shape(dirname + shape.filename, shape.points, shape.lines,
-                shape.triangles, shape.quads, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius))
-          throw std::runtime_error("cannot load " + dirname + shape.filename);
-      } else {
-        if (!load_fvshape(dirname + shape.filename, shape.quadspos,
-                shape.quadsnorm, shape.quadstexcoord, shape.positions,
-                shape.normals, shape.texcoords))
-          throw std::runtime_error("cannot load " + dirname + shape.filename);
+      if(!load_shape(shape, dirname)) {
+        error = "cannot load " + dirname + shape.filename;
+        return false;
       }
     }
+    return true;
   } else {
-    parallel_foreach(scene.shapes, [&dirname](scene_shape& shape) {
+    auto mutex = std::mutex{};
+    auto ok = std::atomic<bool>{true};
+    parallel_foreach(scene.shapes, [&dirname, &error, &mutex, &ok](scene_shape& shape) {
+      if(!ok) return;
       if (!shape.positions.empty()) return;
-      if (!shape.facevarying) {
-        if (!load_shape(dirname + shape.filename, shape.points, shape.lines,
-                shape.triangles, shape.quads, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius))
-          throw std::runtime_error("cannot load " + dirname + shape.filename);
-      } else {
-        if (!load_fvshape(dirname + shape.filename, shape.quadspos,
-                shape.quadsnorm, shape.quadstexcoord, shape.positions,
-                shape.normals, shape.texcoords))
-          throw std::runtime_error("cannot load " + dirname + shape.filename);
+      if(!load_shape(shape, dirname)) {
+        auto lock = std::lock_guard{mutex};
+        error = "cannot load " + dirname + shape.filename;
+        ok = false;
       }
     });
+    return !ok;
   }
 }
 
 // Save json meshes
-void save_shapes(const scene_model& scene, const string& dirname,
+bool save_shapes(const scene_model& scene, const string& dirname, string& error,
     const save_params& params) {
   // save shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
-      if (shape.quadspos.empty()) {
-        if (!save_shape(dirname + shape.filename, shape.points, shape.lines,
-                shape.triangles, shape.quads, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius))
-          throw std::runtime_error("cannot save " + dirname + shape.filename);
-      } else {
-        if (!save_fvshape(dirname + shape.filename, shape.quadspos,
-                shape.quadsnorm, shape.quadstexcoord, shape.positions,
-                shape.normals, shape.texcoords))
-          throw std::runtime_error("cannot load " + dirname + shape.filename);
+      if(!save_shape(shape, dirname)) {
+        error = "cannot save " + dirname + shape.filename;
+        return false;
       }
     }
+    return true;
   } else {
-    parallel_foreach(scene.shapes, [&dirname](const scene_shape& shape) {
-      if (shape.quadspos.empty()) {
-        if (!save_shape(dirname + shape.filename, shape.points, shape.lines,
-                shape.triangles, shape.quads, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius))
-          throw std::runtime_error("cannot load " + dirname + shape.filename);
-      } else {
-        if (!save_fvshape(dirname + shape.filename, shape.quadspos,
-                shape.quadsnorm, shape.quadstexcoord, shape.positions,
-                shape.normals, shape.texcoords))
-          throw std::runtime_error("cannot load " + dirname + shape.filename);
+    auto mutex = std::mutex{};
+    auto ok = std::atomic<bool>{true};
+    parallel_foreach(scene.shapes, [&dirname, &ok, &mutex, &error](const scene_shape& shape) {
+      if(!ok) return;
+      if(!save_shape(shape, dirname)) {
+        auto lock = std::lock_guard{mutex};
+        error = "cannot save " + dirname + shape.filename;
+        ok = false;
       }
     });
+    return ok;
   }
 }
 
@@ -1596,8 +1611,9 @@ void write_yaml_object(yaml_file& fs, const string& object) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void load_yaml(
-    const string& filename, scene_model& scene, const load_params& params) {
+bool load_yaml(
+    const string& filename, scene_model& scene, string& error, const load_params& params) {
+  try {
   // open file
   auto fs = open_yaml(filename);
 
@@ -1859,20 +1875,25 @@ void load_yaml(
       assert(false);  // should not get here
     }
   }
+  } catch(std::exception& e) {
+    error  =e.what();
+    return false;
+  }
+  return true;
 }
 
 // Save a scene in the builtin YAML format.
-static void load_yaml_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+static bool load_yaml_scene(
+    const string& filename, scene_model& scene, string& error, const load_params& params) {
   scene = {};
 
   // Parse yaml
-  load_yaml(filename, scene, params);
+  if(!load_yaml(filename, scene, error, params)) return false;
 
   // load shape and textures
   auto dirname = get_dirname(filename);
-  load_shapes(scene, dirname, params);
-  load_textures(scene, dirname, params);
+  if(!load_shapes(scene, dirname, error, params)) return false;
+  if(!load_textures(scene, dirname, error, params)) return false;
 
   // fix scene
   scene.name = get_basename(filename);
@@ -1880,11 +1901,14 @@ static void load_yaml_scene(
   add_materials(scene);
   add_radius(scene);
   trim_memory(scene);
+
+  return true;
 }
 
 // Save yaml
-static void save_yaml(const string& filename, const scene_model& scene,
+static bool save_yaml(const string& filename, const scene_model& scene, string& error,
     bool ply_instances = false, const string& instances_name = "") {
+  try {
   // open file
   auto fs = open_yaml(filename, "w");
 
@@ -2073,22 +2097,25 @@ static void save_yaml(const string& filename, const scene_model& scene,
       write_yaml_property(fs, "environments", "emission_tex", false,
           make_yaml_value(scene.textures[environment.emission_tex].name));
   }
+  } catch(std::exception& e) {
+    error = e.what();
+    return false;
+  }
+    return true;
 }
 
 // Save a scene in the builtin YAML format.
-static void save_yaml_scene(const string& filename, const scene_model& scene,
+static bool save_yaml_scene(const string& filename, const scene_model& scene, string& error,
     const save_params& params) {
-  try {
-    // save yaml file
-    save_yaml(filename, scene);
+  // save yaml file
+  if(!save_yaml(filename, scene, error)) return false;
 
-    // save meshes and textures
-    auto dirname = get_dirname(filename);
-    save_shapes(scene, dirname, params);
-    save_textures(scene, dirname, params);
-  } catch (const std::exception& e) {
-    throw std::runtime_error("cannot save scene " + filename + "\n" + e.what());
-  }
+  // save meshes and textures
+  auto dirname = get_dirname(filename);
+  if(!save_shapes(scene, dirname, error, params)) return false;
+  if(!save_textures(scene, dirname, error, params)) return false;
+
+  return true;
 }
 
 }  // namespace yocto
@@ -2098,12 +2125,11 @@ static void save_yaml_scene(const string& filename, const scene_model& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void load_obj(
-    const string& filename, scene_model& scene, const load_params& params) {
+bool load_obj(
+    const string& filename, scene_model& scene, string& error, const load_params& params) {
   // load obj
   auto obj = obj_model{};
-  auto error = ""s;
-  if(!load_obj(filename, obj, error, false, true, true)) throw std::runtime_error(error);
+  if(!load_obj(filename, obj, error, false, true, true)) return false;
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
@@ -2234,28 +2260,32 @@ void load_obj(
     environment.emission     = oenvironment.emission;
     environment.emission_tex = get_texture(oenvironment.emission_map);
   }
+
+  return true;
 }
 
 // Loads an OBJ
-static void load_obj_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+static bool load_obj_scene(
+    const string& filename, scene_model& scene, string& error, const load_params& params) {
   scene = {};
 
   // Parse obj
-  load_obj(filename, scene, params);
+  if(!load_obj(filename, scene, error, params)) return false;
 
   // load textures
   auto dirname = get_dirname(filename);
-  load_textures(scene, dirname, params);
+  if(!load_textures(scene, dirname, error, params)) return false;
 
   // fix scene
   scene.name = get_basename(filename);
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
+
+  return true;
 }
 
-static void save_obj(const string& filename, const scene_model& scene,
+static bool save_obj(const string& filename, const scene_model& scene, string& error,
     const save_params& params) {
   auto obj = obj_model{};
 
@@ -2378,15 +2408,15 @@ static void save_obj(const string& filename, const scene_model& scene,
   }
 
   // save obj
-  auto error = ""s;
-  if(!save_obj(filename, obj, error)) throw std::runtime_error(error);
+  return save_obj(filename, obj, error);
 }
 
-static void save_obj_scene(const string& filename, const scene_model& scene,
+static bool save_obj_scene(const string& filename, const scene_model& scene, string& error,
     const save_params& params) {
-  save_obj(filename, scene, params);
+  if(!save_obj(filename, scene, error, params)) return false;
   auto dirname = get_dirname(filename);
-  save_textures(scene, dirname, params);
+  if(!save_textures(scene, dirname, error, params)) return false;
+  return true;
 }
 
 void print_obj_camera(const scene_camera& camera) {
@@ -2405,8 +2435,8 @@ void print_obj_camera(const scene_camera& camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_ply_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+static bool load_ply_scene(
+    const string& filename, scene_model& scene, string& error, const load_params& params) {
   scene = {};
 
   // load ply mesh
@@ -2416,8 +2446,10 @@ static void load_ply_scene(
   shape.filename = get_filename(filename);
   if (!load_shape(filename, shape.points, shape.lines, shape.triangles,
           shape.quads, shape.positions, shape.normals, shape.texcoords,
-          shape.colors, shape.radius))
-    throw std::runtime_error("cannot load " + filename);
+          shape.colors, shape.radius)) {
+    error = "cannot load " + filename;
+    return false;
+  }
 
   // add instance
   auto instance  = scene_instance{};
@@ -2430,12 +2462,15 @@ static void load_ply_scene(
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
+
+  return true;
 }
 
-static void save_ply_scene(const string& filename, const scene_model& scene,
-    const save_params& params) {
+static bool save_ply_scene(const string& filename, const scene_model& scene,
+    string& error, const save_params& params) {
   if (scene.shapes.empty()) {
-    throw std::runtime_error("cannot save empty scene " + filename);
+    error = "cannot save empty scene " + filename;
+    return false;
   }
   auto& shape = scene.shapes.front();
   if (shape.quadspos.empty()) {
@@ -2446,6 +2481,7 @@ static void save_ply_scene(const string& filename, const scene_model& scene,
     save_fvshape(filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
         shape.positions, shape.normals, shape.texcoords);
   }
+  return true;
 }
 
 }  // namespace yocto
@@ -2542,7 +2578,7 @@ void update_transforms(
 }
 
 // convert gltf to scene
-void load_gltf(const string& filename, gltf_model& scene) {
+bool load_gltf(const string& filename, gltf_model& scene, string& error) {
   // load gltf
   auto params = cgltf_options{};
   memset(&params, 0, sizeof(params));
@@ -2976,6 +3012,8 @@ void load_gltf(const string& filename, gltf_model& scene) {
     }
   }
 #endif
+
+  return true;
 }
 
 }  // namespace yocto
@@ -2986,9 +3024,9 @@ void load_gltf(const string& filename, gltf_model& scene) {
 namespace yocto {
 
 // convert gltf to scene
-static void load_gltf(const string& filename, scene_model& scene) {
+static bool load_gltf(const string& filename, scene_model& scene, string& error) {
   auto gltf = gltf_model{};
-  load_gltf(filename, gltf);
+  if(!load_gltf(filename, gltf, error)) return false;
 
   // convert textures
   for (auto& gtexture : gltf.textures) {
@@ -3085,20 +3123,22 @@ static void load_gltf(const string& filename, scene_model& scene) {
       }
     }
   }
+
+  return true;
 }
 
 // Load a scene
-static void load_gltf_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+static bool load_gltf_scene(
+    const string& filename, scene_model& scene, string& error, const load_params& params) {
   // initialization
   scene = {};
 
   // load gltf
-  load_gltf(filename, scene);
+  if(!load_gltf(filename, scene, error)) return false;
 
   // load textures
   auto dirname = get_dirname(filename);
-  load_textures(scene, dirname, params);
+  if(!load_textures(scene, dirname, error, params)) return false;
 
   // fix scene
   scene.name = get_basename(filename);
@@ -3113,6 +3153,8 @@ static void load_gltf_scene(
     auto distance = dot(-camera.frame.z, center - camera.frame.o);
     if (distance > 0) camera.focus = distance;
   }
+
+  return true;
 }
 
 }  // namespace yocto
@@ -3122,12 +3164,11 @@ static void load_gltf_scene(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_pbrt(
-    const string& filename, scene_model& scene, const load_params& params) {
+static bool load_pbrt(
+    const string& filename, scene_model& scene, string& error, const load_params& params) {
   // load pbrt
   auto pbrt = pbrt_model{};
-  auto error = ""s;
-  if(!load_pbrt(filename, pbrt, error)) throw std::runtime_error(error);
+  if(!load_pbrt(filename, pbrt, error)) return false;
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
@@ -3251,30 +3292,34 @@ static void load_pbrt(
     instance.shape    = (int)scene.shapes.size() - 1;
     instance.material = (int)scene.materials.size() - 1;
   }
+
+  return true;
 }
 
 // load pbrt scenes
-static void load_pbrt_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+static bool load_pbrt_scene(
+    const string& filename, scene_model& scene, string& error, const load_params& params) {
   scene = scene_model{};
 
   // Parse pbrt
-  load_pbrt(filename, scene, params);
+  if(!load_pbrt(filename, scene, error, params)) return false;
 
   // load textures
   auto dirname = get_dirname(filename);
-  load_shapes(scene, dirname, params);
-  load_textures(scene, dirname, params);
+  if(!load_shapes(scene, dirname, error, params)) return false;
+  if(!load_textures(scene, dirname, error, params)) return false;
 
   // fix scene
   scene.name = get_basename(filename);
   add_cameras(scene);
   add_materials(scene);
   add_radius(scene);
+
+  return true;
 }
 
 // Convert a scene to pbrt format
-static void save_pbrt(const string& filename, const scene_model& scene) {
+static bool save_pbrt(const string& filename, const scene_model& scene, string& error) {
   auto pbrt = pbrt_model{};
 
   // embed data
@@ -3333,33 +3378,40 @@ static void save_pbrt(const string& filename, const scene_model& scene) {
     }
   }
 
-  auto error = ""s;
-  if(!save_pbrt(filename, pbrt, error)) throw std::runtime_error(error);
+  return save_pbrt(filename, pbrt, error);
 }
 
 // Save a pbrt scene
-void save_pbrt_scene(const string& filename, const scene_model& scene,
+bool save_pbrt_scene(const string& filename, const scene_model& scene, string& error,
     const save_params& params) {
   // save pbrt
-  save_pbrt(filename, scene);
+  if(!save_pbrt(filename, scene, error)) return false;
 
   // save meshes
   auto dirname = get_dirname(filename);
   for (auto& shape : scene.shapes) {
     if (shape.quadspos.empty()) {
-      save_shape(replace_extension(dirname + shape.filename, ".ply"),
+      if(!save_shape(replace_extension(dirname + shape.filename, ".ply"),
           shape.points, shape.lines, shape.triangles, shape.quads,
           shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius);
+          shape.radius)) {
+        error = "cannot save " + dirname + shape.filename;
+        return false;
+      }
     } else {
-      save_fvshape(replace_extension(dirname + shape.filename, ".ply"),
+      if(!save_fvshape(replace_extension(dirname + shape.filename, ".ply"),
           shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-          shape.normals, shape.texcoords);
+          shape.normals, shape.texcoords)) {
+        error = "cannot save " + dirname + shape.filename;
+        return false;
+      }
     }
   }
 
   // save textures
-  save_textures(scene, dirname, params);
+  if(!save_textures(scene, dirname, error, params)) return false;
+
+  return true;
 }
 
 }  // namespace yocto
