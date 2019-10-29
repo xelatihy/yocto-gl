@@ -2102,7 +2102,8 @@ void load_obj(
     const string& filename, scene_model& scene, const load_params& params) {
   // load obj
   auto obj = obj_model{};
-  load_obj(filename, obj, false, true, true);
+  auto error = ""s;
+  if(!load_obj(filename, obj, error, false, true, true)) throw std::runtime_error(error);
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
@@ -2377,7 +2378,8 @@ static void save_obj(const string& filename, const scene_model& scene,
   }
 
   // save obj
-  save_obj(filename, obj);
+  auto error = ""s;
+  if(!save_obj(filename, obj, error)) throw std::runtime_error(error);
 }
 
 static void save_obj_scene(const string& filename, const scene_model& scene,
