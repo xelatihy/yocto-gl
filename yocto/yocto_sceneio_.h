@@ -26,11 +26,11 @@
 // SOFTWARE.
 //
 
-#include "yocto_sceneio.h"
 #include "yocto_image.h"
 #include "yocto_obj.h"
 #include "yocto_pbrt.h"
 #include "yocto_ply.h"
+#include "yocto_sceneio.h"
 #include "yocto_shape.h"
 
 #include <atomic>
@@ -58,8 +58,7 @@ static inline string normalize_path(const string& filename_) {
     throw std::invalid_argument("absolute paths are not supported");
     return filename_;
   }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
+  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' && filename[3] == '/') {
     throw std::invalid_argument("absolute paths are not supported");
     return filename_;
   }
@@ -107,8 +106,7 @@ static inline string get_basename(const string& filename) {
 }
 
 // Replaces extensions
-static inline string replace_extension(
-    const string& filename, const string& ext) {
+static inline string replace_extension(const string& filename, const string& ext) {
   return get_noextension(filename) + ext;
 }
 
@@ -127,14 +125,13 @@ inline void parallel_for(int begin, int end, Func&& func) {
   auto             nthreads = std::thread::hardware_concurrency();
   std::atomic<int> next_idx(begin);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, end]() {
-          while (true) {
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= end) break;
-            func(idx);
-          }
-        }));
+    futures.emplace_back(std::async(std::launch::async, [&func, &next_idx, end]() {
+      while (true) {
+        auto idx = next_idx.fetch_add(1);
+        if (idx >= end) break;
+        func(idx);
+      }
+    }));
   }
   for (auto& f : futures) f.get();
 }
@@ -143,13 +140,11 @@ inline void parallel_for(int begin, int end, Func&& func) {
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
 inline void parallel_foreach(vector<T>& values, Func&& func) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
+  parallel_for(0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, Func&& func) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
+  parallel_for(0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 
 }  // namespace yocto
@@ -168,8 +163,7 @@ inline int keyframe_index(const vector<float>& times, const float& time) {
 
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
-inline T keyframe_step(
-    const vector<float>& times, const vector<T>& vals, float time) {
+inline T keyframe_step(const vector<float>& times, const vector<T>& vals, float time) {
   if (time <= times.front()) return vals.front();
   if (time >= times.back()) return vals.back();
   time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -179,8 +173,7 @@ inline T keyframe_step(
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline vec4f keyframe_slerp(
-    const vector<float>& times, const vector<vec4f>& vals, float time) {
+inline vec4f keyframe_slerp(const vector<float>& times, const vector<vec4f>& vals, float time) {
   if (time <= times.front()) return vals.front();
   if (time >= times.back()) return vals.back();
   time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -191,8 +184,7 @@ inline vec4f keyframe_slerp(
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline T keyframe_linear(
-    const vector<float>& times, const vector<T>& vals, float time) {
+inline T keyframe_linear(const vector<float>& times, const vector<T>& vals, float time) {
   if (time <= times.front()) return vals.front();
   if (time >= times.back()) return vals.back();
   time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -203,15 +195,13 @@ inline T keyframe_linear(
 
 // Evaluates a keyframed value using Bezier interpolation.
 template <typename T>
-inline T keyframe_bezier(
-    const vector<float>& times, const vector<T>& vals, float time) {
+inline T keyframe_bezier(const vector<float>& times, const vector<T>& vals, float time) {
   if (time <= times.front()) return vals.front();
   if (time >= times.back()) return vals.back();
   time     = clamp(time, times.front(), times.back() - 0.001f);
   auto idx = keyframe_index(times, time);
   auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-  return interpolate_bezier(
-      vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
+  return interpolate_bezier(vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
 }  // namespace yocto
@@ -231,8 +221,7 @@ bbox3f compute_bounds(const scene_model& scene) {
   }
   auto bbox = invalidb3f;
   for (auto& instance : scene.instances) {
-    bbox = merge(
-        bbox, transform_bbox(instance.frame, shape_bbox[instance.shape]));
+    bbox = merge(bbox, transform_bbox(instance.frame, shape_bbox[instance.shape]));
   }
   return bbox;
 }
@@ -312,8 +301,7 @@ vector<string> format_stats(const scene_model& scene, bool verbose) {
     return str;
   };
   auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " + std::to_string(num.z);
     while (str.size() < 13) str = " " + str;
     return str;
   };
@@ -329,29 +317,22 @@ vector<string> format_stats(const scene_model& scene, bool verbose) {
   stats.push_back("materials:    " + format(scene.materials.size()));
   stats.push_back("nodes:        " + format(scene.nodes.size()));
   stats.push_back("animations:   " + format(scene.animations.size()));
-  stats.push_back(
-      "points:       " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.points.size(); })));
-  stats.push_back(
-      "lines:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.lines.size(); })));
-  stats.push_back("triangles:    " +
-                  format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.triangles.size(); })));
-  stats.push_back(
-      "quads:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.quads.size(); })));
-  stats.push_back("fvquads:      " +
-                  format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.quadspos.size(); })));
-  stats.push_back(
-      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.ldr.size().x * (size_t)texture.ldr.size().x;
-      })));
-  stats.push_back(
-      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
-      })));
+  stats.push_back("points:       " + format(accumulate(scene.shapes,
+                                         [](auto& shape) { return shape.points.size(); })));
+  stats.push_back("lines:        " +
+                  format(accumulate(scene.shapes, [](auto& shape) { return shape.lines.size(); })));
+  stats.push_back("triangles:    " + format(accumulate(scene.shapes,
+                                         [](auto& shape) { return shape.triangles.size(); })));
+  stats.push_back("quads:        " +
+                  format(accumulate(scene.shapes, [](auto& shape) { return shape.quads.size(); })));
+  stats.push_back("fvquads:      " + format(accumulate(scene.shapes,
+                                         [](auto& shape) { return shape.quadspos.size(); })));
+  stats.push_back("texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
+    return (size_t)texture.ldr.size().x * (size_t)texture.ldr.size().x;
+  })));
+  stats.push_back("texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
+    return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
+  })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));
 
@@ -433,49 +414,41 @@ scene_shape subdivide_shape(const scene_shape& shape) {
   if (!shape.points.empty()) {
     throw std::runtime_error("point subdivision not supported");
   } else if (!shape.lines.empty()) {
-    subdivide_lines(subdiv.lines, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.lines,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
+    subdivide_lines(subdiv.lines, subdiv.positions, subdiv.normals, subdiv.texcoords, subdiv.colors,
+        subdiv.radius, shape.lines, shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius, shape.subdivisions);
-    if (shape.smooth)
-      subdiv.normals = compute_tangents(subdiv.lines, subdiv.positions);
+    if (shape.smooth) subdiv.normals = compute_tangents(subdiv.lines, subdiv.positions);
   } else if (!shape.triangles.empty()) {
-    subdivide_triangles(subdiv.triangles, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.triangles,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, shape.subdivisions);
-    if (shape.smooth)
-      subdiv.normals = compute_normals(subdiv.triangles, subdiv.positions);
+    subdivide_triangles(subdiv.triangles, subdiv.positions, subdiv.normals, subdiv.texcoords,
+        subdiv.colors, subdiv.radius, shape.triangles, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius, shape.subdivisions);
+    if (shape.smooth) subdiv.normals = compute_normals(subdiv.triangles, subdiv.positions);
   } else if (!shape.quads.empty() && !shape.catmullclark) {
-    subdivide_quads(subdiv.quads, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.quads,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
+    subdivide_quads(subdiv.quads, subdiv.positions, subdiv.normals, subdiv.texcoords, subdiv.colors,
+        subdiv.radius, shape.quads, shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius, shape.subdivisions);
-    if (subdiv.smooth)
-      subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
+    if (subdiv.smooth) subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
   } else if (!shape.quads.empty() && shape.catmullclark) {
-    subdivide_catmullclark(subdiv.quads, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.quads,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, shape.subdivisions);
-    if (subdiv.smooth)
-      subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
+    subdivide_catmullclark(subdiv.quads, subdiv.positions, subdiv.normals, subdiv.texcoords,
+        subdiv.colors, subdiv.radius, shape.quads, shape.positions, shape.normals, shape.texcoords,
+        shape.colors, shape.radius, shape.subdivisions);
+    if (subdiv.smooth) subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
   } else if (!shape.quadspos.empty() && !shape.catmullclark) {
-    subdivide_quads(subdiv.quadspos, subdiv.positions, subdiv.quadspos,
-        shape.positions, shape.subdivisions);
-    subdivide_quads(subdiv.quadsnorm, subdiv.normals, subdiv.quadsnorm,
-        shape.normals, shape.subdivisions);
-    subdivide_quads(subdiv.quadstexcoord, subdiv.texcoords,
-        subdiv.quadstexcoord, shape.texcoords, shape.subdivisions);
+    subdivide_quads(
+        subdiv.quadspos, subdiv.positions, subdiv.quadspos, shape.positions, shape.subdivisions);
+    subdivide_quads(
+        subdiv.quadsnorm, subdiv.normals, subdiv.quadsnorm, shape.normals, shape.subdivisions);
+    subdivide_quads(subdiv.quadstexcoord, subdiv.texcoords, subdiv.quadstexcoord, shape.texcoords,
+        shape.subdivisions);
     if (subdiv.smooth) {
       subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
       subdiv.quadsnorm = subdiv.quadspos;
     }
   } else if (!shape.quadspos.empty() && shape.catmullclark) {
-    subdivide_catmullclark(subdiv.quadspos, subdiv.positions, shape.quadspos,
-        shape.positions, subdiv.subdivisions);
-    subdivide_catmullclark(subdiv.quadstexcoord, subdiv.texcoords,
-        shape.quadstexcoord, shape.texcoords, shape.subdivisions, true);
+    subdivide_catmullclark(
+        subdiv.quadspos, subdiv.positions, shape.quadspos, shape.positions, subdiv.subdivisions);
+    subdivide_catmullclark(subdiv.quadstexcoord, subdiv.texcoords, shape.quadstexcoord,
+        shape.texcoords, shape.subdivisions, true);
     if (shape.smooth) {
       subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
       subdiv.quadsnorm = subdiv.quadspos;
@@ -488,14 +461,12 @@ scene_shape subdivide_shape(const scene_shape& shape) {
 // Apply displacement to a shape
 scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
   // Evaluate a texture
-  auto eval_texture = [](const scene_texture& texture, const vec2f& texcoord,
-                          bool ldr_as_linear, bool no_interpolation = false,
-                          bool clamp_to_edge = false) -> vec4f {
+  auto eval_texture = [](const scene_texture& texture, const vec2f& texcoord, bool ldr_as_linear,
+                          bool no_interpolation = false, bool clamp_to_edge = false) -> vec4f {
     if (!texture.hdr.empty()) {
       return eval_image(texture.hdr, texcoord, no_interpolation, clamp_to_edge);
     } else if (!texture.ldr.empty()) {
-      return eval_image(texture.ldr, texcoord, ldr_as_linear, no_interpolation,
-          clamp_to_edge);
+      return eval_image(texture.ldr, texcoord, ldr_as_linear, no_interpolation, clamp_to_edge);
     } else {
       return {1, 1, 1, 1};
     }
@@ -515,11 +486,9 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
   // simple case
   if (!shape.triangles.empty()) {
     auto normals = shape.normals;
-    if (normals.empty())
-      normals = compute_normals(shape.triangles, shape.positions);
+    if (normals.empty()) normals = compute_normals(shape.triangles, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-      auto disp = mean(
-          xyz(eval_texture(displacement, shape.texcoords[vid], true)));
+      auto disp = mean(xyz(eval_texture(displacement, shape.texcoords[vid], true)));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       subdiv.positions[vid] += normals[vid] * shape.displacement * disp;
     }
@@ -527,11 +496,9 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
       subdiv.normals = compute_normals(shape.triangles, shape.positions);
   } else if (!shape.quads.empty()) {
     auto normals = shape.normals;
-    if (normals.empty())
-      normals = compute_normals(shape.triangles, shape.positions);
+    if (normals.empty()) normals = compute_normals(shape.triangles, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-      auto disp = mean(
-          xyz(eval_texture(displacement, shape.texcoords[vid], true)));
+      auto disp = mean(xyz(eval_texture(displacement, shape.texcoords[vid], true)));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       subdiv.positions[vid] += shape.normals[vid] * shape.displacement * disp;
     }
@@ -545,8 +512,7 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
       auto qpos = shape.quadspos[fid];
       auto qtxt = shape.quadstexcoord[fid];
       for (auto i = 0; i < 4; i++) {
-        auto disp = mean(
-            xyz(eval_texture(displacement, shape.texcoords[qtxt[i]], true)));
+        auto disp = mean(xyz(eval_texture(displacement, shape.texcoords[qtxt[i]], true)));
         if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
         offset[qpos[i]] += shape.displacement * disp;
         count[qpos[i]] += 1;
@@ -566,8 +532,8 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
 }
 
 // Update animation transforms
-void update_transforms(scene_model& scene, scene_animation& animation,
-    float time, const string& anim_group) {
+void update_transforms(
+    scene_model& scene, scene_animation& animation, float time, const string& anim_group) {
   if (anim_group != "" && anim_group != animation.group) return;
 
   if (!animation.translations.empty()) {
@@ -584,8 +550,7 @@ void update_transforms(scene_model& scene, scene_animation& animation,
         break;
       default: throw std::runtime_error("should not have been here");
     }
-    for (auto target : animation.targets)
-      scene.nodes[target].translation = value;
+    for (auto target : animation.targets) scene.nodes[target].translation = value;
   }
   if (!animation.rotations.empty()) {
     auto value = vec4f{0, 0, 0, 1};
@@ -620,22 +585,18 @@ void update_transforms(scene_model& scene, scene_animation& animation,
 }
 
 // Update node transforms
-void update_transforms(scene_model& scene, scene_node& node,
-    const frame3f& parent = identity3x4f) {
+void update_transforms(scene_model& scene, scene_node& node, const frame3f& parent = identity3x4f) {
   auto frame = parent * node.local * translation_frame(node.translation) *
                rotation_frame(node.rotation) * scaling_frame(node.scale);
   if (node.instance >= 0) scene.instances[node.instance].frame = frame;
   if (node.camera >= 0) scene.cameras[node.camera].frame = frame;
   if (node.environment >= 0) scene.environments[node.environment].frame = frame;
-  for (auto child : node.children)
-    update_transforms(scene, scene.nodes[child], frame);
+  for (auto child : node.children) update_transforms(scene, scene.nodes[child], frame);
 }
 
 // Update node transforms
-void update_transforms(
-    scene_model& scene, float time, const string& anim_group) {
-  for (auto& agr : scene.animations)
-    update_transforms(scene, agr, time, anim_group);
+void update_transforms(scene_model& scene, float time, const string& anim_group) {
+  for (auto& agr : scene.animations) update_transforms(scene, agr, time, anim_group);
   for (auto& node : scene.nodes) node.children.clear();
   for (auto node_id = 0; node_id < scene.nodes.size(); node_id++) {
     auto& node = scene.nodes[node_id];
@@ -653,38 +614,32 @@ void update_transforms(
 namespace yocto {
 
 // Load/save a scene in the builtin YAML format.
-static void load_yaml_scene(
-    const string& filename, scene_model& scene, const load_params& params);
-static void save_yaml_scene(const string& filename, const scene_model& scene,
-    const save_params& params);
+static void load_yaml_scene(const string& filename, scene_model& scene, const load_params& params);
+static void save_yaml_scene(
+    const string& filename, const scene_model& scene, const save_params& params);
 
 // Load/save a scene from/to OBJ.
-static void load_obj_scene(
-    const string& filename, scene_model& scene, const load_params& params);
-static void save_obj_scene(const string& filename, const scene_model& scene,
-    const save_params& params);
+static void load_obj_scene(const string& filename, scene_model& scene, const load_params& params);
+static void save_obj_scene(
+    const string& filename, const scene_model& scene, const save_params& params);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static void load_ply_scene(
-    const string& filename, scene_model& scene, const load_params& params);
-static void save_ply_scene(const string& filename, const scene_model& scene,
-    const save_params& params);
+static void load_ply_scene(const string& filename, scene_model& scene, const load_params& params);
+static void save_ply_scene(
+    const string& filename, const scene_model& scene, const save_params& params);
 
 // Load/save a scene from/to glTF.
-static void load_gltf_scene(
-    const string& filename, scene_model& scene, const load_params& params);
+static void load_gltf_scene(const string& filename, scene_model& scene, const load_params& params);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static void load_pbrt_scene(
-    const string& filename, scene_model& scene, const load_params& params);
-static void save_pbrt_scene(const string& filename, const scene_model& scene,
-    const save_params& params);
+static void load_pbrt_scene(const string& filename, scene_model& scene, const load_params& params);
+static void save_pbrt_scene(
+    const string& filename, const scene_model& scene, const save_params& params);
 
 // Load a scene
-void load_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+void load_scene(const string& filename, scene_model& scene, const load_params& params) {
   try {
     auto ext = get_extension(filename);
     if (ext == ".yaml" || ext == ".YAML") {
@@ -707,8 +662,7 @@ void load_scene(
 }
 
 // Save a scene
-void save_scene(const string& filename, const scene_model& scene,
-    const save_params& params) {
+void save_scene(const string& filename, const scene_model& scene, const save_params& params) {
   try {
     auto ext = get_extension(filename);
     if (ext == ".yaml" || ext == ".YAML") {
@@ -735,8 +689,7 @@ void load_texture(scene_texture& texture, const string& dirname) {
   }
 }
 
-void load_textures(
-    scene_model& scene, const string& dirname, const load_params& params) {
+void load_textures(scene_model& scene, const string& dirname, const load_params& params) {
   if (params.notextures) return;
 
   // load images
@@ -762,8 +715,7 @@ void save_texture(const scene_texture& texture, const string& dirname) {
 }
 
 // helper to save textures
-void save_textures(const scene_model& scene, const string& dirname,
-    const save_params& params) {
+void save_textures(const scene_model& scene, const string& dirname, const save_params& params) {
   if (params.notextures) return;
 
   // save images
@@ -772,79 +724,71 @@ void save_textures(const scene_model& scene, const string& dirname,
       save_texture(texture, dirname);
     }
   } else {
-    parallel_foreach(scene.textures, [&dirname](const scene_texture& texture) {
-      save_texture(texture, dirname);
-    });
+    parallel_foreach(scene.textures,
+        [&dirname](const scene_texture& texture) { save_texture(texture, dirname); });
   }
 }
 
 // Load json meshes
-void load_shapes(
-    scene_model& scene, const string& dirname, const load_params& params) {
+void load_shapes(scene_model& scene, const string& dirname, const load_params& params) {
   // load shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
       if (!shape.positions.empty()) continue;
       if (!shape.facevarying) {
-        load_shape(dirname + shape.filename, shape.points, shape.lines,
-            shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+        load_shape(dirname + shape.filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.positions, shape.normals, shape.texcoords, shape.colors,
+            shape.radius);
       } else {
-        load_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords);
+        load_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords);
       }
     }
   } else {
     parallel_foreach(scene.shapes, [&dirname](scene_shape& shape) {
       if (!shape.positions.empty()) return;
       if (!shape.facevarying) {
-        load_shape(dirname + shape.filename, shape.points, shape.lines,
-            shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+        load_shape(dirname + shape.filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.positions, shape.normals, shape.texcoords, shape.colors,
+            shape.radius);
       } else {
-        load_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords);
+        load_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords);
       }
     });
   }
 }
 
 // Save json meshes
-void save_shapes(const scene_model& scene, const string& dirname,
-    const save_params& params) {
+void save_shapes(const scene_model& scene, const string& dirname, const save_params& params) {
   // save shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
       if (shape.quadspos.empty()) {
-        save_shape(dirname + shape.filename, shape.points, shape.lines,
-            shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+        save_shape(dirname + shape.filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.positions, shape.normals, shape.texcoords, shape.colors,
+            shape.radius);
       } else {
-        save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords);
+        save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords);
       }
     }
   } else {
     parallel_foreach(scene.shapes, [&dirname](const scene_shape& shape) {
       if (shape.quadspos.empty()) {
-        save_shape(dirname + shape.filename, shape.points, shape.lines,
-            shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+        save_shape(dirname + shape.filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.positions, shape.normals, shape.texcoords, shape.colors,
+            shape.radius);
       } else {
-        save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords);
+        save_fvshape(dirname + shape.filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords);
       }
     });
   }
 }
 
 // create and cleanup names and filenames
-static string make_safe_name(
-    const string& name_, const string& base, int count) {
+static string make_safe_name(const string& name_, const string& base, int count) {
   auto name = name_;
   if (name.empty()) name = base + std::to_string(count);
   if (name.front() == '-') name = "_" + name;
@@ -856,8 +800,8 @@ static string make_safe_name(
     if (c >= 'A' && c <= 'Z') continue;
     c = '_';
   }
-  std::transform(name.begin(), name.end(), name.begin(),
-      [](unsigned char c) { return std::tolower(c); });
+  std::transform(
+      name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::tolower(c); });
   return name;
 }
 static inline string make_safe_filename(const string& filename_) {
@@ -922,18 +866,16 @@ struct yaml_file {
 
 // open a file
 yaml_file open_yaml(const string& filename, const string& mode = "rt");
-void      open_yaml(
-         yaml_file& fs, const string& filename, const string& mode = "rt");
-void close_yaml(yaml_file& fs);
+void      open_yaml(yaml_file& fs, const string& filename, const string& mode = "rt");
+void      close_yaml(yaml_file& fs);
 
 // Load Yaml properties
-bool read_yaml_property(
-    yaml_file& fs, string& group, string& key, bool& newobj, yaml_value& value);
+bool read_yaml_property(yaml_file& fs, string& group, string& key, bool& newobj, yaml_value& value);
 
 // Write Yaml properties
 void write_yaml_comment(yaml_file& fs, const string& comment);
-void write_yaml_property(yaml_file& fs, const string& object, const string& key,
-    bool newobj, const yaml_value& value);
+void write_yaml_property(
+    yaml_file& fs, const string& object, const string& key, bool newobj, const yaml_value& value);
 void write_yaml_object(yaml_file& fs, const string& object);
 
 // type-cheked yaml value access
@@ -975,8 +917,7 @@ inline yaml_file::~yaml_file() {
 }
 
 // Opens a file returing a handle with RIIA
-inline void open_yaml(
-    yaml_file& fs, const string& filename, const string& mode) {
+inline void open_yaml(yaml_file& fs, const string& filename, const string& mode) {
   close_yaml(fs);
   fs.filename = filename;
   fs.mode     = mode;
@@ -1000,9 +941,7 @@ static inline bool read_yaml_line(yaml_file& fs, char* buffer, size_t size) {
   return ok;
 }
 
-static inline bool is_yaml_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
+static inline bool is_yaml_space(char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; }
 static inline bool is_yaml_newline(char c) { return c == '\r' || c == '\n'; }
 static inline bool is_yaml_digit(char c) { return c >= '0' && c <= '9'; }
 static inline bool is_yaml_alpha(char c) {
@@ -1025,8 +964,7 @@ static inline bool is_yaml_whitespace(string_view str) {
   return true;
 }
 
-static inline void remove_yaml_comment(
-    string_view& str, char comment_char = '#') {
+static inline void remove_yaml_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_yaml_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
@@ -1036,11 +974,9 @@ static inline void remove_yaml_comment(
 static inline void parse_yaml_varname(string_view& str, string_view& value) {
   skip_yaml_whitespace(str);
   if (str.empty()) throw std::runtime_error("cannot parse value");
-  if (!is_yaml_alpha(str.front()))
-    throw std::runtime_error("cannot parse value");
+  if (!is_yaml_alpha(str.front())) throw std::runtime_error("cannot parse value");
   auto pos = 0;
-  while (
-      is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
+  while (is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
     pos += 1;
     if (pos >= str.size()) break;
   }
@@ -1104,23 +1040,19 @@ inline void parse_yaml_value(string_view& str, double& value) {
 
 // parse yaml value
 void get_yaml_value(const yaml_value& yaml, string& value) {
-  if (yaml.type != yaml_value_type::string)
-    throw std::runtime_error("error parsing yaml value");
+  if (yaml.type != yaml_value_type::string) throw std::runtime_error("error parsing yaml value");
   value = yaml.string_;
 }
 void get_yaml_value(const yaml_value& yaml, bool& value) {
-  if (yaml.type != yaml_value_type::boolean)
-    throw std::runtime_error("error parsing yaml value");
+  if (yaml.type != yaml_value_type::boolean) throw std::runtime_error("error parsing yaml value");
   value = yaml.boolean;
 }
 void get_yaml_value(const yaml_value& yaml, int& value) {
-  if (yaml.type != yaml_value_type::number)
-    throw std::runtime_error("error parsing yaml value");
+  if (yaml.type != yaml_value_type::number) throw std::runtime_error("error parsing yaml value");
   value = (int)yaml.number;
 }
 void get_yaml_value(const yaml_value& yaml, float& value) {
-  if (yaml.type != yaml_value_type::number)
-    throw std::runtime_error("error parsing yaml value");
+  if (yaml.type != yaml_value_type::number) throw std::runtime_error("error parsing yaml value");
   value = (float)yaml.number;
 }
 void get_yaml_value(const yaml_value& yaml, vec2f& value) {
@@ -1148,22 +1080,15 @@ void get_yaml_value(const yaml_value& yaml, frame3f& value) {
 yaml_value make_yaml_value(const string& value) {
   return {yaml_value_type::string, 0, false, value};
 }
-yaml_value make_yaml_value(bool value) {
-  return {yaml_value_type::boolean, 0, value};
-}
-yaml_value make_yaml_value(int value) {
-  return {yaml_value_type::number, (double)value};
-}
-yaml_value make_yaml_value(float value) {
-  return {yaml_value_type::number, (double)value};
-}
+yaml_value make_yaml_value(bool value) { return {yaml_value_type::boolean, 0, value}; }
+yaml_value make_yaml_value(int value) { return {yaml_value_type::number, (double)value}; }
+yaml_value make_yaml_value(float value) { return {yaml_value_type::number, (double)value}; }
 yaml_value make_yaml_value(const vec2f& value) {
-  return {
-      yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
+  return {yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
 }
 yaml_value make_yaml_value(const vec3f& value) {
-  return {yaml_value_type::array, 3, false, "",
-      {(double)value.x, (double)value.y, (double)value.z}};
+  return {
+      yaml_value_type::array, 3, false, "", {(double)value.x, (double)value.y, (double)value.z}};
 }
 yaml_value make_yaml_value(const mat3f& value) {
   auto yaml = yaml_value{yaml_value_type::array, 9};
@@ -1204,8 +1129,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
         throw std::runtime_error("bad yaml");
       }
     }
-  } else if (is_yaml_digit(str.front()) || str.front() == '-' ||
-             str.front() == '+') {
+  } else if (is_yaml_digit(str.front()) || str.front() == '-' || str.front() == '+') {
     value.type = yaml_value_type::number;
     parse_yaml_value(str, value.number);
   } else {
@@ -1217,8 +1141,7 @@ void parse_yaml_value(string_view& str, yaml_value& value) {
     }
   }
   skip_yaml_whitespace(str);
-  if (!str.empty() && !is_yaml_whitespace(str))
-    throw std::runtime_error("bad yaml");
+  if (!str.empty() && !is_yaml_whitespace(str)) throw std::runtime_error("bad yaml");
 }
 
 // Load/save yaml
@@ -1254,8 +1177,7 @@ void load_yaml(const string& filename, yaml_model& yaml) {
       }
       parse_yaml_varname(line, key);
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':')
-        throw std::runtime_error("bad yaml");
+      if (line.empty() || line.front() != ':') throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       parse_yaml_value(line, value);
       yaml.elements.back().key_values.push_back({key, value});
@@ -1263,8 +1185,7 @@ void load_yaml(const string& filename, yaml_model& yaml) {
       // new group
       parse_yaml_varname(line, key);
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':')
-        throw std::runtime_error("bad yaml");
+      if (line.empty() || line.front() != ':') throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       if (!line.empty() && !is_yaml_whitespace(line)) {
         group = "";
@@ -1284,12 +1205,8 @@ void load_yaml(const string& filename, yaml_model& yaml) {
   }
 }
 
-static inline void format_yaml_value(string& str, const string& value) {
-  str += value;
-}
-static inline void format_yaml_value(string& str, const char* value) {
-  str += value;
-}
+static inline void format_yaml_value(string& str, const string& value) { str += value; }
+static inline void format_yaml_value(string& str, const char* value) { str += value; }
 static inline void format_yaml_value(string& str, double value) {
   char buf[256];
   sprintf(buf, "%g", value);
@@ -1312,27 +1229,22 @@ static inline void format_yaml_values(
 }
 
 template <typename... Args>
-static inline void format_yaml_values(
-    yaml_file& fs, const string& fmt, const Args&... args) {
+static inline void format_yaml_values(yaml_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_yaml_values(str, fmt, args...);
-  if (fputs(str.c_str(), fs.fs) < 0)
-    throw std::runtime_error("cannor write to " + fs.filename);
+  if (fputs(str.c_str(), fs.fs) < 0) throw std::runtime_error("cannor write to " + fs.filename);
 }
 template <typename T>
 static inline void format_yaml_value(yaml_file& fs, const T& value) {
   auto str = ""s;
   format_yaml_value(str, value);
-  if (fputs(str.c_str(), fs.fs) < 0)
-    throw std::runtime_error("cannor write to " + fs.filename);
+  if (fputs(str.c_str(), fs.fs) < 0) throw std::runtime_error("cannor write to " + fs.filename);
 }
 
 static inline void format_yaml_value(string& str, const yaml_value& value) {
   switch (value.type) {
     case yaml_value_type::number: format_yaml_value(str, value.number); break;
-    case yaml_value_type::boolean:
-      format_yaml_value(str, value.boolean ? "true" : "false");
-      break;
+    case yaml_value_type::boolean: format_yaml_value(str, value.boolean ? "true" : "false"); break;
     case yaml_value_type::string:
       if (value.string_.empty() || is_yaml_digit(value.string_.front())) {
         format_yaml_values(str, "\"{}\"", value.string_);
@@ -1376,8 +1288,7 @@ void save_yaml(const string& filename, const yaml_model& yaml) {
       auto first = true;
       for (auto& [key, value] : element.key_values) {
         if (group != "") {
-          format_yaml_values(
-              fs, "  {} {}: {}\n", first ? "-" : " ", key, value);
+          format_yaml_values(fs, "  {} {}: {}\n", first ? "-" : " ", key, value);
           first = false;
         } else {
           format_yaml_values(fs, "{}: {}\n", key, value);
@@ -1387,8 +1298,8 @@ void save_yaml(const string& filename, const yaml_model& yaml) {
   }
 }
 
-bool read_yaml_property(yaml_file& fs, string& group, string& key, bool& newobj,
-    yaml_value& value) {
+bool read_yaml_property(
+    yaml_file& fs, string& group, string& key, bool& newobj, yaml_value& value) {
   // read the file line by line
   char buffer[4096];
   while (read_yaml_line(fs, buffer, sizeof(buffer))) {
@@ -1413,8 +1324,7 @@ bool read_yaml_property(yaml_file& fs, string& group, string& key, bool& newobj,
       }
       parse_yaml_varname(line, key);
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':')
-        throw std::runtime_error("bad yaml");
+      if (line.empty() || line.front() != ':') throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       parse_yaml_value(line, value);
       return true;
@@ -1422,8 +1332,7 @@ bool read_yaml_property(yaml_file& fs, string& group, string& key, bool& newobj,
       // new group
       parse_yaml_varname(line, key);
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':')
-        throw std::runtime_error("bad yaml");
+      if (line.empty() || line.front() != ':') throw std::runtime_error("bad yaml");
       line.remove_prefix(1);
       if (!line.empty() && !is_yaml_whitespace(line)) {
         group = "";
@@ -1441,8 +1350,7 @@ bool read_yaml_property(yaml_file& fs, string& group, string& key, bool& newobj,
   return false;
 }
 
-static inline vector<string> split_yaml_string(
-    const string& str, const string& delim) {
+static inline vector<string> split_yaml_string(const string& str, const string& delim) {
   auto tokens = vector<string>{};
   auto last = (size_t)0, next = (size_t)0;
   while ((next = str.find(delim, last)) != string::npos) {
@@ -1462,8 +1370,8 @@ void write_yaml_comment(yaml_file& fs, const string& comment) {
 }
 
 // Save yaml property
-void write_yaml_property(yaml_file& fs, const string& object, const string& key,
-    bool newobj, const yaml_value& value) {
+void write_yaml_property(
+    yaml_file& fs, const string& object, const string& key, bool newobj, const yaml_value& value) {
   if (key.empty()) {
     format_yaml_values(fs, "\n{}:\n", object);
   } else {
@@ -1486,8 +1394,7 @@ void write_yaml_object(yaml_file& fs, const string& object) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void load_yaml(
-    const string& filename, scene_model& scene, const load_params& params) {
+void load_yaml(const string& filename, scene_model& scene, const load_params& params) {
   // open file
   auto fs = open_yaml(filename);
 
@@ -1507,8 +1414,7 @@ void load_yaml(
   // parse yaml reference
   auto get_yaml_ref = [](const yaml_value& yaml, int& value,
                           const unordered_map<string, int>& refs) {
-    if (yaml.type != yaml_value_type::string)
-      throw std::runtime_error("error parsing yaml value");
+    if (yaml.type != yaml_value_type::string) throw std::runtime_error("error parsing yaml value");
     if (yaml.string_ == "") return;
     try {
       value = refs.at(yaml.string_);
@@ -1597,8 +1503,7 @@ void load_yaml(
         get_yaml_value(value, preset);
         make_image_preset(texture.hdr, texture.ldr, preset);
         if (texture.filename.empty()) {
-          texture.filename = "textures/ypreset-" + preset +
-                             (texture.hdr.empty() ? ".png" : ".hdr");
+          texture.filename = "textures/ypreset-" + preset + (texture.hdr.empty() ? ".png" : ".hdr");
         }
       } else if (key == "uri") {
         get_yaml_value(value, texture.filename);
@@ -1681,10 +1586,9 @@ void load_yaml(
       } else if (key == "preset") {
         auto preset = ""s;
         get_yaml_value(value, preset);
-        make_shape_preset(shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-            shape.positions, shape.normals, shape.texcoords, shape.colors,
-            shape.radius, preset);
+        make_shape_preset(shape.points, shape.lines, shape.triangles, shape.quads, shape.quadspos,
+            shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
+            shape.colors, shape.radius, preset);
         if (shape.filename.empty()) {
           shape.filename = "shapes/ypreset-" + preset + ".yvol";
         }
@@ -1752,8 +1656,7 @@ void load_yaml(
 }
 
 // Save a scene in the builtin YAML format.
-static void load_yaml_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+static void load_yaml_scene(const string& filename, scene_model& scene, const load_params& params) {
   scene = {};
 
   // Parse yaml
@@ -1773,8 +1676,8 @@ static void load_yaml_scene(
 }
 
 // Save yaml
-static void save_yaml(const string& filename, const scene_model& scene,
-    bool ply_instances = false, const string& instances_name = "") {
+static void save_yaml(const string& filename, const scene_model& scene, bool ply_instances = false,
+    const string& instances_name = "") {
   // open file
   auto fs = open_yaml(filename, "w");
 
@@ -1791,85 +1694,65 @@ static void save_yaml(const string& filename, const scene_model& scene,
 
   if (!scene.cameras.empty()) write_yaml_object(fs, "cameras");
   for (auto& camera : scene.cameras) {
-    write_yaml_property(
-        fs, "cameras", "name", true, make_yaml_value(camera.name));
+    write_yaml_property(fs, "cameras", "name", true, make_yaml_value(camera.name));
     if (camera.frame != identity3x4f)
-      write_yaml_property(
-          fs, "cameras", "frame", false, make_yaml_value(camera.frame));
+      write_yaml_property(fs, "cameras", "frame", false, make_yaml_value(camera.frame));
     if (camera.orthographic)
-      write_yaml_property(fs, "cameras", "orthographic", false,
-          make_yaml_value(camera.orthographic));
-    write_yaml_property(
-        fs, "cameras", "lens", false, make_yaml_value(camera.lens));
-    write_yaml_property(
-        fs, "cameras", "aspect", false, make_yaml_value(camera.aspect));
-    write_yaml_property(
-        fs, "cameras", "film", false, make_yaml_value(camera.film));
-    write_yaml_property(
-        fs, "cameras", "focus", false, make_yaml_value(camera.focus));
-    if (camera.aperture)
       write_yaml_property(
-          fs, "cameras", "aperture", false, make_yaml_value(camera.aperture));
+          fs, "cameras", "orthographic", false, make_yaml_value(camera.orthographic));
+    write_yaml_property(fs, "cameras", "lens", false, make_yaml_value(camera.lens));
+    write_yaml_property(fs, "cameras", "aspect", false, make_yaml_value(camera.aspect));
+    write_yaml_property(fs, "cameras", "film", false, make_yaml_value(camera.film));
+    write_yaml_property(fs, "cameras", "focus", false, make_yaml_value(camera.focus));
+    if (camera.aperture)
+      write_yaml_property(fs, "cameras", "aperture", false, make_yaml_value(camera.aperture));
   }
 
   if (!scene.textures.empty()) write_yaml_object(fs, "textures");
   for (auto& texture : scene.textures) {
-    write_yaml_property(
-        fs, "textures", "name", true, make_yaml_value(texture.name));
+    write_yaml_property(fs, "textures", "name", true, make_yaml_value(texture.name));
     if (!texture.filename.empty())
-      write_yaml_property(
-          fs, "textures", "filename", false, make_yaml_value(texture.filename));
+      write_yaml_property(fs, "textures", "filename", false, make_yaml_value(texture.filename));
   }
 
   if (!scene.materials.empty()) write_yaml_object(fs, "materials");
   for (auto& material : scene.materials) {
-    write_yaml_property(
-        fs, "materials", "name", true, make_yaml_value(material.name));
+    write_yaml_property(fs, "materials", "name", true, make_yaml_value(material.name));
     if (material.emission != zero3f)
-      write_yaml_property(fs, "materials", "emission", false,
-          make_yaml_value(material.emission));
+      write_yaml_property(fs, "materials", "emission", false, make_yaml_value(material.emission));
     if (material.diffuse != zero3f)
-      write_yaml_property(
-          fs, "materials", "diffuse", false, make_yaml_value(material.diffuse));
+      write_yaml_property(fs, "materials", "diffuse", false, make_yaml_value(material.diffuse));
     if (material.specular != zero3f)
-      write_yaml_property(fs, "materials", "specular", false,
-          make_yaml_value(material.specular));
+      write_yaml_property(fs, "materials", "specular", false, make_yaml_value(material.specular));
     if (material.metallic)
-      write_yaml_property(fs, "materials", "metallic", false,
-          make_yaml_value(material.metallic));
+      write_yaml_property(fs, "materials", "metallic", false, make_yaml_value(material.metallic));
     if (material.transmission != zero3f)
-      write_yaml_property(fs, "materials", "transmission", false,
-          make_yaml_value(material.transmission));
-    write_yaml_property(fs, "materials", "roughness", false,
-        make_yaml_value(material.roughness));
+      write_yaml_property(
+          fs, "materials", "transmission", false, make_yaml_value(material.transmission));
+    write_yaml_property(fs, "materials", "roughness", false, make_yaml_value(material.roughness));
     if (material.refract)
-      write_yaml_property(
-          fs, "materials", "refract", false, make_yaml_value(material.refract));
+      write_yaml_property(fs, "materials", "refract", false, make_yaml_value(material.refract));
     if (material.voltransmission != zero3f)
-      write_yaml_property(fs, "materials", "voltransmission", false,
-          make_yaml_value(material.voltransmission));
+      write_yaml_property(
+          fs, "materials", "voltransmission", false, make_yaml_value(material.voltransmission));
     if (material.volmeanfreepath != zero3f)
-      write_yaml_property(fs, "materials", "volmeanfreepath", false,
-          make_yaml_value(material.volmeanfreepath));
+      write_yaml_property(
+          fs, "materials", "volmeanfreepath", false, make_yaml_value(material.volmeanfreepath));
     if (material.volscatter != zero3f)
-      write_yaml_property(fs, "materials", "volscatter", false,
-          make_yaml_value(material.volscatter));
+      write_yaml_property(
+          fs, "materials", "volscatter", false, make_yaml_value(material.volscatter));
     if (material.volemission != zero3f)
-      write_yaml_property(fs, "materials", "volemission", false,
-          make_yaml_value(material.volemission));
+      write_yaml_property(
+          fs, "materials", "volemission", false, make_yaml_value(material.volemission));
     if (material.volanisotropy)
-      write_yaml_property(fs, "materials", "volanisotropy", false,
-          make_yaml_value(material.volanisotropy));
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f)
-      write_yaml_property(fs, "materials", "volscale", false,
-          make_yaml_value(material.volscale));
+      write_yaml_property(
+          fs, "materials", "volanisotropy", false, make_yaml_value(material.volanisotropy));
+    if (material.voltransmission != zero3f || material.volmeanfreepath != zero3f)
+      write_yaml_property(fs, "materials", "volscale", false, make_yaml_value(material.volscale));
     if (material.coat != zero3f)
-      write_yaml_property(
-          fs, "materials", "coat", false, make_yaml_value(material.coat));
+      write_yaml_property(fs, "materials", "coat", false, make_yaml_value(material.coat));
     if (material.opacity != 1)
-      write_yaml_property(
-          fs, "materials", "opacity", false, make_yaml_value(material.opacity));
+      write_yaml_property(fs, "materials", "opacity", false, make_yaml_value(material.opacity));
     if (material.emission_tex >= 0)
       write_yaml_property(fs, "materials", "emission_tex", false,
           make_yaml_value(scene.textures[material.emission_tex].name));
@@ -1901,64 +1784,53 @@ static void save_yaml(const string& filename, const scene_model& scene,
       write_yaml_property(fs, "materials", "normal_tex", false,
           make_yaml_value(scene.textures[material.normal_tex].name));
     if (material.gltf_textures)
-      write_yaml_property(fs, "materials", "gltf_textures", false,
-          make_yaml_value(material.gltf_textures));
+      write_yaml_property(
+          fs, "materials", "gltf_textures", false, make_yaml_value(material.gltf_textures));
   }
 
   if (!scene.shapes.empty()) write_yaml_object(fs, "shapes");
   for (auto& shape : scene.shapes) {
-    write_yaml_property(
-        fs, "shapes", "name", true, make_yaml_value(shape.name));
+    write_yaml_property(fs, "shapes", "name", true, make_yaml_value(shape.name));
     if (!shape.filename.empty())
-      write_yaml_property(
-          fs, "shapes", "filename", false, make_yaml_value(shape.filename));
-    write_yaml_property(fs, "subdivs", "subdivisions", false,
-        make_yaml_value(shape.subdivisions));
-    write_yaml_property(fs, "subdivs", "catmullclark", false,
-        make_yaml_value(shape.catmullclark));
-    write_yaml_property(
-        fs, "subdivs", "smooth", false, make_yaml_value(shape.smooth));
+      write_yaml_property(fs, "shapes", "filename", false, make_yaml_value(shape.filename));
+    write_yaml_property(fs, "subdivs", "subdivisions", false, make_yaml_value(shape.subdivisions));
+    write_yaml_property(fs, "subdivs", "catmullclark", false, make_yaml_value(shape.catmullclark));
+    write_yaml_property(fs, "subdivs", "smooth", false, make_yaml_value(shape.smooth));
     if (shape.facevarying)
-      write_yaml_property(fs, "subdivs", "facevarying", false,
-          make_yaml_value(shape.facevarying));
+      write_yaml_property(fs, "subdivs", "facevarying", false, make_yaml_value(shape.facevarying));
     if (shape.displacement_tex >= 0)
       write_yaml_property(fs, "subdivs", "displacement_tex", false,
           make_yaml_value(scene.textures[shape.displacement_tex].name));
     if (shape.displacement_tex >= 0)
-      write_yaml_property(fs, "subdivs", "displacement", false,
-          make_yaml_value(shape.displacement));
+      write_yaml_property(
+          fs, "subdivs", "displacement", false, make_yaml_value(shape.displacement));
   }
 
   if (!ply_instances) {
     if (!scene.instances.empty()) write_yaml_object(fs, "instances");
     for (auto& instance : scene.instances) {
-      write_yaml_property(
-          fs, "instances", "name", true, make_yaml_value(instance.name));
+      write_yaml_property(fs, "instances", "name", true, make_yaml_value(instance.name));
       if (instance.frame != identity3x4f)
-        write_yaml_property(
-            fs, "instances", "frame", false, make_yaml_value(instance.frame));
+        write_yaml_property(fs, "instances", "frame", false, make_yaml_value(instance.frame));
       if (instance.shape >= 0)
-        write_yaml_property(fs, "instances", "shape", false,
-            make_yaml_value(scene.shapes[instance.shape].name));
+        write_yaml_property(
+            fs, "instances", "shape", false, make_yaml_value(scene.shapes[instance.shape].name));
       if (instance.material >= 0)
         write_yaml_property(fs, "instances", "material", false,
             make_yaml_value(scene.materials[instance.material].name));
     }
   } else {
     if (!scene.instances.empty()) write_yaml_object(fs, "ply_instances");
-    write_yaml_property(
-        fs, "ply_instances", "filename", true, make_yaml_value(instances_name));
+    write_yaml_property(fs, "ply_instances", "filename", true, make_yaml_value(instances_name));
   }
 
   if (!scene.environments.empty()) write_yaml_object(fs, "environments");
   for (auto& environment : scene.environments) {
-    write_yaml_property(
-        fs, "environments", "name", true, make_yaml_value(environment.name));
+    write_yaml_property(fs, "environments", "name", true, make_yaml_value(environment.name));
     if (environment.frame != identity3x4f)
-      write_yaml_property(fs, "environments", "frame", false,
-          make_yaml_value(environment.frame));
-    write_yaml_property(fs, "environments", "emission", false,
-        make_yaml_value(environment.emission));
+      write_yaml_property(fs, "environments", "frame", false, make_yaml_value(environment.frame));
+    write_yaml_property(
+        fs, "environments", "emission", false, make_yaml_value(environment.emission));
     if (environment.emission_tex >= 0)
       write_yaml_property(fs, "environments", "emission_tex", false,
           make_yaml_value(scene.textures[environment.emission_tex].name));
@@ -1966,8 +1838,8 @@ static void save_yaml(const string& filename, const scene_model& scene,
 }
 
 // Save a scene in the builtin YAML format.
-static void save_yaml_scene(const string& filename, const scene_model& scene,
-    const save_params& params) {
+static void save_yaml_scene(
+    const string& filename, const scene_model& scene, const save_params& params) {
   try {
     // save yaml file
     save_yaml(filename, scene);
@@ -1988,17 +1860,16 @@ static void save_yaml_scene(const string& filename, const scene_model& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void load_obj(
-    const string& filename, scene_model& scene, const load_params& params) {
+void load_obj(const string& filename, scene_model& scene, const load_params& params) {
   // load obj
   auto obj = obj_model{};
   load_obj(filename, obj, false, true, true);
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
-    auto& camera = scene.cameras.emplace_back();
-    camera.name  = make_safe_name(ocam.name, "cam", (int)scene.cameras.size());
-    camera.frame = ocam.frame;
+    auto& camera        = scene.cameras.emplace_back();
+    camera.name         = make_safe_name(ocam.name, "cam", (int)scene.cameras.size());
+    camera.frame        = ocam.frame;
     camera.orthographic = ocam.ortho;
     camera.film         = max(ocam.width, ocam.height);
     camera.aspect       = ocam.width / ocam.height;
@@ -2014,8 +1885,7 @@ void load_obj(
     auto it = texture_map.find(info.path);
     if (it != texture_map.end()) return it->second;
     auto& texture = scene.textures.emplace_back();
-    texture.name  = make_safe_name(
-        get_basename(info.path), "texture", (int)scene.textures.size());
+    texture.name  = make_safe_name(get_basename(info.path), "texture", (int)scene.textures.size());
     texture.filename       = info.path;
     texture_map[info.path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
@@ -2024,9 +1894,8 @@ void load_obj(
   // convert materials and textures
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& omat : obj.materials) {
-    auto& material = scene.materials.emplace_back();
-    material.name  = make_safe_name(
-        omat.name, "material", (int)scene.materials.size());
+    auto& material            = scene.materials.emplace_back();
+    material.name             = make_safe_name(omat.name, "material", (int)scene.materials.size());
     material.emission         = omat.emission;
     material.diffuse          = omat.diffuse;
     material.specular         = omat.specular;
@@ -2062,27 +1931,26 @@ void load_obj(
     shape_name_counts[shape.name] += 1;
     if (shape_name_counts[shape.name] > 1)
       shape.name += std::to_string(shape_name_counts[shape.name]);
-    shape.name = make_safe_name(shape.name, "shape", (int)scene.shapes.size());
+    shape.name      = make_safe_name(shape.name, "shape", (int)scene.shapes.size());
     shape.filename  = make_safe_filename("shapes/" + shape.name + ".ply");
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
     auto has_quads  = has_obj_quads(oshape);
     if (!oshape.faces.empty() && !params.facevarying && !has_quads) {
-      get_obj_triangles(obj, oshape, shape.triangles, shape.positions,
-          shape.normals, shape.texcoords, materials, ematerials, true);
+      get_obj_triangles(obj, oshape, shape.triangles, shape.positions, shape.normals,
+          shape.texcoords, materials, ematerials, true);
     } else if (!oshape.faces.empty() && !params.facevarying && has_quads) {
-      get_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
-          shape.texcoords, materials, ematerials, true);
-    } else if (!oshape.lines.empty()) {
-      get_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
-          shape.texcoords, materials, ematerials, true);
-    } else if (!oshape.points.empty()) {
-      get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals,
-          shape.texcoords, materials, ematerials, true);
-    } else if (!oshape.faces.empty() && params.facevarying) {
-      get_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
-          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
+      get_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals, shape.texcoords,
           materials, ematerials, true);
+    } else if (!oshape.lines.empty()) {
+      get_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals, shape.texcoords,
+          materials, ematerials, true);
+    } else if (!oshape.points.empty()) {
+      get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals, shape.texcoords,
+          materials, ematerials, true);
+    } else if (!oshape.faces.empty() && params.facevarying) {
+      get_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+          shape.positions, shape.normals, shape.texcoords, materials, ematerials, true);
     } else {
       throw std::runtime_error("should not have gotten here");
     }
@@ -2094,8 +1962,7 @@ void load_obj(
     try {
       material = material_map.at(oshape.materials.at(0));
     } catch (...) {
-      throw std::runtime_error(
-          "cannot find material " + oshape.materials.at(0));
+      throw std::runtime_error("cannot find material " + oshape.materials.at(0));
     }
     // make instances
     if (oshape.instances.empty()) {
@@ -2117,17 +1984,15 @@ void load_obj(
   // convert environments
   for (auto& oenvironment : obj.environments) {
     auto& environment = scene.environments.emplace_back();
-    environment.name  = make_safe_name(
-        oenvironment.name, "environment", scene.environments.size());
-    environment.frame        = oenvironment.frame;
+    environment.name  = make_safe_name(oenvironment.name, "environment", scene.environments.size());
+    environment.frame = oenvironment.frame;
     environment.emission     = oenvironment.emission;
     environment.emission_tex = get_texture(oenvironment.emission_map);
   }
 }
 
 // Loads an OBJ
-static void load_obj_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+static void load_obj_scene(const string& filename, scene_model& scene, const load_params& params) {
   scene = {};
 
   // Parse obj
@@ -2144,8 +2009,7 @@ static void load_obj_scene(
   add_radius(scene);
 }
 
-static void save_obj(const string& filename, const scene_model& scene,
-    const save_params& params) {
+static void save_obj(const string& filename, const scene_model& scene, const save_params& params) {
   auto obj = obj_model{};
 
   // convert cameras
@@ -2191,8 +2055,7 @@ static void save_obj(const string& filename, const scene_model& scene,
     omaterial.reflection_map    = get_texture(material.coat_tex);
     omaterial.opacity_map       = get_texture(material.opacity_tex);
     omaterial.normal_map        = get_texture(material.normal_tex);
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f) {
+    if (material.voltransmission != zero3f || material.volmeanfreepath != zero3f) {
       omaterial.vol_transmission = material.voltransmission;
       omaterial.vol_meanfreepath = material.volmeanfreepath;
       omaterial.vol_emission     = material.volemission;
@@ -2206,21 +2069,20 @@ static void save_obj(const string& filename, const scene_model& scene,
   if (params.objinstances) {
     for (auto& shape : scene.shapes) {
       if (!shape.triangles.empty()) {
-        add_obj_triangles(obj, shape.name, shape.triangles, shape.positions,
-            shape.normals, shape.texcoords, {}, {}, true);
-      } else if (!shape.quads.empty()) {
-        add_obj_quads(obj, shape.name, shape.quads, shape.positions,
-            shape.normals, shape.texcoords, {}, {}, true);
-      } else if (!shape.lines.empty()) {
-        add_obj_lines(obj, shape.name, shape.lines, shape.positions,
-            shape.normals, shape.texcoords, {}, {}, true);
-      } else if (!shape.points.empty()) {
-        add_obj_points(obj, shape.name, shape.points, shape.positions,
-            shape.normals, shape.texcoords, {}, {}, true);
-      } else if (!shape.quadspos.empty()) {
-        add_obj_fvquads(obj, shape.name, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, shape.positions, shape.normals,
+        add_obj_triangles(obj, shape.name, shape.triangles, shape.positions, shape.normals,
             shape.texcoords, {}, {}, true);
+      } else if (!shape.quads.empty()) {
+        add_obj_quads(obj, shape.name, shape.quads, shape.positions, shape.normals, shape.texcoords,
+            {}, {}, true);
+      } else if (!shape.lines.empty()) {
+        add_obj_lines(obj, shape.name, shape.lines, shape.positions, shape.normals, shape.texcoords,
+            {}, {}, true);
+      } else if (!shape.points.empty()) {
+        add_obj_points(obj, shape.name, shape.points, shape.positions, shape.normals,
+            shape.texcoords, {}, {}, true);
+      } else if (!shape.quadspos.empty()) {
+        add_obj_fvquads(obj, shape.name, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords, {}, {}, true);
       } else {
         throw std::runtime_error("do not support empty shapes");
       }
@@ -2236,21 +2098,20 @@ static void save_obj(const string& filename, const scene_model& scene,
       for (auto& p : positions) p = transform_point(instance.frame, p);
       for (auto& n : normals) n = transform_normal(instance.frame, n);
       if (!shape.triangles.empty()) {
-        add_obj_triangles(obj, instance.name, shape.triangles, positions,
-            normals, shape.texcoords, materials, {}, true);
+        add_obj_triangles(obj, instance.name, shape.triangles, positions, normals, shape.texcoords,
+            materials, {}, true);
       } else if (!shape.quads.empty()) {
-        add_obj_quads(obj, instance.name, shape.quads, positions, normals,
-            shape.texcoords, materials, {}, true);
+        add_obj_quads(obj, instance.name, shape.quads, positions, normals, shape.texcoords,
+            materials, {}, true);
       } else if (!shape.lines.empty()) {
-        add_obj_lines(obj, instance.name, shape.lines, positions, normals,
-            shape.texcoords, materials, {}, true);
+        add_obj_lines(obj, instance.name, shape.lines, positions, normals, shape.texcoords,
+            materials, {}, true);
       } else if (!shape.points.empty()) {
-        add_obj_points(obj, instance.name, shape.points, positions, normals,
-            shape.texcoords, materials, {}, true);
+        add_obj_points(obj, instance.name, shape.points, positions, normals, shape.texcoords,
+            materials, {}, true);
       } else if (!shape.quadspos.empty()) {
-        add_obj_fvquads(obj, instance.name, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, positions, normals, shape.texcoords, materials,
-            {}, true);
+        add_obj_fvquads(obj, instance.name, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            positions, normals, shape.texcoords, materials, {}, true);
       } else {
         throw std::runtime_error("do not support empty shapes");
       }
@@ -2270,20 +2131,19 @@ static void save_obj(const string& filename, const scene_model& scene,
   save_obj(filename, obj);
 }
 
-static void save_obj_scene(const string& filename, const scene_model& scene,
-    const save_params& params) {
+static void save_obj_scene(
+    const string& filename, const scene_model& scene, const save_params& params) {
   save_obj(filename, scene, params);
   auto dirname = get_dirname(filename);
   save_textures(scene, dirname, params);
 }
 
 void print_obj_camera(const scene_camera& camera) {
-  printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
-      camera.name.c_str(), (int)camera.orthographic, camera.film,
-      camera.film / camera.aspect, camera.lens, camera.focus, camera.aperture,
-      camera.frame.x.x, camera.frame.x.y, camera.frame.x.z, camera.frame.y.x,
-      camera.frame.y.y, camera.frame.y.z, camera.frame.z.x, camera.frame.z.y,
-      camera.frame.z.z, camera.frame.o.x, camera.frame.o.y, camera.frame.o.z);
+  printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n", camera.name.c_str(),
+      (int)camera.orthographic, camera.film, camera.film / camera.aspect, camera.lens, camera.focus,
+      camera.aperture, camera.frame.x.x, camera.frame.x.y, camera.frame.x.z, camera.frame.y.x,
+      camera.frame.y.y, camera.frame.y.z, camera.frame.z.x, camera.frame.z.y, camera.frame.z.z,
+      camera.frame.o.x, camera.frame.o.y, camera.frame.o.z);
 }
 
 }  // namespace yocto
@@ -2293,8 +2153,7 @@ void print_obj_camera(const scene_camera& camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_ply_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+static void load_ply_scene(const string& filename, scene_model& scene, const load_params& params) {
   scene = {};
 
   // load ply mesh
@@ -2302,9 +2161,8 @@ static void load_ply_scene(
   auto& shape    = scene.shapes.back();
   shape.name     = "shape";
   shape.filename = get_filename(filename);
-  load_shape(filename, shape.points, shape.lines, shape.triangles, shape.quads,
-      shape.positions, shape.normals, shape.texcoords, shape.colors,
-      shape.radius);
+  load_shape(filename, shape.points, shape.lines, shape.triangles, shape.quads, shape.positions,
+      shape.normals, shape.texcoords, shape.colors, shape.radius);
 
   // add instance
   auto instance  = scene_instance{};
@@ -2319,19 +2177,18 @@ static void load_ply_scene(
   add_radius(scene);
 }
 
-static void save_ply_scene(const string& filename, const scene_model& scene,
-    const save_params& params) {
+static void save_ply_scene(
+    const string& filename, const scene_model& scene, const save_params& params) {
   if (scene.shapes.empty()) {
     throw std::runtime_error("cannot save empty scene " + filename);
   }
   auto& shape = scene.shapes.front();
   if (shape.quadspos.empty()) {
-    save_shape(filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.positions, shape.normals, shape.texcoords,
-        shape.colors, shape.radius);
+    save_shape(filename, shape.points, shape.lines, shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, shape.colors, shape.radius);
   } else {
-    save_fvshape(filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords);
+    save_fvshape(filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+        shape.normals, shape.texcoords);
   }
 }
 
@@ -2420,12 +2277,10 @@ void load_gltf(const string& filename, gltf_model& gltf);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void update_transforms(
-    gltf_model& scene, gltf_node& node, const frame3f& parent = identity3x4f) {
+void update_transforms(gltf_model& scene, gltf_node& node, const frame3f& parent = identity3x4f) {
   auto frame = parent * node.local * translation_frame(node.translation) *
                rotation_frame(node.rotation) * scaling_frame(node.scale);
-  for (auto child : node.children)
-    update_transforms(scene, scene.nodes[child], frame);
+  for (auto child : node.children) update_transforms(scene, scene.nodes[child], frame);
 }
 
 // convert gltf to scene
@@ -2438,12 +2293,10 @@ void load_gltf(const string& filename, gltf_model& scene) {
   if (result != cgltf_result_success) {
     throw std::runtime_error("could not load " + filename);
   }
-  auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
-      data, cgltf_free};
+  auto gltf    = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{data, cgltf_free};
   auto dirname = get_dirname(filename);
   if (dirname != "") dirname += "/";
-  if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
-      cgltf_result_success) {
+  if (cgltf_load_buffers(&params, data, dirname.c_str()) != cgltf_result_success) {
     throw std::runtime_error("could not load gltf buffers " + filename);
   }
 
@@ -2457,9 +2310,8 @@ void load_gltf(const string& filename, gltf_model& scene) {
     auto gimg        = &gltf->images[tid];
     auto texture     = gltf_texture{};
     texture.name     = gimg->name ? gimg->name : "";
-    texture.filename = (_startswith(gimg->uri, "data:"))
-                           ? string("[glTF-static inline].png")
-                           : gimg->uri;
+    texture.filename = (_startswith(gimg->uri, "data:")) ? string("[glTF-static inline].png")
+                                                         : gimg->uri;
     scene.textures.push_back(texture);
     imap[gimg] = tid;
   }
@@ -2474,30 +2326,28 @@ void load_gltf(const string& filename, gltf_model& scene) {
   // convert materials
   auto mmap = unordered_map<cgltf_material*, int>{{nullptr, -1}};
   for (auto mid = 0; mid < gltf->materials_count; mid++) {
-    auto gmat             = &gltf->materials[mid];
-    mmap[gmat]            = mid;
-    auto& material        = scene.materials.emplace_back();
-    material.name         = gmat->name ? gmat->name : "";
-    material.emission     = {gmat->emissive_factor[0], gmat->emissive_factor[1],
-        gmat->emissive_factor[2]};
+    auto gmat         = &gltf->materials[mid];
+    mmap[gmat]        = mid;
+    auto& material    = scene.materials.emplace_back();
+    material.name     = gmat->name ? gmat->name : "";
+    material.emission = {
+        gmat->emissive_factor[0], gmat->emissive_factor[1], gmat->emissive_factor[2]};
     material.emission_tex = get_texture(gmat->emissive_texture);
     if (gmat->has_pbr_specular_glossiness) {
       material.has_specgloss = true;
       auto gsg               = &gmat->pbr_specular_glossiness;
-      material.sg_diffuse    = vec4f{gsg->diffuse_factor[0],
-          gsg->diffuse_factor[1], gsg->diffuse_factor[2],
-          gsg->diffuse_factor[3]};
-      material.sg_specular = {gsg->specular_factor[0], gsg->specular_factor[1],
-          gsg->specular_factor[2]};
+      material.sg_diffuse    = vec4f{gsg->diffuse_factor[0], gsg->diffuse_factor[1],
+          gsg->diffuse_factor[2], gsg->diffuse_factor[3]};
+      material.sg_specular   = {
+          gsg->specular_factor[0], gsg->specular_factor[1], gsg->specular_factor[2]};
       material.sg_glossiness   = gsg->glossiness_factor;
       material.sg_diffuse_tex  = get_texture(gsg->diffuse_texture);
       material.sg_specular_tex = get_texture(gsg->specular_glossiness_texture);
     } else if (gmat->has_pbr_metallic_roughness) {
       material.has_metalrough  = true;
       auto gmr                 = &gmat->pbr_metallic_roughness;
-      material.mr_base         = vec4f{gmr->base_color_factor[0],
-          gmr->base_color_factor[1], gmr->base_color_factor[2],
-          gmr->base_color_factor[3]};
+      material.mr_base         = vec4f{gmr->base_color_factor[0], gmr->base_color_factor[1],
+          gmr->base_color_factor[2], gmr->base_color_factor[3]};
       material.mr_metallic     = gmr->metallic_factor;
       material.mr_roughness    = gmr->roughness_factor;
       material.mr_base_tex     = get_texture(gmr->base_color_texture);
@@ -2507,9 +2357,8 @@ void load_gltf(const string& filename, gltf_model& scene) {
   }
 
   // get values from accessors
-  auto accessor_values =
-      [](const cgltf_accessor* gacc,
-          bool normalize = false) -> vector<std::array<double, 4>> {
+  auto accessor_values = [](const cgltf_accessor* gacc,
+                             bool normalize = false) -> vector<std::array<double, 4>> {
     auto gview       = gacc->buffer_view;
     auto data        = (byte*)gview->buffer->data;
     auto offset      = gacc->offset + gview->offset;
@@ -2523,12 +2372,10 @@ void load_gltf(const string& filename, gltf_model& scene) {
     if (type == cgltf_type_vec3) ncomp = 3;
     if (type == cgltf_type_vec4) ncomp = 4;
     auto compSize = 1;
-    if (compTypeNum == cgltf_component_type_r_16 ||
-        compTypeNum == cgltf_component_type_r_16u) {
+    if (compTypeNum == cgltf_component_type_r_16 || compTypeNum == cgltf_component_type_r_16u) {
       compSize = 2;
     }
-    if (compTypeNum == cgltf_component_type_r_32u ||
-        compTypeNum == cgltf_component_type_r_32f) {
+    if (compTypeNum == cgltf_component_type_r_32u || compTypeNum == cgltf_component_type_r_32f) {
       compSize = 4;
     }
     if (!stride) stride = compSize * ncomp;
@@ -2545,8 +2392,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
         } else if (compTypeNum == cgltf_component_type_r_16) {  // short
           vals[i][c] = (double)(*(short*)d);
           if (normalize) vals[i][c] /= SHRT_MAX;
-        } else if (compTypeNum ==
-                   cgltf_component_type_r_16u) {  // unsigned short
+        } else if (compTypeNum == cgltf_component_type_r_16u) {  // unsigned short
           vals[i][c] = (double)(*(unsigned short*)d);
           if (normalize) vals[i][c] /= USHRT_MAX;
         } else if (compTypeNum == cgltf_component_type_r_32u) {  // unsigned int
@@ -2580,13 +2426,11 @@ void load_gltf(const string& filename, gltf_model& scene) {
         if (semantic == "POSITION") {
           shape.positions.reserve(vals.size());
           for (auto i = 0; i < vals.size(); i++)
-            shape.positions.push_back(
-                {(float)vals[i][0], (float)vals[i][1], (float)vals[i][2]});
+            shape.positions.push_back({(float)vals[i][0], (float)vals[i][1], (float)vals[i][2]});
         } else if (semantic == "NORMAL") {
           shape.normals.reserve(vals.size());
           for (auto i = 0; i < vals.size(); i++)
-            shape.normals.push_back(
-                {(float)vals[i][0], (float)vals[i][1], (float)vals[i][2]});
+            shape.normals.push_back({(float)vals[i][0], (float)vals[i][1], (float)vals[i][2]});
         } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
           shape.texcoords.reserve(vals.size());
           for (auto i = 0; i < vals.size(); i++)
@@ -2594,18 +2438,17 @@ void load_gltf(const string& filename, gltf_model& scene) {
         } else if (semantic == "COLOR" || semantic == "COLOR_0") {
           shape.colors.reserve(vals.size());
           for (auto i = 0; i < vals.size(); i++)
-            shape.colors.push_back({(float)vals[i][0], (float)vals[i][1],
-                (float)vals[i][2], (float)vals[i][3]});
+            shape.colors.push_back(
+                {(float)vals[i][0], (float)vals[i][1], (float)vals[i][2], (float)vals[i][3]});
         } else if (semantic == "TANGENT") {
           shape.tangents.reserve(vals.size());
           for (auto i = 0; i < vals.size(); i++)
-            shape.tangents.push_back({(float)vals[i][0], (float)vals[i][1],
-                (float)vals[i][2], (float)vals[i][3]});
+            shape.tangents.push_back(
+                {(float)vals[i][0], (float)vals[i][1], (float)vals[i][2], (float)vals[i][3]});
           for (auto& t : shape.tangents) t.w = -t.w;
         } else if (semantic == "RADIUS") {
           shape.radius.reserve(vals.size());
-          for (auto i = 0; i < vals.size(); i++)
-            shape.radius.push_back((float)vals[i][0]);
+          for (auto i = 0; i < vals.size(); i++) shape.radius.push_back((float)vals[i][0]);
         } else {
           // ignore
         }
@@ -2630,13 +2473,11 @@ void load_gltf(const string& filename, gltf_model& scene) {
             shape.lines.push_back({i * 2 + 0, i * 2 + 1});
         } else if (gprim->type == cgltf_primitive_type_line_loop) {
           shape.lines.reserve(shape.positions.size());
-          for (auto i = 1; i < shape.positions.size(); i++)
-            shape.lines.push_back({i - 1, i});
+          for (auto i = 1; i < shape.positions.size(); i++) shape.lines.push_back({i - 1, i});
           shape.lines.back() = {(int)shape.positions.size() - 1, 0};
         } else if (gprim->type == cgltf_primitive_type_line_strip) {
           shape.lines.reserve(shape.positions.size() - 1);
-          for (auto i = 1; i < shape.positions.size(); i++)
-            shape.lines.push_back({i - 1, i});
+          for (auto i = 1; i < shape.positions.size(); i++) shape.lines.push_back({i - 1, i});
         } else if (gprim->type == cgltf_primitive_type_points) {
           // points
           throw std::runtime_error("points not supported");
@@ -2648,29 +2489,27 @@ void load_gltf(const string& filename, gltf_model& scene) {
         if (gprim->type == cgltf_primitive_type_triangles) {
           shape.triangles.reserve(indices.size() / 3);
           for (auto i = 0; i < indices.size() / 3; i++)
-            shape.triangles.push_back({(int)indices[i * 3 + 0][0],
-                (int)indices[i * 3 + 1][0], (int)indices[i * 3 + 2][0]});
+            shape.triangles.push_back({(int)indices[i * 3 + 0][0], (int)indices[i * 3 + 1][0],
+                (int)indices[i * 3 + 2][0]});
         } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
           shape.triangles.reserve(indices.size() - 2);
           for (auto i = 2; i < indices.size(); i++)
-            shape.triangles.push_back({(int)indices[0][0],
-                (int)indices[i - 1][0], (int)indices[i][0]});
+            shape.triangles.push_back(
+                {(int)indices[0][0], (int)indices[i - 1][0], (int)indices[i][0]});
         } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
           shape.triangles.reserve(indices.size() - 2);
           for (auto i = 2; i < indices.size(); i++)
-            shape.triangles.push_back({(int)indices[i - 2][0],
-                (int)indices[i - 1][0], (int)indices[i][0]});
+            shape.triangles.push_back(
+                {(int)indices[i - 2][0], (int)indices[i - 1][0], (int)indices[i][0]});
         } else if (gprim->type == cgltf_primitive_type_lines) {
           shape.lines.reserve(indices.size() / 2);
           for (auto i = 0; i < indices.size() / 2; i++)
-            shape.lines.push_back(
-                {(int)indices[i * 2 + 0][0], (int)indices[i * 2 + 1][0]});
+            shape.lines.push_back({(int)indices[i * 2 + 0][0], (int)indices[i * 2 + 1][0]});
         } else if (gprim->type == cgltf_primitive_type_line_loop) {
           shape.lines.reserve(indices.size());
           for (auto i = 1; i < indices.size(); i++)
             shape.lines.push_back({(int)indices[i - 1][0], (int)indices[i][0]});
-          shape.lines.back() = {
-              (int)indices[indices.size() - 1][0], (int)indices[0][0]};
+          shape.lines.back() = {(int)indices[indices.size() - 1][0], (int)indices[0][0]};
         } else if (gprim->type == cgltf_primitive_type_line_strip) {
           shape.lines.reserve(indices.size() - 1);
           for (auto i = 1; i < indices.size(); i++)
@@ -2716,21 +2555,18 @@ void load_gltf(const string& filename, gltf_model& scene) {
     if (gnde->camera) node.camera = cmap.at(gnde->camera);
     if (gnde->mesh) node.mesh = smap.at(gnde->mesh);
     if (gnde->has_translation) {
-      node.translation = {
-          gnde->translation[0], gnde->translation[1], gnde->translation[2]};
+      node.translation = {gnde->translation[0], gnde->translation[1], gnde->translation[2]};
     }
     if (gnde->has_rotation) {
-      node.rotation = {gnde->rotation[0], gnde->rotation[1], gnde->rotation[2],
-          gnde->rotation[3]};
+      node.rotation = {gnde->rotation[0], gnde->rotation[1], gnde->rotation[2], gnde->rotation[3]};
     }
     if (gnde->has_scale) {
       node.scale = {gnde->scale[0], gnde->scale[1], gnde->scale[2]};
     }
     if (gnde->has_matrix) {
       auto m     = gnde->matrix;
-      node.local = frame3f(
-          mat4f{{m[0], m[1], m[2], m[3]}, {m[4], m[5], m[6], m[7]},
-              {m[8], m[9], m[10], m[11]}, {m[12], m[13], m[14], m[15]}});
+      node.local = frame3f(mat4f{{m[0], m[1], m[2], m[3]}, {m[4], m[5], m[6], m[7]},
+          {m[8], m[9], m[10], m[11]}, {m[12], m[13], m[14], m[15]}});
     }
   }
 
@@ -2881,20 +2717,18 @@ static void load_gltf(const string& filename, scene_model& scene) {
   for (auto& gtexture : gltf.textures) {
     auto& texture = scene.textures.emplace_back();
     if (!gtexture.name.empty()) {
-      texture.name = make_safe_name(
-          gtexture.name, "texture", (int)scene.textures.size());
+      texture.name = make_safe_name(gtexture.name, "texture", (int)scene.textures.size());
     } else {
-      texture.name = make_safe_name(get_basename(gtexture.filename), "texture",
-          (int)scene.textures.size());
+      texture.name = make_safe_name(
+          get_basename(gtexture.filename), "texture", (int)scene.textures.size());
     }
     texture.filename = gtexture.filename;
   }
 
   // convert materials
   for (auto& gmaterial : gltf.materials) {
-    auto& material = scene.materials.emplace_back();
-    material.name  = make_safe_name(
-        gmaterial.name, "material", (int)scene.materials.size());
+    auto& material        = scene.materials.emplace_back();
+    material.name         = make_safe_name(gmaterial.name, "material", (int)scene.materials.size());
     material.emission     = gmaterial.emission;
     material.emission_tex = gmaterial.emission_tex;
     if (gmaterial.has_specgloss) {
@@ -2919,15 +2753,11 @@ static void load_gltf(const string& filename, scene_model& scene) {
     shape_indices.push_back({});
     for (auto& gprim : gmesh.primitives) {
       auto& shape = scene.shapes.emplace_back();
-      shape_indices.back().push_back(
-          {(int)scene.shapes.size() - 1, gprim.material});
-      shape.name =
-          gmesh.name.empty()
-              ? ""s
-              : (gmesh.name + std::to_string(shape_indices.back().size()));
+      shape_indices.back().push_back({(int)scene.shapes.size() - 1, gprim.material});
+      shape.name = gmesh.name.empty() ? ""s
+                                      : (gmesh.name + std::to_string(shape_indices.back().size()));
       make_safe_name(shape.name, "shape", (int)scene.shapes.size());
-      shape.filename = make_safe_filename(
-          "shapes/shape" + std::to_string(scene.shapes.size()));
+      shape.filename  = make_safe_filename("shapes/shape" + std::to_string(scene.shapes.size()));
       shape.positions = gprim.positions;
       shape.normals   = gprim.normals;
       shape.texcoords = gprim.texcoords;
@@ -2947,9 +2777,8 @@ static void load_gltf(const string& filename, scene_model& scene) {
     camera.name   = gcamera.name;
     camera.aspect = gcamera.aspect;
     camera.film   = 0.036;
-    camera.lens   = gcamera.aspect >= 1
-                      ? (2 * camera.aspect * tan(gcamera.yfov / 2))
-                      : (2 * tan(gcamera.yfov / 2));
+    camera.lens   = gcamera.aspect >= 1 ? (2 * camera.aspect * tan(gcamera.yfov / 2))
+                                      : (2 * tan(gcamera.yfov / 2));
     camera.focus = 10;
   }
 
@@ -2957,8 +2786,7 @@ static void load_gltf(const string& filename, scene_model& scene) {
   for (auto& gnode : gltf.nodes) {
     if (gnode.camera >= 0) {
       auto& camera = scene.cameras.emplace_back(cameras[gnode.camera]);
-      camera.name  = make_safe_name(
-          camera.name, "caemra", (int)scene.cameras.size());
+      camera.name  = make_safe_name(camera.name, "caemra", (int)scene.cameras.size());
       camera.frame = gnode.frame;
     }
     if (gnode.mesh >= 0) {
@@ -2975,8 +2803,7 @@ static void load_gltf(const string& filename, scene_model& scene) {
 }
 
 // Load a scene
-static void load_gltf_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+static void load_gltf_scene(const string& filename, scene_model& scene, const load_params& params) {
   // initialization
   scene = {};
 
@@ -3009,8 +2836,7 @@ static void load_gltf_scene(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_pbrt(
-    const string& filename, scene_model& scene, const load_params& params) {
+static void load_pbrt(const string& filename, scene_model& scene, const load_params& params) {
   // load pbrt
   auto pbrt = pbrt_model{};
   load_pbrt(filename, pbrt);
@@ -3030,10 +2856,9 @@ static void load_pbrt(
   auto texture_map = unordered_map<string, int>{{"", -1}};
   for (auto& ptexture : pbrt.textures) {
     if (ptexture.filename.empty()) continue;
-    auto& texture = scene.textures.emplace_back();
-    texture.name  = make_safe_name(
-        ptexture.name, "texture", (int)scene.textures.size());
-    texture.filename           = ptexture.filename;
+    auto& texture    = scene.textures.emplace_back();
+    texture.name     = make_safe_name(ptexture.name, "texture", (int)scene.textures.size());
+    texture.filename = ptexture.filename;
     texture_map[ptexture.name] = (int)scene.textures.size() - 1;
   }
 
@@ -3046,42 +2871,37 @@ static void load_pbrt(
   };
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
-    auto& material = scene.materials.emplace_back();
-    material.name  = make_safe_name(
-        pmaterial.name, "material", (int)scene.materials.size());
+    auto& material        = scene.materials.emplace_back();
+    material.name         = make_safe_name(pmaterial.name, "material", (int)scene.materials.size());
     material.diffuse      = pmaterial.diffuse;
     material.specular     = pmaterial.sspecular;
     material.transmission = pmaterial.transmission;
     material.roughness    = mean(pmaterial.roughness);
-    material.opacity      = pmaterial.opacity == vec3f{1} ? 1
-                                                     : mean(pmaterial.opacity);
-    material.diffuse_tex         = get_texture(pmaterial.diffuse_map);
+    material.opacity      = pmaterial.opacity == vec3f{1} ? 1 : mean(pmaterial.opacity);
+    material.diffuse_tex  = get_texture(pmaterial.diffuse_map);
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
   }
 
   // convert arealights
   auto arealight_map = unordered_map<string, int>{{"", -1}};
   for (auto& parealight : pbrt.arealights) {
-    auto& material = scene.materials.emplace_back();
-    material.name  = make_safe_name(
-        parealight.name, "arealight", (int)arealight_map.size());
-    material.emission              = parealight.emission;
+    auto& material    = scene.materials.emplace_back();
+    material.name     = make_safe_name(parealight.name, "arealight", (int)arealight_map.size());
+    material.emission = parealight.emission;
     arealight_map[parealight.name] = (int)scene.materials.size() - 1;
   }
 
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
     auto& shape = scene.shapes.emplace_back();
-    shape.name  = make_safe_name(
-        get_basename(shape.filename), "shape", (int)scene.shapes.size());
+    shape.name  = make_safe_name(get_basename(shape.filename), "shape", (int)scene.shapes.size());
     if (pshape.filename.empty()) {
       shape.name     = make_safe_name("", "shape", (int)scene.shapes.size());
       shape.filename = make_safe_filename(
           "shapes/shape" + std::to_string(scene.shapes.size()) + ".ply");
     } else {
       shape.filename = pshape.filename;
-      shape.name     = make_safe_name(
-          get_basename(pshape.filename), "shape", (int)scene.shapes.size());
+      shape.name = make_safe_name(get_basename(pshape.filename), "shape", (int)scene.shapes.size());
     }
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
@@ -3092,10 +2912,9 @@ static void load_pbrt(
     auto arealight_id = arealight_map.at(pshape.arealight);
     auto instance_id  = 0;
     for (auto& frame : pshape.instance_frames) {
-      auto& instance    = scene.instances.emplace_back();
-      instance.name     = shape.name + (pshape.instance_frames.empty()
-                                           ? ""s
-                                           : std::to_string(instance_id++));
+      auto& instance = scene.instances.emplace_back();
+      instance.name  = shape.name +
+                      (pshape.instance_frames.empty() ? ""s : std::to_string(instance_id++));
       instance.frame    = frame * pshape.frame;
       instance.material = arealight_id >= 0 ? arealight_id : material_id;
       instance.shape    = (int)scene.shapes.size() - 1;
@@ -3104,16 +2923,15 @@ static void load_pbrt(
 
   // convert environments
   for (auto& penvironment : pbrt.environments) {
-    auto& environment = scene.environments.emplace_back();
-    environment.name  = make_safe_name(
-        "", "environment", (int)scene.environments.size());
+    auto& environment    = scene.environments.emplace_back();
+    environment.name     = make_safe_name("", "environment", (int)scene.environments.size());
     environment.frame    = penvironment.frame;
     environment.emission = penvironment.emission;
     if (!penvironment.filename.empty()) {
-      auto& texture    = scene.textures.emplace_back();
-      texture.name     = make_safe_name(get_basename(penvironment.filename),
-          "environment", (int)scene.environments.size());
-      texture.filename = penvironment.filename;
+      auto& texture = scene.textures.emplace_back();
+      texture.name  = make_safe_name(
+          get_basename(penvironment.filename), "environment", (int)scene.environments.size());
+      texture.filename         = penvironment.filename;
       environment.emission_tex = (int)scene.textures.size() - 1;
     } else {
       environment.emission_tex = -1;
@@ -3140,8 +2958,7 @@ static void load_pbrt(
 }
 
 // load pbrt scenes
-static void load_pbrt_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+static void load_pbrt_scene(const string& filename, scene_model& scene, const load_params& params) {
   scene = scene_model{};
 
   // Parse pbrt
@@ -3191,9 +3008,8 @@ static void save_pbrt(const string& filename, const scene_model& scene) {
     pmaterial.specular     = material.specular;
     pmaterial.transmission = material.transmission;
     pmaterial.roughness    = {material.roughness, material.roughness};
-    pmaterial.diffuse_map  = material.diffuse_tex >= 0
-                                ? scene.textures[material.diffuse_tex].name
-                                : ""s;
+    pmaterial.diffuse_map  = material.diffuse_tex >= 0 ? scene.textures[material.diffuse_tex].name
+                                                      : ""s;
     auto& parealight    = pbrt.arealights.emplace_back();
     parealight.name     = material.name;
     parealight.emission = material.emission;
@@ -3223,8 +3039,7 @@ static void save_pbrt(const string& filename, const scene_model& scene) {
 }
 
 // Save a pbrt scene
-void save_pbrt_scene(const string& filename, const scene_model& scene,
-    const save_params& params) {
+void save_pbrt_scene(const string& filename, const scene_model& scene, const save_params& params) {
   // save pbrt
   save_pbrt(filename, scene);
 
@@ -3232,14 +3047,12 @@ void save_pbrt_scene(const string& filename, const scene_model& scene,
   auto dirname = get_dirname(filename);
   for (auto& shape : scene.shapes) {
     if (shape.quadspos.empty()) {
-      save_shape(replace_extension(dirname + shape.filename, ".ply"),
-          shape.points, shape.lines, shape.triangles, shape.quads,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius);
+      save_shape(replace_extension(dirname + shape.filename, ".ply"), shape.points, shape.lines,
+          shape.triangles, shape.quads, shape.positions, shape.normals, shape.texcoords,
+          shape.colors, shape.radius);
     } else {
-      save_fvshape(replace_extension(dirname + shape.filename, ".ply"),
-          shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-          shape.normals, shape.texcoords);
+      save_fvshape(replace_extension(dirname + shape.filename, ".ply"), shape.quadspos,
+          shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
     }
   }
 
@@ -3315,38 +3128,32 @@ void make_cornellbox_scene(scene_model& scene) {
   auto& shortbox_shp      = scene.shapes.emplace_back();
   shortbox_shp.name       = "shortbox";
   shortbox_shp.filename   = "shapes/shortbox.obj";
-  shortbox_shp.positions  = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
-      {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
-      {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
-      {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
-      {0.7, 0.0, 0.17}, {0.7, 0.6, 0.17}, {0.53, 0.6, 0.75}, {0.53, 0.0, 0.75},
-      {0.13, 0.0, 0.0}, {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17},
-      {0.53, 0.0, 0.75}, {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0},
-      {-0.05, 0.0, 0.57}};
-  shortbox_shp.triangles  = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
-      {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
-      {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+  shortbox_shp.positions  = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17}, {0.13, 0.6, 0.0},
+      {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57}, {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0},
+      {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75}, {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57},
+      {-0.05, 0.0, 0.57}, {0.7, 0.0, 0.17}, {0.7, 0.6, 0.17}, {0.53, 0.6, 0.75}, {0.53, 0.0, 0.75},
+      {0.13, 0.0, 0.0}, {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17}, {0.53, 0.0, 0.75},
+      {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0}, {-0.05, 0.0, 0.57}};
+  shortbox_shp.triangles  = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4}, {8, 9, 10}, {10, 11, 8},
+      {12, 13, 14}, {14, 15, 12}, {16, 17, 18}, {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   auto& tallbox_shp       = scene.shapes.emplace_back();
   tallbox_shp.name        = "tallbox";
   tallbox_shp.filename    = "shapes/tallbox.obj";
-  tallbox_shp.positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
-      {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
-      {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
-      {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
-      {-0.14, 0.0, -0.67}, {-0.14, 0.0, -0.67}, {-0.14, 1.2, -0.67},
-      {0.04, 1.2, -0.09}, {0.04, 0.0, -0.09}, {0.04, 0.0, -0.09},
-      {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
-      {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
+  tallbox_shp.positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09}, {-0.14, 1.2, -0.67},
+      {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09}, {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49},
+      {-0.71, 0.0, -0.49}, {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
+      {-0.14, 0.0, -0.67}, {-0.14, 0.0, -0.67}, {-0.14, 1.2, -0.67}, {0.04, 1.2, -0.09},
+      {0.04, 0.0, -0.09}, {0.04, 0.0, -0.09}, {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09},
+      {-0.53, 0.0, 0.09}, {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
       {-0.71, 0.0, -0.49}};
-  tallbox_shp.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
-      {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
-      {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
+  tallbox_shp.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4}, {8, 9, 10}, {10, 11, 8},
+      {12, 13, 14}, {14, 15, 12}, {16, 17, 18}, {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   auto& light_shp         = scene.shapes.emplace_back();
   light_shp.name          = "light";
   light_shp.filename      = "shapes/light.obj";
-  light_shp.positions     = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
-      {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
-  light_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
+  light_shp.positions     = {
+      {-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25}, {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
+  light_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
   scene.instances.push_back({"floor", identity3x4f, 0, 0});
   scene.instances.push_back({"ceiling", identity3x4f, 1, 1});
   scene.instances.push_back({"backwall", identity3x4f, 2, 2});

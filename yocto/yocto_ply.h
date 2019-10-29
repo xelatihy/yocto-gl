@@ -338,10 +338,11 @@ inline void close_ply(ply_file& fs) {
 }
 
 // Read a line
-inline bool read_ply_line(ply_file& fs, char* buffer, size_t size, bool& error) {
-  if(fgets(buffer, size, fs.fs)) {
+inline bool read_ply_line(
+    ply_file& fs, char* buffer, size_t size, bool& error) {
+  if (fgets(buffer, size, fs.fs)) {
     fs.linenum += 1;
-      return true;
+    return true;
   } else {
     error = ferror(fs.fs);
     return false;
@@ -442,85 +443,85 @@ inline bool parse_ply_value(string_view& str, string_view& value) {
 }
 inline bool parse_ply_value(string_view& str, string& value) {
   auto valuev = string_view{};
-  if(!parse_ply_value(str, valuev)) return false;
+  if (!parse_ply_value(str, valuev)) return false;
   value = string{valuev};
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, int8_t& value) {
   char* end = nullptr;
   value     = (int8_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, int16_t& value) {
   char* end = nullptr;
   value     = (int16_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, int64_t& value) {
   char* end = nullptr;
   value     = (int64_t)strtoll(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, uint8_t& value) {
   char* end = nullptr;
   value     = (uint8_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, uint16_t& value) {
   char* end = nullptr;
   value     = (uint16_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, uint32_t& value) {
   char* end = nullptr;
   value     = (uint32_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, uint64_t& value) {
   char* end = nullptr;
   value     = (uint64_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, bool& value) {
   auto valuei = 0;
   parse_ply_value(str, valuei);
   value = (bool)valuei;
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 inline bool parse_ply_value(string_view& str, double& value) {
   char* end = nullptr;
   value     = strtod(str.data(), &end);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 #ifdef __APPLE__
 inline bool parse_ply_value(string_view& str, size_t& value) {
@@ -528,7 +529,7 @@ inline bool parse_ply_value(string_view& str, size_t& value) {
   value     = (size_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
-    return true;
+  return true;
 }
 #endif
 
@@ -685,7 +686,7 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
 
     // get command
     auto cmd = ""s;
-    if(!parse_ply_value(str, cmd)) return set_error();
+    if (!parse_ply_value(str, cmd)) return set_error();
     if (cmd == "") continue;
 
     // check magic number
@@ -700,7 +701,7 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
       if (!first_line) throw std::runtime_error{"bad ply file"};
     } else if (cmd == "format") {
       auto fmt = string_view{};
-      if(!parse_ply_value(str, fmt)) return set_error();
+      if (!parse_ply_value(str, fmt)) return set_error();
       if (fmt == "ascii") {
         ply.format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -718,21 +719,21 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto& elem = ply.elements.emplace_back();
-      if(!parse_ply_value(str, elem.name)) return set_error();
-      if(!parse_ply_value(str, elem.count)) return set_error();
+      if (!parse_ply_value(str, elem.name)) return set_error();
+      if (!parse_ply_value(str, elem.count)) return set_error();
     } else if (cmd == "property") {
       if (ply.elements.empty()) throw std::runtime_error{"bad ply header"};
       auto& prop  = ply.elements.back().properties.emplace_back();
       auto  tname = ""s;
-      if(!parse_ply_value(str, tname)) return set_error();
+      if (!parse_ply_value(str, tname)) return set_error();
       if (tname == "list") {
         prop.is_list = true;
-        if(!parse_ply_value(str, tname)) return set_error();
-          throw std::runtime_error{"unknown ply type " + tname};
+        if (!parse_ply_value(str, tname)) return set_error();
+        throw std::runtime_error{"unknown ply type " + tname};
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
           throw std::runtime_error{"unsupported list size type " + tname};
-        if(!parse_ply_value(str, tname)) return set_error();
+        if (!parse_ply_value(str, tname)) return set_error();
         if (type_map.find(tname) == type_map.end())
           return set_error("unknown ply type " + tname);
         prop.type = type_map.at(tname);
@@ -742,7 +743,7 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
           return set_error("unknown ply type " + tname);
         prop.type = type_map.at(tname);
       }
-      if(!parse_ply_value(str, prop.name)) return set_error();
+      if (!parse_ply_value(str, prop.name)) return set_error();
     } else if (cmd == "end_header") {
       end_header = true;
       break;
@@ -783,40 +784,51 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
         auto str = string_view{buffer};
         for (auto& prop : elem.properties) {
           if (prop.is_list) {
-            if(!parse_ply_value(str, prop.ldata_u8.emplace_back())) return set_error();
+            if (!parse_ply_value(str, prop.ldata_u8.emplace_back()))
+              return set_error();
           }
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                if(!parse_ply_value(str, prop.data_i8.emplace_back())) return set_error();
+                if (!parse_ply_value(str, prop.data_i8.emplace_back()))
+                  return set_error();
                 break;
               case ply_type::i16:
-                if(!parse_ply_value(str, prop.data_i16.emplace_back())) return set_error();
+                if (!parse_ply_value(str, prop.data_i16.emplace_back()))
+                  return set_error();
                 break;
               case ply_type::i32:
-                if(!parse_ply_value(str, prop.data_i32.emplace_back())) return set_error();
+                if (!parse_ply_value(str, prop.data_i32.emplace_back()))
+                  return set_error();
                 break;
               case ply_type::i64:
-                if(!parse_ply_value(str, prop.data_i64.emplace_back())) return set_error();
+                if (!parse_ply_value(str, prop.data_i64.emplace_back()))
+                  return set_error();
                 break;
               case ply_type::u8:
-                if(!parse_ply_value(str, prop.data_u8.emplace_back())) return set_error();
+                if (!parse_ply_value(str, prop.data_u8.emplace_back()))
+                  return set_error();
                 break;
               case ply_type::u16:
-                if(!parse_ply_value(str, prop.data_u16.emplace_back())) return set_error();
+                if (!parse_ply_value(str, prop.data_u16.emplace_back()))
+                  return set_error();
                 break;
               case ply_type::u32:
-                if(!parse_ply_value(str, prop.data_u32.emplace_back())) return set_error();
+                if (!parse_ply_value(str, prop.data_u32.emplace_back()))
+                  return set_error();
                 break;
               case ply_type::u64:
-                if(!parse_ply_value(str, prop.data_u64.emplace_back())) return set_error();
+                if (!parse_ply_value(str, prop.data_u64.emplace_back()))
+                  return set_error();
                 break;
               case ply_type::f32:
-                if(!parse_ply_value(str, prop.data_f32.emplace_back())) return set_error();
+                if (!parse_ply_value(str, prop.data_f32.emplace_back()))
+                  return set_error();
                 break;
               case ply_type::f64:
-                if(!parse_ply_value(str, prop.data_f64.emplace_back())) return set_error();
+                if (!parse_ply_value(str, prop.data_f64.emplace_back()))
+                  return set_error();
                 break;
             }
           }
@@ -1460,7 +1472,7 @@ template <typename VT>
 template <typename T, typename VT>
 inline bool parse_ply_prop(string_view& str, VT& value) {
   auto tvalue = T{};
-  if(!parse_ply_value(str, tvalue)) return false;
+  if (!parse_ply_value(str, tvalue)) return false;
   value = (VT)tvalue;
   return false;
 }
@@ -1504,9 +1516,7 @@ inline bool read_ply_header(ply_file& fs, ply_format& format,
   elements.clear();
 
   // initialize parsing
-  auto set_error = [](const string& err = "") {
-    return false;
-  };
+  auto set_error = [](const string& err = "") { return false; };
 
   // read the file header str by str
   char buffer[4096];
@@ -1520,7 +1530,7 @@ inline bool read_ply_header(ply_file& fs, ply_format& format,
 
     // get command
     auto cmd = ""s;
-    if(!parse_ply_value(str, cmd)) return set_error();
+    if (!parse_ply_value(str, cmd)) return set_error();
     if (cmd == "") continue;
 
     // check magic number
@@ -1535,7 +1545,7 @@ inline bool read_ply_header(ply_file& fs, ply_format& format,
       if (!first_line) return set_error("bad ply file");
     } else if (cmd == "format") {
       auto fmt = string_view{};
-      if(!parse_ply_value(str, fmt)) return set_error();
+      if (!parse_ply_value(str, fmt)) return set_error();
       if (fmt == "ascii") {
         format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -1553,22 +1563,22 @@ inline bool read_ply_header(ply_file& fs, ply_format& format,
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto& elem = elements.emplace_back();
-      if(!parse_ply_value(str, elem.name)) return set_error();
-      if(!parse_ply_value(str, elem.count)) return set_error();
+      if (!parse_ply_value(str, elem.name)) return set_error();
+      if (!parse_ply_value(str, elem.count)) return set_error();
     } else if (cmd == "property") {
       if (elements.empty()) throw std::runtime_error{"bad ply header"};
       auto& prop  = elements.back().properties.emplace_back();
       auto  tname = ""s;
-      if(!parse_ply_value(str, tname)) return set_error();
+      if (!parse_ply_value(str, tname)) return set_error();
       if (tname == "list") {
         prop.is_list = true;
-        if(!parse_ply_value(str, tname)) return set_error();
+        if (!parse_ply_value(str, tname)) return set_error();
         if (type_map.find(tname) == type_map.end())
           return set_error("unknown ply type " + tname);
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
           throw std::runtime_error{"unsupported list size type " + tname};
-        if(!parse_ply_value(str, tname)) return set_error();
+        if (!parse_ply_value(str, tname)) return set_error();
         if (type_map.find(tname) == type_map.end())
           return set_error("unknown ply type " + tname);
         prop.type = type_map.at(tname);
@@ -1578,7 +1588,7 @@ inline bool read_ply_header(ply_file& fs, ply_format& format,
           throw std::runtime_error{"unknown ply type " + tname};
         prop.type = type_map.at(tname);
       }
-      if(!parse_ply_value(str, prop.name)) return set_error();
+      if (!parse_ply_value(str, prop.name)) return set_error();
     } else if (cmd == "end_header") {
       end_header = true;
       break;
