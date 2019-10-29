@@ -3126,7 +3126,8 @@ static void load_pbrt(
     const string& filename, scene_model& scene, const load_params& params) {
   // load pbrt
   auto pbrt = pbrt_model{};
-  load_pbrt(filename, pbrt);
+  auto error = ""s;
+  if(!load_pbrt(filename, pbrt, error)) throw std::runtime_error(error);
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
@@ -3332,7 +3333,8 @@ static void save_pbrt(const string& filename, const scene_model& scene) {
     }
   }
 
-  save_pbrt(filename, pbrt);
+  auto error = ""s;
+  if(!save_pbrt(filename, pbrt, error)) throw std::runtime_error(error);
 }
 
 // Save a pbrt scene
