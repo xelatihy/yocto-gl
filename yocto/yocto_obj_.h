@@ -181,15 +181,10 @@ struct obj_model {
 };
 
 // Load and save obj
-inline bool load_obj(const string& filename, obj_model& obj,
+inline void load_obj(const string& filename, obj_model& obj,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-inline bool save_obj(const string& filename, const obj_model& obj);
-inline bool load_obj(const string& filename, obj_model& obj, string& error,
-    bool geom_only = false, bool split_elements = true,
-    bool split_materials = false);
-inline bool save_obj(
-    const string& filename, const obj_model& obj, string& error);
+inline void save_obj(const string& filename, const obj_model& obj);
 
 // convert between roughness and exponent
 inline float obj_exponent_to_roughness(float exponent);
@@ -265,8 +260,6 @@ struct obj_file {
   obj_file& operator=(const obj_file&) = delete;
   ~obj_file();
 
-  operator bool() const { return (bool)fs; }
-
   FILE*  fs       = nullptr;
   string filename = "";
   string mode     = "rt";
@@ -283,14 +276,13 @@ inline void close_obj(obj_file& fs);
 enum struct obj_command {
   // clang-format off
   vertex, normal, texcoord,         // data in value
-  face, str, point,                 // data in vertices
+  face, line, point,                // data in vertices
   object, group, usemtl, smoothing, // data in name
   mtllib, objxlib,                  // data in name
-  error                             // no data
   // clang-format on
 };
-enum struct mtl_command { material, error };
-enum struct objx_command { camera, environment, instance, error };
+enum struct mtl_command { material };
+enum struct objx_command { camera, environment, instance };
 
 // Obj instance
 struct obj_instance {
@@ -307,13 +299,13 @@ inline bool read_objx_command(obj_file& fs, objx_command& command,
     obj_camera& camera, obj_environment& environment, obj_instance& instance);
 
 // Write obj/mtl/objx elements
-inline bool write_obj_comment(obj_file& fs, const string& comment);
-inline bool write_obj_command(obj_file& fs, obj_command command,
+inline void write_obj_comment(obj_file& fs, const string& comment);
+inline void write_obj_command(obj_file& fs, obj_command command,
     const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices = {});
-inline bool write_mtl_command(obj_file& fs, mtl_command command,
+inline void write_mtl_command(obj_file& fs, mtl_command command,
     obj_material& material, const obj_texture_info& texture = {});
-inline bool write_objx_command(obj_file& fs, objx_command command,
+inline void write_objx_command(obj_file& fs, objx_command command,
     const obj_camera& camera, const obj_environment& environment,
     const obj_instance& instance);
 
@@ -406,7 +398,7 @@ inline void write_obj_text(obj_file& fs, const char* value) {
 namespace yocto {
 
 // Utility to normalize a path
-inline string normalize_obj_path(const string& filename_) {
+static inline string normalize_obj_path(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename)
 
@@ -427,7 +419,7 @@ inline string normalize_obj_path(const string& filename_) {
 }
 
 // Get directory name (including '/').
-inline string get_obj_dirname(const string& filename_) {
+static inline string get_obj_dirname(const string& filename_) {
   auto filename = normalize_obj_path(filename_);
   auto pos      = filename.rfind('/');
   if (pos == string::npos) return "";
@@ -435,7 +427,7 @@ inline string get_obj_dirname(const string& filename_) {
 }
 
 // Get extension (not including '.').
-inline string get_obj_extension(const string& filename_) {
+static inline string get_obj_extension(const string& filename_) {
   auto filename = normalize_obj_path(filename_);
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return "";
@@ -443,7 +435,7 @@ inline string get_obj_extension(const string& filename_) {
 }
 
 // Get filename without directory.
-inline string get_obj_filename(const string& filename_) {
+static inline string get_obj_filename(const string& filename_) {
   auto filename = normalize_obj_path(filename_);
   auto pos      = filename.rfind('/');
   if (pos == string::npos) return filename;
@@ -451,7 +443,7 @@ inline string get_obj_filename(const string& filename_) {
 }
 
 // Get extension.
-inline string get_obj_noextension(const string& filename_) {
+static inline string get_obj_noextension(const string& filename_) {
   auto filename = normalize_obj_path(filename_);
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return filename;
@@ -459,17 +451,18 @@ inline string get_obj_noextension(const string& filename_) {
 }
 
 // Get filename without directory and extension.
-inline string get_obj_basename(const string& filename) {
+static inline string get_obj_basename(const string& filename) {
   return get_obj_noextension(get_obj_filename(filename));
 }
 
 // Replaces extensions
-inline string replace_obj_extension(const string& filename, const string& ext) {
+static inline string replace_obj_extension(
+    const string& filename, const string& ext) {
   return get_obj_noextension(filename) + ext;
 }
 
 // Check if a file can be opened for reading.
-inline bool exists_obj_file(const string& filename) {
+static inline bool exists_obj_file(const string& filename) {
   auto fs = fopen(filename.c_str(), "r");
   if (fs) {
     fclose(fs);
@@ -505,64 +498,59 @@ inline void remove_obj_comment(string_view& str, char comment_char = '#') {
 }
 
 // Parse values from a string
-inline bool parse_obj_value(string_view& str, string_view& value) {
+inline void parse_obj_value(string_view& str, string_view& value) {
   skip_obj_whitespace(str);
-  if (str.empty()) return false;
+  if (str.empty()) throw std::runtime_error("cannot parse value");
   auto cpy = str;
   while (!cpy.empty() && !is_obj_space(cpy.front())) cpy.remove_prefix(1);
   value = str;
   value.remove_suffix(cpy.size());
   str.remove_prefix(str.size() - cpy.size());
-  return true;
 }
-inline bool parse_obj_value(string_view& str, string& value) {
+inline void parse_obj_value(string_view& str, string& value) {
   auto valuev = string_view{};
-  if(!parse_obj_value(str, valuev)) return false;
+  parse_obj_value(str, valuev);
   value = string{valuev};
-  return true;
 }
-inline bool parse_obj_value(string_view& str, int& value) {
+inline void parse_obj_value(string_view& str, int& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
-  if (str.data() == end) return false;
+  if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
-  return true;
 }
-inline bool parse_obj_value(string_view& str, bool& value) {
+inline void parse_obj_value(string_view& str, bool& value) {
   auto valuei = 0;
-  if(!parse_obj_value(str, valuei)) return false;
+  parse_obj_value(str, valuei);
   value = (bool)valuei;
-  return true;
 }
-inline bool parse_obj_value(string_view& str, float& value) {
+inline void parse_obj_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
-  if (str.data() == end) return false;
+  if (str == end) throw std::runtime_error("cannot parse value");
   str.remove_prefix(end - str.data());
-  return true;
+}
+template <typename T>
+inline void parse_obj_value(string_view& str, T* values, int num) {
+  for (auto i = 0; i < num; i++) parse_obj_value(str, values[i]);
 }
 
-inline bool parse_obj_value(string_view& str, vec2f& value) {
-  for (auto i = 0; i < 2; i++) if(!parse_obj_value(str, value[i])) return false;
-  return true;
+inline void parse_obj_value(string_view& str, vec2f& value) {
+  for (auto i = 0; i < 2; i++) parse_obj_value(str, value[i]);
 }
-inline bool parse_obj_value(string_view& str, vec3f& value) {
-  for (auto i = 0; i < 3; i++) if(!parse_obj_value(str, value[i])) return false;
-  return true;
+inline void parse_obj_value(string_view& str, vec3f& value) {
+  for (auto i = 0; i < 3; i++) parse_obj_value(str, value[i]);
 }
-inline bool parse_obj_value(string_view& str, frame3f& value) {
-  for (auto i = 0; i < 4; i++) if(!parse_obj_value(str, value[i])) return false;
-  return true;
+inline void parse_obj_value(string_view& str, frame3f& value) {
+  for (auto i = 0; i < 4; i++) parse_obj_value(str, value[i]);
 }
 
 // Parse values from a string
-inline bool parse_obj_value_or_empty(string_view& str, string& value) {
+inline void parse_obj_value_or_empty(string_view& str, string& value) {
   skip_obj_whitespace(str);
   if (str.empty()) {
     value = "";
-    return true;
   } else {
-    return parse_obj_value(str, value);
+    parse_obj_value(str, value);
   }
 }
 
@@ -587,22 +575,13 @@ inline void format_obj_value(string& str, float value) {
   str += buf;
 }
 inline void format_obj_value(string& str, const vec2f& value) {
-  for (auto i = 0; i < 2; i++) {
-    if (i) str += " ";
-    format_obj_value(str, value[i]);
-  }
+  for (auto i = 0; i < 2; i++) format_obj_value(str, value[i]);
 }
 inline void format_obj_value(string& str, const vec3f& value) {
-  for (auto i = 0; i < 3; i++) {
-    if (i) str += " ";
-    format_obj_value(str, value[i]);
-  }
+  for (auto i = 0; i < 3; i++) format_obj_value(str, value[i]);
 }
 inline void format_obj_value(string& str, const frame3f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_obj_value(str, value[i]);
-  }
+  for (auto i = 0; i < 4; i++) format_obj_value(str, value[i]);
 }
 
 // Foramt to file
@@ -644,27 +623,26 @@ inline void format_obj_value(obj_file& fs, const T& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline bool parse_obj_value(string_view& str, obj_vertex& value) {
+inline void parse_obj_value(string_view& str, obj_vertex& value) {
   value = obj_vertex{0, 0, 0};
-  if(!parse_obj_value(str, value.position)) return false;
+  parse_obj_value(str, value.position);
   if (!str.empty() && str.front() == '/') {
     str.remove_prefix(1);
     if (!str.empty() && str.front() == '/') {
       str.remove_prefix(1);
-      if(!parse_obj_value(str, value.normal)) return false;
+      parse_obj_value(str, value.normal);
     } else {
-      if(!parse_obj_value(str, value.texcoord)) return false;
+      parse_obj_value(str, value.texcoord);
       if (!str.empty() && str.front() == '/') {
         str.remove_prefix(1);
-        if(!parse_obj_value(str, value.normal)) return false;
+        parse_obj_value(str, value.normal);
       }
     }
   }
-  return true;
 }
 
 // Input for OBJ textures
-inline bool parse_obj_value(string_view& str, obj_texture_info& info) {
+inline void parse_obj_value(string_view& str, obj_texture_info& info) {
   // initialize
   info = obj_texture_info();
 
@@ -673,11 +651,11 @@ inline bool parse_obj_value(string_view& str, obj_texture_info& info) {
   skip_obj_whitespace(str);
   while (!str.empty()) {
     auto token = ""s;
-    if(!parse_obj_value(str, token)) return false;
+    parse_obj_value(str, token);
     tokens.push_back(token);
     skip_obj_whitespace(str);
   }
-  if (tokens.empty()) return false;
+  if (tokens.empty()) throw std::runtime_error("cannot parse value");
 
   // texture name
   info.path = normalize_obj_path(tokens.back());
@@ -688,64 +666,50 @@ inline bool parse_obj_value(string_view& str, obj_texture_info& info) {
     if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
     if (tokens[i] == "-clamp") info.clamp = true;
   }
-
-  return true;
 }
 
 // Read obj
-inline bool load_mtl(
-    const string& filename, obj_model& obj, string& error, bool fliptr = true) {
+inline void load_mtl(
+    const string& filename, obj_model& obj, bool fliptr = true) {
   // open file
   auto fs = open_obj(filename, "rt");
-  if (!fs) throw std::runtime_error("cannot open " + filename);
 
   // init parsing
   obj.materials.emplace_back();
 
-  // initialize parsing
-  auto set_error = [&filename, &error](const string& err = "") {
-    error = err.empty() ? ("cannot parse " + filename) : err;
-    return false;
-  };
-  auto read_error = [&error](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot parse " + fs.filename;
-    return true;
-  };
-
-  // read the file str by str
+  // read the file line by line
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    remove_obj_comment(str);
-    skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if(!parse_obj_value(str, cmd)) return set_error();
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "newmtl") {
       obj.materials.emplace_back();
-      if(!parse_obj_value(str, obj.materials.back().name)) return set_error();
+      parse_obj_value(line, obj.materials.back().name);
     } else if (cmd == "illum") {
-      if(!parse_obj_value(str, obj.materials.back().illum)) return set_error();
+      parse_obj_value(line, obj.materials.back().illum);
     } else if (cmd == "Ke") {
-      if(!parse_obj_value(str, obj.materials.back().emission)) return set_error();
+      parse_obj_value(line, obj.materials.back().emission);
     } else if (cmd == "Ka") {
-      if(!parse_obj_value(str, obj.materials.back().ambient)) return set_error();
+      parse_obj_value(line, obj.materials.back().ambient);
     } else if (cmd == "Kd") {
-      if(!parse_obj_value(str, obj.materials.back().diffuse)) return set_error();
+      parse_obj_value(line, obj.materials.back().diffuse);
     } else if (cmd == "Ks") {
-      if(!parse_obj_value(str, obj.materials.back().specular)) return set_error();
+      parse_obj_value(line, obj.materials.back().specular);
     } else if (cmd == "Kt") {
-      if(!parse_obj_value(str, obj.materials.back().transmission)) return set_error();
+      parse_obj_value(line, obj.materials.back().transmission);
     } else if (cmd == "Tf") {
       obj.materials.back().transmission = vec3f{-1};
-      if(!parse_obj_value(str, obj.materials.back().transmission)) return set_error();
+      parse_obj_value(line, obj.materials.back().transmission);
       if (obj.materials.back().transmission.y < 0)
         obj.materials.back().transmission = vec3f{
             obj.materials.back().transmission.x};
@@ -753,84 +717,78 @@ inline bool load_mtl(
         obj.materials.back().transmission = 1 -
                                             obj.materials.back().transmission;
     } else if (cmd == "Tr") {
-      if(!parse_obj_value(str, obj.materials.back().opacity)) return set_error();
+      parse_obj_value(line, obj.materials.back().opacity);
       if (fliptr)
         obj.materials.back().opacity = 1 - obj.materials.back().opacity;
     } else if (cmd == "Ns") {
-      if(!parse_obj_value(str, obj.materials.back().exponent)) return set_error();
+      parse_obj_value(line, obj.materials.back().exponent);
     } else if (cmd == "d") {
-      if(!parse_obj_value(str, obj.materials.back().opacity)) return set_error();
+      parse_obj_value(line, obj.materials.back().opacity);
     } else if (cmd == "map_Ke") {
-      if(!parse_obj_value(str, obj.materials.back().emission_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().emission_map);
     } else if (cmd == "map_Ka") {
-      if(!parse_obj_value(str, obj.materials.back().ambient_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().ambient_map);
     } else if (cmd == "map_Kd") {
-      if(!parse_obj_value(str, obj.materials.back().diffuse_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().diffuse_map);
     } else if (cmd == "map_Ks") {
-      if(!parse_obj_value(str, obj.materials.back().specular_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().specular_map);
     } else if (cmd == "map_Tr") {
-      if(!parse_obj_value(str, obj.materials.back().transmission_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().transmission_map);
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      if(!parse_obj_value(str, obj.materials.back().opacity_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().opacity_map);
     } else if (cmd == "map_bump" || cmd == "bump") {
-      if(!parse_obj_value(str, obj.materials.back().bump_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().bump_map);
     } else if (cmd == "map_disp" || cmd == "disp") {
-      if(!parse_obj_value(str, obj.materials.back().displacement_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().displacement_map);
     } else if (cmd == "map_norm" || cmd == "norm") {
-      if(!parse_obj_value(str, obj.materials.back().normal_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().normal_map);
     } else if (cmd == "Pm") {
-      if(!parse_obj_value(str, obj.materials.back().pbr_metallic)) return set_error();
+      parse_obj_value(line, obj.materials.back().pbr_metallic);
     } else if (cmd == "Pr") {
-      if(!parse_obj_value(str, obj.materials.back().pbr_roughness)) return set_error();
+      parse_obj_value(line, obj.materials.back().pbr_roughness);
     } else if (cmd == "Ps") {
-      if(!parse_obj_value(str, obj.materials.back().pbr_sheen)) return set_error();
+      parse_obj_value(line, obj.materials.back().pbr_sheen);
     } else if (cmd == "Pc") {
-      if(!parse_obj_value(str, obj.materials.back().pbr_clearcoat)) return set_error();
+      parse_obj_value(line, obj.materials.back().pbr_clearcoat);
     } else if (cmd == "Pcr") {
-      if(!parse_obj_value(str, obj.materials.back().pbr_coatroughness)) return set_error();
+      parse_obj_value(line, obj.materials.back().pbr_coatroughness);
     } else if (cmd == "map_Pm") {
-      if(!parse_obj_value(str, obj.materials.back().pbr_metallic_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().pbr_metallic_map);
     } else if (cmd == "map_Pr") {
-      if(!parse_obj_value(str, obj.materials.back().pbr_roughness_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().pbr_roughness_map);
     } else if (cmd == "map_Ps") {
-      if(!parse_obj_value(str, obj.materials.back().pbr_sheen_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().pbr_sheen_map);
     } else if (cmd == "map_Pc") {
-      if(!parse_obj_value(str, obj.materials.back().pbr_clearcoat_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().pbr_clearcoat_map);
     } else if (cmd == "map_Pcr") {
-      if(!parse_obj_value(str, obj.materials.back().pbr_coatroughness_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().pbr_coatroughness_map);
     } else if (cmd == "Vt") {
-      if(!parse_obj_value(str, obj.materials.back().vol_transmission)) return set_error();
+      parse_obj_value(line, obj.materials.back().vol_transmission);
     } else if (cmd == "Vp") {
-      if(!parse_obj_value(str, obj.materials.back().vol_meanfreepath)) return set_error();
+      parse_obj_value(line, obj.materials.back().vol_meanfreepath);
     } else if (cmd == "Ve") {
-      if(!parse_obj_value(str, obj.materials.back().vol_emission)) return set_error();
+      parse_obj_value(line, obj.materials.back().vol_emission);
     } else if (cmd == "Vs") {
-      if(!parse_obj_value(str, obj.materials.back().vol_scattering)) return set_error();
+      parse_obj_value(line, obj.materials.back().vol_scattering);
     } else if (cmd == "Vg") {
-      if(!parse_obj_value(str, obj.materials.back().vol_anisotropy)) return set_error();
+      parse_obj_value(line, obj.materials.back().vol_anisotropy);
     } else if (cmd == "Vr") {
-      if(!parse_obj_value(str, obj.materials.back().vol_scale)) return set_error();
+      parse_obj_value(line, obj.materials.back().vol_scale);
     } else if (cmd == "map_Vs") {
-      if(!parse_obj_value(str, obj.materials.back().vol_scattering_map)) return set_error();
+      parse_obj_value(line, obj.materials.back().vol_scattering_map);
     } else {
       continue;
     }
   }
 
-  // check error
-  if (read_error(fs)) return false;
-
   // remove placeholder material
   obj.materials.erase(obj.materials.begin());
-
-  return true;
 }
 
 // Read obj
-inline bool load_objx(const string& filename, obj_model& obj, string& error) {
+inline void load_objx(const string& filename, obj_model& obj) {
   // open file
   auto fs = open_obj(filename, "rt");
-  if (!fs) throw std::runtime_error("cannot open " + filename);
 
   // shape map for instances
   auto shape_map = unordered_map<string, vector<int>>{};
@@ -838,58 +796,47 @@ inline bool load_objx(const string& filename, obj_model& obj, string& error) {
     shape_map[obj.shapes[idx].name].push_back(idx);
   }
 
-  // initialize parsing
-  auto set_error = [&filename, &error](const string& err = "") {
-    error = err.empty() ? ("cannot parse " + filename) : err;
-    return false;
-  };
-  auto read_error = [&error](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot parse " + fs.filename;
-    return true;
-  };
-
-  // read the file str by str
+  // read the file line by line
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    remove_obj_comment(str);
-    skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if(!parse_obj_value(str, cmd)) return set_error();
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // read values
     if (cmd == "c") {
       auto& camera = obj.cameras.emplace_back();
-      if(!parse_obj_value(str, camera.name)) return set_error();
-      if(!parse_obj_value(str, camera.ortho)) return set_error();
-      if(!parse_obj_value(str, camera.width)) return set_error();
-      if(!parse_obj_value(str, camera.height)) return set_error();
-      if(!parse_obj_value(str, camera.lens)) return set_error();
-      if(!parse_obj_value(str, camera.focus)) return set_error();
-      if(!parse_obj_value(str, camera.aperture)) return set_error();
-      if(!parse_obj_value(str, camera.frame)) return set_error();
+      parse_obj_value(line, camera.name);
+      parse_obj_value(line, camera.ortho);
+      parse_obj_value(line, camera.width);
+      parse_obj_value(line, camera.height);
+      parse_obj_value(line, camera.lens);
+      parse_obj_value(line, camera.focus);
+      parse_obj_value(line, camera.aperture);
+      parse_obj_value(line, camera.frame);
     } else if (cmd == "e") {
-      auto& environment  = obj.environments.emplace_back();
-      if(!parse_obj_value(str, environment.name)) return set_error();
-      if(!parse_obj_value(str, environment.emission)) return set_error();
+      auto& environment = obj.environments.emplace_back();
+      parse_obj_value(line, environment.name);
+      parse_obj_value(line, environment.emission);
       auto emission_path = ""s;
-      if(!parse_obj_value(str, emission_path)) return set_error();
+      parse_obj_value(line, emission_path);
       if (emission_path == "\"\"") emission_path = "";
       environment.emission_map.path = emission_path;
-      if(!parse_obj_value(str, environment.frame)) return set_error();
+      parse_obj_value(line, environment.frame);
     } else if (cmd == "i") {
       auto object = ""s;
       auto frame  = identity3x4f;
-      if(!parse_obj_value(str, object)) return set_error();
-      if(!parse_obj_value(str, frame)) return set_error();
+      parse_obj_value(line, object);
+      parse_obj_value(line, frame);
       if (shape_map.find(object) == shape_map.end()) {
-        return set_error("cannot find object " + object);
+        throw std::runtime_error("cannot find object " + object);
       }
       for (auto idx : shape_map.at(object)) {
         obj.shapes[idx].instances.push_back(frame);
@@ -898,22 +845,13 @@ inline bool load_objx(const string& filename, obj_model& obj, string& error) {
       // unused
     }
   }
-
-  // check error
-  if (read_error(fs)) return false;
-
-  return true;
 }
 
 // Read obj
-inline bool load_obj(const string& filename, obj_model& obj, string& error,
-    bool geom_only, bool split_elements, bool split_materials) {
+inline void load_obj(const string& filename, obj_model& obj, bool geom_only,
+    bool split_elements, bool split_materials) {
   // open file
   auto fs = open_obj(filename, "rt");
-  if (!fs) {
-    error = "cannot open " + filename;
-    return false;
-  }
 
   // parsing state
   auto opositions = vector<vec3f>{};
@@ -929,40 +867,29 @@ inline bool load_obj(const string& filename, obj_model& obj, string& error,
   obj = {};
   obj.shapes.emplace_back();
 
-  // initialize parsing
-  auto set_error = [&filename, &error](const string& err = "") {
-    error = err.empty() ? ("cannot parse " + filename) : err;
-    return false;
-  };
-  auto read_error = [&error](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot parse " + fs.filename;
-    return true;
-  };
-
-  // read the file str by str
+  // read the file line by line
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    remove_obj_comment(str);
-    skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if(!parse_obj_value(str, cmd)) return set_error();
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "v") {
-      if(!parse_obj_value(str, opositions.emplace_back())) return set_error();
+      parse_obj_value(line, opositions.emplace_back());
       vert_size.position += 1;
     } else if (cmd == "vn") {
-      if(!parse_obj_value(str, onormals.emplace_back())) return set_error();
+      parse_obj_value(line, onormals.emplace_back());
       vert_size.normal += 1;
     } else if (cmd == "vt") {
-      if(!parse_obj_value(str, otexcoords.emplace_back())) return set_error();
+      parse_obj_value(line, otexcoords.emplace_back());
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       // split if split_elements and different primitives
@@ -1002,10 +929,10 @@ inline bool load_obj(const string& filename, obj_model& obj, string& error,
         element.material = (uint8_t)mat_idx;
       }
       // parse vertices
-      skip_obj_whitespace(str);
-      while (!str.empty()) {
+      skip_obj_whitespace(line);
+      while (!line.empty()) {
         auto vert = obj_vertex{};
-        if(!parse_obj_value(str, vert)) return set_error();
+        parse_obj_value(line, vert);
         if (!vert.position) break;
         if (vert.position < 0)
           vert.position = vert_size.position + vert.position + 1;
@@ -1014,11 +941,11 @@ inline bool load_obj(const string& filename, obj_model& obj, string& error,
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
         shape.vertices.push_back(vert);
         element.size += 1;
-        skip_obj_whitespace(str);
+        skip_obj_whitespace(line);
       }
     } else if (cmd == "o" || cmd == "g") {
       if (geom_only) continue;
-      if(!parse_obj_value_or_empty(str, cmd == "o" ? oname : gname)) return set_error();
+      parse_obj_value_or_empty(line, cmd == "o" ? oname : gname);
       if (!obj.shapes.back().vertices.empty()) {
         obj.shapes.emplace_back();
         obj.shapes.back().name = oname + gname;
@@ -1027,13 +954,13 @@ inline bool load_obj(const string& filename, obj_model& obj, string& error,
       }
     } else if (cmd == "usemtl") {
       if (geom_only) continue;
-      if(!parse_obj_value_or_empty(str, mname)) return set_error();
+      parse_obj_value_or_empty(line, mname);
     } else if (cmd == "s") {
       if (geom_only) continue;
     } else if (cmd == "mtllib") {
       if (geom_only) continue;
       auto mtllib = ""s;
-      if(!parse_obj_value(str, mtllib)) return set_error();
+      parse_obj_value(line, mtllib);
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
       }
@@ -1041,9 +968,6 @@ inline bool load_obj(const string& filename, obj_model& obj, string& error,
       // unused
     }
   }
-
-  // check error
-  if (read_error(fs)) return false;
 
   // convert vertex data
   auto ipositions = vector<int>{};
@@ -1073,21 +997,19 @@ inline bool load_obj(const string& filename, obj_model& obj, string& error,
   }
 
   // exit if done
-  if (geom_only) return true;
+  if (geom_only) return;
 
   // load materials
   auto dirname = get_obj_dirname(filename);
   for (auto& mtllib : mtllibs) {
-    if (!load_mtl(dirname + mtllib, obj, error)) return false;
+    load_mtl(dirname + mtllib, obj);
   }
 
   // load extensions
   auto extfilename = replace_obj_extension(filename, ".objx");
   if (exists_obj_file(extfilename)) {
-    if (!load_objx(extfilename, obj, error)) return false;
+    load_objx(extfilename, obj);
   }
-
-  return true;
 }
 
 // Format values
@@ -1110,17 +1032,9 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 }
 
 // Save obj
-inline bool save_mtl(
-    const string& filename, const obj_model& obj, string& error) {
+inline void save_mtl(const string& filename, const obj_model& obj) {
   // open file
   auto fs = open_obj(filename, "wt");
-  if (!fs) throw std::runtime_error("cannot open " + filename);
-
-  auto write_error = [&filename, &error](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot parse " + filename;
-    return true;
-  };
 
   // save comments
   format_obj_values(fs, "#\n");
@@ -1205,25 +1119,12 @@ inline bool save_mtl(
       format_obj_values(fs, "map_Vs {}\n", material.vol_scattering_map);
     format_obj_values(fs, "\n");
   }
-
-  // check error
-  if (write_error(fs)) return false;
-
-  return true;
 }
 
 // Save obj
-inline bool save_objx(
-    const string& filename, const obj_model& obj, string& error) {
+inline void save_objx(const string& filename, const obj_model& obj) {
   // open file
   auto fs = open_obj(filename, "wt");
-  if (!fs) throw std::runtime_error("cannot open " + filename);
-
-  auto write_error = [&filename, &error](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot parse " + filename;
-    return true;
-  };
 
   // save comments
   format_obj_values(fs, "#\n");
@@ -1257,25 +1158,12 @@ inline bool save_objx(
       format_obj_values(fs, "i {} {}\n", shape.name, frame);
     }
   }
-
-  // check error
-  if (write_error(fs)) return false;
-
-  return true;
 }
 
 // Save obj
-inline bool save_obj(
-    const string& filename, const obj_model& obj, string& error) {
+inline void save_obj(const string& filename, const obj_model& obj) {
   // open file
   auto fs = open_obj(filename, "wt");
-  if (!fs) throw std::runtime_error("cannot open " + filename);
-
-  auto write_error = [&filename, &error](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot parse " + filename;
-    return true;
-  };
 
   // save comments
   format_obj_values(fs, "#\n");
@@ -1331,34 +1219,14 @@ inline bool save_obj(
   }
 
   // save mtl
-  if (!obj.materials.empty()) {
-    if (!save_mtl(replace_obj_extension(filename, ".mtl"), obj, error))
-      return false;
-  }
+  if (!obj.materials.empty())
+    save_mtl(replace_obj_extension(filename, ".mtl"), obj);
 
   // save objx
   if (!obj.cameras.empty() || !obj.environments.empty() ||
       std::any_of(obj.shapes.begin(), obj.shapes.end(),
-          [](auto& shape) { return !shape.instances.empty(); })) {
-    if (!save_objx(replace_obj_extension(filename, ".objx"), obj, error))
-      return false;
-  }
-
-  // check error
-  if (write_error(fs)) return false;
-
-  return true;
-}
-
-inline bool load_obj(const string& filename, obj_model& obj, bool geom_only,
-    bool split_elements, bool split_materials) {
-  auto error = ""s;
-  return load_obj(
-      filename, obj, error, geom_only, split_elements, split_materials);
-}
-inline bool save_obj(const string& filename, const obj_model& obj) {
-  auto error = ""s;
-  return save_obj(filename, obj, error);
+          [](auto& shape) { return !shape.instances.empty(); }))
+    save_objx(replace_obj_extension(filename, ".objx"), obj);
 }
 
 // convert between roughness and exponent
@@ -1465,12 +1333,12 @@ inline void get_obj_lines(const obj_model& obj, const obj_shape& shape,
   lines.reserve(shape.lines.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
   auto cur = 0;
-  for (auto& str : shape.lines) {
-    for (auto c = 1; c < str.size; c++) {
+  for (auto& line : shape.lines) {
+    for (auto c = 1; c < line.size; c++) {
       lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
-      if (!materials.empty()) ematerials.push_back(str.material);
+      if (!materials.empty()) ematerials.push_back(line.material);
     }
-    cur += str.size;
+    cur += line.size;
   }
 }
 inline void get_obj_points(const obj_model& obj, const obj_shape& shape,
@@ -1620,12 +1488,12 @@ inline void add_obj_lines(obj_model& obj, const string& name,
   shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
   shape.vertices.reserve(lines.size() * 2);
   for (auto idx = 0; idx < lines.size(); idx++) {
-    auto& str = lines[idx];
+    auto& line = lines[idx];
     for (auto c = 0; c < 2; c++) {
       shape.vertices.push_back({
-          positions.empty() ? 0 : str[c] + 1,
-          texcoords.empty() ? 0 : str[c] + 1,
-          normals.empty() ? 0 : str[c] + 1,
+          positions.empty() ? 0 : line[c] + 1,
+          texcoords.empty() ? 0 : line[c] + 1,
+          normals.empty() ? 0 : line[c] + 1,
       });
     }
     shape.lines.push_back(
@@ -1685,54 +1553,43 @@ inline void add_obj_fvquads(obj_model& obj, const string& name,
 // Read obj
 inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
     vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size) {
-  // initialize parsing
-  auto set_error = [&command](const string& str = "") {
-    command = obj_command::error;
-    return true;
-  };
-  auto read_error = [&command](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    command = obj_command::error;
-    return true;
-  };
-
-  // read the file str by str
+  // read the file line by line
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    remove_obj_comment(str);
-    skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if(!parse_obj_value(str, cmd)) return set_error();
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "v") {
       command = obj_command::vertex;
-      if(!parse_obj_value(str, value)) return set_error();
+      parse_obj_value(line, value);
       vert_size.position += 1;
       return true;
     } else if (cmd == "vn") {
       command = obj_command::normal;
-      if(!parse_obj_value(str, value)) return set_error();
+      parse_obj_value(line, value);
       vert_size.normal += 1;
       return true;
     } else if (cmd == "vt") {
       command = obj_command::texcoord;
-      if(!parse_obj_value(str, (vec2f&)value)) return set_error();
+      parse_obj_value(line, (vec2f&)value);
       value.z = 0;
       vert_size.texcoord += 1;
       return true;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       vertices.clear();
-      skip_obj_whitespace(str);
-      while (!str.empty()) {
+      skip_obj_whitespace(line);
+      while (!line.empty()) {
         auto vert = obj_vertex{};
-        if(!parse_obj_value(str, vert)) return set_error();
+        parse_obj_value(line, vert);
         if (!vert.position) break;
         if (vert.position < 0)
           vert.position = vert_size.position + vert.position + 1;
@@ -1740,40 +1597,36 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
           vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
         vertices.push_back(vert);
-        skip_obj_whitespace(str);
+        skip_obj_whitespace(line);
       }
       if (cmd == "f") command = obj_command::face;
-      if (cmd == "l") command = obj_command::str;
+      if (cmd == "l") command = obj_command::line;
       if (cmd == "p") command = obj_command::point;
       return true;
     } else if (cmd == "o") {
       command = obj_command::object;
-      if(!parse_obj_value_or_empty(str, name)) return set_error();
+      parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "usemtl") {
       command = obj_command::usemtl;
-      if(!parse_obj_value_or_empty(str, name)) return set_error();
+      parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "g") {
       command = obj_command::group;
-      if(!parse_obj_value_or_empty(str, name)) return set_error();
+      parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "s") {
       command = obj_command::smoothing;
-      if(!parse_obj_value_or_empty(str, name)) return set_error();
+      parse_obj_value_or_empty(line, name);
       return true;
     } else if (cmd == "mtllib") {
       command = obj_command::mtllib;
-      if(!parse_obj_value(str, name)) return set_error();
+      parse_obj_value(line, name);
       return true;
     } else {
       // unused
     }
   }
-
-  // check error
-  if (read_error(fs)) return false;
-
   return false;
 }
 
@@ -1782,31 +1635,20 @@ inline bool read_mtl_command(
     obj_file& fs, mtl_command& command, obj_material& material, bool fliptr) {
   material = {};
 
-  // initialize parsing
-  auto set_error = [&command](const string& err = "") {
-    command = mtl_command::error;
-    return true;
-  };
-  auto read_error = [&command](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    command = mtl_command::error;
-    return true;
-  };
-
-  // read the file str by str
+  // read the file line by line
   auto pos   = ftell(fs.fs);
   auto found = false;
   char buffer[4096];
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    remove_obj_comment(str);
-    skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if(!parse_obj_value(str, cmd)) return set_error();
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // possible token values
@@ -1818,84 +1660,84 @@ inline bool read_mtl_command(
       } else {
         found = true;
       }
-      if(!parse_obj_value(str, material.name)) return set_error();
+      parse_obj_value(line, material.name);
     } else if (cmd == "illum") {
-      if(!parse_obj_value(str, material.illum)) return set_error();
+      parse_obj_value(line, material.illum);
     } else if (cmd == "Ke") {
-      if(!parse_obj_value(str, material.emission)) return set_error();
+      parse_obj_value(line, material.emission);
     } else if (cmd == "Ka") {
-      if(!parse_obj_value(str, material.ambient)) return set_error();
+      parse_obj_value(line, material.ambient);
     } else if (cmd == "Kd") {
-      if(!parse_obj_value(str, material.diffuse)) return set_error();
+      parse_obj_value(line, material.diffuse);
     } else if (cmd == "Ks") {
-      if(!parse_obj_value(str, material.specular)) return set_error();
+      parse_obj_value(line, material.specular);
     } else if (cmd == "Kt") {
-      if(!parse_obj_value(str, material.transmission)) return set_error();
+      parse_obj_value(line, material.transmission);
     } else if (cmd == "Tf") {
       material.transmission = vec3f{-1};
-      if(!parse_obj_value(str, material.transmission)) return set_error();
+      parse_obj_value(line, material.transmission);
       if (material.transmission.y < 0)
         material.transmission = vec3f{material.transmission.x};
       if (fliptr) material.transmission = 1 - material.transmission;
     } else if (cmd == "Tr") {
-      if(!parse_obj_value(str, material.opacity)) return set_error();
+      parse_obj_value(line, material.opacity);
       if (fliptr) material.opacity = 1 - material.opacity;
     } else if (cmd == "Ns") {
-      if(!parse_obj_value(str, material.exponent)) return set_error();
+      parse_obj_value(line, material.exponent);
     } else if (cmd == "d") {
-      if(!parse_obj_value(str, material.opacity)) return set_error();
+      parse_obj_value(line, material.opacity);
     } else if (cmd == "map_Ke") {
-      if(!parse_obj_value(str, material.emission_map)) return set_error();
+      parse_obj_value(line, material.emission_map);
     } else if (cmd == "map_Ka") {
-      if(!parse_obj_value(str, material.ambient_map)) return set_error();
+      parse_obj_value(line, material.ambient_map);
     } else if (cmd == "map_Kd") {
-      if(!parse_obj_value(str, material.diffuse_map)) return set_error();
+      parse_obj_value(line, material.diffuse_map);
     } else if (cmd == "map_Ks") {
-      if(!parse_obj_value(str, material.specular_map)) return set_error();
+      parse_obj_value(line, material.specular_map);
     } else if (cmd == "map_Tr") {
-      if(!parse_obj_value(str, material.transmission_map)) return set_error();
+      parse_obj_value(line, material.transmission_map);
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      if(!parse_obj_value(str, material.opacity_map)) return set_error();
+      parse_obj_value(line, material.opacity_map);
     } else if (cmd == "map_bump" || cmd == "bump") {
-      if(!parse_obj_value(str, material.bump_map)) return set_error();
+      parse_obj_value(line, material.bump_map);
     } else if (cmd == "map_disp" || cmd == "disp") {
-      if(!parse_obj_value(str, material.displacement_map)) return set_error();
+      parse_obj_value(line, material.displacement_map);
     } else if (cmd == "map_norm" || cmd == "norm") {
-      if(!parse_obj_value(str, material.normal_map)) return set_error();
+      parse_obj_value(line, material.normal_map);
     } else if (cmd == "Pm") {
-      if(!parse_obj_value(str, material.pbr_metallic)) return set_error();
+      parse_obj_value(line, material.pbr_metallic);
     } else if (cmd == "Pr") {
-      if(!parse_obj_value(str, material.pbr_roughness)) return set_error();
+      parse_obj_value(line, material.pbr_roughness);
     } else if (cmd == "Ps") {
-      if(!parse_obj_value(str, material.pbr_sheen)) return set_error();
+      parse_obj_value(line, material.pbr_sheen);
     } else if (cmd == "Pc") {
-      if(!parse_obj_value(str, material.pbr_clearcoat)) return set_error();
+      parse_obj_value(line, material.pbr_clearcoat);
     } else if (cmd == "Pcr") {
-      if(!parse_obj_value(str, material.pbr_coatroughness)) return set_error();
+      parse_obj_value(line, material.pbr_coatroughness);
     } else if (cmd == "map_Pm") {
-      if(!parse_obj_value(str, material.pbr_metallic_map)) return set_error();
+      parse_obj_value(line, material.pbr_metallic_map);
     } else if (cmd == "map_Pr") {
-      if(!parse_obj_value(str, material.pbr_roughness_map)) return set_error();
+      parse_obj_value(line, material.pbr_roughness_map);
     } else if (cmd == "map_Ps") {
-      if(!parse_obj_value(str, material.pbr_sheen_map)) return set_error();
+      parse_obj_value(line, material.pbr_sheen_map);
     } else if (cmd == "map_Pc") {
-      if(!parse_obj_value(str, material.pbr_clearcoat_map)) return set_error();
+      parse_obj_value(line, material.pbr_clearcoat_map);
     } else if (cmd == "map_Pcr") {
-      if(!parse_obj_value(str, material.pbr_coatroughness_map)) return set_error();
+      parse_obj_value(line, material.pbr_coatroughness_map);
     } else if (cmd == "Vt") {
-      if(!parse_obj_value(str, material.vol_transmission)) return set_error();
+      parse_obj_value(line, material.vol_transmission);
     } else if (cmd == "Vp") {
-      if(!parse_obj_value(str, material.vol_meanfreepath)) return set_error();
+      parse_obj_value(line, material.vol_meanfreepath);
     } else if (cmd == "Ve") {
-      if(!parse_obj_value(str, material.vol_emission)) return set_error();
+      parse_obj_value(line, material.vol_emission);
     } else if (cmd == "Vs") {
-      if(!parse_obj_value(str, material.vol_scattering)) return set_error();
+      parse_obj_value(line, material.vol_scattering);
     } else if (cmd == "Vg") {
-      if(!parse_obj_value(str, material.vol_anisotropy)) return set_error();
+      parse_obj_value(line, material.vol_anisotropy);
     } else if (cmd == "Vr") {
-      if(!parse_obj_value(str, material.vol_scale)) return set_error();
+      parse_obj_value(line, material.vol_scale);
     } else if (cmd == "map_Vs") {
-      if(!parse_obj_value(str, material.vol_scattering_map)) return set_error();
+      parse_obj_value(line, material.vol_scattering_map);
     } else {
       continue;
     }
@@ -1907,72 +1749,55 @@ inline bool read_mtl_command(
     return true;
   }
 
-  // check error
-  if (read_error(fs)) return false;
-
   return false;
 }
 
 // Read objx
 inline bool read_objx_command(obj_file& fs, objx_command& command,
     obj_camera& camera, obj_environment& environment, obj_instance& instance) {
-  // initialize parsing
-  auto set_error = [&command](const string& err = "") {
-    command = objx_command::error;
-    return true;
-  };
-  auto read_error = [&command](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    command = objx_command::error;
-    return true;
-  };
-
-  // read the file str by str
+  // read the file line by line
   char buffer[4096];
   auto found = false;
   while (read_obj_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    remove_obj_comment(str);
-    skip_obj_whitespace(str);
-    if (str.empty()) continue;
+    // line
+    auto line = string_view{buffer};
+    remove_obj_comment(line);
+    skip_obj_whitespace(line);
+    if (line.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if(!parse_obj_value(str, cmd)) return set_error();
+    parse_obj_value(line, cmd);
     if (cmd == "") continue;
 
     // read values
     if (cmd == "c") {
       command = objx_command::camera;
-      if(!parse_obj_value(str, camera.name)) return set_error();
-      if(!parse_obj_value(str, camera.ortho)) return set_error();
-      if(!parse_obj_value(str, camera.width)) return set_error();
-      if(!parse_obj_value(str, camera.height)) return set_error();
-      if(!parse_obj_value(str, camera.lens)) return set_error();
-      if(!parse_obj_value(str, camera.focus)) return set_error();
-      if(!parse_obj_value(str, camera.aperture)) return set_error();
-      if(!parse_obj_value(str, camera.frame)) return set_error();
+      parse_obj_value(line, camera.name);
+      parse_obj_value(line, camera.ortho);
+      parse_obj_value(line, camera.width);
+      parse_obj_value(line, camera.height);
+      parse_obj_value(line, camera.lens);
+      parse_obj_value(line, camera.focus);
+      parse_obj_value(line, camera.aperture);
+      parse_obj_value(line, camera.frame);
       return true;
     } else if (cmd == "e") {
       command = objx_command::environment;
-      if(!parse_obj_value(str, environment.name)) return set_error();
-      if(!parse_obj_value(str, environment.emission)) return set_error();
-      if(!parse_obj_value(str, environment.emission_map)) return set_error();
-      if(!parse_obj_value(str, environment.frame)) return set_error();
+      parse_obj_value(line, environment.name);
+      parse_obj_value(line, environment.emission);
+      parse_obj_value(line, environment.emission_map);
+      parse_obj_value(line, environment.frame);
       return true;
     } else if (cmd == "i") {
       command = objx_command::instance;
-      if(!parse_obj_value(str, instance.object)) return set_error();
-      if(!parse_obj_value(str, instance.frame)) return set_error();
+      parse_obj_value(line, instance.object);
+      parse_obj_value(line, instance.frame);
       return true;
     }
   }
 
   if (found) return true;
-
-  // check error
-  if (read_error(fs)) return false;
 
   return false;
 }
@@ -1989,36 +1814,26 @@ inline vector<string> split_obj_string(const string& str, const string& delim) {
 }
 
 // Write obj elements
-inline bool write_obj_comment(obj_file& fs, const string& comment) {
-  auto write_error = [&](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    return true;
-  };
+inline void write_obj_comment(obj_file& fs, const string& comment) {
   auto lines = split_obj_string(comment, "\n");
-  for (auto& str : lines) {
-    format_obj_values(fs, "# {}\n", str);
+  for (auto& line : lines) {
+    format_obj_values(fs, "# {}\n", line);
   }
   format_obj_values(fs, "\n");
-  if (write_error(fs)) return false;
-  return true;
 }
 
-inline bool write_obj_command(obj_file& fs, obj_command command,
+inline void write_obj_command(obj_file& fs, obj_command command,
     const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices) {
-  auto write_error = [&](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    return true;
-  };
   switch (command) {
     case obj_command::vertex: format_obj_values(fs, "v {}\n", value); break;
     case obj_command::normal: format_obj_values(fs, "vn {}\n", value); break;
     case obj_command::texcoord: format_obj_values(fs, "vt {}\n", value); break;
     case obj_command::face:
-    case obj_command::str:
+    case obj_command::line:
     case obj_command::point:
       if (command == obj_command::face) format_obj_values(fs, "f ");
-      if (command == obj_command::str) format_obj_values(fs, "l ");
+      if (command == obj_command::line) format_obj_values(fs, "l ");
       if (command == obj_command::point) format_obj_values(fs, "p ");
       for (auto& vert : vertices) format_obj_values(fs, " {}", vert);
       format_obj_values(fs, "\n");
@@ -2029,112 +1844,84 @@ inline bool write_obj_command(obj_file& fs, obj_command command,
     case obj_command::smoothing: format_obj_values(fs, "s {}\n", name); break;
     case obj_command::mtllib: format_obj_values(fs, "mtllib {}\n", name); break;
     case obj_command::objxlib: break;
-    case obj_command::error: break;
   }
-
-  if (write_error(fs)) return false;
-
-  return true;
 }
 
-inline bool write_mtl_command(
+inline void write_mtl_command(
     obj_file& fs, mtl_command command, const obj_material& material) {
-  auto write_error = [&](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    return true;
-  };
-
   // write material
-  switch (command) {
-    case mtl_command::material:
-      format_obj_values(fs, "newmtl {}\n", material.name);
-      format_obj_values(fs, "illum {}\n", material.illum);
-      if (material.emission != zero3f)
-        format_obj_values(fs, "Ke {}\n", material.emission);
-      if (material.ambient != zero3f)
-        format_obj_values(fs, "Ka {}\n", material.ambient);
-      format_obj_values(fs, "Kd {}\n", material.diffuse);
-      format_obj_values(fs, "Ks {}\n", material.specular);
-      if (material.reflection != zero3f)
-        format_obj_values(fs, "Kr {}\n", material.reflection);
-      if (material.transmission != zero3f)
-        format_obj_values(fs, "Kt {}\n", material.transmission);
-      format_obj_values(fs, "Ns {}\n", (int)material.exponent);
-      if (material.opacity != 1)
-        format_obj_values(fs, "d {}\n", material.opacity);
-      if (!material.emission_map.path.empty())
-        format_obj_values(fs, "map_Ke {}\n", material.emission_map);
-      if (!material.diffuse_map.path.empty())
-        format_obj_values(fs, "map_Kd {}\n", material.diffuse_map);
-      if (!material.specular_map.path.empty())
-        format_obj_values(fs, "map_Ks {}\n", material.specular_map);
-      if (!material.transmission_map.path.empty())
-        format_obj_values(fs, "map_Kt {}\n", material.transmission_map);
-      if (!material.reflection_map.path.empty())
-        format_obj_values(fs, "map_Kr {}\n", material.reflection_map);
-      if (!material.exponent_map.path.empty())
-        format_obj_values(fs, "map_Ns {}\n", material.exponent_map);
-      if (!material.opacity_map.path.empty())
-        format_obj_values(fs, "map_d {}\n", material.opacity_map);
-      if (!material.bump_map.path.empty())
-        format_obj_values(fs, "map_bump {}\n", material.bump_map);
-      if (!material.displacement_map.path.empty())
-        format_obj_values(fs, "map_disp {}\n", material.displacement_map);
-      if (!material.normal_map.path.empty())
-        format_obj_values(fs, "map_norm {}\n", material.normal_map);
-      if (material.pbr_roughness)
-        format_obj_values(fs, "Pr {}\n", material.pbr_roughness);
-      if (material.pbr_metallic)
-        format_obj_values(fs, "Pm {}\n", material.pbr_metallic);
-      if (material.pbr_sheen)
-        format_obj_values(fs, "Ps {}\n", material.pbr_sheen);
-      if (material.pbr_clearcoat)
-        format_obj_values(fs, "Pc {}\n", material.pbr_clearcoat);
-      if (material.pbr_coatroughness)
-        format_obj_values(fs, "Pcr {}\n", material.pbr_coatroughness);
-      if (!material.pbr_roughness_map.path.empty())
-        format_obj_values(fs, "map_Pr {}\n", material.pbr_roughness_map);
-      if (!material.pbr_metallic_map.path.empty())
-        format_obj_values(fs, "map_Pm {}\n", material.pbr_metallic_map);
-      if (!material.pbr_sheen_map.path.empty())
-        format_obj_values(fs, "map_Ps {}\n", material.pbr_sheen_map);
-      if (!material.pbr_clearcoat_map.path.empty())
-        format_obj_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map);
-      if (!material.pbr_coatroughness_map.path.empty())
-        format_obj_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map);
-      if (material.vol_transmission != zero3f)
-        format_obj_values(fs, "Vt {}\n", material.vol_transmission);
-      if (material.vol_meanfreepath != zero3f)
-        format_obj_values(fs, "Vp {}\n", material.vol_meanfreepath);
-      if (material.vol_emission != zero3f)
-        format_obj_values(fs, "Ve {}\n", material.vol_emission);
-      if (material.vol_scattering != zero3f)
-        format_obj_values(fs, "Vs {}\n", material.vol_scattering);
-      if (material.vol_anisotropy)
-        format_obj_values(fs, "Vg {}\n", material.vol_anisotropy);
-      if (material.vol_scale)
-        format_obj_values(fs, "Vr {}\n", material.vol_scale);
-      if (!material.vol_scattering_map.path.empty())
-        format_obj_values(fs, "map_Vs {}\n", material.vol_scattering_map);
-      format_obj_values(fs, "\n");
-      break;
-    case mtl_command::error: break;
-  }
-
-  // check error
-  if (write_error(fs)) return false;
-
-  return true;
+  format_obj_values(fs, "newmtl {}\n", material.name);
+  format_obj_values(fs, "illum {}\n", material.illum);
+  if (material.emission != zero3f)
+    format_obj_values(fs, "Ke {}\n", material.emission);
+  if (material.ambient != zero3f)
+    format_obj_values(fs, "Ka {}\n", material.ambient);
+  format_obj_values(fs, "Kd {}\n", material.diffuse);
+  format_obj_values(fs, "Ks {}\n", material.specular);
+  if (material.reflection != zero3f)
+    format_obj_values(fs, "Kr {}\n", material.reflection);
+  if (material.transmission != zero3f)
+    format_obj_values(fs, "Kt {}\n", material.transmission);
+  format_obj_values(fs, "Ns {}\n", (int)material.exponent);
+  if (material.opacity != 1) format_obj_values(fs, "d {}\n", material.opacity);
+  if (!material.emission_map.path.empty())
+    format_obj_values(fs, "map_Ke {}\n", material.emission_map);
+  if (!material.diffuse_map.path.empty())
+    format_obj_values(fs, "map_Kd {}\n", material.diffuse_map);
+  if (!material.specular_map.path.empty())
+    format_obj_values(fs, "map_Ks {}\n", material.specular_map);
+  if (!material.transmission_map.path.empty())
+    format_obj_values(fs, "map_Kt {}\n", material.transmission_map);
+  if (!material.reflection_map.path.empty())
+    format_obj_values(fs, "map_Kr {}\n", material.reflection_map);
+  if (!material.exponent_map.path.empty())
+    format_obj_values(fs, "map_Ns {}\n", material.exponent_map);
+  if (!material.opacity_map.path.empty())
+    format_obj_values(fs, "map_d {}\n", material.opacity_map);
+  if (!material.bump_map.path.empty())
+    format_obj_values(fs, "map_bump {}\n", material.bump_map);
+  if (!material.displacement_map.path.empty())
+    format_obj_values(fs, "map_disp {}\n", material.displacement_map);
+  if (!material.normal_map.path.empty())
+    format_obj_values(fs, "map_norm {}\n", material.normal_map);
+  if (material.pbr_roughness)
+    format_obj_values(fs, "Pr {}\n", material.pbr_roughness);
+  if (material.pbr_metallic)
+    format_obj_values(fs, "Pm {}\n", material.pbr_metallic);
+  if (material.pbr_sheen) format_obj_values(fs, "Ps {}\n", material.pbr_sheen);
+  if (material.pbr_clearcoat)
+    format_obj_values(fs, "Pc {}\n", material.pbr_clearcoat);
+  if (material.pbr_coatroughness)
+    format_obj_values(fs, "Pcr {}\n", material.pbr_coatroughness);
+  if (!material.pbr_roughness_map.path.empty())
+    format_obj_values(fs, "map_Pr {}\n", material.pbr_roughness_map);
+  if (!material.pbr_metallic_map.path.empty())
+    format_obj_values(fs, "map_Pm {}\n", material.pbr_metallic_map);
+  if (!material.pbr_sheen_map.path.empty())
+    format_obj_values(fs, "map_Ps {}\n", material.pbr_sheen_map);
+  if (!material.pbr_clearcoat_map.path.empty())
+    format_obj_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map);
+  if (!material.pbr_coatroughness_map.path.empty())
+    format_obj_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map);
+  if (material.vol_transmission != zero3f)
+    format_obj_values(fs, "Vt {}\n", material.vol_transmission);
+  if (material.vol_meanfreepath != zero3f)
+    format_obj_values(fs, "Vp {}\n", material.vol_meanfreepath);
+  if (material.vol_emission != zero3f)
+    format_obj_values(fs, "Ve {}\n", material.vol_emission);
+  if (material.vol_scattering != zero3f)
+    format_obj_values(fs, "Vs {}\n", material.vol_scattering);
+  if (material.vol_anisotropy)
+    format_obj_values(fs, "Vg {}\n", material.vol_anisotropy);
+  if (material.vol_scale) format_obj_values(fs, "Vr {}\n", material.vol_scale);
+  if (!material.vol_scattering_map.path.empty())
+    format_obj_values(fs, "map_Vs {}\n", material.vol_scattering_map);
+  format_obj_values(fs, "\n");
 }
 
-inline bool write_objx_command(obj_file& fs, objx_command command,
+inline void write_objx_command(obj_file& fs, objx_command command,
     const obj_camera& camera, const obj_environment& environment,
     const obj_instance& instance) {
-  auto write_error = [&](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    return true;
-  };
-
   switch (command) {
     case objx_command::camera: {
       format_obj_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
@@ -2151,13 +1938,7 @@ inline bool write_objx_command(obj_file& fs, objx_command command,
     case objx_command::instance: {
       format_obj_values(fs, "i {} {}\n", instance.object, instance.frame);
     } break;
-    case objx_command::error: break;
   }
-
-  // check error
-  if (write_error(fs)) return false;
-
-  return true;
 }
 
 }  // namespace yocto
