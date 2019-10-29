@@ -1050,10 +1050,13 @@ inline void close_yaml(yaml_file& fs) {
 
 // Read a line
 inline bool read_yaml_line(yaml_file& fs, char* buffer, size_t size, bool& error) {
-  if(!fgets(buffer, size, fs.fs)) return false;
-  fs.linenum += 1;
-  error = ferror(fs.fs);
-  return false;
+  if(fgets(buffer, size, fs.fs)) {
+    fs.linenum += 1;
+      return true;
+  } else {
+    error = ferror(fs.fs);
+    return false;
+  }
 }
 
 static inline bool is_yaml_space(char c) {

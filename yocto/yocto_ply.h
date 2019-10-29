@@ -337,11 +337,15 @@ inline void close_ply(ply_file& fs) {
   fs.fs = nullptr;
 }
 
+// Read a line
 inline bool read_ply_line(ply_file& fs, char* buffer, size_t size, bool& error) {
-  if(!fgets(buffer, size, fs.fs)) return false;
-  fs.linenum += 1;
-  error = ferror(fs.fs);
-  return false;
+  if(fgets(buffer, size, fs.fs)) {
+    fs.linenum += 1;
+      return true;
+  } else {
+    error = ferror(fs.fs);
+    return false;
+  }
 }
 
 template <typename T>
