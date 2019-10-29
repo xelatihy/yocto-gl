@@ -249,6 +249,8 @@ struct pbrt_model {
 };
 
 // Load/save pbrt
+inline bool load_pbrt(const string& filename, pbrt_model& pbrt);
+inline bool save_pbrt(const string& filename, const pbrt_model& pbrt);
 inline bool load_pbrt(const string& filename, pbrt_model& pbrt, string& error);
 inline bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& error);
 
@@ -2307,6 +2309,15 @@ inline bool save_pbrt(const string& filename, const pbrt_model& pbrt, string& er
   if (write_error(fs)) return false;
 
   return true;
+}
+
+inline bool load_pbrt(const string& filename, pbrt_model& pbrt) {
+  auto error = ""s;
+  return load_pbrt(filename, pbrt, error);
+}
+inline bool save_pbrt(const string& filename, const pbrt_model& pbrt) {
+  auto error = ""s;
+  return save_pbrt(filename, pbrt, error);
 }
 
 // Read pbrt commands
