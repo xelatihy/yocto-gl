@@ -653,34 +653,34 @@ void update_transforms(
 namespace yocto {
 
 // Load/save a scene in the builtin YAML format.
-static bool load_yaml_scene(
-    const string& filename, scene_model& scene, string& error, const load_params& params);
-static bool save_yaml_scene(const string& filename, const scene_model& scene, string& error,
-    const save_params& params);
+static bool load_yaml_scene(const string& filename, scene_model& scene,
+    string& error, const load_params& params);
+static bool save_yaml_scene(const string& filename, const scene_model& scene,
+    string& error, const save_params& params);
 
 // Load/save a scene from/to OBJ.
-static bool load_obj_scene(
-    const string& filename, scene_model& scene, string& error,const load_params& params);
-static bool save_obj_scene(const string& filename, const scene_model& scene, string& error,
-    const save_params& params);
+static bool load_obj_scene(const string& filename, scene_model& scene,
+    string& error, const load_params& params);
+static bool save_obj_scene(const string& filename, const scene_model& scene,
+    string& error, const save_params& params);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static bool load_ply_scene(
-    const string& filename, scene_model& scene, string& error,const load_params& params);
-static bool save_ply_scene(const string& filename, const scene_model& scene, string& error,
-    const save_params& params);
+static bool load_ply_scene(const string& filename, scene_model& scene,
+    string& error, const load_params& params);
+static bool save_ply_scene(const string& filename, const scene_model& scene,
+    string& error, const save_params& params);
 
 // Load/save a scene from/to glTF.
-static bool load_gltf_scene(
-    const string& filename, scene_model& scene, string& error,const load_params& params);
+static bool load_gltf_scene(const string& filename, scene_model& scene,
+    string& error, const load_params& params);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static bool load_pbrt_scene(
-    const string& filename, scene_model& scene, string& error,const load_params& params);
-static bool save_pbrt_scene(const string& filename, const scene_model& scene, string& error,
-    const save_params& params);
+static bool load_pbrt_scene(const string& filename, scene_model& scene,
+    string& error, const load_params& params);
+static bool save_pbrt_scene(const string& filename, const scene_model& scene,
+    string& error, const save_params& params);
 
 bool load_scene(
     const string& filename, scene_model& scene, const load_params& params) {
@@ -749,8 +749,8 @@ bool save_texture(const scene_texture& texture, const string& dirname) {
   }
 }
 
-bool load_textures(
-    scene_model& scene, const string& dirname, string& error, const load_params& params) {
+bool load_textures(scene_model& scene, const string& dirname, string& error,
+    const load_params& params) {
   if (params.notextures) return true;
 
   // load images
@@ -765,23 +765,24 @@ bool load_textures(
     return true;
   } else {
     auto mutex = std::mutex{};
-    auto ok = std::atomic<bool>{true};
-    parallel_foreach(scene.textures, [&dirname, &mutex, &ok, &error](scene_texture& texture) {
-      if(!ok) return;
-      if (!texture.hdr.empty() || !texture.ldr.empty()) return;
-      if (!load_texture(texture, dirname))  {
-        auto lock = std::lock_guard{mutex};
-        error = "cannot load " + dirname + texture.filename;
-        ok = false;
-      }
-    });
+    auto ok    = std::atomic<bool>{true};
+    parallel_foreach(scene.textures,
+        [&dirname, &mutex, &ok, &error](scene_texture& texture) {
+          if (!ok) return;
+          if (!texture.hdr.empty() || !texture.ldr.empty()) return;
+          if (!load_texture(texture, dirname)) {
+            auto lock = std::lock_guard{mutex};
+            error     = "cannot load " + dirname + texture.filename;
+            ok        = false;
+          }
+        });
     return ok;
   }
 }
 
 // helper to save textures
-bool save_textures(const scene_model& scene, const string& dirname, string& error,
-    const save_params& params) {
+bool save_textures(const scene_model& scene, const string& dirname,
+    string& error, const save_params& params) {
   if (params.notextures) return true;
 
   // save images
@@ -795,15 +796,16 @@ bool save_textures(const scene_model& scene, const string& dirname, string& erro
     return true;
   } else {
     auto mutex = std::mutex{};
-    auto ok = std::atomic<bool>{true};
-    parallel_foreach(scene.textures, [&dirname, &ok, &mutex, &error](const scene_texture& texture) {
-      if(!ok) return;
-      if (!save_texture(texture, dirname)) {
-        auto lock = std::lock_guard{mutex};
-        error = "cannot save " + dirname + texture.filename;
-        ok = false;
-      }
-    });
+    auto ok    = std::atomic<bool>{true};
+    parallel_foreach(scene.textures,
+        [&dirname, &ok, &mutex, &error](const scene_texture& texture) {
+          if (!ok) return;
+          if (!save_texture(texture, dirname)) {
+            auto lock = std::lock_guard{mutex};
+            error     = "cannot save " + dirname + texture.filename;
+            ok        = false;
+          }
+        });
     return ok;
   }
 }
@@ -811,35 +813,35 @@ bool save_textures(const scene_model& scene, const string& dirname, string& erro
 bool load_shape(scene_shape& shape, const string& dirname) {
   if (!shape.facevarying) {
     return load_shape(dirname + shape.filename, shape.points, shape.lines,
-            shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+        shape.triangles, shape.quads, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius);
   } else {
     return load_fvshape(dirname + shape.filename, shape.quadspos,
-            shape.quadsnorm, shape.quadstexcoord, shape.positions,
-            shape.normals, shape.texcoords);
+        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+        shape.texcoords);
   }
 }
 
 bool save_shape(const scene_shape& shape, const string& dirname) {
   if (shape.quadspos.empty()) {
     return save_shape(dirname + shape.filename, shape.points, shape.lines,
-            shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+        shape.triangles, shape.quads, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.radius);
   } else {
     return save_fvshape(dirname + shape.filename, shape.quadspos,
-            shape.quadsnorm, shape.quadstexcoord, shape.positions,
-            shape.normals, shape.texcoords);
+        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
+        shape.texcoords);
   }
 }
 
 // Load json meshes
-bool load_shapes(
-    scene_model& scene, const string& dirname, string& error, const load_params& params) {
+bool load_shapes(scene_model& scene, const string& dirname, string& error,
+    const load_params& params) {
   // load shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
       if (!shape.positions.empty()) continue;
-      if(!load_shape(shape, dirname)) {
+      if (!load_shape(shape, dirname)) {
         error = "cannot load " + dirname + shape.filename;
         return false;
       }
@@ -847,16 +849,17 @@ bool load_shapes(
     return true;
   } else {
     auto mutex = std::mutex{};
-    auto ok = std::atomic<bool>{true};
-    parallel_foreach(scene.shapes, [&dirname, &error, &mutex, &ok](scene_shape& shape) {
-      if(!ok) return;
-      if (!shape.positions.empty()) return;
-      if(!load_shape(shape, dirname)) {
-        auto lock = std::lock_guard{mutex};
-        error = "cannot load " + dirname + shape.filename;
-        ok = false;
-      }
-    });
+    auto ok    = std::atomic<bool>{true};
+    parallel_foreach(
+        scene.shapes, [&dirname, &error, &mutex, &ok](scene_shape& shape) {
+          if (!ok) return;
+          if (!shape.positions.empty()) return;
+          if (!load_shape(shape, dirname)) {
+            auto lock = std::lock_guard{mutex};
+            error     = "cannot load " + dirname + shape.filename;
+            ok        = false;
+          }
+        });
     return ok;
   }
 }
@@ -867,7 +870,7 @@ bool save_shapes(const scene_model& scene, const string& dirname, string& error,
   // save shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
-      if(!save_shape(shape, dirname)) {
+      if (!save_shape(shape, dirname)) {
         error = "cannot save " + dirname + shape.filename;
         return false;
       }
@@ -875,15 +878,16 @@ bool save_shapes(const scene_model& scene, const string& dirname, string& error,
     return true;
   } else {
     auto mutex = std::mutex{};
-    auto ok = std::atomic<bool>{true};
-    parallel_foreach(scene.shapes, [&dirname, &ok, &mutex, &error](const scene_shape& shape) {
-      if(!ok) return;
-      if(!save_shape(shape, dirname)) {
-        auto lock = std::lock_guard{mutex};
-        error = "cannot save " + dirname + shape.filename;
-        ok = false;
-      }
-    });
+    auto ok    = std::atomic<bool>{true};
+    parallel_foreach(scene.shapes,
+        [&dirname, &ok, &mutex, &error](const scene_shape& shape) {
+          if (!ok) return;
+          if (!save_shape(shape, dirname)) {
+            auto lock = std::lock_guard{mutex};
+            error     = "cannot save " + dirname + shape.filename;
+            ok        = false;
+          }
+        });
     return ok;
   }
 }
@@ -1611,289 +1615,289 @@ void write_yaml_object(yaml_file& fs, const string& object) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool load_yaml(
-    const string& filename, scene_model& scene, string& error, const load_params& params) {
+bool load_yaml(const string& filename, scene_model& scene, string& error,
+    const load_params& params) {
   try {
-  // open file
-  auto fs = open_yaml(filename);
+    // open file
+    auto fs = open_yaml(filename);
 
-  // parse state
-  enum struct parsing_type {
-    // clang-format off
+    // parse state
+    enum struct parsing_type {
+      // clang-format off
     none, camera, texture, material, shape, instance, environment
-    // clang-format on
-  };
-  auto type = parsing_type::none;
+      // clang-format on
+    };
+    auto type = parsing_type::none;
 
-  auto tmap = unordered_map<string, int>{{"", -1}};
-  auto vmap = unordered_map<string, int>{{"", -1}};
-  auto mmap = unordered_map<string, int>{{"", -1}};
-  auto smap = unordered_map<string, int>{{"", -1}};
+    auto tmap = unordered_map<string, int>{{"", -1}};
+    auto vmap = unordered_map<string, int>{{"", -1}};
+    auto mmap = unordered_map<string, int>{{"", -1}};
+    auto smap = unordered_map<string, int>{{"", -1}};
 
-  // parse yaml reference
-  auto get_yaml_ref = [](const yaml_value& yaml, int& value,
-                          const unordered_map<string, int>& refs) {
-    if (yaml.type != yaml_value_type::string)
-      throw std::runtime_error("error parsing yaml value");
-    if (yaml.string_ == "") return;
-    try {
-      value = refs.at(yaml.string_);
-    } catch (...) {
-      throw std::runtime_error("reference not found " + yaml.string_);
-    }
-  };
+    // parse yaml reference
+    auto get_yaml_ref = [](const yaml_value& yaml, int& value,
+                            const unordered_map<string, int>& refs) {
+      if (yaml.type != yaml_value_type::string)
+        throw std::runtime_error("error parsing yaml value");
+      if (yaml.string_ == "") return;
+      try {
+        value = refs.at(yaml.string_);
+      } catch (...) {
+        throw std::runtime_error("reference not found " + yaml.string_);
+      }
+    };
 
-  // load yaml
-  auto group  = ""s;
-  auto key    = ""s;
-  auto newobj = false;
-  auto value  = yaml_value{};
-  while (read_yaml_property(fs, group, key, newobj, value)) {
-    if (group.empty()) {
-      throw std::runtime_error("bad yaml");
-    }
-    if (key.empty()) {
-      type = parsing_type::none;
-      continue;
-    }
-    if (newobj) {
-      if (group == "cameras") {
-        type = parsing_type::camera;
-        scene.cameras.push_back({});
-      } else if (group == "textures") {
-        type = parsing_type::texture;
-        scene.textures.push_back({});
-      } else if (group == "materials") {
-        type = parsing_type::material;
-        scene.materials.push_back({});
-      } else if (group == "shapes") {
-        type = parsing_type::shape;
-        scene.shapes.push_back({});
-      } else if (group == "instances") {
-        type = parsing_type::instance;
-        scene.instances.push_back({});
-      } else if (group == "environments") {
-        type = parsing_type::environment;
-        scene.environments.push_back({});
-      } else {
+    // load yaml
+    auto group  = ""s;
+    auto key    = ""s;
+    auto newobj = false;
+    auto value  = yaml_value{};
+    while (read_yaml_property(fs, group, key, newobj, value)) {
+      if (group.empty()) {
+        throw std::runtime_error("bad yaml");
+      }
+      if (key.empty()) {
         type = parsing_type::none;
-        throw std::runtime_error("unknown object type " + string(group));
+        continue;
+      }
+      if (newobj) {
+        if (group == "cameras") {
+          type = parsing_type::camera;
+          scene.cameras.push_back({});
+        } else if (group == "textures") {
+          type = parsing_type::texture;
+          scene.textures.push_back({});
+        } else if (group == "materials") {
+          type = parsing_type::material;
+          scene.materials.push_back({});
+        } else if (group == "shapes") {
+          type = parsing_type::shape;
+          scene.shapes.push_back({});
+        } else if (group == "instances") {
+          type = parsing_type::instance;
+          scene.instances.push_back({});
+        } else if (group == "environments") {
+          type = parsing_type::environment;
+          scene.environments.push_back({});
+        } else {
+          type = parsing_type::none;
+          throw std::runtime_error("unknown object type " + string(group));
+        }
+      }
+      if (type == parsing_type::none) {
+        throw std::runtime_error("bad yaml");
+      } else if (type == parsing_type::camera) {
+        auto& camera = scene.cameras.back();
+        if (key == "name") {
+          get_yaml_value(value, camera.name);
+        } else if (key == "uri") {
+          get_yaml_value(value, camera.name);
+          camera.name = get_basename(camera.name);
+        } else if (key == "frame") {
+          get_yaml_value(value, camera.frame);
+        } else if (key == "orthographic") {
+          get_yaml_value(value, camera.orthographic);
+        } else if (key == "lens") {
+          get_yaml_value(value, camera.lens);
+        } else if (key == "aspect") {
+          get_yaml_value(value, camera.aspect);
+        } else if (key == "film") {
+          get_yaml_value(value, camera.film);
+        } else if (key == "focus") {
+          get_yaml_value(value, camera.focus);
+        } else if (key == "aperture") {
+          get_yaml_value(value, camera.aperture);
+        } else if (key == "lookat") {
+          auto lookat = identity3x3f;
+          get_yaml_value(value, lookat);
+          camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+          camera.focus = length(lookat.x - lookat.y);
+        } else {
+          throw std::runtime_error("unknown property " + string(key));
+        }
+      } else if (type == parsing_type::texture) {
+        auto& texture = scene.textures.back();
+        if (key == "name") {
+          get_yaml_value(value, texture.name);
+          tmap[texture.name] = (int)scene.textures.size() - 1;
+        } else if (key == "filename") {
+          get_yaml_value(value, texture.filename);
+        } else if (key == "preset") {
+          auto preset = ""s;
+          get_yaml_value(value, preset);
+          make_image_preset(texture.hdr, texture.ldr, preset);
+          if (texture.filename.empty()) {
+            texture.filename = "textures/ypreset-" + preset +
+                               (texture.hdr.empty() ? ".png" : ".hdr");
+          }
+        } else if (key == "uri") {
+          get_yaml_value(value, texture.filename);
+          texture.name           = get_basename(texture.filename);
+          tmap[texture.filename] = (int)scene.textures.size() - 1;
+        } else {
+          throw std::runtime_error("unknown property " + string(key));
+        }
+      } else if (type == parsing_type::material) {
+        auto& material = scene.materials.back();
+        if (key == "name") {
+          get_yaml_value(value, material.name);
+          mmap[material.name] = (int)scene.materials.size() - 1;
+        } else if (key == "uri") {
+          get_yaml_value(value, material.name);
+          mmap[material.name] = (int)scene.materials.size() - 1;
+          material.name       = get_basename(material.name);
+        } else if (key == "emission") {
+          get_yaml_value(value, material.emission);
+        } else if (key == "diffuse") {
+          get_yaml_value(value, material.diffuse);
+        } else if (key == "metallic") {
+          get_yaml_value(value, material.metallic);
+        } else if (key == "specular") {
+          get_yaml_value(value, material.specular);
+        } else if (key == "roughness") {
+          get_yaml_value(value, material.roughness);
+        } else if (key == "coat") {
+          get_yaml_value(value, material.coat);
+        } else if (key == "transmission") {
+          get_yaml_value(value, material.transmission);
+        } else if (key == "refract") {
+          get_yaml_value(value, material.refract);
+        } else if (key == "voltransmission") {
+          get_yaml_value(value, material.voltransmission);
+        } else if (key == "volmeanfreepath") {
+          get_yaml_value(value, material.volmeanfreepath);
+        } else if (key == "volscatter") {
+          get_yaml_value(value, material.volscatter);
+        } else if (key == "volemission") {
+          get_yaml_value(value, material.volemission);
+        } else if (key == "volanisotropy") {
+          get_yaml_value(value, material.volanisotropy);
+        } else if (key == "volscale") {
+          get_yaml_value(value, material.volscale);
+        } else if (key == "opacity") {
+          get_yaml_value(value, material.opacity);
+        } else if (key == "coat") {
+          get_yaml_value(value, material.coat);
+        } else if (key == "emission_tex") {
+          get_yaml_ref(value, material.emission_tex, tmap);
+        } else if (key == "diffuse_tex") {
+          get_yaml_ref(value, material.diffuse_tex, tmap);
+        } else if (key == "metallic_tex") {
+          get_yaml_ref(value, material.metallic_tex, tmap);
+        } else if (key == "specular_tex") {
+          get_yaml_ref(value, material.specular_tex, tmap);
+        } else if (key == "transmission_tex") {
+          get_yaml_ref(value, material.transmission_tex, tmap);
+        } else if (key == "roughness_tex") {
+          get_yaml_ref(value, material.roughness_tex, tmap);
+        } else if (key == "subsurface_tex") {
+          get_yaml_ref(value, material.subsurface_tex, tmap);
+        } else if (key == "opacity_tex") {
+          get_yaml_ref(value, material.normal_tex, tmap);
+        } else if (key == "normal_tex") {
+          get_yaml_ref(value, material.normal_tex, tmap);
+        } else if (key == "gltf_textures") {
+          get_yaml_value(value, material.gltf_textures);
+        } else {
+          throw std::runtime_error("unknown property " + string(key));
+        }
+      } else if (type == parsing_type::shape) {
+        auto& shape = scene.shapes.back();
+        if (key == "name") {
+          get_yaml_value(value, shape.name);
+          smap[shape.name] = (int)scene.shapes.size() - 1;
+        } else if (key == "filename") {
+          get_yaml_value(value, shape.filename);
+        } else if (key == "preset") {
+          auto preset = ""s;
+          get_yaml_value(value, preset);
+          make_shape_preset(shape.points, shape.lines, shape.triangles,
+              shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+              shape.positions, shape.normals, shape.texcoords, shape.colors,
+              shape.radius, preset);
+          if (shape.filename.empty()) {
+            shape.filename = "shapes/ypreset-" + preset + ".yvol";
+          }
+        } else if (key == "subdivisions") {
+          get_yaml_value(value, shape.subdivisions);
+        } else if (key == "catmullclark") {
+          get_yaml_value(value, shape.catmullclark);
+        } else if (key == "smooth") {
+          get_yaml_value(value, shape.smooth);
+        } else if (key == "facevarying") {
+          get_yaml_value(value, shape.facevarying);
+        } else if (key == "displacement_tex") {
+          get_yaml_ref(value, shape.displacement_tex, tmap);
+        } else if (key == "displacement") {
+          get_yaml_value(value, shape.displacement);
+        } else if (key == "uri") {
+          get_yaml_value(value, shape.filename);
+          shape.name           = get_basename(shape.filename);
+          smap[shape.filename] = (int)scene.shapes.size() - 1;
+        } else {
+          throw std::runtime_error("unknown property " + string(key));
+        }
+      } else if (type == parsing_type::instance) {
+        auto& instance = scene.instances.back();
+        if (key == "name") {
+          get_yaml_value(value, instance.name);
+        } else if (key == "uri") {
+          get_yaml_value(value, instance.name);
+        } else if (key == "frame") {
+          get_yaml_value(value, instance.frame);
+        } else if (key == "shape") {
+          get_yaml_ref(value, instance.shape, smap);
+        } else if (key == "material") {
+          get_yaml_ref(value, instance.material, mmap);
+        } else if (key == "lookat") {
+          auto lookat = identity3x3f;
+          get_yaml_value(value, lookat);
+          instance.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+        } else {
+          throw std::runtime_error("unknown property " + string(key));
+        }
+      } else if (type == parsing_type::environment) {
+        auto& environment = scene.environments.back();
+        if (key == "name") {
+          get_yaml_value(value, environment.name);
+        } else if (key == "uri") {
+          get_yaml_value(value, environment.name);
+        } else if (key == "frame") {
+          get_yaml_value(value, environment.frame);
+        } else if (key == "emission") {
+          get_yaml_value(value, environment.emission);
+        } else if (key == "emission_tex") {
+          get_yaml_ref(value, environment.emission_tex, tmap);
+        } else if (key == "lookat") {
+          auto lookat = identity3x3f;
+          get_yaml_value(value, lookat);
+          environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+        } else {
+          throw std::runtime_error("unknown property " + string(key));
+        }
+      } else {
+        assert(false);  // should not get here
       }
     }
-    if (type == parsing_type::none) {
-      throw std::runtime_error("bad yaml");
-    } else if (type == parsing_type::camera) {
-      auto& camera = scene.cameras.back();
-      if (key == "name") {
-        get_yaml_value(value, camera.name);
-      } else if (key == "uri") {
-        get_yaml_value(value, camera.name);
-        camera.name = get_basename(camera.name);
-      } else if (key == "frame") {
-        get_yaml_value(value, camera.frame);
-      } else if (key == "orthographic") {
-        get_yaml_value(value, camera.orthographic);
-      } else if (key == "lens") {
-        get_yaml_value(value, camera.lens);
-      } else if (key == "aspect") {
-        get_yaml_value(value, camera.aspect);
-      } else if (key == "film") {
-        get_yaml_value(value, camera.film);
-      } else if (key == "focus") {
-        get_yaml_value(value, camera.focus);
-      } else if (key == "aperture") {
-        get_yaml_value(value, camera.aperture);
-      } else if (key == "lookat") {
-        auto lookat = identity3x3f;
-        get_yaml_value(value, lookat);
-        camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
-        camera.focus = length(lookat.x - lookat.y);
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
-      }
-    } else if (type == parsing_type::texture) {
-      auto& texture = scene.textures.back();
-      if (key == "name") {
-        get_yaml_value(value, texture.name);
-        tmap[texture.name] = (int)scene.textures.size() - 1;
-      } else if (key == "filename") {
-        get_yaml_value(value, texture.filename);
-      } else if (key == "preset") {
-        auto preset = ""s;
-        get_yaml_value(value, preset);
-        make_image_preset(texture.hdr, texture.ldr, preset);
-        if (texture.filename.empty()) {
-          texture.filename = "textures/ypreset-" + preset +
-                             (texture.hdr.empty() ? ".png" : ".hdr");
-        }
-      } else if (key == "uri") {
-        get_yaml_value(value, texture.filename);
-        texture.name           = get_basename(texture.filename);
-        tmap[texture.filename] = (int)scene.textures.size() - 1;
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
-      }
-    } else if (type == parsing_type::material) {
-      auto& material = scene.materials.back();
-      if (key == "name") {
-        get_yaml_value(value, material.name);
-        mmap[material.name] = (int)scene.materials.size() - 1;
-      } else if (key == "uri") {
-        get_yaml_value(value, material.name);
-        mmap[material.name] = (int)scene.materials.size() - 1;
-        material.name       = get_basename(material.name);
-      } else if (key == "emission") {
-        get_yaml_value(value, material.emission);
-      } else if (key == "diffuse") {
-        get_yaml_value(value, material.diffuse);
-      } else if (key == "metallic") {
-        get_yaml_value(value, material.metallic);
-      } else if (key == "specular") {
-        get_yaml_value(value, material.specular);
-      } else if (key == "roughness") {
-        get_yaml_value(value, material.roughness);
-      } else if (key == "coat") {
-        get_yaml_value(value, material.coat);
-      } else if (key == "transmission") {
-        get_yaml_value(value, material.transmission);
-      } else if (key == "refract") {
-        get_yaml_value(value, material.refract);
-      } else if (key == "voltransmission") {
-        get_yaml_value(value, material.voltransmission);
-      } else if (key == "volmeanfreepath") {
-        get_yaml_value(value, material.volmeanfreepath);
-      } else if (key == "volscatter") {
-        get_yaml_value(value, material.volscatter);
-      } else if (key == "volemission") {
-        get_yaml_value(value, material.volemission);
-      } else if (key == "volanisotropy") {
-        get_yaml_value(value, material.volanisotropy);
-      } else if (key == "volscale") {
-        get_yaml_value(value, material.volscale);
-      } else if (key == "opacity") {
-        get_yaml_value(value, material.opacity);
-      } else if (key == "coat") {
-        get_yaml_value(value, material.coat);
-      } else if (key == "emission_tex") {
-        get_yaml_ref(value, material.emission_tex, tmap);
-      } else if (key == "diffuse_tex") {
-        get_yaml_ref(value, material.diffuse_tex, tmap);
-      } else if (key == "metallic_tex") {
-        get_yaml_ref(value, material.metallic_tex, tmap);
-      } else if (key == "specular_tex") {
-        get_yaml_ref(value, material.specular_tex, tmap);
-      } else if (key == "transmission_tex") {
-        get_yaml_ref(value, material.transmission_tex, tmap);
-      } else if (key == "roughness_tex") {
-        get_yaml_ref(value, material.roughness_tex, tmap);
-      } else if (key == "subsurface_tex") {
-        get_yaml_ref(value, material.subsurface_tex, tmap);
-      } else if (key == "opacity_tex") {
-        get_yaml_ref(value, material.normal_tex, tmap);
-      } else if (key == "normal_tex") {
-        get_yaml_ref(value, material.normal_tex, tmap);
-      } else if (key == "gltf_textures") {
-        get_yaml_value(value, material.gltf_textures);
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
-      }
-    } else if (type == parsing_type::shape) {
-      auto& shape = scene.shapes.back();
-      if (key == "name") {
-        get_yaml_value(value, shape.name);
-        smap[shape.name] = (int)scene.shapes.size() - 1;
-      } else if (key == "filename") {
-        get_yaml_value(value, shape.filename);
-      } else if (key == "preset") {
-        auto preset = ""s;
-        get_yaml_value(value, preset);
-        make_shape_preset(shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-            shape.positions, shape.normals, shape.texcoords, shape.colors,
-            shape.radius, preset);
-        if (shape.filename.empty()) {
-          shape.filename = "shapes/ypreset-" + preset + ".yvol";
-        }
-      } else if (key == "subdivisions") {
-        get_yaml_value(value, shape.subdivisions);
-      } else if (key == "catmullclark") {
-        get_yaml_value(value, shape.catmullclark);
-      } else if (key == "smooth") {
-        get_yaml_value(value, shape.smooth);
-      } else if (key == "facevarying") {
-        get_yaml_value(value, shape.facevarying);
-      } else if (key == "displacement_tex") {
-        get_yaml_ref(value, shape.displacement_tex, tmap);
-      } else if (key == "displacement") {
-        get_yaml_value(value, shape.displacement);
-      } else if (key == "uri") {
-        get_yaml_value(value, shape.filename);
-        shape.name           = get_basename(shape.filename);
-        smap[shape.filename] = (int)scene.shapes.size() - 1;
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
-      }
-    } else if (type == parsing_type::instance) {
-      auto& instance = scene.instances.back();
-      if (key == "name") {
-        get_yaml_value(value, instance.name);
-      } else if (key == "uri") {
-        get_yaml_value(value, instance.name);
-      } else if (key == "frame") {
-        get_yaml_value(value, instance.frame);
-      } else if (key == "shape") {
-        get_yaml_ref(value, instance.shape, smap);
-      } else if (key == "material") {
-        get_yaml_ref(value, instance.material, mmap);
-      } else if (key == "lookat") {
-        auto lookat = identity3x3f;
-        get_yaml_value(value, lookat);
-        instance.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
-      }
-    } else if (type == parsing_type::environment) {
-      auto& environment = scene.environments.back();
-      if (key == "name") {
-        get_yaml_value(value, environment.name);
-      } else if (key == "uri") {
-        get_yaml_value(value, environment.name);
-      } else if (key == "frame") {
-        get_yaml_value(value, environment.frame);
-      } else if (key == "emission") {
-        get_yaml_value(value, environment.emission);
-      } else if (key == "emission_tex") {
-        get_yaml_ref(value, environment.emission_tex, tmap);
-      } else if (key == "lookat") {
-        auto lookat = identity3x3f;
-        get_yaml_value(value, lookat);
-        environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
-      }
-    } else {
-      assert(false);  // should not get here
-    }
-  }
-  } catch(std::exception& e) {
-    error  =e.what();
+  } catch (std::exception& e) {
+    error = e.what();
     return false;
   }
   return true;
 }
 
 // Save a scene in the builtin YAML format.
-static bool load_yaml_scene(
-    const string& filename, scene_model& scene, string& error, const load_params& params) {
+static bool load_yaml_scene(const string& filename, scene_model& scene,
+    string& error, const load_params& params) {
   scene = {};
 
   // Parse yaml
-  if(!load_yaml(filename, scene, error, params)) return false;
+  if (!load_yaml(filename, scene, error, params)) return false;
 
   // load shape and textures
   auto dirname = get_dirname(filename);
-  if(!load_shapes(scene, dirname, error, params)) return false;
-  if(!load_textures(scene, dirname, error, params)) return false;
+  if (!load_shapes(scene, dirname, error, params)) return false;
+  if (!load_textures(scene, dirname, error, params)) return false;
 
   // fix scene
   scene.name = get_basename(filename);
@@ -1906,214 +1910,215 @@ static bool load_yaml_scene(
 }
 
 // Save yaml
-static bool save_yaml(const string& filename, const scene_model& scene, string& error,
-    bool ply_instances = false, const string& instances_name = "") {
+static bool save_yaml(const string& filename, const scene_model& scene,
+    string& error, bool ply_instances = false,
+    const string& instances_name = "") {
   try {
-  // open file
-  auto fs = open_yaml(filename, "w");
+    // open file
+    auto fs = open_yaml(filename, "w");
 
-  // write_yaml_comment(fs, get_save_scene_message(scene, ""));
+    // write_yaml_comment(fs, get_save_scene_message(scene, ""));
 
-  static const auto def_camera      = scene_camera{};
-  static const auto def_texture     = scene_texture{};
-  static const auto def_material    = scene_material{};
-  static const auto def_shape       = scene_shape{};
-  static const auto def_instance    = scene_instance{};
-  static const auto def_environment = scene_environment{};
+    static const auto def_camera      = scene_camera{};
+    static const auto def_texture     = scene_texture{};
+    static const auto def_material    = scene_material{};
+    static const auto def_shape       = scene_shape{};
+    static const auto def_instance    = scene_instance{};
+    static const auto def_environment = scene_environment{};
 
-  auto yvalue = yaml_value{};
+    auto yvalue = yaml_value{};
 
-  if (!scene.cameras.empty()) write_yaml_object(fs, "cameras");
-  for (auto& camera : scene.cameras) {
-    write_yaml_property(
-        fs, "cameras", "name", true, make_yaml_value(camera.name));
-    if (camera.frame != identity3x4f)
+    if (!scene.cameras.empty()) write_yaml_object(fs, "cameras");
+    for (auto& camera : scene.cameras) {
       write_yaml_property(
-          fs, "cameras", "frame", false, make_yaml_value(camera.frame));
-    if (camera.orthographic)
-      write_yaml_property(fs, "cameras", "orthographic", false,
-          make_yaml_value(camera.orthographic));
-    write_yaml_property(
-        fs, "cameras", "lens", false, make_yaml_value(camera.lens));
-    write_yaml_property(
-        fs, "cameras", "aspect", false, make_yaml_value(camera.aspect));
-    write_yaml_property(
-        fs, "cameras", "film", false, make_yaml_value(camera.film));
-    write_yaml_property(
-        fs, "cameras", "focus", false, make_yaml_value(camera.focus));
-    if (camera.aperture)
-      write_yaml_property(
-          fs, "cameras", "aperture", false, make_yaml_value(camera.aperture));
-  }
-
-  if (!scene.textures.empty()) write_yaml_object(fs, "textures");
-  for (auto& texture : scene.textures) {
-    write_yaml_property(
-        fs, "textures", "name", true, make_yaml_value(texture.name));
-    if (!texture.filename.empty())
-      write_yaml_property(
-          fs, "textures", "filename", false, make_yaml_value(texture.filename));
-  }
-
-  if (!scene.materials.empty()) write_yaml_object(fs, "materials");
-  for (auto& material : scene.materials) {
-    write_yaml_property(
-        fs, "materials", "name", true, make_yaml_value(material.name));
-    if (material.emission != zero3f)
-      write_yaml_property(fs, "materials", "emission", false,
-          make_yaml_value(material.emission));
-    if (material.diffuse != zero3f)
-      write_yaml_property(
-          fs, "materials", "diffuse", false, make_yaml_value(material.diffuse));
-    if (material.specular != zero3f)
-      write_yaml_property(fs, "materials", "specular", false,
-          make_yaml_value(material.specular));
-    if (material.metallic)
-      write_yaml_property(fs, "materials", "metallic", false,
-          make_yaml_value(material.metallic));
-    if (material.transmission != zero3f)
-      write_yaml_property(fs, "materials", "transmission", false,
-          make_yaml_value(material.transmission));
-    write_yaml_property(fs, "materials", "roughness", false,
-        make_yaml_value(material.roughness));
-    if (material.refract)
-      write_yaml_property(
-          fs, "materials", "refract", false, make_yaml_value(material.refract));
-    if (material.voltransmission != zero3f)
-      write_yaml_property(fs, "materials", "voltransmission", false,
-          make_yaml_value(material.voltransmission));
-    if (material.volmeanfreepath != zero3f)
-      write_yaml_property(fs, "materials", "volmeanfreepath", false,
-          make_yaml_value(material.volmeanfreepath));
-    if (material.volscatter != zero3f)
-      write_yaml_property(fs, "materials", "volscatter", false,
-          make_yaml_value(material.volscatter));
-    if (material.volemission != zero3f)
-      write_yaml_property(fs, "materials", "volemission", false,
-          make_yaml_value(material.volemission));
-    if (material.volanisotropy)
-      write_yaml_property(fs, "materials", "volanisotropy", false,
-          make_yaml_value(material.volanisotropy));
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f)
-      write_yaml_property(fs, "materials", "volscale", false,
-          make_yaml_value(material.volscale));
-    if (material.coat != zero3f)
-      write_yaml_property(
-          fs, "materials", "coat", false, make_yaml_value(material.coat));
-    if (material.opacity != 1)
-      write_yaml_property(
-          fs, "materials", "opacity", false, make_yaml_value(material.opacity));
-    if (material.emission_tex >= 0)
-      write_yaml_property(fs, "materials", "emission_tex", false,
-          make_yaml_value(scene.textures[material.emission_tex].name));
-    if (material.diffuse_tex >= 0)
-      write_yaml_property(fs, "materials", "diffuse_tex", false,
-          make_yaml_value(scene.textures[material.diffuse_tex].name));
-    if (material.metallic_tex >= 0)
-      write_yaml_property(fs, "materials", "metallic_tex", false,
-          make_yaml_value(scene.textures[material.metallic_tex].name));
-    if (material.specular_tex >= 0)
-      write_yaml_property(fs, "materials", "specular_tex", false,
-          make_yaml_value(scene.textures[material.specular_tex].name));
-    if (material.roughness_tex >= 0)
-      write_yaml_property(fs, "materials", "roughness_tex", false,
-          make_yaml_value(scene.textures[material.roughness_tex].name));
-    if (material.transmission_tex >= 0)
-      write_yaml_property(fs, "materials", "transmission_tex", false,
-          make_yaml_value(scene.textures[material.transmission_tex].name));
-    if (material.subsurface_tex >= 0)
-      write_yaml_property(fs, "materials", "subsurface_tex", false,
-          make_yaml_value(scene.textures[material.subsurface_tex].name));
-    if (material.coat_tex >= 0)
-      write_yaml_property(fs, "materials", "coat_tex", false,
-          make_yaml_value(scene.textures[material.coat_tex].name));
-    if (material.opacity_tex >= 0)
-      write_yaml_property(fs, "materials", "opacity_tex", false,
-          make_yaml_value(scene.textures[material.opacity_tex].name));
-    if (material.normal_tex >= 0)
-      write_yaml_property(fs, "materials", "normal_tex", false,
-          make_yaml_value(scene.textures[material.normal_tex].name));
-    if (material.gltf_textures)
-      write_yaml_property(fs, "materials", "gltf_textures", false,
-          make_yaml_value(material.gltf_textures));
-  }
-
-  if (!scene.shapes.empty()) write_yaml_object(fs, "shapes");
-  for (auto& shape : scene.shapes) {
-    write_yaml_property(
-        fs, "shapes", "name", true, make_yaml_value(shape.name));
-    if (!shape.filename.empty())
-      write_yaml_property(
-          fs, "shapes", "filename", false, make_yaml_value(shape.filename));
-    write_yaml_property(fs, "subdivs", "subdivisions", false,
-        make_yaml_value(shape.subdivisions));
-    write_yaml_property(fs, "subdivs", "catmullclark", false,
-        make_yaml_value(shape.catmullclark));
-    write_yaml_property(
-        fs, "subdivs", "smooth", false, make_yaml_value(shape.smooth));
-    if (shape.facevarying)
-      write_yaml_property(fs, "subdivs", "facevarying", false,
-          make_yaml_value(shape.facevarying));
-    if (shape.displacement_tex >= 0)
-      write_yaml_property(fs, "subdivs", "displacement_tex", false,
-          make_yaml_value(scene.textures[shape.displacement_tex].name));
-    if (shape.displacement_tex >= 0)
-      write_yaml_property(fs, "subdivs", "displacement", false,
-          make_yaml_value(shape.displacement));
-  }
-
-  if (!ply_instances) {
-    if (!scene.instances.empty()) write_yaml_object(fs, "instances");
-    for (auto& instance : scene.instances) {
-      write_yaml_property(
-          fs, "instances", "name", true, make_yaml_value(instance.name));
-      if (instance.frame != identity3x4f)
+          fs, "cameras", "name", true, make_yaml_value(camera.name));
+      if (camera.frame != identity3x4f)
         write_yaml_property(
-            fs, "instances", "frame", false, make_yaml_value(instance.frame));
-      if (instance.shape >= 0)
-        write_yaml_property(fs, "instances", "shape", false,
-            make_yaml_value(scene.shapes[instance.shape].name));
-      if (instance.material >= 0)
-        write_yaml_property(fs, "instances", "material", false,
-            make_yaml_value(scene.materials[instance.material].name));
+            fs, "cameras", "frame", false, make_yaml_value(camera.frame));
+      if (camera.orthographic)
+        write_yaml_property(fs, "cameras", "orthographic", false,
+            make_yaml_value(camera.orthographic));
+      write_yaml_property(
+          fs, "cameras", "lens", false, make_yaml_value(camera.lens));
+      write_yaml_property(
+          fs, "cameras", "aspect", false, make_yaml_value(camera.aspect));
+      write_yaml_property(
+          fs, "cameras", "film", false, make_yaml_value(camera.film));
+      write_yaml_property(
+          fs, "cameras", "focus", false, make_yaml_value(camera.focus));
+      if (camera.aperture)
+        write_yaml_property(
+            fs, "cameras", "aperture", false, make_yaml_value(camera.aperture));
     }
-  } else {
-    if (!scene.instances.empty()) write_yaml_object(fs, "ply_instances");
-    write_yaml_property(
-        fs, "ply_instances", "filename", true, make_yaml_value(instances_name));
-  }
 
-  if (!scene.environments.empty()) write_yaml_object(fs, "environments");
-  for (auto& environment : scene.environments) {
-    write_yaml_property(
-        fs, "environments", "name", true, make_yaml_value(environment.name));
-    if (environment.frame != identity3x4f)
-      write_yaml_property(fs, "environments", "frame", false,
-          make_yaml_value(environment.frame));
-    write_yaml_property(fs, "environments", "emission", false,
-        make_yaml_value(environment.emission));
-    if (environment.emission_tex >= 0)
-      write_yaml_property(fs, "environments", "emission_tex", false,
-          make_yaml_value(scene.textures[environment.emission_tex].name));
-  }
-  } catch(std::exception& e) {
+    if (!scene.textures.empty()) write_yaml_object(fs, "textures");
+    for (auto& texture : scene.textures) {
+      write_yaml_property(
+          fs, "textures", "name", true, make_yaml_value(texture.name));
+      if (!texture.filename.empty())
+        write_yaml_property(fs, "textures", "filename", false,
+            make_yaml_value(texture.filename));
+    }
+
+    if (!scene.materials.empty()) write_yaml_object(fs, "materials");
+    for (auto& material : scene.materials) {
+      write_yaml_property(
+          fs, "materials", "name", true, make_yaml_value(material.name));
+      if (material.emission != zero3f)
+        write_yaml_property(fs, "materials", "emission", false,
+            make_yaml_value(material.emission));
+      if (material.diffuse != zero3f)
+        write_yaml_property(fs, "materials", "diffuse", false,
+            make_yaml_value(material.diffuse));
+      if (material.specular != zero3f)
+        write_yaml_property(fs, "materials", "specular", false,
+            make_yaml_value(material.specular));
+      if (material.metallic)
+        write_yaml_property(fs, "materials", "metallic", false,
+            make_yaml_value(material.metallic));
+      if (material.transmission != zero3f)
+        write_yaml_property(fs, "materials", "transmission", false,
+            make_yaml_value(material.transmission));
+      write_yaml_property(fs, "materials", "roughness", false,
+          make_yaml_value(material.roughness));
+      if (material.refract)
+        write_yaml_property(fs, "materials", "refract", false,
+            make_yaml_value(material.refract));
+      if (material.voltransmission != zero3f)
+        write_yaml_property(fs, "materials", "voltransmission", false,
+            make_yaml_value(material.voltransmission));
+      if (material.volmeanfreepath != zero3f)
+        write_yaml_property(fs, "materials", "volmeanfreepath", false,
+            make_yaml_value(material.volmeanfreepath));
+      if (material.volscatter != zero3f)
+        write_yaml_property(fs, "materials", "volscatter", false,
+            make_yaml_value(material.volscatter));
+      if (material.volemission != zero3f)
+        write_yaml_property(fs, "materials", "volemission", false,
+            make_yaml_value(material.volemission));
+      if (material.volanisotropy)
+        write_yaml_property(fs, "materials", "volanisotropy", false,
+            make_yaml_value(material.volanisotropy));
+      if (material.voltransmission != zero3f ||
+          material.volmeanfreepath != zero3f)
+        write_yaml_property(fs, "materials", "volscale", false,
+            make_yaml_value(material.volscale));
+      if (material.coat != zero3f)
+        write_yaml_property(
+            fs, "materials", "coat", false, make_yaml_value(material.coat));
+      if (material.opacity != 1)
+        write_yaml_property(fs, "materials", "opacity", false,
+            make_yaml_value(material.opacity));
+      if (material.emission_tex >= 0)
+        write_yaml_property(fs, "materials", "emission_tex", false,
+            make_yaml_value(scene.textures[material.emission_tex].name));
+      if (material.diffuse_tex >= 0)
+        write_yaml_property(fs, "materials", "diffuse_tex", false,
+            make_yaml_value(scene.textures[material.diffuse_tex].name));
+      if (material.metallic_tex >= 0)
+        write_yaml_property(fs, "materials", "metallic_tex", false,
+            make_yaml_value(scene.textures[material.metallic_tex].name));
+      if (material.specular_tex >= 0)
+        write_yaml_property(fs, "materials", "specular_tex", false,
+            make_yaml_value(scene.textures[material.specular_tex].name));
+      if (material.roughness_tex >= 0)
+        write_yaml_property(fs, "materials", "roughness_tex", false,
+            make_yaml_value(scene.textures[material.roughness_tex].name));
+      if (material.transmission_tex >= 0)
+        write_yaml_property(fs, "materials", "transmission_tex", false,
+            make_yaml_value(scene.textures[material.transmission_tex].name));
+      if (material.subsurface_tex >= 0)
+        write_yaml_property(fs, "materials", "subsurface_tex", false,
+            make_yaml_value(scene.textures[material.subsurface_tex].name));
+      if (material.coat_tex >= 0)
+        write_yaml_property(fs, "materials", "coat_tex", false,
+            make_yaml_value(scene.textures[material.coat_tex].name));
+      if (material.opacity_tex >= 0)
+        write_yaml_property(fs, "materials", "opacity_tex", false,
+            make_yaml_value(scene.textures[material.opacity_tex].name));
+      if (material.normal_tex >= 0)
+        write_yaml_property(fs, "materials", "normal_tex", false,
+            make_yaml_value(scene.textures[material.normal_tex].name));
+      if (material.gltf_textures)
+        write_yaml_property(fs, "materials", "gltf_textures", false,
+            make_yaml_value(material.gltf_textures));
+    }
+
+    if (!scene.shapes.empty()) write_yaml_object(fs, "shapes");
+    for (auto& shape : scene.shapes) {
+      write_yaml_property(
+          fs, "shapes", "name", true, make_yaml_value(shape.name));
+      if (!shape.filename.empty())
+        write_yaml_property(
+            fs, "shapes", "filename", false, make_yaml_value(shape.filename));
+      write_yaml_property(fs, "subdivs", "subdivisions", false,
+          make_yaml_value(shape.subdivisions));
+      write_yaml_property(fs, "subdivs", "catmullclark", false,
+          make_yaml_value(shape.catmullclark));
+      write_yaml_property(
+          fs, "subdivs", "smooth", false, make_yaml_value(shape.smooth));
+      if (shape.facevarying)
+        write_yaml_property(fs, "subdivs", "facevarying", false,
+            make_yaml_value(shape.facevarying));
+      if (shape.displacement_tex >= 0)
+        write_yaml_property(fs, "subdivs", "displacement_tex", false,
+            make_yaml_value(scene.textures[shape.displacement_tex].name));
+      if (shape.displacement_tex >= 0)
+        write_yaml_property(fs, "subdivs", "displacement", false,
+            make_yaml_value(shape.displacement));
+    }
+
+    if (!ply_instances) {
+      if (!scene.instances.empty()) write_yaml_object(fs, "instances");
+      for (auto& instance : scene.instances) {
+        write_yaml_property(
+            fs, "instances", "name", true, make_yaml_value(instance.name));
+        if (instance.frame != identity3x4f)
+          write_yaml_property(
+              fs, "instances", "frame", false, make_yaml_value(instance.frame));
+        if (instance.shape >= 0)
+          write_yaml_property(fs, "instances", "shape", false,
+              make_yaml_value(scene.shapes[instance.shape].name));
+        if (instance.material >= 0)
+          write_yaml_property(fs, "instances", "material", false,
+              make_yaml_value(scene.materials[instance.material].name));
+      }
+    } else {
+      if (!scene.instances.empty()) write_yaml_object(fs, "ply_instances");
+      write_yaml_property(fs, "ply_instances", "filename", true,
+          make_yaml_value(instances_name));
+    }
+
+    if (!scene.environments.empty()) write_yaml_object(fs, "environments");
+    for (auto& environment : scene.environments) {
+      write_yaml_property(
+          fs, "environments", "name", true, make_yaml_value(environment.name));
+      if (environment.frame != identity3x4f)
+        write_yaml_property(fs, "environments", "frame", false,
+            make_yaml_value(environment.frame));
+      write_yaml_property(fs, "environments", "emission", false,
+          make_yaml_value(environment.emission));
+      if (environment.emission_tex >= 0)
+        write_yaml_property(fs, "environments", "emission_tex", false,
+            make_yaml_value(scene.textures[environment.emission_tex].name));
+    }
+  } catch (std::exception& e) {
     error = e.what();
     return false;
   }
-    return true;
+  return true;
 }
 
 // Save a scene in the builtin YAML format.
-static bool save_yaml_scene(const string& filename, const scene_model& scene, string& error,
-    const save_params& params) {
+static bool save_yaml_scene(const string& filename, const scene_model& scene,
+    string& error, const save_params& params) {
   // save yaml file
-  if(!save_yaml(filename, scene, error)) return false;
+  if (!save_yaml(filename, scene, error)) return false;
 
   // save meshes and textures
   auto dirname = get_dirname(filename);
-  if(!save_shapes(scene, dirname, error, params)) return false;
-  if(!save_textures(scene, dirname, error, params)) return false;
+  if (!save_shapes(scene, dirname, error, params)) return false;
+  if (!save_textures(scene, dirname, error, params)) return false;
 
   return true;
 }
@@ -2125,11 +2130,11 @@ static bool save_yaml_scene(const string& filename, const scene_model& scene, st
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool load_obj(
-    const string& filename, scene_model& scene, string& error, const load_params& params) {
+bool load_obj(const string& filename, scene_model& scene, string& error,
+    const load_params& params) {
   // load obj
   auto obj = obj_model{};
-  if(!load_obj(filename, obj, error, false, true, true)) return false;
+  if (!load_obj(filename, obj, error, false, true, true)) return false;
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
@@ -2265,16 +2270,16 @@ bool load_obj(
 }
 
 // Loads an OBJ
-static bool load_obj_scene(
-    const string& filename, scene_model& scene, string& error, const load_params& params) {
+static bool load_obj_scene(const string& filename, scene_model& scene,
+    string& error, const load_params& params) {
   scene = {};
 
   // Parse obj
-  if(!load_obj(filename, scene, error, params)) return false;
+  if (!load_obj(filename, scene, error, params)) return false;
 
   // load textures
   auto dirname = get_dirname(filename);
-  if(!load_textures(scene, dirname, error, params)) return false;
+  if (!load_textures(scene, dirname, error, params)) return false;
 
   // fix scene
   scene.name = get_basename(filename);
@@ -2285,8 +2290,8 @@ static bool load_obj_scene(
   return true;
 }
 
-static bool save_obj(const string& filename, const scene_model& scene, string& error,
-    const save_params& params) {
+static bool save_obj(const string& filename, const scene_model& scene,
+    string& error, const save_params& params) {
   auto obj = obj_model{};
 
   // convert cameras
@@ -2411,11 +2416,11 @@ static bool save_obj(const string& filename, const scene_model& scene, string& e
   return save_obj(filename, obj, error);
 }
 
-static bool save_obj_scene(const string& filename, const scene_model& scene, string& error,
-    const save_params& params) {
-  if(!save_obj(filename, scene, error, params)) return false;
+static bool save_obj_scene(const string& filename, const scene_model& scene,
+    string& error, const save_params& params) {
+  if (!save_obj(filename, scene, error, params)) return false;
   auto dirname = get_dirname(filename);
-  if(!save_textures(scene, dirname, error, params)) return false;
+  if (!save_textures(scene, dirname, error, params)) return false;
   return true;
 }
 
@@ -2435,8 +2440,8 @@ void print_obj_camera(const scene_camera& camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_ply_scene(
-    const string& filename, scene_model& scene, string& error, const load_params& params) {
+static bool load_ply_scene(const string& filename, scene_model& scene,
+    string& error, const load_params& params) {
   scene = {};
 
   // load ply mesh
@@ -3024,9 +3029,10 @@ bool load_gltf(const string& filename, gltf_model& scene, string& error) {
 namespace yocto {
 
 // convert gltf to scene
-static bool load_gltf(const string& filename, scene_model& scene, string& error) {
+static bool load_gltf(
+    const string& filename, scene_model& scene, string& error) {
   auto gltf = gltf_model{};
-  if(!load_gltf(filename, gltf, error)) return false;
+  if (!load_gltf(filename, gltf, error)) return false;
 
   // convert textures
   for (auto& gtexture : gltf.textures) {
@@ -3128,17 +3134,17 @@ static bool load_gltf(const string& filename, scene_model& scene, string& error)
 }
 
 // Load a scene
-static bool load_gltf_scene(
-    const string& filename, scene_model& scene, string& error, const load_params& params) {
+static bool load_gltf_scene(const string& filename, scene_model& scene,
+    string& error, const load_params& params) {
   // initialization
   scene = {};
 
   // load gltf
-  if(!load_gltf(filename, scene, error)) return false;
+  if (!load_gltf(filename, scene, error)) return false;
 
   // load textures
   auto dirname = get_dirname(filename);
-  if(!load_textures(scene, dirname, error, params)) return false;
+  if (!load_textures(scene, dirname, error, params)) return false;
 
   // fix scene
   scene.name = get_basename(filename);
@@ -3164,11 +3170,11 @@ static bool load_gltf_scene(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_pbrt(
-    const string& filename, scene_model& scene, string& error, const load_params& params) {
+static bool load_pbrt(const string& filename, scene_model& scene, string& error,
+    const load_params& params) {
   // load pbrt
   auto pbrt = pbrt_model{};
-  if(!load_pbrt(filename, pbrt, error)) return false;
+  if (!load_pbrt(filename, pbrt, error)) return false;
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
@@ -3297,17 +3303,17 @@ static bool load_pbrt(
 }
 
 // load pbrt scenes
-static bool load_pbrt_scene(
-    const string& filename, scene_model& scene, string& error, const load_params& params) {
+static bool load_pbrt_scene(const string& filename, scene_model& scene,
+    string& error, const load_params& params) {
   scene = scene_model{};
 
   // Parse pbrt
-  if(!load_pbrt(filename, scene, error, params)) return false;
+  if (!load_pbrt(filename, scene, error, params)) return false;
 
   // load textures
   auto dirname = get_dirname(filename);
-  if(!load_shapes(scene, dirname, error, params)) return false;
-  if(!load_textures(scene, dirname, error, params)) return false;
+  if (!load_shapes(scene, dirname, error, params)) return false;
+  if (!load_textures(scene, dirname, error, params)) return false;
 
   // fix scene
   scene.name = get_basename(filename);
@@ -3319,7 +3325,8 @@ static bool load_pbrt_scene(
 }
 
 // Convert a scene to pbrt format
-static bool save_pbrt(const string& filename, const scene_model& scene, string& error) {
+static bool save_pbrt(
+    const string& filename, const scene_model& scene, string& error) {
   auto pbrt = pbrt_model{};
 
   // embed data
@@ -3382,26 +3389,26 @@ static bool save_pbrt(const string& filename, const scene_model& scene, string& 
 }
 
 // Save a pbrt scene
-bool save_pbrt_scene(const string& filename, const scene_model& scene, string& error,
-    const save_params& params) {
+bool save_pbrt_scene(const string& filename, const scene_model& scene,
+    string& error, const save_params& params) {
   // save pbrt
-  if(!save_pbrt(filename, scene, error)) return false;
+  if (!save_pbrt(filename, scene, error)) return false;
 
   // save meshes
   auto dirname = get_dirname(filename);
   for (auto& shape : scene.shapes) {
     if (shape.quadspos.empty()) {
-      if(!save_shape(replace_extension(dirname + shape.filename, ".ply"),
-          shape.points, shape.lines, shape.triangles, shape.quads,
-          shape.positions, shape.normals, shape.texcoords, shape.colors,
-          shape.radius)) {
+      if (!save_shape(replace_extension(dirname + shape.filename, ".ply"),
+              shape.points, shape.lines, shape.triangles, shape.quads,
+              shape.positions, shape.normals, shape.texcoords, shape.colors,
+              shape.radius)) {
         error = "cannot save " + dirname + shape.filename;
         return false;
       }
     } else {
-      if(!save_fvshape(replace_extension(dirname + shape.filename, ".ply"),
-          shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-          shape.normals, shape.texcoords)) {
+      if (!save_fvshape(replace_extension(dirname + shape.filename, ".ply"),
+              shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+              shape.positions, shape.normals, shape.texcoords)) {
         error = "cannot save " + dirname + shape.filename;
         return false;
       }
@@ -3409,7 +3416,7 @@ bool save_pbrt_scene(const string& filename, const scene_model& scene, string& e
   }
 
   // save textures
-  if(!save_textures(scene, dirname, error, params)) return false;
+  if (!save_textures(scene, dirname, error, params)) return false;
 
   return true;
 }

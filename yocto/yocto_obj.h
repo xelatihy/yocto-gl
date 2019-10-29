@@ -181,14 +181,15 @@ struct obj_model {
 };
 
 // Load and save obj
-inline bool load_obj(const string& filename, obj_model& obj, 
+inline bool load_obj(const string& filename, obj_model& obj,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
 inline bool save_obj(const string& filename, const obj_model& obj);
-inline bool load_obj(const string& filename, obj_model& obj, string& error, 
+inline bool load_obj(const string& filename, obj_model& obj, string& error,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-inline bool save_obj(const string& filename, const obj_model& obj, string& error);
+inline bool save_obj(
+    const string& filename, const obj_model& obj, string& error);
 
 // convert between roughness and exponent
 inline float obj_exponent_to_roughness(float exponent);
@@ -880,7 +881,7 @@ inline bool load_mtl(
   }
 
   // check error
-  if (read_error(fs)) return  false;
+  if (read_error(fs)) return false;
 
   // remove placeholder material
   obj.materials.erase(obj.materials.begin());
@@ -973,11 +974,14 @@ inline bool load_objx(const string& filename, obj_model& obj, string& error) {
 }
 
 // Read obj
-inline bool load_obj(const string& filename, obj_model& obj, string& error, 
-  bool geom_only, bool split_elements, bool split_materials) {
+inline bool load_obj(const string& filename, obj_model& obj, string& error,
+    bool geom_only, bool split_elements, bool split_materials) {
   // open file
   auto fs = open_obj(filename, "rt");
-  if (!fs) { error = "cannot open " + filename; return false; }
+  if (!fs) {
+    error = "cannot open " + filename;
+    return false;
+  }
 
   // parsing state
   auto opositions = vector<vec3f>{};
@@ -1152,13 +1156,13 @@ inline bool load_obj(const string& filename, obj_model& obj, string& error,
   // load materials
   auto dirname = get_obj_dirname(filename);
   for (auto& mtllib : mtllibs) {
-    if(!load_mtl(dirname + mtllib, obj, error)) return false;
+    if (!load_mtl(dirname + mtllib, obj, error)) return false;
   }
 
   // load extensions
   auto extfilename = replace_obj_extension(filename, ".objx");
   if (exists_obj_file(extfilename)) {
-    if(!load_objx(extfilename, obj, error)) return false;
+    if (!load_objx(extfilename, obj, error)) return false;
   }
 
   return true;
@@ -1184,7 +1188,8 @@ inline void format_obj_value(string& str, const obj_vertex& value) {
 }
 
 // Save obj
-inline bool save_mtl(const string& filename, const obj_model& obj, string& error) {
+inline bool save_mtl(
+    const string& filename, const obj_model& obj, string& error) {
   // open file
   auto fs = open_obj(filename, "wt");
   if (!fs) throw std::runtime_error("cannot open " + filename);
@@ -1286,7 +1291,8 @@ inline bool save_mtl(const string& filename, const obj_model& obj, string& error
 }
 
 // Save obj
-inline bool save_objx(const string& filename, const obj_model& obj, string& error) {
+inline bool save_objx(
+    const string& filename, const obj_model& obj, string& error) {
   // open file
   auto fs = open_obj(filename, "wt");
   if (!fs) throw std::runtime_error("cannot open " + filename);
@@ -1337,7 +1343,8 @@ inline bool save_objx(const string& filename, const obj_model& obj, string& erro
 }
 
 // Save obj
-inline bool save_obj(const string& filename, const obj_model& obj, string& error) {
+inline bool save_obj(
+    const string& filename, const obj_model& obj, string& error) {
   // open file
   auto fs = open_obj(filename, "wt");
   if (!fs) throw std::runtime_error("cannot open " + filename);
@@ -1403,15 +1410,17 @@ inline bool save_obj(const string& filename, const obj_model& obj, string& error
 
   // save mtl
   if (!obj.materials.empty()) {
-    if(!save_mtl(replace_obj_extension(filename, ".mtl"), obj, error)) return false;
+    if (!save_mtl(replace_obj_extension(filename, ".mtl"), obj, error))
+      return false;
   }
 
   // save objx
   if (!obj.cameras.empty() || !obj.environments.empty() ||
       std::any_of(obj.shapes.begin(), obj.shapes.end(),
           [](auto& shape) { return !shape.instances.empty(); })) {
-    if(!save_objx(replace_obj_extension(filename, ".objx"), obj, error)) return false;
-          }
+    if (!save_objx(replace_obj_extension(filename, ".objx"), obj, error))
+      return false;
+  }
 
   // check error
   if (write_error(fs)) return false;
@@ -1419,14 +1428,15 @@ inline bool save_obj(const string& filename, const obj_model& obj, string& error
   return true;
 }
 
-inline bool load_obj(const string& filename, obj_model& obj, 
-  bool geom_only, bool split_elements, bool split_materials) {
-    auto error = ""s;
-    return load_obj(filename, obj, error, geom_only, split_elements, split_materials);
+inline bool load_obj(const string& filename, obj_model& obj, bool geom_only,
+    bool split_elements, bool split_materials) {
+  auto error = ""s;
+  return load_obj(
+      filename, obj, error, geom_only, split_elements, split_materials);
 }
 inline bool save_obj(const string& filename, const obj_model& obj) {
-    auto error = ""s;
-    return save_obj(filename, obj, error);
+  auto error = ""s;
+  return save_obj(filename, obj, error);
 }
 
 // convert between roughness and exponent
@@ -2126,7 +2136,7 @@ inline bool write_obj_comment(obj_file& fs, const string& comment) {
     format_obj_values(fs, "# {}\n", str);
   }
   format_obj_values(fs, "\n");
-  if(write_error(fs)) return false;
+  if (write_error(fs)) return false;
   return true;
 }
 
@@ -2159,7 +2169,7 @@ inline bool write_obj_command(obj_file& fs, obj_command command,
     case obj_command::error: break;
   }
 
-  if(write_error(fs)) return false;
+  if (write_error(fs)) return false;
 
   return true;
 }
@@ -2172,77 +2182,80 @@ inline bool write_mtl_command(
   };
 
   // write material
-  switch(command) {
-case mtl_command::material:
-  format_obj_values(fs, "newmtl {}\n", material.name);
-  format_obj_values(fs, "illum {}\n", material.illum);
-  if (material.emission != zero3f)
-    format_obj_values(fs, "Ke {}\n", material.emission);
-  if (material.ambient != zero3f)
-    format_obj_values(fs, "Ka {}\n", material.ambient);
-  format_obj_values(fs, "Kd {}\n", material.diffuse);
-  format_obj_values(fs, "Ks {}\n", material.specular);
-  if (material.reflection != zero3f)
-    format_obj_values(fs, "Kr {}\n", material.reflection);
-  if (material.transmission != zero3f)
-    format_obj_values(fs, "Kt {}\n", material.transmission);
-  format_obj_values(fs, "Ns {}\n", (int)material.exponent);
-  if (material.opacity != 1) format_obj_values(fs, "d {}\n", material.opacity);
-  if (!material.emission_map.path.empty())
-    format_obj_values(fs, "map_Ke {}\n", material.emission_map);
-  if (!material.diffuse_map.path.empty())
-    format_obj_values(fs, "map_Kd {}\n", material.diffuse_map);
-  if (!material.specular_map.path.empty())
-    format_obj_values(fs, "map_Ks {}\n", material.specular_map);
-  if (!material.transmission_map.path.empty())
-    format_obj_values(fs, "map_Kt {}\n", material.transmission_map);
-  if (!material.reflection_map.path.empty())
-    format_obj_values(fs, "map_Kr {}\n", material.reflection_map);
-  if (!material.exponent_map.path.empty())
-    format_obj_values(fs, "map_Ns {}\n", material.exponent_map);
-  if (!material.opacity_map.path.empty())
-    format_obj_values(fs, "map_d {}\n", material.opacity_map);
-  if (!material.bump_map.path.empty())
-    format_obj_values(fs, "map_bump {}\n", material.bump_map);
-  if (!material.displacement_map.path.empty())
-    format_obj_values(fs, "map_disp {}\n", material.displacement_map);
-  if (!material.normal_map.path.empty())
-    format_obj_values(fs, "map_norm {}\n", material.normal_map);
-  if (material.pbr_roughness)
-    format_obj_values(fs, "Pr {}\n", material.pbr_roughness);
-  if (material.pbr_metallic)
-    format_obj_values(fs, "Pm {}\n", material.pbr_metallic);
-  if (material.pbr_sheen) format_obj_values(fs, "Ps {}\n", material.pbr_sheen);
-  if (material.pbr_clearcoat)
-    format_obj_values(fs, "Pc {}\n", material.pbr_clearcoat);
-  if (material.pbr_coatroughness)
-    format_obj_values(fs, "Pcr {}\n", material.pbr_coatroughness);
-  if (!material.pbr_roughness_map.path.empty())
-    format_obj_values(fs, "map_Pr {}\n", material.pbr_roughness_map);
-  if (!material.pbr_metallic_map.path.empty())
-    format_obj_values(fs, "map_Pm {}\n", material.pbr_metallic_map);
-  if (!material.pbr_sheen_map.path.empty())
-    format_obj_values(fs, "map_Ps {}\n", material.pbr_sheen_map);
-  if (!material.pbr_clearcoat_map.path.empty())
-    format_obj_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map);
-  if (!material.pbr_coatroughness_map.path.empty())
-    format_obj_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map);
-  if (material.vol_transmission != zero3f)
-    format_obj_values(fs, "Vt {}\n", material.vol_transmission);
-  if (material.vol_meanfreepath != zero3f)
-    format_obj_values(fs, "Vp {}\n", material.vol_meanfreepath);
-  if (material.vol_emission != zero3f)
-    format_obj_values(fs, "Ve {}\n", material.vol_emission);
-  if (material.vol_scattering != zero3f)
-    format_obj_values(fs, "Vs {}\n", material.vol_scattering);
-  if (material.vol_anisotropy)
-    format_obj_values(fs, "Vg {}\n", material.vol_anisotropy);
-  if (material.vol_scale) format_obj_values(fs, "Vr {}\n", material.vol_scale);
-  if (!material.vol_scattering_map.path.empty())
-    format_obj_values(fs, "map_Vs {}\n", material.vol_scattering_map);
-  format_obj_values(fs, "\n");
-break;
-case mtl_command::error: break;    
+  switch (command) {
+    case mtl_command::material:
+      format_obj_values(fs, "newmtl {}\n", material.name);
+      format_obj_values(fs, "illum {}\n", material.illum);
+      if (material.emission != zero3f)
+        format_obj_values(fs, "Ke {}\n", material.emission);
+      if (material.ambient != zero3f)
+        format_obj_values(fs, "Ka {}\n", material.ambient);
+      format_obj_values(fs, "Kd {}\n", material.diffuse);
+      format_obj_values(fs, "Ks {}\n", material.specular);
+      if (material.reflection != zero3f)
+        format_obj_values(fs, "Kr {}\n", material.reflection);
+      if (material.transmission != zero3f)
+        format_obj_values(fs, "Kt {}\n", material.transmission);
+      format_obj_values(fs, "Ns {}\n", (int)material.exponent);
+      if (material.opacity != 1)
+        format_obj_values(fs, "d {}\n", material.opacity);
+      if (!material.emission_map.path.empty())
+        format_obj_values(fs, "map_Ke {}\n", material.emission_map);
+      if (!material.diffuse_map.path.empty())
+        format_obj_values(fs, "map_Kd {}\n", material.diffuse_map);
+      if (!material.specular_map.path.empty())
+        format_obj_values(fs, "map_Ks {}\n", material.specular_map);
+      if (!material.transmission_map.path.empty())
+        format_obj_values(fs, "map_Kt {}\n", material.transmission_map);
+      if (!material.reflection_map.path.empty())
+        format_obj_values(fs, "map_Kr {}\n", material.reflection_map);
+      if (!material.exponent_map.path.empty())
+        format_obj_values(fs, "map_Ns {}\n", material.exponent_map);
+      if (!material.opacity_map.path.empty())
+        format_obj_values(fs, "map_d {}\n", material.opacity_map);
+      if (!material.bump_map.path.empty())
+        format_obj_values(fs, "map_bump {}\n", material.bump_map);
+      if (!material.displacement_map.path.empty())
+        format_obj_values(fs, "map_disp {}\n", material.displacement_map);
+      if (!material.normal_map.path.empty())
+        format_obj_values(fs, "map_norm {}\n", material.normal_map);
+      if (material.pbr_roughness)
+        format_obj_values(fs, "Pr {}\n", material.pbr_roughness);
+      if (material.pbr_metallic)
+        format_obj_values(fs, "Pm {}\n", material.pbr_metallic);
+      if (material.pbr_sheen)
+        format_obj_values(fs, "Ps {}\n", material.pbr_sheen);
+      if (material.pbr_clearcoat)
+        format_obj_values(fs, "Pc {}\n", material.pbr_clearcoat);
+      if (material.pbr_coatroughness)
+        format_obj_values(fs, "Pcr {}\n", material.pbr_coatroughness);
+      if (!material.pbr_roughness_map.path.empty())
+        format_obj_values(fs, "map_Pr {}\n", material.pbr_roughness_map);
+      if (!material.pbr_metallic_map.path.empty())
+        format_obj_values(fs, "map_Pm {}\n", material.pbr_metallic_map);
+      if (!material.pbr_sheen_map.path.empty())
+        format_obj_values(fs, "map_Ps {}\n", material.pbr_sheen_map);
+      if (!material.pbr_clearcoat_map.path.empty())
+        format_obj_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map);
+      if (!material.pbr_coatroughness_map.path.empty())
+        format_obj_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map);
+      if (material.vol_transmission != zero3f)
+        format_obj_values(fs, "Vt {}\n", material.vol_transmission);
+      if (material.vol_meanfreepath != zero3f)
+        format_obj_values(fs, "Vp {}\n", material.vol_meanfreepath);
+      if (material.vol_emission != zero3f)
+        format_obj_values(fs, "Ve {}\n", material.vol_emission);
+      if (material.vol_scattering != zero3f)
+        format_obj_values(fs, "Vs {}\n", material.vol_scattering);
+      if (material.vol_anisotropy)
+        format_obj_values(fs, "Vg {}\n", material.vol_anisotropy);
+      if (material.vol_scale)
+        format_obj_values(fs, "Vr {}\n", material.vol_scale);
+      if (!material.vol_scattering_map.path.empty())
+        format_obj_values(fs, "map_Vs {}\n", material.vol_scattering_map);
+      format_obj_values(fs, "\n");
+      break;
+    case mtl_command::error: break;
   }
 
   // check error

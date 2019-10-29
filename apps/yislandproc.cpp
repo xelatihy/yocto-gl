@@ -942,8 +942,8 @@ void load_island_elements(const string& filename, const string& dirname,
   // rename materials and shapes
 }
 
-bool load_textures(
-    scene_model& scene, const string& dirname, string& error, const load_params& params);
+bool load_textures(scene_model& scene, const string& dirname, string& error,
+    const load_params& params);
 
 void load_island_scene(
     const string& filename, scene_model& scene, const load_params& params) {
@@ -966,7 +966,8 @@ void load_island_scene(
 
     // load meshes and textures
     auto error = ""s;
-    if(!load_textures(scene, dirname, error, params)) throw std::runtime_error(error);
+    if (!load_textures(scene, dirname, error, params))
+      throw std::runtime_error(error);
   } catch (std::exception& e) {
     throw std::runtime_error("error loading scene "s + e.what());
   }

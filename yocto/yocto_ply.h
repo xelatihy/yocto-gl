@@ -146,7 +146,8 @@ struct ply_model {
 inline bool load_ply(const string& filename, ply_model& ply);
 inline bool save_ply(const string& filename, const ply_model& ply);
 inline bool load_ply(const string& filename, ply_model& ply, string& error);
-inline bool save_ply(const string& filename, const ply_model& ply, string& error);
+inline bool save_ply(
+    const string& filename, const ply_model& ply, string& error);
 
 // Get ply properties
 inline bool has_ply_property(
@@ -905,7 +906,8 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
 }
 
 // Save ply
-inline bool save_ply(const string& filename, const ply_model& ply, string& error) {
+inline bool save_ply(
+    const string& filename, const ply_model& ply, string& error) {
   auto fs = open_ply(filename, "wb");
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
@@ -1045,7 +1047,7 @@ inline bool save_ply(const string& filename, const ply_model& ply, string& error
       }
     }
   }
-  
+
   return true;
 }
 
@@ -1462,26 +1464,27 @@ inline void add_ply_points(ply_model& ply, const vector<int>& values) {
 
 // get ply value either ascii or binary
 template <typename T, typename VT>
-[[nodiscard]] inline bool read_ply_prop(ply_file& fs, VT& value, bool big_endian) {
+[[nodiscard]] inline bool read_ply_prop(
+    ply_file& fs, VT& value, bool big_endian) {
   auto tvalue = T{};
-  auto ok = read_ply_value(fs, tvalue, big_endian);
-  value = (VT)tvalue;
+  auto ok     = read_ply_value(fs, tvalue, big_endian);
+  value       = (VT)tvalue;
   return ok;
 }
 template <typename VT>
 [[nodiscard]] inline bool read_ply_prop(
     ply_file& fs, ply_type type, VT& value, bool big_endian) {
   switch (type) {
-    case ply_type::i8: return read_ply_prop<int8_t>(fs, value, big_endian); 
-    case ply_type::i16: return read_ply_prop<int16_t>(fs, value, big_endian); 
-    case ply_type::i32: return read_ply_prop<int32_t>(fs, value, big_endian); 
-    case ply_type::i64: return read_ply_prop<int64_t>(fs, value, big_endian); 
-    case ply_type::u8: return read_ply_prop<uint8_t>(fs, value, big_endian); 
-    case ply_type::u16: return read_ply_prop<uint16_t>(fs, value, big_endian); 
-    case ply_type::u32: return read_ply_prop<uint32_t>(fs, value, big_endian); 
-    case ply_type::u64: return read_ply_prop<uint64_t>(fs, value, big_endian); 
-    case ply_type::f32: return read_ply_prop<float>(fs, value, big_endian); 
-    case ply_type::f64: return read_ply_prop<double>(fs, value, big_endian); 
+    case ply_type::i8: return read_ply_prop<int8_t>(fs, value, big_endian);
+    case ply_type::i16: return read_ply_prop<int16_t>(fs, value, big_endian);
+    case ply_type::i32: return read_ply_prop<int32_t>(fs, value, big_endian);
+    case ply_type::i64: return read_ply_prop<int64_t>(fs, value, big_endian);
+    case ply_type::u8: return read_ply_prop<uint8_t>(fs, value, big_endian);
+    case ply_type::u16: return read_ply_prop<uint16_t>(fs, value, big_endian);
+    case ply_type::u32: return read_ply_prop<uint32_t>(fs, value, big_endian);
+    case ply_type::u64: return read_ply_prop<uint64_t>(fs, value, big_endian);
+    case ply_type::f32: return read_ply_prop<float>(fs, value, big_endian);
+    case ply_type::f64: return read_ply_prop<double>(fs, value, big_endian);
   }
 }
 
@@ -1671,15 +1674,18 @@ inline bool read_ply_value_generic(ply_file& fs, ply_format format,
       auto& value = values[pidx];
       auto& list  = lists[pidx];
       if (!prop.is_list) {
-        if(!read_ply_prop(
-            fs, prop.type, value, format == ply_format::binary_big_endian)) return false;
+        if (!read_ply_prop(
+                fs, prop.type, value, format == ply_format::binary_big_endian))
+          return false;
       } else {
-        if(!read_ply_prop(
-            fs, ply_type::u8, value, format == ply_format::binary_big_endian)) return false;
+        if (!read_ply_prop(fs, ply_type::u8, value,
+                format == ply_format::binary_big_endian))
+          return false;
         list.resize((int)value);
         for (auto i = 0; i < (int)value; i++)
-          if(!read_ply_prop(
-              fs, prop.type, list[i], format == ply_format::binary_big_endian)) return false;
+          if (!read_ply_prop(fs, prop.type, list[i],
+                  format == ply_format::binary_big_endian))
+            return false;
       }
     }
   }
@@ -1707,16 +1713,16 @@ template <typename VT>
 inline bool write_ply_prop(
     ply_file& fs, ply_type type, VT value, bool big_endian) {
   switch (type) {
-    case ply_type::i8: return write_ply_value(fs, (int8_t)value, big_endian); 
-    case ply_type::i16: return write_ply_value(fs, (int16_t)value, big_endian); 
-    case ply_type::i32: return write_ply_value(fs, (int32_t)value, big_endian); 
-    case ply_type::i64: return write_ply_value(fs, (int64_t)value, big_endian); 
-    case ply_type::u8: return write_ply_value(fs, (uint8_t)value, big_endian); 
-    case ply_type::u16: return write_ply_value(fs, (uint16_t)value, big_endian); 
-    case ply_type::u32: return write_ply_value(fs, (uint32_t)value, big_endian); 
-    case ply_type::u64: return write_ply_value(fs, (uint64_t)value, big_endian); 
-    case ply_type::f32: return write_ply_value(fs, (float)value, big_endian); 
-    case ply_type::f64: return write_ply_value(fs, (double)value, big_endian); 
+    case ply_type::i8: return write_ply_value(fs, (int8_t)value, big_endian);
+    case ply_type::i16: return write_ply_value(fs, (int16_t)value, big_endian);
+    case ply_type::i32: return write_ply_value(fs, (int32_t)value, big_endian);
+    case ply_type::i64: return write_ply_value(fs, (int64_t)value, big_endian);
+    case ply_type::u8: return write_ply_value(fs, (uint8_t)value, big_endian);
+    case ply_type::u16: return write_ply_value(fs, (uint16_t)value, big_endian);
+    case ply_type::u32: return write_ply_value(fs, (uint32_t)value, big_endian);
+    case ply_type::u64: return write_ply_value(fs, (uint64_t)value, big_endian);
+    case ply_type::f32: return write_ply_value(fs, (float)value, big_endian);
+    case ply_type::f64: return write_ply_value(fs, (double)value, big_endian);
     default: return false;
   }
 }

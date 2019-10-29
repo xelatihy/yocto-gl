@@ -3642,7 +3642,7 @@ bool load_shape(const string& filename, vector<int>& points,
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply = ply_model{};
-    if(!load_ply(filename, ply)) return false;
+    if (!load_ply(filename, ply)) return false;
 
     // gets vertex
     positions = get_ply_positions(ply);
@@ -3665,7 +3665,7 @@ bool load_shape(const string& filename, vector<int>& points,
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
     auto obj = obj_model();
-    if(!load_obj(filename, obj, true)) return false;
+    if (!load_obj(filename, obj, true)) return false;
 
     // get shape
     if (obj.shapes.empty()) return true;
@@ -3682,11 +3682,11 @@ bool load_shape(const string& filename, vector<int>& points,
       get_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
           materials, ematerials, flip_texcoord);
     } else if (!shape.faces.empty() && has_quads) {
-      get_obj_quads(obj, shape, quads, positions, normals, texcoords,
-          materials, ematerials, flip_texcoord);
+      get_obj_quads(obj, shape, quads, positions, normals, texcoords, materials,
+          ematerials, flip_texcoord);
     } else if (!shape.lines.empty()) {
-      get_obj_lines(obj, shape, lines, positions, normals, texcoords,
-          materials, ematerials, flip_texcoord);
+      get_obj_lines(obj, shape, lines, positions, normals, texcoords, materials,
+          ematerials, flip_texcoord);
     } else if (!shape.points.empty()) {
       get_obj_points(obj, shape, points, positions, normals, texcoords,
           materials, ematerials, flip_texcoord);
@@ -3708,40 +3708,40 @@ bool save_shape(const string& filename, const vector<int>& points,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
     bool flip_texcoord) {
-    auto ext = get_extension(filename);
-    if (ext == ".ply" || ext == ".PLY") {
-      // create ply
-      auto ply = ply_model{};
-      add_ply_positions(ply, positions);
-      add_ply_normals(ply, normals);
-      add_ply_texcoords(ply, texcoords, flip_texcoord);
-      add_ply_colors(ply, colors);
-      add_ply_radius(ply, radius);
-      add_ply_faces(ply, triangles, quads);
-      add_ply_lines(ply, lines);
-      add_ply_points(ply, points);
-      return save_ply(filename, ply);
-    } else if (ext == ".obj" || ext == ".OBJ") {
-      auto obj = obj_model{};
-      if (!triangles.empty()) {
-        add_obj_triangles(obj, "", triangles, positions, normals, texcoords, {},
-            {}, flip_texcoord);
-      } else if (!quads.empty()) {
-        add_obj_quads(obj, "", quads, positions, normals, texcoords, {}, {},
-            flip_texcoord);
-      } else if (!lines.empty()) {
-        add_obj_lines(obj, "", lines, positions, normals, texcoords, {}, {},
-            flip_texcoord);
-      } else if (!points.empty()) {
-        add_obj_points(obj, "", points, positions, normals, texcoords, {}, {},
-            flip_texcoord);
-      } else {
-        return false;
-      }
-      return save_obj(filename, obj);
+  auto ext = get_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    // create ply
+    auto ply = ply_model{};
+    add_ply_positions(ply, positions);
+    add_ply_normals(ply, normals);
+    add_ply_texcoords(ply, texcoords, flip_texcoord);
+    add_ply_colors(ply, colors);
+    add_ply_radius(ply, radius);
+    add_ply_faces(ply, triangles, quads);
+    add_ply_lines(ply, lines);
+    add_ply_points(ply, points);
+    return save_ply(filename, ply);
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj = obj_model{};
+    if (!triangles.empty()) {
+      add_obj_triangles(obj, "", triangles, positions, normals, texcoords, {},
+          {}, flip_texcoord);
+    } else if (!quads.empty()) {
+      add_obj_quads(
+          obj, "", quads, positions, normals, texcoords, {}, {}, flip_texcoord);
+    } else if (!lines.empty()) {
+      add_obj_lines(
+          obj, "", lines, positions, normals, texcoords, {}, {}, flip_texcoord);
+    } else if (!points.empty()) {
+      add_obj_points(obj, "", points, positions, normals, texcoords, {}, {},
+          flip_texcoord);
     } else {
       return false;
     }
+    return save_obj(filename, obj);
+  } else {
+    return false;
+  }
 }
 
 // Load ply mesh
@@ -3756,34 +3756,34 @@ bool load_fvshape(const string& filename, vector<vec4i>& quadspos,
   normals       = {};
   texcoords     = {};
 
-    auto ext = get_extension(filename);
-    if (ext == ".ply" || ext == ".PLY") {
-      auto ply = ply_model{};
-      if(!load_ply(filename, ply)) return false;
-      positions = get_ply_positions(ply);
-      normals   = get_ply_normals(ply);
-      texcoords = get_ply_texcoords(ply, flip_texcoord);
-      quadspos  = get_ply_quads(ply);
-      if (!normals.empty()) quadsnorm = quadspos;
-      if (!texcoords.empty()) quadstexcoord = quadspos;
+  auto ext = get_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    if (!load_ply(filename, ply)) return false;
+    positions = get_ply_positions(ply);
+    normals   = get_ply_normals(ply);
+    texcoords = get_ply_texcoords(ply, flip_texcoord);
+    quadspos  = get_ply_quads(ply);
+    if (!normals.empty()) quadsnorm = quadspos;
+    if (!texcoords.empty()) quadstexcoord = quadspos;
     if (positions.empty()) return false;
-      return true;
-    } else if (ext == ".obj" || ext == ".OBJ") {
-      auto obj = obj_model();
-      if(!load_obj(filename, obj, true)) return false;
-      if (obj.shapes.empty()) return true;
-      if (obj.shapes.size() > 1) return false;
-      auto& shape = obj.shapes.front();
-      if (shape.faces.empty()) return true;
-      auto materials  = vector<string>{};
-      auto ematerials = vector<int>{};
-      get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
-          normals, texcoords, materials, ematerials, flip_texcoord);
+    return true;
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    auto obj = obj_model();
+    if (!load_obj(filename, obj, true)) return false;
+    if (obj.shapes.empty()) return true;
+    if (obj.shapes.size() > 1) return false;
+    auto& shape = obj.shapes.front();
+    if (shape.faces.empty()) return true;
+    auto materials  = vector<string>{};
+    auto ematerials = vector<int>{};
+    get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords, materials, ematerials, flip_texcoord);
     if (positions.empty()) return false;
-      return true;
-    } else {
-      return false;
-    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 // Save ply mesh
