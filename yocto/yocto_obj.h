@@ -383,10 +383,11 @@ inline void close_obj(obj_file& fs) {
   fs.fs = nullptr;
 }
 
-inline bool read_obj_line(obj_file& fs, char* buffer, size_t size) {
-  auto ok = fgets(buffer, size, fs.fs) != nullptr;
-  if (ok) fs.linenum += 1;
-  return ok;
+inline bool read_obj_line(obj_file& fs, char* buffer, size_t size, bool& error) {
+  if(!fgets(buffer, size, fs.fs)) return false;
+  fs.linenum += 1;
+  error = ferror(fs.fs);
+  return false;
 }
 
 inline void write_obj_text(obj_file& fs, const string& value) {
@@ -707,15 +708,11 @@ inline bool load_mtl(
     error = err.empty() ? ("cannot parse " + filename) : err;
     return false;
   };
-  auto read_error = [&error](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot parse " + fs.filename;
-    return true;
-  };
 
   // read the file str by str
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  auto read_error = false;
+  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -818,7 +815,7 @@ inline bool load_mtl(
   }
 
   // check error
-  if (read_error(fs)) return false;
+  if (read_error) return set_error("cannot read " + filename);
 
   // remove placeholder material
   obj.materials.erase(obj.materials.begin());
@@ -843,15 +840,11 @@ inline bool load_objx(const string& filename, obj_model& obj, string& error) {
     error = err.empty() ? ("cannot parse " + filename) : err;
     return false;
   };
-  auto read_error = [&error](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot parse " + fs.filename;
-    return true;
-  };
 
   // read the file str by str
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  auto read_error = false;
+  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -900,7 +893,7 @@ inline bool load_objx(const string& filename, obj_model& obj, string& error) {
   }
 
   // check error
-  if (read_error(fs)) return false;
+  if (read_error) return set_error("cannot read " + filename);
 
   return true;
 }
@@ -934,15 +927,11 @@ inline bool load_obj(const string& filename, obj_model& obj, string& error,
     error = err.empty() ? ("cannot parse " + filename) : err;
     return false;
   };
-  auto read_error = [&error](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot parse " + fs.filename;
-    return true;
-  };
 
   // read the file str by str
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  auto read_error = false;
+  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1043,7 +1032,7 @@ inline bool load_obj(const string& filename, obj_model& obj, string& error,
   }
 
   // check error
-  if (read_error(fs)) return false;
+  if (read_error) return set_error("cannot read " + filename);
 
   // convert vertex data
   auto ipositions = vector<int>{};
@@ -1690,15 +1679,11 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
     command = obj_command::error;
     return true;
   };
-  auto read_error = [&command](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    command = obj_command::error;
-    return true;
-  };
 
   // read the file str by str
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  auto read_error = false;
+  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1772,7 +1757,7 @@ inline bool read_obj_command(obj_file& fs, obj_command& command, string& name,
   }
 
   // check error
-  if (read_error(fs)) return false;
+  if (read_error) return set_error("cannot read");
 
   return false;
 }
@@ -1787,17 +1772,13 @@ inline bool read_mtl_command(
     command = mtl_command::error;
     return true;
   };
-  auto read_error = [&command](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    command = mtl_command::error;
-    return true;
-  };
 
   // read the file str by str
   auto pos   = ftell(fs.fs);
   auto found = false;
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  auto read_error = false;
+  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1908,7 +1889,7 @@ inline bool read_mtl_command(
   }
 
   // check error
-  if (read_error(fs)) return false;
+  if (read_error) return set_error("cannot read ");
 
   return false;
 }
@@ -1921,16 +1902,12 @@ inline bool read_objx_command(obj_file& fs, objx_command& command,
     command = objx_command::error;
     return true;
   };
-  auto read_error = [&command](obj_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    command = objx_command::error;
-    return true;
-  };
 
   // read the file str by str
   char buffer[4096];
   auto found = false;
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  auto read_error = false;
+  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1972,7 +1949,7 @@ inline bool read_objx_command(obj_file& fs, objx_command& command,
   if (found) return true;
 
   // check error
-  if (read_error(fs)) return false;
+  if (read_error) return set_error("cannot read ");
 
   return false;
 }
