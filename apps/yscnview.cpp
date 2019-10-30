@@ -84,7 +84,7 @@ struct app_states {
   std::list<app_state>         states;
   int                          selected = -1;
   std::list<app_state>         loading;
-  std::list<std::future<bool>> loaders;
+  std::list<std::future<sceneio_status>> loaders;
 
   // get image
   app_state& get_selected() {
@@ -127,11 +127,11 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.load_prms   = app.load_prms;
   app.save_prms   = app.save_prms;
   app.drawgl_prms = app.drawgl_prms;
-  apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
-    if (!load_scene(app.filename, app.scene, app.error)) return false;
+  apps.loaders.push_back(std::async(std::launch::async, [&app]() -> sceneio_status {
+    if (auto ret = load_scene(app.filename, app.scene); !ret) return ret;
     app.time_range = compute_animation_range(app.scene);
     app.time       = app.time_range.x;
-    return true;
+    return {};
   }));
 }
 
@@ -488,11 +488,10 @@ void draw_glwidgets(const opengl_window& win) {
           "*.yaml;*.obj;*.pbrt")) {
     auto& app       = apps.get_selected();
     app.outname     = save_path;
-    auto save_error = ""s;
-    if (!save_scene(app.outname, app.scene, save_error)) {
+    if (auto ret = save_scene(app.outname, app.scene); !ret) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
-      log_glinfo(win, save_error);
+      log_glinfo(win, ret.error);
     }
     save_path = "";
   }
@@ -611,7 +610,7 @@ void draw(const opengl_window& win) {
 
 // update
 void update(const opengl_window& win, app_states& apps) {
-  auto is_ready = [](const std::future<bool>& result) -> bool {
+  auto is_ready = [](const std::future<sceneio_status>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
   };

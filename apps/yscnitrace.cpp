@@ -78,9 +78,6 @@ struct app_state {
   int                  render_sample  = 0;
   int                  render_region  = 0;
   vector<image_region> render_regions = {};
-
-  // error
-  string error = ""s;
 };
 
 // Application state
@@ -89,7 +86,7 @@ struct app_states {
   std::list<app_state>         states;
   int                          selected = -1;
   std::list<app_state>         loading;
-  std::list<std::future<bool>> loaders;
+  std::list<std::future<sceneio_status>> loaders;
 
   // get image
   app_state& get_selected() {
@@ -258,8 +255,8 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.trace_prms   = app.trace_prms;
   app.tonemap_prms = app.tonemap_prms;
   app.add_skyenv   = app.add_skyenv;
-  apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
-    if (!load_scene(app.filename, app.ioscene, app.error)) return false;
+  apps.loaders.push_back(std::async(std::launch::async, [&app]() -> sceneio_status {
+    if (auto ret = load_scene(app.filename, app.ioscene); !ret) return ret;
     app.trscene = make_trace_scene(app.ioscene);
     init_bvh(app.trscene, app.trace_prms);
     init_lights(app.trscene);
@@ -272,7 +269,7 @@ void load_scene_async(app_states& apps, const string& filename) {
     app.name = get_filename(app.filename) + " [" +
                std::to_string(app.render.size().x) + "x" +
                std::to_string(app.render.size().y) + " @ 0]";
-    return true;
+    return {};
   }));
 }
 
@@ -472,11 +469,10 @@ void draw_glwidgets(const opengl_window& win) {
           "*.yaml;*.obj;*.pbrt")) {
     auto& app       = apps.get_selected();
     app.outname     = save_path;
-    auto save_error = ""s;
-    if (!save_scene(app.outname, app.ioscene, save_error)) {
+    if (auto ret = save_scene(app.outname, app.ioscene); !ret) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
-      log_glinfo(win, save_error);
+      log_glinfo(win, ret.error);
     }
     save_path = "";
   }
@@ -638,16 +634,16 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_states& app) {
-  auto is_ready = [](const std::future<bool>& result) -> bool {
+  auto is_ready = [](const std::future<sceneio_status>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
   };
 
   while (!app.loaders.empty() && is_ready(app.loaders.front())) {
-    if (!app.loaders.front().get()) {
+    if (auto ret = app.loaders.front().get(); !ret) {
       push_glmessage(win, "cannot load scene " + app.loading.front().filename);
       log_glinfo(win, "cannot load scene " + app.loading.front().filename);
-      log_glinfo(win, app.loading.front().error);
+      log_glinfo(win, ret.error);
       break;
     }
     app.states.splice(app.states.end(), app.loading, app.loading.begin());

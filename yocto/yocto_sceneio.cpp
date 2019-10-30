@@ -115,6 +115,705 @@ static inline string replace_extension(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// LOW-LEVEL YAML DECLARATIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::string_view;
+using namespace std::literals::string_view_literals;
+
+// Yaml value type
+enum struct yaml_value_type { number, boolean, string, array };
+
+// Yaml value
+struct yaml_value {
+  yaml_value_type   type    = yaml_value_type::number;
+  double            number  = 0;
+  bool              boolean = false;
+  string            string_ = "";
+  array<double, 16> array_  = {};
+};
+
+// Yaml element
+struct yaml_element {
+  string                           name       = "";
+  vector<pair<string, yaml_value>> key_values = {};
+};
+
+// Yaml model
+struct yaml_model {
+  vector<string>       comments = {};
+  vector<yaml_element> elements = {};
+};
+
+// // Result of io operations
+struct yamlio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
+// Load/save yaml
+inline yamlio_status load_yaml(const string& filename, yaml_model& yaml);
+inline yamlio_status save_yaml(const string& filename, const yaml_model& yaml);
+
+// A class that wraps a C file ti handle safe opening/closgin with RIIA.
+struct yaml_file {
+  yaml_file() {}
+  yaml_file(yaml_file&& other);
+  yaml_file(const yaml_file&) = delete;
+  yaml_file& operator=(const yaml_file&) = delete;
+  ~yaml_file();
+
+  operator bool() const { return (bool)fs; }
+
+  FILE*  fs       = nullptr;
+  string filename = "";
+  string mode     = "rt";
+  int    linenum  = 0;
+};
+
+// open a file
+inline yaml_file open_yaml(const string& filename, const string& mode = "rt");
+inline void      open_yaml(
+         yaml_file& fs, const string& filename, const string& mode = "rt");
+inline void close_yaml(yaml_file& fs);
+
+// Load Yaml properties
+inline yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
+    string& group, string& key, bool& newobj, bool& done, yaml_value& value);
+
+// Write Yaml properties
+inline yamlio_status write_yaml_comment(
+    const string& filename, yaml_file& fs, const string& comment);
+inline yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
+    const string& object, const string& key, bool newobj,
+    const yaml_value& value);
+inline yamlio_status write_yaml_object(
+    const string& filename, yaml_file& fs, const string& object);
+
+// type-cheked yaml value access
+inline bool get_yaml_value(const yaml_value& yaml, string& value);
+inline bool get_yaml_value(const yaml_value& yaml, bool& value);
+inline bool get_yaml_value(const yaml_value& yaml, int& value);
+inline bool get_yaml_value(const yaml_value& yaml, float& value);
+inline bool get_yaml_value(const yaml_value& yaml, vec2f& value);
+inline bool get_yaml_value(const yaml_value& yaml, vec3f& value);
+inline bool get_yaml_value(const yaml_value& yaml, mat3f& value);
+inline bool get_yaml_value(const yaml_value& yaml, frame3f& value);
+
+// yaml value construction
+inline yaml_value make_yaml_value(const string& value);
+inline yaml_value make_yaml_value(bool value);
+inline yaml_value make_yaml_value(int value);
+inline yaml_value make_yaml_value(float value);
+inline yaml_value make_yaml_value(const vec2f& value);
+inline yaml_value make_yaml_value(const vec3f& value);
+inline yaml_value make_yaml_value(const mat3f& value);
+inline yaml_value make_yaml_value(const frame3f& value);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// LOW-LEVEL YAML IMPLEMENTATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// copnstrucyor and destructors
+inline yaml_file::yaml_file(yaml_file&& other) {
+  this->fs       = other.fs;
+  this->filename = other.filename;
+  other.fs       = nullptr;
+}
+inline yaml_file::~yaml_file() {
+  if (fs) fclose(fs);
+  fs = nullptr;
+}
+
+// Opens a file returing a handle with RIIA
+inline void open_yaml(
+    yaml_file& fs, const string& filename, const string& mode) {
+  close_yaml(fs);
+  fs.filename = filename;
+  fs.mode     = mode;
+  fs.fs       = fopen(filename.c_str(), mode.c_str());
+  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
+}
+inline yaml_file open_yaml(const string& filename, const string& mode) {
+  auto fs = yaml_file{};
+  open_yaml(fs, filename, mode);
+  return fs;
+}
+inline void close_yaml(yaml_file& fs) {
+  if (fs.fs) fclose(fs.fs);
+  fs.fs = nullptr;
+}
+
+// Read a line
+inline bool read_yaml_line(yaml_file& fs, char* buffer, size_t size) {
+  if (fgets(buffer, size, fs.fs)) {
+    fs.linenum += 1;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// Check for errors
+inline bool has_yaml_error(yaml_file& fs) { return ferror(fs.fs); }
+
+static inline bool is_yaml_space(char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+static inline bool is_yaml_newline(char c) { return c == '\r' || c == '\n'; }
+static inline bool is_yaml_digit(char c) { return c >= '0' && c <= '9'; }
+static inline bool is_yaml_alpha(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+static inline void skip_yaml_whitespace(string_view& str) {
+  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
+}
+static inline void trim_yaml_whitespace(string_view& str) {
+  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
+  while (!str.empty() && is_yaml_space(str.back())) str.remove_suffix(1);
+}
+
+static inline bool is_yaml_whitespace(string_view str) {
+  while (!str.empty()) {
+    if (!is_yaml_space(str.front())) return false;
+    str.remove_prefix(1);
+  }
+  return true;
+}
+
+static inline void remove_yaml_comment(
+    string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_yaml_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
+}
+
+static inline bool parse_yaml_varname(string_view& str, string_view& value) {
+  skip_yaml_whitespace(str);
+  if (str.empty()) return false;
+  if (!is_yaml_alpha(str.front())) return false;
+  auto pos = 0;
+  while (
+      is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
+    pos += 1;
+    if (pos >= str.size()) break;
+  }
+  value = str.substr(0, pos);
+  str.remove_prefix(pos);
+  return true;
+}
+static inline bool parse_yaml_varname(string_view& str, string& value) {
+  auto view = ""sv;
+  if (!parse_yaml_varname(str, view)) return false;
+  value = string{view};
+  return true;
+}
+
+inline bool parse_yaml_value(string_view& str, string_view& value) {
+  skip_yaml_whitespace(str);
+  if (str.empty()) return false;
+  if (str.front() != '"') {
+    auto cpy = str;
+    while (!cpy.empty() && !is_yaml_space(cpy.front())) cpy.remove_prefix(1);
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    return true;
+  } else {
+    if (str.front() != '"') return false;
+    str.remove_prefix(1);
+    if (str.empty()) return false;
+    auto cpy = str;
+    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
+    if (cpy.empty()) return false;
+    value = str;
+    value.remove_suffix(cpy.size());
+    str.remove_prefix(str.size() - cpy.size());
+    str.remove_prefix(1);
+    return true;
+  }
+}
+inline bool parse_yaml_value(string_view& str, string& value) {
+  auto valuev = ""sv;
+  if (!parse_yaml_value(str, valuev)) return false;
+  value = string{valuev};
+  return true;
+}
+inline bool parse_yaml_value(string_view& str, int& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = (int)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+inline bool parse_yaml_value(string_view& str, float& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = strtof(str.data(), &end);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+inline bool parse_yaml_value(string_view& str, double& value) {
+  skip_yaml_whitespace(str);
+  char* end = nullptr;
+  value     = strtod(str.data(), &end);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+
+// parse yaml value
+inline bool get_yaml_value(const yaml_value& yaml, string& value) {
+  if (yaml.type != yaml_value_type::string) return false;
+  value = yaml.string_;
+  return true;
+}
+inline bool get_yaml_value(const yaml_value& yaml, bool& value) {
+  if (yaml.type != yaml_value_type::boolean) return false;
+  value = yaml.boolean;
+  return true;
+}
+inline bool get_yaml_value(const yaml_value& yaml, int& value) {
+  if (yaml.type != yaml_value_type::number) return false;
+  value = (int)yaml.number;
+  return true;
+}
+inline bool get_yaml_value(const yaml_value& yaml, float& value) {
+  if (yaml.type != yaml_value_type::number) return false;
+  value = (float)yaml.number;
+  return true;
+}
+inline bool get_yaml_value(const yaml_value& yaml, vec2f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 2) return false;
+  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
+  return true;
+}
+inline bool get_yaml_value(const yaml_value& yaml, vec3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 3) return false;
+  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
+  return true;
+}
+inline bool get_yaml_value(const yaml_value& yaml, mat3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 9) return false;
+  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+  return true;
+}
+inline bool get_yaml_value(const yaml_value& yaml, frame3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 12) return false;
+  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
+  return true;
+}
+
+// construction
+inline yaml_value make_yaml_value(const string& value) {
+  return {yaml_value_type::string, 0, false, value};
+}
+inline yaml_value make_yaml_value(bool value) {
+  return {yaml_value_type::boolean, 0, value};
+}
+inline yaml_value make_yaml_value(int value) {
+  return {yaml_value_type::number, (double)value};
+}
+inline yaml_value make_yaml_value(float value) {
+  return {yaml_value_type::number, (double)value};
+}
+inline yaml_value make_yaml_value(const vec2f& value) {
+  return {
+      yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
+}
+inline yaml_value make_yaml_value(const vec3f& value) {
+  return {yaml_value_type::array, 3, false, "",
+      {(double)value.x, (double)value.y, (double)value.z}};
+}
+inline yaml_value make_yaml_value(const mat3f& value) {
+  auto yaml = yaml_value{yaml_value_type::array, 9};
+  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+inline yaml_value make_yaml_value(const frame3f& value) {
+  auto yaml = yaml_value{yaml_value_type::array, 12};
+  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
+  return yaml;
+}
+
+inline bool parse_yaml_value(string_view& str, yaml_value& value) {
+  trim_yaml_whitespace(str);
+  if (str.empty()) return false;
+  if (str.front() == '[') {
+    str.remove_prefix(1);
+    value.type   = yaml_value_type::array;
+    value.number = 0;
+    while (!str.empty()) {
+      skip_yaml_whitespace(str);
+      if (str.empty()) return false;
+      if (str.front() == ']') {
+        str.remove_prefix(1);
+        break;
+      }
+      if (value.number >= 16) return false;
+      parse_yaml_value(str, value.array_[(int)value.number]);
+      value.number += 1;
+      skip_yaml_whitespace(str);
+      if (str.front() == ',') {
+        str.remove_prefix(1);
+        continue;
+      } else if (str.front() == ']') {
+        str.remove_prefix(1);
+        break;
+      } else {
+        return false;
+      }
+    }
+  } else if (is_yaml_digit(str.front()) || str.front() == '-' ||
+             str.front() == '+') {
+    value.type = yaml_value_type::number;
+    parse_yaml_value(str, value.number);
+  } else {
+    value.type = yaml_value_type::string;
+    parse_yaml_value(str, value.string_);
+    if (value.string_ == "true" || value.string_ == "false") {
+      value.type    = yaml_value_type::boolean;
+      value.boolean = value.string_ == "true";
+    }
+  }
+  skip_yaml_whitespace(str);
+  if (!str.empty() && !is_yaml_whitespace(str)) return false;
+  return true;
+}
+
+// Load/save yaml
+yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
+  auto ok    = []() { return yamlio_status{}; };
+  auto error = [&filename](const string& err) {
+    return yamlio_status{filename + ": " + err};
+  };
+  auto parse_error = [&filename]() {
+    return yamlio_status{filename + ": parse error"};
+  };
+
+  auto fs = open_yaml(filename, "rt");
+  if (fs) return error("file not found");
+
+  // read the file line by line
+  auto group = ""s;
+  auto key   = ""s;
+  auto value = yaml_value{};
+  char buffer[4096];
+  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+    // line
+    auto line = string_view{buffer};
+    remove_yaml_comment(line);
+    if (line.empty()) continue;
+    if (is_yaml_whitespace(line)) continue;
+
+    // peek commands
+    if (is_yaml_space(line.front())) {
+      // indented property
+      if (group == "") return parse_error();
+      skip_yaml_whitespace(line);
+      if (line.empty()) return parse_error();
+      if (line.front() == '-') {
+        auto& element = yaml.elements.emplace_back();
+        element.name  = group;
+        line.remove_prefix(1);
+        skip_yaml_whitespace(line);
+      } else if (yaml.elements.empty() || yaml.elements.back().name != group) {
+        auto& element = yaml.elements.emplace_back();
+        element.name  = group;
+      }
+      if (!parse_yaml_varname(line, key)) return parse_error();
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':') return parse_error();
+      line.remove_prefix(1);
+      if (!parse_yaml_value(line, value)) return parse_error();
+      yaml.elements.back().key_values.push_back({key, value});
+    } else if (is_yaml_alpha(line.front())) {
+      // new group
+      if (!parse_yaml_varname(line, key)) return parse_error();
+      skip_yaml_whitespace(line);
+      if (line.empty() || line.front() != ':') return parse_error();
+      line.remove_prefix(1);
+      if (!line.empty() && !is_yaml_whitespace(line)) {
+        group = "";
+        if (yaml.elements.empty() || yaml.elements.back().name != group) {
+          auto& element = yaml.elements.emplace_back();
+          element.name  = group;
+        }
+        if (!parse_yaml_value(line, value)) return parse_error();
+        yaml.elements.back().key_values.push_back({key, value});
+      } else {
+        group = key;
+        key   = "";
+      }
+    } else {
+      return parse_error();
+    }
+  }
+  return ok();
+}
+
+static inline void format_yaml_value(string& str, const string& value) {
+  str += value;
+}
+static inline void format_yaml_value(string& str, const char* value) {
+  str += value;
+}
+static inline void format_yaml_value(string& str, double value) {
+  char buf[256];
+  sprintf(buf, "%g", value);
+  str += buf;
+}
+
+static inline void format_yaml_values(string& str, const string& fmt) {
+  auto pos = fmt.find("{}");
+  if (pos != string::npos) throw std::runtime_error("bad format string");
+  str += fmt;
+}
+template <typename Arg, typename... Args>
+static inline void format_yaml_values(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+  auto pos = fmt.find("{}");
+  if (pos == string::npos) throw std::runtime_error("bad format string");
+  str += fmt.substr(0, pos);
+  format_yaml_value(str, arg);
+  format_yaml_values(str, fmt.substr(pos + 2), args...);
+}
+
+template <typename... Args>
+static inline bool format_yaml_values(
+    yaml_file& fs, const string& fmt, const Args&... args) {
+  auto str = ""s;
+  format_yaml_values(str, fmt, args...);
+  return fputs(str.c_str(), fs.fs) >= 0;
+}
+template <typename T>
+static inline bool format_yaml_value(yaml_file& fs, const T& value) {
+  auto str = ""s;
+  format_yaml_value(str, value);
+  return fputs(str.c_str(), fs.fs) >= 0;
+}
+
+static inline void format_yaml_value(string& str, const yaml_value& value) {
+  switch (value.type) {
+    case yaml_value_type::number: format_yaml_value(str, value.number); break;
+    case yaml_value_type::boolean:
+      format_yaml_value(str, value.boolean ? "true" : "false");
+      break;
+    case yaml_value_type::string:
+      if (value.string_.empty() || is_yaml_digit(value.string_.front())) {
+        format_yaml_values(str, "\"{}\"", value.string_);
+      } else {
+        format_yaml_values(str, "{}", value.string_);
+      }
+      break;
+    case yaml_value_type::array:
+      format_yaml_value(str, "[ ");
+      for (auto i = 0; i < value.number; i++) {
+        if (i) format_yaml_value(str, ", ");
+        format_yaml_value(str, value.array_[i]);
+      }
+      format_yaml_value(str, " ]");
+      break;
+  }
+}
+
+inline yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
+  auto ok = []() { return yamlio_status{}; };
+  // auto error = [&filename](const string& err) {
+  //   return yamlio_status{filename + ": " + err};
+  // };
+  auto write_error = [&filename]() {
+    return yamlio_status{filename + ": write error"};
+  };
+
+  auto fs = open_yaml(filename, "wt");
+  if (!fs) throw std::runtime_error("cannot open " + filename);
+
+  // save comments
+  if (!format_yaml_values(fs, "#\n")) return write_error();
+  if (!format_yaml_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if (!format_yaml_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+    return write_error();
+  if (!format_yaml_values(fs, "#\n\n")) return write_error();
+  for (auto& comment : yaml.comments) {
+    if (!format_yaml_values(fs, "# {}\n", comment)) return write_error();
+  }
+  if (!format_yaml_values(fs, "\n")) return write_error();
+
+  auto group = ""s;
+  for (auto& element : yaml.elements) {
+    if (group != element.name) {
+      group = element.name;
+      if (group != "") {
+        if (!format_yaml_values(fs, "\n{}:\n", group)) return write_error();
+      } else {
+        if (!format_yaml_values(fs, "\n")) return write_error();
+      }
+      auto first = true;
+      for (auto& [key, value] : element.key_values) {
+        if (group != "") {
+          if (!format_yaml_values(
+                  fs, "  {} {}: {}\n", first ? "-" : " ", key, value))
+            return write_error();
+          first = false;
+        } else {
+          if (!format_yaml_values(fs, "{}: {}\n", key, value))
+            return write_error();
+        }
+      }
+    }
+  }
+
+  return ok();
+}
+
+inline yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
+    string& group, string& key, bool& newobj, bool& done, yaml_value& value) {
+  auto ok    = []() { return yamlio_status{}; };
+  auto error = [&filename](const string& err) {
+    return yamlio_status{filename + ": " + err};
+  };
+  auto parse_error = [&filename]() {
+    return yamlio_status{filename + ": parse error"};
+  };
+
+  // read the file line by line
+  char buffer[4096];
+  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+    // str
+    auto str = string_view{buffer};
+    remove_yaml_comment(str);
+    if (str.empty()) continue;
+    if (is_yaml_whitespace(str)) continue;
+
+    // peek commands
+    if (is_yaml_space(str.front())) {
+      // indented property
+      if (group == "") return parse_error();
+      skip_yaml_whitespace(str);
+      if (str.empty()) return parse_error();
+      if (str.front() == '-') {
+        newobj = true;
+        str.remove_prefix(1);
+        skip_yaml_whitespace(str);
+      } else {
+        newobj = false;
+      }
+      if (!parse_yaml_varname(str, key)) return parse_error();
+      skip_yaml_whitespace(str);
+      if (str.empty() || str.front() != ':') return parse_error();
+      str.remove_prefix(1);
+      if (!parse_yaml_value(str, value)) return parse_error();
+      return ok();
+    } else if (is_yaml_alpha(str.front())) {
+      // new group
+      if (!parse_yaml_varname(str, key)) return parse_error();
+      skip_yaml_whitespace(str);
+      if (str.empty() || str.front() != ':') return parse_error();
+      str.remove_prefix(1);
+      if (!str.empty() && !is_yaml_whitespace(str)) {
+        group = "";
+        if (!parse_yaml_value(str, value)) return parse_error();
+        return ok();
+      } else {
+        group = key;
+        key   = "";
+        return ok();
+      }
+    } else {
+      str = {};
+    }
+  }
+
+  if (has_yaml_error(fs)) return error("read error");
+
+  done = true;
+  return ok();
+}
+
+static inline vector<string> split_yaml_string(
+    const string& str, const string& delim) {
+  auto tokens = vector<string>{};
+  auto last = (size_t)0, next = (size_t)0;
+  while ((next = str.find(delim, last)) != string::npos) {
+    tokens.push_back(str.substr(last, next - last));
+    last = next + delim.size();
+  }
+  if (last < str.size()) tokens.push_back(str.substr(last));
+  return tokens;
+}
+
+inline yamlio_status write_yaml_comment(
+    const string& filename, yaml_file& fs, const string& comment) {
+  auto ok = []() { return yamlio_status{}; };
+  // auto error = [&filename](const string& err) {
+  //   return yamlio_status{filename + ": " + err};
+  // };
+  auto write_error = [&filename]() {
+    return yamlio_status{filename + ": write error"};
+  };
+
+  auto lines = split_yaml_string(comment, "\n");
+  for (auto& line : lines) {
+    if (!format_yaml_values(fs, "# {}\n", line)) return write_error();
+  }
+  if (!format_yaml_values(fs, "\n")) return write_error();
+
+  return ok();
+}
+
+// Save yaml property
+inline yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
+    const string& object, const string& key, bool newobj,
+    const yaml_value& value) {
+  auto ok = []() { return yamlio_status{}; };
+  // auto error = [&filename](const string& err) {
+  //   return yamlio_status{filename + ": " + err};
+  // };
+  auto write_error = [&filename]() {
+    return yamlio_status{filename + ": write error"};
+  };
+
+  if (key.empty()) {
+    if (!format_yaml_values(fs, "\n{}:\n", object)) return write_error();
+  } else {
+    if (!object.empty()) {
+      if (!format_yaml_values(
+              fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value))
+        return write_error();
+    } else {
+      if (!format_yaml_values(fs, "{}: {}\n", key, value)) return write_error();
+    }
+  }
+
+  return ok();
+}
+
+inline yamlio_status write_yaml_object(
+    const string& filename, yaml_file& fs, const string& object) {
+  auto ok = []() { return yamlio_status{}; };
+  // auto error = [&filename](const string& err) {
+  //   return yamlio_status{filename + ": " + err};
+  // };
+  auto write_error = [&filename]() {
+    return yamlio_status{filename + ": write error"};
+  };
+
+  if (!format_yaml_values(fs, "\n{}:\n", object)) return write_error();
+  return ok();
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF CONCURRENCY UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -653,242 +1352,274 @@ void update_transforms(
 namespace yocto {
 
 // Load/save a scene in the builtin YAML format.
-static bool load_yaml_scene(const string& filename, scene_model& scene,
-    string& error, const load_params& params);
-static bool save_yaml_scene(const string& filename, const scene_model& scene,
-    string& error, const save_params& params);
+static sceneio_status load_yaml_scene(
+    const string& filename, scene_model& scene, const load_params& params);
+static sceneio_status save_yaml_scene(const string& filename,
+    const scene_model& scene, const save_params& params);
 
 // Load/save a scene from/to OBJ.
-static bool load_obj_scene(const string& filename, scene_model& scene,
-    string& error, const load_params& params);
-static bool save_obj_scene(const string& filename, const scene_model& scene,
-    string& error, const save_params& params);
+static sceneio_status load_obj_scene(
+    const string& filename, scene_model& scene, const load_params& params);
+static sceneio_status save_obj_scene(const string& filename,
+    const scene_model& scene, const save_params& params);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
-static bool load_ply_scene(const string& filename, scene_model& scene,
-    string& error, const load_params& params);
-static bool save_ply_scene(const string& filename, const scene_model& scene,
-    string& error, const save_params& params);
+static sceneio_status load_ply_scene(
+    const string& filename, scene_model& scene, const load_params& params);
+static sceneio_status save_ply_scene(const string& filename,
+    const scene_model& scene, const save_params& params);
 
 // Load/save a scene from/to glTF.
-static bool load_gltf_scene(const string& filename, scene_model& scene,
-    string& error, const load_params& params);
+static sceneio_status load_gltf_scene(
+    const string& filename, scene_model& scene, const load_params& params);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-static bool load_pbrt_scene(const string& filename, scene_model& scene,
-    string& error, const load_params& params);
-static bool save_pbrt_scene(const string& filename, const scene_model& scene,
-    string& error, const save_params& params);
+static sceneio_status load_pbrt_scene(
+    const string& filename, scene_model& scene, const load_params& params);
+static sceneio_status save_pbrt_scene(const string& filename,
+    const scene_model& scene, const save_params& params);
 
-bool load_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
-  auto error = ""s;
-  return load_scene(filename, scene, error, params);
-}
-bool save_scene(const string& filename, const scene_model& scene,
-    const save_params& params) {
-  auto error = ""s;
-  return save_scene(filename, scene, error, params);
-}
+static auto sceneio_ok() { return sceneio_status{}; };
+static auto sceneio_error(const string& err) { return sceneio_status{err}; };
+static auto sceneio_error(const string& filename, const string& err) {
+  return sceneio_status{filename + ": " + err};
+};
 
 // Load a scene
-bool load_scene(const string& filename, scene_model& scene, string& error,
-    const load_params& params) {
+sceneio_status load_scene(
+    const string& filename, scene_model& scene, const load_params& params) {
+  auto error = [&filename](const string& err) {
+    return sceneio_status{filename + ": " + err};
+  };
+
   auto ext = get_extension(filename);
   if (ext == ".yaml" || ext == ".YAML") {
-    return load_yaml_scene(filename, scene, error, params);
+    return load_yaml_scene(filename, scene, params);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return load_obj_scene(filename, scene, error, params);
+    return load_obj_scene(filename, scene, params);
   } else if (ext == ".gltf" || ext == ".GLTF") {
-    return load_gltf_scene(filename, scene, error, params);
+    return load_gltf_scene(filename, scene, params);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return load_pbrt_scene(filename, scene, error, params);
+    return load_pbrt_scene(filename, scene, params);
   } else if (ext == ".ply" || ext == ".PLY") {
-    return load_ply_scene(filename, scene, error, params);
+    return load_ply_scene(filename, scene, params);
   } else {
     scene = {};
-    error = "unsupported scene format " + ext;
-    return false;
+    return error("unsupported format");
   }
-  return true;
 }
 
 // Save a scene
-bool save_scene(const string& filename, const scene_model& scene, string& error,
+sceneio_status save_scene(const string& filename, const scene_model& scene,
     const save_params& params) {
+  auto error = [&filename](const string& err) {
+    return sceneio_status{filename + ": " + err};
+  };
+
   auto ext = get_extension(filename);
   if (ext == ".yaml" || ext == ".YAML") {
-    return save_yaml_scene(filename, scene, error, params);
+    return save_yaml_scene(filename, scene, params);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return save_obj_scene(filename, scene, error, params);
+    return save_obj_scene(filename, scene, params);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
-    return save_pbrt_scene(filename, scene, error, params);
+    return save_pbrt_scene(filename, scene, params);
   } else if (ext == ".ply" || ext == ".PLY") {
-    return save_ply_scene(filename, scene, error, params);
+    return save_ply_scene(filename, scene, params);
   } else {
-    error = "unsupported scene format " + ext;
-    return false;
+    return error("unsupported format");
   }
 }
 
-bool load_texture(scene_texture& texture, const string& dirname) {
+sceneio_status load_texture(const string& filename, scene_texture& texture) {
   if (is_hdr_filename(texture.filename)) {
-    return (bool)load_image(dirname + texture.filename, texture.hdr);
+    if (auto ret = load_image(
+            get_dirname(filename) + texture.filename, texture.hdr);
+        !ret) {
+      return sceneio_error(filename, "missing texture (" + ret.error + ")");
+    } else {
+      return sceneio_ok();
+    }
   } else {
-    return (bool)load_imageb(dirname + texture.filename, texture.ldr);
+    if (auto ret = load_imageb(
+            get_dirname(filename) + texture.filename, texture.ldr);
+        !ret) {
+      return sceneio_error(filename, "missing texture (" + ret.error + ")");
+    } else {
+      return sceneio_ok();
+    }
   }
 }
 
-bool save_texture(const scene_texture& texture, const string& dirname) {
+sceneio_status save_texture(
+    const string& filename, const scene_texture& texture) {
   if (!texture.hdr.empty()) {
-    return (bool)save_image(dirname + texture.filename, texture.hdr);
+    if (auto ret = save_image(
+            get_dirname(filename) + texture.filename, texture.hdr);
+        !ret) {
+      return sceneio_error(filename, "missing texture (" + ret.error + ")");
+    } else {
+      return sceneio_ok();
+    }
   } else {
-    return (bool)save_imageb(dirname + texture.filename, texture.ldr);
+    if (auto ret = save_imageb(
+            get_dirname(filename) + texture.filename, texture.ldr);
+        !ret) {
+      return sceneio_error(filename, "missing texture (" + ret.error + ")");
+    } else {
+      return sceneio_ok();
+    }
   }
 }
 
-bool load_textures(scene_model& scene, const string& dirname, string& error,
-    const load_params& params) {
-  if (params.notextures) return true;
+sceneio_status load_textures(
+    const string& filename, scene_model& scene, const load_params& params) {
+  if (params.notextures) return {};
 
   // load images
   if (params.noparallel) {
     for (auto& texture : scene.textures) {
       if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-      if (!load_texture(texture, dirname)) {
-        error = "cannot load " + dirname + texture.filename;
-        return false;
-      }
+      if (auto ret = load_texture(filename, texture); !ret) return ret;
     }
-    return true;
+    return sceneio_ok();
   } else {
-    auto mutex = std::mutex{};
-    auto ok    = std::atomic<bool>{true};
-    parallel_foreach(scene.textures,
-        [&dirname, &mutex, &ok, &error](scene_texture& texture) {
-          if (!ok) return;
+    auto mutex  = std::mutex{};
+    auto status = sceneio_ok();
+    parallel_foreach(
+        scene.textures, [&filename, &mutex, &status](scene_texture& texture) {
+          if (!status) return;
           if (!texture.hdr.empty() || !texture.ldr.empty()) return;
-          if (!load_texture(texture, dirname)) {
+          if (auto ret = load_texture(filename, texture); !ret) {
             auto lock = std::lock_guard{mutex};
-            error     = "cannot load " + dirname + texture.filename;
-            ok        = false;
+            status    = ret;
           }
         });
-    return ok;
+    return status;
   }
 }
 
 // helper to save textures
-bool save_textures(const scene_model& scene, const string& dirname,
-    string& error, const save_params& params) {
-  if (params.notextures) return true;
+sceneio_status save_textures(const string& filename, const scene_model& scene,
+    const save_params& params) {
+  if (params.notextures) return {};
 
   // save images
   if (params.noparallel) {
     for (auto& texture : scene.textures) {
-      if (!save_texture(texture, dirname)) {
-        error = "cannot save " + dirname + texture.filename;
-        return false;
-      }
+      if (auto ret = save_texture(filename, texture); !ret) return ret;
     }
-    return true;
+    return {};
   } else {
-    auto mutex = std::mutex{};
-    auto ok    = std::atomic<bool>{true};
+    auto mutex  = std::mutex{};
+    auto status = sceneio_status{};
     parallel_foreach(scene.textures,
-        [&dirname, &ok, &mutex, &error](const scene_texture& texture) {
-          if (!ok) return;
-          if (!save_texture(texture, dirname)) {
+        [&filename, &mutex, &status](const scene_texture& texture) {
+          if (!status) return;
+          if (auto ret = save_texture(filename, texture); !ret) {
             auto lock = std::lock_guard{mutex};
-            error     = "cannot save " + dirname + texture.filename;
-            ok        = false;
+            status    = ret;
           }
         });
-    return ok;
+    return status;
   }
 }
 
-bool load_shape(scene_shape& shape, const string& dirname) {
+sceneio_status load_shape(const string& filename, scene_shape& shape) {
   if (!shape.facevarying) {
-    return (bool)load_shape(dirname + shape.filename, shape.points, shape.lines,
-        shape.triangles, shape.quads, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius);
+    if (auto ret = load_shape(get_dirname(filename) + shape.filename,
+            shape.points, shape.lines, shape.triangles, shape.quads,
+            shape.positions, shape.normals, shape.texcoords, shape.colors,
+            shape.radius);
+        !ret) {
+      return sceneio_error(filename, "missing shape (" + ret.error + ")");
+    } else {
+      return sceneio_ok();
+    }
   } else {
-    return (bool)load_fvshape(dirname + shape.filename, shape.quadspos,
-        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-        shape.texcoords);
+    if (auto ret = load_fvshape(get_dirname(filename) + shape.filename,
+            shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords);
+        !ret) {
+      return sceneio_error(filename, "missing shape (" + ret.error + ")");
+    } else {
+      return sceneio_ok();
+    }
   }
 }
 
-bool save_shape(const scene_shape& shape, const string& dirname) {
+sceneio_status save_shape(const string& filename, const scene_shape& shape) {
   if (shape.quadspos.empty()) {
-    return (bool)save_shape(dirname + shape.filename, shape.points, shape.lines,
-        shape.triangles, shape.quads, shape.positions, shape.normals,
-        shape.texcoords, shape.colors, shape.radius);
+    if (auto ret = save_shape(get_dirname(filename) + shape.filename,
+            shape.points, shape.lines, shape.triangles, shape.quads,
+            shape.positions, shape.normals, shape.texcoords, shape.colors,
+            shape.radius);
+        !ret) {
+      return sceneio_error(filename, "missing shape (" + ret.error + ")");
+    } else {
+      return sceneio_ok();
+    }
   } else {
-    return (bool)save_fvshape(dirname + shape.filename, shape.quadspos,
-        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-        shape.texcoords);
+    if (auto ret = save_fvshape(get_dirname(filename) + shape.filename,
+            shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+            shape.positions, shape.normals, shape.texcoords);
+        !ret) {
+      return sceneio_error(filename, "missing shape (" + ret.error + ")");
+    } else {
+      return sceneio_ok();
+    }
   }
 }
 
 // Load json meshes
-bool load_shapes(scene_model& scene, const string& dirname, string& error,
-    const load_params& params) {
+sceneio_status load_shapes(
+    const string& filename, scene_model& scene, const load_params& params) {
   // load shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
       if (!shape.positions.empty()) continue;
-      if (!load_shape(shape, dirname)) {
-        error = "cannot load " + dirname + shape.filename;
-        return false;
-      }
+      if (auto ret = load_shape(filename, shape); !ret) return ret;
     }
-    return true;
+    return {};
   } else {
-    auto mutex = std::mutex{};
-    auto ok    = std::atomic<bool>{true};
+    auto mutex  = std::mutex{};
+    auto status = sceneio_status{};
     parallel_foreach(
-        scene.shapes, [&dirname, &error, &mutex, &ok](scene_shape& shape) {
-          if (!ok) return;
+        scene.shapes, [&filename, &status, &mutex](scene_shape& shape) {
+          if (!status) return;
           if (!shape.positions.empty()) return;
-          if (!load_shape(shape, dirname)) {
+          if (auto ret = load_shape(filename, shape); !ret) {
             auto lock = std::lock_guard{mutex};
-            error     = "cannot load " + dirname + shape.filename;
-            ok        = false;
+            status    = ret;
           }
         });
-    return ok;
+    return status;
   }
 }
 
 // Save json meshes
-bool save_shapes(const scene_model& scene, const string& dirname, string& error,
+sceneio_status save_shapes(const string& filename, const scene_model& scene,
     const save_params& params) {
   // save shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
-      if (!save_shape(shape, dirname)) {
-        error = "cannot save " + dirname + shape.filename;
-        return false;
-      }
+      if (auto ret = save_shape(filename, shape); !ret)
+        return sceneio_error(filename, "missing shape (" + ret.error + ")");
     }
-    return true;
+    return {};
   } else {
-    auto mutex = std::mutex{};
-    auto ok    = std::atomic<bool>{true};
-    parallel_foreach(scene.shapes,
-        [&dirname, &ok, &mutex, &error](const scene_shape& shape) {
-          if (!ok) return;
-          if (!save_shape(shape, dirname)) {
+    auto mutex  = std::mutex{};
+    auto status = sceneio_status{};
+    parallel_foreach(
+        scene.shapes, [&filename, &status, &mutex](const scene_shape& shape) {
+          if (!status) return;
+          if (auto ret = save_shape(filename, shape); !ret) {
             auto lock = std::lock_guard{mutex};
-            error     = "cannot save " + dirname + shape.filename;
-            ok        = false;
+            status    = ret;
           }
         });
-    return ok;
+    return {};
   }
 }
 
@@ -921,713 +1652,15 @@ static inline string make_safe_filename(const string& filename_) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// LOW-LEVEL YAML DECLARATIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::string_view;
-using namespace std::literals::string_view_literals;
-
-// Yaml value type
-enum struct yaml_value_type { number, boolean, string, array };
-
-// Yaml value
-struct yaml_value {
-  yaml_value_type   type    = yaml_value_type::number;
-  double            number  = 0;
-  bool              boolean = false;
-  string            string_ = "";
-  array<double, 16> array_  = {};
-};
-
-// Yaml element
-struct yaml_element {
-  string                           name       = "";
-  vector<pair<string, yaml_value>> key_values = {};
-};
-
-// Yaml model
-struct yaml_model {
-  vector<string>       comments = {};
-  vector<yaml_element> elements = {};
-};
-
-// // Result of io operations
-struct yamlio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
-
-// Load/save yaml
-inline yamlio_status load_yaml(const string& filename, yaml_model& yaml);
-inline yamlio_status save_yaml(const string& filename, const yaml_model& yaml);
-
-// A class that wraps a C file ti handle safe opening/closgin with RIIA.
-struct yaml_file {
-  yaml_file() {}
-  yaml_file(yaml_file&& other);
-  yaml_file(const yaml_file&) = delete;
-  yaml_file& operator=(const yaml_file&) = delete;
-  ~yaml_file();
-
-  operator bool() const { return (bool)fs; }
-
-  FILE*  fs       = nullptr;
-  string filename = "";
-  string mode     = "rt";
-  int    linenum  = 0;
-};
-
-// open a file
-inline yaml_file open_yaml(const string& filename, const string& mode = "rt");
-inline void      open_yaml(
-         yaml_file& fs, const string& filename, const string& mode = "rt");
-inline void close_yaml(yaml_file& fs);
-
-// Load Yaml properties
-inline yamlio_status read_yaml_property(const string& filename, yaml_file& fs, string& group, string& key,
-    bool& newobj, bool& done, yaml_value& value);
-
-// Write Yaml properties
-inline yamlio_status write_yaml_comment(const string& filename, yaml_file& fs, const string& comment);
-inline yamlio_status write_yaml_property(const string& filename, yaml_file& fs, const string& object,
-    const string& key, bool newobj, const yaml_value& value);
-inline yamlio_status write_yaml_object(const string& filename, yaml_file& fs, const string& object);
-
-// type-cheked yaml value access
-inline bool get_yaml_value(const yaml_value& yaml, string& value);
-inline bool get_yaml_value(const yaml_value& yaml, bool& value);
-inline bool get_yaml_value(const yaml_value& yaml, int& value);
-inline bool get_yaml_value(const yaml_value& yaml, float& value);
-inline bool get_yaml_value(const yaml_value& yaml, vec2f& value);
-inline bool get_yaml_value(const yaml_value& yaml, vec3f& value);
-inline bool get_yaml_value(const yaml_value& yaml, mat3f& value);
-inline bool get_yaml_value(const yaml_value& yaml, frame3f& value);
-
-// yaml value construction
-inline yaml_value make_yaml_value(const string& value);
-inline yaml_value make_yaml_value(bool value);
-inline yaml_value make_yaml_value(int value);
-inline yaml_value make_yaml_value(float value);
-inline yaml_value make_yaml_value(const vec2f& value);
-inline yaml_value make_yaml_value(const vec3f& value);
-inline yaml_value make_yaml_value(const mat3f& value);
-inline yaml_value make_yaml_value(const frame3f& value);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// LOW-LEVEL YAML IMPLEMENTATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// copnstrucyor and destructors
-inline yaml_file::yaml_file(yaml_file&& other) {
-  this->fs       = other.fs;
-  this->filename = other.filename;
-  other.fs       = nullptr;
-}
-inline yaml_file::~yaml_file() {
-  if (fs) fclose(fs);
-  fs = nullptr;
-}
-
-// Opens a file returing a handle with RIIA
-inline void open_yaml(
-    yaml_file& fs, const string& filename, const string& mode) {
-  close_yaml(fs);
-  fs.filename = filename;
-  fs.mode     = mode;
-  fs.fs       = fopen(filename.c_str(), mode.c_str());
-  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
-}
-inline yaml_file open_yaml(const string& filename, const string& mode) {
-  auto fs = yaml_file{};
-  open_yaml(fs, filename, mode);
-  return fs;
-}
-inline void close_yaml(yaml_file& fs) {
-  if (fs.fs) fclose(fs.fs);
-  fs.fs = nullptr;
-}
-
-// Read a line
-inline bool read_yaml_line(
-    yaml_file& fs, char* buffer, size_t size) {
-  if (fgets(buffer, size, fs.fs)) {
-    fs.linenum += 1;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-// Check for errors
-inline bool has_yaml_error(yaml_file& fs) {
-  return ferror(fs.fs);
-}
-
-static inline bool is_yaml_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-static inline bool is_yaml_newline(char c) { return c == '\r' || c == '\n'; }
-static inline bool is_yaml_digit(char c) { return c >= '0' && c <= '9'; }
-static inline bool is_yaml_alpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
-static inline void skip_yaml_whitespace(string_view& str) {
-  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
-}
-static inline void trim_yaml_whitespace(string_view& str) {
-  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
-  while (!str.empty() && is_yaml_space(str.back())) str.remove_suffix(1);
-}
-
-static inline bool is_yaml_whitespace(string_view str) {
-  while (!str.empty()) {
-    if (!is_yaml_space(str.front())) return false;
-    str.remove_prefix(1);
-  }
-  return true;
-}
-
-static inline void remove_yaml_comment(
-    string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_yaml_newline(str.back())) str.remove_suffix(1);
-  auto cpy = str;
-  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
-  str.remove_suffix(cpy.size());
-}
-
-static inline bool parse_yaml_varname(string_view& str, string_view& value) {
-  skip_yaml_whitespace(str);
-  if (str.empty()) return false;
-  if (!is_yaml_alpha(str.front())) return false;
-  auto pos = 0;
-  while (
-      is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
-    pos += 1;
-    if (pos >= str.size()) break;
-  }
-  value = str.substr(0, pos);
-  str.remove_prefix(pos);
-  return true;
-}
-static inline bool parse_yaml_varname(string_view& str, string& value) {
-  auto view = ""sv;
-  if (!parse_yaml_varname(str, view)) return false;
-  value = string{view};
-  return true;
-}
-
-inline bool parse_yaml_value(string_view& str, string_view& value) {
-  skip_yaml_whitespace(str);
-  if (str.empty()) return false;
-  if (str.front() != '"') {
-    auto cpy = str;
-    while (!cpy.empty() && !is_yaml_space(cpy.front())) cpy.remove_prefix(1);
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-    return true;
-  } else {
-    if (str.front() != '"') return false;
-    str.remove_prefix(1);
-    if (str.empty()) return false;
-    auto cpy = str;
-    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
-    if (cpy.empty()) return false;
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-    str.remove_prefix(1);
-    return true;
-  }
-}
-inline bool parse_yaml_value(string_view& str, string& value) {
-  auto valuev = ""sv;
-  if (!parse_yaml_value(str, valuev)) return false;
-  value = string{valuev};
-  return true;
-}
-inline bool parse_yaml_value(string_view& str, int& value) {
-  skip_yaml_whitespace(str);
-  char* end = nullptr;
-  value     = (int)strtol(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-inline bool parse_yaml_value(string_view& str, float& value) {
-  skip_yaml_whitespace(str);
-  char* end = nullptr;
-  value     = strtof(str.data(), &end);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-inline bool parse_yaml_value(string_view& str, double& value) {
-  skip_yaml_whitespace(str);
-  char* end = nullptr;
-  value     = strtod(str.data(), &end);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-
-// parse yaml value
-inline bool get_yaml_value(const yaml_value& yaml, string& value) {
-  if (yaml.type != yaml_value_type::string) return false;
-  value = yaml.string_;
-  return true;
-}
-inline bool get_yaml_value(const yaml_value& yaml, bool& value) {
-  if (yaml.type != yaml_value_type::boolean) return false;
-  value = yaml.boolean;
-  return true;
-}
-inline bool get_yaml_value(const yaml_value& yaml, int& value) {
-  if (yaml.type != yaml_value_type::number) return false;
-  value = (int)yaml.number;
-  return true;
-}
-inline bool get_yaml_value(const yaml_value& yaml, float& value) {
-  if (yaml.type != yaml_value_type::number) return false;
-  value = (float)yaml.number;
-  return true;
-}
-inline bool get_yaml_value(const yaml_value& yaml, vec2f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 2) return false;
-  value = {(float)yaml.array_[0], (float)yaml.array_[1]};
-  return true;
-}
-inline bool get_yaml_value(const yaml_value& yaml, vec3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 3) return false;
-  value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
-  return true;
-}
-inline bool get_yaml_value(const yaml_value& yaml, mat3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 9) return false;
-  for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-  return true;
-}
-inline bool get_yaml_value(const yaml_value& yaml, frame3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 12) return false;
-  for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-  return true;
-}
-
-// construction
-inline yaml_value make_yaml_value(const string& value) {
-  return {yaml_value_type::string, 0, false, value};
-}
-inline yaml_value make_yaml_value(bool value) {
-  return {yaml_value_type::boolean, 0, value};
-}
-inline yaml_value make_yaml_value(int value) {
-  return {yaml_value_type::number, (double)value};
-}
-inline yaml_value make_yaml_value(float value) {
-  return {yaml_value_type::number, (double)value};
-}
-inline yaml_value make_yaml_value(const vec2f& value) {
-  return {
-      yaml_value_type::array, 2, false, "", {(double)value.x, (double)value.y}};
-}
-inline yaml_value make_yaml_value(const vec3f& value) {
-  return {yaml_value_type::array, 3, false, "",
-      {(double)value.x, (double)value.y, (double)value.z}};
-}
-inline yaml_value make_yaml_value(const mat3f& value) {
-  auto yaml = yaml_value{yaml_value_type::array, 9};
-  for (auto i = 0; i < 9; i++) yaml.array_[i] = (double)(&value.x.x)[i];
-  return yaml;
-}
-inline yaml_value make_yaml_value(const frame3f& value) {
-  auto yaml = yaml_value{yaml_value_type::array, 12};
-  for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
-  return yaml;
-}
-
-inline bool parse_yaml_value(string_view& str, yaml_value& value) {
-  trim_yaml_whitespace(str);
-  if (str.empty()) return false;
-  if (str.front() == '[') {
-    str.remove_prefix(1);
-    value.type   = yaml_value_type::array;
-    value.number = 0;
-    while (!str.empty()) {
-      skip_yaml_whitespace(str);
-      if (str.empty()) return false;
-      if (str.front() == ']') {
-        str.remove_prefix(1);
-        break;
-      }
-      if (value.number >= 16) return false;
-      parse_yaml_value(str, value.array_[(int)value.number]);
-      value.number += 1;
-      skip_yaml_whitespace(str);
-      if (str.front() == ',') {
-        str.remove_prefix(1);
-        continue;
-      } else if (str.front() == ']') {
-        str.remove_prefix(1);
-        break;
-      } else {
-        return false;
-      }
-    }
-  } else if (is_yaml_digit(str.front()) || str.front() == '-' ||
-             str.front() == '+') {
-    value.type = yaml_value_type::number;
-    parse_yaml_value(str, value.number);
-  } else {
-    value.type = yaml_value_type::string;
-    parse_yaml_value(str, value.string_);
-    if (value.string_ == "true" || value.string_ == "false") {
-      value.type    = yaml_value_type::boolean;
-      value.boolean = value.string_ == "true";
-    }
-  }
-  skip_yaml_whitespace(str);
-  if (!str.empty() && !is_yaml_whitespace(str)) return false;
-  return true;
-}
-
-// Load/save yaml
-yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
-  auto ok    = []() { return yamlio_status{}; };
-  auto error = [&filename](const string& err) {
-    return yamlio_status{filename + ": " + err};
-  };
-  auto parse_error = [&filename]() {
-    return yamlio_status{filename + ": parse error"};
-  };
-
-  auto fs = open_yaml(filename, "rt");
-  if(fs) return error("file not found");
-
-  // read the file line by line
-  auto group = ""s;
-  auto key   = ""s;
-  auto value = yaml_value{};
-  char buffer[4096];
-  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
-    // line
-    auto line = string_view{buffer};
-    remove_yaml_comment(line);
-    if (line.empty()) continue;
-    if (is_yaml_whitespace(line)) continue;
-
-    // peek commands
-    if (is_yaml_space(line.front())) {
-      // indented property
-      if (group == "") return parse_error();
-      skip_yaml_whitespace(line);
-      if (line.empty()) return parse_error();
-      if (line.front() == '-') {
-        auto& element = yaml.elements.emplace_back();
-        element.name  = group;
-        line.remove_prefix(1);
-        skip_yaml_whitespace(line);
-      } else if (yaml.elements.empty() || yaml.elements.back().name != group) {
-        auto& element = yaml.elements.emplace_back();
-        element.name  = group;
-      }
-      if (!parse_yaml_varname(line, key)) return parse_error();
-      skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':') return parse_error();
-      line.remove_prefix(1);
-      if (!parse_yaml_value(line, value)) return parse_error();
-      yaml.elements.back().key_values.push_back({key, value});
-    } else if (is_yaml_alpha(line.front())) {
-      // new group
-      if (!parse_yaml_varname(line, key)) return parse_error();
-      skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':') return parse_error();
-      line.remove_prefix(1);
-      if (!line.empty() && !is_yaml_whitespace(line)) {
-        group = "";
-        if (yaml.elements.empty() || yaml.elements.back().name != group) {
-          auto& element = yaml.elements.emplace_back();
-          element.name  = group;
-        }
-        if (!parse_yaml_value(line, value)) return parse_error();
-        yaml.elements.back().key_values.push_back({key, value});
-      } else {
-        group = key;
-        key   = "";
-      }
-    } else {
-      return parse_error();
-    }
-  }
-  return ok();
-}
-
-static inline void format_yaml_value(string& str, const string& value) {
-  str += value;
-}
-static inline void format_yaml_value(string& str, const char* value) {
-  str += value;
-}
-static inline void format_yaml_value(string& str, double value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
-
-static inline void format_yaml_values(string& str, const string& fmt) {
-  auto pos = fmt.find("{}");
-  if (pos != string::npos) throw std::runtime_error("bad format string");
-  str += fmt;
-}
-template <typename Arg, typename... Args>
-static inline void format_yaml_values(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
-  auto pos = fmt.find("{}");
-  if (pos == string::npos) throw std::runtime_error("bad format string");
-  str += fmt.substr(0, pos);
-  format_yaml_value(str, arg);
-  format_yaml_values(str, fmt.substr(pos + 2), args...);
-}
-
-template <typename... Args>
-static inline bool format_yaml_values(
-    yaml_file& fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
-  format_yaml_values(str, fmt, args...);
-  return fputs(str.c_str(), fs.fs) >= 0;
-}
-template <typename T>
-static inline bool format_yaml_value(yaml_file& fs, const T& value) {
-  auto str = ""s;
-  format_yaml_value(str, value);
-  return fputs(str.c_str(), fs.fs) >= 0;
-}
-
-static inline void format_yaml_value(string& str, const yaml_value& value) {
-  switch (value.type) {
-    case yaml_value_type::number: format_yaml_value(str, value.number); break;
-    case yaml_value_type::boolean:
-      format_yaml_value(str, value.boolean ? "true" : "false");
-      break;
-    case yaml_value_type::string:
-      if (value.string_.empty() || is_yaml_digit(value.string_.front())) {
-        format_yaml_values(str, "\"{}\"", value.string_);
-      } else {
-        format_yaml_values(str, "{}", value.string_);
-      }
-      break;
-    case yaml_value_type::array:
-      format_yaml_value(str, "[ ");
-      for (auto i = 0; i < value.number; i++) {
-        if (i) format_yaml_value(str, ", ");
-        format_yaml_value(str, value.array_[i]);
-      }
-      format_yaml_value(str, " ]");
-      break;
-  }
-}
-
-inline yamlio_status save_yaml(
-    const string& filename, const yaml_model& yaml) {
-  auto ok    = []() { return yamlio_status{}; };
-  // auto error = [&filename](const string& err) {
-  //   return yamlio_status{filename + ": " + err};
-  // };
-  auto write_error = [&filename]() {
-    return yamlio_status{filename + ": write error"};
-  };
-
-  auto fs = open_yaml(filename, "wt");
-  if (!fs) throw std::runtime_error("cannot open " + filename);
-
-  // save comments
-  if(!format_yaml_values(fs, "#\n")) return write_error();
-  if(!format_yaml_values(fs, "# Written by Yocto/GL\n")) return write_error();
-  if(!format_yaml_values(fs, "# https://github.com/xelatihy/yocto-gl\n")) return write_error();
-  if(!format_yaml_values(fs, "#\n\n")) return write_error();
-  for (auto& comment : yaml.comments) {
-    if(!format_yaml_values(fs, "# {}\n", comment)) return write_error();
-  }
-  if(!format_yaml_values(fs, "\n")) return write_error();
-
-  auto group = ""s;
-  for (auto& element : yaml.elements) {
-    if (group != element.name) {
-      group = element.name;
-      if (group != "") {
-        if(!format_yaml_values(fs, "\n{}:\n", group)) return write_error();
-      } else {
-        if(!format_yaml_values(fs, "\n")) return write_error();
-      }
-      auto first = true;
-      for (auto& [key, value] : element.key_values) {
-        if (group != "") {
-          if(!format_yaml_values(
-              fs, "  {} {}: {}\n", first ? "-" : " ", key, value)) return write_error();
-          first = false;
-        } else {
-          if(!format_yaml_values(fs, "{}: {}\n", key, value)) return write_error();
-        }
-      }
-    }
-  }
-
-  return ok();
-}
-
-inline yamlio_status read_yaml_property(const string& filename, yaml_file& fs, string& group, string& key,
-    bool& newobj, bool& done, yaml_value& value) {
-  auto ok    = []() { return yamlio_status{}; };
-  auto error = [&filename](const string& err) {
-    return yamlio_status{filename + ": " + err};
-  };
-  auto parse_error = [&filename]() {
-    return yamlio_status{filename + ": parse error"};
-  };
-
-  // read the file line by line
-  char buffer[4096];
-  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
-    // str
-    auto str = string_view{buffer};
-    remove_yaml_comment(str);
-    if (str.empty()) continue;
-    if (is_yaml_whitespace(str)) continue;
-
-    // peek commands
-    if (is_yaml_space(str.front())) {
-      // indented property
-      if (group == "") return parse_error();
-      skip_yaml_whitespace(str);
-      if (str.empty()) return parse_error();
-      if (str.front() == '-') {
-        newobj = true;
-        str.remove_prefix(1);
-        skip_yaml_whitespace(str);
-      } else {
-        newobj = false;
-      }
-      if (!parse_yaml_varname(str, key)) return parse_error();
-      skip_yaml_whitespace(str);
-      if (str.empty() || str.front() != ':') return parse_error();
-      str.remove_prefix(1);
-      if (!parse_yaml_value(str, value)) return parse_error();
-      return ok();
-    } else if (is_yaml_alpha(str.front())) {
-      // new group
-      if (!parse_yaml_varname(str, key)) return parse_error();
-      skip_yaml_whitespace(str);
-      if (str.empty() || str.front() != ':') return parse_error();
-      str.remove_prefix(1);
-      if (!str.empty() && !is_yaml_whitespace(str)) {
-        group = "";
-        if (!parse_yaml_value(str, value)) return parse_error();
-        return ok();
-      } else {
-        group = key;
-        key   = "";
-        return ok();
-      }
-    } else {
-      str = {};
-    }
-  }
-
-  if (has_yaml_error(fs)) return error("read error");
-
-  done = true;
-  return ok();
-}
-
-static inline vector<string> split_yaml_string(
-    const string& str, const string& delim) {
-  auto tokens = vector<string>{};
-  auto last = (size_t)0, next = (size_t)0;
-  while ((next = str.find(delim, last)) != string::npos) {
-    tokens.push_back(str.substr(last, next - last));
-    last = next + delim.size();
-  }
-  if (last < str.size()) tokens.push_back(str.substr(last));
-  return tokens;
-}
-
-inline yamlio_status write_yaml_comment(const string& filename, yaml_file& fs, const string& comment) {
-  auto ok    = []() { return yamlio_status{}; };
-  // auto error = [&filename](const string& err) {
-  //   return yamlio_status{filename + ": " + err};
-  // };
-  auto write_error = [&filename]() {
-    return yamlio_status{filename + ": write error"};
-  };
-
-  auto lines = split_yaml_string(comment, "\n");
-  for (auto& line : lines) {
-    if(!format_yaml_values(fs, "# {}\n", line)) return write_error();
-  }
-  if(!format_yaml_values(fs, "\n")) return write_error();
-
-  return ok();
-}
-
-// Save yaml property
-inline yamlio_status write_yaml_property(const string& filename, yaml_file& fs, const string& object,
-    const string& key, bool newobj, const yaml_value& value) {
-  auto ok    = []() { return yamlio_status{}; };
-  // auto error = [&filename](const string& err) {
-  //   return yamlio_status{filename + ": " + err};
-  // };
-  auto write_error = [&filename]() {
-    return yamlio_status{filename + ": write error"};
-  };
-
-  if (key.empty()) {
-    if(!format_yaml_values(fs, "\n{}:\n", object)) return write_error();
-  } else {
-    if (!object.empty()) {
-      if(!format_yaml_values(fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value)) return write_error();
-    } else {
-      if(!format_yaml_values(fs, "{}: {}\n", key, value)) return write_error();
-    }
-  }
-
-  return ok();
-}
-
-inline yamlio_status write_yaml_object(const string& filename, yaml_file& fs, const string& object) {
-  auto ok    = []() { return yamlio_status{}; };
-  // auto error = [&filename](const string& err) {
-  //   return yamlio_status{filename + ": " + err};
-  // };
-  auto write_error = [&filename]() {
-    return yamlio_status{filename + ": write error"};
-  };
-
-  if(!format_yaml_values(fs, "\n{}:\n", object)) return write_error();
-  return ok();
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // YAML SUPPORT
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool load_yaml(const string& filename, scene_model& scene, string& error,
-    const load_params& params) {
+sceneio_status load_yaml(
+    const string& filename, scene_model& scene, const load_params& params) {
   // open file
   auto fs = open_yaml(filename);
-
-  // initialize parsing
-  auto set_error = [&filename, &error](const string& err = "") {
-    error = err.empty() ? ("cannot parse " + filename) : err;
-    return true;
-  };
+  if (!fs) return sceneio_error(filename, "file not found");
 
   // parse state
   enum struct parsing_type {
@@ -1660,14 +1693,15 @@ bool load_yaml(const string& filename, scene_model& scene, string& error,
   };
 
   // load yaml
-  auto group   = ""s;
-  auto key     = ""s;
-  auto newobj  = false;
-  auto value   = yaml_value{};
-  auto done = false;
+  auto group  = ""s;
+  auto key    = ""s;
+  auto newobj = false;
+  auto value  = yaml_value{};
+  auto done   = false;
   auto status = yamlio_status{};
-  while ((status = read_yaml_property(filename, fs, group, key, newobj, done, value))) {
-    if(done) break;
+  while ((status = read_yaml_property(
+              filename, fs, group, key, newobj, done, value))) {
+    if (done) break;
 
     if (group.empty()) {
       throw std::runtime_error("bad yaml");
@@ -1705,27 +1739,37 @@ bool load_yaml(const string& filename, scene_model& scene, string& error,
     } else if (type == parsing_type::camera) {
       auto& camera = scene.cameras.back();
       if (key == "name") {
-        if (!get_yaml_value(value, camera.name)) return set_error();
+        if (!get_yaml_value(value, camera.name))
+          return sceneio_error(filename, "parse error");
       } else if (key == "uri") {
-        if (!get_yaml_value(value, camera.name)) return set_error();
+        if (!get_yaml_value(value, camera.name))
+          return sceneio_error(filename, "parse error");
         camera.name = get_basename(camera.name);
       } else if (key == "frame") {
-        if (!get_yaml_value(value, camera.frame)) return set_error();
+        if (!get_yaml_value(value, camera.frame))
+          return sceneio_error(filename, "parse error");
       } else if (key == "orthographic") {
-        if (!get_yaml_value(value, camera.orthographic)) return set_error();
+        if (!get_yaml_value(value, camera.orthographic))
+          return sceneio_error(filename, "parse error");
       } else if (key == "lens") {
-        if (!get_yaml_value(value, camera.lens)) return set_error();
+        if (!get_yaml_value(value, camera.lens))
+          return sceneio_error(filename, "parse error");
       } else if (key == "aspect") {
-        if (!get_yaml_value(value, camera.aspect)) return set_error();
+        if (!get_yaml_value(value, camera.aspect))
+          return sceneio_error(filename, "parse error");
       } else if (key == "film") {
-        if (!get_yaml_value(value, camera.film)) return set_error();
+        if (!get_yaml_value(value, camera.film))
+          return sceneio_error(filename, "parse error");
       } else if (key == "focus") {
-        if (!get_yaml_value(value, camera.focus)) return set_error();
+        if (!get_yaml_value(value, camera.focus))
+          return sceneio_error(filename, "parse error");
       } else if (key == "aperture") {
-        if (!get_yaml_value(value, camera.aperture)) return set_error();
+        if (!get_yaml_value(value, camera.aperture))
+          return sceneio_error(filename, "parse error");
       } else if (key == "lookat") {
         auto lookat = identity3x3f;
-        if (!get_yaml_value(value, lookat)) return set_error();
+        if (!get_yaml_value(value, lookat))
+          return sceneio_error(filename, "parse error");
         camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
         camera.focus = length(lookat.x - lookat.y);
       } else {
@@ -1734,20 +1778,24 @@ bool load_yaml(const string& filename, scene_model& scene, string& error,
     } else if (type == parsing_type::texture) {
       auto& texture = scene.textures.back();
       if (key == "name") {
-        if (!get_yaml_value(value, texture.name)) return set_error();
+        if (!get_yaml_value(value, texture.name))
+          return sceneio_error(filename, "parse error");
         tmap[texture.name] = (int)scene.textures.size() - 1;
       } else if (key == "filename") {
-        if (!get_yaml_value(value, texture.filename)) return set_error();
+        if (!get_yaml_value(value, texture.filename))
+          return sceneio_error(filename, "parse error");
       } else if (key == "preset") {
         auto preset = ""s;
-        if (!get_yaml_value(value, preset)) return set_error();
+        if (!get_yaml_value(value, preset))
+          return sceneio_error(filename, "parse error");
         make_image_preset(texture.hdr, texture.ldr, preset);
         if (texture.filename.empty()) {
           texture.filename = "textures/ypreset-" + preset +
                              (texture.hdr.empty() ? ".png" : ".hdr");
         }
       } else if (key == "uri") {
-        if (!get_yaml_value(value, texture.filename)) return set_error();
+        if (!get_yaml_value(value, texture.filename))
+          return sceneio_error(filename, "parse error");
         texture.name           = get_basename(texture.filename);
         tmap[texture.filename] = (int)scene.textures.size() - 1;
       } else {
@@ -1756,86 +1804,108 @@ bool load_yaml(const string& filename, scene_model& scene, string& error,
     } else if (type == parsing_type::material) {
       auto& material = scene.materials.back();
       if (key == "name") {
-        if (!get_yaml_value(value, material.name)) return set_error();
+        if (!get_yaml_value(value, material.name))
+          return sceneio_error(filename, "parse error");
         mmap[material.name] = (int)scene.materials.size() - 1;
       } else if (key == "uri") {
-        if (!get_yaml_value(value, material.name)) return set_error();
+        if (!get_yaml_value(value, material.name))
+          return sceneio_error(filename, "parse error");
         mmap[material.name] = (int)scene.materials.size() - 1;
         material.name       = get_basename(material.name);
       } else if (key == "emission") {
-        if (!get_yaml_value(value, material.emission)) return set_error();
+        if (!get_yaml_value(value, material.emission))
+          return sceneio_error(filename, "parse error");
       } else if (key == "diffuse") {
-        if (!get_yaml_value(value, material.diffuse)) return set_error();
+        if (!get_yaml_value(value, material.diffuse))
+          return sceneio_error(filename, "parse error");
       } else if (key == "metallic") {
-        if (!get_yaml_value(value, material.metallic)) return set_error();
+        if (!get_yaml_value(value, material.metallic))
+          return sceneio_error(filename, "parse error");
       } else if (key == "specular") {
-        if (!get_yaml_value(value, material.specular)) return set_error();
+        if (!get_yaml_value(value, material.specular))
+          return sceneio_error(filename, "parse error");
       } else if (key == "roughness") {
-        if (!get_yaml_value(value, material.roughness)) return set_error();
+        if (!get_yaml_value(value, material.roughness))
+          return sceneio_error(filename, "parse error");
       } else if (key == "coat") {
-        if (!get_yaml_value(value, material.coat)) return set_error();
+        if (!get_yaml_value(value, material.coat))
+          return sceneio_error(filename, "parse error");
       } else if (key == "transmission") {
-        if (!get_yaml_value(value, material.transmission)) return set_error();
+        if (!get_yaml_value(value, material.transmission))
+          return sceneio_error(filename, "parse error");
       } else if (key == "refract") {
-        if (!get_yaml_value(value, material.refract)) return set_error();
+        if (!get_yaml_value(value, material.refract))
+          return sceneio_error(filename, "parse error");
       } else if (key == "voltransmission") {
         if (!get_yaml_value(value, material.voltransmission))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "volmeanfreepath") {
         if (!get_yaml_value(value, material.volmeanfreepath))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "volscatter") {
-        if (!get_yaml_value(value, material.volscatter)) return set_error();
+        if (!get_yaml_value(value, material.volscatter))
+          return sceneio_error(filename, "parse error");
       } else if (key == "volemission") {
-        if (!get_yaml_value(value, material.volemission)) return set_error();
+        if (!get_yaml_value(value, material.volemission))
+          return sceneio_error(filename, "parse error");
       } else if (key == "volanisotropy") {
-        if (!get_yaml_value(value, material.volanisotropy)) return set_error();
+        if (!get_yaml_value(value, material.volanisotropy))
+          return sceneio_error(filename, "parse error");
       } else if (key == "volscale") {
-        if (!get_yaml_value(value, material.volscale)) return set_error();
+        if (!get_yaml_value(value, material.volscale))
+          return sceneio_error(filename, "parse error");
       } else if (key == "opacity") {
-        if (!get_yaml_value(value, material.opacity)) return set_error();
+        if (!get_yaml_value(value, material.opacity))
+          return sceneio_error(filename, "parse error");
       } else if (key == "coat") {
-        if (!get_yaml_value(value, material.coat)) return set_error();
+        if (!get_yaml_value(value, material.coat))
+          return sceneio_error(filename, "parse error");
       } else if (key == "emission_tex") {
         if (!get_yaml_ref(value, material.emission_tex, tmap))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "diffuse_tex") {
         if (!get_yaml_ref(value, material.diffuse_tex, tmap))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "metallic_tex") {
         if (!get_yaml_ref(value, material.metallic_tex, tmap))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "specular_tex") {
         if (!get_yaml_ref(value, material.specular_tex, tmap))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "transmission_tex") {
         if (!get_yaml_ref(value, material.transmission_tex, tmap))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "roughness_tex") {
         if (!get_yaml_ref(value, material.roughness_tex, tmap))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "subsurface_tex") {
         if (!get_yaml_ref(value, material.subsurface_tex, tmap))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "opacity_tex") {
-        if (!get_yaml_ref(value, material.normal_tex, tmap)) return set_error();
+        if (!get_yaml_ref(value, material.normal_tex, tmap))
+          return sceneio_error(filename, "parse error");
       } else if (key == "normal_tex") {
-        if (!get_yaml_ref(value, material.normal_tex, tmap)) return set_error();
+        if (!get_yaml_ref(value, material.normal_tex, tmap))
+          return sceneio_error(filename, "parse error");
       } else if (key == "gltf_textures") {
-        if (!get_yaml_value(value, material.gltf_textures)) return set_error();
+        if (!get_yaml_value(value, material.gltf_textures))
+          return sceneio_error(filename, "parse error");
       } else {
         throw std::runtime_error("unknown property " + string(key));
       }
     } else if (type == parsing_type::shape) {
       auto& shape = scene.shapes.back();
       if (key == "name") {
-        if (!get_yaml_value(value, shape.name)) return set_error();
+        if (!get_yaml_value(value, shape.name))
+          return sceneio_error(filename, "parse error");
         smap[shape.name] = (int)scene.shapes.size() - 1;
       } else if (key == "filename") {
-        if (!get_yaml_value(value, shape.filename)) return set_error();
+        if (!get_yaml_value(value, shape.filename))
+          return sceneio_error(filename, "parse error");
       } else if (key == "preset") {
         auto preset = ""s;
-        if (!get_yaml_value(value, preset)) return set_error();
+        if (!get_yaml_value(value, preset))
+          return sceneio_error(filename, "parse error");
         make_shape_preset(shape.points, shape.lines, shape.triangles,
             shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
             shape.positions, shape.normals, shape.texcoords, shape.colors,
@@ -1844,20 +1914,26 @@ bool load_yaml(const string& filename, scene_model& scene, string& error,
           shape.filename = "shapes/ypreset-" + preset + ".yvol";
         }
       } else if (key == "subdivisions") {
-        if (!get_yaml_value(value, shape.subdivisions)) return set_error();
+        if (!get_yaml_value(value, shape.subdivisions))
+          return sceneio_error(filename, "parse error");
       } else if (key == "catmullclark") {
-        if (!get_yaml_value(value, shape.catmullclark)) return set_error();
+        if (!get_yaml_value(value, shape.catmullclark))
+          return sceneio_error(filename, "parse error");
       } else if (key == "smooth") {
-        if (!get_yaml_value(value, shape.smooth)) return set_error();
+        if (!get_yaml_value(value, shape.smooth))
+          return sceneio_error(filename, "parse error");
       } else if (key == "facevarying") {
-        if (!get_yaml_value(value, shape.facevarying)) return set_error();
+        if (!get_yaml_value(value, shape.facevarying))
+          return sceneio_error(filename, "parse error");
       } else if (key == "displacement_tex") {
         if (!get_yaml_ref(value, shape.displacement_tex, tmap))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "displacement") {
-        if (!get_yaml_value(value, shape.displacement)) return set_error();
+        if (!get_yaml_value(value, shape.displacement))
+          return sceneio_error(filename, "parse error");
       } else if (key == "uri") {
-        if (!get_yaml_value(value, shape.filename)) return set_error();
+        if (!get_yaml_value(value, shape.filename))
+          return sceneio_error(filename, "parse error");
         shape.name           = get_basename(shape.filename);
         smap[shape.filename] = (int)scene.shapes.size() - 1;
       } else {
@@ -1866,18 +1942,24 @@ bool load_yaml(const string& filename, scene_model& scene, string& error,
     } else if (type == parsing_type::instance) {
       auto& instance = scene.instances.back();
       if (key == "name") {
-        if (!get_yaml_value(value, instance.name)) return set_error();
+        if (!get_yaml_value(value, instance.name))
+          return sceneio_error(filename, "parse error");
       } else if (key == "uri") {
-        if (!get_yaml_value(value, instance.name)) return set_error();
+        if (!get_yaml_value(value, instance.name))
+          return sceneio_error(filename, "parse error");
       } else if (key == "frame") {
-        if (!get_yaml_value(value, instance.frame)) return set_error();
+        if (!get_yaml_value(value, instance.frame))
+          return sceneio_error(filename, "parse error");
       } else if (key == "shape") {
-        if (!get_yaml_ref(value, instance.shape, smap)) return set_error();
+        if (!get_yaml_ref(value, instance.shape, smap))
+          return sceneio_error(filename, "parse error");
       } else if (key == "material") {
-        if (!get_yaml_ref(value, instance.material, mmap)) return set_error();
+        if (!get_yaml_ref(value, instance.material, mmap))
+          return sceneio_error(filename, "parse error");
       } else if (key == "lookat") {
         auto lookat = identity3x3f;
-        if (!get_yaml_value(value, lookat)) return set_error();
+        if (!get_yaml_value(value, lookat))
+          return sceneio_error(filename, "parse error");
         instance.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       } else {
         throw std::runtime_error("unknown property " + string(key));
@@ -1885,19 +1967,24 @@ bool load_yaml(const string& filename, scene_model& scene, string& error,
     } else if (type == parsing_type::environment) {
       auto& environment = scene.environments.back();
       if (key == "name") {
-        if (!get_yaml_value(value, environment.name)) return set_error();
+        if (!get_yaml_value(value, environment.name))
+          return sceneio_error(filename, "parse error");
       } else if (key == "uri") {
-        if (!get_yaml_value(value, environment.name)) return set_error();
+        if (!get_yaml_value(value, environment.name))
+          return sceneio_error(filename, "parse error");
       } else if (key == "frame") {
-        if (!get_yaml_value(value, environment.frame)) return set_error();
+        if (!get_yaml_value(value, environment.frame))
+          return sceneio_error(filename, "parse error");
       } else if (key == "emission") {
-        if (!get_yaml_value(value, environment.emission)) return set_error();
+        if (!get_yaml_value(value, environment.emission))
+          return sceneio_error(filename, "parse error");
       } else if (key == "emission_tex") {
         if (!get_yaml_ref(value, environment.emission_tex, tmap))
-          return set_error();
+          return sceneio_error(filename, "parse error");
       } else if (key == "lookat") {
         auto lookat = identity3x3f;
-        if (!get_yaml_value(value, lookat)) return set_error();
+        if (!get_yaml_value(value, lookat))
+          return sceneio_error(filename, "parse error");
         environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       } else {
         throw std::runtime_error("unknown property " + string(key));
@@ -1907,26 +1994,22 @@ bool load_yaml(const string& filename, scene_model& scene, string& error,
     }
   }
 
-  if (!status) {
-    error = "cannot load " + filename;
-    return false;
-  }
+  if (!status) return sceneio_error(status.error);
 
-  return true;
+  return sceneio_ok();
 }
 
 // Save a scene in the builtin YAML format.
-static bool load_yaml_scene(const string& filename, scene_model& scene,
-    string& error, const load_params& params) {
+static sceneio_status load_yaml_scene(
+    const string& filename, scene_model& scene, const load_params& params) {
   scene = {};
 
   // Parse yaml
-  if (!load_yaml(filename, scene, error, params)) return false;
+  if (auto ret = load_yaml(filename, scene, params); !ret) return ret;
 
   // load shape and textures
-  auto dirname = get_dirname(filename);
-  if (!load_shapes(scene, dirname, error, params)) return false;
-  if (!load_textures(scene, dirname, error, params)) return false;
+  if (auto ret = load_shapes(filename, scene, params); !ret) return ret;
+  if (auto ret = load_textures(filename, scene, params); !ret) return ret;
 
   // fix scene
   scene.name = get_basename(filename);
@@ -1935,15 +2018,16 @@ static bool load_yaml_scene(const string& filename, scene_model& scene,
   add_radius(scene);
   trim_memory(scene);
 
-  return true;
+  return sceneio_ok();
 }
 
 // Save yaml
-static bool save_yaml(const string& filename, const scene_model& scene,
-    string& error, bool ply_instances = false,
+static sceneio_status save_yaml(const string& filename,
+    const scene_model& scene, bool ply_instances = false,
     const string& instances_name = "") {
   // open file
   auto fs = open_yaml(filename, "w");
+  if (!fs) return sceneio_error(filename, "file not found");
 
   // write_yaml_comment(fs, get_save_scene_message(scene, ""));
 
@@ -1956,196 +2040,266 @@ static bool save_yaml(const string& filename, const scene_model& scene,
 
   auto yvalue = yaml_value{};
 
-  if (!scene.cameras.empty()) write_yaml_object(filename, fs, "cameras");
+  if (!scene.cameras.empty())
+    if (!write_yaml_object(filename, fs, "cameras"))
+      return sceneio_error(filename, "write error");
   for (auto& camera : scene.cameras) {
-    write_yaml_property(filename, 
-        fs, "cameras", "name", true, make_yaml_value(camera.name));
+    if (!write_yaml_property(filename, fs, "cameras", "name", true,
+            make_yaml_value(camera.name)))
+      return sceneio_error(filename, "write error");
     if (camera.frame != identity3x4f)
-      write_yaml_property(filename, 
-          fs, "cameras", "frame", false, make_yaml_value(camera.frame));
+      if (!write_yaml_property(filename, fs, "cameras", "frame", false,
+              make_yaml_value(camera.frame)))
+        return sceneio_error(filename, "write error");
     if (camera.orthographic)
-      write_yaml_property(filename, fs, "cameras", "orthographic", false,
-          make_yaml_value(camera.orthographic));
-    write_yaml_property(filename, 
-        fs, "cameras", "lens", false, make_yaml_value(camera.lens));
-    write_yaml_property(filename, 
-        fs, "cameras", "aspect", false, make_yaml_value(camera.aspect));
-    write_yaml_property(filename, 
-        fs, "cameras", "film", false, make_yaml_value(camera.film));
-    write_yaml_property(filename, 
-        fs, "cameras", "focus", false, make_yaml_value(camera.focus));
+      if (!write_yaml_property(filename, fs, "cameras", "orthographic", false,
+              make_yaml_value(camera.orthographic)))
+        return sceneio_error(filename, "write error");
+    if (!write_yaml_property(filename, fs, "cameras", "lens", false,
+            make_yaml_value(camera.lens)))
+      return sceneio_error(filename, "write error");
+    if (!write_yaml_property(filename, fs, "cameras", "aspect", false,
+            make_yaml_value(camera.aspect)))
+      return sceneio_error(filename, "write error");
+    if (!write_yaml_property(filename, fs, "cameras", "film", false,
+            make_yaml_value(camera.film)))
+      return sceneio_error(filename, "write error");
+    if (!write_yaml_property(filename, fs, "cameras", "focus", false,
+            make_yaml_value(camera.focus)))
+      return sceneio_error(filename, "write error");
     if (camera.aperture)
-      write_yaml_property(filename, 
-          fs, "cameras", "aperture", false, make_yaml_value(camera.aperture));
+      if (!write_yaml_property(filename, fs, "cameras", "aperture", false,
+              make_yaml_value(camera.aperture)))
+        return sceneio_error(filename, "write error");
   }
 
-  if (!scene.textures.empty()) write_yaml_object(filename, fs, "textures");
+  if (!scene.textures.empty())
+    if (!write_yaml_object(filename, fs, "textures"))
+      return sceneio_error(filename, "write error");
   for (auto& texture : scene.textures) {
-    write_yaml_property(filename, 
-        fs, "textures", "name", true, make_yaml_value(texture.name));
+    if (!write_yaml_property(filename, fs, "textures", "name", true,
+            make_yaml_value(texture.name)))
+      return sceneio_error(filename, "write error");
     if (!texture.filename.empty())
-      write_yaml_property(filename, 
-          fs, "textures", "filename", false, make_yaml_value(texture.filename));
+      if (!write_yaml_property(filename, fs, "textures", "filename", false,
+              make_yaml_value(texture.filename)))
+        return sceneio_error(filename, "write error");
   }
 
-  if (!scene.materials.empty()) write_yaml_object(filename, fs, "materials");
+  if (!scene.materials.empty())
+    if (!write_yaml_object(filename, fs, "materials"))
+      return sceneio_error(filename, "write error");
   for (auto& material : scene.materials) {
-    write_yaml_property(filename, 
-        fs, "materials", "name", true, make_yaml_value(material.name));
+    if (!write_yaml_property(filename, fs, "materials", "name", true,
+            make_yaml_value(material.name)))
+      return sceneio_error(filename, "write error");
     if (material.emission != zero3f)
-      write_yaml_property(filename, fs, "materials", "emission", false,
-          make_yaml_value(material.emission));
+      if (!write_yaml_property(filename, fs, "materials", "emission", false,
+              make_yaml_value(material.emission)))
+        return sceneio_error(filename, "write error");
     if (material.diffuse != zero3f)
-      write_yaml_property(filename, 
-          fs, "materials", "diffuse", false, make_yaml_value(material.diffuse));
+      if (!write_yaml_property(filename, fs, "materials", "diffuse", false,
+              make_yaml_value(material.diffuse)))
+        return sceneio_error(filename, "write error");
     if (material.specular != zero3f)
-      write_yaml_property(filename, fs, "materials", "specular", false,
-          make_yaml_value(material.specular));
+      if (!write_yaml_property(filename, fs, "materials", "specular", false,
+              make_yaml_value(material.specular)))
+        return sceneio_error(filename, "write error");
     if (material.metallic)
-      write_yaml_property(filename, fs, "materials", "metallic", false,
-          make_yaml_value(material.metallic));
+      if (!write_yaml_property(filename, fs, "materials", "metallic", false,
+              make_yaml_value(material.metallic)))
+        return sceneio_error(filename, "write error");
     if (material.transmission != zero3f)
-      write_yaml_property(filename, fs, "materials", "transmission", false,
-          make_yaml_value(material.transmission));
-    write_yaml_property(filename, fs, "materials", "roughness", false,
-        make_yaml_value(material.roughness));
+      if (!write_yaml_property(filename, fs, "materials", "transmission", false,
+              make_yaml_value(material.transmission)))
+        return sceneio_error(filename, "write error");
+    if (!write_yaml_property(filename, fs, "materials", "roughness", false,
+            make_yaml_value(material.roughness)))
+      return sceneio_error(filename, "write error");
     if (material.refract)
-      write_yaml_property(filename, 
-          fs, "materials", "refract", false, make_yaml_value(material.refract));
+      if (!write_yaml_property(filename, fs, "materials", "refract", false,
+              make_yaml_value(material.refract)))
+        return sceneio_error(filename, "write error");
     if (material.voltransmission != zero3f)
-      write_yaml_property(filename, fs, "materials", "voltransmission", false,
-          make_yaml_value(material.voltransmission));
+      if (!write_yaml_property(filename, fs, "materials", "voltransmission",
+              false, make_yaml_value(material.voltransmission)))
+        return sceneio_error(filename, "write error");
     if (material.volmeanfreepath != zero3f)
-      write_yaml_property(filename, fs, "materials", "volmeanfreepath", false,
-          make_yaml_value(material.volmeanfreepath));
+      if (!write_yaml_property(filename, fs, "materials", "volmeanfreepath",
+              false, make_yaml_value(material.volmeanfreepath)))
+        return sceneio_error(filename, "write error");
     if (material.volscatter != zero3f)
-      write_yaml_property(filename, fs, "materials", "volscatter", false,
-          make_yaml_value(material.volscatter));
+      if (!write_yaml_property(filename, fs, "materials", "volscatter", false,
+              make_yaml_value(material.volscatter)))
+        return sceneio_error(filename, "write error");
     if (material.volemission != zero3f)
-      write_yaml_property(filename, fs, "materials", "volemission", false,
-          make_yaml_value(material.volemission));
+      if (!write_yaml_property(filename, fs, "materials", "volemission", false,
+              make_yaml_value(material.volemission)))
+        return sceneio_error(filename, "write error");
     if (material.volanisotropy)
-      write_yaml_property(filename, fs, "materials", "volanisotropy", false,
-          make_yaml_value(material.volanisotropy));
+      if (!write_yaml_property(filename, fs, "materials", "volanisotropy",
+              false, make_yaml_value(material.volanisotropy)))
+        return sceneio_error(filename, "write error");
     if (material.voltransmission != zero3f ||
         material.volmeanfreepath != zero3f)
-      write_yaml_property(filename, fs, "materials", "volscale", false,
-          make_yaml_value(material.volscale));
+      if (!write_yaml_property(filename, fs, "materials", "volscale", false,
+              make_yaml_value(material.volscale)))
+        return sceneio_error(filename, "write error");
     if (material.coat != zero3f)
-      write_yaml_property(filename, 
-          fs, "materials", "coat", false, make_yaml_value(material.coat));
+      if (!write_yaml_property(filename, fs, "materials", "coat", false,
+              make_yaml_value(material.coat)))
+        return sceneio_error(filename, "write error");
     if (material.opacity != 1)
-      write_yaml_property(filename, 
-          fs, "materials", "opacity", false, make_yaml_value(material.opacity));
+      if (!write_yaml_property(filename, fs, "materials", "opacity", false,
+              make_yaml_value(material.opacity)))
+        return sceneio_error(filename, "write error");
     if (material.emission_tex >= 0)
-      write_yaml_property(filename, fs, "materials", "emission_tex", false,
-          make_yaml_value(scene.textures[material.emission_tex].name));
+      if (!write_yaml_property(filename, fs, "materials", "emission_tex", false,
+              make_yaml_value(scene.textures[material.emission_tex].name)))
+        return sceneio_error(filename, "write error");
     if (material.diffuse_tex >= 0)
-      write_yaml_property(filename, fs, "materials", "diffuse_tex", false,
-          make_yaml_value(scene.textures[material.diffuse_tex].name));
+      if (!write_yaml_property(filename, fs, "materials", "diffuse_tex", false,
+              make_yaml_value(scene.textures[material.diffuse_tex].name)))
+        return sceneio_error(filename, "write error");
     if (material.metallic_tex >= 0)
-      write_yaml_property(filename, fs, "materials", "metallic_tex", false,
-          make_yaml_value(scene.textures[material.metallic_tex].name));
+      if (!write_yaml_property(filename, fs, "materials", "metallic_tex", false,
+              make_yaml_value(scene.textures[material.metallic_tex].name)))
+        return sceneio_error(filename, "write error");
     if (material.specular_tex >= 0)
-      write_yaml_property(filename, fs, "materials", "specular_tex", false,
-          make_yaml_value(scene.textures[material.specular_tex].name));
+      if (!write_yaml_property(filename, fs, "materials", "specular_tex", false,
+              make_yaml_value(scene.textures[material.specular_tex].name)))
+        return sceneio_error(filename, "write error");
     if (material.roughness_tex >= 0)
-      write_yaml_property(filename, fs, "materials", "roughness_tex", false,
-          make_yaml_value(scene.textures[material.roughness_tex].name));
+      if (!write_yaml_property(filename, fs, "materials", "roughness_tex",
+              false,
+              make_yaml_value(scene.textures[material.roughness_tex].name)))
+        return sceneio_error(filename, "write error");
     if (material.transmission_tex >= 0)
-      write_yaml_property(filename, fs, "materials", "transmission_tex", false,
-          make_yaml_value(scene.textures[material.transmission_tex].name));
+      if (!write_yaml_property(filename, fs, "materials", "transmission_tex",
+              false,
+              make_yaml_value(scene.textures[material.transmission_tex].name)))
+        return sceneio_error(filename, "write error");
     if (material.subsurface_tex >= 0)
-      write_yaml_property(filename, fs, "materials", "subsurface_tex", false,
-          make_yaml_value(scene.textures[material.subsurface_tex].name));
+      if (!write_yaml_property(filename, fs, "materials", "subsurface_tex",
+              false,
+              make_yaml_value(scene.textures[material.subsurface_tex].name)))
+        return sceneio_error(filename, "write error");
     if (material.coat_tex >= 0)
-      write_yaml_property(filename, fs, "materials", "coat_tex", false,
-          make_yaml_value(scene.textures[material.coat_tex].name));
+      if (!write_yaml_property(filename, fs, "materials", "coat_tex", false,
+              make_yaml_value(scene.textures[material.coat_tex].name)))
+        return sceneio_error(filename, "write error");
     if (material.opacity_tex >= 0)
-      write_yaml_property(filename, fs, "materials", "opacity_tex", false,
-          make_yaml_value(scene.textures[material.opacity_tex].name));
+      if (!write_yaml_property(filename, fs, "materials", "opacity_tex", false,
+              make_yaml_value(scene.textures[material.opacity_tex].name)))
+        return sceneio_error(filename, "write error");
     if (material.normal_tex >= 0)
-      write_yaml_property(filename, fs, "materials", "normal_tex", false,
-          make_yaml_value(scene.textures[material.normal_tex].name));
+      if (!write_yaml_property(filename, fs, "materials", "normal_tex", false,
+              make_yaml_value(scene.textures[material.normal_tex].name)))
+        return sceneio_error(filename, "write error");
     if (material.gltf_textures)
-      write_yaml_property(filename, fs, "materials", "gltf_textures", false,
-          make_yaml_value(material.gltf_textures));
+      if (!write_yaml_property(filename, fs, "materials", "gltf_textures",
+              false, make_yaml_value(material.gltf_textures)))
+        return sceneio_error(filename, "write error");
   }
 
-  if (!scene.shapes.empty()) write_yaml_object(filename, fs, "shapes");
+  if (!scene.shapes.empty())
+    if (!write_yaml_object(filename, fs, "shapes"))
+      return sceneio_error(filename, "write error");
   for (auto& shape : scene.shapes) {
-    write_yaml_property(filename, 
-        fs, "shapes", "name", true, make_yaml_value(shape.name));
+    if (!write_yaml_property(
+            filename, fs, "shapes", "name", true, make_yaml_value(shape.name)))
+      return sceneio_error(filename, "write error");
     if (!shape.filename.empty())
-      write_yaml_property(filename, 
-          fs, "shapes", "filename", false, make_yaml_value(shape.filename));
-    write_yaml_property(filename, fs, "subdivs", "subdivisions", false,
-        make_yaml_value(shape.subdivisions));
-    write_yaml_property(filename, fs, "subdivs", "catmullclark", false,
-        make_yaml_value(shape.catmullclark));
-    write_yaml_property(filename, 
-        fs, "subdivs", "smooth", false, make_yaml_value(shape.smooth));
+      if (!write_yaml_property(filename, fs, "shapes", "filename", false,
+              make_yaml_value(shape.filename)))
+        return sceneio_error(filename, "write error");
+    if (!write_yaml_property(filename, fs, "subdivs", "subdivisions", false,
+            make_yaml_value(shape.subdivisions)))
+      return sceneio_error(filename, "write error");
+    if (!write_yaml_property(filename, fs, "subdivs", "catmullclark", false,
+            make_yaml_value(shape.catmullclark)))
+      return sceneio_error(filename, "write error");
+    if (!write_yaml_property(filename, fs, "subdivs", "smooth", false,
+            make_yaml_value(shape.smooth)))
+      return sceneio_error(filename, "write error");
     if (shape.facevarying)
-      write_yaml_property(filename, fs, "subdivs", "facevarying", false,
-          make_yaml_value(shape.facevarying));
+      if (!write_yaml_property(filename, fs, "subdivs", "facevarying", false,
+              make_yaml_value(shape.facevarying)))
+        return sceneio_error(filename, "write error");
     if (shape.displacement_tex >= 0)
-      write_yaml_property(filename, fs, "subdivs", "displacement_tex", false,
-          make_yaml_value(scene.textures[shape.displacement_tex].name));
+      if (!write_yaml_property(filename, fs, "subdivs", "displacement_tex",
+              false,
+              make_yaml_value(scene.textures[shape.displacement_tex].name)))
+        return sceneio_error(filename, "write error");
     if (shape.displacement_tex >= 0)
-      write_yaml_property(filename, fs, "subdivs", "displacement", false,
-          make_yaml_value(shape.displacement));
+      if (!write_yaml_property(filename, fs, "subdivs", "displacement", false,
+              make_yaml_value(shape.displacement)))
+        return sceneio_error(filename, "write error");
   }
 
   if (!ply_instances) {
-    if (!scene.instances.empty()) write_yaml_object(filename, fs, "instances");
+    if (!scene.instances.empty())
+      if (!write_yaml_object(filename, fs, "instances"))
+        return sceneio_error(filename, "write error");
     for (auto& instance : scene.instances) {
-      write_yaml_property(filename, 
-          fs, "instances", "name", true, make_yaml_value(instance.name));
+      if (!write_yaml_property(filename, fs, "instances", "name", true,
+              make_yaml_value(instance.name)))
+        return sceneio_error(filename, "write error");
       if (instance.frame != identity3x4f)
-        write_yaml_property(filename, 
-            fs, "instances", "frame", false, make_yaml_value(instance.frame));
+        if (!write_yaml_property(filename, fs, "instances", "frame", false,
+                make_yaml_value(instance.frame)))
+          return sceneio_error(filename, "write error");
       if (instance.shape >= 0)
-        write_yaml_property(filename, fs, "instances", "shape", false,
-            make_yaml_value(scene.shapes[instance.shape].name));
+        if (!write_yaml_property(filename, fs, "instances", "shape", false,
+                make_yaml_value(scene.shapes[instance.shape].name)))
+          return sceneio_error(filename, "write error");
       if (instance.material >= 0)
-        write_yaml_property(filename, fs, "instances", "material", false,
-            make_yaml_value(scene.materials[instance.material].name));
+        if (!write_yaml_property(filename, fs, "instances", "material", false,
+                make_yaml_value(scene.materials[instance.material].name)))
+          return sceneio_error(filename, "write error");
     }
   } else {
-    if (!scene.instances.empty()) write_yaml_object(filename, fs, "ply_instances");
-    write_yaml_property(filename, 
-        fs, "ply_instances", "filename", true, make_yaml_value(instances_name));
+    if (!scene.instances.empty())
+      if (!write_yaml_object(filename, fs, "ply_instances"))
+        return sceneio_error(filename, "write error");
+    if (!write_yaml_property(filename, fs, "ply_instances", "filename", true,
+            make_yaml_value(instances_name)))
+      return sceneio_error(filename, "write error");
   }
 
-  if (!scene.environments.empty()) write_yaml_object(filename, fs, "environments");
+  if (!scene.environments.empty())
+    if (!write_yaml_object(filename, fs, "environments"))
+      return sceneio_error(filename, "write error");
   for (auto& environment : scene.environments) {
-    write_yaml_property(filename, 
-        fs, "environments", "name", true, make_yaml_value(environment.name));
+    if (!write_yaml_property(filename, fs, "environments", "name", true,
+            make_yaml_value(environment.name)))
+      return sceneio_error(filename, "write error");
     if (environment.frame != identity3x4f)
-      write_yaml_property(filename, fs, "environments", "frame", false,
-          make_yaml_value(environment.frame));
-    write_yaml_property(filename, fs, "environments", "emission", false,
-        make_yaml_value(environment.emission));
+      if (!write_yaml_property(filename, fs, "environments", "frame", false,
+              make_yaml_value(environment.frame)))
+        return sceneio_error(filename, "write error");
+    if (!write_yaml_property(filename, fs, "environments", "emission", false,
+            make_yaml_value(environment.emission)))
+      return sceneio_error(filename, "write error");
     if (environment.emission_tex >= 0)
-      write_yaml_property(filename, fs, "environments", "emission_tex", false,
-          make_yaml_value(scene.textures[environment.emission_tex].name));
+      if (!write_yaml_property(filename, fs, "environments", "emission_tex",
+              false,
+              make_yaml_value(scene.textures[environment.emission_tex].name)))
+        return sceneio_error(filename, "write error");
   }
 
-  return true;
+  return sceneio_ok();
 }
 
 // Save a scene in the builtin YAML format.
-static bool save_yaml_scene(const string& filename, const scene_model& scene,
-    string& error, const save_params& params) {
+static sceneio_status save_yaml_scene(const string& filename,
+    const scene_model& scene, const save_params& params) {
   // save yaml file
-  if (!save_yaml(filename, scene, error)) return false;
+  if (auto ret = save_yaml(filename, scene); !ret) return ret;
+  if (auto ret = save_shapes(filename, scene, params); !ret) return ret;
+  if (auto ret = save_textures(filename, scene, params); !ret) return ret;
 
-  // save meshes and textures
-  auto dirname = get_dirname(filename);
-  if (!save_shapes(scene, dirname, error, params)) return false;
-  if (!save_textures(scene, dirname, error, params)) return false;
-
-  return true;
+  return sceneio_ok();
 }
 
 }  // namespace yocto
@@ -2155,14 +2309,12 @@ static bool save_yaml_scene(const string& filename, const scene_model& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool load_obj(const string& filename, scene_model& scene, string& error,
-    const load_params& params) {
+static sceneio_status load_obj(
+    const string& filename, scene_model& scene, const load_params& params) {
   // load obj
   auto obj = obj_model{};
-  if (auto ret = load_obj(filename, obj, false, true, true); !ret) {
-    error = ret.error;
-    return false;
-  }
+  if (auto ret = load_obj(filename, obj, false, true, true); !ret)
+    return {ret.error};
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
@@ -2254,19 +2406,17 @@ bool load_obj(const string& filename, scene_model& scene, string& error,
           shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
           materials, ematerials, true);
     } else {
-      throw std::runtime_error("should not have gotten here");
+      return sceneio_error(filename, "empty shape");
     }
     // get material
     if (oshape.materials.size() != 1) {
-      throw std::runtime_error("missing material for " + oshape.name);
+      return sceneio_error(filename, "missing material for " + oshape.name);
     }
-    auto material = -1;
-    try {
-      material = material_map.at(oshape.materials.at(0));
-    } catch (...) {
-      throw std::runtime_error(
-          "cannot find material " + oshape.materials.at(0));
+    if (material_map.find(oshape.materials.at(0)) == material_map.end()) {
+      return sceneio_error(
+          filename, "missing material " + oshape.materials.at(0));
     }
+    auto material = material_map.at(oshape.materials.at(0));
     // make instances
     if (oshape.instances.empty()) {
       auto& instance    = scene.instances.emplace_back();
@@ -2294,20 +2444,17 @@ bool load_obj(const string& filename, scene_model& scene, string& error,
     environment.emission_tex = get_texture(oenvironment.emission_map);
   }
 
-  return true;
+  return sceneio_ok();
 }
 
 // Loads an OBJ
-static bool load_obj_scene(const string& filename, scene_model& scene,
-    string& error, const load_params& params) {
+static sceneio_status load_obj_scene(
+    const string& filename, scene_model& scene, const load_params& params) {
   scene = {};
 
   // Parse obj
-  if (!load_obj(filename, scene, error, params)) return false;
-
-  // load textures
-  auto dirname = get_dirname(filename);
-  if (!load_textures(scene, dirname, error, params)) return false;
+  if (auto ret = load_obj(filename, scene, params); !ret) return ret;
+  if (auto ret = load_textures(filename, scene, params); !ret) return ret;
 
   // fix scene
   scene.name = get_basename(filename);
@@ -2315,11 +2462,11 @@ static bool load_obj_scene(const string& filename, scene_model& scene,
   add_materials(scene);
   add_radius(scene);
 
-  return true;
+  return sceneio_ok();
 }
 
-static bool save_obj(const string& filename, const scene_model& scene,
-    string& error, const save_params& params) {
+static sceneio_status save_obj(const string& filename, const scene_model& scene,
+    const save_params& params) {
   auto obj = obj_model{};
 
   // convert cameras
@@ -2426,7 +2573,7 @@ static bool save_obj(const string& filename, const scene_model& scene,
             shape.quadstexcoord, positions, normals, shape.texcoords, materials,
             {}, true);
       } else {
-        throw std::runtime_error("do not support empty shapes");
+        return sceneio_error(filename, "do not support empty shapes");
       }
     }
   }
@@ -2441,19 +2588,16 @@ static bool save_obj(const string& filename, const scene_model& scene,
   }
 
   // save obj
-  if(auto ret = save_obj(filename, obj); !ret) {
-    error = ret.error;
-    return false;
-  }
-  return true;
+  if (auto ret = save_obj(filename, obj); !ret) return {ret.error};
+
+  return sceneio_ok();
 }
 
-static bool save_obj_scene(const string& filename, const scene_model& scene,
-    string& error, const save_params& params) {
-  if (!save_obj(filename, scene, error, params)) return false;
-  auto dirname = get_dirname(filename);
-  if (!save_textures(scene, dirname, error, params)) return false;
-  return true;
+static sceneio_status save_obj_scene(const string& filename,
+    const scene_model& scene, const save_params& params) {
+  if (auto ret = save_obj(filename, scene, params); !ret) return ret;
+  if (auto ret = save_textures(filename, scene, params)) return ret;
+  return sceneio_ok();
 }
 
 void print_obj_camera(const scene_camera& camera) {
@@ -2472,8 +2616,8 @@ void print_obj_camera(const scene_camera& camera) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_ply_scene(const string& filename, scene_model& scene,
-    string& error, const load_params& params) {
+static sceneio_status load_ply_scene(
+    const string& filename, scene_model& scene, const load_params& params) {
   scene = {};
 
   // load ply mesh
@@ -2481,11 +2625,11 @@ static bool load_ply_scene(const string& filename, scene_model& scene,
   auto& shape    = scene.shapes.back();
   shape.name     = "shape";
   shape.filename = get_filename(filename);
-  if (!load_shape(filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.positions, shape.normals, shape.texcoords,
-          shape.colors, shape.radius)) {
-    error = "cannot load " + filename;
-    return false;
+  if (auto ret = load_shape(filename, shape.points, shape.lines,
+          shape.triangles, shape.quads, shape.positions, shape.normals,
+          shape.texcoords, shape.colors, shape.radius);
+      !ret) {
+    return {ret.error};
   }
 
   // add instance
@@ -2500,15 +2644,12 @@ static bool load_ply_scene(const string& filename, scene_model& scene,
   add_materials(scene);
   add_radius(scene);
 
-  return true;
+  return sceneio_ok();
 }
 
-static bool save_ply_scene(const string& filename, const scene_model& scene,
-    string& error, const save_params& params) {
-  if (scene.shapes.empty()) {
-    error = "cannot save empty scene " + filename;
-    return false;
-  }
+static sceneio_status save_ply_scene(const string& filename, const scene_model& scene,
+    const save_params& params) {
+  if (scene.shapes.empty()) return sceneio_error(filename, "empty scene");
   auto& shape = scene.shapes.front();
   if (shape.quadspos.empty()) {
     save_shape(filename, shape.points, shape.lines, shape.triangles,
@@ -2518,7 +2659,7 @@ static bool save_ply_scene(const string& filename, const scene_model& scene,
     save_fvshape(filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
         shape.positions, shape.normals, shape.texcoords);
   }
-  return true;
+  return sceneio_ok();
 }
 
 }  // namespace yocto
@@ -2597,7 +2738,13 @@ struct gltf_model {
   vector<gltf_scene>    scenes    = {};
 };
 
-void load_gltf(const string& filename, gltf_model& gltf);
+// Result of io operations
+struct gltfio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
+gltfio_status load_gltf(const string& filename, gltf_model& gltf);
 
 }  // namespace yocto
 
@@ -2615,7 +2762,7 @@ void update_transforms(
 }
 
 // convert gltf to scene
-bool load_gltf(const string& filename, gltf_model& scene, string& error) {
+gltfio_status load_gltf(const string& filename, gltf_model& scene) {
   // load gltf
   auto params = cgltf_options{};
   memset(&params, 0, sizeof(params));
@@ -3050,7 +3197,7 @@ bool load_gltf(const string& filename, gltf_model& scene, string& error) {
   }
 #endif
 
-  return true;
+  return {};
 }
 
 }  // namespace yocto
@@ -3061,10 +3208,9 @@ bool load_gltf(const string& filename, gltf_model& scene, string& error) {
 namespace yocto {
 
 // convert gltf to scene
-static bool load_gltf(
-    const string& filename, scene_model& scene, string& error) {
+static sceneio_status load_gltf(const string& filename, scene_model& scene) {
   auto gltf = gltf_model{};
-  if (!load_gltf(filename, gltf, error)) return false;
+  if (auto ret = load_gltf(filename, gltf); !ret) return {ret.error};
 
   // convert textures
   for (auto& gtexture : gltf.textures) {
@@ -3162,21 +3308,18 @@ static bool load_gltf(
     }
   }
 
-  return true;
+  return {};
 }
 
 // Load a scene
-static bool load_gltf_scene(const string& filename, scene_model& scene,
-    string& error, const load_params& params) {
+static sceneio_status load_gltf_scene(
+    const string& filename, scene_model& scene, const load_params& params) {
   // initialization
   scene = {};
 
   // load gltf
-  if (!load_gltf(filename, scene, error)) return false;
-
-  // load textures
-  auto dirname = get_dirname(filename);
-  if (!load_textures(scene, dirname, error, params)) return false;
+  if (auto ret = load_gltf(filename, scene); !ret) return ret;
+  if (auto ret = load_textures(filename, scene, params)) return ret;
 
   // fix scene
   scene.name = get_basename(filename);
@@ -3192,7 +3335,7 @@ static bool load_gltf_scene(const string& filename, scene_model& scene,
     if (distance > 0) camera.focus = distance;
   }
 
-  return true;
+  return sceneio_ok();
 }
 
 }  // namespace yocto
@@ -3202,11 +3345,11 @@ static bool load_gltf_scene(const string& filename, scene_model& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool load_pbrt(const string& filename, scene_model& scene, string& error,
-    const load_params& params) {
+static sceneio_status load_pbrt(
+    const string& filename, scene_model& scene, const load_params& params) {
   // load pbrt
   auto pbrt = pbrt_model{};
-  if (auto ret = load_pbrt(filename, pbrt); !ret) return false;
+  if (auto ret = load_pbrt(filename, pbrt); !ret) return {ret.error};
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
@@ -3331,21 +3474,18 @@ static bool load_pbrt(const string& filename, scene_model& scene, string& error,
     instance.material = (int)scene.materials.size() - 1;
   }
 
-  return true;
+  return sceneio_ok();
 }
 
 // load pbrt scenes
-static bool load_pbrt_scene(const string& filename, scene_model& scene,
-    string& error, const load_params& params) {
+static sceneio_status load_pbrt_scene(
+    const string& filename, scene_model& scene, const load_params& params) {
   scene = scene_model{};
 
   // Parse pbrt
-  if (!load_pbrt(filename, scene, error, params)) return false;
-
-  // load textures
-  auto dirname = get_dirname(filename);
-  if (!load_shapes(scene, dirname, error, params)) return false;
-  if (!load_textures(scene, dirname, error, params)) return false;
+  if (auto ret = load_pbrt(filename, scene, params); !ret) return ret;
+  if (auto ret = load_shapes(filename, scene, params); !ret) return ret;
+  if (auto ret = load_textures(filename, scene, params); !ret) return ret;
 
   // fix scene
   scene.name = get_basename(filename);
@@ -3353,12 +3493,12 @@ static bool load_pbrt_scene(const string& filename, scene_model& scene,
   add_materials(scene);
   add_radius(scene);
 
-  return true;
+  return sceneio_ok();
 }
 
 // Convert a scene to pbrt format
-static bool save_pbrt(
-    const string& filename, const scene_model& scene, string& error) {
+static sceneio_status save_pbrt(
+    const string& filename, const scene_model& scene) {
   auto pbrt = pbrt_model{};
 
   // embed data
@@ -3417,40 +3557,43 @@ static bool save_pbrt(
     }
   }
 
-  return (bool)save_pbrt(filename, pbrt);
+  if (auto ret = save_pbrt(filename, pbrt); !ret) return {ret.error};
+
+  return sceneio_ok();
 }
 
 // Save a pbrt scene
-bool save_pbrt_scene(const string& filename, const scene_model& scene,
-    string& error, const save_params& params) {
+sceneio_status save_pbrt_scene(const string& filename, const scene_model& scene,
+    const save_params& params) {
   // save pbrt
-  if (!save_pbrt(filename, scene, error)) return false;
+  if (auto ret = save_pbrt(filename, scene); !ret) return ret;
 
   // save meshes
   auto dirname = get_dirname(filename);
   for (auto& shape : scene.shapes) {
     if (shape.quadspos.empty()) {
-      if (!save_shape(replace_extension(dirname + shape.filename, ".ply"),
-              shape.points, shape.lines, shape.triangles, shape.quads,
-              shape.positions, shape.normals, shape.texcoords, shape.colors,
-              shape.radius)) {
-        error = "cannot save " + dirname + shape.filename;
-        return false;
+      if (auto ret = save_shape(
+              replace_extension(dirname + shape.filename, ".ply"), shape.points,
+              shape.lines, shape.triangles, shape.quads, shape.positions,
+              shape.normals, shape.texcoords, shape.colors, shape.radius);
+          !ret) {
+        return sceneio_error(filename, "missing shape (" + ret.error + ")");
       }
     } else {
-      if (!save_fvshape(replace_extension(dirname + shape.filename, ".ply"),
+      if (auto ret = save_fvshape(
+              replace_extension(dirname + shape.filename, ".ply"),
               shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-              shape.positions, shape.normals, shape.texcoords)) {
-        error = "cannot save " + dirname + shape.filename;
-        return false;
+              shape.positions, shape.normals, shape.texcoords);
+          !ret) {
+        return sceneio_error(filename, "missing shape (" + ret.error + ")");
       }
     }
   }
 
   // save textures
-  if (!save_textures(scene, dirname, error, params)) return false;
+  if (auto ret = save_textures(filename, scene, params); !ret) return ret;
 
-  return true;
+  return sceneio_ok();
 }
 
 }  // namespace yocto

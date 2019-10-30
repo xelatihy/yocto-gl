@@ -356,9 +356,8 @@ int main(int argc, const char* argv[]) {
   // scene loading
   auto ioscene    = scene_model{};
   auto load_timer = print_timed("loading scene");
-  auto load_error = ""s;
-  if (!load_scene(app.filename, ioscene, load_error, app.load_prms)) {
-    print_fatal(load_error);
+  if (auto ret = load_scene(app.filename, ioscene, app.load_prms); !ret) {
+    print_fatal(ret.error);
   }
   print_elapsed(load_timer);
 

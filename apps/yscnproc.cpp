@@ -89,9 +89,8 @@ int main(int argc, const char** argv) {
   // load scene
   auto scene      = scene_model{};
   auto load_timer = print_timed("loading scene");
-  auto load_error = ""s;
-  if (!load_scene(filename, scene, load_error, load_prms)) {
-    print_fatal(load_error);
+  if (auto ret = load_scene(filename, scene, load_prms); !ret) {
+    print_fatal(ret.error);
   }
   print_elapsed(load_timer);
 
@@ -153,9 +152,8 @@ int main(int argc, const char** argv) {
 
   // save scene
   auto save_timer = print_timed("saving scene");
-  auto save_error = ""s;
-  if (!save_scene(output, scene, save_error, save_prms)) {
-    print_fatal(save_error);
+  if (auto ret = save_scene(output, scene, save_prms); !ret) {
+    print_fatal(ret.error);
   }
   print_elapsed(save_timer);
 
