@@ -200,6 +200,10 @@ inline bool get_yaml_value(const yaml_value& yaml, vec2f& value);
 inline bool get_yaml_value(const yaml_value& yaml, vec3f& value);
 inline bool get_yaml_value(const yaml_value& yaml, mat3f& value);
 inline bool get_yaml_value(const yaml_value& yaml, frame3f& value);
+template <typename T>
+inline bool get_yaml_value(
+    const yaml_element& element, const string& name, const T& value);
+inline bool has_yaml_value(const yaml_element& element, const string& name);
 
 // yaml value construction
 inline yaml_value make_yaml_value(const string& value);
@@ -210,6 +214,9 @@ inline yaml_value make_yaml_value(const vec2f& value);
 inline yaml_value make_yaml_value(const vec3f& value);
 inline yaml_value make_yaml_value(const mat3f& value);
 inline yaml_value make_yaml_value(const frame3f& value);
+template <typename T>
+inline bool add_yaml_value(
+    yaml_element& element, const string& name, const T& value);
 
 }  // namespace yocto
 
@@ -411,6 +418,20 @@ inline bool get_yaml_value(const yaml_value& yaml, frame3f& value) {
   for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
   return true;
 }
+template <typename T>
+inline bool get_yaml_value(
+    const yaml_element& element, const string& name, T& value) {
+  for (auto& [key, value_] : element.key_values) {
+    if (key == name) return get_yaml_value(value_, value);
+  }
+  return true;
+}
+inline bool has_yaml_value(const yaml_element& element, const string& name) {
+  for (auto& [key, _] : element.key_values) {
+    if (key == name) return true;
+  }
+  return false;
+}
 
 // construction
 inline yaml_value make_yaml_value(const string& value) {
@@ -442,6 +463,14 @@ inline yaml_value make_yaml_value(const frame3f& value) {
   auto yaml = yaml_value{yaml_value_type::array, 12};
   for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
   return yaml;
+}
+template <typename T>
+inline bool add_yaml_value(
+    yaml_element& element, const string& name, const T& value) {
+  for (auto& [key, value] : element.key_values)
+    if (key == name) return false;
+  element.key_values.push_back({name, make_yaml_value(value)});
+  return true;
 }
 
 inline bool parse_yaml_value(string_view& str, yaml_value& value) {
@@ -492,7 +521,7 @@ inline bool parse_yaml_value(string_view& str, yaml_value& value) {
 // Load/save yaml
 yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
   auto fs = open_yaml(filename, "rt");
-  if (fs) return {filename + ": file not found"};
+  if (!fs) return {filename + ": file not found"};
 
   // read the file line by line
   auto group = ""s;
@@ -1608,16 +1637,8 @@ namespace yocto {
 sceneio_status load_yaml(
     const string& filename, scene_model& scene, const load_params& params) {
   // open file
-  auto fs = open_yaml(filename);
-  if (!fs) return {filename + ": file not found"};
-
-  // parse state
-  enum struct parsing_type {
-    // clang-format off
-    none, camera, texture, material, shape, instance, environment
-    // clang-format on
-  };
-  auto type = parsing_type::none;
+  auto yaml = yaml_model{};
+  if (auto ret = load_yaml(filename, yaml); !ret) return {ret.error};
 
   auto tmap = unordered_map<string, int>{{"", -1}};
   auto vmap = unordered_map<string, int>{{"", -1}};
@@ -1625,233 +1646,176 @@ sceneio_status load_yaml(
   auto smap = unordered_map<string, int>{{"", -1}};
 
   // parse yaml reference
-  auto get_yaml_ref = [](const yaml_value& yaml, int& value,
+  auto get_yaml_ref = [](const yaml_element& yelment, const string& name,
+                          int&                              value,
                           const unordered_map<string, int>& refs) -> bool {
-    if (yaml.type != yaml_value_type::string) return false;
-    if (yaml.string_ == "") {
+    auto ref = ""s;
+    if (!get_yaml_value(yelment, name, ref)) return false;
+    if (ref == "") {
       value = -1;
       return true;
-    }
-    try {
-      value = refs.at(yaml.string_);
+    } else {
+      if (refs.find(ref) == refs.end()) return false;
+      value = refs.at(ref);
       return true;
-    } catch (...) {
-      return false;
     }
-    return true;
   };
 
-  // load yaml
-  auto group  = ""s;
-  auto key    = ""s;
-  auto newobj = false;
-  auto value  = yaml_value{};
-  auto done   = false;
-  auto status = yamlio_status{};
-  while ((status = read_yaml_property(
-              filename, fs, group, key, newobj, done, value))) {
-    if (done) break;
-
-    if (group.empty()) {
-      throw std::runtime_error("bad yaml");
-    }
-    if (key.empty()) {
-      type = parsing_type::none;
-      continue;
-    }
-    if (newobj) {
-      if (group == "cameras") {
-        type = parsing_type::camera;
-        scene.cameras.push_back({});
-      } else if (group == "textures") {
-        type = parsing_type::texture;
-        scene.textures.push_back({});
-      } else if (group == "materials") {
-        type = parsing_type::material;
-        scene.materials.push_back({});
-      } else if (group == "shapes") {
-        type = parsing_type::shape;
-        scene.shapes.push_back({});
-      } else if (group == "instances") {
-        type = parsing_type::instance;
-        scene.instances.push_back({});
-      } else if (group == "environments") {
-        type = parsing_type::environment;
-        scene.environments.push_back({});
-      } else {
-        type = parsing_type::none;
-        throw std::runtime_error("unknown object type " + string(group));
+  // cameras
+  for (auto& yelement : yaml.elements) {
+    if (yelement.name == "cameras") {
+      auto& camera = scene.cameras.emplace_back();
+      if (!get_yaml_value(yelement, "name", camera.name))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "uri", camera.name))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "frame", camera.frame))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "orthographic", camera.orthographic))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "lens", camera.lens))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "aspect", camera.aspect))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "film", camera.film))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "focus", camera.focus))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "aperture", camera.aperture))
+        return {filename + ": parse error"};
+      if (has_yaml_value(yelement, "uri")) {
+        auto uri = ""s;
+        if (!get_yaml_value(yelement, "uri", uri))
+          return {filename + ": parse error"};
+        camera.name = get_basename(uri);
       }
-    }
-    if (type == parsing_type::none) {
-      throw std::runtime_error("bad yaml");
-    } else if (type == parsing_type::camera) {
-      auto& camera = scene.cameras.back();
-      if (key == "name") {
-        if (!get_yaml_value(value, camera.name))
-          return {filename + ": parse error"};
-      } else if (key == "uri") {
-        if (!get_yaml_value(value, camera.name))
-          return {filename + ": parse error"};
-        camera.name = get_basename(camera.name);
-      } else if (key == "frame") {
-        if (!get_yaml_value(value, camera.frame))
-          return {filename + ": parse error"};
-      } else if (key == "orthographic") {
-        if (!get_yaml_value(value, camera.orthographic))
-          return {filename + ": parse error"};
-      } else if (key == "lens") {
-        if (!get_yaml_value(value, camera.lens))
-          return {filename + ": parse error"};
-      } else if (key == "aspect") {
-        if (!get_yaml_value(value, camera.aspect))
-          return {filename + ": parse error"};
-      } else if (key == "film") {
-        if (!get_yaml_value(value, camera.film))
-          return {filename + ": parse error"};
-      } else if (key == "focus") {
-        if (!get_yaml_value(value, camera.focus))
-          return {filename + ": parse error"};
-      } else if (key == "aperture") {
-        if (!get_yaml_value(value, camera.aperture))
-          return {filename + ": parse error"};
-      } else if (key == "lookat") {
+      if (has_yaml_value(yelement, "lookat")) {
         auto lookat = identity3x3f;
-        if (!get_yaml_value(value, lookat)) return {filename + ": parse error"};
+        if (!get_yaml_value(yelement, "lookat", lookat))
+          return {filename + ": parse error"};
         camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
         camera.focus = length(lookat.x - lookat.y);
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (type == parsing_type::texture) {
-      auto& texture = scene.textures.back();
-      if (key == "name") {
-        if (!get_yaml_value(value, texture.name))
-          return {filename + ": parse error"};
-        tmap[texture.name] = (int)scene.textures.size() - 1;
-      } else if (key == "filename") {
-        if (!get_yaml_value(value, texture.filename))
-          return {filename + ": parse error"};
-      } else if (key == "preset") {
+    } else if (yelement.name == "textures") {
+      auto& texture = scene.textures.emplace_back();
+      if (!get_yaml_value(yelement, "name", texture.name))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "filename", texture.filename))
+        return {filename + ": parse error"};
+      if (has_yaml_value(yelement, "preset")) {
         auto preset = ""s;
-        if (!get_yaml_value(value, preset)) return {filename + ": parse error"};
+        if (!get_yaml_value(yelement, "preset", preset))
+          return {filename + ": parse error"};
         make_image_preset(texture.hdr, texture.ldr, preset);
         if (texture.filename.empty()) {
           texture.filename = "textures/ypreset-" + preset +
                              (texture.hdr.empty() ? ".png" : ".hdr");
         }
-      } else if (key == "uri") {
-        if (!get_yaml_value(value, texture.filename))
+      }
+      if (has_yaml_value(yelement, "uri")) {
+        if (!get_yaml_value(yelement, "uri", texture.filename))
           return {filename + ": parse error"};
         texture.name           = get_basename(texture.filename);
         tmap[texture.filename] = (int)scene.textures.size() - 1;
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (type == parsing_type::material) {
-      auto& material = scene.materials.back();
-      if (key == "name") {
-        if (!get_yaml_value(value, material.name))
-          return {filename + ": parse error"};
-        mmap[material.name] = (int)scene.materials.size() - 1;
-      } else if (key == "uri") {
-        if (!get_yaml_value(value, material.name))
+      tmap[texture.name] = (int)scene.textures.size() - 1;
+    } else if (yelement.name == "materials") {
+      auto& material = scene.materials.emplace_back();
+      if (!get_yaml_value(yelement, "name", material.name))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "emission", material.emission))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "diffuse", material.diffuse))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "metallic", material.metallic))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "specular", material.specular))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "roughness", material.roughness))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "coat", material.coat))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "transmission", material.transmission))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "refract", material.refract))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(
+              yelement, "voltransmission", material.voltransmission))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(
+              yelement, "volmeanfreepath", material.volmeanfreepath))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "volscatter", material.volscatter))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "volemission", material.volemission))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "volanisotropy", material.volanisotropy))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "volscale", material.volscale))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "opacity", material.opacity))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "coat", material.coat))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "emission_tex", material.emission_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "diffuse_tex", material.diffuse_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "metallic_tex", material.metallic_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "specular_tex", material.specular_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(
+              yelement, "transmission_tex", material.transmission_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(
+              yelement, "roughness_tex", material.roughness_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(
+              yelement, "subsurface_tex", material.subsurface_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "gltf_textures", material.gltf_textures))
+        return {filename + ": parse error"};
+      if (has_yaml_value(yelement, "uri")) {
+        if (!get_yaml_value(yelement, "uri", material.name))
           return {filename + ": parse error"};
         mmap[material.name] = (int)scene.materials.size() - 1;
         material.name       = get_basename(material.name);
-      } else if (key == "emission") {
-        if (!get_yaml_value(value, material.emission))
-          return {filename + ": parse error"};
-      } else if (key == "diffuse") {
-        if (!get_yaml_value(value, material.diffuse))
-          return {filename + ": parse error"};
-      } else if (key == "metallic") {
-        if (!get_yaml_value(value, material.metallic))
-          return {filename + ": parse error"};
-      } else if (key == "specular") {
-        if (!get_yaml_value(value, material.specular))
-          return {filename + ": parse error"};
-      } else if (key == "roughness") {
-        if (!get_yaml_value(value, material.roughness))
-          return {filename + ": parse error"};
-      } else if (key == "coat") {
-        if (!get_yaml_value(value, material.coat))
-          return {filename + ": parse error"};
-      } else if (key == "transmission") {
-        if (!get_yaml_value(value, material.transmission))
-          return {filename + ": parse error"};
-      } else if (key == "refract") {
-        if (!get_yaml_value(value, material.refract))
-          return {filename + ": parse error"};
-      } else if (key == "voltransmission") {
-        if (!get_yaml_value(value, material.voltransmission))
-          return {filename + ": parse error"};
-      } else if (key == "volmeanfreepath") {
-        if (!get_yaml_value(value, material.volmeanfreepath))
-          return {filename + ": parse error"};
-      } else if (key == "volscatter") {
-        if (!get_yaml_value(value, material.volscatter))
-          return {filename + ": parse error"};
-      } else if (key == "volemission") {
-        if (!get_yaml_value(value, material.volemission))
-          return {filename + ": parse error"};
-      } else if (key == "volanisotropy") {
-        if (!get_yaml_value(value, material.volanisotropy))
-          return {filename + ": parse error"};
-      } else if (key == "volscale") {
-        if (!get_yaml_value(value, material.volscale))
-          return {filename + ": parse error"};
-      } else if (key == "opacity") {
-        if (!get_yaml_value(value, material.opacity))
-          return {filename + ": parse error"};
-      } else if (key == "coat") {
-        if (!get_yaml_value(value, material.coat))
-          return {filename + ": parse error"};
-      } else if (key == "emission_tex") {
-        if (!get_yaml_ref(value, material.emission_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "diffuse_tex") {
-        if (!get_yaml_ref(value, material.diffuse_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "metallic_tex") {
-        if (!get_yaml_ref(value, material.metallic_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "specular_tex") {
-        if (!get_yaml_ref(value, material.specular_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "transmission_tex") {
-        if (!get_yaml_ref(value, material.transmission_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "roughness_tex") {
-        if (!get_yaml_ref(value, material.roughness_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "subsurface_tex") {
-        if (!get_yaml_ref(value, material.subsurface_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "opacity_tex") {
-        if (!get_yaml_ref(value, material.normal_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "normal_tex") {
-        if (!get_yaml_ref(value, material.normal_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "gltf_textures") {
-        if (!get_yaml_value(value, material.gltf_textures))
-          return {filename + ": parse error"};
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (type == parsing_type::shape) {
-      auto& shape = scene.shapes.back();
-      if (key == "name") {
-        if (!get_yaml_value(value, shape.name))
+      mmap[material.name] = (int)scene.materials.size() - 1;
+    } else if (yelement.name == "shapes") {
+      auto& shape = scene.shapes.emplace_back();
+      if (!get_yaml_value(yelement, "name", shape.name))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "filename", shape.filename))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "subdivisions", shape.subdivisions))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "catmullclark", shape.catmullclark))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "smooth", shape.smooth))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "facevarying", shape.facevarying))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(
+              yelement, "displacement_tex", shape.displacement_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "displacement", shape.displacement))
+        return {filename + ": parse error"};
+      if (has_yaml_value(yelement, "uri")) {
+        if (!get_yaml_value(yelement, "uri", shape.filename))
           return {filename + ": parse error"};
-        smap[shape.name] = (int)scene.shapes.size() - 1;
-      } else if (key == "filename") {
-        if (!get_yaml_value(value, shape.filename))
-          return {filename + ": parse error"};
-      } else if (key == "preset") {
+        shape.name           = get_basename(shape.filename);
+        smap[shape.filename] = (int)scene.shapes.size() - 1;
+      }
+      if (has_yaml_value(yelement, "preset")) {
         auto preset = ""s;
-        if (!get_yaml_value(value, preset)) return {filename + ": parse error"};
+        if (!get_yaml_value(yelement, "preset", preset))
+          return {filename + ": parse error"};
         make_shape_preset(shape.points, shape.lines, shape.triangles,
             shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
             shape.positions, shape.normals, shape.texcoords, shape.colors,
@@ -1859,86 +1823,55 @@ sceneio_status load_yaml(
         if (shape.filename.empty()) {
           shape.filename = "shapes/ypreset-" + preset + ".yvol";
         }
-      } else if (key == "subdivisions") {
-        if (!get_yaml_value(value, shape.subdivisions))
-          return {filename + ": parse error"};
-      } else if (key == "catmullclark") {
-        if (!get_yaml_value(value, shape.catmullclark))
-          return {filename + ": parse error"};
-      } else if (key == "smooth") {
-        if (!get_yaml_value(value, shape.smooth))
-          return {filename + ": parse error"};
-      } else if (key == "facevarying") {
-        if (!get_yaml_value(value, shape.facevarying))
-          return {filename + ": parse error"};
-      } else if (key == "displacement_tex") {
-        if (!get_yaml_ref(value, shape.displacement_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "displacement") {
-        if (!get_yaml_value(value, shape.displacement))
-          return {filename + ": parse error"};
-      } else if (key == "uri") {
-        if (!get_yaml_value(value, shape.filename))
-          return {filename + ": parse error"};
-        shape.name           = get_basename(shape.filename);
-        smap[shape.filename] = (int)scene.shapes.size() - 1;
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (type == parsing_type::instance) {
-      auto& instance = scene.instances.back();
-      if (key == "name") {
-        if (!get_yaml_value(value, instance.name))
-          return {filename + ": parse error"};
-      } else if (key == "uri") {
-        if (!get_yaml_value(value, instance.name))
-          return {filename + ": parse error"};
-      } else if (key == "frame") {
-        if (!get_yaml_value(value, instance.frame))
-          return {filename + ": parse error"};
-      } else if (key == "shape") {
-        if (!get_yaml_ref(value, instance.shape, smap))
-          return {filename + ": parse error"};
-      } else if (key == "material") {
-        if (!get_yaml_ref(value, instance.material, mmap))
-          return {filename + ": parse error"};
-      } else if (key == "lookat") {
+      smap[shape.name] = (int)scene.shapes.size() - 1;
+    } else if (yelement.name == "instances") {
+      auto& instance = scene.instances.emplace_back();
+      if (!get_yaml_value(yelement, "name", instance.name))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "frame", instance.frame))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "shape", instance.shape, smap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "material", instance.material, mmap))
+        return {filename + ": parse error"};
+      if (has_yaml_value(yelement, "uri")) {
+        auto uri = ""s;
+        if (!get_yaml_value(yelement, "uri", uri))
+          return {filename + ": type error"};
+        instance.name = get_basename(uri);
+      }
+      if (has_yaml_value(yelement, "lookat")) {
         auto lookat = identity3x3f;
-        if (!get_yaml_value(value, lookat)) return {filename + ": parse error"};
+        if (!get_yaml_value(yelement, "lookat", lookat))
+          return {filename + ": parse error"};
         instance.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
       }
-    } else if (type == parsing_type::environment) {
-      auto& environment = scene.environments.back();
-      if (key == "name") {
-        if (!get_yaml_value(value, environment.name))
-          return {filename + ": parse error"};
-      } else if (key == "uri") {
-        if (!get_yaml_value(value, environment.name))
-          return {filename + ": parse error"};
-      } else if (key == "frame") {
-        if (!get_yaml_value(value, environment.frame))
-          return {filename + ": parse error"};
-      } else if (key == "emission") {
-        if (!get_yaml_value(value, environment.emission))
-          return {filename + ": parse error"};
-      } else if (key == "emission_tex") {
-        if (!get_yaml_ref(value, environment.emission_tex, tmap))
-          return {filename + ": parse error"};
-      } else if (key == "lookat") {
+    } else if (yelement.name == "environments") {
+      auto& environment = scene.environments.emplace_back();
+      if (!get_yaml_value(yelement, "name", environment.name))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "frame", environment.frame))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "emission", environment.emission))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(
+              yelement, "emission_tex", environment.emission_tex, tmap))
+        return {filename + ": parse error"};
+      if (has_yaml_value(yelement, "uri")) {
+        auto uri = ""s;
+        if (!get_yaml_value(yelement, "uri", uri))
+          return {filename + ": type error"};
+        environment.name = get_basename(uri);
+      }
+      if (has_yaml_value(yelement, "lookat")) {
         auto lookat = identity3x3f;
-        if (!get_yaml_value(value, lookat)) return {filename + ": parse error"};
+        if (!get_yaml_value(yelement, "lookat", lookat))
+          return {filename + ": parse error"};
         environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-      } else {
-        throw std::runtime_error("unknown property " + string(key));
       }
-    } else {
-      assert(false);  // should not get here
     }
   }
-
-  if (!status) return {status.error};
 
   return {};
 }
@@ -1975,261 +1908,137 @@ static sceneio_status save_yaml(const string& filename,
 
   // write_yaml_comment(fs, get_save_scene_message(scene, ""));
 
-  static const auto def_camera      = scene_camera{};
   static const auto def_texture     = scene_texture{};
   static const auto def_material    = scene_material{};
   static const auto def_shape       = scene_shape{};
   static const auto def_instance    = scene_instance{};
   static const auto def_environment = scene_environment{};
 
-  auto yvalue = yaml_value{};
+  auto yaml = yaml_model{};
 
-  if (!scene.cameras.empty())
-    if (!write_yaml_object(filename, fs, "cameras"))
-      return {filename + ": write error"};
   for (auto& camera : scene.cameras) {
-    if (!write_yaml_property(filename, fs, "cameras", "name", true,
-            make_yaml_value(camera.name)))
-      return {filename + ": write error"};
-    if (camera.frame != identity3x4f)
-      if (!write_yaml_property(filename, fs, "cameras", "frame", false,
-              make_yaml_value(camera.frame)))
-        return {filename + ": write error"};
+    auto yelement = yaml.elements.emplace_back();
+    yelement.name = "cameras";
+    add_yaml_value(yelement, "name", camera.name);
+    add_yaml_value(yelement, "frame", camera.frame);
     if (camera.orthographic)
-      if (!write_yaml_property(filename, fs, "cameras", "orthographic", false,
-              make_yaml_value(camera.orthographic)))
-        return {filename + ": write error"};
-    if (!write_yaml_property(filename, fs, "cameras", "lens", false,
-            make_yaml_value(camera.lens)))
-      return {filename + ": write error"};
-    if (!write_yaml_property(filename, fs, "cameras", "aspect", false,
-            make_yaml_value(camera.aspect)))
-      return {filename + ": write error"};
-    if (!write_yaml_property(filename, fs, "cameras", "film", false,
-            make_yaml_value(camera.film)))
-      return {filename + ": write error"};
-    if (!write_yaml_property(filename, fs, "cameras", "focus", false,
-            make_yaml_value(camera.focus)))
-      return {filename + ": write error"};
-    if (camera.aperture)
-      if (!write_yaml_property(filename, fs, "cameras", "aperture", false,
-              make_yaml_value(camera.aperture)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "orthographic", camera.orthographic);
+    add_yaml_value(yelement, "lens", camera.lens);
+    add_yaml_value(yelement, "aspect", camera.aspect);
+    add_yaml_value(yelement, "film", camera.film);
+    add_yaml_value(yelement, "focus", camera.focus);
+    add_yaml_value(yelement, "aperture", camera.aperture);
   }
 
-  if (!scene.textures.empty())
-    if (!write_yaml_object(filename, fs, "textures"))
-      return {filename + ": write error"};
   for (auto& texture : scene.textures) {
-    if (!write_yaml_property(filename, fs, "textures", "name", true,
-            make_yaml_value(texture.name)))
-      return {filename + ": write error"};
-    if (!texture.filename.empty())
-      if (!write_yaml_property(filename, fs, "textures", "filename", false,
-              make_yaml_value(texture.filename)))
-        return {filename + ": write error"};
+    auto yelement = yaml.elements.emplace_back();
+    yelement.name = "textures";
+    add_yaml_value(yelement, "name", texture.name);
+    add_yaml_value(yelement, "filename", texture.filename);
   }
 
-  if (!scene.materials.empty())
-    if (!write_yaml_object(filename, fs, "materials"))
-      return {filename + ": write error"};
   for (auto& material : scene.materials) {
-    if (!write_yaml_property(filename, fs, "materials", "name", true,
-            make_yaml_value(material.name)))
-      return {filename + ": write error"};
-    if (material.emission != zero3f)
-      if (!write_yaml_property(filename, fs, "materials", "emission", false,
-              make_yaml_value(material.emission)))
-        return {filename + ": write error"};
-    if (material.diffuse != zero3f)
-      if (!write_yaml_property(filename, fs, "materials", "diffuse", false,
-              make_yaml_value(material.diffuse)))
-        return {filename + ": write error"};
-    if (material.specular != zero3f)
-      if (!write_yaml_property(filename, fs, "materials", "specular", false,
-              make_yaml_value(material.specular)))
-        return {filename + ": write error"};
+    auto yelement = yaml.elements.emplace_back();
+    yelement.name = "materials";
+    add_yaml_value(yelement, "name", material.name);
+    add_yaml_value(yelement, "emission", material.emission);
+    add_yaml_value(yelement, "diffuse", material.diffuse);
+    add_yaml_value(yelement, "specular", material.specular);
     if (material.metallic)
-      if (!write_yaml_property(filename, fs, "materials", "metallic", false,
-              make_yaml_value(material.metallic)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "metallic", material.metallic);
     if (material.transmission != zero3f)
-      if (!write_yaml_property(filename, fs, "materials", "transmission", false,
-              make_yaml_value(material.transmission)))
-        return {filename + ": write error"};
-    if (!write_yaml_property(filename, fs, "materials", "roughness", false,
-            make_yaml_value(material.roughness)))
-      return {filename + ": write error"};
-    if (material.refract)
-      if (!write_yaml_property(filename, fs, "materials", "refract", false,
-              make_yaml_value(material.refract)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "transmission", material.transmission);
+    add_yaml_value(yelement, "roughness", material.roughness);
+    if (material.refract) add_yaml_value(yelement, "refract", material.refract);
     if (material.voltransmission != zero3f)
-      if (!write_yaml_property(filename, fs, "materials", "voltransmission",
-              false, make_yaml_value(material.voltransmission)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "voltransmission", material.voltransmission);
     if (material.volmeanfreepath != zero3f)
-      if (!write_yaml_property(filename, fs, "materials", "volmeanfreepath",
-              false, make_yaml_value(material.volmeanfreepath)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "volmeanfreepath", material.volmeanfreepath);
     if (material.volscatter != zero3f)
-      if (!write_yaml_property(filename, fs, "materials", "volscatter", false,
-              make_yaml_value(material.volscatter)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "volscatter", material.volscatter);
     if (material.volemission != zero3f)
-      if (!write_yaml_property(filename, fs, "materials", "volemission", false,
-              make_yaml_value(material.volemission)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "volemission", material.volemission);
     if (material.volanisotropy)
-      if (!write_yaml_property(filename, fs, "materials", "volanisotropy",
-              false, make_yaml_value(material.volanisotropy)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "volanisotropy", material.volanisotropy);
     if (material.voltransmission != zero3f ||
         material.volmeanfreepath != zero3f)
-      if (!write_yaml_property(filename, fs, "materials", "volscale", false,
-              make_yaml_value(material.volscale)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "volscale", material.volscale);
     if (material.coat != zero3f)
-      if (!write_yaml_property(filename, fs, "materials", "coat", false,
-              make_yaml_value(material.coat)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "coat", material.coat);
     if (material.opacity != 1)
-      if (!write_yaml_property(filename, fs, "materials", "opacity", false,
-              make_yaml_value(material.opacity)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "opacity", material.opacity);
     if (material.emission_tex >= 0)
-      if (!write_yaml_property(filename, fs, "materials", "emission_tex", false,
-              make_yaml_value(scene.textures[material.emission_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(
+          yelement, "emission_tex", scene.textures[material.emission_tex].name);
     if (material.diffuse_tex >= 0)
-      if (!write_yaml_property(filename, fs, "materials", "diffuse_tex", false,
-              make_yaml_value(scene.textures[material.diffuse_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(
+          yelement, "diffuse_tex", scene.textures[material.diffuse_tex].name);
     if (material.metallic_tex >= 0)
-      if (!write_yaml_property(filename, fs, "materials", "metallic_tex", false,
-              make_yaml_value(scene.textures[material.metallic_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(
+          yelement, "metallic_tex", scene.textures[material.metallic_tex].name);
     if (material.specular_tex >= 0)
-      if (!write_yaml_property(filename, fs, "materials", "specular_tex", false,
-              make_yaml_value(scene.textures[material.specular_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(
+          yelement, "specular_tex", scene.textures[material.specular_tex].name);
     if (material.roughness_tex >= 0)
-      if (!write_yaml_property(filename, fs, "materials", "roughness_tex",
-              false,
-              make_yaml_value(scene.textures[material.roughness_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "roughness_tex",
+          scene.textures[material.roughness_tex].name);
     if (material.transmission_tex >= 0)
-      if (!write_yaml_property(filename, fs, "materials", "transmission_tex",
-              false,
-              make_yaml_value(scene.textures[material.transmission_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "transmission_tex",
+          scene.textures[material.transmission_tex].name);
     if (material.subsurface_tex >= 0)
-      if (!write_yaml_property(filename, fs, "materials", "subsurface_tex",
-              false,
-              make_yaml_value(scene.textures[material.subsurface_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "subsurface_tex",
+          scene.textures[material.subsurface_tex].name);
     if (material.coat_tex >= 0)
-      if (!write_yaml_property(filename, fs, "materials", "coat_tex", false,
-              make_yaml_value(scene.textures[material.coat_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(
+          yelement, "coat_tex", scene.textures[material.coat_tex].name);
     if (material.opacity_tex >= 0)
-      if (!write_yaml_property(filename, fs, "materials", "opacity_tex", false,
-              make_yaml_value(scene.textures[material.opacity_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(
+          yelement, "opacity_tex", scene.textures[material.opacity_tex].name);
     if (material.normal_tex >= 0)
-      if (!write_yaml_property(filename, fs, "materials", "normal_tex", false,
-              make_yaml_value(scene.textures[material.normal_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(
+          yelement, "normal_tex", scene.textures[material.normal_tex].name);
     if (material.gltf_textures)
-      if (!write_yaml_property(filename, fs, "materials", "gltf_textures",
-              false, make_yaml_value(material.gltf_textures)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "gltf_textures", material.gltf_textures);
   }
 
-  if (!scene.shapes.empty())
-    if (!write_yaml_object(filename, fs, "shapes"))
-      return {filename + ": write error"};
   for (auto& shape : scene.shapes) {
-    if (!write_yaml_property(
-            filename, fs, "shapes", "name", true, make_yaml_value(shape.name)))
-      return {filename + ": write error"};
-    if (!shape.filename.empty())
-      if (!write_yaml_property(filename, fs, "shapes", "filename", false,
-              make_yaml_value(shape.filename)))
-        return {filename + ": write error"};
-    if (!write_yaml_property(filename, fs, "subdivs", "subdivisions", false,
-            make_yaml_value(shape.subdivisions)))
-      return {filename + ": write error"};
-    if (!write_yaml_property(filename, fs, "subdivs", "catmullclark", false,
-            make_yaml_value(shape.catmullclark)))
-      return {filename + ": write error"};
-    if (!write_yaml_property(filename, fs, "subdivs", "smooth", false,
-            make_yaml_value(shape.smooth)))
-      return {filename + ": write error"};
+    auto yelement = yaml.elements.emplace_back();
+    yelement.name = "shapes";
+    add_yaml_value(yelement, "name", shape.name);
+    add_yaml_value(yelement, "filename", shape.filename);
+    add_yaml_value(yelement, "subdivisions", shape.subdivisions);
+    add_yaml_value(yelement, "catmullclark", shape.catmullclark);
+    add_yaml_value(yelement, "smooth", shape.smooth);
     if (shape.facevarying)
-      if (!write_yaml_property(filename, fs, "subdivs", "facevarying", false,
-              make_yaml_value(shape.facevarying)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "facevarying", shape.facevarying);
     if (shape.displacement_tex >= 0)
-      if (!write_yaml_property(filename, fs, "subdivs", "displacement_tex",
-              false,
-              make_yaml_value(scene.textures[shape.displacement_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "displacement_tex",
+          scene.textures[shape.displacement_tex].name);
     if (shape.displacement_tex >= 0)
-      if (!write_yaml_property(filename, fs, "subdivs", "displacement", false,
-              make_yaml_value(shape.displacement)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "displacement", shape.displacement);
   }
 
-  if (!ply_instances) {
-    if (!scene.instances.empty())
-      if (!write_yaml_object(filename, fs, "instances"))
-        return {filename + ": write error"};
-    for (auto& instance : scene.instances) {
-      if (!write_yaml_property(filename, fs, "instances", "name", true,
-              make_yaml_value(instance.name)))
-        return {filename + ": write error"};
-      if (instance.frame != identity3x4f)
-        if (!write_yaml_property(filename, fs, "instances", "frame", false,
-                make_yaml_value(instance.frame)))
-          return {filename + ": write error"};
-      if (instance.shape >= 0)
-        if (!write_yaml_property(filename, fs, "instances", "shape", false,
-                make_yaml_value(scene.shapes[instance.shape].name)))
-          return {filename + ": write error"};
-      if (instance.material >= 0)
-        if (!write_yaml_property(filename, fs, "instances", "material", false,
-                make_yaml_value(scene.materials[instance.material].name)))
-          return {filename + ": write error"};
-    }
-  } else {
-    if (!scene.instances.empty())
-      if (!write_yaml_object(filename, fs, "ply_instances"))
-        return {filename + ": write error"};
-    if (!write_yaml_property(filename, fs, "ply_instances", "filename", true,
-            make_yaml_value(instances_name)))
-      return {filename + ": write error"};
+  for (auto& instance : scene.instances) {
+    auto yelement = yaml.elements.emplace_back();
+    yelement.name = "instances";
+    add_yaml_value(yelement, "name", instance.name);
+    add_yaml_value(yelement, "frame", instance.frame);
+    if (instance.shape >= 0)
+      add_yaml_value(yelement, "shape", scene.shapes[instance.shape].name);
+    if (instance.material >= 0)
+      add_yaml_value(
+          yelement, "material", scene.materials[instance.material].name);
   }
 
-  if (!scene.environments.empty())
-    if (!write_yaml_object(filename, fs, "environments"))
-      return {filename + ": write error"};
   for (auto& environment : scene.environments) {
-    if (!write_yaml_property(filename, fs, "environments", "name", true,
-            make_yaml_value(environment.name)))
-      return {filename + ": write error"};
-    if (environment.frame != identity3x4f)
-      if (!write_yaml_property(filename, fs, "environments", "frame", false,
-              make_yaml_value(environment.frame)))
-        return {filename + ": write error"};
-    if (!write_yaml_property(filename, fs, "environments", "emission", false,
-            make_yaml_value(environment.emission)))
-      return {filename + ": write error"};
+    auto yelement = yaml.elements.emplace_back();
+    yelement.name = "environments";
+    add_yaml_value(yelement, "name", environment.name);
+    add_yaml_value(yelement, "frame", environment.frame);
+    add_yaml_value(yelement, "emission", environment.emission);
     if (environment.emission_tex >= 0)
-      if (!write_yaml_property(filename, fs, "environments", "emission_tex",
-              false,
-              make_yaml_value(scene.textures[environment.emission_tex].name)))
-        return {filename + ": write error"};
+      add_yaml_value(yelement, "emission_tex",
+          scene.textures[environment.emission_tex].name);
   }
 
   return {};
