@@ -203,8 +203,7 @@ inline bool get_yaml_value(const yaml_value& yaml, frame3f& value);
 template <typename T>
 inline bool get_yaml_value(
     const yaml_element& element, const string& name, const T& value);
-inline bool has_yaml_value(
-    const yaml_element& element, const string& name);
+inline bool has_yaml_value(const yaml_element& element, const string& name);
 
 // yaml value construction
 inline yaml_value make_yaml_value(const string& value);
@@ -422,17 +421,16 @@ inline bool get_yaml_value(const yaml_value& yaml, frame3f& value) {
 template <typename T>
 inline bool get_yaml_value(
     const yaml_element& element, const string& name, T& value) {
-  for(auto& [key, value_]: element.key_values) {
-    if(key == name) return get_yaml_value(value_, value);
+  for (auto& [key, value_] : element.key_values) {
+    if (key == name) return get_yaml_value(value_, value);
   }
   return true;
 }
-inline bool has_yaml_value(
-    const yaml_element& element, const string& name) {
-  for(auto& [key, _]: element.key_values) {
-    if(key == name) return true;
+inline bool has_yaml_value(const yaml_element& element, const string& name) {
+  for (auto& [key, _] : element.key_values) {
+    if (key == name) return true;
   }
-  return false;  
+  return false;
 }
 
 // construction
@@ -466,9 +464,11 @@ inline yaml_value make_yaml_value(const frame3f& value) {
   for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
   return yaml;
 }
-template<typename T>
-inline bool add_yaml_value(yaml_element& element, const string& name, const T& value) {
-  for(auto& [key, value] : element.key_values) if(key == name) return false;
+template <typename T>
+inline bool add_yaml_value(
+    yaml_element& element, const string& name, const T& value) {
+  for (auto& [key, value] : element.key_values)
+    if (key == name) return false;
   element.key_values.push_back({name, make_yaml_value(value)});
   return true;
 }
@@ -1666,24 +1666,34 @@ sceneio_status load_yaml(
   for (auto& yelement : yaml.elements) {
     if (yelement.name == "cameras") {
       auto& camera = scene.cameras.emplace_back();
-      auto status = true;
-      status = status && get_yaml_value(yelement, "name", camera.name);
-      status = status && get_yaml_value(yelement, "uri", camera.name);
-      status = status && get_yaml_value(yelement, "frame", camera.frame);
-      status = status && get_yaml_value(yelement, "orthographic", camera.orthographic);
-      status = status && get_yaml_value(yelement, "lens", camera.lens);
-      status = status && get_yaml_value(yelement, "aspect", camera.aspect);
-      status = status && get_yaml_value(yelement, "film", camera.film);
-      status = status && get_yaml_value(yelement, "focus", camera.focus);
-      status = status && get_yaml_value(yelement, "aperture", camera.aperture);
-      if(has_yaml_value(yelement, "uri")) {
+      auto  status = true;
+      if (!get_yaml_value(yelement, "name", camera.name))
+        return {filename + ": type error"};
+      if (!get_yaml_value(yelement, "uri", camera.name))
+        return {filename + ": type error"};
+      if (!get_yaml_value(yelement, "frame", camera.frame))
+        return {filename + ": type error"};
+      if (!get_yaml_value(yelement, "orthographic", camera.orthographic))
+        return {filename + ": type error"};
+      if (!get_yaml_value(yelement, "lens", camera.lens))
+        return {filename + ": type error"};
+      if (!get_yaml_value(yelement, "aspect", camera.aspect))
+        return {filename + ": type error"};
+      if (!get_yaml_value(yelement, "film", camera.film))
+        return {filename + ": type error"};
+      if (!get_yaml_value(yelement, "focus", camera.focus))
+        return {filename + ": type error"};
+      if (!get_yaml_value(yelement, "aperture", camera.aperture))
+        return {filename + ": type error"};
+      if (has_yaml_value(yelement, "uri")) {
         auto uri = ""s;
-        status = status && get_yaml_value(yelement, "uri", uri);
+        if (!get_yaml_value(yelement, "uri", uri))
+          return {filename + ": type error"};
         camera.name = get_basename(uri);
       }
-      if(has_yaml_value(yelement, "lookat")) {
-        auto lookat = identity3x3f;
-        status = status && get_yaml_value(yelement, "lookat", lookat);
+      if (has_yaml_value(yelement, "lookat")) {
+        auto lookat  = identity3x3f;
+        status       = status && get_yaml_value(yelement, "lookat", lookat);
         camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
         camera.focus = length(lookat.x - lookat.y);
       }
@@ -2069,7 +2079,8 @@ static sceneio_status save_yaml(const string& filename,
     if (instance.shape >= 0)
       add_yaml_value(yelement, "shape", scene.shapes[instance.shape].name);
     if (instance.material >= 0)
-      add_yaml_value(yelement, "material", scene.materials[instance.material].name);
+      add_yaml_value(
+          yelement, "material", scene.materials[instance.material].name);
   }
 
   for (auto& environment : scene.environments) {
@@ -2079,7 +2090,8 @@ static sceneio_status save_yaml(const string& filename,
     add_yaml_value(yelement, "frame", environment.frame);
     add_yaml_value(yelement, "emission", environment.emission);
     if (environment.emission_tex >= 0)
-      add_yaml_value(yelement, "emission_tex", scene.textures[environment.emission_tex].name);
+      add_yaml_value(yelement, "emission_tex",
+          scene.textures[environment.emission_tex].name);
   }
 
   return {};
