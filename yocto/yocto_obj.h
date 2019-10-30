@@ -386,14 +386,13 @@ inline void close_obj(obj_file& fs) {
 
 // Read a line
 inline bool read_obj_line(
-    obj_file& fs, char* buffer, size_t size, bool& error) {
-  if (fgets(buffer, size, fs.fs)) {
-    fs.linenum += 1;
-    return true;
-  } else {
-    error = ferror(fs.fs);
-    return false;
-  }
+    obj_file& fs, char* buffer, size_t size) {
+  return fgets(buffer, size, fs.fs) != nullptr;
+}
+
+// Check for errors
+inline bool has_obj_error(obj_file& fs) {
+  return ferror(fs.fs);
 }
 
 }  // namespace yocto
@@ -711,8 +710,7 @@ inline objio_status load_mtl(
 
   // read the file str by str
   char buffer[4096];
-  auto read_error = false;
-  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
+  while (read_obj_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -850,7 +848,7 @@ inline objio_status load_mtl(
   }
 
   // check error
-  if (read_error) return error("read error");
+  if (has_obj_error(fs)) return error("read error");
 
   // remove placeholder material
   obj.materials.erase(obj.materials.begin());
@@ -880,8 +878,7 @@ inline objio_status load_objx(const string& filename, obj_model& obj) {
 
   // read the file str by str
   char buffer[4096];
-  auto read_error = false;
-  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
+  while (read_obj_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -930,7 +927,7 @@ inline objio_status load_objx(const string& filename, obj_model& obj) {
   }
 
   // check error
-  if (read_error) return error("read error");
+  if (has_obj_error(fs)) return error("read error");
 
   return ok();
 }
@@ -966,8 +963,7 @@ inline objio_status load_obj(const string& filename, obj_model& obj,
 
   // read the file str by str
   char buffer[4096];
-  auto read_error = false;
-  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
+  while (read_obj_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1069,7 +1065,7 @@ inline objio_status load_obj(const string& filename, obj_model& obj,
   }
 
   // check error
-  if (read_error) return error("read error");
+  if (has_obj_error(fs)) return error("read error");
 
   // convert vertex data
   auto ipositions = vector<int>{};
@@ -1752,8 +1748,7 @@ inline objio_status read_obj_command(const string& filename, obj_file& fs, obj_c
 
   // read the file str by str
   char buffer[4096];
-  auto read_error = false;
-  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
+  while (read_obj_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1827,7 +1822,7 @@ inline objio_status read_obj_command(const string& filename, obj_file& fs, obj_c
   }
 
   // check error
-  if (read_error) return error("read error");
+  if (has_obj_error(fs)) return error("read error");
 
   return eof();
 }
@@ -1852,8 +1847,7 @@ inline objio_status read_mtl_command(const string& filename,
   auto pos   = ftell(fs.fs);
   auto found = false;
   char buffer[4096];
-  auto read_error = false;
-  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
+  while (read_obj_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1966,7 +1960,7 @@ inline objio_status read_mtl_command(const string& filename,
   }
 
   // check error
-  if (read_error) return error("read error");
+  if (has_obj_error(fs)) return error("read error");
 
   return eof();
 }
@@ -1988,8 +1982,7 @@ inline objio_status read_objx_command(const string& filename, obj_file& fs, objx
   // read the file str by str
   char buffer[4096];
   auto found      = false;
-  auto read_error = false;
-  while (read_obj_line(fs, buffer, sizeof(buffer), read_error)) {
+  while (read_obj_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -2031,7 +2024,7 @@ inline objio_status read_objx_command(const string& filename, obj_file& fs, objx
   if (found) return ok();
 
   // check error
-  if (read_error) return error("read error");
+  if (has_obj_error(fs)) return error("read error");
 
   return eof();
 }
