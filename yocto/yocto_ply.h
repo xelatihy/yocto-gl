@@ -149,11 +149,8 @@ struct plyio_status {
 };
 
 // Load and save ply
-inline bool load_ply(const string& filename, ply_model& ply);
-inline bool save_ply(const string& filename, const ply_model& ply);
-inline bool load_ply(const string& filename, ply_model& ply, string& error);
-inline bool save_ply(
-    const string& filename, const ply_model& ply, string& error);
+inline plyio_status load_ply(const string& filename, ply_model& ply);
+inline plyio_status save_ply(const string& filename, const ply_model& ply);
 
 // Get ply properties
 inline bool has_ply_property(
@@ -267,23 +264,25 @@ inline void     open_ply(
 inline void close_ply(ply_file& fs);
 
 // Read Ply functions
-inline bool read_ply_header(ply_file& fs, ply_format& format,
-    vector<ply_element>& elements, vector<string>& comments);
-inline bool read_ply_value(ply_file& fs, ply_format format,
-    const ply_element& element, vector<double>& values,
+inline plyio_status read_ply_header(const string& filename, ply_file& fs,
+    ply_format& format, vector<ply_element>& elements,
+    vector<string>& comments);
+inline plyio_status read_ply_value(const string& filename, ply_file& fs,
+    ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists);
-inline bool read_ply_value(ply_file& fs, ply_format format,
-    const ply_element& element, vector<float>& values,
+inline plyio_status read_ply_value(const string& filename, ply_file& fs,
+    ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists);
 
 // Write Ply functions
-inline bool write_ply_header(ply_file& fs, ply_format format,
-    const vector<ply_element>& elements, const vector<string>& comments);
-inline bool write_ply_value(ply_file& fs, ply_format format,
-    const ply_element& element, vector<double>& values,
+inline plyio_status write_ply_header(const string& filename, ply_file& fs,
+    ply_format format, const vector<ply_element>& elements,
+    const vector<string>& comments);
+inline plyio_status write_ply_value(const string& filename, ply_file& fs,
+    ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists);
-inline bool write_ply_value(ply_file& fs, ply_format format,
-    const ply_element& element, vector<float>& values,
+inline plyio_status write_ply_value(const string& filename, ply_file& fs,
+    ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists);
 
 // Helpers to get element and property indices
@@ -344,16 +343,17 @@ inline void close_ply(ply_file& fs) {
 }
 
 // Read a line
-inline bool read_ply_line(
-    ply_file& fs, char* buffer, size_t size, bool& error) {
+inline bool read_ply_line(ply_file& fs, char* buffer, size_t size) {
   if (fgets(buffer, size, fs.fs)) {
     fs.linenum += 1;
     return true;
   } else {
-    error = ferror(fs.fs);
     return false;
   }
 }
+
+// Check for errors
+inline bool has_ply_error(ply_file& fs) { return ferror(fs.fs); }
 
 template <typename T>
 inline T swap_ply_endian(T value) {
@@ -377,13 +377,6 @@ template <typename T>
 inline bool write_ply_value(ply_file& fs, const T& value_, bool big_endian) {
   auto value = big_endian ? swap_ply_endian(value_) : value_;
   return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
-}
-
-inline bool write_ply_text(ply_file& fs, const string& value) {
-  return fputs(value.c_str(), fs.fs) >= 0;
-}
-inline bool write_ply_text(ply_file& fs, const char* value) {
-  return fputs(value, fs.fs) >= 0;
 }
 
 template <typename T>
@@ -617,19 +610,17 @@ inline void format_ply_values(
 }
 
 template <typename... Args>
-inline void format_ply_values(
+inline bool format_ply_values(
     ply_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_ply_values(str, fmt, args...);
-  if (fputs(str.c_str(), fs.fs) < 0)
-    throw std::runtime_error("cannor write to " + fs.filename);
+  return fputs(str.c_str(), fs.fs) >= 0;
 }
 template <typename T>
-inline void format_ply_value(ply_file& fs, const T& value) {
+inline bool format_ply_value(ply_file& fs, const T& value) {
   auto str = ""s;
   format_ply_value(str, value);
-  if (fputs(str.c_str(), fs.fs) < 0)
-    throw std::runtime_error("cannor write to " + fs.filename);
+  return fputs(str.c_str(), fs.fs) >= 0;
 }
 
 }  // namespace yocto
@@ -639,18 +630,19 @@ inline void format_ply_value(ply_file& fs, const T& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// load ply
-inline bool load_ply(const string& filename, ply_model& ply) {
-  string error = "";
-  return load_ply(filename, ply, error);
-}
-inline bool save_ply(const string& filename, const ply_model& ply) {
-  string error = "";
-  return save_ply(filename, ply, error);
-}
-
 // Load ply
-inline bool load_ply(const string& filename, ply_model& ply, string& error) {
+inline plyio_status load_ply(const string& filename, ply_model& ply) {
+  auto ok    = []() { return plyio_status{}; };
+  auto error = [&filename](const string& err) {
+    return plyio_status{filename + ": " + err};
+  };
+  auto parse_error = [&filename]() {
+    return plyio_status{filename + ": parse error"};
+  };
+  auto read_error = [&filename]() {
+    return plyio_status{filename + ": read error"};
+  };
+
   // ply type names
   static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
       {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
@@ -672,18 +664,11 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
 
   // open file
   auto fs = open_ply(filename, "rb");
-  if (!fs) throw std::runtime_error("cannot open " + filename);
-
-  // initialize parsing
-  auto set_error = [&filename, &error](const string& err = "") {
-    error = err.empty() ? ("cannot parse " + filename) : err;
-    return true;
-  };
+  if (!fs) return error("file not found");
 
   // read header ---------------------------------------------
   char buffer[4096];
-  auto read_error = false;
-  while (read_ply_line(fs, buffer, sizeof(buffer), read_error)) {
+  while (read_ply_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_ply_comment(str);
@@ -692,22 +677,22 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
 
     // get command
     auto cmd = ""s;
-    if (!parse_ply_value(str, cmd)) return set_error();
+    if (!parse_ply_value(str, cmd)) return parse_error();
     if (cmd == "") continue;
 
     // check magic number
     if (first_line) {
-      if (cmd != "ply") throw std::runtime_error{"bad ply file"};
+      if (cmd != "ply") return error("not ply file");
       first_line = false;
       continue;
     }
 
     // possible token values
     if (cmd == "ply") {
-      if (!first_line) throw std::runtime_error{"bad ply file"};
+      if (!first_line) return error("corrupt header");
     } else if (cmd == "format") {
-      auto fmt = string_view{};
-      if (!parse_ply_value(str, fmt)) return set_error();
+      auto fmt = ""s;
+      if (!parse_ply_value(str, fmt)) return parse_error();
       if (fmt == "ascii") {
         ply.format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -715,7 +700,7 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
       } else if (fmt == "binary_big_endian") {
         ply.format = ply_format::binary_big_endian;
       } else {
-        throw std::runtime_error{"unknown ply format"};
+        return error("unknown format " + fmt);
       }
     } else if (cmd == "comment") {
       skip_ply_whitespace(str);
@@ -725,41 +710,40 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto& elem = ply.elements.emplace_back();
-      if (!parse_ply_value(str, elem.name)) return set_error();
-      if (!parse_ply_value(str, elem.count)) return set_error();
+      if (!parse_ply_value(str, elem.name)) return parse_error();
+      if (!parse_ply_value(str, elem.count)) return parse_error();
     } else if (cmd == "property") {
-      if (ply.elements.empty()) throw std::runtime_error{"bad ply header"};
+      if (ply.elements.empty()) return error("corrupt header");
       auto& prop  = ply.elements.back().properties.emplace_back();
       auto  tname = ""s;
-      if (!parse_ply_value(str, tname)) return set_error();
+      if (!parse_ply_value(str, tname)) return parse_error();
       if (tname == "list") {
         prop.is_list = true;
-        if (!parse_ply_value(str, tname)) return set_error();
-        throw std::runtime_error{"unknown ply type " + tname};
+        if (!parse_ply_value(str, tname)) return parse_error();
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
-          throw std::runtime_error{"unsupported list size type " + tname};
-        if (!parse_ply_value(str, tname)) return set_error();
+          return error("unsupported list size type " + tname);
+        if (!parse_ply_value(str, tname)) return parse_error();
         if (type_map.find(tname) == type_map.end())
-          return set_error("unknown ply type " + tname);
+          return error("unknown type " + tname);
         prop.type = type_map.at(tname);
       } else {
         prop.is_list = false;
         if (type_map.find(tname) == type_map.end())
-          return set_error("unknown ply type " + tname);
+          return error("unknown type " + tname);
         prop.type = type_map.at(tname);
       }
-      if (!parse_ply_value(str, prop.name)) return set_error();
+      if (!parse_ply_value(str, prop.name)) return parse_error();
     } else if (cmd == "end_header") {
       end_header = true;
       break;
     } else {
-      return set_error("unknown ply command");
+      return error("unknown command " + cmd);
     }
   }
 
   // check exit
-  if (!end_header) return set_error("bad ply header");
+  if (!end_header) return error("incomplete header");
 
   // allocate data ---------------------------------
   for (auto& element : ply.elements) {
@@ -785,56 +769,56 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
   if (ply.format == ply_format::ascii) {
     for (auto& elem : ply.elements) {
       for (auto idx = 0; idx < elem.count; idx++) {
-        if (!read_ply_line(fs, buffer, sizeof(buffer), read_error))
-          return set_error("cannot read");
+        if (!read_ply_line(fs, buffer, sizeof(buffer)))
+          return error("read error");
         auto str = string_view{buffer};
         for (auto& prop : elem.properties) {
           if (prop.is_list) {
             if (!parse_ply_value(str, prop.ldata_u8.emplace_back()))
-              return set_error();
+              return parse_error();
           }
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
                 if (!parse_ply_value(str, prop.data_i8.emplace_back()))
-                  return set_error();
+                  return parse_error();
                 break;
               case ply_type::i16:
                 if (!parse_ply_value(str, prop.data_i16.emplace_back()))
-                  return set_error();
+                  return parse_error();
                 break;
               case ply_type::i32:
                 if (!parse_ply_value(str, prop.data_i32.emplace_back()))
-                  return set_error();
+                  return parse_error();
                 break;
               case ply_type::i64:
                 if (!parse_ply_value(str, prop.data_i64.emplace_back()))
-                  return set_error();
+                  return parse_error();
                 break;
               case ply_type::u8:
                 if (!parse_ply_value(str, prop.data_u8.emplace_back()))
-                  return set_error();
+                  return parse_error();
                 break;
               case ply_type::u16:
                 if (!parse_ply_value(str, prop.data_u16.emplace_back()))
-                  return set_error();
+                  return parse_error();
                 break;
               case ply_type::u32:
                 if (!parse_ply_value(str, prop.data_u32.emplace_back()))
-                  return set_error();
+                  return parse_error();
                 break;
               case ply_type::u64:
                 if (!parse_ply_value(str, prop.data_u64.emplace_back()))
-                  return set_error();
+                  return parse_error();
                 break;
               case ply_type::f32:
                 if (!parse_ply_value(str, prop.data_f32.emplace_back()))
-                  return set_error();
+                  return parse_error();
                 break;
               case ply_type::f64:
                 if (!parse_ply_value(str, prop.data_f64.emplace_back()))
-                  return set_error();
+                  return parse_error();
                 break;
             }
           }
@@ -847,40 +831,61 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto& prop : elem.properties) {
           if (prop.is_list) {
-            read_ply_value(fs, prop.ldata_u8.emplace_back(), big_endian);
+            if (!read_ply_value(fs, prop.ldata_u8.emplace_back(), big_endian))
+              return read_error();
           }
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                read_ply_value(fs, prop.data_i8.emplace_back(), big_endian);
+                if (!read_ply_value(
+                        fs, prop.data_i8.emplace_back(), big_endian))
+                  return read_error();
                 break;
               case ply_type::i16:
-                read_ply_value(fs, prop.data_i16.emplace_back(), big_endian);
+                if (!read_ply_value(
+                        fs, prop.data_i16.emplace_back(), big_endian))
+                  return read_error();
                 break;
               case ply_type::i32:
-                read_ply_value(fs, prop.data_i32.emplace_back(), big_endian);
+                if (!read_ply_value(
+                        fs, prop.data_i32.emplace_back(), big_endian))
+                  return read_error();
                 break;
               case ply_type::i64:
-                read_ply_value(fs, prop.data_i64.emplace_back(), big_endian);
+                if (!read_ply_value(
+                        fs, prop.data_i64.emplace_back(), big_endian))
+                  return read_error();
                 break;
               case ply_type::u8:
-                read_ply_value(fs, prop.data_u8.emplace_back(), big_endian);
+                if (!read_ply_value(
+                        fs, prop.data_u8.emplace_back(), big_endian))
+                  return read_error();
                 break;
               case ply_type::u16:
-                read_ply_value(fs, prop.data_u16.emplace_back(), big_endian);
+                if (!read_ply_value(
+                        fs, prop.data_u16.emplace_back(), big_endian))
+                  return read_error();
                 break;
               case ply_type::u32:
-                read_ply_value(fs, prop.data_u32.emplace_back(), big_endian);
+                if (!read_ply_value(
+                        fs, prop.data_u32.emplace_back(), big_endian))
+                  return read_error();
                 break;
               case ply_type::u64:
-                read_ply_value(fs, prop.data_u64.emplace_back(), big_endian);
+                if (!read_ply_value(
+                        fs, prop.data_u64.emplace_back(), big_endian))
+                  return read_error();
                 break;
               case ply_type::f32:
-                read_ply_value(fs, prop.data_f32.emplace_back(), big_endian);
+                if (!read_ply_value(
+                        fs, prop.data_f32.emplace_back(), big_endian))
+                  return read_error();
                 break;
               case ply_type::f64:
-                read_ply_value(fs, prop.data_f64.emplace_back(), big_endian);
+                if (!read_ply_value(
+                        fs, prop.data_f64.emplace_back(), big_endian))
+                  return read_error();
                 break;
             }
           }
@@ -889,14 +894,21 @@ inline bool load_ply(const string& filename, ply_model& ply, string& error) {
     }
   }
 
-  return true;
+  return ok();
 }
 
 // Save ply
-inline bool save_ply(
-    const string& filename, const ply_model& ply, string& error) {
+inline plyio_status save_ply(const string& filename, const ply_model& ply) {
+  auto ok    = []() { return plyio_status{}; };
+  auto error = [&filename](const string& err) {
+    return plyio_status{filename + ": " + err};
+  };
+  auto write_error = [&filename]() {
+    return plyio_status{filename + ": write error"};
+  };
+
   auto fs = open_ply(filename, "wb");
-  if (!fs) throw std::runtime_error("cannot open " + filename);
+  if (!fs) return error("file not found");
 
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
@@ -909,33 +921,33 @@ inline bool save_ply(
       {ply_format::binary_little_endian, "binary_little_endian"},
       {ply_format::binary_big_endian, "binary_big_endian"}};
 
-  auto write_error = [&filename, &error](ply_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot write " + filename;
-    return true;
-  };
-
   // header
-  format_ply_values(fs, "ply\n");
-  format_ply_values(fs, "format {} 1.0\n", format_map.at(ply.format));
-  format_ply_values(fs, "comment Written by Yocto/GL\n");
-  format_ply_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
+  if (!format_ply_values(fs, "ply\n")) return write_error();
+  if (!format_ply_values(fs, "format {} 1.0\n", format_map.at(ply.format)))
+    return write_error();
+  if (!format_ply_values(fs, "comment Written by Yocto/GL\n"))
+    return write_error();
+  if (!format_ply_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
+    return write_error();
   for (auto& comment : ply.comments)
-    format_ply_values(fs, "comment {}\n", comment);
+    if (!format_ply_values(fs, "comment {}\n", comment)) return write_error();
   for (auto& elem : ply.elements) {
-    format_ply_values(fs, "element {} {}\n", elem.name, (uint64_t)elem.count);
+    if (!format_ply_values(
+            fs, "element {} {}\n", elem.name, (uint64_t)elem.count))
+      return write_error();
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        format_ply_values(
-            fs, "property list uchar {} {}\n", type_map[prop.type], prop.name);
+        if (!format_ply_values(fs, "property list uchar {} {}\n",
+                type_map[prop.type], prop.name))
+          return write_error();
       } else {
-        format_ply_values(
-            fs, "property {} {}\n", type_map[prop.type], prop.name);
+        if (!format_ply_values(
+                fs, "property {} {}\n", type_map[prop.type], prop.name))
+          return write_error();
       }
     }
   }
-  format_ply_values(fs, "end_header\n");
-  if (write_error(fs)) return false;
+  if (!format_ply_values(fs, "end_header\n")) return write_error();
 
   // properties
   if (ply.format == ply_format::ascii) {
@@ -945,45 +957,55 @@ inline bool save_ply(
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
           if (prop.is_list)
-            format_ply_values(fs, "{} ", (int)prop.ldata_u8[idx]);
+            if (!format_ply_values(fs, "{} ", (int)prop.ldata_u8[idx]))
+              return write_error();
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                format_ply_values(fs, "{} ", prop.data_i8[cur[idx]++]);
+                if (!format_ply_values(fs, "{} ", prop.data_i8[cur[idx]++]))
+                  return write_error();
                 break;
               case ply_type::i16:
-                format_ply_values(fs, "{} ", prop.data_i16[cur[idx]++]);
+                if (!format_ply_values(fs, "{} ", prop.data_i16[cur[idx]++]))
+                  return write_error();
                 break;
               case ply_type::i32:
-                format_ply_values(fs, "{} ", prop.data_i32[cur[idx]++]);
+                if (!format_ply_values(fs, "{} ", prop.data_i32[cur[idx]++]))
+                  return write_error();
                 break;
               case ply_type::i64:
-                format_ply_values(fs, "{} ", prop.data_i64[cur[idx]++]);
+                if (!format_ply_values(fs, "{} ", prop.data_i64[cur[idx]++]))
+                  return write_error();
                 break;
               case ply_type::u8:
-                format_ply_values(fs, "{} ", prop.data_u8[cur[idx]++]);
+                if (!format_ply_values(fs, "{} ", prop.data_u8[cur[idx]++]))
+                  return write_error();
                 break;
               case ply_type::u16:
-                format_ply_values(fs, "{} ", prop.data_u16[cur[idx]++]);
+                if (!format_ply_values(fs, "{} ", prop.data_u16[cur[idx]++]))
+                  return write_error();
                 break;
               case ply_type::u32:
-                format_ply_values(fs, "{} ", prop.data_u32[cur[idx]++]);
+                if (!format_ply_values(fs, "{} ", prop.data_u32[cur[idx]++]))
+                  return write_error();
                 break;
               case ply_type::u64:
-                format_ply_values(fs, "{} ", prop.data_u64[cur[idx]++]);
+                if (!format_ply_values(fs, "{} ", prop.data_u64[cur[idx]++]))
+                  return write_error();
                 break;
               case ply_type::f32:
-                format_ply_values(fs, "{} ", prop.data_f32[cur[idx]++]);
+                if (!format_ply_values(fs, "{} ", prop.data_f32[cur[idx]++]))
+                  return write_error();
                 break;
               case ply_type::f64:
-                format_ply_values(fs, "{} ", prop.data_f64[cur[idx]++]);
+                if (!format_ply_values(fs, "{} ", prop.data_f64[cur[idx]++]))
+                  return write_error();
                 break;
             }
           }
-          format_ply_values(fs, "\n");
+          if (!format_ply_values(fs, "\n")) return write_error();
         }
-        if (write_error(fs)) return false;
       }
     }
   } else {
@@ -993,49 +1015,68 @@ inline bool save_ply(
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
-          if (prop.is_list) write_ply_value(fs, prop.ldata_u8[idx], big_endian);
+          if (prop.is_list)
+            if (!write_ply_value(fs, prop.ldata_u8[idx], big_endian))
+              return write_error();
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                write_ply_value(fs, prop.data_i8[cur[pidx]++], big_endian);
+                if (!write_ply_value(fs, prop.data_i8[cur[pidx]++], big_endian))
+                  return write_error();
                 break;
               case ply_type::i16:
-                write_ply_value(fs, prop.data_i16[cur[pidx]++], big_endian);
+                if (!write_ply_value(
+                        fs, prop.data_i16[cur[pidx]++], big_endian))
+                  return write_error();
                 break;
               case ply_type::i32:
-                write_ply_value(fs, prop.data_i32[cur[pidx]++], big_endian);
+                if (!write_ply_value(
+                        fs, prop.data_i32[cur[pidx]++], big_endian))
+                  return write_error();
                 break;
               case ply_type::i64:
-                write_ply_value(fs, prop.data_i64[cur[pidx]++], big_endian);
+                if (!write_ply_value(
+                        fs, prop.data_i64[cur[pidx]++], big_endian))
+                  return write_error();
                 break;
               case ply_type::u8:
-                write_ply_value(fs, prop.data_u8[cur[pidx]++], big_endian);
+                if (!write_ply_value(fs, prop.data_u8[cur[pidx]++], big_endian))
+                  return write_error();
                 break;
               case ply_type::u16:
-                write_ply_value(fs, prop.data_u16[cur[pidx]++], big_endian);
+                if (!write_ply_value(
+                        fs, prop.data_u16[cur[pidx]++], big_endian))
+                  return write_error();
                 break;
               case ply_type::u32:
-                write_ply_value(fs, prop.data_u32[cur[pidx]++], big_endian);
+                if (!write_ply_value(
+                        fs, prop.data_u32[cur[pidx]++], big_endian))
+                  return write_error();
                 break;
               case ply_type::u64:
-                write_ply_value(fs, prop.data_u64[cur[pidx]++], big_endian);
+                if (!write_ply_value(
+                        fs, prop.data_u64[cur[pidx]++], big_endian))
+                  return write_error();
                 break;
               case ply_type::f32:
-                write_ply_value(fs, prop.data_f32[cur[pidx]++], big_endian);
+                if (!write_ply_value(
+                        fs, prop.data_f32[cur[pidx]++], big_endian))
+                  return write_error();
                 break;
               case ply_type::f64:
-                write_ply_value(fs, prop.data_f64[cur[pidx]++], big_endian);
+                if (!write_ply_value(
+                        fs, prop.data_f64[cur[pidx]++], big_endian))
+                  return write_error();
                 break;
             }
           }
         }
-        if (write_error(fs)) return false;
       }
     }
   }
 
-  return true;
+  return ok();
 }
 
 // Get ply properties
@@ -1500,8 +1541,17 @@ inline bool parse_ply_prop(string_view& str, ply_type type, VT& value) {
 }
 
 // Load ply data
-inline bool read_ply_header(ply_file& fs, ply_format& format,
-    vector<ply_element>& elements, vector<string>& comments) {
+inline plyio_status read_ply_header(const string& filename, ply_file& fs,
+    ply_format& format, vector<ply_element>& elements,
+    vector<string>& comments) {
+  auto ok    = []() { return plyio_status{}; };
+  auto error = [&filename](const string& err) {
+    return plyio_status{filename + ": " + err};
+  };
+  auto parse_error = [&filename]() {
+    return plyio_status{filename + ": parse error"};
+  };
+
   // ply type names
   static auto type_map = unordered_map<string, ply_type>{{"char", ply_type::i8},
       {"short", ply_type::i16}, {"int", ply_type::i32}, {"long", ply_type::i64},
@@ -1521,13 +1571,9 @@ inline bool read_ply_header(ply_file& fs, ply_format& format,
   // prepare elements
   elements.clear();
 
-  // initialize parsing
-  auto set_error = [](const string& err = "") { return false; };
-
   // read the file header str by str
   char buffer[4096];
-  auto read_error = false;
-  while (read_ply_line(fs, buffer, sizeof(buffer), read_error)) {
+  while (read_ply_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_ply_comment(str);
@@ -1536,22 +1582,22 @@ inline bool read_ply_header(ply_file& fs, ply_format& format,
 
     // get command
     auto cmd = ""s;
-    if (!parse_ply_value(str, cmd)) return set_error();
+    if (!parse_ply_value(str, cmd)) return parse_error();
     if (cmd == "") continue;
 
     // check magic number
     if (first_line) {
-      if (cmd != "ply") return set_error("bad ply file");
+      if (cmd != "ply") return error("format not ply");
       first_line = false;
       continue;
     }
 
     // possible token values
     if (cmd == "ply") {
-      if (!first_line) return set_error("bad ply file");
+      if (!first_line) return error("corrupt header");
     } else if (cmd == "format") {
       auto fmt = string_view{};
-      if (!parse_ply_value(str, fmt)) return set_error();
+      if (!parse_ply_value(str, fmt)) return parse_error();
       if (fmt == "ascii") {
         format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -1559,7 +1605,7 @@ inline bool read_ply_header(ply_file& fs, ply_format& format,
       } else if (fmt == "binary_big_endian") {
         format = ply_format::binary_big_endian;
       } else {
-        throw std::runtime_error{"unknown ply format"};
+        return error("unknown format");
       }
     } else if (cmd == "comment") {
       skip_ply_whitespace(str);
@@ -1569,49 +1615,60 @@ inline bool read_ply_header(ply_file& fs, ply_format& format,
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto& elem = elements.emplace_back();
-      if (!parse_ply_value(str, elem.name)) return set_error();
-      if (!parse_ply_value(str, elem.count)) return set_error();
+      if (!parse_ply_value(str, elem.name)) return parse_error();
+      if (!parse_ply_value(str, elem.count)) return parse_error();
     } else if (cmd == "property") {
       if (elements.empty()) throw std::runtime_error{"bad ply header"};
       auto& prop  = elements.back().properties.emplace_back();
       auto  tname = ""s;
-      if (!parse_ply_value(str, tname)) return set_error();
+      if (!parse_ply_value(str, tname)) return parse_error();
       if (tname == "list") {
         prop.is_list = true;
-        if (!parse_ply_value(str, tname)) return set_error();
+        if (!parse_ply_value(str, tname)) return parse_error();
         if (type_map.find(tname) == type_map.end())
-          return set_error("unknown ply type " + tname);
+          return error("unknown type " + tname);
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
           throw std::runtime_error{"unsupported list size type " + tname};
-        if (!parse_ply_value(str, tname)) return set_error();
+        if (!parse_ply_value(str, tname)) return parse_error();
         if (type_map.find(tname) == type_map.end())
-          return set_error("unknown ply type " + tname);
+          return error("unknown type " + tname);
         prop.type = type_map.at(tname);
       } else {
         prop.is_list = false;
         if (type_map.find(tname) == type_map.end())
-          throw std::runtime_error{"unknown ply type " + tname};
+          return error("unknown type " + tname);
         prop.type = type_map.at(tname);
       }
-      if (!parse_ply_value(str, prop.name)) return set_error();
+      if (!parse_ply_value(str, prop.name)) return parse_error();
     } else if (cmd == "end_header") {
       end_header = true;
       break;
     } else {
-      return set_error("unknown ply command");
+      return error("unknown command " + cmd);
     }
   }
 
-  if (read_error) return set_error("canot read");
-  if (!end_header) return set_error("bad ply header");
+  if (!end_header) return error("incomplete header");
 
-  return true;
+  return ok();
 }
 
 template <typename VT, typename LT>
-inline bool read_ply_value_generic(ply_file& fs, ply_format format,
-    const ply_element& element, vector<VT>& values, vector<vector<LT>>& lists) {
+inline plyio_status read_ply_value_generic(const string& filename, ply_file& fs,
+    ply_format format, const ply_element& element, vector<VT>& values,
+    vector<vector<LT>>& lists) {
+  auto ok    = []() { return plyio_status{}; };
+  auto error = [&filename](const string& err) {
+    return plyio_status{filename + ": " + err};
+  };
+  auto parse_error = [&filename]() {
+    return plyio_status{filename + ": parse error"};
+  };
+  auto read_error = [&filename]() {
+    return plyio_status{filename + ": read error"};
+  };
+
   // prepare properties
   if (values.size() != element.properties.size()) {
     values.resize(element.properties.size());
@@ -1624,20 +1681,19 @@ inline bool read_ply_value_generic(ply_file& fs, ply_format format,
   // read property values
   if (format == ply_format::ascii) {
     char buffer[4096];
-    auto read_error = false;
-    if (!read_ply_line(fs, buffer, sizeof(buffer), read_error)) return false;
+    if (!read_ply_line(fs, buffer, sizeof(buffer))) return error("read error");
     auto str = string_view{buffer};
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop  = element.properties[pidx];
       auto& value = values[pidx];
       auto& list  = lists[pidx];
       if (!prop.is_list) {
-        parse_ply_prop(str, prop.type, value);
+        if(!parse_ply_prop(str, prop.type, value)) return parse_error();
       } else {
-        parse_ply_prop(str, ply_type::u8, value);
+        if(!parse_ply_prop(str, ply_type::u8, value)) return parse_error();
         list.resize((int)value);
         for (auto i = 0; i < (int)value; i++)
-          parse_ply_prop(str, prop.type, list[i]);
+          if(!parse_ply_prop(str, prop.type, list[i])) return parse_error();
       }
     }
   } else {
@@ -1648,36 +1704,36 @@ inline bool read_ply_value_generic(ply_file& fs, ply_format format,
       if (!prop.is_list) {
         if (!read_ply_prop(
                 fs, prop.type, value, format == ply_format::binary_big_endian))
-          return false;
+          return read_error();
       } else {
         if (!read_ply_prop(fs, ply_type::u8, value,
                 format == ply_format::binary_big_endian))
-          return false;
+          return read_error();
         list.resize((int)value);
         for (auto i = 0; i < (int)value; i++)
           if (!read_ply_prop(fs, prop.type, list[i],
                   format == ply_format::binary_big_endian))
-            return false;
+            return read_error();
       }
     }
   }
 
-  return true;
+  return ok();
 }
 
 template <typename VT>
-inline void format_ply_prop(ply_file& fs, ply_type type, VT value) {
+inline bool format_ply_prop(ply_file& fs, ply_type type, VT value) {
   switch (type) {
-    case ply_type::i8: format_ply_value(fs, (int8_t)value); break;
-    case ply_type::i16: format_ply_value(fs, (int16_t)value); break;
-    case ply_type::i32: format_ply_value(fs, (int32_t)value); break;
-    case ply_type::i64: format_ply_value(fs, (int64_t)value); break;
-    case ply_type::u8: format_ply_value(fs, (uint8_t)value); break;
-    case ply_type::u16: format_ply_value(fs, (uint16_t)value); break;
-    case ply_type::u32: format_ply_value(fs, (uint32_t)value); break;
-    case ply_type::u64: format_ply_value(fs, (uint64_t)value); break;
-    case ply_type::f32: format_ply_value(fs, (float)value); break;
-    case ply_type::f64: format_ply_value(fs, (double)value); break;
+    case ply_type::i8: return format_ply_value(fs, (int8_t)value); 
+    case ply_type::i16: return format_ply_value(fs, (int16_t)value); 
+    case ply_type::i32: return format_ply_value(fs, (int32_t)value); 
+    case ply_type::i64: return format_ply_value(fs, (int64_t)value);
+    case ply_type::u8: return format_ply_value(fs, (uint8_t)value); 
+    case ply_type::u16: return format_ply_value(fs, (uint16_t)value); 
+    case ply_type::u32: return format_ply_value(fs, (uint32_t)value); 
+    case ply_type::u64: return format_ply_value(fs, (uint64_t)value);
+    case ply_type::f32: return format_ply_value(fs, (float)value);
+    case ply_type::f64: return format_ply_value(fs, (double)value);
   }
 }
 
@@ -1700,8 +1756,16 @@ inline bool write_ply_prop(
 }
 
 // Write Ply functions
-inline bool write_ply_header(ply_file& fs, ply_format format,
+inline plyio_status write_ply_header(const string& filename, ply_file& fs, ply_format format,
     const vector<ply_element>& elements, const vector<string>& comments) {
+  auto ok    = []() { return plyio_status{}; };
+  // auto error = [&filename](const string& err) {
+  //   return plyio_status{filename + ": " + err};
+  // };
+  auto write_error = [&filename]() {
+    return plyio_status{filename + ": write error"};
+  };
+
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
       {ply_type::i16, "short"}, {ply_type::i32, "int"}, {ply_type::i64, "uint"},
@@ -1709,106 +1773,100 @@ inline bool write_ply_header(ply_file& fs, ply_format format,
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
       {ply_type::f32, "float"}, {ply_type::f64, "double"}};
 
-  auto write_error = [&](ply_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    throw std::runtime_error("cannot parse " + fs.filename);
-    return true;
-  };
-
-  write_ply_text(fs, "ply\n");
+  if(!format_ply_values(fs, "ply\n")) return write_error();
   switch (format) {
-    case ply_format::ascii: write_ply_text(fs, "format ascii 1.0\n"); break;
+    case ply_format::ascii: if(!format_ply_values(fs, "format ascii 1.0\n")) return write_error(); break;
     case ply_format::binary_little_endian:
-      write_ply_text(fs, "format binary_little_endian 1.0\n");
+      if(!format_ply_values(fs, "format binary_little_endian 1.0\n")) return write_error();
       break;
     case ply_format::binary_big_endian:
-      write_ply_text(fs, "format binary_big_endian 1.0\n");
+      if(!format_ply_values(fs, "format binary_big_endian 1.0\n")) return write_error();
       break;
   }
   for (auto& comment : comments)
-    write_ply_text(fs, "comment " + comment + "\n");
+    if(!format_ply_values(fs, "comment " + comment + "\n")) return write_error();
   for (auto& elem : elements) {
-    write_ply_text(
-        fs, "element " + elem.name + " " + std::to_string(elem.count) + "\n");
+    if(!format_ply_values(
+        fs, "element " + elem.name + " " + std::to_string(elem.count) + "\n")) return write_error();
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        write_ply_text(fs, "property list uchar " + type_map[prop.type] + " " +
-                               prop.name + "\n");
+        if(!format_ply_values(fs, "property list uchar " + type_map[prop.type] + " " +
+                               prop.name + "\n")) return write_error();
       } else {
-        write_ply_text(
-            fs, "property " + type_map[prop.type] + " " + prop.name + "\n");
+        if(!format_ply_values(
+            fs, "property " + type_map[prop.type] + " " + prop.name + "\n")) return write_error();
       }
     }
   }
-  write_ply_text(fs, "end_header\n");
+  if(!format_ply_values(fs, "end_header\n")) return write_error();
 
-  if (write_error(fs)) return false;
-
-  return true;
+  return ok();
 }
 
 template <typename VT, typename LT>
-inline bool write_ply_value_generic(ply_file& fs, ply_format format,
+inline plyio_status write_ply_value_generic(const string& filename, ply_file& fs, ply_format format,
     const ply_element& element, vector<VT>& values, vector<vector<LT>>& lists) {
-  auto write_error = [](ply_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    return true;
+  auto ok    = []() { return plyio_status{}; };
+  // auto error = [&filename](const string& err) {
+  //   return plyio_status{filename + ": " + err};
+  // };
+  auto write_error = [&filename]() {
+    return plyio_status{filename + ": write error"};
   };
 
   if (format == ply_format::ascii) {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
-      if (pidx) format_ply_value(fs, " ");
+      if (pidx) if(!format_ply_value(fs, " ")) return write_error();
       if (!prop.is_list) {
-        format_ply_prop(fs, prop.type, values[pidx]);
+        if(!format_ply_prop(fs, prop.type, values[pidx])) return write_error();
       } else {
-        format_ply_prop(fs, ply_type::u8, values[pidx]);
+        if(!format_ply_prop(fs, ply_type::u8, values[pidx])) return write_error();
         for (auto i = 0; i < (int)lists[pidx].size(); i++) {
-          if (i) format_ply_value(fs, " ");
-          format_ply_prop(fs, prop.type, lists[pidx][i]);
+          if (i) if(!format_ply_value(fs, " ")) return write_error();
+          if(!format_ply_prop(fs, prop.type, lists[pidx][i])) return write_error();
         }
       }
-      format_ply_value(fs, "\n");
+      if(!format_ply_value(fs, "\n")) return write_error();
     }
   } else {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
       if (!prop.is_list) {
-        write_ply_prop(fs, prop.type, values[pidx],
-            format == ply_format::binary_big_endian);
+        if(!write_ply_prop(fs, prop.type, values[pidx],
+            format == ply_format::binary_big_endian)) return write_error();
       } else {
-        write_ply_prop(fs, ply_type::u8, values[pidx],
-            format == ply_format::binary_big_endian);
+        if(!write_ply_prop(fs, ply_type::u8, values[pidx],
+            format == ply_format::binary_big_endian)) return write_error();
         for (auto i = 0; i < (int)lists[pidx].size(); i++)
-          write_ply_prop(fs, prop.type, lists[pidx][i],
-              format == ply_format::binary_big_endian);
+          if(!write_ply_prop(fs, prop.type, lists[pidx][i],
+              format == ply_format::binary_big_endian)) return write_error();
       }
     }
   }
-  if (write_error(fs)) return false;
-  return true;
+  return ok();
 }
 
-inline bool write_ply_value(ply_file& fs, ply_format format,
+inline plyio_status write_ply_value(const string& filename, ply_file& fs, ply_format format,
     const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists) {
-  return write_ply_value_generic(fs, format, element, values, lists);
+  return write_ply_value_generic(filename, fs, format, element, values, lists);
 }
-inline bool write_ply_value(ply_file& fs, ply_format format,
+inline plyio_status write_ply_value(const string& filename, ply_file& fs, ply_format format,
     const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists) {
-  return write_ply_value_generic(fs, format, element, values, lists);
+  return write_ply_value_generic(filename, fs, format, element, values, lists);
 }
 
-inline bool read_ply_value(ply_file& fs, ply_format format,
+inline plyio_status read_ply_value(const string& filename, ply_file& fs, ply_format format,
     const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists) {
-  return read_ply_value_generic(fs, format, element, values, lists);
+  return read_ply_value_generic(filename, fs, format, element, values, lists);
 }
-inline bool read_ply_value(ply_file& fs, ply_format format,
+inline plyio_status read_ply_value(const string& filename, ply_file& fs, ply_format format,
     const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists) {
-  return read_ply_value_generic(fs, format, element, values, lists);
+  return read_ply_value_generic(filename, fs, format, element, values, lists);
 }
 
 inline int find_ply_element(

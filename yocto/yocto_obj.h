@@ -387,7 +387,12 @@ inline void close_obj(obj_file& fs) {
 // Read a line
 inline bool read_obj_line(
     obj_file& fs, char* buffer, size_t size) {
-  return fgets(buffer, size, fs.fs) != nullptr;
+  if (fgets(buffer, size, fs.fs)) {
+    fs.linenum += 1;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 // Check for errors
