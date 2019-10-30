@@ -918,6 +918,89 @@ pbrt_value make_pbrt_value(const string& name,
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// SIMPLE GLTF LOADER DECLARATIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+struct gltf_camera {
+  string name   = "";
+  bool   ortho  = false;
+  float  yfov   = 45 * pif / 180;
+  float  aspect = 1;
+};
+struct gltf_texture {
+  string name     = "";
+  string filename = "";
+};
+struct gltf_material {
+  string name            = "";
+  vec3f  emission        = zero3f;
+  int    emission_tex    = -1;
+  int    normal_tex      = -1;
+  bool   has_metalrough  = false;
+  vec4f  mr_base         = zero4f;
+  float  mr_metallic     = 0;
+  float  mr_roughness    = 1;
+  int    mr_base_tex     = -1;
+  int    mr_metallic_tex = -1;
+  bool   has_specgloss   = false;
+  vec4f  sg_diffuse      = zero4f;
+  vec3f  sg_specular     = zero3f;
+  float  sg_glossiness   = 1;
+  int    sg_diffuse_tex  = -1;
+  int    sg_specular_tex = -1;
+};
+struct gltf_primitive {
+  int           material  = -1;
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
+  vector<vec3i> triangles = {};
+  vector<vec2i> lines     = {};
+  vector<int>   points    = {};
+};
+struct gltf_mesh {
+  string                 name       = "";
+  vector<gltf_primitive> primitives = {};
+};
+struct gltf_node {
+  string      name        = "";
+  frame3f     frame       = {};
+  vec3f       translation = zero3f;
+  vec4f       rotation    = vec4f{0, 0, 0, 1};
+  vec3f       scale       = vec3f{1};
+  frame3f     local       = identity3x4f;
+  int         camera      = -1;
+  int         mesh        = -1;
+  int         parent      = -1;
+  vector<int> children    = {};
+};
+struct gltf_scene {
+  string      name  = "";
+  vector<int> nodes = {};
+};
+struct gltf_model {
+  vector<gltf_camera>   cameras   = {};
+  vector<gltf_mesh>     meshes    = {};
+  vector<gltf_texture>  textures  = {};
+  vector<gltf_material> materials = {};
+  vector<gltf_node>     nodes     = {};
+  vector<gltf_scene>    scenes    = {};
+};
+
+// Result of io operations
+struct gltfio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
+gltfio_status load_gltf(const string& filename, gltf_model& gltf);
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION
