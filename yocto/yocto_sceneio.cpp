@@ -735,17 +735,17 @@ bool save_scene(const string& filename, const scene_model& scene, string& error,
 
 bool load_texture(scene_texture& texture, const string& dirname) {
   if (is_hdr_filename(texture.filename)) {
-    return load_image(dirname + texture.filename, texture.hdr);
+    return (bool)load_image(dirname + texture.filename, texture.hdr);
   } else {
-    return load_imageb(dirname + texture.filename, texture.ldr);
+    return (bool)load_imageb(dirname + texture.filename, texture.ldr);
   }
 }
 
 bool save_texture(const scene_texture& texture, const string& dirname) {
   if (!texture.hdr.empty()) {
-    return save_image(dirname + texture.filename, texture.hdr);
+    return (bool)save_image(dirname + texture.filename, texture.hdr);
   } else {
-    return save_imageb(dirname + texture.filename, texture.ldr);
+    return (bool)save_imageb(dirname + texture.filename, texture.ldr);
   }
 }
 
@@ -812,11 +812,11 @@ bool save_textures(const scene_model& scene, const string& dirname,
 
 bool load_shape(scene_shape& shape, const string& dirname) {
   if (!shape.facevarying) {
-    return load_shape(dirname + shape.filename, shape.points, shape.lines,
+    return (bool)load_shape(dirname + shape.filename, shape.points, shape.lines,
         shape.triangles, shape.quads, shape.positions, shape.normals,
         shape.texcoords, shape.colors, shape.radius);
   } else {
-    return load_fvshape(dirname + shape.filename, shape.quadspos,
+    return (bool)load_fvshape(dirname + shape.filename, shape.quadspos,
         shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
         shape.texcoords);
   }
@@ -824,11 +824,11 @@ bool load_shape(scene_shape& shape, const string& dirname) {
 
 bool save_shape(const scene_shape& shape, const string& dirname) {
   if (shape.quadspos.empty()) {
-    return save_shape(dirname + shape.filename, shape.points, shape.lines,
+    return (bool)save_shape(dirname + shape.filename, shape.points, shape.lines,
         shape.triangles, shape.quads, shape.positions, shape.normals,
         shape.texcoords, shape.colors, shape.radius);
   } else {
-    return save_fvshape(dirname + shape.filename, shape.quadspos,
+    return (bool)save_fvshape(dirname + shape.filename, shape.quadspos,
         shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
         shape.texcoords);
   }

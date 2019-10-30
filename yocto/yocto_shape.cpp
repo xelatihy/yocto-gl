@@ -3624,10 +3624,15 @@ static inline string get_extension(const string& filename_) {
 }
 
 // Load ply mesh
-bool load_shape(const string& filename, vector<int>& points,
+shapeio_status load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec4f>& colors, vector<float>& radius, bool flip_texcoord) {
+  auto ok    = []() { return shapeio_status{}; };
+  auto error = [&filename](const string& err) {
+    return shapeio_status{filename + ": " + err};
+  };
+
   points    = {};
   lines     = {};
   triangles = {};
@@ -3642,7 +3647,8 @@ bool load_shape(const string& filename, vector<int>& points,
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply = ply_model{};
-    if (!load_ply(filename, ply)) return false;
+    auto err = ""s;
+    if (!load_ply(filename, ply, err)) return error(err);
 
     // gets vertex
     positions = get_ply_positions(ply);
@@ -3660,19 +3666,20 @@ bool load_shape(const string& filename, vector<int>& points,
     lines  = get_ply_lines(ply);
     points = get_ply_points(ply);
 
-    if (positions.empty()) return false;
-    return true;
+    if (positions.empty()) return error("empty shape");
+    return ok();
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
     auto obj = obj_model();
-    if (!load_obj(filename, obj, true)) return false;
+    auto err = ""s;
+    if (!load_obj(filename, obj, err, true)) return error(err);
 
     // get shape
-    if (obj.shapes.empty()) return true;
-    if (obj.shapes.size() > 1) return false;
+    if (obj.shapes.empty()) return error("empty shape");
+    if (obj.shapes.size() > 1) return error("diffent element types");
     auto& shape = obj.shapes.front();
     if (shape.points.empty() && shape.lines.empty() && shape.faces.empty())
-      return true;
+      return ok();
 
     // decide what to do and get properties
     auto materials  = vector<string>{};
@@ -3691,23 +3698,28 @@ bool load_shape(const string& filename, vector<int>& points,
       get_obj_points(obj, shape, points, positions, normals, texcoords,
           materials, ematerials, flip_texcoord);
     } else {
-      return false;
+      return error("empty shape");
     }
 
-    if (positions.empty()) return false;
-    return true;
+    if (positions.empty()) return error("empty shape");
+    return ok();
   } else {
-    return false;
+    return error("unsupported format");
   }
 }
 
 // Save ply mesh
-bool save_shape(const string& filename, const vector<int>& points,
+shapeio_status save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
     bool flip_texcoord) {
+  auto ok    = []() { return shapeio_status{}; };
+  auto error = [&filename](const string& err) {
+    return shapeio_status{filename + ": " + err};
+  };
+
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
@@ -3720,7 +3732,9 @@ bool save_shape(const string& filename, const vector<int>& points,
     add_ply_faces(ply, triangles, quads);
     add_ply_lines(ply, lines);
     add_ply_points(ply, points);
-    return save_ply(filename, ply);
+    auto err = ""s;
+    if(!save_ply(filename, ply, err)) return error(err);
+    return ok();
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_model{};
     if (!triangles.empty()) {
@@ -3736,19 +3750,27 @@ bool save_shape(const string& filename, const vector<int>& points,
       add_obj_points(obj, "", points, positions, normals, texcoords, {}, {},
           flip_texcoord);
     } else {
-      return false;
+      return error("empty shape");
     }
-    return save_obj(filename, obj);
+    auto err = ""s;
+    if(!save_obj(filename, obj)) return error(err);
+    return ok();
   } else {
-    return false;
+    return error("unsupported format");
+    ;
   }
 }
 
 // Load ply mesh
-bool load_fvshape(const string& filename, vector<vec4i>& quadspos,
+shapeio_status load_fvshape(const string& filename, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool flip_texcoord) {
+  auto ok    = []() { return shapeio_status{}; };
+  auto error = [&filename](const string& err) {
+    return shapeio_status{filename + ": " + err};
+  };
+
   quadspos      = {};
   quadsnorm     = {};
   quadstexcoord = {};
@@ -3759,66 +3781,73 @@ bool load_fvshape(const string& filename, vector<vec4i>& quadspos,
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    if (!load_ply(filename, ply)) return false;
+    auto err = ""s;
+    if (!load_ply(filename, ply, err)) return error(err);
     positions = get_ply_positions(ply);
     normals   = get_ply_normals(ply);
     texcoords = get_ply_texcoords(ply, flip_texcoord);
     quadspos  = get_ply_quads(ply);
     if (!normals.empty()) quadsnorm = quadspos;
     if (!texcoords.empty()) quadstexcoord = quadspos;
-    if (positions.empty()) return false;
-    return true;
+    if (positions.empty()) return error("empty shape");
+    return ok();
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_model();
-    if (!load_obj(filename, obj, true)) return false;
-    if (obj.shapes.empty()) return true;
-    if (obj.shapes.size() > 1) return false;
+    auto err = ""s;
+    if (!load_obj(filename, obj, true)) return error(err);
+    if (obj.shapes.empty()) return error("empty shape");
+    if (obj.shapes.size() > 1) return error("diffent element types");
     auto& shape = obj.shapes.front();
-    if (shape.faces.empty()) return true;
+    if (shape.faces.empty()) return error("empty shape");
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
     get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
-    if (positions.empty()) return false;
-    return true;
+    if (positions.empty()) return error("empty shape");
+    return ok();
   } else {
-    return false;
+    return error("unsupported format");
+    ;
   }
 }
 
 // Save ply mesh
-bool save_fvshape(const string& filename, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, bool ascii, bool flip_texcoord) {
-  try {
-    auto ext = get_extension(filename);
-    if (ext == ".ply" || ext == ".PLY") {
-      auto split_quads         = vector<vec4i>{};
-      auto split_positions     = vector<vec3f>{};
-      auto split_normals       = vector<vec3f>{};
-      auto split_texturecoords = vector<vec2f>{};
-      split_facevarying(split_quads, split_positions, split_normals,
-          split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
-          normals, texcoords);
-      return save_shape(filename, {}, {}, {}, split_quads, split_positions,
-          split_normals, split_texturecoords, {}, {}, ascii, flip_texcoord);
-    } else if (ext == ".obj" || ext == ".OBJ") {
-      // Obj model
-      auto obj = obj_model{};
+shapeio_status save_fvshape(const string& filename,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords, bool ascii,
+    bool flip_texcoord) {
+  auto ok    = []() { return shapeio_status{}; };
+  auto error = [&filename](const string& err) {
+    return shapeio_status{filename + ": " + err};
+  };
 
-      // Add obj data
-      add_obj_fvquads(obj, "", quadspos, quadsnorm, quadstexcoord, positions,
-          normals, texcoords, {}, {}, flip_texcoord);
+  auto ext = get_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto split_quads         = vector<vec4i>{};
+    auto split_positions     = vector<vec3f>{};
+    auto split_normals       = vector<vec3f>{};
+    auto split_texturecoords = vector<vec2f>{};
+    split_facevarying(split_quads, split_positions, split_normals,
+        split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords);
+    return save_shape(filename, {}, {}, {}, split_quads, split_positions,
+        split_normals, split_texturecoords, {}, {}, ascii, flip_texcoord);
+    return ok();
+  } else if (ext == ".obj" || ext == ".OBJ") {
+    // Obj model
+    auto obj = obj_model{};
 
-      // Save
-      save_obj(filename, obj);
-      return true;
-    } else {
-      throw std::runtime_error("unsupported shape type " + ext);
-    }
-  } catch (std::exception& e) {
-    return false;
+    // Add obj data
+    add_obj_fvquads(obj, "", quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords, {}, {}, flip_texcoord);
+
+    // Save
+    auto err = ""s;
+    if (!save_obj(filename, obj, err)) return error(err);
+    return ok();
+  } else {
+    error("unsupported format");
   }
 }
 
