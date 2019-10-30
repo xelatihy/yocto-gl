@@ -1307,6 +1307,7 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
   };
 
   auto fs = open_yaml(filename, "rt");
+  if(fs) return error("file not found");
 
   // read the file line by line
   auto group = ""s;
@@ -1431,52 +1432,52 @@ static inline void format_yaml_value(string& str, const yaml_value& value) {
   }
 }
 
-inline bool save_yaml(
-    const string& filename, const yaml_model& yaml, string& error) {
+inline yamlio_status save_yaml(
+    const string& filename, const yaml_model& yaml) {
+  auto ok    = []() { return yamlio_status{}; };
+  // auto error = [&filename](const string& err) {
+  //   return yamlio_status{filename + ": " + err};
+  // };
+  auto write_error = [&filename]() {
+    return yamlio_status{filename + ": write error"};
+  };
+
   auto fs = open_yaml(filename, "wt");
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
-  auto write_error = [&filename, &error](yaml_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    error = "cannot parse " + filename;
-    return true;
-  };
-
   // save comments
-  format_yaml_values(fs, "#\n");
-  format_yaml_values(fs, "# Written by Yocto/GL\n");
-  format_yaml_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-  format_yaml_values(fs, "#\n\n");
+  if(!format_yaml_values(fs, "#\n")) return write_error();
+  if(!format_yaml_values(fs, "# Written by Yocto/GL\n")) return write_error();
+  if(!format_yaml_values(fs, "# https://github.com/xelatihy/yocto-gl\n")) return write_error();
+  if(!format_yaml_values(fs, "#\n\n")) return write_error();
   for (auto& comment : yaml.comments) {
-    format_yaml_values(fs, "# {}\n", comment);
+    if(!format_yaml_values(fs, "# {}\n", comment)) return write_error();
   }
-  format_yaml_values(fs, "\n");
-  if (write_error(fs)) return false;
+  if(!format_yaml_values(fs, "\n")) return write_error();
 
   auto group = ""s;
   for (auto& element : yaml.elements) {
     if (group != element.name) {
       group = element.name;
       if (group != "") {
-        format_yaml_values(fs, "\n{}:\n", group);
+        if(!format_yaml_values(fs, "\n{}:\n", group)) return write_error();
       } else {
-        format_yaml_values(fs, "\n");
+        if(!format_yaml_values(fs, "\n")) return write_error();
       }
       auto first = true;
       for (auto& [key, value] : element.key_values) {
         if (group != "") {
-          format_yaml_values(
-              fs, "  {} {}: {}\n", first ? "-" : " ", key, value);
+          if(!format_yaml_values(
+              fs, "  {} {}: {}\n", first ? "-" : " ", key, value)) return write_error();
           first = false;
         } else {
-          format_yaml_values(fs, "{}: {}\n", key, value);
+          if(!format_yaml_values(fs, "{}: {}\n", key, value)) return write_error();
         }
       }
     }
-    if (write_error(fs)) return false;
   }
 
-  return true;
+  return ok();
 }
 
 inline yamlio_status read_yaml_property(const string& filename, yaml_file& fs, string& group, string& key,
