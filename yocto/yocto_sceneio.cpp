@@ -3178,7 +3178,7 @@ static bool load_pbrt(const string& filename, scene_model& scene, string& error,
     const load_params& params) {
   // load pbrt
   auto pbrt = pbrt_model{};
-  if (!load_pbrt(filename, pbrt, error)) return false;
+  if (auto ret = load_pbrt(filename, pbrt); !ret) return false;
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
@@ -3389,7 +3389,7 @@ static bool save_pbrt(
     }
   }
 
-  return save_pbrt(filename, pbrt, error);
+  return (bool)save_pbrt(filename, pbrt);
 }
 
 // Save a pbrt scene
