@@ -598,6 +598,112 @@ struct hash<yocto::obj_vertex> {
 }  // namespace std
 
 // -----------------------------------------------------------------------------
+// LOW-LEVEL YAML DECLARATIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::string_view;
+using namespace std::literals::string_view_literals;
+
+// Yaml value type
+enum struct yaml_value_type { number, boolean, string, array };
+
+// Yaml value
+struct yaml_value {
+  yaml_value_type   type    = yaml_value_type::number;
+  double            number  = 0;
+  bool              boolean = false;
+  string            string_ = "";
+  array<double, 16> array_  = {};
+};
+
+// Yaml element
+struct yaml_element {
+  string                           name       = "";
+  vector<pair<string, yaml_value>> key_values = {};
+};
+
+// Yaml model
+struct yaml_model {
+  vector<string>       comments = {};
+  vector<yaml_element> elements = {};
+};
+
+// // Result of io operations
+struct yamlio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
+// Load/save yaml
+yamlio_status load_yaml(const string& filename, yaml_model& yaml);
+yamlio_status save_yaml(const string& filename, const yaml_model& yaml);
+
+// A class that wraps a C file ti handle safe opening/closgin with RIIA.
+struct yaml_file {
+  yaml_file() {}
+  yaml_file(yaml_file&& other);
+  yaml_file(const yaml_file&) = delete;
+  yaml_file& operator=(const yaml_file&) = delete;
+  ~yaml_file();
+
+  operator bool() const { return (bool)fs; }
+
+  FILE*  fs       = nullptr;
+  string filename = "";
+  string mode     = "rt";
+  int    linenum  = 0;
+};
+
+// open a file
+yaml_file open_yaml(const string& filename, const string& mode = "rt");
+void      open_yaml(
+         yaml_file& fs, const string& filename, const string& mode = "rt");
+void close_yaml(yaml_file& fs);
+
+// Load Yaml properties
+yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
+    string& group, string& key, bool& newobj, bool& done, yaml_value& value);
+
+// Write Yaml properties
+yamlio_status write_yaml_comment(
+    const string& filename, yaml_file& fs, const string& comment);
+yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
+    const string& object, const string& key, bool newobj,
+    const yaml_value& value);
+yamlio_status write_yaml_object(
+    const string& filename, yaml_file& fs, const string& object);
+
+// type-cheked yaml value access
+bool get_yaml_value(const yaml_value& yaml, string& value);
+bool get_yaml_value(const yaml_value& yaml, bool& value);
+bool get_yaml_value(const yaml_value& yaml, int& value);
+bool get_yaml_value(const yaml_value& yaml, float& value);
+bool get_yaml_value(const yaml_value& yaml, vec2f& value);
+bool get_yaml_value(const yaml_value& yaml, vec3f& value);
+bool get_yaml_value(const yaml_value& yaml, mat3f& value);
+bool get_yaml_value(const yaml_value& yaml, frame3f& value);
+template <typename T>
+inline bool get_yaml_value(
+    const yaml_element& element, const string& name, const T& value);
+bool has_yaml_value(const yaml_element& element, const string& name);
+
+// yaml value construction
+yaml_value make_yaml_value(const string& value);
+yaml_value make_yaml_value(bool value);
+yaml_value make_yaml_value(int value);
+yaml_value make_yaml_value(float value);
+yaml_value make_yaml_value(const vec2f& value);
+yaml_value make_yaml_value(const vec3f& value);
+yaml_value make_yaml_value(const mat3f& value);
+yaml_value make_yaml_value(const frame3f& value);
+template <typename T>
+inline bool add_yaml_value(
+    yaml_element& element, const string& name, const T& value);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SIMPLE PBRT LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -892,7 +998,7 @@ bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value);
 bool get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value);
 bool get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value);
 template <typename T>
-bool get_pbrt_value(
+inline bool get_pbrt_value(
     const vector<pbrt_value>& pbrt, const string& name, T& value);
 
 // pbrt value construction
@@ -1006,6 +1112,24 @@ gltfio_status load_gltf(const string& filename, gltf_model& gltf);
 // IMPLEMENTATION
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+template <typename T>
+inline bool get_yaml_value(
+    const yaml_element& element, const string& name, T& value) {
+  for (auto& [key, value_] : element.key_values) {
+    if (key == name) return get_yaml_value(value_, value);
+  }
+  return true;
+}
+
+template <typename T>
+inline bool add_yaml_value(
+    yaml_element& element, const string& name, const T& value) {
+  for (auto& [key, value] : element.key_values)
+    if (key == name) return false;
+  element.key_values.push_back({name, make_yaml_value(value)});
+  return true;
+}
 
 template <typename T>
 inline bool get_pbrt_value(
