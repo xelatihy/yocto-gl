@@ -3671,8 +3671,8 @@ shapeio_status load_shape(const string& filename, vector<int>& points,
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
     auto obj = obj_model();
-    auto err = ""s;
-    if (!load_obj(filename, obj, err, true)) return error(err);
+    if (auto ret = load_obj(filename, obj, true); !ret) 
+      return error(ret.error);
 
     // get shape
     if (obj.shapes.empty()) return error("empty shape");
@@ -3833,7 +3833,6 @@ shapeio_status save_fvshape(const string& filename,
         normals, texcoords);
     return save_shape(filename, {}, {}, {}, split_quads, split_positions,
         split_normals, split_texturecoords, {}, {}, ascii, flip_texcoord);
-    return ok();
   } else if (ext == ".obj" || ext == ".OBJ") {
     // Obj model
     auto obj = obj_model{};
@@ -3843,11 +3842,10 @@ shapeio_status save_fvshape(const string& filename,
         normals, texcoords, {}, {}, flip_texcoord);
 
     // Save
-    auto err = ""s;
-    if (!save_obj(filename, obj, err)) return error(err);
+    if (auto ret = save_obj(filename, obj); !ret) return error(ret.error);
     return ok();
   } else {
-    error("unsupported format");
+    return error("unsupported format");
   }
 }
 

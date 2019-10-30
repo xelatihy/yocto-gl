@@ -2131,7 +2131,10 @@ bool load_obj(const string& filename, scene_model& scene, string& error,
     const load_params& params) {
   // load obj
   auto obj = obj_model{};
-  if (!load_obj(filename, obj, error, false, true, true)) return false;
+  if (auto ret = load_obj(filename, obj, false, true, true); !ret) {
+    error = ret.error;
+    return false;
+  }
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
@@ -2410,7 +2413,11 @@ static bool save_obj(const string& filename, const scene_model& scene,
   }
 
   // save obj
-  return save_obj(filename, obj, error);
+  if(auto ret = save_obj(filename, obj); !ret) {
+    error = ret.error;
+    return false;
+  }
+  return true;
 }
 
 static bool save_obj_scene(const string& filename, const scene_model& scene,
