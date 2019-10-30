@@ -28,7 +28,6 @@
 
 #include "yocto_sceneio.h"
 #include "yocto_image.h"
-#include "yocto_pbrt.h"
 #include "yocto_modelio.h"
 #include "yocto_shape.h"
 

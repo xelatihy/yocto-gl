@@ -597,4 +597,344 @@ struct hash<yocto::obj_vertex> {
 
 }  // namespace std
 
+// -----------------------------------------------------------------------------
+// SIMPLE PBRT LOADER AND WRITER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Pbrt value type
+enum struct pbrt_value_type {
+  // clang-format off
+  real, integer, boolean, string, point, normal, vector, texture, color, 
+  point2, vector2, spectrum
+  // clang-format on
+};
+
+// Pbrt value
+struct pbrt_value {
+  string          name     = "";
+  pbrt_value_type type     = pbrt_value_type::real;
+  int             value1i  = 0;
+  float           value1f  = 0;
+  vec2f           value2f  = {0, 0};
+  vec3f           value3f  = {0, 0, 0};
+  bool            value1b  = false;
+  string          value1s  = "";
+  vector<float>   vector1f = {};
+  vector<vec2f>   vector2f = {};
+  vector<vec3f>   vector3f = {};
+  vector<int>     vector1i = {};
+};
+
+// Pbrt camera
+struct pbrt_camera {
+  // camera parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
+  // camera approximation
+  float width    = 0;
+  float height   = 0;
+  float lens     = 0;
+  float aspect   = 0;
+  float focus    = 0;
+  float aperture = 0;
+};
+
+// Pbrt texture
+struct pbrt_texture {
+  // texture parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  // texture approximation
+  vec3f  constant = vec3f{1, 1, 1};
+  string filename = "";
+};
+
+// Pbrt material
+struct pbrt_material {
+  // material parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  // material approximation
+  vec3f  diffuse          = zero3f;
+  vec3f  specular         = zero3f;
+  vec3f  transmission     = zero3f;
+  vec2f  roughness        = zero2f;
+  vec3f  opacity          = vec3f{1};
+  vec3f  eta              = zero3f;
+  vec3f  etak             = zero3f;
+  vec3f  sspecular        = zero3f;  // specular scaled by fresnel
+  string diffuse_map      = "";
+  string specular_map     = "";
+  string transmission_map = "";
+  string roughness_map    = "";
+  string opacity_map      = "";
+  string eta_map          = "";
+  string etak_map         = "";
+  vec3f  volmeanfreepath  = vec3f{0};
+  vec3f  volscatter       = vec3f{0};
+  float  volscale         = 0.01;
+  bool   refract          = false;
+};
+
+// Pbrt medium
+struct pbrt_medium {
+  // medium parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+
+// Pbrt shape
+struct pbrt_shape {
+  // shape parameters
+  string             type            = "";
+  vector<pbrt_value> values          = {};
+  frame3f            frame           = identity3x4f;
+  frame3f            frend           = identity3x4f;
+  string             material        = "";
+  string             arealight       = "";
+  string             interior        = "";
+  string             exterior        = "";
+  bool               is_instanced    = false;
+  vector<frame3f>    instance_frames = {};
+  vector<frame3f>    instance_frends = {};
+  // shape approximation
+  string        filename  = "";
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec3i> triangles = {};
+  float         radius    = 0;  // radius for sphere, cylinder, disk
+};
+
+// Pbrt lights
+struct pbrt_light {
+  // light parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
+  // light approximation
+  vec3f emission = zero3f;
+  vec3f from     = zero3f;
+  vec3f to       = zero3f;
+  bool  distant  = false;
+  // arealight approximation
+  vec3f         area_emission  = zero3f;
+  frame3f       area_frame     = identity3x4f;
+  frame3f       area_frend     = identity3x4f;
+  vector<vec3i> area_triangles = {};
+  vector<vec3f> area_positions = {};
+  vector<vec3f> area_normals   = {};
+};
+struct pbrt_arealight {
+  // arealight parameters
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
+  // arealight approximation
+  vec3f emission = zero3f;
+};
+struct pbrt_environment {
+  // shape parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
+  // environment approximation
+  vec3f  emission = zero3f;
+  string filename = "";
+};
+
+// Other pbrt elements
+struct pbrt_integrator {
+  // integrator parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+struct pbrt_film {
+  // film parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  // film approximation
+  string filename   = "";
+  vec2i  resolution = zero2i;
+};
+struct pbrt_filter {
+  // filter parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+struct pbrt_accelerator {
+  // accelerator parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+struct pbrt_sampler {
+  // sampler parameters
+  string             type   = "";
+  vector<pbrt_value> values = {};
+};
+
+// Pbrt model
+struct pbrt_model {
+  vector<string>           comments     = {};
+  vector<pbrt_camera>      cameras      = {};
+  vector<pbrt_shape>       shapes       = {};
+  vector<pbrt_texture>     textures     = {};
+  vector<pbrt_material>    materials    = {};
+  vector<pbrt_medium>      mediums      = {};
+  vector<pbrt_environment> environments = {};
+  vector<pbrt_arealight>   arealights   = {};
+  vector<pbrt_light>       lights       = {};
+  vector<pbrt_integrator>  integrators  = {};
+  vector<pbrt_film>        films        = {};
+  vector<pbrt_filter>      filters      = {};
+  vector<pbrt_sampler>     samplers     = {};
+  vector<pbrt_accelerator> accelerators = {};
+};
+
+// Result of io operations
+struct pbrtio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
+// Load/save pbrt
+pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt);
+pbrtio_status save_pbrt(const string& filename, const pbrt_model& pbrt);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// LOW-LEVEL INTERFACE
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// A class that wraps a C file ti handle safe opening/closgin with RIIA.
+struct pbrt_file {
+  pbrt_file() {}
+  pbrt_file(pbrt_file&& other);
+  pbrt_file(const pbrt_file&) = delete;
+  pbrt_file& operator=(const pbrt_file&) = delete;
+  ~pbrt_file();
+
+  operator bool() const { return (bool)fs; }
+
+  FILE*  fs       = nullptr;
+  string filename = "";
+  string mode     = "rt";
+  int    linenum  = 0;
+};
+
+// open a file
+pbrt_file open_pbrt(const string& filename, const string& mode = "rt");
+void      open_pbrt(
+         pbrt_file& fs, const string& filename, const string& mode = "rt");
+void close_pbrt(pbrt_file& fs);
+
+// Pbrt command
+enum struct pbrt_command {
+  // clang-format off
+  world_begin, world_end, attribute_begin, attribute_end,
+  transform_begin, transform_end, reverse_orientation,
+  set_transform, concat_transform, lookat_transform,
+  object_instance, object_begin, object_end, include,      
+  sampler, integrator, accelerator, film, filter, camera, shape, light,
+  material, arealight, named_texture, named_medium, named_material,             
+  use_material, medium_interface, active_transform,
+  coordinate_system_set, coordinate_system_transform,
+  error
+  // clang-format on
+};
+
+// Read pbrt commands
+pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs,
+    pbrt_command& command, string& name, string& type, frame3f& xform,
+    vector<pbrt_value>& values);
+pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs,
+    pbrt_command& command, string& name, string& type, frame3f& xform,
+    vector<pbrt_value>& values, string& buffer);
+
+// Write pbrt commands
+pbrtio_status write_pbrt_comment(
+    const string& filename, pbrt_file& fs, const string& comment);
+pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+    pbrt_command command, const string& name, const string& type,
+    const frame3f& xform, const vector<pbrt_value>& values,
+    bool texture_as_float = false);
+pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+    pbrt_command command, const string& name = "",
+    const frame3f& xform = identity3x4f);
+pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+    pbrt_command command, const string& name, const string& type,
+    const vector<pbrt_value>& values, bool texture_as_float = false);
+
+// type-cheked pbrt value access
+bool get_pbrt_value(const pbrt_value& pbrt, string& value);
+bool get_pbrt_value(const pbrt_value& pbrt, bool& value);
+bool get_pbrt_value(const pbrt_value& pbrt, int& value);
+bool get_pbrt_value(const pbrt_value& pbrt, float& value);
+bool get_pbrt_value(const pbrt_value& pbrt, vec2f& value);
+bool get_pbrt_value(const pbrt_value& pbrt, vec3f& value);
+bool get_pbrt_value(const pbrt_value& pbrt, vector<float>& value);
+bool get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& value);
+bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& value);
+bool get_pbrt_value(const pbrt_value& pbrt, vector<int>& value);
+bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value);
+bool get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value);
+bool get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value);
+template <typename T>
+bool get_pbrt_value(
+    const vector<pbrt_value>& pbrt, const string& name, T& value);
+
+// pbrt value construction
+pbrt_value make_pbrt_value(const string& name, const string& value,
+    pbrt_value_type type = pbrt_value_type::string);
+pbrt_value make_pbrt_value(const string& name, bool value,
+    pbrt_value_type type = pbrt_value_type::boolean);
+pbrt_value make_pbrt_value(const string& name, int value,
+    pbrt_value_type type = pbrt_value_type::integer);
+pbrt_value make_pbrt_value(const string& name, float value,
+    pbrt_value_type type = pbrt_value_type::real);
+pbrt_value make_pbrt_value(const string& name, const vec2f& value,
+    pbrt_value_type type = pbrt_value_type::point2);
+pbrt_value make_pbrt_value(const string& name, const vec3f& value,
+    pbrt_value_type type = pbrt_value_type::color);
+pbrt_value make_pbrt_value(const string& name,
+    const vector<vec2f>& value, pbrt_value_type type = pbrt_value_type::point2);
+pbrt_value make_pbrt_value(const string& name,
+    const vector<vec3f>& value, pbrt_value_type type = pbrt_value_type::point);
+pbrt_value make_pbrt_value(const string& name,
+    const vector<vec3i>&                        value,
+    pbrt_value_type type = pbrt_value_type::integer);
+
+}  // namespace yocto
+
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+template <typename T>
+inline bool get_pbrt_value(
+    const vector<pbrt_value>& pbrt, const string& name, T& value) {
+  for (auto& p : pbrt) {
+    if (p.name == name) {
+      return get_pbrt_value(p, value);
+    }
+  }
+  return true;
+}
+
+}
+
 #endif
