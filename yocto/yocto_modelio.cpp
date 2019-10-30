@@ -115,36 +115,36 @@ static string replace_extension(
 namespace yocto {
 
 // copnstrucyor and destructors
-ply_file::ply_file(ply_file&& other) {
+modelio_file::modelio_file(modelio_file&& other) {
   this->fs       = other.fs;
   this->filename = other.filename;
   other.fs       = nullptr;
 }
-ply_file::~ply_file() {
+modelio_file::~modelio_file() {
   if (fs) fclose(fs);
   fs = nullptr;
 }
 
 // Opens a file returing a handle with RIIA
-void open_ply(ply_file& fs, const string& filename, const string& mode) {
-  close_ply(fs);
+void open_file(modelio_file& fs, const string& filename, const string& mode) {
+  close_file(fs);
   fs.filename = filename;
   fs.mode     = mode;
   fs.fs       = fopen(filename.c_str(), mode.c_str());
   if (!fs.fs) throw std::runtime_error("could not open file " + filename);
 }
-ply_file open_ply(const string& filename, const string& mode) {
-  auto fs = ply_file{};
-  open_ply(fs, filename, mode);
+modelio_file open_file(const string& filename, const string& mode) {
+  auto fs = modelio_file{};
+  open_file(fs, filename, mode);
   return fs;
 }
-void close_ply(ply_file& fs) {
+void close_file(modelio_file& fs) {
   if (fs.fs) fclose(fs.fs);
   fs.fs = nullptr;
 }
 
 // Read a line
-bool read_ply_line(ply_file& fs, char* buffer, size_t size) {
+static bool read_line(modelio_file& fs, char* buffer, size_t size) {
   if (fgets(buffer, size, fs.fs)) {
     fs.linenum += 1;
     return true;
@@ -154,7 +154,7 @@ bool read_ply_line(ply_file& fs, char* buffer, size_t size) {
 }
 
 template <typename T>
-static T swap_ply_endian(T value) {
+static T swap_endian(T value) {
   // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
   static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
   union {
@@ -168,25 +168,28 @@ static T swap_ply_endian(T value) {
 }
 
 template <typename T>
-bool write_ply_value(ply_file& fs, const T& value) {
+static bool write_value(modelio_file& fs, const T& value) {
   return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
 }
 template <typename T>
-bool write_ply_value(ply_file& fs, const T& value_, bool big_endian) {
-  auto value = big_endian ? swap_ply_endian(value_) : value_;
+static bool write_value(modelio_file& fs, const T& value_, bool big_endian) {
+  auto value = big_endian ? swap_endian(value_) : value_;
   return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
 }
 
 template <typename T>
-bool read_ply_value(ply_file& fs, T& value) {
+static bool read_value(modelio_file& fs, T& value) {
   return fread(&value, sizeof(value), 1, fs.fs) == 1;
 }
 template <typename T>
-bool read_ply_value(ply_file& fs, T& value, bool big_endian) {
+static bool read_value(modelio_file& fs, T& value, bool big_endian) {
   auto ok = fread(&value, sizeof(value), 1, fs.fs) == 1;
-  if (big_endian) value = swap_ply_endian(value);
+  if (big_endian) value = swap_endian(value);
   return ok;
 }
+
+// Check for errors
+static bool has_error(modelio_file& fs) { return ferror(fs.fs); }
 
 }  // namespace yocto
 
@@ -409,13 +412,13 @@ static void format_ply_values(
 
 template <typename... Args>
 static bool format_ply_values(
-    ply_file& fs, const string& fmt, const Args&... args) {
+    modelio_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_ply_values(str, fmt, args...);
   return fputs(str.c_str(), fs.fs) >= 0;
 }
 template <typename T>
-static bool format_ply_value(ply_file& fs, const T& value) {
+static bool format_ply_value(modelio_file& fs, const T& value) {
   auto str = ""s;
   format_ply_value(str, value);
   return fputs(str.c_str(), fs.fs) >= 0;
@@ -450,12 +453,12 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
   auto end_header = false;
 
   // open file
-  auto fs = open_ply(filename, "rb");
+  auto fs = open_file(filename, "rb");
   if (!fs) return {filename + ": file not found"};
 
   // read header ---------------------------------------------
   char buffer[4096];
-  while (read_ply_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_ply_comment(str);
@@ -557,7 +560,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
   if (ply.format == ply_format::ascii) {
     for (auto& elem : ply.elements) {
       for (auto idx = 0; idx < elem.count; idx++) {
-        if (!read_ply_line(fs, buffer, sizeof(buffer)))
+        if (!read_line(fs, buffer, sizeof(buffer)))
           return {filename + ": read error"};
         auto str = string_view{buffer};
         for (auto& prop : elem.properties) {
@@ -619,59 +622,59 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto& prop : elem.properties) {
           if (prop.is_list) {
-            if (!read_ply_value(fs, prop.ldata_u8.emplace_back(), big_endian))
+            if (!read_value(fs, prop.ldata_u8.emplace_back(), big_endian))
               return {filename + ": read error"};
           }
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_i8.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::i16:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_i16.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::i32:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_i32.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::i64:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_i64.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::u8:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_u8.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::u16:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_u16.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::u32:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_u32.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::u64:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_u64.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::f32:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_f32.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::f64:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_f64.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
@@ -687,7 +690,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
 
 // Save ply
 plyio_status save_ply(const string& filename, const ply_model& ply) {
-  auto fs = open_ply(filename, "wb");
+  auto fs = open_file(filename, "wb");
   if (!fs) return {filename + ": file not found"};
 
   // ply type names
@@ -798,56 +801,56 @@ plyio_status save_ply(const string& filename, const ply_model& ply) {
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
           if (prop.is_list)
-            if (!write_ply_value(fs, prop.ldata_u8[idx], big_endian))
+            if (!write_value(fs, prop.ldata_u8[idx], big_endian))
               return {filename + ": write error"};
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                if (!write_ply_value(fs, prop.data_i8[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_i8[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::i16:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_i16[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::i32:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_i32[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::i64:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_i64[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::u8:
-                if (!write_ply_value(fs, prop.data_u8[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_u8[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::u16:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_u16[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::u32:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_u32[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::u64:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_u64[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::f32:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_f32[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::f64:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_f64[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
@@ -1275,15 +1278,15 @@ void add_ply_points(ply_model& ply, const vector<int>& values) {
 // get ply value either ascii or binary
 template <typename T, typename VT>
 [[nodiscard]] static bool read_ply_prop(
-    ply_file& fs, VT& value, bool big_endian) {
+    modelio_file& fs, VT& value, bool big_endian) {
   auto tvalue = T{};
-  auto ok     = read_ply_value(fs, tvalue, big_endian);
+  auto ok     = read_value(fs, tvalue, big_endian);
   value       = (VT)tvalue;
   return ok;
 }
 template <typename VT>
 [[nodiscard]] static bool read_ply_prop(
-    ply_file& fs, ply_type type, VT& value, bool big_endian) {
+    modelio_file& fs, ply_type type, VT& value, bool big_endian) {
   switch (type) {
     case ply_type::i8: return read_ply_prop<int8_t>(fs, value, big_endian);
     case ply_type::i16: return read_ply_prop<int16_t>(fs, value, big_endian);
@@ -1323,7 +1326,7 @@ static bool parse_ply_prop(string_view& str, ply_type type, VT& value) {
 }
 
 // Load ply data
-plyio_status read_ply_header(const string& filename, ply_file& fs,
+plyio_status read_ply_header(const string& filename, modelio_file& fs,
     ply_format& format, vector<ply_element>& elements,
     vector<string>& comments) {
   // ply type names
@@ -1347,7 +1350,7 @@ plyio_status read_ply_header(const string& filename, ply_file& fs,
 
   // read the file header str by str
   char buffer[4096];
-  while (read_ply_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_ply_comment(str);
@@ -1430,7 +1433,7 @@ plyio_status read_ply_header(const string& filename, ply_file& fs,
 }
 
 template <typename VT, typename LT>
-static plyio_status read_ply_value_generic(const string& filename, ply_file& fs,
+static plyio_status read_ply_value_generic(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<VT>& values,
     vector<vector<LT>>& lists) {
   // prepare properties
@@ -1445,7 +1448,7 @@ static plyio_status read_ply_value_generic(const string& filename, ply_file& fs,
   // read property values
   if (format == ply_format::ascii) {
     char buffer[4096];
-    if (!read_ply_line(fs, buffer, sizeof(buffer)))
+    if (!read_line(fs, buffer, sizeof(buffer)))
       return {filename + ": read error"};
     auto str = string_view{buffer};
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -1490,7 +1493,7 @@ static plyio_status read_ply_value_generic(const string& filename, ply_file& fs,
 }
 
 template <typename VT>
-static bool format_ply_prop(ply_file& fs, ply_type type, VT value) {
+static bool format_ply_prop(modelio_file& fs, ply_type type, VT value) {
   switch (type) {
     case ply_type::i8: return format_ply_value(fs, (int8_t)value);
     case ply_type::i16: return format_ply_value(fs, (int16_t)value);
@@ -1507,24 +1510,24 @@ static bool format_ply_prop(ply_file& fs, ply_type type, VT value) {
 
 template <typename VT>
 static bool write_ply_prop(
-    ply_file& fs, ply_type type, VT value, bool big_endian) {
+    modelio_file& fs, ply_type type, VT value, bool big_endian) {
   switch (type) {
-    case ply_type::i8: return write_ply_value(fs, (int8_t)value, big_endian);
-    case ply_type::i16: return write_ply_value(fs, (int16_t)value, big_endian);
-    case ply_type::i32: return write_ply_value(fs, (int32_t)value, big_endian);
-    case ply_type::i64: return write_ply_value(fs, (int64_t)value, big_endian);
-    case ply_type::u8: return write_ply_value(fs, (uint8_t)value, big_endian);
-    case ply_type::u16: return write_ply_value(fs, (uint16_t)value, big_endian);
-    case ply_type::u32: return write_ply_value(fs, (uint32_t)value, big_endian);
-    case ply_type::u64: return write_ply_value(fs, (uint64_t)value, big_endian);
-    case ply_type::f32: return write_ply_value(fs, (float)value, big_endian);
-    case ply_type::f64: return write_ply_value(fs, (double)value, big_endian);
+    case ply_type::i8: return write_value(fs, (int8_t)value, big_endian);
+    case ply_type::i16: return write_value(fs, (int16_t)value, big_endian);
+    case ply_type::i32: return write_value(fs, (int32_t)value, big_endian);
+    case ply_type::i64: return write_value(fs, (int64_t)value, big_endian);
+    case ply_type::u8: return write_value(fs, (uint8_t)value, big_endian);
+    case ply_type::u16: return write_value(fs, (uint16_t)value, big_endian);
+    case ply_type::u32: return write_value(fs, (uint32_t)value, big_endian);
+    case ply_type::u64: return write_value(fs, (uint64_t)value, big_endian);
+    case ply_type::f32: return write_value(fs, (float)value, big_endian);
+    case ply_type::f64: return write_value(fs, (double)value, big_endian);
     default: return false;
   }
 }
 
 // Write Ply functions
-plyio_status write_ply_header(const string& filename, ply_file& fs,
+plyio_status write_ply_header(const string& filename, modelio_file& fs,
     ply_format format, const vector<ply_element>& elements,
     const vector<string>& comments) {
   // ply type names
@@ -1577,7 +1580,7 @@ plyio_status write_ply_header(const string& filename, ply_file& fs,
 
 template <typename VT, typename LT>
 static plyio_status write_ply_value_generic(const string& filename,
-    ply_file& fs, ply_format format, const ply_element& element,
+    modelio_file& fs, ply_format format, const ply_element& element,
     vector<VT>& values, vector<vector<LT>>& lists) {
   if (format == ply_format::ascii) {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -1620,23 +1623,23 @@ static plyio_status write_ply_value_generic(const string& filename,
   return {};
 }
 
-plyio_status write_ply_value(const string& filename, ply_file& fs,
+plyio_status write_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists) {
   return write_ply_value_generic(filename, fs, format, element, values, lists);
 }
-plyio_status write_ply_value(const string& filename, ply_file& fs,
+plyio_status write_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists) {
   return write_ply_value_generic(filename, fs, format, element, values, lists);
 }
 
-plyio_status read_ply_value(const string& filename, ply_file& fs,
+plyio_status read_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists) {
   return read_ply_value_generic(filename, fs, format, element, values, lists);
 }
-plyio_status read_ply_value(const string& filename, ply_file& fs,
+plyio_status read_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists) {
   return read_ply_value_generic(filename, fs, format, element, values, lists);
@@ -1683,55 +1686,6 @@ vec4i find_ply_property(const ply_element& element, const string& name1,
   if (ids.x < 0 || ids.y < 0 || ids.z < 0 || ids.w < 0) return vec4i{-1};
   return ids;
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// LOW-LEVEL FILE HANDLING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// copnstrucyor and destructors
-obj_file::obj_file(obj_file&& other) {
-  this->fs       = other.fs;
-  this->filename = other.filename;
-  other.fs       = nullptr;
-}
-obj_file::~obj_file() {
-  if (fs) fclose(fs);
-  fs = nullptr;
-}
-
-// Opens a file returing a handle with RIIA
-void open_obj(obj_file& fs, const string& filename, const string& mode) {
-  close_obj(fs);
-  fs.filename = filename;
-  fs.mode     = mode;
-  fs.fs       = fopen(filename.c_str(), mode.c_str());
-  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
-}
-obj_file open_obj(const string& filename, const string& mode) {
-  auto fs = obj_file{};
-  open_obj(fs, filename, mode);
-  return fs;
-}
-void close_obj(obj_file& fs) {
-  if (fs.fs) fclose(fs.fs);
-  fs.fs = nullptr;
-}
-
-// Read a line
-static bool read_obj_line(obj_file& fs, char* buffer, size_t size) {
-  if (fgets(buffer, size, fs.fs)) {
-    fs.linenum += 1;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-// Check for errors
-static bool has_obj_error(obj_file& fs) { return ferror(fs.fs); }
 
 }  // namespace yocto
 
@@ -1961,13 +1915,13 @@ static void format_obj_values(
 
 template <typename... Args>
 static bool format_obj_values(
-    obj_file& fs, const string& fmt, const Args&... args) {
+    modelio_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_obj_values(str, fmt, args...);
   return fputs(str.c_str(), fs.fs) >= 0;
 }
 template <typename T>
-static bool format_obj_value(obj_file& fs, const T& value) {
+static bool format_obj_value(modelio_file& fs, const T& value) {
   auto str = ""s;
   format_obj_value(str, value);
   return fputs(str.c_str(), fs.fs) >= 0;
@@ -2032,7 +1986,7 @@ static bool parse_obj_value(string_view& str, obj_texture_info& info) {
 static objio_status load_mtl(
     const string& filename, obj_model& obj, bool fliptr = true) {
   // open file
-  auto fs = open_obj(filename, "rt");
+  auto fs = open_file(filename, "rt");
   if (!fs) return {filename + ": file not found"};
 
   // init parsing
@@ -2040,7 +1994,7 @@ static objio_status load_mtl(
 
   // read the file str by str
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -2180,7 +2134,7 @@ static objio_status load_mtl(
   }
 
   // check error
-  if (has_obj_error(fs)) return {filename + ": read error"};
+  if (has_error(fs)) return {filename + ": read error"};
 
   // remove placeholder material
   obj.materials.erase(obj.materials.begin());
@@ -2191,7 +2145,7 @@ static objio_status load_mtl(
 // Read obj
 static objio_status load_objx(const string& filename, obj_model& obj) {
   // open file
-  auto fs = open_obj(filename, "rt");
+  auto fs = open_file(filename, "rt");
   if (!fs) return {filename + ": file not found"};
 
   // shape map for instances
@@ -2202,7 +2156,7 @@ static objio_status load_objx(const string& filename, obj_model& obj) {
 
   // read the file str by str
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -2263,7 +2217,7 @@ static objio_status load_objx(const string& filename, obj_model& obj) {
   }
 
   // check error
-  if (has_obj_error(fs)) return {filename + "read error"};
+  if (has_error(fs)) return {filename + "read error"};
 
   return {};
 }
@@ -2272,7 +2226,7 @@ static objio_status load_objx(const string& filename, obj_model& obj) {
 objio_status load_obj(const string& filename, obj_model& obj,
     bool geom_only, bool split_elements, bool split_materials) {
   // open file
-  auto fs = open_obj(filename, "rt");
+  auto fs = open_file(filename, "rt");
   if (!fs) return {filename + ": file not found"};
 
   // parsing state
@@ -2291,7 +2245,7 @@ objio_status load_obj(const string& filename, obj_model& obj,
 
   // read the file str by str
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -2397,7 +2351,7 @@ objio_status load_obj(const string& filename, obj_model& obj,
   }
 
   // check error
-  if (has_obj_error(fs)) return {filename + ": read error"};
+  if (has_error(fs)) return {filename + ": read error"};
 
   // convert vertex data
   auto ipositions = vector<int>{};
@@ -2468,7 +2422,7 @@ static void format_obj_value(string& str, const obj_vertex& value) {
 // Save obj
 static objio_status save_mtl(const string& filename, const obj_model& obj) {
   // open file
-  auto fs = open_obj(filename, "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) return {filename + ": file not found"};
 
   // save comments
@@ -2601,7 +2555,7 @@ static objio_status save_mtl(const string& filename, const obj_model& obj) {
 // Save obj
 static objio_status save_objx(const string& filename, const obj_model& obj) {
   // open file
-  auto fs = open_obj(filename, "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) return {filename + ": file not found"};
 
   // save comments
@@ -2646,7 +2600,7 @@ static objio_status save_objx(const string& filename, const obj_model& obj) {
 // Save obj
 objio_status save_obj(const string& filename, const obj_model& obj) {
   // open file
-  auto fs = open_obj(filename, "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) return {filename + ": file not found"};
 
   // save comments
@@ -3054,12 +3008,12 @@ void add_obj_fvquads(obj_model& obj, const string& name,
 }  // namespace yocto
 
 // Read obj
-objio_status read_obj_command(const string& filename, obj_file& fs,
+objio_status read_obj_command(const string& filename, modelio_file& fs,
     obj_command& command, string& name, vec3f& value,
     vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // read the file str by str
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -3138,13 +3092,13 @@ objio_status read_obj_command(const string& filename, obj_file& fs,
   }
 
   // check error
-  if (has_obj_error(fs)) return {filename + ": read error"};
+  if (has_error(fs)) return {filename + ": read error"};
 
   return {"eof"};
 }
 
 // Read mtl
-objio_status read_mtl_command(const string& filename, obj_file& fs,
+objio_status read_mtl_command(const string& filename, modelio_file& fs,
     mtl_command& command, obj_material& material, bool fliptr) {
   material = {};
 
@@ -3152,7 +3106,7 @@ objio_status read_mtl_command(const string& filename, obj_file& fs,
   auto pos   = ftell(fs.fs);
   auto found = false;
   char buffer[4096];
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -3300,19 +3254,19 @@ objio_status read_mtl_command(const string& filename, obj_file& fs,
   }
 
   // check error
-  if (has_obj_error(fs)) return {filename + "read error"};
+  if (has_error(fs)) return {filename + "read error"};
 
   return {"eof"};
 }
 
 // Read objx
-objio_status read_objx_command(const string& filename, obj_file& fs,
+objio_status read_objx_command(const string& filename, modelio_file& fs,
     objx_command& command, obj_camera& camera, obj_environment& environment,
     obj_instance& instance) {
   // read the file str by str
   char buffer[4096];
   auto found = false;
-  while (read_obj_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -3368,7 +3322,7 @@ objio_status read_objx_command(const string& filename, obj_file& fs,
   if (found) return {};
 
   // check error
-  if (has_obj_error(fs)) return {filename + ": read error"};
+  if (has_error(fs)) return {filename + ": read error"};
 
   return {"eof"};
 }
@@ -3386,7 +3340,7 @@ static vector<string> split_obj_string(const string& str, const string& delim) {
 
 // Write obj elements
 objio_status write_obj_comment(
-    const string& filename, obj_file& fs, const string& comment) {
+    const string& filename, modelio_file& fs, const string& comment) {
   auto lines = split_obj_string(comment, "\n");
   for (auto& str : lines) {
     if (!format_obj_values(fs, "# {}\n", str))
@@ -3396,7 +3350,7 @@ objio_status write_obj_comment(
   return {};
 }
 
-objio_status write_obj_command(const string& filename, obj_file& fs,
+objio_status write_obj_command(const string& filename, modelio_file& fs,
     obj_command command, const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices) {
   switch (command) {
@@ -3453,7 +3407,7 @@ objio_status write_obj_command(const string& filename, obj_file& fs,
   return {};
 }
 
-static objio_status write_mtl_command(const string& filename, obj_file& fs,
+static objio_status write_mtl_command(const string& filename, modelio_file& fs,
     mtl_command command, const obj_material& material) {
   // write material
   switch (command) {
@@ -3572,7 +3526,7 @@ static objio_status write_mtl_command(const string& filename, obj_file& fs,
   return {};
 }
 
-objio_status write_objx_command(const string& filename, obj_file& fs,
+objio_status write_objx_command(const string& filename, modelio_file& fs,
     objx_command command, const obj_camera& camera,
     const obj_environment& environment, const obj_instance& instance) {
   switch (command) {
@@ -3685,56 +3639,6 @@ static bool exists_pbrt_file(const string& filename) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// LOW-LEVEL FILE HANDLING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// copnstrucyor and destructors
-pbrt_file ::pbrt_file(pbrt_file&& other) {
-  this->fs       = other.fs;
-  this->filename = other.filename;
-  other.fs       = nullptr;
-}
-pbrt_file ::~pbrt_file() {
-  if (fs) fclose(fs);
-  fs = nullptr;
-}
-
-// Opens a file returing a handle with RIIA
-void open_pbrt(
-    pbrt_file& fs, const string& filename, const string& mode) {
-  close_pbrt(fs);
-  fs.filename = filename;
-  fs.mode     = mode;
-  fs.fs       = fopen(filename.c_str(), mode.c_str());
-  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
-}
-pbrt_file open_pbrt(const string& filename, const string& mode) {
-  auto fs = pbrt_file{};
-  open_pbrt(fs, filename, mode);
-  return fs;
-}
-void close_pbrt(pbrt_file& fs) {
-  if (fs.fs) fclose(fs.fs);
-  fs.fs = nullptr;
-}
-
-// Read a line
-static bool read_pbrt_line(pbrt_file& fs, char* buffer, size_t size) {
-  if (fgets(buffer, size, fs.fs)) {
-    fs.linenum += 1;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-// Check for errors
-static bool has_pbrt_error(pbrt_file& fs) { return ferror(fs.fs); }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -3763,12 +3667,12 @@ static void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 }
 
 // Read a pbrt command from file
-static bool read_pbrt_cmdline(pbrt_file& fs, string& cmd, int& line_num) {
+static bool read_pbrt_cmdline(modelio_file& fs, string& cmd, int& line_num) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
   auto pos   = ftell(fs.fs);
-  while (read_pbrt_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     line_num += 1;
     auto line = string_view{buffer};
@@ -3861,13 +3765,13 @@ static void format_pbrt_values(
 
 template <typename... Args>
 static bool format_pbrt_values(
-    pbrt_file& fs, const string& fmt, const Args&... args) {
+    modelio_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_pbrt_values(str, fmt, args...);
   return fputs(str.c_str(), fs.fs) >= 0;
 }
 template <typename T>
-static bool format_pbrt_value(pbrt_file& fs, const T& value) {
+static bool format_pbrt_value(modelio_file& fs, const T& value) {
   auto str = ""s;
   format_pbrt_value(str, value);
   return fputs(str.c_str(), fs.fs) >= 0;
@@ -4942,8 +4846,8 @@ struct pbrt_context {
 
 // load pbrt
 pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
-  auto files = vector<pbrt_file>{};
-  open_pbrt(files.emplace_back(), filename);
+  auto files = vector<modelio_file>{};
+  open_file(files.emplace_back(), filename);
   if (!files.back()) return {filename + ": file not found"};
 
   // parser state
@@ -5206,14 +5110,14 @@ pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
         auto includename = ""s;
         if (!parse_pbrt_param(str, includename))
           return {filename + ": parse error"};
-        open_pbrt(
+        open_file(
             files.emplace_back(), get_pbrt_dirname(filename) + includename);
         if (!files.back()) return {filename + ": file not found"};
       } else {
         return {filename + ": unknown command " + cmd};
       }
     }
-    if (has_pbrt_error(files.back())) return {filename + ": read error"};
+    if (has_error(files.back())) return {filename + ": read error"};
     files.pop_back();
   }
 
@@ -5318,7 +5222,7 @@ static  void format_pbrt_value(
 }
 
 pbrtio_status save_pbrt(const string& filename, const pbrt_model& pbrt) {
-  auto fs = open_pbrt(filename, "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) return {filename + ": file not found"};
 
   // save comments
@@ -5585,7 +5489,7 @@ pbrtio_status save_pbrt(const string& filename, const pbrt_model& pbrt) {
 }
 
 // Read pbrt commands
-pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status read_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values, string& line) {
   // parse command by command
@@ -5771,11 +5675,11 @@ pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs,
     }
   }
 
-  if (has_pbrt_error(fs)) return {filename + ": read error"};
+  if (has_error(fs)) return {filename + ": read error"};
 
   return {"eof"};
 }
-pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status read_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values) {
   auto command_buffer = ""s;
@@ -5797,7 +5701,7 @@ vector<string> split_pbrt_string(
 
 // Write obj elements
 pbrtio_status write_pbrt_comment(
-    const string& filename, pbrt_file& fs, const string& comment) {
+    const string& filename, modelio_file& fs, const string& comment) {
   auto lines = split_pbrt_string(comment, "\n");
   for (auto& line : lines) {
     if (!format_pbrt_values(fs, "# {}\n", line))
@@ -5808,7 +5712,7 @@ pbrtio_status write_pbrt_comment(
 }
 
 bool write_pbrt_values(
-    const string& filename, pbrt_file& fs, const vector<pbrt_value>& values) {
+    const string& filename, modelio_file& fs, const vector<pbrt_value>& values) {
   static auto type_labels = unordered_map<pbrt_value_type, string>{
       {pbrt_value_type::real, "float"},
       {pbrt_value_type::integer, "integer"},
@@ -5824,7 +5728,7 @@ bool write_pbrt_values(
       {pbrt_value_type::spectrum, "spectrum"},
   };
 
-  auto write_error = [](pbrt_file& fs) {
+  auto write_error = [](modelio_file& fs) {
     if (!ferror(fs.fs)) return false;
     return true;
   };
@@ -5896,7 +5800,7 @@ bool write_pbrt_values(
   return true;
 }
 
-pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command command, const string& name, const string& type,
     const frame3f& xform, const vector<pbrt_value>& values,
     bool texture_float) {
@@ -6054,11 +5958,11 @@ pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
   return {};
 }
 
-pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command command, const string& name, const frame3f& xform) {
   return write_pbrt_command(filename, fs, command, name, "", xform, {});
 }
-pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command command, const string& name, const string& type,
     const vector<pbrt_value>& values, bool texture_as_float) {
   return write_pbrt_command(filename, fs, command, name, type, identity3x4f,
@@ -6905,49 +6809,6 @@ gltfio_status load_gltf(const string& filename, gltf_model& scene) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// copnstrucyor and destructors
-yaml_file::yaml_file(yaml_file&& other) {
-  this->fs       = other.fs;
-  this->filename = other.filename;
-  other.fs       = nullptr;
-}
-yaml_file::~yaml_file() {
-  if (fs) fclose(fs);
-  fs = nullptr;
-}
-
-// Opens a file returing a handle with RIIA
-void open_yaml(
-    yaml_file& fs, const string& filename, const string& mode) {
-  close_yaml(fs);
-  fs.filename = filename;
-  fs.mode     = mode;
-  fs.fs       = fopen(filename.c_str(), mode.c_str());
-  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
-}
-yaml_file open_yaml(const string& filename, const string& mode) {
-  auto fs = yaml_file{};
-  open_yaml(fs, filename, mode);
-  return fs;
-}
-void close_yaml(yaml_file& fs) {
-  if (fs.fs) fclose(fs.fs);
-  fs.fs = nullptr;
-}
-
-// Read a line
-static bool read_yaml_line(yaml_file& fs, char* buffer, size_t size) {
-  if (fgets(buffer, size, fs.fs)) {
-    fs.linenum += 1;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-// Check for errors
-static bool has_yaml_error(yaml_file& fs) { return ferror(fs.fs); }
-
 static  bool is_yaml_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
@@ -7184,7 +7045,7 @@ static bool parse_yaml_value(string_view& str, yaml_value& value) {
 
 // Load/save yaml
 yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
-  auto fs = open_yaml(filename, "rt");
+  auto fs = open_file(filename, "rt");
   if (!fs) return {filename + ": file not found"};
 
   // read the file line by line
@@ -7192,7 +7053,7 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
   auto key   = ""s;
   auto value = yaml_value{};
   char buffer[4096];
-  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_yaml_comment(line);
@@ -7276,13 +7137,13 @@ static  void format_yaml_values(
 
 template <typename... Args>
 static  bool format_yaml_values(
-    yaml_file& fs, const string& fmt, const Args&... args) {
+    modelio_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_yaml_values(str, fmt, args...);
   return fputs(str.c_str(), fs.fs) >= 0;
 }
 template <typename T>
-static  bool format_yaml_value(yaml_file& fs, const T& value) {
+static  bool format_yaml_value(modelio_file& fs, const T& value) {
   auto str = ""s;
   format_yaml_value(str, value);
   return fputs(str.c_str(), fs.fs) >= 0;
@@ -7313,7 +7174,7 @@ static  void format_yaml_value(string& str, const yaml_value& value) {
 }
 
 yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
-  auto fs = open_yaml(filename, "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
   // save comments
@@ -7357,11 +7218,11 @@ yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
   return {};
 }
 
-yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
+yamlio_status read_yaml_property(const string& filename, modelio_file& fs,
     string& group, string& key, bool& newobj, bool& done, yaml_value& value) {
   // read the file line by line
   char buffer[4096];
-  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_yaml_comment(str);
@@ -7409,7 +7270,7 @@ yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
     }
   }
 
-  if (has_yaml_error(fs)) return {filename + ": read error"};
+  if (has_error(fs)) return {filename + ": read error"};
 
   done = true;
   return {};
@@ -7428,7 +7289,7 @@ static  vector<string> split_yaml_string(
 }
 
 yamlio_status write_yaml_comment(
-    const string& filename, yaml_file& fs, const string& comment) {
+    const string& filename, modelio_file& fs, const string& comment) {
   auto lines = split_yaml_string(comment, "\n");
   for (auto& line : lines) {
     if (!format_yaml_values(fs, "# {}\n", line))
@@ -7440,7 +7301,7 @@ yamlio_status write_yaml_comment(
 }
 
 // Save yaml property
-yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
+yamlio_status write_yaml_property(const string& filename, modelio_file& fs,
     const string& object, const string& key, bool newobj,
     const yaml_value& value) {
   if (key.empty()) {
@@ -7461,7 +7322,7 @@ yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
 }
 
 yamlio_status write_yaml_object(
-    const string& filename, yaml_file& fs, const string& object) {
+    const string& filename, modelio_file& fs, const string& object) {
   if (!format_yaml_values(fs, "\n{}:\n", object))
     return {filename + ": write error"};
   return {};

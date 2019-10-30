@@ -97,6 +97,35 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// A class that wraps a C file ti handle safe opening/closgin with RIIA.
+struct modelio_file {
+  modelio_file() {}
+  modelio_file(modelio_file&& other);
+  modelio_file(const modelio_file&) = delete;
+  modelio_file& operator=(const modelio_file&) = delete;
+  ~modelio_file();
+
+  operator bool() const { return (bool)fs; }
+
+  FILE*  fs       = nullptr;
+  string filename = "";
+  string mode     = "rt";
+  int    linenum  = 0;
+};
+
+// open a file
+modelio_file open_file(const string& filename, const string& mode = "rt");
+void     open_file(
+        modelio_file& fs, const string& filename, const string& mode = "rt");
+void close_file(modelio_file& fs);
+
+}
+
+// -----------------------------------------------------------------------------
+// SIMPLE PLY LOADER AND WRITER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // Type of ply file. For best performance, choose binary_little_endian when
 // writing ply files.
 enum struct ply_format { ascii, binary_little_endian, binary_big_endian };
@@ -240,47 +269,25 @@ void add_ply_points(ply_model& ply, const vector<int>& values);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// A class that wraps a C file ti handle safe opening/closgin with RIIA.
-struct ply_file {
-  ply_file() {}
-  ply_file(ply_file&& other);
-  ply_file(const ply_file&) = delete;
-  ply_file& operator=(const ply_file&) = delete;
-  ~ply_file();
-
-  operator bool() const { return (bool)fs; }
-
-  FILE*  fs       = nullptr;
-  string filename = "";
-  string mode     = "rt";
-  int    linenum  = 0;
-};
-
-// open a file
-ply_file open_ply(const string& filename, const string& mode = "rt");
-void     open_ply(
-        ply_file& fs, const string& filename, const string& mode = "rt");
-void close_ply(ply_file& fs);
-
 // Read Ply functions
-plyio_status read_ply_header(const string& filename, ply_file& fs,
+plyio_status read_ply_header(const string& filename, modelio_file& fs,
     ply_format& format, vector<ply_element>& elements,
     vector<string>& comments);
-plyio_status read_ply_value(const string& filename, ply_file& fs,
+plyio_status read_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists);
-plyio_status read_ply_value(const string& filename, ply_file& fs,
+plyio_status read_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists);
 
 // Write Ply functions
-plyio_status write_ply_header(const string& filename, ply_file& fs,
+plyio_status write_ply_header(const string& filename, modelio_file& fs,
     ply_format format, const vector<ply_element>& elements,
     const vector<string>& comments);
-plyio_status write_ply_value(const string& filename, ply_file& fs,
+plyio_status write_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists);
-plyio_status write_ply_value(const string& filename, ply_file& fs,
+plyio_status write_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists);
 
@@ -511,28 +518,6 @@ void add_obj_fvquads(obj_model& obj, const string& name,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// A class that wraps a C file ti handle safe opening/closgin with RIIA.
-struct obj_file {
-  obj_file() {}
-  obj_file(obj_file&& other);
-  obj_file(const obj_file&) = delete;
-  obj_file& operator=(const obj_file&) = delete;
-  ~obj_file();
-
-  operator bool() const { return (bool)fs; }
-
-  FILE*  fs       = nullptr;
-  string filename = "";
-  string mode     = "rt";
-  int    linenum  = 0;
-};
-
-// open a file
-obj_file open_obj(const string& filename, const string& mode = "rt");
-void     open_obj(
-        obj_file& fs, const string& filename, const string& mode = "rt");
-void close_obj(obj_file& fs);
-
 // Obj/Mtl/Objx command
 enum struct obj_command {
   // clang-format off
@@ -553,25 +538,25 @@ struct obj_instance {
 };
 
 // Read obj/mtl/objx elements
-objio_status read_obj_command(const string& filename, obj_file& fs,
+objio_status read_obj_command(const string& filename, modelio_file& fs,
     obj_command& command, string& name, vec3f& value,
     vector<obj_vertex>& vertices, obj_vertex& vert_size);
-objio_status read_mtl_command(const string& filename, obj_file& fs,
+objio_status read_mtl_command(const string& filename, modelio_file& fs,
     mtl_command& command, obj_material& material, bool fliptr = true);
-objio_status read_objx_command(const string& filename, obj_file& fs,
+objio_status read_objx_command(const string& filename, modelio_file& fs,
     objx_command& command, obj_camera& camera, obj_environment& environment,
     obj_instance& instance);
 
 // Write obj/mtl/objx elements
 objio_status write_obj_comment(
-    const string& filename, obj_file& fs, const string& comment);
-objio_status write_obj_command(const string& filename, obj_file& fs,
+    const string& filename, modelio_file& fs, const string& comment);
+objio_status write_obj_command(const string& filename, modelio_file& fs,
     obj_command command, const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices = {});
-objio_status write_mtl_command(const string& filename, obj_file& fs,
+objio_status write_mtl_command(const string& filename, modelio_file& fs,
     mtl_command command, obj_material& material,
     const obj_texture_info& texture = {});
-objio_status write_objx_command(const string& filename, obj_file& fs,
+objio_status write_objx_command(const string& filename, modelio_file& fs,
     objx_command command, const obj_camera& camera,
     const obj_environment& environment, const obj_instance& instance);
 
@@ -639,40 +624,18 @@ struct yamlio_status {
 yamlio_status load_yaml(const string& filename, yaml_model& yaml);
 yamlio_status save_yaml(const string& filename, const yaml_model& yaml);
 
-// A class that wraps a C file ti handle safe opening/closgin with RIIA.
-struct yaml_file {
-  yaml_file() {}
-  yaml_file(yaml_file&& other);
-  yaml_file(const yaml_file&) = delete;
-  yaml_file& operator=(const yaml_file&) = delete;
-  ~yaml_file();
-
-  operator bool() const { return (bool)fs; }
-
-  FILE*  fs       = nullptr;
-  string filename = "";
-  string mode     = "rt";
-  int    linenum  = 0;
-};
-
-// open a file
-yaml_file open_yaml(const string& filename, const string& mode = "rt");
-void      open_yaml(
-         yaml_file& fs, const string& filename, const string& mode = "rt");
-void close_yaml(yaml_file& fs);
-
 // Load Yaml properties
-yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
+yamlio_status read_yaml_property(const string& filename, modelio_file& fs,
     string& group, string& key, bool& newobj, bool& done, yaml_value& value);
 
 // Write Yaml properties
 yamlio_status write_yaml_comment(
-    const string& filename, yaml_file& fs, const string& comment);
-yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
+    const string& filename, modelio_file& fs, const string& comment);
+yamlio_status write_yaml_property(const string& filename, modelio_file& fs,
     const string& object, const string& key, bool newobj,
     const yaml_value& value);
 yamlio_status write_yaml_object(
-    const string& filename, yaml_file& fs, const string& object);
+    const string& filename, modelio_file& fs, const string& object);
 
 // type-cheked yaml value access
 bool get_yaml_value(const yaml_value& yaml, string& value);
@@ -924,28 +887,6 @@ pbrtio_status save_pbrt(const string& filename, const pbrt_model& pbrt);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// A class that wraps a C file ti handle safe opening/closgin with RIIA.
-struct pbrt_file {
-  pbrt_file() {}
-  pbrt_file(pbrt_file&& other);
-  pbrt_file(const pbrt_file&) = delete;
-  pbrt_file& operator=(const pbrt_file&) = delete;
-  ~pbrt_file();
-
-  operator bool() const { return (bool)fs; }
-
-  FILE*  fs       = nullptr;
-  string filename = "";
-  string mode     = "rt";
-  int    linenum  = 0;
-};
-
-// open a file
-pbrt_file open_pbrt(const string& filename, const string& mode = "rt");
-void      open_pbrt(
-         pbrt_file& fs, const string& filename, const string& mode = "rt");
-void close_pbrt(pbrt_file& fs);
-
 // Pbrt command
 enum struct pbrt_command {
   // clang-format off
@@ -962,24 +903,24 @@ enum struct pbrt_command {
 };
 
 // Read pbrt commands
-pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status read_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values);
-pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status read_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values, string& buffer);
 
 // Write pbrt commands
 pbrtio_status write_pbrt_comment(
-    const string& filename, pbrt_file& fs, const string& comment);
-pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+    const string& filename, modelio_file& fs, const string& comment);
+pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command command, const string& name, const string& type,
     const frame3f& xform, const vector<pbrt_value>& values,
     bool texture_as_float = false);
-pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command command, const string& name = "",
     const frame3f& xform = identity3x4f);
-pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command command, const string& name, const string& type,
     const vector<pbrt_value>& values, bool texture_as_float = false);
 

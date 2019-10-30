@@ -1207,7 +1207,7 @@ static sceneio_status save_yaml(const string& filename,
     const scene_model& scene, bool ply_instances = false,
     const string& instances_name = "") {
   // open file
-  auto fs = open_yaml(filename, "w");
+  auto fs = open_file(filename, "w");
   if (!fs) return {filename + ": file not found"};
 
   // write_yaml_comment(fs, get_save_scene_message(scene, ""));
