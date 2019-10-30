@@ -83,9 +83,9 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::list<app_state>         states;
-  int                          selected = -1;
-  std::list<app_state>         loading;
+  std::list<app_state>                   states;
+  int                                    selected = -1;
+  std::list<app_state>                   loading;
   std::list<std::future<sceneio_status>> loaders;
 
   // get image
@@ -255,22 +255,23 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.trace_prms   = app.trace_prms;
   app.tonemap_prms = app.tonemap_prms;
   app.add_skyenv   = app.add_skyenv;
-  apps.loaders.push_back(std::async(std::launch::async, [&app]() -> sceneio_status {
-    if (auto ret = load_scene(app.filename, app.ioscene); !ret) return ret;
-    app.trscene = make_trace_scene(app.ioscene);
-    init_bvh(app.trscene, app.trace_prms);
-    init_lights(app.trscene);
-    if (app.trscene.lights.empty() && is_sampler_lit(app.trace_prms)) {
-      app.trace_prms.sampler = trace_sampler_type::eyelight;
-    }
-    app.state = make_state(app.trscene, app.trace_prms);
-    app.render.resize(app.state.size());
-    app.display.resize(app.state.size());
-    app.name = get_filename(app.filename) + " [" +
-               std::to_string(app.render.size().x) + "x" +
-               std::to_string(app.render.size().y) + " @ 0]";
-    return {};
-  }));
+  apps.loaders.push_back(
+      std::async(std::launch::async, [&app]() -> sceneio_status {
+        if (auto ret = load_scene(app.filename, app.ioscene); !ret) return ret;
+        app.trscene = make_trace_scene(app.ioscene);
+        init_bvh(app.trscene, app.trace_prms);
+        init_lights(app.trscene);
+        if (app.trscene.lights.empty() && is_sampler_lit(app.trace_prms)) {
+          app.trace_prms.sampler = trace_sampler_type::eyelight;
+        }
+        app.state = make_state(app.trscene, app.trace_prms);
+        app.render.resize(app.state.size());
+        app.display.resize(app.state.size());
+        app.name = get_filename(app.filename) + " [" +
+                   std::to_string(app.render.size().x) + "x" +
+                   std::to_string(app.render.size().y) + " @ 0]";
+        return {};
+      }));
 }
 
 bool draw_glwidgets_camera(const opengl_window& win, app_state& app, int id) {
@@ -467,8 +468,8 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
-    auto& app       = apps.get_selected();
-    app.outname     = save_path;
+    auto& app   = apps.get_selected();
+    app.outname = save_path;
     if (auto ret = save_scene(app.outname, app.ioscene); !ret) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);

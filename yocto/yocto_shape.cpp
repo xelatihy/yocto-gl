@@ -3670,8 +3670,7 @@ shapeio_status load_shape(const string& filename, vector<int>& points,
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
     auto obj = obj_model();
-    if (auto ret = load_obj(filename, obj, true); !ret) 
-      return error(ret.error);
+    if (auto ret = load_obj(filename, obj, true); !ret) return error(ret.error);
 
     // get shape
     if (obj.shapes.empty()) return error("empty shape");
@@ -3731,7 +3730,7 @@ shapeio_status save_shape(const string& filename, const vector<int>& points,
     add_ply_faces(ply, triangles, quads);
     add_ply_lines(ply, lines);
     add_ply_points(ply, points);
-    if(auto ret = save_ply(filename, ply); !ret) return error(ret.error);
+    if (auto ret = save_ply(filename, ply); !ret) return error(ret.error);
     return ok();
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_model{};
@@ -3751,7 +3750,7 @@ shapeio_status save_shape(const string& filename, const vector<int>& points,
       return error("empty shape");
     }
     auto err = ""s;
-    if(!save_obj(filename, obj)) return error(err);
+    if (!save_obj(filename, obj)) return error(err);
     return ok();
   } else {
     return error("unsupported format");

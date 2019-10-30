@@ -266,8 +266,8 @@ struct sceneio_status {
 };
 
 // Load/save a scene in the supported formats.
-sceneio_status load_scene(const string& filename, scene_model& scene, 
-    const load_params& params = {});
+sceneio_status load_scene(
+    const string& filename, scene_model& scene, const load_params& params = {});
 sceneio_status save_scene(const string& filename, const scene_model& scene,
     const save_params& params = {});
 

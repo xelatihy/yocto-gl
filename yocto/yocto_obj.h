@@ -860,7 +860,7 @@ inline objio_status load_mtl(
 inline objio_status load_objx(const string& filename, obj_model& obj) {
   // open file
   auto fs = open_obj(filename, "rt");
-  if (!fs) return {filename +": file not found"};
+  if (!fs) return {filename + ": file not found"};
 
   // shape map for instances
   auto shape_map = unordered_map<string, vector<int>>{};
@@ -1141,12 +1141,14 @@ inline objio_status save_mtl(const string& filename, const obj_model& obj) {
 
   // save comments
   if (!format_obj_values(fs, "#\n")) return {filename + ": write error"};
-  if (!format_obj_values(fs, "# Written by Yocto/GL\n")) return {filename + ": write error"};
+  if (!format_obj_values(fs, "# Written by Yocto/GL\n"))
+    return {filename + ": write error"};
   if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return {filename + ": write error"};
   if (!format_obj_values(fs, "#\n\n")) return {filename + ": write error"};
   for (auto& comment : obj.comments) {
-    if (!format_obj_values(fs, "# {}\n", comment)) return {filename + ": write error"};
+    if (!format_obj_values(fs, "# {}\n", comment))
+      return {filename + ": write error"};
   }
   if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
 
@@ -1272,12 +1274,14 @@ inline objio_status save_objx(const string& filename, const obj_model& obj) {
 
   // save comments
   if (!format_obj_values(fs, "#\n")) return {filename + ": write error"};
-  if (!format_obj_values(fs, "# Written by Yocto/GL\n")) return {filename + ": write error"};
+  if (!format_obj_values(fs, "# Written by Yocto/GL\n"))
+    return {filename + ": write error"};
   if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return {filename + ": write error"};
   if (!format_obj_values(fs, "#\n\n")) return {filename + ": write error"};
   for (auto& comment : obj.comments) {
-    if (!format_obj_values(fs, "# {}\n", comment)) return {filename + ": write error"};
+    if (!format_obj_values(fs, "# {}\n", comment))
+      return {filename + ": write error"};
   }
   if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
 
@@ -1315,12 +1319,14 @@ inline objio_status save_obj(const string& filename, const obj_model& obj) {
 
   // save comments
   if (!format_obj_values(fs, "#\n")) return {filename + ": write error"};
-  if (!format_obj_values(fs, "# Written by Yocto/GL\n")) return {filename + ": write error"};
+  if (!format_obj_values(fs, "# Written by Yocto/GL\n"))
+    return {filename + ": write error"};
   if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return {filename + ": write error"};
   if (!format_obj_values(fs, "#\n\n")) return {filename + ": write error"};
   for (auto& comment : obj.comments) {
-    if (!format_obj_values(fs, "# {}\n", comment)) return {filename + ": write error"};
+    if (!format_obj_values(fs, "# {}\n", comment))
+      return {filename + ": write error"};
   }
   if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
 
@@ -1333,13 +1339,17 @@ inline objio_status save_obj(const string& filename, const obj_model& obj) {
   // save objects
   auto vert_size = obj_vertex{0, 0, 0};
   for (auto& shape : obj.shapes) {
-    if (!format_obj_values(fs, "o {}\n", shape.name)) return {filename + ": write error"};
+    if (!format_obj_values(fs, "o {}\n", shape.name))
+      return {filename + ": write error"};
     for (auto& p : shape.positions)
-      if (!format_obj_values(fs, "v {}\n", p)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "v {}\n", p))
+        return {filename + ": write error"};
     for (auto& n : shape.normals)
-      if (!format_obj_values(fs, "vn {}\n", n)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "vn {}\n", n))
+        return {filename + ": write error"};
     for (auto& t : shape.texcoords)
-      if (!format_obj_values(fs, "vt {}\n", t)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "vt {}\n", t))
+        return {filename + ": write error"};
     auto element_labels = vector<string>{"f", "l", "p"};
     auto element_groups = vector<const vector<obj_element>*>{
         &shape.faces, &shape.lines, &shape.points};
@@ -1353,13 +1363,15 @@ inline objio_status save_obj(const string& filename, const obj_model& obj) {
               fs, "usemtl {}\n", shape.materials[element.material]);
           cur_material = element.material;
         }
-        if (!format_obj_values(fs, "{}", label)) return {filename + ": write error"};
+        if (!format_obj_values(fs, "{}", label))
+          return {filename + ": write error"};
         for (auto c = 0; c < element.size; c++) {
           auto vert = shape.vertices[cur_vertex++];
           if (vert.position) vert.position += vert_size.position;
           if (vert.normal) vert.normal += vert_size.normal;
           if (vert.texcoord) vert.texcoord += vert_size.texcoord;
-          if (!format_obj_values(fs, " {}", vert)) return {filename + ": write error"};
+          if (!format_obj_values(fs, " {}", vert))
+            return {filename + ": write error"};
         }
         if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
       }
@@ -2045,7 +2057,8 @@ inline objio_status write_obj_comment(
     const string& filename, obj_file& fs, const string& comment) {
   auto lines = split_obj_string(comment, "\n");
   for (auto& str : lines) {
-    if (!format_obj_values(fs, "# {}\n", str)) return {filename + ": write error"};
+    if (!format_obj_values(fs, "# {}\n", str))
+      return {filename + ": write error"};
   }
   if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
   return {};
@@ -2056,13 +2069,16 @@ inline objio_status write_obj_command(const string& filename, obj_file& fs,
     const vector<obj_vertex>& vertices) {
   switch (command) {
     case obj_command::vertex:
-      if (!format_obj_values(fs, "v {}\n", value)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "v {}\n", value))
+        return {filename + ": write error"};
       break;
     case obj_command::normal:
-      if (!format_obj_values(fs, "vn {}\n", value)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "vn {}\n", value))
+        return {filename + ": write error"};
       break;
     case obj_command::texcoord:
-      if (!format_obj_values(fs, "vt {}\n", value)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "vt {}\n", value))
+        return {filename + ": write error"};
       break;
     case obj_command::face:
     case obj_command::str:
@@ -2074,23 +2090,29 @@ inline objio_status write_obj_command(const string& filename, obj_file& fs,
       if (command == obj_command::point)
         if (!format_obj_values(fs, "p ")) return {filename + ": write error"};
       for (auto& vert : vertices)
-        if (!format_obj_values(fs, " {}", vert)) return {filename + ": write error"};
+        if (!format_obj_values(fs, " {}", vert))
+          return {filename + ": write error"};
       if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
       break;
     case obj_command::object:
-      if (!format_obj_values(fs, "o {}\n", name)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "o {}\n", name))
+        return {filename + ": write error"};
       break;
     case obj_command::group:
-      if (!format_obj_values(fs, "g {}\n", name)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "g {}\n", name))
+        return {filename + ": write error"};
       break;
     case obj_command::usemtl:
-      if (!format_obj_values(fs, "usemtl {}\n", name)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "usemtl {}\n", name))
+        return {filename + ": write error"};
       break;
     case obj_command::smoothing:
-      if (!format_obj_values(fs, "s {}\n", name)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "s {}\n", name))
+        return {filename + ": write error"};
       break;
     case obj_command::mtllib:
-      if (!format_obj_values(fs, "mtllib {}\n", name)) return {filename + ": write error"};
+      if (!format_obj_values(fs, "mtllib {}\n", name))
+        return {filename + ": write error"};
       break;
     case obj_command::objxlib: break;
     case obj_command::error: break;

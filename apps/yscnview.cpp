@@ -81,9 +81,9 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::list<app_state>         states;
-  int                          selected = -1;
-  std::list<app_state>         loading;
+  std::list<app_state>                   states;
+  int                                    selected = -1;
+  std::list<app_state>                   loading;
   std::list<std::future<sceneio_status>> loaders;
 
   // get image
@@ -127,12 +127,13 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.load_prms   = app.load_prms;
   app.save_prms   = app.save_prms;
   app.drawgl_prms = app.drawgl_prms;
-  apps.loaders.push_back(std::async(std::launch::async, [&app]() -> sceneio_status {
-    if (auto ret = load_scene(app.filename, app.scene); !ret) return ret;
-    app.time_range = compute_animation_range(app.scene);
-    app.time       = app.time_range.x;
-    return {};
-  }));
+  apps.loaders.push_back(
+      std::async(std::launch::async, [&app]() -> sceneio_status {
+        if (auto ret = load_scene(app.filename, app.scene); !ret) return ret;
+        app.time_range = compute_animation_range(app.scene);
+        app.time       = app.time_range.x;
+        return {};
+      }));
 }
 
 void update_glcamera(opengl_camera& glcamera, const scene_camera& camera) {
@@ -486,8 +487,8 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
-    auto& app       = apps.get_selected();
-    app.outname     = save_path;
+    auto& app   = apps.get_selected();
+    app.outname = save_path;
     if (auto ret = save_scene(app.outname, app.scene); !ret) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);

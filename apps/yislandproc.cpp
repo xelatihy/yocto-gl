@@ -412,7 +412,8 @@ void load_island_shape(vector<scene_shape>& shapes,
   auto name      = ""s;
   auto verts     = vector<obj_vertex>{};
   auto vert_size = obj_vertex{};
-  while (read_obj_command(filename, fs, command, name, value, verts, vert_size)) {
+  while (
+      read_obj_command(filename, fs, command, name, value, verts, vert_size)) {
     switch (command) {
       case obj_command::vertex: opos.push_back(value); break;
       case obj_command::normal: onorm.push_back(value); break;
@@ -942,8 +943,8 @@ void load_island_elements(const string& filename, const string& dirname,
   // rename materials and shapes
 }
 
-sceneio_status load_textures(const string& filename, scene_model& scene, 
-    const load_params& params);
+sceneio_status load_textures(
+    const string& filename, scene_model& scene, const load_params& params);
 
 void load_island_scene(
     const string& filename, scene_model& scene, const load_params& params) {

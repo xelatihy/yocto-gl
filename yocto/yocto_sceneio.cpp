@@ -523,7 +523,8 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
       }
       if (!parse_yaml_varname(line, key)) return {filename + ": parse error"};
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':') return {filename + ": parse error"};
+      if (line.empty() || line.front() != ':')
+        return {filename + ": parse error"};
       line.remove_prefix(1);
       if (!parse_yaml_value(line, value)) return {filename + ": parse error"};
       yaml.elements.back().key_values.push_back({key, value});
@@ -531,7 +532,8 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
       // new group
       if (!parse_yaml_varname(line, key)) return {filename + ": parse error"};
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':') return {filename + ": parse error"};
+      if (line.empty() || line.front() != ':')
+        return {filename + ": parse error"};
       line.remove_prefix(1);
       if (!line.empty() && !is_yaml_whitespace(line)) {
         group = "";
@@ -623,12 +625,14 @@ inline yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
 
   // save comments
   if (!format_yaml_values(fs, "#\n")) return {filename + ": write error"};
-  if (!format_yaml_values(fs, "# Written by Yocto/GL\n")) return {filename + ": write error"};
+  if (!format_yaml_values(fs, "# Written by Yocto/GL\n"))
+    return {filename + ": write error"};
   if (!format_yaml_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return {filename + ": write error"};
   if (!format_yaml_values(fs, "#\n\n")) return {filename + ": write error"};
   for (auto& comment : yaml.comments) {
-    if (!format_yaml_values(fs, "# {}\n", comment)) return {filename + ": write error"};
+    if (!format_yaml_values(fs, "# {}\n", comment))
+      return {filename + ": write error"};
   }
   if (!format_yaml_values(fs, "\n")) return {filename + ": write error"};
 
@@ -637,7 +641,8 @@ inline yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
     if (group != element.name) {
       group = element.name;
       if (group != "") {
-        if (!format_yaml_values(fs, "\n{}:\n", group)) return {filename + ": write error"};
+        if (!format_yaml_values(fs, "\n{}:\n", group))
+          return {filename + ": write error"};
       } else {
         if (!format_yaml_values(fs, "\n")) return {filename + ": write error"};
       }
@@ -685,7 +690,8 @@ inline yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
       }
       if (!parse_yaml_varname(str, key)) return {filename + ": parse error"};
       skip_yaml_whitespace(str);
-      if (str.empty() || str.front() != ':') return {filename + ": parse error"};
+      if (str.empty() || str.front() != ':')
+        return {filename + ": parse error"};
       str.remove_prefix(1);
       if (!parse_yaml_value(str, value)) return {filename + ": parse error"};
       return {};
@@ -693,7 +699,8 @@ inline yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
       // new group
       if (!parse_yaml_varname(str, key)) return {filename + ": parse error"};
       skip_yaml_whitespace(str);
-      if (str.empty() || str.front() != ':') return {filename + ": parse error"};
+      if (str.empty() || str.front() != ':')
+        return {filename + ": parse error"};
       str.remove_prefix(1);
       if (!str.empty() && !is_yaml_whitespace(str)) {
         group = "";
@@ -731,7 +738,8 @@ inline yamlio_status write_yaml_comment(
     const string& filename, yaml_file& fs, const string& comment) {
   auto lines = split_yaml_string(comment, "\n");
   for (auto& line : lines) {
-    if (!format_yaml_values(fs, "# {}\n", line)) return {filename + ": write error"};
+    if (!format_yaml_values(fs, "# {}\n", line))
+      return {filename + ": write error"};
   }
   if (!format_yaml_values(fs, "\n")) return {filename + ": write error"};
 
@@ -743,14 +751,16 @@ inline yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
     const string& object, const string& key, bool newobj,
     const yaml_value& value) {
   if (key.empty()) {
-    if (!format_yaml_values(fs, "\n{}:\n", object)) return {filename + ": write error"};
+    if (!format_yaml_values(fs, "\n{}:\n", object))
+      return {filename + ": write error"};
   } else {
     if (!object.empty()) {
       if (!format_yaml_values(
               fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value))
         return {filename + ": write error"};
     } else {
-      if (!format_yaml_values(fs, "{}: {}\n", key, value)) return {filename + ": write error"};
+      if (!format_yaml_values(fs, "{}: {}\n", key, value))
+        return {filename + ": write error"};
     }
   }
 
@@ -759,7 +769,8 @@ inline yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
 
 inline yamlio_status write_yaml_object(
     const string& filename, yaml_file& fs, const string& object) {
-  if (!format_yaml_values(fs, "\n{}:\n", object)) return {filename + ": write error"};
+  if (!format_yaml_values(fs, "\n{}:\n", object))
+    return {filename + ": write error"};
   return {};
 }
 
@@ -1706,8 +1717,7 @@ sceneio_status load_yaml(
           return {filename + ": parse error"};
       } else if (key == "lookat") {
         auto lookat = identity3x3f;
-        if (!get_yaml_value(value, lookat))
-          return {filename + ": parse error"};
+        if (!get_yaml_value(value, lookat)) return {filename + ": parse error"};
         camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
         camera.focus = length(lookat.x - lookat.y);
       } else {
@@ -1724,8 +1734,7 @@ sceneio_status load_yaml(
           return {filename + ": parse error"};
       } else if (key == "preset") {
         auto preset = ""s;
-        if (!get_yaml_value(value, preset))
-          return {filename + ": parse error"};
+        if (!get_yaml_value(value, preset)) return {filename + ": parse error"};
         make_image_preset(texture.hdr, texture.ldr, preset);
         if (texture.filename.empty()) {
           texture.filename = "textures/ypreset-" + preset +
@@ -1842,8 +1851,7 @@ sceneio_status load_yaml(
           return {filename + ": parse error"};
       } else if (key == "preset") {
         auto preset = ""s;
-        if (!get_yaml_value(value, preset))
-          return {filename + ": parse error"};
+        if (!get_yaml_value(value, preset)) return {filename + ": parse error"};
         make_shape_preset(shape.points, shape.lines, shape.triangles,
             shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
             shape.positions, shape.normals, shape.texcoords, shape.colors,
@@ -1896,8 +1904,7 @@ sceneio_status load_yaml(
           return {filename + ": parse error"};
       } else if (key == "lookat") {
         auto lookat = identity3x3f;
-        if (!get_yaml_value(value, lookat))
-          return {filename + ": parse error"};
+        if (!get_yaml_value(value, lookat)) return {filename + ": parse error"};
         instance.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       } else {
         throw std::runtime_error("unknown property " + string(key));
@@ -1921,8 +1928,7 @@ sceneio_status load_yaml(
           return {filename + ": parse error"};
       } else if (key == "lookat") {
         auto lookat = identity3x3f;
-        if (!get_yaml_value(value, lookat))
-          return {filename + ": parse error"};
+        if (!get_yaml_value(value, lookat)) return {filename + ": parse error"};
         environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       } else {
         throw std::runtime_error("unknown property " + string(key));
@@ -2351,8 +2357,7 @@ static sceneio_status load_obj(
       return {filename + ": missing material for " + oshape.name};
     }
     if (material_map.find(oshape.materials.at(0)) == material_map.end()) {
-      return {
-          filename + ": missing material " + oshape.materials.at(0)};
+      return {filename + ": missing material " + oshape.materials.at(0)};
     }
     auto material = material_map.at(oshape.materials.at(0));
     // make instances
@@ -2585,8 +2590,8 @@ static sceneio_status load_ply_scene(
   return {};
 }
 
-static sceneio_status save_ply_scene(const string& filename, const scene_model& scene,
-    const save_params& params) {
+static sceneio_status save_ply_scene(const string& filename,
+    const scene_model& scene, const save_params& params) {
   if (scene.shapes.empty()) return {filename + ": empty scene"};
   auto& shape = scene.shapes.front();
   if (shape.quadspos.empty()) {
