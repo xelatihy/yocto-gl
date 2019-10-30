@@ -203,6 +203,8 @@ inline bool get_yaml_value(const yaml_value& yaml, frame3f& value);
 template <typename T>
 inline bool get_yaml_value(
     const yaml_element& element, const string& name, const T& value);
+inline bool has_yaml_value(
+    const yaml_element& element, const string& name);
 
 // yaml value construction
 inline yaml_value make_yaml_value(const string& value);
@@ -416,6 +418,21 @@ inline bool get_yaml_value(const yaml_value& yaml, frame3f& value) {
   if (yaml.type != yaml_value_type::array || yaml.number != 12) return false;
   for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
   return true;
+}
+template <typename T>
+inline bool get_yaml_value(
+    const yaml_element& element, const string& name, T& value) {
+  for(auto& [key, value_]: element.key_values) {
+    if(key == name) return get_yaml_value(value_, value);
+  }
+  return true;
+}
+inline bool has_yaml_value(
+    const yaml_element& element, const string& name) {
+  for(auto& [key, _]: element.key_values) {
+    if(key == name) return true;
+  }
+  return false;  
 }
 
 // construction
@@ -1649,44 +1666,26 @@ sceneio_status load_yaml(
   for (auto& yelement : yaml.elements) {
     if (yelement.name == "cameras") {
       auto& camera = scene.cameras.emplace_back();
-      for (auto& [key, value] : yelement.key_values) {
-        if (key == "name") {
-          if (!get_yaml_value(value, camera.name))
-            return {filename + ": parse error"};
-        } else if (key == "uri") {
-          if (!get_yaml_value(value, camera.name))
-            return {filename + ": parse error"};
-          camera.name = get_basename(camera.name);
-        } else if (key == "frame") {
-          if (!get_yaml_value(value, camera.frame))
-            return {filename + ": parse error"};
-        } else if (key == "orthographic") {
-          if (!get_yaml_value(value, camera.orthographic))
-            return {filename + ": parse error"};
-        } else if (key == "lens") {
-          if (!get_yaml_value(value, camera.lens))
-            return {filename + ": parse error"};
-        } else if (key == "aspect") {
-          if (!get_yaml_value(value, camera.aspect))
-            return {filename + ": parse error"};
-        } else if (key == "film") {
-          if (!get_yaml_value(value, camera.film))
-            return {filename + ": parse error"};
-        } else if (key == "focus") {
-          if (!get_yaml_value(value, camera.focus))
-            return {filename + ": parse error"};
-        } else if (key == "aperture") {
-          if (!get_yaml_value(value, camera.aperture))
-            return {filename + ": parse error"};
-        } else if (key == "lookat") {
-          auto lookat = identity3x3f;
-          if (!get_yaml_value(value, lookat))
-            return {filename + ": parse error"};
-          camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
-          camera.focus = length(lookat.x - lookat.y);
-        } else {
-          throw std::runtime_error("unknown property " + string(key));
-        }
+      auto status = true;
+      status = status && get_yaml_value(yelement, "name", camera.name);
+      status = status && get_yaml_value(yelement, "uri", camera.name);
+      status = status && get_yaml_value(yelement, "frame", camera.frame);
+      status = status && get_yaml_value(yelement, "orthographic", camera.orthographic);
+      status = status && get_yaml_value(yelement, "lens", camera.lens);
+      status = status && get_yaml_value(yelement, "aspect", camera.aspect);
+      status = status && get_yaml_value(yelement, "film", camera.film);
+      status = status && get_yaml_value(yelement, "focus", camera.focus);
+      status = status && get_yaml_value(yelement, "aperture", camera.aperture);
+      if(has_yaml_value(yelement, "uri")) {
+        auto uri = ""s;
+        status = status && get_yaml_value(yelement, "uri", uri);
+        camera.name = get_basename(uri);
+      }
+      if(has_yaml_value(yelement, "lookat")) {
+        auto lookat = identity3x3f;
+        status = status && get_yaml_value(yelement, "lookat", lookat);
+        camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+        camera.focus = length(lookat.x - lookat.y);
       }
     } else if (yelement.name == "textures") {
       auto& texture = scene.textures.emplace_back();
