@@ -180,6 +180,12 @@ struct obj_model {
   vector<obj_environment> environments = {};
 };
 
+// Result of io operations
+struct objio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
 // Load and save obj
 inline bool load_obj(const string& filename, obj_model& obj,
     bool geom_only = false, bool split_elements = true,

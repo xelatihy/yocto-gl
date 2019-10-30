@@ -248,6 +248,12 @@ struct pbrt_model {
   vector<pbrt_accelerator> accelerators = {};
 };
 
+// Result of io operations
+struct pbrtio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
 // Load/save pbrt
 inline bool load_pbrt(const string& filename, pbrt_model& pbrt);
 inline bool save_pbrt(const string& filename, const pbrt_model& pbrt);

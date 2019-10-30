@@ -142,6 +142,12 @@ struct ply_model {
   vector<ply_element> elements = {};
 };
 
+// Result of io operations
+struct plyio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
 // Load and save ply
 inline bool load_ply(const string& filename, ply_model& ply);
 inline bool save_ply(const string& filename, const ply_model& ply);
