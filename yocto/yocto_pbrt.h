@@ -1693,16 +1693,6 @@ struct pbrt_context {
 
 // load pbrt
 inline pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
-  auto filenames = vector<string>{};
-  auto ok    = []() { return pbrtio_status{}; };
-  auto error = [&filenames](const string& err) {
-    return pbrtio_status{filenames.back() + ": " + err};
-  };
-  auto parse_error = [&filenames]() {
-    return pbrtio_status{filenames.back() + ": parse error"};
-  };
-
-  filenames.push_back(filename);
   auto files = vector<pbrt_file>{};
   open_pbrt(files.emplace_back(), filename);
   if (!files.back()) return {filename + ": file not found"};
@@ -1763,7 +1753,7 @@ inline pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
       } else if (cmd == "ObjectInstance") {
         auto object = ""s;
         if (!parse_pbrt_param(str, object)) return {filename + ": parse error"};
-        if (objects.find(object) == objects.end()) return error("unknown object " + object);
+        if (objects.find(object) == objects.end()) return {filename + ": unknown object " + object};
         for (auto shape_id : objects.at(object)) {
           auto& shape = pbrt.shapes[shape_id];
           shape.instance_frames.push_back(stack.back().transform_start);
@@ -1935,12 +1925,11 @@ inline pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
       } else if (cmd == "Include") {
         auto includename = ""s;
         if (!parse_pbrt_param(str, includename)) return {filename + ": parse error"};
-        filenames.push_back(get_pbrt_dirname(filename) + includename);
         open_pbrt(
             files.emplace_back(), get_pbrt_dirname(filename) + includename);
         if (!files.back()) return {filename + ": file not found"};
       } else {
-        return error("unknown command " + cmd);
+        return {filename + ": unknown command " + cmd};
       }
     }
     if (has_pbrt_error(files.back())) return {filename + ": read error"};
@@ -2272,17 +2261,6 @@ inline pbrtio_status save_pbrt(
 inline pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs, pbrt_command& command,
     string& name, string& type, frame3f& xform, vector<pbrt_value>& values,
     string& line) {
-  auto ok    = []() { return pbrtio_status{}; };
-  auto error = [&filename](const string& err) {
-    return pbrtio_status{filename + ": " + err};
-  };
-  auto parse_error = [&filename]() {
-    return pbrtio_status{filename + ": parse error"};
-  };
-  auto eof = [&filename]() {
-    return pbrtio_status{filename + ": oef"};
-  };
-
   // parse command by command
   auto line_num   = 0;
   while (read_pbrt_cmdline(fs, line, line_num)) {
@@ -2462,13 +2440,13 @@ inline pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs, pb
       command = pbrt_command::include;
       return {};
     } else {
-      return error("unknown command " + cmd);
+      return {filename + ": unknown command " + cmd};
     }
   }
 
   if (has_pbrt_error(fs)) return {filename + ": read error"};
 
-  return eof();
+  return {"eof"};
 }
 inline pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs, pbrt_command& command,
     string& name, string& type, frame3f& xform, vector<pbrt_value>& values) {
@@ -2491,14 +2469,6 @@ inline vector<string> split_pbrt_string(
 
 // Write obj elements
 inline pbrtio_status write_pbrt_comment(const string& filename, pbrt_file& fs, const string& comment) {
-  auto ok    = []() { return pbrtio_status{}; };
-  // auto error = [&filename](const string& err) {
-  //   return pbrtio_status{filename + ": " + err};
-  // };
-  auto write_error = [&filename]() {
-    return pbrtio_status{filename + ": write error"};
-  };
-
   auto lines = split_pbrt_string(comment, "\n");
   for (auto& line : lines) {
     if(!format_pbrt_values(fs, "# {}\n", line)) return {filename + ": write error"};
@@ -2598,14 +2568,6 @@ inline bool write_pbrt_values(const string& filename, pbrt_file& fs, const vecto
 inline pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs, pbrt_command command,
     const string& name, const string& type, const frame3f& xform,
     const vector<pbrt_value>& values, bool texture_float) {
-  auto ok    = []() { return pbrtio_status{}; };
-  // auto error = [&filename](const string& err) {
-  //   return pbrtio_status{filename + ": " + err};
-  // };
-  auto write_error = [&filename]() {
-    return pbrtio_status{filename + ": write error"};
-  };
-
   switch (command) {
     case pbrt_command::world_begin:
       if(!format_pbrt_values(fs, "WorldBegin\n")) return {filename + ": write error"};
