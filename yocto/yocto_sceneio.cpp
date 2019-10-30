@@ -1297,13 +1297,16 @@ inline bool parse_yaml_value(string_view& str, yaml_value& value) {
 }
 
 // Load/save yaml
-bool load_yaml(const string& filename, yaml_model& yaml, string& error) {
-  auto fs = open_yaml(filename, "rt");
-
-  auto set_error = [&error, &filename](const string& err = "") {
-    error = err.empty() ? "cannot parse " + filename : err;
-    return false;
+yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
+  auto ok    = []() { return yamlio_status{}; };
+  auto error = [&filename](const string& err) {
+    return yamlio_status{filename + ": " + err};
   };
+  auto parse_error = [&filename]() {
+    return yamlio_status{filename + ": parse error"};
+  };
+
+  auto fs = open_yaml(filename, "rt");
 
   // read the file line by line
   auto group = ""s;
@@ -1320,9 +1323,9 @@ bool load_yaml(const string& filename, yaml_model& yaml, string& error) {
     // peek commands
     if (is_yaml_space(line.front())) {
       // indented property
-      if (group == "") throw std::runtime_error("bad yaml");
+      if (group == "") return parse_error();
       skip_yaml_whitespace(line);
-      if (line.empty()) throw std::runtime_error("bad yaml");
+      if (line.empty()) return parse_error();
       if (line.front() == '-') {
         auto& element = yaml.elements.emplace_back();
         element.name  = group;
@@ -1332,17 +1335,17 @@ bool load_yaml(const string& filename, yaml_model& yaml, string& error) {
         auto& element = yaml.elements.emplace_back();
         element.name  = group;
       }
-      if (!parse_yaml_varname(line, key)) return set_error();
+      if (!parse_yaml_varname(line, key)) return parse_error();
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':') return set_error("bad yaml");
+      if (line.empty() || line.front() != ':') return parse_error();
       line.remove_prefix(1);
-      if (!parse_yaml_value(line, value)) return set_error();
+      if (!parse_yaml_value(line, value)) return parse_error();
       yaml.elements.back().key_values.push_back({key, value});
     } else if (is_yaml_alpha(line.front())) {
       // new group
-      if (!parse_yaml_varname(line, key)) return set_error();
+      if (!parse_yaml_varname(line, key)) return parse_error();
       skip_yaml_whitespace(line);
-      if (line.empty() || line.front() != ':') return set_error("bad yaml");
+      if (line.empty() || line.front() != ':') return parse_error();
       line.remove_prefix(1);
       if (!line.empty() && !is_yaml_whitespace(line)) {
         group = "";
@@ -1350,17 +1353,17 @@ bool load_yaml(const string& filename, yaml_model& yaml, string& error) {
           auto& element = yaml.elements.emplace_back();
           element.name  = group;
         }
-        if (!parse_yaml_value(line, value)) return set_error();
+        if (!parse_yaml_value(line, value)) return parse_error();
         yaml.elements.back().key_values.push_back({key, value});
       } else {
         group = key;
         key   = "";
       }
     } else {
-      return set_error("bad yaml");
+      return parse_error();
     }
   }
-  return true;
+  return ok();
 }
 
 static inline void format_yaml_value(string& str, const string& value) {
