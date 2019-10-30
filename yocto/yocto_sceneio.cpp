@@ -952,12 +952,16 @@ struct yaml_model {
   vector<yaml_element> elements = {};
 };
 
+// // Result of io operations
+struct yamlio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
+
 // Load/save yaml
-inline bool load_yaml(const string& filename, yaml_model& yaml, string& error);
-inline bool save_yaml(
-    const string& filename, const yaml_model& yaml, string& error);
-inline bool load_yaml(const string& filename, yaml_model& yaml);
-inline bool save_yaml(const string& filename, const yaml_model& yaml);
+inline yamlio_status load_yaml(const string& filename, yaml_model& yaml);
+inline yamlio_status save_yaml(const string& filename, const yaml_model& yaml);
 
 // A class that wraps a C file ti handle safe opening/closgin with RIIA.
 struct yaml_file {
@@ -982,14 +986,14 @@ inline void      open_yaml(
 inline void close_yaml(yaml_file& fs);
 
 // Load Yaml properties
-inline bool read_yaml_property(yaml_file& fs, string& group, string& key,
-    bool& newobj, yaml_value& value, bool& errored);
+inline yamlio_status read_yaml_property(const string& filename, yaml_file& fs, string& group, string& key,
+    bool& newobj, bool& done, yaml_value& value);
 
 // Write Yaml properties
-inline bool write_yaml_comment(yaml_file& fs, const string& comment);
-inline bool write_yaml_property(yaml_file& fs, const string& object,
+inline yamlio_status write_yaml_comment(const string& filename, yaml_file& fs, const string& comment);
+inline yamlio_status write_yaml_property(const string& filename, yaml_file& fs, const string& object,
     const string& key, bool newobj, const yaml_value& value);
-inline bool write_yaml_object(yaml_file& fs, const string& object);
+inline yamlio_status write_yaml_object(const string& filename, yaml_file& fs, const string& object);
 
 // type-cheked yaml value access
 inline bool get_yaml_value(const yaml_value& yaml, string& value);
@@ -1050,14 +1054,18 @@ inline void close_yaml(yaml_file& fs) {
 
 // Read a line
 inline bool read_yaml_line(
-    yaml_file& fs, char* buffer, size_t size, bool& error) {
+    yaml_file& fs, char* buffer, size_t size) {
   if (fgets(buffer, size, fs.fs)) {
     fs.linenum += 1;
     return true;
   } else {
-    error = ferror(fs.fs);
     return false;
   }
+}
+
+// Check for errors
+inline bool has_yaml_error(yaml_file& fs) {
+  return ferror(fs.fs);
 }
 
 static inline bool is_yaml_space(char c) {
@@ -1302,8 +1310,7 @@ bool load_yaml(const string& filename, yaml_model& yaml, string& error) {
   auto key   = ""s;
   auto value = yaml_value{};
   char buffer[4096];
-  auto read_error = false;
-  while (read_yaml_line(fs, buffer, sizeof(buffer), read_error)) {
+  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_yaml_comment(line);
@@ -1469,18 +1476,19 @@ inline bool save_yaml(
   return true;
 }
 
-inline bool read_yaml_property(yaml_file& fs, string& group, string& key,
-    bool& newobj, yaml_value& value, bool& errored) {
-  // initialize parsing
-  auto set_error = [&errored](const string& err = "") {
-    errored = true;
-    return true;
+inline yamlio_status read_yaml_property(const string& filename, yaml_file& fs, string& group, string& key,
+    bool& newobj, bool& done, yaml_value& value) {
+  auto ok    = []() { return yamlio_status{}; };
+  auto error = [&filename](const string& err) {
+    return yamlio_status{filename + ": " + err};
+  };
+  auto parse_error = [&filename]() {
+    return yamlio_status{filename + ": parse error"};
   };
 
   // read the file line by line
   char buffer[4096];
-  auto read_error = false;
-  while (read_yaml_line(fs, buffer, sizeof(buffer), read_error)) {
+  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_yaml_comment(str);
@@ -1490,9 +1498,9 @@ inline bool read_yaml_property(yaml_file& fs, string& group, string& key,
     // peek commands
     if (is_yaml_space(str.front())) {
       // indented property
-      if (group == "") return set_error();
+      if (group == "") return parse_error();
       skip_yaml_whitespace(str);
-      if (str.empty()) return set_error();
+      if (str.empty()) return parse_error();
       if (str.front() == '-') {
         newobj = true;
         str.remove_prefix(1);
@@ -1500,35 +1508,36 @@ inline bool read_yaml_property(yaml_file& fs, string& group, string& key,
       } else {
         newobj = false;
       }
-      if (!parse_yaml_varname(str, key)) return set_error();
+      if (!parse_yaml_varname(str, key)) return parse_error();
       skip_yaml_whitespace(str);
-      if (str.empty() || str.front() != ':') return false;
+      if (str.empty() || str.front() != ':') return parse_error();
       str.remove_prefix(1);
-      if (!parse_yaml_value(str, value)) return set_error();
-      return true;
+      if (!parse_yaml_value(str, value)) return parse_error();
+      return ok();
     } else if (is_yaml_alpha(str.front())) {
       // new group
-      if (!parse_yaml_varname(str, key)) return set_error();
+      if (!parse_yaml_varname(str, key)) return parse_error();
       skip_yaml_whitespace(str);
-      if (str.empty() || str.front() != ':') return false;
+      if (str.empty() || str.front() != ':') return parse_error();
       str.remove_prefix(1);
       if (!str.empty() && !is_yaml_whitespace(str)) {
         group = "";
-        if (!parse_yaml_value(str, value)) return set_error();
-        return true;
+        if (!parse_yaml_value(str, value)) return parse_error();
+        return ok();
       } else {
         group = key;
         key   = "";
-        return true;
+        return ok();
       }
     } else {
       str = {};
     }
   }
 
-  if (read_error) return set_error("cannot reada");
+  if (has_yaml_error(fs)) return error("read error");
 
-  return false;
+  done = true;
+  return ok();
 }
 
 static inline vector<string> split_yaml_string(
@@ -1543,47 +1552,59 @@ static inline vector<string> split_yaml_string(
   return tokens;
 }
 
-bool write_yaml_comment(yaml_file& fs, const string& comment) {
-  auto write_error = [](yaml_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    return true;
+inline yamlio_status write_yaml_comment(const string& filename, yaml_file& fs, const string& comment) {
+  auto ok    = []() { return yamlio_status{}; };
+  // auto error = [&filename](const string& err) {
+  //   return yamlio_status{filename + ": " + err};
+  // };
+  auto write_error = [&filename]() {
+    return yamlio_status{filename + ": write error"};
   };
 
   auto lines = split_yaml_string(comment, "\n");
   for (auto& line : lines) {
-    format_yaml_values(fs, "# {}\n", line);
+    if(!format_yaml_values(fs, "# {}\n", line)) return write_error();
   }
-  format_yaml_values(fs, "\n");
-  if (write_error(fs)) return false;
+  if(!format_yaml_values(fs, "\n")) return write_error();
 
-  return true;
+  return ok();
 }
 
 // Save yaml property
-inline bool write_yaml_property(yaml_file& fs, const string& object,
+inline yamlio_status write_yaml_property(const string& filename, yaml_file& fs, const string& object,
     const string& key, bool newobj, const yaml_value& value) {
-  auto write_error = [](yaml_file& fs) {
-    if (!ferror(fs.fs)) return false;
-    return true;
+  auto ok    = []() { return yamlio_status{}; };
+  // auto error = [&filename](const string& err) {
+  //   return yamlio_status{filename + ": " + err};
+  // };
+  auto write_error = [&filename]() {
+    return yamlio_status{filename + ": write error"};
   };
 
   if (key.empty()) {
-    format_yaml_values(fs, "\n{}:\n", object);
+    if(!format_yaml_values(fs, "\n{}:\n", object)) return write_error();
   } else {
     if (!object.empty()) {
-      format_yaml_values(fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value);
+      if(!format_yaml_values(fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value)) return write_error();
     } else {
-      format_yaml_values(fs, "{}: {}\n", key, value);
+      if(!format_yaml_values(fs, "{}: {}\n", key, value)) return write_error();
     }
   }
 
-  if (write_error(fs)) return false;
-
-  return true;
+  return ok();
 }
 
-bool write_yaml_object(yaml_file& fs, const string& object) {
-  return format_yaml_values(fs, "\n{}:\n", object);
+inline yamlio_status write_yaml_object(const string& filename, yaml_file& fs, const string& object) {
+  auto ok    = []() { return yamlio_status{}; };
+  // auto error = [&filename](const string& err) {
+  //   return yamlio_status{filename + ": " + err};
+  // };
+  auto write_error = [&filename]() {
+    return yamlio_status{filename + ": write error"};
+  };
+
+  if(!format_yaml_values(fs, "\n{}:\n", object)) return write_error();
+  return ok();
 }
 
 }  // namespace yocto
@@ -1639,8 +1660,11 @@ bool load_yaml(const string& filename, scene_model& scene, string& error,
   auto key     = ""s;
   auto newobj  = false;
   auto value   = yaml_value{};
-  auto errored = false;
-  while (read_yaml_property(fs, group, key, newobj, value, errored)) {
+  auto done = false;
+  auto status = yamlio_status{};
+  while ((status = read_yaml_property(filename, fs, group, key, newobj, done, value))) {
+    if(done) break;
+
     if (group.empty()) {
       throw std::runtime_error("bad yaml");
     }
@@ -1879,7 +1903,7 @@ bool load_yaml(const string& filename, scene_model& scene, string& error,
     }
   }
 
-  if (errored) {
+  if (!status) {
     error = "cannot load " + filename;
     return false;
   }
@@ -1928,178 +1952,178 @@ static bool save_yaml(const string& filename, const scene_model& scene,
 
   auto yvalue = yaml_value{};
 
-  if (!scene.cameras.empty()) write_yaml_object(fs, "cameras");
+  if (!scene.cameras.empty()) write_yaml_object(filename, fs, "cameras");
   for (auto& camera : scene.cameras) {
-    write_yaml_property(
+    write_yaml_property(filename, 
         fs, "cameras", "name", true, make_yaml_value(camera.name));
     if (camera.frame != identity3x4f)
-      write_yaml_property(
+      write_yaml_property(filename, 
           fs, "cameras", "frame", false, make_yaml_value(camera.frame));
     if (camera.orthographic)
-      write_yaml_property(fs, "cameras", "orthographic", false,
+      write_yaml_property(filename, fs, "cameras", "orthographic", false,
           make_yaml_value(camera.orthographic));
-    write_yaml_property(
+    write_yaml_property(filename, 
         fs, "cameras", "lens", false, make_yaml_value(camera.lens));
-    write_yaml_property(
+    write_yaml_property(filename, 
         fs, "cameras", "aspect", false, make_yaml_value(camera.aspect));
-    write_yaml_property(
+    write_yaml_property(filename, 
         fs, "cameras", "film", false, make_yaml_value(camera.film));
-    write_yaml_property(
+    write_yaml_property(filename, 
         fs, "cameras", "focus", false, make_yaml_value(camera.focus));
     if (camera.aperture)
-      write_yaml_property(
+      write_yaml_property(filename, 
           fs, "cameras", "aperture", false, make_yaml_value(camera.aperture));
   }
 
-  if (!scene.textures.empty()) write_yaml_object(fs, "textures");
+  if (!scene.textures.empty()) write_yaml_object(filename, fs, "textures");
   for (auto& texture : scene.textures) {
-    write_yaml_property(
+    write_yaml_property(filename, 
         fs, "textures", "name", true, make_yaml_value(texture.name));
     if (!texture.filename.empty())
-      write_yaml_property(
+      write_yaml_property(filename, 
           fs, "textures", "filename", false, make_yaml_value(texture.filename));
   }
 
-  if (!scene.materials.empty()) write_yaml_object(fs, "materials");
+  if (!scene.materials.empty()) write_yaml_object(filename, fs, "materials");
   for (auto& material : scene.materials) {
-    write_yaml_property(
+    write_yaml_property(filename, 
         fs, "materials", "name", true, make_yaml_value(material.name));
     if (material.emission != zero3f)
-      write_yaml_property(fs, "materials", "emission", false,
+      write_yaml_property(filename, fs, "materials", "emission", false,
           make_yaml_value(material.emission));
     if (material.diffuse != zero3f)
-      write_yaml_property(
+      write_yaml_property(filename, 
           fs, "materials", "diffuse", false, make_yaml_value(material.diffuse));
     if (material.specular != zero3f)
-      write_yaml_property(fs, "materials", "specular", false,
+      write_yaml_property(filename, fs, "materials", "specular", false,
           make_yaml_value(material.specular));
     if (material.metallic)
-      write_yaml_property(fs, "materials", "metallic", false,
+      write_yaml_property(filename, fs, "materials", "metallic", false,
           make_yaml_value(material.metallic));
     if (material.transmission != zero3f)
-      write_yaml_property(fs, "materials", "transmission", false,
+      write_yaml_property(filename, fs, "materials", "transmission", false,
           make_yaml_value(material.transmission));
-    write_yaml_property(fs, "materials", "roughness", false,
+    write_yaml_property(filename, fs, "materials", "roughness", false,
         make_yaml_value(material.roughness));
     if (material.refract)
-      write_yaml_property(
+      write_yaml_property(filename, 
           fs, "materials", "refract", false, make_yaml_value(material.refract));
     if (material.voltransmission != zero3f)
-      write_yaml_property(fs, "materials", "voltransmission", false,
+      write_yaml_property(filename, fs, "materials", "voltransmission", false,
           make_yaml_value(material.voltransmission));
     if (material.volmeanfreepath != zero3f)
-      write_yaml_property(fs, "materials", "volmeanfreepath", false,
+      write_yaml_property(filename, fs, "materials", "volmeanfreepath", false,
           make_yaml_value(material.volmeanfreepath));
     if (material.volscatter != zero3f)
-      write_yaml_property(fs, "materials", "volscatter", false,
+      write_yaml_property(filename, fs, "materials", "volscatter", false,
           make_yaml_value(material.volscatter));
     if (material.volemission != zero3f)
-      write_yaml_property(fs, "materials", "volemission", false,
+      write_yaml_property(filename, fs, "materials", "volemission", false,
           make_yaml_value(material.volemission));
     if (material.volanisotropy)
-      write_yaml_property(fs, "materials", "volanisotropy", false,
+      write_yaml_property(filename, fs, "materials", "volanisotropy", false,
           make_yaml_value(material.volanisotropy));
     if (material.voltransmission != zero3f ||
         material.volmeanfreepath != zero3f)
-      write_yaml_property(fs, "materials", "volscale", false,
+      write_yaml_property(filename, fs, "materials", "volscale", false,
           make_yaml_value(material.volscale));
     if (material.coat != zero3f)
-      write_yaml_property(
+      write_yaml_property(filename, 
           fs, "materials", "coat", false, make_yaml_value(material.coat));
     if (material.opacity != 1)
-      write_yaml_property(
+      write_yaml_property(filename, 
           fs, "materials", "opacity", false, make_yaml_value(material.opacity));
     if (material.emission_tex >= 0)
-      write_yaml_property(fs, "materials", "emission_tex", false,
+      write_yaml_property(filename, fs, "materials", "emission_tex", false,
           make_yaml_value(scene.textures[material.emission_tex].name));
     if (material.diffuse_tex >= 0)
-      write_yaml_property(fs, "materials", "diffuse_tex", false,
+      write_yaml_property(filename, fs, "materials", "diffuse_tex", false,
           make_yaml_value(scene.textures[material.diffuse_tex].name));
     if (material.metallic_tex >= 0)
-      write_yaml_property(fs, "materials", "metallic_tex", false,
+      write_yaml_property(filename, fs, "materials", "metallic_tex", false,
           make_yaml_value(scene.textures[material.metallic_tex].name));
     if (material.specular_tex >= 0)
-      write_yaml_property(fs, "materials", "specular_tex", false,
+      write_yaml_property(filename, fs, "materials", "specular_tex", false,
           make_yaml_value(scene.textures[material.specular_tex].name));
     if (material.roughness_tex >= 0)
-      write_yaml_property(fs, "materials", "roughness_tex", false,
+      write_yaml_property(filename, fs, "materials", "roughness_tex", false,
           make_yaml_value(scene.textures[material.roughness_tex].name));
     if (material.transmission_tex >= 0)
-      write_yaml_property(fs, "materials", "transmission_tex", false,
+      write_yaml_property(filename, fs, "materials", "transmission_tex", false,
           make_yaml_value(scene.textures[material.transmission_tex].name));
     if (material.subsurface_tex >= 0)
-      write_yaml_property(fs, "materials", "subsurface_tex", false,
+      write_yaml_property(filename, fs, "materials", "subsurface_tex", false,
           make_yaml_value(scene.textures[material.subsurface_tex].name));
     if (material.coat_tex >= 0)
-      write_yaml_property(fs, "materials", "coat_tex", false,
+      write_yaml_property(filename, fs, "materials", "coat_tex", false,
           make_yaml_value(scene.textures[material.coat_tex].name));
     if (material.opacity_tex >= 0)
-      write_yaml_property(fs, "materials", "opacity_tex", false,
+      write_yaml_property(filename, fs, "materials", "opacity_tex", false,
           make_yaml_value(scene.textures[material.opacity_tex].name));
     if (material.normal_tex >= 0)
-      write_yaml_property(fs, "materials", "normal_tex", false,
+      write_yaml_property(filename, fs, "materials", "normal_tex", false,
           make_yaml_value(scene.textures[material.normal_tex].name));
     if (material.gltf_textures)
-      write_yaml_property(fs, "materials", "gltf_textures", false,
+      write_yaml_property(filename, fs, "materials", "gltf_textures", false,
           make_yaml_value(material.gltf_textures));
   }
 
-  if (!scene.shapes.empty()) write_yaml_object(fs, "shapes");
+  if (!scene.shapes.empty()) write_yaml_object(filename, fs, "shapes");
   for (auto& shape : scene.shapes) {
-    write_yaml_property(
+    write_yaml_property(filename, 
         fs, "shapes", "name", true, make_yaml_value(shape.name));
     if (!shape.filename.empty())
-      write_yaml_property(
+      write_yaml_property(filename, 
           fs, "shapes", "filename", false, make_yaml_value(shape.filename));
-    write_yaml_property(fs, "subdivs", "subdivisions", false,
+    write_yaml_property(filename, fs, "subdivs", "subdivisions", false,
         make_yaml_value(shape.subdivisions));
-    write_yaml_property(fs, "subdivs", "catmullclark", false,
+    write_yaml_property(filename, fs, "subdivs", "catmullclark", false,
         make_yaml_value(shape.catmullclark));
-    write_yaml_property(
+    write_yaml_property(filename, 
         fs, "subdivs", "smooth", false, make_yaml_value(shape.smooth));
     if (shape.facevarying)
-      write_yaml_property(fs, "subdivs", "facevarying", false,
+      write_yaml_property(filename, fs, "subdivs", "facevarying", false,
           make_yaml_value(shape.facevarying));
     if (shape.displacement_tex >= 0)
-      write_yaml_property(fs, "subdivs", "displacement_tex", false,
+      write_yaml_property(filename, fs, "subdivs", "displacement_tex", false,
           make_yaml_value(scene.textures[shape.displacement_tex].name));
     if (shape.displacement_tex >= 0)
-      write_yaml_property(fs, "subdivs", "displacement", false,
+      write_yaml_property(filename, fs, "subdivs", "displacement", false,
           make_yaml_value(shape.displacement));
   }
 
   if (!ply_instances) {
-    if (!scene.instances.empty()) write_yaml_object(fs, "instances");
+    if (!scene.instances.empty()) write_yaml_object(filename, fs, "instances");
     for (auto& instance : scene.instances) {
-      write_yaml_property(
+      write_yaml_property(filename, 
           fs, "instances", "name", true, make_yaml_value(instance.name));
       if (instance.frame != identity3x4f)
-        write_yaml_property(
+        write_yaml_property(filename, 
             fs, "instances", "frame", false, make_yaml_value(instance.frame));
       if (instance.shape >= 0)
-        write_yaml_property(fs, "instances", "shape", false,
+        write_yaml_property(filename, fs, "instances", "shape", false,
             make_yaml_value(scene.shapes[instance.shape].name));
       if (instance.material >= 0)
-        write_yaml_property(fs, "instances", "material", false,
+        write_yaml_property(filename, fs, "instances", "material", false,
             make_yaml_value(scene.materials[instance.material].name));
     }
   } else {
-    if (!scene.instances.empty()) write_yaml_object(fs, "ply_instances");
-    write_yaml_property(
+    if (!scene.instances.empty()) write_yaml_object(filename, fs, "ply_instances");
+    write_yaml_property(filename, 
         fs, "ply_instances", "filename", true, make_yaml_value(instances_name));
   }
 
-  if (!scene.environments.empty()) write_yaml_object(fs, "environments");
+  if (!scene.environments.empty()) write_yaml_object(filename, fs, "environments");
   for (auto& environment : scene.environments) {
-    write_yaml_property(
+    write_yaml_property(filename, 
         fs, "environments", "name", true, make_yaml_value(environment.name));
     if (environment.frame != identity3x4f)
-      write_yaml_property(fs, "environments", "frame", false,
+      write_yaml_property(filename, fs, "environments", "frame", false,
           make_yaml_value(environment.frame));
-    write_yaml_property(fs, "environments", "emission", false,
+    write_yaml_property(filename, fs, "environments", "emission", false,
         make_yaml_value(environment.emission));
     if (environment.emission_tex >= 0)
-      write_yaml_property(fs, "environments", "emission_tex", false,
+      write_yaml_property(filename, fs, "environments", "emission_tex", false,
           make_yaml_value(scene.textures[environment.emission_tex].name));
   }
 

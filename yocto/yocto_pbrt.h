@@ -490,12 +490,11 @@ inline void close_pbrt(pbrt_file& fs) {
 
 // Read a line
 inline bool read_pbrt_line(
-    pbrt_file& fs, char* buffer, size_t size, bool& error) {
+    pbrt_file& fs, char* buffer, size_t size) {
   if (fgets(buffer, size, fs.fs)) {
     fs.linenum += 1;
     return true;
   } else {
-    error = ferror(fs.fs);
     return false;
   }
 }
@@ -537,12 +536,12 @@ inline void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 
 // Read a pbrt command from file
 inline bool read_pbrt_cmdline(
-    pbrt_file& fs, string& cmd, int& line_num, bool& error) {
+    pbrt_file& fs, string& cmd, int& line_num) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
   auto pos   = ftell(fs.fs);
-  while (read_pbrt_line(fs, buffer, sizeof(buffer), error)) {
+  while (read_pbrt_line(fs, buffer, sizeof(buffer))) {
     // line
     line_num += 1;
     auto line = string_view{buffer};
@@ -567,7 +566,7 @@ inline bool read_pbrt_cmdline(
     cmd += " ";
     pos = ftell(fs.fs);
   }
-  return found && !error;
+  return found;
 }
 
 }  // namespace yocto
@@ -1797,8 +1796,7 @@ inline pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
   while (!files.empty()) {
     auto line       = ""s;
     auto line_num   = 0;
-    auto read_error = false;
-    while (read_pbrt_cmdline(files.back(), line, line_num, read_error)) {
+    while (read_pbrt_cmdline(files.back(), line, line_num)) {
       auto str = string_view{line};
       // get command
       auto cmd = ""s;
@@ -2359,8 +2357,7 @@ inline pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs, pb
 
   // parse command by command
   auto line_num   = 0;
-  auto read_error = false;
-  while (read_pbrt_cmdline(fs, line, line_num, read_error)) {
+  while (read_pbrt_cmdline(fs, line, line_num)) {
     auto str = string_view{line};
     // get command
     auto cmd = ""s;
