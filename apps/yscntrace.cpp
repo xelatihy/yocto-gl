@@ -195,14 +195,12 @@ int main(int argc, const char* argv[]) {
   }
 
   // scene loading
-  auto ioscene = scene_model{};
-  try {
-    auto load_timer = print_timed("loading scene");
-    load_scene(filename, ioscene, load_prms);
-    print_elapsed(load_timer);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  auto ioscene    = scene_model{};
+  auto load_timer = print_timed("loading scene");
+  if (auto ret = load_scene(filename, ioscene, load_prms); !ret) {
+    print_fatal(ret.error);
   }
+  print_elapsed(load_timer);
 
   // add components
   if (validate) {

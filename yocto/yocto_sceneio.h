@@ -259,10 +259,16 @@ struct save_params {
   bool noparallel   = false;
 };
 
+// Scene io status
+struct sceneio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
 // Load/save a scene in the supported formats.
-void load_scene(
+sceneio_status load_scene(
     const string& filename, scene_model& scene, const load_params& params = {});
-void save_scene(const string& filename, const scene_model& scene,
+sceneio_status save_scene(const string& filename, const scene_model& scene,
     const save_params& params = {});
 
 }  // namespace yocto

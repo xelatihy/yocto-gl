@@ -173,13 +173,19 @@ namespace yocto {
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename);
 
+// Result of io operations
+struct imageio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
 // Loads/saves a 4 channels float/byte image in linear color space.
-image<vec4f> load_image(const string& filename);
-void         load_image(const string& filename, image<vec4f>& img);
-void         save_image(const string& filename, const image<vec4f>& img);
-image<vec4b> load_imageb(const string& filename);
-void         load_imageb(const string& filename, image<vec4b>& img);
-void         save_imageb(const string& filename, const image<vec4b>& img);
+image<vec4f>   load_image(const string& filename);
+imageio_status load_image(const string& filename, image<vec4f>& img);
+imageio_status save_image(const string& filename, const image<vec4f>& img);
+image<vec4b>   load_imageb(const string& filename);
+imageio_status load_imageb(const string& filename, image<vec4b>& img);
+imageio_status save_imageb(const string& filename, const image<vec4b>& img);
 
 }  // namespace yocto
 
@@ -253,9 +259,9 @@ void add_logo(image<vec4b>& with_logo, const image<vec4b>& img,
 
 // Make an image preset, useful for testing. See implementation for types.
 image<vec4f> make_image_preset(const string& type);
-void         make_image_preset(image<vec4f>& img, const string& type);
-void         make_image_preset(image<vec4b>& img, const string& type);
-void         make_image_preset(
+bool         make_image_preset(image<vec4f>& img, const string& type);
+bool         make_image_preset(image<vec4b>& img, const string& type);
+bool         make_image_preset(
             image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
 
 }  // namespace yocto

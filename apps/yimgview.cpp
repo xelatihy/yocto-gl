@@ -68,6 +68,9 @@ struct app_state {
   int                  render_region  = 0;
   vector<image_region> render_regions = {};
   bool                 render_stats   = false;
+
+  // error
+  string error = "";
 };
 
 struct app_states {
@@ -75,7 +78,7 @@ struct app_states {
   std::list<app_state>         states   = {};
   int                          selected = -1;
   std::list<app_state>         loading  = {};
-  std::list<std::future<void>> loaders  = {};
+  std::list<std::future<bool>> loaders  = {};
 
   // get image
   app_state& get_selected() {
@@ -156,13 +159,17 @@ void load_image_async(app_states& apps, const string& filename) {
   app.tonemap_prms    = app.tonemap_prms;
   app.colorgrade_prms = app.colorgrade_prms;
   apps.selected       = (int)apps.states.size() - 1;
-  apps.loaders.push_back(std::async(std::launch::async, [&app]() {
-    load_image(app.filename, app.source);
+  apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
+    if (!load_image(app.filename, app.source)) {
+      app.error = "cannot load " + app.filename;
+      return false;
+    }
     compute_stats(app.source_stats, app.source, is_hdr_filename(app.filename));
     app.display = tonemap_image(app.source, app.tonemap_prms);
     if (app.apply_colorgrade)
       app.display = colorgrade_image(app.display, app.colorgrade_prms);
     compute_stats(app.display_stats, app.display, false);
+    return true;
   }));
 }
 
@@ -304,18 +311,16 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_states& app) {
-  auto is_ready = [](const std::future<void>& result) -> bool {
+  auto is_ready = [](const std::future<bool>& result) -> bool {
     return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
                                  std::future_status::ready;
   };
 
   while (!app.loaders.empty() && is_ready(app.loaders.front())) {
-    try {
-      app.loaders.front().get();
-    } catch (const std::exception& e) {
+    if (!app.loaders.front().get()) {
       push_glmessage(win, "cannot load image " + app.loading.front().filename);
       log_glinfo(win, "cannot load image " + app.loading.front().filename);
-      log_glinfo(win, e.what());
+      log_glinfo(win, app.loading.front().error);
       break;
     }
     app.states.splice(app.states.end(), app.loading, app.loading.begin());

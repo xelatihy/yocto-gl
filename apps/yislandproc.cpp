@@ -412,7 +412,8 @@ void load_island_shape(vector<scene_shape>& shapes,
   auto name      = ""s;
   auto verts     = vector<obj_vertex>{};
   auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, command, name, value, verts, vert_size)) {
+  while (
+      read_obj_command(filename, fs, command, name, value, verts, vert_size)) {
     switch (command) {
       case obj_command::vertex: opos.push_back(value); break;
       case obj_command::normal: onorm.push_back(value); break;
@@ -942,8 +943,8 @@ void load_island_elements(const string& filename, const string& dirname,
   // rename materials and shapes
 }
 
-void load_textures(
-    scene_model& scene, const string& dirname, const load_params& params);
+sceneio_status load_textures(
+    const string& filename, scene_model& scene, const load_params& params);
 
 void load_island_scene(
     const string& filename, scene_model& scene, const load_params& params) {
@@ -965,7 +966,8 @@ void load_island_scene(
     }
 
     // load meshes and textures
-    load_textures(scene, dirname, params);
+    if (!load_textures(filename, scene, params))
+      throw std::runtime_error("error loading textures");
   } catch (std::exception& e) {
     throw std::runtime_error("error loading scene "s + e.what());
   }
@@ -1144,16 +1146,15 @@ int main(int argc, const char** argv) {
   }
 
   // save scene
-  try {
-    auto save_timer      = print_timed("saving scene");
-    save_prms.notextures = false;
-    save_prms.noparallel = false;
-    // save_prms.ply_instances = true;
-    save_scene(output, scene, save_prms);
-    print_elapsed(save_timer);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  auto save_timer      = print_timed("saving scene");
+  auto save_error      = ""s;
+  save_prms.notextures = false;
+  save_prms.noparallel = false;
+  // save_prms.ply_instances = true;
+  if (auto ret = save_scene(output, scene, save_prms); !ret) {
+    print_fatal(ret.error);
   }
+  print_elapsed(save_timer);
 
   // done
   return 0;

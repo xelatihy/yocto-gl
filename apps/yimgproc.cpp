@@ -154,19 +154,15 @@ int main(int argc, const char* argv[]) {
 
   // load
   auto img = image<vec4f>();
-  try {
-    load_image(filename, img);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  if (!load_image(filename, img)) {
+    print_fatal("cannor load " + filename);
   }
 
   // set alpha
   if (alpha_filename != "") {
     auto alpha = image<vec4f>();
-    try {
-      load_image(alpha_filename, alpha);
-    } catch (const std::exception& e) {
-      print_fatal(e.what());
+    if (!load_image(alpha_filename, alpha)) {
+      print_fatal("cannor load " + alpha_filename);
     }
     if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
@@ -176,10 +172,8 @@ int main(int argc, const char* argv[]) {
   // set alpha
   if (coloralpha_filename != "") {
     auto alpha = image<vec4f>();
-    try {
-      load_image(coloralpha_filename, alpha);
-    } catch (const std::exception& e) {
-      print_fatal(e.what());
+    if (!load_image(coloralpha_filename, alpha)) {
+      print_fatal("cannor load " + coloralpha_filename);
     }
     if (img.size() != alpha.size()) print_fatal("bad image size");
     for (auto j = 0; j < img.size().y; j++)
@@ -190,10 +184,8 @@ int main(int argc, const char* argv[]) {
   // diff
   if (diff_filename != "") {
     auto diff = image<vec4f>();
-    try {
-      load_image(diff_filename, diff);
-    } catch (const std::exception& e) {
-      print_fatal(e.what());
+    if (!load_image(diff_filename, diff)) {
+      print_fatal("cannor load " + diff_filename);
     }
     if (img.size() != diff.size()) print_fatal("image sizes are different");
     img = image_difference(img, diff, true);
@@ -217,14 +209,15 @@ int main(int argc, const char* argv[]) {
   }
 
   // save
-  try {
-    if (do_tonemap && tonemap_prms.srgb) {
-      save_image(output, logo ? add_logo(srgb_to_rgb(img)) : srgb_to_rgb(img));
-    } else {
-      save_image(output, logo ? add_logo(img) : img);
+  if (do_tonemap && tonemap_prms.srgb) {
+    if (!save_image(
+            output, logo ? add_logo(srgb_to_rgb(img)) : srgb_to_rgb(img))) {
+      print_fatal("cannor save " + output);
     }
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  } else {
+    if (!save_image(output, logo ? add_logo(img) : img)) {
+      print_fatal("cannor save " + output);
+    }
   }
 
   // check diff

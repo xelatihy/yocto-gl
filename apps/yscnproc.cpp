@@ -87,14 +87,12 @@ int main(int argc, const char** argv) {
   save_prms.objinstances = obj_instances;
 
   // load scene
-  auto scene = scene_model{};
-  try {
-    auto load_timer = print_timed("loading scene");
-    load_scene(filename, scene, load_prms);
-    print_elapsed(load_timer);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  auto scene      = scene_model{};
+  auto load_timer = print_timed("loading scene");
+  if (auto ret = load_scene(filename, scene, load_prms); !ret) {
+    print_fatal(ret.error);
   }
+  print_elapsed(load_timer);
 
   // validate scene
   if (validate) {
@@ -153,13 +151,11 @@ int main(int argc, const char** argv) {
   }
 
   // save scene
-  try {
-    auto save_timer = print_timed("saving scene");
-    save_scene(output, scene, save_prms);
-    print_elapsed(save_timer);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  auto save_timer = print_timed("saving scene");
+  if (auto ret = save_scene(output, scene, save_prms); !ret) {
+    print_fatal(ret.error);
   }
+  print_elapsed(save_timer);
 
   // done
   return 0;
