@@ -1648,10 +1648,6 @@ vector<float> sample_points_cdf(int npoints) {
   for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
   return cdf;
 }
-void sample_points_cdf(vector<float>& cdf, int npoints) {
-  cdf.resize(npoints);
-  for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
-}
 
 // Pick a point on lines uniformly.
 pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru) {
@@ -1666,15 +1662,6 @@ vector<float> sample_lines_cdf(
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
-}
-void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
-    const vector<vec3f>& positions) {
-  cdf.resize(lines.size());
-  for (auto i = 0; i < cdf.size(); i++) {
-    auto l = lines[i];
-    auto w = line_length(positions[l.x], positions[l.y]);
-    cdf[i] = w + (i ? cdf[i - 1] : 0);
-  }
 }
 
 // Pick a point on a triangle mesh uniformly.
@@ -1691,15 +1678,6 @@ vector<float> sample_triangles_cdf(
     cdf[i] = w + (i ? cdf[i - 1] : 0);
   }
   return cdf;
-}
-void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
-  cdf.resize(triangles.size());
-  for (auto i = 0; i < cdf.size(); i++) {
-    auto t = triangles[i];
-    auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
-    cdf[i] = w + (i ? cdf[i - 1] : 0);
-  }
 }
 
 // Pick a point on a quad mesh uniformly.
@@ -1727,16 +1705,6 @@ vector<float> sample_quads_cdf(
   }
   return cdf;
 }
-void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
-  cdf.resize(quads.size());
-  for (auto i = 0; i < cdf.size(); i++) {
-    auto q = quads[i];
-    auto w = quad_area(
-        positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-    cdf[i] = w + (i ? cdf[i - 1] : 0);
-  }
-}
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
@@ -1749,8 +1717,7 @@ void sample_triangles(vector<vec3f>& sampled_positions,
   sampled_positions.resize(npoints);
   sampled_normals.resize(npoints);
   sampled_texturecoords.resize(npoints);
-  auto cdf = vector<float>{};
-  sample_triangles_cdf(cdf, triangles, positions);
+  auto cdf = sample_triangles_cdf(triangles, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
     auto  sample         = sample_triangles(cdf, rand1f(rng), rand2f(rng));
@@ -1785,8 +1752,7 @@ void sample_quads(vector<vec3f>& sampled_positions,
   sampled_positions.resize(npoints);
   sampled_normals.resize(npoints);
   sampled_texturecoords.resize(npoints);
-  auto cdf = vector<float>{};
-  sample_quads_cdf(cdf, quads, positions);
+  auto cdf = sample_quads_cdf(quads, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
     auto  sample         = sample_quads(cdf, rand1f(rng), rand2f(rng));
