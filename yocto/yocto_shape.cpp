@@ -453,7 +453,7 @@ vector<vector<int>> vertex_adjacencies(
 // Build adjacencies between each vertex and its adjacent faces.
 // Adjacencies are sorted counter-clockwise and have same starting points as
 // vertex_adjacencies()
-void vertex_to_faces_adjacencies(vector<vector<int>>& result,
+vector<vector<int>> vertex_to_faces_adjacencies(
     const vector<vec3i>& triangles, const vector<vec3i>& adjacencies) {
   auto find_index = [](const vec3i& v, int x) {
     if (v.x == x) return 0;
@@ -474,7 +474,7 @@ void vertex_to_faces_adjacencies(vector<vector<int>>& result,
   }
 
   // Init result.
-  result.assign(num_vertices, {});
+    auto result = vector<vector<int>>(num_vertices);
 
   // For each vertex, loop around it and build its adjacency.
   for (int i = 0; i < num_vertices; ++i) {
@@ -492,11 +492,7 @@ void vertex_to_faces_adjacencies(vector<vector<int>>& result,
       if (face == first_face) break;
     }
   }
-}
-vector<vector<int>> vertex_to_faces_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies) {
-  auto result = vector<vector<int>>{};
-  vertex_to_faces_adjacencies(result, triangles, adjacencies);
+
   return result;
 }
 
