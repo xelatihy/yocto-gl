@@ -154,7 +154,7 @@ void close_file(modelio_file& fs) {
 }
 
 // Read a line
-bool read_ply_line(modelio_file& fs, char* buffer, size_t size) {
+bool read_line(modelio_file& fs, char* buffer, size_t size) {
   if (fgets(buffer, size, fs.fs)) {
     fs.linenum += 1;
     return true;
@@ -164,7 +164,7 @@ bool read_ply_line(modelio_file& fs, char* buffer, size_t size) {
 }
 
 template <typename T>
-static T swap_ply_endian(T value) {
+static T swap_endian(T value) {
   // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
   static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
   union {
@@ -178,23 +178,23 @@ static T swap_ply_endian(T value) {
 }
 
 template <typename T>
-bool write_ply_value(modelio_file& fs, const T& value) {
+bool write_value(modelio_file& fs, const T& value) {
   return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
 }
 template <typename T>
-bool write_ply_value(modelio_file& fs, const T& value_, bool big_endian) {
-  auto value = big_endian ? swap_ply_endian(value_) : value_;
+bool write_value(modelio_file& fs, const T& value_, bool big_endian) {
+  auto value = big_endian ? swap_endian(value_) : value_;
   return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
 }
 
 template <typename T>
-bool read_ply_value(modelio_file& fs, T& value) {
+bool read_value(modelio_file& fs, T& value) {
   return fread(&value, sizeof(value), 1, fs.fs) == 1;
 }
 template <typename T>
-bool read_ply_value(modelio_file& fs, T& value, bool big_endian) {
+bool read_value(modelio_file& fs, T& value, bool big_endian) {
   auto ok = fread(&value, sizeof(value), 1, fs.fs) == 1;
-  if (big_endian) value = swap_ply_endian(value);
+  if (big_endian) value = swap_endian(value);
   return ok;
 }
 
@@ -208,28 +208,28 @@ namespace yocto {
 using std::string_view;
 
 // utilities
-static bool is_ply_newline(char c) { return c == '\r' || c == '\n'; }
-static bool is_ply_space(char c) {
+static bool is_newline(char c) { return c == '\r' || c == '\n'; }
+static bool is_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-static void skip_ply_whitespace(string_view& str) {
-  while (!str.empty() && is_ply_space(str.front())) str.remove_prefix(1);
+static void skip_whitespace(string_view& str) {
+  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
-static void remove_ply_comment(string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_ply_newline(str.back())) str.remove_suffix(1);
+static void remove_comment(string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
 }
 
 // Parse values from a string
-static bool parse_ply_value(string_view& str, string_view& value) {
-  skip_ply_whitespace(str);
+static bool parse_value(string_view& str, string_view& value) {
+  skip_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
     auto cpy = str;
-    while (!cpy.empty() && !is_ply_space(cpy.front())) cpy.remove_prefix(1);
+    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -248,82 +248,82 @@ static bool parse_ply_value(string_view& str, string_view& value) {
     return true;
   }
 }
-static bool parse_ply_value(string_view& str, string& value) {
+static bool parse_value(string_view& str, string& value) {
   auto valuev = string_view{};
-  if (!parse_ply_value(str, valuev)) return false;
+  if (!parse_value(str, valuev)) return false;
   value = string{valuev};
   return true;
 }
-static bool parse_ply_value(string_view& str, int8_t& value) {
+static bool parse_value(string_view& str, int8_t& value) {
   char* end = nullptr;
   value     = (int8_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_ply_value(string_view& str, int16_t& value) {
+static bool parse_value(string_view& str, int16_t& value) {
   char* end = nullptr;
   value     = (int16_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_ply_value(string_view& str, int32_t& value) {
+static bool parse_value(string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_ply_value(string_view& str, int64_t& value) {
+static bool parse_value(string_view& str, int64_t& value) {
   char* end = nullptr;
   value     = (int64_t)strtoll(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_ply_value(string_view& str, uint8_t& value) {
+static bool parse_value(string_view& str, uint8_t& value) {
   char* end = nullptr;
   value     = (uint8_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_ply_value(string_view& str, uint16_t& value) {
+static bool parse_value(string_view& str, uint16_t& value) {
   char* end = nullptr;
   value     = (uint16_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_ply_value(string_view& str, uint32_t& value) {
+static bool parse_value(string_view& str, uint32_t& value) {
   char* end = nullptr;
   value     = (uint32_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_ply_value(string_view& str, uint64_t& value) {
+static bool parse_value(string_view& str, uint64_t& value) {
   char* end = nullptr;
   value     = (uint64_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_ply_value(string_view& str, bool& value) {
+static bool parse_value(string_view& str, bool& value) {
   auto valuei = 0;
-  parse_ply_value(str, valuei);
+  if(!parse_value(str, valuei)) return false;
   value = (bool)valuei;
   return true;
 }
-static bool parse_ply_value(string_view& str, float& value) {
+static bool parse_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_ply_value(string_view& str, double& value) {
+static bool parse_value(string_view& str, double& value) {
   char* end = nullptr;
   value     = strtod(str.data(), &end);
   if (str.data() == end) return false;
@@ -331,7 +331,7 @@ static bool parse_ply_value(string_view& str, double& value) {
   return true;
 }
 #ifdef __APPLE__
-static bool parse_ply_value(string_view& str, size_t& value) {
+static bool parse_value(string_view& str, size_t& value) {
   char* end = nullptr;
   value     = (size_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
@@ -348,86 +348,86 @@ static bool parse_ply_value(string_view& str, size_t& value) {
 namespace yocto {
 
 // Formats values to string
-static void format_ply_value(string& str, const string& value) { str += value; }
-static void format_ply_value(string& str, const char* value) { str += value; }
-static void format_ply_value(string& str, int8_t value) {
+static void format_value(string& str, const string& value) { str += value; }
+static void format_value(string& str, const char* value) { str += value; }
+static void format_value(string& str, int8_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-static void format_ply_value(string& str, int16_t value) {
+static void format_value(string& str, int16_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-static void format_ply_value(string& str, int32_t value) {
+static void format_value(string& str, int32_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-static void format_ply_value(string& str, int64_t value) {
+static void format_value(string& str, int64_t value) {
   char buf[256];
   sprintf(buf, "%lld", (long long)value);
   str += buf;
 }
-static void format_ply_value(string& str, uint8_t value) {
+static void format_value(string& str, uint8_t value) {
   char buf[256];
   sprintf(buf, "%u", (unsigned)value);
   str += buf;
 }
-static void format_ply_value(string& str, uint16_t value) {
+static void format_value(string& str, uint16_t value) {
   char buf[256];
   sprintf(buf, "%u", (unsigned)value);
   str += buf;
 }
-static void format_ply_value(string& str, uint32_t value) {
+static void format_value(string& str, uint32_t value) {
   char buf[256];
   sprintf(buf, "%u", (unsigned)value);
   str += buf;
 }
-static void format_ply_value(string& str, uint64_t value) {
+static void format_value(string& str, uint64_t value) {
   char buf[256];
   sprintf(buf, "%llu", (unsigned long long)value);
   str += buf;
 }
-static void format_ply_value(string& str, float value) {
+static void format_value(string& str, float value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
-static void format_ply_value(string& str, double value) {
+static void format_value(string& str, double value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
 
 // Foramt to file
-static void format_ply_values(string& str, const string& fmt) {
+static void format_values(string& str, const string& fmt) {
   auto pos = fmt.find("{}");
   if (pos != string::npos) throw std::runtime_error("bad format string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
-static void format_ply_values(
+static void format_values(
     string& str, const string& fmt, const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
   if (pos == string::npos) throw std::runtime_error("bad format string");
   str += fmt.substr(0, pos);
-  format_ply_value(str, arg);
-  format_ply_values(str, fmt.substr(pos + 2), args...);
+  format_value(str, arg);
+  format_values(str, fmt.substr(pos + 2), args...);
 }
 
 template <typename... Args>
-static bool format_ply_values(
+static bool format_values(
     modelio_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
-  format_ply_values(str, fmt, args...);
+  format_values(str, fmt, args...);
   return fputs(str.c_str(), fs.fs) >= 0;
 }
 template <typename T>
-static bool format_ply_value(modelio_file& fs, const T& value) {
+static bool format_value(modelio_file& fs, const T& value) {
   auto str = ""s;
-  format_ply_value(str, value);
+  format_value(str, value);
   return fputs(str.c_str(), fs.fs) >= 0;
 }
 
@@ -465,16 +465,16 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
 
   // read header ---------------------------------------------
   char buffer[4096];
-  while (read_ply_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_ply_comment(str);
-    skip_ply_whitespace(str);
+    remove_comment(str);
+    skip_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_ply_value(str, cmd)) return {filename + ": parse error"};
+    if (!parse_value(str, cmd)) return {filename + ": parse error"};
     if (cmd == "") continue;
 
     // check magic number
@@ -489,7 +489,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
       if (!first_line) return {filename + ": corrupt header"};
     } else if (cmd == "format") {
       auto fmt = ""s;
-      if (!parse_ply_value(str, fmt)) return {filename + ": parse error"};
+      if (!parse_value(str, fmt)) return {filename + ": parse error"};
       if (fmt == "ascii") {
         ply.format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -500,28 +500,28 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
         return {filename + ": unknown format " + fmt};
       }
     } else if (cmd == "comment") {
-      skip_ply_whitespace(str);
+      skip_whitespace(str);
       ply.comments.push_back(string{str});
     } else if (cmd == "obj_info") {
-      skip_ply_whitespace(str);
+      skip_whitespace(str);
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto& elem = ply.elements.emplace_back();
-      if (!parse_ply_value(str, elem.name)) return {filename + ": parse error"};
-      if (!parse_ply_value(str, elem.count))
+      if (!parse_value(str, elem.name)) return {filename + ": parse error"};
+      if (!parse_value(str, elem.count))
         return {filename + ": parse error"};
     } else if (cmd == "property") {
       if (ply.elements.empty()) return {filename + ": corrupt header"};
       auto& prop  = ply.elements.back().properties.emplace_back();
       auto  tname = ""s;
-      if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
+      if (!parse_value(str, tname)) return {filename + ": parse error"};
       if (tname == "list") {
         prop.is_list = true;
-        if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
+        if (!parse_value(str, tname)) return {filename + ": parse error"};
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
           return {filename + ": unsupported list size type " + tname};
-        if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
+        if (!parse_value(str, tname)) return {filename + ": parse error"};
         if (type_map.find(tname) == type_map.end())
           return {filename + ": unknown type " + tname};
         prop.type = type_map.at(tname);
@@ -531,7 +531,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
           return {filename + ": unknown type " + tname};
         prop.type = type_map.at(tname);
       }
-      if (!parse_ply_value(str, prop.name)) return {filename + ": parse error"};
+      if (!parse_value(str, prop.name)) return {filename + ": parse error"};
     } else if (cmd == "end_header") {
       end_header = true;
       break;
@@ -567,55 +567,55 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
   if (ply.format == ply_format::ascii) {
     for (auto& elem : ply.elements) {
       for (auto idx = 0; idx < elem.count; idx++) {
-        if (!read_ply_line(fs, buffer, sizeof(buffer)))
+        if (!read_line(fs, buffer, sizeof(buffer)))
           return {filename + ": read error"};
         auto str = string_view{buffer};
         for (auto& prop : elem.properties) {
           if (prop.is_list) {
-            if (!parse_ply_value(str, prop.ldata_u8.emplace_back()))
+            if (!parse_value(str, prop.ldata_u8.emplace_back()))
               return {filename + ": parse error"};
           }
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                if (!parse_ply_value(str, prop.data_i8.emplace_back()))
+                if (!parse_value(str, prop.data_i8.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::i16:
-                if (!parse_ply_value(str, prop.data_i16.emplace_back()))
+                if (!parse_value(str, prop.data_i16.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::i32:
-                if (!parse_ply_value(str, prop.data_i32.emplace_back()))
+                if (!parse_value(str, prop.data_i32.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::i64:
-                if (!parse_ply_value(str, prop.data_i64.emplace_back()))
+                if (!parse_value(str, prop.data_i64.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::u8:
-                if (!parse_ply_value(str, prop.data_u8.emplace_back()))
+                if (!parse_value(str, prop.data_u8.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::u16:
-                if (!parse_ply_value(str, prop.data_u16.emplace_back()))
+                if (!parse_value(str, prop.data_u16.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::u32:
-                if (!parse_ply_value(str, prop.data_u32.emplace_back()))
+                if (!parse_value(str, prop.data_u32.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::u64:
-                if (!parse_ply_value(str, prop.data_u64.emplace_back()))
+                if (!parse_value(str, prop.data_u64.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::f32:
-                if (!parse_ply_value(str, prop.data_f32.emplace_back()))
+                if (!parse_value(str, prop.data_f32.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::f64:
-                if (!parse_ply_value(str, prop.data_f64.emplace_back()))
+                if (!parse_value(str, prop.data_f64.emplace_back()))
                   return {filename + ": parse error"};
                 break;
             }
@@ -629,59 +629,59 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
       for (auto idx = 0; idx < elem.count; idx++) {
         for (auto& prop : elem.properties) {
           if (prop.is_list) {
-            if (!read_ply_value(fs, prop.ldata_u8.emplace_back(), big_endian))
+            if (!read_value(fs, prop.ldata_u8.emplace_back(), big_endian))
               return {filename + ": read error"};
           }
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_i8.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::i16:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_i16.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::i32:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_i32.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::i64:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_i64.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::u8:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_u8.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::u16:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_u16.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::u32:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_u32.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::u64:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_u64.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::f32:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_f32.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
               case ply_type::f64:
-                if (!read_ply_value(
+                if (!read_value(
                         fs, prop.data_f64.emplace_back(), big_endian))
                   return {filename + ": read error"};
                 break;
@@ -712,33 +712,33 @@ plyio_status save_ply(const string& filename, const ply_model& ply) {
       {ply_format::binary_big_endian, "binary_big_endian"}};
 
   // header
-  if (!format_ply_values(fs, "ply\n")) return {filename + ": write error"};
-  if (!format_ply_values(fs, "format {} 1.0\n", format_map.at(ply.format)))
+  if (!format_values(fs, "ply\n")) return {filename + ": write error"};
+  if (!format_values(fs, "format {} 1.0\n", format_map.at(ply.format)))
     return {filename + ": write error"};
-  if (!format_ply_values(fs, "comment Written by Yocto/GL\n"))
+  if (!format_values(fs, "comment Written by Yocto/GL\n"))
     return {filename + ": write error"};
-  if (!format_ply_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
     return {filename + ": write error"};
   for (auto& comment : ply.comments)
-    if (!format_ply_values(fs, "comment {}\n", comment))
+    if (!format_values(fs, "comment {}\n", comment))
       return {filename + ": write error"};
   for (auto& elem : ply.elements) {
-    if (!format_ply_values(
+    if (!format_values(
             fs, "element {} {}\n", elem.name, (uint64_t)elem.count))
       return {filename + ": write error"};
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        if (!format_ply_values(fs, "property list uchar {} {}\n",
+        if (!format_values(fs, "property list uchar {} {}\n",
                 type_map[prop.type], prop.name))
           return {filename + ": write error"};
       } else {
-        if (!format_ply_values(
+        if (!format_values(
                 fs, "property {} {}\n", type_map[prop.type], prop.name))
           return {filename + ": write error"};
       }
     }
   }
-  if (!format_ply_values(fs, "end_header\n"))
+  if (!format_values(fs, "end_header\n"))
     return {filename + ": write error"};
 
   // properties
@@ -749,54 +749,54 @@ plyio_status save_ply(const string& filename, const ply_model& ply) {
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
           if (prop.is_list)
-            if (!format_ply_values(fs, "{} ", (int)prop.ldata_u8[idx]))
+            if (!format_values(fs, "{} ", (int)prop.ldata_u8[idx]))
               return {filename + ": write error"};
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                if (!format_ply_values(fs, "{} ", prop.data_i8[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_i8[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::i16:
-                if (!format_ply_values(fs, "{} ", prop.data_i16[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_i16[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::i32:
-                if (!format_ply_values(fs, "{} ", prop.data_i32[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_i32[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::i64:
-                if (!format_ply_values(fs, "{} ", prop.data_i64[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_i64[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::u8:
-                if (!format_ply_values(fs, "{} ", prop.data_u8[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_u8[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::u16:
-                if (!format_ply_values(fs, "{} ", prop.data_u16[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_u16[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::u32:
-                if (!format_ply_values(fs, "{} ", prop.data_u32[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_u32[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::u64:
-                if (!format_ply_values(fs, "{} ", prop.data_u64[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_u64[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::f32:
-                if (!format_ply_values(fs, "{} ", prop.data_f32[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_f32[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::f64:
-                if (!format_ply_values(fs, "{} ", prop.data_f64[cur[idx]++]))
+                if (!format_values(fs, "{} ", prop.data_f64[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
             }
           }
-          if (!format_ply_values(fs, "\n")) return {filename + ": write error"};
+          if (!format_values(fs, "\n")) return {filename + ": write error"};
         }
       }
     }
@@ -808,56 +808,56 @@ plyio_status save_ply(const string& filename, const ply_model& ply) {
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
           if (prop.is_list)
-            if (!write_ply_value(fs, prop.ldata_u8[idx], big_endian))
+            if (!write_value(fs, prop.ldata_u8[idx], big_endian))
               return {filename + ": write error"};
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                if (!write_ply_value(fs, prop.data_i8[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_i8[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::i16:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_i16[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::i32:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_i32[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::i64:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_i64[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::u8:
-                if (!write_ply_value(fs, prop.data_u8[cur[pidx]++], big_endian))
+                if (!write_value(fs, prop.data_u8[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::u16:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_u16[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::u32:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_u32[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::u64:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_u64[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::f32:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_f32[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
               case ply_type::f64:
-                if (!write_ply_value(
+                if (!write_value(
                         fs, prop.data_f64[cur[pidx]++], big_endian))
                   return {filename + ": write error"};
                 break;
@@ -1287,7 +1287,7 @@ template <typename T, typename VT>
 [[nodiscard]] static bool read_ply_prop(
     modelio_file& fs, VT& value, bool big_endian) {
   auto tvalue = T{};
-  auto ok     = read_ply_value(fs, tvalue, big_endian);
+  auto ok     = read_value(fs, tvalue, big_endian);
   value       = (VT)tvalue;
   return ok;
 }
@@ -1311,7 +1311,7 @@ template <typename VT>
 template <typename T, typename VT>
 static bool parse_ply_prop(string_view& str, VT& value) {
   auto tvalue = T{};
-  if (!parse_ply_value(str, tvalue)) return false;
+  if (!parse_value(str, tvalue)) return false;
   value = (VT)tvalue;
   return false;
 }
@@ -1357,16 +1357,16 @@ plyio_status read_ply_header(const string& filename, modelio_file& fs,
 
   // read the file header str by str
   char buffer[4096];
-  while (read_ply_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_ply_comment(str);
-    skip_ply_whitespace(str);
+    remove_comment(str);
+    skip_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_ply_value(str, cmd)) return {filename + ": parse error"};
+    if (!parse_value(str, cmd)) return {filename + ": parse error"};
     if (cmd == "") continue;
 
     // check magic number
@@ -1381,7 +1381,7 @@ plyio_status read_ply_header(const string& filename, modelio_file& fs,
       if (!first_line) return {filename + ": corrupt header"};
     } else if (cmd == "format") {
       auto fmt = string_view{};
-      if (!parse_ply_value(str, fmt)) return {filename + ": parse error"};
+      if (!parse_value(str, fmt)) return {filename + ": parse error"};
       if (fmt == "ascii") {
         format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -1392,30 +1392,30 @@ plyio_status read_ply_header(const string& filename, modelio_file& fs,
         return {filename + ": unknown format"};
       }
     } else if (cmd == "comment") {
-      skip_ply_whitespace(str);
+      skip_whitespace(str);
       comments.push_back(string{str});
     } else if (cmd == "obj_info") {
-      skip_ply_whitespace(str);
+      skip_whitespace(str);
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto& elem = elements.emplace_back();
-      if (!parse_ply_value(str, elem.name)) return {filename + ": parse error"};
-      if (!parse_ply_value(str, elem.count))
+      if (!parse_value(str, elem.name)) return {filename + ": parse error"};
+      if (!parse_value(str, elem.count))
         return {filename + ": parse error"};
     } else if (cmd == "property") {
       if (elements.empty()) throw std::runtime_error{"bad ply header"};
       auto& prop  = elements.back().properties.emplace_back();
       auto  tname = ""s;
-      if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
+      if (!parse_value(str, tname)) return {filename + ": parse error"};
       if (tname == "list") {
         prop.is_list = true;
-        if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
+        if (!parse_value(str, tname)) return {filename + ": parse error"};
         if (type_map.find(tname) == type_map.end())
           return {filename + ": unknown type " + tname};
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
           throw std::runtime_error{"unsupported list size type " + tname};
-        if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
+        if (!parse_value(str, tname)) return {filename + ": parse error"};
         if (type_map.find(tname) == type_map.end())
           return {filename + ": unknown type " + tname};
         prop.type = type_map.at(tname);
@@ -1425,7 +1425,7 @@ plyio_status read_ply_header(const string& filename, modelio_file& fs,
           return {filename + ": unknown type " + tname};
         prop.type = type_map.at(tname);
       }
-      if (!parse_ply_value(str, prop.name)) return {filename + ": parse error"};
+      if (!parse_value(str, prop.name)) return {filename + ": parse error"};
     } else if (cmd == "end_header") {
       end_header = true;
       break;
@@ -1455,7 +1455,7 @@ static plyio_status read_ply_value_generic(const string& filename, modelio_file&
   // read property values
   if (format == ply_format::ascii) {
     char buffer[4096];
-    if (!read_ply_line(fs, buffer, sizeof(buffer)))
+    if (!read_line(fs, buffer, sizeof(buffer)))
       return {filename + ": read error"};
     auto str = string_view{buffer};
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -1500,35 +1500,35 @@ static plyio_status read_ply_value_generic(const string& filename, modelio_file&
 }
 
 template <typename VT>
-static bool format_ply_prop(modelio_file& fs, ply_type type, VT value) {
+static bool format_prop(modelio_file& fs, ply_type type, VT value) {
   switch (type) {
-    case ply_type::i8: return format_ply_value(fs, (int8_t)value);
-    case ply_type::i16: return format_ply_value(fs, (int16_t)value);
-    case ply_type::i32: return format_ply_value(fs, (int32_t)value);
-    case ply_type::i64: return format_ply_value(fs, (int64_t)value);
-    case ply_type::u8: return format_ply_value(fs, (uint8_t)value);
-    case ply_type::u16: return format_ply_value(fs, (uint16_t)value);
-    case ply_type::u32: return format_ply_value(fs, (uint32_t)value);
-    case ply_type::u64: return format_ply_value(fs, (uint64_t)value);
-    case ply_type::f32: return format_ply_value(fs, (float)value);
-    case ply_type::f64: return format_ply_value(fs, (double)value);
+    case ply_type::i8: return format_value(fs, (int8_t)value);
+    case ply_type::i16: return format_value(fs, (int16_t)value);
+    case ply_type::i32: return format_value(fs, (int32_t)value);
+    case ply_type::i64: return format_value(fs, (int64_t)value);
+    case ply_type::u8: return format_value(fs, (uint8_t)value);
+    case ply_type::u16: return format_value(fs, (uint16_t)value);
+    case ply_type::u32: return format_value(fs, (uint32_t)value);
+    case ply_type::u64: return format_value(fs, (uint64_t)value);
+    case ply_type::f32: return format_value(fs, (float)value);
+    case ply_type::f64: return format_value(fs, (double)value);
   }
 }
 
 template <typename VT>
-static bool write_ply_prop(
+static bool write_prop(
     modelio_file& fs, ply_type type, VT value, bool big_endian) {
   switch (type) {
-    case ply_type::i8: return write_ply_value(fs, (int8_t)value, big_endian);
-    case ply_type::i16: return write_ply_value(fs, (int16_t)value, big_endian);
-    case ply_type::i32: return write_ply_value(fs, (int32_t)value, big_endian);
-    case ply_type::i64: return write_ply_value(fs, (int64_t)value, big_endian);
-    case ply_type::u8: return write_ply_value(fs, (uint8_t)value, big_endian);
-    case ply_type::u16: return write_ply_value(fs, (uint16_t)value, big_endian);
-    case ply_type::u32: return write_ply_value(fs, (uint32_t)value, big_endian);
-    case ply_type::u64: return write_ply_value(fs, (uint64_t)value, big_endian);
-    case ply_type::f32: return write_ply_value(fs, (float)value, big_endian);
-    case ply_type::f64: return write_ply_value(fs, (double)value, big_endian);
+    case ply_type::i8: return write_value(fs, (int8_t)value, big_endian);
+    case ply_type::i16: return write_value(fs, (int16_t)value, big_endian);
+    case ply_type::i32: return write_value(fs, (int32_t)value, big_endian);
+    case ply_type::i64: return write_value(fs, (int64_t)value, big_endian);
+    case ply_type::u8: return write_value(fs, (uint8_t)value, big_endian);
+    case ply_type::u16: return write_value(fs, (uint16_t)value, big_endian);
+    case ply_type::u32: return write_value(fs, (uint32_t)value, big_endian);
+    case ply_type::u64: return write_value(fs, (uint64_t)value, big_endian);
+    case ply_type::f32: return write_value(fs, (float)value, big_endian);
+    case ply_type::f64: return write_value(fs, (double)value, big_endian);
     default: return false;
   }
 }
@@ -1544,42 +1544,42 @@ plyio_status write_ply_header(const string& filename, modelio_file& fs,
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
       {ply_type::f32, "float"}, {ply_type::f64, "double"}};
 
-  if (!format_ply_values(fs, "ply\n")) return {filename + ": write error"};
+  if (!format_values(fs, "ply\n")) return {filename + ": write error"};
   switch (format) {
     case ply_format::ascii:
-      if (!format_ply_values(fs, "format ascii 1.0\n"))
+      if (!format_values(fs, "format ascii 1.0\n"))
         return {filename + ": write error"};
       break;
     case ply_format::binary_little_endian:
-      if (!format_ply_values(fs, "format binary_little_endian 1.0\n"))
+      if (!format_values(fs, "format binary_little_endian 1.0\n"))
         return {filename + ": write error"};
       break;
     case ply_format::binary_big_endian:
-      if (!format_ply_values(fs, "format binary_big_endian 1.0\n"))
+      if (!format_values(fs, "format binary_big_endian 1.0\n"))
         return {filename + ": write error"};
       break;
   }
   for (auto& comment : comments)
-    if (!format_ply_values(fs, "comment " + comment + "\n"))
+    if (!format_values(fs, "comment " + comment + "\n"))
       return {filename + ": write error"};
   for (auto& elem : elements) {
-    if (!format_ply_values(fs,
+    if (!format_values(fs,
             "element " + elem.name + " " + std::to_string(elem.count) + "\n"))
       return {filename + ": write error"};
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        if (!format_ply_values(fs, "property list uchar " +
+        if (!format_values(fs, "property list uchar " +
                                        type_map[prop.type] + " " + prop.name +
                                        "\n"))
           return {filename + ": write error"};
       } else {
-        if (!format_ply_values(
+        if (!format_values(
                 fs, "property " + type_map[prop.type] + " " + prop.name + "\n"))
           return {filename + ": write error"};
       }
     }
   }
-  if (!format_ply_values(fs, "end_header\n"))
+  if (!format_values(fs, "end_header\n"))
     return {filename + ": write error"};
 
   return {};
@@ -1593,35 +1593,35 @@ static plyio_status write_ply_value_generic(const string& filename,
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
       if (pidx)
-        if (!format_ply_value(fs, " ")) return {filename + ": write error"};
+        if (!format_value(fs, " ")) return {filename + ": write error"};
       if (!prop.is_list) {
-        if (!format_ply_prop(fs, prop.type, values[pidx]))
+        if (!format_prop(fs, prop.type, values[pidx]))
           return {filename + ": write error"};
       } else {
-        if (!format_ply_prop(fs, ply_type::u8, values[pidx]))
+        if (!format_prop(fs, ply_type::u8, values[pidx]))
           return {filename + ": write error"};
         for (auto i = 0; i < (int)lists[pidx].size(); i++) {
           if (i)
-            if (!format_ply_value(fs, " ")) return {filename + ": write error"};
-          if (!format_ply_prop(fs, prop.type, lists[pidx][i]))
+            if (!format_value(fs, " ")) return {filename + ": write error"};
+          if (!format_prop(fs, prop.type, lists[pidx][i]))
             return {filename + ": write error"};
         }
       }
-      if (!format_ply_value(fs, "\n")) return {filename + ": write error"};
+      if (!format_value(fs, "\n")) return {filename + ": write error"};
     }
   } else {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
       if (!prop.is_list) {
-        if (!write_ply_prop(fs, prop.type, values[pidx],
+        if (!write_prop(fs, prop.type, values[pidx],
                 format == ply_format::binary_big_endian))
           return {filename + ": write error"};
       } else {
-        if (!write_ply_prop(fs, ply_type::u8, values[pidx],
+        if (!write_prop(fs, ply_type::u8, values[pidx],
                 format == ply_format::binary_big_endian))
           return {filename + ": write error"};
         for (auto i = 0; i < (int)lists[pidx].size(); i++)
-          if (!write_ply_prop(fs, prop.type, lists[pidx][i],
+          if (!write_prop(fs, prop.type, lists[pidx][i],
                   format == ply_format::binary_big_endian))
             return {filename + ": write error"};
       }
