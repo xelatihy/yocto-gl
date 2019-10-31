@@ -242,7 +242,7 @@ int main(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(trace_prms.samples));
-    trace_samples(render, state, scene, sample, trace_prms);
+    trace_samples(render, state, scene, trace_prms);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,

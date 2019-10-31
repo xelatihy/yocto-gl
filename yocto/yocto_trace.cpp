@@ -2940,33 +2940,32 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-vec4f trace_sample(trace_state& state,
-    const trace_scene& scene, const vec2i& ij, 
-    const trace_params& params) {
+vec4f trace_sample(trace_state& state, const trace_scene& scene,
+    const vec2i& ij, const trace_params& params) {
   auto& camera  = scene.cameras.at(params.camera);
   auto  sampler = get_trace_sampler_func(params);
-  auto& pixel = state[ij];
-  auto ray = params.tentfilter
-                  ? sample_camera_tent(camera, ij, state.size(),
-                        rand2f(pixel.rng), rand2f(pixel.rng))
-                  : sample_camera(camera, ij, state.size(),
-                        rand2f(pixel.rng), rand2f(pixel.rng));
-    auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
-    if (!hit) {
-      if (params.envhidden || scene.environments.empty()) {
-        radiance = zero3f;
-        hit      = false;
-      } else {
-        hit = true;
-      }
+  auto& pixel   = state[ij];
+  auto  ray = params.tentfilter ? sample_camera_tent(camera, ij, state.size(),
+                                     rand2f(pixel.rng), rand2f(pixel.rng))
+                               : sample_camera(camera, ij, state.size(),
+                                     rand2f(pixel.rng), rand2f(pixel.rng));
+  auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
+  if (!hit) {
+    if (params.envhidden || scene.environments.empty()) {
+      radiance = zero3f;
+      hit      = false;
+    } else {
+      hit = true;
     }
-    if (!isfinite(radiance)) radiance = zero3f;
-    if (max(radiance) > params.clamp)
-      radiance = radiance * (params.clamp / max(radiance));
-    pixel.radiance += radiance;
-    pixel.hits += hit ? 1 : 0;
-    pixel.samples += 1;
-    return {pixel.hits ? pixel.radiance / pixel.hits : zero3f, (float)pixel.hits / (float)pixel.samples};
+  }
+  if (!isfinite(radiance)) radiance = zero3f;
+  if (max(radiance) > params.clamp)
+    radiance = radiance * (params.clamp / max(radiance));
+  pixel.radiance += radiance;
+  pixel.hits += hit ? 1 : 0;
+  pixel.samples += 1;
+  return {pixel.hits ? pixel.radiance / pixel.hits : zero3f,
+      (float)pixel.hits / (float)pixel.samples};
 }
 
 // Trace a block of samples
@@ -3043,20 +3042,45 @@ void init_lights(trace_scene& scene) {
   }
 }
 
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(const vec2i& size, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, size]() {
+          while (true) {
+            auto j = next_idx.fetch_add(1);
+            if (j >= size.y) break;
+            for (auto i = 0; i < size.x; i++) func({i, j});
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
-  auto state   = make_state(scene, params);
-  auto render  = image{state.size(), zero4f};
-  auto regions = make_image_regions(render.size(), params.region, true);
+  auto state  = make_state(scene, params);
+  auto render = image{state.size(), zero4f};
 
   if (params.noparallel) {
-    for (auto& region : regions) {
-      trace_region(render, state, scene, region, params.samples, params);
+    for (auto j = 0; j < render.size().y; j++) {
+      for (auto i = 0; i < render.size().x; i++) {
+        for (auto s = 0; s < params.samples; s++) {
+          render[{i, j}] = trace_sample(state, scene, {i, j}, params);
+        }
+      }
     }
   } else {
-    parallel_foreach(regions,
-        [&render, &state, &scene, &params](const image_region& region) {
-          trace_region(render, state, scene, region, params.samples, params);
+    parallel_for(
+        render.size(), [&render, &state, &scene, &params](const vec2i& ij) {
+          for (auto s = 0; s < params.samples; s++) {
+            render[ij] = trace_sample(state, scene, ij, params);
+          }
         });
   }
 
@@ -3065,18 +3089,25 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
 
 // Progressively compute an image by calling trace_samples multiple times.
 int trace_samples(image<vec4f>& render, trace_state& state,
-    const trace_scene& scene, int current_sample, const trace_params& params) {
+    const trace_scene& scene, const trace_params& params) {
   auto regions     = make_image_regions(render.size(), params.region, true);
+  auto current_sample = state[zero2i].samples;
   auto num_samples = min(params.batch, params.samples - current_sample);
   if (params.noparallel) {
-    for (auto& region : regions) {
-      trace_region(render, state, scene, region, params.samples, params);
+    for (auto j = 0; j < render.size().y; j++) {
+      for (auto i = 0; i < render.size().x; i++) {
+        for (auto s = 0; s < params.samples; s++) {
+          render[{i, j}] = trace_sample(state, scene, {i, j}, params);
+        }
+      }
     }
   } else {
-    parallel_foreach(regions, [&render, &state, &scene, &params, num_samples](
-                                  const image_region& region) {
-      trace_region(render, state, scene, region, num_samples, params);
-    });
+    parallel_for(
+        render.size(), [&render, &state, &scene, &params](const vec2i& ij) {
+          for (auto s = 0; s < params.samples; s++) {
+            render[ij] = trace_sample(state, scene, ij, params);
+          }
+        });
   }
   return current_sample + num_samples;
 }
