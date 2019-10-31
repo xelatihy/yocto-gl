@@ -1836,9 +1836,10 @@ static inline void connect_opposite_nodes(geodesic_solver& solver,
   connect_nodes(solver, v0, v1, length);
 }
 
-void make_geodesic_solver(geodesic_solver& solver,
+geodesic_solver make_geodesic_solver(
     const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
     const vector<vec3f>& positions) {
+  auto solver = geodesic_solver{};
   solver.graph.resize(positions.size());
   for (int face = 0; face < triangles.size(); face++) {
     for (int k = 0; k < 3; k++) {
@@ -1857,11 +1858,6 @@ void make_geodesic_solver(geodesic_solver& solver,
       }
     }
   }
-}
-geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
-    const vector<vec3i>& adjacencies, const vector<vec3f>& positions) {
-  auto solver = geodesic_solver{};
-  make_geodesic_solver(solver, triangles, adjacencies, positions);
   return solver;
 }
 
@@ -1961,13 +1957,6 @@ void update_geodesic_distances(vector<float>& distances,
   visit_geodesic_graph(distances, solver, sources, update, exit);
 }
 
-void compute_geodesic_distances(const geodesic_solver& solver,
-    const vector<int>& sources, vector<float>& distances, float max_distance) {
-  distances.assign(solver.graph.size(), flt_max);
-  for (auto source : sources) distances[source] = 0.0f;
-  update_geodesic_distances(distances, solver, sources, max_distance);
-}
-
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<int>& sources, float max_distance) {
   auto distances = vector<float>(solver.graph.size(), flt_max);
@@ -1995,9 +1984,8 @@ vector<int> compute_geodesic_paths(
 // Sample vertices with a Poisson distribution using geodesic distances
 // Sampling strategy is farthest point sampling (FPS): at every step
 // take the farthers point from current sampled set until done.
-void sample_vertices_poisson(
-    vector<int>& verts, const geodesic_solver& solver, int num_samples) {
-  verts.clear();
+vector<int> sample_vertices_poisson(const geodesic_solver& solver, int num_samples) {
+  auto verts = vector<int>{};
   verts.reserve(num_samples);
   auto distances = vector<float>(solver.graph.size(), flt_max);
   while (true) {
@@ -2009,11 +1997,6 @@ void sample_vertices_poisson(
     distances[max_index] = 0.0f;
     update_geodesic_distances(distances, solver, {max_index}, flt_max);
   }
-}
-vector<int> sample_vertices_poisson(
-    const geodesic_solver& solver, int num_samples) {
-  auto verts = vector<int>{};
-  sample_vertices_poisson(verts, solver, num_samples);
   return verts;
 }
 
@@ -2036,17 +2019,12 @@ vector<vector<float>> compute_voronoi_fields(
   return fields;
 }
 
-void colors_from_field(vector<vec4f>& colors, const vector<float>& field,
+vector<vec4f> colors_from_field(const vector<float>& field,
     float scale, const vec4f& c0, const vec4f& c1) {
-  colors.resize(field.size());
+  auto colors = vector<vec4f>{field.size()};
   for (auto i = 0; i < colors.size(); i++) {
     colors[i] = ((int64_t)(field[i] * scale)) % 2 ? c0 : c1;
   }
-}
-vector<vec4f> colors_from_field(
-    const vector<float>& field, float scale, const vec4f& c0, const vec4f& c1) {
-  auto colors = vector<vec4f>{field.size()};
-  colors_from_field(colors, field, scale, c0, c1);
   return colors;
 }
 

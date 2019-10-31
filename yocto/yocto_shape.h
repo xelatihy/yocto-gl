@@ -491,9 +491,6 @@ struct geodesic_solver {
 // Construct a a graph to compute geodesic distances
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacencies, const vector<vec3f>& positions);
-void            make_geodesic_solver(geodesic_solver& solver,
-               const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
-               const vector<vec3f>& positions);
 
 // Compute geodesic distances
 void update_geodesic_distances(vector<float>& distances,
@@ -502,9 +499,6 @@ void update_geodesic_distances(vector<float>& distances,
 
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<int>& sources, float max_distance = flt_max);
-void          compute_geodesic_distances(const geodesic_solver& solver,
-             const vector<int>& sources, vector<float>& distances,
-             float max_distance = flt_max);
 
 // Compute all shortest paths from source vertices to any other vertex.
 // Paths are implicitly represented: each node is assignes its previous node in
@@ -517,8 +511,6 @@ vector<int> compute_geodesic_paths(const geodesic_solver& solver,
 // take the farthers point from current sampled set until done.
 vector<int> sample_vertices_poisson(
     const geodesic_solver& solver, int num_samples);
-void sample_vertices_poisson(
-    vector<int>& verts, const geodesic_solver& solver, int num_samples);
 
 // Compute the distance field needed to compute a voronoi diagram
 vector<vector<float>> compute_voronoi_fields(
@@ -527,9 +519,6 @@ vector<vector<float>> compute_voronoi_fields(
 // Convert distances to colors
 vector<vec4f> colors_from_field(const vector<float>& field, float scale = 1,
     const vec4f& c0 = {1, 1, 1, 1}, const vec4f& c1 = {1, 0.1, 0.1, 1});
-void colors_from_field(vector<vec4f>& colors, const vector<float>& field,
-    float scale = 1, const vec4f& c0 = {1, 1, 1, 1},
-    const vec4f& c1 = {1, 0.1, 0.1, 1});
 
 struct path_vertex {
   vec2i edge;
