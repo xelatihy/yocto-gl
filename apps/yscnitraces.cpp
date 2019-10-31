@@ -61,7 +61,6 @@ struct app_state {
   // view scene
   opengl_image        gl_image       = {};
   draw_glimage_params draw_prms      = {};
-  bool                navigation_fps = false;
 
   // editing
   pair<string, int> selection = {"camera", 0};
