@@ -909,28 +909,6 @@ pbrtio_status save_pbrt(const string& filename, const pbrt_model& pbrt);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// A class that wraps a C file ti handle safe opening/closgin with RIIA.
-struct pbrt_file {
-  pbrt_file() {}
-  pbrt_file(pbrt_file&& other);
-  pbrt_file(const pbrt_file&) = delete;
-  pbrt_file& operator=(const pbrt_file&) = delete;
-  ~pbrt_file();
-
-  operator bool() const { return (bool)fs; }
-
-  FILE*  fs       = nullptr;
-  string filename = "";
-  string mode     = "rt";
-  int    linenum  = 0;
-};
-
-// open a file
-pbrt_file open_pbrt(const string& filename, const string& mode = "rt");
-void      open_pbrt(
-         pbrt_file& fs, const string& filename, const string& mode = "rt");
-void close_pbrt(pbrt_file& fs);
-
 // Pbrt command
 enum struct pbrt_command {
   // clang-format off
@@ -947,24 +925,24 @@ enum struct pbrt_command {
 };
 
 // Read pbrt commands
-pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status read_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values);
-pbrtio_status read_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status read_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values, string& buffer);
 
 // Write pbrt commands
 pbrtio_status write_pbrt_comment(
-    const string& filename, pbrt_file& fs, const string& comment);
-pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+    const string& filename, modelio_file& fs, const string& comment);
+pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command command, const string& name, const string& type,
     const frame3f& xform, const vector<pbrt_value>& values,
     bool texture_as_float = false);
-pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command command, const string& name = "",
     const frame3f& xform = identity3x4f);
-pbrtio_status write_pbrt_command(const string& filename, pbrt_file& fs,
+pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
     pbrt_command command, const string& name, const string& type,
     const vector<pbrt_value>& values, bool texture_as_float = false);
 
