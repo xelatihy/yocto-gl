@@ -1135,7 +1135,7 @@ image<vec4f> make_lights(const vec2i& size, const vec3f& le,
   return img;
 }
 
-void make_logo(image<vec4b>& img, const string& type) {
+image<vec4b> make_logo(const string& type) {
   static const auto logo_medium_size = vec2i{102, 36};
   static const auto logo_small_size  = vec2i{72, 28};
   // clang-format off
@@ -1209,29 +1209,19 @@ static const auto logo_small = vector<byte> {
   };
   // clang-format on
   if (type == "logo-medium") {
-    img.resize(logo_medium_size);
+    auto img = image<vec4b>{logo_medium_size};
     for (auto i = 0; i < img.count(); i++)
       img[i] = vec4b{logo_medium[i], logo_medium[i], logo_medium[i], (byte)255};
+    return img;
   } else if (type == "logo-small") {
-    img.resize(logo_small_size);
+    auto img = image<vec4b>{logo_small_size};
     for (auto i = 0; i < img.count(); i++)
       img[i] = vec4b{logo_small[i], logo_small[i], logo_small[i], (byte)255};
+    return img;
   } else {
     throw std::runtime_error("unknown builtin image " + type);
+    return {};
   }
-}
-
-image<vec4b> make_logo(const string& type) {
-  auto img = image<vec4b>{};
-  make_logo(img, type);
-  return img;
-}
-
-void make_logo(image<vec4f>& img, const string& type) {
-  auto img8 = image<vec4b>();
-  make_logo(img8, type);
-  img.resize(img8.size());
-  srgb_to_rgb(img, img8);
 }
 
 image<vec4f> add_logo(const image<vec4f>& img, const string& type) {
@@ -1248,22 +1238,6 @@ image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
   auto wlogo  = img;
   set_region(wlogo, logo, offset);
   return wlogo;
-}
-
-void add_logo(
-    image<vec4f>& wlogo, const image<vec4f>& img, const string& type) {
-  auto logo   = srgb_to_rgb(make_logo(type));
-  auto offset = img.size() - logo.size() - 8;
-  wlogo       = img;
-  set_region(wlogo, logo, offset);
-}
-
-void add_logo(
-    image<vec4b>& wlogo, const image<vec4b>& img, const string& type) {
-  auto logo   = make_logo(type);
-  auto offset = img.size() - logo.size() - 8;
-  wlogo       = img;
-  set_region(wlogo, logo, offset);
 }
 
 bool make_image_preset(image<vec4f>& img, const string& type) {
@@ -1341,9 +1315,6 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
     make_proc_image(img, params);
     auto bump = img;
     bump_to_normal(img, bump, 0.05f);
-    return true;
-  } else if (type == "logo-medium") {
-    make_logo(img, "logo-medium");
     return true;
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",

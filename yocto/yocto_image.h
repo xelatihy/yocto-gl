@@ -257,16 +257,10 @@ void         add_border(
 
 // Make logo images. Image is resized to proper size.
 image<vec4b> make_logo(const string& name);
-void         make_logo(image<vec4f>& img, const string& name);
-void         make_logo(image<vec4b>& img, const string& name);
 image<vec4f> add_logo(
     const image<vec4f>& img, const string& name = "logo-medium");
 image<vec4b> add_logo(
     const image<vec4b>& img, const string& name = "logo-medium");
-void add_logo(image<vec4f>& with_logo, const image<vec4f>& img,
-    const string& name = "logo-medium");
-void add_logo(image<vec4b>& with_logo, const image<vec4b>& img,
-    const string& name = "logo-medium");
 
 // Make an image preset, useful for testing. See implementation for types.
 image<vec4f> make_image_preset(const string& type);
