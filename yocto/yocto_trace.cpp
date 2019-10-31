@@ -2968,47 +2968,6 @@ vec4f trace_sample(trace_state& state, const trace_scene& scene,
       (float)pixel.hits / (float)pixel.samples};
 }
 
-// Trace a block of samples
-void trace_region(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const image_region& region, int num_samples,
-    const trace_params& params) {
-  auto& camera  = scene.cameras.at(params.camera);
-  auto  sampler = get_trace_sampler_func(params);
-  for (auto j = region.min.y; j < region.max.y; j++) {
-    for (auto i = region.min.x; i < region.max.x; i++) {
-      auto& pixel = state[{i, j}];
-      for (auto s = 0; s < num_samples; s++) {
-        auto ray = params.tentfilter
-                       ? sample_camera_tent(camera, {i, j}, image.size(),
-                             rand2f(pixel.rng), rand2f(pixel.rng))
-                       : sample_camera(camera, {i, j}, image.size(),
-                             rand2f(pixel.rng), rand2f(pixel.rng));
-        auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
-        if (!hit) {
-          if (params.envhidden || scene.environments.empty()) {
-            radiance = zero3f;
-            hit      = false;
-          } else {
-            hit = true;
-          }
-        }
-        if (!isfinite(radiance)) {
-          // printf("NaN detected\n");
-          radiance = zero3f;
-        }
-        if (max(radiance) > params.clamp)
-          radiance = radiance * (params.clamp / max(radiance));
-        pixel.radiance += radiance;
-        pixel.hits += hit ? 1 : 0;
-        pixel.samples += 1;
-      }
-      auto radiance = pixel.hits ? pixel.radiance / pixel.hits : zero3f;
-      auto coverage = (float)pixel.hits / (float)pixel.samples;
-      image[{i, j}] = {radiance.x, radiance.y, radiance.z, coverage};
-    }
-  }
-}
-
 // Init a sequence of random number generators.
 trace_state make_state(const trace_scene& scene, const trace_params& params) {
   auto image_size = camera_resolution(
