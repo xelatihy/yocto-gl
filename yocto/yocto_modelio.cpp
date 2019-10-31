@@ -1500,7 +1500,7 @@ static plyio_status read_ply_value_generic(const string& filename, modelio_file&
 }
 
 template <typename VT>
-static bool format_prop(modelio_file& fs, ply_type type, VT value) {
+static bool format_ply_prop(modelio_file& fs, ply_type type, VT value) {
   switch (type) {
     case ply_type::i8: return format_value(fs, (int8_t)value);
     case ply_type::i16: return format_value(fs, (int16_t)value);
@@ -1516,7 +1516,7 @@ static bool format_prop(modelio_file& fs, ply_type type, VT value) {
 }
 
 template <typename VT>
-static bool write_prop(
+static bool write_ply_prop(
     modelio_file& fs, ply_type type, VT value, bool big_endian) {
   switch (type) {
     case ply_type::i8: return write_value(fs, (int8_t)value, big_endian);
@@ -1595,15 +1595,15 @@ static plyio_status write_ply_value_generic(const string& filename,
       if (pidx)
         if (!format_value(fs, " ")) return {filename + ": write error"};
       if (!prop.is_list) {
-        if (!format_prop(fs, prop.type, values[pidx]))
+        if (!format_ply_prop(fs, prop.type, values[pidx]))
           return {filename + ": write error"};
       } else {
-        if (!format_prop(fs, ply_type::u8, values[pidx]))
+        if (!format_ply_prop(fs, ply_type::u8, values[pidx]))
           return {filename + ": write error"};
         for (auto i = 0; i < (int)lists[pidx].size(); i++) {
           if (i)
             if (!format_value(fs, " ")) return {filename + ": write error"};
-          if (!format_prop(fs, prop.type, lists[pidx][i]))
+          if (!format_ply_prop(fs, prop.type, lists[pidx][i]))
             return {filename + ": write error"};
         }
       }
@@ -1613,15 +1613,15 @@ static plyio_status write_ply_value_generic(const string& filename,
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
       if (!prop.is_list) {
-        if (!write_prop(fs, prop.type, values[pidx],
+        if (!write_ply_prop(fs, prop.type, values[pidx],
                 format == ply_format::binary_big_endian))
           return {filename + ": write error"};
       } else {
-        if (!write_prop(fs, ply_type::u8, values[pidx],
+        if (!write_ply_prop(fs, ply_type::u8, values[pidx],
                 format == ply_format::binary_big_endian))
           return {filename + ": write error"};
         for (auto i = 0; i < (int)lists[pidx].size(); i++)
-          if (!write_prop(fs, prop.type, lists[pidx][i],
+          if (!write_ply_prop(fs, prop.type, lists[pidx][i],
                   format == ply_format::binary_big_endian))
             return {filename + ": write error"};
       }
