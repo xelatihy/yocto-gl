@@ -937,6 +937,24 @@ static inline string make_safe_filename(const string& filename_) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+static bool make_image_preset(
+    image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
+  if (type.find("sky") == type.npos) {
+    auto imgf = make_image_preset(type);
+    if (imgf.empty()) return false;
+    if (type.find("-normal") == type.npos &&
+        type.find("-displacement") == type.npos) {
+      ldr = rgb_to_srgbb(imgf);
+    } else {
+      ldr = float_to_byte(imgf);
+    }
+    return true;
+  } else {
+    hdr = make_image_preset(type);
+    return true;
+  }
+}
+
 sceneio_status load_yaml(
     const string& filename, scene_model& scene, const load_params& params) {
   // open file

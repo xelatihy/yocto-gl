@@ -1291,33 +1291,14 @@ image<vec4f> make_image_preset(const string& type) {
   }
 }
 
-bool make_image_preset(image<vec4b>& img, const string& type) {
+image<vec4b> make_image_presetb(const string& type) {
   auto imgf = make_image_preset(type);
-  if (imgf.empty()) return false;
+  if (imgf.empty()) return {};
   if (type.find("-normal") == type.npos &&
       type.find("-displacement") == type.npos) {
-    img = rgb_to_srgbb(imgf);
+    return rgb_to_srgbb(imgf);
   } else {
-    img = float_to_byte(imgf);
-  }
-  return true;
-}
-
-bool make_image_preset(
-    image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
-  if (type.find("sky") == type.npos) {
-    auto imgf = make_image_preset(type);
-    if (imgf.empty()) return false;
-    if (type.find("-normal") == type.npos &&
-        type.find("-displacement") == type.npos) {
-      ldr = rgb_to_srgbb(imgf);
-    } else {
-      ldr = float_to_byte(imgf);
-    }
-    return true;
-  } else {
-    hdr = make_image_preset(type);
-    return true;
+    return float_to_byte(imgf);
   }
 }
 
@@ -1648,78 +1629,68 @@ image<vec4f> load_image(const string& filename) {
 
 // Loads an hdr image.
 imageio_status load_image(const string& filename, image<vec4f>& img) {
-  auto ok    = []() { return imageio_status{}; };
-  auto error = [&filename](const string& err) {
-    return imageio_status{filename + ": " + err};
-  };
-
   auto ext = get_extension(filename);
   if (ext == ".ypreset") {
     img = make_image_preset(get_basename(filename));
-    if (img.empty()) return error("unknown preset");
+    if (img.empty()) return {filename + ": unknown preset"};
     return {};
   }
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
-      return error("read error");
-    if (!pixels) return error("read error");
+      return {filename + ": read error"};
+    if (!pixels) return {filename + ": read error"};
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
-    return ok();
+    return {};
   } else if (ext == ".pfm" || ext == ".PFM") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) return error("read error");
+    if (!pixels) return {filename + ": read error"};
     img = image{{width, height}, (const vec4f*)pixels};
     delete[] pixels;
-    return ok();
+    return {};
   } else if (ext == ".hdr" || ext == ".HDR") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) return error("read error");
+    if (!pixels) return {filename + ": read error"};
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
-    return ok();
+    return {};
   } else if (!is_hdr_filename(filename)) {
     auto imgb = image<vec4b>{};
-    if (!load_imageb(filename, imgb)) return error("read error");
+    if (!load_imageb(filename, imgb)) return {filename + ": read error"};
     img = srgb_to_rgb(imgb);
-    return ok();
+    return {};
   } else {
-    return error("unsupported format");
+    return {filename + ": unsupported format"};
   }
 }
 
 // Saves an hdr image.
 imageio_status save_image(const string& filename, const image<vec4f>& img) {
-  auto ok    = []() { return imageio_status{}; };
-  auto error = [&filename](const string& err) {
-    return imageio_status{filename + ": " + err};
-  };
-
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data()))
-      return error("write error");
-    return ok();
+      return {filename + ": write error"};
+    return {};
   } else if (ext == ".pfm" || ext == ".PFM") {
     if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data()))
-      return error("write error");
-    return ok();
+      return {filename + ": write error"};
+    return {};
   } else if (ext == ".exr" || ext == ".EXR") {
     if (SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
             filename.c_str()) < 0)
-      return error("write error");
-    return ok();
+      return {filename + ": write error"};
+    return {};
   } else if (!is_hdr_filename(filename)) {
-    if (!save_imageb(filename, rgb_to_srgbb(img))) return error("write error");
-    return ok();
+    if (!save_imageb(filename, rgb_to_srgbb(img))) return {filename + ": write error"};
+    return {};
   } else {
-    return error("unsupported format");
+    return {filename + ": unsupported format"};
   }
 }
 
@@ -1732,66 +1703,57 @@ image<vec4b> load_imageb(const string& filename) {
 
 // Loads an ldr image.
 imageio_status load_imageb(const string& filename, image<vec4b>& img) {
-  auto ok    = []() { return imageio_status{}; };
-  auto error = [&filename](const string& err) {
-    return imageio_status{filename + ": " + err};
-  };
-
   auto ext = get_extension(filename);
   if (ext == ".ypreset") {
-    if (!make_image_preset(img, get_basename(filename)))
-      return error("unknown preset");
+    img = make_image_presetb(get_basename(filename));
+    if(img.empty()) return {filename + ": unknown preset " + get_basename(filename)};
+    return {};
   }
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) return error("read error");
+    if (!pixels) return {filename + ": read error"};
     img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
-    return ok();
+    return {};
   } else if (is_hdr_filename(filename)) {
     auto imgf = image<vec4f>{};
     if (auto ret = load_image(filename, imgf); !ret) return ret;
     img = rgb_to_srgbb(imgf);
-    return ok();
+    return {};
   } else {
-    return error("unsupported format");
+    return {filename + ": unsupported format"};
   }
 }
 
 // Saves an ldr image.
 imageio_status save_imageb(const string& filename, const image<vec4b>& img) {
-  auto ok    = []() { return imageio_status{}; };
-  auto error = [&filename](const string& err) {
-    return imageio_status{filename + ": " + err};
-  };
-
   auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
             img.data(), img.size().x * 4))
-      return error("write wrror");
-    return ok();
+      return {filename + ": write wrror"};
+    return {};
   } else if (ext == ".jpg" || ext == ".JPG") {
     if (!stbi_write_jpg(
             filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75))
-      return error("write wrror");
-    return ok();
+      return {filename + ": write wrror"};
+    return {};
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(
             filename.c_str(), img.size().x, img.size().y, 4, img.data()))
-      return error("write wrror");
-    return ok();
+      return {filename + ": write wrror"};
+    return {};
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(
             filename.c_str(), img.size().x, img.size().y, 4, img.data()))
-      return error("write wrror");
-    return ok();
+      return {filename + ": write wrror"};
+    return {};
   } else if (is_hdr_filename(filename)) {
     return save_image(filename, srgb_to_rgb(img));
   } else {
-    return error("unsupported format");
+    return {filename + ": unsupported format"};
   }
 }
 
