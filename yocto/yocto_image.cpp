@@ -652,12 +652,6 @@ image<vec4b> tonemap_imageb(
     ldr[i] = float_to_byte(tonemap(hdr[i], params));
   return ldr;
 }
-void tonemap_region(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_params& params) {
-  for (auto j = region.min.y; j < region.max.y; j++)
-    for (auto i = region.min.x; i < region.max.x; i++)
-      ldr[{i, j}] = tonemap(hdr[{i, j}], params);
-}
 
 vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
   auto rgb = ldr;
@@ -694,12 +688,6 @@ image<vec4f> colorgrade_image(
   for (auto i = 0ull; i < ldr.count(); i++)
     corrected[i] = colorgrade(ldr[i], params);
   return corrected;
-}
-void colorgrade_region(image<vec4f>& corrected, const image<vec4f>& ldr,
-    const image_region& region, const colorgrade_params& params) {
-  for (auto j = region.min.y; j < region.max.y; j++)
-    for (auto i = region.min.x; i < region.max.x; i++)
-      corrected[{i, j}] = colorgrade(ldr[{i, j}], params);
 }
 
 // compute white balance

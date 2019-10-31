@@ -143,8 +143,6 @@ image<vec4f> tonemap_image(
     const image<vec4f>& hdr, const tonemap_params& params);
 image<vec4b> tonemap_imageb(
     const image<vec4f>& hdr, const tonemap_params& params);
-void tonemap_region(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_params& params);
 
 // minimal color grading
 struct colorgrade_params {
@@ -165,7 +163,6 @@ image<vec4f> colorgrade_image(
     const image<vec4f>& img, const colorgrade_params& params);
 void colorgrade_region(image<vec4f>& corrected, const image<vec4f>& img,
     const image_region& region, const colorgrade_params& params);
-vec4f colorgrade_region(const vec4f& img, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
