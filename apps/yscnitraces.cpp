@@ -116,7 +116,7 @@ inline void parallel_foreach(const vector<T>& values, Func&& func) {
 }
 
 // construct a scene from io
-trace_scene make_trace_scene(const scene_model& ioscene) {
+trace_scene make_scene(const scene_model& ioscene) {
   auto tesselate = [](const scene_model& ioscene, const scene_shape& shape) {
     if (!shape.subdivisions && !shape.displacement) return scene_shape{};
     auto subdiv = shape;
@@ -253,8 +253,9 @@ void reset_display(app_state& app) {
 void draw(const opengl_window& win) {
   auto& app = *(app_state*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_image || app.gl_image.size() != app.display.size() || app.render_counter)
+  if (!app.gl_image || app.gl_image.size() != app.display.size() || !app.render_counter) {
     update_glimage(app.gl_image, app.display, false, false);
+  }
   app.draw_prms.window      = get_glwindow_size(win);
   app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
   update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
@@ -262,7 +263,7 @@ void draw(const opengl_window& win) {
   draw_glimage(app.gl_image, app.draw_prms);
   swap_glbuffers(win);
   app.render_counter ++;
-  if(app.render_counter > 60) app.render_counter = 0;
+  if(app.render_counter > 30) app.render_counter = 0;
 }
 
 // run ui loop
@@ -366,7 +367,7 @@ int main(int argc, const char* argv[]) {
 
   // conversion
   auto convert_timer = print_timed("converting");
-  app.scene          = make_trace_scene(ioscene);
+  app.scene          = make_scene(ioscene);
   print_elapsed(convert_timer);
 
   // build bvh

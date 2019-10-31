@@ -36,7 +36,7 @@ using namespace yocto;
 #include <map>
 
 // Construct a scene from io
-trace_scene make_trace_scene(const scene_model& ioscene) {
+trace_scene make_scene(const scene_model& ioscene) {
   auto tesselate = [](const scene_model& ioscene, const scene_shape& shape) {
     if (!shape.subdivisions && !shape.displacement) return scene_shape{};
     auto subdiv = shape;
@@ -212,7 +212,7 @@ int main(int argc, const char* argv[]) {
 
   // convert scene
   auto convert_timer = print_timed("converting");
-  auto scene         = make_trace_scene(ioscene);
+  auto scene         = make_scene(ioscene);
   print_elapsed(convert_timer);
 
   // build bvh

@@ -208,7 +208,7 @@ void update_trace_environment(
 }
 
 // Construct a scene from io
-trace_scene make_trace_scene(const scene_model& ioscene) {
+trace_scene make_scene(const scene_model& ioscene) {
   auto scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
@@ -258,7 +258,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   apps.loaders.push_back(
       std::async(std::launch::async, [&app]() -> sceneio_status {
         if (auto ret = load_scene(app.filename, app.ioscene); !ret) return ret;
-        app.trscene = make_trace_scene(app.ioscene);
+        app.trscene = make_scene(app.ioscene);
         init_bvh(app.trscene, app.trace_prms);
         init_lights(app.trscene);
         if (app.trscene.lights.empty() && is_sampler_lit(app.trace_prms)) {
