@@ -168,9 +168,6 @@ bool read_value(FILE* fs, T& value, bool big_endian) {
   return ok;
 }
 
-// Check for errors
-static bool has_error(FILE* fs) { return ferror(fs); }
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1978,7 +1975,7 @@ static objio_status load_mtl(
   }
 
   // check error
-  if (has_error(fs)) return {filename + ": read error"};
+  if (ferror(fs)) return {filename + ": read error"};
 
   // remove placeholder material
   obj.materials.erase(obj.materials.begin());
@@ -2062,7 +2059,7 @@ static objio_status load_objx(const string& filename, obj_model& obj) {
   }
 
   // check error
-  if (has_error(fs)) return {filename + "read error"};
+  if (ferror(fs)) return {filename + "read error"};
 
   return {};
 }
@@ -2197,7 +2194,7 @@ objio_status load_obj(const string& filename, obj_model& obj,
   }
 
   // check error
-  if (has_error(fs)) return {filename + ": read error"};
+  if (ferror(fs)) return {filename + ": read error"};
 
   // convert vertex data
   auto ipositions = vector<int>{};
@@ -2941,7 +2938,7 @@ objio_status read_obj_command(const string& filename, FILE* fs,
   }
 
   // check error
-  if (has_error(fs)) return {filename + ": read error"};
+  if (ferror(fs)) return {filename + ": read error"};
 
   return {"eof"};
 }
@@ -3103,7 +3100,7 @@ objio_status read_mtl_command(const string& filename, FILE* fs,
   }
 
   // check error
-  if (has_error(fs)) return {filename + "read error"};
+  if (ferror(fs)) return {filename + "read error"};
 
   return {"eof"};
 }
@@ -3171,7 +3168,7 @@ objio_status read_objx_command(const string& filename, FILE* fs,
   if (found) return {};
 
   // check error
-  if (has_error(fs)) return {filename + ": read error"};
+  if (ferror(fs)) return {filename + ": read error"};
 
   return {"eof"};
 }
@@ -4715,7 +4712,7 @@ pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
         return {filename + ": unknown command " + cmd};
       }
     }
-    if (has_error(fs_guards.back().get())) return {filename + ": read error"};
+    if (ferror(fs_guards.back().get())) return {filename + ": read error"};
     fs_guards.pop_back();
   }
 
@@ -5274,7 +5271,7 @@ pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
     }
   }
 
-  if (has_error(fs)) return {filename + ": read error"};
+  if (ferror(fs)) return {filename + ": read error"};
 
   return {"eof"};
 }
@@ -6749,7 +6746,7 @@ yamlio_status read_yaml_property(const string& filename, FILE* fs,
     }
   }
 
-  if (has_error(fs)) return {filename + ": read error"};
+  if (ferror(fs)) return {filename + ": read error"};
 
   done = true;
   return {};
