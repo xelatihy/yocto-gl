@@ -220,8 +220,45 @@ struct proc_image_params {
   vec4f  borderc = {0, 0, 0, 1};
 };
 
-// Make an image
-image<vec4f> make_proc_image(const proc_image_params& params);
+// Make a grid image.
+image<vec4f> make_grid(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
+    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+// Make a checker image.
+image<vec4f> make_checker(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
+    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+// Make a bump map.
+image<vec4f> make_bumps(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a ramp
+image<vec4f> make_ramp(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a gamma ramp.
+image<vec4f> make_gammaramp(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a uv ramp
+image<vec4f> make_uvramp(const vec2i& size, float scale = 1);
+// Make a uv grid
+image<vec4f> make_uvgrid(const vec2i& size, float scale = 1, bool colored = true);
+// Make blackbody ramp.
+image<vec4f> make_blackbodyramp(const vec2i& size, float scale = 1, float from = 1000, float to = 12000) ;
+// Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
+image<vec4f> make_noisemap(const vec2i& size, float scale = 1, 
+  const vec4f& color0 = {0,0,0,1}, 
+  const vec4f& color1 = {0,0,0,1});
+image<vec4f> make_fbmmap(const vec2i& size, float scale = 1, 
+  const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0,0,0,1}, 
+  const vec4f& color1 = {0,0,0,1});
+image<vec4f> make_turbulencemap(const vec2i& size, float scale = 1, 
+  const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0,0,0,1}, 
+  const vec4f& color1 = {0,0,0,1});
+image<vec4f> make_ridgemap(const vec2i& size, float scale = 1, 
+  const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0,0,0,1}, 
+  const vec4f& color1 = {0,0,0,1});
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
@@ -240,7 +277,7 @@ image<vec4f> make_lights(const vec2i& size, const vec3f& le = {1, 1, 1},
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
-image<vec4f> add_border(const image<vec4f>& img, int width, const vec4f& color);
+image<vec4f> add_border(const image<vec4f>& img, float width, const vec4f& color = {0,0,0,1});
 
 // Make logo images. Image is resized to proper size.
 image<vec4b> make_logo(const string& name);
@@ -251,7 +288,6 @@ image<vec4b> add_logo(
 
 // Make an image preset, useful for testing. See implementation for types.
 image<vec4f> make_image_preset(const string& type);
-bool         make_image_preset(image<vec4f>& img, const string& type);
 bool         make_image_preset(image<vec4b>& img, const string& type);
 bool         make_image_preset(
             image<vec4f>& hdr, image<vec4b>& ldr, const string& type);

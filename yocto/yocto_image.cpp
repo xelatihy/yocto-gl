@@ -506,8 +506,8 @@ inline void set_region(
 }
 
 template <typename T>
-inline void get_region(
-    image<T>& clipped, const image<T>& img, const vec2i& offset, const vec2i& size) {
+inline void get_region(image<T>& clipped, const image<T>& img,
+    const vec2i& offset, const vec2i& size) {
   clipped.resize(size);
   for (auto j = 0; j < size.y; j++) {
     for (auto i = 0; i < size.x; i++) {
@@ -693,8 +693,8 @@ image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size_) {
   return res_img;
 }
 
-image<vec4f> image_difference(const image<vec4f>& a,
-    const image<vec4f>& b, bool display) {
+image<vec4f> image_difference(
+    const image<vec4f>& a, const image<vec4f>& b, bool display) {
   if (a.size() != b.size())
     throw std::invalid_argument("image haev different sizes");
   auto diff = image<vec4f>{a.size()};
@@ -741,177 +741,191 @@ image<vec4f> bump_to_normal(const image<vec4f>& img, float scale) {
   return norm;
 }
 
+template <typename Shader>
+image<vec4f> make_image(const vec2i& size, Shader&& shader) {
+  auto img   = image<vec4f>{size};
+  auto scale = 1.0f / max(size);
+  for (auto j = 0; j < img.size().y; j++) {
+    for (auto i = 0; i < img.size().x; i++) {
+      auto uv     = vec2f{i * scale, j * scale};
+      img[{i, j}] = shader(uv);
+    }
+  }
+  return img;
+};
+
 // Make an image
-image<vec4f> make_proc_image(const proc_image_params& params) {
-  auto make_img = [&](const auto& shader) {
-    auto img = image<vec4f>{params.size};
-    auto scale = 1.0f / max(params.size);
-    for (auto j = 0; j < img.size().y; j++) {
-      for (auto i = 0; i < img.size().x; i++) {
-        auto uv     = vec2f{i * scale, j * scale};
-        img[{i, j}] = shader(uv * params.scale);
-        if (uv.x < params.borderw || uv.y < params.borderw ||
-            uv.x > img.size().x * scale - params.borderw ||
-            uv.y > img.size().y * scale - params.borderw) {
-          img[{i, j}] = params.borderc;
-        }
+image<vec4f> make_grid(
+    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= 4 * scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    auto thick = 0.01f / 2;
+    auto c     = uv.x <= thick || uv.x >= 1 - thick || uv.y <= thick ||
+             uv.y >= 1 - thick ||
+             (uv.x >= 0.5f - thick && uv.x <= 0.5f + thick) ||
+             (uv.y >= 0.5f - thick && uv.y <= 0.5f + thick);
+    return c ? color0 : color1;
+  });
+}
+
+image<vec4f> make_checker(
+    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= 4 * scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    auto c = uv.x <= 0.5f != uv.y <= 0.5f;
+    return c ? color0 : color1;
+  });
+}
+
+image<vec4f> make_bumps(
+    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= 4 * scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    auto thick  = 0.125f;
+    auto center = vec2f{
+        uv.x <= 0.5f ? 0.25f : 0.75f,
+        uv.y <= 0.5f ? 0.25f : 0.75f,
+    };
+    auto dist = clamp(length(uv - center), 0.0f, thick) / thick;
+    auto val  = uv.x <= 0.5f != uv.y <= 0.5f ? (1 + sqrt(1 - dist)) / 2
+                                            : (dist * dist) / 2;
+    return lerp(color0, color1, val);
+  });
+}
+
+image<vec4f> make_ramp(
+    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    return lerp(color0, color1, uv.x);
+  });
+}
+
+image<vec4f> make_gammaramp(const vec2i& size, float scale,
+    const vec4f& color0, const vec4f& color1) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    if (uv.y < 1 / 3.0f) {
+      return lerp(color0, color1, pow(uv.x, 2.2f));
+    } else if (uv.y < 2 / 3.0f) {
+      return lerp(color0, color1, uv.x);
+    } else {
+      return lerp(color0, color1, pow(uv.x, 1 / 2.2f));
+    }
+  });
+}
+
+image<vec4f> make_uvramp(const vec2i& size, float scale) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    return vec4f{uv.x, uv.y, 0, 1};
+  });
+}
+
+image<vec4f> make_uvgrid(
+    const vec2i& size, float scale, bool colored) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    uv.y     = 1 - uv.y;
+    auto hsv = zero3f;
+    hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
+                (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
+            64.0f;
+    auto vuv = uv * 4;
+    vuv -= vec2f{(float)(int)vuv.x, (float)(int)vuv.y};
+    auto vc  = vuv.x <= 0.5f != vuv.y <= 0.5f;
+    hsv.z    = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
+    auto suv = uv * 16;
+    suv -= vec2f{(float)(int)suv.x, (float)(int)suv.y};
+    auto st = 0.01f / 2;
+    auto sc = suv.x <= st || suv.x >= 1 - st || suv.y <= st || suv.y >= 1 - st;
+    if (sc) {
+      hsv.y = 0.2f;
+      hsv.z = 0.8f;
+    } else {
+      hsv.y = 0.8f;
+    }
+    auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv.z};
+    return vec4f{rgb, 1};
+  });
+}
+
+image<vec4f> make_blackbodyramp(
+    const vec2i& size, float scale, float from, float to) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= scale;
+    uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
+    return vec4f{blackbody_to_rgb(lerp(from, to, uv.x)), 1};
+  });
+}
+
+image<vec4f> make_noisemap(const vec2i& size, float scale, 
+    const vec4f& color0, const vec4f& color1) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= 8 * scale;
+    auto v = perlin_noise({uv.x, uv.y, 0.5f});
+    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    return lerp(color0, color1, v);
+  });
+}
+image<vec4f> make_fbmmap(const vec2i& size, float scale,
+    const vec4f& noise, const vec4f& color0,
+    const vec4f& color1) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= 8 * scale;
+    auto v = perlin_fbm({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
+    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    return lerp(color0, color1, v);
+  });
+}
+image<vec4f> make_turbulencemap(const vec2i& size, float scale,
+    const vec4f& noise, const vec4f& color0,
+    const vec4f& color1) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= 8 * scale;
+    auto v = perlin_turbulence({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
+    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    return lerp(color0, color1, v);
+  });
+}
+image<vec4f> make_ridgemap(const vec2i& size, float scale,
+    const vec4f& noise, const vec4f& color0,
+    const vec4f& color1) {
+  return make_image(size, [=](vec2f uv) {
+    uv *= 8 * scale;
+    auto v = perlin_ridge({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z, noise.w);
+    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    return lerp(color0, color1, v);
+  });
+}
+
+// Add image border
+image<vec4f> add_border(
+    const image<vec4f>& source, float width, const vec4f& color) {
+  auto img   = source;
+  auto scale = 1.0f / max(img.size());
+  for (auto j = 0; j < img.size().y; j++) {
+    for (auto i = 0; i < img.size().x; i++) {
+      auto uv = vec2f{i * scale, j * scale};
+      if (uv.x < width || uv.y < width || uv.x > img.size().x * scale - width ||
+          uv.y > img.size().y * scale - width) {
+        img[{i, j}] = color;
       }
     }
-    return img;
-  };
-  switch (params.type) {
-    case proc_image_params::type_t::grid: {
-      return make_img([&params](vec2f uv) {
-        uv *= 4;
-        uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-        auto thick = 0.01f / 2;
-        auto c     = uv.x <= thick || uv.x >= 1 - thick || uv.y <= thick ||
-                 uv.y >= 1 - thick ||
-                 (uv.x >= 0.5f - thick && uv.x <= 0.5f + thick) ||
-                 (uv.y >= 0.5f - thick && uv.y <= 0.5f + thick);
-        return c ? params.color0 : params.color1;
-      });
-    } break;
-    case proc_image_params::type_t::checker: {
-      return make_img([&params](vec2f uv) {
-        uv *= 4;
-        uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-        auto c = uv.x <= 0.5f != uv.y <= 0.5f;
-        return c ? params.color0 : params.color1;
-      });
-    } break;
-    case proc_image_params::type_t::bumps: {
-      return make_img([&params](vec2f uv) {
-        uv *= 4;
-        uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-        auto thick  = 0.125f;
-        auto center = vec2f{
-            uv.x <= 0.5f ? 0.25f : 0.75f,
-            uv.y <= 0.5f ? 0.25f : 0.75f,
-        };
-        auto dist = clamp(length(uv - center), 0.0f, thick) / thick;
-        auto val  = uv.x <= 0.5f != uv.y <= 0.5f ? (1 + sqrt(1 - dist)) / 2
-                                                : (dist * dist) / 2;
-        return lerp(params.color0, params.color1, val);
-      });
-    } break;
-    case proc_image_params::type_t::ramp: {
-      return make_img([&params](vec2f uv) {
-        uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-        return lerp(params.color0, params.color1, uv.x);
-      });
-    } break;
-    case proc_image_params::type_t::gammaramp: {
-      return make_img([&params](vec2f uv) {
-        uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-        if (uv.y < 1 / 3.0f) {
-          return lerp(params.color0, params.color1, pow(uv.x, 2.2f));
-        } else if (uv.y < 2 / 3.0f) {
-          return lerp(params.color0, params.color1, uv.x);
-        } else {
-          return lerp(params.color0, params.color1, pow(uv.x, 1 / 2.2f));
-        }
-      });
-    } break;
-    case proc_image_params::type_t::uvramp: {
-      return make_img([](vec2f uv) {
-        uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-        return vec4f{uv.x, uv.y, 0, 1};
-      });
-    } break;
-    case proc_image_params::type_t::uvgrid: {
-      return make_img([](vec2f uv) {
-        auto colored = true;
-        uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-        uv.y     = 1 - uv.y;
-        auto hsv = zero3f;
-        hsv.x    = (clamp((int)(uv.x * 8), 0, 7) +
-                    (clamp((int)(uv.y * 8), 0, 7) + 5) % 8 * 8) /
-                64.0f;
-        auto vuv = uv * 4;
-        vuv -= vec2f{(float)(int)vuv.x, (float)(int)vuv.y};
-        auto vc  = vuv.x <= 0.5f != vuv.y <= 0.5f;
-        hsv.z    = vc ? 0.5f - 0.05f : 0.5f + 0.05f;
-        auto suv = uv * 16;
-        suv -= vec2f{(float)(int)suv.x, (float)(int)suv.y};
-        auto st = 0.01f / 2;
-        auto sc = suv.x <= st || suv.x >= 1 - st || suv.y <= st ||
-                  suv.y >= 1 - st;
-        if (sc) {
-          hsv.y = 0.2f;
-          hsv.z = 0.8f;
-        } else {
-          hsv.y = 0.8f;
-        }
-        auto rgb = (colored) ? hsv_to_rgb(hsv) : vec3f{hsv.z};
-        return vec4f{rgb, 1};
-      });
-    } break;
-    case proc_image_params::type_t::blackbody: {
-      return make_img([](vec2f uv) {
-        uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
-        return vec4f{blackbody_to_rgb(lerp(1000, 12000, uv.x)), 1};
-      });
-    } break;
-    case proc_image_params::type_t::noise: {
-      return make_img([&params](vec2f uv) {
-        uv *= 8;
-        auto v = perlin_noise({uv.x, uv.y, 0.5f});
-        v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
-        return lerp(params.color0, params.color1, v);
-      });
-    } break;
-    case proc_image_params::type_t::turbulence: {
-      return make_img([&params](vec2f uv) {
-        uv *= 8;
-        auto v = perlin_turbulence({uv.x, uv.y, 0.5f}, params.noise.x,
-            params.noise.y, (int)params.noise.z);
-        v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
-        return lerp(params.color0, params.color1, v);
-      });
-    } break;
-    case proc_image_params::type_t::fbm: {
-      return make_img([&params](vec2f uv) {
-        uv *= 8;
-        auto v = perlin_fbm({uv.x, uv.y, 0.5f}, params.noise.x, params.noise.y,
-            (int)params.noise.z);
-        v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
-        return lerp(params.color0, params.color1, v);
-      });
-    } break;
-    case proc_image_params::type_t::ridge: {
-      return make_img([&params](vec2f uv) {
-        uv *= 8;
-        auto v = perlin_ridge({uv.x, uv.y, 0.5f}, params.noise.x,
-            params.noise.y, (int)params.noise.z, params.noise.w);
-        v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
-        return lerp(params.color0, params.color1, v);
-      });
-    } break;
   }
-}
-
-// Add a border to an image
-image<vec4f> add_border(image<vec4f>& img, int width, const vec4f& color) {
-  auto bordered = img;
-  for (auto j = 0; j < img.size().y; j++) {
-    for (auto b = 0; b < width; b++) {
-      bordered[{b, j}]                    = color;
-      bordered[{img.size().x - 1 - b, j}] = color;
-    }
-  }
-  for (auto i = 0; i < img.size().x; i++) {
-    for (auto b = 0; b < width; b++) {
-      bordered[{i, b}]                    = color;
-      bordered[{i, img.size().y - 1 - b}] = color;
-    }
-  }
-  return bordered;
-}
+  return img;
+};
 
 // Implementation of sunsky modified heavily from pbrt
-image<vec4f> make_sunsky(const vec2i& size, float theta_sun,
-    float turbidity, bool has_sun, float sun_intensity, float sun_radius,
+image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
+    bool has_sun, float sun_intensity, float sun_radius,
     const vec3f& ground_albedo) {
   auto zenith_xyY = vec3f{
       (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
@@ -1000,7 +1014,7 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun,
   };
 
   // Make the sun sky image
-  auto img = image<vec4f>{size};
+  auto img          = image<vec4f>{size};
   auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
@@ -1046,8 +1060,8 @@ image<vec4f> make_sunsky(const vec2i& size, float theta_sun,
 }
 
 // Make an image of multiple lights.
-image<vec4f> make_lights(const vec2i& size, const vec3f& le,
-    int nlights, float langle, float lwidth, float lheight) {
+image<vec4f> make_lights(const vec2i& size, const vec3f& le, int nlights,
+    float langle, float lwidth, float lheight) {
   auto img = image<vec4f>{size};
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
@@ -1171,209 +1185,117 @@ image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
   return wlogo;
 }
 
-bool make_image_preset(image<vec4f>& img, const string& type) {
+image<vec4f> make_image_preset(const string& type) {
   auto size = vec2i{1024, 1024};
   if (type.find("sky") != type.npos) size = {2048, 1024};
   if (type.find("images2") != type.npos) size = {2048, 1024};
   if (type == "grid") {
-    auto params   = proc_image_params{};
-    params.type   = proc_image_params::type_t::grid;
-    params.color0 = vec4f{0.2, 0.2, 0.2, 1};
-    params.color1 = vec4f{0.7, 0.7, 0.7, 1};
-    img = make_proc_image(params);
-    return true;
+    return make_grid(size);
   } else if (type == "checker") {
-    auto params   = proc_image_params{};
-    params.type   = proc_image_params::type_t::checker;
-    params.color0 = vec4f{0.2, 0.2, 0.2, 1};
-    params.color1 = vec4f{0.7, 0.7, 0.7, 1};
-    img = make_proc_image(params);
-    return true;
+    return make_checker(size);
   } else if (type == "bumps") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::bumps;
-    img = make_proc_image(params);
-    return true;
+    return make_bumps(size);
   } else if (type == "uvramp") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::uvramp;
-    img = make_proc_image(params);
-    return true;
+    return make_uvramp(size);
   } else if (type == "gammaramp") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::gammaramp;
-    img = make_proc_image(params);
-    return true;
+    return make_gammaramp(size);
   } else if (type == "blackbodyramp") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::blackbody;
-    img = make_proc_image(params);
-    return true;
+    return make_blackbodyramp(size);
   } else if (type == "uvgrid") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::uvgrid;
-    img = make_proc_image(params);
-    return true;
+    return make_uvgrid(size);
   } else if (type == "sky") {
-    img = make_sunsky(size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-    return true;
+    return make_sunsky(
+        size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "sunsky") {
-    img = make_sunsky(size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-    return true;
+    return make_sunsky(
+        size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "noise") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::noise;
-    img = make_proc_image(params);
-    return true;
+    return make_noisemap(size, 1);
   } else if (type == "fbm") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::fbm;
-    img = make_proc_image(params);
-    return true;
+    return make_fbmmap(size, 1);
   } else if (type == "ridge") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::ridge;
-    img = make_proc_image(params);
-    return true;
+    return make_ridgemap(size, 1);
   } else if (type == "turbulence") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::turbulence;
-    img = make_proc_image(params);
-    return true;
+    return make_turbulencemap(size, 1);
   } else if (type == "bump-normal") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::bumps;
-    img = bump_to_normal(make_proc_image(params), 0.05f);
-    return true;
+    return bump_to_normal(make_bumps(size), 0.05f);
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
         "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      sub_imgs.at(i).resize(img.size());
-      if (!make_image_preset(sub_imgs.at(i), sub_types.at(i))) return true;
+      sub_imgs[i] = make_image_preset(sub_types[i]);
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
       montage_size.x += sub_img.size().x;
       montage_size.y = max(montage_size.y, sub_img.size().y);
     }
-    img.resize(montage_size);
+    auto img = image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
       pos += sub_img.size().x;
     }
-    return true;
+    return img;
   } else if (type == "images2") {
     auto sub_types = vector<string>{"sky", "sunsky"};
     auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
     for (auto i = 0; i < sub_imgs.size(); i++) {
-      if (!make_image_preset(sub_imgs.at(i), sub_types.at(i))) return true;
+      sub_imgs[i] = make_image_preset(sub_types[i]);
     }
     auto montage_size = zero2i;
     for (auto& sub_img : sub_imgs) {
       montage_size.x += sub_img.size().x;
       montage_size.y = max(montage_size.y, sub_img.size().y);
     }
-    img.resize(montage_size);
+    auto img = image<vec4f>(montage_size);
     auto pos = 0;
     for (auto& sub_img : sub_imgs) {
       set_region(img, sub_img, {pos, 0});
       pos += sub_img.size().x;
     }
-    return true;
+    return img;
   } else if (type == "test-floor") {
-    auto params    = proc_image_params{};
-    params.type    = proc_image_params::type_t::grid;
-    params.color0  = vec4f{0.2, 0.2, 0.2, 1};
-    params.color1  = vec4f{0.5, 0.5, 0.5, 1};
-    params.borderw = 0.0025;
-    img = make_proc_image(params);
-    return true;
+    return add_border(make_grid(size), 0.0025f);
   } else if (type == "test-grid") {
-    auto params   = proc_image_params{};
-    params.type   = proc_image_params::type_t::grid;
-    params.color0 = vec4f{0.2, 0.2, 0.2, 1};
-    params.color1 = vec4f{0.5, 0.5, 0.5, 1};
-    img = make_proc_image(params);
-    return true;
+    return make_grid(size);
   } else if (type == "test-checker") {
-    auto params   = proc_image_params{};
-    params.type   = proc_image_params::type_t::checker;
-    params.color0 = vec4f{0.2, 0.2, 0.2, 1};
-    params.color1 = vec4f{0.5, 0.5, 0.5, 1};
-    img = make_proc_image(params);
-    return true;
+    return make_checker(size);
   } else if (type == "test-bumps") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::bumps;
-    img = make_proc_image(params);
-    return true;
+    return make_bumps(size);
   } else if (type == "test-uvramp") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::uvramp;
-    img = make_proc_image(params);
-    return true;
+    return make_uvramp(size);
   } else if (type == "test-gammaramp") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::gammaramp;
-    img = make_proc_image(params);
-    return true;
+    return make_gammaramp(size);
   } else if (type == "test-blackbodyramp") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::blackbody;
-    img = make_proc_image(params);
-    return true;
+    return make_blackbodyramp(size);
   } else if (type == "test-uvgrid") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::uvgrid;
-    img = make_proc_image(params);
-    return true;
+    return make_uvgrid(size);
   } else if (type == "test-sky") {
-    img = make_sunsky(size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-    return true;
+    return make_sunsky(
+        size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-sunsky") {
-    img = make_sunsky(size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-    return true;
+    return make_sunsky(
+        size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
   } else if (type == "test-noise") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::noise;
-    img = make_proc_image(params);
-    return true;
+    return make_noisemap(size);
   } else if (type == "test-fbm") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::fbm;
-    img = make_proc_image(params);
-    return true;
+    return make_noisemap(size);
   } else if (type == "test-bumps-normal") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::bumps;
-    img = bump_to_normal(make_proc_image(params), 0.05f);
-    return true;
+    return bump_to_normal(make_bumps(size), 0.05f);
   } else if (type == "test-bumps-displacement") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::bumps;
-    img = make_proc_image(params);
-    return true;
+    return make_bumps(size);
   } else if (type == "test-fbm-displacement") {
-    auto params = proc_image_params{};
-    params.type = proc_image_params::type_t::fbm;
-    img = make_proc_image(params);
-    return true;
+    return make_fbmmap(size);
   } else {
-    return false;
+    return {};
   }
-}
-image<vec4f> make_image_preset(const string& type) {
-  auto img = image<vec4f>{};
-  if (!make_image_preset(img, type)) return {};
-  return img;
 }
 
 bool make_image_preset(image<vec4b>& img, const string& type) {
-  auto imgf = image<vec4f>{};
-  if (!make_image_preset(imgf, type)) return false;
+  auto imgf = make_image_preset(type);
+  if (imgf.empty()) return false;
   if (type.find("-normal") == type.npos &&
       type.find("-displacement") == type.npos) {
     img = rgb_to_srgbb(imgf);
@@ -1386,16 +1308,18 @@ bool make_image_preset(image<vec4b>& img, const string& type) {
 bool make_image_preset(
     image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
   if (type.find("sky") == type.npos) {
-    auto imgf = image<vec4f>{};
-    if (!make_image_preset(imgf, type)) return false;
-    if (type.find("-normal") == type.npos) {
+    auto imgf = make_image_preset(type);
+    if (imgf.empty()) return false;
+    if (type.find("-normal") == type.npos &&
+      type.find("-displacement") == type.npos) {
       ldr = rgb_to_srgbb(imgf);
     } else {
       ldr = float_to_byte(imgf);
     }
     return true;
   } else {
-    return make_image_preset(hdr, type);
+    hdr = make_image_preset(type);
+    return true;
   }
 }
 
@@ -1733,8 +1657,9 @@ imageio_status load_image(const string& filename, image<vec4f>& img) {
 
   auto ext = get_extension(filename);
   if (ext == ".ypreset") {
-    if (!make_image_preset(img, get_basename(filename)))
-      return error("unknown preset");
+    img = make_image_preset(get_basename(filename));
+    if(img.empty()) return error("unknown preset");
+    return {};
   }
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
@@ -1875,8 +1800,9 @@ imageio_status save_imageb(const string& filename, const image<vec4b>& img) {
 // Loads/saves a 4 channels float/byte image tonemapped
 imageio_status save_image_tonemapped(const string& filename,
     const image<vec4f>& img, const tonemap_params& params) {
-  return is_hdr_filename(filename) ? save_image(filename, img)
-                                   : save_imageb(filename, tonemap_imageb(img, params));
+  return is_hdr_filename(filename)
+             ? save_image(filename, img)
+             : save_imageb(filename, tonemap_imageb(img, params));
 }
 
 }  // namespace yocto
