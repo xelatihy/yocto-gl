@@ -198,6 +198,53 @@ inline bool exists_file(const string& filename);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// C FILE WRAPPER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// A class that wraps a C file ti handle safe opening/closgin with RIIA.
+struct file {
+  file() {}
+  file(file&& other);
+  file(const file&) = delete;
+  file& operator=(const file&) = delete;
+  ~file();
+
+  operator bool() const { return (bool)fs; }
+
+  FILE*  fs       = nullptr;
+  string filename = "";
+  string mode     = "rt";
+  int    linenum  = 0;
+};
+
+// open/close a file
+inline file open_file(const string& filename, const string& mode = "rt");
+inline void     open_file(
+        file& fs, const string& filename, const string& mode = "rt");
+inline void close_file(file& fs);
+
+// read file line
+inline bool read_line(file& fs, char* buffer, size_t size);
+
+// write binary values
+template <typename T>
+inline bool write_value(file& fs, const T& value);
+template <typename T>
+inline bool write_value(file& fs, const T& value_, bool big_endian);
+
+// read binary values
+template <typename T>
+inline bool read_value(file& fs, T& value);
+template <typename T>
+inline bool read_value(file& fs, T& value, bool big_endian);
+
+// Check for errors
+inline bool has_error(file& fs);
+
+}
+
+// -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -367,6 +414,90 @@ inline bool exists_file(const string& filename) {
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// C FILE WRAPPER
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// copnstrucyor and destructors
+inline file::file(file&& other) {
+  this->fs       = other.fs;
+  this->filename = other.filename;
+  other.fs       = nullptr;
+}
+inline file::~file() {
+  if (fs) fclose(fs);
+  fs = nullptr;
+}
+
+// Opens a file returing a handle with RIIA
+inline void open_file(file& fs, const string& filename, const string& mode) {
+  close_file(fs);
+  fs.filename = filename;
+  fs.mode     = mode;
+  fs.fs       = fopen(filename.c_str(), mode.c_str());
+  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
+}
+inline file open_file(const string& filename, const string& mode) {
+  auto fs = file{};
+  open_file(fs, filename, mode);
+  return fs;
+}
+inline void close_file(file& fs) {
+  if (fs.fs) fclose(fs.fs);
+  fs.fs = nullptr;
+}
+
+// Read a line
+inline bool read_line(file& fs, char* buffer, size_t size) {
+  if (fgets(buffer, size, fs.fs)) {
+    fs.linenum += 1;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template <typename T>
+inline T swap_endian(T value) {
+  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+  static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
+  union {
+    T             value;
+    unsigned char bytes[sizeof(T)];
+  } source, dest;
+  source.value = value;
+  for (auto k = (size_t)0; k < sizeof(T); k++)
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
+}
+
+template <typename T>
+inline bool write_value(file& fs, const T& value) {
+  return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
+}
+template <typename T>
+inline bool write_value(file& fs, const T& value_, bool big_endian) {
+  auto value = big_endian ? swap_endian(value_) : value_;
+  return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
+}
+
+template <typename T>
+inline bool read_value(file& fs, T& value) {
+  return fread(&value, sizeof(value), 1, fs.fs) == 1;
+}
+template <typename T>
+inline bool read_value(file& fs, T& value, bool big_endian) {
+  auto ok = fread(&value, sizeof(value), 1, fs.fs) == 1;
+  if (big_endian) value = swap_endian(value);
+  return ok;
+}
+
+// Check for errors
+inline bool has_error(file& fs) { return ferror(fs.fs); }
+
+}
 
 // -----------------------------------------------------------------------------
 // FILE IO
