@@ -124,39 +124,9 @@ static bool exists_file(const string& filename) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// copnstrucyor and destructors
-modelio_file::modelio_file(modelio_file&& other) {
-  this->fs       = other.fs;
-  this->filename = other.filename;
-  other.fs       = nullptr;
-}
-modelio_file::~modelio_file() {
-  if (fs) fclose(fs);
-  fs = nullptr;
-}
-
-// Opens a file returing a handle with RIIA
-void open_file(modelio_file& fs, const string& filename, const string& mode) {
-  close_file(fs);
-  fs.filename = filename;
-  fs.mode     = mode;
-  fs.fs       = fopen(filename.c_str(), mode.c_str());
-  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
-}
-modelio_file open_file(const string& filename, const string& mode) {
-  auto fs = modelio_file{};
-  open_file(fs, filename, mode);
-  return fs;
-}
-void close_file(modelio_file& fs) {
-  if (fs.fs) fclose(fs.fs);
-  fs.fs = nullptr;
-}
-
 // Read a line
-bool read_line(modelio_file& fs, char* buffer, size_t size) {
-  if (fgets(buffer, size, fs.fs)) {
-    fs.linenum += 1;
+bool read_line(FILE* fs, char* buffer, size_t size) {
+  if (fgets(buffer, size, fs)) {
     return true;
   } else {
     return false;
@@ -178,28 +148,28 @@ static T swap_endian(T value) {
 }
 
 template <typename T>
-bool write_value(modelio_file& fs, const T& value) {
-  return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
+bool write_value(FILE* fs, const T& value) {
+  return fwrite(&value, sizeof(value), 1, fs) == 1;
 }
 template <typename T>
-bool write_value(modelio_file& fs, const T& value_, bool big_endian) {
+bool write_value(FILE* fs, const T& value_, bool big_endian) {
   auto value = big_endian ? swap_endian(value_) : value_;
-  return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
+  return fwrite(&value, sizeof(value), 1, fs) == 1;
 }
 
 template <typename T>
-bool read_value(modelio_file& fs, T& value) {
-  return fread(&value, sizeof(value), 1, fs.fs) == 1;
+bool read_value(FILE* fs, T& value) {
+  return fread(&value, sizeof(value), 1, fs) == 1;
 }
 template <typename T>
-bool read_value(modelio_file& fs, T& value, bool big_endian) {
-  auto ok = fread(&value, sizeof(value), 1, fs.fs) == 1;
+bool read_value(FILE* fs, T& value, bool big_endian) {
+  auto ok = fread(&value, sizeof(value), 1, fs) == 1;
   if (big_endian) value = swap_endian(value);
   return ok;
 }
 
 // Check for errors
-static bool has_error(modelio_file& fs) { return ferror(fs.fs); }
+static bool has_error(FILE* fs) { return ferror(fs); }
 
 }  // namespace yocto
 
@@ -509,16 +479,16 @@ static void format_values(
 
 template <typename... Args>
 static bool format_values(
-    modelio_file& fs, const string& fmt, const Args&... args) {
+    FILE* fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
-  return fputs(str.c_str(), fs.fs) >= 0;
+  return fputs(str.c_str(), fs) >= 0;
 }
 template <typename T>
-static bool format_value(modelio_file& fs, const T& value) {
+static bool format_value(FILE* fs, const T& value) {
   auto str = ""s;
   format_value(str, value);
-  return fputs(str.c_str(), fs.fs) >= 0;
+  return fputs(str.c_str(), fs) >= 0;
 }
 
 }  // namespace yocto
@@ -557,8 +527,9 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
   auto end_header = false;
 
   // open file
-  auto fs = open_file(filename, "rb");
+  auto fs = fopen(filename.c_str(), "rb");
   if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // read header ---------------------------------------------
   char buffer[4096];
@@ -794,8 +765,9 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
 
 // Save ply
 plyio_status save_ply(const string& filename, const ply_model& ply) {
-  auto fs = open_file(filename, "wb");
+  auto fs = fopen(filename.c_str(), "wb");
   if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // ply type names
   static auto type_map = unordered_map<ply_type, string>{{ply_type::i8, "char"},
@@ -1382,7 +1354,7 @@ void add_ply_points(ply_model& ply, const vector<int>& values) {
 // get ply value either ascii or binary
 template <typename T, typename VT>
 [[nodiscard]] static bool read_ply_prop(
-    modelio_file& fs, VT& value, bool big_endian) {
+    FILE* fs, VT& value, bool big_endian) {
   auto tvalue = T{};
   auto ok     = read_value(fs, tvalue, big_endian);
   value       = (VT)tvalue;
@@ -1390,7 +1362,7 @@ template <typename T, typename VT>
 }
 template <typename VT>
 [[nodiscard]] static bool read_ply_prop(
-    modelio_file& fs, ply_type type, VT& value, bool big_endian) {
+    FILE* fs, ply_type type, VT& value, bool big_endian) {
   switch (type) {
     case ply_type::i8: return read_ply_prop<int8_t>(fs, value, big_endian);
     case ply_type::i16: return read_ply_prop<int16_t>(fs, value, big_endian);
@@ -1430,7 +1402,7 @@ static bool parse_ply_prop(string_view& str, ply_type type, VT& value) {
 }
 
 // Load ply data
-plyio_status read_ply_header(const string& filename, modelio_file& fs,
+plyio_status read_ply_header(const string& filename, FILE* fs,
     ply_format& format, vector<ply_element>& elements,
     vector<string>& comments) {
   // ply type names
@@ -1537,7 +1509,7 @@ plyio_status read_ply_header(const string& filename, modelio_file& fs,
 }
 
 template <typename VT, typename LT>
-static plyio_status read_ply_value_generic(const string& filename, modelio_file& fs,
+static plyio_status read_ply_value_generic(const string& filename, FILE* fs,
     ply_format format, const ply_element& element, vector<VT>& values,
     vector<vector<LT>>& lists) {
   // prepare properties
@@ -1597,7 +1569,7 @@ static plyio_status read_ply_value_generic(const string& filename, modelio_file&
 }
 
 template <typename VT>
-static bool format_ply_prop(modelio_file& fs, ply_type type, VT value) {
+static bool format_ply_prop(FILE* fs, ply_type type, VT value) {
   switch (type) {
     case ply_type::i8: return format_value(fs, (int8_t)value);
     case ply_type::i16: return format_value(fs, (int16_t)value);
@@ -1614,7 +1586,7 @@ static bool format_ply_prop(modelio_file& fs, ply_type type, VT value) {
 
 template <typename VT>
 static bool write_ply_prop(
-    modelio_file& fs, ply_type type, VT value, bool big_endian) {
+    FILE* fs, ply_type type, VT value, bool big_endian) {
   switch (type) {
     case ply_type::i8: return write_value(fs, (int8_t)value, big_endian);
     case ply_type::i16: return write_value(fs, (int16_t)value, big_endian);
@@ -1631,7 +1603,7 @@ static bool write_ply_prop(
 }
 
 // Write Ply functions
-plyio_status write_ply_header(const string& filename, modelio_file& fs,
+plyio_status write_ply_header(const string& filename, FILE* fs,
     ply_format format, const vector<ply_element>& elements,
     const vector<string>& comments) {
   // ply type names
@@ -1684,7 +1656,7 @@ plyio_status write_ply_header(const string& filename, modelio_file& fs,
 
 template <typename VT, typename LT>
 static plyio_status write_ply_value_generic(const string& filename,
-    modelio_file& fs, ply_format format, const ply_element& element,
+    FILE* fs, ply_format format, const ply_element& element,
     vector<VT>& values, vector<vector<LT>>& lists) {
   if (format == ply_format::ascii) {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -1727,23 +1699,23 @@ static plyio_status write_ply_value_generic(const string& filename,
   return {};
 }
 
-plyio_status write_ply_value(const string& filename, modelio_file& fs,
+plyio_status write_ply_value(const string& filename, FILE* fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists) {
   return write_ply_value_generic(filename, fs, format, element, values, lists);
 }
-plyio_status write_ply_value(const string& filename, modelio_file& fs,
+plyio_status write_ply_value(const string& filename, FILE* fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists) {
   return write_ply_value_generic(filename, fs, format, element, values, lists);
 }
 
-plyio_status read_ply_value(const string& filename, modelio_file& fs,
+plyio_status read_ply_value(const string& filename, FILE* fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists) {
   return read_ply_value_generic(filename, fs, format, element, values, lists);
 }
-plyio_status read_ply_value(const string& filename, modelio_file& fs,
+plyio_status read_ply_value(const string& filename, FILE* fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists) {
   return read_ply_value_generic(filename, fs, format, element, values, lists);
@@ -1857,8 +1829,9 @@ static bool parse_value(string_view& str, obj_texture_info& info) {
 static objio_status load_mtl(
     const string& filename, obj_model& obj, bool fliptr = true) {
   // open file
-  auto fs = open_file(filename, "rt");
+  auto fs = fopen(filename.c_str(), "rt");
   if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // init parsing
   obj.materials.emplace_back();
@@ -2016,8 +1989,9 @@ static objio_status load_mtl(
 // Read obj
 static objio_status load_objx(const string& filename, obj_model& obj) {
   // open file
-  auto fs = open_file(filename, "rt");
+  auto fs = fopen(filename.c_str(), "rt");
   if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // shape map for instances
   auto shape_map = unordered_map<string, vector<int>>{};
@@ -2097,8 +2071,9 @@ static objio_status load_objx(const string& filename, obj_model& obj) {
 objio_status load_obj(const string& filename, obj_model& obj,
     bool geom_only, bool split_elements, bool split_materials) {
   // open file
-  auto fs = open_file(filename, "rt");
+  auto fs = fopen(filename.c_str(), "rt");
   if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // parsing state
   auto opositions = vector<vec3f>{};
@@ -2293,8 +2268,9 @@ static void format_value(string& str, const obj_vertex& value) {
 // Save obj
 static objio_status save_mtl(const string& filename, const obj_model& obj) {
   // open file
-  auto fs = open_file(filename, "wt");
+  auto fs = fopen(filename.c_str(), "wt");
   if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
   if (!format_values(fs, "#\n")) return {filename + ": write error"};
@@ -2426,8 +2402,9 @@ static objio_status save_mtl(const string& filename, const obj_model& obj) {
 // Save obj
 static objio_status save_objx(const string& filename, const obj_model& obj) {
   // open file
-  auto fs = open_file(filename, "wt");
+  auto fs = fopen(filename.c_str(), "wt");
   if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
   if (!format_values(fs, "#\n")) return {filename + ": write error"};
@@ -2471,8 +2448,9 @@ static objio_status save_objx(const string& filename, const obj_model& obj) {
 // Save obj
 objio_status save_obj(const string& filename, const obj_model& obj) {
   // open file
-  auto fs = open_file(filename, "wt");
+  auto fs = fopen(filename.c_str(), "wt");
   if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
   if (!format_values(fs, "#\n")) return {filename + ": write error"};
@@ -2879,7 +2857,7 @@ void add_obj_fvquads(obj_model& obj, const string& name,
 }  // namespace yocto
 
 // Read obj
-objio_status read_obj_command(const string& filename, modelio_file& fs,
+objio_status read_obj_command(const string& filename, FILE* fs,
     obj_command& command, string& name, vec3f& value,
     vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // read the file str by str
@@ -2969,12 +2947,12 @@ objio_status read_obj_command(const string& filename, modelio_file& fs,
 }
 
 // Read mtl
-objio_status read_mtl_command(const string& filename, modelio_file& fs,
+objio_status read_mtl_command(const string& filename, FILE* fs,
     mtl_command& command, obj_material& material, bool fliptr) {
   material = {};
 
   // read the file str by str
-  auto pos   = ftell(fs.fs);
+  auto pos   = ftell(fs);
   auto found = false;
   char buffer[4096];
   while (read_line(fs, buffer, sizeof(buffer))) {
@@ -2993,7 +2971,7 @@ objio_status read_mtl_command(const string& filename, modelio_file& fs,
     if (cmd == "newmtl") {
       if (found) {
         command = mtl_command::material;
-        fseek(fs.fs, pos, SEEK_SET);
+        fseek(fs, pos, SEEK_SET);
         return {};
       } else {
         found = true;
@@ -3116,7 +3094,7 @@ objio_status read_mtl_command(const string& filename, modelio_file& fs,
     } else {
       continue;
     }
-    pos = ftell(fs.fs);
+    pos = ftell(fs);
   }
 
   if (found) {
@@ -3131,7 +3109,7 @@ objio_status read_mtl_command(const string& filename, modelio_file& fs,
 }
 
 // Read objx
-objio_status read_objx_command(const string& filename, modelio_file& fs,
+objio_status read_objx_command(const string& filename, FILE* fs,
     objx_command& command, obj_camera& camera, obj_environment& environment,
     obj_instance& instance) {
   // read the file str by str
@@ -3211,7 +3189,7 @@ static vector<string> split_obj_string(const string& str, const string& delim) {
 
 // Write obj elements
 objio_status write_obj_comment(
-    const string& filename, modelio_file& fs, const string& comment) {
+    const string& filename, FILE* fs, const string& comment) {
   auto lines = split_obj_string(comment, "\n");
   for (auto& str : lines) {
     if (!format_values(fs, "# {}\n", str))
@@ -3221,7 +3199,7 @@ objio_status write_obj_comment(
   return {};
 }
 
-objio_status write_obj_command(const string& filename, modelio_file& fs,
+objio_status write_obj_command(const string& filename, FILE* fs,
     obj_command command, const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices) {
   switch (command) {
@@ -3278,7 +3256,7 @@ objio_status write_obj_command(const string& filename, modelio_file& fs,
   return {};
 }
 
-objio_status write_mtl_command(const string& filename, modelio_file& fs,
+objio_status write_mtl_command(const string& filename, FILE* fs,
     mtl_command command, const obj_material& material) {
   // write material
   switch (command) {
@@ -3397,7 +3375,7 @@ objio_status write_mtl_command(const string& filename, modelio_file& fs,
   return {};
 }
 
-objio_status write_objx_command(const string& filename, modelio_file& fs,
+objio_status write_objx_command(const string& filename, FILE* fs,
     objx_command command, const obj_camera& camera,
     const obj_environment& environment, const obj_instance& instance) {
   switch (command) {
@@ -3448,11 +3426,11 @@ static void remove_pbrt_comment(string_view& str, char comment_char = '#') {
 }
 
 // Read a pbrt command from file
-static bool read_pbrt_cmdline(modelio_file& fs, string& cmd, int& line_num) {
+static bool read_pbrt_cmdline(FILE* fs, string& cmd, int& line_num) {
   char buffer[4096];
   cmd.clear();
   auto found = false;
-  auto pos   = ftell(fs.fs);
+  auto pos   = ftell(fs);
   while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     line_num += 1;
@@ -3465,7 +3443,7 @@ static bool read_pbrt_cmdline(modelio_file& fs, string& cmd, int& line_num) {
     auto is_cmd = line[0] >= 'A' && line[0] <= 'Z';
     if (is_cmd) {
       if (found) {
-        fseek(fs.fs, pos, SEEK_SET);
+        fseek(fs, pos, SEEK_SET);
         line_num -= 1;
         return true;
       } else {
@@ -3476,7 +3454,7 @@ static bool read_pbrt_cmdline(modelio_file& fs, string& cmd, int& line_num) {
     }
     cmd += line;
     cmd += " ";
-    pos = ftell(fs.fs);
+    pos = ftell(fs);
   }
   return found;
 }
@@ -4464,9 +4442,10 @@ struct pbrt_context {
 
 // load pbrt
 pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
-  auto files = vector<modelio_file>{};
-  open_file(files.emplace_back(), filename);
-  if (!files.back()) return {filename + ": file not found"};
+  auto fs = fopen(filename.c_str(), "rt");
+  if(!fs) return {filename + ": file not found"};
+  auto fs_guards = vector<std::unique_ptr<FILE, decltype(&fclose)>>{};
+  fs_guards.push_back({fs, fclose});
 
   // parser state
   auto   stack      = vector<pbrt_context>{};
@@ -4490,10 +4469,11 @@ pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
   if (stack.empty()) stack.emplace_back();
 
   // parse command by command
-  while (!files.empty()) {
+  while (!fs_guards.empty()) {
     auto line     = ""s;
     auto line_num = 0;
-    while (read_pbrt_cmdline(files.back(), line, line_num)) {
+    auto fs = fs_guards.back().get();
+    while (read_pbrt_cmdline(fs, line, line_num)) {
       auto str = string_view{line};
       // get command
       auto cmd = ""s;
@@ -4728,15 +4708,15 @@ pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
         auto includename = ""s;
         if (!parse_pbrt_param(str, includename))
           return {filename + ": parse error"};
-        open_file(
-            files.emplace_back(), get_dirname(filename) + includename);
-        if (!files.back()) return {filename + ": file not found"};
+        auto ifs = fopen((get_dirname(filename) + includename).c_str(), "rt");
+        if (!ifs) return {filename + ": file not found"};
+        fs_guards.push_back({ifs, fclose});
       } else {
         return {filename + ": unknown command " + cmd};
       }
     }
-    if (has_error(files.back())) return {filename + ": read error"};
-    files.pop_back();
+    if (has_error(fs_guards.back().get())) return {filename + ": read error"};
+    fs_guards.pop_back();
   }
 
   // convert objects
@@ -4840,8 +4820,9 @@ static  void format_value(
 }
 
 pbrtio_status save_pbrt(const string& filename, const pbrt_model& pbrt) {
-  auto fs = open_file(filename, "wt");
+  auto fs = fopen(filename.c_str(), "wt");
   if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
   if (!format_values(fs, "#\n")) return {filename + ": write error"};
@@ -5107,7 +5088,7 @@ pbrtio_status save_pbrt(const string& filename, const pbrt_model& pbrt) {
 }
 
 // Read pbrt commands
-pbrtio_status read_pbrt_command(const string& filename, modelio_file& fs,
+pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values, string& line) {
   // parse command by command
@@ -5297,7 +5278,7 @@ pbrtio_status read_pbrt_command(const string& filename, modelio_file& fs,
 
   return {"eof"};
 }
-pbrtio_status read_pbrt_command(const string& filename, modelio_file& fs,
+pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values) {
   auto command_buffer = ""s;
@@ -5319,7 +5300,7 @@ vector<string> split_pbrt_string(
 
 // Write obj elements
 pbrtio_status write_pbrt_comment(
-    const string& filename, modelio_file& fs, const string& comment) {
+    const string& filename, FILE* fs, const string& comment) {
   auto lines = split_pbrt_string(comment, "\n");
   for (auto& line : lines) {
     if (!format_values(fs, "# {}\n", line))
@@ -5330,7 +5311,7 @@ pbrtio_status write_pbrt_comment(
 }
 
 bool write_pbrt_values(
-    const string& filename, modelio_file& fs, const vector<pbrt_value>& values) {
+    const string& filename, FILE* fs, const vector<pbrt_value>& values) {
   static auto type_labels = unordered_map<pbrt_value_type, string>{
       {pbrt_value_type::real, "float"},
       {pbrt_value_type::integer, "integer"},
@@ -5346,8 +5327,8 @@ bool write_pbrt_values(
       {pbrt_value_type::spectrum, "spectrum"},
   };
 
-  auto write_error = [](modelio_file& fs) {
-    if (!ferror(fs.fs)) return false;
+  auto write_error = [](FILE* fs) {
+    if (!ferror(fs)) return false;
     return true;
   };
 
@@ -5418,7 +5399,7 @@ bool write_pbrt_values(
   return true;
 }
 
-pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
+pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
     pbrt_command command, const string& name, const string& type,
     const frame3f& xform, const vector<pbrt_value>& values,
     bool texture_float) {
@@ -5576,11 +5557,11 @@ pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
   return {};
 }
 
-pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
+pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
     pbrt_command command, const string& name, const frame3f& xform) {
   return write_pbrt_command(filename, fs, command, name, "", xform, {});
 }
-pbrtio_status write_pbrt_command(const string& filename, modelio_file& fs,
+pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
     pbrt_command command, const string& name, const string& type,
     const vector<pbrt_value>& values, bool texture_as_float) {
   return write_pbrt_command(filename, fs, command, name, type, identity3x4f,
@@ -6582,8 +6563,9 @@ static bool parse_value(string_view& str, yaml_value& value) {
 
 // Load/save yaml
 yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
-  auto fs = open_file(filename, "rt");
+  auto fs = fopen(filename.c_str(), "rt");
   if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // read the file line by line
   auto group = ""s;
@@ -6670,8 +6652,9 @@ static  void format_value(string& str, const yaml_value& value) {
 }
 
 yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
-  auto fs = open_file(filename, "wt");
+  auto fs = fopen(filename.c_str(), "wt");
   if (!fs) throw std::runtime_error("cannot open " + filename);
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // save comments
   if (!format_values(fs, "#\n")) return {filename + ": write error"};
@@ -6714,7 +6697,7 @@ yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
   return {};
 }
 
-yamlio_status read_yaml_property(const string& filename, modelio_file& fs,
+yamlio_status read_yaml_property(const string& filename, FILE* fs,
     string& group, string& key, bool& newobj, bool& done, yaml_value& value) {
   // read the file line by line
   char buffer[4096];
@@ -6785,7 +6768,7 @@ static  vector<string> split_yaml_string(
 }
 
 yamlio_status write_yaml_comment(
-    const string& filename, modelio_file& fs, const string& comment) {
+    const string& filename, FILE* fs, const string& comment) {
   auto lines = split_yaml_string(comment, "\n");
   for (auto& line : lines) {
     if (!format_values(fs, "# {}\n", line))
@@ -6797,7 +6780,7 @@ yamlio_status write_yaml_comment(
 }
 
 // Save yaml property
-yamlio_status write_yaml_property(const string& filename, modelio_file& fs,
+yamlio_status write_yaml_property(const string& filename, FILE* fs,
     const string& object, const string& key, bool newobj,
     const yaml_value& value) {
   if (key.empty()) {
@@ -6818,7 +6801,7 @@ yamlio_status write_yaml_property(const string& filename, modelio_file& fs,
 }
 
 yamlio_status write_yaml_object(
-    const string& filename, modelio_file& fs, const string& object) {
+    const string& filename, FILE* fs, const string& object) {
   if (!format_values(fs, "\n{}:\n", object))
     return {filename + ": write error"};
   return {};

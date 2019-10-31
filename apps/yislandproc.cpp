@@ -49,6 +49,7 @@ using namespace yocto;
 #include <deque>
 #include <string_view>
 #include <unordered_set>
+#include <memory>
 
 using std::string_view;
 using std::unordered_set;
@@ -405,7 +406,8 @@ void load_island_shape(vector<scene_shape>& shapes,
     norm_map.reserve(1024 * 1024);
   };
 
-  auto fs = open_file(filename);
+  auto fs = fopen(filename.c_str(), "rt");
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   auto command   = obj_command{};
   auto value     = vec3f{};
