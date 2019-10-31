@@ -112,8 +112,6 @@ namespace yocto {
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
-void         byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
-void         float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);

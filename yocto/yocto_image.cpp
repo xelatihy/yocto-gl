@@ -517,14 +517,6 @@ inline void get_region(
 }
 
 // Conversion from/to floats.
-void byte_to_float(image<vec4f>& fl, const image<vec4b>& bt) {
-  fl.resize(bt.size());
-  for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
-}
-void float_to_byte(image<vec4b>& bt, const image<vec4f>& fl) {
-  bt.resize(fl.size());
-  for (auto i = 0ull; i < bt.count(); i++) bt[i] = float_to_byte(fl[i]);
-}
 image<vec4f> byte_to_float(const image<vec4b>& bt) {
   auto fl = image<vec4f>{bt.size()};
   for (auto i = 0ull; i < fl.count(); i++) fl[i] = byte_to_float(bt[i]);
@@ -1404,7 +1396,7 @@ bool make_image_preset(image<vec4b>& img, const string& type) {
       type.find("-displacement") == type.npos) {
     rgb_to_srgb(img, imgf);
   } else {
-    float_to_byte(img, imgf);
+    img = float_to_byte(imgf);
   }
   return true;
 }
@@ -1417,7 +1409,7 @@ bool make_image_preset(
     if (type.find("-normal") == type.npos) {
       rgb_to_srgb(ldr, imgf);
     } else {
-      float_to_byte(ldr, imgf);
+      ldr = float_to_byte(imgf);
     }
     return true;
   } else {
