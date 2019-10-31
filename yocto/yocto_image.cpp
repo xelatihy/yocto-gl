@@ -961,22 +961,6 @@ image<vec4f> add_border(image<vec4f>& img, int width, const vec4f& color) {
   }
   return bordered;
 }
-void add_border(
-    image<vec4f>& bordered, image<vec4f>& img, int width, const vec4f& color) {
-  bordered = img;
-  for (auto j = 0; j < img.size().y; j++) {
-    for (auto b = 0; b < width; b++) {
-      bordered[{b, j}]                    = color;
-      bordered[{img.size().x - 1 - b, j}] = color;
-    }
-  }
-  for (auto i = 0; i < img.size().x; i++) {
-    for (auto b = 0; b < width; b++) {
-      bordered[{i, b}]                    = color;
-      bordered[{i, img.size().y - 1 - b}] = color;
-    }
-  }
-}
 
 // Implementation of sunsky modified heavily from pbrt
 image<vec4f> make_sunsky(const vec2i& size, float theta_sun,

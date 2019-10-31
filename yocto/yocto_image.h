@@ -252,8 +252,6 @@ image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
 image<vec4f> add_border(const image<vec4f>& img, int width, const vec4f& color);
-void         add_border(
-            image<vec4f>& bordered, image<vec4f>& img, int width, const vec4f& color);
 
 // Make logo images. Image is resized to proper size.
 image<vec4b> make_logo(const string& name);
