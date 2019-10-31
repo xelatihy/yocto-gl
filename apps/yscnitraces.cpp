@@ -263,7 +263,7 @@ void draw(const opengl_window& win) {
   draw_glimage(app.gl_image, app.draw_prms);
   swap_glbuffers(win);
   app.render_counter ++;
-  if(app.render_counter > 30) app.render_counter = 0;
+  if(app.render_counter > 10) app.render_counter = 0;
 }
 
 // run ui loop
