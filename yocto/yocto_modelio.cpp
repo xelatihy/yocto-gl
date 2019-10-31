@@ -107,6 +107,17 @@ static string replace_extension(
   return get_noextension(filename) + ext;
 }
 
+// Check if a file can be opened for reading.
+static bool exists_file(const string& filename) {
+  auto fs = fopen(filename.c_str(), "r");
+  if (fs) {
+    fclose(fs);
+    return true;
+  } else {
+    return false;
+  }
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -420,6 +431,25 @@ static void format_value(string& str, double value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
+}
+
+static void format_value(string& str, const vec2f& value) {
+  for (auto i = 0; i < 2; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+static void format_value(string& str, const vec3f& value) {
+  for (auto i = 0; i < 3; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
+}
+static void format_value(string& str, const frame3f& value) {
+  for (auto i = 0; i < 4; i++) {
+    if (i) str += " ";
+    format_value(str, value[i]);
+  }
 }
 
 // Foramt to file
@@ -1717,164 +1747,6 @@ vec4i find_ply_property(const ply_element& element, const string& name1,
 
 }  // namespace yocto
 
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF PATH HELPERS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Utility to normalize a path
-static string normalize_obj_path(const string& filename_) {
-  auto filename = filename_;
-  for (auto& c : filename)
-
-    if (c == '\\') c = '/';
-  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-      filename[3] == '/') {
-    throw std::invalid_argument("absolute paths are not supported");
-    return filename_;
-  }
-  auto pos = (size_t)0;
-  while ((pos = filename.find("//")) != filename.npos)
-    filename = filename.substr(0, pos) + filename.substr(pos + 1);
-  return filename;
-}
-
-// Get directory name (including '/').
-static string get_obj_dirname(const string& filename_) {
-  auto filename = normalize_obj_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return "";
-  return filename.substr(0, pos + 1);
-}
-
-// Get extension (not including '.').
-static string get_obj_extension(const string& filename_) {
-  auto filename = normalize_obj_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return "";
-  return filename.substr(pos);
-}
-
-// Get filename without directory.
-static string get_obj_filename(const string& filename_) {
-  auto filename = normalize_obj_path(filename_);
-  auto pos      = filename.rfind('/');
-  if (pos == string::npos) return filename;
-  return filename.substr(pos + 1);
-}
-
-// Get extension.
-static string get_obj_noextension(const string& filename_) {
-  auto filename = normalize_obj_path(filename_);
-  auto pos      = filename.rfind('.');
-  if (pos == string::npos) return filename;
-  return filename.substr(0, pos);
-}
-
-// Get filename without directory and extension.
-static string get_obj_basename(const string& filename) {
-  return get_obj_noextension(get_obj_filename(filename));
-}
-
-// Replaces extensions
-static string replace_obj_extension(const string& filename, const string& ext) {
-  return get_obj_noextension(filename) + ext;
-}
-
-// Check if a file can be opened for reading.
-static bool exists_obj_file(const string& filename) {
-  auto fs = fopen(filename.c_str(), "r");
-  if (fs) {
-    fclose(fs);
-    return true;
-  } else {
-    return false;
-  }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// LOAD-LEVEL PARSING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::string_view;
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// LOW-LEVEL PRINTING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Formats values to string
-static void format_obj_value(string& str, const string& value) { str += value; }
-static void format_obj_value(string& str, const char* value) { str += value; }
-static void format_obj_value(string& str, int value) {
-  char buf[256];
-  sprintf(buf, "%d", (int)value);
-  str += buf;
-}
-static void format_obj_value(string& str, float value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
-static void format_obj_value(string& str, const vec2f& value) {
-  for (auto i = 0; i < 2; i++) {
-    if (i) str += " ";
-    format_obj_value(str, value[i]);
-  }
-}
-static void format_obj_value(string& str, const vec3f& value) {
-  for (auto i = 0; i < 3; i++) {
-    if (i) str += " ";
-    format_obj_value(str, value[i]);
-  }
-}
-static void format_obj_value(string& str, const frame3f& value) {
-  for (auto i = 0; i < 4; i++) {
-    if (i) str += " ";
-    format_obj_value(str, value[i]);
-  }
-}
-
-// Foramt to file
-static void format_obj_values(string& str, const string& fmt) {
-  auto pos = fmt.find("{}");
-  if (pos != string::npos) throw std::runtime_error("bad format string");
-  str += fmt;
-}
-template <typename Arg, typename... Args>
-static void format_obj_values(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
-  auto pos = fmt.find("{}");
-  if (pos == string::npos) throw std::runtime_error("bad format string");
-  str += fmt.substr(0, pos);
-  format_obj_value(str, arg);
-  format_obj_values(str, fmt.substr(pos + 2), args...);
-}
-
-template <typename... Args>
-static bool format_obj_values(
-    modelio_file& fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
-  format_obj_values(str, fmt, args...);
-  return fputs(str.c_str(), fs.fs) >= 0;
-}
-template <typename T>
-static bool format_obj_value(modelio_file& fs, const T& value) {
-  auto str = ""s;
-  format_obj_value(str, value);
-  return fputs(str.c_str(), fs.fs) >= 0;
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
@@ -1917,7 +1789,7 @@ static bool parse_value(string_view& str, obj_texture_info& info) {
   if (tokens.empty()) return false;
 
   // texture name
-  info.path = normalize_obj_path(tokens.back());
+  info.path = normalize_path(tokens.back());
 
   // texture params
   auto last = string();
@@ -2331,15 +2203,15 @@ objio_status load_obj(const string& filename, obj_model& obj,
   if (geom_only) return {};
 
   // load materials
-  auto dirname = get_obj_dirname(filename);
+  auto dirname = get_dirname(filename);
   for (auto& mtllib : mtllibs) {
     if (auto ret = load_mtl(dirname + mtllib, obj); !ret)
       return {filename + ": mtl error (" + ret.error + ")"};
   }
 
   // load extensions
-  auto extfilename = replace_obj_extension(filename, ".objx");
-  if (exists_obj_file(extfilename)) {
+  auto extfilename = replace_extension(filename, ".objx");
+  if (exists_file(extfilename)) {
     if (auto ret = load_objx(extfilename, obj); !ret)
       return {filename + ": objx error (" + ret.error + ")"};
   }
@@ -2348,21 +2220,21 @@ objio_status load_obj(const string& filename, obj_model& obj,
 }
 
 // Format values
-static void format_obj_value(string& str, const obj_texture_info& value) {
+static void format_value(string& str, const obj_texture_info& value) {
   str += value.path.empty() ? "" : value.path;
 }
-static void format_obj_value(string& str, const obj_vertex& value) {
-  format_obj_value(str, value.position);
+static void format_value(string& str, const obj_vertex& value) {
+  format_value(str, value.position);
   if (value.texcoord) {
     str += "/";
-    format_obj_value(str, value.texcoord);
+    format_value(str, value.texcoord);
     if (value.normal) {
       str += "/";
-      format_obj_value(str, value.normal);
+      format_value(str, value.normal);
     }
   } else if (value.normal) {
     str += "//";
-    format_obj_value(str, value.normal);
+    format_value(str, value.normal);
   }
 }
 
@@ -2373,127 +2245,127 @@ static objio_status save_mtl(const string& filename, const obj_model& obj) {
   if (!fs) return {filename + ": file not found"};
 
   // save comments
-  if (!format_obj_values(fs, "#\n")) return {filename + ": write error"};
-  if (!format_obj_values(fs, "# Written by Yocto/GL\n"))
+  if (!format_values(fs, "#\n")) return {filename + ": write error"};
+  if (!format_values(fs, "# Written by Yocto/GL\n"))
     return {filename + ": write error"};
-  if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return {filename + ": write error"};
-  if (!format_obj_values(fs, "#\n\n")) return {filename + ": write error"};
+  if (!format_values(fs, "#\n\n")) return {filename + ": write error"};
   for (auto& comment : obj.comments) {
-    if (!format_obj_values(fs, "# {}\n", comment))
+    if (!format_values(fs, "# {}\n", comment))
       return {filename + ": write error"};
   }
-  if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
+  if (!format_values(fs, "\n")) return {filename + ": write error"};
 
   // write material
   for (auto& material : obj.materials) {
-    if (!format_obj_values(fs, "newmtl {}\n", material.name))
+    if (!format_values(fs, "newmtl {}\n", material.name))
       return {filename + ": write error"};
-    if (!format_obj_values(fs, "illum {}\n", material.illum))
+    if (!format_values(fs, "illum {}\n", material.illum))
       return {filename + ": write error"};
     if (material.emission != zero3f)
-      if (!format_obj_values(fs, "Ke {}\n", material.emission))
+      if (!format_values(fs, "Ke {}\n", material.emission))
         return {filename + ": write error"};
     if (material.ambient != zero3f)
-      if (!format_obj_values(fs, "Ka {}\n", material.ambient))
+      if (!format_values(fs, "Ka {}\n", material.ambient))
         return {filename + ": write error"};
-    if (!format_obj_values(fs, "Kd {}\n", material.diffuse))
+    if (!format_values(fs, "Kd {}\n", material.diffuse))
       return {filename + ": write error"};
-    if (!format_obj_values(fs, "Ks {}\n", material.specular))
+    if (!format_values(fs, "Ks {}\n", material.specular))
       return {filename + ": write error"};
     if (material.reflection != zero3f)
-      if (!format_obj_values(fs, "Kr {}\n", material.reflection))
+      if (!format_values(fs, "Kr {}\n", material.reflection))
         return {filename + ": write error"};
     if (material.transmission != zero3f)
-      if (!format_obj_values(fs, "Kt {}\n", material.transmission))
+      if (!format_values(fs, "Kt {}\n", material.transmission))
         return {filename + ": write error"};
-    format_obj_values(fs, "Ns {}\n", (int)material.exponent);
+    format_values(fs, "Ns {}\n", (int)material.exponent);
     if (material.opacity != 1)
-      if (!format_obj_values(fs, "d {}\n", material.opacity))
+      if (!format_values(fs, "d {}\n", material.opacity))
         return {filename + ": write error"};
     if (!material.emission_map.path.empty())
-      if (!format_obj_values(fs, "map_Ke {}\n", material.emission_map))
+      if (!format_values(fs, "map_Ke {}\n", material.emission_map))
         return {filename + ": write error"};
     if (!material.diffuse_map.path.empty())
-      if (!format_obj_values(fs, "map_Kd {}\n", material.diffuse_map))
+      if (!format_values(fs, "map_Kd {}\n", material.diffuse_map))
         return {filename + ": write error"};
     if (!material.specular_map.path.empty())
-      if (!format_obj_values(fs, "map_Ks {}\n", material.specular_map))
+      if (!format_values(fs, "map_Ks {}\n", material.specular_map))
         return {filename + ": write error"};
     if (!material.transmission_map.path.empty())
-      if (!format_obj_values(fs, "map_Kt {}\n", material.transmission_map))
+      if (!format_values(fs, "map_Kt {}\n", material.transmission_map))
         return {filename + ": write error"};
     if (!material.reflection_map.path.empty())
-      if (!format_obj_values(fs, "map_Kr {}\n", material.reflection_map))
+      if (!format_values(fs, "map_Kr {}\n", material.reflection_map))
         return {filename + ": write error"};
     if (!material.exponent_map.path.empty())
-      if (!format_obj_values(fs, "map_Ns {}\n", material.exponent_map))
+      if (!format_values(fs, "map_Ns {}\n", material.exponent_map))
         return {filename + ": write error"};
     if (!material.opacity_map.path.empty())
-      if (!format_obj_values(fs, "map_d {}\n", material.opacity_map))
+      if (!format_values(fs, "map_d {}\n", material.opacity_map))
         return {filename + ": write error"};
     if (!material.bump_map.path.empty())
-      if (!format_obj_values(fs, "map_bump {}\n", material.bump_map))
+      if (!format_values(fs, "map_bump {}\n", material.bump_map))
         return {filename + ": write error"};
     if (!material.displacement_map.path.empty())
-      if (!format_obj_values(fs, "map_disp {}\n", material.displacement_map))
+      if (!format_values(fs, "map_disp {}\n", material.displacement_map))
         return {filename + ": write error"};
     if (!material.normal_map.path.empty())
-      if (!format_obj_values(fs, "map_norm {}\n", material.normal_map))
+      if (!format_values(fs, "map_norm {}\n", material.normal_map))
         return {filename + ": write error"};
     if (material.pbr_roughness)
-      if (!format_obj_values(fs, "Pr {}\n", material.pbr_roughness))
+      if (!format_values(fs, "Pr {}\n", material.pbr_roughness))
         return {filename + ": write error"};
     if (material.pbr_metallic)
-      if (!format_obj_values(fs, "Pm {}\n", material.pbr_metallic))
+      if (!format_values(fs, "Pm {}\n", material.pbr_metallic))
         return {filename + ": write error"};
     if (material.pbr_sheen)
-      if (!format_obj_values(fs, "Ps {}\n", material.pbr_sheen))
+      if (!format_values(fs, "Ps {}\n", material.pbr_sheen))
         return {filename + ": write error"};
     if (material.pbr_clearcoat)
-      if (!format_obj_values(fs, "Pc {}\n", material.pbr_clearcoat))
+      if (!format_values(fs, "Pc {}\n", material.pbr_clearcoat))
         return {filename + ": write error"};
     if (material.pbr_coatroughness)
-      if (!format_obj_values(fs, "Pcr {}\n", material.pbr_coatroughness))
+      if (!format_values(fs, "Pcr {}\n", material.pbr_coatroughness))
         return {filename + ": write error"};
     if (!material.pbr_roughness_map.path.empty())
-      if (!format_obj_values(fs, "map_Pr {}\n", material.pbr_roughness_map))
+      if (!format_values(fs, "map_Pr {}\n", material.pbr_roughness_map))
         return {filename + ": write error"};
     if (!material.pbr_metallic_map.path.empty())
-      if (!format_obj_values(fs, "map_Pm {}\n", material.pbr_metallic_map))
+      if (!format_values(fs, "map_Pm {}\n", material.pbr_metallic_map))
         return {filename + ": write error"};
     if (!material.pbr_sheen_map.path.empty())
-      if (!format_obj_values(fs, "map_Ps {}\n", material.pbr_sheen_map))
+      if (!format_values(fs, "map_Ps {}\n", material.pbr_sheen_map))
         return {filename + ": write error"};
     if (!material.pbr_clearcoat_map.path.empty())
-      if (!format_obj_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map))
+      if (!format_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map))
         return {filename + ": write error"};
     if (!material.pbr_coatroughness_map.path.empty())
-      if (!format_obj_values(
+      if (!format_values(
               fs, "map_Pcr {}\n", material.pbr_coatroughness_map))
         return {filename + ": write error"};
     if (material.vol_transmission != zero3f)
-      if (!format_obj_values(fs, "Vt {}\n", material.vol_transmission))
+      if (!format_values(fs, "Vt {}\n", material.vol_transmission))
         return {filename + ": write error"};
     if (material.vol_meanfreepath != zero3f)
-      if (!format_obj_values(fs, "Vp {}\n", material.vol_meanfreepath))
+      if (!format_values(fs, "Vp {}\n", material.vol_meanfreepath))
         return {filename + ": write error"};
     if (material.vol_emission != zero3f)
-      if (!format_obj_values(fs, "Ve {}\n", material.vol_emission))
+      if (!format_values(fs, "Ve {}\n", material.vol_emission))
         return {filename + ": write error"};
     if (material.vol_scattering != zero3f)
-      if (!format_obj_values(fs, "Vs {}\n", material.vol_scattering))
+      if (!format_values(fs, "Vs {}\n", material.vol_scattering))
         return {filename + ": write error"};
     if (material.vol_anisotropy)
-      if (!format_obj_values(fs, "Vg {}\n", material.vol_anisotropy))
+      if (!format_values(fs, "Vg {}\n", material.vol_anisotropy))
         return {filename + ": write error"};
     if (material.vol_scale)
-      if (!format_obj_values(fs, "Vr {}\n", material.vol_scale))
+      if (!format_values(fs, "Vr {}\n", material.vol_scale))
         return {filename + ": write error"};
     if (!material.vol_scattering_map.path.empty())
-      if (!format_obj_values(fs, "map_Vs {}\n", material.vol_scattering_map))
+      if (!format_values(fs, "map_Vs {}\n", material.vol_scattering_map))
         return {filename + ": write error"};
-    if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
+    if (!format_values(fs, "\n")) return {filename + ": write error"};
   }
 
   return {};
@@ -2506,28 +2378,28 @@ static objio_status save_objx(const string& filename, const obj_model& obj) {
   if (!fs) return {filename + ": file not found"};
 
   // save comments
-  if (!format_obj_values(fs, "#\n")) return {filename + ": write error"};
-  if (!format_obj_values(fs, "# Written by Yocto/GL\n"))
+  if (!format_values(fs, "#\n")) return {filename + ": write error"};
+  if (!format_values(fs, "# Written by Yocto/GL\n"))
     return {filename + ": write error"};
-  if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return {filename + ": write error"};
-  if (!format_obj_values(fs, "#\n\n")) return {filename + ": write error"};
+  if (!format_values(fs, "#\n\n")) return {filename + ": write error"};
   for (auto& comment : obj.comments) {
-    if (!format_obj_values(fs, "# {}\n", comment))
+    if (!format_values(fs, "# {}\n", comment))
       return {filename + ": write error"};
   }
-  if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
+  if (!format_values(fs, "\n")) return {filename + ": write error"};
 
   // cameras
   for (auto& camera : obj.cameras) {
-    format_obj_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
+    format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
         camera.ortho, camera.width, camera.height, camera.lens, camera.focus,
         camera.aperture, camera.frame);
   }
 
   // environments
   for (auto& environment : obj.environments) {
-    format_obj_values(fs, "e {} {} {} {}\n", environment.name,
+    format_values(fs, "e {} {} {} {}\n", environment.name,
         environment.emission,
         environment.emission_map.path.empty() ? "\"\""s
                                               : environment.emission_map.path,
@@ -2537,7 +2409,7 @@ static objio_status save_objx(const string& filename, const obj_model& obj) {
   // instances
   for (auto& shape : obj.shapes) {
     for (auto& frame : shape.instances) {
-      format_obj_values(fs, "i {} {}\n", shape.name, frame);
+      format_values(fs, "i {} {}\n", shape.name, frame);
     }
   }
 
@@ -2551,37 +2423,37 @@ objio_status save_obj(const string& filename, const obj_model& obj) {
   if (!fs) return {filename + ": file not found"};
 
   // save comments
-  if (!format_obj_values(fs, "#\n")) return {filename + ": write error"};
-  if (!format_obj_values(fs, "# Written by Yocto/GL\n"))
+  if (!format_values(fs, "#\n")) return {filename + ": write error"};
+  if (!format_values(fs, "# Written by Yocto/GL\n"))
     return {filename + ": write error"};
-  if (!format_obj_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return {filename + ": write error"};
-  if (!format_obj_values(fs, "#\n\n")) return {filename + ": write error"};
+  if (!format_values(fs, "#\n\n")) return {filename + ": write error"};
   for (auto& comment : obj.comments) {
-    if (!format_obj_values(fs, "# {}\n", comment))
+    if (!format_values(fs, "# {}\n", comment))
       return {filename + ": write error"};
   }
-  if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
+  if (!format_values(fs, "\n")) return {filename + ": write error"};
 
   // save material library
   if (!obj.materials.empty()) {
-    format_obj_values(fs, "mtllib {}\n\n",
-        replace_obj_extension(get_obj_filename(filename), ".mtl"));
+    format_values(fs, "mtllib {}\n\n",
+        replace_extension(get_filename(filename), ".mtl"));
   }
 
   // save objects
   auto vert_size = obj_vertex{0, 0, 0};
   for (auto& shape : obj.shapes) {
-    if (!format_obj_values(fs, "o {}\n", shape.name))
+    if (!format_values(fs, "o {}\n", shape.name))
       return {filename + ": write error"};
     for (auto& p : shape.positions)
-      if (!format_obj_values(fs, "v {}\n", p))
+      if (!format_values(fs, "v {}\n", p))
         return {filename + ": write error"};
     for (auto& n : shape.normals)
-      if (!format_obj_values(fs, "vn {}\n", n))
+      if (!format_values(fs, "vn {}\n", n))
         return {filename + ": write error"};
     for (auto& t : shape.texcoords)
-      if (!format_obj_values(fs, "vt {}\n", t))
+      if (!format_values(fs, "vt {}\n", t))
         return {filename + ": write error"};
     auto element_labels = vector<string>{"f", "l", "p"};
     auto element_groups = vector<const vector<obj_element>*>{
@@ -2592,24 +2464,24 @@ objio_status save_obj(const string& filename, const obj_model& obj) {
       auto  cur_material = -1, cur_vertex = 0;
       for (auto& element : elements) {
         if (!shape.materials.empty() && cur_material != element.material) {
-          format_obj_values(
+          format_values(
               fs, "usemtl {}\n", shape.materials[element.material]);
           cur_material = element.material;
         }
-        if (!format_obj_values(fs, "{}", label))
+        if (!format_values(fs, "{}", label))
           return {filename + ": write error"};
         for (auto c = 0; c < element.size; c++) {
           auto vert = shape.vertices[cur_vertex++];
           if (vert.position) vert.position += vert_size.position;
           if (vert.normal) vert.normal += vert_size.normal;
           if (vert.texcoord) vert.texcoord += vert_size.texcoord;
-          if (!format_obj_values(fs, " {}", vert))
+          if (!format_values(fs, " {}", vert))
             return {filename + ": write error"};
         }
-        if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
+        if (!format_values(fs, "\n")) return {filename + ": write error"};
       }
     }
-    if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
+    if (!format_values(fs, "\n")) return {filename + ": write error"};
     vert_size.position += (int)shape.positions.size();
     vert_size.normal += (int)shape.normals.size();
     vert_size.texcoord += (int)shape.texcoords.size();
@@ -2617,7 +2489,7 @@ objio_status save_obj(const string& filename, const obj_model& obj) {
 
   // save mtl
   if (!obj.materials.empty()) {
-    if (auto ret = save_mtl(replace_obj_extension(filename, ".mtl"), obj); !ret)
+    if (auto ret = save_mtl(replace_extension(filename, ".mtl"), obj); !ret)
       return ret;
   }
 
@@ -2625,7 +2497,7 @@ objio_status save_obj(const string& filename, const obj_model& obj) {
   if (!obj.cameras.empty() || !obj.environments.empty() ||
       std::any_of(obj.shapes.begin(), obj.shapes.end(),
           [](auto& shape) { return !shape.instances.empty(); })) {
-    if (auto ret = save_objx(replace_obj_extension(filename, ".objx"), obj);
+    if (auto ret = save_objx(replace_extension(filename, ".objx"), obj);
         !ret)
       return ret;
   }
@@ -3290,10 +3162,10 @@ objio_status write_obj_comment(
     const string& filename, modelio_file& fs, const string& comment) {
   auto lines = split_obj_string(comment, "\n");
   for (auto& str : lines) {
-    if (!format_obj_values(fs, "# {}\n", str))
+    if (!format_values(fs, "# {}\n", str))
       return {filename + ": write error"};
   }
-  if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
+  if (!format_values(fs, "\n")) return {filename + ": write error"};
   return {};
 }
 
@@ -3302,49 +3174,49 @@ objio_status write_obj_command(const string& filename, modelio_file& fs,
     const vector<obj_vertex>& vertices) {
   switch (command) {
     case obj_command::vertex:
-      if (!format_obj_values(fs, "v {}\n", value))
+      if (!format_values(fs, "v {}\n", value))
         return {filename + ": write error"};
       break;
     case obj_command::normal:
-      if (!format_obj_values(fs, "vn {}\n", value))
+      if (!format_values(fs, "vn {}\n", value))
         return {filename + ": write error"};
       break;
     case obj_command::texcoord:
-      if (!format_obj_values(fs, "vt {}\n", value))
+      if (!format_values(fs, "vt {}\n", value))
         return {filename + ": write error"};
       break;
     case obj_command::face:
     case obj_command::str:
     case obj_command::point:
       if (command == obj_command::face)
-        if (!format_obj_values(fs, "f ")) return {filename + ": write error"};
+        if (!format_values(fs, "f ")) return {filename + ": write error"};
       if (command == obj_command::str)
-        if (!format_obj_values(fs, "l ")) return {filename + ": write error"};
+        if (!format_values(fs, "l ")) return {filename + ": write error"};
       if (command == obj_command::point)
-        if (!format_obj_values(fs, "p ")) return {filename + ": write error"};
+        if (!format_values(fs, "p ")) return {filename + ": write error"};
       for (auto& vert : vertices)
-        if (!format_obj_values(fs, " {}", vert))
+        if (!format_values(fs, " {}", vert))
           return {filename + ": write error"};
-      if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
+      if (!format_values(fs, "\n")) return {filename + ": write error"};
       break;
     case obj_command::object:
-      if (!format_obj_values(fs, "o {}\n", name))
+      if (!format_values(fs, "o {}\n", name))
         return {filename + ": write error"};
       break;
     case obj_command::group:
-      if (!format_obj_values(fs, "g {}\n", name))
+      if (!format_values(fs, "g {}\n", name))
         return {filename + ": write error"};
       break;
     case obj_command::usemtl:
-      if (!format_obj_values(fs, "usemtl {}\n", name))
+      if (!format_values(fs, "usemtl {}\n", name))
         return {filename + ": write error"};
       break;
     case obj_command::smoothing:
-      if (!format_obj_values(fs, "s {}\n", name))
+      if (!format_values(fs, "s {}\n", name))
         return {filename + ": write error"};
       break;
     case obj_command::mtllib:
-      if (!format_obj_values(fs, "mtllib {}\n", name))
+      if (!format_values(fs, "mtllib {}\n", name))
         return {filename + ": write error"};
       break;
     case obj_command::objxlib: break;
@@ -3359,113 +3231,113 @@ static objio_status write_mtl_command(const string& filename, modelio_file& fs,
   // write material
   switch (command) {
     case mtl_command::material:
-      if (!format_obj_values(fs, "newmtl {}\n", material.name))
+      if (!format_values(fs, "newmtl {}\n", material.name))
         return {filename + ": write error"};
-      if (!format_obj_values(fs, "illum {}\n", material.illum))
+      if (!format_values(fs, "illum {}\n", material.illum))
         return {filename + ": write error"};
       if (material.emission != zero3f)
-        if (!format_obj_values(fs, "Ke {}\n", material.emission))
+        if (!format_values(fs, "Ke {}\n", material.emission))
           return {filename + ": write error"};
       if (material.ambient != zero3f)
-        if (!format_obj_values(fs, "Ka {}\n", material.ambient))
+        if (!format_values(fs, "Ka {}\n", material.ambient))
           return {filename + ": write error"};
-      if (!format_obj_values(fs, "Kd {}\n", material.diffuse))
+      if (!format_values(fs, "Kd {}\n", material.diffuse))
         return {filename + ": write error"};
-      if (!format_obj_values(fs, "Ks {}\n", material.specular))
+      if (!format_values(fs, "Ks {}\n", material.specular))
         return {filename + ": write error"};
       if (material.reflection != zero3f)
-        if (!format_obj_values(fs, "Kr {}\n", material.reflection))
+        if (!format_values(fs, "Kr {}\n", material.reflection))
           return {filename + ": write error"};
       if (material.transmission != zero3f)
-        if (!format_obj_values(fs, "Kt {}\n", material.transmission))
+        if (!format_values(fs, "Kt {}\n", material.transmission))
           return {filename + ": write error"};
-      format_obj_values(fs, "Ns {}\n", (int)material.exponent);
+      format_values(fs, "Ns {}\n", (int)material.exponent);
       if (material.opacity != 1)
-        if (!format_obj_values(fs, "d {}\n", material.opacity))
+        if (!format_values(fs, "d {}\n", material.opacity))
           return {filename + ": write error"};
       if (!material.emission_map.path.empty())
-        if (!format_obj_values(fs, "map_Ke {}\n", material.emission_map))
+        if (!format_values(fs, "map_Ke {}\n", material.emission_map))
           return {filename + ": write error"};
       if (!material.diffuse_map.path.empty())
-        if (!format_obj_values(fs, "map_Kd {}\n", material.diffuse_map))
+        if (!format_values(fs, "map_Kd {}\n", material.diffuse_map))
           return {filename + ": write error"};
       if (!material.specular_map.path.empty())
-        if (!format_obj_values(fs, "map_Ks {}\n", material.specular_map))
+        if (!format_values(fs, "map_Ks {}\n", material.specular_map))
           return {filename + ": write error"};
       if (!material.transmission_map.path.empty())
-        if (!format_obj_values(fs, "map_Kt {}\n", material.transmission_map))
+        if (!format_values(fs, "map_Kt {}\n", material.transmission_map))
           return {filename + ": write error"};
       if (!material.reflection_map.path.empty())
-        if (!format_obj_values(fs, "map_Kr {}\n", material.reflection_map))
+        if (!format_values(fs, "map_Kr {}\n", material.reflection_map))
           return {filename + ": write error"};
       if (!material.exponent_map.path.empty())
-        if (!format_obj_values(fs, "map_Ns {}\n", material.exponent_map))
+        if (!format_values(fs, "map_Ns {}\n", material.exponent_map))
           return {filename + ": write error"};
       if (!material.opacity_map.path.empty())
-        if (!format_obj_values(fs, "map_d {}\n", material.opacity_map))
+        if (!format_values(fs, "map_d {}\n", material.opacity_map))
           return {filename + ": write error"};
       if (!material.bump_map.path.empty())
-        if (!format_obj_values(fs, "map_bump {}\n", material.bump_map))
+        if (!format_values(fs, "map_bump {}\n", material.bump_map))
           return {filename + ": write error"};
       if (!material.displacement_map.path.empty())
-        if (!format_obj_values(fs, "map_disp {}\n", material.displacement_map))
+        if (!format_values(fs, "map_disp {}\n", material.displacement_map))
           return {filename + ": write error"};
       if (!material.normal_map.path.empty())
-        if (!format_obj_values(fs, "map_norm {}\n", material.normal_map))
+        if (!format_values(fs, "map_norm {}\n", material.normal_map))
           return {filename + ": write error"};
       if (material.pbr_roughness)
-        if (!format_obj_values(fs, "Pr {}\n", material.pbr_roughness))
+        if (!format_values(fs, "Pr {}\n", material.pbr_roughness))
           return {filename + ": write error"};
       if (material.pbr_metallic)
-        if (!format_obj_values(fs, "Pm {}\n", material.pbr_metallic))
+        if (!format_values(fs, "Pm {}\n", material.pbr_metallic))
           return {filename + ": write error"};
       if (material.pbr_sheen)
-        if (!format_obj_values(fs, "Ps {}\n", material.pbr_sheen))
+        if (!format_values(fs, "Ps {}\n", material.pbr_sheen))
           return {filename + ": write error"};
       if (material.pbr_clearcoat)
-        if (!format_obj_values(fs, "Pc {}\n", material.pbr_clearcoat))
+        if (!format_values(fs, "Pc {}\n", material.pbr_clearcoat))
           return {filename + ": write error"};
       if (material.pbr_coatroughness)
-        if (!format_obj_values(fs, "Pcr {}\n", material.pbr_coatroughness))
+        if (!format_values(fs, "Pcr {}\n", material.pbr_coatroughness))
           return {filename + ": write error"};
       if (!material.pbr_roughness_map.path.empty())
-        if (!format_obj_values(fs, "map_Pr {}\n", material.pbr_roughness_map))
+        if (!format_values(fs, "map_Pr {}\n", material.pbr_roughness_map))
           return {filename + ": write error"};
       if (!material.pbr_metallic_map.path.empty())
-        if (!format_obj_values(fs, "map_Pm {}\n", material.pbr_metallic_map))
+        if (!format_values(fs, "map_Pm {}\n", material.pbr_metallic_map))
           return {filename + ": write error"};
       if (!material.pbr_sheen_map.path.empty())
-        if (!format_obj_values(fs, "map_Ps {}\n", material.pbr_sheen_map))
+        if (!format_values(fs, "map_Ps {}\n", material.pbr_sheen_map))
           return {filename + ": write error"};
       if (!material.pbr_clearcoat_map.path.empty())
-        if (!format_obj_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map))
+        if (!format_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map))
           return {filename + ": write error"};
       if (!material.pbr_coatroughness_map.path.empty())
-        if (!format_obj_values(
+        if (!format_values(
                 fs, "map_Pcr {}\n", material.pbr_coatroughness_map))
           return {filename + ": write error"};
       if (material.vol_transmission != zero3f)
-        if (!format_obj_values(fs, "Vt {}\n", material.vol_transmission))
+        if (!format_values(fs, "Vt {}\n", material.vol_transmission))
           return {filename + ": write error"};
       if (material.vol_meanfreepath != zero3f)
-        if (!format_obj_values(fs, "Vp {}\n", material.vol_meanfreepath))
+        if (!format_values(fs, "Vp {}\n", material.vol_meanfreepath))
           return {filename + ": write error"};
       if (material.vol_emission != zero3f)
-        if (!format_obj_values(fs, "Ve {}\n", material.vol_emission))
+        if (!format_values(fs, "Ve {}\n", material.vol_emission))
           return {filename + ": write error"};
       if (material.vol_scattering != zero3f)
-        if (!format_obj_values(fs, "Vs {}\n", material.vol_scattering))
+        if (!format_values(fs, "Vs {}\n", material.vol_scattering))
           return {filename + ": write error"};
       if (material.vol_anisotropy)
-        if (!format_obj_values(fs, "Vg {}\n", material.vol_anisotropy))
+        if (!format_values(fs, "Vg {}\n", material.vol_anisotropy))
           return {filename + ": write error"};
       if (material.vol_scale)
-        if (!format_obj_values(fs, "Vr {}\n", material.vol_scale))
+        if (!format_values(fs, "Vr {}\n", material.vol_scale))
           return {filename + ": write error"};
       if (!material.vol_scattering_map.path.empty())
-        if (!format_obj_values(fs, "map_Vs {}\n", material.vol_scattering_map))
+        if (!format_values(fs, "map_Vs {}\n", material.vol_scattering_map))
           return {filename + ": write error"};
-      if (!format_obj_values(fs, "\n")) return {filename + ": write error"};
+      if (!format_values(fs, "\n")) return {filename + ": write error"};
       break;
     case mtl_command::error: break;
   }
@@ -3478,13 +3350,13 @@ objio_status write_objx_command(const string& filename, modelio_file& fs,
     const obj_environment& environment, const obj_instance& instance) {
   switch (command) {
     case objx_command::camera: {
-      if (!format_obj_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
+      if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
               camera.ortho, camera.width, camera.height, camera.lens,
               camera.focus, camera.aperture, camera.frame))
         return {filename + ": write error"};
     } break;
     case objx_command::environment: {
-      if (!format_obj_values(fs, "e {} {} {} {}\n", environment.name,
+      if (!format_values(fs, "e {} {} {} {}\n", environment.name,
               environment.emission,
               environment.emission_map.path.empty()
                   ? "\"\""s
@@ -3493,7 +3365,7 @@ objio_status write_objx_command(const string& filename, modelio_file& fs,
         return {filename + ": write error"};
     } break;
     case objx_command::instance: {
-      if (!format_obj_values(fs, "i {} {}\n", instance.object, instance.frame))
+      if (!format_values(fs, "i {} {}\n", instance.object, instance.frame))
         return {filename + ": write error"};
     } break;
     case objx_command::error: break;
@@ -3570,17 +3442,6 @@ static string get_pbrt_basename(const string& filename) {
 static string replace_pbrt_extension(
     const string& filename, const string& ext) {
   return get_pbrt_noextension(filename) + ext;
-}
-
-// Check if a file can be opened for reading.
-static bool exists_pbrt_file(const string& filename) {
-  auto fs = fopen(filename.c_str(), "r");
-  if (fs) {
-    fclose(fs);
-    return true;
-  } else {
-    return false;
-  }
 }
 
 }  // namespace yocto
