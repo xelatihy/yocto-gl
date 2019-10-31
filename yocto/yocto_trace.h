@@ -318,14 +318,13 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_params& params);
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-int trace_samples(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, int current_sample, const trace_params& params);
+image<vec4f> trace_samples(trace_state& state,
+    const trace_scene& scene, const trace_params& params);
 
-// Progressively compute an image by calling trace_region multiple times.
-// Compared to `trace_samples` this always runs serially and is helpful
-// when building async applications.
-void trace_region(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const image_region& region, int num_samples,
+// Progressively compute an image by calling trace_sample multiple times.
+// This is helpful when building async applications.
+vec4f trace_sample(trace_state& state,
+    const trace_scene& scene, const vec2i& ij, 
     const trace_params& params);
 
 // Check is a sampler requires lights

@@ -61,45 +61,24 @@ struct app_state {
   // view scene
   opengl_image        gl_image       = {};
   draw_glimage_params draw_prms      = {};
-  bool                navigation_fps = false;
 
   // editing
   pair<string, int> selection = {"camera", 0};
 
   // computation
-  bool                 render_preview = true;
   int                  render_sample  = 0;
-  int                  render_region  = 0;
-  vector<image_region> render_regions = {};
+  std::atomic<bool>    render_stop = {};
+  std::future<void>    render_future = {};
+  int                  render_counter = 0;
+
+  ~app_state() {
+    render_stop = true;
+    if(render_future.valid()) render_future.get();
+  }
 };
 
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(int begin, int end, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(begin);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, end]() {
-          while (true) {
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= end) break;
-            func(idx);
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-}
-
-template <typename Func>
-inline void parallel_for(int num, Func&& func) {
-  parallel_for(0, num, std::forward<Func>(func));
-}
-
 // construct a scene from io
-trace_scene make_trace_scene(const scene_model& ioscene) {
+trace_scene make_scene(const scene_model& ioscene) {
   auto tesselate = [](const scene_model& ioscene, const scene_shape& shape) {
     if (!shape.subdivisions && !shape.displacement) return scene_shape{};
     auto subdiv = shape;
@@ -113,13 +92,13 @@ trace_scene make_trace_scene(const scene_model& ioscene) {
 
   for (auto& iocamera : ioscene.cameras) {
     auto& camera = scene.cameras.emplace_back();
-    camera.frame = iocamera.frame;
-    camera.film  = iocamera.aspect >= 1
-                      ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
-                      : vec2f{iocamera.film / iocamera.aspect, iocamera.film};
-    camera.lens     = iocamera.lens;
-    camera.focus    = iocamera.focus;
-    camera.aperture = iocamera.aperture;
+  camera.frame = iocamera.frame;
+  camera.film  = iocamera.aspect >= 1
+                    ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
+                    : vec2f{iocamera.film / iocamera.aspect, iocamera.film};
+  camera.lens     = iocamera.lens;
+  camera.focus    = iocamera.focus;
+  camera.aperture = iocamera.aperture;
   }
 
   for (auto& iotexture : ioscene.textures) {
@@ -130,32 +109,32 @@ trace_scene make_trace_scene(const scene_model& ioscene) {
 
   for (auto& iomaterial : ioscene.materials) {
     auto& material            = scene.materials.emplace_back();
-    material.emission         = iomaterial.emission;
-    material.diffuse          = iomaterial.diffuse;
-    material.specular         = iomaterial.specular;
-    material.transmission     = iomaterial.transmission;
-    material.roughness        = iomaterial.roughness;
-    material.opacity          = iomaterial.opacity;
-    material.refract          = iomaterial.refract;
-    material.volemission      = iomaterial.volemission;
-    material.voltransmission  = iomaterial.voltransmission;
-    material.volmeanfreepath  = iomaterial.volmeanfreepath;
-    material.volscatter       = iomaterial.volscatter;
-    material.volscale         = iomaterial.volscale;
-    material.volanisotropy    = iomaterial.volanisotropy;
-    material.emission_tex     = iomaterial.emission_tex;
-    material.diffuse_tex      = iomaterial.diffuse_tex;
-    material.specular_tex     = iomaterial.specular_tex;
-    material.transmission_tex = iomaterial.transmission_tex;
-    material.roughness_tex    = iomaterial.roughness_tex;
-    material.opacity_tex      = iomaterial.opacity_tex;
-    material.subsurface_tex   = iomaterial.subsurface_tex;
+  material.emission         = iomaterial.emission;
+  material.diffuse          = iomaterial.diffuse;
+  material.specular         = iomaterial.specular;
+  material.transmission     = iomaterial.transmission;
+  material.roughness        = iomaterial.roughness;
+  material.opacity          = iomaterial.opacity;
+  material.refract          = iomaterial.refract;
+  material.volemission      = iomaterial.volemission;
+  material.voltransmission  = iomaterial.voltransmission;
+  material.volmeanfreepath  = iomaterial.volmeanfreepath;
+  material.volscatter       = iomaterial.volscatter;
+  material.volscale         = iomaterial.volscale;
+  material.volanisotropy    = iomaterial.volanisotropy;
+  material.emission_tex     = iomaterial.emission_tex;
+  material.diffuse_tex      = iomaterial.diffuse_tex;
+  material.specular_tex     = iomaterial.specular_tex;
+  material.transmission_tex = iomaterial.transmission_tex;
+  material.roughness_tex    = iomaterial.roughness_tex;
+  material.opacity_tex      = iomaterial.opacity_tex;
+  material.subsurface_tex   = iomaterial.subsurface_tex;
   }
 
   for (auto& ioshape_ : ioscene.shapes) {
     auto& ioshape = (ioshape_.subdivisions || ioshape_.displacement)
-                        ? ioshape_
-                        : tesselate(ioscene, ioshape_);
+                        ? tesselate(ioscene, ioshape_)
+                        : ioshape_;
     auto& shape         = scene.shapes.emplace_back();
     shape.points        = ioshape.points;
     shape.lines         = ioshape.lines;
@@ -189,74 +168,80 @@ trace_scene make_trace_scene(const scene_model& ioscene) {
   return scene;
 }
 
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(const vec2i& size, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, size]() {
+          while (true) {
+            auto j = next_idx.fetch_add(1);
+            if (j >= size.y) break;
+            for (auto i = 0; i < size.x; i++) func({i, j});
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
 void reset_display(app_state& app) {
+  // stop render
+  app.render_stop = true;
+  if(app.render_future.valid()) app.render_future.get();
+
+  // reset state
   app.state = make_state(app.scene, app.trace_prms);
   app.render.resize(app.state.size());
   app.display.resize(app.state.size());
-  app.render_preview = true;
-  app.render_sample  = 0;
-  app.render_region  = 0;
-  app.render_regions = make_image_regions(
-      app.render.size(), app.trace_prms.region, true);
+  
+  // render preview
+  auto preview_prms = app.trace_prms;
+  preview_prms.resolution /= app.preview_ratio;
+  preview_prms.samples = 1;
+  auto preview         = trace_image(app.scene, preview_prms);
+  preview              = tonemap_image(preview, app.tonemap_prms);
+  for (auto j = 0; j < app.display.size().y; j++) {
+    for (auto i = 0; i < app.display.size().x; i++) {
+      auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
+            pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
+      app.display[{i, j}] = preview[{pi, pj}];
+    }
+  }
+
+  // start renderer
+  app.render_counter = 0;
+  app.render_stop = false;
+  app.render_future = std::async(std::launch::async, [&app]() {
+    for(auto sample = 0; sample < app.trace_prms.samples; sample++) {
+      if(app.render_stop) return;
+      parallel_for(app.render.size(),
+        [&app](const vec2i& ij) {
+          if(app.render_stop) return;
+          app.render[ij] = trace_sample(app.state, app.scene, ij, app.trace_prms);
+          app.display[ij] = tonemap(app.render[ij], app.tonemap_prms);
+        });
+    }
+  });
 }
 
 void draw(const opengl_window& win) {
   auto& app = *(app_state*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_image || app.gl_image.size() != app.display.size())
+  if (!app.gl_image || app.gl_image.size() != app.display.size() || !app.render_counter) {
     update_glimage(app.gl_image, app.display, false, false);
+  }
   app.draw_prms.window      = get_glwindow_size(win);
   app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
   update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
       app.draw_prms.window, app.draw_prms.fit);
   draw_glimage(app.gl_image, app.draw_prms);
   swap_glbuffers(win);
-}
-
-void update(const opengl_window& win, app_state& app) {
-  if (app.render_preview) {
-    // rendering preview
-    auto preview_prms = app.trace_prms;
-    preview_prms.resolution /= app.preview_ratio;
-    preview_prms.samples = 1;
-    auto preview         = trace_image(app.scene, preview_prms);
-    preview              = tonemap_image(preview, app.tonemap_prms);
-    for (auto j = 0; j < app.display.size().y; j++) {
-      for (auto i = 0; i < app.display.size().x; i++) {
-        auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
-             pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
-        app.display[{i, j}] = preview[{pi, pj}];
-      }
-    }
-    if (!app.gl_image || app.gl_image.size() != app.display.size()) {
-      update_glimage(app.gl_image, app.display, false, false);
-    } else {
-      update_glimage(app.gl_image, app.display, false, false);
-    }
-    app.render_preview = false;
-  } else if (app.render_sample < app.trace_prms.samples) {
-    // rendering blocks
-    auto num_regions = min(128, app.render_regions.size() - app.render_region);
-    parallel_for(app.render_region, app.render_region + num_regions,
-        [&app](int region_id) {
-          trace_region(app.render, app.state, app.scene,
-              app.render_regions[region_id], 1, app.trace_prms);
-          tonemap_region(app.display, app.render, app.render_regions[region_id],
-              app.tonemap_prms);
-        });
-    if (!app.gl_image || app.gl_image.size() != app.display.size()) {
-      update_glimage(app.gl_image, app.display, false, false);
-    } else {
-      for (auto idx = 0; idx < num_regions; idx++)
-        update_glimage_region(app.gl_image, app.display,
-            app.render_regions[app.render_region + idx]);
-    }
-    app.render_region += num_regions;
-    if (app.render_region >= app.render_regions.size()) {
-      app.render_region = 0;
-      app.render_sample += 1;
-    }
-  }
+  app.render_counter ++;
+  if(app.render_counter > 10) app.render_counter = 0;
 }
 
 // run ui loop
@@ -289,9 +274,6 @@ void run_ui(app_state& app) {
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       reset_display(app);
     }
-
-    // update
-    update(win, app);
 
     // draw
     draw(win);
@@ -363,7 +345,7 @@ int main(int argc, const char* argv[]) {
 
   // conversion
   auto convert_timer = print_timed("converting");
-  app.scene          = make_trace_scene(ioscene);
+  app.scene          = make_scene(ioscene);
   print_elapsed(convert_timer);
 
   // build bvh

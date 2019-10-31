@@ -425,39 +425,95 @@ vec3f convert_color(const vec3f& col, color_space from, color_space to) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMAGE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Lookup an image at coordinates `ij`
+vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_linear) {
+  return img[ij];
+}
+vec4f lookup_image(const image<vec4b>& img, const vec2i& ij, bool as_linear) {
+  if (as_linear) {
+    return byte_to_float(img[ij]);
+  } else {
+    return srgb_to_rgb(byte_to_float(img[ij]));
+  }
+}
+
+// Evaluate a texture
+template <typename T>
+inline vec4f eval_image_generic(const image<T>& img, const vec2f& uv,
+    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
+  if (img.empty()) return zero4f;
+
+  // get image width/height
+  auto size = img.size();
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation) return lookup_image(img, {i, j}, as_linear);
+
+  // handle interpolation
+  return lookup_image(img, {i, j}, as_linear) * (1 - u) * (1 - v) +
+         lookup_image(img, {i, jj}, as_linear) * (1 - u) * v +
+         lookup_image(img, {ii, j}, as_linear) * u * (1 - v) +
+         lookup_image(img, {ii, jj}, as_linear) * u * v;
+}
+
+// Evaluates a color image at a point `uv`.
+vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
+    bool no_interpolation, bool clamp_to_edge) {
+  return eval_image_generic(img, uv, false, no_interpolation, clamp_to_edge);
+}
+vec4f eval_image(const image<vec4b>& img, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge) {
+  return eval_image_generic(
+      img, uv, as_linear, no_interpolation, clamp_to_edge);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Splits an image into an array of regions
-void make_image_regions(vector<image_region>& regions, const vec2i& size,
-    int region_size, bool shuffled) {
-  regions.clear();
-  for (auto y = 0; y < size.y; y += region_size) {
-    for (auto x = 0; x < size.x; x += region_size) {
-      regions.push_back({{x, y},
-          {min(x + region_size, size.x), min(y + region_size, size.y)}});
+template <typename T>
+inline void set_region(
+    image<T>& img, const image<T>& region, const vec2i& offset) {
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      if (!img.contains({i, j})) continue;
+      img[vec2i{i, j} + offset] = region[{i, j}];
     }
-  }
-  if (shuffled) {
-    auto rng = rng_state{};
-    shuffle(regions, rng);
   }
 }
-vector<image_region> make_image_regions(
-    const vec2i& size, int region_size, bool shuffled) {
-  auto regions = vector<image_region>{};
-  for (auto y = 0; y < size.y; y += region_size) {
-    for (auto x = 0; x < size.x; x += region_size) {
-      regions.push_back({{x, y},
-          {min(x + region_size, size.x), min(y + region_size, size.y)}});
+
+template <typename T>
+inline void get_region(
+    image<T>& clipped, const image<T>& img, const vec2i& offset, const vec2i& size) {
+  clipped.resize(size);
+  for (auto j = 0; j < size.y; j++) {
+    for (auto i = 0; i < size.x; i++) {
+      clipped[{i, j}] = img[{i + offset.x, j + offset.y}];
     }
   }
-  if (shuffled) {
-    auto rng = rng_state{};
-    shuffle(regions, rng);
-  }
-  return regions;
 }
 
 // Conversion from/to floats.
@@ -555,7 +611,7 @@ static vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
   }
 }
 
-static vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
+vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   auto rgb = hdr;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
   if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
@@ -567,7 +623,7 @@ static vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   if (params.srgb) rgb = rgb_to_srgb(rgb);
   return rgb;
 }
-static vec4f tonemap(const vec4f& hdr, const tonemap_params& params) {
+vec4f tonemap(const vec4f& hdr, const tonemap_params& params) {
   return {tonemap(xyz(hdr), params), hdr.w};
 }
 
@@ -585,14 +641,8 @@ image<vec4b> tonemap_imageb(
     ldr[i] = float_to_byte(tonemap(hdr[i], params));
   return ldr;
 }
-void tonemap_region(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_params& params) {
-  for (auto j = region.min.y; j < region.max.y; j++)
-    for (auto i = region.min.x; i < region.max.x; i++)
-      ldr[{i, j}] = tonemap(hdr[{i, j}], params);
-}
 
-static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
+vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
   auto rgb = ldr;
   if (params.contrast != 0.5f) {
     rgb = gain(ldr, 1 - params.contrast);
@@ -616,7 +666,7 @@ static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
   }
   return rgb;
 }
-static vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params) {
+vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params) {
   return {colorgrade(xyz(ldr), params), ldr.w};
 }
 
@@ -627,12 +677,6 @@ image<vec4f> colorgrade_image(
   for (auto i = 0ull; i < ldr.count(); i++)
     corrected[i] = colorgrade(ldr[i], params);
   return corrected;
-}
-void colorgrade_region(image<vec4f>& corrected, const image<vec4f>& ldr,
-    const image_region& region, const colorgrade_params& params) {
-  for (auto j = region.min.y; j < region.max.y; j++)
-    for (auto i = region.min.x; i < region.max.x; i++)
-      corrected[{i, j}] = colorgrade(ldr[{i, j}], params);
 }
 
 // compute white balance
@@ -1553,6 +1597,57 @@ bool make_image_preset(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// VOLUME SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Lookup volume
+inline float lookup_volume(
+    const volume<float>& vol, const vec3i& ijk, bool as_linear) {
+  return vol[ijk];
+}
+
+// Evaluates a color image at a point `uv`.
+inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
+    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
+  if (vol.empty()) return 0;
+
+  // get coordinates normalized for tiling
+  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().x;
+  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().y;
+  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().z;
+
+  // get image coordinates and residuals
+  auto i  = clamp((int)s, 0, vol.size().x - 1);
+  auto j  = clamp((int)t, 0, vol.size().y - 1);
+  auto k  = clamp((int)r, 0, vol.size().z - 1);
+  auto ii = (i + 1) % vol.size().x, jj = (j + 1) % vol.size().y,
+       kk = (k + 1) % vol.size().z;
+  auto u = s - i, v = t - j, w = r - k;
+
+  // nearest-neighbor interpolation
+  if (no_interpolation) {
+    i = u < 0.5 ? i : min(i + 1, vol.size().x - 1);
+    j = v < 0.5 ? j : min(j + 1, vol.size().y - 1);
+    k = w < 0.5 ? k : min(k + 1, vol.size().z - 1);
+    return lookup_volume(vol, {i, j, k}, ldr_as_linear);
+  }
+
+  // trilinear interpolation
+  return lookup_volume(vol, {i, j, k}, ldr_as_linear) * (1 - u) * (1 - v) *
+             (1 - w) +
+         lookup_volume(vol, {ii, j, k}, ldr_as_linear) * u * (1 - v) * (1 - w) +
+         lookup_volume(vol, {i, jj, k}, ldr_as_linear) * (1 - u) * v * (1 - w) +
+         lookup_volume(vol, {i, j, kk}, ldr_as_linear) * (1 - u) * (1 - v) * w +
+         lookup_volume(vol, {i, jj, kk}, ldr_as_linear) * (1 - u) * v * w +
+         lookup_volume(vol, {ii, j, kk}, ldr_as_linear) * u * (1 - v) * w +
+         lookup_volume(vol, {ii, jj, k}, ldr_as_linear) * u * v * (1 - w) +
+         lookup_volume(vol, {ii, jj, kk}, ldr_as_linear) * u * v * w;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1970,6 +2065,13 @@ imageio_status save_imageb(const string& filename, const image<vec4b>& img) {
   } else {
     return error("unsupported format");
   }
+}
+
+// Loads/saves a 4 channels float/byte image tonemapped
+imageio_status save_image_tonemapped(const string& filename,
+    const image<vec4f>& img, const tonemap_params& params) {
+  return is_hdr_filename(filename) ? save_image(filename, img)
+                                   : save_imageb(filename, tonemap_imageb(img, params));
 }
 
 }  // namespace yocto

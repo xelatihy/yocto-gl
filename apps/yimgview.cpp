@@ -63,11 +63,7 @@ struct app_state {
   // viewing properties
   opengl_image        gl_image  = {};
   draw_glimage_params draw_prms = {};
-
-  // rendering properties
-  int                  render_region  = 0;
-  vector<image_region> render_regions = {};
-  bool                 render_stats   = false;
+  bool                gl_updated = true;
 
   // error
   string error = "";
@@ -100,33 +96,21 @@ struct app_states {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
-inline void parallel_for(int begin, int end, Func&& func) {
+inline void parallel_for(const vec2i& size, Func&& func) {
   auto             futures  = vector<std::future<void>>{};
   auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(begin);
+  std::atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, end]() {
+        std::async(std::launch::async, [&func, &next_idx, size]() {
           while (true) {
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= end) break;
-            func(idx);
+            auto j = next_idx.fetch_add(1);
+            if (j >= size.y) break;
+            for (auto i = 0; i < size.x; i++) func({i, j});
           }
         }));
   }
   for (auto& f : futures) f.get();
-}
-
-template <typename Func>
-inline void parallel_for(int num, Func&& func) {
-  parallel_for(0, num, std::forward<Func>(func));
-}
-
-// reset display
-void reset_display(app_state& app) {
-  if (app.display.size() != app.source.size()) app.display = app.source;
-  app.render_region  = 0;
-  app.render_regions = make_image_regions(app.source.size(), 256);
 }
 
 // compute min/max
@@ -148,6 +132,20 @@ void compute_stats(
   auto num_pixels = (size_t)img.size().x * (size_t)img.size().y;
   for (auto& v : stats.histogram) v /= num_pixels;
   stats.average /= num_pixels;
+}
+
+void update_display(app_state& app) {
+  if (app.display.size() != app.source.size()) app.display = app.source;
+  parallel_for(app.source.size(), [&app](const vec2i& ij) {
+    if (app.apply_colorgrade) {
+      app.display[ij] = colorgrade(
+          tonemap(app.source[ij], app.tonemap_prms), app.colorgrade_prms);
+    } else {
+      app.display[ij] = tonemap(app.source[ij], app.tonemap_prms);
+    }
+  });
+  compute_stats(app.display_stats, app.display, false);
+  app.gl_updated = true;
 }
 
 // add a new image
@@ -236,7 +234,7 @@ void draw_glwidgets(const opengl_window& win) {
       params.tint = wb / max(wb);
       edited += 1;
     }
-    if (edited) reset_display(app);
+    if (edited) update_display(app);
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "colorgrade")) {
@@ -252,7 +250,7 @@ void draw_glwidgets(const opengl_window& win) {
     edited += draw_glcoloredit(win, "midtones color", params.midtones_color);
     edited += draw_glcoloredit(
         win, "highlights color", params.highlights_color);
-    if (edited) reset_display(app);
+    if (edited) update_display(app);
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "inspect")) {
@@ -299,7 +297,10 @@ void draw(const opengl_window& win) {
     auto& app                 = apps.get_selected();
     app.draw_prms.window      = get_glwindow_size(win);
     app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
-    if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
+    if (!app.gl_image || app.gl_updated) {
+      update_glimage(app.gl_image, app.display, false, false);
+      app.gl_updated = false;
+    }
     update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
         app.draw_prms.window, app.draw_prms.fit);
     draw_glimage(app.gl_image, app.draw_prms);
@@ -325,32 +326,8 @@ void update(const opengl_window& win, app_states& app) {
     }
     app.states.splice(app.states.end(), app.loading, app.loading.begin());
     app.loaders.pop_front();
-    reset_display(app.states.back());
+    update_display(app.states.back());
     if (app.selected < 0) app.selected = (int)app.states.size() - 1;
-  }
-  for (auto& app : app.states) {
-    if (app.render_region < app.render_regions.size()) {
-      auto num_regions = min(12, app.render_regions.size() - app.render_region);
-      parallel_for(num_regions, [&app](int idx) {
-        auto& region = app.render_regions[app.render_region + idx];
-        tonemap_region(app.display, app.source,
-            app.render_regions[app.render_region + idx], app.tonemap_prms);
-        if (app.apply_colorgrade) {
-          colorgrade_region(
-              app.display, app.display, region, app.colorgrade_prms);
-        }
-      });
-      if (!app.gl_image) {
-        update_glimage(app.gl_image, app.display, false, false);
-      } else {
-        for (auto idx = 0; idx < num_regions; idx++)
-          update_glimage_region(app.gl_image, app.display,
-              app.render_regions[app.render_region + idx]);
-      }
-      app.render_region += num_regions;
-    } else if (app.render_stats) {
-      compute_stats(app.display_stats, app.display, false);
-    }
   }
 }
 

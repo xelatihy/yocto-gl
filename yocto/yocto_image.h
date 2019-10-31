@@ -92,6 +92,19 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
+// IMAGE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Evaluates a color image at a point `uv`.
+vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
+    bool no_interpolation, bool clamp_to_edge);
+vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
+    bool as_linear, bool no_interpolation, bool clamp_to_edge);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -121,13 +134,15 @@ struct tonemap_params {
   bool  srgb        = true;
 };
 
-// Apply exposure and filmic tone mapping
+// Apply tone mapping
+vec3f tonemap(const vec3f& hdr, const tonemap_params& params);
+vec4f tonemap(const vec4f& hdr, const tonemap_params& params);
+
+// Apply tone mapping
 image<vec4f> tonemap_image(
     const image<vec4f>& hdr, const tonemap_params& params);
 image<vec4b> tonemap_imageb(
     const image<vec4f>& hdr, const tonemap_params& params);
-void tonemap_region(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_params& params);
 
 // minimal color grading
 struct colorgrade_params {
@@ -140,11 +155,12 @@ struct colorgrade_params {
   vec3f highlights_color = {1, 1, 1};
 };
 
+vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params);
+vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params);
+
 // color grade an image region
 image<vec4f> colorgrade_image(
     const image<vec4f>& img, const colorgrade_params& params);
-void colorgrade_region(image<vec4f>& corrected, const image<vec4f>& img,
-    const image_region& region, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
@@ -179,13 +195,16 @@ struct imageio_status {
   explicit operator bool() const { return error.empty(); }
 };
 
-// Loads/saves a 4 channels float/byte image in linear color space.
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
 image<vec4f>   load_image(const string& filename);
 imageio_status load_image(const string& filename, image<vec4f>& img);
 imageio_status save_image(const string& filename, const image<vec4f>& img);
 image<vec4b>   load_imageb(const string& filename);
 imageio_status load_imageb(const string& filename, image<vec4b>& img);
 imageio_status save_imageb(const string& filename, const image<vec4b>& img);
+
+// Loads/saves a 4 channels float/byte image tonemapped
+imageio_status save_image_tonemapped(const string& filename, const image<vec4f>& img, const tonemap_params& params);
 
 }  // namespace yocto
 
@@ -263,6 +282,17 @@ bool         make_image_preset(image<vec4f>& img, const string& type);
 bool         make_image_preset(image<vec4b>& img, const string& type);
 bool         make_image_preset(
             image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VOLUME SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Evaluates a color image at a point `uv`.
+float eval_volume(const image<float>& img, const vec3f& uvw,
+    bool no_interpolation = false, bool clamp_to_edge = false);
 
 }  // namespace yocto
 

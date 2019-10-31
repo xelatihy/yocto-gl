@@ -87,6 +87,133 @@ inline void parallel_foreach(const vector<T>& values, Func&& func) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// MONETACARLO SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Sample an hemispherical direction with uniform distribution.
+inline vec3f sample_hemisphere(const vec2f& ruv) {
+  auto z   = ruv.y;
+  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto phi = 2 * pif * ruv.x;
+  return {r * cos(phi), r * sin(phi), z};
+}
+inline float sample_hemisphere_pdf(const vec3f& direction) {
+  return (direction.z <= 0) ? 0 : 1 / (2 * pif);
+}
+
+// Sample an hemispherical direction with uniform distribution.
+inline vec3f sample_hemisphere(const vec3f& normal, const vec2f& ruv) {
+  auto z               = ruv.y;
+  auto r               = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto phi             = 2 * pif * ruv.x;
+  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  return transform_direction(basis_fromz(normal), local_direction);
+}
+inline float sample_hemisphere_pdf(
+    const vec3f& normal, const vec3f& direction) {
+  return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
+}
+
+// Sample a spherical direction with uniform distribution.
+inline vec3f sample_sphere(const vec2f& ruv) {
+  auto z   = 2 * ruv.y - 1;
+  auto r   = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
+  auto phi = 2 * pif * ruv.x;
+  return {r * cos(phi), r * sin(phi), z};
+}
+inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pif); }
+
+// Sample an hemispherical direction with cosine distribution.
+inline vec3f sample_hemisphere_cos(const vec2f& ruv) {
+  auto z   = sqrt(ruv.y);
+  auto r   = sqrt(1 - z * z);
+  auto phi = 2 * pif * ruv.x;
+  return {r * cos(phi), r * sin(phi), z};
+}
+inline float sample_hemisphere_cos_pdf(const vec3f& direction) {
+  return (direction.z <= 0) ? 0 : direction.z / pif;
+}
+
+// Sample an hemispherical direction with cosine power distribution.
+inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv) {
+  auto z   = pow(ruv.y, 1 / (exponent + 1));
+  auto r   = sqrt(1 - z * z);
+  auto phi = 2 * pif * ruv.x;
+  return {r * cos(phi), r * sin(phi), z};
+}
+inline float sample_hemisphere_cospower_pdf(
+    float exponent, const vec3f& direction) {
+  return (direction.z <= 0)
+             ? 0
+             : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
+}
+
+// Sample a point uniformly on a disk.
+inline vec2f sample_disk(const vec2f& ruv) {
+  auto r   = sqrt(ruv.y);
+  auto phi = 2 * pif * ruv.x;
+  return {cos(phi) * r, sin(phi) * r};
+}
+inline float sample_disk_pdf() { return 1 / pif; }
+
+// Sample a point uniformly on a cylinder, without caps.
+inline vec3f sample_cylinder(const vec2f& ruv) {
+  auto phi = 2 * pif * ruv.x;
+  return {sin(phi), cos(phi), ruv.y * 2 - 1};
+}
+inline float sample_cylinder_pdf() { return 1 / pif; }
+
+// Sample a point uniformly on a triangle returning the baricentric coordinates.
+inline vec2f sample_triangle(const vec2f& ruv) {
+  return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
+}
+
+// Sample a point uniformly on a triangle.
+inline vec3f sample_triangle(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
+  auto uv = sample_triangle(ruv);
+  return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+}
+// Pdf for uniform triangle sampling, i.e. triangle area.
+inline float sample_triangle_pdf(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+  return 2 / length(cross(p1 - p0, p2 - p0));
+}
+
+// Sample an index with uniform distribution.
+inline int sample_uniform(int size, float r) {
+  return clamp((int)(r * size), 0, size - 1);
+}
+inline float sample_uniform_pdf(int size) { return (float)1 / (float)size; }
+
+// Sample an index with uniform distribution.
+inline float sample_uniform(const vector<float>& elements, float r) {
+  if (elements.empty()) return {};
+  auto size = (int)elements.size();
+  return elements[clamp((int)(r * size), 0, size - 1)];
+}
+inline float sample_uniform_pdf(const vector<float>& elements) {
+  if (elements.empty()) return 0;
+  return 1.0f / (int)elements.size();
+}
+
+// Sample a discrete distribution represented by its cdf.
+inline int sample_discrete(const vector<float>& cdf, float r) {
+  r        = clamp(r * cdf.back(), (float)0, cdf.back() - (float)0.00001);
+  auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
+                   cdf.data());
+  return clamp(idx, 0, (int)cdf.size() - 1);
+}
+// Pdf for uniform discrete distribution sampling.
+inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
+  if (idx == 0) return cdf.at(0);
+  return cdf.at(idx) - cdf.at(idx - 1);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -677,24 +804,47 @@ vec4f lookup_texture(
     const trace_texture& texture, const vec2i& ij, bool ldr_as_linear = false) {
   if (texture.hdr.empty() && texture.ldr.empty()) return {1, 1, 1, 1};
   if (!texture.hdr.empty()) {
-    return lookup_image(texture.hdr, ij, false);
-  } else if (!texture.ldr.empty()) {
-    return lookup_image(texture.ldr, ij, !ldr_as_linear);
+    return texture.hdr[ij];
+  } else if (!texture.ldr.empty() && ldr_as_linear) {
+    return byte_to_float(texture.ldr[ij]);
+  } else if (!texture.ldr.empty() && !ldr_as_linear) {
+    return srgb_to_rgb(byte_to_float(texture.ldr[ij]));
   } else {
     return {1, 1, 1, 1};
   }
 }
 
 // Evaluate a texture
-vec4f eval_texture(const trace_texture& texture, const vec2f& texcoord,
-    bool ldr_as_linear = false) {
-  if (!texture.hdr.empty()) {
-    return eval_image(texture.hdr, texcoord, false, false);
-  } else if (!texture.ldr.empty()) {
-    return eval_image(texture.ldr, texcoord, ldr_as_linear, false, false);
+vec4f eval_texture(const trace_texture& texture, const vec2f& uv,
+    bool ldr_as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false) {
+  // get image width/height
+  auto size = texture_size(texture);
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
   } else {
-    return {1, 1, 1, 1};
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
   }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation) return lookup_texture(texture, {i, j}, ldr_as_linear);
+
+  // handle interpolation
+  return lookup_texture(texture, {i, j}, ldr_as_linear) * (1 - u) * (1 - v) +
+         lookup_texture(texture, {i, jj}, ldr_as_linear) * (1 - u) * v +
+         lookup_texture(texture, {ii, j}, ldr_as_linear) * u * (1 - v) +
+         lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
 }
 
 // Generates a ray from a camera for image plane coordinate uv and
@@ -981,6 +1131,165 @@ vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
   for (auto& environment : scene.environments)
     emission += eval_environment(scene, environment, direction);
   return emission;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENRTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Intersect a ray with a point (approximate)
+inline bool intersect_point(
+    const ray3f& ray, const vec3f& p, float r, vec2f& uv, float& dist) {
+  // find parameter for line-point minimum distance
+  auto w = p - ray.o;
+  auto t = dot(w, ray.d) / dot(ray.d, ray.d);
+
+  // exit if not within bounds
+  if (t < ray.tmin || t > ray.tmax) return false;
+
+  // test for line-point distance vs point radius
+  auto rp  = ray.o + ray.d * t;
+  auto prp = p - rp;
+  if (dot(prp, prp) > r * r) return false;
+
+  // intersection occurred: set params and exit
+  uv   = {0, 0};
+  dist = t;
+  return true;
+}
+
+// Intersect a ray with a line
+inline bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    float r0, float r1, vec2f& uv, float& dist) {
+  // setup intersection params
+  auto u = ray.d;
+  auto v = p1 - p0;
+  auto w = ray.o - p0;
+
+  // compute values to solve a linear system
+  auto a   = dot(u, u);
+  auto b   = dot(u, v);
+  auto c   = dot(v, v);
+  auto d   = dot(u, w);
+  auto e   = dot(v, w);
+  auto det = a * c - b * b;
+
+  // check determinant and exit if lines are parallel
+  // (could use EPSILONS if desired)
+  if (det == 0) return false;
+
+  // compute Parameters on both ray and segment
+  auto t = (b * e - c * d) / det;
+  auto s = (a * e - b * d) / det;
+
+  // exit if not within bounds
+  if (t < ray.tmin || t > ray.tmax) return false;
+
+  // clamp segment param to segment corners
+  s = clamp(s, (float)0, (float)1);
+
+  // compute segment-segment distance on the closest points
+  auto pr  = ray.o + ray.d * t;
+  auto pl  = p0 + (p1 - p0) * s;
+  auto prl = pr - pl;
+
+  // check with the line radius at the same point
+  auto d2 = dot(prl, prl);
+  auto r  = r0 * (1 - s) + r1 * s;
+  if (d2 > r * r) return {};
+
+  // intersection occurred: set params and exit
+  uv   = {s, sqrt(d2) / r};
+  dist = t;
+  return true;
+}
+
+// Intersect a ray with a triangle
+inline bool intersect_triangle(const ray3f& ray, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, vec2f& uv, float& dist) {
+  // compute triangle edges
+  auto edge1 = p1 - p0;
+  auto edge2 = p2 - p0;
+
+  // compute determinant to solve a linear system
+  auto pvec = cross(ray.d, edge2);
+  auto det  = dot(edge1, pvec);
+
+  // check determinant and exit if triangle and ray are parallel
+  // (could use EPSILONS if desired)
+  if (det == 0) return false;
+  auto inv_det = 1.0f / det;
+
+  // compute and check first bricentric coordinated
+  auto tvec = ray.o - p0;
+  auto u    = dot(tvec, pvec) * inv_det;
+  if (u < 0 || u > 1) return false;
+
+  // compute and check second bricentric coordinated
+  auto qvec = cross(tvec, edge1);
+  auto v    = dot(ray.d, qvec) * inv_det;
+  if (v < 0 || u + v > 1) return false;
+
+  // compute and check ray parameter
+  auto t = dot(edge2, qvec) * inv_det;
+  if (t < ray.tmin || t > ray.tmax) return false;
+
+  // intersection occurred: set params and exit
+  uv   = {u, v};
+  dist = t;
+  return true;
+}
+
+// Intersect a ray with a quad.
+inline bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, vec2f& uv, float& dist) {
+  if (p2 == p3) {
+    return intersect_triangle(ray, p0, p1, p3, uv, dist);
+  }
+  auto hit  = false;
+  auto tray = ray;
+  if (intersect_triangle(tray, p0, p1, p3, uv, dist)) {
+    hit       = true;
+    tray.tmax = dist;
+  }
+  if (intersect_triangle(tray, p2, p3, p1, uv, dist)) {
+    hit       = true;
+    uv        = 1 - uv;
+    tray.tmax = dist;
+  }
+  return hit;
+}
+
+// Intersect a ray with a axis-aligned bounding box
+inline bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
+  // determine intersection ranges
+  auto invd = 1.0f / ray.d;
+  auto t0   = (bbox.min - ray.o) * invd;
+  auto t1   = (bbox.max - ray.o) * invd;
+  // flip based on range directions
+  if (invd.x < 0.0f) swap(t0.x, t1.x);
+  if (invd.y < 0.0f) swap(t0.y, t1.y);
+  if (invd.z < 0.0f) swap(t0.z, t1.z);
+  auto tmin = max(t0.z, max(t0.y, max(t0.x, ray.tmin)));
+  auto tmax = min(t1.z, min(t1.y, min(t1.x, ray.tmax)));
+  tmax *= 1.00000024f;  // for double: 1.0000000000000004
+  return tmin <= tmax;
+}
+
+// Intersect a ray with a axis-aligned bounding box
+inline bool intersect_bbox(
+    const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox) {
+  auto it_min = (bbox.min - ray.o) * ray_dinv;
+  auto it_max = (bbox.max - ray.o) * ray_dinv;
+  auto tmin   = min(it_min, it_max);
+  auto tmax   = max(it_min, it_max);
+  auto t0     = max(max(tmin), ray.tmin);
+  auto t1     = min(min(tmax), ray.tmax);
+  t1 *= 1.00000024f;  // for double: 1.0000000000000004
+  return t0 <= t1;
 }
 
 }  // namespace yocto
@@ -2790,44 +3099,32 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-void trace_region(image<vec4f>& image, trace_state& state,
-    const trace_scene& scene, const image_region& region, int num_samples,
-    const trace_params& params) {
+vec4f trace_sample(trace_state& state, const trace_scene& scene,
+    const vec2i& ij, const trace_params& params) {
   auto& camera  = scene.cameras.at(params.camera);
   auto  sampler = get_trace_sampler_func(params);
-  for (auto j = region.min.y; j < region.max.y; j++) {
-    for (auto i = region.min.x; i < region.max.x; i++) {
-      auto& pixel = state[{i, j}];
-      for (auto s = 0; s < num_samples; s++) {
-        auto ray = params.tentfilter
-                       ? sample_camera_tent(camera, {i, j}, image.size(),
-                             rand2f(pixel.rng), rand2f(pixel.rng))
-                       : sample_camera(camera, {i, j}, image.size(),
-                             rand2f(pixel.rng), rand2f(pixel.rng));
-        auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
-        if (!hit) {
-          if (params.envhidden || scene.environments.empty()) {
-            radiance = zero3f;
-            hit      = false;
-          } else {
-            hit = true;
-          }
-        }
-        if (!isfinite(radiance)) {
-          // printf("NaN detected\n");
-          radiance = zero3f;
-        }
-        if (max(radiance) > params.clamp)
-          radiance = radiance * (params.clamp / max(radiance));
-        pixel.radiance += radiance;
-        pixel.hits += hit ? 1 : 0;
-        pixel.samples += 1;
-      }
-      auto radiance = pixel.hits ? pixel.radiance / pixel.hits : zero3f;
-      auto coverage = (float)pixel.hits / (float)pixel.samples;
-      image[{i, j}] = {radiance.x, radiance.y, radiance.z, coverage};
+  auto& pixel   = state[ij];
+  auto  ray = params.tentfilter ? sample_camera_tent(camera, ij, state.size(),
+                                     rand2f(pixel.rng), rand2f(pixel.rng))
+                               : sample_camera(camera, ij, state.size(),
+                                     rand2f(pixel.rng), rand2f(pixel.rng));
+  auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
+  if (!hit) {
+    if (params.envhidden || scene.environments.empty()) {
+      radiance = zero3f;
+      hit      = false;
+    } else {
+      hit = true;
     }
   }
+  if (!isfinite(radiance)) radiance = zero3f;
+  if (max(radiance) > params.clamp)
+    radiance = radiance * (params.clamp / max(radiance));
+  pixel.radiance += radiance;
+  pixel.hits += hit ? 1 : 0;
+  pixel.samples += 1;
+  return {pixel.hits ? pixel.radiance / pixel.hits : zero3f,
+      (float)pixel.hits / (float)pixel.samples};
 }
 
 // Init a sequence of random number generators.
@@ -2863,20 +3160,45 @@ void init_lights(trace_scene& scene) {
   }
 }
 
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(const vec2i& size, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, size]() {
+          while (true) {
+            auto j = next_idx.fetch_add(1);
+            if (j >= size.y) break;
+            for (auto i = 0; i < size.x; i++) func({i, j});
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
-  auto state   = make_state(scene, params);
-  auto render  = image{state.size(), zero4f};
-  auto regions = make_image_regions(render.size(), params.region, true);
+  auto state  = make_state(scene, params);
+  auto render = image{state.size(), zero4f};
 
   if (params.noparallel) {
-    for (auto& region : regions) {
-      trace_region(render, state, scene, region, params.samples, params);
+    for (auto j = 0; j < render.size().y; j++) {
+      for (auto i = 0; i < render.size().x; i++) {
+        for (auto s = 0; s < params.samples; s++) {
+          render[{i, j}] = trace_sample(state, scene, {i, j}, params);
+        }
+      }
     }
   } else {
-    parallel_foreach(regions,
-        [&render, &state, &scene, &params](const image_region& region) {
-          trace_region(render, state, scene, region, params.samples, params);
+    parallel_for(
+        render.size(), [&render, &state, &scene, &params](const vec2i& ij) {
+          for (auto s = 0; s < params.samples; s++) {
+            render[ij] = trace_sample(state, scene, ij, params);
+          }
         });
   }
 
@@ -2884,21 +3206,28 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-int trace_samples(image<vec4f>& render, trace_state& state,
-    const trace_scene& scene, int current_sample, const trace_params& params) {
-  auto regions     = make_image_regions(render.size(), params.region, true);
+image<vec4f> trace_samples(trace_state& state,
+    const trace_scene& scene, const trace_params& params) {
+  auto render = image<vec4f>{state.size()};
+  auto current_sample = state[zero2i].samples;
   auto num_samples = min(params.batch, params.samples - current_sample);
   if (params.noparallel) {
-    for (auto& region : regions) {
-      trace_region(render, state, scene, region, params.samples, params);
+    for (auto j = 0; j < render.size().y; j++) {
+      for (auto i = 0; i < render.size().x; i++) {
+        for (auto s = 0; s < num_samples; s++) {
+          render[{i, j}] = trace_sample(state, scene, {i, j}, params);
+        }
+      }
     }
   } else {
-    parallel_foreach(regions, [&render, &state, &scene, &params, num_samples](
-                                  const image_region& region) {
-      trace_region(render, state, scene, region, num_samples, params);
-    });
+    parallel_for(
+        render.size(), [&render, &state, &scene, &params, num_samples](const vec2i& ij) {
+          for (auto s = 0; s < num_samples; s++) {
+            render[ij] = trace_sample(state, scene, ij, params);
+          }
+        });
   }
-  return current_sample + num_samples;
+  return render;
 }
 
 }  // namespace yocto
