@@ -978,83 +978,8 @@ void add_border(
   }
 }
 
-#if 0
-
 // Implementation of sunsky modified heavily from pbrt
-void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
-    float turbidity, bool has_sun, float sun_intensity, float sun_temperature,
-    const vec3f& ground_albedo) {
-  // idea adapted from pbrt
-
-  // initialize model
-  double wavelengths[9] = {630, 680, 710, 500, 530, 560, 460, 480, 490};
-  ArHosekSkyModelState* skymodel_state[9];
-  if (sun_temperature) {
-    sun_temperature = clamp(sun_temperature, 2000.0f, 14000.0f);
-    for (int i = 0; i < 9; ++i) {
-      skymodel_state[i] = arhosekskymodelstate_alienworld_alloc_init(theta_sun,
-          sun_intensity, sun_temperature, turbidity, ground_albedo[i / 3]);
-    }
-  } else {
-    for (int i = 0; i < 9; ++i) {
-      skymodel_state[i] = arhosekskymodelstate_alloc_init(
-          theta_sun, turbidity, ground_albedo[i / 3]);
-    }
-  }
-
-  // clear image
-  img.resize(size);
-  for (auto& p : img) p = {0, 0, 0, 1};
-
-  // sun-sky
-  auto sun_direction = vec3f{0, sin(theta_sun), cos(theta_sun)};
-  auto integral      = zero3f;
-  for (auto j = 0; j < img.size().y / 2; j++) {
-    auto theta = (j + 0.5f) * pif / img.size().y;
-    if (theta > pif / 2) continue;
-    for (auto i = 0; i < img.size().x; i++) {
-      auto phi       = (i + 0.5f) * 2 * pif / img.size().x;
-      auto direction = vec3f{
-          cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-      auto gamma = acos(clamp(dot(direction, sun_direction), -1.0f, 1.0f));
-      for (int c = 0; c < 9; ++c) {
-        auto val = (has_sun) ? arhosekskymodel_solar_radiance(skymodel_state[c],
-                                   theta, gamma, wavelengths[c])
-                             : arhosekskymodel_radiance(skymodel_state[c],
-                                   theta, gamma, wavelengths[c]);
-        // average channel over wavelengths
-        img[{i, j}][c / 3] += (float)val / 3;
-      }
-      integral += xyz(img[{i, j}]) * sin(theta) /
-                  (img.size().x * img.size().y / 2);
-    }
-  }
-
-  // ground
-  auto ground = ground_albedo * integral;
-  for (auto j = img.size().y / 2; j < img.size().y; j++) {
-    for (auto i = 0; i < img.size().x; i++) {
-      img[{i, j}] = {ground.x, ground.y, ground.z, 1};
-    }
-  }
-
-  // cleanup
-  for (auto i = 0; i < 9; i++) arhosekskymodelstate_free(skymodel_state[i]);
-}
-
-image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
-    bool has_sun, float sun_intensity, float sun_temperature,
-    const vec3f& ground_albedo) {
-  auto img = image<vec4f>{size};
-  make_sunsky(img, size, theta_sun, turbidity, has_sun, sun_intensity,
-      sun_temperature, ground_albedo);
-  return img;
-}
-
-#else
-
-// Implementation of sunsky modified heavily from pbrt
-void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
+image<vec4f> make_sunsky(const vec2i& size, float theta_sun,
     float turbidity, bool has_sun, float sun_intensity, float sun_radius,
     const vec3f& ground_albedo) {
   auto zenith_xyY = vec3f{
@@ -1144,7 +1069,7 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
   };
 
   // Make the sun sky image
-  img.resize(size);
+  auto img = image<vec4f>{size};
   auto sky_integral = 0.0f, sun_integral = 0.0f;
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
@@ -1185,23 +1110,14 @@ void make_sunsky(image<vec4f>& img, const vec2i& size, float theta_sun,
       }
     }
   }
-}
 
-image<vec4f> make_sunsky(const vec2i& size, float theta_sun, float turbidity,
-    bool has_sun, float sun_intensity, float sun_radius,
-    const vec3f& ground_albedo) {
-  auto img = image<vec4f>{size};
-  make_sunsky(img, size, theta_sun, turbidity, has_sun, sun_intensity,
-      sun_radius, ground_albedo);
   return img;
 }
 
-#endif
-
 // Make an image of multiple lights.
-void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le,
+image<vec4f> make_lights(const vec2i& size, const vec3f& le,
     int nlights, float langle, float lwidth, float lheight) {
-  img.resize(size);
+  auto img = image<vec4f>{size};
   for (auto j = 0; j < img.size().y / 2; j++) {
     auto theta = pif * ((j + 0.5f) / img.size().y);
     theta      = clamp(theta, 0.0f, pif / 2 - 0.00001f);
@@ -1216,11 +1132,6 @@ void make_lights(image<vec4f>& img, const vec2i& size, const vec3f& le,
       img[{i, j}] = {le, 1};
     }
   }
-}
-image<vec4f> make_lights(const vec2i& size, const vec3f& le, int nlights,
-    float langle, float lwidth, float lheight) {
-  auto img = image<vec4f>{size};
-  make_lights(img, size, le, nlights, langle, lwidth, lheight);
   return img;
 }
 
@@ -1399,12 +1310,10 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
     make_proc_image(img, params);
     return true;
   } else if (type == "sky") {
-    make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    img = make_sunsky(size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
     return true;
   } else if (type == "sunsky") {
-    make_sunsky(
-        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    img = make_sunsky(size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
     return true;
   } else if (type == "noise") {
     auto params = proc_image_params{};

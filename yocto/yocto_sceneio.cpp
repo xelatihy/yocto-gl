@@ -286,7 +286,7 @@ void add_sky(scene_model& scene, float sun_angle) {
   auto texture     = scene_texture{};
   texture.name     = "sky";
   texture.filename = "textures/sky.hdr";
-  make_sunsky(texture.hdr, {1024, 512}, sun_angle);
+  texture.hdr = make_sunsky({1024, 512}, sun_angle);
   scene.textures.push_back(texture);
   auto environment         = scene_environment{};
   environment.name         = "sky";

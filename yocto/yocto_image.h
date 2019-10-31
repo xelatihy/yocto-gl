@@ -242,21 +242,13 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params);
 image<vec4f> make_sunsky(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
-void         make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
-            float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-            float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
 image<vec4f> make_lights(const vec2i& size, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
-void         make_lights(image<vec4f>& img, const vec2i& size,
-            const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-            float lwidth = pif / 16, float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
-void         bump_to_normal(
-            image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
 image<vec4f> add_border(const image<vec4f>& img, int width, const vec4f& color);
