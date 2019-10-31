@@ -96,11 +96,6 @@ static string get_noextension(const string& filename_) {
   return filename.substr(0, pos);
 }
 
-// Get filename without directory and extension.
-static string get_basename(const string& filename) {
-  return get_noextension(get_filename(filename));
-}
-
 // Replaces extensions
 static string replace_extension(const string& filename, const string& ext) {
   return get_noextension(filename) + ext;
@@ -123,15 +118,6 @@ static bool exists_file(const string& filename) {
 // LOW-LEVEL FILE HANDLING
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Read a line
-bool read_line(FILE* fs, char* buffer, size_t size) {
-  if (fgets(buffer, size, fs)) {
-    return true;
-  } else {
-    return false;
-  }
-}
 
 template <typename T>
 static T swap_endian(T value) {
@@ -530,7 +516,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
 
   // read header ---------------------------------------------
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_ply_comment(str);
@@ -632,7 +618,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
   if (ply.format == ply_format::ascii) {
     for (auto& elem : ply.elements) {
       for (auto idx = 0; idx < elem.count; idx++) {
-        if (!read_line(fs, buffer, sizeof(buffer)))
+        if (!fgets(buffer, sizeof(buffer), fs))
           return {filename + ": read error"};
         auto str = string_view{buffer};
         for (auto& prop : elem.properties) {
@@ -1423,7 +1409,7 @@ plyio_status read_ply_header(const string& filename, FILE* fs,
 
   // read the file header str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_ply_comment(str);
@@ -1521,7 +1507,7 @@ static plyio_status read_ply_value_generic(const string& filename, FILE* fs,
   // read property values
   if (format == ply_format::ascii) {
     char buffer[4096];
-    if (!read_line(fs, buffer, sizeof(buffer)))
+    if (!fgets(buffer, sizeof(buffer), fs))
       return {filename + ": read error"};
     auto str = string_view{buffer};
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -1835,7 +1821,7 @@ static objio_status load_mtl(
 
   // read the file str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -1998,7 +1984,7 @@ static objio_status load_objx(const string& filename, obj_model& obj) {
 
   // read the file str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -2088,7 +2074,7 @@ objio_status load_obj(const string& filename, obj_model& obj,
 
   // read the file str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -2859,7 +2845,7 @@ objio_status read_obj_command(const string& filename, FILE* fs,
     vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // read the file str by str
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -2952,7 +2938,7 @@ objio_status read_mtl_command(const string& filename, FILE* fs,
   auto pos   = ftell(fs);
   auto found = false;
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -3112,7 +3098,7 @@ objio_status read_objx_command(const string& filename, FILE* fs,
   // read the file str by str
   char buffer[4096];
   auto found = false;
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_obj_comment(str);
@@ -3428,7 +3414,7 @@ static bool read_pbrt_cmdline(FILE* fs, string& cmd, int& line_num) {
   cmd.clear();
   auto found = false;
   auto pos   = ftell(fs);
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // line
     line_num += 1;
     auto line = string_view{buffer};
@@ -6569,7 +6555,7 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
   auto key   = ""s;
   auto value = yaml_value{};
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // line
     auto line = string_view{buffer};
     remove_yaml_comment(line);
@@ -6698,7 +6684,7 @@ yamlio_status read_yaml_property(const string& filename, FILE* fs,
     string& group, string& key, bool& newobj, bool& done, yaml_value& value) {
   // read the file line by line
   char buffer[4096];
-  while (read_line(fs, buffer, sizeof(buffer))) {
+  while (fgets(buffer, sizeof(buffer), fs)) {
     // str
     auto str = string_view{buffer};
     remove_yaml_comment(str);
