@@ -677,24 +677,47 @@ vec4f lookup_texture(
     const trace_texture& texture, const vec2i& ij, bool ldr_as_linear = false) {
   if (texture.hdr.empty() && texture.ldr.empty()) return {1, 1, 1, 1};
   if (!texture.hdr.empty()) {
-    return lookup_image(texture.hdr, ij, false);
-  } else if (!texture.ldr.empty()) {
-    return lookup_image(texture.ldr, ij, !ldr_as_linear);
+    return texture.hdr[ij];
+  } else if (!texture.ldr.empty() && ldr_as_linear) {
+    return byte_to_float(texture.ldr[ij]);
+  } else if (!texture.ldr.empty() && !ldr_as_linear) {
+    return srgb_to_rgb(byte_to_float(texture.ldr[ij]));
   } else {
     return {1, 1, 1, 1};
   }
 }
 
 // Evaluate a texture
-vec4f eval_texture(const trace_texture& texture, const vec2f& texcoord,
-    bool ldr_as_linear = false) {
-  if (!texture.hdr.empty()) {
-    return eval_image(texture.hdr, texcoord, false, false);
-  } else if (!texture.ldr.empty()) {
-    return eval_image(texture.ldr, texcoord, ldr_as_linear, false, false);
+vec4f eval_texture(const trace_texture& texture, const vec2f& uv,
+    bool ldr_as_linear = false, bool no_interpolation = false,
+    bool clamp_to_edge = false) {
+  // get image width/height
+  auto size = texture_size(texture);
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
   } else {
-    return {1, 1, 1, 1};
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
   }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation) return lookup_texture(texture, {i, j}, ldr_as_linear);
+
+  // handle interpolation
+  return lookup_texture(texture, {i, j}, ldr_as_linear) * (1 - u) * (1 - v) +
+         lookup_texture(texture, {i, jj}, ldr_as_linear) * (1 - u) * v +
+         lookup_texture(texture, {ii, j}, ldr_as_linear) * u * (1 - v) +
+         lookup_texture(texture, {ii, jj}, ldr_as_linear) * u * v;
 }
 
 // Generates a ray from a camera for image plane coordinate uv and

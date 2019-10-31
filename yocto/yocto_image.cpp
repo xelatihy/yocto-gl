@@ -425,6 +425,73 @@ vec3f convert_color(const vec3f& col, color_space from, color_space to) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// IMAGE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Lookup an image at coordinates `ij`
+vec4f lookup_image(
+    const image<vec4f>& img, const vec2i& ij, bool as_linear) {
+  return img[ij];
+}
+vec4f lookup_image(
+    const image<vec4b>& img, const vec2i& ij, bool as_linear) {
+  if (as_linear) {
+    return byte_to_float(img[ij]);
+  } else {
+    return srgb_to_rgb(byte_to_float(img[ij]));
+  }
+}
+
+// Evaluate a texture
+template <typename T>
+inline vec4f eval_image_generic(const image<T>& img, const vec2f& uv,
+    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
+  if (img.empty()) return zero4f;
+
+  // get image width/height
+  auto size = img.size();
+
+  // get coordinates normalized for tiling
+  auto s = 0.0f, t = 0.0f;
+  if (clamp_to_edge) {
+    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
+    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
+  } else {
+    s = fmod(uv.x, 1.0f) * size.x;
+    if (s < 0) s += size.x;
+    t = fmod(uv.y, 1.0f) * size.y;
+    if (t < 0) t += size.y;
+  }
+
+  // get image coordinates and residuals
+  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
+  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
+  auto u = s - i, v = t - j;
+
+  if (no_interpolation) return lookup_image(img, {i, j}, as_linear);
+
+  // handle interpolation
+  return lookup_image(img, {i, j}, as_linear) * (1 - u) * (1 - v) +
+         lookup_image(img, {i, jj}, as_linear) * (1 - u) * v +
+         lookup_image(img, {ii, j}, as_linear) * u * (1 - v) +
+         lookup_image(img, {ii, jj}, as_linear) * u * v;
+}
+
+// Evaluates a color image at a point `uv`.
+vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
+    bool no_interpolation, bool clamp_to_edge) {
+  return eval_image_generic(img, uv, false, no_interpolation, clamp_to_edge);
+}
+vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
+    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
+  return eval_image_generic(
+      img, uv, as_linear, no_interpolation, clamp_to_edge);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1548,6 +1615,57 @@ bool make_image_preset(
   } else {
     return make_image_preset(hdr, type);
   }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VOLUME SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Lookup volume
+inline float lookup_volume(
+    const volume<float>& vol, const vec3i& ijk, bool as_linear) {
+  return vol[ijk];
+}
+
+// Evaluates a color image at a point `uv`.
+inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
+    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
+  if (vol.empty()) return 0;
+
+  // get coordinates normalized for tiling
+  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().x;
+  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().y;
+  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().z;
+
+  // get image coordinates and residuals
+  auto i  = clamp((int)s, 0, vol.size().x - 1);
+  auto j  = clamp((int)t, 0, vol.size().y - 1);
+  auto k  = clamp((int)r, 0, vol.size().z - 1);
+  auto ii = (i + 1) % vol.size().x, jj = (j + 1) % vol.size().y,
+       kk = (k + 1) % vol.size().z;
+  auto u = s - i, v = t - j, w = r - k;
+
+  // nearest-neighbor interpolation
+  if (no_interpolation) {
+    i = u < 0.5 ? i : min(i + 1, vol.size().x - 1);
+    j = v < 0.5 ? j : min(j + 1, vol.size().y - 1);
+    k = w < 0.5 ? k : min(k + 1, vol.size().z - 1);
+    return lookup_volume(vol, {i, j, k}, ldr_as_linear);
+  }
+
+  // trilinear interpolation
+  return lookup_volume(vol, {i, j, k}, ldr_as_linear) * (1 - u) * (1 - v) *
+             (1 - w) +
+         lookup_volume(vol, {ii, j, k}, ldr_as_linear) * u * (1 - v) * (1 - w) +
+         lookup_volume(vol, {i, jj, k}, ldr_as_linear) * (1 - u) * v * (1 - w) +
+         lookup_volume(vol, {i, j, kk}, ldr_as_linear) * (1 - u) * (1 - v) * w +
+         lookup_volume(vol, {i, jj, kk}, ldr_as_linear) * (1 - u) * v * w +
+         lookup_volume(vol, {ii, j, kk}, ldr_as_linear) * u * (1 - v) * w +
+         lookup_volume(vol, {ii, jj, k}, ldr_as_linear) * u * v * (1 - w) +
+         lookup_volume(vol, {ii, jj, kk}, ldr_as_linear) * u * v * w;
 }
 
 }  // namespace yocto

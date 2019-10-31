@@ -92,6 +92,19 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
+// IMAGE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Evaluates a color image at a point `uv`.
+vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
+    bool no_interpolation, bool clamp_to_edge);
+vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
+    bool as_linear, bool no_interpolation, bool clamp_to_edge);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -263,6 +276,17 @@ bool         make_image_preset(image<vec4f>& img, const string& type);
 bool         make_image_preset(image<vec4b>& img, const string& type);
 bool         make_image_preset(
             image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VOLUME SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Evaluates a color image at a point `uv`.
+float eval_volume(const image<float>& img, const vec3f& uvw,
+    bool no_interpolation = false, bool clamp_to_edge = false);
 
 }  // namespace yocto
 
