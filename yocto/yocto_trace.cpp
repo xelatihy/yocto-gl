@@ -3061,7 +3061,7 @@ int trace_samples(image<vec4f>& render, trace_state& state,
     }
   } else {
     parallel_for(
-        render.size(), [&render, &state, &scene, &params](const vec2i& ij) {
+        render.size(), [&render, &state, &scene, &params, num_samples](const vec2i& ij) {
           for (auto s = 0; s < num_samples; s++) {
             render[ij] = trace_sample(state, scene, ij, params);
           }
