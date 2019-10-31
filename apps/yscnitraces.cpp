@@ -67,10 +67,7 @@ struct app_state {
   pair<string, int> selection = {"camera", 0};
 
   // computation
-  bool                 render_preview = true;
   int                  render_sample  = 0;
-  int                  render_region  = 0;
-  vector<image_region> render_regions = {};
   std::atomic<bool>    render_stop = {};
   std::future<void>    render_future = {};
   int                  render_counter = 0;
@@ -219,11 +216,6 @@ void reset_display(app_state& app) {
   app.state = make_state(app.scene, app.trace_prms);
   app.render.resize(app.state.size());
   app.display.resize(app.state.size());
-  app.render_preview = true;
-  app.render_sample  = 0;
-  app.render_region  = 0;
-  app.render_regions = make_image_regions(
-      app.render.size(), app.trace_prms.region, true);
   
   // render preview
   auto preview_prms = app.trace_prms;
@@ -240,11 +232,14 @@ void reset_display(app_state& app) {
   }
 
   // start renderer
+  auto regions = make_image_regions(
+        app.render.size(), app.trace_prms.region, true);
   app.render_counter = 0;
   app.render_stop = false;
-  app.render_future = std::async(std::launch::async, [&app]() {
+  app.render_future = std::async(std::launch::async, [&app, regions]() {
     for(auto sample = 0; sample < app.trace_prms.samples; sample++) {
-    parallel_foreach(app.render_regions,
+      if(app.render_stop) return;
+      parallel_foreach(regions,
         [&app](const image_region& region) {
           if(app.render_stop) return;
           trace_region(app.render, app.state, app.scene,
