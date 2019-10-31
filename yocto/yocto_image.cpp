@@ -551,24 +551,6 @@ image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb) {
     srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
   return srgb;
 }
-void srgb_to_rgb(image<vec4f>& rgb, const image<vec4f>& srgb) {
-  rgb.resize(srgb.size());
-  for (auto i = 0ull; i < rgb.count(); i++) rgb[i] = srgb_to_rgb(srgb[i]);
-}
-void rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& rgb) {
-  srgb.resize(rgb.size());
-  for (auto i = 0ull; i < srgb.count(); i++) srgb[i] = rgb_to_srgb(rgb[i]);
-}
-void srgb_to_rgb(image<vec4f>& rgb, const image<vec4b>& srgb) {
-  rgb.resize(srgb.size());
-  for (auto i = 0ull; i < rgb.count(); i++)
-    rgb[i] = srgb_to_rgb(byte_to_float(srgb[i]));
-}
-void rgb_to_srgb(image<vec4b>& srgb, const image<vec4f>& rgb) {
-  srgb.resize(rgb.size());
-  for (auto i = 0ull; i < srgb.count(); i++)
-    srgb[i] = float_to_byte(rgb_to_srgb(rgb[i]));
-}
 
 // Filmic tonemapping
 static vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
@@ -1394,7 +1376,7 @@ bool make_image_preset(image<vec4b>& img, const string& type) {
   if (!make_image_preset(imgf, type)) return false;
   if (type.find("-normal") == type.npos &&
       type.find("-displacement") == type.npos) {
-    rgb_to_srgb(img, imgf);
+    img = rgb_to_srgbb(imgf);
   } else {
     img = float_to_byte(imgf);
   }
@@ -1407,7 +1389,7 @@ bool make_image_preset(
     auto imgf = image<vec4f>{};
     if (!make_image_preset(imgf, type)) return false;
     if (type.find("-normal") == type.npos) {
-      rgb_to_srgb(ldr, imgf);
+      ldr = rgb_to_srgbb(imgf);
     } else {
       ldr = float_to_byte(imgf);
     }
