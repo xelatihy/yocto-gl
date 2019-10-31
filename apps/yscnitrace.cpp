@@ -57,7 +57,7 @@ struct app_state {
 
   // scene
   scene_model ioscene    = {};
-  trace_scene trscene    = {};
+  trace_scene scene    = {};
   bool        add_skyenv = false;
 
   // rendering state
@@ -74,10 +74,15 @@ struct app_state {
   pair<string, int> selection = {"camera", 0};
 
   // computation
-  bool                 render_preview = true;
   int                  render_sample  = 0;
-  int                  render_region  = 0;
-  vector<image_region> render_regions = {};
+  std::atomic<bool>    render_stop = {};
+  std::future<void>    render_future = {};
+  int                  render_counter = 0;
+
+  ~app_state() {
+    render_stop = true;
+    if(render_future.valid()) render_future.get();
+  }
 };
 
 // Application state
@@ -131,6 +136,19 @@ inline void parallel_for(int begin, int end, Func&& func) {
 template <typename Func>
 inline void parallel_for(int num, Func&& func) {
   parallel_for(0, num, std::forward<Func>(func));
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+inline void parallel_foreach(vector<T>& values, Func&& func) {
+  parallel_for(
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
+}
+template <typename T, typename Func>
+inline void parallel_foreach(const vector<T>& values, Func&& func) {
+  parallel_for(
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 
 // convert scene objects
@@ -234,14 +252,47 @@ trace_scene make_scene(const scene_model& ioscene) {
 }
 
 void reset_display(app_state& app) {
-  app.state = make_state(app.trscene, app.trace_prms);
+  // stop render
+  app.render_stop = true;
+  if(app.render_future.valid()) app.render_future.get();
+
+  // reset state
+  app.state = make_state(app.scene, app.trace_prms);
   app.render.resize(app.state.size());
   app.display.resize(app.state.size());
-  app.render_preview = true;
-  app.render_sample  = 0;
-  app.render_region  = 0;
-  app.render_regions = make_image_regions(
-      app.render.size(), app.trace_prms.region, true);
+  
+  // render preview
+  auto preview_prms = app.trace_prms;
+  preview_prms.resolution /= app.preview_ratio;
+  preview_prms.samples = 1;
+  auto preview         = trace_image(app.scene, preview_prms);
+  preview              = tonemap_image(preview, app.tonemap_prms);
+  for (auto j = 0; j < app.display.size().y; j++) {
+    for (auto i = 0; i < app.display.size().x; i++) {
+      auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
+            pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
+      app.display[{i, j}] = preview[{pi, pj}];
+    }
+  }
+
+  // start renderer
+  auto regions = make_image_regions(
+        app.render.size(), app.trace_prms.region, true);
+  app.render_counter = 0;
+  app.render_stop = false;
+  app.render_future = std::async(std::launch::async, [&app, regions]() {
+    for(auto sample = 0; sample < app.trace_prms.samples; sample++) {
+      if(app.render_stop) return;
+      parallel_foreach(regions,
+        [&app](const image_region& region) {
+          if(app.render_stop) return;
+          trace_region(app.render, app.state, app.scene,
+              region, 1, app.trace_prms);
+          tonemap_region(app.display, app.render, region,
+              app.tonemap_prms);
+        });
+    }
+  });
 }
 
 void load_scene_async(app_states& apps, const string& filename) {
@@ -258,13 +309,13 @@ void load_scene_async(app_states& apps, const string& filename) {
   apps.loaders.push_back(
       std::async(std::launch::async, [&app]() -> sceneio_status {
         if (auto ret = load_scene(app.filename, app.ioscene); !ret) return ret;
-        app.trscene = make_scene(app.ioscene);
-        init_bvh(app.trscene, app.trace_prms);
-        init_lights(app.trscene);
-        if (app.trscene.lights.empty() && is_sampler_lit(app.trace_prms)) {
+        app.scene = make_scene(app.ioscene);
+        init_bvh(app.scene, app.trace_prms);
+        init_lights(app.scene);
+        if (app.scene.lights.empty() && is_sampler_lit(app.trace_prms)) {
           app.trace_prms.sampler = trace_sampler_type::eyelight;
         }
-        app.state = make_state(app.trscene, app.trace_prms);
+        app.state = make_state(app.scene, app.trace_prms);
         app.render.resize(app.state.size());
         app.display.resize(app.state.size());
         app.name = get_filename(app.filename) + " [" +
@@ -296,7 +347,7 @@ bool draw_glwidgets_camera(const opengl_window& win, app_state& app, int id) {
     camera.focus = length(from - to);
     edited += 1;
   }
-  if (edited) update_trace_camera(app.trscene.cameras.at(id), camera);
+  if (edited) update_trace_camera(app.scene.cameras.at(id), camera);
   return edited;
 }
 
@@ -328,7 +379,7 @@ bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
     }
     // TODO: update lights
   }
-  if (edited) update_trace_texture(app.trscene.textures.at(id), texture);
+  if (edited) update_trace_texture(app.scene.textures.at(id), texture);
   return edited;
 }
 
@@ -370,7 +421,7 @@ bool draw_glwidgets_material(const opengl_window& win, app_state& app, int id) {
       win, "normal_tex", material.normal_tex, app.ioscene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   // TODO: update lights
-  if (edited) update_trace_material(app.trscene.materials.at(id), material);
+  if (edited) update_trace_material(app.scene.materials.at(id), material);
   return edited;
 }
 
@@ -404,11 +455,11 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
       log_glinfo(win, "cannot load " + shape.filename);
       log_glinfo(win, e.what());
     }
-    update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
-    update_bvh(app.trscene, {}, {id}, app.trace_prms);
-    init_lights(app.trscene);
+    update_trace_shape(app.scene.shapes.at(id), shape, app.ioscene);
+    update_bvh(app.scene, {}, {id}, app.trace_prms);
+    init_lights(app.scene);
   } else if (edited) {
-    update_trace_shape(app.trscene.shapes.at(id), shape, app.ioscene);
+    update_trace_shape(app.scene.shapes.at(id), shape, app.ioscene);
   }
   return edited;
 }
@@ -426,11 +477,11 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
       win, "shape", instance.shape, app.ioscene.shapes, true);
   edited += draw_glcombobox(
       win, "material", instance.material, app.ioscene.materials, true);
-  if (edited) update_trace_instance(app.trscene.instances.at(id), instance);
+  if (edited) update_trace_instance(app.scene.instances.at(id), instance);
   if (edited && instance.shape != old_instance.shape)
-    update_bvh(app.trscene, {}, {id}, app.trace_prms);
+    update_bvh(app.scene, {}, {id}, app.trace_prms);
   if (edited && instance.frame != old_instance.frame)
-    update_bvh(app.trscene, {}, {id}, app.trace_prms);
+    update_bvh(app.scene, {}, {id}, app.trace_prms);
   // TODO: update lights
   return edited;
 }
@@ -448,8 +499,8 @@ bool draw_glwidgets_environment(
   edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
       app.ioscene.textures, true);
   if (edited)
-    update_trace_environment(app.trscene.environments.at(id), environment);
-  if (edited) init_lights(app.trscene);
+    update_trace_environment(app.scene.environments.at(id), environment);
+  if (edited) init_lights(app.scene);
   return edited;
 }
 
@@ -622,11 +673,14 @@ void draw(const opengl_window& win) {
     auto& app                 = apps.get_selected();
     app.draw_prms.window      = get_glwindow_size(win);
     app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
-    if (!app.gl_image || app.gl_image.size() != app.display.size())
+    if (!app.gl_image || app.gl_image.size() != app.display.size() || !app.render_counter) {
       update_glimage(app.gl_image, app.display, false, false);
+    }
     update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
         app.draw_prms.window, app.draw_prms.fit);
     draw_glimage(app.gl_image, app.draw_prms);
+    app.render_counter ++;
+    if(app.render_counter > 10) app.render_counter = 0;
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -651,52 +705,6 @@ void update(const opengl_window& win, app_states& app) {
     app.loaders.pop_front();
     reset_display(app.states.back());
     if (app.selected < 0) app.selected = (int)app.states.size() - 1;
-  }
-  for (auto& app : app.states) {
-    if (app.render_preview) {
-      // rendering preview
-      auto preview_prms = app.trace_prms;
-      preview_prms.resolution /= app.preview_ratio;
-      preview_prms.samples = 1;
-      auto preview         = trace_image(app.trscene, preview_prms);
-      preview              = tonemap_image(preview, app.tonemap_prms);
-      for (auto j = 0; j < app.display.size().y; j++) {
-        for (auto i = 0; i < app.display.size().x; i++) {
-          auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
-               pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
-          app.display[{i, j}] = preview[{pi, pj}];
-        }
-      }
-      if (!app.gl_image || app.gl_image.size() != app.display.size()) {
-        update_glimage(app.gl_image, app.display, false, false);
-      } else {
-        update_glimage(app.gl_image, app.display, false, false);
-      }
-      app.render_preview = false;
-    } else if (app.render_sample < app.trace_prms.samples) {
-      // rendering blocks
-      auto num_regions = min(
-          128, app.render_regions.size() - app.render_region);
-      parallel_for(app.render_region, app.render_region + num_regions,
-          [&app](int region_id) {
-            trace_region(app.render, app.state, app.trscene,
-                app.render_regions[region_id], 1, app.trace_prms);
-            tonemap_region(app.display, app.render,
-                app.render_regions[region_id], app.tonemap_prms);
-          });
-      if (!app.gl_image || app.gl_image.size() != app.display.size()) {
-        update_glimage(app.gl_image, app.display, false, false);
-      } else {
-        for (auto idx = 0; idx < num_regions; idx++)
-          update_glimage_region(app.gl_image, app.display,
-              app.render_regions[app.render_region + idx]);
-      }
-      app.render_region += num_regions;
-      if (app.render_region >= app.render_regions.size()) {
-        app.render_region = 0;
-        app.render_sample += 1;
-      }
-    }
   }
 }
 
@@ -741,7 +749,7 @@ void run_ui(app_states& apps) {
       pan.x = -pan.x;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       update_trace_camera(
-          app.trscene.cameras.at(app.trace_prms.camera), camera);
+          app.scene.cameras.at(app.trace_prms.camera), camera);
       // TODO: update
       reset_display(app);
     }
@@ -754,11 +762,11 @@ void run_ui(app_states& apps) {
           app.draw_prms.scale, app.render.size());
       if (ij.x >= 0 && ij.x < app.render.size().x && ij.y >= 0 &&
           ij.y < app.render.size().y) {
-        auto& camera = app.trscene.cameras.at(app.trace_prms.camera);
+        auto& camera = app.scene.cameras.at(app.trace_prms.camera);
         auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /
                 vec2f{(float)app.render.size().x, (float)app.render.size().y});
-        if (auto isec = intersect_scene_bvh(app.trscene, ray); isec.hit) {
+        if (auto isec = intersect_scene_bvh(app.scene, ray); isec.hit) {
           app.selection = {"instance", isec.instance};
         }
       }
