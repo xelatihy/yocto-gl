@@ -45,7 +45,7 @@ if(MSVC)
 endif(MSVC)
 
 add_library(yocto 
-    yocto/yocto_math.h yocto/yocto_cmdline.h 
+    yocto/yocto_math.h yocto/yocto_commonio.h 
     yocto/yocto_modelio.h yocto/yocto_modelio.cpp
     yocto/yocto_bvh.h yocto/yocto_bvh.cpp
     yocto/yocto_shape.h yocto/yocto_shape.cpp 

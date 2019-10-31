@@ -1,9 +1,9 @@
 //
-// # Yocto/Cmdline: Tiny collection of utilities for writing command-line apps
+// # Yocto/CommonIO: Tiny collection of IO utilities
 //
 //
-// Yocto/Cmdline is a collection of utilities used in writing Yocto/GL example
-// applications. We support printing and parsing builting and Yocto/Math values,
+// Yocto/CommonIO is a collection of utilities used in writing Yocto/GL libraries 
+// and example applications. We support printing and parsing builtin types,
 // parsing command line arguments, simple path manipulation, file lading/saving.
 //
 //
@@ -50,6 +50,9 @@
 //
 // 1. load and save text files with `load_text()` and `save_text()`
 // 2. load and save binary files with `load_binary()` and `save_binary()`
+// 3. use `file` as a safe wrapper over C streams; use `open_file()`, 
+//  `close_file()`, `read_line()`, `read_value()`, `write_text()` and 
+//  `write_value()` to operate on the file.
 //
 //
 // LICENSE:
