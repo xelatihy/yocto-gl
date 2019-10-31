@@ -1,5 +1,5 @@
 #include "../yocto/yocto_bvh.h"
-#include "../yocto/yocto_cmdline.h"
+#include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"

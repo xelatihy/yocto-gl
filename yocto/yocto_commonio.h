@@ -1,10 +1,11 @@
 //
-// # Yocto/Cmdline: Tiny collection of utilities for writing command-line apps
+// # Yocto/CommonIO: Tiny collection of IO utilities
 //
 //
-// Yocto/Cmdline is a collection of utilities used in writing Yocto/GL example
-// applications. We support printing and parsing builting and Yocto/Math values,
-// parsing command line arguments, simple path manipulation, file lading/saving.
+// Yocto/CommonIO is a collection of utilities used in writing Yocto/GL
+// libraries and example applications. We support printing and parsing builtin
+// types, parsing command line arguments, simple path manipulation, file
+// lading/saving.
 //
 //
 // ## Printing values
@@ -50,6 +51,9 @@
 //
 // 1. load and save text files with `load_text()` and `save_text()`
 // 2. load and save binary files with `load_binary()` and `save_binary()`
+// 3. use `file` as a safe wrapper over C streams; use `open_file()`,
+//  `close_file()`, `read_line()`, `read_value()`, `write_text()` and
+//  `write_value()` to operate on the file.
 //
 //
 // LICENSE:
@@ -85,6 +89,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -199,13 +204,20 @@ inline bool exists_file(const string& filename);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Result of io operations
+struct fileio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
 // Load/save a text file
-inline void load_text(const string& filename, string& str);
-inline void save_text(const string& filename, const string& str);
+inline fileio_status load_text(const string& filename, string& str);
+inline fileio_status save_text(const string& filename, const string& str);
 
 // Load/save a binary file
-inline void load_binary(const string& filename, vector<byte>& data);
-inline void save_binary(const string& filename, const vector<byte>& data);
+inline fileio_status load_binary(const string& filename, vector<byte>& data);
+inline fileio_status save_binary(
+    const string& filename, const vector<byte>& data);
 
 }  // namespace yocto
 
@@ -371,57 +383,56 @@ inline bool exists_file(const string& filename) {
 namespace yocto {
 
 // Load a text file
-inline void load_text(const string& filename, string& str) {
+inline fileio_status load_text(const string& filename, string& str) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rt");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
-    fclose(fs);
-    throw std::runtime_error("cannot read file " + filename);
-  }
-  fclose(fs);
+  if (fread(str.data(), 1, length, fs) != length)
+    return {filename + ": read error"};
+  return {};
 }
 
 // Save a text file
-inline void save_text(const string& filename, const string& str) {
+inline fileio_status save_text(const string& filename, const string& str) {
   auto fs = fopen(filename.c_str(), "wt");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
-    fclose(fs);
-    throw std::runtime_error("cannot write file " + filename);
-  }
+  if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  if (fprintf(fs, "%s", str.c_str()) < 0) return {filename + ": write error"};
   fclose(fs);
+  return {};
 }
 
 // Load a binary file
-inline void load_binary(const string& filename, vector<byte>& data) {
+inline fileio_status load_binary(const string& filename, vector<byte>& data) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rb");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) {
-    fclose(fs);
-    throw std::runtime_error("cannot read file " + filename);
-  }
+  if (fread(data.data(), 1, length, fs) != length)
+    return {filename + ": read error"};
   fclose(fs);
+  return {};
 }
 
 // Save a binary file
-inline void save_binary(const string& filename, const vector<byte>& data) {
+inline fileio_status save_binary(
+    const string& filename, const vector<byte>& data) {
   auto fs = fopen(filename.c_str(), "wb");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
-    fclose(fs);
-    throw std::runtime_error("cannot write file " + filename);
-  }
+  if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size())
+    return {filename + ": rewritead error"};
   fclose(fs);
+  return {};
 }
 
 }  // namespace yocto

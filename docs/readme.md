@@ -71,7 +71,7 @@ See each header file for documentation.
 - `yocto/yocto_modelio.{h,cpp}`: parsing and writing for Ply/Obj/Pbrt/Yaml/glTF formats
 - `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving of Obj/Pbrt/glTF and
    and a custom Yaml format
-- `yocto/yocto_cmdline.h`: printing utilities, file io utilities,
+- `yocto/yocto_commonio.h`: printing utilities, file io utilities,
   command line parsing
 
 You can see Yocto/GL in action in the following applications written to
