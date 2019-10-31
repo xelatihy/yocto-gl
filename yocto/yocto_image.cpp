@@ -718,24 +718,6 @@ image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size_) {
       STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
   return res_img;
 }
-void resize_image(
-    image<vec4f>& res_img, const image<vec4f>& img, const vec2i& size_) {
-  auto size = resize_size(img.size(), size_);
-  res_img   = {size};
-  stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-      sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
-      res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
-      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-}
-void resize_image(
-    image<vec4b>& res_img, const image<vec4b>& img, const vec2i& size_) {
-  auto size = resize_size(img.size(), size_);
-  res_img   = {size};
-  stbir_resize_uint8_generic((byte*)img.data(), img.size().x, img.size().y,
-      sizeof(vec4b) * img.size().x, (byte*)res_img.data(), res_img.size().x,
-      res_img.size().y, sizeof(vec4b) * res_img.size().x, 4, 3, 0,
-      STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-}
 
 void image_difference(image<vec4f>& diff, const image<vec4f>& a,
     const image<vec4f>& b, bool display) {
