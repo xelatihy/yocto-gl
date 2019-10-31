@@ -791,9 +791,9 @@ image<vec4f> bump_to_normal(const image<vec4f>& img, float scale) {
 }
 
 // Make an image
-void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
+image<vec4f> make_proc_image(const proc_image_params& params) {
   auto make_img = [&](const auto& shader) {
-    img.resize(params.size);
+    auto img = image<vec4f>{params.size};
     auto scale = 1.0f / max(params.size);
     for (auto j = 0; j < img.size().y; j++) {
       for (auto i = 0; i < img.size().x; i++) {
@@ -806,10 +806,11 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
         }
       }
     }
+    return img;
   };
   switch (params.type) {
     case proc_image_params::type_t::grid: {
-      make_img([&params](vec2f uv) {
+      return make_img([&params](vec2f uv) {
         uv *= 4;
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         auto thick = 0.01f / 2;
@@ -821,7 +822,7 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
       });
     } break;
     case proc_image_params::type_t::checker: {
-      make_img([&params](vec2f uv) {
+      return make_img([&params](vec2f uv) {
         uv *= 4;
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         auto c = uv.x <= 0.5f != uv.y <= 0.5f;
@@ -829,7 +830,7 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
       });
     } break;
     case proc_image_params::type_t::bumps: {
-      make_img([&params](vec2f uv) {
+      return make_img([&params](vec2f uv) {
         uv *= 4;
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         auto thick  = 0.125f;
@@ -844,13 +845,13 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
       });
     } break;
     case proc_image_params::type_t::ramp: {
-      make_img([&params](vec2f uv) {
+      return make_img([&params](vec2f uv) {
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         return lerp(params.color0, params.color1, uv.x);
       });
     } break;
     case proc_image_params::type_t::gammaramp: {
-      make_img([&params](vec2f uv) {
+      return make_img([&params](vec2f uv) {
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         if (uv.y < 1 / 3.0f) {
           return lerp(params.color0, params.color1, pow(uv.x, 2.2f));
@@ -862,13 +863,13 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
       });
     } break;
     case proc_image_params::type_t::uvramp: {
-      make_img([](vec2f uv) {
+      return make_img([](vec2f uv) {
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         return vec4f{uv.x, uv.y, 0, 1};
       });
     } break;
     case proc_image_params::type_t::uvgrid: {
-      make_img([](vec2f uv) {
+      return make_img([](vec2f uv) {
         auto colored = true;
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         uv.y     = 1 - uv.y;
@@ -896,13 +897,13 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
       });
     } break;
     case proc_image_params::type_t::blackbody: {
-      make_img([](vec2f uv) {
+      return make_img([](vec2f uv) {
         uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
         return vec4f{blackbody_to_rgb(lerp(1000, 12000, uv.x)), 1};
       });
     } break;
     case proc_image_params::type_t::noise: {
-      make_img([&params](vec2f uv) {
+      return make_img([&params](vec2f uv) {
         uv *= 8;
         auto v = perlin_noise({uv.x, uv.y, 0.5f});
         v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
@@ -910,7 +911,7 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
       });
     } break;
     case proc_image_params::type_t::turbulence: {
-      make_img([&params](vec2f uv) {
+      return make_img([&params](vec2f uv) {
         uv *= 8;
         auto v = perlin_turbulence({uv.x, uv.y, 0.5f}, params.noise.x,
             params.noise.y, (int)params.noise.z);
@@ -919,7 +920,7 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
       });
     } break;
     case proc_image_params::type_t::fbm: {
-      make_img([&params](vec2f uv) {
+      return make_img([&params](vec2f uv) {
         uv *= 8;
         auto v = perlin_fbm({uv.x, uv.y, 0.5f}, params.noise.x, params.noise.y,
             (int)params.noise.z);
@@ -928,7 +929,7 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
       });
     } break;
     case proc_image_params::type_t::ridge: {
-      make_img([&params](vec2f uv) {
+      return make_img([&params](vec2f uv) {
         uv *= 8;
         auto v = perlin_ridge({uv.x, uv.y, 0.5f}, params.noise.x,
             params.noise.y, (int)params.noise.z, params.noise.w);
@@ -937,11 +938,6 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params) {
       });
     } break;
   }
-}
-image<vec4f> make_proc_image(const proc_image_params& params) {
-  auto img = image<vec4f>{params.size};
-  make_proc_image(img, params);
-  return img;
 }
 
 // Add a border to an image
@@ -1233,39 +1229,39 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
     params.type   = proc_image_params::type_t::grid;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.7, 0.7, 0.7, 1};
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "checker") {
     auto params   = proc_image_params{};
     params.type   = proc_image_params::type_t::checker;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.7, 0.7, 0.7, 1};
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "bumps") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "uvramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::uvramp;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "gammaramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::gammaramp;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "blackbodyramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::blackbody;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "uvgrid") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::uvgrid;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "sky") {
     img = make_sunsky(size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
@@ -1276,29 +1272,27 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
   } else if (type == "noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "fbm") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::fbm;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "ridge") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::ridge;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "turbulence") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::turbulence;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "bump-normal") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
-    make_proc_image(img, params);
-    auto bump = img;
-    bump_to_normal(img, bump, 0.05f);
+    img = bump_to_normal(make_proc_image(params), 0.05f);
     return true;
   } else if (type == "images1") {
     auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
@@ -1344,46 +1338,46 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
     params.color0  = vec4f{0.2, 0.2, 0.2, 1};
     params.color1  = vec4f{0.5, 0.5, 0.5, 1};
     params.borderw = 0.0025;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-grid") {
     auto params   = proc_image_params{};
     params.type   = proc_image_params::type_t::grid;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.5, 0.5, 0.5, 1};
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-checker") {
     auto params   = proc_image_params{};
     params.type   = proc_image_params::type_t::checker;
     params.color0 = vec4f{0.2, 0.2, 0.2, 1};
     params.color1 = vec4f{0.5, 0.5, 0.5, 1};
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-bumps") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-uvramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::uvramp;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-gammaramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::gammaramp;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-blackbodyramp") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::blackbody;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-uvgrid") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::uvgrid;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-sky") {
     img = make_sunsky(size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
@@ -1394,29 +1388,27 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
   } else if (type == "test-noise") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::noise;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-fbm") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::fbm;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-bumps-normal") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
-    make_proc_image(img, params);
-    auto bump = img;
-    bump_to_normal(img, bump, 0.05f);
+    img = bump_to_normal(make_proc_image(params), 0.05f);
     return true;
   } else if (type == "test-bumps-displacement") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::bumps;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else if (type == "test-fbm-displacement") {
     auto params = proc_image_params{};
     params.type = proc_image_params::type_t::fbm;
-    make_proc_image(img, params);
+    img = make_proc_image(params);
     return true;
   } else {
     return false;

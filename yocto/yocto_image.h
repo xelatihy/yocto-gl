@@ -232,7 +232,6 @@ struct proc_image_params {
 
 // Make an image
 image<vec4f> make_proc_image(const proc_image_params& params);
-void make_proc_image(image<vec4f>& img, const proc_image_params& params);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
