@@ -73,6 +73,7 @@ struct app_state {
   vector<image_region> render_regions = {};
   std::atomic<bool>    render_stop = {};
   std::future<void>    render_future = {};
+  int                  render_counter = 0;
 
   ~app_state() {
     render_stop = true;
@@ -239,6 +240,7 @@ void reset_display(app_state& app) {
   }
 
   // start renderer
+  app.render_counter = 0;
   app.render_stop = false;
   app.render_future = std::async(std::launch::async, [&app]() {
     for(auto sample = 0; sample < app.trace_prms.samples; sample++) {
@@ -255,10 +257,9 @@ void reset_display(app_state& app) {
 }
 
 void draw(const opengl_window& win) {
-  static int update_counter = 0;
   auto& app = *(app_state*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_image || app.gl_image.size() != app.display.size() || update_counter)
+  if (!app.gl_image || app.gl_image.size() != app.display.size() || app.render_counter)
     update_glimage(app.gl_image, app.display, false, false);
   app.draw_prms.window      = get_glwindow_size(win);
   app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
@@ -266,54 +267,8 @@ void draw(const opengl_window& win) {
       app.draw_prms.window, app.draw_prms.fit);
   draw_glimage(app.gl_image, app.draw_prms);
   swap_glbuffers(win);
-  update_counter ++;
-  if(update_counter > 60) update_counter = 0;
-}
-
-void update(const opengl_window& win, app_state& app) {
-  if (app.render_preview) {
-    // rendering preview
-    auto preview_prms = app.trace_prms;
-    preview_prms.resolution /= app.preview_ratio;
-    preview_prms.samples = 1;
-    auto preview         = trace_image(app.scene, preview_prms);
-    preview              = tonemap_image(preview, app.tonemap_prms);
-    for (auto j = 0; j < app.display.size().y; j++) {
-      for (auto i = 0; i < app.display.size().x; i++) {
-        auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
-             pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
-        app.display[{i, j}] = preview[{pi, pj}];
-      }
-    }
-    if (!app.gl_image || app.gl_image.size() != app.display.size()) {
-      update_glimage(app.gl_image, app.display, false, false);
-    } else {
-      update_glimage(app.gl_image, app.display, false, false);
-    }
-    app.render_preview = false;
-  } else if (app.render_sample < app.trace_prms.samples) {
-    // rendering blocks
-    auto num_regions = min(128, app.render_regions.size() - app.render_region);
-    parallel_for(app.render_region, app.render_region + num_regions,
-        [&app](int region_id) {
-          trace_region(app.render, app.state, app.scene,
-              app.render_regions[region_id], 1, app.trace_prms);
-          tonemap_region(app.display, app.render, app.render_regions[region_id],
-              app.tonemap_prms);
-        });
-    if (!app.gl_image || app.gl_image.size() != app.display.size()) {
-      update_glimage(app.gl_image, app.display, false, false);
-    } else {
-      for (auto idx = 0; idx < num_regions; idx++)
-        update_glimage_region(app.gl_image, app.display,
-            app.render_regions[app.render_region + idx]);
-    }
-    app.render_region += num_regions;
-    if (app.render_region >= app.render_regions.size()) {
-      app.render_region = 0;
-      app.render_sample += 1;
-    }
-  }
+  app.render_counter ++;
+  if(app.render_counter > 60) app.render_counter = 0;
 }
 
 // run ui loop
@@ -346,9 +301,6 @@ void run_ui(app_state& app) {
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       reset_display(app);
     }
-
-    // update
-    update(win, app);
 
     // draw
     draw(win);
