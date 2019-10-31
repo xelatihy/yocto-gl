@@ -161,8 +161,6 @@ vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params);
 // color grade an image region
 image<vec4f> colorgrade_image(
     const image<vec4f>& img, const colorgrade_params& params);
-void colorgrade_region(image<vec4f>& corrected, const image<vec4f>& img,
-    const image_region& region, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);

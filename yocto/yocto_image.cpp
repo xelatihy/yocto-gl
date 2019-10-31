@@ -494,35 +494,26 @@ vec4f eval_image(const image<vec4b>& img, const vec2f& uv, bool as_linear,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Splits an image into an array of regions
-void make_image_regions(vector<image_region>& regions, const vec2i& size,
-    int region_size, bool shuffled) {
-  regions.clear();
-  for (auto y = 0; y < size.y; y += region_size) {
-    for (auto x = 0; x < size.x; x += region_size) {
-      regions.push_back({{x, y},
-          {min(x + region_size, size.x), min(y + region_size, size.y)}});
+template <typename T>
+inline void set_region(
+    image<T>& img, const image<T>& region, const vec2i& offset) {
+  for (auto j = 0; j < region.size().y; j++) {
+    for (auto i = 0; i < region.size().x; i++) {
+      if (!img.contains({i, j})) continue;
+      img[vec2i{i, j} + offset] = region[{i, j}];
     }
-  }
-  if (shuffled) {
-    auto rng = rng_state{};
-    shuffle(regions, rng);
   }
 }
-vector<image_region> make_image_regions(
-    const vec2i& size, int region_size, bool shuffled) {
-  auto regions = vector<image_region>{};
-  for (auto y = 0; y < size.y; y += region_size) {
-    for (auto x = 0; x < size.x; x += region_size) {
-      regions.push_back({{x, y},
-          {min(x + region_size, size.x), min(y + region_size, size.y)}});
+
+template <typename T>
+inline void get_region(
+    image<T>& clipped, const image<T>& img, const vec2i& offset, const vec2i& size) {
+  clipped.resize(size);
+  for (auto j = 0; j < size.y; j++) {
+    for (auto i = 0; i < size.x; i++) {
+      clipped[{i, j}] = img[{i + offset.x, j + offset.y}];
     }
   }
-  if (shuffled) {
-    auto rng = rng_state{};
-    shuffle(regions, rng);
-  }
-  return regions;
 }
 
 // Conversion from/to floats.

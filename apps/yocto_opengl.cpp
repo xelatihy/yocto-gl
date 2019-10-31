@@ -194,17 +194,6 @@ void update_glimage(
   }
 }
 
-void update_glimage_region(opengl_image& glimage, const image<vec4f>& img,
-    const image_region& region) {
-  if (!glimage) throw std::runtime_error("glimage is not initialized");
-  update_gltexture_region(glimage.texture, img, region, glimage.texture.mipmap);
-}
-void update_glimage_region(opengl_image& glimage, const image<vec4b>& img,
-    const image_region& region) {
-  if (!glimage) throw std::runtime_error("glimage is not initialized");
-  update_gltexture_region(glimage.texture, img, region, glimage.texture.mipmap);
-}
-
 // draw image
 void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
   check_glerror();
@@ -837,36 +826,12 @@ void update_gltexture(
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void update_gltexture_region(opengl_texture& texture, const image<vec4f>& img,
-    const image_region& region, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  auto clipped = image<vec4f>{};
-  get_region(clipped, img, region);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, region.min.x, region.min.y, region.size().x,
-      region.size().y, GL_RGBA, GL_FLOAT, clipped.data());
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
 void update_gltexture(
     opengl_texture& texture, const image<vec4b>& img, bool mipmap) {
   assert(glGetError() == GL_NO_ERROR);
   glBindTexture(GL_TEXTURE_2D, texture.texture_id);
   glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
       GL_UNSIGNED_BYTE, img.data());
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void update_gltexture_region(opengl_texture& texture, const image<vec4b>& img,
-    const image_region& region, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  auto clipped = image<vec4b>{};
-  get_region(clipped, img, region);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, region.min.x, region.min.y, region.size().x,
-      region.size().y, GL_RGBA, GL_UNSIGNED_BYTE, clipped.data());
   if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   assert(glGetError() == GL_NO_ERROR);
 }

@@ -1637,28 +1637,6 @@ inline bool operator==(const image<T>& a, const image<T>& b);
 template <typename T>
 inline bool operator!=(const image<T>& a, const image<T>& b);
 
-// Image region
-struct image_region {
-  vec2i min = zero2i;
-  vec2i max = zero2i;
-
-  image_region();
-  image_region(const vec2i& min, const vec2i& max);
-
-  vec2i size() const;
-};
-
-// Gets pixels in an image region
-template <typename T>
-inline image<T> get_image_region(
-    const image<T>& img, const image_region& region);
-template <typename T>
-inline void set_region(
-    image<T>& img, const image<T>& region, const vec2i& offset);
-template <typename T>
-inline void get_region(
-    image<T>& clipped, const image<T>& img, const image_region& region);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -2691,47 +2669,6 @@ inline bool operator==(const image<T>& a, const image<T>& b) {
 template <typename T>
 inline bool operator!=(const image<T>& a, const image<T>& b) {
   return a.size() != b.size() || a.pixels != b.pixels;
-}
-
-inline image_region::image_region() {}
-inline image_region::image_region(const vec2i& min, const vec2i& max)
-    : min{min}, max{max} {}
-
-inline vec2i image_region::size() const { return max - min; }
-
-// Gets pixels in an image region
-template <typename T>
-inline image<T> get_image_region(
-    const image<T>& img, const image_region& region) {
-  auto clipped = image<T>{region.size()};
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-    }
-  }
-  return clipped;
-}
-
-template <typename T>
-inline void set_region(
-    image<T>& img, const image<T>& region, const vec2i& offset) {
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      if (!img.contains({i, j})) continue;
-      img[vec2i{i, j} + offset] = region[{i, j}];
-    }
-  }
-}
-
-template <typename T>
-inline void get_region(
-    image<T>& clipped, const image<T>& img, const image_region& region) {
-  clipped.resize(region.size());
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-    }
-  }
 }
 
 }  // namespace yocto

@@ -138,12 +138,6 @@ void update_glimage(opengl_image& glimage, const image<vec4f>& img,
 void update_glimage(opengl_image& glimage, const image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
-// update the image data for a small region
-void update_glimage_region(
-    opengl_image& glimage, const image<vec4f>& img, const image_region& region);
-void update_glimage_region(
-    opengl_image& glimage, const image<vec4b>& img, const image_region& region);
-
 // draw image
 void draw_glimage(opengl_image& glimage, const draw_glimage_params& params);
 
@@ -311,8 +305,6 @@ void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
 
 void update_gltexture(
     opengl_texture& texture, const image<vec4f>& img, bool mipmap);
-void update_gltexture_region(opengl_texture& texture, const image<vec4f>& img,
-    const image_region& region, bool mipmap);
 
 inline void init_gltexture(opengl_texture& texture, const image<vec4f>& img,
     bool as_float, bool linear, bool mipmap) {
@@ -324,8 +316,6 @@ void init_gltexture(opengl_texture& texture, const image<vec4b>& img,
     bool as_srgb, bool linear, bool mipmap);
 void update_gltexture(
     opengl_texture& texture, const image<vec4b>& img, bool mipmap);
-void update_gltexture_region(opengl_texture& texture, const image<vec4b>& img,
-    const image_region& region, bool mipmap);
 
 inline void init_gltexture(opengl_texture& texture, const image<vec4b>& img,
     bool as_srgb, bool linear, bool mipmap) {
