@@ -518,28 +518,6 @@ void add_obj_fvquads(obj_model& obj, const string& name,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// A class that wraps a C file ti handle safe opening/closgin with RIIA.
-struct obj_file {
-  obj_file() {}
-  obj_file(obj_file&& other);
-  obj_file(const obj_file&) = delete;
-  obj_file& operator=(const obj_file&) = delete;
-  ~obj_file();
-
-  operator bool() const { return (bool)fs; }
-
-  FILE*  fs       = nullptr;
-  string filename = "";
-  string mode     = "rt";
-  int    linenum  = 0;
-};
-
-// open a file
-obj_file open_obj(const string& filename, const string& mode = "rt");
-void     open_obj(
-        obj_file& fs, const string& filename, const string& mode = "rt");
-void close_obj(obj_file& fs);
-
 // Obj/Mtl/Objx command
 enum struct obj_command {
   // clang-format off
@@ -560,25 +538,25 @@ struct obj_instance {
 };
 
 // Read obj/mtl/objx elements
-objio_status read_obj_command(const string& filename, obj_file& fs,
+objio_status read_obj_command(const string& filename, modelio_file& fs,
     obj_command& command, string& name, vec3f& value,
     vector<obj_vertex>& vertices, obj_vertex& vert_size);
-objio_status read_mtl_command(const string& filename, obj_file& fs,
+objio_status read_mtl_command(const string& filename, modelio_file& fs,
     mtl_command& command, obj_material& material, bool fliptr = true);
-objio_status read_objx_command(const string& filename, obj_file& fs,
+objio_status read_objx_command(const string& filename, modelio_file& fs,
     objx_command& command, obj_camera& camera, obj_environment& environment,
     obj_instance& instance);
 
 // Write obj/mtl/objx elements
 objio_status write_obj_comment(
-    const string& filename, obj_file& fs, const string& comment);
-objio_status write_obj_command(const string& filename, obj_file& fs,
+    const string& filename, modelio_file& fs, const string& comment);
+objio_status write_obj_command(const string& filename, modelio_file& fs,
     obj_command command, const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices = {});
-objio_status write_mtl_command(const string& filename, obj_file& fs,
+objio_status write_mtl_command(const string& filename, modelio_file& fs,
     mtl_command command, obj_material& material,
     const obj_texture_info& texture = {});
-objio_status write_objx_command(const string& filename, obj_file& fs,
+objio_status write_objx_command(const string& filename, modelio_file& fs,
     objx_command command, const obj_camera& camera,
     const obj_environment& environment, const obj_instance& instance);
 
