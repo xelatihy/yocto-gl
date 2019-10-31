@@ -629,7 +629,7 @@ static vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast, 0.18f);
   if (params.logcontrast != 0.5f)
     rgb = logcontrast(rgb, params.logcontrast, 0.18f);
-  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
+  if (params.saturation != 0.5f) rgb = saturation(rgb, params.saturation);
   if (params.filmic) rgb = tonemap_filmic(rgb);
   if (params.srgb) rgb = rgb_to_srgb(rgb);
   return rgb;
