@@ -77,44 +77,6 @@ struct app_state {
   }
 };
 
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(int begin, int end, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(begin);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, end]() {
-          while (true) {
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= end) break;
-            func(idx);
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-}
-
-template <typename Func>
-inline void parallel_for(int num, Func&& func) {
-  parallel_for(0, num, std::forward<Func>(func));
-}
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes a reference to a `T`.
-template <typename T, typename Func>
-inline void parallel_foreach(vector<T>& values, Func&& func) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
-}
-template <typename T, typename Func>
-inline void parallel_foreach(const vector<T>& values, Func&& func) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
-}
-
 // construct a scene from io
 trace_scene make_scene(const scene_model& ioscene) {
   auto tesselate = [](const scene_model& ioscene, const scene_shape& shape) {
