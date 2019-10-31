@@ -231,14 +231,10 @@ namespace yocto {
 
 // Convert quads to triangles
 vector<vec3i> quads_to_triangles(const vector<vec4i>& quads);
-void quads_to_triangles(vector<vec3i>& triangles, const vector<vec4i>& quads);
 // Convert triangles to quads by creating degenerate quads
 vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles);
-void triangles_to_quads(vector<vec4i>& quads, const vector<vec3i>& triangles);
-
 // Convert beziers to lines using 3 lines for each bezier.
 vector<vec4i> bezier_to_lines(vector<vec2i>& lines);
-void bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm, texcoord and colors.
@@ -256,12 +252,6 @@ vector<vector<vec3i>> ungroup_triangles(
     const vector<vec3i>& triangles, const vector<int>& ids);
 vector<vector<vec4i>> ungroup_quads(
     const vector<vec4i>& quads, const vector<int>& ids);
-void ungroup_lines(vector<vector<vec2i>>& split_lines,
-    const vector<vec2i>& lines, const vector<int>& ids);
-void ungroup_triangles(vector<vector<vec3i>>& split_triangles,
-    const vector<vec3i>& triangles, const vector<int>& ids);
-void ungroup_quads(vector<vector<vec4i>>& split_quads,
-    const vector<vec4i>& quads, const vector<int>& ids);
 
 // Weld vertices within a threshold.
 pair<vector<vec3f>, vector<int>> weld_vertices(
@@ -271,15 +261,6 @@ pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     float threshold);
 pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold);
-// Weld vertices within a threshold.
-void weld_vertices(vector<vec3f>& welded_positions, vector<int>& indices,
-    const vector<vec3f>& positions, float threshold);
-void weld_triangles(vector<vec3i>& welded_triangles,
-    vector<vec3f>& welded_positions, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, float threshold);
-void weld_quads(vector<vec4i>& welded_quads, vector<vec3f>& welded_positions,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    float threshold);
 
 // Merge shape elements
 void merge_lines(

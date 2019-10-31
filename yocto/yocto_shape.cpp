@@ -732,14 +732,6 @@ vector<vec3i> quads_to_triangles(const vector<vec4i>& quads) {
   }
   return triangles;
 }
-void quads_to_triangles(vector<vec3i>& triangles, const vector<vec4i>& quads) {
-  triangles.clear();
-  triangles.reserve(quads.size() * 2);
-  for (auto& q : quads) {
-    triangles.push_back({q.x, q.y, q.w});
-    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
-  }
-}
 
 // Convert triangles to quads by creating degenerate quads
 vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles) {
@@ -747,11 +739,6 @@ vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles) {
   quads.reserve(triangles.size());
   for (auto& t : triangles) quads.push_back({t.x, t.y, t.z, t.z});
   return quads;
-}
-void triangles_to_quads(vector<vec4i>& quads, const vector<vec3i>& triangles) {
-  quads.clear();
-  quads.reserve(triangles.size());
-  for (auto& t : triangles) quads.push_back({t.x, t.y, t.z, t.z});
 }
 
 // Convert beziers to lines using 3 lines for each bezier.
@@ -764,15 +751,6 @@ vector<vec2i> bezier_to_lines(const vector<vec4i>& beziers) {
     lines.push_back({b.z, b.w});
   }
   return lines;
-}
-void bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers) {
-  lines.clear();
-  lines.reserve(beziers.size() * 3);
-  for (auto b : beziers) {
-    lines.push_back({b.x, b.y});
-    lines.push_back({b.y, b.z});
-    lines.push_back({b.z, b.w});
-  }
 }
 
 // Convert face varying data to single primitives. Returns the quads indices
@@ -851,27 +829,6 @@ vector<vector<vec4i>> ungroup_quads(
     const vector<vec4i>& quads, const vector<int>& ids) {
   return ungroup_elems_impl(quads, ids);
 }
-template <typename T>
-void ungroup_elems_impl(vector<vector<T>>& split_elems, const vector<T>& elems,
-    const vector<int>& ids) {
-  auto max_id = *max_element(ids.begin(), ids.end());
-  split_elems.resize(max_id + 1);
-  for (auto elem_id = 0; elem_id < elems.size(); elem_id++) {
-    split_elems[ids[elem_id]].push_back(elems[elem_id]);
-  }
-}
-void ungroup_lines(vector<vector<vec2i>>& split_lines,
-    const vector<vec2i>& lines, const vector<int>& ids) {
-  ungroup_elems_impl(split_lines, lines, ids);
-}
-void ungroup_triangles(vector<vector<vec3i>>& split_triangles,
-    const vector<vec3i>& triangles, const vector<int>& ids) {
-  ungroup_elems_impl(split_triangles, triangles, ids);
-}
-void ungroup_quads(vector<vector<vec4i>>& split_quads,
-    const vector<vec4i>& quads, const vector<int>& ids) {
-  ungroup_elems_impl(split_quads, quads, ids);
-}
 
 // Weld vertices within a threshold.
 pair<vector<vec3f>, vector<int>> weld_vertices(
@@ -913,46 +870,6 @@ pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
         indices[q.w],
     };
   return {wquads, wpositions};
-}
-void weld_vertices(vector<vec3f>& wpositions, vector<int>& indices,
-    const vector<vec3f>& positions, float threshold) {
-  indices.resize(positions.size());
-  wpositions.clear();
-  auto grid       = make_hash_grid(threshold);
-  auto neighboors = vector<int>{};
-  for (auto vertex = 0; vertex < positions.size(); vertex++) {
-    auto& position = positions[vertex];
-    find_neightbors(grid, neighboors, position, threshold);
-    if (neighboors.empty()) {
-      wpositions.push_back(position);
-      indices[vertex] = (int)wpositions.size() - 1;
-      insert_vertex(grid, position);
-    } else {
-      indices[vertex] = neighboors.front();
-    }
-  }
-}
-void weld_triangles_inplace(vector<vec3i>& wtriangles,
-    vector<vec3f>& wpositions, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, float threshold) {
-  auto indices = vector<int>{};
-  weld_vertices(wpositions, indices, positions, threshold);
-  wtriangles = triangles;
-  for (auto& t : wtriangles) t = {indices[t.x], indices[t.y], indices[t.z]};
-}
-void weld_quads_inplace(vector<vec4i>& wquads, vector<vec3f>& wpositions,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    float threshold) {
-  auto indices = vector<int>{};
-  weld_vertices(wpositions, indices, positions, threshold);
-  wquads = quads;
-  for (auto& q : wquads)
-    q = {
-        indices[q.x],
-        indices[q.y],
-        indices[q.z],
-        indices[q.w],
-    };
 }
 
 // Merge shape elements
@@ -3199,8 +3116,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
     const vector<vec2f>& stexcoord, const hair_params& params) {
   auto alltriangles    = striangles;
-  auto quads_triangles = vector<vec3i>{};
-  quads_to_triangles(quads_triangles, squads);
+  auto quads_triangles = quads_to_triangles(squads);
   alltriangles.insert(
       alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
   auto bpos      = vector<vec3f>{};
