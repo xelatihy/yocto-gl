@@ -368,15 +368,6 @@ vector<vec2i> get_boundary(const edge_map& emap) {
   }
   return boundary;
 }
-void get_edges(const edge_map& emap, vector<vec2i>& edges) {
-  edges = emap.edges;
-}
-void get_boundary(const edge_map& emap, vector<vec2i>& boundary) {
-  boundary.clear();
-  for (auto idx = 0; idx < emap.edges.size(); idx++) {
-    if (emap.nfaces[idx] < 2) boundary.push_back(emap.edges[idx]);
-  }
-}
 vector<vec2i> get_edges(const vector<vec3i>& triangles) {
   return get_edges(make_edge_map(triangles));
 }

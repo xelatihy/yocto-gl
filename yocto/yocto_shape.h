@@ -175,8 +175,6 @@ int edge_index(const edge_map& emap, const vec2i& edge);
 int           num_edges(const edge_map& emap);
 vector<vec2i> get_edges(const edge_map& emap);
 vector<vec2i> get_boundary(const edge_map& emap);
-void          get_edges(const edge_map& emap, vector<vec2i>& edges);
-void          get_boundary(const edge_map& emap, vector<vec2i>& edges);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);
 vector<vec2i> get_edges(const vector<vec4i>& quads);
 
