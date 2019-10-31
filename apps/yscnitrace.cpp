@@ -258,11 +258,9 @@ void reset_display(app_state& app) {
   }
 
   // start renderer
-  auto regions = make_image_regions(
-        app.render.size(), app.trace_prms.region, true);
   app.render_counter = 0;
   app.render_stop = false;
-  app.render_future = std::async(std::launch::async, [&app, regions]() {
+  app.render_future = std::async(std::launch::async, [&app]() {
     for(auto sample = 0; sample < app.trace_prms.samples; sample++) {
       if(app.render_stop) return;
       parallel_for(app.render.size(),

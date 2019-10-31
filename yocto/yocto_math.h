@@ -1648,10 +1648,6 @@ struct image_region {
   vec2i size() const;
 };
 
-// Splits an image into an array of regions
-vector<image_region> make_image_regions(
-    const vec2i& size, int region_size = 32, bool shuffled = false);
-
 // Gets pixels in an image region
 template <typename T>
 inline image<T> get_image_region(

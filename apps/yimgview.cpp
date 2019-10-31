@@ -136,7 +136,6 @@ void compute_stats(
 
 void update_display(app_state& app) {
   if (app.display.size() != app.source.size()) app.display = app.source;
-  auto regions = make_image_regions(app.source.size(), 128);
   parallel_for(app.source.size(), [&app](const vec2i& ij) {
     if (app.apply_colorgrade) {
       app.display[ij] = colorgrade(

@@ -3049,13 +3049,12 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
 // Progressively compute an image by calling trace_samples multiple times.
 int trace_samples(image<vec4f>& render, trace_state& state,
     const trace_scene& scene, const trace_params& params) {
-  auto regions     = make_image_regions(render.size(), params.region, true);
   auto current_sample = state[zero2i].samples;
   auto num_samples = min(params.batch, params.samples - current_sample);
   if (params.noparallel) {
     for (auto j = 0; j < render.size().y; j++) {
       for (auto i = 0; i < render.size().x; i++) {
-        for (auto s = 0; s < params.samples; s++) {
+        for (auto s = 0; s < num_samples; s++) {
           render[{i, j}] = trace_sample(state, scene, {i, j}, params);
         }
       }
@@ -3063,7 +3062,7 @@ int trace_samples(image<vec4f>& render, trace_state& state,
   } else {
     parallel_for(
         render.size(), [&render, &state, &scene, &params](const vec2i& ij) {
-          for (auto s = 0; s < params.samples; s++) {
+          for (auto s = 0; s < num_samples; s++) {
             render[ij] = trace_sample(state, scene, ij, params);
           }
         });
