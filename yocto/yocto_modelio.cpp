@@ -201,29 +201,28 @@ namespace yocto {
 using std::string_view;
 
 // utilities
-static bool is_newline(char c) { return c == '\r' || c == '\n'; }
-static bool is_space(char c) {
+static bool is_ply_newline(char c) { return c == '\r' || c == '\n'; }
+static bool is_ply_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
-static void skip_whitespace(string_view& str) {
-  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
+static void skip_ply_whitespace(string_view& str) {
+  while (!str.empty() && is_ply_space(str.front())) str.remove_prefix(1);
 }
 
-static void remove_comment(string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+static void remove_ply_comment(string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_ply_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
 }
 
-
 // Parse values from a string
-static bool parse_value(string_view& str, string_view& value) {
-  skip_whitespace(str);
+static bool parse_ply_value(string_view& str, string_view& value) {
+  skip_ply_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
     auto cpy = str;
-    while (!cpy.empty() && !is_space(cpy.front())) cpy.remove_prefix(1);
+    while (!cpy.empty() && !is_ply_space(cpy.front())) cpy.remove_prefix(1);
     value = str;
     value.remove_suffix(cpy.size());
     str.remove_prefix(str.size() - cpy.size());
@@ -242,82 +241,82 @@ static bool parse_value(string_view& str, string_view& value) {
     return true;
   }
 }
-static bool parse_value(string_view& str, string& value) {
+static bool parse_ply_value(string_view& str, string& value) {
   auto valuev = string_view{};
-  if (!parse_value(str, valuev)) return false;
+  if (!parse_ply_value(str, valuev)) return false;
   value = string{valuev};
   return true;
 }
-static bool parse_value(string_view& str, int8_t& value) {
+static bool parse_ply_value(string_view& str, int8_t& value) {
   char* end = nullptr;
   value     = (int8_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_value(string_view& str, int16_t& value) {
+static bool parse_ply_value(string_view& str, int16_t& value) {
   char* end = nullptr;
   value     = (int16_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_value(string_view& str, int32_t& value) {
+static bool parse_ply_value(string_view& str, int32_t& value) {
   char* end = nullptr;
   value     = (int32_t)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_value(string_view& str, int64_t& value) {
+static bool parse_ply_value(string_view& str, int64_t& value) {
   char* end = nullptr;
   value     = (int64_t)strtoll(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_value(string_view& str, uint8_t& value) {
+static bool parse_ply_value(string_view& str, uint8_t& value) {
   char* end = nullptr;
   value     = (uint8_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_value(string_view& str, uint16_t& value) {
+static bool parse_ply_value(string_view& str, uint16_t& value) {
   char* end = nullptr;
   value     = (uint16_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_value(string_view& str, uint32_t& value) {
+static bool parse_ply_value(string_view& str, uint32_t& value) {
   char* end = nullptr;
   value     = (uint32_t)strtoul(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_value(string_view& str, uint64_t& value) {
+static bool parse_ply_value(string_view& str, uint64_t& value) {
   char* end = nullptr;
   value     = (uint64_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_value(string_view& str, bool& value) {
+static bool parse_ply_value(string_view& str, bool& value) {
   auto valuei = 0;
-  if(!parse_value(str, valuei)) return false;
+  parse_ply_value(str, valuei);
   value = (bool)valuei;
   return true;
 }
-static bool parse_value(string_view& str, float& value) {
+static bool parse_ply_value(string_view& str, float& value) {
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
   str.remove_prefix(end - str.data());
   return true;
 }
-static bool parse_value(string_view& str, double& value) {
+static bool parse_ply_value(string_view& str, double& value) {
   char* end = nullptr;
   value     = strtod(str.data(), &end);
   if (str.data() == end) return false;
@@ -325,7 +324,7 @@ static bool parse_value(string_view& str, double& value) {
   return true;
 }
 #ifdef __APPLE__
-static bool parse_value(string_view& str, size_t& value) {
+static bool parse_ply_value(string_view& str, size_t& value) {
   char* end = nullptr;
   value     = (size_t)strtoull(str.data(), &end, 10);
   if (str.data() == end) return false;
@@ -333,33 +332,6 @@ static bool parse_value(string_view& str, size_t& value) {
   return true;
 }
 #endif
-
-static bool parse_value(string_view& str, vec2f& value) {
-  for (auto i = 0; i < 2; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-static bool parse_value(string_view& str, vec3f& value) {
-  for (auto i = 0; i < 3; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-static bool parse_value(string_view& str, frame3f& value) {
-  for (auto i = 0; i < 4; i++)
-    if (!parse_value(str, value[i])) return false;
-  return true;
-}
-
-// Parse values from a string
-static bool parse_value_or_empty(string_view& str, string& value) {
-  skip_whitespace(str);
-  if (str.empty()) {
-    value = "";
-    return true;
-  } else {
-    return parse_value(str, value);
-  }
-}
 
 }  // namespace yocto
 
@@ -369,86 +341,86 @@ static bool parse_value_or_empty(string_view& str, string& value) {
 namespace yocto {
 
 // Formats values to string
-static void format_value(string& str, const string& value) { str += value; }
-static void format_value(string& str, const char* value) { str += value; }
-static void format_value(string& str, int8_t value) {
+static void format_ply_value(string& str, const string& value) { str += value; }
+static void format_ply_value(string& str, const char* value) { str += value; }
+static void format_ply_value(string& str, int8_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-static void format_value(string& str, int16_t value) {
+static void format_ply_value(string& str, int16_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-static void format_value(string& str, int32_t value) {
+static void format_ply_value(string& str, int32_t value) {
   char buf[256];
   sprintf(buf, "%d", (int)value);
   str += buf;
 }
-static void format_value(string& str, int64_t value) {
+static void format_ply_value(string& str, int64_t value) {
   char buf[256];
   sprintf(buf, "%lld", (long long)value);
   str += buf;
 }
-static void format_value(string& str, uint8_t value) {
+static void format_ply_value(string& str, uint8_t value) {
   char buf[256];
   sprintf(buf, "%u", (unsigned)value);
   str += buf;
 }
-static void format_value(string& str, uint16_t value) {
+static void format_ply_value(string& str, uint16_t value) {
   char buf[256];
   sprintf(buf, "%u", (unsigned)value);
   str += buf;
 }
-static void format_value(string& str, uint32_t value) {
+static void format_ply_value(string& str, uint32_t value) {
   char buf[256];
   sprintf(buf, "%u", (unsigned)value);
   str += buf;
 }
-static void format_value(string& str, uint64_t value) {
+static void format_ply_value(string& str, uint64_t value) {
   char buf[256];
   sprintf(buf, "%llu", (unsigned long long)value);
   str += buf;
 }
-static void format_value(string& str, float value) {
+static void format_ply_value(string& str, float value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
-static void format_value(string& str, double value) {
+static void format_ply_value(string& str, double value) {
   char buf[256];
   sprintf(buf, "%g", value);
   str += buf;
 }
 
 // Foramt to file
-static void format_values(string& str, const string& fmt) {
+static void format_ply_values(string& str, const string& fmt) {
   auto pos = fmt.find("{}");
   if (pos != string::npos) throw std::runtime_error("bad format string");
   str += fmt;
 }
 template <typename Arg, typename... Args>
-static void format_values(
+static void format_ply_values(
     string& str, const string& fmt, const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
   if (pos == string::npos) throw std::runtime_error("bad format string");
   str += fmt.substr(0, pos);
-  format_value(str, arg);
-  format_values(str, fmt.substr(pos + 2), args...);
+  format_ply_value(str, arg);
+  format_ply_values(str, fmt.substr(pos + 2), args...);
 }
 
 template <typename... Args>
-static bool format_values(
+static bool format_ply_values(
     modelio_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
-  format_values(str, fmt, args...);
+  format_ply_values(str, fmt, args...);
   return fputs(str.c_str(), fs.fs) >= 0;
 }
 template <typename T>
-static bool format_value(modelio_file& fs, const T& value) {
+static bool format_ply_value(modelio_file& fs, const T& value) {
   auto str = ""s;
-  format_value(str, value);
+  format_ply_value(str, value);
   return fputs(str.c_str(), fs.fs) >= 0;
 }
 
@@ -489,13 +461,13 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_ply_comment(str);
+    skip_ply_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return {filename + ": parse error"};
+    if (!parse_ply_value(str, cmd)) return {filename + ": parse error"};
     if (cmd == "") continue;
 
     // check magic number
@@ -510,7 +482,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
       if (!first_line) return {filename + ": corrupt header"};
     } else if (cmd == "format") {
       auto fmt = ""s;
-      if (!parse_value(str, fmt)) return {filename + ": parse error"};
+      if (!parse_ply_value(str, fmt)) return {filename + ": parse error"};
       if (fmt == "ascii") {
         ply.format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -521,28 +493,28 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
         return {filename + ": unknown format " + fmt};
       }
     } else if (cmd == "comment") {
-      skip_whitespace(str);
+      skip_ply_whitespace(str);
       ply.comments.push_back(string{str});
     } else if (cmd == "obj_info") {
-      skip_whitespace(str);
+      skip_ply_whitespace(str);
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto& elem = ply.elements.emplace_back();
-      if (!parse_value(str, elem.name)) return {filename + ": parse error"};
-      if (!parse_value(str, elem.count))
+      if (!parse_ply_value(str, elem.name)) return {filename + ": parse error"};
+      if (!parse_ply_value(str, elem.count))
         return {filename + ": parse error"};
     } else if (cmd == "property") {
       if (ply.elements.empty()) return {filename + ": corrupt header"};
       auto& prop  = ply.elements.back().properties.emplace_back();
       auto  tname = ""s;
-      if (!parse_value(str, tname)) return {filename + ": parse error"};
+      if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
       if (tname == "list") {
         prop.is_list = true;
-        if (!parse_value(str, tname)) return {filename + ": parse error"};
+        if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
           return {filename + ": unsupported list size type " + tname};
-        if (!parse_value(str, tname)) return {filename + ": parse error"};
+        if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
         if (type_map.find(tname) == type_map.end())
           return {filename + ": unknown type " + tname};
         prop.type = type_map.at(tname);
@@ -552,7 +524,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
           return {filename + ": unknown type " + tname};
         prop.type = type_map.at(tname);
       }
-      if (!parse_value(str, prop.name)) return {filename + ": parse error"};
+      if (!parse_ply_value(str, prop.name)) return {filename + ": parse error"};
     } else if (cmd == "end_header") {
       end_header = true;
       break;
@@ -593,50 +565,50 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
         auto str = string_view{buffer};
         for (auto& prop : elem.properties) {
           if (prop.is_list) {
-            if (!parse_value(str, prop.ldata_u8.emplace_back()))
+            if (!parse_ply_value(str, prop.ldata_u8.emplace_back()))
               return {filename + ": parse error"};
           }
           auto vcount = prop.is_list ? prop.ldata_u8.back() : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                if (!parse_value(str, prop.data_i8.emplace_back()))
+                if (!parse_ply_value(str, prop.data_i8.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::i16:
-                if (!parse_value(str, prop.data_i16.emplace_back()))
+                if (!parse_ply_value(str, prop.data_i16.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::i32:
-                if (!parse_value(str, prop.data_i32.emplace_back()))
+                if (!parse_ply_value(str, prop.data_i32.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::i64:
-                if (!parse_value(str, prop.data_i64.emplace_back()))
+                if (!parse_ply_value(str, prop.data_i64.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::u8:
-                if (!parse_value(str, prop.data_u8.emplace_back()))
+                if (!parse_ply_value(str, prop.data_u8.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::u16:
-                if (!parse_value(str, prop.data_u16.emplace_back()))
+                if (!parse_ply_value(str, prop.data_u16.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::u32:
-                if (!parse_value(str, prop.data_u32.emplace_back()))
+                if (!parse_ply_value(str, prop.data_u32.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::u64:
-                if (!parse_value(str, prop.data_u64.emplace_back()))
+                if (!parse_ply_value(str, prop.data_u64.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::f32:
-                if (!parse_value(str, prop.data_f32.emplace_back()))
+                if (!parse_ply_value(str, prop.data_f32.emplace_back()))
                   return {filename + ": parse error"};
                 break;
               case ply_type::f64:
-                if (!parse_value(str, prop.data_f64.emplace_back()))
+                if (!parse_ply_value(str, prop.data_f64.emplace_back()))
                   return {filename + ": parse error"};
                 break;
             }
@@ -733,33 +705,33 @@ plyio_status save_ply(const string& filename, const ply_model& ply) {
       {ply_format::binary_big_endian, "binary_big_endian"}};
 
   // header
-  if (!format_values(fs, "ply\n")) return {filename + ": write error"};
-  if (!format_values(fs, "format {} 1.0\n", format_map.at(ply.format)))
+  if (!format_ply_values(fs, "ply\n")) return {filename + ": write error"};
+  if (!format_ply_values(fs, "format {} 1.0\n", format_map.at(ply.format)))
     return {filename + ": write error"};
-  if (!format_values(fs, "comment Written by Yocto/GL\n"))
+  if (!format_ply_values(fs, "comment Written by Yocto/GL\n"))
     return {filename + ": write error"};
-  if (!format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_ply_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
     return {filename + ": write error"};
   for (auto& comment : ply.comments)
-    if (!format_values(fs, "comment {}\n", comment))
+    if (!format_ply_values(fs, "comment {}\n", comment))
       return {filename + ": write error"};
   for (auto& elem : ply.elements) {
-    if (!format_values(
+    if (!format_ply_values(
             fs, "element {} {}\n", elem.name, (uint64_t)elem.count))
       return {filename + ": write error"};
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        if (!format_values(fs, "property list uchar {} {}\n",
+        if (!format_ply_values(fs, "property list uchar {} {}\n",
                 type_map[prop.type], prop.name))
           return {filename + ": write error"};
       } else {
-        if (!format_values(
+        if (!format_ply_values(
                 fs, "property {} {}\n", type_map[prop.type], prop.name))
           return {filename + ": write error"};
       }
     }
   }
-  if (!format_values(fs, "end_header\n"))
+  if (!format_ply_values(fs, "end_header\n"))
     return {filename + ": write error"};
 
   // properties
@@ -770,54 +742,54 @@ plyio_status save_ply(const string& filename, const ply_model& ply) {
         for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
           auto& prop = elem.properties[pidx];
           if (prop.is_list)
-            if (!format_values(fs, "{} ", (int)prop.ldata_u8[idx]))
+            if (!format_ply_values(fs, "{} ", (int)prop.ldata_u8[idx]))
               return {filename + ": write error"};
           auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
           for (auto i = 0; i < vcount; i++) {
             switch (prop.type) {
               case ply_type::i8:
-                if (!format_values(fs, "{} ", prop.data_i8[cur[idx]++]))
+                if (!format_ply_values(fs, "{} ", prop.data_i8[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::i16:
-                if (!format_values(fs, "{} ", prop.data_i16[cur[idx]++]))
+                if (!format_ply_values(fs, "{} ", prop.data_i16[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::i32:
-                if (!format_values(fs, "{} ", prop.data_i32[cur[idx]++]))
+                if (!format_ply_values(fs, "{} ", prop.data_i32[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::i64:
-                if (!format_values(fs, "{} ", prop.data_i64[cur[idx]++]))
+                if (!format_ply_values(fs, "{} ", prop.data_i64[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::u8:
-                if (!format_values(fs, "{} ", prop.data_u8[cur[idx]++]))
+                if (!format_ply_values(fs, "{} ", prop.data_u8[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::u16:
-                if (!format_values(fs, "{} ", prop.data_u16[cur[idx]++]))
+                if (!format_ply_values(fs, "{} ", prop.data_u16[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::u32:
-                if (!format_values(fs, "{} ", prop.data_u32[cur[idx]++]))
+                if (!format_ply_values(fs, "{} ", prop.data_u32[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::u64:
-                if (!format_values(fs, "{} ", prop.data_u64[cur[idx]++]))
+                if (!format_ply_values(fs, "{} ", prop.data_u64[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::f32:
-                if (!format_values(fs, "{} ", prop.data_f32[cur[idx]++]))
+                if (!format_ply_values(fs, "{} ", prop.data_f32[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
               case ply_type::f64:
-                if (!format_values(fs, "{} ", prop.data_f64[cur[idx]++]))
+                if (!format_ply_values(fs, "{} ", prop.data_f64[cur[idx]++]))
                   return {filename + ": write error"};
                 break;
             }
           }
-          if (!format_values(fs, "\n")) return {filename + ": write error"};
+          if (!format_ply_values(fs, "\n")) return {filename + ": write error"};
         }
       }
     }
@@ -1332,7 +1304,7 @@ template <typename VT>
 template <typename T, typename VT>
 static bool parse_ply_prop(string_view& str, VT& value) {
   auto tvalue = T{};
-  if (!parse_value(str, tvalue)) return false;
+  if (!parse_ply_value(str, tvalue)) return false;
   value = (VT)tvalue;
   return false;
 }
@@ -1381,13 +1353,13 @@ plyio_status read_ply_header(const string& filename, modelio_file& fs,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_ply_comment(str);
+    skip_ply_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return {filename + ": parse error"};
+    if (!parse_ply_value(str, cmd)) return {filename + ": parse error"};
     if (cmd == "") continue;
 
     // check magic number
@@ -1402,7 +1374,7 @@ plyio_status read_ply_header(const string& filename, modelio_file& fs,
       if (!first_line) return {filename + ": corrupt header"};
     } else if (cmd == "format") {
       auto fmt = string_view{};
-      if (!parse_value(str, fmt)) return {filename + ": parse error"};
+      if (!parse_ply_value(str, fmt)) return {filename + ": parse error"};
       if (fmt == "ascii") {
         format = ply_format::ascii;
       } else if (fmt == "binary_little_endian") {
@@ -1413,30 +1385,30 @@ plyio_status read_ply_header(const string& filename, modelio_file& fs,
         return {filename + ": unknown format"};
       }
     } else if (cmd == "comment") {
-      skip_whitespace(str);
+      skip_ply_whitespace(str);
       comments.push_back(string{str});
     } else if (cmd == "obj_info") {
-      skip_whitespace(str);
+      skip_ply_whitespace(str);
       // comment is the rest of the str
     } else if (cmd == "element") {
       auto& elem = elements.emplace_back();
-      if (!parse_value(str, elem.name)) return {filename + ": parse error"};
-      if (!parse_value(str, elem.count))
+      if (!parse_ply_value(str, elem.name)) return {filename + ": parse error"};
+      if (!parse_ply_value(str, elem.count))
         return {filename + ": parse error"};
     } else if (cmd == "property") {
       if (elements.empty()) throw std::runtime_error{"bad ply header"};
       auto& prop  = elements.back().properties.emplace_back();
       auto  tname = ""s;
-      if (!parse_value(str, tname)) return {filename + ": parse error"};
+      if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
       if (tname == "list") {
         prop.is_list = true;
-        if (!parse_value(str, tname)) return {filename + ": parse error"};
+        if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
         if (type_map.find(tname) == type_map.end())
           return {filename + ": unknown type " + tname};
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
           throw std::runtime_error{"unsupported list size type " + tname};
-        if (!parse_value(str, tname)) return {filename + ": parse error"};
+        if (!parse_ply_value(str, tname)) return {filename + ": parse error"};
         if (type_map.find(tname) == type_map.end())
           return {filename + ": unknown type " + tname};
         prop.type = type_map.at(tname);
@@ -1446,7 +1418,7 @@ plyio_status read_ply_header(const string& filename, modelio_file& fs,
           return {filename + ": unknown type " + tname};
         prop.type = type_map.at(tname);
       }
-      if (!parse_value(str, prop.name)) return {filename + ": parse error"};
+      if (!parse_ply_value(str, prop.name)) return {filename + ": parse error"};
     } else if (cmd == "end_header") {
       end_header = true;
       break;
@@ -1523,16 +1495,16 @@ static plyio_status read_ply_value_generic(const string& filename, modelio_file&
 template <typename VT>
 static bool format_ply_prop(modelio_file& fs, ply_type type, VT value) {
   switch (type) {
-    case ply_type::i8: return format_value(fs, (int8_t)value);
-    case ply_type::i16: return format_value(fs, (int16_t)value);
-    case ply_type::i32: return format_value(fs, (int32_t)value);
-    case ply_type::i64: return format_value(fs, (int64_t)value);
-    case ply_type::u8: return format_value(fs, (uint8_t)value);
-    case ply_type::u16: return format_value(fs, (uint16_t)value);
-    case ply_type::u32: return format_value(fs, (uint32_t)value);
-    case ply_type::u64: return format_value(fs, (uint64_t)value);
-    case ply_type::f32: return format_value(fs, (float)value);
-    case ply_type::f64: return format_value(fs, (double)value);
+    case ply_type::i8: return format_ply_value(fs, (int8_t)value);
+    case ply_type::i16: return format_ply_value(fs, (int16_t)value);
+    case ply_type::i32: return format_ply_value(fs, (int32_t)value);
+    case ply_type::i64: return format_ply_value(fs, (int64_t)value);
+    case ply_type::u8: return format_ply_value(fs, (uint8_t)value);
+    case ply_type::u16: return format_ply_value(fs, (uint16_t)value);
+    case ply_type::u32: return format_ply_value(fs, (uint32_t)value);
+    case ply_type::u64: return format_ply_value(fs, (uint64_t)value);
+    case ply_type::f32: return format_ply_value(fs, (float)value);
+    case ply_type::f64: return format_ply_value(fs, (double)value);
   }
 }
 
@@ -1565,42 +1537,42 @@ plyio_status write_ply_header(const string& filename, modelio_file& fs,
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
       {ply_type::f32, "float"}, {ply_type::f64, "double"}};
 
-  if (!format_values(fs, "ply\n")) return {filename + ": write error"};
+  if (!format_ply_values(fs, "ply\n")) return {filename + ": write error"};
   switch (format) {
     case ply_format::ascii:
-      if (!format_values(fs, "format ascii 1.0\n"))
+      if (!format_ply_values(fs, "format ascii 1.0\n"))
         return {filename + ": write error"};
       break;
     case ply_format::binary_little_endian:
-      if (!format_values(fs, "format binary_little_endian 1.0\n"))
+      if (!format_ply_values(fs, "format binary_little_endian 1.0\n"))
         return {filename + ": write error"};
       break;
     case ply_format::binary_big_endian:
-      if (!format_values(fs, "format binary_big_endian 1.0\n"))
+      if (!format_ply_values(fs, "format binary_big_endian 1.0\n"))
         return {filename + ": write error"};
       break;
   }
   for (auto& comment : comments)
-    if (!format_values(fs, "comment " + comment + "\n"))
+    if (!format_ply_values(fs, "comment " + comment + "\n"))
       return {filename + ": write error"};
   for (auto& elem : elements) {
-    if (!format_values(fs,
+    if (!format_ply_values(fs,
             "element " + elem.name + " " + std::to_string(elem.count) + "\n"))
       return {filename + ": write error"};
     for (auto& prop : elem.properties) {
       if (prop.is_list) {
-        if (!format_values(fs, "property list uchar " +
+        if (!format_ply_values(fs, "property list uchar " +
                                        type_map[prop.type] + " " + prop.name +
                                        "\n"))
           return {filename + ": write error"};
       } else {
-        if (!format_values(
+        if (!format_ply_values(
                 fs, "property " + type_map[prop.type] + " " + prop.name + "\n"))
           return {filename + ": write error"};
       }
     }
   }
-  if (!format_values(fs, "end_header\n"))
+  if (!format_ply_values(fs, "end_header\n"))
     return {filename + ": write error"};
 
   return {};
@@ -1614,7 +1586,7 @@ static plyio_status write_ply_value_generic(const string& filename,
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
       auto& prop = element.properties[pidx];
       if (pidx)
-        if (!format_value(fs, " ")) return {filename + ": write error"};
+        if (!format_ply_value(fs, " ")) return {filename + ": write error"};
       if (!prop.is_list) {
         if (!format_ply_prop(fs, prop.type, values[pidx]))
           return {filename + ": write error"};
@@ -1623,12 +1595,12 @@ static plyio_status write_ply_value_generic(const string& filename,
           return {filename + ": write error"};
         for (auto i = 0; i < (int)lists[pidx].size(); i++) {
           if (i)
-            if (!format_value(fs, " ")) return {filename + ": write error"};
+            if (!format_ply_value(fs, " ")) return {filename + ": write error"};
           if (!format_ply_prop(fs, prop.type, lists[pidx][i]))
             return {filename + ": write error"};
         }
       }
-      if (!format_value(fs, "\n")) return {filename + ": write error"};
+      if (!format_ply_value(fs, "\n")) return {filename + ": write error"};
     }
   } else {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -1805,6 +1777,87 @@ namespace yocto {
 
 using std::string_view;
 
+// utilities
+static bool is_obj_newline(char c) { return c == '\r' || c == '\n'; }
+static bool is_obj_space(char c) {
+  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+static void skip_obj_whitespace(string_view& str) {
+  while (!str.empty() && is_obj_space(str.front())) str.remove_prefix(1);
+}
+
+static void remove_obj_comment(string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_obj_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
+}
+
+// Parse values from a string
+static bool parse_obj_value(string_view& str, string_view& value) {
+  skip_obj_whitespace(str);
+  if (str.empty()) return false;
+  auto cpy = str;
+  while (!cpy.empty() && !is_obj_space(cpy.front())) cpy.remove_prefix(1);
+  value = str;
+  value.remove_suffix(cpy.size());
+  str.remove_prefix(str.size() - cpy.size());
+  return true;
+}
+static bool parse_obj_value(string_view& str, string& value) {
+  auto valuev = string_view{};
+  if (!parse_obj_value(str, valuev)) return false;
+  value = string{valuev};
+  return true;
+}
+static bool parse_obj_value(string_view& str, int& value) {
+  char* end = nullptr;
+  value     = (int32_t)strtol(str.data(), &end, 10);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+static bool parse_obj_value(string_view& str, bool& value) {
+  auto valuei = 0;
+  if (!parse_obj_value(str, valuei)) return false;
+  value = (bool)valuei;
+  return true;
+}
+static bool parse_obj_value(string_view& str, float& value) {
+  char* end = nullptr;
+  value     = strtof(str.data(), &end);
+  if (str.data() == end) return false;
+  str.remove_prefix(end - str.data());
+  return true;
+}
+
+static bool parse_obj_value(string_view& str, vec2f& value) {
+  for (auto i = 0; i < 2; i++)
+    if (!parse_obj_value(str, value[i])) return false;
+  return true;
+}
+static bool parse_obj_value(string_view& str, vec3f& value) {
+  for (auto i = 0; i < 3; i++)
+    if (!parse_obj_value(str, value[i])) return false;
+  return true;
+}
+static bool parse_obj_value(string_view& str, frame3f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_obj_value(str, value[i])) return false;
+  return true;
+}
+
+// Parse values from a string
+static bool parse_obj_value_or_empty(string_view& str, string& value) {
+  skip_obj_whitespace(str);
+  if (str.empty()) {
+    value = "";
+    return true;
+  } else {
+    return parse_obj_value(str, value);
+  }
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1881,19 +1934,19 @@ static bool format_obj_value(modelio_file& fs, const T& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool parse_value(string_view& str, obj_vertex& value) {
+static bool parse_obj_value(string_view& str, obj_vertex& value) {
   value = obj_vertex{0, 0, 0};
-  if (!parse_value(str, value.position)) return false;
+  if (!parse_obj_value(str, value.position)) return false;
   if (!str.empty() && str.front() == '/') {
     str.remove_prefix(1);
     if (!str.empty() && str.front() == '/') {
       str.remove_prefix(1);
-      if (!parse_value(str, value.normal)) return false;
+      if (!parse_obj_value(str, value.normal)) return false;
     } else {
-      if (!parse_value(str, value.texcoord)) return false;
+      if (!parse_obj_value(str, value.texcoord)) return false;
       if (!str.empty() && str.front() == '/') {
         str.remove_prefix(1);
-        if (!parse_value(str, value.normal)) return false;
+        if (!parse_obj_value(str, value.normal)) return false;
       }
     }
   }
@@ -1901,18 +1954,18 @@ static bool parse_value(string_view& str, obj_vertex& value) {
 }
 
 // Input for OBJ textures
-static bool parse_value(string_view& str, obj_texture_info& info) {
+static bool parse_obj_value(string_view& str, obj_texture_info& info) {
   // initialize
   info = obj_texture_info();
 
   // get tokens
   auto tokens = vector<string>();
-  skip_whitespace(str);
+  skip_obj_whitespace(str);
   while (!str.empty()) {
     auto token = ""s;
-    if (!parse_value(str, token)) return false;
+    if (!parse_obj_value(str, token)) return false;
     tokens.push_back(token);
-    skip_whitespace(str);
+    skip_obj_whitespace(str);
   }
   if (tokens.empty()) return false;
 
@@ -1944,41 +1997,41 @@ static objio_status load_mtl(
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_obj_comment(str);
+    skip_obj_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return {filename + ": parse error"};
+    if (!parse_obj_value(str, cmd)) return {filename + ": parse error"};
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "newmtl") {
       obj.materials.emplace_back();
-      if (!parse_value(str, obj.materials.back().name))
+      if (!parse_obj_value(str, obj.materials.back().name))
         return {filename + ": parse error"};
     } else if (cmd == "illum") {
-      if (!parse_value(str, obj.materials.back().illum))
+      if (!parse_obj_value(str, obj.materials.back().illum))
         return {filename + ": parse error"};
     } else if (cmd == "Ke") {
-      if (!parse_value(str, obj.materials.back().emission))
+      if (!parse_obj_value(str, obj.materials.back().emission))
         return {filename + ": parse error"};
     } else if (cmd == "Ka") {
-      if (!parse_value(str, obj.materials.back().ambient))
+      if (!parse_obj_value(str, obj.materials.back().ambient))
         return {filename + ": parse error"};
     } else if (cmd == "Kd") {
-      if (!parse_value(str, obj.materials.back().diffuse))
+      if (!parse_obj_value(str, obj.materials.back().diffuse))
         return {filename + ": parse error"};
     } else if (cmd == "Ks") {
-      if (!parse_value(str, obj.materials.back().specular))
+      if (!parse_obj_value(str, obj.materials.back().specular))
         return {filename + ": parse error"};
     } else if (cmd == "Kt") {
-      if (!parse_value(str, obj.materials.back().transmission))
+      if (!parse_obj_value(str, obj.materials.back().transmission))
         return {filename + ": parse error"};
     } else if (cmd == "Tf") {
       obj.materials.back().transmission = vec3f{-1};
-      if (!parse_value(str, obj.materials.back().transmission))
+      if (!parse_obj_value(str, obj.materials.back().transmission))
         return {filename + ": parse error"};
       if (obj.materials.back().transmission.y < 0)
         obj.materials.back().transmission = vec3f{
@@ -1987,93 +2040,93 @@ static objio_status load_mtl(
         obj.materials.back().transmission = 1 -
                                             obj.materials.back().transmission;
     } else if (cmd == "Tr") {
-      if (!parse_value(str, obj.materials.back().opacity))
+      if (!parse_obj_value(str, obj.materials.back().opacity))
         return {filename + ": parse error"};
       if (fliptr)
         obj.materials.back().opacity = 1 - obj.materials.back().opacity;
     } else if (cmd == "Ns") {
-      if (!parse_value(str, obj.materials.back().exponent))
+      if (!parse_obj_value(str, obj.materials.back().exponent))
         return {filename + ": parse error"};
     } else if (cmd == "d") {
-      if (!parse_value(str, obj.materials.back().opacity))
+      if (!parse_obj_value(str, obj.materials.back().opacity))
         return {filename + ": parse error"};
     } else if (cmd == "map_Ke") {
-      if (!parse_value(str, obj.materials.back().emission_map))
+      if (!parse_obj_value(str, obj.materials.back().emission_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Ka") {
-      if (!parse_value(str, obj.materials.back().ambient_map))
+      if (!parse_obj_value(str, obj.materials.back().ambient_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Kd") {
-      if (!parse_value(str, obj.materials.back().diffuse_map))
+      if (!parse_obj_value(str, obj.materials.back().diffuse_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Ks") {
-      if (!parse_value(str, obj.materials.back().specular_map))
+      if (!parse_obj_value(str, obj.materials.back().specular_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Tr") {
-      if (!parse_value(str, obj.materials.back().transmission_map))
+      if (!parse_obj_value(str, obj.materials.back().transmission_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      if (!parse_value(str, obj.materials.back().opacity_map))
+      if (!parse_obj_value(str, obj.materials.back().opacity_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_bump" || cmd == "bump") {
-      if (!parse_value(str, obj.materials.back().bump_map))
+      if (!parse_obj_value(str, obj.materials.back().bump_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_disp" || cmd == "disp") {
-      if (!parse_value(str, obj.materials.back().displacement_map))
+      if (!parse_obj_value(str, obj.materials.back().displacement_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_norm" || cmd == "norm") {
-      if (!parse_value(str, obj.materials.back().normal_map))
+      if (!parse_obj_value(str, obj.materials.back().normal_map))
         return {filename + ": parse error"};
     } else if (cmd == "Pm") {
-      if (!parse_value(str, obj.materials.back().pbr_metallic))
+      if (!parse_obj_value(str, obj.materials.back().pbr_metallic))
         return {filename + ": parse error"};
     } else if (cmd == "Pr") {
-      if (!parse_value(str, obj.materials.back().pbr_roughness))
+      if (!parse_obj_value(str, obj.materials.back().pbr_roughness))
         return {filename + ": parse error"};
     } else if (cmd == "Ps") {
-      if (!parse_value(str, obj.materials.back().pbr_sheen))
+      if (!parse_obj_value(str, obj.materials.back().pbr_sheen))
         return {filename + ": parse error"};
     } else if (cmd == "Pc") {
-      if (!parse_value(str, obj.materials.back().pbr_clearcoat))
+      if (!parse_obj_value(str, obj.materials.back().pbr_clearcoat))
         return {filename + ": parse error"};
     } else if (cmd == "Pcr") {
-      if (!parse_value(str, obj.materials.back().pbr_coatroughness))
+      if (!parse_obj_value(str, obj.materials.back().pbr_coatroughness))
         return {filename + ": parse error"};
     } else if (cmd == "map_Pm") {
-      if (!parse_value(str, obj.materials.back().pbr_metallic_map))
+      if (!parse_obj_value(str, obj.materials.back().pbr_metallic_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Pr") {
-      if (!parse_value(str, obj.materials.back().pbr_roughness_map))
+      if (!parse_obj_value(str, obj.materials.back().pbr_roughness_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Ps") {
-      if (!parse_value(str, obj.materials.back().pbr_sheen_map))
+      if (!parse_obj_value(str, obj.materials.back().pbr_sheen_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Pc") {
-      if (!parse_value(str, obj.materials.back().pbr_clearcoat_map))
+      if (!parse_obj_value(str, obj.materials.back().pbr_clearcoat_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Pcr") {
-      if (!parse_value(str, obj.materials.back().pbr_coatroughness_map))
+      if (!parse_obj_value(str, obj.materials.back().pbr_coatroughness_map))
         return {filename + ": parse error"};
     } else if (cmd == "Vt") {
-      if (!parse_value(str, obj.materials.back().vol_transmission))
+      if (!parse_obj_value(str, obj.materials.back().vol_transmission))
         return {filename + ": parse error"};
     } else if (cmd == "Vp") {
-      if (!parse_value(str, obj.materials.back().vol_meanfreepath))
+      if (!parse_obj_value(str, obj.materials.back().vol_meanfreepath))
         return {filename + ": parse error"};
     } else if (cmd == "Ve") {
-      if (!parse_value(str, obj.materials.back().vol_emission))
+      if (!parse_obj_value(str, obj.materials.back().vol_emission))
         return {filename + ": parse error"};
     } else if (cmd == "Vs") {
-      if (!parse_value(str, obj.materials.back().vol_scattering))
+      if (!parse_obj_value(str, obj.materials.back().vol_scattering))
         return {filename + ": parse error"};
     } else if (cmd == "Vg") {
-      if (!parse_value(str, obj.materials.back().vol_anisotropy))
+      if (!parse_obj_value(str, obj.materials.back().vol_anisotropy))
         return {filename + ": parse error"};
     } else if (cmd == "Vr") {
-      if (!parse_value(str, obj.materials.back().vol_scale))
+      if (!parse_obj_value(str, obj.materials.back().vol_scale))
         return {filename + ": parse error"};
     } else if (cmd == "map_Vs") {
-      if (!parse_value(str, obj.materials.back().vol_scattering_map))
+      if (!parse_obj_value(str, obj.materials.back().vol_scattering_map))
         return {filename + ": parse error"};
     } else {
       continue;
@@ -2106,52 +2159,52 @@ static objio_status load_objx(const string& filename, obj_model& obj) {
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_obj_comment(str);
+    skip_obj_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return {filename + ": parse error"};
+    if (!parse_obj_value(str, cmd)) return {filename + ": parse error"};
     if (cmd == "") continue;
 
     // read values
     if (cmd == "c") {
       auto& camera = obj.cameras.emplace_back();
-      if (!parse_value(str, camera.name))
+      if (!parse_obj_value(str, camera.name))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.ortho))
+      if (!parse_obj_value(str, camera.ortho))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.width))
+      if (!parse_obj_value(str, camera.width))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.height))
+      if (!parse_obj_value(str, camera.height))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.lens))
+      if (!parse_obj_value(str, camera.lens))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.focus))
+      if (!parse_obj_value(str, camera.focus))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.aperture))
+      if (!parse_obj_value(str, camera.aperture))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.frame))
+      if (!parse_obj_value(str, camera.frame))
         return {filename + ": parse error"};
     } else if (cmd == "e") {
       auto& environment = obj.environments.emplace_back();
-      if (!parse_value(str, environment.name))
+      if (!parse_obj_value(str, environment.name))
         return {filename + ": parse error"};
-      if (!parse_value(str, environment.emission))
+      if (!parse_obj_value(str, environment.emission))
         return {filename + ": parse error"};
       auto emission_path = ""s;
-      if (!parse_value(str, emission_path))
+      if (!parse_obj_value(str, emission_path))
         return {filename + ": parse error"};
       if (emission_path == "\"\"") emission_path = "";
       environment.emission_map.path = emission_path;
-      if (!parse_value(str, environment.frame))
+      if (!parse_obj_value(str, environment.frame))
         return {filename + ": parse error"};
     } else if (cmd == "i") {
       auto object = ""s;
       auto frame  = identity3x4f;
-      if (!parse_value(str, object)) return {filename + ": parse error"};
-      if (!parse_value(str, frame)) return {filename + ": parse error"};
+      if (!parse_obj_value(str, object)) return {filename + ": parse error"};
+      if (!parse_obj_value(str, frame)) return {filename + ": parse error"};
       if (shape_map.find(object) == shape_map.end()) {
         return {filename + ": missing object " + object};
       }
@@ -2195,26 +2248,26 @@ objio_status load_obj(const string& filename, obj_model& obj,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_obj_comment(str);
+    skip_obj_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return {filename + ": parse error"};
+    if (!parse_obj_value(str, cmd)) return {filename + ": parse error"};
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "v") {
-      if (!parse_value(str, opositions.emplace_back()))
+      if (!parse_obj_value(str, opositions.emplace_back()))
         return {filename + ": parse error"};
       vert_size.position += 1;
     } else if (cmd == "vn") {
-      if (!parse_value(str, onormals.emplace_back()))
+      if (!parse_obj_value(str, onormals.emplace_back()))
         return {filename + ": parse error"};
       vert_size.normal += 1;
     } else if (cmd == "vt") {
-      if (!parse_value(str, otexcoords.emplace_back()))
+      if (!parse_obj_value(str, otexcoords.emplace_back()))
         return {filename + ": parse error"};
       vert_size.texcoord += 1;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -2255,10 +2308,10 @@ objio_status load_obj(const string& filename, obj_model& obj,
         element.material = (uint8_t)mat_idx;
       }
       // parse vertices
-      skip_whitespace(str);
+      skip_obj_whitespace(str);
       while (!str.empty()) {
         auto vert = obj_vertex{};
-        if (!parse_value(str, vert)) return {filename + ": parse error"};
+        if (!parse_obj_value(str, vert)) return {filename + ": parse error"};
         if (!vert.position) break;
         if (vert.position < 0)
           vert.position = vert_size.position + vert.position + 1;
@@ -2267,11 +2320,11 @@ objio_status load_obj(const string& filename, obj_model& obj,
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
         shape.vertices.push_back(vert);
         element.size += 1;
-        skip_whitespace(str);
+        skip_obj_whitespace(str);
       }
     } else if (cmd == "o" || cmd == "g") {
       if (geom_only) continue;
-      if (!parse_value_or_empty(str, cmd == "o" ? oname : gname))
+      if (!parse_obj_value_or_empty(str, cmd == "o" ? oname : gname))
         return {filename + ": parse error"};
       if (!obj.shapes.back().vertices.empty()) {
         obj.shapes.emplace_back();
@@ -2281,14 +2334,14 @@ objio_status load_obj(const string& filename, obj_model& obj,
       }
     } else if (cmd == "usemtl") {
       if (geom_only) continue;
-      if (!parse_value_or_empty(str, mname))
+      if (!parse_obj_value_or_empty(str, mname))
         return {filename + ": parse error"};
     } else if (cmd == "s") {
       if (geom_only) continue;
     } else if (cmd == "mtllib") {
       if (geom_only) continue;
       auto mtllib = ""s;
-      if (!parse_value(str, mtllib)) return {filename + ": parse error"};
+      if (!parse_obj_value(str, mtllib)) return {filename + ": parse error"};
       if (std::find(mtllibs.begin(), mtllibs.end(), mtllib) == mtllibs.end()) {
         mtllibs.push_back(mtllib);
       }
@@ -2963,39 +3016,39 @@ objio_status read_obj_command(const string& filename, modelio_file& fs,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_obj_comment(str);
+    skip_obj_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return {filename + ": parse error"};
+    if (!parse_obj_value(str, cmd)) return {filename + ": parse error"};
     if (cmd == "") continue;
 
     // possible token values
     if (cmd == "v") {
       command = obj_command::vertex;
-      if (!parse_value(str, value)) return {filename + ": parse error"};
+      if (!parse_obj_value(str, value)) return {filename + ": parse error"};
       vert_size.position += 1;
       return {};
     } else if (cmd == "vn") {
       command = obj_command::normal;
-      if (!parse_value(str, value)) return {filename + ": parse error"};
+      if (!parse_obj_value(str, value)) return {filename + ": parse error"};
       vert_size.normal += 1;
       return {};
     } else if (cmd == "vt") {
       command = obj_command::texcoord;
-      if (!parse_value(str, (vec2f&)value))
+      if (!parse_obj_value(str, (vec2f&)value))
         return {filename + ": parse error"};
       value.z = 0;
       vert_size.texcoord += 1;
       return {};
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       vertices.clear();
-      skip_whitespace(str);
+      skip_obj_whitespace(str);
       while (!str.empty()) {
         auto vert = obj_vertex{};
-        if (!parse_value(str, vert)) return {filename + ": parse error"};
+        if (!parse_obj_value(str, vert)) return {filename + ": parse error"};
         if (!vert.position) break;
         if (vert.position < 0)
           vert.position = vert_size.position + vert.position + 1;
@@ -3003,7 +3056,7 @@ objio_status read_obj_command(const string& filename, modelio_file& fs,
           vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
         if (vert.normal < 0) vert.normal = vert_size.normal + vert.normal + 1;
         vertices.push_back(vert);
-        skip_whitespace(str);
+        skip_obj_whitespace(str);
       }
       if (cmd == "f") command = obj_command::face;
       if (cmd == "l") command = obj_command::str;
@@ -3011,27 +3064,27 @@ objio_status read_obj_command(const string& filename, modelio_file& fs,
       return {};
     } else if (cmd == "o") {
       command = obj_command::object;
-      if (!parse_value_or_empty(str, name))
+      if (!parse_obj_value_or_empty(str, name))
         return {filename + ": parse error"};
       return {};
     } else if (cmd == "usemtl") {
       command = obj_command::usemtl;
-      if (!parse_value_or_empty(str, name))
+      if (!parse_obj_value_or_empty(str, name))
         return {filename + ": parse error"};
       return {};
     } else if (cmd == "g") {
       command = obj_command::group;
-      if (!parse_value_or_empty(str, name))
+      if (!parse_obj_value_or_empty(str, name))
         return {filename + ": parse error"};
       return {};
     } else if (cmd == "s") {
       command = obj_command::smoothing;
-      if (!parse_value_or_empty(str, name))
+      if (!parse_obj_value_or_empty(str, name))
         return {filename + ": parse error"};
       return {};
     } else if (cmd == "mtllib") {
       command = obj_command::mtllib;
-      if (!parse_value(str, name)) return {filename + ": parse error"};
+      if (!parse_obj_value(str, name)) return {filename + ": parse error"};
       return {};
     } else {
       // unused
@@ -3056,13 +3109,13 @@ objio_status read_mtl_command(const string& filename, modelio_file& fs,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_obj_comment(str);
+    skip_obj_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return {filename + ": parse error"};
+    if (!parse_obj_value(str, cmd)) return {filename + ": parse error"};
     if (cmd == "") continue;
 
     // possible token values
@@ -3074,120 +3127,120 @@ objio_status read_mtl_command(const string& filename, modelio_file& fs,
       } else {
         found = true;
       }
-      if (!parse_value(str, material.name))
+      if (!parse_obj_value(str, material.name))
         return {filename + ": parse error"};
     } else if (cmd == "illum") {
-      if (!parse_value(str, material.illum))
+      if (!parse_obj_value(str, material.illum))
         return {filename + ": parse error"};
     } else if (cmd == "Ke") {
-      if (!parse_value(str, material.emission))
+      if (!parse_obj_value(str, material.emission))
         return {filename + ": parse error"};
     } else if (cmd == "Ka") {
-      if (!parse_value(str, material.ambient))
+      if (!parse_obj_value(str, material.ambient))
         return {filename + ": parse error"};
     } else if (cmd == "Kd") {
-      if (!parse_value(str, material.diffuse))
+      if (!parse_obj_value(str, material.diffuse))
         return {filename + ": parse error"};
     } else if (cmd == "Ks") {
-      if (!parse_value(str, material.specular))
+      if (!parse_obj_value(str, material.specular))
         return {filename + ": parse error"};
     } else if (cmd == "Kt") {
-      if (!parse_value(str, material.transmission))
+      if (!parse_obj_value(str, material.transmission))
         return {filename + ": parse error"};
     } else if (cmd == "Tf") {
       material.transmission = vec3f{-1};
-      if (!parse_value(str, material.transmission))
+      if (!parse_obj_value(str, material.transmission))
         return {filename + ": parse error"};
       if (material.transmission.y < 0)
         material.transmission = vec3f{material.transmission.x};
       if (fliptr) material.transmission = 1 - material.transmission;
     } else if (cmd == "Tr") {
-      if (!parse_value(str, material.opacity))
+      if (!parse_obj_value(str, material.opacity))
         return {filename + ": parse error"};
       if (fliptr) material.opacity = 1 - material.opacity;
     } else if (cmd == "Ns") {
-      if (!parse_value(str, material.exponent))
+      if (!parse_obj_value(str, material.exponent))
         return {filename + ": parse error"};
     } else if (cmd == "d") {
-      if (!parse_value(str, material.opacity))
+      if (!parse_obj_value(str, material.opacity))
         return {filename + ": parse error"};
     } else if (cmd == "map_Ke") {
-      if (!parse_value(str, material.emission_map))
+      if (!parse_obj_value(str, material.emission_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Ka") {
-      if (!parse_value(str, material.ambient_map))
+      if (!parse_obj_value(str, material.ambient_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Kd") {
-      if (!parse_value(str, material.diffuse_map))
+      if (!parse_obj_value(str, material.diffuse_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Ks") {
-      if (!parse_value(str, material.specular_map))
+      if (!parse_obj_value(str, material.specular_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Tr") {
-      if (!parse_value(str, material.transmission_map))
+      if (!parse_obj_value(str, material.transmission_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_d" || cmd == "map_Tr") {
-      if (!parse_value(str, material.opacity_map))
+      if (!parse_obj_value(str, material.opacity_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_bump" || cmd == "bump") {
-      if (!parse_value(str, material.bump_map))
+      if (!parse_obj_value(str, material.bump_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_disp" || cmd == "disp") {
-      if (!parse_value(str, material.displacement_map))
+      if (!parse_obj_value(str, material.displacement_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_norm" || cmd == "norm") {
-      if (!parse_value(str, material.normal_map))
+      if (!parse_obj_value(str, material.normal_map))
         return {filename + ": parse error"};
     } else if (cmd == "Pm") {
-      if (!parse_value(str, material.pbr_metallic))
+      if (!parse_obj_value(str, material.pbr_metallic))
         return {filename + ": parse error"};
     } else if (cmd == "Pr") {
-      if (!parse_value(str, material.pbr_roughness))
+      if (!parse_obj_value(str, material.pbr_roughness))
         return {filename + ": parse error"};
     } else if (cmd == "Ps") {
-      if (!parse_value(str, material.pbr_sheen))
+      if (!parse_obj_value(str, material.pbr_sheen))
         return {filename + ": parse error"};
     } else if (cmd == "Pc") {
-      if (!parse_value(str, material.pbr_clearcoat))
+      if (!parse_obj_value(str, material.pbr_clearcoat))
         return {filename + ": parse error"};
     } else if (cmd == "Pcr") {
-      if (!parse_value(str, material.pbr_coatroughness))
+      if (!parse_obj_value(str, material.pbr_coatroughness))
         return {filename + ": parse error"};
     } else if (cmd == "map_Pm") {
-      if (!parse_value(str, material.pbr_metallic_map))
+      if (!parse_obj_value(str, material.pbr_metallic_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Pr") {
-      if (!parse_value(str, material.pbr_roughness_map))
+      if (!parse_obj_value(str, material.pbr_roughness_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Ps") {
-      if (!parse_value(str, material.pbr_sheen_map))
+      if (!parse_obj_value(str, material.pbr_sheen_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Pc") {
-      if (!parse_value(str, material.pbr_clearcoat_map))
+      if (!parse_obj_value(str, material.pbr_clearcoat_map))
         return {filename + ": parse error"};
     } else if (cmd == "map_Pcr") {
-      if (!parse_value(str, material.pbr_coatroughness_map))
+      if (!parse_obj_value(str, material.pbr_coatroughness_map))
         return {filename + ": parse error"};
     } else if (cmd == "Vt") {
-      if (!parse_value(str, material.vol_transmission))
+      if (!parse_obj_value(str, material.vol_transmission))
         return {filename + ": parse error"};
     } else if (cmd == "Vp") {
-      if (!parse_value(str, material.vol_meanfreepath))
+      if (!parse_obj_value(str, material.vol_meanfreepath))
         return {filename + ": parse error"};
     } else if (cmd == "Ve") {
-      if (!parse_value(str, material.vol_emission))
+      if (!parse_obj_value(str, material.vol_emission))
         return {filename + ": parse error"};
     } else if (cmd == "Vs") {
-      if (!parse_value(str, material.vol_scattering))
+      if (!parse_obj_value(str, material.vol_scattering))
         return {filename + ": parse error"};
     } else if (cmd == "Vg") {
-      if (!parse_value(str, material.vol_anisotropy))
+      if (!parse_obj_value(str, material.vol_anisotropy))
         return {filename + ": parse error"};
     } else if (cmd == "Vr") {
-      if (!parse_value(str, material.vol_scale))
+      if (!parse_obj_value(str, material.vol_scale))
         return {filename + ": parse error"};
     } else if (cmd == "map_Vs") {
-      if (!parse_value(str, material.vol_scattering_map))
+      if (!parse_obj_value(str, material.vol_scattering_map))
         return {filename + ": parse error"};
     } else {
       continue;
@@ -3216,51 +3269,51 @@ objio_status read_objx_command(const string& filename, modelio_file& fs,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
-    skip_whitespace(str);
+    remove_obj_comment(str);
+    skip_obj_whitespace(str);
     if (str.empty()) continue;
 
     // get command
     auto cmd = ""s;
-    if (!parse_value(str, cmd)) return {filename + ": parse error"};
+    if (!parse_obj_value(str, cmd)) return {filename + ": parse error"};
     if (cmd == "") continue;
 
     // read values
     if (cmd == "c") {
       command = objx_command::camera;
-      if (!parse_value(str, camera.name))
+      if (!parse_obj_value(str, camera.name))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.ortho))
+      if (!parse_obj_value(str, camera.ortho))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.width))
+      if (!parse_obj_value(str, camera.width))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.height))
+      if (!parse_obj_value(str, camera.height))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.lens))
+      if (!parse_obj_value(str, camera.lens))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.focus))
+      if (!parse_obj_value(str, camera.focus))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.aperture))
+      if (!parse_obj_value(str, camera.aperture))
         return {filename + ": parse error"};
-      if (!parse_value(str, camera.frame))
+      if (!parse_obj_value(str, camera.frame))
         return {filename + ": parse error"};
       return {};
     } else if (cmd == "e") {
       command = objx_command::environment;
-      if (!parse_value(str, environment.name))
+      if (!parse_obj_value(str, environment.name))
         return {filename + ": parse error"};
-      if (!parse_value(str, environment.emission))
+      if (!parse_obj_value(str, environment.emission))
         return {filename + ": parse error"};
-      if (!parse_value(str, environment.emission_map))
+      if (!parse_obj_value(str, environment.emission_map))
         return {filename + ": parse error"};
-      if (!parse_value(str, environment.frame))
+      if (!parse_obj_value(str, environment.frame))
         return {filename + ": parse error"};
       return {};
     } else if (cmd == "i") {
       command = objx_command::instance;
-      if (!parse_value(str, instance.object))
+      if (!parse_obj_value(str, instance.object))
         return {filename + ": parse error"};
-      if (!parse_value(str, instance.frame))
+      if (!parse_obj_value(str, instance.frame))
         return {filename + ": parse error"};
       return {};
     }
@@ -3597,6 +3650,9 @@ static bool is_pbrt_newline(char c) { return c == '\r' || c == '\n'; }
 static bool is_pbrt_space(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
+static void skip_pbrt_whitespace(string_view& str) {
+  while (!str.empty() && is_pbrt_space(str.front())) str.remove_prefix(1);
+}
 
 static void remove_pbrt_comment(string_view& str, char comment_char = '#') {
   while (!str.empty() && is_pbrt_newline(str.back())) str.remove_suffix(1);
@@ -3621,7 +3677,7 @@ static bool read_pbrt_cmdline(modelio_file& fs, string& cmd, int& line_num) {
     line_num += 1;
     auto line = string_view{buffer};
     remove_pbrt_comment(line);
-    skip_whitespace(line);
+    skip_pbrt_whitespace(line);
     if (line.empty()) continue;
 
     // check if command
@@ -3731,7 +3787,7 @@ namespace yocto {
 // parse a quoted string
 [[nodiscard]] static bool parse_pbrt_value(
     string_view& str, string_view& value) {
-  skip_whitespace(str);
+  skip_pbrt_whitespace(str);
   if (str.front() != '"') return {};
   str.remove_prefix(1);
   if (str.empty()) return {};
@@ -3755,7 +3811,7 @@ namespace yocto {
 
 // parse a quoted string
 [[nodiscard]] static bool parse_pbrt_command(string_view& str, string& value) {
-  skip_whitespace(str);
+  skip_pbrt_whitespace(str);
   if (!isalpha((int)str.front())) return {};
   auto pos = str.find_first_not_of(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
@@ -3771,7 +3827,7 @@ namespace yocto {
 
 // parse a number
 [[nodiscard]] static bool parse_pbrt_value(string_view& str, float& value) {
-  skip_whitespace(str);
+  skip_pbrt_whitespace(str);
   if (str.empty()) return false;
   auto next = (char*)nullptr;
   value     = strtof(str.data(), &next);
@@ -3782,7 +3838,7 @@ namespace yocto {
 
 // parse a number
 [[nodiscard]] static bool parse_pbrt_value(string_view& str, int& value) {
-  skip_whitespace(str);
+  skip_pbrt_whitespace(str);
   if (str.empty()) return false;
   auto next = (char*)nullptr;
   value     = strtol(str.data(), &next, 10);
@@ -3826,13 +3882,13 @@ template <typename T, size_t N>
 // parse pbrt value with optional parens
 template <typename T>
 [[nodiscard]] static bool parse_pbrt_param(string_view& str, T& value) {
-  skip_whitespace(str);
+  skip_pbrt_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
   if (!parse_pbrt_value(str, value)) return false;
   if (!str.data()) return {};
   if (parens) {
-    skip_whitespace(str);
+    skip_pbrt_whitespace(str);
     if (!str.empty() && str.front() == '[') return {};
     str.remove_prefix(1);
   }
@@ -3948,17 +4004,17 @@ static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
   auto parse_pbrt_pvalues = [](string_view& str, auto& value,
                                 auto& values) -> bool {
     values.clear();
-    skip_whitespace(str);
+    skip_pbrt_whitespace(str);
     if (str.empty()) throw std::runtime_error("bad pbrt value");
     if (str.front() == '[') {
       str.remove_prefix(1);
-      skip_whitespace(str);
+      skip_pbrt_whitespace(str);
       if (str.empty()) throw std::runtime_error("bad pbrt value");
       while (!str.empty()) {
         auto& val = values.empty() ? value : values.emplace_back();
         if (!parse_pbrt_value(str, val)) return false;
         if (!str.data()) return {};
-        skip_whitespace(str);
+        skip_pbrt_whitespace(str);
         if (str.empty()) break;
         if (str.front() == ']') break;
         if (values.empty()) values.push_back(value);
@@ -3973,12 +4029,12 @@ static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
   };
 
   values.clear();
-  skip_whitespace(str);
+  skip_pbrt_whitespace(str);
   while (!str.empty()) {
     auto& value = values.emplace_back();
     auto  type  = ""s;
     if (!parse_pbrt_nametype(str, value.name, type)) return false;
-    skip_whitespace(str);
+    skip_pbrt_whitespace(str);
     if (str.empty()) throw std::runtime_error("expected value");
     if (type == "float") {
       value.type = pbrt_value_type::real;
@@ -4036,12 +4092,12 @@ static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
     } else if (type == "spectrum") {
       auto is_string = false;
       auto str1      = str;
-      skip_whitespace(str1);
+      skip_pbrt_whitespace(str1);
       if (!str1.empty() && str1.front() == '"')
         is_string = true;
       else if (!str1.empty() && str1.front() == '[') {
         str1.remove_prefix(1);
-        skip_whitespace(str1);
+        skip_pbrt_whitespace(str1);
         if (!str1.empty() && str1.front() == '"') is_string = true;
       }
       if (is_string) {
@@ -4077,7 +4133,7 @@ static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
     } else {
       return false;
     }
-    skip_whitespace(str);
+    skip_pbrt_whitespace(str);
   }
   return true;
 }
@@ -6762,6 +6818,9 @@ static  bool is_yaml_alpha(char c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
+static  void skip_yaml_whitespace(string_view& str) {
+  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
+}
 static  void trim_yaml_whitespace(string_view& str) {
   while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
   while (!str.empty() && is_yaml_space(str.back())) str.remove_suffix(1);
@@ -6784,7 +6843,7 @@ static  void remove_yaml_comment(
 }
 
 static  bool parse_yaml_varname(string_view& str, string_view& value) {
-  skip_whitespace(str);
+  skip_yaml_whitespace(str);
   if (str.empty()) return false;
   if (!is_yaml_alpha(str.front())) return false;
   auto pos = 0;
@@ -6805,7 +6864,7 @@ static  bool parse_yaml_varname(string_view& str, string& value) {
 }
 
 static bool parse_yaml_value(string_view& str, string_view& value) {
-  skip_whitespace(str);
+  skip_yaml_whitespace(str);
   if (str.empty()) return false;
   if (str.front() != '"') {
     auto cpy = str;
@@ -6835,7 +6894,7 @@ static bool parse_yaml_value(string_view& str, string& value) {
   return true;
 }
 static bool parse_yaml_value(string_view& str, int& value) {
-  skip_whitespace(str);
+  skip_yaml_whitespace(str);
   char* end = nullptr;
   value     = (int)strtol(str.data(), &end, 10);
   if (str.data() == end) return false;
@@ -6843,7 +6902,7 @@ static bool parse_yaml_value(string_view& str, int& value) {
   return true;
 }
 static bool parse_yaml_value(string_view& str, float& value) {
-  skip_whitespace(str);
+  skip_yaml_whitespace(str);
   char* end = nullptr;
   value     = strtof(str.data(), &end);
   if (str.data() == end) return false;
@@ -6851,7 +6910,7 @@ static bool parse_yaml_value(string_view& str, float& value) {
   return true;
 }
 static bool parse_yaml_value(string_view& str, double& value) {
-  skip_whitespace(str);
+  skip_yaml_whitespace(str);
   char* end = nullptr;
   value     = strtod(str.data(), &end);
   if (str.data() == end) return false;
@@ -6947,7 +7006,7 @@ static bool parse_yaml_value(string_view& str, yaml_value& value) {
     value.type   = yaml_value_type::array;
     value.number = 0;
     while (!str.empty()) {
-      skip_whitespace(str);
+      skip_yaml_whitespace(str);
       if (str.empty()) return false;
       if (str.front() == ']') {
         str.remove_prefix(1);
@@ -6956,7 +7015,7 @@ static bool parse_yaml_value(string_view& str, yaml_value& value) {
       if (value.number >= 16) return false;
       parse_yaml_value(str, value.array_[(int)value.number]);
       value.number += 1;
-      skip_whitespace(str);
+      skip_yaml_whitespace(str);
       if (str.front() == ',') {
         str.remove_prefix(1);
         continue;
@@ -6979,7 +7038,7 @@ static bool parse_yaml_value(string_view& str, yaml_value& value) {
       value.boolean = value.string_ == "true";
     }
   }
-  skip_whitespace(str);
+  skip_yaml_whitespace(str);
   if (!str.empty() && !is_yaml_whitespace(str)) return false;
   return true;
 }
@@ -7005,19 +7064,19 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
     if (is_yaml_space(line.front())) {
       // indented property
       if (group == "") return {filename + ": parse error"};
-      skip_whitespace(line);
+      skip_yaml_whitespace(line);
       if (line.empty()) return {filename + ": parse error"};
       if (line.front() == '-') {
         auto& element = yaml.elements.emplace_back();
         element.name  = group;
         line.remove_prefix(1);
-        skip_whitespace(line);
+        skip_yaml_whitespace(line);
       } else if (yaml.elements.empty() || yaml.elements.back().name != group) {
         auto& element = yaml.elements.emplace_back();
         element.name  = group;
       }
       if (!parse_yaml_varname(line, key)) return {filename + ": parse error"};
-      skip_whitespace(line);
+      skip_yaml_whitespace(line);
       if (line.empty() || line.front() != ':')
         return {filename + ": parse error"};
       line.remove_prefix(1);
@@ -7026,7 +7085,7 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
     } else if (is_yaml_alpha(line.front())) {
       // new group
       if (!parse_yaml_varname(line, key)) return {filename + ": parse error"};
-      skip_whitespace(line);
+      skip_yaml_whitespace(line);
       if (line.empty() || line.front() != ':')
         return {filename + ": parse error"};
       line.remove_prefix(1);
@@ -7174,17 +7233,17 @@ yamlio_status read_yaml_property(const string& filename, modelio_file& fs,
     if (is_yaml_space(str.front())) {
       // indented property
       if (group == "") return {filename + ": parse error"};
-      skip_whitespace(str);
+      skip_yaml_whitespace(str);
       if (str.empty()) return {filename + ": parse error"};
       if (str.front() == '-') {
         newobj = true;
         str.remove_prefix(1);
-        skip_whitespace(str);
+        skip_yaml_whitespace(str);
       } else {
         newobj = false;
       }
       if (!parse_yaml_varname(str, key)) return {filename + ": parse error"};
-      skip_whitespace(str);
+      skip_yaml_whitespace(str);
       if (str.empty() || str.front() != ':')
         return {filename + ": parse error"};
       str.remove_prefix(1);
@@ -7193,7 +7252,7 @@ yamlio_status read_yaml_property(const string& filename, modelio_file& fs,
     } else if (is_yaml_alpha(str.front())) {
       // new group
       if (!parse_yaml_varname(str, key)) return {filename + ": parse error"};
-      skip_whitespace(str);
+      skip_yaml_whitespace(str);
       if (str.empty() || str.front() != ':')
         return {filename + ": parse error"};
       str.remove_prefix(1);
