@@ -2940,16 +2940,16 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-void trace_sample(image<vec4f>& image, trace_state& state,
+vec4f trace_sample(trace_state& state,
     const trace_scene& scene, const vec2i& ij, 
     const trace_params& params) {
   auto& camera  = scene.cameras.at(params.camera);
   auto  sampler = get_trace_sampler_func(params);
   auto& pixel = state[ij];
   auto ray = params.tentfilter
-                  ? sample_camera_tent(camera, ij, image.size(),
+                  ? sample_camera_tent(camera, ij, state.size(),
                         rand2f(pixel.rng), rand2f(pixel.rng))
-                  : sample_camera(camera, ij, image.size(),
+                  : sample_camera(camera, ij, state.size(),
                         rand2f(pixel.rng), rand2f(pixel.rng));
     auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
     if (!hit) {
@@ -2966,7 +2966,7 @@ void trace_sample(image<vec4f>& image, trace_state& state,
     pixel.radiance += radiance;
     pixel.hits += hit ? 1 : 0;
     pixel.samples += 1;
-    image[ij] = {pixel.hits ? pixel.radiance / pixel.hits : zero3f, (float)pixel.hits / (float)pixel.samples};
+    return {pixel.hits ? pixel.radiance / pixel.hits : zero3f, (float)pixel.hits / (float)pixel.samples};
 }
 
 // Trace a block of samples

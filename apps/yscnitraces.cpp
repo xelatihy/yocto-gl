@@ -261,7 +261,7 @@ void reset_display(app_state& app) {
       parallel_for(app.render.size(),
         [&app](const vec2i& ij) {
           if(app.render_stop) return;
-          trace_sample(app.render, app.state, app.scene, ij, app.trace_prms);
+          app.render[ij] = trace_sample(app.state, app.scene, ij, app.trace_prms);
           app.display[ij] = tonemap(app.render[ij], app.tonemap_prms);
         });
     }
