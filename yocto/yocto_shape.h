@@ -92,11 +92,12 @@ vector<vec3f> compute_normals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
 vector<vec3f> compute_normals(
     const vector<vec4i>& quads, const vector<vec3f>& positions);
-void compute_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
+// Update normals and tangents
+void update_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
     const vector<vec3f>& positions);
-void compute_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
+void update_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
     const vector<vec3f>& positions);
-void compute_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+void update_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
     const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
@@ -107,25 +108,23 @@ void compute_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
 vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords);
-void          compute_tangent_spaces(vector<vec4f>& tangents,
-             const vector<vec3i>& triangles, const vector<vec3f>& positions,
-             const vector<vec3f>& normals, const vector<vec2f>& texcoords);
 
 // Apply skinning to vertex position and normals.
 pair<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms);
-void compute_skinning(vector<vec3f>& skinned_positions,
-    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
 pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
-void compute_matrix_skinning(vector<vec3f>& skinned_positions,
+// Update skinning
+void udpate_skinning(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms);
+void update_matrix_skinning(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<mat4f>& xforms);
@@ -139,17 +138,12 @@ namespace yocto {
 
 // Flip vertex normals
 vector<vec3f> flip_normals(const vector<vec3f>& normals);
-void flip_normals(vector<vec3f>& flipped, const vector<vec3f>& normals);
 // Flip face orientation
 vector<vec3i> flip_triangles(const vector<vec3i>& triangles);
 vector<vec4i> flip_quads(const vector<vec4i>& quads);
-void flip_triangles(vector<vec3i>& flipped, const vector<vec3i>& triangles);
-void flip_quads(vector<vec4i>& flipped, const vector<vec4i>& quads);
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
 vector<vec3f> align_vertices(
     const vector<vec3f>& positions, const vec3i& alignment);
-void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
-    const vec3i& alignment);
 
 }  // namespace yocto
 

@@ -547,8 +547,7 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
         count[qpos[i]] += 1;
       }
     }
-    auto normals = vector<vec3f>{shape.positions.size()};
-    compute_normals(normals, shape.quadspos, shape.positions);
+    auto normals = compute_normals(shape.quadspos, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       subdiv.positions[vid] += normals[vid] * offset[vid] / count[vid];
     }
