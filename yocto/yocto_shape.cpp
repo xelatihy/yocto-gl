@@ -376,13 +376,12 @@ vector<vec2i> get_edges(const vector<vec4i>& quads) {
 }
 
 // Build adjacencies between faces (sorted counter-clockwise)
-void face_adjacencies(
-    vector<vec3i>& adjacencies, const vector<vec3i>& triangles) {
+vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
   auto get_edge = [](const vec3i& triangle, int i) -> vec2i {
     auto x = triangle[i], y = triangle[i < 2 ? i + 1 : 0];
     return x < y ? vec2i{x, y} : vec2i{y, x};
   };
-  adjacencies.assign(triangles.size(), vec3i{-1, -1, -1});
+  auto adjacencies = vector<vec3i>{triangles.size(), vec3i{-1, -1, -1}};
   auto edge_map = unordered_map<vec2i, int>();
   edge_map.reserve((size_t)(triangles.size() * 1.5));
   for (int i = 0; i < triangles.size(); ++i) {
@@ -404,15 +403,11 @@ void face_adjacencies(
       }
     }
   }
-}
-vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
-  auto adjacencies = vector<vec3i>{};
-  face_adjacencies(adjacencies, triangles);
   return adjacencies;
 }
 
 // Build adjacencies between vertices (sorted counter-clockwise)
-void vertex_adjacencies(vector<vector<int>>& result,
+vector<vector<int>> vertex_adjacencies(
     const vector<vec3i>& triangles, const vector<vec3i>& adjacencies) {
   auto find_index = [](const vec3i& v, int x) {
     if (v.x == x) return 0;
@@ -433,7 +428,7 @@ void vertex_adjacencies(vector<vector<int>>& result,
   }
 
   // Init result.
-  result.assign(num_vertices, {});
+  auto result = vector<vector<int>>(num_vertices);
 
   // For each vertex, loop around it and build its adjacency.
   for (int i = 0; i < num_vertices; ++i) {
@@ -451,11 +446,7 @@ void vertex_adjacencies(vector<vector<int>>& result,
       if (face == first_face) break;
     }
   }
-}
-vector<vector<int>> vertex_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies) {
-  auto result = vector<vector<int>>{};
-  vertex_adjacencies(result, triangles, adjacencies);
+
   return result;
 }
 

@@ -180,13 +180,9 @@ vector<vec2i> get_edges(const vector<vec4i>& quads);
 
 // Build adjacencies between faces (sorted counter-clockwise)
 vector<vec3i> face_adjacencies(const vector<vec3i>& triangles);
-void          face_adjacencies(
-             vector<vec3i>& adjacencies, const vector<vec3i>& triangles);
 
 // Build adjacencies between vertices (sorted counter-clockwise)
 vector<vector<int>> vertex_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
-void vertex_adjacencies(vector<vector<int>>& result,
     const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
 
 // Compute boundaries as a list of loops (sorted counter-clockwise)
