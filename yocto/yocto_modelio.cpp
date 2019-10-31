@@ -102,9 +102,19 @@ static string get_basename(const string& filename) {
 }
 
 // Replaces extensions
-static string replace_extension(
-    const string& filename, const string& ext) {
+static string replace_extension(const string& filename, const string& ext) {
   return get_noextension(filename) + ext;
+}
+
+// Check if a file can be opened for reading.
+static bool exists_file(const string& filename) {
+  auto fs = fopen(filename.c_str(), "r");
+  if (fs) {
+    fclose(fs);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 }  // namespace yocto
@@ -115,36 +125,36 @@ static string replace_extension(
 namespace yocto {
 
 // copnstrucyor and destructors
-ply_file::ply_file(ply_file&& other) {
+modelio_file::modelio_file(modelio_file&& other) {
   this->fs       = other.fs;
   this->filename = other.filename;
   other.fs       = nullptr;
 }
-ply_file::~ply_file() {
+modelio_file::~modelio_file() {
   if (fs) fclose(fs);
   fs = nullptr;
 }
 
 // Opens a file returing a handle with RIIA
-void open_ply(ply_file& fs, const string& filename, const string& mode) {
-  close_ply(fs);
+void open_file(modelio_file& fs, const string& filename, const string& mode) {
+  close_file(fs);
   fs.filename = filename;
   fs.mode     = mode;
   fs.fs       = fopen(filename.c_str(), mode.c_str());
   if (!fs.fs) throw std::runtime_error("could not open file " + filename);
 }
-ply_file open_ply(const string& filename, const string& mode) {
-  auto fs = ply_file{};
-  open_ply(fs, filename, mode);
+modelio_file open_file(const string& filename, const string& mode) {
+  auto fs = modelio_file{};
+  open_file(fs, filename, mode);
   return fs;
 }
-void close_ply(ply_file& fs) {
+void close_file(modelio_file& fs) {
   if (fs.fs) fclose(fs.fs);
   fs.fs = nullptr;
 }
 
 // Read a line
-bool read_ply_line(ply_file& fs, char* buffer, size_t size) {
+bool read_ply_line(modelio_file& fs, char* buffer, size_t size) {
   if (fgets(buffer, size, fs.fs)) {
     fs.linenum += 1;
     return true;
@@ -168,21 +178,21 @@ static T swap_ply_endian(T value) {
 }
 
 template <typename T>
-bool write_ply_value(ply_file& fs, const T& value) {
+bool write_ply_value(modelio_file& fs, const T& value) {
   return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
 }
 template <typename T>
-bool write_ply_value(ply_file& fs, const T& value_, bool big_endian) {
+bool write_ply_value(modelio_file& fs, const T& value_, bool big_endian) {
   auto value = big_endian ? swap_ply_endian(value_) : value_;
   return fwrite(&value, sizeof(value), 1, fs.fs) == 1;
 }
 
 template <typename T>
-bool read_ply_value(ply_file& fs, T& value) {
+bool read_ply_value(modelio_file& fs, T& value) {
   return fread(&value, sizeof(value), 1, fs.fs) == 1;
 }
 template <typename T>
-bool read_ply_value(ply_file& fs, T& value, bool big_endian) {
+bool read_ply_value(modelio_file& fs, T& value, bool big_endian) {
   auto ok = fread(&value, sizeof(value), 1, fs.fs) == 1;
   if (big_endian) value = swap_ply_endian(value);
   return ok;
@@ -409,13 +419,13 @@ static void format_ply_values(
 
 template <typename... Args>
 static bool format_ply_values(
-    ply_file& fs, const string& fmt, const Args&... args) {
+    modelio_file& fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_ply_values(str, fmt, args...);
   return fputs(str.c_str(), fs.fs) >= 0;
 }
 template <typename T>
-static bool format_ply_value(ply_file& fs, const T& value) {
+static bool format_ply_value(modelio_file& fs, const T& value) {
   auto str = ""s;
   format_ply_value(str, value);
   return fputs(str.c_str(), fs.fs) >= 0;
@@ -450,7 +460,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
   auto end_header = false;
 
   // open file
-  auto fs = open_ply(filename, "rb");
+  auto fs = open_file(filename, "rb");
   if (!fs) return {filename + ": file not found"};
 
   // read header ---------------------------------------------
@@ -687,7 +697,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
 
 // Save ply
 plyio_status save_ply(const string& filename, const ply_model& ply) {
-  auto fs = open_ply(filename, "wb");
+  auto fs = open_file(filename, "wb");
   if (!fs) return {filename + ": file not found"};
 
   // ply type names
@@ -1275,7 +1285,7 @@ void add_ply_points(ply_model& ply, const vector<int>& values) {
 // get ply value either ascii or binary
 template <typename T, typename VT>
 [[nodiscard]] static bool read_ply_prop(
-    ply_file& fs, VT& value, bool big_endian) {
+    modelio_file& fs, VT& value, bool big_endian) {
   auto tvalue = T{};
   auto ok     = read_ply_value(fs, tvalue, big_endian);
   value       = (VT)tvalue;
@@ -1283,7 +1293,7 @@ template <typename T, typename VT>
 }
 template <typename VT>
 [[nodiscard]] static bool read_ply_prop(
-    ply_file& fs, ply_type type, VT& value, bool big_endian) {
+    modelio_file& fs, ply_type type, VT& value, bool big_endian) {
   switch (type) {
     case ply_type::i8: return read_ply_prop<int8_t>(fs, value, big_endian);
     case ply_type::i16: return read_ply_prop<int16_t>(fs, value, big_endian);
@@ -1323,7 +1333,7 @@ static bool parse_ply_prop(string_view& str, ply_type type, VT& value) {
 }
 
 // Load ply data
-plyio_status read_ply_header(const string& filename, ply_file& fs,
+plyio_status read_ply_header(const string& filename, modelio_file& fs,
     ply_format& format, vector<ply_element>& elements,
     vector<string>& comments) {
   // ply type names
@@ -1430,7 +1440,7 @@ plyio_status read_ply_header(const string& filename, ply_file& fs,
 }
 
 template <typename VT, typename LT>
-static plyio_status read_ply_value_generic(const string& filename, ply_file& fs,
+static plyio_status read_ply_value_generic(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<VT>& values,
     vector<vector<LT>>& lists) {
   // prepare properties
@@ -1490,7 +1500,7 @@ static plyio_status read_ply_value_generic(const string& filename, ply_file& fs,
 }
 
 template <typename VT>
-static bool format_ply_prop(ply_file& fs, ply_type type, VT value) {
+static bool format_ply_prop(modelio_file& fs, ply_type type, VT value) {
   switch (type) {
     case ply_type::i8: return format_ply_value(fs, (int8_t)value);
     case ply_type::i16: return format_ply_value(fs, (int16_t)value);
@@ -1507,7 +1517,7 @@ static bool format_ply_prop(ply_file& fs, ply_type type, VT value) {
 
 template <typename VT>
 static bool write_ply_prop(
-    ply_file& fs, ply_type type, VT value, bool big_endian) {
+    modelio_file& fs, ply_type type, VT value, bool big_endian) {
   switch (type) {
     case ply_type::i8: return write_ply_value(fs, (int8_t)value, big_endian);
     case ply_type::i16: return write_ply_value(fs, (int16_t)value, big_endian);
@@ -1524,7 +1534,7 @@ static bool write_ply_prop(
 }
 
 // Write Ply functions
-plyio_status write_ply_header(const string& filename, ply_file& fs,
+plyio_status write_ply_header(const string& filename, modelio_file& fs,
     ply_format format, const vector<ply_element>& elements,
     const vector<string>& comments) {
   // ply type names
@@ -1577,7 +1587,7 @@ plyio_status write_ply_header(const string& filename, ply_file& fs,
 
 template <typename VT, typename LT>
 static plyio_status write_ply_value_generic(const string& filename,
-    ply_file& fs, ply_format format, const ply_element& element,
+    modelio_file& fs, ply_format format, const ply_element& element,
     vector<VT>& values, vector<vector<LT>>& lists) {
   if (format == ply_format::ascii) {
     for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
@@ -1620,23 +1630,23 @@ static plyio_status write_ply_value_generic(const string& filename,
   return {};
 }
 
-plyio_status write_ply_value(const string& filename, ply_file& fs,
+plyio_status write_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists) {
   return write_ply_value_generic(filename, fs, format, element, values, lists);
 }
-plyio_status write_ply_value(const string& filename, ply_file& fs,
+plyio_status write_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists) {
   return write_ply_value_generic(filename, fs, format, element, values, lists);
 }
 
-plyio_status read_ply_value(const string& filename, ply_file& fs,
+plyio_status read_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists) {
   return read_ply_value_generic(filename, fs, format, element, values, lists);
 }
-plyio_status read_ply_value(const string& filename, ply_file& fs,
+plyio_status read_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists) {
   return read_ply_value_generic(filename, fs, format, element, values, lists);

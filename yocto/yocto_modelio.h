@@ -93,6 +93,35 @@
 #include <algorithm>
 
 // -----------------------------------------------------------------------------
+// FILE HANDLING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// A class that wraps a C file ti handle safe opening/closgin with RIIA.
+struct modelio_file {
+  modelio_file() {}
+  modelio_file(modelio_file&& other);
+  modelio_file(const modelio_file&) = delete;
+  modelio_file& operator=(const modelio_file&) = delete;
+  ~modelio_file();
+
+  operator bool() const { return (bool)fs; }
+
+  FILE*  fs       = nullptr;
+  string filename = "";
+  string mode     = "rt";
+  int    linenum  = 0;
+};
+
+// open a file
+modelio_file open_file(const string& filename, const string& mode = "rt");
+void     open_file(
+        modelio_file& fs, const string& filename, const string& mode = "rt");
+void close_file(modelio_file& fs);
+
+}
+
+// -----------------------------------------------------------------------------
 // SIMPLE PLY LOADER AND WRITER
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -240,47 +269,25 @@ void add_ply_points(ply_model& ply, const vector<int>& values);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// A class that wraps a C file ti handle safe opening/closgin with RIIA.
-struct ply_file {
-  ply_file() {}
-  ply_file(ply_file&& other);
-  ply_file(const ply_file&) = delete;
-  ply_file& operator=(const ply_file&) = delete;
-  ~ply_file();
-
-  operator bool() const { return (bool)fs; }
-
-  FILE*  fs       = nullptr;
-  string filename = "";
-  string mode     = "rt";
-  int    linenum  = 0;
-};
-
-// open a file
-ply_file open_ply(const string& filename, const string& mode = "rt");
-void     open_ply(
-        ply_file& fs, const string& filename, const string& mode = "rt");
-void close_ply(ply_file& fs);
-
 // Read Ply functions
-plyio_status read_ply_header(const string& filename, ply_file& fs,
+plyio_status read_ply_header(const string& filename, modelio_file& fs,
     ply_format& format, vector<ply_element>& elements,
     vector<string>& comments);
-plyio_status read_ply_value(const string& filename, ply_file& fs,
+plyio_status read_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists);
-plyio_status read_ply_value(const string& filename, ply_file& fs,
+plyio_status read_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists);
 
 // Write Ply functions
-plyio_status write_ply_header(const string& filename, ply_file& fs,
+plyio_status write_ply_header(const string& filename, modelio_file& fs,
     ply_format format, const vector<ply_element>& elements,
     const vector<string>& comments);
-plyio_status write_ply_value(const string& filename, ply_file& fs,
+plyio_status write_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists);
-plyio_status write_ply_value(const string& filename, ply_file& fs,
+plyio_status write_ply_value(const string& filename, modelio_file& fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists);
 
