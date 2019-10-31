@@ -719,11 +719,11 @@ image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size_) {
   return res_img;
 }
 
-void image_difference(image<vec4f>& diff, const image<vec4f>& a,
+image<vec4f> image_difference(const image<vec4f>& a,
     const image<vec4f>& b, bool display) {
   if (a.size() != b.size())
     throw std::invalid_argument("image haev different sizes");
-  diff.resize(a.size());
+  auto diff = image<vec4f>{a.size()};
   for (auto i = 0llu; i < diff.count(); i++) diff[i] = abs(a[i] - b[i]);
   if (display) {
     for (auto i = 0llu; i < diff.count(); i++) {
@@ -731,11 +731,6 @@ void image_difference(image<vec4f>& diff, const image<vec4f>& a,
       diff[i] = {d, d, d, 1};
     }
   }
-}
-image<vec4f> image_difference(
-    const image<vec4f>& a, const image<vec4f>& b, bool display) {
-  auto diff = image<vec4f>{a.size()};
-  image_difference(diff, a, b, display);
   return diff;
 }
 
