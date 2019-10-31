@@ -135,7 +135,6 @@ int main(int argc, const char* argv[]) {
   auto save_batch   = false;
   auto add_skyenv   = false;
   auto validate     = false;
-  auto logo         = false;
   auto imfilename   = "out.hdr"s;
   auto filename     = "scene.json"s;
 
@@ -185,7 +184,6 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--add-skyenv", add_skyenv, "Add sky envmap");
   add_cli_option(cli, "--output-image,-o", imfilename, "Image filename");
   add_cli_option(cli, "--validate", validate, "Validate scene");
-  add_cli_option(cli, "--logo/--no-logo", logo, "Whether to append a logo");
   add_cli_option(cli, "scene", filename, "Scene filename", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 
@@ -242,39 +240,21 @@ int main(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(trace_prms.samples));
-    trace_samples(render, state, scene, trace_prms);
+    render           = trace_samples(state, scene, trace_prms);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
-      try {
-        if (is_hdr_filename(outfilename)) {
-          save_image(outfilename, logo ? add_logo(render) : render);
-        } else {
-          save_imageb(
-              outfilename, logo ? add_logo(tonemap_imageb(render, tonemap_prms))
-                                : tonemap_imageb(render, tonemap_prms));
-        }
-      } catch (const std::exception& e) {
-        print_fatal(e.what());
-      }
+      if (auto ret = save_image_tonemapped(outfilename, render, tonemap_prms); !ret)
+        print_fatal(ret.error);
     }
   }
 
   // save image
-  try {
-    auto save_timer = print_timed("saving image");
-    if (is_hdr_filename(imfilename)) {
-      save_image(imfilename, logo ? add_logo(render) : render);
-    } else {
-      save_imageb(
-          imfilename, logo ? add_logo(tonemap_imageb(render, tonemap_prms))
-                           : tonemap_imageb(render, tonemap_prms));
-    }
-    print_elapsed(save_timer);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
-  }
+  auto save_timer = print_timed("saving image");
+  if (auto ret = save_image_tonemapped(imfilename, render, tonemap_prms); !ret)
+    print_fatal(ret.error);
+  print_elapsed(save_timer);
 
   // done
   return 0;

@@ -3047,8 +3047,9 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-int trace_samples(image<vec4f>& render, trace_state& state,
+image<vec4f> trace_samples(trace_state& state,
     const trace_scene& scene, const trace_params& params) {
+  auto render = image<vec4f>{state.size()};
   auto current_sample = state[zero2i].samples;
   auto num_samples = min(params.batch, params.samples - current_sample);
   if (params.noparallel) {
@@ -3067,7 +3068,7 @@ int trace_samples(image<vec4f>& render, trace_state& state,
           }
         });
   }
-  return current_sample + num_samples;
+  return render;
 }
 
 }  // namespace yocto

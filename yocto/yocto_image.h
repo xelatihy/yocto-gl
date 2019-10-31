@@ -197,13 +197,16 @@ struct imageio_status {
   explicit operator bool() const { return error.empty(); }
 };
 
-// Loads/saves a 4 channels float/byte image in linear color space.
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
 image<vec4f>   load_image(const string& filename);
 imageio_status load_image(const string& filename, image<vec4f>& img);
 imageio_status save_image(const string& filename, const image<vec4f>& img);
 image<vec4b>   load_imageb(const string& filename);
 imageio_status load_imageb(const string& filename, image<vec4b>& img);
 imageio_status save_imageb(const string& filename, const image<vec4b>& img);
+
+// Loads/saves a 4 channels float/byte image tonemapped
+imageio_status save_image_tonemapped(const string& filename, const image<vec4f>& img, const tonemap_params& params);
 
 }  // namespace yocto
 

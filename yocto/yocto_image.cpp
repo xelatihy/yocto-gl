@@ -430,12 +430,10 @@ vec3f convert_color(const vec3f& col, color_space from, color_space to) {
 namespace yocto {
 
 // Lookup an image at coordinates `ij`
-vec4f lookup_image(
-    const image<vec4f>& img, const vec2i& ij, bool as_linear) {
+vec4f lookup_image(const image<vec4f>& img, const vec2i& ij, bool as_linear) {
   return img[ij];
 }
-vec4f lookup_image(
-    const image<vec4b>& img, const vec2i& ij, bool as_linear) {
+vec4f lookup_image(const image<vec4b>& img, const vec2i& ij, bool as_linear) {
   if (as_linear) {
     return byte_to_float(img[ij]);
   } else {
@@ -483,8 +481,8 @@ vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
     bool no_interpolation, bool clamp_to_edge) {
   return eval_image_generic(img, uv, false, no_interpolation, clamp_to_edge);
 }
-vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
-    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
+vec4f eval_image(const image<vec4b>& img, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge) {
   return eval_image_generic(
       img, uv, as_linear, no_interpolation, clamp_to_edge);
 }
@@ -2076,6 +2074,13 @@ imageio_status save_imageb(const string& filename, const image<vec4b>& img) {
   } else {
     return error("unsupported format");
   }
+}
+
+// Loads/saves a 4 channels float/byte image tonemapped
+imageio_status save_image_tonemapped(const string& filename,
+    const image<vec4f>& img, const tonemap_params& params) {
+  return is_hdr_filename(filename) ? save_image(filename, img)
+                                   : save_imageb(filename, tonemap_imageb(img, params));
 }
 
 }  // namespace yocto
