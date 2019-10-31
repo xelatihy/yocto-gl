@@ -1431,12 +1431,10 @@ bool make_image_preset(image<vec4f>& img, const string& type) {
     make_proc_image(img, params);
     return true;
   } else if (type == "test-sky") {
-    make_sunsky(
-        img, size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    img = make_sunsky(size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
     return true;
   } else if (type == "test-sunsky") {
-    make_sunsky(
-        img, size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+    img = make_sunsky(size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
     return true;
   } else if (type == "test-noise") {
     auto params = proc_image_params{};
