@@ -219,13 +219,6 @@ static void skip_whitespace(string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
 
-static void remove_comment(string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
-  auto cpy = str;
-  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
-  str.remove_suffix(cpy.size());
-}
-
 // Parse values from a string
 static bool parse_value(string_view& str, string_view& value) {
   skip_whitespace(str);
@@ -353,7 +346,17 @@ static bool parse_value(string_view& str, vec3f& value) {
     if (!parse_value(str, value[i])) return false;
   return true;
 }
+static bool parse_value(string_view& str, vec4f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
 static bool parse_value(string_view& str, frame3f& value) {
+  for (auto i = 0; i < 4; i++)
+    if (!parse_value(str, value[i])) return false;
+  return true;
+}
+static bool parse_value(string_view& str, mat4f& value) {
   for (auto i = 0; i < 4; i++)
     if (!parse_value(str, value[i])) return false;
   return true;
@@ -368,6 +371,16 @@ static bool parse_value_or_empty(string_view& str, string& value) {
   } else {
     return parse_value(str, value);
   }
+}
+
+template <typename T>
+static bool parse_value(
+    string_view& str, T& value, unordered_map<string, T>& value_names) {
+  auto value_name = ""s;
+  if (!parse_value(str, value_name)) return false;
+  if (value_names.find(value_name) == value_names.end()) return false;
+  value = value_names.at(value_name);
+  return true;
 }
 
 }  // namespace yocto
@@ -499,6 +512,13 @@ static bool format_value(modelio_file& fs, const T& value) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+static void remove_ply_comment(string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
+}
+
 // Load ply
 plyio_status load_ply(const string& filename, ply_model& ply) {
   // ply type names
@@ -529,7 +549,7 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
+    remove_ply_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -1421,7 +1441,7 @@ plyio_status read_ply_header(const string& filename, modelio_file& fs,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
+    remove_ply_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -1762,6 +1782,13 @@ vec4i find_ply_property(const ply_element& element, const string& name1,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+static void remove_obj_comment(string_view& str, char comment_char = '#') {
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
+  auto cpy = str;
+  while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
+  str.remove_suffix(cpy.size());
+}
+
 static bool parse_value(string_view& str, obj_vertex& value) {
   value = obj_vertex{0, 0, 0};
   if (!parse_value(str, value.position)) return false;
@@ -1825,7 +1852,7 @@ static objio_status load_mtl(
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
+    remove_obj_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -1987,7 +2014,7 @@ static objio_status load_objx(const string& filename, obj_model& obj) {
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
+    remove_obj_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -2076,7 +2103,7 @@ objio_status load_obj(const string& filename, obj_model& obj,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
+    remove_obj_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -2844,7 +2871,7 @@ objio_status read_obj_command(const string& filename, modelio_file& fs,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
+    remove_obj_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -2937,7 +2964,7 @@ objio_status read_mtl_command(const string& filename, modelio_file& fs,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
+    remove_obj_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -3097,7 +3124,7 @@ objio_status read_objx_command(const string& filename, modelio_file& fs,
   while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
-    remove_comment(str);
+    remove_obj_comment(str);
     skip_whitespace(str);
     if (str.empty()) continue;
 
@@ -3392,17 +3419,8 @@ namespace yocto {
 
 using std::string_view;
 
-// utilities
-static bool is_pbrt_newline(char c) { return c == '\r' || c == '\n'; }
-static bool is_pbrt_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-static void skip_pbrt_whitespace(string_view& str) {
-  while (!str.empty() && is_pbrt_space(str.front())) str.remove_prefix(1);
-}
-
 static void remove_pbrt_comment(string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_pbrt_newline(str.back())) str.remove_suffix(1);
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy       = str;
   auto in_string = false;
   while (!cpy.empty()) {
@@ -3424,7 +3442,7 @@ static bool read_pbrt_cmdline(modelio_file& fs, string& cmd, int& line_num) {
     line_num += 1;
     auto line = string_view{buffer};
     remove_pbrt_comment(line);
-    skip_pbrt_whitespace(line);
+    skip_whitespace(line);
     if (line.empty()) continue;
 
     // check if command
@@ -3447,41 +3465,9 @@ static bool read_pbrt_cmdline(modelio_file& fs, string& cmd, int& line_num) {
   return found;
 }
 
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PBRT CONVERSION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
 // parse a quoted string
-[[nodiscard]] static bool parse_pbrt_value(
-    string_view& str, string_view& value) {
-  skip_pbrt_whitespace(str);
-  if (str.front() != '"') return {};
-  str.remove_prefix(1);
-  if (str.empty()) return {};
-  auto cpy = str;
-  while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
-  if (cpy.empty()) return {};
-  value = str;
-  value.remove_suffix(cpy.size());
-  str.remove_prefix(str.size() - cpy.size());
-  str.remove_prefix(1);
-  return true;
-}
-
-[[nodiscard]] static bool parse_pbrt_value(string_view& str, string& value) {
-  auto view = string_view{};
-  if (!parse_pbrt_value(str, view)) return false;
-  if (!str.data()) return {};
-  value = string{view};
-  return true;
-}
-
-// parse a quoted string
-[[nodiscard]] static bool parse_pbrt_command(string_view& str, string& value) {
-  skip_pbrt_whitespace(str);
+static bool parse_pbrt_command(string_view& str, string& value) {
+  skip_whitespace(str);
   if (!isalpha((int)str.front())) return {};
   auto pos = str.find_first_not_of(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
@@ -3495,70 +3481,16 @@ namespace yocto {
   return true;
 }
 
-// parse a number
-[[nodiscard]] static bool parse_pbrt_value(string_view& str, float& value) {
-  skip_pbrt_whitespace(str);
-  if (str.empty()) return false;
-  auto next = (char*)nullptr;
-  value     = strtof(str.data(), &next);
-  if (str.data() == next) return {};
-  str.remove_prefix(next - str.data());
-  return true;
-}
-
-// parse a number
-[[nodiscard]] static bool parse_pbrt_value(string_view& str, int& value) {
-  skip_pbrt_whitespace(str);
-  if (str.empty()) return false;
-  auto next = (char*)nullptr;
-  value     = strtol(str.data(), &next, 10);
-  if (str.data() == next) return false;
-  str.remove_prefix(next - str.data());
-  return true;
-}
-template <typename T>
-[[nodiscard]] static bool parse_pbrt_value(
-    string_view& str, T& value, unordered_map<string, T>& value_names) {
-  auto value_name = ""s;
-  if (!parse_pbrt_value(str, value_name)) return false;
-  if (value_names.find(value_name) == value_names.end()) return false;
-  value = value_names.at(value_name);
-  return true;
-}
-template <typename T, size_t N>
-[[nodiscard]] static bool parse_pbrt_value(
-    string_view& str, array<T, N>& value) {
-  for (auto i = 0; i < N; i++) {
-    if (!parse_pbrt_value(str, value[i])) return false;
-    if (!str.data()) return {};
-  }
-  return true;
-}
-
-// parse a vec type
-[[nodiscard]] static bool parse_pbrt_value(string_view& str, vec2f& value) {
-  return parse_pbrt_value(str, reinterpret_cast<array<float, 2>&>(value));
-}
-[[nodiscard]] static bool parse_pbrt_value(string_view& str, vec3f& value) {
-  return parse_pbrt_value(str, reinterpret_cast<array<float, 3>&>(value));
-}
-[[nodiscard]] static bool parse_pbrt_value(string_view& str, vec4f& value) {
-  return parse_pbrt_value(str, reinterpret_cast<array<float, 4>&>(value));
-}
-[[nodiscard]] static bool parse_pbrt_value(string_view& str, mat4f& value) {
-  return parse_pbrt_value(str, reinterpret_cast<array<float, 16>&>(value));
-}
-
 // parse pbrt value with optional parens
 template <typename T>
-[[nodiscard]] static bool parse_pbrt_param(string_view& str, T& value) {
-  skip_pbrt_whitespace(str);
+static bool parse_pbrt_param(string_view& str, T& value) {
+  skip_whitespace(str);
   auto parens = !str.empty() && str.front() == '[';
   if (parens) str.remove_prefix(1);
-  if (!parse_pbrt_value(str, value)) return false;
+  if (!parse_value(str, value)) return false;
   if (!str.data()) return {};
   if (parens) {
-    skip_pbrt_whitespace(str);
+    skip_whitespace(str);
     if (!str.empty() && str.front() == '[') return {};
     str.remove_prefix(1);
   }
@@ -3569,7 +3501,7 @@ template <typename T>
 [[nodiscard]] static bool parse_pbrt_nametype(
     string_view& str_, string& name, string& type) {
   auto value = ""s;
-  if (!parse_pbrt_value(str_, value)) return false;
+  if (!parse_value(str_, value)) return false;
   if (!str_.data()) return {};
   auto str  = string_view{value};
   auto pos1 = str.find(' ');
@@ -3674,17 +3606,17 @@ static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
   auto parse_pbrt_pvalues = [](string_view& str, auto& value,
                                 auto& values) -> bool {
     values.clear();
-    skip_pbrt_whitespace(str);
+    skip_whitespace(str);
     if (str.empty()) throw std::runtime_error("bad pbrt value");
     if (str.front() == '[') {
       str.remove_prefix(1);
-      skip_pbrt_whitespace(str);
+      skip_whitespace(str);
       if (str.empty()) throw std::runtime_error("bad pbrt value");
       while (!str.empty()) {
         auto& val = values.empty() ? value : values.emplace_back();
-        if (!parse_pbrt_value(str, val)) return false;
+        if (!parse_value(str, val)) return false;
         if (!str.data()) return {};
-        skip_pbrt_whitespace(str);
+        skip_whitespace(str);
         if (str.empty()) break;
         if (str.front() == ']') break;
         if (values.empty()) values.push_back(value);
@@ -3694,17 +3626,17 @@ static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
       str.remove_prefix(1);
       return true;
     } else {
-      return parse_pbrt_value(str, value);
+      return parse_value(str, value);
     }
   };
 
   values.clear();
-  skip_pbrt_whitespace(str);
+  skip_whitespace(str);
   while (!str.empty()) {
     auto& value = values.emplace_back();
     auto  type  = ""s;
     if (!parse_pbrt_nametype(str, value.name, type)) return false;
-    skip_pbrt_whitespace(str);
+    skip_whitespace(str);
     if (str.empty()) throw std::runtime_error("expected value");
     if (type == "float") {
       value.type = pbrt_value_type::real;
@@ -3762,19 +3694,19 @@ static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
     } else if (type == "spectrum") {
       auto is_string = false;
       auto str1      = str;
-      skip_pbrt_whitespace(str1);
+      skip_whitespace(str1);
       if (!str1.empty() && str1.front() == '"')
         is_string = true;
       else if (!str1.empty() && str1.front() == '[') {
         str1.remove_prefix(1);
-        skip_pbrt_whitespace(str1);
+        skip_whitespace(str1);
         if (!str1.empty() && str1.front() == '"') is_string = true;
       }
       if (is_string) {
         value.type     = pbrt_value_type::color;
         auto filename  = ""s;
         auto filenames = vector<string>{};
-        if (!parse_pbrt_value(str, filename)) return false;
+        if (!parse_value(str, filename)) return false;
         if (!str.data()) return {};
         auto filenamep = get_filename(filename);
         if (get_extension(filenamep) == ".spd") {
@@ -3803,7 +3735,7 @@ static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
     } else {
       return false;
     }
-    skip_pbrt_whitespace(str);
+    skip_whitespace(str);
   }
   return true;
 }
