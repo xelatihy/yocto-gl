@@ -3235,7 +3235,7 @@ objio_status write_obj_command(const string& filename, modelio_file& fs,
   return {};
 }
 
-static objio_status write_mtl_command(const string& filename, modelio_file& fs,
+objio_status write_mtl_command(const string& filename, modelio_file& fs,
     mtl_command command, const obj_material& material) {
   // write material
   switch (command) {
