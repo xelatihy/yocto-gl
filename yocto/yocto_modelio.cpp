@@ -115,48 +115,6 @@ static bool exists_file(const string& filename) {
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// LOW-LEVEL FILE HANDLING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-template <typename T>
-static T swap_endian(T value) {
-  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
-  static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
-  union {
-    T             value;
-    unsigned char bytes[sizeof(T)];
-  } source, dest;
-  source.value = value;
-  for (auto k = (size_t)0; k < sizeof(T); k++)
-    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
-  return dest.value;
-}
-
-template <typename T>
-bool write_value(FILE* fs, const T& value) {
-  return fwrite(&value, sizeof(value), 1, fs) == 1;
-}
-template <typename T>
-bool write_value(FILE* fs, const T& value_, bool big_endian) {
-  auto value = big_endian ? swap_endian(value_) : value_;
-  return fwrite(&value, sizeof(value), 1, fs) == 1;
-}
-
-template <typename T>
-bool read_value(FILE* fs, T& value) {
-  return fread(&value, sizeof(value), 1, fs) == 1;
-}
-template <typename T>
-bool read_value(FILE* fs, T& value, bool big_endian) {
-  auto ok = fread(&value, sizeof(value), 1, fs) == 1;
-  if (big_endian) value = swap_endian(value);
-  return ok;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // LOAD-LEVEL PARSING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -488,6 +446,20 @@ static void remove_ply_comment(string_view& str, char comment_char = '#') {
   str.remove_suffix(cpy.size());
 }
 
+template <typename T>
+static T swap_endian(T value) {
+  // https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+  static_assert(CHAR_BIT == 8, "CHAR_BIT != 8");
+  union {
+    T             value;
+    unsigned char bytes[sizeof(T)];
+  } source, dest;
+  source.value = value;
+  for (auto k = (size_t)0; k < sizeof(T); k++)
+    dest.bytes[k] = source.bytes[sizeof(T) - k - 1];
+  return dest.value;
+}
+
 // Load ply
 plyio_status load_ply(const string& filename, ply_model& ply) {
   // ply type names
@@ -613,6 +585,12 @@ plyio_status load_ply(const string& filename, ply_model& ply) {
       if (property.is_list) property.ldata_u8.reserve(element.count);
     }
   }
+
+  auto read_value = [](FILE* fs, auto& value, bool big_endian) -> bool {
+    auto ok = fread(&value, sizeof(value), 1, fs) == 1;
+    if (big_endian) value = swap_endian(value);
+    return ok;
+  };
 
   // read data -------------------------------------
   if (ply.format == ply_format::ascii) {
@@ -792,6 +770,11 @@ plyio_status save_ply(const string& filename, const ply_model& ply) {
   }
   if (!format_values(fs, "end_header\n"))
     return {filename + ": write error"};
+
+  auto write_value = [](FILE* fs, auto value_, bool big_endian) -> bool {
+    auto value = big_endian ? swap_endian(value_) : value_;
+    return fwrite(&value, sizeof(value), 1, fs) == 1;
+  };
 
   // properties
   if (ply.format == ply_format::ascii) {
@@ -1338,6 +1321,12 @@ void add_ply_points(ply_model& ply, const vector<int>& values) {
 template <typename T, typename VT>
 [[nodiscard]] static bool read_ply_prop(
     FILE* fs, VT& value, bool big_endian) {
+  auto read_value = [](FILE* fs, auto& value, bool big_endian) -> bool {
+    auto ok = fread(&value, sizeof(value), 1, fs) == 1;
+    if (big_endian) value = swap_endian(value);
+    return ok;
+  };
+
   auto tvalue = T{};
   auto ok     = read_value(fs, tvalue, big_endian);
   value       = (VT)tvalue;
@@ -1570,6 +1559,11 @@ static bool format_ply_prop(FILE* fs, ply_type type, VT value) {
 template <typename VT>
 static bool write_ply_prop(
     FILE* fs, ply_type type, VT value, bool big_endian) {
+  auto write_value = [](FILE* fs, auto value_, bool big_endian) -> bool {
+    auto value = big_endian ? swap_endian(value_) : value_;
+    return fwrite(&value, sizeof(value), 1, fs) == 1;
+  };
+
   switch (type) {
     case ply_type::i8: return write_value(fs, (int8_t)value, big_endian);
     case ply_type::i16: return write_value(fs, (int16_t)value, big_endian);
