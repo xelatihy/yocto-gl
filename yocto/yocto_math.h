@@ -2091,7 +2091,7 @@ inline vec3f contrast(const vec3f& rgb, float contrast, float grey);
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
 // Apply saturation.
-inline vec3f saturation(const vec3f& rgb, float saturation,
+inline vec3f saturate(const vec3f& rgb, float saturation,
     const vec3f& weights = vec3f{0.333333f});
 
 // Convert between CIE XYZ and RGB
@@ -2448,7 +2448,7 @@ inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
   return max(zero3f, exp2(adjusted) - epsilon);
 }
 // Apply saturation.
-inline vec3f saturation(
+inline vec3f saturate(
     const vec3f& rgb, float saturation, const vec3f& weights) {
   auto grey = dot(weights, rgb);
   return max(zero3f, grey + (rgb - grey) * (saturation * 2));
