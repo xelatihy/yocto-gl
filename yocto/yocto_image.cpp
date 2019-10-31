@@ -622,7 +622,7 @@ static vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
   }
 }
 
-static vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
+vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   auto rgb = hdr;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
   if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
@@ -634,7 +634,7 @@ static vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   if (params.srgb) rgb = rgb_to_srgb(rgb);
   return rgb;
 }
-static vec4f tonemap(const vec4f& hdr, const tonemap_params& params) {
+vec4f tonemap(const vec4f& hdr, const tonemap_params& params) {
   return {tonemap(xyz(hdr), params), hdr.w};
 }
 
@@ -659,7 +659,7 @@ void tonemap_region(image<vec4f>& ldr, const image<vec4f>& hdr,
       ldr[{i, j}] = tonemap(hdr[{i, j}], params);
 }
 
-static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
+vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
   auto rgb = ldr;
   if (params.contrast != 0.5f) {
     rgb = gain(ldr, 1 - params.contrast);
@@ -683,7 +683,7 @@ static vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
   }
   return rgb;
 }
-static vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params) {
+vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params) {
   return {colorgrade(xyz(ldr), params), ldr.w};
 }
 

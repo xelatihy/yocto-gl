@@ -134,7 +134,11 @@ struct tonemap_params {
   bool  srgb        = true;
 };
 
-// Apply exposure and filmic tone mapping
+// Apply tone mapping
+vec3f tonemap(const vec3f& hdr, const tonemap_params& params);
+vec4f tonemap(const vec4f& hdr, const tonemap_params& params);
+
+// Apply tone mapping
 image<vec4f> tonemap_image(
     const image<vec4f>& hdr, const tonemap_params& params);
 image<vec4b> tonemap_imageb(
@@ -153,11 +157,15 @@ struct colorgrade_params {
   vec3f highlights_color = {1, 1, 1};
 };
 
+vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params);
+vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params);
+
 // color grade an image region
 image<vec4f> colorgrade_image(
     const image<vec4f>& img, const colorgrade_params& params);
 void colorgrade_region(image<vec4f>& corrected, const image<vec4f>& img,
     const image_region& region, const colorgrade_params& params);
+vec4f colorgrade_region(const vec4f& img, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
