@@ -71,6 +71,13 @@ struct app_state {
   int                  render_sample  = 0;
   int                  render_region  = 0;
   vector<image_region> render_regions = {};
+  std::atomic<bool>    render_stop = {};
+  std::future<void>    render_future = {};
+
+  ~app_state() {
+    render_stop = true;
+    if(render_future.valid()) render_future.get();
+  }
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -96,6 +103,19 @@ inline void parallel_for(int begin, int end, Func&& func) {
 template <typename Func>
 inline void parallel_for(int num, Func&& func) {
   parallel_for(0, num, std::forward<Func>(func));
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+inline void parallel_foreach(vector<T>& values, Func&& func) {
+  parallel_for(
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
+}
+template <typename T, typename Func>
+inline void parallel_foreach(const vector<T>& values, Func&& func) {
+  parallel_for(
+      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
 }
 
 // construct a scene from io
@@ -190,6 +210,11 @@ trace_scene make_trace_scene(const scene_model& ioscene) {
 }
 
 void reset_display(app_state& app) {
+  // stop render
+  app.render_stop = true;
+  if(app.render_future.valid()) app.render_future.get();
+
+  // reset state
   app.state = make_state(app.scene, app.trace_prms);
   app.render.resize(app.state.size());
   app.display.resize(app.state.size());
@@ -198,12 +223,42 @@ void reset_display(app_state& app) {
   app.render_region  = 0;
   app.render_regions = make_image_regions(
       app.render.size(), app.trace_prms.region, true);
+  
+  // render preview
+  auto preview_prms = app.trace_prms;
+  preview_prms.resolution /= app.preview_ratio;
+  preview_prms.samples = 1;
+  auto preview         = trace_image(app.scene, preview_prms);
+  preview              = tonemap_image(preview, app.tonemap_prms);
+  for (auto j = 0; j < app.display.size().y; j++) {
+    for (auto i = 0; i < app.display.size().x; i++) {
+      auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
+            pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
+      app.display[{i, j}] = preview[{pi, pj}];
+    }
+  }
+
+  // start renderer
+  app.render_stop = false;
+  app.render_future = std::async(std::launch::async, [&app]() {
+    for(auto sample = 0; sample < app.trace_prms.samples; sample++) {
+    parallel_foreach(app.render_regions,
+        [&app](const image_region& region) {
+          if(app.render_stop) return;
+          trace_region(app.render, app.state, app.scene,
+              region, 1, app.trace_prms);
+          tonemap_region(app.display, app.render, region,
+              app.tonemap_prms);
+        });
+    }
+  });
 }
 
 void draw(const opengl_window& win) {
+  static int update_counter = 0;
   auto& app = *(app_state*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_image || app.gl_image.size() != app.display.size())
+  if (!app.gl_image || app.gl_image.size() != app.display.size() || update_counter)
     update_glimage(app.gl_image, app.display, false, false);
   app.draw_prms.window      = get_glwindow_size(win);
   app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
@@ -211,6 +266,8 @@ void draw(const opengl_window& win) {
       app.draw_prms.window, app.draw_prms.fit);
   draw_glimage(app.gl_image, app.draw_prms);
   swap_glbuffers(win);
+  update_counter ++;
+  if(update_counter > 60) update_counter = 0;
 }
 
 void update(const opengl_window& win, app_state& app) {
