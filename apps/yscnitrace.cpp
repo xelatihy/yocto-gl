@@ -57,7 +57,7 @@ struct app_state {
 
   // scene
   scene_model ioscene    = {};
-  trace_scene scene    = {};
+  trace_scene scene      = {};
   bool        add_skyenv = false;
 
   // rendering state
@@ -74,14 +74,14 @@ struct app_state {
   pair<string, int> selection = {"camera", 0};
 
   // computation
-  int                  render_sample  = 0;
-  std::atomic<bool>    render_stop = {};
-  std::future<void>    render_future = {};
-  int                  render_counter = 0;
+  int               render_sample  = 0;
+  std::atomic<bool> render_stop    = {};
+  std::future<void> render_future  = {};
+  int               render_counter = 0;
 
   ~app_state() {
     render_stop = true;
-    if(render_future.valid()) render_future.get();
+    if (render_future.valid()) render_future.get();
   }
 };
 
@@ -236,13 +236,13 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 void reset_display(app_state& app) {
   // stop render
   app.render_stop = true;
-  if(app.render_future.valid()) app.render_future.get();
+  if (app.render_future.valid()) app.render_future.get();
 
   // reset state
   app.state = make_state(app.scene, app.trace_prms);
   app.render.resize(app.state.size());
   app.display.resize(app.state.size());
-  
+
   // render preview
   auto preview_prms = app.trace_prms;
   preview_prms.resolution /= app.preview_ratio;
@@ -252,23 +252,22 @@ void reset_display(app_state& app) {
   for (auto j = 0; j < app.display.size().y; j++) {
     for (auto i = 0; i < app.display.size().x; i++) {
       auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
-            pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
+           pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
       app.display[{i, j}] = preview[{pi, pj}];
     }
   }
 
   // start renderer
   app.render_counter = 0;
-  app.render_stop = false;
-  app.render_future = std::async(std::launch::async, [&app]() {
-    for(auto sample = 0; sample < app.trace_prms.samples; sample++) {
-      if(app.render_stop) return;
-      parallel_for(app.render.size(),
-        [&app](const vec2i& ij) {
-          if(app.render_stop) return;
-          app.render[ij] = trace_sample(app.state, app.scene, ij, app.trace_prms);
-          app.display[ij] = tonemap(app.render[ij], app.tonemap_prms);
-        });
+  app.render_stop    = false;
+  app.render_future  = std::async(std::launch::async, [&app]() {
+    for (auto sample = 0; sample < app.trace_prms.samples; sample++) {
+      if (app.render_stop) return;
+      parallel_for(app.render.size(), [&app](const vec2i& ij) {
+        if (app.render_stop) return;
+        app.render[ij] = trace_sample(app.state, app.scene, ij, app.trace_prms);
+        app.display[ij] = tonemap(app.render[ij], app.tonemap_prms);
+      });
     }
   });
 }
@@ -651,14 +650,15 @@ void draw(const opengl_window& win) {
     auto& app                 = apps.get_selected();
     app.draw_prms.window      = get_glwindow_size(win);
     app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
-    if (!app.gl_image || app.gl_image.size() != app.display.size() || !app.render_counter) {
+    if (!app.gl_image || app.gl_image.size() != app.display.size() ||
+        !app.render_counter) {
       update_glimage(app.gl_image, app.display, false, false);
     }
     update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
         app.draw_prms.window, app.draw_prms.fit);
     draw_glimage(app.gl_image, app.draw_prms);
-    app.render_counter ++;
-    if(app.render_counter > 10) app.render_counter = 0;
+    app.render_counter++;
+    if (app.render_counter > 10) app.render_counter = 0;
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -726,8 +726,7 @@ void run_ui(app_states& apps) {
         pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
       pan.x = -pan.x;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      update_trace_camera(
-          app.scene.cameras.at(app.trace_prms.camera), camera);
+      update_trace_camera(app.scene.cameras.at(app.trace_prms.camera), camera);
       // TODO: update
       reset_display(app);
     }

@@ -805,8 +805,8 @@ image<vec4f> make_ramp(
   });
 }
 
-image<vec4f> make_gammaramp(const vec2i& size, float scale,
-    const vec4f& color0, const vec4f& color1) {
+image<vec4f> make_gammaramp(
+    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
   return make_image(size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -828,8 +828,7 @@ image<vec4f> make_uvramp(const vec2i& size, float scale) {
   });
 }
 
-image<vec4f> make_uvgrid(
-    const vec2i& size, float scale, bool colored) {
+image<vec4f> make_uvgrid(const vec2i& size, float scale, bool colored) {
   return make_image(size, [=](vec2f uv) {
     uv *= scale;
     uv -= vec2f{(float)(int)uv.x, (float)(int)uv.y};
@@ -866,41 +865,40 @@ image<vec4f> make_blackbodyramp(
   });
 }
 
-image<vec4f> make_noisemap(const vec2i& size, float scale, 
-    const vec4f& color0, const vec4f& color1) {
+image<vec4f> make_noisemap(
+    const vec2i& size, float scale, const vec4f& color0, const vec4f& color1) {
   return make_image(size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_noise({uv.x, uv.y, 0.5f});
-    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
-image<vec4f> make_fbmmap(const vec2i& size, float scale,
-    const vec4f& noise, const vec4f& color0,
-    const vec4f& color1) {
+image<vec4f> make_fbmmap(const vec2i& size, float scale, const vec4f& noise,
+    const vec4f& color0, const vec4f& color1) {
   return make_image(size, [=](vec2f uv) {
     uv *= 8 * scale;
     auto v = perlin_fbm({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
-    v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
+    v      = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
 image<vec4f> make_turbulencemap(const vec2i& size, float scale,
-    const vec4f& noise, const vec4f& color0,
-    const vec4f& color1) {
+    const vec4f& noise, const vec4f& color0, const vec4f& color1) {
   return make_image(size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = perlin_turbulence({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
+    auto v = perlin_turbulence(
+        {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z);
     v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
 }
-image<vec4f> make_ridgemap(const vec2i& size, float scale,
-    const vec4f& noise, const vec4f& color0,
-    const vec4f& color1) {
+image<vec4f> make_ridgemap(const vec2i& size, float scale, const vec4f& noise,
+    const vec4f& color0, const vec4f& color1) {
   return make_image(size, [=](vec2f uv) {
     uv *= 8 * scale;
-    auto v = perlin_ridge({uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z, noise.w);
+    auto v = perlin_ridge(
+        {uv.x, uv.y, 0.5f}, noise.x, noise.y, (int)noise.z, noise.w);
     v = clamp(0.5f + 0.5f * v, 0.0f, 1.0f);
     return lerp(color0, color1, v);
   });
@@ -1311,7 +1309,7 @@ bool make_image_preset(
     auto imgf = make_image_preset(type);
     if (imgf.empty()) return false;
     if (type.find("-normal") == type.npos &&
-      type.find("-displacement") == type.npos) {
+        type.find("-displacement") == type.npos) {
       ldr = rgb_to_srgbb(imgf);
     } else {
       ldr = float_to_byte(imgf);
@@ -1658,7 +1656,7 @@ imageio_status load_image(const string& filename, image<vec4f>& img) {
   auto ext = get_extension(filename);
   if (ext == ".ypreset") {
     img = make_image_preset(get_basename(filename));
-    if(img.empty()) return error("unknown preset");
+    if (img.empty()) return error("unknown preset");
     return {};
   }
   if (ext == ".exr" || ext == ".EXR") {

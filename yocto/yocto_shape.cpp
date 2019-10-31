@@ -17,8 +17,8 @@
 namespace yocto {
 
 // Compute per-vertex tangents for lines.
-vector<vec3f> compute_tangents(const vector<vec2i>& lines,
-    const vector<vec3f>& positions) {
+vector<vec3f> compute_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
   auto tangents = vector<vec3f>{positions.size()};
   for (auto& tangent : tangents) tangent = zero3f;
   for (auto& l : lines) {
@@ -32,8 +32,8 @@ vector<vec3f> compute_tangents(const vector<vec2i>& lines,
 }
 
 // Compute per-vertex normals for triangles.
-vector<vec3f> compute_normals(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
+vector<vec3f> compute_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
   auto normals = vector<vec3f>{positions.size()};
   for (auto& normal : normals) normal = zero3f;
   for (auto& t : triangles) {
@@ -49,8 +49,8 @@ vector<vec3f> compute_normals(const vector<vec3i>& triangles,
 }
 
 // Compute per-vertex normals for quads.
-vector<vec3f> compute_normals(const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
+vector<vec3f> compute_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
   auto normals = vector<vec3f>{positions.size()};
   for (auto& normal : normals) normal = zero3f;
   for (auto& q : quads) {
@@ -126,9 +126,9 @@ void update_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_spaces(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords) {
+vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords) {
   auto tangu = vector<vec3f>(positions.size(), zero3f);
   auto tangv = vector<vec3f>(positions.size(), zero3f);
   for (auto t : triangles) {
@@ -151,11 +151,12 @@ vector<vec4f> compute_tangent_spaces(
 }
 
 // Apply skinning
-pair<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
+pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms) {
   auto skinned_positions = vector<vec3f>{positions.size()};
-  auto skinned_normals = vector<vec3f>{positions.size()};
+  auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i = 0; i < positions.size(); i++) {
     skinned_positions[i] =
         transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
@@ -174,11 +175,12 @@ pair<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& positio
 }
 
 // Apply skinning as specified in Khronos glTF
-pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
+pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<mat4f>& xforms) {
   auto skinned_positions = vector<vec3f>{positions.size()};
-  auto skinned_normals = vector<vec3f>{positions.size()};
+  auto skinned_normals   = vector<vec3f>{positions.size()};
   for (auto i = 0; i < positions.size(); i++) {
     auto xform = xforms[joints[i].x] * weights[i].x +
                  xforms[joints[i].y] * weights[i].y +
@@ -267,8 +269,8 @@ vector<vec4i> flip_quads(const vector<vec4i>& quads) {
 }
 
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-vector<vec3f> align_vertices(const vector<vec3f>& positions,
-    const vec3i& alignment) {
+vector<vec3f> align_vertices(
+    const vector<vec3f>& positions, const vec3i& alignment) {
   auto bounds = invalidb3f;
   for (auto& p : positions) bounds = merge(bounds, p);
   auto offset = vec3f{0, 0, 0};
@@ -382,7 +384,7 @@ vector<vec3i> face_adjacencies(const vector<vec3i>& triangles) {
     return x < y ? vec2i{x, y} : vec2i{y, x};
   };
   auto adjacencies = vector<vec3i>{triangles.size(), vec3i{-1, -1, -1}};
-  auto edge_map = unordered_map<vec2i, int>();
+  auto edge_map    = unordered_map<vec2i, int>();
   edge_map.reserve((size_t)(triangles.size() * 1.5));
   for (int i = 0; i < triangles.size(); ++i) {
     for (int k = 0; k < 3; ++k) {
@@ -474,7 +476,7 @@ vector<vector<int>> vertex_to_faces_adjacencies(
   }
 
   // Init result.
-    auto result = vector<vector<int>>(num_vertices);
+  auto result = vector<vector<int>>(num_vertices);
 
   // For each vertex, loop around it and build its adjacency.
   for (int i = 0; i < num_vertices; ++i) {
@@ -1836,9 +1838,8 @@ static inline void connect_opposite_nodes(geodesic_solver& solver,
   connect_nodes(solver, v0, v1, length);
 }
 
-geodesic_solver make_geodesic_solver(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
-    const vector<vec3f>& positions) {
+geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
+    const vector<vec3i>& adjacencies, const vector<vec3f>& positions) {
   auto solver = geodesic_solver{};
   solver.graph.resize(positions.size());
   for (int face = 0; face < triangles.size(); face++) {
@@ -1984,7 +1985,8 @@ vector<int> compute_geodesic_paths(
 // Sample vertices with a Poisson distribution using geodesic distances
 // Sampling strategy is farthest point sampling (FPS): at every step
 // take the farthers point from current sampled set until done.
-vector<int> sample_vertices_poisson(const geodesic_solver& solver, int num_samples) {
+vector<int> sample_vertices_poisson(
+    const geodesic_solver& solver, int num_samples) {
   auto verts = vector<int>{};
   verts.reserve(num_samples);
   auto distances = vector<float>(solver.graph.size(), flt_max);
@@ -2019,8 +2021,8 @@ vector<vector<float>> compute_voronoi_fields(
   return fields;
 }
 
-vector<vec4f> colors_from_field(const vector<float>& field,
-    float scale, const vec4f& c0, const vec4f& c1) {
+vector<vec4f> colors_from_field(
+    const vector<float>& field, float scale, const vec4f& c0, const vec4f& c1) {
   auto colors = vector<vec4f>{field.size()};
   for (auto i = 0; i < colors.size(); i++) {
     colors[i] = ((int64_t)(field[i] * scale)) % 2 ? c0 : c1;

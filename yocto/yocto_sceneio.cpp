@@ -286,7 +286,7 @@ void add_sky(scene_model& scene, float sun_angle) {
   auto texture     = scene_texture{};
   texture.name     = "sky";
   texture.filename = "textures/sky.hdr";
-  texture.hdr = make_sunsky({1024, 512}, sun_angle);
+  texture.hdr      = make_sunsky({1024, 512}, sun_angle);
   scene.textures.push_back(texture);
   auto environment         = scene_environment{};
   environment.name         = "sky";
@@ -1205,7 +1205,6 @@ static sceneio_status load_yaml_scene(
 static sceneio_status save_yaml(const string& filename,
     const scene_model& scene, bool ply_instances = false,
     const string& instances_name = "") {
-
   static const auto def_texture     = scene_texture{};
   static const auto def_material    = scene_material{};
   static const auto def_shape       = scene_shape{};

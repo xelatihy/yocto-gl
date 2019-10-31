@@ -38,8 +38,8 @@
 
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_modelio.h"
+#include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 using namespace yocto;
 
@@ -47,9 +47,9 @@ using namespace yocto;
 #include "ext/sajson.h"
 
 #include <deque>
+#include <memory>
 #include <string_view>
 #include <unordered_set>
-#include <memory>
 
 using std::string_view;
 using std::unordered_set;
@@ -406,7 +406,7 @@ void load_island_shape(vector<scene_shape>& shapes,
     norm_map.reserve(1024 * 1024);
   };
 
-  auto fs = fopen(filename.c_str(), "rt");
+  auto fs       = fopen(filename.c_str(), "rt");
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   auto command   = obj_command{};

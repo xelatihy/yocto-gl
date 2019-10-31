@@ -99,8 +99,8 @@ namespace yocto {
 // Evaluates a color image at a point `uv`.
 vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
     bool no_interpolation, bool clamp_to_edge);
-vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
-    bool as_linear, bool no_interpolation, bool clamp_to_edge);
+vec4f eval_image(const image<vec4b>& img, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge);
 
 }  // namespace yocto
 
@@ -194,7 +194,8 @@ imageio_status load_imageb(const string& filename, image<vec4b>& img);
 imageio_status save_imageb(const string& filename, const image<vec4b>& img);
 
 // Loads/saves a 4 channels float/byte image tonemapped
-imageio_status save_image_tonemapped(const string& filename, const image<vec4f>& img, const tonemap_params& params);
+imageio_status save_image_tonemapped(const string& filename,
+    const image<vec4f>& img, const tonemap_params& params);
 
 }  // namespace yocto
 
@@ -243,22 +244,23 @@ image<vec4f> make_gammaramp(const vec2i& size, float scale = 1,
 // Make a uv ramp
 image<vec4f> make_uvramp(const vec2i& size, float scale = 1);
 // Make a uv grid
-image<vec4f> make_uvgrid(const vec2i& size, float scale = 1, bool colored = true);
+image<vec4f> make_uvgrid(
+    const vec2i& size, float scale = 1, bool colored = true);
 // Make blackbody ramp.
-image<vec4f> make_blackbodyramp(const vec2i& size, float scale = 1, float from = 1000, float to = 12000) ;
+image<vec4f> make_blackbodyramp(
+    const vec2i& size, float scale = 1, float from = 1000, float to = 12000);
 // Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
-image<vec4f> make_noisemap(const vec2i& size, float scale = 1, 
-  const vec4f& color0 = {0,0,0,1}, 
-  const vec4f& color1 = {0,0,0,1});
-image<vec4f> make_fbmmap(const vec2i& size, float scale = 1, 
-  const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0,0,0,1}, 
-  const vec4f& color1 = {0,0,0,1});
-image<vec4f> make_turbulencemap(const vec2i& size, float scale = 1, 
-  const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0,0,0,1}, 
-  const vec4f& color1 = {0,0,0,1});
-image<vec4f> make_ridgemap(const vec2i& size, float scale = 1, 
-  const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0,0,0,1}, 
-  const vec4f& color1 = {0,0,0,1});
+image<vec4f> make_noisemap(const vec2i& size, float scale = 1,
+    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {0, 0, 0, 1});
+image<vec4f> make_fbmmap(const vec2i& size, float scale = 1,
+    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {0, 0, 0, 1});
+image<vec4f> make_turbulencemap(const vec2i& size, float scale = 1,
+    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {0, 0, 0, 1});
+image<vec4f> make_ridgemap(const vec2i& size, float scale = 1,
+    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {0, 0, 0, 1});
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
@@ -277,7 +279,8 @@ image<vec4f> make_lights(const vec2i& size, const vec3f& le = {1, 1, 1},
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
-image<vec4f> add_border(const image<vec4f>& img, float width, const vec4f& color = {0,0,0,1});
+image<vec4f> add_border(
+    const image<vec4f>& img, float width, const vec4f& color = {0, 0, 0, 1});
 
 // Make logo images. Image is resized to proper size.
 image<vec4b> make_logo(const string& name);
