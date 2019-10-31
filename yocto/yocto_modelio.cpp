@@ -218,6 +218,22 @@ static bool is_space(char c) {
 static void skip_whitespace(string_view& str) {
   while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
 }
+static  void trim_whitespace(string_view& str) {
+  while (!str.empty() && is_space(str.front())) str.remove_prefix(1);
+  while (!str.empty() && is_space(str.back())) str.remove_suffix(1);
+}
+static  bool is_digit(char c) { return c >= '0' && c <= '9'; }
+static  bool is_alpha(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+static  bool is_whitespace(string_view str) {
+  while (!str.empty()) {
+    if (!is_space(str.front())) return false;
+    str.remove_prefix(1);
+  }
+  return true;
+}
 
 // Parse values from a string
 static bool parse_value(string_view& str, string_view& value) {
@@ -6411,89 +6427,20 @@ gltfio_status load_gltf(const string& filename, gltf_model& scene) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// copnstrucyor and destructors
-yaml_file::yaml_file(yaml_file&& other) {
-  this->fs       = other.fs;
-  this->filename = other.filename;
-  other.fs       = nullptr;
-}
-yaml_file::~yaml_file() {
-  if (fs) fclose(fs);
-  fs = nullptr;
-}
-
-// Opens a file returing a handle with RIIA
-void open_yaml(
-    yaml_file& fs, const string& filename, const string& mode) {
-  close_yaml(fs);
-  fs.filename = filename;
-  fs.mode     = mode;
-  fs.fs       = fopen(filename.c_str(), mode.c_str());
-  if (!fs.fs) throw std::runtime_error("could not open file " + filename);
-}
-yaml_file open_yaml(const string& filename, const string& mode) {
-  auto fs = yaml_file{};
-  open_yaml(fs, filename, mode);
-  return fs;
-}
-void close_yaml(yaml_file& fs) {
-  if (fs.fs) fclose(fs.fs);
-  fs.fs = nullptr;
-}
-
-// Read a line
-static bool read_yaml_line(yaml_file& fs, char* buffer, size_t size) {
-  if (fgets(buffer, size, fs.fs)) {
-    fs.linenum += 1;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-// Check for errors
-static bool has_yaml_error(yaml_file& fs) { return ferror(fs.fs); }
-
-static  bool is_yaml_space(char c) {
-  return c == ' ' || c == '\t' || c == '\r' || c == '\n';
-}
-static  bool is_yaml_newline(char c) { return c == '\r' || c == '\n'; }
-static  bool is_yaml_digit(char c) { return c >= '0' && c <= '9'; }
-static  bool is_yaml_alpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
-static  void skip_yaml_whitespace(string_view& str) {
-  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
-}
-static  void trim_yaml_whitespace(string_view& str) {
-  while (!str.empty() && is_yaml_space(str.front())) str.remove_prefix(1);
-  while (!str.empty() && is_yaml_space(str.back())) str.remove_suffix(1);
-}
-
-static  bool is_yaml_whitespace(string_view str) {
-  while (!str.empty()) {
-    if (!is_yaml_space(str.front())) return false;
-    str.remove_prefix(1);
-  }
-  return true;
-}
-
 static  void remove_yaml_comment(
     string_view& str, char comment_char = '#') {
-  while (!str.empty() && is_yaml_newline(str.back())) str.remove_suffix(1);
+  while (!str.empty() && is_newline(str.back())) str.remove_suffix(1);
   auto cpy = str;
   while (!cpy.empty() && cpy.front() != comment_char) cpy.remove_prefix(1);
   str.remove_suffix(cpy.size());
 }
 
 static  bool parse_yaml_varname(string_view& str, string_view& value) {
-  skip_yaml_whitespace(str);
+  skip_whitespace(str);
   if (str.empty()) return false;
-  if (!is_yaml_alpha(str.front())) return false;
+  if (!is_alpha(str.front())) return false;
   auto pos = 0;
-  while (
-      is_yaml_alpha(str[pos]) || str[pos] == '_' || is_yaml_digit(str[pos])) {
+  while (is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
     pos += 1;
     if (pos >= str.size()) break;
   }
@@ -6505,61 +6452,6 @@ static  bool parse_yaml_varname(string_view& str, string& value) {
   auto view = ""sv;
   if (!parse_yaml_varname(str, view)) return false;
   value = string{view};
-  return true;
-}
-
-static bool parse_yaml_value(string_view& str, string_view& value) {
-  skip_yaml_whitespace(str);
-  if (str.empty()) return false;
-  if (str.front() != '"') {
-    auto cpy = str;
-    while (!cpy.empty() && !is_yaml_space(cpy.front())) cpy.remove_prefix(1);
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-    return true;
-  } else {
-    if (str.front() != '"') return false;
-    str.remove_prefix(1);
-    if (str.empty()) return false;
-    auto cpy = str;
-    while (!cpy.empty() && cpy.front() != '"') cpy.remove_prefix(1);
-    if (cpy.empty()) return false;
-    value = str;
-    value.remove_suffix(cpy.size());
-    str.remove_prefix(str.size() - cpy.size());
-    str.remove_prefix(1);
-    return true;
-  }
-}
-static bool parse_yaml_value(string_view& str, string& value) {
-  auto valuev = ""sv;
-  if (!parse_yaml_value(str, valuev)) return false;
-  value = string{valuev};
-  return true;
-}
-static bool parse_yaml_value(string_view& str, int& value) {
-  skip_yaml_whitespace(str);
-  char* end = nullptr;
-  value     = (int)strtol(str.data(), &end, 10);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-static bool parse_yaml_value(string_view& str, float& value) {
-  skip_yaml_whitespace(str);
-  char* end = nullptr;
-  value     = strtof(str.data(), &end);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
-  return true;
-}
-static bool parse_yaml_value(string_view& str, double& value) {
-  skip_yaml_whitespace(str);
-  char* end = nullptr;
-  value     = strtod(str.data(), &end);
-  if (str.data() == end) return false;
-  str.remove_prefix(end - str.data());
   return true;
 }
 
@@ -6643,24 +6535,24 @@ yaml_value make_yaml_value(const frame3f& value) {
   return yaml;
 }
 
-static bool parse_yaml_value(string_view& str, yaml_value& value) {
-  trim_yaml_whitespace(str);
+static bool parse_value(string_view& str, yaml_value& value) {
+  trim_whitespace(str);
   if (str.empty()) return false;
   if (str.front() == '[') {
     str.remove_prefix(1);
     value.type   = yaml_value_type::array;
     value.number = 0;
     while (!str.empty()) {
-      skip_yaml_whitespace(str);
+      skip_whitespace(str);
       if (str.empty()) return false;
       if (str.front() == ']') {
         str.remove_prefix(1);
         break;
       }
       if (value.number >= 16) return false;
-      parse_yaml_value(str, value.array_[(int)value.number]);
+      parse_value(str, value.array_[(int)value.number]);
       value.number += 1;
-      skip_yaml_whitespace(str);
+      skip_whitespace(str);
       if (str.front() == ',') {
         str.remove_prefix(1);
         continue;
@@ -6671,26 +6563,26 @@ static bool parse_yaml_value(string_view& str, yaml_value& value) {
         return false;
       }
     }
-  } else if (is_yaml_digit(str.front()) || str.front() == '-' ||
+  } else if (is_digit(str.front()) || str.front() == '-' ||
              str.front() == '+') {
     value.type = yaml_value_type::number;
-    parse_yaml_value(str, value.number);
+    parse_value(str, value.number);
   } else {
     value.type = yaml_value_type::string;
-    parse_yaml_value(str, value.string_);
+    parse_value(str, value.string_);
     if (value.string_ == "true" || value.string_ == "false") {
       value.type    = yaml_value_type::boolean;
       value.boolean = value.string_ == "true";
     }
   }
-  skip_yaml_whitespace(str);
-  if (!str.empty() && !is_yaml_whitespace(str)) return false;
+  skip_whitespace(str);
+  if (!str.empty() && !is_whitespace(str)) return false;
   return true;
 }
 
 // Load/save yaml
 yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
-  auto fs = open_yaml(filename, "rt");
+  auto fs = open_file(filename, "rt");
   if (!fs) return {filename + ": file not found"};
 
   // read the file line by line
@@ -6698,49 +6590,49 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
   auto key   = ""s;
   auto value = yaml_value{};
   char buffer[4096];
-  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_yaml_comment(line);
     if (line.empty()) continue;
-    if (is_yaml_whitespace(line)) continue;
+    if (is_whitespace(line)) continue;
 
     // peek commands
-    if (is_yaml_space(line.front())) {
+    if (is_space(line.front())) {
       // indented property
       if (group == "") return {filename + ": parse error"};
-      skip_yaml_whitespace(line);
+      skip_whitespace(line);
       if (line.empty()) return {filename + ": parse error"};
       if (line.front() == '-') {
         auto& element = yaml.elements.emplace_back();
         element.name  = group;
         line.remove_prefix(1);
-        skip_yaml_whitespace(line);
+        skip_whitespace(line);
       } else if (yaml.elements.empty() || yaml.elements.back().name != group) {
         auto& element = yaml.elements.emplace_back();
         element.name  = group;
       }
       if (!parse_yaml_varname(line, key)) return {filename + ": parse error"};
-      skip_yaml_whitespace(line);
+      skip_whitespace(line);
       if (line.empty() || line.front() != ':')
         return {filename + ": parse error"};
       line.remove_prefix(1);
-      if (!parse_yaml_value(line, value)) return {filename + ": parse error"};
+      if (!parse_value(line, value)) return {filename + ": parse error"};
       yaml.elements.back().key_values.push_back({key, value});
-    } else if (is_yaml_alpha(line.front())) {
+    } else if (is_alpha(line.front())) {
       // new group
       if (!parse_yaml_varname(line, key)) return {filename + ": parse error"};
-      skip_yaml_whitespace(line);
+      skip_whitespace(line);
       if (line.empty() || line.front() != ':')
         return {filename + ": parse error"};
       line.remove_prefix(1);
-      if (!line.empty() && !is_yaml_whitespace(line)) {
+      if (!line.empty() && !is_whitespace(line)) {
         group = "";
         if (yaml.elements.empty() || yaml.elements.back().name != group) {
           auto& element = yaml.elements.emplace_back();
           element.name  = group;
         }
-        if (!parse_yaml_value(line, value)) return {filename + ": parse error"};
+        if (!parse_value(line, value)) return {filename + ": parse error"};
         yaml.elements.back().key_values.push_back({key, value});
       } else {
         group = key;
@@ -6753,107 +6645,66 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
   return {};
 }
 
-static  void format_yaml_value(string& str, const string& value) {
-  str += value;
-}
-static  void format_yaml_value(string& str, const char* value) {
-  str += value;
-}
-static  void format_yaml_value(string& str, double value) {
-  char buf[256];
-  sprintf(buf, "%g", value);
-  str += buf;
-}
-
-static  void format_yaml_values(string& str, const string& fmt) {
-  auto pos = fmt.find("{}");
-  if (pos != string::npos) throw std::runtime_error("bad format string");
-  str += fmt;
-}
-template <typename Arg, typename... Args>
-static  void format_yaml_values(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
-  auto pos = fmt.find("{}");
-  if (pos == string::npos) throw std::runtime_error("bad format string");
-  str += fmt.substr(0, pos);
-  format_yaml_value(str, arg);
-  format_yaml_values(str, fmt.substr(pos + 2), args...);
-}
-
-template <typename... Args>
-static  bool format_yaml_values(
-    yaml_file& fs, const string& fmt, const Args&... args) {
-  auto str = ""s;
-  format_yaml_values(str, fmt, args...);
-  return fputs(str.c_str(), fs.fs) >= 0;
-}
-template <typename T>
-static  bool format_yaml_value(yaml_file& fs, const T& value) {
-  auto str = ""s;
-  format_yaml_value(str, value);
-  return fputs(str.c_str(), fs.fs) >= 0;
-}
-
-static  void format_yaml_value(string& str, const yaml_value& value) {
+static  void format_value(string& str, const yaml_value& value) {
   switch (value.type) {
-    case yaml_value_type::number: format_yaml_value(str, value.number); break;
+    case yaml_value_type::number: format_value(str, value.number); break;
     case yaml_value_type::boolean:
-      format_yaml_value(str, value.boolean ? "true" : "false");
+      format_value(str, value.boolean ? "true" : "false");
       break;
     case yaml_value_type::string:
-      if (value.string_.empty() || is_yaml_digit(value.string_.front())) {
-        format_yaml_values(str, "\"{}\"", value.string_);
+      if (value.string_.empty() || is_digit(value.string_.front())) {
+        format_values(str, "\"{}\"", value.string_);
       } else {
-        format_yaml_values(str, "{}", value.string_);
+        format_values(str, "{}", value.string_);
       }
       break;
     case yaml_value_type::array:
-      format_yaml_value(str, "[ ");
+      format_value(str, "[ ");
       for (auto i = 0; i < value.number; i++) {
-        if (i) format_yaml_value(str, ", ");
-        format_yaml_value(str, value.array_[i]);
+        if (i) format_value(str, ", ");
+        format_value(str, value.array_[i]);
       }
-      format_yaml_value(str, " ]");
+      format_value(str, " ]");
       break;
   }
 }
 
 yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
-  auto fs = open_yaml(filename, "wt");
+  auto fs = open_file(filename, "wt");
   if (!fs) throw std::runtime_error("cannot open " + filename);
 
   // save comments
-  if (!format_yaml_values(fs, "#\n")) return {filename + ": write error"};
-  if (!format_yaml_values(fs, "# Written by Yocto/GL\n"))
+  if (!format_values(fs, "#\n")) return {filename + ": write error"};
+  if (!format_values(fs, "# Written by Yocto/GL\n"))
     return {filename + ": write error"};
-  if (!format_yaml_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
+  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
     return {filename + ": write error"};
-  if (!format_yaml_values(fs, "#\n\n")) return {filename + ": write error"};
+  if (!format_values(fs, "#\n\n")) return {filename + ": write error"};
   for (auto& comment : yaml.comments) {
-    if (!format_yaml_values(fs, "# {}\n", comment))
+    if (!format_values(fs, "# {}\n", comment))
       return {filename + ": write error"};
   }
-  if (!format_yaml_values(fs, "\n")) return {filename + ": write error"};
+  if (!format_values(fs, "\n")) return {filename + ": write error"};
 
   auto group = ""s;
   for (auto& element : yaml.elements) {
     if (group != element.name) {
       group = element.name;
       if (group != "") {
-        if (!format_yaml_values(fs, "\n{}:\n", group))
+        if (!format_values(fs, "\n{}:\n", group))
           return {filename + ": write error"};
       } else {
-        if (!format_yaml_values(fs, "\n")) return {filename + ": write error"};
+        if (!format_values(fs, "\n")) return {filename + ": write error"};
       }
       auto first = true;
       for (auto& [key, value] : element.key_values) {
         if (group != "") {
-          if (!format_yaml_values(
+          if (!format_values(
                   fs, "  {} {}: {}\n", first ? "-" : " ", key, value))
             return {filename + ": write error"};
           first = false;
         } else {
-          if (!format_yaml_values(fs, "{}: {}\n", key, value))
+          if (!format_values(fs, "{}: {}\n", key, value))
             return {filename + ": write error"};
         }
       }
@@ -6863,47 +6714,47 @@ yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
   return {};
 }
 
-yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
+yamlio_status read_yaml_property(const string& filename, modelio_file& fs,
     string& group, string& key, bool& newobj, bool& done, yaml_value& value) {
   // read the file line by line
   char buffer[4096];
-  while (read_yaml_line(fs, buffer, sizeof(buffer))) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // str
     auto str = string_view{buffer};
     remove_yaml_comment(str);
     if (str.empty()) continue;
-    if (is_yaml_whitespace(str)) continue;
+    if (is_whitespace(str)) continue;
 
     // peek commands
-    if (is_yaml_space(str.front())) {
+    if (is_space(str.front())) {
       // indented property
       if (group == "") return {filename + ": parse error"};
-      skip_yaml_whitespace(str);
+      skip_whitespace(str);
       if (str.empty()) return {filename + ": parse error"};
       if (str.front() == '-') {
         newobj = true;
         str.remove_prefix(1);
-        skip_yaml_whitespace(str);
+        skip_whitespace(str);
       } else {
         newobj = false;
       }
       if (!parse_yaml_varname(str, key)) return {filename + ": parse error"};
-      skip_yaml_whitespace(str);
+      skip_whitespace(str);
       if (str.empty() || str.front() != ':')
         return {filename + ": parse error"};
       str.remove_prefix(1);
-      if (!parse_yaml_value(str, value)) return {filename + ": parse error"};
+      if (!parse_value(str, value)) return {filename + ": parse error"};
       return {};
-    } else if (is_yaml_alpha(str.front())) {
+    } else if (is_alpha(str.front())) {
       // new group
       if (!parse_yaml_varname(str, key)) return {filename + ": parse error"};
-      skip_yaml_whitespace(str);
+      skip_whitespace(str);
       if (str.empty() || str.front() != ':')
         return {filename + ": parse error"};
       str.remove_prefix(1);
-      if (!str.empty() && !is_yaml_whitespace(str)) {
+      if (!str.empty() && !is_whitespace(str)) {
         group = "";
-        if (!parse_yaml_value(str, value)) return {filename + ": parse error"};
+        if (!parse_value(str, value)) return {filename + ": parse error"};
         return {};
       } else {
         group = key;
@@ -6915,7 +6766,7 @@ yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
     }
   }
 
-  if (has_yaml_error(fs)) return {filename + ": read error"};
+  if (has_error(fs)) return {filename + ": read error"};
 
   done = true;
   return {};
@@ -6934,31 +6785,31 @@ static  vector<string> split_yaml_string(
 }
 
 yamlio_status write_yaml_comment(
-    const string& filename, yaml_file& fs, const string& comment) {
+    const string& filename, modelio_file& fs, const string& comment) {
   auto lines = split_yaml_string(comment, "\n");
   for (auto& line : lines) {
-    if (!format_yaml_values(fs, "# {}\n", line))
+    if (!format_values(fs, "# {}\n", line))
       return {filename + ": write error"};
   }
-  if (!format_yaml_values(fs, "\n")) return {filename + ": write error"};
+  if (!format_values(fs, "\n")) return {filename + ": write error"};
 
   return {};
 }
 
 // Save yaml property
-yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
+yamlio_status write_yaml_property(const string& filename, modelio_file& fs,
     const string& object, const string& key, bool newobj,
     const yaml_value& value) {
   if (key.empty()) {
-    if (!format_yaml_values(fs, "\n{}:\n", object))
+    if (!format_values(fs, "\n{}:\n", object))
       return {filename + ": write error"};
   } else {
     if (!object.empty()) {
-      if (!format_yaml_values(
+      if (!format_values(
               fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value))
         return {filename + ": write error"};
     } else {
-      if (!format_yaml_values(fs, "{}: {}\n", key, value))
+      if (!format_values(fs, "{}: {}\n", key, value))
         return {filename + ": write error"};
     }
   }
@@ -6967,8 +6818,8 @@ yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
 }
 
 yamlio_status write_yaml_object(
-    const string& filename, yaml_file& fs, const string& object) {
-  if (!format_yaml_values(fs, "\n{}:\n", object))
+    const string& filename, modelio_file& fs, const string& object) {
+  if (!format_values(fs, "\n{}:\n", object))
     return {filename + ": write error"};
   return {};
 }

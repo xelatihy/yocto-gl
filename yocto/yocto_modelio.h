@@ -624,40 +624,18 @@ struct yamlio_status {
 yamlio_status load_yaml(const string& filename, yaml_model& yaml);
 yamlio_status save_yaml(const string& filename, const yaml_model& yaml);
 
-// A class that wraps a C file ti handle safe opening/closgin with RIIA.
-struct yaml_file {
-  yaml_file() {}
-  yaml_file(yaml_file&& other);
-  yaml_file(const yaml_file&) = delete;
-  yaml_file& operator=(const yaml_file&) = delete;
-  ~yaml_file();
-
-  operator bool() const { return (bool)fs; }
-
-  FILE*  fs       = nullptr;
-  string filename = "";
-  string mode     = "rt";
-  int    linenum  = 0;
-};
-
-// open a file
-yaml_file open_yaml(const string& filename, const string& mode = "rt");
-void      open_yaml(
-         yaml_file& fs, const string& filename, const string& mode = "rt");
-void close_yaml(yaml_file& fs);
-
 // Load Yaml properties
-yamlio_status read_yaml_property(const string& filename, yaml_file& fs,
+yamlio_status read_yaml_property(const string& filename, modelio_file& fs,
     string& group, string& key, bool& newobj, bool& done, yaml_value& value);
 
 // Write Yaml properties
 yamlio_status write_yaml_comment(
-    const string& filename, yaml_file& fs, const string& comment);
-yamlio_status write_yaml_property(const string& filename, yaml_file& fs,
+    const string& filename, modelio_file& fs, const string& comment);
+yamlio_status write_yaml_property(const string& filename, modelio_file& fs,
     const string& object, const string& key, bool newobj,
     const yaml_value& value);
 yamlio_status write_yaml_object(
-    const string& filename, yaml_file& fs, const string& object);
+    const string& filename, modelio_file& fs, const string& object);
 
 // type-cheked yaml value access
 bool get_yaml_value(const yaml_value& yaml, string& value);
