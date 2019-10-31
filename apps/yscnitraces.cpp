@@ -113,13 +113,13 @@ trace_scene make_trace_scene(const scene_model& ioscene) {
 
   for (auto& iocamera : ioscene.cameras) {
     auto& camera = scene.cameras.emplace_back();
-    camera.frame = iocamera.frame;
-    camera.film  = iocamera.aspect >= 1
-                      ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
-                      : vec2f{iocamera.film / iocamera.aspect, iocamera.film};
-    camera.lens     = iocamera.lens;
-    camera.focus    = iocamera.focus;
-    camera.aperture = iocamera.aperture;
+  camera.frame = iocamera.frame;
+  camera.film  = iocamera.aspect >= 1
+                    ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
+                    : vec2f{iocamera.film / iocamera.aspect, iocamera.film};
+  camera.lens     = iocamera.lens;
+  camera.focus    = iocamera.focus;
+  camera.aperture = iocamera.aperture;
   }
 
   for (auto& iotexture : ioscene.textures) {
@@ -130,32 +130,32 @@ trace_scene make_trace_scene(const scene_model& ioscene) {
 
   for (auto& iomaterial : ioscene.materials) {
     auto& material            = scene.materials.emplace_back();
-    material.emission         = iomaterial.emission;
-    material.diffuse          = iomaterial.diffuse;
-    material.specular         = iomaterial.specular;
-    material.transmission     = iomaterial.transmission;
-    material.roughness        = iomaterial.roughness;
-    material.opacity          = iomaterial.opacity;
-    material.refract          = iomaterial.refract;
-    material.volemission      = iomaterial.volemission;
-    material.voltransmission  = iomaterial.voltransmission;
-    material.volmeanfreepath  = iomaterial.volmeanfreepath;
-    material.volscatter       = iomaterial.volscatter;
-    material.volscale         = iomaterial.volscale;
-    material.volanisotropy    = iomaterial.volanisotropy;
-    material.emission_tex     = iomaterial.emission_tex;
-    material.diffuse_tex      = iomaterial.diffuse_tex;
-    material.specular_tex     = iomaterial.specular_tex;
-    material.transmission_tex = iomaterial.transmission_tex;
-    material.roughness_tex    = iomaterial.roughness_tex;
-    material.opacity_tex      = iomaterial.opacity_tex;
-    material.subsurface_tex   = iomaterial.subsurface_tex;
+  material.emission         = iomaterial.emission;
+  material.diffuse          = iomaterial.diffuse;
+  material.specular         = iomaterial.specular;
+  material.transmission     = iomaterial.transmission;
+  material.roughness        = iomaterial.roughness;
+  material.opacity          = iomaterial.opacity;
+  material.refract          = iomaterial.refract;
+  material.volemission      = iomaterial.volemission;
+  material.voltransmission  = iomaterial.voltransmission;
+  material.volmeanfreepath  = iomaterial.volmeanfreepath;
+  material.volscatter       = iomaterial.volscatter;
+  material.volscale         = iomaterial.volscale;
+  material.volanisotropy    = iomaterial.volanisotropy;
+  material.emission_tex     = iomaterial.emission_tex;
+  material.diffuse_tex      = iomaterial.diffuse_tex;
+  material.specular_tex     = iomaterial.specular_tex;
+  material.transmission_tex = iomaterial.transmission_tex;
+  material.roughness_tex    = iomaterial.roughness_tex;
+  material.opacity_tex      = iomaterial.opacity_tex;
+  material.subsurface_tex   = iomaterial.subsurface_tex;
   }
 
   for (auto& ioshape_ : ioscene.shapes) {
     auto& ioshape = (ioshape_.subdivisions || ioshape_.displacement)
-                        ? ioshape_
-                        : tesselate(ioscene, ioshape_);
+                        ? tesselate(ioscene, ioshape_)
+                        : ioshape_;
     auto& shape         = scene.shapes.emplace_back();
     shape.points        = ioshape.points;
     shape.lines         = ioshape.lines;

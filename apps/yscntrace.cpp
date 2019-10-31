@@ -91,8 +91,8 @@ trace_scene make_trace_scene(const scene_model& ioscene) {
 
   for (auto& ioshape_ : ioscene.shapes) {
     auto& ioshape = (ioshape_.subdivisions || ioshape_.displacement)
-                        ? ioshape_
-                        : tesselate(ioscene, ioshape_);
+                        ? tesselate(ioscene, ioshape_)
+                        : ioshape_;
     auto& shape         = scene.shapes.emplace_back();
     shape.points        = ioshape.points;
     shape.lines         = ioshape.lines;
