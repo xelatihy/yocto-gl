@@ -242,35 +242,16 @@ void update_matrix_skinning(vector<vec3f>& skinned_positions,
 namespace yocto {
 
 // Flip vertex normals
-void flip_normals(vector<vec3f>& flipped, const vector<vec3f>& normals) {
-  flipped = normals;
-  for (auto& n : flipped) n = -n;
-}
 vector<vec3f> flip_normals(const vector<vec3f>& normals) {
   auto flipped = normals;
   for (auto& n : flipped) n = -n;
   return flipped;
 }
 // Flip face orientation
-void flip_triangles(vector<vec3i>& flipped, const vector<vec3i>& triangles) {
-  flipped = triangles;
-  for (auto& t : flipped) swap(t.y, t.z);
-}
 vector<vec3i> flip_triangles(const vector<vec3i>& triangles) {
   auto flipped = triangles;
   for (auto& t : flipped) swap(t.y, t.z);
   return flipped;
-}
-void flip_quads(vector<vec4i>& flipped, const vector<vec4i>& quads) {
-  flipped = quads;
-  for (auto& q : flipped) {
-    if (q.z != q.w) {
-      swap(q.y, q.w);
-    } else {
-      swap(q.y, q.z);
-      q.w = q.z;
-    }
-  }
 }
 vector<vec4i> flip_quads(const vector<vec4i>& quads) {
   auto flipped = quads;
@@ -286,7 +267,7 @@ vector<vec4i> flip_quads(const vector<vec4i>& quads) {
 }
 
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
-void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
+vector<vec3f> align_vertices(const vector<vec3f>& positions,
     const vec3i& alignment) {
   auto bounds = invalidb3f;
   for (auto& p : positions) bounds = merge(bounds, p);
@@ -306,13 +287,8 @@ void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
     case 2: offset.z = (bounds.min.z + bounds.max.z) / 2; break;
     case 3: offset.z = bounds.max.z; break;
   }
-  aligned = positions;
+  auto aligned = positions;
   for (auto& p : aligned) p -= offset;
-}
-vector<vec3f> align_vertices(
-    const vector<vec3f>& positions, const vec3i& alignment) {
-  auto aligned = vector<vec3f>(positions.size());
-  align_vertices(aligned, positions, alignment);
   return aligned;
 }
 
