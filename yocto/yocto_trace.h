@@ -327,6 +327,9 @@ int trace_samples(image<vec4f>& image, trace_state& state,
 void trace_region(image<vec4f>& image, trace_state& state,
     const trace_scene& scene, const image_region& region, int num_samples,
     const trace_params& params);
+void trace_sample(image<vec4f>& image, trace_state& state,
+    const trace_scene& scene, const vec2i& ij, 
+    const trace_params& params);
 
 // Check is a sampler requires lights
 bool is_sampler_lit(const trace_params& params);

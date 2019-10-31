@@ -2940,7 +2940,7 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-void trace_samples(image<vec4f>& image, trace_state& state,
+void trace_sample(image<vec4f>& image, trace_state& state,
     const trace_scene& scene, const vec2i& ij, 
     const trace_params& params) {
   auto& camera  = scene.cameras.at(params.camera);

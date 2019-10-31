@@ -206,6 +206,26 @@ trace_scene make_scene(const scene_model& ioscene) {
   return scene;
 }
 
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(const vec2i& size, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, size]() {
+          while (true) {
+            auto j = next_idx.fetch_add(1);
+            if (j >= size.y) break;
+            for (auto i = 0; i < size.x; i++) func({i, j});
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
 void reset_display(app_state& app) {
   // stop render
   app.render_stop = true;
@@ -238,13 +258,11 @@ void reset_display(app_state& app) {
   app.render_future = std::async(std::launch::async, [&app, regions]() {
     for(auto sample = 0; sample < app.trace_prms.samples; sample++) {
       if(app.render_stop) return;
-      parallel_foreach(regions,
-        [&app](const image_region& region) {
+      parallel_for(app.render.size(),
+        [&app](const vec2i& ij) {
           if(app.render_stop) return;
-          trace_region(app.render, app.state, app.scene,
-              region, 1, app.trace_prms);
-          tonemap_region(app.display, app.render, region,
-              app.tonemap_prms);
+          trace_sample(app.render, app.state, app.scene, ij, app.trace_prms);
+          app.display[ij] = tonemap(app.render[ij], app.tonemap_prms);
         });
     }
   });
