@@ -306,14 +306,6 @@ pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec3f>& vert, int level);
 pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec4f>& vert, int level);
-void subdivide_lines(vector<vec2i>& slines, vector<float>& svert,
-    const vector<vec2i>& lines, const vector<float>& vert, int level);
-void subdivide_lines(vector<vec2i>& slines, vector<vec2f>& svert,
-    const vector<vec2i>& lines, const vector<vec2f>& vert, int level);
-void subdivide_lines(vector<vec2i>& slines, vector<vec3f>& svert,
-    const vector<vec2i>& lines, const vector<vec3f>& vert, int level);
-void subdivide_lines(vector<vec2i>& slines, vector<vec4f>& svert,
-    const vector<vec2i>& lines, const vector<vec4f>& vert, int level);
 void subdivide_lines(vector<vec2i>& slines, vector<vec3f>& spositions,
     vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
     vector<float>& sradius, const vector<vec2i>& lines,
@@ -329,14 +321,6 @@ pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
 pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& vert, int level);
 pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec4f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& striangles, vector<float>& svert,
-    const vector<vec3i>& triangles, const vector<float>& vert, int level);
-void subdivide_triangles(vector<vec3i>& striangles, vector<vec2f>& svert,
-    const vector<vec3i>& triangles, const vector<vec2f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& striangles, vector<vec3f>& svert,
-    const vector<vec3i>& triangles, const vector<vec3f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& striangles, vector<vec4f>& svert,
     const vector<vec3i>& triangles, const vector<vec4f>& vert, int level);
 void subdivide_triangles(vector<vec3i>& striangles, vector<vec3f>& spositions,
     vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
@@ -354,14 +338,6 @@ pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec3f>& vert, int level);
 pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level);
-void subdivide_quads(vector<vec4i>& squads, vector<float>& svert,
-    const vector<vec4i>& quads, const vector<float>& vert, int level);
-void subdivide_quads(vector<vec4i>& squads, vector<vec2f>& svert,
-    const vector<vec4i>& quads, const vector<vec2f>& vert, int level);
-void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& svert,
-    const vector<vec4i>& quads, const vector<vec3f>& vert, int level);
-void subdivide_quads(vector<vec4i>& squads, vector<vec4f>& svert,
-    const vector<vec4i>& quads, const vector<vec4f>& vert, int level);
 void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& spositions,
     vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
     vector<float>& sradius, const vector<vec4i>& quads,
@@ -376,14 +352,6 @@ pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
 pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec3f>& vert, int level);
 pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec4f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
-    const vector<vec4i>& beziers, const vector<float>& vert, int level);
-void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
-    const vector<vec4i>& beziers, const vector<vec2f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
-    const vector<vec4i>& beziers, const vector<vec3f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
     const vector<vec4i>& beziers, const vector<vec4f>& vert, int level);
 void subdivide_beziers(vector<vec4i>& sbeziers, vector<vec3f>& spositions,
     vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
@@ -402,18 +370,6 @@ pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
     bool lock_boundary = false);
 pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
-    bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& squads, vector<float>& svert,
-    const vector<vec4i>& quads, const vector<float>& vert, int level,
-    bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& squads, vector<vec2f>& svert,
-    const vector<vec4i>& quads, const vector<vec2f>& vert, int level,
-    bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& squads, vector<vec3f>& svert,
-    const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
-    bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& squads, vector<vec4f>& svert,
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
     bool lock_boundary = false);
 void subdivide_catmullclark(vector<vec4i>& squads, vector<vec3f>& spositions,
