@@ -2903,7 +2903,8 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
           {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
           {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
           {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-      subdivide_triangles(triangles, positions, sphere_triangles,
+      std::tie(triangles, positions) =
+      subdivide_triangles(sphere_triangles,
           sphere_positions, params.subdivisions);
       for (auto& p : positions) p = normalize(p);
       normals = positions;
@@ -2927,32 +2928,40 @@ void make_proc_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     const proc_shape_params& params) {
   switch (params.type) {
     case proc_shape_params::type_t::quad: {
+      std::tie(quadspos, positions) =
       subdivide_quads(
-          quadspos, positions, quad_quads, quad_positions, params.subdivisions);
-      subdivide_quads(
-          quadsnorm, normals, quad_quads, quad_normals, params.subdivisions);
-      subdivide_quads(quadstexcoord, texcoords, quad_quads, quad_texcoords,
+          quad_quads, quad_positions, params.subdivisions);
+      std::tie(quadsnorm, normals) =
+      subdivide_quads(quad_quads, quad_normals, params.subdivisions);
+      std::tie(quadstexcoord, texcoords) =
+      subdivide_quads(quad_quads, quad_texcoords,
           params.subdivisions);
     } break;
     case proc_shape_params::type_t::cube: {
-      subdivide_quads(quadspos, positions, fvcube_quads, fvcube_positions,
+      std::tie(quadspos, positions) = 
+      subdivide_quads(fvcube_quads, fvcube_positions,
           params.subdivisions);
+      std::tie(quadsnorm, normals) = 
       subdivide_quads(
-          quadsnorm, normals, cube_quads, cube_normals, params.subdivisions);
-      subdivide_quads(quadstexcoord, texcoords, cube_quads, cube_texcoords,
+          cube_quads, cube_normals, params.subdivisions);
+      std::tie(quadstexcoord, texcoords) = 
+      subdivide_quads(cube_quads, cube_texcoords,
           params.subdivisions);
     } break;
     case proc_shape_params::type_t::sphere: {
-      subdivide_quads(quadspos, positions, fvcube_quads, fvcube_positions,
+      std::tie(quadspos, positions) = 
+      subdivide_quads(fvcube_quads, fvcube_positions,
           params.subdivisions);
-      subdivide_quads(quadstexcoord, texcoords, cube_quads, cube_texcoords,
+      std::tie(quadstexcoord, texcoords) = 
+      subdivide_quads(cube_quads, cube_texcoords,
           params.subdivisions);
       for (auto& p : positions) p = normalize(p);
       normals   = positions;
       quadsnorm = quadspos;
     } break;
     case proc_shape_params::type_t::suzanne: {
-      subdivide_quads(quadspos, positions, suzanne_quads, suzanne_positions,
+      std::tie(quadspos, positions) = 
+      subdivide_quads(suzanne_quads, suzanne_positions,
           params.subdivisions);
     } break;
     default: {
