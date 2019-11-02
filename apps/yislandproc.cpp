@@ -510,12 +510,8 @@ void add_island_shape(scene_model& scene, const string& parent_name,
   // conversion to non-facevarying
   if (!facevarying) {
     for (auto& shape : shapes) {
-      auto split_quads     = vector<vec4i>{};
-      auto split_positions = vector<vec3f>{};
-      auto split_normals   = vector<vec3f>{};
-      auto split_texcoords = vector<vec2f>{};
-      split_facevarying(split_quads, split_positions, split_normals,
-          split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+      auto [split_quads, split_positions, split_normals, split_texcoords] =
+      split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
           shape.positions, shape.normals, shape.texcoords);
       shape.quads         = split_quads;
       shape.positions     = split_positions;

@@ -197,11 +197,8 @@ void update_glshape(
       init_glelementbuffer(glshape.quads, triangles, false);
     }
   } else {
-    auto quads     = vector<vec4i>{};
-    auto positions = vector<vec3f>{};
-    auto normals   = vector<vec3f>{};
-    auto texcoords = vector<vec2f>{};
-    split_facevarying(quads, positions, normals, texcoords, shape.quadspos,
+    auto [quads, positions, normals, texcoords] =
+    split_facevarying(shape.quadspos,
         shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
         shape.texcoords);
     if (!positions.empty())
