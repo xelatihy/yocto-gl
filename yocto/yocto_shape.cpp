@@ -2337,20 +2337,20 @@ void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
   }
 }
 
-void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
+void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
     const vec3f& size, const vec2f& uvsize, float rounded) {
-      auto qquads         = vector<vec4i>{};
-      auto qpositions     = vector<vec3f>{};
-      auto qnormals       = vector<vec3f>{};
-      auto qtexturecoords = vector<vec2f>{};
-      for (auto i = 0; i <= steps.z; i++) {
-        make_rect(qquads, qpositions, qnormals, qtexturecoords,
-            {steps.x, steps.y}, {size.x, size.y}, uvsize, rounded);
-        for (auto& p : qpositions) p.z = (-0.5f + (float)i / steps.z) * size.z;
-        merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
-            qnormals, qtexturecoords);
-      }
+  auto qquads         = vector<vec4i>{};
+  auto qpositions     = vector<vec3f>{};
+  auto qnormals       = vector<vec3f>{};
+  auto qtexturecoords = vector<vec2f>{};
+  for (auto i = 0; i <= steps.z; i++) {
+    make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y},
+        {size.x, size.y}, uvsize, rounded);
+    for (auto& p : qpositions) p.z = (-0.5f + (float)i / steps.z) * size.z;
+    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+        qnormals, qtexturecoords);
+  }
 }
 
 void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
@@ -2393,10 +2393,12 @@ void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
     float uvsize, float flipcap) {
-  make_rect(quads, positions, normals, texcoords, {steps, steps}, {1, 1}, {1, 1});
+  make_rect(
+      quads, positions, normals, texcoords, {steps, steps}, {1, 1}, {1, 1});
   for (auto i = 0; i < positions.size(); i++) {
     auto a       = vec2f{2 * pif * texcoords[i].x, pif * (1 - texcoords[i].y)};
-    positions[i] = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)} * size / 2;
+    positions[i] = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)} *
+                   size / 2;
     normals[i]   = normalize(positions[i]);
     texcoords[i] = texcoords[i] * uvsize;
   }
@@ -2564,7 +2566,8 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     } break;
     case proc_shape_params::type_t::uvsphere: {
       make_uvsphere(quads, positions, normals, texcoords,
-          pow2(params.subdivisions), 2 * params.scale, params.uvscale, params.rounded);
+          pow2(params.subdivisions), 2 * params.scale, params.uvscale,
+          params.rounded);
     } break;
     case proc_shape_params::type_t::disk: {
       tie(quads, positions) = subdivide_quads(
@@ -2622,7 +2625,8 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
           (int)round(pow2(params.subdivisions) * params.aspect.z)};
       auto uvsize = params.aspect * params.uvscale;
       auto size   = 2 * params.aspect * params.scale;
-      make_box(quads, positions, normals, texcoords, steps, size, uvsize, params.rounded);
+      make_box(quads, positions, normals, texcoords, steps, size, uvsize,
+          params.rounded);
     } break;
     case proc_shape_params::type_t::rect: {
       auto steps = vec2i{
@@ -2637,25 +2641,10 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
           (int)round(pow2(params.subdivisions) * params.aspect.x),
           (int)round(pow2(params.subdivisions) * params.aspect.y),
           (int)round(pow2(params.subdivisions) * params.aspect.z)};
-      auto uvsize         = vec2f{params.aspect.x, params.aspect.y};
-      auto size           = params.aspect;
-      auto qquads         = vector<vec4i>{};
-      auto qpositions     = vector<vec3f>{};
-      auto qnormals       = vector<vec3f>{};
-      auto qtexturecoords = vector<vec2f>{};
-      for (auto i = 0; i <= steps.z; i++) {
-        make_rect(qquads, qpositions, qnormals, qtexturecoords,
-            {steps.x, steps.y}, {size.x, size.y}, uvsize);
-        for (auto& p : qpositions) p.z = (-0.5f + (float)i / steps.z) * size.z;
-        merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
-            qnormals, qtexturecoords);
-      }
-      if (params.scale != 1) {
-        for (auto& p : positions) p *= params.scale;
-      }
-      if (params.uvscale != 1) {
-        for (auto& uv : texcoords) uv *= params.uvscale;
-      }
+      auto uvsize = vec2f{params.aspect.x, params.aspect.y} * params.uvscale;
+      auto size   = vec3f{params.aspect} * params.scale;
+      make_rect_stack(quads, positions, normals, texcoords, steps, size, uvsize,
+          params.rounded);
     } break;
     case proc_shape_params::type_t::uvdisk: {
       tie(quads, positions) = subdivide_quads(
