@@ -2569,9 +2569,8 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
 // Generate lines set along a quad.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, int subdivisions, const vec2f& size, const vec2f& uvscale,
-    const vec2f& line_radius) {
-  auto steps  = vec2i{pow2(subdivisions), num};
+    const vec2i& steps, const vec2f& size, const vec2f& uvscale,
+    const vec2f& rad) {
   auto nverts = (steps.x + 1) * steps.y;
   auto nlines = steps.x * steps.y;
   auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
@@ -2792,7 +2791,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, int num, int steps, const vec2f& len,
+    const vector<vec2f>& stexcoord, const vec2i& steps, const vec2f& len,
     const vec2f& rad, const vec2f& noise, const vec2f& clump,
     const vec2f& rotation, int seed) {
   auto alltriangles    = striangles;
@@ -2803,7 +2802,7 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
   auto bnorm     = vector<vec3f>{};
   auto btexcoord = vector<vec2f>{};
   sample_triangles(
-      bpos, bnorm, btexcoord, alltriangles, spos, snorm, stexcoord, num, seed);
+      bpos, bnorm, btexcoord, alltriangles, spos, snorm, stexcoord, steps.y, seed);
 
   auto rng  = make_rng(seed, 3);
   auto blen = vector<float>(bpos.size());
@@ -2826,18 +2825,18 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     }
   }
 
-  make_lines(lines, positions, normals, texcoords, radius, num, steps, {1, 1},
+  make_lines(lines, positions, normals, texcoords, radius, steps, {1, 1},
       {1, 1}, {1, 1});
   for (auto i = 0; i < positions.size(); i++) {
     auto u       = texcoords[i].x;
-    auto bidx    = i / (steps + 1);
+    auto bidx    = i / (steps.x + 1);
     positions[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
     normals[i]   = bnorm[bidx];
     radius[i]    = lerp(rad.x, rad.y, u);
     if (clump.x > 0) {
       positions[i] =
           positions[i] +
-          (positions[i + (cidx[bidx] - bidx) * (steps + 1)] - positions[i]) *
+          (positions[i + (cidx[bidx] - bidx) * (steps.x + 1)] - positions[i]) *
               u * clump.x;
     }
     if (noise.x > 0) {
@@ -2920,7 +2919,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_sphere(
         base_quads, base_positions, base_normals, base_texcoords, pow2(5), 0.8);
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, 65536, 4,
+        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
         {0.2, 0.2}, {0.002, 0.001});
   } else if (type == "default-hairball-interior") {
     make_sphere(quads, positions, normals, texcoords, pow2(5), 0.8);
@@ -2971,7 +2970,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, 65536, 4,
+        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
         {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f},
         {0.03, 100});
   } else if (type == "test-hairball2") {
@@ -2984,7 +2983,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, 65536, 4,
+        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
         {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f});
   } else if (type == "test-hairball3") {
     auto base_triangles = vector<vec3i>{};
@@ -2996,7 +2995,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         0.075f * 0.8f, 1);
     for (auto& p : base_positions) p += {0, 0.075, 0};
     make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, 65536, 4,
+        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
         {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0},
         {0.5, 128});
   } else if (type == "test-hairball-interior") {
