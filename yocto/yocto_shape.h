@@ -544,10 +544,10 @@ void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
     const vec2f& uvscale = {1, 1});
-void make_rounded_rect(vector<vec4i>& quads, vector<vec3f>& positions,
+void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
-    const vec2f& uvscale = {1, 1}, float rounded = 0.15);
+    const vec2f& uvscale = {1, 1}, float radius = 0.3);
 // Make a box.
 void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
@@ -556,16 +556,12 @@ void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-    const vec3f& uvscale = {1, 1, 1}, float rounded = 0.15);
+    const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
 // Make a quad stack
-void make_stack(vector<vec4i>& quads, vector<vec3f>& positions,
+void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
     const vec3f& uvscale = {1, 1, 1});
-void make_rounded_stack(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
-    const vec3f& uvscale = {1, 1, 1}, float rounded = 0.15);
 // Make a floor.
 void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {1, 1},
@@ -577,6 +573,22 @@ void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32, float scale = 1,
     float uvscale = 1);
+// Make a sphere.
+void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
+// Make a sphere with slipped caps.
+void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {32, 32},
+    float scale = 1, const vec2f& uvscale = {1, 1}, float height = 0.3);
+// Make a disk
+void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32, float scale = 1,
+    float uvscale = 1);
+// Make a bulged disk
+void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32, float scale = 1,
+    float uvscale = 1, float height = 0.3);
 
 // Make a facevarying rect
 void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, 

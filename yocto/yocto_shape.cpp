@@ -2235,12 +2235,12 @@ void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
   }
 }
 
-void make_rounded_rect(vector<vec4i>& quads, vector<vec3f>& positions,
+void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& scale, const vec2f& uvscale, float rounded) {
+    const vec2f& scale, const vec2f& uvscale, float height) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
-  if (rounded) {
-    auto height = rounded;
+  if (height) {
+    height = min(height, min(scale));
     auto radius = (1 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
     for (auto i = 0; i < positions.size(); i++) {
@@ -2313,10 +2313,10 @@ void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
 
 void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& scale, const vec3f& uvscale, float rounded) {
+    const vec3f& scale, const vec3f& uvscale, float radius) {
   make_box(quads, positions, normals, texcoords, steps, scale, uvscale);
-  if (rounded) {
-    auto radius = rounded * min(scale);
+  if (radius) {
+    radius = min(radius, min(scale));
     auto c      = scale - radius;
     for (auto i = 0; i < positions.size(); i++) {
       auto pc = vec3f{
@@ -2348,7 +2348,7 @@ void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
   }
 }
 
-void make_stack(vector<vec4i>& quads, vector<vec3f>& positions,
+void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
     const vec3f& scale, const vec2f& uvscale) {
   auto qquads         = vector<vec4i>{};
@@ -2358,21 +2358,6 @@ void make_stack(vector<vec4i>& quads, vector<vec3f>& positions,
   for (auto i = 0; i <= steps.z; i++) {
     make_rect(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y},
         {scale.x, scale.y}, uvscale);
-    for (auto& p : qpositions) p.z = (-1 + 2 * (float)i / steps.z) * scale.z;
-    merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
-        qnormals, qtexturecoords);
-  }
-}
-void make_rounded_stack(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& scale, const vec2f& uvscale, float rounded) {
-  auto qquads         = vector<vec4i>{};
-  auto qpositions     = vector<vec3f>{};
-  auto qnormals       = vector<vec3f>{};
-  auto qtexturecoords = vector<vec2f>{};
-  for (auto i = 0; i <= steps.z; i++) {
-    make_rounded_rect(qquads, qpositions, qnormals, qtexturecoords,
-        {steps.x, steps.y}, {scale.x, scale.y}, uvscale, rounded);
     for (auto& p : qpositions) p.z = (-1 + 2 * (float)i / steps.z) * scale.z;
     merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
         qnormals, qtexturecoords);
@@ -2389,10 +2374,10 @@ void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
 
 void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& scale, const vec2f& uvscale, float bent) {
+    const vec2f& scale, const vec2f& uvscale, float radius) {
   make_floor(quads, positions, normals, texcoords, steps, scale, uvscale);
-  if (bent) {
-    auto radius = bent * scale.y;
+  if (radius) {
+    radius = min(radius, scale.y);
     auto start  = (scale.y - radius) / 2;
     auto end    = start + radius;
     for (auto i = 0; i < positions.size(); i++) {
@@ -2438,10 +2423,10 @@ void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
 
 void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    float scale, const vec2f& uvscale, float flipcap) {
+    float scale, const vec2f& uvscale, float cap) {
   make_uvsphere(quads, positions, normals, texcoords, steps, scale, uvscale);
-  if (flipcap) {
-    auto zflip = (scale - flipcap);
+  if (cap) {
+    auto zflip = (scale - cap);
     for (auto i = 0; i < positions.size(); i++) {
       if (positions[i].z > zflip) {
         positions[i].z = 2 * zflip - positions[i].z;
@@ -2452,6 +2437,37 @@ void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
         normals[i].x   = -normals[i].x;
         normals[i].y   = -normals[i].y;
       }
+    }
+  }
+}
+
+// Generate a disk
+void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
+    float uvscale) {
+  make_rect(quads, positions, normals, texcoords, {steps, steps}, {scale, scale}, {uvscale, uvscale});
+  for (auto i = 0; i < positions.size(); i++) {
+    // Analytical Methods for Squaring the Disc, by C. Fong
+    // https://arxiv.org/abs/1509.06344
+    auto xy = vec2f{positions[i].x, positions[i].y};
+    auto uv = vec2f{
+        xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
+    positions[i] = {uv.x, uv.y, 0};
+  }
+}
+
+void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
+    float uvscale, float height) {
+  make_disk(quads, positions, normals, texcoords, steps, scale, uvscale);
+  if (height) {
+    height = min(height, scale);
+    auto radius = (1 + height * height) / (2 * height);
+    auto center = vec3f{0, 0, -radius + height};
+    for (auto i = 0; i < positions.size(); i++) {
+      auto pn      = normalize(positions[i] - center);
+      positions[i] = center + pn * radius;
+      normals[i]   = pn;
     }
   }
 }
@@ -3021,20 +3037,11 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         {1, 1, 1}, 0.3);
     for(auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::uvsphere;
-    params.subdivisions = 5;
-    params.scale        = 0.075;
-    params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075);
+    for(auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere-flipcap") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::uvsphere;
-    params.subdivisions = 5;
-    params.scale        = 0.075;
-    params.rounded      = 0.3;
-    params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_capped_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075, {1, 1}, 0.3);
+    for(auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere") {
     make_sphere(quads, positions, normals, texcoords, 32, 0.075f, 1);
     for(auto& p : positions) p += {0, 0.075, 0};
@@ -3059,12 +3066,8 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-floor") {
     make_floor(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
   } else if (type == "test-matball") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::matball;
-    params.subdivisions = 5;
-    params.scale        = 0.075;
-    params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_sphere(quads, positions, normals, texcoords, 32, 0.075);
+    for(auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-hairball1") {
     auto base_triangles = vector<vec3i>{};
     auto base_quads     = vector<vec4i>{};
