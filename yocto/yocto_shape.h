@@ -522,10 +522,10 @@ namespace yocto {
 struct proc_shape_params {
   // clang-format off
   enum struct type_t {
-    quad, floor, cube, sphere, disk, matball, suzanne, box, rect, rect_stack,
+    disk, matball, suzanne, box, rect,
     uvsphere, uvdisk, uvcylinder, geosphere };
   // clang-format on
-  type_t  type         = type_t::quad;
+  type_t  type         = type_t::disk;
   int     subdivisions = 0;
   float   scale        = 1;
   float   uvscale      = 1;
@@ -538,31 +538,57 @@ struct proc_shape_params {
 void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     const proc_shape_params& params);
-// Make face-varying quads. For now supports only quad, cube, suzanne, sphere,
-// rect, box. Rounding not supported for now.
-void make_proc_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const proc_shape_params& params);
 
 // Make a plane.
 void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec2i& steps = {1, 1}, const vec2f& size = {1, 1},
-    const vec2f& uvsize = {1, 1}, float rounded = 0);
+    const vec2f& uvsize = {1, 1});
+void make_rounded_rect(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps = {1, 1}, const vec2f& size = {1, 1},
+    const vec2f& uvsize = {1, 1}, float rounded = 0.15);
 // Make a box.
 void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec3i& steps = {1, 1, 1}, const vec3f& size = {1, 1, 1},
-    const vec3f& uvsize = {1, 1, 1}, float rounded = 0);
+    const vec3f& uvsize = {1, 1, 1});
+void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec3i& steps = {1, 1, 1}, const vec3f& size = {1, 1, 1},
+    const vec3f& uvsize = {1, 1, 1}, float rounded = 0.15);
+// Make a quad stack
+void make_stack(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec3i& steps = {1, 1, 1}, const vec3f& size = {1, 1, 1},
+    const vec3f& uvsize = {1, 1, 1});
+void make_rounded_stack(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec3i& steps = {1, 1, 1}, const vec3f& size = {1, 1, 1},
+    const vec3f& uvsize = {1, 1, 1}, float rounded = 0.15);
 // Make a floor.
 void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {1, 1},
-    const vec2f& size = {20, 20}, const vec2f& uvsize = {10, 10}, float bent = 0);
+    const vec2f& size = {20, 20}, const vec2f& uvsize = {10, 10});
+void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {1, 1},
+    const vec2f& size = {20, 20}, const vec2f& uvsize = {10, 10}, float bent = 0.5);
 // Make a sphere.
 void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, float size,
-    int steps = 1, float uvsize = 1);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32, float size = 1,
+    float uvsize = 1);
+
+// Make a facevarying rect
+void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, 
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {1, 1},
+    const vec2f& size = {1, 1}, const vec2f& uvsize = {1, 1});
+// Make a facevarying box
+void make_fvbox(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps = {1, 1, 1},
+    const vec3f& size = {1, 1, 1}, const vec3f& uvsize = {1, 1, 1});
+void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
+    float size = 1, float uvsize = 1);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
