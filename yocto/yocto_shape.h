@@ -545,18 +545,24 @@ void make_proc_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const proc_shape_params& params);
 
-// Make a plane mesh.
+// Make a plane.
 void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec2i& steps = {1, 1}, const vec2f& size = {1, 1},
     const vec2f& uvsize = {1, 1}, float rounded = 0);
+// Make a box.
 void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
     const vec3i& steps = {1, 1, 1}, const vec3f& size = {1, 1, 1},
     const vec3f& uvsize = {1, 1, 1}, float rounded = 0);
+// Make a floor.
 void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {1, 1},
     const vec2f& size = {20, 20}, const vec2f& uvsize = {10, 10}, float bent = 0);
+// Make a sphere.
+void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float size,
+    int steps = 1, float uvsize = 1);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,

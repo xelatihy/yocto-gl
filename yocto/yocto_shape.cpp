@@ -2362,6 +2362,43 @@ void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
   }
 }
 
+// Generate a sphere
+void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
+    float uvsize) {
+  make_box(quads, positions, normals, texcoords, {steps, steps, steps},
+      {size, size, size}, {uvsize, uvsize, uvsize});
+  for (auto& p : positions) p = normalize(p) * size / 2;
+  for (auto& n : normals) n = normalize(n);
+}
+
+// Generate a uvsphere
+void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
+    float uvsize, float flipcap) {
+  make_rect(quads, positions, normals, texcoords, {steps, steps}, {1, 1}, {1, 1});
+  for (auto i = 0; i < positions.size(); i++) {
+    auto a       = vec2f{2 * pif * texcoords[i].x, pif * (1 - texcoords[i].y)};
+    positions[i] = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)} * size / 2;
+    normals[i]   = normalize(positions[i]);
+    texcoords[i] = texcoords[i] * uvsize;
+  }
+  if (flipcap) {
+    auto zflip = (1 - flipcap);
+    for (auto i = 0; i < positions.size(); i++) {
+      if (positions[i].z > zflip) {
+        positions[i].z = 2 * zflip - positions[i].z;
+        normals[i].x   = -normals[i].x;
+        normals[i].y   = -normals[i].y;
+      } else if (positions[i].z < -zflip) {
+        positions[i].z = 2 * (-zflip) - positions[i].z;
+        normals[i].x   = -normals[i].x;
+        normals[i].y   = -normals[i].y;
+      }
+    }
+  }
+}
+
 // Generate lines set along a quad.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
@@ -2505,36 +2542,12 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
           vec3f{params.uvscale}, params.rounded);
     } break;
     case proc_shape_params::type_t::sphere: {
+      make_sphere(quads, positions, normals, texcoords,
+          pow2(params.subdivisions), 2 * params.scale, params.uvscale);
     } break;
     case proc_shape_params::type_t::uvsphere: {
-      tie(quads, positions) = subdivide_quads(
-          quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(
-          quad_quads, quad_normals, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(
-          quad_quads, quad_texcoords, params.subdivisions);
-      for (auto i = 0; i < positions.size(); i++) {
-        auto uv = texcoords[i];
-        auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        auto p  = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-        positions[i] = p;
-        normals[i]   = normalize(p);
-        texcoords[i] = uv;
-      }
-      if (params.rounded) {
-        auto zflip = (1 - params.rounded);
-        for (auto i = 0; i < positions.size(); i++) {
-          if (positions[i].z > zflip) {
-            positions[i].z = 2 * zflip - positions[i].z;
-            normals[i].x   = -normals[i].x;
-            normals[i].y   = -normals[i].y;
-          } else if (positions[i].z < -zflip) {
-            positions[i].z = 2 * (-zflip) - positions[i].z;
-            normals[i].x   = -normals[i].x;
-            normals[i].y   = -normals[i].y;
-          }
-        }
-      }
+      make_uvsphere(quads, positions, normals, texcoords,
+          pow2(params.subdivisions), 2 * params.scale, params.uvscale, params.rounded);
     } break;
     case proc_shape_params::type_t::disk: {
       tie(quads, positions) = subdivide_quads(
