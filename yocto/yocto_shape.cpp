@@ -3006,10 +3006,9 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-cube-subdiv") {
     // TODO: this should be a Catmull-Clark cube
     // make_cube(quads, positions, normals, texcoords, 0.075f);
-    // make_box(quads, positions, normals, texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
-    make_rect(quads, positions, normals, texcoords, {1, 1}, {0.075f, 0.075f});
+    make_fvcube(quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords, 0.075f);
     // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
-    //     texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
+    //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-arealight1") {
     make_rect(quads, positions, normals, texcoords, {1, 1}, {0.2, 0.2});

@@ -482,23 +482,28 @@ scene_shape subdivide_shape(const scene_shape& shape) {
       subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
   } else if (!shape.quadspos.empty() && !shape.catmullclark) {
     std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_quads(
-        subdiv.quadsnorm, shape.normals, shape.subdivisions);
+        subdiv.quadsnorm, subdiv.normals, shape.subdivisions);
     std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_quads(
-        subdiv.quadstexcoord, shape.texcoords, shape.subdivisions);
+        subdiv.quadstexcoord, subdiv.texcoords, shape.subdivisions);
     std::tie(subdiv.quadspos, subdiv.positions) = subdivide_quads(
-        subdiv.quadspos, shape.positions, shape.subdivisions);
+        subdiv.quadspos, subdiv.positions, shape.subdivisions);
     if (subdiv.smooth) {
       subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
       subdiv.quadsnorm = subdiv.quadspos;
     }
   } else if (!shape.quadspos.empty() && shape.catmullclark) {
-    std::tie(subdiv.quadspos, subdiv.positions) = subdivide_catmullclark(
-        shape.quadspos, shape.positions, subdiv.subdivisions);
     std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_catmullclark(
-        shape.quadstexcoord, shape.texcoords, shape.subdivisions, true);
+        subdiv.quadstexcoord, subdiv.texcoords, shape.subdivisions, true);
+    std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_catmullclark(
+        subdiv.quadsnorm, subdiv.normals, shape.subdivisions, true);
+    std::tie(subdiv.quadspos, subdiv.positions) = subdivide_catmullclark(
+        subdiv.quadspos, subdiv.positions, shape.subdivisions);
     if (shape.smooth) {
       subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
       subdiv.quadsnorm = subdiv.quadspos;
+    } else {
+      subdiv.normals = {};
+      subdiv.quadsnorm = {};
     }
   } else {
     throw std::runtime_error("empty shape");
