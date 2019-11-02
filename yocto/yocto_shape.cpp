@@ -2424,7 +2424,7 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
   switch (params.type) {
     case proc_shape_params::type_t::quad: {
       tie(quads, positions) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(quad_quads, quad_normals, params.subdivisions);
       tie(ignore, texcoords) = subdivide_quads(quad_quads, quad_texcoords, params.subdivisions);
       if (params.rounded) {
         auto height = params.rounded;
@@ -2439,7 +2439,7 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     } break;
     case proc_shape_params::type_t::floor: {
       tie(quads, positions) = subdivide_quads(quady_quads, quady_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(quady_quads, quady_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(quady_quads, quady_normals, params.subdivisions);
       tie(ignore, texcoords) = subdivide_quads(quady_quads, quady_texcoords, params.subdivisions);
       if (params.rounded) {
         auto radius = params.rounded;
@@ -2462,7 +2462,7 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     } break;
     case proc_shape_params::type_t::cube: {
       tie(quads, positions) = subdivide_quads(cube_quads, cube_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(cube_quads, cube_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(cube_quads, cube_normals, params.subdivisions);
       tie(ignore, texcoords) = subdivide_quads(cube_quads, cube_texcoords, params.subdivisions);
       auto steps  = vec3i{pow2(params.subdivisions)};
       auto uvsize = vec3f{1};
@@ -2503,14 +2503,14 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     } break;
     case proc_shape_params::type_t::sphere: {
       tie(quads, positions) = subdivide_quads(cube_quads, cube_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(cube_quads, cube_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(cube_quads, cube_normals, params.subdivisions);
       tie(ignore, texcoords) = subdivide_quads(cube_quads, cube_texcoords, params.subdivisions);
       for (auto& p : positions) p = normalize(p);
       normals = positions;
     } break;
     case proc_shape_params::type_t::uvsphere: {
       tie(quads, positions) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(quad_quads, quad_normals, params.subdivisions);
       tie(ignore, texcoords) = subdivide_quads(quad_quads, quad_texcoords, params.subdivisions);
       for (auto i = 0; i < positions.size(); i++) {
         auto uv = texcoords[i];
@@ -2537,7 +2537,7 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     } break;
     case proc_shape_params::type_t::disk: {
       tie(quads, positions) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(quad_quads, quad_normals, params.subdivisions);
       tie(ignore, texcoords) = subdivide_quads(quad_quads, quad_texcoords, params.subdivisions);
       for (auto i = 0; i < positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
@@ -2560,7 +2560,7 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     } break;
     case proc_shape_params::type_t::matball: {
       tie(quads, positions) = subdivide_quads(cube_quads, cube_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(cube_quads, cube_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(cube_quads, cube_normals, params.subdivisions);
       tie(ignore, texcoords) = subdivide_quads(cube_quads, cube_texcoords, params.subdivisions);
       for (auto i = 0; i < positions.size(); i++) {
         auto p       = positions[i];
