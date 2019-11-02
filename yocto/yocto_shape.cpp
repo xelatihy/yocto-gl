@@ -2446,14 +2446,14 @@ void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
     float uvscale) {
   make_rect(quads, positions, normals, texcoords, {steps, steps},
-      {scale, scale}, {uvscale, uvscale});
+      {1, 1}, {uvscale, uvscale});
   for (auto i = 0; i < positions.size(); i++) {
     // Analytical Methods for Squaring the Disc, by C. Fong
     // https://arxiv.org/abs/1509.06344
     auto xy = vec2f{positions[i].x, positions[i].y};
     auto uv = vec2f{
         xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
-    positions[i] = {uv.x, uv.y, 0};
+    positions[i] = vec3f{uv.x, uv.y, 0} * scale;
   }
 }
 
