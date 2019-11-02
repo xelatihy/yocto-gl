@@ -1237,8 +1237,8 @@ void subdivide_catmullclark_impl(vector<vec4i>& quads, vector<T>& vert,
     auto tboundary = vector<vec2i>(nboundary * 2);
     for (auto i = 0; i < nboundary; i++) {
       auto e = boundary[i];
-      tboundary.push_back({e.x, nverts + edge_index(emap, e)});
-      tboundary.push_back({nverts + edge_index(emap, e), e.y});
+      tboundary[i * 2 + 0] = {e.x, nverts + edge_index(emap, e)};
+      tboundary[i * 2 + 1] = {nverts + edge_index(emap, e), e.y};
     }
 
     // setup creases -----------------------------------
@@ -3001,13 +3001,15 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_sphere(quads, positions, normals, texcoords, 32, 0.075f * 0.8f, 1);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-suzanne-subdiv") {
-    // TODO: this should be a Catmull-Clark suzanne
     make_monkey(quads, positions, 0.075f * 0.8f);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-cube-subdiv") {
     // TODO: this should be a Catmull-Clark cube
-    make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
+    // make_cube(quads, positions, normals, texcoords, 0.075f);
+    // make_box(quads, positions, normals, texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
+    make_rect(quads, positions, normals, texcoords, {1, 1}, {0.075f, 0.075f});
+    // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
+    //     texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-arealight1") {
     make_rect(quads, positions, normals, texcoords, {1, 1}, {0.2, 0.2});
