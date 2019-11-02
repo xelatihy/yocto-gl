@@ -299,9 +299,6 @@ void merge_triangles_and_quads(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-using std::tie;
-using std::tuple;
-
 // Subdivide lines by splitting each line in half.
 pair<vector<vec2i>, vector<float>> subdivide_lines(
     const vector<vec2i>& lines, const vector<float>& vert, int level);
