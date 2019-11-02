@@ -2933,7 +2933,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
   } else if (type == "test-cube") {
     make_rounded_box(quads, positions, normals, texcoords, {32, 32, 32},
-        {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3);
+        {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere") {
     make_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075);
