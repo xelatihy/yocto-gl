@@ -2209,9 +2209,9 @@ vec3f compute_gradient(const vec3i& triangle, const vector<vec3f>& positions,
 namespace yocto {
 
 // Make a quad.
-static void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
+void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize) {
+    const vec2f& size, const vec2f& uvsize, float rounded) {
   positions.resize((steps.x + 1) * (steps.y + 1));
   normals.resize((steps.x + 1) * (steps.y + 1));
   texcoords.resize((steps.x + 1) * (steps.y + 1));
@@ -2233,12 +2233,23 @@ static void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
           (j + 1) * (steps.x + 1) + i};
     }
   }
+
+  if (rounded) {
+    auto height = rounded;
+    auto radius = (1 + height * height) / (2 * height);
+    auto center = vec3f{0, 0, -radius + height};
+    for (auto i = 0; i < positions.size(); i++) {
+      auto pn      = normalize(positions[i] - center);
+      positions[i] = center + pn * radius;
+      normals[i]   = pn;
+    }
+  }
 }
 
 // Make a cube.
 void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize) {
+    const vec3f& size, const vec3f& uvsize, float rounded) {
   quads.clear();
   positions.clear();
   normals.clear();
@@ -2293,6 +2304,62 @@ void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
   }
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexturecoords);
+  if (rounded) {
+    auto radius = rounded * min(size) / 2;
+    auto c      = size / 2 - radius;
+    for (auto i = 0; i < positions.size(); i++) {
+      auto pc = vec3f{
+          abs(positions[i].x), abs(positions[i].y), abs(positions[i].z)};
+      auto ps = vec3f{positions[i].x < 0 ? -1.0f : 1.0f,
+          positions[i].y < 0 ? -1.0f : 1.0f, positions[i].z < 0 ? -1.0f : 1.0f};
+      if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
+        auto pn      = normalize(pc - c);
+        positions[i] = c + radius * pn;
+        normals[i]   = pn;
+      } else if (pc.x >= c.x && pc.y >= c.y) {
+        auto pn      = normalize((pc - c) * vec3f{1, 1, 0});
+        positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
+        normals[i]   = pn;
+      } else if (pc.x >= c.x && pc.z >= c.z) {
+        auto pn      = normalize((pc - c) * vec3f{1, 0, 1});
+        positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
+        normals[i]   = pn;
+      } else if (pc.y >= c.y && pc.z >= c.z) {
+        auto pn      = normalize((pc - c) * vec3f{0, 1, 1});
+        positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
+        normals[i]   = pn;
+      } else {
+        continue;
+      }
+      positions[i] *= ps;
+      normals[i] *= ps;
+    }
+  }
+}  // namespace yocto
+
+void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize, float bent) {
+  make_rect(quads, positions, normals, texcoords, steps, size, uvsize);
+  for (auto& p : positions) std::swap(p.y, p.z);
+  for (auto& n : normals) n = {0, 1, 0};
+  if (bent) {
+    auto radius = bent;
+    auto start  = (1 - radius) / 2;
+    auto end    = start + radius;
+    for (auto i = 0; i < positions.size(); i++) {
+      if (positions[i].z < -end) {
+        positions[i] = {positions[i].x, -positions[i].z - end + radius, -end};
+        normals[i]   = {0, 0, 1};
+      } else if (positions[i].z < -start && positions[i].z >= -end) {
+        auto phi     = (pif / 2) * (-positions[i].z - start) / radius;
+        positions[i] = {positions[i].x, -cos(phi) * radius + radius,
+            -sin(phi) * radius - start};
+        normals[i]   = {0, cos(phi), sin(phi)};
+      } else {
+      }
+    }
+  }
 }
 
 // Generate lines set along a quad.
@@ -2414,8 +2481,8 @@ extern const vector<vec4i> suzanne_quads;
 void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     const proc_shape_params& params) {
-  using std::tie;
   using std::ignore;
+  using std::tie;
   triangles.clear();
   quads.clear();
   positions.clear();
@@ -2423,95 +2490,29 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
   texcoords.clear();
   switch (params.type) {
     case proc_shape_params::type_t::quad: {
-      tie(quads, positions) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(quad_quads, quad_normals, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(quad_quads, quad_texcoords, params.subdivisions);
-      if (params.rounded) {
-        auto height = params.rounded;
-        auto radius = (1 + height * height) / (2 * height);
-        auto center = vec3f{0, 0, -radius + height};
-        for (auto i = 0; i < positions.size(); i++) {
-          auto pn      = normalize(positions[i] - center);
-          positions[i] = center + pn * radius;
-          normals[i]   = pn;
-        }
-      }
+      make_rect(quads, positions, normals, texcoords,
+          vec2i{pow2(params.subdivisions)}, vec2f{2 * params.scale},
+          vec2f{params.uvscale}, params.rounded);
     } break;
     case proc_shape_params::type_t::floor: {
-      tie(quads, positions) = subdivide_quads(quady_quads, quady_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(quady_quads, quady_normals, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(quady_quads, quady_texcoords, params.subdivisions);
-      if (params.rounded) {
-        auto radius = params.rounded;
-        auto start  = (1 - radius) / 2;
-        auto end    = start + radius;
-        for (auto i = 0; i < positions.size(); i++) {
-          if (positions[i].z < -end) {
-            positions[i] = {
-                positions[i].x, -positions[i].z - end + radius, -end};
-            normals[i] = {0, 0, 1};
-          } else if (positions[i].z < -start && positions[i].z >= -end) {
-            auto phi     = (pif / 2) * (-positions[i].z - start) / radius;
-            positions[i] = {positions[i].x, -cos(phi) * radius + radius,
-                -sin(phi) * radius - start};
-            normals[i]   = {0, cos(phi), sin(phi)};
-          } else {
-          }
-        }
-      }
+      make_floor(quads, positions, normals, texcoords,
+          vec2i{pow2(params.subdivisions)}, vec2f{2 * params.scale},
+          vec2f{params.uvscale}, params.rounded);
     } break;
     case proc_shape_params::type_t::cube: {
-      tie(quads, positions) = subdivide_quads(cube_quads, cube_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(cube_quads, cube_normals, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(cube_quads, cube_texcoords, params.subdivisions);
-      auto steps  = vec3i{pow2(params.subdivisions)};
-      auto uvsize = vec3f{1};
-      auto size   = vec3f{2};
-      make_box(quads, positions, normals, texcoords, steps, size, uvsize);
-      if (params.rounded) {
-        auto radius = params.rounded;
-        auto c      = vec3f{1 - radius};
-        for (auto i = 0; i < positions.size(); i++) {
-          auto pc = vec3f{
-              abs(positions[i].x), abs(positions[i].y), abs(positions[i].z)};
-          auto ps = vec3f{positions[i].x < 0 ? -1.0f : 1.0f,
-              positions[i].y < 0 ? -1.0f : 1.0f,
-              positions[i].z < 0 ? -1.0f : 1.0f};
-          if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
-            auto pn      = normalize(pc - c);
-            positions[i] = c + radius * pn;
-            normals[i]   = pn;
-          } else if (pc.x >= c.x && pc.y >= c.y) {
-            auto pn      = normalize((pc - c) * vec3f{1, 1, 0});
-            positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
-            normals[i]   = pn;
-          } else if (pc.x >= c.x && pc.z >= c.z) {
-            auto pn      = normalize((pc - c) * vec3f{1, 0, 1});
-            positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
-            normals[i]   = pn;
-          } else if (pc.y >= c.y && pc.z >= c.z) {
-            auto pn      = normalize((pc - c) * vec3f{0, 1, 1});
-            positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
-            normals[i]   = pn;
-          } else {
-            continue;
-          }
-          positions[i] *= ps;
-          normals[i] *= ps;
-        }
-      }
+      make_box(quads, positions, normals, texcoords,
+          vec3i{pow2(params.subdivisions)}, vec3f{2 * params.scale},
+          vec3f{params.uvscale}, params.rounded);
     } break;
     case proc_shape_params::type_t::sphere: {
-      tie(quads, positions) = subdivide_quads(cube_quads, cube_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(cube_quads, cube_normals, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(cube_quads, cube_texcoords, params.subdivisions);
-      for (auto& p : positions) p = normalize(p);
-      normals = positions;
     } break;
     case proc_shape_params::type_t::uvsphere: {
-      tie(quads, positions) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(quad_quads, quad_normals, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(quad_quads, quad_texcoords, params.subdivisions);
+      tie(quads, positions) = subdivide_quads(
+          quad_quads, quad_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(
+          quad_quads, quad_normals, params.subdivisions);
+      tie(ignore, texcoords) = subdivide_quads(
+          quad_quads, quad_texcoords, params.subdivisions);
       for (auto i = 0; i < positions.size(); i++) {
         auto uv = texcoords[i];
         auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
@@ -2536,9 +2537,12 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
       }
     } break;
     case proc_shape_params::type_t::disk: {
-      tie(quads, positions) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(quad_quads, quad_normals, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(quad_quads, quad_texcoords, params.subdivisions);
+      tie(quads, positions) = subdivide_quads(
+          quad_quads, quad_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(
+          quad_quads, quad_normals, params.subdivisions);
+      tie(ignore, texcoords) = subdivide_quads(
+          quad_quads, quad_texcoords, params.subdivisions);
       for (auto i = 0; i < positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
@@ -2559,9 +2563,12 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
       }
     } break;
     case proc_shape_params::type_t::matball: {
-      tie(quads, positions) = subdivide_quads(cube_quads, cube_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(cube_quads, cube_normals, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(cube_quads, cube_texcoords, params.subdivisions);
+      tie(quads, positions) = subdivide_quads(
+          cube_quads, cube_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(
+          cube_quads, cube_normals, params.subdivisions);
+      tie(ignore, texcoords) = subdivide_quads(
+          cube_quads, cube_texcoords, params.subdivisions);
       for (auto i = 0; i < positions.size(); i++) {
         auto p       = positions[i];
         positions[i] = normalize(p);
@@ -2569,7 +2576,14 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
       }
     } break;
     case proc_shape_params::type_t::suzanne: {
-      tie(quads, positions) = subdivide_quads(suzanne_quads, suzanne_positions, params.subdivisions);
+      tie(quads, positions) = subdivide_quads(
+          suzanne_quads, suzanne_positions, params.subdivisions);
+      if (params.scale != 1) {
+        for (auto& p : positions) p *= params.scale;
+      }
+      if (params.uvscale != 1) {
+        for (auto& uv : texcoords) uv *= params.uvscale;
+      }
     } break;
     case proc_shape_params::type_t::box: {
       auto steps = vec3i{
@@ -2611,6 +2625,12 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
           normals[i] *= ps;
         }
       }
+      if (params.scale != 1) {
+        for (auto& p : positions) p *= params.scale;
+      }
+      if (params.uvscale != 1) {
+        for (auto& uv : texcoords) uv *= params.uvscale;
+      }
     } break;
     case proc_shape_params::type_t::rect: {
       auto steps = vec2i{
@@ -2619,6 +2639,12 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
       auto uvsize = vec2f{params.aspect.x, params.aspect.y};
       auto size   = 2 * vec2f{params.aspect.x, params.aspect.y};
       make_rect(quads, positions, normals, texcoords, steps, size, uvsize);
+      if (params.scale != 1) {
+        for (auto& p : positions) p *= params.scale;
+      }
+      if (params.uvscale != 1) {
+        for (auto& uv : texcoords) uv *= params.uvscale;
+      }
     } break;
     case proc_shape_params::type_t::rect_stack: {
       auto steps = vec3i{
@@ -2638,16 +2664,31 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
         merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
             qnormals, qtexturecoords);
       }
+      if (params.scale != 1) {
+        for (auto& p : positions) p *= params.scale;
+      }
+      if (params.uvscale != 1) {
+        for (auto& uv : texcoords) uv *= params.uvscale;
+      }
     } break;
     case proc_shape_params::type_t::uvdisk: {
-      tie(quads, positions) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(quad_quads, quad_texcoords, params.subdivisions);
+      tie(quads, positions) = subdivide_quads(
+          quad_quads, quad_positions, params.subdivisions);
+      tie(ignore, normals) = subdivide_quads(
+          quad_quads, quad_positions, params.subdivisions);
+      tie(ignore, texcoords) = subdivide_quads(
+          quad_quads, quad_texcoords, params.subdivisions);
       for (auto i = 0; i < positions.size(); i++) {
         auto uv      = texcoords[i];
         auto phi     = 2 * pif * uv.x;
         positions[i] = {cos(phi) * uv.y, sin(phi) * uv.y, 0};
         normals[i]   = {0, 0, 1};
+      }
+      if (params.scale != 1) {
+        for (auto& p : positions) p *= params.scale;
+      }
+      if (params.uvscale != 1) {
+        for (auto& uv : texcoords) uv *= params.uvscale;
       }
     } break;
     case proc_shape_params::type_t::uvcylinder: {
@@ -2723,6 +2764,12 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
           }
         }
       }
+      if (params.scale != 1) {
+        for (auto& p : positions) p *= params.scale;
+      }
+      if (params.uvscale != 1) {
+        for (auto& uv : texcoords) uv *= params.uvscale;
+      }
     } break;
     case proc_shape_params::type_t::geosphere: {
       // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
@@ -2740,13 +2787,13 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
           sphere_triangles, sphere_positions, params.subdivisions);
       for (auto& p : positions) p = normalize(p);
       normals = positions;
+      if (params.scale != 1) {
+        for (auto& p : positions) p *= params.scale;
+      }
+      if (params.uvscale != 1) {
+        for (auto& uv : texcoords) uv *= params.uvscale;
+      }
     } break;
-  }
-  if (params.scale != 1) {
-    for (auto& p : positions) p *= params.scale;
-  }
-  if (params.uvscale != 1) {
-    for (auto& uv : texcoords) uv *= params.uvscale;
   }
   if (params.frame != identity3x4f) {
     for (auto& p : positions) p = transform_point(params.frame, p);
