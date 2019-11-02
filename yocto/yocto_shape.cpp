@@ -2426,7 +2426,7 @@ void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
     float scale, const vec2f& uvscale, float cap) {
   make_uvsphere(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (cap) {
-    cap = min(cap, scale/2);
+    cap        = min(cap, scale / 2);
     auto zflip = (scale - cap);
     for (auto i = 0; i < positions.size(); i++) {
       if (positions[i].z > zflip) {
@@ -2446,8 +2446,8 @@ void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
     float uvscale) {
-  make_rect(quads, positions, normals, texcoords, {steps, steps},
-      {1, 1}, {uvscale, uvscale});
+  make_rect(quads, positions, normals, texcoords, {steps, steps}, {1, 1},
+      {uvscale, uvscale});
   for (auto i = 0; i < positions.size(); i++) {
     // Analytical Methods for Squaring the Disc, by C. Fong
     // https://arxiv.org/abs/1509.06344
@@ -2502,7 +2502,8 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   for (auto i = 0; i < qpositions.size(); i++) {
     auto uv       = qtexcoords[i];
     auto phi      = 2 * pif * uv.x;
-    qpositions[i] = {cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
+    qpositions[i] = {
+        cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
     qnormals[i]   = {cos(phi), sin(phi), 0};
     qtexcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
   }
@@ -2512,9 +2513,9 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.z},
       {1, 1}, {1, 1});
   for (auto i = 0; i < qpositions.size(); i++) {
-    auto uv       = qtexcoords[i];
-    auto phi      = 2 * pif * uv.x;
-    qpositions[i] = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
+    auto uv         = qtexcoords[i];
+    auto phi        = 2 * pif * uv.x;
+    qpositions[i]   = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
     qnormals[i]     = {0, 0, 1};
     qtexcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
     qpositions[i].z = scale.y;
@@ -2525,9 +2526,9 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.z},
       {1, 1}, {1, 1});
   for (auto i = 0; i < qpositions.size(); i++) {
-    auto uv       = qtexcoords[i];
-    auto phi      = 2 * pif * uv.x;
-    qpositions[i] = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
+    auto uv         = qtexcoords[i];
+    auto phi        = 2 * pif * uv.x;
+    qpositions[i]   = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
     qnormals[i]     = {0, 0, 1};
     qtexcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
     qpositions[i].z = -scale.y;
@@ -2799,8 +2800,8 @@ void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
   auto bpos      = vector<vec3f>{};
   auto bnorm     = vector<vec3f>{};
   auto btexcoord = vector<vec2f>{};
-  sample_triangles(
-      bpos, bnorm, btexcoord, alltriangles, spos, snorm, stexcoord, steps.y, seed);
+  sample_triangles(bpos, bnorm, btexcoord, alltriangles, spos, snorm, stexcoord,
+      steps.y, seed);
 
   auto rng  = make_rng(seed, 3);
   auto blen = vector<float>(bpos.size());
@@ -2937,8 +2938,8 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere-flipcap") {
-    make_capped_uvsphere(
-        quads, positions, normals, texcoords, {32, 32}, 0.075, {1, 1}, 0.3 * 0.075);
+    make_capped_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075,
+        {1, 1}, 0.3 * 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere") {
     make_sphere(quads, positions, normals, texcoords, 32, 0.075f, 1);

@@ -608,8 +608,9 @@ void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num = 65536, const vec2i& steps = {4, 65536}, const vec2f& scale = {1, 1}, 
-    const vec2f& uvscale = {1, 1}, const vec2f& rad = {0.001, 0.001});
+    int num = 65536, const vec2i& steps = {4, 65536},
+    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
+    const vec2f& rad = {0.001, 0.001});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 void make_points(vector<int>& points, vector<vec3f>& positions,
