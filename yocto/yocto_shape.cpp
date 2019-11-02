@@ -758,11 +758,11 @@ vector<vec2i> bezier_to_lines(const vector<vec4i>& beziers) {
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
 std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-split_facevarying(const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords) {
-  auto split = std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>{};
+split_facevarying(const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords) {
+  auto split =
+      std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>{};
   auto& [split_quads, split_positions, split_normals, split_texcoords] = split;
   // make faces unique
   unordered_map<vec3i, int> vert_map;
@@ -3261,8 +3261,8 @@ shapeio_status save_fvshape(const string& filename,
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto [split_quads, split_positions, split_normals, split_texturecoords] =
-    split_facevarying(quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords);
+        split_facevarying(
+            quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
     return save_shape(filename, {}, {}, {}, split_quads, split_positions,
         split_normals, split_texturecoords, {}, {}, ascii, flip_texcoord);
   } else if (ext == ".obj" || ext == ".OBJ") {

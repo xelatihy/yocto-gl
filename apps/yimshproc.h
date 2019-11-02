@@ -80,10 +80,9 @@ void update_glshape(app_state& app) {
       init_glelementbuffer(glshape.quads, triangles, false);
     }
   } else {
-    auto [quads, positions, normals, texcoords] =
-    split_facevarying(shape.quadspos,
-        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-        shape.texcoords);
+    auto [quads, positions, normals, texcoords] = split_facevarying(
+        shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+        shape.normals, shape.texcoords);
     if (!positions.empty())
       init_glarraybuffer(glshape.positions, positions, false);
     if (!normals.empty()) init_glarraybuffer(glshape.normals, normals, false);

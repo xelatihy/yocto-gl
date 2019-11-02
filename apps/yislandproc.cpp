@@ -510,16 +510,16 @@ void add_island_shape(scene_model& scene, const string& parent_name,
   // conversion to non-facevarying
   if (!facevarying) {
     for (auto& shape : shapes) {
-      auto [split_quads, split_positions, split_normals, split_texcoords] =
-      split_facevarying(shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords);
-      shape.quads         = split_quads;
-      shape.positions     = split_positions;
-      shape.normals       = split_normals;
-      shape.texcoords     = split_texcoords;
-      shape.quadspos      = {};
-      shape.quadsnorm     = {};
-      shape.quadstexcoord = {};
+      auto [split_quads, split_positions, split_normals,
+          split_texcoords] = split_facevarying(shape.quadspos, shape.quadsnorm,
+          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
+      shape.quads          = split_quads;
+      shape.positions      = split_positions;
+      shape.normals        = split_normals;
+      shape.texcoords      = split_texcoords;
+      shape.quadspos       = {};
+      shape.quadsnorm      = {};
+      shape.quadstexcoord  = {};
       if (shape.texcoords.empty()) {
         auto all_triangles = true;
         for (auto& q : shape.quads) {

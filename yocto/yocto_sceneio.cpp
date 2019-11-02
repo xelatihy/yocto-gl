@@ -593,12 +593,10 @@ scene_shape tesselate_shape(const scene_model& scene, const scene_shape& shape,
   if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
   if (subdiv.displacement) subdiv = displace_shape(scene, subdiv);
   if (!subdiv.quadspos.empty() && no_facevarying) {
-    std::tie(subdiv.quads, subdiv.positions, subdiv.normals,
-        subdiv.texcoords) = 
-    split_facevarying(
-        subdiv.quadspos, subdiv.quadsnorm,
-        subdiv.quadstexcoord, subdiv.positions,
-        subdiv.normals, subdiv.texcoords);
+    std::tie(subdiv.quads, subdiv.positions, subdiv.normals, subdiv.texcoords) =
+        split_facevarying(subdiv.quadspos, subdiv.quadsnorm,
+            subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
+            subdiv.texcoords);
   }
   if (!subdiv.quads.empty() && no_quads) {
     subdiv.triangles = quads_to_triangles(subdiv.quads);
