@@ -2502,8 +2502,7 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   for (auto i = 0; i < qpositions.size(); i++) {
     auto uv       = qtexcoords[i];
     auto phi      = 2 * pif * uv.x;
-    qpositions[i] = {
-        cos(phi) * scale.x, sin(phi) * scale.x, (uv.y - 0.5f) * scale.y};
+    qpositions[i] = {cos(phi) * scale.x, sin(phi) * scale.x, (2 * uv.y - 1) * scale.y};
     qnormals[i]   = {cos(phi), sin(phi), 0};
     qtexcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
   }
@@ -2515,11 +2514,10 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   for (auto i = 0; i < qpositions.size(); i++) {
     auto uv       = qtexcoords[i];
     auto phi      = 2 * pif * uv.x;
-    qpositions[i] = {
-        cos(phi) * uv.y * scale.x / 2, sin(phi) * uv.y * scale.x / 2, 0};
+    qpositions[i] = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
     qnormals[i]     = {0, 0, 1};
     qtexcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
-    qpositions[i].z = scale.y / 2;
+    qpositions[i].z = scale.y;
   }
   merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
       qnormals, qtexcoords);
@@ -2529,11 +2527,10 @@ void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   for (auto i = 0; i < qpositions.size(); i++) {
     auto uv       = qtexcoords[i];
     auto phi      = 2 * pif * uv.x;
-    qpositions[i] = {
-        cos(phi) * uv.y * scale.x / 2, sin(phi) * uv.y * scale.x / 2, 0};
+    qpositions[i] = {cos(phi) * uv.y * scale.x, sin(phi) * uv.y * scale.x, 0};
     qnormals[i]     = {0, 0, 1};
     qtexcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
-    qpositions[i].z = -scale.y / 2;
+    qpositions[i].z = -scale.y;
     qnormals[i]     = -qnormals[i];
   }
   for (auto i = 0; i < qquads.size(); i++) swap(qquads[i].x, qquads[i].z);
@@ -2548,12 +2545,12 @@ void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
   make_uvcylinder(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (radius) {
     radius = min(radius, min(scale));
-    auto c = scale - vec2f{radius, radius};
+    auto c = scale - radius;
     for (auto i = 0; i < positions.size(); i++) {
       auto phi = atan2(positions[i].y, positions[i].x);
       auto r   = length(vec2f{positions[i].x, positions[i].y});
       auto z   = positions[i].z;
-      auto pc  = vec2f{r, fabs(z)};
+      auto pc  = vec2f{r, abs(z)};
       auto ps  = (z < 0) ? -1.0f : 1.0f;
       if (pc.x >= c.x && pc.y >= c.y) {
         auto pn      = normalize(pc - c);
