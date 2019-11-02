@@ -286,7 +286,7 @@ void add_sky(scene_model& scene, float sun_angle) {
   auto texture     = scene_texture{};
   texture.name     = "sky";
   texture.filename = "textures/sky.hdr";
-  make_sunsky(texture.hdr, {1024, 512}, sun_angle);
+  texture.hdr      = make_sunsky({1024, 512}, sun_angle);
   scene.textures.push_back(texture);
   auto environment         = scene_environment{};
   environment.name         = "sky";
@@ -422,54 +422,79 @@ vector<string> format_validation(const scene_model& scene, bool notextures) {
 
 // Apply subdivision and displacement rules.
 scene_shape subdivide_shape(const scene_shape& shape) {
+  using std::ignore;
   if (!shape.subdivisions) return shape;
   auto subdiv         = shape;
   subdiv.subdivisions = 0;
   if (!shape.points.empty()) {
     throw std::runtime_error("point subdivision not supported");
   } else if (!shape.lines.empty()) {
-    subdivide_lines(subdiv.lines, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.lines,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, shape.subdivisions);
+    tie(subdiv.lines, subdiv.positions) = subdivide_lines(
+        subdiv.lines, subdiv.positions, shape.subdivisions);
+    tie(ignore, subdiv.normals) = subdivide_lines(
+        subdiv.lines, subdiv.normals, shape.subdivisions);
+    tie(ignore, subdiv.texcoords) = subdivide_lines(
+        subdiv.lines, subdiv.texcoords, shape.subdivisions);
+    tie(ignore, subdiv.colors) = subdivide_lines(
+        subdiv.lines, subdiv.colors, shape.subdivisions);
+    tie(ignore, subdiv.radius) = subdivide_lines(
+        subdiv.lines, subdiv.radius, shape.subdivisions);
     if (shape.smooth)
       subdiv.normals = compute_tangents(subdiv.lines, subdiv.positions);
   } else if (!shape.triangles.empty()) {
-    subdivide_triangles(subdiv.triangles, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.triangles,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, shape.subdivisions);
+    tie(subdiv.triangles, subdiv.positions) = subdivide_triangles(
+        subdiv.triangles, subdiv.positions, shape.subdivisions);
+    tie(ignore, subdiv.normals) = subdivide_triangles(
+        subdiv.triangles, subdiv.normals, shape.subdivisions);
+    tie(ignore, subdiv.texcoords) = subdivide_triangles(
+        subdiv.triangles, subdiv.texcoords, shape.subdivisions);
+    tie(ignore, subdiv.colors) = subdivide_triangles(
+        subdiv.triangles, subdiv.colors, shape.subdivisions);
+    tie(ignore, subdiv.radius) = subdivide_triangles(
+        subdiv.triangles, subdiv.radius, shape.subdivisions);
     if (shape.smooth)
       subdiv.normals = compute_normals(subdiv.triangles, subdiv.positions);
   } else if (!shape.quads.empty() && !shape.catmullclark) {
-    subdivide_quads(subdiv.quads, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.quads,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, shape.subdivisions);
+    tie(subdiv.quads, subdiv.positions) = subdivide_quads(
+        subdiv.quads, subdiv.positions, shape.subdivisions);
+    tie(ignore, subdiv.normals) = subdivide_quads(
+        subdiv.quads, subdiv.normals, shape.subdivisions);
+    tie(ignore, subdiv.texcoords) = subdivide_quads(
+        subdiv.quads, subdiv.texcoords, shape.subdivisions);
+    tie(ignore, subdiv.colors) = subdivide_quads(
+        subdiv.quads, subdiv.colors, shape.subdivisions);
+    tie(ignore, subdiv.radius) = subdivide_quads(
+        subdiv.quads, subdiv.radius, shape.subdivisions);
     if (subdiv.smooth)
       subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
   } else if (!shape.quads.empty() && shape.catmullclark) {
-    subdivide_catmullclark(subdiv.quads, subdiv.positions, subdiv.normals,
-        subdiv.texcoords, subdiv.colors, subdiv.radius, shape.quads,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius, shape.subdivisions);
+    tie(subdiv.quads, subdiv.positions) = subdivide_catmullclark(
+        subdiv.quads, subdiv.positions, shape.subdivisions);
+    tie(ignore, subdiv.normals) = subdivide_catmullclark(
+        subdiv.quads, subdiv.normals, shape.subdivisions);
+    tie(ignore, subdiv.texcoords) = subdivide_catmullclark(
+        subdiv.quads, subdiv.texcoords, shape.subdivisions);
+    tie(ignore, subdiv.colors) = subdivide_catmullclark(
+        subdiv.quads, subdiv.colors, shape.subdivisions);
+    tie(ignore, subdiv.radius) = subdivide_catmullclark(
+        subdiv.quads, subdiv.radius, shape.subdivisions);
     if (subdiv.smooth)
       subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
   } else if (!shape.quadspos.empty() && !shape.catmullclark) {
-    subdivide_quads(subdiv.quadspos, subdiv.positions, subdiv.quadspos,
-        shape.positions, shape.subdivisions);
-    subdivide_quads(subdiv.quadsnorm, subdiv.normals, subdiv.quadsnorm,
-        shape.normals, shape.subdivisions);
-    subdivide_quads(subdiv.quadstexcoord, subdiv.texcoords,
+    std::tie(subdiv.quadspos, subdiv.positions) = subdivide_quads(
+        subdiv.quadspos, shape.positions, shape.subdivisions);
+    std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_quads(
+        subdiv.quadsnorm, shape.normals, shape.subdivisions);
+    std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_quads(
         subdiv.quadstexcoord, shape.texcoords, shape.subdivisions);
     if (subdiv.smooth) {
       subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
       subdiv.quadsnorm = subdiv.quadspos;
     }
   } else if (!shape.quadspos.empty() && shape.catmullclark) {
-    subdivide_catmullclark(subdiv.quadspos, subdiv.positions, shape.quadspos,
-        shape.positions, subdiv.subdivisions);
-    subdivide_catmullclark(subdiv.quadstexcoord, subdiv.texcoords,
+    std::tie(subdiv.quadspos, subdiv.positions) = subdivide_catmullclark(
+        shape.quadspos, shape.positions, subdiv.subdivisions);
+    std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_catmullclark(
         shape.quadstexcoord, shape.texcoords, shape.subdivisions, true);
     if (shape.smooth) {
       subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
@@ -547,8 +572,7 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
         count[qpos[i]] += 1;
       }
     }
-    auto normals = vector<vec3f>{shape.positions.size()};
-    compute_normals(normals, shape.quadspos, shape.positions);
+    auto normals = compute_normals(shape.quadspos, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       subdiv.positions[vid] += normals[vid] * offset[vid] / count[vid];
     }
@@ -938,6 +962,24 @@ static inline string make_safe_filename(const string& filename_) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+static bool make_image_preset(
+    image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
+  if (type.find("sky") == type.npos) {
+    auto imgf = make_image_preset(type);
+    if (imgf.empty()) return false;
+    if (type.find("-normal") == type.npos &&
+        type.find("-displacement") == type.npos) {
+      ldr = rgb_to_srgbb(imgf);
+    } else {
+      ldr = float_to_byte(imgf);
+    }
+    return true;
+  } else {
+    hdr = make_image_preset(type);
+    return true;
+  }
+}
+
 sceneio_status load_yaml(
     const string& filename, scene_model& scene, const load_params& params) {
   // open file
@@ -1206,7 +1248,6 @@ static sceneio_status load_yaml_scene(
 static sceneio_status save_yaml(const string& filename,
     const scene_model& scene, bool ply_instances = false,
     const string& instances_name = "") {
-
   static const auto def_texture     = scene_texture{};
   static const auto def_material    = scene_material{};
   static const auto def_shape       = scene_shape{};

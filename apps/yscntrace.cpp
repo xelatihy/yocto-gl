@@ -245,7 +245,8 @@ int main(int argc, const char* argv[]) {
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
-      if (auto ret = save_image_tonemapped(outfilename, render, tonemap_prms); !ret)
+      if (auto ret = save_image_tonemapped(outfilename, render, tonemap_prms);
+          !ret)
         print_fatal(ret.error);
     }
   }

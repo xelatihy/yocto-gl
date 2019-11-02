@@ -291,6 +291,7 @@ inline print_timer print_timed(const string& msg) {
 inline void print_elapsed(print_timer& timer) {
   if (timer.start_time < 0) return;
   printf(" in %s\n", format_duration(get_time_() - timer.start_time).c_str());
+  timer.start_time = -1;
 }
 inline print_timer::~print_timer() { print_elapsed(*this); }
 

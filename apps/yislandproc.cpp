@@ -38,8 +38,8 @@
 
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_modelio.h"
+#include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 using namespace yocto;
 
@@ -47,9 +47,9 @@ using namespace yocto;
 #include "ext/sajson.h"
 
 #include <deque>
+#include <memory>
 #include <string_view>
 #include <unordered_set>
-#include <memory>
 
 using std::string_view;
 using std::unordered_set;
@@ -247,12 +247,10 @@ void load_island_lights(
       auto shape     = scene_shape{};
       shape.name     = "shapes/lights/" + name + ".ply";
       shape.filename = "shapes/lights/" + name + ".ply";
-      auto params    = proc_shape_params{};
-      params.type    = proc_shape_params::type_t::quad;
-      params.scale =
-          (ljs.at("width").get<float>() + ljs.at("height").get<float>());
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
+      auto size      = vec2f{
+          ljs.at("width").get<float>(), ljs.at("height").get<float>()};
+      make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
+          {1, 1}, size, {1, 1});
       scene.shapes.push_back(shape);
       auto instance     = scene_instance{};
       instance.name     = name;
@@ -406,7 +404,7 @@ void load_island_shape(vector<scene_shape>& shapes,
     norm_map.reserve(1024 * 1024);
   };
 
-  auto fs = fopen(filename.c_str(), "rt");
+  auto fs       = fopen(filename.c_str(), "rt");
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   auto command   = obj_command{};

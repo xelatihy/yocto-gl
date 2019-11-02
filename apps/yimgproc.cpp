@@ -193,9 +193,7 @@ int main(int argc, const char* argv[]) {
 
   // resize
   if (resize_width != 0 || resize_height != 0) {
-    auto res = image<vec4f>{};
-    resize_image(res, img, {resize_width, resize_height});
-    img = res;
+    img = resize_image(img, {resize_width, resize_height});
   }
 
   // bilateral

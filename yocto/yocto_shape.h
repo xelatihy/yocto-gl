@@ -80,6 +80,8 @@
 
 #include "yocto_math.h"
 
+#include <tuple>
+
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
@@ -92,11 +94,12 @@ vector<vec3f> compute_normals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
 vector<vec3f> compute_normals(
     const vector<vec4i>& quads, const vector<vec3f>& positions);
-void compute_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
+// Update normals and tangents
+void update_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
     const vector<vec3f>& positions);
-void compute_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
+void update_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
     const vector<vec3f>& positions);
-void compute_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+void update_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
     const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
@@ -107,25 +110,23 @@ void compute_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
 vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords);
-void          compute_tangent_spaces(vector<vec4f>& tangents,
-             const vector<vec3i>& triangles, const vector<vec3f>& positions,
-             const vector<vec3f>& normals, const vector<vec2f>& texcoords);
 
 // Apply skinning to vertex position and normals.
 pair<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms);
-void compute_skinning(vector<vec3f>& skinned_positions,
-    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
 pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
-void compute_matrix_skinning(vector<vec3f>& skinned_positions,
+// Update skinning
+void udpate_skinning(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms);
+void update_matrix_skinning(vector<vec3f>& skinned_positions,
     vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<mat4f>& xforms);
@@ -139,17 +140,12 @@ namespace yocto {
 
 // Flip vertex normals
 vector<vec3f> flip_normals(const vector<vec3f>& normals);
-void flip_normals(vector<vec3f>& flipped, const vector<vec3f>& normals);
 // Flip face orientation
 vector<vec3i> flip_triangles(const vector<vec3i>& triangles);
 vector<vec4i> flip_quads(const vector<vec4i>& quads);
-void flip_triangles(vector<vec3i>& flipped, const vector<vec3i>& triangles);
-void flip_quads(vector<vec4i>& flipped, const vector<vec4i>& quads);
 // Align vertex positions. Alignment is 0: none, 1: min, 2: max, 3: center.
 vector<vec3f> align_vertices(
     const vector<vec3f>& positions, const vec3i& alignment);
-void align_vertices(vector<vec3f>& aligned, const vector<vec3f>& positions,
-    const vec3i& alignment);
 
 }  // namespace yocto
 
@@ -181,35 +177,24 @@ int edge_index(const edge_map& emap, const vec2i& edge);
 int           num_edges(const edge_map& emap);
 vector<vec2i> get_edges(const edge_map& emap);
 vector<vec2i> get_boundary(const edge_map& emap);
-void          get_edges(const edge_map& emap, vector<vec2i>& edges);
-void          get_boundary(const edge_map& emap, vector<vec2i>& edges);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);
 vector<vec2i> get_edges(const vector<vec4i>& quads);
 
 // Build adjacencies between faces (sorted counter-clockwise)
 vector<vec3i> face_adjacencies(const vector<vec3i>& triangles);
-void          face_adjacencies(
-             vector<vec3i>& adjacencies, const vector<vec3i>& triangles);
 
 // Build adjacencies between vertices (sorted counter-clockwise)
 vector<vector<int>> vertex_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
-void vertex_adjacencies(vector<vector<int>>& result,
     const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
 
 // Compute boundaries as a list of loops (sorted counter-clockwise)
 vector<vector<int>> ordered_boundaries(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacency, int num_vertices);
-void                ordered_boundaries(vector<vector<int>>& boundaries,
-                   const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
-                   int num_vertices);
 
 // Build adjacencies between each vertex and its adjacent faces.
 // Adjacencies are sorted counter-clockwise and have same starting points as
 // vertex_adjacencies()
 vector<vector<int>> vertex_to_faces_adjacencies(
-    const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
-void vertex_to_faces_adjacencies(vector<vector<int>>& result,
     const vector<vec3i>& triangles, const vector<vec3i>& adjacencies);
 
 }  // namespace yocto
@@ -248,14 +233,10 @@ namespace yocto {
 
 // Convert quads to triangles
 vector<vec3i> quads_to_triangles(const vector<vec4i>& quads);
-void quads_to_triangles(vector<vec3i>& triangles, const vector<vec4i>& quads);
 // Convert triangles to quads by creating degenerate quads
 vector<vec4i> triangles_to_quads(const vector<vec3i>& triangles);
-void triangles_to_quads(vector<vec4i>& quads, const vector<vec3i>& triangles);
-
 // Convert beziers to lines using 3 lines for each bezier.
 vector<vec4i> bezier_to_lines(vector<vec2i>& lines);
-void bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm, texcoord and colors.
@@ -273,12 +254,6 @@ vector<vector<vec3i>> ungroup_triangles(
     const vector<vec3i>& triangles, const vector<int>& ids);
 vector<vector<vec4i>> ungroup_quads(
     const vector<vec4i>& quads, const vector<int>& ids);
-void ungroup_lines(vector<vector<vec2i>>& split_lines,
-    const vector<vec2i>& lines, const vector<int>& ids);
-void ungroup_triangles(vector<vector<vec3i>>& split_triangles,
-    const vector<vec3i>& triangles, const vector<int>& ids);
-void ungroup_quads(vector<vector<vec4i>>& split_quads,
-    const vector<vec4i>& quads, const vector<int>& ids);
 
 // Weld vertices within a threshold.
 pair<vector<vec3f>, vector<int>> weld_vertices(
@@ -288,15 +263,6 @@ pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     float threshold);
 pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold);
-// Weld vertices within a threshold.
-void weld_vertices(vector<vec3f>& welded_positions, vector<int>& indices,
-    const vector<vec3f>& positions, float threshold);
-void weld_triangles(vector<vec3i>& welded_triangles,
-    vector<vec3f>& welded_positions, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, float threshold);
-void weld_quads(vector<vec4i>& welded_quads, vector<vec3f>& welded_positions,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    float threshold);
 
 // Merge shape elements
 void merge_lines(
@@ -342,20 +308,6 @@ pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec3f>& vert, int level);
 pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec4f>& vert, int level);
-void subdivide_lines(vector<vec2i>& slines, vector<float>& svert,
-    const vector<vec2i>& lines, const vector<float>& vert, int level);
-void subdivide_lines(vector<vec2i>& slines, vector<vec2f>& svert,
-    const vector<vec2i>& lines, const vector<vec2f>& vert, int level);
-void subdivide_lines(vector<vec2i>& slines, vector<vec3f>& svert,
-    const vector<vec2i>& lines, const vector<vec3f>& vert, int level);
-void subdivide_lines(vector<vec2i>& slines, vector<vec4f>& svert,
-    const vector<vec2i>& lines, const vector<vec4f>& vert, int level);
-void subdivide_lines(vector<vec2i>& slines, vector<vec3f>& spositions,
-    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
-    vector<float>& sradius, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 pair<vector<vec3i>, vector<float>> subdivide_triangles(
@@ -366,20 +318,6 @@ pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& vert, int level);
 pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec4f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& striangles, vector<float>& svert,
-    const vector<vec3i>& triangles, const vector<float>& vert, int level);
-void subdivide_triangles(vector<vec3i>& striangles, vector<vec2f>& svert,
-    const vector<vec3i>& triangles, const vector<vec2f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& striangles, vector<vec3f>& svert,
-    const vector<vec3i>& triangles, const vector<vec3f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& striangles, vector<vec4f>& svert,
-    const vector<vec3i>& triangles, const vector<vec4f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& striangles, vector<vec3f>& spositions,
-    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
-    vector<float>& sradius, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, int level);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 pair<vector<vec4i>, vector<float>> subdivide_quads(
@@ -390,20 +328,6 @@ pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec3f>& vert, int level);
 pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level);
-void subdivide_quads(vector<vec4i>& squads, vector<float>& svert,
-    const vector<vec4i>& quads, const vector<float>& vert, int level);
-void subdivide_quads(vector<vec4i>& squads, vector<vec2f>& svert,
-    const vector<vec4i>& quads, const vector<vec2f>& vert, int level);
-void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& svert,
-    const vector<vec4i>& quads, const vector<vec3f>& vert, int level);
-void subdivide_quads(vector<vec4i>& squads, vector<vec4f>& svert,
-    const vector<vec4i>& quads, const vector<vec4f>& vert, int level);
-void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& spositions,
-    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
-    vector<float>& sradius, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, int level);
 // Subdivide beziers by splitting each segment in two.
 pair<vector<vec4i>, vector<float>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<float>& vert, int level);
@@ -413,20 +337,6 @@ pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec3f>& vert, int level);
 pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec4f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
-    const vector<vec4i>& beziers, const vector<float>& vert, int level);
-void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
-    const vector<vec4i>& beziers, const vector<vec2f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
-    const vector<vec4i>& beziers, const vector<vec3f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& sbeziers, vector<float>& svert,
-    const vector<vec4i>& beziers, const vector<vec4f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& sbeziers, vector<vec3f>& spositions,
-    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
-    vector<float>& sradius, const vector<vec4i>& beziers,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
 pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<float>& vert, int level,
@@ -440,24 +350,6 @@ pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
 pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
     bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& squads, vector<float>& svert,
-    const vector<vec4i>& quads, const vector<float>& vert, int level,
-    bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& squads, vector<vec2f>& svert,
-    const vector<vec4i>& quads, const vector<vec2f>& vert, int level,
-    bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& squads, vector<vec3f>& svert,
-    const vector<vec4i>& quads, const vector<vec3f>& vert, int level,
-    bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& squads, vector<vec4f>& svert,
-    const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
-    bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& squads, vector<vec3f>& spositions,
-    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
-    vector<float>& sradius, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, int level);
 
 }  // namespace yocto
 
@@ -470,22 +362,17 @@ namespace yocto {
 int           sample_points(int npoints, float re);
 int           sample_points(const vector<float>& cdf, float re);
 vector<float> sample_points_cdf(int npoints);
-void          sample_points_cdf(vector<float>& cdf, int npoints);
 
 // Pick a point on lines uniformly.
 pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru);
 vector<float>    sample_lines_cdf(
        const vector<vec2i>& lines, const vector<vec3f>& positions);
-void sample_lines_cdf(vector<float>& cdf, const vector<vec2i>& lines,
-    const vector<vec3f>& positions);
 
 // Pick a point on a triangle mesh uniformly.
 pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv);
 vector<float> sample_triangles_cdf(
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
-void sample_triangles_cdf(vector<float>& cdf, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions);
 
 // Pick a point on a quad mesh uniformly.
 pair<int, vec2f> sample_quads(
@@ -494,8 +381,6 @@ pair<int, vec2f> sample_quads(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv);
 vector<float>    sample_quads_cdf(
        const vector<vec4i>& quads, const vector<vec3f>& positions);
-void sample_quads_cdf(vector<float>& cdf, const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
 
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.
@@ -534,9 +419,6 @@ struct geodesic_solver {
 // Construct a a graph to compute geodesic distances
 geodesic_solver make_geodesic_solver(const vector<vec3i>& triangles,
     const vector<vec3i>& adjacencies, const vector<vec3f>& positions);
-void            make_geodesic_solver(geodesic_solver& solver,
-               const vector<vec3i>& triangles, const vector<vec3i>& adjacencies,
-               const vector<vec3f>& positions);
 
 // Compute geodesic distances
 void update_geodesic_distances(vector<float>& distances,
@@ -545,9 +427,6 @@ void update_geodesic_distances(vector<float>& distances,
 
 vector<float> compute_geodesic_distances(const geodesic_solver& solver,
     const vector<int>& sources, float max_distance = flt_max);
-void          compute_geodesic_distances(const geodesic_solver& solver,
-             const vector<int>& sources, vector<float>& distances,
-             float max_distance = flt_max);
 
 // Compute all shortest paths from source vertices to any other vertex.
 // Paths are implicitly represented: each node is assignes its previous node in
@@ -560,8 +439,6 @@ vector<int> compute_geodesic_paths(const geodesic_solver& solver,
 // take the farthers point from current sampled set until done.
 vector<int> sample_vertices_poisson(
     const geodesic_solver& solver, int num_samples);
-void sample_vertices_poisson(
-    vector<int>& verts, const geodesic_solver& solver, int num_samples);
 
 // Compute the distance field needed to compute a voronoi diagram
 vector<vector<float>> compute_voronoi_fields(
@@ -570,9 +447,6 @@ vector<vector<float>> compute_voronoi_fields(
 // Convert distances to colors
 vector<vec4f> colors_from_field(const vector<float>& field, float scale = 1,
     const vec4f& c0 = {1, 1, 1, 1}, const vec4f& c1 = {1, 0.1, 0.1, 1});
-void colors_from_field(vector<vec4f>& colors, const vector<float>& field,
-    float scale = 1, const vec4f& c0 = {1, 1, 1, 1},
-    const vec4f& c1 = {1, 0.1, 0.1, 1});
 
 struct path_vertex {
   vec2i edge;
@@ -644,76 +518,138 @@ shapeio_status save_fvshape(const string& filename,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Parameters for make shape function
-struct proc_shape_params {
-  // clang-format off
-  enum struct type_t {
-    quad, floor, cube, sphere, disk, matball, suzanne, box, rect, rect_stack,
-    uvsphere, uvdisk, uvcylinder, geosphere };
-  // clang-format on
-  type_t  type         = type_t::quad;
-  int     subdivisions = 0;
-  float   scale        = 1;
-  float   uvscale      = 1;
-  float   rounded      = 0;
-  vec3f   aspect       = {1, 1, 1};  // for rect, box, cylinder
-  frame3f frame        = identity3x4f;
-};
+// Make a plane.
+void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1});
+void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1}, float radius = 0.3);
+// Make a box.
+void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
+    const vec3f& uvscale = {1, 1, 1});
+void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
+    const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
+// Make a quad stack
+void make_rect_stack(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
+    const vec3f& uvscale = {1, 1, 1});
+// Make a floor.
+void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps = {1, 1}, const vec2f& scale = {10, 10},
+    const vec2f& uvscale = {10, 10});
+void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps = {1, 1}, const vec2f& scale = {10, 10},
+    const vec2f& uvscale = {10, 10}, float bent = 0.5);
+// Make a sphere.
+void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
+    float scale = 1, float uvscale = 1);
+// Make a sphere.
+void make_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
+// Make a sphere with slipped caps.
+void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1}, float height = 0.3);
+// Make a disk
+void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
+    float scale = 1, float uvscale = 1);
+// Make a bulged disk
+void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
+    float scale = 1, float uvscale = 1, float height = 0.3);
+// Make a uv disk
+void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec2i& steps = {32, 32}, float scale = 1,
+    const vec2f& uvscale = {1, 1});
+// Make a uv cylinder
+void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1},
+    const vec3f& uvscale = {1, 1, 1});
+// Make a rounded uv cylinder
+void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec3i& steps = {32, 32, 32}, const vec2f& scale = {1, 1},
+    const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
 
-// Make a procedural shape
-void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const proc_shape_params& params);
-// Make face-varying quads. For now supports only quad, cube, suzanne, sphere,
-// rect, box. Rounding not supported for now.
-void make_proc_fvshape(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+// Make a facevarying rect
+void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const proc_shape_params& params);
+    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1});
+// Make a facevarying box
+void make_fvbox(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords,
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
+    const vec3f& uvscale = {1, 1, 1});
+void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
+    float scale = 1, float uvscale = 1);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, int subdivisions, const vec2f& size, const vec2f& uvsize,
-    const vec2f& line_radius);
+    int num = 65536, const vec2i& steps = {4, 65536},
+    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1},
+    const vec2f& rad = {0.001, 0.001});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 void make_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, float uvsize, float point_radius);
+    int num, float uvscale, float point_radius);
 void make_random_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, const vec3f& size, float uvsize, float point_radius,
+    int num, const vec3f& size, float uvscale, float point_radius,
     uint64_t seed);
 
-// Make fair params
-struct hair_params {
-  int   num               = 0;
-  int   subdivisions      = 0;
-  float length_min        = 0.1;
-  float length_max        = 0.1;
-  float radius_base       = 0.001;
-  float radius_tip        = 0.001;
-  float noise_strength    = 0;
-  float noise_scale       = 10;
-  float clump_strength    = 0;
-  int   clump_num         = 0;
-  float rotation_strength = 0;
-  float rotation_minchia  = 0;
-  int   seed              = 7;
-};
+// Predefined meshes
+void make_monkey(
+    vector<vec4i>& quads, vector<vec3f>& positions, float scale = 1);
+void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
+void make_quady(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
+void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
+void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
+void make_geosphere(
+    vector<vec3i>& triangles, vector<vec3f>& positions, float scale = 1);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
 // rad: minimum and maximum radius from base to tip
 // noise: noise added to hair (strength/scale)
-// clump: clump added to hair (number/strength)
+// clump: clump added to hair (strength/number)
 // rotation: rotation added to hair (angle/strength)
 void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const hair_params& params);
+    const vector<vec2f>& stexcoord, const vec2i& steps = {8, 65536},
+    const vec2f& length = {0.1, 0.1}, const vec2f& rad = {0.001, 0.001},
+    const vec2f& noise = {0, 10}, const vec2f& clump = {0, 128},
+    const vec2f& rotation = {0, 0}, int seed = 7);
 
 // Thickens a shape by copying the shape content, rescaling it and flipping its
 // normals. Note that this is very much not robust and only useful for trivial

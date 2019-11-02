@@ -99,8 +99,8 @@ namespace yocto {
 // Evaluates a color image at a point `uv`.
 vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
     bool no_interpolation, bool clamp_to_edge);
-vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
-    bool as_linear, bool no_interpolation, bool clamp_to_edge);
+vec4f eval_image(const image<vec4b>& img, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge);
 
 }  // namespace yocto
 
@@ -112,16 +112,12 @@ namespace yocto {
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
-void         byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
-void         float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
 image<vec4f> rgb_to_srgb(const image<vec4f>& rgb);
 image<vec4f> srgb_to_rgb(const image<vec4b>& srgb);
 image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb);
-void         srgb_to_rgb(image<vec4f>& rgb, const image<vec4f>& srgb);
-void         rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& rgb);
 
 // Tone mapping params
 struct tonemap_params {
@@ -168,16 +164,10 @@ vec3f compute_white_balance(const image<vec4f>& img);
 // Resize an image.
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size);
-void         resize_image(
-            image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
-void resize_image(
-    image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
 
 // Compute the difference between two images
 image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool disply_diff);
-void image_difference(image<vec4f>& diff, const image<vec4f>& a,
-    const image<vec4f>& b, bool disply_diff);
 
 }  // namespace yocto
 
@@ -204,7 +194,8 @@ imageio_status load_imageb(const string& filename, image<vec4b>& img);
 imageio_status save_imageb(const string& filename, const image<vec4b>& img);
 
 // Loads/saves a 4 channels float/byte image tonemapped
-imageio_status save_image_tonemapped(const string& filename, const image<vec4f>& img, const tonemap_params& params);
+imageio_status save_image_tonemapped(const string& filename,
+    const image<vec4f>& img, const tonemap_params& params);
 
 }  // namespace yocto
 
@@ -230,9 +221,46 @@ struct proc_image_params {
   vec4f  borderc = {0, 0, 0, 1};
 };
 
-// Make an image
-image<vec4f> make_proc_image(const proc_image_params& params);
-void make_proc_image(image<vec4f>& img, const proc_image_params& params);
+// Make a grid image.
+image<vec4f> make_grid(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
+    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+// Make a checker image.
+image<vec4f> make_checker(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
+    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+// Make a bump map.
+image<vec4f> make_bumps(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a ramp
+image<vec4f> make_ramp(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a gamma ramp.
+image<vec4f> make_gammaramp(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a uv ramp
+image<vec4f> make_uvramp(const vec2i& size, float scale = 1);
+// Make a uv grid
+image<vec4f> make_uvgrid(
+    const vec2i& size, float scale = 1, bool colored = true);
+// Make blackbody ramp.
+image<vec4f> make_blackbodyramp(
+    const vec2i& size, float scale = 1, float from = 1000, float to = 12000);
+// Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
+image<vec4f> make_noisemap(const vec2i& size, float scale = 1,
+    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {0, 0, 0, 1});
+image<vec4f> make_fbmmap(const vec2i& size, float scale = 1,
+    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {0, 0, 0, 1});
+image<vec4f> make_turbulencemap(const vec2i& size, float scale = 1,
+    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {0, 0, 0, 1});
+image<vec4f> make_ridgemap(const vec2i& size, float scale = 1,
+    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {0, 0, 0, 1});
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
@@ -242,46 +270,28 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params);
 image<vec4f> make_sunsky(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
-void         make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
-            float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-            float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
 image<vec4f> make_lights(const vec2i& size, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
-void         make_lights(image<vec4f>& img, const vec2i& size,
-            const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-            float lwidth = pif / 16, float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
-void         bump_to_normal(
-            image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
-image<vec4f> add_border(const image<vec4f>& img, int width, const vec4f& color);
-void         add_border(
-            image<vec4f>& bordered, image<vec4f>& img, int width, const vec4f& color);
+image<vec4f> add_border(
+    const image<vec4f>& img, float width, const vec4f& color = {0, 0, 0, 1});
 
 // Make logo images. Image is resized to proper size.
 image<vec4b> make_logo(const string& name);
-void         make_logo(image<vec4f>& img, const string& name);
-void         make_logo(image<vec4b>& img, const string& name);
 image<vec4f> add_logo(
     const image<vec4f>& img, const string& name = "logo-medium");
 image<vec4b> add_logo(
     const image<vec4b>& img, const string& name = "logo-medium");
-void add_logo(image<vec4f>& with_logo, const image<vec4f>& img,
-    const string& name = "logo-medium");
-void add_logo(image<vec4b>& with_logo, const image<vec4b>& img,
-    const string& name = "logo-medium");
 
 // Make an image preset, useful for testing. See implementation for types.
 image<vec4f> make_image_preset(const string& type);
-bool         make_image_preset(image<vec4f>& img, const string& type);
-bool         make_image_preset(image<vec4b>& img, const string& type);
-bool         make_image_preset(
-            image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+image<vec4b> make_image_presetb(const string& type);
 
 }  // namespace yocto
 
