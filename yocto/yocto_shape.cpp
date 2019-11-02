@@ -2710,11 +2710,13 @@ void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
   normals   = positions;
   for (auto& n : normals) n = normalize(n);
 }
-void make_suzanne(vector<vec4i>& quads, vector<vec3f>& positions, float size) {
+
+// Predefined meshes
+void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale) {
   quads     = suzanne_quads;
   positions = suzanne_positions;
-  if (size != 1) {
-    for (auto& p : positions) p *= size;
+  if (scale != 1) {
+    for (auto& p : positions) p *= scale;
   }
 }
 
@@ -2741,16 +2743,6 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
         auto p       = positions[i];
         positions[i] = normalize(p);
         normals[i]   = normalize(p);
-      }
-    } break;
-    case proc_shape_params::type_t::suzanne: {
-      tie(quads, positions) = subdivide_quads(
-          suzanne_quads, suzanne_positions, params.subdivisions);
-      if (params.scale != 1) {
-        for (auto& p : positions) p *= params.scale;
-      }
-      if (params.uvscale != 1) {
-        for (auto& uv : texcoords) uv *= params.uvscale;
       }
     } break;
     case proc_shape_params::type_t::uvcylinder: {
@@ -3020,9 +3012,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "default-hairball-interior") {
     make_sphere(quads, positions, normals, texcoords, pow2(5), 0.8);
   } else if (type == "default-suzanne") {
-    auto params = proc_shape_params{};
-    params.type = proc_shape_params::type_t::suzanne;
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_monkey(quads, positions);
   } else if (type == "default-cube-facevarying") {
     make_fvbox(
         quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
@@ -3125,11 +3115,8 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-suzanne-subdiv") {
     // TODO: this should be a Catmull-Clark suzanne
-    auto params  = proc_shape_params{};
-    params.type  = proc_shape_params::type_t::suzanne;
-    params.scale = 0.075f * 0.8f;
-    params.frame = frame3f{{0, 0.075, 0}};
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_monkey(quads, positions, 0.075f * 0.8f);
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-cube-subdiv") {
     // TODO: this should be a Catmull-Clark cube
     make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,

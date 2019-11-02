@@ -522,7 +522,7 @@ namespace yocto {
 struct proc_shape_params {
   // clang-format off
   enum struct type_t {
-    matball, suzanne,
+    matball, 
     uvsphere, uvcylinder, geosphere };
   // clang-format on
   type_t  type         = type_t::matball;
@@ -628,6 +628,9 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     int num, const vec3f& size, float uvscale, float point_radius,
     uint64_t seed);
+
+// Predefined meshes
+void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale = 1);
 
 // Make fair params
 struct hair_params {
