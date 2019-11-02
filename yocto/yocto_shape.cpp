@@ -2335,7 +2335,23 @@ void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
       normals[i] *= ps;
     }
   }
-}  // namespace yocto
+}
+
+void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec3f& size, const vec2f& uvsize, float rounded) {
+      auto qquads         = vector<vec4i>{};
+      auto qpositions     = vector<vec3f>{};
+      auto qnormals       = vector<vec3f>{};
+      auto qtexturecoords = vector<vec2f>{};
+      for (auto i = 0; i <= steps.z; i++) {
+        make_rect(qquads, qpositions, qnormals, qtexturecoords,
+            {steps.x, steps.y}, {size.x, size.y}, uvsize, rounded);
+        for (auto& p : qpositions) p.z = (-0.5f + (float)i / steps.z) * size.z;
+        merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+            qnormals, qtexturecoords);
+      }
+}
 
 void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
@@ -2612,15 +2628,9 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
       auto steps = vec2i{
           (int)round(pow2(params.subdivisions) * params.aspect.x),
           (int)round(pow2(params.subdivisions) * params.aspect.y)};
-      auto uvsize = vec2f{params.aspect.x, params.aspect.y};
-      auto size   = 2 * vec2f{params.aspect.x, params.aspect.y};
+      auto uvsize = vec2f{params.aspect.x, params.aspect.y} * params.uvscale;
+      auto size   = 2 * vec2f{params.aspect.x, params.aspect.y} * params.scale;
       make_rect(quads, positions, normals, texcoords, steps, size, uvsize);
-      if (params.scale != 1) {
-        for (auto& p : positions) p *= params.scale;
-      }
-      if (params.uvscale != 1) {
-        for (auto& uv : texcoords) uv *= params.uvscale;
-      }
     } break;
     case proc_shape_params::type_t::rect_stack: {
       auto steps = vec3i{
