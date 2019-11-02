@@ -203,7 +203,7 @@ int main(int argc, const char* argv[]) {
   // add components
   if (validate) {
     auto validate_timer = print_timed("validating");
-    auto errors         = format_validation(ioscene);
+    auto errors         = scene_validation(ioscene);
     for (auto& error : errors) print_info(error);
     print_elapsed(validate_timer);
   }

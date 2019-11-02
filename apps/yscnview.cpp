@@ -553,7 +553,7 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : format_stats(app.scene)) print_info(stat);
+      for (auto stat : scene_stats(app.scene)) print_info(stat);
     }
     end_glheader(win);
   }

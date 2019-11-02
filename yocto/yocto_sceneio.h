@@ -288,9 +288,9 @@ void update_transforms(
     scene_model& scene, float time = 0, const string& anim_group = "");
 
 // Return scene statistics as list of strings.
-vector<string> format_stats(const scene_model& scene, bool verbose = false);
+vector<string> scene_stats(const scene_model& scene, bool verbose = false);
 // Return validation errors as list of strings.
-vector<string> format_validation(
+vector<string> scene_validation(
     const scene_model& scene, bool notextures = false);
 
 }  // namespace yocto

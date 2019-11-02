@@ -295,7 +295,7 @@ void add_sky(scene_model& scene, float sun_angle) {
   scene.environments.push_back(environment);
 }
 
-vector<string> format_stats(const scene_model& scene, bool verbose) {
+vector<string> scene_stats(const scene_model& scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
@@ -385,7 +385,7 @@ void trim_memory(scene_model& scene) {
 }
 
 // Checks for validity of the scene.
-vector<string> format_validation(const scene_model& scene, bool notextures) {
+vector<string> scene_validation(const scene_model& scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = unordered_map<string, int>();
@@ -2056,7 +2056,7 @@ static sceneio_status save_pbrt(
   auto pbrt = pbrt_model{};
 
   // embed data
-  for (auto stat : format_stats(scene)) pbrt.comments.push_back(stat);
+  for (auto stat : scene_stats(scene)) pbrt.comments.push_back(stat);
 
   // convert camera
   auto& camera     = scene.cameras.front();

@@ -586,8 +586,8 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : format_stats(app.ioscene)) print_info(stat);
-      // for (auto stat : format_stats(app.bvh)) print_info(stat);
+      for (auto stat : scene_stats(app.ioscene)) print_info(stat);
+      // for (auto stat : scene_stats(app.bvh)) print_info(stat);
     }
     auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(mouse_pos, app.draw_prms.center,
