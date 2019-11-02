@@ -2719,138 +2719,48 @@ void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale) {
     for (auto& p : positions) p *= scale;
   }
 }
-
-// Make a procedural shape
-void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const proc_shape_params& params) {
-  using std::ignore;
-  using std::tie;
-  triangles.clear();
-  quads.clear();
-  positions.clear();
-  normals.clear();
-  texcoords.clear();
-  switch (params.type) {
-    case proc_shape_params::type_t::matball: {
-      tie(quads, positions) = subdivide_quads(
-          cube_quads, cube_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(
-          cube_quads, cube_normals, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(
-          cube_quads, cube_texcoords, params.subdivisions);
-      for (auto i = 0; i < positions.size(); i++) {
-        auto p       = positions[i];
-        positions[i] = normalize(p);
-        normals[i]   = normalize(p);
-      }
-    } break;
-    case proc_shape_params::type_t::uvcylinder: {
-      auto steps = vec3i{
-          (int)round(pow2(params.subdivisions + 1) * params.aspect.x),
-          (int)round(pow2(params.subdivisions + 0) * params.aspect.y),
-          (int)round(pow2(params.subdivisions - 1) * params.aspect.z)};
-      auto uvscale    = params.aspect;
-      auto size       = 2 * vec2f{params.aspect.x, params.aspect.y};
-      auto qquads     = vector<vec4i>{};
-      auto qpositions = vector<vec3f>{};
-      auto qnormals   = vector<vec3f>{};
-      auto qtexcoords = vector<vec2f>{};
-      // side
-      make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.y},
-          {1, 1}, {1, 1});
-      for (auto i = 0; i < qpositions.size(); i++) {
-        auto uv       = qtexcoords[i];
-        auto phi      = 2 * pif * uv.x;
-        qpositions[i] = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
-            (uv.y - 0.5f) * size.y};
-        qnormals[i]   = {cos(phi), sin(phi), 0};
-        qtexcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
-      }
-      merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
-          qnormals, qtexcoords);
-      // top
-      make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.z},
-          {1, 1}, {1, 1});
-      for (auto i = 0; i < qpositions.size(); i++) {
-        auto uv       = qtexcoords[i];
-        auto phi      = 2 * pif * uv.x;
-        qpositions[i] = {
-            cos(phi) * uv.y * size.x / 2, sin(phi) * uv.y * size.x / 2, 0};
-        qnormals[i]     = {0, 0, 1};
-        qtexcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
-        qpositions[i].z = size.y / 2;
-      }
-      merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
-          qnormals, qtexcoords);
-      // bottom
-      make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.z},
-          {1, 1}, {1, 1});
-      for (auto i = 0; i < qpositions.size(); i++) {
-        auto uv       = qtexcoords[i];
-        auto phi      = 2 * pif * uv.x;
-        qpositions[i] = {
-            cos(phi) * uv.y * size.x / 2, sin(phi) * uv.y * size.x / 2, 0};
-        qnormals[i]     = {0, 0, 1};
-        qtexcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
-        qpositions[i].z = -size.y / 2;
-        qnormals[i]     = -qnormals[i];
-      }
-      for (auto i = 0; i < qquads.size(); i++) swap(qquads[i].x, qquads[i].z);
-      merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
-          qnormals, qtexcoords);
-      if (params.rounded) {
-        auto radius = params.rounded * min(size) / 2;
-        auto c      = size / 2 - vec2f{radius, radius};
-        for (auto i = 0; i < positions.size(); i++) {
-          auto phi = atan2(positions[i].y, positions[i].x);
-          auto r   = length(vec2f{positions[i].x, positions[i].y});
-          auto z   = positions[i].z;
-          auto pc  = vec2f{r, fabs(z)};
-          auto ps  = (z < 0) ? -1.0f : 1.0f;
-          if (pc.x >= c.x && pc.y >= c.y) {
-            auto pn      = normalize(pc - c);
-            positions[i] = {cos(phi) * (c.x + radius * pn.x),
-                sin(phi) * (c.x + radius * pn.x), ps * (c.y + radius * pn.y)};
-            normals[i]   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
-          } else {
-            continue;
-          }
-        }
-      }
-      if (params.scale != 1) {
-        for (auto& p : positions) p *= params.scale;
-      }
-      if (params.uvscale != 1) {
-        for (auto& uv : texcoords) uv *= params.uvscale;
-      }
-    } break;
-    case proc_shape_params::type_t::geosphere: {
-      // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
-      const float X                = 0.525731112119133606f;
-      const float Z                = 0.850650808352039932f;
-      static auto sphere_positions = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
-          {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
-          {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0},
-          {-Z, -X, 0.0}};
-      static auto sphere_triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9},
-          {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
-          {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
-          {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-      tie(triangles, positions)    = subdivide_triangles(
-          sphere_triangles, sphere_positions, params.subdivisions);
-      for (auto& p : positions) p = normalize(p);
-      normals = positions;
-      if (params.scale != 1) {
-        for (auto& p : positions) p *= params.scale;
-      }
-      if (params.uvscale != 1) {
-        for (auto& uv : texcoords) uv *= params.uvscale;
-      }
-    } break;
+void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale) {
+  quads     = quad_quads;
+  positions = quad_positions;
+  normals   = quad_normals;
+  texcoords = quad_texcoords;
+  if (scale != 1) {
+    for (auto& p : positions) p *= scale;
   }
-  if (params.frame != identity3x4f) {
-    for (auto& p : positions) p = transform_point(params.frame, p);
+}
+
+void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, float scale) {
+  quads     = cube_quads;
+  positions = cube_positions;
+  normals   = cube_normals;
+  texcoords = cube_texcoords;
+  if (scale != 1) {
+    for (auto& p : positions) p *= scale;
+  }
+}
+
+void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec3f>& texcoords, float scale) {}
+
+void make_geosphere(
+    vector<vec3i>& triangles, vector<vec3f>& positions, float scale) {
+  // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
+  const float X                   = 0.525731112119133606f;
+  const float Z                   = 0.850650808352039932f;
+  static auto geosphere_positions = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
+      {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
+      {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
+  static auto geosphere_triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9},
+      {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
+      {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
+      {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
+  triangles                       = geosphere_triangles;
+  positions                       = geosphere_positions;
+  if (scale != 1) {
+    for (auto& p : positions) p *= scale;
   }
 }
 
@@ -2973,25 +2883,15 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "default-uvcylinder") {
     make_uvcylinder(quads, positions, normals, texcoords);
   } else if (type == "default-uvcylinder-rounded") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::uvcylinder;
-    params.subdivisions = 5;
-    params.rounded      = 0.075;
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32});
   } else if (type == "default-geosphere") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::geosphere;
-    params.subdivisions = 5;
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_geosphere(triangles, positions);
   } else if (type == "default-floor") {
     make_floor(quads, positions, normals, texcoords);
   } else if (type == "default-floor-bent") {
     make_bent_floor(quads, positions, normals, texcoords);
   } else if (type == "default-matball") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::matball;
-    params.subdivisions = 5;
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_sphere(quads, positions, normals, texcoords);
   } else if (type == "default-hairball") {
     auto base_triangles = vector<vec3i>{};
     auto base_quads     = vector<vec4i>{};
@@ -3040,13 +2940,8 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_disk(quads, positions, normals, texcoords, 32, 0.075f, 1);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvcylinder") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::uvcylinder;
-    params.subdivisions = 5;
-    params.scale        = 0.075;
-    params.rounded      = 0.3;
-    params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3);
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-floor") {
     make_floor(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
   } else if (type == "test-matball") {

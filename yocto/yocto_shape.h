@@ -518,27 +518,6 @@ shapeio_status save_fvshape(const string& filename,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Parameters for make shape function
-struct proc_shape_params {
-  // clang-format off
-  enum struct type_t {
-    matball, 
-    uvsphere, uvcylinder, geosphere };
-  // clang-format on
-  type_t  type         = type_t::matball;
-  int     subdivisions = 0;
-  float   scale        = 1;
-  float   uvscale      = 1;
-  float   rounded      = 0;
-  vec3f   aspect       = {1, 1, 1};  // for rect, box, cylinder
-  frame3f frame        = identity3x4f;
-};
-
-// Make a procedural shape
-void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const proc_shape_params& params);
-
 // Make a plane.
 void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
@@ -631,6 +610,11 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
 
 // Predefined meshes
 void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale = 1);
+void make_quad(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
+void make_cube(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
+void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, 
+vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
+void make_geosphere(vector<vec3i>& triangles, vector<vec3f>& positions, float scale = 1);
 
 // Make fair params
 struct hair_params {
