@@ -635,34 +635,20 @@ void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
 void make_geosphere(
     vector<vec3i>& triangles, vector<vec3f>& positions, float scale = 1);
 
-// Make fair params
-struct hair_params {
-  int   num               = 0;
-  int   subdivisions      = 0;
-  float length_min        = 0.1;
-  float length_max        = 0.1;
-  float radius_base       = 0.001;
-  float radius_tip        = 0.001;
-  float noise_strength    = 0;
-  float noise_scale       = 10;
-  float clump_strength    = 0;
-  int   clump_num         = 0;
-  float rotation_strength = 0;
-  float rotation_minchia  = 0;
-  int   seed              = 7;
-};
-
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
 // rad: minimum and maximum radius from base to tip
 // noise: noise added to hair (strength/scale)
-// clump: clump added to hair (number/strength)
+// clump: clump added to hair (strength/number)
 // rotation: rotation added to hair (angle/strength)
 void make_hair(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const hair_params& params);
+    const vector<vec2f>& stexcoord, int num = 65536, int steps = 8,
+    const vec2f& length = {0.1, 0.1}, const vec2f& rad = {0.001, 0.001},
+    const vec2f& noise = {0, 10}, const vec2f& clump = {0, 128},
+    const vec2f& rotation = {0, 0}, int seed = 7);
 
 // Thickens a shape by copying the shape content, rescaling it and flipping its
 // normals. Note that this is very much not robust and only useful for trivial
