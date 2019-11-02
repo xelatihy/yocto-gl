@@ -2240,7 +2240,7 @@ void make_bulged_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     const vec2f& scale, const vec2f& uvscale, float height) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (height) {
-    height = min(height, min(scale));
+    height      = min(height, min(scale));
     auto radius = (1 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
     for (auto i = 0; i < positions.size(); i++) {
@@ -2317,7 +2317,7 @@ void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
   make_box(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (radius) {
     radius = min(radius, min(scale));
-    auto c      = scale - radius;
+    auto c = scale - radius;
     for (auto i = 0; i < positions.size(); i++) {
       auto pc = vec3f{
           abs(positions[i].x), abs(positions[i].y), abs(positions[i].z)};
@@ -2377,9 +2377,9 @@ void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     const vec2f& scale, const vec2f& uvscale, float radius) {
   make_floor(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (radius) {
-    radius = min(radius, scale.y);
-    auto start  = (scale.y - radius) / 2;
-    auto end    = start + radius;
+    radius     = min(radius, scale.y);
+    auto start = (scale.y - radius) / 2;
+    auto end   = start + radius;
     for (auto i = 0; i < positions.size(); i++) {
       if (positions[i].z < -end) {
         positions[i] = {positions[i].x, -positions[i].z - end + radius, -end};
@@ -2445,7 +2445,8 @@ void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float scale,
     float uvscale) {
-  make_rect(quads, positions, normals, texcoords, {steps, steps}, {scale, scale}, {uvscale, uvscale});
+  make_rect(quads, positions, normals, texcoords, {steps, steps},
+      {scale, scale}, {uvscale, uvscale});
   for (auto i = 0; i < positions.size(); i++) {
     // Analytical Methods for Squaring the Disc, by C. Fong
     // https://arxiv.org/abs/1509.06344
@@ -2461,7 +2462,7 @@ void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     float uvscale, float height) {
   make_disk(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (height) {
-    height = min(height, scale);
+    height      = min(height, scale);
     auto radius = (1 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
     for (auto i = 0; i < positions.size(); i++) {
@@ -2483,6 +2484,85 @@ void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
     positions[i] = vec3f{cos(phi) * uv.y, sin(phi) * uv.y, 0} * scale;
     normals[i]   = {0, 0, 1};
     texcoords[i] = uv * uvscale;
+  }
+}
+
+// Generate a uvcylinder
+void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec2f& scale, const vec3f& uvscale) {
+  auto qquads     = vector<vec4i>{};
+  auto qpositions = vector<vec3f>{};
+  auto qnormals   = vector<vec3f>{};
+  auto qtexcoords = vector<vec2f>{};
+  // side
+  make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.y},
+      {1, 1}, {1, 1});
+  for (auto i = 0; i < qpositions.size(); i++) {
+    auto uv       = qtexcoords[i];
+    auto phi      = 2 * pif * uv.x;
+    qpositions[i] = {
+        cos(phi) * scale.x, sin(phi) * scale.x, (uv.y - 0.5f) * scale.y};
+    qnormals[i]   = {cos(phi), sin(phi), 0};
+    qtexcoords[i] = uv * vec2f{uvscale.x, uvscale.y};
+  }
+  merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+      qnormals, qtexcoords);
+  // top
+  make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.z},
+      {1, 1}, {1, 1});
+  for (auto i = 0; i < qpositions.size(); i++) {
+    auto uv       = qtexcoords[i];
+    auto phi      = 2 * pif * uv.x;
+    qpositions[i] = {
+        cos(phi) * uv.y * scale.x / 2, sin(phi) * uv.y * scale.x / 2, 0};
+    qnormals[i]     = {0, 0, 1};
+    qtexcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
+    qpositions[i].z = scale.y / 2;
+  }
+  merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+      qnormals, qtexcoords);
+  // bottom
+  make_rect(qquads, qpositions, qnormals, qtexcoords, {steps.x, steps.z},
+      {1, 1}, {1, 1});
+  for (auto i = 0; i < qpositions.size(); i++) {
+    auto uv       = qtexcoords[i];
+    auto phi      = 2 * pif * uv.x;
+    qpositions[i] = {
+        cos(phi) * uv.y * scale.x / 2, sin(phi) * uv.y * scale.x / 2, 0};
+    qnormals[i]     = {0, 0, 1};
+    qtexcoords[i]   = uv * vec2f{uvscale.x, uvscale.z};
+    qpositions[i].z = -scale.y / 2;
+    qnormals[i]     = -qnormals[i];
+  }
+  for (auto i = 0; i < qquads.size(); i++) swap(qquads[i].x, qquads[i].z);
+  merge_quads(quads, positions, normals, texcoords, qquads, qpositions,
+      qnormals, qtexcoords);
+}
+
+// Generate a uvcylinder
+void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps,
+    const vec2f& scale, const vec3f& uvscale, float radius) {
+  make_uvcylinder(quads, positions, normals, texcoords, steps, scale, uvscale);
+  if (radius) {
+    radius = min(radius, min(scale));
+    auto c = scale - vec2f{radius, radius};
+    for (auto i = 0; i < positions.size(); i++) {
+      auto phi = atan2(positions[i].y, positions[i].x);
+      auto r   = length(vec2f{positions[i].x, positions[i].y});
+      auto z   = positions[i].z;
+      auto pc  = vec2f{r, fabs(z)};
+      auto ps  = (z < 0) ? -1.0f : 1.0f;
+      if (pc.x >= c.x && pc.y >= c.y) {
+        auto pn      = normalize(pc - c);
+        positions[i] = {cos(phi) * (c.x + radius * pn.x),
+            sin(phi) * (c.x + radius * pn.x), ps * (c.y + radius * pn.y)};
+        normals[i]   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
+      } else {
+        continue;
+      }
+    }
   }
 }
 
@@ -2549,8 +2629,8 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
     int num, const vec3f& size, float uvscale, float point_radius,
     uint64_t seed) {
-  make_points(
-      points, positions, normals, texcoords, radius, num, uvscale, point_radius);
+  make_points(points, positions, normals, texcoords, radius, num, uvscale,
+      point_radius);
   auto rng = make_rng(seed);
   for (auto i = 0; i < positions.size(); i++) {
     positions[i] = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
@@ -2622,13 +2702,13 @@ void make_fvbox(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
 }
 void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps,
-    float size, float uvscale) {
-  make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords, 
-    {steps, steps, steps}, {size, size, size}, {uvscale, uvscale, uvscale});
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps, float size,
+    float uvscale) {
+  make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords,
+      {steps, steps, steps}, {size, size, size}, {uvscale, uvscale, uvscale});
   quadsnorm = quadspos;
-  normals = positions;
-  for(auto& n : normals) n = normalize(n);
+  normals   = positions;
+  for (auto& n : normals) n = normalize(n);
 }
 void make_suzanne(vector<vec4i>& quads, vector<vec3f>& positions, float size) {
   quads     = suzanne_quads;
@@ -2678,7 +2758,7 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
           (int)round(pow2(params.subdivisions + 1) * params.aspect.x),
           (int)round(pow2(params.subdivisions + 0) * params.aspect.y),
           (int)round(pow2(params.subdivisions - 1) * params.aspect.z)};
-      auto uvscale     = params.aspect;
+      auto uvscale    = params.aspect;
       auto size       = 2 * vec2f{params.aspect.x, params.aspect.y};
       auto qquads     = vector<vec4i>{};
       auto qpositions = vector<vec3f>{};
@@ -2899,10 +2979,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "default-uvdisk") {
     make_uvdisk(quads, positions, normals, texcoords);
   } else if (type == "default-uvcylinder") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::uvcylinder;
-    params.subdivisions = 5;
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_uvcylinder(quads, positions, normals, texcoords);
   } else if (type == "default-uvcylinder-rounded") {
     auto params         = proc_shape_params{};
     params.type         = proc_shape_params::type_t::uvcylinder;
@@ -2953,24 +3030,25 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_fvsphere(
         quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
   } else if (type == "test-cube") {
-    make_rounded_box(quads, positions, normals, texcoords, {32, 32, 32}, {0.075f, 0.075f, 0.075f},
-        {1, 1, 1}, 0.3);
-    for(auto& p : positions) p += {0, 0.075, 0};
+    make_rounded_box(quads, positions, normals, texcoords, {32, 32, 32},
+        {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3);
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere") {
     make_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075);
-    for(auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere-flipcap") {
-    make_capped_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075, {1, 1}, 0.3);
-    for(auto& p : positions) p += {0, 0.075, 0};
+    make_capped_uvsphere(
+        quads, positions, normals, texcoords, {32, 32}, 0.075, {1, 1}, 0.3);
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere") {
     make_sphere(quads, positions, normals, texcoords, 32, 0.075f, 1);
-    for(auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere-displaced") {
     make_sphere(quads, positions, normals, texcoords, 128, 0.075f, 1);
-    for(auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-disk") {
     make_disk(quads, positions, normals, texcoords, 32, 0.075f, 1);
-    for(auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvcylinder") {
     auto params         = proc_shape_params{};
     params.type         = proc_shape_params::type_t::uvcylinder;
@@ -2983,15 +3061,16 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_floor(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
   } else if (type == "test-matball") {
     make_sphere(quads, positions, normals, texcoords, 32, 0.075);
-    for(auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-hairball1") {
     auto base_triangles = vector<vec3i>{};
     auto base_quads     = vector<vec4i>{};
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32, 0.075f * 0.8f, 1);
-    for(auto& p : base_positions) p += {0, 0.075, 0};
+    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
+        0.075f * 0.8f, 1);
+    for (auto& p : base_positions) p += {0, 0.075, 0};
     auto hparams           = hair_params{};
     hparams.num            = 65536;
     hparams.subdivisions   = 2;
@@ -3009,8 +3088,9 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32, 0.075f * 0.8f, 1);
-    for(auto& p : base_positions) p += {0, 0.075, 0};
+    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
+        0.075f * 0.8f, 1);
+    for (auto& p : base_positions) p += {0, 0.075, 0};
     auto hparams         = hair_params{};
     hparams.num          = 65536;
     hparams.subdivisions = 2;
@@ -3026,8 +3106,9 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     auto base_positions = vector<vec3f>{};
     auto base_normals   = vector<vec3f>{};
     auto base_texcoords = vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32, 0.075f * 0.8f, 1);
-    for(auto& p : base_positions) p += {0, 0.075, 0};
+    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
+        0.075f * 0.8f, 1);
+    for (auto& p : base_positions) p += {0, 0.075, 0};
     auto hparams           = hair_params{};
     hparams.num            = 65536;
     hparams.subdivisions   = 2;
@@ -3041,7 +3122,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
         base_quads, base_positions, base_normals, base_texcoords, hparams);
   } else if (type == "test-hairball-interior") {
     make_sphere(quads, positions, normals, texcoords, 32, 0.075f * 0.8f, 1);
-    for(auto& p : positions) p += {0, 0.075, 0};
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-suzanne-subdiv") {
     // TODO: this should be a Catmull-Clark suzanne
     auto params  = proc_shape_params{};
@@ -3051,8 +3132,9 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_proc_shape(triangles, quads, positions, normals, texcoords, params);
   } else if (type == "test-cube-subdiv") {
     // TODO: this should be a Catmull-Clark cube
-    make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
-    for(auto& p : positions) p += {0, 0.075, 0};
+    make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
+        texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
+    for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-arealight1") {
     make_rect(quads, positions, normals, texcoords, {1, 1}, {0.2, 0.2});
   } else if (type == "test-arealight2") {

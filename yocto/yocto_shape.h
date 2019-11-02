@@ -593,6 +593,14 @@ void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {32, 32},
     float scale = 1, const vec2f& uvscale = {1, 1});
+// Make a uv cylinder
+void make_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1});
+// Make a rounded uv cylinder
+void make_rounded_uvcylinder(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps = {32, 32, 32},
+    const vec2f& scale = {1, 1}, const vec3f& uvscale = {1, 1, 1}, float radius = 0.3);
 
 // Make a facevarying rect
 void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, 
