@@ -172,12 +172,8 @@ void update_glmaterial(
 
 void update_glshape(
     opengl_shape& glshape, const scene_shape& shape, const scene_model& scene) {
-  if (shape.subdivisions || shape.displacement || shape.displacement_tex >= 0) {
-    auto subdiv = shape;
-    if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
-    if (subdiv.displacement && subdiv.displacement_tex < 0)
-      subdiv = displace_shape(scene, subdiv);
-    return update_glshape(glshape, subdiv, scene);
+  if (needs_tesselation(scene, shape)) {
+    return update_glshape(glshape, tesselate_shape(scene, shape), scene);
   }
   if (shape.quadspos.empty()) {
     if (!shape.positions.empty())
@@ -201,13 +197,9 @@ void update_glshape(
       init_glelementbuffer(glshape.quads, triangles, false);
     }
   } else {
-    auto quads     = vector<vec4i>{};
-    auto positions = vector<vec3f>{};
-    auto normals   = vector<vec3f>{};
-    auto texcoords = vector<vec2f>{};
-    split_facevarying(quads, positions, normals, texcoords, shape.quadspos,
-        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-        shape.texcoords);
+    auto [quads, positions, normals, texcoords] = split_facevarying(
+        shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+        shape.normals, shape.texcoords);
     if (!positions.empty())
       init_glarraybuffer(glshape.positions, positions, false);
     if (!normals.empty()) init_glarraybuffer(glshape.normals, normals, false);
@@ -553,7 +545,7 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : format_stats(app.scene)) print_info(stat);
+      for (auto stat : scene_stats(app.scene)) print_info(stat);
     }
     end_glheader(win);
   }

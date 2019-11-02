@@ -757,12 +757,13 @@ vector<vec2i> bezier_to_lines(const vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-void split_facevarying(vector<vec4i>& split_quads,
-    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
-    vector<vec2f>& split_texcoords, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords) {
+std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+split_facevarying(const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords) {
+  auto split =
+      std::tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>{};
+  auto& [split_quads, split_positions, split_normals, split_texcoords] = split;
   // make faces unique
   unordered_map<vec3i, int> vert_map;
   split_quads.resize(quadspos.size());
@@ -806,6 +807,8 @@ void split_facevarying(vector<vec4i>& split_quads,
       split_texcoords[index] = texcoords[vert.z];
     }
   }
+
+  return split;
 }
 
 // Split primitives per id
@@ -1236,9 +1239,9 @@ void subdivide_catmullclark_impl(vector<vec4i>& quads, vector<T>& vert,
     // split boundary
     auto tboundary = vector<vec2i>(nboundary * 2);
     for (auto i = 0; i < nboundary; i++) {
-      auto e = boundary[i];
-      tboundary.push_back({e.x, nverts + edge_index(emap, e)});
-      tboundary.push_back({nverts + edge_index(emap, e), e.y});
+      auto e               = boundary[i];
+      tboundary[i * 2 + 0] = {e.x, nverts + edge_index(emap, e)};
+      tboundary[i * 2 + 1] = {nverts + edge_index(emap, e), e.y};
     }
 
     // setup creases -----------------------------------
@@ -3001,13 +3004,15 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_sphere(quads, positions, normals, texcoords, 32, 0.075f * 0.8f, 1);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-suzanne-subdiv") {
-    // TODO: this should be a Catmull-Clark suzanne
     make_monkey(quads, positions, 0.075f * 0.8f);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-cube-subdiv") {
     // TODO: this should be a Catmull-Clark cube
-    make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
+    // make_cube(quads, positions, normals, texcoords, 0.075f);
+    make_fvcube(quadspos, quadsnorm, quadstexcoord, positions, normals,
+        texcoords, 0.075f);
+    // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
+    //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-arealight1") {
     make_rect(quads, positions, normals, texcoords, {1, 1}, {0.2, 0.2});
@@ -3255,13 +3260,9 @@ shapeio_status save_fvshape(const string& filename,
 
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
-    auto split_quads         = vector<vec4i>{};
-    auto split_positions     = vector<vec3f>{};
-    auto split_normals       = vector<vec3f>{};
-    auto split_texturecoords = vector<vec2f>{};
-    split_facevarying(split_quads, split_positions, split_normals,
-        split_texturecoords, quadspos, quadsnorm, quadstexcoord, positions,
-        normals, texcoords);
+    auto [split_quads, split_positions, split_normals, split_texturecoords] =
+        split_facevarying(
+            quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
     return save_shape(filename, {}, {}, {}, split_quads, split_positions,
         split_normals, split_texturecoords, {}, {}, ascii, flip_texcoord);
   } else if (ext == ".obj" || ext == ".OBJ") {

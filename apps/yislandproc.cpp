@@ -510,20 +510,16 @@ void add_island_shape(scene_model& scene, const string& parent_name,
   // conversion to non-facevarying
   if (!facevarying) {
     for (auto& shape : shapes) {
-      auto split_quads     = vector<vec4i>{};
-      auto split_positions = vector<vec3f>{};
-      auto split_normals   = vector<vec3f>{};
-      auto split_texcoords = vector<vec2f>{};
-      split_facevarying(split_quads, split_positions, split_normals,
-          split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords);
-      shape.quads         = split_quads;
-      shape.positions     = split_positions;
-      shape.normals       = split_normals;
-      shape.texcoords     = split_texcoords;
-      shape.quadspos      = {};
-      shape.quadsnorm     = {};
-      shape.quadstexcoord = {};
+      auto [split_quads, split_positions, split_normals,
+          split_texcoords] = split_facevarying(shape.quadspos, shape.quadsnorm,
+          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
+      shape.quads          = split_quads;
+      shape.positions      = split_positions;
+      shape.normals        = split_normals;
+      shape.texcoords      = split_texcoords;
+      shape.quadspos       = {};
+      shape.quadsnorm      = {};
+      shape.quadstexcoord  = {};
       if (shape.texcoords.empty()) {
         auto all_triangles = true;
         for (auto& q : shape.quads) {
@@ -1043,7 +1039,7 @@ void load_island_scene(
   fix_names(scene);
 
   // print stats
-  for (auto& stat : format_stats(scene)) printf("%s\n", stat.c_str());
+  for (auto& stat : scene_stats(scene)) printf("%s\n", stat.c_str());
 }
 
 }  // namespace yocto
@@ -1105,14 +1101,14 @@ int main(int argc, const char** argv) {
   // validate scene
   if (validate) {
     auto validate_timer = print_timed("validating scene");
-    auto errors         = format_validation(scene);
+    auto errors         = scene_validation(scene);
     print_elapsed(validate_timer);
     for (auto& error : errors) print_info(error);
   }
 
   // print info
   if (info) {
-    for (auto stat : format_stats(scene)) print_info(stat);
+    for (auto stat : scene_stats(scene)) print_info(stat);
   }
 
 // add missing mesh names if necessary

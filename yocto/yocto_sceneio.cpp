@@ -295,7 +295,7 @@ void add_sky(scene_model& scene, float sun_angle) {
   scene.environments.push_back(environment);
 }
 
-vector<string> format_stats(const scene_model& scene, bool verbose) {
+vector<string> scene_stats(const scene_model& scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
@@ -385,7 +385,7 @@ void trim_memory(scene_model& scene) {
 }
 
 // Checks for validity of the scene.
-vector<string> format_validation(const scene_model& scene, bool notextures) {
+vector<string> scene_validation(const scene_model& scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = unordered_map<string, int>();
@@ -429,8 +429,6 @@ scene_shape subdivide_shape(const scene_shape& shape) {
   if (!shape.points.empty()) {
     throw std::runtime_error("point subdivision not supported");
   } else if (!shape.lines.empty()) {
-    tie(subdiv.lines, subdiv.positions) = subdivide_lines(
-        subdiv.lines, subdiv.positions, shape.subdivisions);
     tie(ignore, subdiv.normals) = subdivide_lines(
         subdiv.lines, subdiv.normals, shape.subdivisions);
     tie(ignore, subdiv.texcoords) = subdivide_lines(
@@ -439,11 +437,11 @@ scene_shape subdivide_shape(const scene_shape& shape) {
         subdiv.lines, subdiv.colors, shape.subdivisions);
     tie(ignore, subdiv.radius) = subdivide_lines(
         subdiv.lines, subdiv.radius, shape.subdivisions);
+    tie(subdiv.lines, subdiv.positions) = subdivide_lines(
+        subdiv.lines, subdiv.positions, shape.subdivisions);
     if (shape.smooth)
       subdiv.normals = compute_tangents(subdiv.lines, subdiv.positions);
   } else if (!shape.triangles.empty()) {
-    tie(subdiv.triangles, subdiv.positions) = subdivide_triangles(
-        subdiv.triangles, subdiv.positions, shape.subdivisions);
     tie(ignore, subdiv.normals) = subdivide_triangles(
         subdiv.triangles, subdiv.normals, shape.subdivisions);
     tie(ignore, subdiv.texcoords) = subdivide_triangles(
@@ -452,11 +450,11 @@ scene_shape subdivide_shape(const scene_shape& shape) {
         subdiv.triangles, subdiv.colors, shape.subdivisions);
     tie(ignore, subdiv.radius) = subdivide_triangles(
         subdiv.triangles, subdiv.radius, shape.subdivisions);
+    tie(subdiv.triangles, subdiv.positions) = subdivide_triangles(
+        subdiv.triangles, subdiv.positions, shape.subdivisions);
     if (shape.smooth)
       subdiv.normals = compute_normals(subdiv.triangles, subdiv.positions);
   } else if (!shape.quads.empty() && !shape.catmullclark) {
-    tie(subdiv.quads, subdiv.positions) = subdivide_quads(
-        subdiv.quads, subdiv.positions, shape.subdivisions);
     tie(ignore, subdiv.normals) = subdivide_quads(
         subdiv.quads, subdiv.normals, shape.subdivisions);
     tie(ignore, subdiv.texcoords) = subdivide_quads(
@@ -465,11 +463,11 @@ scene_shape subdivide_shape(const scene_shape& shape) {
         subdiv.quads, subdiv.colors, shape.subdivisions);
     tie(ignore, subdiv.radius) = subdivide_quads(
         subdiv.quads, subdiv.radius, shape.subdivisions);
+    tie(subdiv.quads, subdiv.positions) = subdivide_quads(
+        subdiv.quads, subdiv.positions, shape.subdivisions);
     if (subdiv.smooth)
       subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
   } else if (!shape.quads.empty() && shape.catmullclark) {
-    tie(subdiv.quads, subdiv.positions) = subdivide_catmullclark(
-        subdiv.quads, subdiv.positions, shape.subdivisions);
     tie(ignore, subdiv.normals) = subdivide_catmullclark(
         subdiv.quads, subdiv.normals, shape.subdivisions);
     tie(ignore, subdiv.texcoords) = subdivide_catmullclark(
@@ -478,27 +476,34 @@ scene_shape subdivide_shape(const scene_shape& shape) {
         subdiv.quads, subdiv.colors, shape.subdivisions);
     tie(ignore, subdiv.radius) = subdivide_catmullclark(
         subdiv.quads, subdiv.radius, shape.subdivisions);
+    tie(subdiv.quads, subdiv.positions) = subdivide_catmullclark(
+        subdiv.quads, subdiv.positions, shape.subdivisions);
     if (subdiv.smooth)
       subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
   } else if (!shape.quadspos.empty() && !shape.catmullclark) {
-    std::tie(subdiv.quadspos, subdiv.positions) = subdivide_quads(
-        subdiv.quadspos, shape.positions, shape.subdivisions);
     std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_quads(
-        subdiv.quadsnorm, shape.normals, shape.subdivisions);
+        subdiv.quadsnorm, subdiv.normals, shape.subdivisions);
     std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_quads(
-        subdiv.quadstexcoord, shape.texcoords, shape.subdivisions);
+        subdiv.quadstexcoord, subdiv.texcoords, shape.subdivisions);
+    std::tie(subdiv.quadspos, subdiv.positions) = subdivide_quads(
+        subdiv.quadspos, subdiv.positions, shape.subdivisions);
     if (subdiv.smooth) {
       subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
       subdiv.quadsnorm = subdiv.quadspos;
     }
   } else if (!shape.quadspos.empty() && shape.catmullclark) {
-    std::tie(subdiv.quadspos, subdiv.positions) = subdivide_catmullclark(
-        shape.quadspos, shape.positions, subdiv.subdivisions);
     std::tie(subdiv.quadstexcoord, subdiv.texcoords) = subdivide_catmullclark(
-        shape.quadstexcoord, shape.texcoords, shape.subdivisions, true);
+        subdiv.quadstexcoord, subdiv.texcoords, shape.subdivisions, true);
+    std::tie(subdiv.quadsnorm, subdiv.normals) = subdivide_catmullclark(
+        subdiv.quadsnorm, subdiv.normals, shape.subdivisions, true);
+    std::tie(subdiv.quadspos, subdiv.positions) = subdivide_catmullclark(
+        subdiv.quadspos, subdiv.positions, shape.subdivisions);
     if (shape.smooth) {
       subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
       subdiv.quadsnorm = subdiv.quadspos;
+    } else {
+      subdiv.normals   = {};
+      subdiv.quadsnorm = {};
     }
   } else {
     throw std::runtime_error("empty shape");
@@ -508,14 +513,12 @@ scene_shape subdivide_shape(const scene_shape& shape) {
 // Apply displacement to a shape
 scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
   // Evaluate a texture
-  auto eval_texture = [](const scene_texture& texture, const vec2f& texcoord,
-                          bool ldr_as_linear, bool no_interpolation = false,
-                          bool clamp_to_edge = false) -> vec4f {
+  auto eval_texture = [](const scene_texture& texture,
+                          const vec2f&        texcoord) -> vec4f {
     if (!texture.hdr.empty()) {
-      return eval_image(texture.hdr, texcoord, no_interpolation, clamp_to_edge);
+      return eval_image(texture.hdr, texcoord, false, false);
     } else if (!texture.ldr.empty()) {
-      return eval_image(texture.ldr, texcoord, ldr_as_linear, no_interpolation,
-          clamp_to_edge);
+      return eval_image(texture.ldr, texcoord, true, false, false);
     } else {
       return {1, 1, 1, 1};
     }
@@ -538,25 +541,25 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
     if (normals.empty())
       normals = compute_normals(shape.triangles, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-      auto disp = mean(
-          xyz(eval_texture(displacement, shape.texcoords[vid], true)));
+      auto disp = mean(xyz(eval_texture(displacement, shape.texcoords[vid])));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       subdiv.positions[vid] += normals[vid] * shape.displacement * disp;
     }
-    if (shape.smooth || !shape.normals.empty())
-      subdiv.normals = compute_normals(shape.triangles, shape.positions);
+    if (shape.smooth || !shape.normals.empty()) {
+      subdiv.normals = compute_normals(subdiv.triangles, subdiv.positions);
+    }
   } else if (!shape.quads.empty()) {
     auto normals = shape.normals;
     if (normals.empty())
       normals = compute_normals(shape.triangles, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-      auto disp = mean(
-          xyz(eval_texture(displacement, shape.texcoords[vid], true)));
+      auto disp = mean(xyz(eval_texture(displacement, shape.texcoords[vid])));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       subdiv.positions[vid] += shape.normals[vid] * shape.displacement * disp;
     }
-    if (shape.smooth || !shape.normals.empty())
-      subdiv.normals = compute_normals(shape.quads, shape.positions);
+    if (shape.smooth || !shape.normals.empty()) {
+      subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
+    }
   } else if (!shape.quadspos.empty()) {
     // facevarying case
     auto offset = vector<float>(shape.positions.size(), 0);
@@ -566,7 +569,7 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
       auto qtxt = shape.quadstexcoord[fid];
       for (auto i = 0; i < 4; i++) {
         auto disp = mean(
-            xyz(eval_texture(displacement, shape.texcoords[qtxt[i]], true)));
+            xyz(eval_texture(displacement, shape.texcoords[qtxt[i]])));
         if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
         offset[qpos[i]] += shape.displacement * disp;
         count[qpos[i]] += 1;
@@ -578,10 +581,35 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
     }
     if (shape.smooth || !shape.normals.empty()) {
       subdiv.quadsnorm = shape.quadspos;
-      subdiv.normals   = compute_normals(shape.quadspos, shape.positions);
+      subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
     }
   }
   return subdiv;
+}
+scene_shape tesselate_shape(const scene_model& scene, const scene_shape& shape,
+    bool no_quads, bool no_facevarying) {
+  if (!needs_tesselation(scene, shape, no_quads, no_facevarying)) return shape;
+  auto subdiv = shape;
+  if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
+  if (subdiv.displacement) subdiv = displace_shape(scene, subdiv);
+  if (!subdiv.quadspos.empty() && no_facevarying) {
+    std::tie(subdiv.quads, subdiv.positions, subdiv.normals, subdiv.texcoords) =
+        split_facevarying(subdiv.quadspos, subdiv.quadsnorm,
+            subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
+            subdiv.texcoords);
+  }
+  if (!subdiv.quads.empty() && no_quads) {
+    subdiv.triangles = quads_to_triangles(subdiv.quads);
+    subdiv.quads     = {};
+  }
+  return subdiv;
+}
+bool needs_tesselation(const scene_model& scene, const scene_shape& shape,
+    bool no_quads, bool no_facevarying) {
+  if (!shape.quadspos.empty() && (no_facevarying || no_quads)) return true;
+  if (!shape.quads.empty() && no_quads) return true;
+  if (shape.subdivisions || shape.displacement) return true;
+  return false;
 }
 
 // Update animation transforms
@@ -2056,7 +2084,7 @@ static sceneio_status save_pbrt(
   auto pbrt = pbrt_model{};
 
   // embed data
-  for (auto stat : format_stats(scene)) pbrt.comments.push_back(stat);
+  for (auto stat : scene_stats(scene)) pbrt.comments.push_back(stat);
 
   // convert camera
   auto& camera     = scene.cameras.front();

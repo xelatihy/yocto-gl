@@ -153,12 +153,9 @@ void update_trace_material(
 }
 void update_trace_shape(trace_shape& shape, const scene_shape& ioshape,
     const scene_model& ioscene) {
-  if (ioshape.subdivisions || ioshape.displacement) {
-    auto subdiv = ioshape;
-    if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
-    if (subdiv.displacement && subdiv.displacement_tex >= 0)
-      subdiv = displace_shape(ioscene, subdiv);
-    return update_trace_shape(shape, subdiv, ioscene);
+  if (needs_tesselation(ioscene, ioshape)) {
+    return update_trace_shape(
+        shape, tesselate_shape(ioscene, ioshape), ioscene);
   }
   shape.points        = ioshape.points;
   shape.lines         = ioshape.lines;
@@ -586,8 +583,8 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : format_stats(app.ioscene)) print_info(stat);
-      // for (auto stat : format_stats(app.bvh)) print_info(stat);
+      for (auto stat : scene_stats(app.ioscene)) print_info(stat);
+      // for (auto stat : scene_stats(app.bvh)) print_info(stat);
     }
     auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(mouse_pos, app.draw_prms.center,

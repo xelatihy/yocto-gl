@@ -279,8 +279,10 @@ sceneio_status save_scene(const string& filename, const scene_model& scene,
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-scene_shape subdivide_shape(const scene_shape& shape);
-scene_shape displace_shape(const scene_model& scene, const scene_shape& shape);
+scene_shape tesselate_shape(const scene_model& scene, const scene_shape& shape,
+    bool no_quads = false, bool no_facevarying = false);
+bool needs_tesselation(const scene_model& scene, const scene_shape& shape,
+    bool no_quads = false, bool no_facevarying = false);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
@@ -288,9 +290,9 @@ void update_transforms(
     scene_model& scene, float time = 0, const string& anim_group = "");
 
 // Return scene statistics as list of strings.
-vector<string> format_stats(const scene_model& scene, bool verbose = false);
+vector<string> scene_stats(const scene_model& scene, bool verbose = false);
 // Return validation errors as list of strings.
-vector<string> format_validation(
+vector<string> scene_validation(
     const scene_model& scene, bool notextures = false);
 
 }  // namespace yocto

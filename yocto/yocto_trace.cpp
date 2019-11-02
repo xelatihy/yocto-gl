@@ -1906,9 +1906,9 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
           shape.positions[q.z], shape.positions[q.w]);
     }
   } else if (!shape.quadspos.empty()) {
-    bboxes = vector<bbox3f>(shape.quads.size());
+    bboxes = vector<bbox3f>(shape.quadspos.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape.quads[idx];
+      auto& q     = shape.quadspos[idx];
       bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
     }
