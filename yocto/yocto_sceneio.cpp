@@ -508,14 +508,12 @@ scene_shape subdivide_shape(const scene_shape& shape) {
 // Apply displacement to a shape
 scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
   // Evaluate a texture
-  auto eval_texture = [](const scene_texture& texture, const vec2f& texcoord,
-                          bool ldr_as_linear, bool no_interpolation = false,
-                          bool clamp_to_edge = false) -> vec4f {
+  auto eval_texture = [](const scene_texture& texture, const vec2f& texcoord) -> vec4f {
     if (!texture.hdr.empty()) {
-      return eval_image(texture.hdr, texcoord, no_interpolation, clamp_to_edge);
+      return eval_image(texture.hdr, texcoord, false, false);
     } else if (!texture.ldr.empty()) {
-      return eval_image(texture.ldr, texcoord, ldr_as_linear, no_interpolation,
-          clamp_to_edge);
+      return eval_image(texture.ldr, texcoord, true, false,
+          false);
     } else {
       return {1, 1, 1, 1};
     }
@@ -538,8 +536,7 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
     if (normals.empty())
       normals = compute_normals(shape.triangles, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-      auto disp = mean(
-          xyz(eval_texture(displacement, shape.texcoords[vid], true)));
+      auto disp = mean(xyz(eval_texture(displacement, shape.texcoords[vid])));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       subdiv.positions[vid] += normals[vid] * shape.displacement * disp;
     }
@@ -550,8 +547,7 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
     if (normals.empty())
       normals = compute_normals(shape.triangles, shape.positions);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-      auto disp = mean(
-          xyz(eval_texture(displacement, shape.texcoords[vid], true)));
+      auto disp = mean(xyz(eval_texture(displacement, shape.texcoords[vid])));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       subdiv.positions[vid] += shape.normals[vid] * shape.displacement * disp;
     }
@@ -565,8 +561,7 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
       auto qpos = shape.quadspos[fid];
       auto qtxt = shape.quadstexcoord[fid];
       for (auto i = 0; i < 4; i++) {
-        auto disp = mean(
-            xyz(eval_texture(displacement, shape.texcoords[qtxt[i]], true)));
+        auto disp = mean(xyz(eval_texture(displacement, shape.texcoords[qtxt[i]])));
         if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
         offset[qpos[i]] += shape.displacement * disp;
         count[qpos[i]] += 1;
