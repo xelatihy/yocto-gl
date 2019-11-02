@@ -83,16 +83,6 @@
 #include <tuple>
 
 // -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::tuple;
-using std::tie;
-
-}
-
-// -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -309,6 +299,9 @@ void merge_triangles_and_quads(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+using std::tie;
+using std::tuple;
+
 // Subdivide lines by splitting each line in half.
 pair<vector<vec2i>, vector<float>> subdivide_lines(
     const vector<vec2i>& lines, const vector<float>& vert, int level);
@@ -318,12 +311,6 @@ pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec3f>& vert, int level);
 pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
     const vector<vec2i>& lines, const vector<vec4f>& vert, int level);
-void subdivide_lines(vector<vec2i>& slines, vector<vec3f>& spositions,
-    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
-    vector<float>& sradius, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 pair<vector<vec3i>, vector<float>> subdivide_triangles(
@@ -334,12 +321,6 @@ pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& vert, int level);
 pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<vec4f>& vert, int level);
-void subdivide_triangles(vector<vec3i>& striangles, vector<vec3f>& spositions,
-    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
-    vector<float>& sradius, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, int level);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 pair<vector<vec4i>, vector<float>> subdivide_quads(
@@ -350,12 +331,6 @@ pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec3f>& vert, int level);
 pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level);
-void subdivide_quads(vector<vec4i>& squads, vector<vec3f>& spositions,
-    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
-    vector<float>& sradius, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, int level);
 // Subdivide beziers by splitting each segment in two.
 pair<vector<vec4i>, vector<float>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<float>& vert, int level);
@@ -365,12 +340,6 @@ pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec3f>& vert, int level);
 pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec4f>& vert, int level);
-void subdivide_beziers(vector<vec4i>& sbeziers, vector<vec3f>& spositions,
-    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
-    vector<float>& sradius, const vector<vec4i>& beziers,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
 pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<float>& vert, int level,
@@ -384,12 +353,6 @@ pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
 pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec4f>& vert, int level,
     bool lock_boundary = false);
-void subdivide_catmullclark(vector<vec4i>& squads, vector<vec3f>& spositions,
-    vector<vec3f>& snormals, vector<vec2f>& stexcoords, vector<vec4f>& scolors,
-    vector<float>& sradius, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius, int level);
 
 }  // namespace yocto
 
