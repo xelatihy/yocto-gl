@@ -2650,32 +2650,6 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
   normals.clear();
   texcoords.clear();
   switch (params.type) {
-    case proc_shape_params::type_t::disk: {
-      tie(quads, positions) = subdivide_quads(
-          quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(
-          quad_quads, quad_normals, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(
-          quad_quads, quad_texcoords, params.subdivisions);
-      for (auto i = 0; i < positions.size(); i++) {
-        // Analytical Methods for Squaring the Disc, by C. Fong
-        // https://arxiv.org/abs/1509.06344
-        auto xy = vec2f{positions[i].x, positions[i].y};
-        auto uv = vec2f{
-            xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
-        positions[i] = {uv.x, uv.y, 0};
-      }
-      if (params.rounded) {
-        auto height = params.rounded;
-        auto radius = (1 + height * height) / (2 * height);
-        auto center = vec3f{0, 0, -radius + height};
-        for (auto i = 0; i < positions.size(); i++) {
-          auto pn      = normalize(positions[i] - center);
-          positions[i] = center + pn * radius;
-          normals[i]   = pn;
-        }
-      }
-    } break;
     case proc_shape_params::type_t::matball: {
       tie(quads, positions) = subdivide_quads(
           cube_quads, cube_positions, params.subdivisions);
@@ -2692,43 +2666,6 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
     case proc_shape_params::type_t::suzanne: {
       tie(quads, positions) = subdivide_quads(
           suzanne_quads, suzanne_positions, params.subdivisions);
-      if (params.scale != 1) {
-        for (auto& p : positions) p *= params.scale;
-      }
-      if (params.uvscale != 1) {
-        for (auto& uv : texcoords) uv *= params.uvscale;
-      }
-    } break;
-    case proc_shape_params::type_t::box: {
-      auto steps = vec3i{
-          (int)round(pow2(params.subdivisions) * params.aspect.x),
-          (int)round(pow2(params.subdivisions) * params.aspect.y),
-          (int)round(pow2(params.subdivisions) * params.aspect.z)};
-      auto uvscale = params.aspect * params.uvscale;
-      auto size   = 2 * params.aspect * params.scale;
-      make_box(quads, positions, normals, texcoords, steps, size, uvscale);
-    } break;
-    case proc_shape_params::type_t::rect: {
-      auto steps = vec2i{
-          (int)round(pow2(params.subdivisions) * params.aspect.x),
-          (int)round(pow2(params.subdivisions) * params.aspect.y)};
-      auto uvscale = vec2f{params.aspect.x, params.aspect.y} * params.uvscale;
-      auto size   = 2 * vec2f{params.aspect.x, params.aspect.y} * params.scale;
-      make_rect(quads, positions, normals, texcoords, steps, size, uvscale);
-    } break;
-    case proc_shape_params::type_t::uvdisk: {
-      tie(quads, positions) = subdivide_quads(
-          quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, normals) = subdivide_quads(
-          quad_quads, quad_positions, params.subdivisions);
-      tie(ignore, texcoords) = subdivide_quads(
-          quad_quads, quad_texcoords, params.subdivisions);
-      for (auto i = 0; i < positions.size(); i++) {
-        auto uv      = texcoords[i];
-        auto phi     = 2 * pif * uv.x;
-        positions[i] = {cos(phi) * uv.y, sin(phi) * uv.y, 0};
-        normals[i]   = {0, 0, 1};
-      }
       if (params.scale != 1) {
         for (auto& p : positions) p *= params.scale;
       }
@@ -2950,34 +2887,17 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "default-sphere") {
     make_sphere(quads, positions, normals, texcoords);
   } else if (type == "default-disk") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::disk;
-    params.subdivisions = 5;
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_disk(quads, positions, normals, texcoords);
   } else if (type == "default-disk-bulged") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::disk;
-    params.subdivisions = 5;
-    params.rounded      = 0.25;
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_bulged_disk(quads, positions, normals, texcoords);
   } else if (type == "default-quad-bulged") {
-    // TODO: quad bulging
+    make_bulged_rect(quads, positions, normals, texcoords);
   } else if (type == "default-uvsphere") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::uvsphere;
-    params.subdivisions = 5;
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_uvsphere(quads, positions, normals, texcoords);
   } else if (type == "default-uvsphere-flipcap") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::uvsphere;
-    params.subdivisions = 5;
-    params.rounded      = 0.75;
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_capped_uvsphere(quads, positions, normals, texcoords);
   } else if (type == "default-uvdisk") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::uvdisk;
-    params.subdivisions = 4;
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_uvdisk(quads, positions, normals, texcoords);
   } else if (type == "default-uvcylinder") {
     auto params         = proc_shape_params{};
     params.type         = proc_shape_params::type_t::uvcylinder;
@@ -3049,12 +2969,8 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_sphere(quads, positions, normals, texcoords, 128, 0.075f, 1);
     for(auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-disk") {
-    auto params         = proc_shape_params{};
-    params.type         = proc_shape_params::type_t::disk;
-    params.subdivisions = 5;
-    params.scale        = 0.075;
-    params.frame        = frame3f{{0, 0.075, 0}};
-    make_proc_shape(triangles, quads, positions, normals, texcoords, params);
+    make_disk(quads, positions, normals, texcoords, 32, 0.075f, 1);
+    for(auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvcylinder") {
     auto params         = proc_shape_params{};
     params.type         = proc_shape_params::type_t::uvcylinder;

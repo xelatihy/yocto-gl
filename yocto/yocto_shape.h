@@ -522,10 +522,10 @@ namespace yocto {
 struct proc_shape_params {
   // clang-format off
   enum struct type_t {
-    disk, matball, suzanne, box, rect,
-    uvsphere, uvdisk, uvcylinder, geosphere };
+    matball, suzanne,
+    uvsphere, uvcylinder, geosphere };
   // clang-format on
-  type_t  type         = type_t::disk;
+  type_t  type         = type_t::matball;
   int     subdivisions = 0;
   float   scale        = 1;
   float   uvscale      = 1;
@@ -589,6 +589,10 @@ void make_disk(vector<vec4i>& quads, vector<vec3f>& positions,
 void make_bulged_disk(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32, float scale = 1,
     float uvscale = 1, float height = 0.3);
+// Make a uv disk
+void make_uvdisk(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {32, 32},
+    float scale = 1, const vec2f& uvscale = {1, 1});
 
 // Make a facevarying rect
 void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, 
