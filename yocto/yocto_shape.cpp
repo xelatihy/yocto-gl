@@ -2369,6 +2369,7 @@ void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
   make_box(quads, positions, normals, texcoords, {steps, steps, steps},
       {size, size, size}, {uvsize, uvsize, uvsize});
   for (auto& p : positions) p = normalize(p) * size / 2;
+  normals = positions;
   for (auto& n : normals) n = normalize(n);
 }
 
@@ -2603,47 +2604,9 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
           (int)round(pow2(params.subdivisions) * params.aspect.x),
           (int)round(pow2(params.subdivisions) * params.aspect.y),
           (int)round(pow2(params.subdivisions) * params.aspect.z)};
-      auto uvsize = params.aspect;
-      auto size   = 2 * params.aspect;
-      make_box(quads, positions, normals, texcoords, steps, size, uvsize);
-      if (params.rounded) {
-        auto radius = params.rounded * min(size) / 2;
-        auto c      = size / 2 - radius;
-        for (auto i = 0; i < positions.size(); i++) {
-          auto pc = vec3f{
-              abs(positions[i].x), abs(positions[i].y), abs(positions[i].z)};
-          auto ps = vec3f{positions[i].x < 0 ? -1.0f : 1.0f,
-              positions[i].y < 0 ? -1.0f : 1.0f,
-              positions[i].z < 0 ? -1.0f : 1.0f};
-          if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
-            auto pn      = normalize(pc - c);
-            positions[i] = c + radius * pn;
-            normals[i]   = pn;
-          } else if (pc.x >= c.x && pc.y >= c.y) {
-            auto pn      = normalize((pc - c) * vec3f{1, 1, 0});
-            positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
-            normals[i]   = pn;
-          } else if (pc.x >= c.x && pc.z >= c.z) {
-            auto pn      = normalize((pc - c) * vec3f{1, 0, 1});
-            positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
-            normals[i]   = pn;
-          } else if (pc.y >= c.y && pc.z >= c.z) {
-            auto pn      = normalize((pc - c) * vec3f{0, 1, 1});
-            positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
-            normals[i]   = pn;
-          } else {
-            continue;
-          }
-          positions[i] *= ps;
-          normals[i] *= ps;
-        }
-      }
-      if (params.scale != 1) {
-        for (auto& p : positions) p *= params.scale;
-      }
-      if (params.uvscale != 1) {
-        for (auto& uv : texcoords) uv *= params.uvscale;
-      }
+      auto uvsize = params.aspect * params.uvscale;
+      auto size   = 2 * params.aspect * params.scale;
+      make_box(quads, positions, normals, texcoords, steps, size, uvsize, params.rounded);
     } break;
     case proc_shape_params::type_t::rect: {
       auto steps = vec2i{
