@@ -172,12 +172,8 @@ void update_glmaterial(
 
 void update_glshape(
     opengl_shape& glshape, const scene_shape& shape, const scene_model& scene) {
-  if (shape.subdivisions || shape.displacement || shape.displacement_tex >= 0) {
-    auto subdiv = shape;
-    if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
-    if (subdiv.displacement && subdiv.displacement_tex < 0)
-      subdiv = displace_shape(scene, subdiv);
-    return update_glshape(glshape, subdiv, scene);
+  if (needs_tesselation(scene, shape)) {
+    return update_glshape(glshape, tesselate_shape(scene, shape), scene);
   }
   if (shape.quadspos.empty()) {
     if (!shape.positions.empty())

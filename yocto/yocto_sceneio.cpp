@@ -585,6 +585,32 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
   }
   return subdiv;
 }
+scene_shape tesselate_shape(const scene_model& scene, const scene_shape& shape,
+    bool no_quads, bool no_facevarying) {
+  if(!needs_tesselation(scene, shape, no_quads, no_facevarying)) return shape;
+  auto subdiv = shape;
+  if(subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
+  if(subdiv.displacement) subdiv = displace_shape(scene, subdiv);
+  if(!subdiv.quadspos.empty() && no_facevarying) {
+    split_facevarying(subdiv.quads, subdiv.positions, subdiv.normals, subdiv.texcoords,
+       // enforce copies below
+       vector<vec4i>{subdiv.quadspos}, vector<vec4i>{subdiv.quadsnorm}, vector<vec4i>{subdiv.quadstexcoord},
+       vector<vec3f>{subdiv.positions}, vector<vec3f>{subdiv.normals}, vector<vec2f>{subdiv.texcoords}
+      );
+  }
+  if(!subdiv.quads.empty() && no_quads) {
+    subdiv.triangles = quads_to_triangles(subdiv.quads);
+    subdiv.quads = {};
+  }
+  return subdiv;
+}
+bool needs_tesselation(const scene_model& scene, const scene_shape& shape,
+    bool no_quads, bool no_facevarying) {
+  if(!shape.quadspos.empty() && (no_facevarying || no_quads)) return true;
+  if(!shape.quads.empty() && no_quads) return true;
+  if(shape.subdivisions || shape.displacement) return true;
+  return false;
+}
 
 // Update animation transforms
 void update_transforms(scene_model& scene, scene_animation& animation,

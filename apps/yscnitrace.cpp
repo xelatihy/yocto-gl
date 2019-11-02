@@ -153,12 +153,8 @@ void update_trace_material(
 }
 void update_trace_shape(trace_shape& shape, const scene_shape& ioshape,
     const scene_model& ioscene) {
-  if (ioshape.subdivisions || ioshape.displacement) {
-    auto subdiv = ioshape;
-    if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
-    if (subdiv.displacement && subdiv.displacement_tex >= 0)
-      subdiv = displace_shape(ioscene, subdiv);
-    return update_trace_shape(shape, subdiv, ioscene);
+  if(needs_tesselation(ioscene, ioshape)) {
+    return update_trace_shape(shape, tesselate_shape(ioscene, ioshape), ioscene);
   }
   shape.points        = ioshape.points;
   shape.lines         = ioshape.lines;

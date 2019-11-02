@@ -79,15 +79,6 @@ struct app_state {
 
 // construct a scene from io
 trace_scene make_scene(const scene_model& ioscene) {
-  auto tesselate = [](const scene_model& ioscene, const scene_shape& shape) {
-    if (!shape.subdivisions && !shape.displacement) return scene_shape{};
-    auto subdiv = shape;
-    if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
-    if (subdiv.displacement && subdiv.displacement_tex >= 0)
-      subdiv = displace_shape(ioscene, subdiv);
-    return subdiv;
-  };
-
   auto scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
@@ -132,8 +123,8 @@ trace_scene make_scene(const scene_model& ioscene) {
   }
 
   for (auto& ioshape_ : ioscene.shapes) {
-    auto& ioshape = (ioshape_.subdivisions || ioshape_.displacement)
-                        ? tesselate(ioscene, ioshape_)
+    auto& ioshape = (needs_tesselation(ioscene, ioshape_))
+                        ? tesselate_shape(ioscene, ioshape_)
                         : ioshape_;
     auto& shape         = scene.shapes.emplace_back();
     shape.points        = ioshape.points;
