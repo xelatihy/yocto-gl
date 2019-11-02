@@ -2426,6 +2426,7 @@ void make_capped_uvsphere(vector<vec4i>& quads, vector<vec3f>& positions,
     float scale, const vec2f& uvscale, float cap) {
   make_uvsphere(quads, positions, normals, texcoords, steps, scale, uvscale);
   if (cap) {
+    cap = min(cap, scale/2);
     auto zflip = (scale - cap);
     for (auto i = 0; i < positions.size(); i++) {
       if (positions[i].z > zflip) {
@@ -2940,7 +2941,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvsphere-flipcap") {
     make_capped_uvsphere(
-        quads, positions, normals, texcoords, {32, 32}, 0.075, {1, 1}, 0.3);
+        quads, positions, normals, texcoords, {32, 32}, 0.075, {1, 1}, 0.3 * 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-sphere") {
     make_sphere(quads, positions, normals, texcoords, 32, 0.075f, 1);
@@ -2953,7 +2954,7 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvcylinder") {
     make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32},
-        {0.075, 0.075}, {1, 1, 1}, 0.3);
+        {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-floor") {
     make_floor(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
