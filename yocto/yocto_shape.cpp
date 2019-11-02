@@ -1236,7 +1236,7 @@ void subdivide_catmullclark_impl(vector<vec4i>& quads, vector<T>& vert,
     // split boundary
     auto tboundary = vector<vec2i>(nboundary * 2);
     for (auto i = 0; i < nboundary; i++) {
-      auto e = boundary[i];
+      auto e               = boundary[i];
       tboundary[i * 2 + 0] = {e.x, nverts + edge_index(emap, e)};
       tboundary[i * 2 + 1] = {nverts + edge_index(emap, e), e.y};
     }
@@ -3006,7 +3006,8 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   } else if (type == "test-cube-subdiv") {
     // TODO: this should be a Catmull-Clark cube
     // make_cube(quads, positions, normals, texcoords, 0.075f);
-    make_fvcube(quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords, 0.075f);
+    make_fvcube(quadspos, quadsnorm, quadstexcoord, positions, normals,
+        texcoords, 0.075f);
     // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
     //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
     for (auto& p : positions) p += {0, 0.075, 0};

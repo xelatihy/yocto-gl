@@ -502,7 +502,7 @@ scene_shape subdivide_shape(const scene_shape& shape) {
       subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
       subdiv.quadsnorm = subdiv.quadspos;
     } else {
-      subdiv.normals = {};
+      subdiv.normals   = {};
       subdiv.quadsnorm = {};
     }
   } else {
@@ -513,12 +513,12 @@ scene_shape subdivide_shape(const scene_shape& shape) {
 // Apply displacement to a shape
 scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
   // Evaluate a texture
-  auto eval_texture = [](const scene_texture& texture, const vec2f& texcoord) -> vec4f {
+  auto eval_texture = [](const scene_texture& texture,
+                          const vec2f&        texcoord) -> vec4f {
     if (!texture.hdr.empty()) {
       return eval_image(texture.hdr, texcoord, false, false);
     } else if (!texture.ldr.empty()) {
-      return eval_image(texture.ldr, texcoord, true, false,
-          false);
+      return eval_image(texture.ldr, texcoord, true, false, false);
     } else {
       return {1, 1, 1, 1};
     }
@@ -568,7 +568,8 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
       auto qpos = shape.quadspos[fid];
       auto qtxt = shape.quadstexcoord[fid];
       for (auto i = 0; i < 4; i++) {
-        auto disp = mean(xyz(eval_texture(displacement, shape.texcoords[qtxt[i]])));
+        auto disp = mean(
+            xyz(eval_texture(displacement, shape.texcoords[qtxt[i]])));
         if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
         offset[qpos[i]] += shape.displacement * disp;
         count[qpos[i]] += 1;
@@ -587,28 +588,29 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
 }
 scene_shape tesselate_shape(const scene_model& scene, const scene_shape& shape,
     bool no_quads, bool no_facevarying) {
-  if(!needs_tesselation(scene, shape, no_quads, no_facevarying)) return shape;
+  if (!needs_tesselation(scene, shape, no_quads, no_facevarying)) return shape;
   auto subdiv = shape;
-  if(subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
-  if(subdiv.displacement) subdiv = displace_shape(scene, subdiv);
-  if(!subdiv.quadspos.empty() && no_facevarying) {
-    split_facevarying(subdiv.quads, subdiv.positions, subdiv.normals, subdiv.texcoords,
-       // enforce copies below
-       vector<vec4i>{subdiv.quadspos}, vector<vec4i>{subdiv.quadsnorm}, vector<vec4i>{subdiv.quadstexcoord},
-       vector<vec3f>{subdiv.positions}, vector<vec3f>{subdiv.normals}, vector<vec2f>{subdiv.texcoords}
-      );
+  if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
+  if (subdiv.displacement) subdiv = displace_shape(scene, subdiv);
+  if (!subdiv.quadspos.empty() && no_facevarying) {
+    split_facevarying(subdiv.quads, subdiv.positions, subdiv.normals,
+        subdiv.texcoords,
+        // enforce copies below
+        vector<vec4i>{subdiv.quadspos}, vector<vec4i>{subdiv.quadsnorm},
+        vector<vec4i>{subdiv.quadstexcoord}, vector<vec3f>{subdiv.positions},
+        vector<vec3f>{subdiv.normals}, vector<vec2f>{subdiv.texcoords});
   }
-  if(!subdiv.quads.empty() && no_quads) {
+  if (!subdiv.quads.empty() && no_quads) {
     subdiv.triangles = quads_to_triangles(subdiv.quads);
-    subdiv.quads = {};
+    subdiv.quads     = {};
   }
   return subdiv;
 }
 bool needs_tesselation(const scene_model& scene, const scene_shape& shape,
     bool no_quads, bool no_facevarying) {
-  if(!shape.quadspos.empty() && (no_facevarying || no_quads)) return true;
-  if(!shape.quads.empty() && no_quads) return true;
-  if(shape.subdivisions || shape.displacement) return true;
+  if (!shape.quadspos.empty() && (no_facevarying || no_quads)) return true;
+  if (!shape.quads.empty() && no_quads) return true;
+  if (shape.subdivisions || shape.displacement) return true;
   return false;
 }
 
