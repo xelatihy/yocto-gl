@@ -611,6 +611,7 @@ void make_random_points(vector<int>& points, vector<vec3f>& positions,
 // Predefined meshes
 void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale = 1);
 void make_quad(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
+void make_quady(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
 void make_cube(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
 void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, 
 vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords, float scale = 1);
