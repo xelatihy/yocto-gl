@@ -540,8 +540,9 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       subdiv.positions[vid] += normals[vid] * shape.displacement * disp;
     }
-    if (shape.smooth || !shape.normals.empty())
-      subdiv.normals = compute_normals(shape.triangles, shape.positions);
+    if (shape.smooth || !shape.normals.empty()) {
+      subdiv.normals = compute_normals(subdiv.triangles, subdiv.positions);
+    }
   } else if (!shape.quads.empty()) {
     auto normals = shape.normals;
     if (normals.empty())
@@ -551,8 +552,9 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
       subdiv.positions[vid] += shape.normals[vid] * shape.displacement * disp;
     }
-    if (shape.smooth || !shape.normals.empty())
-      subdiv.normals = compute_normals(shape.quads, shape.positions);
+    if (shape.smooth || !shape.normals.empty()) {
+      subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
+    }
   } else if (!shape.quadspos.empty()) {
     // facevarying case
     auto offset = vector<float>(shape.positions.size(), 0);
@@ -573,7 +575,7 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
     }
     if (shape.smooth || !shape.normals.empty()) {
       subdiv.quadsnorm = shape.quadspos;
-      subdiv.normals   = compute_normals(shape.quadspos, shape.positions);
+      subdiv.normals   = compute_normals(subdiv.quadspos, subdiv.positions);
     }
   }
   return subdiv;
