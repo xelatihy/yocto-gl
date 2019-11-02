@@ -542,67 +542,67 @@ void make_proc_shape(vector<vec3i>& triangles, vector<vec4i>& quads,
 // Make a plane.
 void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& size = {1, 1},
-    const vec2f& uvsize = {1, 1});
+    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1});
 void make_rounded_rect(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec2i& steps = {1, 1}, const vec2f& size = {1, 1},
-    const vec2f& uvsize = {1, 1}, float rounded = 0.15);
+    const vec2i& steps = {1, 1}, const vec2f& scale = {1, 1},
+    const vec2f& uvscale = {1, 1}, float rounded = 0.15);
 // Make a box.
 void make_box(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {1, 1, 1}, const vec3f& size = {1, 1, 1},
-    const vec3f& uvsize = {1, 1, 1});
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
+    const vec3f& uvscale = {1, 1, 1});
 void make_rounded_box(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {1, 1, 1}, const vec3f& size = {1, 1, 1},
-    const vec3f& uvsize = {1, 1, 1}, float rounded = 0.15);
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
+    const vec3f& uvscale = {1, 1, 1}, float rounded = 0.15);
 // Make a quad stack
 void make_stack(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {1, 1, 1}, const vec3f& size = {1, 1, 1},
-    const vec3f& uvsize = {1, 1, 1});
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
+    const vec3f& uvscale = {1, 1, 1});
 void make_rounded_stack(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords,
-    const vec3i& steps = {1, 1, 1}, const vec3f& size = {1, 1, 1},
-    const vec3f& uvsize = {1, 1, 1}, float rounded = 0.15);
+    const vec3i& steps = {1, 1, 1}, const vec3f& scale = {1, 1, 1},
+    const vec3f& uvscale = {1, 1, 1}, float rounded = 0.15);
 // Make a floor.
 void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {1, 1},
-    const vec2f& size = {20, 20}, const vec2f& uvsize = {10, 10});
+    const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10});
 void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {1, 1},
-    const vec2f& size = {20, 20}, const vec2f& uvsize = {10, 10}, float bent = 0.5);
+    const vec2f& scale = {10, 10}, const vec2f& uvscale = {10, 10}, float bent = 0.5);
 // Make a sphere.
 void make_sphere(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32, float size = 1,
-    float uvsize = 1);
+    vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32, float scale = 1,
+    float uvscale = 1);
 
 // Make a facevarying rect
 void make_fvrect(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, 
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps = {1, 1},
-    const vec2f& size = {1, 1}, const vec2f& uvsize = {1, 1});
+    const vec2f& scale = {1, 1}, const vec2f& uvscale = {1, 1});
 // Make a facevarying box
 void make_fvbox(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec3i& steps = {1, 1, 1},
-    const vec3f& size = {1, 1, 1}, const vec3f& uvsize = {1, 1, 1});
+    const vec3f& scale = {1, 1, 1}, const vec3f& uvscale = {1, 1, 1});
 void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, int steps = 32,
-    float size = 1, float uvsize = 1);
+    float scale = 1, float uvscale = 1);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 void make_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, int subdivisions, const vec2f& size, const vec2f& uvsize,
+    int num, int subdivisions, const vec2f& size, const vec2f& uvscale,
     const vec2f& line_radius);
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 void make_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, float uvsize, float point_radius);
+    int num, float uvscale, float point_radius);
 void make_random_points(vector<int>& points, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<float>& radius,
-    int num, const vec3f& size, float uvsize, float point_radius,
+    int num, const vec3f& size, float uvscale, float point_radius,
     uint64_t seed);
 
 // Make fair params
