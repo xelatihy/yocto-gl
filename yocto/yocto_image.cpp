@@ -1687,7 +1687,8 @@ imageio_status save_image(const string& filename, const image<vec4f>& img) {
       return {filename + ": write error"};
     return {};
   } else if (!is_hdr_filename(filename)) {
-    if (!save_imageb(filename, rgb_to_srgbb(img))) return {filename + ": write error"};
+    if (!save_imageb(filename, rgb_to_srgbb(img)))
+      return {filename + ": write error"};
     return {};
   } else {
     return {filename + ": unsupported format"};
@@ -1706,7 +1707,8 @@ imageio_status load_imageb(const string& filename, image<vec4b>& img) {
   auto ext = get_extension(filename);
   if (ext == ".ypreset") {
     img = make_image_presetb(get_basename(filename));
-    if(img.empty()) return {filename + ": unknown preset " + get_basename(filename)};
+    if (img.empty())
+      return {filename + ": unknown preset " + get_basename(filename)};
     return {};
   }
   if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||

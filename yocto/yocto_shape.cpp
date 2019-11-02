@@ -2695,8 +2695,8 @@ void make_fvsphere(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
 
 // Predefined meshes
 void make_monkey(vector<vec4i>& quads, vector<vec3f>& positions, float scale) {
-extern const vector<vec3f> suzanne_positions;
-extern const vector<vec4i> suzanne_quads;
+  extern const vector<vec3f> suzanne_positions;
+  extern const vector<vec4i> suzanne_quads;
   quads     = suzanne_quads;
   positions = suzanne_positions;
   if (scale != 1) {
@@ -2705,10 +2705,10 @@ extern const vector<vec4i> suzanne_quads;
 }
 void make_quad(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float scale) {
-extern const vector<vec3f> quad_positions;
-extern const vector<vec3f> quad_normals;
-extern const vector<vec2f> quad_texcoords;
-extern const vector<vec4i> quad_quads;
+  extern const vector<vec3f> quad_positions;
+  extern const vector<vec3f> quad_normals;
+  extern const vector<vec2f> quad_texcoords;
+  extern const vector<vec4i> quad_quads;
   quads     = quad_quads;
   positions = quad_positions;
   normals   = quad_normals;
@@ -2720,10 +2720,10 @@ extern const vector<vec4i> quad_quads;
 
 void make_quady(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float scale) {
-extern const vector<vec3f> quady_positions;
-extern const vector<vec3f> quady_normals;
-extern const vector<vec2f> quady_texcoords;
-extern const vector<vec4i> quady_quads;
+  extern const vector<vec3f> quady_positions;
+  extern const vector<vec3f> quady_normals;
+  extern const vector<vec2f> quady_texcoords;
+  extern const vector<vec4i> quady_quads;
   quads     = quady_quads;
   positions = quady_positions;
   normals   = quady_normals;
@@ -2735,10 +2735,10 @@ extern const vector<vec4i> quady_quads;
 
 void make_cube(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float scale) {
-extern const vector<vec3f> cube_positions;
-extern const vector<vec3f> cube_normals;
-extern const vector<vec2f> cube_texcoords;
-extern const vector<vec4i> cube_quads;
+  extern const vector<vec3f> cube_positions;
+  extern const vector<vec3f> cube_normals;
+  extern const vector<vec2f> cube_texcoords;
+  extern const vector<vec4i> cube_quads;
   quads     = cube_quads;
   positions = cube_positions;
   normals   = cube_normals;
@@ -2751,18 +2751,18 @@ extern const vector<vec4i> cube_quads;
 void make_fvcube(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, float scale) {
-extern const vector<vec3f> fvcube_positions;
-extern const vector<vec3f> fvcube_normals;
-extern const vector<vec2f> fvcube_texcoords;
-extern const vector<vec4i> fvcube_quadspos;
-extern const vector<vec4i> fvcube_quadsnorm;
-extern const vector<vec4i> fvcube_quadstexcoord;
-  quadspos     = fvcube_quadspos;
+  extern const vector<vec3f> fvcube_positions;
+  extern const vector<vec3f> fvcube_normals;
+  extern const vector<vec2f> fvcube_texcoords;
+  extern const vector<vec4i> fvcube_quadspos;
+  extern const vector<vec4i> fvcube_quadsnorm;
+  extern const vector<vec4i> fvcube_quadstexcoord;
+  quadspos      = fvcube_quadspos;
   quadsnorm     = fvcube_quadsnorm;
-  quadstexcoord     = fvcube_quadstexcoord;
-  positions = fvcube_positions;
-  normals   = fvcube_normals;
-  texcoords = fvcube_texcoords;
+  quadstexcoord = fvcube_quadstexcoord;
+  positions     = fvcube_positions;
+  normals       = fvcube_normals;
+  texcoords     = fvcube_texcoords;
   if (scale != 1) {
     for (auto& p : positions) p *= scale;
   }
@@ -2963,7 +2963,8 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_disk(quads, positions, normals, texcoords, 32, 0.075f, 1);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-uvcylinder") {
-    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32}, {0.075, 0.075}, {1, 1, 1}, 0.3);
+    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32},
+        {0.075, 0.075}, {1, 1, 1}, 0.3);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-floor") {
     make_floor(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
@@ -3352,21 +3353,22 @@ const vector<vec4i> cube_quads       = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
 const vector<vec3f> fvcube_positions = vector<vec3f>{{-1, -1, +1}, {+1, -1, +1},
     {+1, +1, +1}, {-1, +1, +1}, {+1, -1, -1}, {-1, -1, -1}, {-1, +1, -1},
     {+1, +1, -1}};
-const vector<vec3f> fvcube_normals     = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
+const vector<vec3f> fvcube_normals   = vector<vec3f>{{0, 0, +1}, {0, 0, +1},
     {0, 0, +1}, {0, 0, +1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
     {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
     {-1, 0, 0}, {-1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0},
     {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
-const vector<vec2f> fvcube_texcoords   = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
+const vector<vec2f> fvcube_texcoords = vector<vec2f>{{0, 1}, {1, 1}, {1, 0},
     {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
     {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1},
     {1, 1}, {1, 0}, {0, 0}};
-const vector<vec4i> fvcube_quadspos     = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+const vector<vec4i> fvcube_quadspos  = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
     {1, 4, 7, 2}, {5, 0, 3, 6}, {3, 2, 7, 6}, {1, 0, 5, 4}};
-const vector<vec4i> fvcube_quadsnorm       = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+const vector<vec4i> fvcube_quadsnorm = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
     {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
-const vector<vec4i> fvcube_quadstexcoord       = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-    {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+const vector<vec4i> fvcube_quadstexcoord = vector<vec4i>{{0, 1, 2, 3},
+    {4, 5, 6, 7}, {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19},
+    {20, 21, 22, 23}};
 
 const vector<vec3f> suzanne_positions = vector<vec3f>{
     {0.4375, 0.1640625, 0.765625}, {-0.4375, 0.1640625, 0.765625},

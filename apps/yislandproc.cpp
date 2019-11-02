@@ -247,7 +247,7 @@ void load_island_lights(
       auto shape     = scene_shape{};
       shape.name     = "shapes/lights/" + name + ".ply";
       shape.filename = "shapes/lights/" + name + ".ply";
-      auto size = vec2f{
+      auto size      = vec2f{
           ljs.at("width").get<float>(), ljs.at("height").get<float>()};
       make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
           {1, 1}, size, {1, 1});
