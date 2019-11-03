@@ -383,12 +383,12 @@ vector<float>    sample_quads_cdf(
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.
 void sample_triangles(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
     int seed = 7);
 void sample_quads(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
     int seed = 7);

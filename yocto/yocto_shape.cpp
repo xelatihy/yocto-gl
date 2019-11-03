@@ -1497,13 +1497,13 @@ vector<float> sample_quads_cdf(
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
 void sample_triangles(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
     int seed) {
   sampled_positions.resize(npoints);
   sampled_normals.resize(npoints);
-  sampled_texturecoords.resize(npoints);
+  sampled_texcoords.resize(npoints);
   auto cdf = sample_triangles_cdf(triangles, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
@@ -1519,11 +1519,11 @@ void sample_triangles(vector<vec3f>& sampled_positions,
       sampled_normals[i] = triangle_normal(
           positions[t.x], positions[t.y], positions[t.z]);
     }
-    if (!sampled_texturecoords.empty()) {
-      sampled_texturecoords[i] = interpolate_triangle(
+    if (!sampled_texcoords.empty()) {
+      sampled_texcoords[i] = interpolate_triangle(
           texcoords[t.x], texcoords[t.y], texcoords[t.z], uv);
     } else {
-      sampled_texturecoords[i] = zero2f;
+      sampled_texcoords[i] = zero2f;
     }
   }
 }
@@ -1532,13 +1532,13 @@ void sample_triangles(vector<vec3f>& sampled_positions,
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
 void sample_quads(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
     int seed) {
   sampled_positions.resize(npoints);
   sampled_normals.resize(npoints);
-  sampled_texturecoords.resize(npoints);
+  sampled_texcoords.resize(npoints);
   auto cdf = sample_quads_cdf(quads, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
@@ -1554,11 +1554,11 @@ void sample_quads(vector<vec3f>& sampled_positions,
       sampled_normals[i] = quad_normal(
           positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     }
-    if (!sampled_texturecoords.empty()) {
-      sampled_texturecoords[i] = interpolate_quad(
+    if (!sampled_texcoords.empty()) {
+      sampled_texcoords[i] = interpolate_quad(
           texcoords[q.x], texcoords[q.y], texcoords[q.z], texcoords[q.w], uv);
     } else {
-      sampled_texturecoords[i] = zero2f;
+      sampled_texcoords[i] = zero2f;
     }
   }
 }
