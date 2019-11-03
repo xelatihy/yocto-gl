@@ -576,12 +576,12 @@ int insert_vertex(hash_grid& grid, const vec3f& position) {
   grid.positions.push_back(position);
   return vertex_id;
 }
-// Finds the nearest neighboors within a given radius
-void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
+// Finds the nearest neighbors within a given radius
+void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
     const vec3f& position, float max_radius, int skip_id) {
   auto cell        = get_cell_index(grid, position);
   auto cell_radius = (int)(max_radius * grid.cell_inv_size) + 1;
-  neighboors.clear();
+  neighbors.clear();
   auto max_radius_squared = max_radius * max_radius;
   for (auto k = -cell_radius; k <= cell_radius; k++) {
     for (auto j = -cell_radius; j <= cell_radius; j++) {
@@ -595,19 +595,19 @@ void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
               max_radius_squared)
             continue;
           if (vertex_id == skip_id) continue;
-          neighboors.push_back(vertex_id);
+          neighbors.push_back(vertex_id);
         }
       }
     }
   }
 }
-void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
+void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
     const vec3f& position, float max_radius) {
-  find_neightbors(grid, neighboors, position, max_radius, -1);
+  find_neighbors(grid, neighbors, position, max_radius, -1);
 }
-void find_neightbors(const hash_grid& grid, vector<int>& neighboors, int vertex,
+void find_neighbors(const hash_grid& grid, vector<int>& neighbors, int vertex,
     float max_radius) {
-  find_neightbors(grid, neighboors, grid.positions[vertex], max_radius, vertex);
+  find_neighbors(grid, neighbors, grid.positions[vertex], max_radius, vertex);
 }
 
 }  // namespace yocto
@@ -841,16 +841,16 @@ pair<vector<vec3f>, vector<int>> weld_vertices(
   auto indices    = vector<int>(positions.size());
   auto welded     = vector<vec3f>{};
   auto grid       = make_hash_grid(threshold);
-  auto neighboors = vector<int>{};
+  auto neighbors = vector<int>{};
   for (auto vertex = 0; vertex < positions.size(); vertex++) {
     auto& position = positions[vertex];
-    find_neightbors(grid, neighboors, position, threshold);
-    if (neighboors.empty()) {
+    find_neighbors(grid, neighbors, position, threshold);
+    if (neighbors.empty()) {
       welded.push_back(position);
       indices[vertex] = (int)welded.size() - 1;
       insert_vertex(grid, position);
     } else {
-      indices[vertex] = neighboors.front();
+      indices[vertex] = neighbors.front();
     }
   }
   return {welded, indices};
@@ -1497,13 +1497,13 @@ vector<float> sample_quads_cdf(
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
 void sample_triangles(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
     int seed) {
   sampled_positions.resize(npoints);
   sampled_normals.resize(npoints);
-  sampled_texturecoords.resize(npoints);
+  sampled_texcoords.resize(npoints);
   auto cdf = sample_triangles_cdf(triangles, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
@@ -1519,11 +1519,11 @@ void sample_triangles(vector<vec3f>& sampled_positions,
       sampled_normals[i] = triangle_normal(
           positions[t.x], positions[t.y], positions[t.z]);
     }
-    if (!sampled_texturecoords.empty()) {
-      sampled_texturecoords[i] = interpolate_triangle(
+    if (!sampled_texcoords.empty()) {
+      sampled_texcoords[i] = interpolate_triangle(
           texcoords[t.x], texcoords[t.y], texcoords[t.z], uv);
     } else {
-      sampled_texturecoords[i] = zero2f;
+      sampled_texcoords[i] = zero2f;
     }
   }
 }
@@ -1532,13 +1532,13 @@ void sample_triangles(vector<vec3f>& sampled_positions,
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
 void sample_quads(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
     int seed) {
   sampled_positions.resize(npoints);
   sampled_normals.resize(npoints);
-  sampled_texturecoords.resize(npoints);
+  sampled_texcoords.resize(npoints);
   auto cdf = sample_quads_cdf(quads, positions);
   auto rng = make_rng(seed);
   for (auto i = 0; i < npoints; i++) {
@@ -1554,11 +1554,11 @@ void sample_quads(vector<vec3f>& sampled_positions,
       sampled_normals[i] = quad_normal(
           positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
     }
-    if (!sampled_texturecoords.empty()) {
-      sampled_texturecoords[i] = interpolate_quad(
+    if (!sampled_texcoords.empty()) {
+      sampled_texcoords[i] = interpolate_quad(
           texcoords[q.x], texcoords[q.y], texcoords[q.z], texcoords[q.w], uv);
     } else {
-      sampled_texturecoords[i] = zero2f;
+      sampled_texcoords[i] = zero2f;
     }
   }
 }
@@ -1921,7 +1921,7 @@ static pair<float, bool> step_from_edge_to_edge(const vec3f& point,
   }
 }
 
-static path_vertex step_from_point(const vector<vec3i>& triangles,
+static surface_path::vertex step_from_point(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, const vector<float>& field, int vertex,
     int start_face, int tag = -1, float epsilon = 0.0001f) {
@@ -1944,7 +1944,7 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
   auto triangle_fan = get_face_ring(triangles, adjacency, start_face, vertex);
 
   auto best_alignment = 0.0;
-  auto fallback_lerp  = path_vertex{vec2i{-1, -1}, -1, 0};
+  auto fallback_lerp  = surface_path::vertex{vec2i{-1, -1}, -1, 0};
 
   for (auto i = 0; i < triangle_fan.size(); ++i) {
     auto face = triangle_fan[i];
@@ -1969,13 +1969,13 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
     if (max(right_dot, left_dot) > best_alignment) {
       best_alignment = max(right_dot, left_dot);
       auto alpha     = right_dot > left_dot ? 0.0f + epsilon : 1.0f - epsilon;
-      fallback_lerp  = path_vertex{edge, face, alpha};
+      fallback_lerp  = surface_path::vertex{edge, face, alpha};
     }
 
     // Check if gradient direction is in between ac and ab.
     if (is_direction_inbetween(right, left, direction)) {
       auto alpha = step_from_point_to_edge(right, left, direction);
-      return path_vertex{edge, face, alpha};
+      return surface_path::vertex{edge, face, alpha};
     }
   }
 
@@ -1999,7 +1999,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
   };
 
   // trace function
-  auto lerps = vector<path_vertex>();
+  auto lerps = vector<surface_path::vertex>();
   auto lerp  = step_from_point(
       triangles, positions, adjacency, tags, field, from, -1, tag);
   if (lerp.face == -1) return {};
@@ -2076,7 +2076,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
     return v.x == a || v.y == a || v.z == a;
   };
 
-  auto lerps = vector<path_vertex>();
+  auto lerps = vector<surface_path::vertex>();
 
   lerps.push_back(
       step_from_point(triangles, positions, adjacency, tags, field, from, -1));

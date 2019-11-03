@@ -200,7 +200,7 @@ vector<vector<int>> vertex_to_faces_adjacencies(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// HASH GRID AND NEAREST NEIGHTBORS
+// HASH GRID AND NEAREST NEIGHBORS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -218,10 +218,10 @@ hash_grid make_hash_grid(float cell_size);
 hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size);
 // Inserts a point into the grid
 int insert_vertex(hash_grid& grid, const vec3f& position);
-// Finds the nearest neighboors within a given radius
-void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
+// Finds the nearest neighbors within a given radius
+void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
     const vec3f& position, float max_radius);
-void find_neightbors(const hash_grid& grid, vector<int>& neighboors, int vertex,
+void find_neighbors(const hash_grid& grid, vector<int>& neighbors, int vertex,
     float max_radius);
 
 }  // namespace yocto
@@ -383,12 +383,12 @@ vector<float>    sample_quads_cdf(
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.
 void sample_triangles(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
     int seed = 7);
 void sample_quads(vector<vec3f>& sampled_positions,
-    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texcoords,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, int npoints,
     int seed = 7);
@@ -446,16 +446,15 @@ vector<vector<float>> compute_voronoi_fields(
 vector<vec4f> colors_from_field(const vector<float>& field, float scale = 1,
     const vec4f& c0 = {1, 1, 1, 1}, const vec4f& c1 = {1, 0.1, 0.1, 1});
 
-struct path_vertex {
-  vec2i edge;
-  int   face;
-  float alpha;
-};
-
-// Description of a discrete path along the surface of the mesh.
+// Description of a discrete path along the surface of a triangle mesh.
 struct surface_path {
+  struct vertex {
+      vec2i edge = {0, 0};
+      int   face = 0;
+      float alpha = 0;
+  };
   int                 start, end;
-  vector<path_vertex> vertices;
+  vector<vertex> vertices;
 };
 
 // Trace integral path following the gradient of a scalar field
