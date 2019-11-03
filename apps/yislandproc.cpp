@@ -142,7 +142,7 @@ inline void from_json(const json& js, mat4f& val) {
 }
 
 // Add missing names and resolve duplicated names.
-void fix_names(scene_model& scene) {
+void fix_names(sceneio_model& scene) {
   auto fix_names = [](auto& values, const string& base) {
     auto count = 0;
     for (auto& value : values) {
@@ -182,7 +182,7 @@ void fix_names(scene_model& scene) {
   fix_filenames(scene.textures, "texture", "textures/", ".png");
   fix_filenames(scene.shapes, "shape", "shapes/", ".ply");
 }
-void rename_instances(scene_model& scene) {
+void rename_instances(sceneio_model& scene) {
   auto shape_names = vector<string>(scene.shapes.size());
   for (auto sid = 0; sid < scene.shapes.size(); sid++) {
     shape_names[sid] = get_basename(scene.shapes[sid].name);
@@ -214,11 +214,11 @@ struct disney_material {
 };
 
 void load_island_cameras(
-    const string& filename, const string& dirname, scene_model& scene) {
+    const string& filename, const string& dirname, sceneio_model& scene) {
   printf("%s\n", filename.c_str());
   auto js = json{};
   load_json(dirname + filename, js);
-  auto camera  = scene_camera{};
+  auto camera  = sceneio_camera{};
   camera.name  = get_basename(filename);
   camera.lens  = js.at("focalLength").get<float>() * 0.001f;
   camera.focus = js.at("centerOfInterest").get<float>();
@@ -233,18 +233,18 @@ void load_island_cameras(
 }
 
 void load_island_lights(
-    const string& filename, const string& dirname, scene_model& scene) {
+    const string& filename, const string& dirname, sceneio_model& scene) {
   printf("%s\n", filename.c_str());
   auto js = json{};
   load_json(dirname + filename, js);
   for (auto& [name, ljs] : js.items()) {
     if (ljs.at("type") == "quad") {
-      auto material     = scene_material{};
+      auto material     = sceneio_material{};
       material.name     = name;
       material.emission = xyz(ljs.at("color").get<vec4f>()) *
                           pow(2.0f, ljs.at("exposure").get<float>());
       scene.materials.push_back(material);
-      auto shape     = scene_shape{};
+      auto shape     = sceneio_shape{};
       shape.name     = "shapes/lights/" + name + ".ply";
       shape.filename = "shapes/lights/" + name + ".ply";
       auto size      = vec2f{
@@ -252,19 +252,19 @@ void load_island_lights(
       make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
           {1, 1}, size, {1, 1});
       scene.shapes.push_back(shape);
-      auto instance     = scene_instance{};
+      auto instance     = sceneio_instance{};
       instance.name     = name;
       instance.frame    = frame3f(ljs.at("translationMatrix").get<mat4f>());
       instance.shape    = (int)scene.shapes.size() - 1;
       instance.material = (int)scene.materials.size() - 1;
       scene.instances.push_back(instance);
     } else if (ljs.at("type") == "dome") {
-      auto texture     = scene_texture{};
+      auto texture     = sceneio_texture{};
       texture.name     = ljs.at("map");
       texture.filename = ljs.at("map");
       load_image(dirname + texture.filename, texture.hdr);
       scene.textures.push_back(texture);
-      auto environment     = scene_environment{};
+      auto environment     = sceneio_environment{};
       environment.name     = name;
       environment.emission = xyz(ljs.at("color").get<vec4f>()) *
                              pow(2.0f, ljs.at("exposure").get<float>());
@@ -316,11 +316,11 @@ void load_island_materials(const string& filename, const string& dirname,
   }
 }
 
-void load_island_shape(vector<scene_shape>& shapes,
-    vector<scene_material>& materials, vector<disney_material>& dmaterials,
+void load_island_shape(vector<sceneio_shape>& shapes,
+    vector<sceneio_material>& materials, vector<disney_material>& dmaterials,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
-    unordered_map<string, int>& tmap, scene_model& scene,
+    unordered_map<string, int>& tmap, sceneio_model& scene,
     const string& filename, const string& parent_name) {
   // obj vertices
   std::deque<vec3f> opos  = std::deque<vec3f>();
@@ -391,7 +391,7 @@ void load_island_shape(vector<scene_shape>& shapes,
       materials.back().roughness    = 0;
       materials.back().refract      = true;
     }
-    shapes.push_back(scene_shape{});
+    shapes.push_back(sceneio_shape{});
     shapes.back().name = "shapes/" + parent_name + "/" +
                          get_basename(filename) + "-" +
                          std::to_string((int)shapes.size()) + ".ply";
@@ -479,7 +479,7 @@ void load_island_shape(vector<scene_shape>& shapes,
   }
 }
 
-void add_island_shape(scene_model& scene, const string& parent_name,
+void add_island_shape(sceneio_model& scene, const string& parent_name,
     const string& filename, const string& dirname,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
@@ -487,8 +487,8 @@ void add_island_shape(scene_model& scene, const string& parent_name,
   if (smap.find(filename) != smap.end()) return;
   printf("%s\n", filename.c_str());
 
-  auto shapes      = vector<scene_shape>{};
-  auto materials   = vector<scene_material>{};
+  auto shapes      = vector<sceneio_shape>{};
+  auto materials   = vector<sceneio_material>{};
   auto dmaterials  = vector<disney_material>{};
   auto facevarying = false;
 
@@ -560,11 +560,11 @@ void add_island_shape(scene_model& scene, const string& parent_name,
   }
 }
 
-void add_island_instance(scene_model& scene, const string& parent_name,
+void add_island_instance(sceneio_model& scene, const string& parent_name,
     const mat4f& xform, const vector<vec2i>& shapes) {
   static auto name_counter = unordered_map<string, int>{};
   for (auto shape_material : shapes) {
-    auto instance = scene_instance{};
+    auto instance = sceneio_instance{};
     instance.name = parent_name + "/" + parent_name + "-" +
                     std::to_string(name_counter[parent_name]++);
     instance.frame    = frame3f(xform);
@@ -574,11 +574,11 @@ void add_island_instance(scene_model& scene, const string& parent_name,
   }
 }
 
-void add_island_variant_instance(vector<scene_instance>& instances,
+void add_island_variant_instance(vector<sceneio_instance>& instances,
     const string& parent_name, const mat4f& xform,
     const vector<vec2i>& shapes) {
   for (auto shape_material : shapes) {
-    auto instance     = scene_instance{};
+    auto instance     = sceneio_instance{};
     instance.frame    = frame3f(xform);
     instance.shape    = shape_material.x;
     instance.material = shape_material.y;
@@ -587,7 +587,7 @@ void add_island_variant_instance(vector<scene_instance>& instances,
 }
 
 void load_island_archive(const string& filename, const string& dirname,
-    scene_model& scene, const string& parent_name, const mat4f& parent_xform,
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
@@ -615,8 +615,8 @@ void load_island_archive(const string& filename, const string& dirname,
 }
 
 void load_island_variant_archive(const string& filename, const string& dirname,
-    scene_model& scene, const string& parent_name, const mat4f& parent_xform,
-    vector<scene_instance>&                 instances,
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
+    vector<sceneio_instance>&               instances,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
@@ -646,11 +646,11 @@ void load_island_variant_archive(const string& filename, const string& dirname,
 }
 
 void load_island_variants(const string& filename, const string& dirname,
-    scene_model& scene, const string& parent_name, const mat4f& parent_xform,
-    unordered_map<string, vector<scene_instance>>& instances,
-    unordered_map<string, vector<vec2i>>&          smap,
-    unordered_map<string, disney_material>&        mmap,
-    unordered_map<string, int>&                    tmap) {
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
+    unordered_map<string, vector<sceneio_instance>>& instances,
+    unordered_map<string, vector<vec2i>>&            smap,
+    unordered_map<string, disney_material>&          mmap,
+    unordered_map<string, int>&                      tmap) {
   printf("%s\n", filename.c_str());
   auto js_ = json{};
   load_json(dirname + filename, js_);
@@ -681,11 +681,11 @@ void load_island_variants(const string& filename, const string& dirname,
 }
 
 void load_island_element(const string& filename, const string& dirname,
-    scene_model& scene, const string& parent_name, const mat4f& parent_xform,
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
     unordered_map<string, int>&             tmap) {
-  unordered_map<string, vector<scene_instance>> variants;
+  unordered_map<string, vector<sceneio_instance>> variants;
   load_island_variants("json/isBayCedarA1/isBayCedarA1.json", dirname, scene,
       parent_name, identity4x4f, variants, smap, mmap, tmap);
 
@@ -715,7 +715,7 @@ void load_island_element(const string& filename, const string& dirname,
 }
 
 void load_island_curve(const string& filename, const string& dirname,
-    scene_model& scene, const string& parent_name, const mat4f& parent_xform,
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
     float start_radius, float end_radius,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
@@ -729,7 +729,7 @@ void load_island_curve(const string& filename, const string& dirname,
                  get_filename(filename) + ".ply";
   if (smap.find(outname) == smap.end()) {
     auto curves   = doc.get_root();
-    auto shape    = scene_shape{};
+    auto shape    = sceneio_shape{};
     auto material = -1;
     for (auto j = 0; j < curves.get_length(); j++) {
       auto curve     = curves.get_array_element(j);
@@ -757,7 +757,7 @@ void load_island_curve(const string& filename, const string& dirname,
 }
 
 void load_island_curvetube(const string& filename, const string& dirname,
-    scene_model& scene, const string& parent_name, const mat4f& parent_xform,
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
     float start_width, float end_width, const string& material_name,
     unordered_map<string, vector<vec2i>>&   smap,
     unordered_map<string, disney_material>& mmap,
@@ -771,10 +771,10 @@ void load_island_curvetube(const string& filename, const string& dirname,
                  get_filename(filename) + ".ply";
   if (smap.find(outname) == smap.end()) {
     auto curves      = doc.get_root();
-    auto material    = scene_material{};
+    auto material    = sceneio_material{};
     material.diffuse = mmap.at(material_name).color;
     scene.materials.push_back(material);
-    auto shape      = scene_shape{};
+    auto shape      = sceneio_shape{};
     shape.name      = outname;
     shape.filename  = outname;
     auto ssmaterial = (int)scene.materials.size() - 1;
@@ -841,7 +841,7 @@ void load_island_curvetube(const string& filename, const string& dirname,
 }
 
 void load_island_elements(const string& filename, const string& dirname,
-    scene_model& scene, unordered_map<string, vector<vec2i>>& smap,
+    sceneio_model& scene, unordered_map<string, vector<vec2i>>& smap,
     unordered_map<string, int>& tmap) {
   // instancing model
   // - main shape: "geomObjFile" and "name" properties
@@ -940,10 +940,10 @@ void load_island_elements(const string& filename, const string& dirname,
 }
 
 sceneio_status load_textures(
-    const string& filename, scene_model& scene, const load_params& params);
+    const string& filename, sceneio_model& scene, const load_params& params);
 
 void load_island_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   try {
     auto js = json{};
     load_json(filename, js);
@@ -1089,7 +1089,7 @@ int main(int argc, const char** argv) {
   save_prms.notextures = notextures;
 
   // load scene
-  auto scene = scene_model{};
+  auto scene = sceneio_model{};
   try {
     auto load_timer = print_timed("loading scene");
     load_island_scene(filename, scene, load_prms);

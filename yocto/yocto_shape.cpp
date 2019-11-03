@@ -838,9 +838,9 @@ vector<vector<vec4i>> ungroup_quads(
 // Weld vertices within a threshold.
 pair<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold) {
-  auto indices    = vector<int>(positions.size());
-  auto welded     = vector<vec3f>{};
-  auto grid       = make_hash_grid(threshold);
+  auto indices   = vector<int>(positions.size());
+  auto welded    = vector<vec3f>{};
+  auto grid      = make_hash_grid(threshold);
   auto neighbors = vector<int>{};
   for (auto vertex = 0; vertex < positions.size(); vertex++) {
     auto& position = positions[vertex];

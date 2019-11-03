@@ -449,11 +449,11 @@ vector<vec4f> colors_from_field(const vector<float>& field, float scale = 1,
 // Description of a discrete path along the surface of a triangle mesh.
 struct surface_path {
   struct vertex {
-      vec2i edge = {0, 0};
-      int   face = 0;
-      float alpha = 0;
+    vec2i edge  = {0, 0};
+    int   face  = 0;
+    float alpha = 0;
   };
-  int                 start, end;
+  int            start, end;
   vector<vertex> vertices;
 };
 

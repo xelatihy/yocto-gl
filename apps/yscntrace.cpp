@@ -36,7 +36,7 @@ using namespace yocto;
 #include <map>
 
 // Construct a scene from io
-trace_scene make_scene(const scene_model& ioscene) {
+trace_scene make_scene(const sceneio_model& ioscene) {
   auto scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
@@ -184,7 +184,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // scene loading
-  auto ioscene    = scene_model{};
+  auto ioscene    = sceneio_model{};
   auto load_timer = print_timed("loading scene");
   if (auto ret = load_scene(filename, ioscene, load_prms); !ret) {
     print_fatal(ret.error);

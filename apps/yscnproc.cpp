@@ -87,7 +87,7 @@ int main(int argc, const char** argv) {
   save_prms.objinstances = obj_instances;
 
   // load scene
-  auto scene      = scene_model{};
+  auto scene      = sceneio_model{};
   auto load_timer = print_timed("loading scene");
   if (auto ret = load_scene(filename, scene, load_prms); !ret) {
     print_fatal(ret.error);

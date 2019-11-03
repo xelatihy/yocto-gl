@@ -217,7 +217,7 @@ inline T keyframe_bezier(
 namespace yocto {
 
 // Updates the scene and scene's instances bounding boxes
-bbox3f compute_bounds(const scene_model& scene) {
+bbox3f compute_bounds(const sceneio_model& scene) {
   auto shape_bbox = vector<bbox3f>{};
   for (auto& shape : scene.shapes) {
     auto& sbvh = shape_bbox.emplace_back();
@@ -233,7 +233,7 @@ bbox3f compute_bounds(const scene_model& scene) {
 }
 
 // Add missing cameras.
-void add_cameras(scene_model& scene) {
+void add_cameras(sceneio_model& scene) {
   if (!scene.cameras.empty()) return;
   auto& camera = scene.cameras.emplace_back();
   camera.name  = "default";
@@ -257,12 +257,12 @@ void add_cameras(scene_model& scene) {
 }
 
 // Add missing materials.
-void add_materials(scene_model& scene) {
+void add_materials(sceneio_model& scene) {
   auto material_id = -1;
   for (auto& instance : scene.instances) {
     if (instance.material >= 0) continue;
     if (material_id < 0) {
-      auto material    = scene_material{};
+      auto material    = sceneio_material{};
       material.name    = "default";
       material.diffuse = {0.2f, 0.2f, 0.2f};
       scene.materials.push_back(material);
@@ -273,7 +273,7 @@ void add_materials(scene_model& scene) {
 }
 
 // Add missing radius.
-void add_radius(scene_model& scene, float radius = 0.001f) {
+void add_radius(sceneio_model& scene, float radius = 0.001f) {
   for (auto& shape : scene.shapes) {
     if (shape.points.empty() && shape.lines.empty()) continue;
     if (!shape.radius.empty()) continue;
@@ -282,20 +282,20 @@ void add_radius(scene_model& scene, float radius = 0.001f) {
 }
 
 // Add a sky environment
-void add_sky(scene_model& scene, float sun_angle) {
-  auto texture     = scene_texture{};
+void add_sky(sceneio_model& scene, float sun_angle) {
+  auto texture     = sceneio_texture{};
   texture.name     = "sky";
   texture.filename = "textures/sky.hdr";
   texture.hdr      = make_sunsky({1024, 512}, sun_angle);
   scene.textures.push_back(texture);
-  auto environment         = scene_environment{};
+  auto environment         = sceneio_environment{};
   environment.name         = "sky";
   environment.emission     = {1, 1, 1};
   environment.emission_tex = (int)scene.textures.size() - 1;
   scene.environments.push_back(environment);
 }
 
-vector<string> scene_stats(const scene_model& scene, bool verbose) {
+vector<string> scene_stats(const sceneio_model& scene, bool verbose) {
   auto accumulate = [](const auto& values, const auto& func) -> size_t {
     auto sum = (size_t)0;
     for (auto& value : values) sum += func(value);
@@ -354,7 +354,7 @@ vector<string> scene_stats(const scene_model& scene, bool verbose) {
 }
 
 // Reduce memory usage
-void trim_memory(scene_model& scene) {
+void trim_memory(sceneio_model& scene) {
   for (auto& shape : scene.shapes) {
     shape.points.shrink_to_fit();
     shape.lines.shrink_to_fit();
@@ -385,7 +385,7 @@ void trim_memory(scene_model& scene) {
 }
 
 // Checks for validity of the scene.
-vector<string> scene_validation(const scene_model& scene, bool notextures) {
+vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
   auto errs        = vector<string>();
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = unordered_map<string, int>();
@@ -399,7 +399,7 @@ vector<string> scene_validation(const scene_model& scene, bool notextures) {
       }
     }
   };
-  auto check_empty_textures = [&errs](const vector<scene_texture>& vals) {
+  auto check_empty_textures = [&errs](const vector<sceneio_texture>& vals) {
     for (auto& value : vals) {
       if (value.hdr.empty() && value.ldr.empty()) {
         errs.push_back("empty texture " + value.name);
@@ -421,7 +421,7 @@ vector<string> scene_validation(const scene_model& scene, bool notextures) {
 }
 
 // Apply subdivision and displacement rules.
-scene_shape subdivide_shape(const scene_shape& shape) {
+sceneio_shape subdivide_shape(const sceneio_shape& shape) {
   using std::ignore;
   if (!shape.subdivisions) return shape;
   auto subdiv         = shape;
@@ -511,10 +511,11 @@ scene_shape subdivide_shape(const scene_shape& shape) {
   return subdiv;
 }
 // Apply displacement to a shape
-scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
+sceneio_shape displace_shape(
+    const sceneio_model& scene, const sceneio_shape& shape) {
   // Evaluate a texture
-  auto eval_texture = [](const scene_texture& texture,
-                          const vec2f&        texcoord) -> vec4f {
+  auto eval_texture = [](const sceneio_texture& texture,
+                          const vec2f&          texcoord) -> vec4f {
     if (!texture.hdr.empty()) {
       return eval_image(texture.hdr, texcoord, false, false);
     } else if (!texture.ldr.empty()) {
@@ -586,8 +587,8 @@ scene_shape displace_shape(const scene_model& scene, const scene_shape& shape) {
   }
   return subdiv;
 }
-scene_shape tesselate_shape(const scene_model& scene, const scene_shape& shape,
-    bool no_quads, bool no_facevarying) {
+sceneio_shape tesselate_shape(const sceneio_model& scene,
+    const sceneio_shape& shape, bool no_quads, bool no_facevarying) {
   if (!needs_tesselation(scene, shape, no_quads, no_facevarying)) return shape;
   auto subdiv = shape;
   if (subdiv.subdivisions) subdiv = subdivide_shape(subdiv);
@@ -604,7 +605,7 @@ scene_shape tesselate_shape(const scene_model& scene, const scene_shape& shape,
   }
   return subdiv;
 }
-bool needs_tesselation(const scene_model& scene, const scene_shape& shape,
+bool needs_tesselation(const sceneio_model& scene, const sceneio_shape& shape,
     bool no_quads, bool no_facevarying) {
   if (!shape.quadspos.empty() && (no_facevarying || no_quads)) return true;
   if (!shape.quads.empty() && no_quads) return true;
@@ -613,20 +614,20 @@ bool needs_tesselation(const scene_model& scene, const scene_shape& shape,
 }
 
 // Update animation transforms
-void update_transforms(scene_model& scene, scene_animation& animation,
+void update_transforms(sceneio_model& scene, sceneio_animation& animation,
     float time, const string& anim_group) {
   if (anim_group != "" && anim_group != animation.group) return;
 
   if (!animation.translations.empty()) {
     auto value = vec3f{0, 0, 0};
     switch (animation.interpolation) {
-      case scene_animation::interpolation_type::step:
+      case sceneio_animation::interpolation_type::step:
         value = keyframe_step(animation.times, animation.translations, time);
         break;
-      case scene_animation::interpolation_type::linear:
+      case sceneio_animation::interpolation_type::linear:
         value = keyframe_linear(animation.times, animation.translations, time);
         break;
-      case scene_animation::interpolation_type::bezier:
+      case sceneio_animation::interpolation_type::bezier:
         value = keyframe_bezier(animation.times, animation.translations, time);
         break;
       default: throw std::runtime_error("should not have been here");
@@ -637,13 +638,13 @@ void update_transforms(scene_model& scene, scene_animation& animation,
   if (!animation.rotations.empty()) {
     auto value = vec4f{0, 0, 0, 1};
     switch (animation.interpolation) {
-      case scene_animation::interpolation_type::step:
+      case sceneio_animation::interpolation_type::step:
         value = keyframe_step(animation.times, animation.rotations, time);
         break;
-      case scene_animation::interpolation_type::linear:
+      case sceneio_animation::interpolation_type::linear:
         value = keyframe_linear(animation.times, animation.rotations, time);
         break;
-      case scene_animation::interpolation_type::bezier:
+      case sceneio_animation::interpolation_type::bezier:
         value = keyframe_bezier(animation.times, animation.rotations, time);
         break;
     }
@@ -652,13 +653,13 @@ void update_transforms(scene_model& scene, scene_animation& animation,
   if (!animation.scales.empty()) {
     auto value = vec3f{1, 1, 1};
     switch (animation.interpolation) {
-      case scene_animation::interpolation_type::step:
+      case sceneio_animation::interpolation_type::step:
         value = keyframe_step(animation.times, animation.scales, time);
         break;
-      case scene_animation::interpolation_type::linear:
+      case sceneio_animation::interpolation_type::linear:
         value = keyframe_linear(animation.times, animation.scales, time);
         break;
-      case scene_animation::interpolation_type::bezier:
+      case sceneio_animation::interpolation_type::bezier:
         value = keyframe_bezier(animation.times, animation.scales, time);
         break;
     }
@@ -667,7 +668,7 @@ void update_transforms(scene_model& scene, scene_animation& animation,
 }
 
 // Update node transforms
-void update_transforms(scene_model& scene, scene_node& node,
+void update_transforms(sceneio_model& scene, sceneio_node& node,
     const frame3f& parent = identity3x4f) {
   auto frame = parent * node.local * translation_frame(node.translation) *
                rotation_frame(node.rotation) * scaling_frame(node.scale);
@@ -680,7 +681,7 @@ void update_transforms(scene_model& scene, scene_node& node,
 
 // Update node transforms
 void update_transforms(
-    scene_model& scene, float time, const string& anim_group) {
+    sceneio_model& scene, float time, const string& anim_group) {
   for (auto& agr : scene.animations)
     update_transforms(scene, agr, time, anim_group);
   for (auto& node : scene.nodes) node.children.clear();
@@ -701,37 +702,37 @@ namespace yocto {
 
 // Load/save a scene in the builtin YAML format.
 static sceneio_status load_yaml_scene(
-    const string& filename, scene_model& scene, const load_params& params);
+    const string& filename, sceneio_model& scene, const load_params& params);
 static sceneio_status save_yaml_scene(const string& filename,
-    const scene_model& scene, const save_params& params);
+    const sceneio_model& scene, const save_params& params);
 
 // Load/save a scene from/to OBJ.
 static sceneio_status load_obj_scene(
-    const string& filename, scene_model& scene, const load_params& params);
+    const string& filename, sceneio_model& scene, const load_params& params);
 static sceneio_status save_obj_scene(const string& filename,
-    const scene_model& scene, const save_params& params);
+    const sceneio_model& scene, const save_params& params);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static sceneio_status load_ply_scene(
-    const string& filename, scene_model& scene, const load_params& params);
+    const string& filename, sceneio_model& scene, const load_params& params);
 static sceneio_status save_ply_scene(const string& filename,
-    const scene_model& scene, const save_params& params);
+    const sceneio_model& scene, const save_params& params);
 
 // Load/save a scene from/to glTF.
 static sceneio_status load_gltf_scene(
-    const string& filename, scene_model& scene, const load_params& params);
+    const string& filename, sceneio_model& scene, const load_params& params);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 static sceneio_status load_pbrt_scene(
-    const string& filename, scene_model& scene, const load_params& params);
+    const string& filename, sceneio_model& scene, const load_params& params);
 static sceneio_status save_pbrt_scene(const string& filename,
-    const scene_model& scene, const save_params& params);
+    const sceneio_model& scene, const save_params& params);
 
 // Load a scene
 sceneio_status load_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   auto ext = get_extension(filename);
   if (ext == ".yaml" || ext == ".YAML") {
     return load_yaml_scene(filename, scene, params);
@@ -750,7 +751,7 @@ sceneio_status load_scene(
 }
 
 // Save a scene
-sceneio_status save_scene(const string& filename, const scene_model& scene,
+sceneio_status save_scene(const string& filename, const sceneio_model& scene,
     const save_params& params) {
   auto ext = get_extension(filename);
   if (ext == ".yaml" || ext == ".YAML") {
@@ -766,7 +767,7 @@ sceneio_status save_scene(const string& filename, const scene_model& scene,
   }
 }
 
-sceneio_status load_texture(const string& filename, scene_texture& texture) {
+sceneio_status load_texture(const string& filename, sceneio_texture& texture) {
   if (is_hdr_filename(texture.filename)) {
     if (auto ret = load_image(
             get_dirname(filename) + texture.filename, texture.hdr);
@@ -787,7 +788,7 @@ sceneio_status load_texture(const string& filename, scene_texture& texture) {
 }
 
 sceneio_status save_texture(
-    const string& filename, const scene_texture& texture) {
+    const string& filename, const sceneio_texture& texture) {
   if (!texture.hdr.empty()) {
     if (auto ret = save_image(
             get_dirname(filename) + texture.filename, texture.hdr);
@@ -808,7 +809,7 @@ sceneio_status save_texture(
 }
 
 sceneio_status load_textures(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   if (params.notextures) return {};
 
   // load images
@@ -822,7 +823,7 @@ sceneio_status load_textures(
     auto mutex  = std::mutex{};
     auto status = sceneio_status{};
     parallel_foreach(
-        scene.textures, [&filename, &mutex, &status](scene_texture& texture) {
+        scene.textures, [&filename, &mutex, &status](sceneio_texture& texture) {
           if (!status) return;
           if (!texture.hdr.empty() || !texture.ldr.empty()) return;
           if (auto ret = load_texture(filename, texture); !ret) {
@@ -835,7 +836,7 @@ sceneio_status load_textures(
 }
 
 // helper to save textures
-sceneio_status save_textures(const string& filename, const scene_model& scene,
+sceneio_status save_textures(const string& filename, const sceneio_model& scene,
     const save_params& params) {
   if (params.notextures) return {};
 
@@ -849,7 +850,7 @@ sceneio_status save_textures(const string& filename, const scene_model& scene,
     auto mutex  = std::mutex{};
     auto status = sceneio_status{};
     parallel_foreach(scene.textures,
-        [&filename, &mutex, &status](const scene_texture& texture) {
+        [&filename, &mutex, &status](const sceneio_texture& texture) {
           if (!status) return;
           if (auto ret = save_texture(filename, texture); !ret) {
             auto lock = std::lock_guard{mutex};
@@ -860,7 +861,7 @@ sceneio_status save_textures(const string& filename, const scene_model& scene,
   }
 }
 
-sceneio_status load_shape(const string& filename, scene_shape& shape) {
+sceneio_status load_shape(const string& filename, sceneio_shape& shape) {
   if (!shape.facevarying) {
     if (auto ret = load_shape(get_dirname(filename) + shape.filename,
             shape.points, shape.lines, shape.triangles, shape.quads,
@@ -883,7 +884,7 @@ sceneio_status load_shape(const string& filename, scene_shape& shape) {
   }
 }
 
-sceneio_status save_shape(const string& filename, const scene_shape& shape) {
+sceneio_status save_shape(const string& filename, const sceneio_shape& shape) {
   if (shape.quadspos.empty()) {
     if (auto ret = save_shape(get_dirname(filename) + shape.filename,
             shape.points, shape.lines, shape.triangles, shape.quads,
@@ -908,7 +909,7 @@ sceneio_status save_shape(const string& filename, const scene_shape& shape) {
 
 // Load json meshes
 sceneio_status load_shapes(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   // load shapes
   if (params.noparallel) {
     for (auto& shape : scene.shapes) {
@@ -920,7 +921,7 @@ sceneio_status load_shapes(
     auto mutex  = std::mutex{};
     auto status = sceneio_status{};
     parallel_foreach(
-        scene.shapes, [&filename, &status, &mutex](scene_shape& shape) {
+        scene.shapes, [&filename, &status, &mutex](sceneio_shape& shape) {
           if (!status) return;
           if (!shape.positions.empty()) return;
           if (auto ret = load_shape(filename, shape); !ret) {
@@ -933,7 +934,7 @@ sceneio_status load_shapes(
 }
 
 // Save json meshes
-sceneio_status save_shapes(const string& filename, const scene_model& scene,
+sceneio_status save_shapes(const string& filename, const sceneio_model& scene,
     const save_params& params) {
   // save shapes
   if (params.noparallel) {
@@ -946,7 +947,7 @@ sceneio_status save_shapes(const string& filename, const scene_model& scene,
     auto mutex  = std::mutex{};
     auto status = sceneio_status{};
     parallel_foreach(
-        scene.shapes, [&filename, &status, &mutex](const scene_shape& shape) {
+        scene.shapes, [&filename, &status, &mutex](const sceneio_shape& shape) {
           if (!status) return;
           if (auto ret = save_shape(filename, shape); !ret) {
             auto lock = std::lock_guard{mutex};
@@ -1009,7 +1010,7 @@ static bool make_image_preset(
 }
 
 sceneio_status load_yaml(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   // open file
   auto yaml = yaml_model{};
   if (auto ret = load_yaml(filename, yaml); !ret) return {ret.error};
@@ -1252,7 +1253,7 @@ sceneio_status load_yaml(
 
 // Save a scene in the builtin YAML format.
 static sceneio_status load_yaml_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   scene = {};
 
   // Parse yaml
@@ -1274,13 +1275,13 @@ static sceneio_status load_yaml_scene(
 
 // Save yaml
 static sceneio_status save_yaml(const string& filename,
-    const scene_model& scene, bool ply_instances = false,
+    const sceneio_model& scene, bool ply_instances = false,
     const string& instances_name = "") {
-  static const auto def_texture     = scene_texture{};
-  static const auto def_material    = scene_material{};
-  static const auto def_shape       = scene_shape{};
-  static const auto def_instance    = scene_instance{};
-  static const auto def_environment = scene_environment{};
+  static const auto def_texture     = sceneio_texture{};
+  static const auto def_material    = sceneio_material{};
+  static const auto def_shape       = sceneio_shape{};
+  static const auto def_instance    = sceneio_instance{};
+  static const auto def_environment = sceneio_environment{};
 
   auto yaml = yaml_model{};
 
@@ -1414,7 +1415,7 @@ static sceneio_status save_yaml(const string& filename,
 
 // Save a scene in the builtin YAML format.
 static sceneio_status save_yaml_scene(const string& filename,
-    const scene_model& scene, const save_params& params) {
+    const sceneio_model& scene, const save_params& params) {
   // save yaml file
   if (auto ret = save_yaml(filename, scene); !ret) return ret;
   if (auto ret = save_shapes(filename, scene, params); !ret) return ret;
@@ -1431,7 +1432,7 @@ static sceneio_status save_yaml_scene(const string& filename,
 namespace yocto {
 
 static sceneio_status load_obj(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   // load obj
   auto obj = obj_model{};
   if (auto ret = load_obj(filename, obj, false, true, true); !ret)
@@ -1569,7 +1570,7 @@ static sceneio_status load_obj(
 
 // Loads an OBJ
 static sceneio_status load_obj_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   scene = {};
 
   // Parse obj
@@ -1585,8 +1586,8 @@ static sceneio_status load_obj_scene(
   return {};
 }
 
-static sceneio_status save_obj(const string& filename, const scene_model& scene,
-    const save_params& params) {
+static sceneio_status save_obj(const string& filename,
+    const sceneio_model& scene, const save_params& params) {
   auto obj = obj_model{};
 
   // convert cameras
@@ -1714,13 +1715,13 @@ static sceneio_status save_obj(const string& filename, const scene_model& scene,
 }
 
 static sceneio_status save_obj_scene(const string& filename,
-    const scene_model& scene, const save_params& params) {
+    const sceneio_model& scene, const save_params& params) {
   if (auto ret = save_obj(filename, scene, params); !ret) return ret;
   if (auto ret = save_textures(filename, scene, params)) return ret;
   return {};
 }
 
-void print_obj_camera(const scene_camera& camera) {
+void print_obj_camera(const sceneio_camera& camera) {
   printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
       camera.name.c_str(), (int)camera.orthographic, camera.film,
       camera.film / camera.aspect, camera.lens, camera.focus, camera.aperture,
@@ -1737,7 +1738,7 @@ void print_obj_camera(const scene_camera& camera) {
 namespace yocto {
 
 static sceneio_status load_ply_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   scene = {};
 
   // load ply mesh
@@ -1753,7 +1754,7 @@ static sceneio_status load_ply_scene(
   }
 
   // add instance
-  auto instance  = scene_instance{};
+  auto instance  = sceneio_instance{};
   instance.name  = shape.name;
   instance.shape = 0;
   scene.instances.push_back(instance);
@@ -1768,7 +1769,7 @@ static sceneio_status load_ply_scene(
 }
 
 static sceneio_status save_ply_scene(const string& filename,
-    const scene_model& scene, const save_params& params) {
+    const sceneio_model& scene, const save_params& params) {
   if (scene.shapes.empty()) return {filename + ": empty scene"};
   auto& shape = scene.shapes.front();
   if (shape.quadspos.empty()) {
@@ -1790,7 +1791,7 @@ static sceneio_status save_ply_scene(const string& filename,
 namespace yocto {
 
 // convert gltf to scene
-static sceneio_status load_gltf(const string& filename, scene_model& scene) {
+static sceneio_status load_gltf(const string& filename, sceneio_model& scene) {
   auto gltf = gltf_model{};
   if (auto ret = load_gltf(filename, gltf); !ret) return {ret.error};
 
@@ -1858,7 +1859,7 @@ static sceneio_status load_gltf(const string& filename, scene_model& scene) {
   }
 
   // convert cameras
-  auto cameras = vector<scene_camera>{};
+  auto cameras = vector<sceneio_camera>{};
   for (auto& gcamera : gltf.cameras) {
     auto& camera  = cameras.emplace_back();
     camera.name   = gcamera.name;
@@ -1895,7 +1896,7 @@ static sceneio_status load_gltf(const string& filename, scene_model& scene) {
 
 // Load a scene
 static sceneio_status load_gltf_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   // initialization
   scene = {};
 
@@ -1928,7 +1929,7 @@ static sceneio_status load_gltf_scene(
 namespace yocto {
 
 static sceneio_status load_pbrt(
-    const string& filename, scene_model& scene, const load_params& params) {
+    const string& filename, sceneio_model& scene, const load_params& params) {
   // load pbrt
   auto pbrt = pbrt_model{};
   if (auto ret = load_pbrt(filename, pbrt); !ret) return {ret.error};
@@ -2061,8 +2062,8 @@ static sceneio_status load_pbrt(
 
 // load pbrt scenes
 static sceneio_status load_pbrt_scene(
-    const string& filename, scene_model& scene, const load_params& params) {
-  scene = scene_model{};
+    const string& filename, sceneio_model& scene, const load_params& params) {
+  scene = sceneio_model{};
 
   // Parse pbrt
   if (auto ret = load_pbrt(filename, scene, params); !ret) return ret;
@@ -2080,7 +2081,7 @@ static sceneio_status load_pbrt_scene(
 
 // Convert a scene to pbrt format
 static sceneio_status save_pbrt(
-    const string& filename, const scene_model& scene) {
+    const string& filename, const sceneio_model& scene) {
   auto pbrt = pbrt_model{};
 
   // embed data
@@ -2145,8 +2146,8 @@ static sceneio_status save_pbrt(
 }
 
 // Save a pbrt scene
-sceneio_status save_pbrt_scene(const string& filename, const scene_model& scene,
-    const save_params& params) {
+sceneio_status save_pbrt_scene(const string& filename,
+    const sceneio_model& scene, const save_params& params) {
   // save pbrt
   if (auto ret = save_pbrt(filename, scene); !ret) return ret;
 
@@ -2185,7 +2186,7 @@ sceneio_status save_pbrt_scene(const string& filename, const scene_model& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void make_cornellbox_scene(scene_model& scene) {
+void make_cornellbox_scene(sceneio_model& scene) {
   scene.name              = "cornellbox";
   auto& camera            = scene.cameras.emplace_back();
   camera.name             = "camera";

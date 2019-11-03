@@ -37,7 +37,7 @@ using namespace yocto;
 #include <list>
 
 namespace yocto {
-void print_obj_camera(const scene_camera& camera);
+void print_obj_camera(const sceneio_camera& camera);
 };  // namespace yocto
 
 // Application scene
@@ -56,9 +56,9 @@ struct app_state {
   int            preview_ratio = 8;
 
   // scene
-  scene_model ioscene    = {};
-  trace_scene scene      = {};
-  bool        add_skyenv = false;
+  sceneio_model ioscene    = {};
+  trace_scene   scene      = {};
+  bool          add_skyenv = false;
 
   // rendering state
   trace_state  state   = {};
@@ -114,7 +114,7 @@ struct app_states {
 };
 
 // convert scene objects
-void update_trace_camera(trace_camera& camera, const scene_camera& iocamera) {
+void update_trace_camera(trace_camera& camera, const sceneio_camera& iocamera) {
   camera.frame = iocamera.frame;
   camera.film  = iocamera.aspect >= 1
                     ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
@@ -124,12 +124,12 @@ void update_trace_camera(trace_camera& camera, const scene_camera& iocamera) {
   camera.aperture = iocamera.aperture;
 }
 void update_trace_texture(
-    trace_texture& texture, const scene_texture& iotexture) {
+    trace_texture& texture, const sceneio_texture& iotexture) {
   texture.hdr = iotexture.hdr;
   texture.ldr = iotexture.ldr;
 }
 void update_trace_material(
-    trace_material& material, const scene_material& iomaterial) {
+    trace_material& material, const sceneio_material& iomaterial) {
   material.emission         = iomaterial.emission;
   material.diffuse          = iomaterial.diffuse;
   material.specular         = iomaterial.specular;
@@ -151,8 +151,8 @@ void update_trace_material(
   material.opacity_tex      = iomaterial.opacity_tex;
   material.subsurface_tex   = iomaterial.subsurface_tex;
 }
-void update_trace_shape(trace_shape& shape, const scene_shape& ioshape,
-    const scene_model& ioscene) {
+void update_trace_shape(trace_shape& shape, const sceneio_shape& ioshape,
+    const sceneio_model& ioscene) {
   if (needs_tesselation(ioscene, ioshape)) {
     return update_trace_shape(
         shape, tesselate_shape(ioscene, ioshape), ioscene);
@@ -172,20 +172,20 @@ void update_trace_shape(trace_shape& shape, const scene_shape& ioshape,
   shape.tangents      = ioshape.tangents;
 }
 void update_trace_instance(
-    trace_instance& instance, const scene_instance& ioinstance) {
+    trace_instance& instance, const sceneio_instance& ioinstance) {
   instance.frame    = ioinstance.frame;
   instance.shape    = ioinstance.shape;
   instance.material = ioinstance.material;
 }
 void update_trace_environment(
-    trace_environment& environment, const scene_environment& ioenvironment) {
+    trace_environment& environment, const sceneio_environment& ioenvironment) {
   environment.frame        = ioenvironment.frame;
   environment.emission     = ioenvironment.emission;
   environment.emission_tex = ioenvironment.emission_tex;
 }
 
 // Construct a scene from io
-trace_scene make_scene(const scene_model& ioscene) {
+trace_scene make_scene(const sceneio_model& ioscene) {
   auto scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {

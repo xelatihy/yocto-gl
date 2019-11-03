@@ -42,7 +42,7 @@ using namespace yocto;
 #endif
 
 namespace yocto {
-void print_obj_camera(const scene_camera& camera);
+void print_obj_camera(const sceneio_camera& camera);
 };
 
 // Application state
@@ -59,7 +59,7 @@ struct app_state {
   draw_glscene_params drawgl_prms = {};
 
   // scene
-  scene_model scene = {};
+  sceneio_model scene = {};
 
   // rendering state
   opengl_scene glscene = {};
@@ -106,7 +106,7 @@ struct app_states {
 
 // Compute animation range
 vec2f compute_animation_range(
-    const scene_model& scene, const string& anim_group = "") {
+    const sceneio_model& scene, const string& anim_group = "") {
   if (scene.animations.empty()) return zero2f;
   auto range = vec2f{+flt_max, -flt_max};
   for (auto& animation : scene.animations) {
@@ -136,7 +136,7 @@ void load_scene_async(app_states& apps, const string& filename) {
       }));
 }
 
-void update_glcamera(opengl_camera& glcamera, const scene_camera& camera) {
+void update_glcamera(opengl_camera& glcamera, const sceneio_camera& camera) {
   glcamera.frame  = camera.frame;
   glcamera.film   = camera.film;
   glcamera.asepct = camera.aspect;
@@ -145,7 +145,8 @@ void update_glcamera(opengl_camera& glcamera, const scene_camera& camera) {
   glcamera.far    = 10000;
 }
 
-void update_gltexture(opengl_texture& gltexture, const scene_texture& texture) {
+void update_gltexture(
+    opengl_texture& gltexture, const sceneio_texture& texture) {
   if (!texture.hdr.empty()) {
     init_gltexture(gltexture, texture.hdr, true, true, true);
   } else if (!texture.ldr.empty()) {
@@ -156,7 +157,7 @@ void update_gltexture(opengl_texture& gltexture, const scene_texture& texture) {
 }
 
 void update_glmaterial(
-    opengl_material& glmaterial, const scene_material& material) {
+    opengl_material& glmaterial, const sceneio_material& material) {
   glmaterial.emission     = material.emission;
   glmaterial.diffuse      = material.diffuse;
   glmaterial.specular     = material.specular;
@@ -170,8 +171,8 @@ void update_glmaterial(
   glmaterial.normal_map   = material.normal_tex;
 }
 
-void update_glshape(
-    opengl_shape& glshape, const scene_shape& shape, const scene_model& scene) {
+void update_glshape(opengl_shape& glshape, const sceneio_shape& shape,
+    const sceneio_model& scene) {
   if (needs_tesselation(scene, shape)) {
     return update_glshape(glshape, tesselate_shape(scene, shape), scene);
   }
@@ -213,13 +214,13 @@ void update_glshape(
 }
 
 void update_glinstance(
-    opengl_instance& glinstance, const scene_instance& instance) {
+    opengl_instance& glinstance, const sceneio_instance& instance) {
   glinstance.frame    = instance.frame;
   glinstance.shape    = instance.shape;
   glinstance.material = instance.material;
 }
 
-void update_gllights(opengl_scene& state, const scene_model& scene) {
+void update_gllights(opengl_scene& state, const sceneio_model& scene) {
   state.lights = {};
   for (auto& instance : scene.instances) {
     if (state.lights.size() >= 16) break;
@@ -253,7 +254,7 @@ void update_gllights(opengl_scene& state, const scene_model& scene) {
   }
 }
 
-void make_glscene(opengl_scene& glscene, const scene_model& scene) {
+void make_glscene(opengl_scene& glscene, const sceneio_model& scene) {
   // load program
   make_glscene(glscene);
 

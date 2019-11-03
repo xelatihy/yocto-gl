@@ -55,13 +55,11 @@ namespace yocto {
 //
 // TODO: update transforms -> should be compute transforms?
 // TODO: update tesselation -> should be compute tesselation
-// TODO: displace in yocto_shape
-// TODO: remove subdiv from shape
-// TODO: move out animation utlities
+// TODO: move out animation utilities
 //
 
 // Camera based on a simple lens model. The camera is placed using a frame.
-// Camera projection is described in photorgaphics terms. In particular,
+// Camera projection is described in photographic terms. In particular,
 // we specify film size (35mm by default), film aspect ration,
 // the lens' focal length, the focus distance and the lens aperture.
 // All values are in meters. Here are some common aspect ratios used in video
@@ -71,9 +69,9 @@ namespace yocto {
 // 2.35:1 on 35 mm:  0.036 x 0.01532 or 0.05640 x 0.024
 // 2.39:1 on 35 mm:  0.036 x 0.01506 or 0.05736 x 0.024
 // 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
-// To compute good apertures, one can use the F-stop number from phostography
+// To compute good apertures, one can use the F-stop number from photography
 // and set the aperture to focal length over f-stop.
-struct scene_camera {
+struct sceneio_camera {
   string  name         = "";
   frame3f frame        = identity3x4f;
   bool    orthographic = false;
@@ -86,7 +84,7 @@ struct scene_camera {
 
 // Texture containing either an LDR or HDR image. HdR images are encoded
 // in linear color space, while LDRs are encoded as sRGB.
-struct scene_texture {
+struct sceneio_texture {
   string       name     = "";
   string       filename = "";
   image<vec4f> hdr      = {};
@@ -97,7 +95,7 @@ struct scene_texture {
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct scene_material {
+struct sceneio_material {
   string name = "";
 
   // lobes
@@ -133,9 +131,9 @@ struct scene_material {
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
-// Additionally, we support faceavarying primitives where
-// each verftex data has its own topology.
-struct scene_shape {
+// Additionally, we support face-varying primitives where
+// each vertex data has its own topology.
+struct sceneio_shape {
   // shape data
   string name     = "";
   string filename = "";
@@ -171,7 +169,7 @@ struct scene_shape {
 };
 
 // Instance of a visible shape in the scene.
-struct scene_instance {
+struct sceneio_instance {
   string  name     = "";
   frame3f frame    = identity3x4f;
   int     shape    = -1;
@@ -179,7 +177,7 @@ struct scene_instance {
 };
 
 // Environment map.
-struct scene_environment {
+struct sceneio_environment {
   string  name         = "";
   frame3f frame        = identity3x4f;
   vec3f   emission     = {0, 0, 0};
@@ -187,7 +185,7 @@ struct scene_environment {
 };
 
 // Node in a transform hierarchy.
-struct scene_node {
+struct sceneio_node {
   string        name        = "";
   int           parent      = -1;
   frame3f       local       = identity3x4f;
@@ -204,7 +202,7 @@ struct scene_node {
 };
 
 // Keyframe data.
-struct scene_animation {
+struct sceneio_animation {
   enum struct interpolation_type { linear, step, bezier };
   string                name          = "";
   string                filename      = "";
@@ -225,16 +223,16 @@ struct scene_animation {
 // environment. In that case, the element transforms are computed from
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
-struct scene_model {
-  string                    name         = "";
-  vector<scene_camera>      cameras      = {};
-  vector<scene_shape>       shapes       = {};
-  vector<scene_instance>    instances    = {};
-  vector<scene_material>    materials    = {};
-  vector<scene_texture>     textures     = {};
-  vector<scene_environment> environments = {};
-  vector<scene_node>        nodes        = {};
-  vector<scene_animation>   animations   = {};
+struct sceneio_model {
+  string                      name         = "";
+  vector<sceneio_camera>      cameras      = {};
+  vector<sceneio_shape>       shapes       = {};
+  vector<sceneio_instance>    instances    = {};
+  vector<sceneio_material>    materials    = {};
+  vector<sceneio_texture>     textures     = {};
+  vector<sceneio_environment> environments = {};
+  vector<sceneio_node>        nodes        = {};
+  vector<sceneio_animation>   animations   = {};
 };
 
 }  // namespace yocto
@@ -266,9 +264,9 @@ struct sceneio_status {
 };
 
 // Load/save a scene in the supported formats.
-sceneio_status load_scene(
-    const string& filename, scene_model& scene, const load_params& params = {});
-sceneio_status save_scene(const string& filename, const scene_model& scene,
+sceneio_status load_scene(const string& filename, sceneio_model& scene,
+    const load_params& params = {});
+sceneio_status save_scene(const string& filename, const sceneio_model& scene,
     const save_params& params = {});
 
 }  // namespace yocto
@@ -279,21 +277,22 @@ sceneio_status save_scene(const string& filename, const scene_model& scene,
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-scene_shape tesselate_shape(const scene_model& scene, const scene_shape& shape,
-    bool no_quads = false, bool no_facevarying = false);
-bool needs_tesselation(const scene_model& scene, const scene_shape& shape,
+sceneio_shape tesselate_shape(const sceneio_model& scene,
+    const sceneio_shape& shape, bool no_quads = false,
+    bool no_facevarying = false);
+bool needs_tesselation(const sceneio_model& scene, const sceneio_shape& shape,
     bool no_quads = false, bool no_facevarying = false);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
 void update_transforms(
-    scene_model& scene, float time = 0, const string& anim_group = "");
+    sceneio_model& scene, float time = 0, const string& anim_group = "");
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(const scene_model& scene, bool verbose = false);
+vector<string> scene_stats(const sceneio_model& scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
-    const scene_model& scene, bool notextures = false);
+    const sceneio_model& scene, bool notextures = false);
 
 }  // namespace yocto
 

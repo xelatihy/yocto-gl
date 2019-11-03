@@ -14,18 +14,18 @@ struct app_state {
   std::function<void(app_state&, const opengl_window&)>   draw_glwidgets;
 
   // Geometry data
-  scene_shape shape;
+  sceneio_shape shape;
 
   // OpenGL data
   opengl_scene        scene          = {};
   draw_glscene_params opengl_options = {};
 
   // Interaction data
-  float        time       = 0;
-  bool         show_edges = false;
-  scene_camera camera;
-  float        camera_focus;
-  bvh_tree     bvh;
+  float          time       = 0;
+  bool           show_edges = false;
+  sceneio_camera camera;
+  float          camera_focus;
+  bvh_tree       bvh;
 
   // Internal handles
   int glshape_id, glpoints_id, glvector_field_id, gledges_id, glpolyline_id;
@@ -187,7 +187,7 @@ void update_gledges(app_state& app) {
   init_glelementbuffer(glshape.lines, elements, false);
 }
 
-void update_glcamera(opengl_camera& glcamera, const scene_camera& camera) {
+void update_glcamera(opengl_camera& glcamera, const sceneio_camera& camera) {
   glcamera.frame  = camera.frame;
   glcamera.lens   = camera.lens;
   glcamera.asepct = camera.aspect;
@@ -197,7 +197,7 @@ void update_glcamera(opengl_camera& glcamera, const scene_camera& camera) {
 
 void init_camera(app_state& app, const vec3f& from = vec3f{0, 0.5, 1.5},
     const vec3f& to = {0, 0, 0}) {
-  app.camera              = scene_camera{};
+  app.camera              = sceneio_camera{};
   auto up                 = vec3f{0, 1, 0};
   app.camera.lens         = 0.02f;
   app.camera.orthographic = false;
