@@ -200,7 +200,7 @@ vector<vector<int>> vertex_to_faces_adjacencies(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// HASH GRID AND NEAREST NEIGHTBORS
+// HASH GRID AND NEAREST NEIGHBORS
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -218,10 +218,10 @@ hash_grid make_hash_grid(float cell_size);
 hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size);
 // Inserts a point into the grid
 int insert_vertex(hash_grid& grid, const vec3f& position);
-// Finds the nearest neighboors within a given radius
-void find_neightbors(const hash_grid& grid, vector<int>& neighboors,
+// Finds the nearest neighbors within a given radius
+void find_neighbors(const hash_grid& grid, vector<int>& neighbors,
     const vec3f& position, float max_radius);
-void find_neightbors(const hash_grid& grid, vector<int>& neighboors, int vertex,
+void find_neighbors(const hash_grid& grid, vector<int>& neighbors, int vertex,
     float max_radius);
 
 }  // namespace yocto
