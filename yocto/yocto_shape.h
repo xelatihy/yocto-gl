@@ -446,16 +446,15 @@ vector<vector<float>> compute_voronoi_fields(
 vector<vec4f> colors_from_field(const vector<float>& field, float scale = 1,
     const vec4f& c0 = {1, 1, 1, 1}, const vec4f& c1 = {1, 0.1, 0.1, 1});
 
-struct path_vertex {
-  vec2i edge;
-  int   face;
-  float alpha;
-};
-
-// Description of a discrete path along the surface of the mesh.
+// Description of a discrete path along the surface of a triangle mesh.
 struct surface_path {
+  struct vertex {
+      vec2i edge = {0, 0};
+      int   face = 0;
+      float alpha = 0;
+  };
   int                 start, end;
-  vector<path_vertex> vertices;
+  vector<vertex> vertices;
 };
 
 // Trace integral path following the gradient of a scalar field

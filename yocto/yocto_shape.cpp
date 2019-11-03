@@ -1921,7 +1921,7 @@ static pair<float, bool> step_from_edge_to_edge(const vec3f& point,
   }
 }
 
-static path_vertex step_from_point(const vector<vec3i>& triangles,
+static surface_path::vertex step_from_point(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3i>& adjacency,
     const vector<int>& tags, const vector<float>& field, int vertex,
     int start_face, int tag = -1, float epsilon = 0.0001f) {
@@ -1944,7 +1944,7 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
   auto triangle_fan = get_face_ring(triangles, adjacency, start_face, vertex);
 
   auto best_alignment = 0.0;
-  auto fallback_lerp  = path_vertex{vec2i{-1, -1}, -1, 0};
+  auto fallback_lerp  = surface_path::vertex{vec2i{-1, -1}, -1, 0};
 
   for (auto i = 0; i < triangle_fan.size(); ++i) {
     auto face = triangle_fan[i];
@@ -1969,13 +1969,13 @@ static path_vertex step_from_point(const vector<vec3i>& triangles,
     if (max(right_dot, left_dot) > best_alignment) {
       best_alignment = max(right_dot, left_dot);
       auto alpha     = right_dot > left_dot ? 0.0f + epsilon : 1.0f - epsilon;
-      fallback_lerp  = path_vertex{edge, face, alpha};
+      fallback_lerp  = surface_path::vertex{edge, face, alpha};
     }
 
     // Check if gradient direction is in between ac and ab.
     if (is_direction_inbetween(right, left, direction)) {
       auto alpha = step_from_point_to_edge(right, left, direction);
-      return path_vertex{edge, face, alpha};
+      return surface_path::vertex{edge, face, alpha};
     }
   }
 
@@ -1999,7 +1999,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
   };
 
   // trace function
-  auto lerps = vector<path_vertex>();
+  auto lerps = vector<surface_path::vertex>();
   auto lerp  = step_from_point(
       triangles, positions, adjacency, tags, field, from, -1, tag);
   if (lerp.face == -1) return {};
@@ -2076,7 +2076,7 @@ surface_path integrate_field(const vector<vec3i>& triangles,
     return v.x == a || v.y == a || v.z == a;
   };
 
-  auto lerps = vector<path_vertex>();
+  auto lerps = vector<surface_path::vertex>();
 
   lerps.push_back(
       step_from_point(triangles, positions, adjacency, tags, field, from, -1));
