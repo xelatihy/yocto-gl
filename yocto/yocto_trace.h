@@ -63,6 +63,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include "yocto_image.h"
 #include "yocto_math.h"
 
 #if YOCTO_EMBREE

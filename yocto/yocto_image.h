@@ -12,6 +12,13 @@
 // used without dependencies.
 //
 //
+// ## Images
+//
+// Yocto/Math contains a simple image container that can be used to store
+// generic images. The container is similar in spirit to `std::vector`.
+// We provide only minimal image functions including lookup and sampling.
+//
+//
 // ## Image Utilities
 //
 // Yocto/Image supports a very small set of color and image utilities including
@@ -90,6 +97,58 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_math.h"
+
+// -----------------------------------------------------------------------------
+// IMAGE DATA AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Image container.
+template <typename T>
+struct image {
+  // constructors
+  image();
+  image(const vec2i& size, const T& value = {});
+  image(const vec2i& size, const T* value);
+
+  // size
+  bool   empty() const;
+  vec2i  size() const;
+  size_t count() const;
+  bool   contains(const vec2i& ij) const;
+  void   resize(const vec2i& size);
+  void   assign(const vec2i& size, const T& value = {});
+  void   shrink_to_fit();
+
+  // element access
+  T&       operator[](int i);
+  const T& operator[](int i) const;
+  T&       operator[](const vec2i& ij);
+  const T& operator[](const vec2i& ij) const;
+
+  // data access
+  T*       data();
+  const T* data() const;
+
+  // iteration
+  T*       begin();
+  T*       end();
+  const T* begin() const;
+  const T* end() const;
+
+ private:
+  // data
+  vec2i     extent = zero2i;
+  vector<T> pixels = {};
+};
+
+// equality
+template <typename T>
+inline bool operator==(const image<T>& a, const image<T>& b);
+template <typename T>
+inline bool operator!=(const image<T>& a, const image<T>& b);
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMAGE SAMPLING
@@ -296,6 +355,57 @@ image<vec4b> make_image_presetb(const string& type);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// VOLUME TYPE AND UTILITIES (EXPERIMENTAL)
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Volume container.
+template <typename T>
+struct volume {
+  // constructors
+  volume();
+  volume(const vec3i& size, const T& value);
+  volume(const vec3i& size, const T* value);
+
+  // size
+  bool   empty() const;
+  vec3i  size() const;
+  size_t count() const;
+  void   resize(const vec3i& size);
+  void   assign(const vec3i& size, const T& value);
+  void   shrink_to_fit();
+
+  // element access
+  T&       operator[](size_t i);
+  const T& operator[](size_t i) const;
+  T&       operator[](const vec3i& ijk);
+  const T& operator[](const vec3i& ijk) const;
+
+  // data access
+  T*       data();
+  const T* data() const;
+
+  // iteration
+  T*       begin();
+  T*       end();
+  const T* begin() const;
+  const T* end() const;
+
+ private:
+  // data
+  vec3i         extent = zero3i;
+  vector<float> voxels = {};
+};
+
+// equality
+template <typename T>
+inline bool operator==(const volume<T>& a, const volume<T>& b);
+template <typename T>
+inline bool operator!=(const volume<T>& a, const volume<T>& b);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // VOLUME SAMPLING
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -357,6 +467,218 @@ enum struct color_space {
 // Conversion between rgb color spaces
 vec3f color_to_xyz(const vec3f& col, color_space from);
 vec3f xyz_to_color(const vec3f& xyz, color_space to);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMAGE DATA AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// constructors
+template <typename T>
+inline image<T>::image() : extent{0, 0}, pixels{} {}
+template <typename T>
+inline image<T>::image(const vec2i& size, const T& value)
+    : extent{size}, pixels((size_t)size.x * (size_t)size.y, value) {}
+template <typename T>
+inline image<T>::image(const vec2i& size, const T* value)
+    : extent{size}, pixels(value, value + (size_t)size.x * (size_t)size.y) {}
+
+// size
+template <typename T>
+inline bool image<T>::empty() const {
+  return pixels.empty();
+}
+template <typename T>
+inline vec2i image<T>::size() const {
+  return extent;
+}
+template <typename T>
+inline size_t image<T>::count() const {
+  return pixels.size();
+}
+template <typename T>
+inline bool image<T>::contains(const vec2i& ij) const {
+  return ij.x > 0 && ij.x < extent.x && ij.y > 0 && ij.y < extent.y;
+}
+template <typename T>
+inline void image<T>::resize(const vec2i& size) {
+  if (size == extent) return;
+  extent = size;
+  pixels.resize((size_t)size.x * (size_t)size.y);
+}
+template <typename T>
+inline void image<T>::assign(const vec2i& size, const T& value) {
+  extent = size;
+  pixels.assign((size_t)size.x * (size_t)size.y, value);
+}
+template <typename T>
+inline void image<T>::shrink_to_fit() {
+  pixels.shrink_to_fit();
+}
+
+// element access
+template <typename T>
+inline T& image<T>::operator[](int i) {
+  return pixels[i];
+}
+template <typename T>
+inline const T& image<T>::operator[](int i) const {
+  return pixels[i];
+}
+template <typename T>
+inline T& image<T>::operator[](const vec2i& ij) {
+  return pixels[ij.y * extent.x + ij.x];
+}
+template <typename T>
+inline const T& image<T>::operator[](const vec2i& ij) const {
+  return pixels[ij.y * extent.x + ij.x];
+}
+
+// data access
+template <typename T>
+inline T* image<T>::data() {
+  return pixels.data();
+}
+template <typename T>
+inline const T* image<T>::data() const {
+  return pixels.data();
+}
+
+// iteration
+template <typename T>
+inline T* image<T>::begin() {
+  return pixels.data();
+}
+template <typename T>
+inline T* image<T>::end() {
+  return pixels.data() + pixels.size();
+}
+template <typename T>
+inline const T* image<T>::begin() const {
+  return pixels.data();
+}
+template <typename T>
+inline const T* image<T>::end() const {
+  return pixels.data() + pixels.size();
+}
+
+// equality
+template <typename T>
+inline bool operator==(const image<T>& a, const image<T>& b) {
+  return a.size() == b.size() && a.pixels == b.pixels;
+}
+template <typename T>
+inline bool operator!=(const image<T>& a, const image<T>& b) {
+  return a.size() != b.size() || a.pixels != b.pixels;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// VOLUME TYPE AND UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Volume container ----------
+
+// constructors
+template <typename T>
+inline volume<T>::volume() : extent{0, 0, 0}, voxels{} {}
+template <typename T>
+inline volume<T>::volume(const vec3i& size, const T& value)
+    : extent{size}
+    , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
+template <typename T>
+inline volume<T>::volume(const vec3i& size, const T* value)
+    : extent{size}
+    , voxels(value, value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
+
+// size
+template <typename T>
+inline bool volume<T>::empty() const {
+  return voxels.empty();
+}
+template <typename T>
+inline vec3i volume<T>::size() const {
+  return extent;
+}
+template <typename T>
+inline size_t volume<T>::count() const {
+  return voxels.size();
+}
+template <typename T>
+inline void volume<T>::resize(const vec3i& size) {
+  if (size == extent) return;
+  extent = size;
+  voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
+}
+template <typename T>
+inline void volume<T>::assign(const vec3i& size, const T& value) {
+  extent = size;
+  voxels.assign((size_t)size.x * (size_t)size.y * (size_t)size.z, value);
+}
+template <typename T>
+inline void volume<T>::shrink_to_fit() {
+  voxels.shrink_to_fit();
+}
+
+// element access
+template <typename T>
+inline T& volume<T>::operator[](size_t i) {
+  return voxels[i];
+}
+template <typename T>
+inline const T& volume<T>::operator[](size_t i) const {
+  return voxels[i];
+}
+template <typename T>
+inline T& volume<T>::operator[](const vec3i& ijk) {
+  return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
+}
+template <typename T>
+inline const T& volume<T>::operator[](const vec3i& ijk) const {
+  return voxels[ijk.z * extent.x * extent.y + ijk.y * extent.x + ijk.x];
+}
+
+// data access
+template <typename T>
+inline T* volume<T>::data() {
+  return voxels.data();
+}
+template <typename T>
+inline const T* volume<T>::data() const {
+  return voxels.data();
+}
+
+// iteration
+template <typename T>
+inline T* volume<T>::begin() {
+  return voxels.data();
+}
+template <typename T>
+inline T* volume<T>::end() {
+  return voxels.data() + voxels.size();
+}
+template <typename T>
+inline const T* volume<T>::begin() const {
+  return voxels.data();
+}
+template <typename T>
+inline const T* volume<T>::end() const {
+  return voxels.data() + voxels.size();
+}
+
+// equality
+template <typename T>
+inline bool operator==(const volume<T>& a, const volume<T>& b) {
+  return a.size() == b.size() && a.voxels == b.voxels;
+}
+template <typename T>
+inline bool operator!=(const volume<T>& a, const volume<T>& b) {
+  return a.size() != b.size() || a.voxels != b.voxels;
+}
 
 }  // namespace yocto
 
