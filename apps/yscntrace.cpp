@@ -78,6 +78,7 @@ trace_scene make_scene(const sceneio_model& ioscene) {
     material.roughness_tex    = iomaterial.roughness_tex;
     material.opacity_tex      = iomaterial.opacity_tex;
     material.subsurface_tex   = iomaterial.subsurface_tex;
+    material.normal_tex       = iomaterial.normal_tex;
   }
 
   for (auto& ioshape_ : ioscene.shapes) {

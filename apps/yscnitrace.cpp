@@ -150,6 +150,7 @@ void update_trace_material(
   material.roughness_tex    = iomaterial.roughness_tex;
   material.opacity_tex      = iomaterial.opacity_tex;
   material.subsurface_tex   = iomaterial.subsurface_tex;
+  material.normal_tex       = iomaterial.normal_tex;
 }
 void update_trace_shape(trace_shape& shape, const sceneio_shape& ioshape,
     const sceneio_model& ioscene) {

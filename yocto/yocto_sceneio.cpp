@@ -556,7 +556,7 @@ sceneio_shape displace_shape(
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
       auto disp = mean(xyz(eval_texture(displacement, shape.texcoords[vid])));
       if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
-      subdiv.positions[vid] += shape.normals[vid] * shape.displacement * disp;
+      subdiv.positions[vid] += normals[vid] * shape.displacement * disp;
     }
     if (shape.smooth || !shape.normals.empty()) {
       subdiv.normals = compute_normals(subdiv.quads, subdiv.positions);
