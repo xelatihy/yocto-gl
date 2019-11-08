@@ -26,6 +26,12 @@
 // SOFTWARE.
 //
 
+//
+// TODO: update transforms -> should be compute transforms?
+// TODO: update tesselation -> should be compute tesselation
+// TODO: move out animation utilities
+//
+
 #include "yocto_sceneio.h"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
@@ -237,8 +243,7 @@ void add_cameras(sceneio_model& scene) {
   if (!scene.cameras.empty()) return;
   auto& camera = scene.cameras.emplace_back();
   camera.name  = "default";
-  // TODO: fix me
-  // FIXME: error in camera.lens and camera.film
+  // TODO: error in camera.lens and camera.film
   camera.orthographic = false;
   camera.film         = 0.036;
   camera.aperture     = 0;

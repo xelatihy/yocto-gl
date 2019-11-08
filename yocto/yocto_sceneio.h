@@ -53,12 +53,6 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-//
-// TODO: update transforms -> should be compute transforms?
-// TODO: update tesselation -> should be compute tesselation
-// TODO: move out animation utilities
-//
-
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photographic terms. In particular,
 // we specify film size (35mm by default), film aspect ration,

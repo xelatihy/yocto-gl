@@ -207,7 +207,7 @@ inline bool intersect_bbox(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// TODO: documentation
+// Check if a point overlaps a position pos withint a maximum distance dist_max.
 inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
     float r, vec2f& uv, float& dist) {
   auto d2 = dot(pos - p, pos - p);
@@ -217,7 +217,7 @@ inline bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p,
   return true;
 }
 
-// TODO: documentation
+// Compute the closest line uv to a give position pos.
 inline float closestuv_line(
     const vec3f& pos, const vec3f& p0, const vec3f& p1) {
   auto ab = p1 - p0;
@@ -229,7 +229,7 @@ inline float closestuv_line(
   return u;
 }
 
-// TODO: documentation
+// Check if a line overlaps a position pos withint a maximum distance dist_max.
 inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, float r0, float r1, vec2f& uv, float& dist) {
   auto u = closestuv_line(pos, p0, p1);
@@ -245,11 +245,11 @@ inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
   return true;
 }
 
-// TODO: documentation
-// this is a complicated test -> I probably "--"+prefix to use a sequence of
-// test (triangle body, and 3 edges)
+// Compute the closest triangle uv to a give position pos.
 inline vec2f closestuv_triangle(
     const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+// this is a complicated test -> I probably "--"+prefix to use a sequence of
+// test (triangle body, and 3 edges)
   auto ab = p1 - p0;
   auto ac = p2 - p0;
   auto ap = pos - p0;
@@ -289,7 +289,8 @@ inline vec2f closestuv_triangle(
   return {u, v};
 }
 
-// TODO: documentation
+// Check if a triangle overlaps a position pos withint a maximum distance 
+// dist_max.
 inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, vec2f& uv,
     float& dist) {
@@ -303,7 +304,7 @@ inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
   return true;
 }
 
-// TODO: documentation
+// Check if a quad overlaps a position pos withint a maximum distance dist_max.
 inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
     float r2, float r3, vec2f& uv, float& dist) {
@@ -323,7 +324,7 @@ inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
   return hit;
 }
 
-// TODO: documentation
+// Check if a bbox overlaps a position pos withint a maximum distance dist_max.
 inline bool distance_check_bbox(
     const vec3f& pos, float dist_max, const bbox3f& bbox) {
   // computing distance
@@ -341,7 +342,7 @@ inline bool distance_check_bbox(
   return dd < dist_max * dist_max;
 }
 
-// TODO: doc
+// Check if two bboxe overlap.
 inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
   if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x) return false;
   if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;

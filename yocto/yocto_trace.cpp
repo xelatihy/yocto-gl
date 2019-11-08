@@ -26,11 +26,6 @@
 // SOFTWARE.
 //
 
-//
-// TODO: better documentation
-// TODO: consider removing dependency from image
-//
-
 #include "yocto_trace.h"
 
 #include <atomic>

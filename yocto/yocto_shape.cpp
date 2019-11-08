@@ -3007,7 +3007,6 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     make_monkey(quads, positions, 0.075f * 0.8f);
     for (auto& p : positions) p += {0, 0.075, 0};
   } else if (type == "test-cube-subdiv") {
-    // TODO: this should be a Catmull-Clark cube
     // make_cube(quads, positions, normals, texcoords, 0.075f);
     make_fvcube(quadspos, quadsnorm, quadstexcoord, positions, normals,
         texcoords, 0.075f);
