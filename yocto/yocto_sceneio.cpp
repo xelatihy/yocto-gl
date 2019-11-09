@@ -2014,6 +2014,13 @@ static sceneio_status load_pbrt(
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
     auto material_id  = material_map.at(pshape.material);
     auto arealight_id = arealight_map.at(pshape.arealight);
+      if(pshape.instance_frames.empty()) {
+          auto& instance    = scene.instances.emplace_back();
+          instance.name     = shape.name;
+          instance.frame    = pshape.frame;
+          instance.material = arealight_id >= 0 ? arealight_id : material_id;
+          instance.shape    = (int)scene.shapes.size() - 1;
+      } else {
     auto instance_id  = 0;
     for (auto& frame : pshape.instance_frames) {
       auto& instance    = scene.instances.emplace_back();
@@ -2024,6 +2031,7 @@ static sceneio_status load_pbrt(
       instance.material = arealight_id >= 0 ? arealight_id : material_id;
       instance.shape    = (int)scene.shapes.size() - 1;
     }
+      }
   }
 
   // convert environments
