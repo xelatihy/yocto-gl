@@ -3689,7 +3689,8 @@ static pbrtio_status convert_pbrt_cameras(const string& filename,
         return {filename + ": type error"};
       // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
       camera.aspect = film_aspect;
-      camera.lens = 0.036 * min(camera.aspect, 1 / camera.aspect) / (2 * tan(radians(fov) / 2));
+      camera.lens   = 0.036 * min(camera.aspect, 1 / camera.aspect) /
+                    (2 * tan(radians(fov) / 2));
       if (!get_pbrt_value(values, "frameaspectratio", camera.aspect))
         return {filename + ": type error"};
       camera.focus = 10.0f;

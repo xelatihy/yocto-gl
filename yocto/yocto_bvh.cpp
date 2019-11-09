@@ -248,8 +248,8 @@ inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
 // Compute the closest triangle uv to a give position pos.
 inline vec2f closestuv_triangle(
     const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-// this is a complicated test -> I probably "--"+prefix to use a sequence of
-// test (triangle body, and 3 edges)
+  // this is a complicated test -> I probably "--"+prefix to use a sequence of
+  // test (triangle body, and 3 edges)
   auto ab = p1 - p0;
   auto ac = p2 - p0;
   auto ap = pos - p0;
@@ -289,7 +289,7 @@ inline vec2f closestuv_triangle(
   return {u, v};
 }
 
-// Check if a triangle overlaps a position pos withint a maximum distance 
+// Check if a triangle overlaps a position pos withint a maximum distance
 // dist_max.
 inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, vec2f& uv,
