@@ -3687,17 +3687,14 @@ static pbrtio_status convert_pbrt_cameras(const string& filename,
       auto fov = 90.0f;
       if (!get_pbrt_value(values, "fov", fov))
         return {filename + ": type error"};
-      fov *= pif / 180;
-      camera.lens = 2 * tan(fov / 2) * 0.036;
       // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
       camera.aspect = film_aspect;
+      camera.lens = 0.036 * min(camera.aspect, 1 / camera.aspect) / (2 * tan(radians(fov) / 2));
       if (!get_pbrt_value(values, "frameaspectratio", camera.aspect))
         return {filename + ": type error"};
       camera.focus = 10.0f;
       if (!get_pbrt_value(values, "focaldistance", camera.focus))
         return {filename + ": type error"};
-      if (!camera.aspect) camera.aspect = 1;
-      if (!camera.focus) camera.focus = 10;
     } else if (camera.type == "realistic") {
       auto lensfile = ""s;
       if (!get_pbrt_value(values, "lensfile", lensfile))
