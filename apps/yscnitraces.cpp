@@ -86,7 +86,7 @@ trace_scene make_scene(const sceneio_model& ioscene) {
     camera.frame = iocamera.frame;
     camera.film  = iocamera.aspect >= 1
                       ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
-                      : vec2f{iocamera.film / iocamera.aspect, iocamera.film};
+                      : vec2f{iocamera.film * iocamera.aspect, iocamera.film};
     camera.lens     = iocamera.lens;
     camera.focus    = iocamera.focus;
     camera.aperture = iocamera.aperture;

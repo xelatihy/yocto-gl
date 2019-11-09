@@ -118,7 +118,7 @@ void update_trace_camera(trace_camera& camera, const sceneio_camera& iocamera) {
   camera.frame = iocamera.frame;
   camera.film  = iocamera.aspect >= 1
                     ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
-                    : vec2f{iocamera.film / iocamera.aspect, iocamera.film};
+                    : vec2f{iocamera.film * iocamera.aspect, iocamera.film};
   camera.lens     = iocamera.lens;
   camera.focus    = iocamera.focus;
   camera.aperture = iocamera.aperture;
