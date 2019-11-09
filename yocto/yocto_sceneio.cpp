@@ -1218,7 +1218,7 @@ sceneio_status load_yaml(
       if (has_yaml_value(yelement, "uri")) {
         auto uri = ""s;
         if (!get_yaml_value(yelement, "uri", uri))
-          return {filename + ": type error"};
+          return {filename + ": parse error"};
         instance.name = get_basename(uri);
       }
       if (has_yaml_value(yelement, "lookat")) {
@@ -1241,7 +1241,7 @@ sceneio_status load_yaml(
       if (has_yaml_value(yelement, "uri")) {
         auto uri = ""s;
         if (!get_yaml_value(yelement, "uri", uri))
-          return {filename + ": type error"};
+          return {filename + ": parse error"};
         environment.name = get_basename(uri);
       }
       if (has_yaml_value(yelement, "lookat")) {

@@ -3853,7 +3853,7 @@ static pbrtio_status convert_pbrt_materials(const string& filename,
     if (!get_pbrt_value(values, "remaproughness", remaproughness)) return false;
 
     roughness = zero2f;
-    if (uroughness.first == zero3f || vroughness.first == zero3f) return false;
+    if (uroughness.first == zero3f || vroughness.first == zero3f) return true;
     roughness = vec2f{mean(uroughness.first), mean(vroughness.first)};
     // from pbrt code
     if (remaproughness) {
