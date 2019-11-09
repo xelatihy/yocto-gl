@@ -4347,7 +4347,7 @@ static pbrtio_status convert_pbrt_environments(const string& filename,
 }
 
 // pbrt stack ctm
-struct pbrt_context {
+struct pbrt_stack_element {
   frame3f transform_start        = identity3x4f;
   frame3f transform_end          = identity3x4f;
   string  material               = "";
@@ -4359,27 +4359,32 @@ struct pbrt_context {
   bool    active_transform_end   = true;
 };
 
+// pbrt parsing context
+struct pbrt_context {
+  vector<pbrt_stack_element> stack = {};
+  unordered_map<string, pbrt_stack_element> coordsys = {};
+  unordered_map<string, vector<int>> objects = {};
+  string cur_object = "";
+};
+
 // load pbrt
-pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
+pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
   auto fs = fopen(filename.c_str(), "rt");
   if (!fs) return {filename + ": file not found"};
-  auto fs_guards = vector<std::unique_ptr<FILE, decltype(&fclose)>>{};
-  fs_guards.push_back({fs, fclose});
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // parser state
-  auto   stack      = vector<pbrt_context>{};
-  string cur_object = "";
-
-  // objects and coords
-  unordered_map<string, pbrt_context> coordsys = {};
-  unordered_map<string, vector<int>>  objects  = {};
+  auto& stack = ctx.stack;
+  auto& cur_object = ctx.cur_object;
+  auto& coordsys = ctx.coordsys;
+  auto& objects  = ctx.objects;
 
   // helpers
-  auto set_transform = [](pbrt_context& ctx, const frame3f& xform) {
+  auto set_transform = [](pbrt_stack_element& ctx, const frame3f& xform) {
     if (ctx.active_transform_start) ctx.transform_start = xform;
     if (ctx.active_transform_end) ctx.transform_end = xform;
   };
-  auto concat_transform = [](pbrt_context& ctx, const frame3f& xform) {
+  auto concat_transform = [](pbrt_stack_element& ctx, const frame3f& xform) {
     if (ctx.active_transform_start) ctx.transform_start *= xform;
     if (ctx.active_transform_end) ctx.transform_end *= xform;
   };
@@ -4388,10 +4393,8 @@ pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
   if (stack.empty()) stack.emplace_back();
 
   // parse command by command
-  while (!fs_guards.empty()) {
     auto line     = ""s;
     auto line_num = 0;
-    auto fs       = fs_guards.back().get();
     while (read_pbrt_cmdline(fs, line, line_num)) {
       auto str = string_view{line};
       // get command
@@ -4627,16 +4630,19 @@ pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
         auto includename = ""s;
         if (!parse_pbrt_param(str, includename))
           return {filename + ": parse error"};
-        auto ifs = fopen((get_dirname(filename) + includename).c_str(), "rt");
-        if (!ifs) return {filename + ": file not found"};
-        fs_guards.push_back({ifs, fclose});
+        if(auto ret = load_pbrt(get_dirname(filename) + includename, pbrt, ctx); !ret) return ret;
       } else {
         return {filename + ": unknown command " + cmd};
       }
     }
-    if (ferror(fs_guards.back().get())) return {filename + ": read error"};
-    fs_guards.pop_back();
-  }
+
+  return {};
+}
+
+// load pbrt
+pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
+  auto ctx = pbrt_context{};
+  if(auto ret = load_pbrt(filename, pbrt, ctx); !ret) return ret;
 
   // convert objects
   if (auto ret = convert_pbrt_films(filename, pbrt.films); !ret) return ret;
