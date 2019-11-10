@@ -3009,7 +3009,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
     case trace_falsecolor_type::texcoord: {
       auto texcoord = eval_texcoord(
           shape, intersection.element, intersection.uv);
-      return {{texcoord.x, texcoord.y, 0}, 1};
+      return {{fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0}, 1};
     }
     case trace_falsecolor_type::color: {
       auto color = eval_color(shape, intersection.element, intersection.uv);

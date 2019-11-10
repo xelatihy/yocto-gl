@@ -2373,6 +2373,7 @@ void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
   for (auto& p : positions) std::swap(p.y, p.z);
   for (auto& n : normals) n = {0, 1, 0};
+  for (auto& q : quads) std::swap(q.y, q.w);
 }
 
 void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
