@@ -279,7 +279,6 @@ struct trace_params {
   int                   samples         = 512;
   int                   bounces         = 8;
   int                   batch           = 16;
-  int                   region          = 16;
   float                 clamp           = 10;
   bool                  envhidden       = false;
   bool                  tentfilter      = false;
