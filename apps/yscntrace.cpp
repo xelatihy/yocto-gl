@@ -120,8 +120,7 @@ trace_scene make_scene(const sceneio_model& ioscene) {
 
 int main(int argc, const char* argv[]) {
   // options
-  auto trace_prms   = trace_params{};
-  auto tonemap_prms = tonemap_params{};
+  auto params   = trace_params{};
   auto batch = 16;
   auto save_batch   = false;
   auto add_skyenv   = false;
@@ -142,33 +141,29 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("yscntrace", "Offline path tracing");
-  add_cli_option(cli, "--camera", trace_prms.camera, "Camera index.");
+  add_cli_option(cli, "--camera", params.camera, "Camera index.");
   add_cli_option(
-      cli, "--resolution,-r", trace_prms.resolution, "Image resolution.");
-  add_cli_option(cli, "--samples,-s", trace_prms.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)trace_prms.sampler, "Trace type.",
+      cli, "--resolution,-r", params.resolution, "Image resolution.");
+  add_cli_option(cli, "--samples,-s", params.samples, "Number of samples.");
+  add_cli_option(cli, "--tracer,-t", (int&)params.sampler, "Trace type.",
       trace_sampler_names);
-  add_cli_option(cli, "--falsecolor,-F", (int&)trace_prms.falsecolor,
+  add_cli_option(cli, "--falsecolor,-F", (int&)params.falsecolor,
       "Tracer false color type.", trace_falsecolor_names);
   add_cli_option(
-      cli, "--bounces", trace_prms.bounces, "Maximum number of bounces.");
-  add_cli_option(cli, "--clamp", trace_prms.clamp, "Final pixel clamping.");
-  add_cli_option(cli, "--filter", trace_prms.tentfilter, "Filter image.");
+      cli, "--bounces", params.bounces, "Maximum number of bounces.");
+  add_cli_option(cli, "--clamp", params.clamp, "Final pixel clamping.");
+  add_cli_option(cli, "--filter", params.tentfilter, "Filter image.");
   add_cli_option(cli, "--batch,-b", batch, "Samples per batch.");
-  add_cli_option(cli, "--env-hidden/--no-env-hidden", trace_prms.envhidden,
+  add_cli_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
   add_cli_option(cli, "--save-batch", save_batch, "Save images progressively");
-  add_cli_option(cli, "--exposure,-e", tonemap_prms.exposure, "Hdr exposure");
-  add_cli_option(
-      cli, "--filmic/--no-filmic", tonemap_prms.filmic, "Hdr filmic");
-  add_cli_option(cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Hdr srgb");
   add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
-      trace_prms.highquality_bvh, "Use high quality bvh mode");
+      params.highquality_bvh, "Use high quality bvh mode");
 #if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", trace_prms.embree_bvh,
+  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", params.embree_bvh,
       "Use Embree ratracer");
   add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      trace_prms.compact_bvh, "Embree runs in compact memory");
+      params.compact_bvh, "Embree runs in compact memory");
 #endif
   add_cli_option(cli, "--add-skyenv", add_skyenv, "Add sky envmap");
   add_cli_option(cli, "--output-image,-o", imfilename, "Image filename");
@@ -199,7 +194,7 @@ int main(int argc, const char* argv[]) {
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(scene, trace_prms);
+  init_bvh(scene, params);
   print_elapsed(bvh_timer);
 
   // init renderer
@@ -208,35 +203,34 @@ int main(int argc, const char* argv[]) {
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (scene.lights.empty() && is_sampler_lit(trace_prms)) {
+  if (scene.lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, switching to eyelight shader");
-    trace_prms.sampler = trace_sampler_type::eyelight;
+    params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  auto state  = make_state(scene, trace_prms);
+  auto state  = make_state(scene, params);
   auto render = image{state.size(), zero4f};
 
   // render
-  for (auto sample = 0; sample < trace_prms.samples; sample += batch) {
-    auto nsamples    = min(batch, trace_prms.samples - sample);
+  for (auto sample = 0; sample < params.samples; sample += batch) {
+    auto nsamples    = min(batch, params.samples - sample);
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
-                                   std::to_string(trace_prms.samples));
-    render           = trace_samples(state, scene, nsamples, trace_prms);
+                                   std::to_string(params.samples));
+    render           = trace_samples(state, scene, nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
-      if (auto ret = save_image_tonemapped(outfilename, render, tonemap_prms);
-          !ret)
+      if (auto ret = save_image(outfilename, render); !ret)
         print_fatal(ret.error);
     }
   }
 
   // save image
   auto save_timer = print_timed("saving image");
-  if (auto ret = save_image_tonemapped(imfilename, render, tonemap_prms); !ret)
+  if (auto ret = save_image(imfilename, render); !ret)
     print_fatal(ret.error);
   print_elapsed(save_timer);
 
