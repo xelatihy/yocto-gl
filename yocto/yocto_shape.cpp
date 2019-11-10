@@ -2224,7 +2224,7 @@ void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
       positions[j * (steps.x + 1) + i] = {
           (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
       normals[j * (steps.x + 1) + i]   = {0, 0, 1};
-      texcoords[j * (steps.x + 1) + i] = (1 - uv) * uvscale;
+      texcoords[j * (steps.x + 1) + i] = vec2f{uv.x, 1 - uv.y} * uvscale;
     }
   }
 
