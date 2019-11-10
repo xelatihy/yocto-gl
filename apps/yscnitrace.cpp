@@ -758,7 +758,6 @@ void run_ui(app_states& apps) {
 int main(int argc, const char* argv[]) {
   // application
   app_states app{};
-  app.trace_prms.batch = 1;
   auto filenames       = vector<string>{};
 
   // parse command line

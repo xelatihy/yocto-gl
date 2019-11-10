@@ -122,6 +122,7 @@ int main(int argc, const char* argv[]) {
   // options
   auto trace_prms   = trace_params{};
   auto tonemap_prms = tonemap_params{};
+  auto batch = 16;
   auto save_batch   = false;
   auto add_skyenv   = false;
   auto validate     = false;
@@ -153,7 +154,7 @@ int main(int argc, const char* argv[]) {
       cli, "--bounces", trace_prms.bounces, "Maximum number of bounces.");
   add_cli_option(cli, "--clamp", trace_prms.clamp, "Final pixel clamping.");
   add_cli_option(cli, "--filter", trace_prms.tentfilter, "Filter image.");
-  add_cli_option(cli, "--batch,-b", trace_prms.batch, "Samples per batch.");
+  add_cli_option(cli, "--batch,-b", batch, "Samples per batch.");
   add_cli_option(cli, "--env-hidden/--no-env-hidden", trace_prms.envhidden,
       "Environments are hidden in renderer");
   add_cli_option(cli, "--save-batch", save_batch, "Save images progressively");
@@ -217,13 +218,12 @@ int main(int argc, const char* argv[]) {
   auto render = image{state.size(), zero4f};
 
   // render
-  for (auto sample = 0; sample < trace_prms.samples;
-       sample += trace_prms.batch) {
-    auto nsamples    = min(trace_prms.batch, trace_prms.samples - sample);
+  for (auto sample = 0; sample < trace_prms.samples; sample += batch) {
+    auto nsamples    = min(batch, trace_prms.samples - sample);
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(trace_prms.samples));
-    render           = trace_samples(state, scene, trace_prms);
+    render           = trace_samples(state, scene, nsamples, trace_prms);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
