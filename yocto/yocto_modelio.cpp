@@ -4392,9 +4392,11 @@ pbrtio_status load_pbrt(
   if (stack.empty()) stack.emplace_back();
 
   // parse command by command
-  auto line     = ""s;
-  auto line_num = 0;
-  auto parse_error = [&line_num, &filename]() -> pbrtio_status { return {filename + ": parse error at line " + std::to_string(line_num)}; };
+  auto line        = ""s;
+  auto line_num    = 0;
+  auto parse_error = [&line_num, &filename]() -> pbrtio_status {
+    return {filename + ": parse error at line " + std::to_string(line_num)};
+  };
   while (read_pbrt_cmdline(fs, line, line_num)) {
     auto str = string_view{line};
     // get command
@@ -4418,8 +4420,7 @@ pbrtio_status load_pbrt(
       stack.pop_back();
     } else if (cmd == "ObjectBegin") {
       stack.push_back(stack.back());
-      if (!parse_pbrt_param(str, cur_object))
-        return parse_error();
+      if (!parse_pbrt_param(str, cur_object)) return parse_error();
       objects[cur_object] = {};
     } else if (cmd == "ObjectEnd") {
       stack.pop_back();
@@ -4493,60 +4494,43 @@ pbrtio_status load_pbrt(
       }
     } else if (cmd == "Integrator") {
       auto& integrator = pbrt.integrators.emplace_back();
-      if (!parse_pbrt_param(str, integrator.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, integrator.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, integrator.type)) return parse_error();
+      if (!parse_pbrt_params(str, integrator.values)) return parse_error();
     } else if (cmd == "Sampler") {
       auto& sampler = pbrt.samplers.emplace_back();
-      if (!parse_pbrt_param(str, sampler.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, sampler.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, sampler.type)) return parse_error();
+      if (!parse_pbrt_params(str, sampler.values)) return parse_error();
     } else if (cmd == "PixelFilter") {
       auto& filter = pbrt.filters.emplace_back();
-      if (!parse_pbrt_param(str, filter.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, filter.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, filter.type)) return parse_error();
+      if (!parse_pbrt_params(str, filter.values)) return parse_error();
     } else if (cmd == "Film") {
       auto& film = pbrt.films.emplace_back();
-      if (!parse_pbrt_param(str, film.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, film.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, film.type)) return parse_error();
+      if (!parse_pbrt_params(str, film.values)) return parse_error();
     } else if (cmd == "Accelerator") {
       auto& accelerator = pbrt.accelerators.emplace_back();
-      if (!parse_pbrt_param(str, accelerator.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, accelerator.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, accelerator.type)) return parse_error();
+      if (!parse_pbrt_params(str, accelerator.values)) return parse_error();
     } else if (cmd == "Camera") {
       auto& camera = pbrt.cameras.emplace_back();
-      if (!parse_pbrt_param(str, camera.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, camera.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, camera.type)) return parse_error();
+      if (!parse_pbrt_params(str, camera.values)) return parse_error();
       camera.frame = stack.back().transform_start;
       camera.frend = stack.back().transform_end;
     } else if (cmd == "Texture") {
       auto& texture  = pbrt.textures.emplace_back();
       auto  comptype = ""s;
-      if (!parse_pbrt_param(str, texture.name))
-        return parse_error();
+      if (!parse_pbrt_param(str, texture.name)) return parse_error();
       if (!parse_pbrt_param(str, comptype)) return parse_error();
-      if (!parse_pbrt_param(str, texture.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, texture.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, texture.type)) return parse_error();
+      if (!parse_pbrt_params(str, texture.values)) return parse_error();
     } else if (cmd == "Material") {
       static auto material_id = 0;
       auto&       material    = pbrt.materials.emplace_back();
       material.name           = "material_" + std::to_string(material_id++);
-      if (!parse_pbrt_param(str, material.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, material.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, material.type)) return parse_error();
+      if (!parse_pbrt_params(str, material.values)) return parse_error();
       if (material.type == "") {
         stack.back().material = "";
         pbrt.materials.pop_back();
@@ -4555,22 +4539,17 @@ pbrtio_status load_pbrt(
       }
     } else if (cmd == "MakeNamedMaterial") {
       auto& material = pbrt.materials.emplace_back();
-      if (!parse_pbrt_param(str, material.name))
-        return parse_error();
-      if (!parse_pbrt_params(str, material.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, material.name)) return parse_error();
+      if (!parse_pbrt_params(str, material.values)) return parse_error();
       material.type = "";
       for (auto& value : material.values)
         if (value.name == "type") material.type = value.value1s;
     } else if (cmd == "NamedMaterial") {
-      if (!parse_pbrt_param(str, stack.back().material))
-        return parse_error();
+      if (!parse_pbrt_param(str, stack.back().material)) return parse_error();
     } else if (cmd == "Shape") {
       auto& shape = pbrt.shapes.emplace_back();
-      if (!parse_pbrt_param(str, shape.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, shape.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, shape.type)) return parse_error();
+      if (!parse_pbrt_params(str, shape.values)) return parse_error();
       shape.frame     = stack.back().transform_start;
       shape.frend     = stack.back().transform_end;
       shape.material  = stack.back().material;
@@ -4588,19 +4567,15 @@ pbrtio_status load_pbrt(
       static auto arealight_id = 0;
       auto&       arealight    = pbrt.arealights.emplace_back();
       arealight.name           = "arealight_" + std::to_string(arealight_id++);
-      if (!parse_pbrt_param(str, arealight.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, arealight.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, arealight.type)) return parse_error();
+      if (!parse_pbrt_params(str, arealight.values)) return parse_error();
       arealight.frame        = stack.back().transform_start;
       arealight.frend        = stack.back().transform_end;
       stack.back().arealight = arealight.name;
     } else if (cmd == "LightSource") {
       auto& light = pbrt.lights.emplace_back();
-      if (!parse_pbrt_param(str, light.type))
-        return parse_error();
-      if (!parse_pbrt_params(str, light.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, light.type)) return parse_error();
+      if (!parse_pbrt_params(str, light.values)) return parse_error();
       light.frame = stack.back().transform_start;
       light.frend = stack.back().transform_end;
       if (light.type == "infinite") {
@@ -4613,10 +4588,8 @@ pbrtio_status load_pbrt(
       }
     } else if (cmd == "MakeNamedMedium") {
       auto& medium = pbrt.mediums.emplace_back();
-      if (!parse_pbrt_param(str, medium.name))
-        return parse_error();
-      if (!parse_pbrt_params(str, medium.values))
-        return parse_error();
+      if (!parse_pbrt_param(str, medium.name)) return parse_error();
+      if (!parse_pbrt_params(str, medium.values)) return parse_error();
       medium.type = "";
       for (auto& value : medium.values)
         if (value.name == "type") medium.type = value.value1s;
@@ -4627,8 +4600,7 @@ pbrtio_status load_pbrt(
         return parse_error();
     } else if (cmd == "Include") {
       auto includename = ""s;
-      if (!parse_pbrt_param(str, includename))
-        return parse_error();
+      if (!parse_pbrt_param(str, includename)) return parse_error();
       if (auto ret = load_pbrt(get_dirname(filename) + includename, pbrt, ctx);
           !ret)
         return ret;
@@ -5012,8 +4984,10 @@ pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values, string& line) {
   // parse command by command
-  auto line_num = 0;
-  auto parse_error = [&line_num, &filename]() -> pbrtio_status { return {filename + ": parse error at line " + std::to_string(line_num)}; };
+  auto line_num    = 0;
+  auto parse_error = [&line_num, &filename]() -> pbrtio_status {
+    return {filename + ": parse error at line " + std::to_string(line_num)};
+  };
   while (read_pbrt_cmdline(fs, line, line_num)) {
     auto str = string_view{line};
     // get command
