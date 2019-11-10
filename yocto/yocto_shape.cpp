@@ -2224,7 +2224,7 @@ void make_rect(vector<vec4i>& quads, vector<vec3f>& positions,
       positions[j * (steps.x + 1) + i] = {
           (2 * uv.x - 1) * scale.x, (2 * uv.y - 1) * scale.y, 0};
       normals[j * (steps.x + 1) + i]   = {0, 0, 1};
-      texcoords[j * (steps.x + 1) + i] = 1 - uv * uvscale;
+      texcoords[j * (steps.x + 1) + i] = (1 - uv) * uvscale;
     }
   }
 
@@ -2371,9 +2371,11 @@ void make_floor(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     const vec2f& scale, const vec2f& uvscale) {
   make_rect(quads, positions, normals, texcoords, steps, scale, uvscale);
-  for (auto& p : positions) std::swap(p.y, p.z);
-  for (auto& n : normals) n = {0, 1, 0};
-  for (auto& q : quads) std::swap(q.y, q.w);
+  for (auto& p : positions) {
+    std::swap(p.y, p.z);
+    p.z = -p.z;
+  }
+  for (auto& n : normals) std::swap(n.y, n.z);
 }
 
 void make_bent_floor(vector<vec4i>& quads, vector<vec3f>& positions,
