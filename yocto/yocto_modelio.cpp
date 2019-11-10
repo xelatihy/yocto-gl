@@ -6592,17 +6592,17 @@ yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
       } else {
         if (!format_values(fs, "\n")) return {filename + ": write error"};
       }
-      auto first = true;
-      for (auto& [key, value] : element.key_values) {
-        if (group != "") {
-          if (!format_values(
-                  fs, "  {} {}: {}\n", first ? "-" : " ", key, value))
-            return {filename + ": write error"};
-          first = false;
-        } else {
-          if (!format_values(fs, "{}: {}\n", key, value))
-            return {filename + ": write error"};
-        }
+    }
+    auto first = true;
+    for (auto& [key, value] : element.key_values) {
+      if (group != "") {
+        if (!format_values(
+                fs, "  {} {}: {}\n", first ? "-" : " ", key, value))
+          return {filename + ": write error"};
+        first = false;
+      } else {
+        if (!format_values(fs, "{}: {}\n", key, value))
+          return {filename + ": write error"};
       }
     }
   }

@@ -1291,7 +1291,7 @@ static sceneio_status save_yaml(const string& filename,
   auto yaml = yaml_model{};
 
   for (auto& camera : scene.cameras) {
-    auto yelement = yaml.elements.emplace_back();
+    auto& yelement = yaml.elements.emplace_back();
     yelement.name = "cameras";
     add_yaml_value(yelement, "name", camera.name);
     add_yaml_value(yelement, "frame", camera.frame);
@@ -1305,14 +1305,14 @@ static sceneio_status save_yaml(const string& filename,
   }
 
   for (auto& texture : scene.textures) {
-    auto yelement = yaml.elements.emplace_back();
+    auto& yelement = yaml.elements.emplace_back();
     yelement.name = "textures";
     add_yaml_value(yelement, "name", texture.name);
     add_yaml_value(yelement, "filename", texture.filename);
   }
 
   for (auto& material : scene.materials) {
-    auto yelement = yaml.elements.emplace_back();
+    auto& yelement = yaml.elements.emplace_back();
     yelement.name = "materials";
     add_yaml_value(yelement, "name", material.name);
     add_yaml_value(yelement, "emission", material.emission);
@@ -1376,7 +1376,7 @@ static sceneio_status save_yaml(const string& filename,
   }
 
   for (auto& shape : scene.shapes) {
-    auto yelement = yaml.elements.emplace_back();
+    auto& yelement = yaml.elements.emplace_back();
     yelement.name = "shapes";
     add_yaml_value(yelement, "name", shape.name);
     add_yaml_value(yelement, "filename", shape.filename);
@@ -1393,7 +1393,7 @@ static sceneio_status save_yaml(const string& filename,
   }
 
   for (auto& instance : scene.instances) {
-    auto yelement = yaml.elements.emplace_back();
+    auto& yelement = yaml.elements.emplace_back();
     yelement.name = "instances";
     add_yaml_value(yelement, "name", instance.name);
     add_yaml_value(yelement, "frame", instance.frame);
@@ -1405,7 +1405,7 @@ static sceneio_status save_yaml(const string& filename,
   }
 
   for (auto& environment : scene.environments) {
-    auto yelement = yaml.elements.emplace_back();
+    auto& yelement = yaml.elements.emplace_back();
     yelement.name = "environments";
     add_yaml_value(yelement, "name", environment.name);
     add_yaml_value(yelement, "frame", environment.frame);
@@ -1414,6 +1414,8 @@ static sceneio_status save_yaml(const string& filename,
       add_yaml_value(yelement, "emission_tex",
           scene.textures[environment.emission_tex].name);
   }
+
+  if(auto ret = save_yaml(filename, yaml); !ret) return {ret.error};
 
   return {};
 }
