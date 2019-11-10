@@ -1282,13 +1282,9 @@ static sceneio_status load_yaml_scene(
 static sceneio_status save_yaml(const string& filename,
     const sceneio_model& scene, bool ply_instances = false,
     const string& instances_name = "") {
-  static const auto def_texture     = sceneio_texture{};
-  static const auto def_material    = sceneio_material{};
-  static const auto def_shape       = sceneio_shape{};
-  static const auto def_instance    = sceneio_instance{};
-  static const auto def_environment = sceneio_environment{};
-
   auto yaml = yaml_model{};
+
+  for (auto stat : scene_stats(scene)) yaml.comments.push_back(stat);
 
   for (auto& camera : scene.cameras) {
     auto& yelement = yaml.elements.emplace_back();
@@ -1596,6 +1592,8 @@ static sceneio_status load_obj_scene(
 static sceneio_status save_obj(const string& filename,
     const sceneio_model& scene, const save_params& params) {
   auto obj = obj_model{};
+
+  for (auto stat : scene_stats(scene)) obj.comments.push_back(stat);
 
   // convert cameras
   for (auto& camera : scene.cameras) {
