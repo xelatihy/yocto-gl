@@ -120,10 +120,8 @@ trace_scene make_scene(const sceneio_model& ioscene) {
 
 int main(int argc, const char* argv[]) {
   // options
-  auto load_prms    = load_params{};
   auto trace_prms   = trace_params{};
   auto tonemap_prms = tonemap_params{};
-  auto noparallel   = false;
   auto save_batch   = false;
   auto add_skyenv   = false;
   auto validate     = false;
@@ -155,8 +153,6 @@ int main(int argc, const char* argv[]) {
       cli, "--bounces", trace_prms.bounces, "Maximum number of bounces.");
   add_cli_option(cli, "--clamp", trace_prms.clamp, "Final pixel clamping.");
   add_cli_option(cli, "--filter", trace_prms.tentfilter, "Filter image.");
-  add_cli_option(
-      cli, "--noparallel", noparallel, "Disable parallel execution.");
   add_cli_option(cli, "--batch,-b", trace_prms.batch, "Samples per batch.");
   add_cli_option(cli, "--env-hidden/--no-env-hidden", trace_prms.envhidden,
       "Environments are hidden in renderer");
@@ -179,15 +175,10 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "scene", filename, "Scene filename", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 
-  // fix parallel code
-  if (noparallel) {
-    load_prms.noparallel = true;
-  }
-
   // scene loading
   auto ioscene    = sceneio_model{};
   auto load_timer = print_timed("loading scene");
-  if (auto ret = load_scene(filename, ioscene, load_prms); !ret) {
+  if (auto ret = load_scene(filename, ioscene); !ret) {
     print_fatal(ret.error);
   }
   print_elapsed(load_timer);

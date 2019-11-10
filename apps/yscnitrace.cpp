@@ -49,8 +49,6 @@ struct app_state {
   string name      = "";
 
   // options
-  load_params    load_prms     = {};
-  save_params    save_prms     = {};
   trace_params   trace_prms    = {};
   tonemap_params tonemap_prms  = {};
   int            preview_ratio = 8;
@@ -106,8 +104,6 @@ struct app_states {
   }
 
   // default options
-  load_params    load_prms    = {};
-  save_params    save_prms    = {};
   trace_params   trace_prms   = {};
   tonemap_params tonemap_prms = {};
   bool           add_skyenv   = false;
@@ -276,8 +272,6 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.imagename    = replace_extension(filename, ".png");
   app.outname      = replace_extension(filename, ".edited.yaml");
   app.name         = get_filename(app.filename);
-  app.load_prms    = app.load_prms;
-  app.save_prms    = app.save_prms;
   app.trace_prms   = app.trace_prms;
   app.tonemap_prms = app.tonemap_prms;
   app.add_skyenv   = app.add_skyenv;
@@ -765,7 +759,6 @@ int main(int argc, const char* argv[]) {
   // application
   app_states app{};
   app.trace_prms.batch = 1;
-  auto no_parallel     = false;
   auto filenames       = vector<string>{};
 
   // parse command line
@@ -785,8 +778,6 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--filter", app.trace_prms.tentfilter, "Filter image.");
   add_cli_option(cli, "--env-hidden/--no-env-hidden", app.trace_prms.envhidden,
       "Environments are hidden in renderer");
-  add_cli_option(cli, "--parallel,/--no-parallel", no_parallel,
-      "Disable parallel execution.");
   add_cli_option(
       cli, "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
   add_cli_option(
@@ -803,13 +794,6 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
-
-  // fix parallel code
-  if (no_parallel) {
-    app.load_prms.noparallel  = true;
-    app.save_prms.noparallel  = true;
-    app.trace_prms.noparallel = true;
-  }
 
   // loading images
   for (auto filename : filenames) load_scene_async(app, filename);

@@ -54,8 +54,6 @@ struct app_state {
   string name      = "";
 
   // options
-  load_params         load_prms   = {};
-  save_params         save_prms   = {};
   draw_glscene_params drawgl_prms = {};
 
   // scene
@@ -99,8 +97,6 @@ struct app_states {
   }
 
   // default options
-  load_params         load_prms   = {};
-  save_params         save_prms   = {};
   draw_glscene_params drawgl_prms = {};
 };
 
@@ -124,8 +120,6 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.imagename   = replace_extension(filename, ".png");
   app.outname     = replace_extension(filename, ".edited.yaml");
   app.name        = get_filename(app.filename);
-  app.load_prms   = app.load_prms;
-  app.save_prms   = app.save_prms;
   app.drawgl_prms = app.drawgl_prms;
   apps.loaders.push_back(
       std::async(std::launch::async, [&app]() -> sceneio_status {
@@ -716,12 +710,6 @@ int main(int argc, const char* argv[]) {
       cli, "--noparallel", noparallel, "Disable parallel execution.");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
-
-  // fix parallel code
-  if (noparallel) {
-    app.load_prms.noparallel = true;
-    app.save_prms.noparallel = true;
-  }
 
   // loading images
   for (auto filename : filenames) load_scene_async(app, filename);

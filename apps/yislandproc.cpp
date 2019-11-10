@@ -940,10 +940,9 @@ void load_island_elements(const string& filename, const string& dirname,
 }
 
 sceneio_status load_textures(
-    const string& filename, sceneio_model& scene, const load_params& params);
+    const string& filename, sceneio_model& scene, bool noparallel);
 
-void load_island_scene(
-    const string& filename, sceneio_model& scene, const load_params& params) {
+void load_island_scene(const string& filename, sceneio_model& scene) {
   try {
     auto js = json{};
     load_json(filename, js);
@@ -962,7 +961,7 @@ void load_island_scene(
     }
 
     // load meshes and textures
-    if (!load_textures(filename, scene, params))
+    if (!load_textures(filename, scene, false))
       throw std::runtime_error("error loading textures");
   } catch (std::exception& e) {
     throw std::runtime_error("error loading scene "s + e.what());
@@ -1058,7 +1057,6 @@ bool mkdir(const string& dir) {
 
 int main(int argc, const char** argv) {
   // command line parameters
-  auto notextures     = false;
   auto mesh_filenames = true;
   auto mesh_directory = "shapes/"s;
   auto uniform_txt    = false;
@@ -1069,7 +1067,6 @@ int main(int argc, const char** argv) {
 
   // parse command line
   auto cli = make_cli("yislandproc", "Process scene");
-  add_cli_option(cli, "--notextures", notextures, "Disable textures.");
   add_cli_option(cli, "--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
       "Add mesh filenames.");
   add_cli_option(cli, "--mesh-directory", mesh_directory,
@@ -1082,17 +1079,11 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "scene", filename, "input scene", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 
-  // fix params
-  auto load_prms       = load_params();
-  auto save_prms       = save_params();
-  load_prms.notextures = notextures;
-  save_prms.notextures = notextures;
-
   // load scene
   auto scene = sceneio_model{};
   try {
     auto load_timer = print_timed("loading scene");
-    load_island_scene(filename, scene, load_prms);
+    load_island_scene(filename, scene);
     print_elapsed(load_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
@@ -1142,12 +1133,10 @@ int main(int argc, const char** argv) {
   }
 
   // save scene
-  auto save_timer      = print_timed("saving scene");
-  auto save_error      = ""s;
-  save_prms.notextures = false;
-  save_prms.noparallel = false;
+  auto save_timer = print_timed("saving scene");
+  auto save_error = ""s;
   // save_prms.ply_instances = true;
-  if (auto ret = save_scene(output, scene, save_prms); !ret) {
+  if (auto ret = save_scene(output, scene); !ret) {
     print_fatal(ret.error);
   }
   print_elapsed(save_timer);

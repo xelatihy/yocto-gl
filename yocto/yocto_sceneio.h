@@ -238,20 +238,6 @@ struct sceneio_model {
 
 namespace yocto {
 
-// Scene load params
-struct load_params {
-  bool notextures  = false;
-  bool facevarying = false;
-  bool noparallel  = false;
-};
-
-// Scene save params
-struct save_params {
-  bool notextures   = false;
-  bool objinstances = false;
-  bool noparallel   = false;
-};
-
 // Scene io status
 struct sceneio_status {
   string   error = {};
@@ -260,9 +246,9 @@ struct sceneio_status {
 
 // Load/save a scene in the supported formats.
 sceneio_status load_scene(const string& filename, sceneio_model& scene,
-    const load_params& params = {});
+    bool obj_facevarying = false, bool noparallel = false);
 sceneio_status save_scene(const string& filename, const sceneio_model& scene,
-    const save_params& params = {});
+    bool obj_instances = false, bool noparallel = false);
 
 }  // namespace yocto
 

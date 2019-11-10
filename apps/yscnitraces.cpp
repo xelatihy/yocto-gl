@@ -43,8 +43,6 @@ struct app_state {
   string name      = "";
 
   // options
-  load_params    load_prms     = {};
-  save_params    save_prms     = {};
   trace_params   trace_prms    = {};
   tonemap_params tonemap_prms  = {};
   int            preview_ratio = 8;
@@ -281,7 +279,6 @@ void run_ui(app_state& app) {
 int main(int argc, const char* argv[]) {
   // application
   app_state app{};
-  auto      no_parallel = false;
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");
@@ -300,8 +297,6 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--filter", app.trace_prms.tentfilter, "Filter image.");
   add_cli_option(cli, "--env-hidden/--no-env-hidden", app.trace_prms.envhidden,
       "Environments are hidden in renderer");
-  add_cli_option(cli, "--parallel,/--no-parallel", no_parallel,
-      "Disable parallel execution.");
   add_cli_option(
       cli, "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
   add_cli_option(
@@ -320,17 +315,10 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "scene", app.filename, "Scene filename", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 
-  // fix parallel code
-  if (no_parallel) {
-    app.load_prms.noparallel  = true;
-    app.save_prms.noparallel  = true;
-    app.trace_prms.noparallel = true;
-  }
-
   // scene loading
   auto ioscene    = sceneio_model{};
   auto load_timer = print_timed("loading scene");
-  if (auto ret = load_scene(app.filename, ioscene, app.load_prms); !ret) {
+  if (auto ret = load_scene(app.filename, ioscene); !ret) {
     print_fatal(ret.error);
   }
   print_elapsed(load_timer);

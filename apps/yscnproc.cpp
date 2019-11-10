@@ -49,7 +49,6 @@ bool mkdir(const string& dir) {
 
 int main(int argc, const char** argv) {
   // command line parameters
-  auto notextures       = false;
   auto mesh_filenames   = false;
   auto shape_directory  = "shapes/"s;
   auto subdiv_directory = "subdivs/"s;
@@ -62,7 +61,6 @@ int main(int argc, const char** argv) {
 
   // parse command line
   auto cli = make_cli("yscnproc", "Process scene");
-  add_cli_option(cli, "--notextures", notextures, "Disable textures.");
   add_cli_option(
       cli, "--mesh-filenames", mesh_filenames, "Add mesh filenames.");
   add_cli_option(cli, "--shape-directory", shape_directory,
@@ -79,17 +77,10 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "scene", filename, "input scene", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 
-  // fix options
-  auto load_prms         = load_params();
-  auto save_prms         = save_params();
-  load_prms.notextures   = notextures;
-  save_prms.notextures   = notextures;
-  save_prms.objinstances = obj_instances;
-
   // load scene
   auto scene      = sceneio_model{};
   auto load_timer = print_timed("loading scene");
-  if (auto ret = load_scene(filename, scene, load_prms); !ret) {
+  if (auto ret = load_scene(filename, scene); !ret) {
     print_fatal(ret.error);
   }
   print_elapsed(load_timer);
@@ -160,7 +151,7 @@ int main(int argc, const char** argv) {
 
   // save scene
   auto save_timer = print_timed("saving scene");
-  if (auto ret = save_scene(output, scene, save_prms); !ret) {
+  if (auto ret = save_scene(output, scene, obj_instances); !ret) {
     print_fatal(ret.error);
   }
   print_elapsed(save_timer);
