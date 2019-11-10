@@ -1292,7 +1292,7 @@ static sceneio_status save_yaml(const string& filename,
 
   for (auto& camera : scene.cameras) {
     auto& yelement = yaml.elements.emplace_back();
-    yelement.name = "cameras";
+    yelement.name  = "cameras";
     add_yaml_value(yelement, "name", camera.name);
     add_yaml_value(yelement, "frame", camera.frame);
     if (camera.orthographic)
@@ -1306,14 +1306,14 @@ static sceneio_status save_yaml(const string& filename,
 
   for (auto& texture : scene.textures) {
     auto& yelement = yaml.elements.emplace_back();
-    yelement.name = "textures";
+    yelement.name  = "textures";
     add_yaml_value(yelement, "name", texture.name);
     add_yaml_value(yelement, "filename", texture.filename);
   }
 
   for (auto& material : scene.materials) {
     auto& yelement = yaml.elements.emplace_back();
-    yelement.name = "materials";
+    yelement.name  = "materials";
     add_yaml_value(yelement, "name", material.name);
     add_yaml_value(yelement, "emission", material.emission);
     add_yaml_value(yelement, "diffuse", material.diffuse);
@@ -1377,7 +1377,7 @@ static sceneio_status save_yaml(const string& filename,
 
   for (auto& shape : scene.shapes) {
     auto& yelement = yaml.elements.emplace_back();
-    yelement.name = "shapes";
+    yelement.name  = "shapes";
     add_yaml_value(yelement, "name", shape.name);
     add_yaml_value(yelement, "filename", shape.filename);
     add_yaml_value(yelement, "subdivisions", shape.subdivisions);
@@ -1394,7 +1394,7 @@ static sceneio_status save_yaml(const string& filename,
 
   for (auto& instance : scene.instances) {
     auto& yelement = yaml.elements.emplace_back();
-    yelement.name = "instances";
+    yelement.name  = "instances";
     add_yaml_value(yelement, "name", instance.name);
     add_yaml_value(yelement, "frame", instance.frame);
     if (instance.shape >= 0)
@@ -1406,7 +1406,7 @@ static sceneio_status save_yaml(const string& filename,
 
   for (auto& environment : scene.environments) {
     auto& yelement = yaml.elements.emplace_back();
-    yelement.name = "environments";
+    yelement.name  = "environments";
     add_yaml_value(yelement, "name", environment.name);
     add_yaml_value(yelement, "frame", environment.frame);
     add_yaml_value(yelement, "emission", environment.emission);
@@ -1415,7 +1415,7 @@ static sceneio_status save_yaml(const string& filename,
           scene.textures[environment.emission_tex].name);
   }
 
-  if(auto ret = save_yaml(filename, yaml); !ret) return {ret.error};
+  if (auto ret = save_yaml(filename, yaml); !ret) return {ret.error};
 
   return {};
 }
@@ -2016,24 +2016,24 @@ static sceneio_status load_pbrt(
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
     auto material_id  = material_map.at(pshape.material);
     auto arealight_id = arealight_map.at(pshape.arealight);
-      if(pshape.instance_frames.empty()) {
-          auto& instance    = scene.instances.emplace_back();
-          instance.name     = shape.name;
-          instance.frame    = pshape.frame;
-          instance.material = arealight_id >= 0 ? arealight_id : material_id;
-          instance.shape    = (int)scene.shapes.size() - 1;
-      } else {
-    auto instance_id  = 0;
-    for (auto& frame : pshape.instance_frames) {
+    if (pshape.instance_frames.empty()) {
       auto& instance    = scene.instances.emplace_back();
-      instance.name     = shape.name + (pshape.instance_frames.empty()
-                                           ? ""s
-                                           : std::to_string(instance_id++));
-      instance.frame    = frame * pshape.frame;
+      instance.name     = shape.name;
+      instance.frame    = pshape.frame;
       instance.material = arealight_id >= 0 ? arealight_id : material_id;
       instance.shape    = (int)scene.shapes.size() - 1;
-    }
+    } else {
+      auto instance_id = 0;
+      for (auto& frame : pshape.instance_frames) {
+        auto& instance    = scene.instances.emplace_back();
+        instance.name     = shape.name + (pshape.instance_frames.empty()
+                                             ? ""s
+                                             : std::to_string(instance_id++));
+        instance.frame    = frame * pshape.frame;
+        instance.material = arealight_id >= 0 ? arealight_id : material_id;
+        instance.shape    = (int)scene.shapes.size() - 1;
       }
+    }
   }
 
   // convert environments

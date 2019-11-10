@@ -384,7 +384,7 @@ static void format_value(string& str, const vec3f& value) {
   }
 }
 static void format_value(string& str, const vec4f& value) {
-  for (auto i = 0; i < 3; i++) {
+  for (auto i = 0; i < 4; i++) {
     if (i) str += " ";
     format_value(str, value[i]);
   }
@@ -3689,13 +3689,11 @@ static pbrtio_status convert_pbrt_cameras(const string& filename,
         return {filename + ": type error"};
       // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
       camera.aspect = film_aspect;
-        if(camera.aspect >= 1) {
-            camera.lens   = (0.036 / camera.aspect) /
-                    (2 * tan(radians(fov) / 2));
-        } else {
-            camera.lens   = (0.036 * camera.aspect) /
-                    (2 * tan(radians(fov) / 2));
-        }
+      if (camera.aspect >= 1) {
+        camera.lens = (0.036 / camera.aspect) / (2 * tan(radians(fov) / 2));
+      } else {
+        camera.lens = (0.036 * camera.aspect) / (2 * tan(radians(fov) / 2));
+      }
       if (!get_pbrt_value(values, "frameaspectratio", camera.aspect))
         return {filename + ": type error"};
       camera.focus = 10.0f;
@@ -4361,23 +4359,24 @@ struct pbrt_stack_element {
 
 // pbrt parsing context
 struct pbrt_context {
-  vector<pbrt_stack_element> stack = {};
-  unordered_map<string, pbrt_stack_element> coordsys = {};
-  unordered_map<string, vector<int>> objects = {};
-  string cur_object = "";
+  vector<pbrt_stack_element>                stack      = {};
+  unordered_map<string, pbrt_stack_element> coordsys   = {};
+  unordered_map<string, vector<int>>        objects    = {};
+  string                                    cur_object = "";
 };
 
 // load pbrt
-pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
+pbrtio_status load_pbrt(
+    const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
   auto fs = fopen(filename.c_str(), "rt");
   if (!fs) return {filename + ": file not found"};
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   // parser state
-  auto& stack = ctx.stack;
+  auto& stack      = ctx.stack;
   auto& cur_object = ctx.cur_object;
-  auto& coordsys = ctx.coordsys;
-  auto& objects  = ctx.objects;
+  auto& coordsys   = ctx.coordsys;
+  auto& objects    = ctx.objects;
 
   // helpers
   auto set_transform = [](pbrt_stack_element& ctx, const frame3f& xform) {
@@ -4393,248 +4392,250 @@ pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& 
   if (stack.empty()) stack.emplace_back();
 
   // parse command by command
-    auto line     = ""s;
-    auto line_num = 0;
-    while (read_pbrt_cmdline(fs, line, line_num)) {
-      auto str = string_view{line};
-      // get command
-      auto cmd = ""s;
-      if (!parse_pbrt_command(str, cmd)) return {filename + ": parse error"};
-      if (cmd == "WorldBegin") {
-        stack.push_back({});
-      } else if (cmd == "WorldEnd") {
-        if (stack.empty()) return {filename + ": bad stack"};
-        stack.pop_back();
-        if (stack.size() != 1) return {filename + ": bad stack"};
-      } else if (cmd == "AttributeBegin") {
-        stack.push_back(stack.back());
-      } else if (cmd == "AttributeEnd") {
-        if (stack.empty()) return {filename + ": bad stack"};
-        stack.pop_back();
-      } else if (cmd == "TransformBegin") {
-        stack.push_back(stack.back());
-      } else if (cmd == "TransformEnd") {
-        if (stack.empty()) return {filename + ": bad stack"};
-        stack.pop_back();
-      } else if (cmd == "ObjectBegin") {
-        stack.push_back(stack.back());
-        if (!parse_pbrt_param(str, cur_object))
-          return {filename + ": parse error"};
-        objects[cur_object] = {};
-      } else if (cmd == "ObjectEnd") {
-        stack.pop_back();
-        cur_object = "";
-      } else if (cmd == "ObjectInstance") {
-        auto object = ""s;
-        if (!parse_pbrt_param(str, object)) return {filename + ": parse error"};
-        if (objects.find(object) == objects.end())
-          return {filename + ": unknown object " + object};
-        for (auto shape_id : objects.at(object)) {
-          auto& shape = pbrt.shapes[shape_id];
-          shape.instance_frames.push_back(stack.back().transform_start);
-          shape.instance_frends.push_back(stack.back().transform_end);
-        }
-      } else if (cmd == "ActiveTransform") {
-        auto name = ""s;
-        if (!parse_pbrt_command(str, name)) return {filename + ": parse error"};
-        if (name == "StartTime") {
-          stack.back().active_transform_start = true;
-          stack.back().active_transform_end   = false;
-        } else if (name == "EndTime") {
-          stack.back().active_transform_start = false;
-          stack.back().active_transform_end   = true;
-        } else if (name == "All") {
-          stack.back().active_transform_start = true;
-          stack.back().active_transform_end   = true;
-        } else {
-          return {filename + ": bad active transform"};
-        }
-      } else if (cmd == "Transform") {
-        auto xf = identity4x4f;
-        if (!parse_pbrt_param(str, xf)) return {filename + ": parse error"};
-        set_transform(stack.back(), frame3f{xf});
-      } else if (cmd == "ConcatTransform") {
-        auto xf = identity4x4f;
-        if (!parse_pbrt_param(str, xf)) return {filename + ": parse error"};
-        concat_transform(stack.back(), frame3f{xf});
-      } else if (cmd == "Scale") {
-        auto v = zero3f;
-        if (!parse_pbrt_param(str, v)) return {filename + ": parse error"};
-        concat_transform(stack.back(), scaling_frame(v));
-      } else if (cmd == "Translate") {
-        auto v = zero3f;
-        if (!parse_pbrt_param(str, v)) return {filename + ": parse error"};
-        concat_transform(stack.back(), translation_frame(v));
-      } else if (cmd == "Rotate") {
-        auto v = zero4f;
-        if (!parse_pbrt_param(str, v)) return {filename + ": parse error"};
-        concat_transform(
-            stack.back(), rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
-      } else if (cmd == "LookAt") {
-        auto from = zero3f, to = zero3f, up = zero3f;
-        if (!parse_pbrt_param(str, from)) return {filename + ": parse error"};
-        if (!parse_pbrt_param(str, to)) return {filename + ": parse error"};
-        if (!parse_pbrt_param(str, up)) return {filename + ": parse error"};
-        auto frame = lookat_frame(from, to, up, true);
-        concat_transform(stack.back(), inverse(frame));
-      } else if (cmd == "ReverseOrientation") {
-        stack.back().reverse = !stack.back().reverse;
-      } else if (cmd == "CoordinateSystem") {
-        auto name = ""s;
-        if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
-        coordsys[name].transform_start = stack.back().transform_start;
-        coordsys[name].transform_end   = stack.back().transform_end;
-      } else if (cmd == "CoordSysTransform") {
-        auto name = ""s;
-        if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
-        if (coordsys.find(name) != coordsys.end()) {
-          stack.back().transform_start = coordsys.at(name).transform_start;
-          stack.back().transform_end   = coordsys.at(name).transform_end;
-        }
-      } else if (cmd == "Integrator") {
-        auto& integrator = pbrt.integrators.emplace_back();
-        if (!parse_pbrt_param(str, integrator.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, integrator.values))
-          return {filename + ": parse error"};
-      } else if (cmd == "Sampler") {
-        auto& sampler = pbrt.samplers.emplace_back();
-        if (!parse_pbrt_param(str, sampler.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, sampler.values))
-          return {filename + ": parse error"};
-      } else if (cmd == "PixelFilter") {
-        auto& filter = pbrt.filters.emplace_back();
-        if (!parse_pbrt_param(str, filter.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, filter.values))
-          return {filename + ": parse error"};
-      } else if (cmd == "Film") {
-        auto& film = pbrt.films.emplace_back();
-        if (!parse_pbrt_param(str, film.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, film.values))
-          return {filename + ": parse error"};
-      } else if (cmd == "Accelerator") {
-        auto& accelerator = pbrt.accelerators.emplace_back();
-        if (!parse_pbrt_param(str, accelerator.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, accelerator.values))
-          return {filename + ": parse error"};
-      } else if (cmd == "Camera") {
-        auto& camera = pbrt.cameras.emplace_back();
-        if (!parse_pbrt_param(str, camera.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, camera.values))
-          return {filename + ": parse error"};
-        camera.frame = stack.back().transform_start;
-        camera.frend = stack.back().transform_end;
-      } else if (cmd == "Texture") {
-        auto& texture  = pbrt.textures.emplace_back();
-        auto  comptype = ""s;
-        if (!parse_pbrt_param(str, texture.name))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_param(str, comptype))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_param(str, texture.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, texture.values))
-          return {filename + ": parse error"};
-      } else if (cmd == "Material") {
-        static auto material_id = 0;
-        auto&       material    = pbrt.materials.emplace_back();
-        material.name           = "material_" + std::to_string(material_id++);
-        if (!parse_pbrt_param(str, material.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, material.values))
-          return {filename + ": parse error"};
-        if (material.type == "") {
-          stack.back().material = "";
-          pbrt.materials.pop_back();
-        } else {
-          stack.back().material = material.name;
-        }
-      } else if (cmd == "MakeNamedMaterial") {
-        auto& material = pbrt.materials.emplace_back();
-        if (!parse_pbrt_param(str, material.name))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, material.values))
-          return {filename + ": parse error"};
-        material.type = "";
-        for (auto& value : material.values)
-          if (value.name == "type") material.type = value.value1s;
-      } else if (cmd == "NamedMaterial") {
-        if (!parse_pbrt_param(str, stack.back().material))
-          return {filename + ": parse error"};
-      } else if (cmd == "Shape") {
-        auto& shape = pbrt.shapes.emplace_back();
-        if (!parse_pbrt_param(str, shape.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, shape.values))
-          return {filename + ": parse error"};
-        shape.frame     = stack.back().transform_start;
-        shape.frend     = stack.back().transform_end;
-        shape.material  = stack.back().material;
-        shape.arealight = stack.back().arealight;
-        shape.interior  = stack.back().medium_interior;
-        shape.exterior  = stack.back().medium_exterior;
-        if (cur_object != "") {
-          shape.is_instanced = true;
-          objects[cur_object].push_back((int)pbrt.shapes.size() - 1);
-        } else {
-          shape.instance_frames.push_back(identity3x4f);
-          shape.instance_frends.push_back(identity3x4f);
-        }
-      } else if (cmd == "AreaLightSource") {
-        static auto arealight_id = 0;
-        auto&       arealight    = pbrt.arealights.emplace_back();
-        arealight.name = "arealight_" + std::to_string(arealight_id++);
-        if (!parse_pbrt_param(str, arealight.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, arealight.values))
-          return {filename + ": parse error"};
-        arealight.frame        = stack.back().transform_start;
-        arealight.frend        = stack.back().transform_end;
-        stack.back().arealight = arealight.name;
-      } else if (cmd == "LightSource") {
-        auto& light = pbrt.lights.emplace_back();
-        if (!parse_pbrt_param(str, light.type))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, light.values))
-          return {filename + ": parse error"};
-        light.frame = stack.back().transform_start;
-        light.frend = stack.back().transform_end;
-        if (light.type == "infinite") {
-          auto& environment  = pbrt.environments.emplace_back();
-          environment.type   = light.type;
-          environment.values = light.values;
-          environment.frame  = light.frame;
-          environment.frend  = light.frend;
-          pbrt.lights.pop_back();
-        }
-      } else if (cmd == "MakeNamedMedium") {
-        auto& medium = pbrt.mediums.emplace_back();
-        if (!parse_pbrt_param(str, medium.name))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_params(str, medium.values))
-          return {filename + ": parse error"};
-        medium.type = "";
-        for (auto& value : medium.values)
-          if (value.name == "type") medium.type = value.value1s;
-      } else if (cmd == "MediumInterface") {
-        if (!parse_pbrt_param(str, stack.back().medium_interior))
-          return {filename + ": parse error"};
-        if (!parse_pbrt_param(str, stack.back().medium_exterior))
-          return {filename + ": parse error"};
-      } else if (cmd == "Include") {
-        auto includename = ""s;
-        if (!parse_pbrt_param(str, includename))
-          return {filename + ": parse error"};
-        if(auto ret = load_pbrt(get_dirname(filename) + includename, pbrt, ctx); !ret) return ret;
-      } else {
-        return {filename + ": unknown command " + cmd};
+  auto line     = ""s;
+  auto line_num = 0;
+  auto parse_error = [&line_num, &filename]() -> pbrtio_status { return {filename + ": parse error at line " + std::to_string(line_num)}; };
+  while (read_pbrt_cmdline(fs, line, line_num)) {
+    auto str = string_view{line};
+    // get command
+    auto cmd = ""s;
+    if (!parse_pbrt_command(str, cmd)) return parse_error();
+    if (cmd == "WorldBegin") {
+      stack.push_back({});
+    } else if (cmd == "WorldEnd") {
+      if (stack.empty()) return {filename + ": bad stack"};
+      stack.pop_back();
+      if (stack.size() != 1) return {filename + ": bad stack"};
+    } else if (cmd == "AttributeBegin") {
+      stack.push_back(stack.back());
+    } else if (cmd == "AttributeEnd") {
+      if (stack.empty()) return {filename + ": bad stack"};
+      stack.pop_back();
+    } else if (cmd == "TransformBegin") {
+      stack.push_back(stack.back());
+    } else if (cmd == "TransformEnd") {
+      if (stack.empty()) return {filename + ": bad stack"};
+      stack.pop_back();
+    } else if (cmd == "ObjectBegin") {
+      stack.push_back(stack.back());
+      if (!parse_pbrt_param(str, cur_object))
+        return parse_error();
+      objects[cur_object] = {};
+    } else if (cmd == "ObjectEnd") {
+      stack.pop_back();
+      cur_object = "";
+    } else if (cmd == "ObjectInstance") {
+      auto object = ""s;
+      if (!parse_pbrt_param(str, object)) return parse_error();
+      if (objects.find(object) == objects.end())
+        return {filename + ": unknown object " + object};
+      for (auto shape_id : objects.at(object)) {
+        auto& shape = pbrt.shapes[shape_id];
+        shape.instance_frames.push_back(stack.back().transform_start);
+        shape.instance_frends.push_back(stack.back().transform_end);
       }
+    } else if (cmd == "ActiveTransform") {
+      auto name = ""s;
+      if (!parse_pbrt_command(str, name)) return parse_error();
+      if (name == "StartTime") {
+        stack.back().active_transform_start = true;
+        stack.back().active_transform_end   = false;
+      } else if (name == "EndTime") {
+        stack.back().active_transform_start = false;
+        stack.back().active_transform_end   = true;
+      } else if (name == "All") {
+        stack.back().active_transform_start = true;
+        stack.back().active_transform_end   = true;
+      } else {
+        return {filename + ": bad active transform"};
+      }
+    } else if (cmd == "Transform") {
+      auto xf = identity4x4f;
+      if (!parse_pbrt_param(str, xf)) return parse_error();
+      set_transform(stack.back(), frame3f{xf});
+    } else if (cmd == "ConcatTransform") {
+      auto xf = identity4x4f;
+      if (!parse_pbrt_param(str, xf)) return parse_error();
+      concat_transform(stack.back(), frame3f{xf});
+    } else if (cmd == "Scale") {
+      auto v = zero3f;
+      if (!parse_pbrt_param(str, v)) return parse_error();
+      concat_transform(stack.back(), scaling_frame(v));
+    } else if (cmd == "Translate") {
+      auto v = zero3f;
+      if (!parse_pbrt_param(str, v)) return parse_error();
+      concat_transform(stack.back(), translation_frame(v));
+    } else if (cmd == "Rotate") {
+      auto v = zero4f;
+      if (!parse_pbrt_param(str, v)) return parse_error();
+      concat_transform(
+          stack.back(), rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
+    } else if (cmd == "LookAt") {
+      auto from = zero3f, to = zero3f, up = zero3f;
+      if (!parse_pbrt_param(str, from)) return parse_error();
+      if (!parse_pbrt_param(str, to)) return parse_error();
+      if (!parse_pbrt_param(str, up)) return parse_error();
+      auto frame = lookat_frame(from, to, up, true);
+      concat_transform(stack.back(), inverse(frame));
+    } else if (cmd == "ReverseOrientation") {
+      stack.back().reverse = !stack.back().reverse;
+    } else if (cmd == "CoordinateSystem") {
+      auto name = ""s;
+      if (!parse_pbrt_param(str, name)) return parse_error();
+      coordsys[name].transform_start = stack.back().transform_start;
+      coordsys[name].transform_end   = stack.back().transform_end;
+    } else if (cmd == "CoordSysTransform") {
+      auto name = ""s;
+      if (!parse_pbrt_param(str, name)) return parse_error();
+      if (coordsys.find(name) != coordsys.end()) {
+        stack.back().transform_start = coordsys.at(name).transform_start;
+        stack.back().transform_end   = coordsys.at(name).transform_end;
+      }
+    } else if (cmd == "Integrator") {
+      auto& integrator = pbrt.integrators.emplace_back();
+      if (!parse_pbrt_param(str, integrator.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, integrator.values))
+        return parse_error();
+    } else if (cmd == "Sampler") {
+      auto& sampler = pbrt.samplers.emplace_back();
+      if (!parse_pbrt_param(str, sampler.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, sampler.values))
+        return parse_error();
+    } else if (cmd == "PixelFilter") {
+      auto& filter = pbrt.filters.emplace_back();
+      if (!parse_pbrt_param(str, filter.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, filter.values))
+        return parse_error();
+    } else if (cmd == "Film") {
+      auto& film = pbrt.films.emplace_back();
+      if (!parse_pbrt_param(str, film.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, film.values))
+        return parse_error();
+    } else if (cmd == "Accelerator") {
+      auto& accelerator = pbrt.accelerators.emplace_back();
+      if (!parse_pbrt_param(str, accelerator.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, accelerator.values))
+        return parse_error();
+    } else if (cmd == "Camera") {
+      auto& camera = pbrt.cameras.emplace_back();
+      if (!parse_pbrt_param(str, camera.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, camera.values))
+        return parse_error();
+      camera.frame = stack.back().transform_start;
+      camera.frend = stack.back().transform_end;
+    } else if (cmd == "Texture") {
+      auto& texture  = pbrt.textures.emplace_back();
+      auto  comptype = ""s;
+      if (!parse_pbrt_param(str, texture.name))
+        return parse_error();
+      if (!parse_pbrt_param(str, comptype)) return parse_error();
+      if (!parse_pbrt_param(str, texture.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, texture.values))
+        return parse_error();
+    } else if (cmd == "Material") {
+      static auto material_id = 0;
+      auto&       material    = pbrt.materials.emplace_back();
+      material.name           = "material_" + std::to_string(material_id++);
+      if (!parse_pbrt_param(str, material.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, material.values))
+        return parse_error();
+      if (material.type == "") {
+        stack.back().material = "";
+        pbrt.materials.pop_back();
+      } else {
+        stack.back().material = material.name;
+      }
+    } else if (cmd == "MakeNamedMaterial") {
+      auto& material = pbrt.materials.emplace_back();
+      if (!parse_pbrt_param(str, material.name))
+        return parse_error();
+      if (!parse_pbrt_params(str, material.values))
+        return parse_error();
+      material.type = "";
+      for (auto& value : material.values)
+        if (value.name == "type") material.type = value.value1s;
+    } else if (cmd == "NamedMaterial") {
+      if (!parse_pbrt_param(str, stack.back().material))
+        return parse_error();
+    } else if (cmd == "Shape") {
+      auto& shape = pbrt.shapes.emplace_back();
+      if (!parse_pbrt_param(str, shape.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, shape.values))
+        return parse_error();
+      shape.frame     = stack.back().transform_start;
+      shape.frend     = stack.back().transform_end;
+      shape.material  = stack.back().material;
+      shape.arealight = stack.back().arealight;
+      shape.interior  = stack.back().medium_interior;
+      shape.exterior  = stack.back().medium_exterior;
+      if (cur_object != "") {
+        shape.is_instanced = true;
+        objects[cur_object].push_back((int)pbrt.shapes.size() - 1);
+      } else {
+        shape.instance_frames.push_back(identity3x4f);
+        shape.instance_frends.push_back(identity3x4f);
+      }
+    } else if (cmd == "AreaLightSource") {
+      static auto arealight_id = 0;
+      auto&       arealight    = pbrt.arealights.emplace_back();
+      arealight.name           = "arealight_" + std::to_string(arealight_id++);
+      if (!parse_pbrt_param(str, arealight.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, arealight.values))
+        return parse_error();
+      arealight.frame        = stack.back().transform_start;
+      arealight.frend        = stack.back().transform_end;
+      stack.back().arealight = arealight.name;
+    } else if (cmd == "LightSource") {
+      auto& light = pbrt.lights.emplace_back();
+      if (!parse_pbrt_param(str, light.type))
+        return parse_error();
+      if (!parse_pbrt_params(str, light.values))
+        return parse_error();
+      light.frame = stack.back().transform_start;
+      light.frend = stack.back().transform_end;
+      if (light.type == "infinite") {
+        auto& environment  = pbrt.environments.emplace_back();
+        environment.type   = light.type;
+        environment.values = light.values;
+        environment.frame  = light.frame;
+        environment.frend  = light.frend;
+        pbrt.lights.pop_back();
+      }
+    } else if (cmd == "MakeNamedMedium") {
+      auto& medium = pbrt.mediums.emplace_back();
+      if (!parse_pbrt_param(str, medium.name))
+        return parse_error();
+      if (!parse_pbrt_params(str, medium.values))
+        return parse_error();
+      medium.type = "";
+      for (auto& value : medium.values)
+        if (value.name == "type") medium.type = value.value1s;
+    } else if (cmd == "MediumInterface") {
+      if (!parse_pbrt_param(str, stack.back().medium_interior))
+        return parse_error();
+      if (!parse_pbrt_param(str, stack.back().medium_exterior))
+        return parse_error();
+    } else if (cmd == "Include") {
+      auto includename = ""s;
+      if (!parse_pbrt_param(str, includename))
+        return parse_error();
+      if (auto ret = load_pbrt(get_dirname(filename) + includename, pbrt, ctx);
+          !ret)
+        return ret;
+    } else {
+      return {filename + ": unknown command " + cmd};
     }
+  }
 
   return {};
 }
@@ -4642,7 +4643,7 @@ pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& 
 // load pbrt
 pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt) {
   auto ctx = pbrt_context{};
-  if(auto ret = load_pbrt(filename, pbrt, ctx); !ret) return ret;
+  if (auto ret = load_pbrt(filename, pbrt, ctx); !ret) return ret;
 
   // convert objects
   if (auto ret = convert_pbrt_films(filename, pbrt.films); !ret) return ret;
@@ -5012,11 +5013,12 @@ pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
     vector<pbrt_value>& values, string& line) {
   // parse command by command
   auto line_num = 0;
+  auto parse_error = [&line_num, &filename]() -> pbrtio_status { return {filename + ": parse error at line " + std::to_string(line_num)}; };
   while (read_pbrt_cmdline(fs, line, line_num)) {
     auto str = string_view{line};
     // get command
     auto cmd = ""s;
-    if (!parse_pbrt_command(str, cmd)) return {filename + ": parse error"};
+    if (!parse_pbrt_command(str, cmd)) return parse_error();
     if (cmd == "WorldBegin") {
       command = pbrt_command::world_begin;
       return {};
@@ -5036,55 +5038,55 @@ pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
       command = pbrt_command::transform_end;
       return {};
     } else if (cmd == "ObjectBegin") {
-      if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, name)) return parse_error();
       command = pbrt_command::object_begin;
       return {};
     } else if (cmd == "ObjectEnd") {
       command = pbrt_command::object_end;
       return {};
     } else if (cmd == "ObjectInstance") {
-      if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, name)) return parse_error();
       command = pbrt_command::object_instance;
       return {};
     } else if (cmd == "ActiveTransform") {
-      if (!parse_pbrt_command(str, name)) return {filename + ": parse error"};
+      if (!parse_pbrt_command(str, name)) return parse_error();
       command = pbrt_command::active_transform;
       return {};
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;
-      if (!parse_pbrt_param(str, xf)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, xf)) return parse_error();
       xform   = frame3f{xf};
       command = pbrt_command::set_transform;
       return {};
     } else if (cmd == "ConcatTransform") {
       auto xf = identity4x4f;
-      if (!parse_pbrt_param(str, xf)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, xf)) return parse_error();
       xform   = frame3f{xf};
       command = pbrt_command::concat_transform;
       return {};
     } else if (cmd == "Scale") {
       auto v = zero3f;
-      if (!parse_pbrt_param(str, v)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, v)) return parse_error();
       xform   = scaling_frame(v);
       command = pbrt_command::concat_transform;
       return {};
     } else if (cmd == "Translate") {
       auto v = zero3f;
-      if (!parse_pbrt_param(str, v)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, v)) return parse_error();
       xform   = translation_frame(v);
       command = pbrt_command::concat_transform;
       return {};
     } else if (cmd == "Rotate") {
       auto v = zero4f;
-      if (!parse_pbrt_param(str, v)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, v)) return parse_error();
       xform   = rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x));
       command = pbrt_command::concat_transform;
       return {};
     } else if (cmd == "LookAt") {
       auto from = zero3f, to = zero3f, up = zero3f;
-      if (!parse_pbrt_param(str, from)) return {filename + ": parse error"};
-      if (!parse_pbrt_param(str, to)) return {filename + ": parse error"};
-      if (!parse_pbrt_param(str, up)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, from)) return parse_error();
+      if (!parse_pbrt_param(str, to)) return parse_error();
+      if (!parse_pbrt_param(str, up)) return parse_error();
       xform   = {from, to, up, zero3f};
       command = pbrt_command::lookat_transform;
       return {};
@@ -5092,86 +5094,86 @@ pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
       command = pbrt_command::reverse_orientation;
       return {};
     } else if (cmd == "CoordinateSystem") {
-      if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, name)) return parse_error();
       command = pbrt_command::coordinate_system_set;
       return {};
     } else if (cmd == "CoordSysTransform") {
-      if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, name)) return parse_error();
       command = pbrt_command::coordinate_system_transform;
       return {};
     } else if (cmd == "Integrator") {
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::integrator;
       return {};
     } else if (cmd == "Sampler") {
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::sampler;
       return {};
     } else if (cmd == "PixelFilter") {
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::filter;
       return {};
     } else if (cmd == "Film") {
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::film;
       return {};
     } else if (cmd == "Accelerator") {
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::accelerator;
       return {};
     } else if (cmd == "Camera") {
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::camera;
       return {};
     } else if (cmd == "Texture") {
       auto comptype = ""s;
-      if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
-      if (!parse_pbrt_param(str, comptype)) return {filename + ": parse error"};
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, name)) return parse_error();
+      if (!parse_pbrt_param(str, comptype)) return parse_error();
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::named_texture;
       return {};
     } else if (cmd == "Material") {
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::material;
       return {};
     } else if (cmd == "MakeNamedMaterial") {
-      if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, name)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       type = "";
       for (auto& value : values)
         if (value.name == "type") type = value.value1s;
       command = pbrt_command::named_material;
       return {};
     } else if (cmd == "NamedMaterial") {
-      if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, name)) return parse_error();
       command = pbrt_command::use_material;
       return {};
     } else if (cmd == "Shape") {
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::shape;
       return {};
     } else if (cmd == "AreaLightSource") {
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::arealight;
       return {};
     } else if (cmd == "LightSource") {
-      if (!parse_pbrt_param(str, type)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, type)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       command = pbrt_command::light;
       return {};
     } else if (cmd == "MakeNamedMedium") {
-      if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
-      if (!parse_pbrt_params(str, values)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, name)) return parse_error();
+      if (!parse_pbrt_params(str, values)) return parse_error();
       type = "";
       for (auto& value : values)
         if (value.name == "type") type = value.value1s;
@@ -5179,13 +5181,13 @@ pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
       return {};
     } else if (cmd == "MediumInterface") {
       auto interior = ""s, exterior = ""s;
-      if (!parse_pbrt_param(str, interior)) return {filename + ": parse error"};
-      if (!parse_pbrt_param(str, exterior)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, interior)) return parse_error();
+      if (!parse_pbrt_param(str, exterior)) return parse_error();
       name    = interior + "####" + exterior;
       command = pbrt_command::medium_interface;
       return {};
     } else if (cmd == "Include") {
-      if (!parse_pbrt_param(str, name)) return {filename + ": parse error"};
+      if (!parse_pbrt_param(str, name)) return parse_error();
       command = pbrt_command::include;
       return {};
     } else {
@@ -6495,9 +6497,9 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
     // peek commands
     if (is_space(line.front())) {
       // indented property
-      if (group == "") return {filename + ": parse error"};
+      if (group == "") return {filename + " parse_error"};
       skip_whitespace(line);
-      if (line.empty()) return {filename + ": parse error"};
+      if (line.empty()) return {filename + " parse_error"};
       if (line.front() == '-') {
         auto& element = yaml.elements.emplace_back();
         element.name  = group;
@@ -6507,19 +6509,19 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
         auto& element = yaml.elements.emplace_back();
         element.name  = group;
       }
-      if (!parse_yaml_varname(line, key)) return {filename + ": parse error"};
+      if (!parse_yaml_varname(line, key)) return {filename + " parse_error"};
       skip_whitespace(line);
       if (line.empty() || line.front() != ':')
-        return {filename + ": parse error"};
+        return {filename + " parse_error"};
       line.remove_prefix(1);
-      if (!parse_value(line, value)) return {filename + ": parse error"};
+      if (!parse_value(line, value)) return {filename + " parse_error"};
       yaml.elements.back().key_values.push_back({key, value});
     } else if (is_alpha(line.front())) {
       // new group
-      if (!parse_yaml_varname(line, key)) return {filename + ": parse error"};
+      if (!parse_yaml_varname(line, key)) return {filename + " parse_error"};
       skip_whitespace(line);
       if (line.empty() || line.front() != ':')
-        return {filename + ": parse error"};
+        return {filename + " parse_error"};
       line.remove_prefix(1);
       if (!line.empty() && !is_whitespace(line)) {
         group = "";
@@ -6527,14 +6529,14 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml) {
           auto& element = yaml.elements.emplace_back();
           element.name  = group;
         }
-        if (!parse_value(line, value)) return {filename + ": parse error"};
+        if (!parse_value(line, value)) return {filename + " parse_error"};
         yaml.elements.back().key_values.push_back({key, value});
       } else {
         group = key;
         key   = "";
       }
     } else {
-      return {filename + ": parse error"};
+      return {filename + " parse_error"};
     }
   }
   return {};
@@ -6596,8 +6598,7 @@ yamlio_status save_yaml(const string& filename, const yaml_model& yaml) {
     auto first = true;
     for (auto& [key, value] : element.key_values) {
       if (group != "") {
-        if (!format_values(
-                fs, "  {} {}: {}\n", first ? "-" : " ", key, value))
+        if (!format_values(fs, "  {} {}: {}\n", first ? "-" : " ", key, value))
           return {filename + ": write error"};
         first = false;
       } else {
