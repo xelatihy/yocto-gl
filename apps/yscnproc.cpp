@@ -107,6 +107,13 @@ int main(int argc, const char** argv) {
     for (auto stat : scene_stats(scene)) print_info(stat);
   }
 
+  // tesselate if needed
+  if(get_extension(output) != ".yaml") {
+    for(auto& shape : scene.shapes) {
+      if(needs_tesselation(scene, shape)) shape = tesselate_shape(scene, shape);
+    }
+  }
+
   // change texture names
   if (uniform_txt) {
     for (auto& texture : scene.textures) {
