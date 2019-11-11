@@ -157,14 +157,7 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--env-hidden/--no-env-hidden", params.envhidden,
       "Environments are hidden in renderer");
   add_cli_option(cli, "--save-batch", save_batch, "Save images progressively");
-  add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
-      params.highquality_bvh, "Use high quality bvh mode");
-#if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", params.embree_bvh,
-      "Use Embree ratracer");
-  add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      params.compact_bvh, "Embree runs in compact memory");
-#endif
+  add_cli_option(cli, "--bvh", (int&)params.bvh, "Bvh type", trace_bvh_names);
   add_cli_option(cli, "--add-skyenv", add_skyenv, "Add sky envmap");
   add_cli_option(cli, "--output-image,-o", imfilename, "Image filename");
   add_cli_option(cli, "--validate", validate, "Validate scene");

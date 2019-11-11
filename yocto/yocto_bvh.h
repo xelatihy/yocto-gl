@@ -131,8 +131,8 @@ struct bvh_intersection {
   bool  hit      = false;
 };
 
-// Bvh build strategy.
-enum struct bvh_strategy {
+// Bvh build type.
+enum struct bvh_type {
   default_, highquality, middle, balanced,
 #ifdef YOCTO_EMBREE
   embree_default, embree_highquality, embree_compact // only for copy interface
@@ -142,16 +142,16 @@ enum struct bvh_strategy {
 // Make shape bvh
 void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
-    bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
+    bvh_type type = bvh_type::default_, bool parallel = false);
 void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
-    bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
+    bvh_type type = bvh_type::default_, bool parallel = false);
 void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<float>& radius,
-    bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
+    bvh_type type = bvh_type::default_, bool parallel = false);
 void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius,
-    bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
+    bvh_type type = bvh_type::default_, bool parallel = false);
 
 // Updates shape bvh for changes in positions and radia
 void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
@@ -247,8 +247,8 @@ struct bvh_scene {
 };
 
 // Build the bvh acceleration structure.
-void init_shape_bvh(bvh_shape& bvh, bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
-void init_scene_bvh(bvh_scene& bvh, bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
+void init_shape_bvh(bvh_shape& bvh, bvh_type type = bvh_type::default_, bool parallel = false);
+void init_scene_bvh(bvh_scene& bvh, bvh_type type = bvh_type::default_, bool parallel = false);
 
 // Refit bvh data
 void update_shape_bvh(bvh_shape& bvh);

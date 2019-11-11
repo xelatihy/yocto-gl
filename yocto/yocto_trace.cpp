@@ -1336,8 +1336,8 @@ static RTCDevice     trace_embree_device() {
 static void init_embree_bvh(trace_shape& shape, const trace_params& params) {
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
-  if (params.compact_bvh) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.highquality_bvh)
+  if (params.bvh == trace_bvh_type::embree_compact) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  if (params.bvh == trace_bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   if (!shape.points.empty()) {
     throw std::runtime_error("embree does not support points");
@@ -1370,7 +1370,7 @@ static void init_embree_bvh(trace_shape& shape, const trace_params& params) {
   } else if (!shape.triangles.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_TRIANGLE);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.compact_bvh) {
+    if (params.bvh == trace_bvh_type::embree_compact) {
       rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
           RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
           shape.positions.size());
@@ -1394,7 +1394,7 @@ static void init_embree_bvh(trace_shape& shape, const trace_params& params) {
   } else if (!shape.quads.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.compact_bvh) {
+    if (params.bvh == trace_bvh_type::embree_compact) {
       rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
           RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
           shape.positions.size());
@@ -1416,7 +1416,7 @@ static void init_embree_bvh(trace_shape& shape, const trace_params& params) {
   } else if (!shape.quadspos.empty()) {
     auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_QUAD);
     rtcSetGeometryVertexAttributeCount(egeometry, 1);
-    if (params.compact_bvh) {
+    if (params.bvh == trace_bvh_type::embree_compact) {
       rtcSetSharedGeometryBuffer(egeometry, RTC_BUFFER_TYPE_VERTEX, 0,
           RTC_FORMAT_FLOAT3, shape.positions.data(), 0, 3 * 4,
           shape.positions.size());
@@ -1448,8 +1448,8 @@ static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
   // scene bvh
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
-  if (params.compact_bvh) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
-  if (params.highquality_bvh)
+  if (params.bvh == trace_bvh_type::embree_compact) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  if (params.bvh == trace_bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
@@ -1675,12 +1675,30 @@ static pair<int, int> split_middle(vector<int>& primitives,
   return {mid, axis};
 }
 
+// Split bvh nodes according to a type
+static pair<int, int> split_nodes(vector<int>& primitives,
+    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
+    int end, trace_bvh_type type) {
+  switch (type) {
+    case trace_bvh_type::default_: 
+      return split_balanced(primitives, bboxes, centers, start, end);
+    case trace_bvh_type::highquality: 
+      return split_sah(primitives, bboxes, centers, start, end);
+    case trace_bvh_type::middle: 
+      return split_middle(primitives, bboxes, centers, start, end);
+    case trace_bvh_type::balanced: 
+      return split_balanced(primitives, bboxes, centers, start, end);
+    default: 
+      throw std::runtime_error("should not have gotten here");
+  }
+}
+
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
 static void build_bvh_serial(
-    trace_bvh& bvh, vector<bbox3f>& bboxes, bool high_quality) {
+    trace_bvh& bvh, vector<bbox3f>& bboxes, trace_bvh_type type) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -1720,10 +1738,7 @@ static void build_bvh_serial(
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] =
-          high_quality
-              ? split_sah(primitives, bboxes, centers, start, end)
-              : split_balanced(primitives, bboxes, centers, start, end);
+      auto [mid, axis] = split_nodes(primitives, bboxes, centers, start, end, type);
 
       // make an internal node
       node.internal = true;
@@ -1748,7 +1763,7 @@ static void build_bvh_serial(
 
 // Build BVH nodes
 static void build_bvh_parallel(
-    trace_bvh& bvh, vector<bbox3f>& bboxes, bool high_quality) {
+    trace_bvh& bvh, vector<bbox3f>& bboxes, trace_bvh_type type) {
   // get values
   auto& nodes      = bvh.nodes;
   auto& primitives = bvh.primitives;
@@ -1779,7 +1794,7 @@ static void build_bvh_parallel(
   // create nodes until the queue is empty
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(std::async(std::launch::async,
-        [&nodes, &primitives, &bboxes, &centers, &high_quality,
+        [&nodes, &primitives, &bboxes, &centers, &type,
             &num_processed_prims, &queue_mutex, &queue] {
           while (true) {
             // exit if needed
@@ -1813,10 +1828,7 @@ static void build_bvh_parallel(
             // split into two children
             if (end - start > bvh_max_prims) {
               // get split
-              auto [mid, axis] =
-                  high_quality
-                      ? split_sah(primitives, bboxes, centers, start, end)
-                      : split_balanced(primitives, bboxes, centers, start, end);
+              auto [mid, axis] = split_nodes(primitives, bboxes, centers, start, end, type);
 
               // make an internal node
               {
@@ -1866,7 +1878,9 @@ static void update_bvh(trace_bvh& bvh, const vector<bbox3f>& bboxes) {
 static void init_bvh(trace_shape& shape, const trace_params& params) {
 #if YOCTO_EMBREE
   // call Embree if needed
-  if (params.embree_bvh) {
+  if (params.bvh == trace_bvh_type::embree_default ||
+      params.bvh == trace_bvh_type::embree_highquality ||
+      params.bvh == trace_bvh_type::embree_compact) {
     return init_embree_bvh(shape, params);
   }
 #endif
@@ -1911,9 +1925,9 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
 
   // build nodes
   if (params.noparallel) {
-    build_bvh_serial(shape.bvh, bboxes, params.highquality_bvh);
+    build_bvh_serial(shape.bvh, bboxes, params.bvh);
   } else {
-    build_bvh_parallel(shape.bvh, bboxes, params.highquality_bvh);
+    build_bvh_parallel(shape.bvh, bboxes, params.bvh);
   }
 }
 
@@ -1924,7 +1938,9 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
 
   // embree
 #if YOCTO_EMBREE
-  if (params.embree_bvh) {
+  if (params.bvh == trace_bvh_type::embree_default ||
+      params.bvh == trace_bvh_type::embree_highquality ||
+      params.bvh == trace_bvh_type::embree_compact) {
     return init_embree_bvh(scene, params);
   }
 #endif
@@ -1941,15 +1957,15 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
 
   // build nodes
   if (params.noparallel) {
-    build_bvh_serial(scene.bvh, bboxes, params.highquality_bvh);
+    build_bvh_serial(scene.bvh, bboxes, params.bvh);
   } else {
-    build_bvh_parallel(scene.bvh, bboxes, params.highquality_bvh);
+    build_bvh_parallel(scene.bvh, bboxes, params.bvh);
   }
 }
 
 static void update_bvh(trace_shape& shape, const trace_params& params) {
 #if YOCTO_EMBREE
-  if (params.embree_bvh) {
+  if (shape.embree_bvh) {
     throw std::runtime_error("embree shape update not implemented");
   }
 #endif
@@ -2002,7 +2018,7 @@ void update_bvh(trace_scene& scene, const vector<int>& updated_instances,
   for (auto shape : updated_shapes) update_bvh(scene.shapes[shape], params);
 
 #if YOCTO_EMBREE
-  if (params.embree_bvh) {
+  if (scene.embree_bvh) {
     update_embree_bvh(scene, updated_instances);
   }
 #endif

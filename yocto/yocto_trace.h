@@ -269,6 +269,13 @@ enum struct trace_falsecolor_type {
   element, highlight
   // clang-format on
 };
+// Strategy used to build the bvh
+enum struct trace_bvh_type {
+  default_, highquality, middle, balanced,
+#ifdef YOCTO_EMBREE
+  embree_default, embree_highquality, embree_compact // only for copy interface
+#endif
+};
 
 // Options for trace functions
 struct trace_params {
@@ -282,11 +289,7 @@ struct trace_params {
   bool                  envhidden       = false;
   bool                  tentfilter      = false;
   uint64_t              seed            = trace_default_seed;
-  bool                  highquality_bvh = false;
-#if YOCTO_EMBREE
-  bool embree_bvh  = false;
-  bool compact_bvh = false;
-#endif
+  trace_bvh_type    bvh = trace_bvh_type::default_;
   bool noparallel = false;
 };
 
@@ -297,6 +300,11 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "transmission", "roughness", "material", "shape", "instance",
     "element", "highlight"};
+const auto trace_bvh_names = vector<string>{"default", "highquality", "middle", "balanced",
+#ifdef YOCTO_EMBREE
+  "embree-default", "embree-highquality", "embree-compact"
+#endif
+};
 
 // Initialize state of the renderer.
 trace_state make_state(const trace_scene& scene, const trace_params& params);

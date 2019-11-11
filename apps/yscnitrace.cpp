@@ -782,14 +782,7 @@ int main(int argc, const char* argv[]) {
   add_cli_option(
       cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
   add_cli_option(cli, "--srgb/--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
-  add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
-      app.trace_prms.highquality_bvh, "Use high quality bvh mode");
-#if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.trace_prms.embree_bvh,
-      "Use Embree ratracer");
-  add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      app.trace_prms.compact_bvh, "Embree runs in compact memory");
-#endif
+  add_cli_option(cli, "--bvh", (int&)app.trace_prms.bvh, "Bvh type", trace_bvh_names);
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
   if (!parse_cli(cli, argc, argv)) exit(1);

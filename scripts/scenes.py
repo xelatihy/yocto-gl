@@ -13,11 +13,11 @@ def cli():
 @click.option('--mode','-m', default='path')
 def itrace(directory='mcguire',scene='*',format='yaml',mode='path'):
     modes = {
-        'path': '--bvh-high-quality',
-        'embree': '--bvh-embree --bvh-high-quality',
-        'embree-compact': '--bvh-embree --bvh-embree-compact',
-        'eyelight': '-t eyelight --bvh-high-quality',
-        'eyelight-quick': '--all-cameras -s 16 -r 1280 -t eyelight --no-bvh-highquality'
+        'path': '--bvh highquality',
+        'embree': '--bvh embree-highquality',
+        'embree-compact': '--bvh embree-compact',
+        'eyelight': '-t eyelight --bvh highquality',
+        'eyelight-quick': '--all-cameras -s 16 -r 1280 -t eyelight --bvh default'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{format}/{scene}')):
@@ -61,16 +61,15 @@ def view(directory='mcguire',scene='*',format='yaml',mode='path'):
 @click.option('--mode','-m', default='path')
 def trace(directory='mcguire',scene='*',format='yaml',mode='path'):
     modes = {
-        'path': '-s 64 -r 640 --bvh-high-quality',
-        'embree': '-s 256 -r 1280 --bvh-embree --bvh-high-quality',
-        'embree-flatten': '-s 256 -r 1280 --bvh-embree --bvh-embree-flatten --bvh-high-quality',
-        'embree-compact': '-s 256 -r 1280 --bvh-embree --bvh-embree-compact',
+        'path': '-s 64 -r 640 --bvh highquality',
+        'embree': '-s 256 -r 1280 --bvh embree-highquality',
+        'embree-compact': '-s 256 -r 1280 --bvh embree-compact',
         'eyelight': '-s 16 -r 1280 -t eyelight --bvh-high-quality',
-        'embree-face': '-s 256 -r 640 --bvh-embree --bvh-high-quality',
-        'final': '-s 4096 -r 1280 --bvh-embree --bvh-high-quality',
-        'final-compact': '-s 4096 -r 1280 --bvh-embree --bvh-high-quality --bvh-embree-compact',
-        'final-filter': '-s 4096 -r 1280 --filter --bvh-embree --bvh-high-quality',
-        'final-face': '-s 4096 -r 640 --bvh-embree --bvh-high-quality',
+        'embree-face': '-s 256 -r 640 --bvh embree-highquality',
+        'final': '-s 4096 -r 1280 --bvh embree-highquality',
+        'final-compact': '-s 4096 -r 1280 --bvh embree-compact',
+        'final-filter': '-s 4096 -r 1280 --filter --bvh embree-highquality',
+        'final-face': '-s 4096 -r 640 --bvh embree-highquality',
     }
     options = modes[mode]
     outformat = 'png' if 'eyelight' in mode else 'hdr'
