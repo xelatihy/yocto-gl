@@ -10,17 +10,17 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
     steps:
     - uses: actions/checkout@v1
-    - name: install dependencies
+    - name: install ubuntu dependencies
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update --yes
         sudo apt-get install --yes ninja-build
-    - name: install dependencies
+    - name: install windows dependencies
       if: matrix.os == 'windows-latest'
       run: |
         choco update
         choco install ninja
-    - name: install dependencies
+    - name: install macos dependencies
       if: matrix.os == 'macos-latest'
       run: |
         brew update
