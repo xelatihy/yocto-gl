@@ -219,19 +219,19 @@ inline float gain(float a, float gain) {
   return (a < 0.5f) ? bias(a * 2, gain) / 2
                     : bias(a * 2 - 1, 1 - gain) / 2 + 0.5f;
 }
-inline float sqrt(float a) { return sqrtf(a); }
-inline float sin(float a) { return sinf(a); }
-inline float cos(float a) { return cosf(a); }
-inline float tan(float a) { return tanf(a); }
-inline float asin(float a) { return asinf(a); }
-inline float acos(float a) { return acosf(a); }
-inline float atan(float a) { return atanf(a); }
-inline float log(float a) { return logf(a); }
-inline float exp(float a) { return expf(a); }
-inline float log2(float a) { return log2f(a); }
-inline float exp2(float a) { return exp2f(a); }
-inline float pow(float a, float b) { return powf(a, b); }
-inline float isfinite(float a) { return ::isfinite(a); }
+inline float sqrt(float a) { return std::sqrt(a); }
+inline float sin(float a) { return std::sin(a); }
+inline float cos(float a) { return std::cos(a); }
+inline float tan(float a) { return std::tan(a); }
+inline float asin(float a) { return std::asin(a); }
+inline float acos(float a) { return std::acos(a); }
+inline float atan(float a) { return std::atan(a); }
+inline float log(float a) { return std::log(a); }
+inline float exp(float a) { return std::exp(a); }
+inline float log2(float a) { return std::log2(a); }
+inline float exp2(float a) { return std::exp2(a); }
+inline float pow(float a, float b) { return std::pow(a, b); }
+inline float isfinite(float a) { return std::isfinite(a); }
 inline void  swap(float& a, float& b) { std::swap(a, b); }
 
 inline int  abs(int a) { return a < 0 ? -a : a; }
