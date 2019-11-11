@@ -63,7 +63,6 @@ struct app_state {
   opengl_scene glscene = {};
 
   // view image
-  bool   navigation_fps = false;
   float  time           = 0;
   string anim_group     = "";
   vec2f  time_range     = zero2f;
@@ -532,7 +531,6 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "outname", app.outname);
     draw_gllabel(win, "imagename", app.imagename);
     continue_glline(win);
-    draw_glcheckbox(win, "fps", app.navigation_fps);
     if (draw_glbutton(win, "print cams")) {
       for (auto& camera : app.scene.cameras) {
         print_obj_camera(camera);

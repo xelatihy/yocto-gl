@@ -49,8 +49,8 @@ struct app_state {
   string name      = "";
 
   // options
-  trace_params trace_prms    = {};
-  int          preview_ratio = 8;
+  trace_params params    = {};
+  int          pratio = 8;
 
   // scene
   sceneio_model ioscene    = {};
@@ -66,7 +66,6 @@ struct app_state {
   // view scene
   opengl_image        glimage       = {};
   draw_glimage_params glparams      = {};
-  bool                navigation_fps = false;
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -104,7 +103,7 @@ struct app_states {
   }
 
   // default options
-  trace_params trace_prms = {};
+  trace_params params = {};
   bool         add_skyenv = false;
 };
 
@@ -232,20 +231,20 @@ void reset_display(app_state& app) {
   if (app.render_future.valid()) app.render_future.get();
 
   // reset state
-  app.state = make_state(app.scene, app.trace_prms);
+  app.state = make_state(app.scene, app.params);
   app.render.resize(app.state.size());
   app.display.resize(app.state.size());
 
   // render preview
-  auto preview_prms = app.trace_prms;
-  preview_prms.resolution /= app.preview_ratio;
+  auto preview_prms = app.params;
+  preview_prms.resolution /= app.pratio;
   preview_prms.samples = 1;
   auto preview         = trace_image(app.scene, preview_prms);
   preview              = tonemap_image(preview, app.exposure);
   for (auto j = 0; j < app.display.size().y; j++) {
     for (auto i = 0; i < app.display.size().x; i++) {
-      auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
-           pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
+      auto pi = clamp(i / app.pratio, 0, preview.size().x - 1),
+           pj = clamp(j / app.pratio, 0, preview.size().y - 1);
       app.display[{i, j}] = preview[{pi, pj}];
     }
   }
@@ -254,11 +253,11 @@ void reset_display(app_state& app) {
   app.render_counter = 0;
   app.render_stop    = false;
   app.render_future  = std::async(std::launch::async, [&app]() {
-    for (auto sample = 0; sample < app.trace_prms.samples; sample++) {
+    for (auto sample = 0; sample < app.params.samples; sample++) {
       if (app.render_stop) return;
       parallel_for(app.render.size(), [&app](const vec2i& ij) {
         if (app.render_stop) return;
-        app.render[ij] = trace_sample(app.state, app.scene, ij, app.trace_prms);
+        app.render[ij] = trace_sample(app.state, app.scene, ij, app.params);
         app.display[ij] = tonemap(app.render[ij], app.exposure);
       });
     }
@@ -271,18 +270,18 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.imagename  = replace_extension(filename, ".png");
   app.outname    = replace_extension(filename, ".edited.yaml");
   app.name       = get_filename(app.filename);
-  app.trace_prms = app.trace_prms;
+  app.params = app.params;
   app.add_skyenv = app.add_skyenv;
   apps.loaders.push_back(
       std::async(std::launch::async, [&app]() -> sceneio_status {
         if (auto ret = load_scene(app.filename, app.ioscene); !ret) return ret;
         app.scene = make_scene(app.ioscene);
-        init_bvh(app.scene, app.trace_prms);
+        init_bvh(app.scene, app.params);
         init_lights(app.scene);
-        if (app.scene.lights.empty() && is_sampler_lit(app.trace_prms)) {
-          app.trace_prms.sampler = trace_sampler_type::eyelight;
+        if (app.scene.lights.empty() && is_sampler_lit(app.params)) {
+          app.params.sampler = trace_sampler_type::eyelight;
         }
-        app.state = make_state(app.scene, app.trace_prms);
+        app.state = make_state(app.scene, app.params);
         app.render.resize(app.state.size());
         app.display.resize(app.state.size());
         app.name = get_filename(app.filename) + " [" +
@@ -423,7 +422,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
       log_glinfo(win, e.what());
     }
     update_trace_shape(app.scene.shapes.at(id), shape, app.ioscene);
-    update_bvh(app.scene, {}, {id}, app.trace_prms);
+    update_bvh(app.scene, {}, {id}, app.params);
     init_lights(app.scene);
   } else if (edited) {
     update_trace_shape(app.scene.shapes.at(id), shape, app.ioscene);
@@ -446,9 +445,9 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
       win, "material", instance.material, app.ioscene.materials, true);
   if (edited) update_trace_instance(app.scene.instances.at(id), instance);
   if (edited && instance.shape != old_instance.shape)
-    update_bvh(app.scene, {}, {id}, app.trace_prms);
+    update_bvh(app.scene, {}, {id}, app.params);
   if (edited && instance.frame != old_instance.frame)
-    update_bvh(app.scene, {}, {id}, app.trace_prms);
+    update_bvh(app.scene, {}, {id}, app.params);
   // TODO: update lights
   return edited;
 }
@@ -532,7 +531,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (scene_ok && begin_glheader(win, "trace")) {
     auto  edited  = 0;
     auto& app     = apps.get_selected();
-    auto& tparams = app.trace_prms;
+    auto& tparams = app.params;
     edited += draw_glcombobox(
         win, "camera", tparams.camera, app.ioscene.cameras);
     edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
@@ -546,7 +545,7 @@ void draw_glwidgets(const opengl_window& win) {
     continue_glline(win);
     edited += draw_glcheckbox(win, "filter", tparams.tentfilter);
     edited += draw_glslider(win, "seed", (int&)tparams.seed, 0, 1000000);
-    edited += draw_glslider(win, "pratio", app.preview_ratio, 1, 64);
+    edited += draw_glslider(win, "pratio", app.pratio, 1, 64);
     edited += draw_glslider(win, "exposure", app.exposure, -5, 5);
     if (edited) reset_display(app);
     end_glheader(win);
@@ -564,7 +563,6 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glslider(win, "zoom", app.glparams.scale, 0.1, 10);
     draw_glcheckbox(win, "zoom to fit", app.glparams.fit);
     continue_glline(win);
-    draw_glcheckbox(win, "fps", app.navigation_fps);
     if (draw_glbutton(win, "print cams")) {
       for (auto& camera : app.ioscene.cameras) {
         print_obj_camera(camera);
@@ -702,7 +700,7 @@ void run_ui(app_states& apps) {
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
       auto& app    = apps.get_selected();
-      auto& camera = app.ioscene.cameras.at(app.trace_prms.camera);
+      auto& camera = app.ioscene.cameras.at(app.params.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
       auto  rotate = zero2f;
@@ -712,7 +710,7 @@ void run_ui(app_states& apps) {
         pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
       pan.x = -pan.x;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      update_trace_camera(app.scene.cameras.at(app.trace_prms.camera), camera);
+      update_trace_camera(app.scene.cameras.at(app.params.camera), camera);
       // TODO: update
       reset_display(app);
     }
@@ -725,7 +723,7 @@ void run_ui(app_states& apps) {
           app.glparams.scale, app.render.size());
       if (ij.x >= 0 && ij.x < app.render.size().x && ij.y >= 0 &&
           ij.y < app.render.size().y) {
-        auto& camera = app.scene.cameras.at(app.trace_prms.camera);
+        auto& camera = app.scene.cameras.at(app.params.camera);
         auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} /
                 vec2f{(float)app.render.size().x, (float)app.render.size().y});
@@ -756,23 +754,23 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");
-  add_cli_option(cli, "--camera", app.trace_prms.camera, "Camera index.");
+  add_cli_option(cli, "--camera", app.params.camera, "Camera index.");
   add_cli_option(
-      cli, "--resolution,-r", app.trace_prms.resolution, "Image resolution.");
+      cli, "--resolution,-r", app.params.resolution, "Image resolution.");
   add_cli_option(
-      cli, "--samples,-s", app.trace_prms.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)app.trace_prms.sampler,
+      cli, "--samples,-s", app.params.samples, "Number of samples.");
+  add_cli_option(cli, "--tracer,-t", (int&)app.params.sampler,
       "Tracer type.", trace_sampler_names);
-  add_cli_option(cli, "--falsecolor,-F", (int&)app.trace_prms.falsecolor,
+  add_cli_option(cli, "--falsecolor,-F", (int&)app.params.falsecolor,
       "Tracer false color type.", trace_falsecolor_names);
   add_cli_option(
-      cli, "--bounces", app.trace_prms.bounces, "Maximum number of bounces.");
-  add_cli_option(cli, "--clamp", app.trace_prms.clamp, "Final pixel clamping.");
-  add_cli_option(cli, "--filter", app.trace_prms.tentfilter, "Filter image.");
-  add_cli_option(cli, "--env-hidden/--no-env-hidden", app.trace_prms.envhidden,
+      cli, "--bounces", app.params.bounces, "Maximum number of bounces.");
+  add_cli_option(cli, "--clamp", app.params.clamp, "Final pixel clamping.");
+  add_cli_option(cli, "--filter", app.params.tentfilter, "Filter image.");
+  add_cli_option(cli, "--env-hidden/--no-env-hidden", app.params.envhidden,
       "Environments are hidden in renderer");
   add_cli_option(
-      cli, "--bvh", (int&)app.trace_prms.bvh, "Bvh type", trace_bvh_names);
+      cli, "--bvh", (int&)app.params.bvh, "Bvh type", trace_bvh_names);
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
