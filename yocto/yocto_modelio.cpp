@@ -935,7 +935,6 @@ static vector<T> convert_ply_property(const ply_property& prop) {
     case ply_type::u64: return convert_ply_property<T>(prop.data_u64);
     case ply_type::f32: return convert_ply_property<T>(prop.data_f32);
     case ply_type::f64: return convert_ply_property<T>(prop.data_f64);
-    default: throw std::runtime_error("should not be here");
   }
   // return here to silence warnings
   std::runtime_error("should not have gotten here");
@@ -1325,6 +1324,7 @@ template <typename VT>
     case ply_type::f32: return read_ply_prop<float>(fs, value, big_endian);
     case ply_type::f64: return read_ply_prop<double>(fs, value, big_endian);
   }
+  return false;
 }
 
 template <typename T, typename VT>
@@ -1347,8 +1347,8 @@ static bool parse_ply_prop(string_view& str, ply_type type, VT& value) {
     case ply_type::u64: return parse_ply_prop<uint64_t>(str, value);
     case ply_type::f32: return parse_ply_prop<float>(str, value);
     case ply_type::f64: return parse_ply_prop<double>(str, value);
-    default: return false;
   }
+  return false;
 }
 
 // Load ply data
@@ -1530,6 +1530,7 @@ static bool format_ply_prop(FILE* fs, ply_type type, VT value) {
     case ply_type::f32: return format_value(fs, (float)value);
     case ply_type::f64: return format_value(fs, (double)value);
   }
+  return false;
 }
 
 template <typename VT>
@@ -1550,8 +1551,8 @@ static bool write_ply_prop(FILE* fs, ply_type type, VT value, bool big_endian) {
     case ply_type::u64: return write_value(fs, (uint64_t)value, big_endian);
     case ply_type::f32: return write_value(fs, (float)value, big_endian);
     case ply_type::f64: return write_value(fs, (double)value, big_endian);
-    default: return false;
   }
+  return false;
 }
 
 // Write Ply functions
