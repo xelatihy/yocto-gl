@@ -1336,7 +1336,8 @@ static RTCDevice     trace_embree_device() {
 static void init_embree_bvh(trace_shape& shape, const trace_params& params) {
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
-  if (params.bvh == trace_bvh_type::embree_compact) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  if (params.bvh == trace_bvh_type::embree_compact)
+    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == trace_bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   if (!shape.points.empty()) {
@@ -1448,7 +1449,8 @@ static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
   // scene bvh
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
-  if (params.bvh == trace_bvh_type::embree_compact) rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
+  if (params.bvh == trace_bvh_type::embree_compact)
+    rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == trace_bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < scene.instances.size();
@@ -1680,16 +1682,15 @@ static pair<int, int> split_nodes(vector<int>& primitives,
     const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
     int end, trace_bvh_type type) {
   switch (type) {
-    case trace_bvh_type::default_: 
+    case trace_bvh_type::default_:
       return split_balanced(primitives, bboxes, centers, start, end);
-    case trace_bvh_type::highquality: 
+    case trace_bvh_type::highquality:
       return split_sah(primitives, bboxes, centers, start, end);
-    case trace_bvh_type::middle: 
+    case trace_bvh_type::middle:
       return split_middle(primitives, bboxes, centers, start, end);
-    case trace_bvh_type::balanced: 
+    case trace_bvh_type::balanced:
       return split_balanced(primitives, bboxes, centers, start, end);
-    default: 
-      throw std::runtime_error("should not have gotten here");
+    default: throw std::runtime_error("should not have gotten here");
   }
 }
 
@@ -1738,7 +1739,8 @@ static void build_bvh_serial(
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] = split_nodes(primitives, bboxes, centers, start, end, type);
+      auto [mid, axis] = split_nodes(
+          primitives, bboxes, centers, start, end, type);
 
       // make an internal node
       node.internal = true;
@@ -1793,9 +1795,9 @@ static void build_bvh_parallel(
 
   // create nodes until the queue is empty
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(std::async(std::launch::async,
-        [&nodes, &primitives, &bboxes, &centers, &type,
-            &num_processed_prims, &queue_mutex, &queue] {
+    futures.emplace_back(std::async(
+        std::launch::async, [&nodes, &primitives, &bboxes, &centers, &type,
+                                &num_processed_prims, &queue_mutex, &queue] {
           while (true) {
             // exit if needed
             if (num_processed_prims >= primitives.size()) return;
@@ -1828,7 +1830,8 @@ static void build_bvh_parallel(
             // split into two children
             if (end - start > bvh_max_prims) {
               // get split
-              auto [mid, axis] = split_nodes(primitives, bboxes, centers, start, end, type);
+              auto [mid, axis] = split_nodes(
+                  primitives, bboxes, centers, start, end, type);
 
               // make an internal node
               {
@@ -3217,11 +3220,11 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_samples(
-    trace_state& state, const trace_scene& scene, int samples, const trace_params& params) {
+image<vec4f> trace_samples(trace_state& state, const trace_scene& scene,
+    int samples, const trace_params& params) {
   auto render         = image<vec4f>{state.size()};
   auto current_sample = state[zero2i].samples;
-  samples    = min(samples, params.samples - current_sample);
+  samples             = min(samples, params.samples - current_sample);
   if (params.noparallel) {
     for (auto j = 0; j < render.size().y; j++) {
       for (auto i = 0; i < render.size().x; i++) {

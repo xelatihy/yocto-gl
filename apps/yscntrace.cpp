@@ -120,13 +120,13 @@ trace_scene make_scene(const sceneio_model& ioscene) {
 
 int main(int argc, const char* argv[]) {
   // options
-  auto params   = trace_params{};
-  auto batch = 16;
-  auto save_batch   = false;
-  auto add_skyenv   = false;
-  auto validate     = false;
-  auto imfilename   = "out.hdr"s;
-  auto filename     = "scene.json"s;
+  auto params     = trace_params{};
+  auto batch      = 16;
+  auto save_batch = false;
+  auto add_skyenv = false;
+  auto validate   = false;
+  auto imfilename = "out.hdr"s;
+  auto filename   = "scene.json"s;
 
   // names for enums
   auto sampler_namemap = std::map<string, trace_sampler_type>{};
@@ -223,8 +223,7 @@ int main(int argc, const char* argv[]) {
 
   // save image
   auto save_timer = print_timed("saving image");
-  if (auto ret = save_image(imfilename, render); !ret)
-    print_fatal(ret.error);
+  if (auto ret = save_image(imfilename, render); !ret) print_fatal(ret.error);
   print_elapsed(save_timer);
 
   // done

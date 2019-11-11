@@ -302,7 +302,8 @@ int main(int argc, const char* argv[]) {
   add_cli_option(
       cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
   add_cli_option(cli, "--srgb/--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
-  add_cli_option(cli, "--bvh", (int&)app.trace_prms.bvh, "Bvh type", trace_bvh_names);
+  add_cli_option(
+      cli, "--bvh", (int&)app.trace_prms.bvh, "Bvh type", trace_bvh_names);
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
   add_cli_option(cli, "--output,-o", app.imagename, "Image output", false);
   add_cli_option(cli, "scene", app.filename, "Scene filename", true);

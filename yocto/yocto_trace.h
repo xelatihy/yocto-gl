@@ -271,26 +271,31 @@ enum struct trace_falsecolor_type {
 };
 // Strategy used to build the bvh
 enum struct trace_bvh_type {
-  default_, highquality, middle, balanced,
+  default_,
+  highquality,
+  middle,
+  balanced,
 #ifdef YOCTO_EMBREE
-  embree_default, embree_highquality, embree_compact // only for copy interface
+  embree_default,
+  embree_highquality,
+  embree_compact  // only for copy interface
 #endif
 };
 
 // Options for trace functions
 struct trace_params {
-  int                   camera          = 0;
-  int                   resolution      = 1280;
-  trace_sampler_type    sampler         = trace_sampler_type::path;
-  trace_falsecolor_type falsecolor      = trace_falsecolor_type::diffuse;
-  int                   samples         = 512;
-  int                   bounces         = 8;
-  float                 clamp           = 10;
-  bool                  envhidden       = false;
-  bool                  tentfilter      = false;
-  uint64_t              seed            = trace_default_seed;
-  trace_bvh_type    bvh = trace_bvh_type::default_;
-  bool noparallel = false;
+  int                   camera     = 0;
+  int                   resolution = 1280;
+  trace_sampler_type    sampler    = trace_sampler_type::path;
+  trace_falsecolor_type falsecolor = trace_falsecolor_type::diffuse;
+  int                   samples    = 512;
+  int                   bounces    = 8;
+  float                 clamp      = 10;
+  bool                  envhidden  = false;
+  bool                  tentfilter = false;
+  uint64_t              seed       = trace_default_seed;
+  trace_bvh_type        bvh        = trace_bvh_type::default_;
+  bool                  noparallel = false;
 };
 
 const auto trace_sampler_names = vector<string>{
@@ -300,9 +305,10 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "transmission", "roughness", "material", "shape", "instance",
     "element", "highlight"};
-const auto trace_bvh_names = vector<string>{"default", "highquality", "middle", "balanced",
+const auto trace_bvh_names        = vector<string>{
+    "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
-  "embree-default", "embree-highquality", "embree-compact"
+    "embree-default", "embree-highquality", "embree-compact"
 #endif
 };
 
@@ -325,9 +331,8 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_params& params);
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-image<vec4f> trace_samples(
-    trace_state& state, const trace_scene& scene, int samples, 
-    const trace_params& params);
+image<vec4f> trace_samples(trace_state& state, const trace_scene& scene,
+    int samples, const trace_params& params);
 
 // Progressively compute an image by calling trace_sample multiple times.
 // This is helpful when building async applications.

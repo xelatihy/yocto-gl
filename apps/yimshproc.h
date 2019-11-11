@@ -210,8 +210,8 @@ void init_camera(app_state& app, const vec3f& from = vec3f{0, 0.5, 1.5},
 }
 
 void init_bvh(app_state& app) {
-  make_triangles_bvh(app.bvh, app.shape.triangles, app.shape.positions,
-      app.shape.radius);
+  make_triangles_bvh(
+      app.bvh, app.shape.triangles, app.shape.positions, app.shape.radius);
 }
 
 void hide_edges(app_state& app) {

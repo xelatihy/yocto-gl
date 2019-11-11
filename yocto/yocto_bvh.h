@@ -133,9 +133,14 @@ struct bvh_intersection {
 
 // Bvh build type.
 enum struct bvh_type {
-  default_, highquality, middle, balanced,
+  default_,
+  highquality,
+  middle,
+  balanced,
 #ifdef YOCTO_EMBREE
-  embree_default, embree_highquality, embree_compact // only for copy interface
+  embree_default,
+  embree_highquality,
+  embree_compact  // only for copy interface
 #endif
 };
 
@@ -247,8 +252,10 @@ struct bvh_scene {
 };
 
 // Build the bvh acceleration structure.
-void init_shape_bvh(bvh_shape& bvh, bvh_type type = bvh_type::default_, bool parallel = false);
-void init_scene_bvh(bvh_scene& bvh, bvh_type type = bvh_type::default_, bool parallel = false);
+void init_shape_bvh(
+    bvh_shape& bvh, bvh_type type = bvh_type::default_, bool parallel = false);
+void init_scene_bvh(
+    bvh_scene& bvh, bvh_type type = bvh_type::default_, bool parallel = false);
 
 // Refit bvh data
 void update_shape_bvh(bvh_shape& bvh);
