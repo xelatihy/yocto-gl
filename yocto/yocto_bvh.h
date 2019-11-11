@@ -131,19 +131,27 @@ struct bvh_intersection {
   bool  hit      = false;
 };
 
+// Bvh build strategy.
+enum struct bvh_strategy {
+  default_, highquality, middle, balanced,
+#ifdef YOCTO_EMBREE
+  embree_default, embree_highquality, embree_compact // only for copy interface
+#endif
+};
+
 // Make shape bvh
 void make_points_bvh(bvh_tree& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius,
-    bool high_quality, bool parallel);
+    bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
 void make_lines_bvh(bvh_tree& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius,
-    bool high_quality, bool parallel);
+    bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
 void make_triangles_bvh(bvh_tree& bvh, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<float>& radius,
-    bool high_quality, bool parallel);
+    bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
 void make_quads_bvh(bvh_tree& bvh, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<float>& radius,
-    bool high_quality, bool parallel);
+    bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
 
 // Updates shape bvh for changes in positions and radia
 void update_points_bvh(bvh_tree& bvh, const vector<int>& points,
@@ -238,24 +246,14 @@ struct bvh_scene {
 #endif
 };
 
-// bvh build params
-struct bvh_params {
-  bool high_quality = false;
-#if YOCTO_EMBREE
-  bool embree  = false;
-  bool compact = false;
-#endif
-  bool noparallel = false;
-};
-
 // Build the bvh acceleration structure.
-void init_shape_bvh(bvh_shape& bvh, const bvh_params& params);
-void init_scene_bvh(bvh_scene& bvh, const bvh_params& params);
+void init_shape_bvh(bvh_shape& bvh, bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
+void init_scene_bvh(bvh_scene& bvh, bvh_strategy strategy = bvh_strategy::default_, bool parallel = false);
 
 // Refit bvh data
-void update_shape_bvh(bvh_shape& bvh, const bvh_params& params);
+void update_shape_bvh(bvh_shape& bvh);
 void update_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes, const bvh_params& params);
+    const vector<int>& updated_shapes);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
