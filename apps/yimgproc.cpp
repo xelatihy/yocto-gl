@@ -129,7 +129,7 @@ int main(int argc, const char* argv[]) {
   add_cli_option(
       cli, "--logcontrast", tonemap_prms.logcontrast, "Tonemap log contrast");
   add_cli_option(
-      cli, "--lincontrast", tonemap_prms.contrast, "Tonemap linear contrast");
+      cli, "--lincontrast", tonemap_prms.lincontrast, "Tonemap linear contrast");
   add_cli_option(
       cli, "--saturation", tonemap_prms.saturation, "Tonemap saturation");
   add_cli_option(cli, "--resize-width", resize_width,

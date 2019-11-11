@@ -615,7 +615,7 @@ vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   auto rgb = hdr;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
   if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
-  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast, 0.18f);
+  if (params.lincontrast != 0.5f) rgb = lincontrast(rgb, params.lincontrast, 0.18f);
   if (params.logcontrast != 0.5f)
     rgb = logcontrast(rgb, params.logcontrast, 0.18f);
   if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);

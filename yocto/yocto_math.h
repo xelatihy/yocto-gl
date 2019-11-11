@@ -1951,7 +1951,7 @@ inline vec3f rgb_to_srgb(const vec3f& rgb);
 inline vec4f rgb_to_srgb(const vec4f& rgb);
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f contrast(const vec3f& rgb, float contrast, float grey);
+inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey);
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
 // Apply saturation.
@@ -2242,7 +2242,7 @@ inline vec4f rgb_to_srgb(const vec4f& rgb) {
 }
 
 // Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f contrast(const vec3f& rgb, float contrast, float grey) {
+inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey) {
   return max(zero3f, grey + (rgb - grey) * (contrast * 2));
 }
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.

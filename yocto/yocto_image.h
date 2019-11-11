@@ -191,7 +191,7 @@ image<vec4b> tonemap_imageb(const image<vec4f>& hdr, float exposure, bool filmic
 struct tonemap_params {
   float exposure    = 0;
   vec3f tint        = {1, 1, 1};
-  float contrast    = 0.5;
+  float lincontrast = 0.5;
   float logcontrast = 0.5;
   float saturation  = 0.5;
   bool  filmic      = false;

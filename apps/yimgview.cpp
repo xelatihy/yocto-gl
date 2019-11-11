@@ -222,7 +222,7 @@ void draw_glwidgets(const opengl_window& win) {
     auto  edited = 0;
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
     edited += draw_glcoloredit(win, "tint", params.tint);
-    edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
+    edited += draw_glslider(win, "contrast", params.lincontrast, 0, 1);
     edited += draw_glslider(win, "logcontrast", params.logcontrast, 0, 1);
     edited += draw_glslider(win, "saturation", params.saturation, 0, 1);
     edited += draw_glcheckbox(win, "filmic", params.filmic);
