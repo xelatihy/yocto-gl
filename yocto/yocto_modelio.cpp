@@ -33,8 +33,8 @@
 #include "yocto_modelio.h"
 
 #include <algorithm>
-#include <string_view>
 #include <memory>
+#include <string_view>
 
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"

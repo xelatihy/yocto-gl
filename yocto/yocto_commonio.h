@@ -87,13 +87,13 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <algorithm>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
