@@ -84,6 +84,7 @@ write and more robust io code. This follows the stardard practice in the C++ STL
 ## Credits
 
 Main contributors:
+
 - Fabio Pellacini (lead developer): [web](http://pellacini.di.uniroma1.it), [github](https://github.com/xelatihy)
 - Edoardo Carra: [github](https://github.com/edoardocarra)
 - Giacomo Nazzaro: [github](https://github.com/giacomonazzaro)
