@@ -642,10 +642,18 @@ image<vec4b> tonemap_imageb(
   return ldr;
 }
 
-vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
-  auto rgb = ldr;
+vec3f colorgrade(const vec3f& rgb_, bool linear, const colorgrade_params& params) {
+  auto rgb = rgb_;
+  if (params.exposure != 0) rgb *= exp2(params.exposure);
+  if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
+  if (params.lincontrast != 0.5f) rgb = lincontrast(rgb, params.lincontrast, linear ? 0.18f : 0.5f);
+  if (params.logcontrast != 0.5f)
+    rgb = logcontrast(rgb, params.logcontrast, linear ? 0.18f : 0.5f);
+  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
+  if (params.filmic) rgb = tonemap_filmic(rgb);
+  if (linear && params.srgb) rgb = rgb_to_srgb(rgb);
   if (params.contrast != 0.5f) {
-    rgb = gain(ldr, 1 - params.contrast);
+    rgb = gain(rgb, 1 - params.contrast);
   }
   if (params.shadows != 0.5f || params.midtones != 0.5f ||
       params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
@@ -666,16 +674,16 @@ vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params) {
   }
   return rgb;
 }
-vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params) {
-  return {colorgrade(xyz(ldr), params), ldr.w};
+vec4f colorgrade(const vec4f& rgba, bool linear, const colorgrade_params& params) {
+  return {colorgrade(xyz(rgba), linear, params), rgba.w};
 }
 
 // Apply exposure and filmic tone mapping
 image<vec4f> colorgrade_image(
-    const image<vec4f>& ldr, const colorgrade_params& params) {
-  auto corrected = image<vec4f>{ldr.size()};
-  for (auto i = 0ull; i < ldr.count(); i++)
-    corrected[i] = colorgrade(ldr[i], params);
+    const image<vec4f>& img, bool linear, const colorgrade_params& params) {
+  auto corrected = image<vec4f>{img.size()};
+  for (auto i = 0ull; i < img.count(); i++)
+    corrected[i] = colorgrade(img[i], linear, params);
   return corrected;
 }
 

@@ -141,7 +141,7 @@ void update_display(app_state& app) {
   parallel_for(app.source.size(), [&app](const vec2i& ij) {
     if (app.apply_colorgrade) {
       app.display[ij] = colorgrade(
-          tonemap(app.source[ij], app.exposure, app.filmic), app.colorgrade_prms);
+          app.source[ij], true, app.colorgrade_prms);
     } else {
       app.display[ij] = tonemap(app.source[ij], app.exposure, app.filmic);
     }
@@ -166,9 +166,11 @@ void load_image_async(app_states& apps, const string& filename) {
       return false;
     }
     compute_stats(app.source_stats, app.source, is_hdr_filename(app.filename));
-    app.display = tonemap_image(app.source, app.exposure, app.filmic);
-    if (app.apply_colorgrade)
-      app.display = colorgrade_image(app.display, app.colorgrade_prms);
+    if (app.apply_colorgrade) {
+      app.display = colorgrade_image(app.display, true, app.colorgrade_prms);
+    } else {
+      app.display = tonemap_image(app.source, app.exposure, app.filmic);
+    }
     compute_stats(app.display_stats, app.display, false);
     return true;
   }));

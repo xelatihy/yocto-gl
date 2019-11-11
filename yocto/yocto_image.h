@@ -202,7 +202,7 @@ struct tonemap_params {
 vec3f tonemap(const vec3f& hdr, const tonemap_params& params);
 vec4f tonemap(const vec4f& hdr, const tonemap_params& params);
 
-// Apply tone mapping
+// Tonemap an HDR image to an LDR one.
 image<vec4f> tonemap_image(
     const image<vec4f>& hdr, const tonemap_params& params);
 image<vec4b> tonemap_imageb(
@@ -210,6 +210,13 @@ image<vec4b> tonemap_imageb(
 
 // minimal color grading
 struct colorgrade_params {
+  float exposure    = 0;
+  vec3f tint        = {1, 1, 1};
+  float lincontrast = 0.5;
+  float logcontrast = 0.5;
+  float saturation  = 0.5;
+  bool  filmic      = false;
+  bool  srgb        = true;
   float contrast         = 0.5;
   float shadows          = 0.5;
   float midtones         = 0.5;
@@ -219,12 +226,13 @@ struct colorgrade_params {
   vec3f highlights_color = {1, 1, 1};
 };
 
-vec3f colorgrade(const vec3f& ldr, const colorgrade_params& params);
-vec4f colorgrade(const vec4f& ldr, const colorgrade_params& params);
+// Apply color grading from a linear or srgb color to an srgb color.
+vec3f colorgrade(const vec3f& rgb, bool linear, const colorgrade_params& params);
+vec4f colorgrade(const vec4f& rgb, bool linear, const colorgrade_params& params);
 
-// color grade an image region
-image<vec4f> colorgrade_image(
-    const image<vec4f>& img, const colorgrade_params& params);
+// Color grade a linear or srgb image to an srgb image.
+image<vec4f> colorgrade_image(const image<vec4f>& img, bool linear, 
+  const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
