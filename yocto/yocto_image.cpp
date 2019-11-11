@@ -612,38 +612,6 @@ image<vec4b> tonemap_imageb(
   return ldr;
 }
 
-vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
-  auto rgb = hdr;
-  if (params.exposure != 0) rgb *= exp2(params.exposure);
-  if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
-  if (params.lincontrast != 0.5f)
-    rgb = lincontrast(rgb, params.lincontrast, 0.18f);
-  if (params.logcontrast != 0.5f)
-    rgb = logcontrast(rgb, params.logcontrast, 0.18f);
-  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
-  if (params.filmic) rgb = tonemap_filmic(rgb);
-  if (params.srgb) rgb = rgb_to_srgb(rgb);
-  return rgb;
-}
-vec4f tonemap(const vec4f& hdr, const tonemap_params& params) {
-  return {tonemap(xyz(hdr), params), hdr.w};
-}
-
-// Apply exposure and filmic tone mapping
-image<vec4f> tonemap_image(
-    const image<vec4f>& hdr, const tonemap_params& params) {
-  auto ldr = image<vec4f>{hdr.size()};
-  for (auto i = 0ull; i < hdr.count(); i++) ldr[i] = tonemap(hdr[i], params);
-  return ldr;
-}
-image<vec4b> tonemap_imageb(
-    const image<vec4f>& hdr, const tonemap_params& params) {
-  auto ldr = image<vec4b>{hdr.size()};
-  for (auto i = 0ull; i < hdr.count(); i++)
-    ldr[i] = float_to_byte(tonemap(hdr[i], params));
-  return ldr;
-}
-
 vec3f colorgrade(
     const vec3f& rgb_, bool linear, const colorgrade_params& params) {
   auto rgb = rgb_;
@@ -1795,14 +1763,6 @@ imageio_status save_imageb(const string& filename, const image<vec4b>& img) {
   } else {
     return {filename + ": unsupported format"};
   }
-}
-
-// Loads/saves a 4 channels float/byte image tonemapped
-imageio_status save_image_tonemapped(const string& filename,
-    const image<vec4f>& img, const tonemap_params& params) {
-  return is_hdr_filename(filename)
-             ? save_image(filename, img)
-             : save_imageb(filename, tonemap_imageb(img, params));
 }
 
 }  // namespace yocto

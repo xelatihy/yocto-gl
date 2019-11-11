@@ -190,27 +190,6 @@ image<vec4f> tonemap_image(const image<vec4f>& hdr, float exposure,
 image<vec4b> tonemap_imageb(const image<vec4f>& hdr, float exposure,
     bool filmic = false, bool srgb = true);
 
-// Tone mapping params
-struct tonemap_params {
-  float exposure    = 0;
-  vec3f tint        = {1, 1, 1};
-  float lincontrast = 0.5;
-  float logcontrast = 0.5;
-  float saturation  = 0.5;
-  bool  filmic      = false;
-  bool  srgb        = true;
-};
-
-// Apply tone mapping
-vec3f tonemap(const vec3f& hdr, const tonemap_params& params);
-vec4f tonemap(const vec4f& hdr, const tonemap_params& params);
-
-// Tonemap an HDR image to an LDR one.
-image<vec4f> tonemap_image(
-    const image<vec4f>& hdr, const tonemap_params& params);
-image<vec4b> tonemap_imageb(
-    const image<vec4f>& hdr, const tonemap_params& params);
-
 // minimal color grading
 struct colorgrade_params {
   float exposure         = 0;
@@ -274,10 +253,6 @@ imageio_status save_image(const string& filename, const image<vec4f>& img);
 image<vec4b>   load_imageb(const string& filename);
 imageio_status load_imageb(const string& filename, image<vec4b>& img);
 imageio_status save_imageb(const string& filename, const image<vec4b>& img);
-
-// Loads/saves a 4 channels float/byte image tonemapped
-imageio_status save_image_tonemapped(const string& filename,
-    const image<vec4f>& img, const tonemap_params& params);
 
 }  // namespace yocto
 
