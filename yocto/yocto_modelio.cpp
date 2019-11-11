@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <string_view>
+#include <memory>
 
 #define CGLTF_IMPLEMENTATION
 #include "ext/cgltf.h"
