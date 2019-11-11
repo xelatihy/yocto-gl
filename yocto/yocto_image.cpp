@@ -600,7 +600,8 @@ vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
 image<vec4f> tonemap_image(
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
   auto ldr = image<vec4f>{hdr.size()};
-  for (auto i = 0ull; i < hdr.count(); i++) ldr[i] = tonemap(hdr[i], exposure, filmic, srgb);
+  for (auto i = 0ull; i < hdr.count(); i++)
+    ldr[i] = tonemap(hdr[i], exposure, filmic, srgb);
   return ldr;
 }
 image<vec4b> tonemap_imageb(
@@ -615,7 +616,8 @@ vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   auto rgb = hdr;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
   if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
-  if (params.lincontrast != 0.5f) rgb = lincontrast(rgb, params.lincontrast, 0.18f);
+  if (params.lincontrast != 0.5f)
+    rgb = lincontrast(rgb, params.lincontrast, 0.18f);
   if (params.logcontrast != 0.5f)
     rgb = logcontrast(rgb, params.logcontrast, 0.18f);
   if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
@@ -642,11 +644,13 @@ image<vec4b> tonemap_imageb(
   return ldr;
 }
 
-vec3f colorgrade(const vec3f& rgb_, bool linear, const colorgrade_params& params) {
+vec3f colorgrade(
+    const vec3f& rgb_, bool linear, const colorgrade_params& params) {
   auto rgb = rgb_;
   if (params.exposure != 0) rgb *= exp2(params.exposure);
   if (params.tint != vec3f{1, 1, 1}) rgb *= params.tint;
-  if (params.lincontrast != 0.5f) rgb = lincontrast(rgb, params.lincontrast, linear ? 0.18f : 0.5f);
+  if (params.lincontrast != 0.5f)
+    rgb = lincontrast(rgb, params.lincontrast, linear ? 0.18f : 0.5f);
   if (params.logcontrast != 0.5f)
     rgb = logcontrast(rgb, params.logcontrast, linear ? 0.18f : 0.5f);
   if (params.linsaturation != 0.5f) rgb = saturate(rgb, params.linsaturation);
@@ -673,7 +677,8 @@ vec3f colorgrade(const vec3f& rgb_, bool linear, const colorgrade_params& params
   }
   return rgb;
 }
-vec4f colorgrade(const vec4f& rgba, bool linear, const colorgrade_params& params) {
+vec4f colorgrade(
+    const vec4f& rgba, bool linear, const colorgrade_params& params) {
   return {colorgrade(xyz(rgba), linear, params), rgba.w};
 }
 

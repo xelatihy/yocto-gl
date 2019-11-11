@@ -43,18 +43,18 @@ struct app_state {
   string name      = "";
 
   // options
-  trace_params   trace_prms    = {};
-  int            preview_ratio = 8;
+  trace_params trace_prms    = {};
+  int          preview_ratio = 8;
 
   // scene
   trace_scene scene      = {};
   bool        add_skyenv = false;
 
   // rendering state
-  trace_state  state   = {};
-  image<vec4f> render  = {};
-  image<vec4f> display = {};
-  float exposure = 0;
+  trace_state  state    = {};
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
   opengl_image        gl_image  = {};

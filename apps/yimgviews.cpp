@@ -43,8 +43,8 @@ struct app_state {
 
   // diplay data
   image<vec4f>      display          = {};
-  float exposure = 0;
-  bool filmic = false;
+  float             exposure         = 0;
+  bool              filmic           = false;
   colorgrade_params colorgrade_prms  = {};
   bool              apply_colorgrade = false;
 

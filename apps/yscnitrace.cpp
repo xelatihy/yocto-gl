@@ -49,8 +49,8 @@ struct app_state {
   string name      = "";
 
   // options
-  trace_params   trace_prms    = {};
-  int            preview_ratio = 8;
+  trace_params trace_prms    = {};
+  int          preview_ratio = 8;
 
   // scene
   sceneio_model ioscene    = {};
@@ -58,10 +58,10 @@ struct app_state {
   bool          add_skyenv = false;
 
   // rendering state
-  trace_state  state   = {};
-  image<vec4f> render  = {};
-  image<vec4f> display = {};
-  float exposure = 0;
+  trace_state  state    = {};
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
   opengl_image        gl_image       = {};
@@ -104,8 +104,8 @@ struct app_states {
   }
 
   // default options
-  trace_params   trace_prms   = {};
-  bool           add_skyenv   = false;
+  trace_params trace_prms = {};
+  bool         add_skyenv = false;
 };
 
 // convert scene objects
@@ -266,13 +266,13 @@ void reset_display(app_state& app) {
 }
 
 void load_scene_async(app_states& apps, const string& filename) {
-  auto& app        = apps.loading.emplace_back();
-  app.filename     = filename;
-  app.imagename    = replace_extension(filename, ".png");
-  app.outname      = replace_extension(filename, ".edited.yaml");
-  app.name         = get_filename(app.filename);
-  app.trace_prms   = app.trace_prms;
-  app.add_skyenv   = app.add_skyenv;
+  auto& app      = apps.loading.emplace_back();
+  app.filename   = filename;
+  app.imagename  = replace_extension(filename, ".png");
+  app.outname    = replace_extension(filename, ".edited.yaml");
+  app.name       = get_filename(app.filename);
+  app.trace_prms = app.trace_prms;
+  app.add_skyenv = app.add_skyenv;
   apps.loaders.push_back(
       std::async(std::launch::async, [&app]() -> sceneio_status {
         if (auto ret = load_scene(app.filename, app.ioscene); !ret) return ret;

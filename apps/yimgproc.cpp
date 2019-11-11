@@ -102,9 +102,9 @@ image<vec4f> filter_bilateral(
 
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto tonemap_on             = false;
-  auto tonemap_exposure            = 0;
-  auto tonemap_filmic              = false;
+  auto tonemap_on          = false;
+  auto tonemap_exposure    = 0;
+  auto tonemap_filmic      = false;
   auto logo                = false;
   auto resize_width        = 0;
   auto resize_height       = 0;
@@ -121,8 +121,7 @@ int main(int argc, const char* argv[]) {
   // parse command line
   auto cli = make_cli("yimgproc", "Transform images");
   add_cli_option(cli, "--tonemap/--no-tonemap,-t", tonemap_on, "Tonemap image");
-  add_cli_option(
-      cli, "--exposure,-e", tonemap_exposure, "Tonemap exposure");
+  add_cli_option(cli, "--exposure,-e", tonemap_exposure, "Tonemap exposure");
   add_cli_option(cli, "--filmic/--no-filmic,-f", tonemap_filmic,
       "Tonemap uses filmic curve");
   add_cli_option(cli, "--resize-width", resize_width,

@@ -56,8 +56,8 @@ struct app_state {
   image_stats display_stats = {};
 
   // tonemapping values
-  float exposure = 0;
-  bool filmic = false;
+  float             exposure         = 0;
+  bool              filmic           = false;
   colorgrade_params colorgrade_prms  = {};
   bool              apply_colorgrade = false;
 
@@ -90,8 +90,8 @@ struct app_states {
   }
 
   // default options
-  float exposure = 0;
-  bool filmic = false;
+  float             exposure        = 0;
+  bool              filmic          = false;
   colorgrade_params colorgrade_prms = {};
 };
 
@@ -140,8 +140,7 @@ void update_display(app_state& app) {
   if (app.display.size() != app.source.size()) app.display = app.source;
   parallel_for(app.source.size(), [&app](const vec2i& ij) {
     if (app.apply_colorgrade) {
-      app.display[ij] = colorgrade(
-          app.source[ij], true, app.colorgrade_prms);
+      app.display[ij] = colorgrade(app.source[ij], true, app.colorgrade_prms);
     } else {
       app.display[ij] = tonemap(app.source[ij], app.exposure, app.filmic);
     }
@@ -156,8 +155,8 @@ void load_image_async(app_states& apps, const string& filename) {
   app.filename        = filename;
   app.outname         = replace_extension(filename, ".display.png");
   app.name            = get_filename(filename);
-  app.exposure    = apps.exposure;
-  app.filmic    = apps.filmic;
+  app.exposure        = apps.exposure;
+  app.filmic          = apps.filmic;
   app.colorgrade_prms = apps.colorgrade_prms;
   apps.selected       = (int)apps.states.size() - 1;
   apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
