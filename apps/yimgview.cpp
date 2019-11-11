@@ -233,6 +233,7 @@ void draw_glwidgets(const opengl_window& win) {
     auto& app    = apps.get_selected();
     auto& params = app.colorgrade_prms;
     auto  edited = 0;
+    edited += draw_glcheckbox(win, "apply colorgrade", app.apply_colorgrade);
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
     edited += draw_glcoloredit(win, "tint", params.tint);
     edited += draw_glslider(win, "lincontrast", params.lincontrast, 0, 1);
@@ -247,7 +248,6 @@ void draw_glwidgets(const opengl_window& win) {
       params.tint = wb / max(wb);
       edited += 1;
     }
-    edited += draw_glcheckbox(win, "apply colorgrade", app.apply_colorgrade);
     edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
     edited += draw_glslider(win, "saturation", params.saturation, 0, 1);
     edited += draw_glslider(win, "shadows", params.shadows, 0, 1);
