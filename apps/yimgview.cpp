@@ -56,7 +56,8 @@ struct app_state {
   image_stats display_stats = {};
 
   // tonemapping values
-  tonemap_params    tonemap_prms     = {};
+  float exposure = 0;
+  bool filmic = false;
   colorgrade_params colorgrade_prms  = {};
   bool              apply_colorgrade = false;
 
@@ -89,7 +90,8 @@ struct app_states {
   }
 
   // default options
-  tonemap_params    tonemap_prms    = {};
+  float exposure = 0;
+  bool filmic = false;
   colorgrade_params colorgrade_prms = {};
 };
 
@@ -139,9 +141,9 @@ void update_display(app_state& app) {
   parallel_for(app.source.size(), [&app](const vec2i& ij) {
     if (app.apply_colorgrade) {
       app.display[ij] = colorgrade(
-          tonemap(app.source[ij], app.tonemap_prms), app.colorgrade_prms);
+          tonemap(app.source[ij], app.exposure, app.filmic), app.colorgrade_prms);
     } else {
-      app.display[ij] = tonemap(app.source[ij], app.tonemap_prms);
+      app.display[ij] = tonemap(app.source[ij], app.exposure, app.filmic);
     }
   });
   compute_stats(app.display_stats, app.display, false);
@@ -154,8 +156,9 @@ void load_image_async(app_states& apps, const string& filename) {
   app.filename        = filename;
   app.outname         = replace_extension(filename, ".display.png");
   app.name            = get_filename(filename);
-  app.tonemap_prms    = app.tonemap_prms;
-  app.colorgrade_prms = app.colorgrade_prms;
+  app.exposure    = apps.exposure;
+  app.filmic    = apps.filmic;
+  app.colorgrade_prms = apps.colorgrade_prms;
   apps.selected       = (int)apps.states.size() - 1;
   apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
     if (!load_image(app.filename, app.source)) {
@@ -163,7 +166,7 @@ void load_image_async(app_states& apps, const string& filename) {
       return false;
     }
     compute_stats(app.source_stats, app.source, is_hdr_filename(app.filename));
-    app.display = tonemap_image(app.source, app.tonemap_prms);
+    app.display = tonemap_image(app.source, app.exposure, app.filmic);
     if (app.apply_colorgrade)
       app.display = colorgrade_image(app.display, app.colorgrade_prms);
     compute_stats(app.display_stats, app.display, false);
@@ -218,8 +221,17 @@ void draw_glwidgets(const opengl_window& win) {
       false);
   if (image_ok && begin_glheader(win, "tonemap")) {
     auto& app    = apps.get_selected();
-    auto& params = app.tonemap_prms;
     auto  edited = 0;
+    edited += draw_glslider(win, "exposure", app.exposure, -5, 5);
+    edited += draw_glcheckbox(win, "filmic", app.filmic);
+    if (edited) update_display(app);
+    end_glheader(win);
+  }
+  if (image_ok && begin_glheader(win, "colorgrade")) {
+    auto& app    = apps.get_selected();
+    auto& params = app.colorgrade_prms;
+    auto  edited = 0;
+    #if 0
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
     edited += draw_glcoloredit(win, "tint", params.tint);
     edited += draw_glslider(win, "contrast", params.lincontrast, 0, 1);
@@ -234,13 +246,7 @@ void draw_glwidgets(const opengl_window& win) {
       params.tint = wb / max(wb);
       edited += 1;
     }
-    if (edited) update_display(app);
-    end_glheader(win);
-  }
-  if (image_ok && begin_glheader(win, "colorgrade")) {
-    auto& app    = apps.get_selected();
-    auto& params = app.colorgrade_prms;
-    auto  edited = 0;
+    #endif
     edited += draw_glcheckbox(win, "apply colorgrade", app.apply_colorgrade);
     edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
     edited += draw_glslider(win, "ldr shadows", params.shadows, 0, 1);

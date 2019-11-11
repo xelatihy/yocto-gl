@@ -43,7 +43,8 @@ struct app_state {
 
   // diplay data
   image<vec4f>      display          = {};
-  tonemap_params    tonemap_prms     = {};
+  float exposure = 0;
+  bool filmic = false;
   colorgrade_params colorgrade_prms  = {};
   bool              apply_colorgrade = false;
 
@@ -77,9 +78,9 @@ void update_display(app_state& app) {
   parallel_for(app.source.size(), [&app](const vec2i& ij) {
     if (app.apply_colorgrade) {
       app.display[ij] = colorgrade(
-          tonemap(app.source[ij], app.tonemap_prms), app.colorgrade_prms);
+          tonemap(app.source[ij], app.exposure, app.filmic), app.colorgrade_prms);
     } else {
-      app.display[ij] = tonemap(app.source[ij], app.tonemap_prms);
+      app.display[ij] = tonemap(app.source[ij], app.exposure, app.filmic);
     }
   });
 }
