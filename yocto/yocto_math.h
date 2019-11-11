@@ -163,10 +163,6 @@
 #ifndef _YOCTO_MATH_H_
 #define _YOCTO_MATH_H_
 
-#ifndef YOCTO_QUADS_AS_TRIANGLES
-#define YOCTO_QUADS_AS_TRIANGLES 1
-#endif
-
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -1862,7 +1858,7 @@ inline T interpolate_triangle(
 template <typename T>
 inline T interpolate_quad(
     const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
-#if YOCTO_QUADS_AS_TRIANGLES
+#if 1
   if (uv.x + uv.y <= 1) {
     return interpolate_triangle(p0, p1, p3, uv);
   } else {
@@ -1919,7 +1915,7 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
-#if YOCTO_QUADS_AS_TRIANGLES
+#if 1
   if (current_uv.x + current_uv.y <= 1) {
     return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
   } else {

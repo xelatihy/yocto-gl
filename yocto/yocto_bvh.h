@@ -75,10 +75,6 @@
 #ifndef _YOCTO_BVH_H_
 #define _YOCTO_BVH_H_
 
-#ifndef YOCTO_QUADS_AS_TRIANGLES
-#define YOCTO_QUADS_AS_TRIANGLES 1
-#endif
-
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
