@@ -275,7 +275,7 @@ enum struct trace_bvh_type {
   highquality,
   middle,
   balanced,
-#ifdef YOCTO_EMBREE
+#if YOCTO_EMBREE
   embree_default,
   embree_highquality,
   embree_compact  // only for copy interface
@@ -307,7 +307,7 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "element", "highlight"};
 const auto trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
-#ifdef YOCTO_EMBREE
+#if YOCTO_EMBREE
     "embree-default", "embree-highquality", "embree-compact"
 #endif
 };
