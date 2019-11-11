@@ -1954,6 +1954,8 @@ inline vec4f rgb_to_srgb(const vec4f& rgb);
 inline vec3f lincontrast(const vec3f& rgb, float contrast, float grey);
 // Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
 inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
+// Apply an s-shaped contrast.
+inline vec3f contrast(const vec3f& rgb, float contrast);
 // Apply saturation.
 inline vec3f saturate(const vec3f& rgb, float saturation,
     const vec3f& weights = vec3f{0.333333f});
@@ -2252,6 +2254,10 @@ inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
   auto log_ldr  = log2(rgb + epsilon);
   auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
   return max(zero3f, exp2(adjusted) - epsilon);
+}
+// Apply an s-shaped contrast.
+inline vec3f contrast(const vec3f& rgb, float contrast) {
+  return gain(rgb, 1 - contrast);
 }
 // Apply saturation.
 inline vec3f saturate(

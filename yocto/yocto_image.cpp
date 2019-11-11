@@ -649,12 +649,11 @@ vec3f colorgrade(const vec3f& rgb_, bool linear, const colorgrade_params& params
   if (params.lincontrast != 0.5f) rgb = lincontrast(rgb, params.lincontrast, linear ? 0.18f : 0.5f);
   if (params.logcontrast != 0.5f)
     rgb = logcontrast(rgb, params.logcontrast, linear ? 0.18f : 0.5f);
-  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
+  if (params.linsaturation != 0.5f) rgb = saturate(rgb, params.linsaturation);
   if (params.filmic) rgb = tonemap_filmic(rgb);
   if (linear && params.srgb) rgb = rgb_to_srgb(rgb);
-  if (params.contrast != 0.5f) {
-    rgb = gain(rgb, 1 - params.contrast);
-  }
+  if (params.contrast != 0.5f) rgb = contrast(rgb, params.contrast);
+  if (params.saturation != 0.5f) rgb = saturate(rgb, params.saturation);
   if (params.shadows != 0.5f || params.midtones != 0.5f ||
       params.highlights != 0.5f || params.shadows_color != vec3f{1, 1, 1} ||
       params.midtones_color != vec3f{1, 1, 1} ||

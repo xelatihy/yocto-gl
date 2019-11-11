@@ -233,12 +233,11 @@ void draw_glwidgets(const opengl_window& win) {
     auto& app    = apps.get_selected();
     auto& params = app.colorgrade_prms;
     auto  edited = 0;
-    #if 0
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
     edited += draw_glcoloredit(win, "tint", params.tint);
-    edited += draw_glslider(win, "contrast", params.lincontrast, 0, 1);
+    edited += draw_glslider(win, "lincontrast", params.lincontrast, 0, 1);
     edited += draw_glslider(win, "logcontrast", params.logcontrast, 0, 1);
-    edited += draw_glslider(win, "saturation", params.saturation, 0, 1);
+    edited += draw_glslider(win, "linsaturation", params.linsaturation, 0, 1);
     edited += draw_glcheckbox(win, "filmic", params.filmic);
     continue_glline(win);
     edited += draw_glcheckbox(win, "srgb", params.srgb);
@@ -248,11 +247,11 @@ void draw_glwidgets(const opengl_window& win) {
       params.tint = wb / max(wb);
       edited += 1;
     }
-    #endif
     edited += draw_glcheckbox(win, "apply colorgrade", app.apply_colorgrade);
     edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
-    edited += draw_glslider(win, "ldr shadows", params.shadows, 0, 1);
-    edited += draw_glslider(win, "ldr midtones", params.midtones, 0, 1);
+    edited += draw_glslider(win, "saturation", params.saturation, 0, 1);
+    edited += draw_glslider(win, "shadows", params.shadows, 0, 1);
+    edited += draw_glslider(win, "midtones", params.midtones, 0, 1);
     edited += draw_glslider(win, "highlights", params.highlights, 0, 1);
     edited += draw_glcoloredit(win, "shadows color", params.shadows_color);
     edited += draw_glcoloredit(win, "midtones color", params.midtones_color);

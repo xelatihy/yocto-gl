@@ -214,10 +214,11 @@ struct colorgrade_params {
   vec3f tint        = {1, 1, 1};
   float lincontrast = 0.5;
   float logcontrast = 0.5;
-  float saturation  = 0.5;
+  float linsaturation  = 0.5;
   bool  filmic      = false;
   bool  srgb        = true;
   float contrast         = 0.5;
+  float saturation  = 0.5;
   float shadows          = 0.5;
   float midtones         = 0.5;
   float highlights       = 0.5;
