@@ -58,8 +58,8 @@ struct app_state {
   // tonemapping values
   float             exposure         = 0;
   bool              filmic           = false;
-  colorgrade_params colorgrade_prms  = {};
-  bool              apply_colorgrade = false;
+  colorgrade_params params  = {};
+  bool              colorgrade = false;
 
   // viewing properties
   opengl_image        glimage   = {};
@@ -92,7 +92,7 @@ struct app_states {
   // default options
   float             exposure        = 0;
   bool              filmic          = false;
-  colorgrade_params colorgrade_prms = {};
+  colorgrade_params params = {};
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -139,8 +139,8 @@ void compute_stats(
 void update_display(app_state& app) {
   if (app.display.size() != app.source.size()) app.display = app.source;
   parallel_for(app.source.size(), [&app](const vec2i& ij) {
-    if (app.apply_colorgrade) {
-      app.display[ij] = colorgrade(app.source[ij], true, app.colorgrade_prms);
+    if (app.colorgrade) {
+      app.display[ij] = colorgrade(app.source[ij], true, app.params);
     } else {
       app.display[ij] = tonemap(app.source[ij], app.exposure, app.filmic);
     }
@@ -157,7 +157,7 @@ void load_image_async(app_states& apps, const string& filename) {
   app.name            = get_filename(filename);
   app.exposure        = apps.exposure;
   app.filmic          = apps.filmic;
-  app.colorgrade_prms = apps.colorgrade_prms;
+  app.params = apps.params;
   apps.selected       = (int)apps.states.size() - 1;
   apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
     if (!load_image(app.filename, app.source)) {
@@ -165,8 +165,8 @@ void load_image_async(app_states& apps, const string& filename) {
       return false;
     }
     compute_stats(app.source_stats, app.source, is_hdr_filename(app.filename));
-    if (app.apply_colorgrade) {
-      app.display = colorgrade_image(app.display, true, app.colorgrade_prms);
+    if (app.colorgrade) {
+      app.display = colorgrade_image(app.display, true, app.params);
     } else {
       app.display = tonemap_image(app.source, app.exposure, app.filmic);
     }
@@ -230,9 +230,9 @@ void draw_glwidgets(const opengl_window& win) {
   }
   if (image_ok && begin_glheader(win, "colorgrade")) {
     auto& app    = apps.get_selected();
-    auto& params = app.colorgrade_prms;
+    auto& params = app.params;
     auto  edited = 0;
-    edited += draw_glcheckbox(win, "apply colorgrade", app.apply_colorgrade);
+    edited += draw_glcheckbox(win, "apply colorgrade", app.colorgrade);
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
     edited += draw_glcoloredit(win, "tint", params.tint);
     edited += draw_glslider(win, "lincontrast", params.lincontrast, 0, 1);

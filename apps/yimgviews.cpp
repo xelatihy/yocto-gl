@@ -45,8 +45,8 @@ struct app_state {
   image<vec4f>      display          = {};
   float             exposure         = 0;
   bool              filmic           = false;
-  colorgrade_params colorgrade_prms  = {};
-  bool              apply_colorgrade = false;
+  colorgrade_params params  = {};
+  bool              colorgrade = false;
 
   // viewing properties
   opengl_image        glimage  = {};
@@ -76,8 +76,8 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 void update_display(app_state& app) {
   if (app.display.size() != app.source.size()) app.display = app.source;
   parallel_for(app.source.size(), [&app](const vec2i& ij) {
-    if (app.apply_colorgrade) {
-      app.display[ij] = colorgrade(app.source[ij], true, app.colorgrade_prms);
+    if (app.colorgrade) {
+      app.display[ij] = colorgrade(app.source[ij], true, app.params);
     } else {
       app.display[ij] = tonemap(app.source[ij], app.exposure, app.filmic);
     }
