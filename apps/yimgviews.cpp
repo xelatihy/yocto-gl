@@ -49,8 +49,8 @@ struct app_state {
   bool              apply_colorgrade = false;
 
   // viewing properties
-  opengl_image        gl_image  = {};
-  draw_glimage_params draw_prms = {};
+  opengl_image        glimage  = {};
+  draw_glimage_params glparams = {};
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -87,12 +87,12 @@ void update_display(app_state& app) {
 void draw(const opengl_window& win) {
   auto& app = *(app_state*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
-  app.draw_prms.window      = get_glwindow_size(win);
-  app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
-  update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
-      app.draw_prms.window, app.draw_prms.fit);
-  draw_glimage(app.gl_image, app.draw_prms);
+  if (!app.glimage) update_glimage(app.glimage, app.display, false, false);
+  app.glparams.window      = get_glwindow_size(win);
+  app.glparams.framebuffer = get_glframebuffer_viewport(win);
+  update_imview(app.glparams.center, app.glparams.scale, app.display.size(),
+      app.glparams.window, app.glparams.fit);
+  draw_glimage(app.glimage, app.glparams);
   swap_glbuffers(win);
 }
 
@@ -111,10 +111,10 @@ void run_ui(app_state& app) {
 
     // handle mouse
     if (mouse_left) {
-      app.draw_prms.center += mouse_pos - last_pos;
+      app.glparams.center += mouse_pos - last_pos;
     }
     if (mouse_right) {
-      app.draw_prms.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+      app.glparams.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
     // draw
