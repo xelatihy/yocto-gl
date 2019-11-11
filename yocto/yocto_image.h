@@ -178,6 +178,15 @@ image<vec4f> rgb_to_srgb(const image<vec4f>& rgb);
 image<vec4f> srgb_to_rgb(const image<vec4b>& srgb);
 image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb);
 
+// Apply tone mapping
+vec3f tonemap(const vec3f& hdr, float exposure, bool filmic = false, bool srgb = true);
+vec4f tonemap(const vec4f& hdr, float exposure, bool filmic = false, bool srgb = true);
+
+// Apply tone mapping
+image<vec4f> tonemap_image(const image<vec4f>& hdr, float exposure, bool filmic = false, bool srgb = true);
+image<vec4b> tonemap_imageb(const image<vec4f>& hdr, float exposure, bool filmic = false, bool srgb = true);
+
+
 // Tone mapping params
 struct tonemap_params {
   float exposure    = 0;

@@ -585,6 +585,32 @@ static vec3f tonemap_filmic(const vec3f& hdr_, bool accurate_fit = false) {
   }
 }
 
+vec3f tonemap(const vec3f& hdr, float exposure, bool filmic, bool srgb) {
+  auto rgb = hdr;
+  if (exposure != 0) rgb *= exp2(exposure);
+  if (filmic) rgb = tonemap_filmic(rgb);
+  if (srgb) rgb = rgb_to_srgb(rgb);
+  return rgb;
+}
+vec4f tonemap(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
+  return {tonemap(xyz(hdr), exposure, filmic, srgb), hdr.w};
+}
+
+// Apply exposure and filmic tone mapping
+image<vec4f> tonemap_image(
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
+  auto ldr = image<vec4f>{hdr.size()};
+  for (auto i = 0ull; i < hdr.count(); i++) ldr[i] = tonemap(hdr[i], exposure, filmic, srgb);
+  return ldr;
+}
+image<vec4b> tonemap_imageb(
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
+  auto ldr = image<vec4b>{hdr.size()};
+  for (auto i = 0ull; i < hdr.count(); i++)
+    ldr[i] = float_to_byte(tonemap(hdr[i], exposure, filmic, srgb));
+  return ldr;
+}
+
 vec3f tonemap(const vec3f& hdr, const tonemap_params& params) {
   auto rgb = hdr;
   if (params.exposure != 0) rgb *= exp2(params.exposure);

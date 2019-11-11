@@ -44,7 +44,6 @@ struct app_state {
 
   // options
   trace_params   trace_prms    = {};
-  tonemap_params tonemap_prms  = {};
   int            preview_ratio = 8;
 
   // scene
@@ -55,6 +54,7 @@ struct app_state {
   trace_state  state   = {};
   image<vec4f> render  = {};
   image<vec4f> display = {};
+  float exposure = 0;
 
   // view scene
   opengl_image        gl_image  = {};
@@ -193,7 +193,7 @@ void reset_display(app_state& app) {
   preview_prms.resolution /= app.preview_ratio;
   preview_prms.samples = 1;
   auto preview         = trace_image(app.scene, preview_prms);
-  preview              = tonemap_image(preview, app.tonemap_prms);
+  preview              = tonemap_image(preview, app.exposure);
   for (auto j = 0; j < app.display.size().y; j++) {
     for (auto i = 0; i < app.display.size().x; i++) {
       auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
@@ -211,7 +211,7 @@ void reset_display(app_state& app) {
       parallel_for(app.render.size(), [&app](const vec2i& ij) {
         if (app.render_stop) return;
         app.render[ij] = trace_sample(app.state, app.scene, ij, app.trace_prms);
-        app.display[ij] = tonemap(app.render[ij], app.tonemap_prms);
+        app.display[ij] = tonemap(app.render[ij], app.exposure);
       });
     }
   });
@@ -297,11 +297,6 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--filter", app.trace_prms.tentfilter, "Filter image.");
   add_cli_option(cli, "--env-hidden/--no-env-hidden", app.trace_prms.envhidden,
       "Environments are hidden in renderer");
-  add_cli_option(
-      cli, "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
-  add_cli_option(
-      cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
-  add_cli_option(cli, "--srgb/--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
   add_cli_option(
       cli, "--bvh", (int&)app.trace_prms.bvh, "Bvh type", trace_bvh_names);
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
