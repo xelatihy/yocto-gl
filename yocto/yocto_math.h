@@ -232,6 +232,8 @@ inline float log2(float a) { return std::log2(a); }
 inline float exp2(float a) { return std::exp2(a); }
 inline float pow(float a, float b) { return std::pow(a, b); }
 inline float isfinite(float a) { return std::isfinite(a); }
+inline float atan2(float a, float b) { return std::atan2(a, b); }
+inline float fmod(float a, float b) { return std::fmod(a, b); }
 inline void  swap(float& a, float& b) { std::swap(a, b); }
 
 inline int  abs(int a) { return a < 0 ? -a : a; }
