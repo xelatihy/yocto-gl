@@ -78,9 +78,9 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
-
 #include <tuple>
+
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // COMPUTATION OF PER_VERTEX PROPETIES

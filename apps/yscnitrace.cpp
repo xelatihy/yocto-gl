@@ -49,7 +49,7 @@ struct app_state {
   string name      = "";
 
   // options
-  trace_params params    = {};
+  trace_params params = {};
   int          pratio = 8;
 
   // scene
@@ -64,8 +64,8 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  opengl_image        glimage       = {};
-  draw_glimage_params glparams      = {};
+  opengl_image        glimage  = {};
+  draw_glimage_params glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -103,7 +103,7 @@ struct app_states {
   }
 
   // default options
-  trace_params params = {};
+  trace_params params     = {};
   bool         add_skyenv = false;
 };
 
@@ -243,8 +243,8 @@ void reset_display(app_state& app) {
   preview              = tonemap_image(preview, app.exposure);
   for (auto j = 0; j < app.display.size().y; j++) {
     for (auto i = 0; i < app.display.size().x; i++) {
-      auto pi = clamp(i / app.pratio, 0, preview.size().x - 1),
-           pj = clamp(j / app.pratio, 0, preview.size().y - 1);
+      auto pi             = clamp(i / app.pratio, 0, preview.size().x - 1),
+           pj             = clamp(j / app.pratio, 0, preview.size().y - 1);
       app.display[{i, j}] = preview[{pi, pj}];
     }
   }
@@ -257,7 +257,7 @@ void reset_display(app_state& app) {
       if (app.render_stop) return;
       parallel_for(app.render.size(), [&app](const vec2i& ij) {
         if (app.render_stop) return;
-        app.render[ij] = trace_sample(app.state, app.scene, ij, app.params);
+        app.render[ij]  = trace_sample(app.state, app.scene, ij, app.params);
         app.display[ij] = tonemap(app.render[ij], app.exposure);
       });
     }
@@ -270,7 +270,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.imagename  = replace_extension(filename, ".png");
   app.outname    = replace_extension(filename, ".edited.yaml");
   app.name       = get_filename(app.filename);
-  app.params = app.params;
+  app.params     = app.params;
   app.add_skyenv = app.add_skyenv;
   apps.loaders.push_back(
       std::async(std::launch::async, [&app]() -> sceneio_status {
@@ -574,8 +574,8 @@ void draw_glwidgets(const opengl_window& win) {
       // for (auto stat : scene_stats(app.bvh)) print_info(stat);
     }
     auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(mouse_pos, app.glparams.center,
-        app.glparams.scale, app.render.size());
+    auto ij        = get_image_coords(
+        mouse_pos, app.glparams.center, app.glparams.scale, app.render.size());
     draw_gldragger(win, "mouse", ij);
     if (ij.x >= 0 && ij.x < app.render.size().x && ij.y >= 0 &&
         ij.y < app.render.size().y) {
@@ -631,7 +631,7 @@ void draw(const opengl_window& win) {
   auto& apps = *(app_states*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app                 = apps.get_selected();
+    auto& app                = apps.get_selected();
     app.glparams.window      = get_glwindow_size(win);
     app.glparams.framebuffer = get_glframebuffer_viewport(win);
     if (!app.glimage || app.glimage.size() != app.display.size() ||
@@ -757,10 +757,9 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--camera", app.params.camera, "Camera index.");
   add_cli_option(
       cli, "--resolution,-r", app.params.resolution, "Image resolution.");
-  add_cli_option(
-      cli, "--samples,-s", app.params.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)app.params.sampler,
-      "Tracer type.", trace_sampler_names);
+  add_cli_option(cli, "--samples,-s", app.params.samples, "Number of samples.");
+  add_cli_option(cli, "--tracer,-t", (int&)app.params.sampler, "Tracer type.",
+      trace_sampler_names);
   add_cli_option(cli, "--falsecolor,-F", (int&)app.params.falsecolor,
       "Tracer false color type.", trace_falsecolor_names);
   add_cli_option(

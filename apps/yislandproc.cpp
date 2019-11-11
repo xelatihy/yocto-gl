@@ -43,13 +43,13 @@
 #include "../yocto/yocto_shape.h"
 using namespace yocto;
 
-#include "ext/json.hpp"
-#include "ext/sajson.h"
-
 #include <deque>
 #include <memory>
 #include <string_view>
 #include <unordered_set>
+
+#include "ext/json.hpp"
+#include "ext/sajson.h"
 
 using std::string_view;
 using std::unordered_set;

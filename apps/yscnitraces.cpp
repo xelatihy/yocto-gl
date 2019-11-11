@@ -43,7 +43,7 @@ struct app_state {
   string name      = "";
 
   // options
-  trace_params params    = {};
+  trace_params params = {};
   int          pratio = 8;
 
   // scene
@@ -196,8 +196,8 @@ void reset_display(app_state& app) {
   preview              = tonemap_image(preview, app.exposure);
   for (auto j = 0; j < app.display.size().y; j++) {
     for (auto i = 0; i < app.display.size().x; i++) {
-      auto pi = clamp(i / app.pratio, 0, preview.size().x - 1),
-           pj = clamp(j / app.pratio, 0, preview.size().y - 1);
+      auto pi             = clamp(i / app.pratio, 0, preview.size().x - 1),
+           pj             = clamp(j / app.pratio, 0, preview.size().y - 1);
       app.display[{i, j}] = preview[{pi, pj}];
     }
   }
@@ -210,7 +210,7 @@ void reset_display(app_state& app) {
       if (app.render_stop) return;
       parallel_for(app.render.size(), [&app](const vec2i& ij) {
         if (app.render_stop) return;
-        app.render[ij] = trace_sample(app.state, app.scene, ij, app.params);
+        app.render[ij]  = trace_sample(app.state, app.scene, ij, app.params);
         app.display[ij] = tonemap(app.render[ij], app.exposure);
       });
     }
@@ -285,10 +285,9 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--camera", app.params.camera, "Camera index.");
   add_cli_option(
       cli, "--resolution,-r", app.params.resolution, "Image resolution.");
-  add_cli_option(
-      cli, "--samples,-s", app.params.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)app.params.sampler,
-      "Tracer type.", trace_sampler_names);
+  add_cli_option(cli, "--samples,-s", app.params.samples, "Number of samples.");
+  add_cli_option(cli, "--tracer,-t", (int&)app.params.sampler, "Tracer type.",
+      trace_sampler_names);
   add_cli_option(cli, "--falsecolor,-F", (int&)app.params.falsecolor,
       "Tracer false color type.", trace_falsecolor_names);
   add_cli_option(

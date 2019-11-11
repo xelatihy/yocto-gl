@@ -42,10 +42,10 @@ struct app_state {
   image<vec4f> source = {};
 
   // diplay data
-  image<vec4f>      display          = {};
-  float             exposure         = 0;
-  bool              filmic           = false;
-  colorgrade_params params  = {};
+  image<vec4f>      display    = {};
+  float             exposure   = 0;
+  bool              filmic     = false;
+  colorgrade_params params     = {};
   bool              colorgrade = false;
 
   // viewing properties

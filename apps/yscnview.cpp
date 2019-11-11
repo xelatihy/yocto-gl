@@ -63,10 +63,10 @@ struct app_state {
   opengl_scene glscene = {};
 
   // view image
-  float  time           = 0;
-  string anim_group     = "";
-  vec2f  time_range     = zero2f;
-  bool   animate        = false;
+  float  time       = 0;
+  string anim_group = "";
+  vec2f  time_range = zero2f;
+  bool   animate    = false;
 
   // editing
   pair<string, int> selection = {"camera", 0};

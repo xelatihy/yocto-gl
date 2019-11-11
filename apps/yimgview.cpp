@@ -56,9 +56,9 @@ struct app_state {
   image_stats display_stats = {};
 
   // tonemapping values
-  float             exposure         = 0;
-  bool              filmic           = false;
-  colorgrade_params params  = {};
+  float             exposure   = 0;
+  bool              filmic     = false;
+  colorgrade_params params     = {};
   bool              colorgrade = false;
 
   // viewing properties
@@ -90,9 +90,9 @@ struct app_states {
   }
 
   // default options
-  float             exposure        = 0;
-  bool              filmic          = false;
-  colorgrade_params params = {};
+  float             exposure = 0;
+  bool              filmic   = false;
+  colorgrade_params params   = {};
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -151,14 +151,14 @@ void update_display(app_state& app) {
 
 // add a new image
 void load_image_async(app_states& apps, const string& filename) {
-  auto& app           = apps.loading.emplace_back();
-  app.filename        = filename;
-  app.outname         = replace_extension(filename, ".display.png");
-  app.name            = get_filename(filename);
-  app.exposure        = apps.exposure;
-  app.filmic          = apps.filmic;
-  app.params = apps.params;
-  apps.selected       = (int)apps.states.size() - 1;
+  auto& app     = apps.loading.emplace_back();
+  app.filename  = filename;
+  app.outname   = replace_extension(filename, ".display.png");
+  app.name      = get_filename(filename);
+  app.exposure  = apps.exposure;
+  app.filmic    = apps.filmic;
+  app.params    = apps.params;
+  apps.selected = (int)apps.states.size() - 1;
   apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
     if (!load_image(app.filename, app.source)) {
       app.error = "cannot load " + app.filename;
@@ -270,8 +270,8 @@ void draw_glwidgets(const opengl_window& win) {
     draw_glslider(win, "zoom", app.glparams.scale, 0.1, 10);
     draw_glcheckbox(win, "fit", app.glparams.fit);
     auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(mouse_pos, app.glparams.center,
-        app.glparams.scale, app.source.size());
+    auto ij        = get_image_coords(
+        mouse_pos, app.glparams.center, app.glparams.scale, app.source.size());
     draw_gldragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
     if (ij.x >= 0 && ij.x < app.source.size().x && ij.y >= 0 &&
@@ -300,7 +300,7 @@ void draw_glwidgets(const opengl_window& win) {
 void draw(const opengl_window& win) {
   auto& apps = *(app_states*)get_gluser_pointer(win);
   if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app                 = apps.get_selected();
+    auto& app                = apps.get_selected();
     app.glparams.window      = get_glwindow_size(win);
     app.glparams.framebuffer = get_glframebuffer_viewport(win);
     if (!app.glimage || app.glupdated) {

@@ -34,10 +34,10 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <functional>
+
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
-
-#include <functional>
 
 // forward declaration
 struct GLFWwindow;

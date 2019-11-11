@@ -88,9 +88,9 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
-
 #include <algorithm>
+
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // SIMPLE PLY LOADER AND WRITER
@@ -152,19 +152,23 @@ plyio_status load_ply(const string& filename, ply_model& ply);
 plyio_status save_ply(const string& filename, const ply_model& ply);
 
 // Get ply properties
-bool has_ply_property(const ply_model& ply, const string& element, const string& property);
+bool has_ply_property(
+    const ply_model& ply, const string& element, const string& property);
 const ply_property& get_ply_property(
     const ply_model& ply, const string& element, const string& property);
 
-vector<float> get_ply_values(const ply_model& ply, const string& element, const string& property);
-vector<vec2f> get_ply_values(
-    const ply_model& ply, const string& element, const string& property1, const string& property2);
-vector<vec3f> get_ply_values(const ply_model& ply, const string& element, const string& property1,
-    const string& property2, const string& property3);
-vector<vec4f> get_ply_values(const ply_model& ply, const string& element, const string& property1,
-    const string& property2, const string& property3, const string& property4);
-vector<vec4f> get_ply_values(const ply_model& ply, const string& element, const string& property1,
-    const string& property2, const string& property3, float property4);
+vector<float> get_ply_values(
+    const ply_model& ply, const string& element, const string& property);
+vector<vec2f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2);
+vector<vec3f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2, const string& property3);
+vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2, const string& property3,
+    const string& property4);
+vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
+    const string& property1, const string& property2, const string& property3,
+    float property4);
 
 vector<vector<int>> get_ply_lists(
     const ply_model& ply, const string& element, const string& property);
@@ -172,7 +176,8 @@ vector<byte> get_ply_list_sizes(
     const ply_model& ply, const string& element, const string& property);
 vector<int> get_ply_list_values(
     const ply_model& ply, const string& element, const string& property);
-vec2i get_ply_list_minxmax(const ply_model& ply, const string& element, const string& property);
+vec2i get_ply_list_minxmax(
+    const ply_model& ply, const string& element, const string& property);
 
 // Get ply properties for meshes
 vector<vec3f>       get_ply_positions(const ply_model& ply);
@@ -188,37 +193,40 @@ vector<vec4i>       get_ply_quads(const ply_model& ply);
 bool                has_ply_quads(const ply_model& ply);
 
 // Add ply properties
-void add_ply_values(
-    ply_model& ply, const vector<float>& values, const string& element, const string& property);
-void add_ply_values(ply_model& ply, const vector<vec2f>& values, const string& element,
-    const string& property1, const string& property2);
-void add_ply_values(ply_model& ply, const vector<vec3f>& values, const string& element,
-    const string& property1, const string& property2, const string& property3);
-void add_ply_values(ply_model& ply, const vector<vec4f>& values, const string& element,
-    const string& property1, const string& property2, const string& property3,
-    const string& property4);
-
-void add_ply_lists(ply_model& ply, const vector<vector<int>>& values, const string& element,
-    const string& property);
-void add_ply_lists(ply_model& ply, const vector<byte>& sizes, const vector<int>& values,
+void add_ply_values(ply_model& ply, const vector<float>& values,
     const string& element, const string& property);
-void add_ply_lists(
-    ply_model& ply, const vector<int>& values, const string& element, const string& property);
-void add_ply_lists(
-    ply_model& ply, const vector<vec2i>& values, const string& element, const string& property);
-void add_ply_lists(
-    ply_model& ply, const vector<vec3i>& values, const string& element, const string& property);
-void add_ply_lists(
-    ply_model& ply, const vector<vec4i>& values, const string& element, const string& property);
+void add_ply_values(ply_model& ply, const vector<vec2f>& values,
+    const string& element, const string& property1, const string& property2);
+void add_ply_values(ply_model& ply, const vector<vec3f>& values,
+    const string& element, const string& property1, const string& property2,
+    const string& property3);
+void add_ply_values(ply_model& ply, const vector<vec4f>& values,
+    const string& element, const string& property1, const string& property2,
+    const string& property3, const string& property4);
+
+void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
+    const string& element, const string& property);
+void add_ply_lists(ply_model& ply, const vector<byte>& sizes,
+    const vector<int>& values, const string& element, const string& property);
+void add_ply_lists(ply_model& ply, const vector<int>& values,
+    const string& element, const string& property);
+void add_ply_lists(ply_model& ply, const vector<vec2i>& values,
+    const string& element, const string& property);
+void add_ply_lists(ply_model& ply, const vector<vec3i>& values,
+    const string& element, const string& property);
+void add_ply_lists(ply_model& ply, const vector<vec4i>& values,
+    const string& element, const string& property);
 
 // Add ply properties for meshes
 void add_ply_positions(ply_model& ply, const vector<vec3f>& values);
 void add_ply_normals(ply_model& ply, const vector<vec3f>& values);
-void add_ply_texcoords(ply_model& ply, const vector<vec2f>& values, bool flipv = false);
+void add_ply_texcoords(
+    ply_model& ply, const vector<vec2f>& values, bool flipv = false);
 void add_ply_colors(ply_model& ply, const vector<vec4f>& values);
 void add_ply_radius(ply_model& ply, const vector<float>& values);
 void add_ply_faces(ply_model& ply, const vector<vector<int>>& values);
-void add_ply_faces(ply_model& ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
+void add_ply_faces(
+    ply_model& ply, const vector<vec3i>& tvalues, const vector<vec4i>& qvalues);
 void add_ply_triangles(ply_model& ply, const vector<vec3i>& values);
 void add_ply_quads(ply_model& ply, const vector<vec4i>& values);
 void add_ply_lines(ply_model& ply, const vector<vec2i>& values);
@@ -232,29 +240,36 @@ void add_ply_points(ply_model& ply, const vector<int>& values);
 namespace yocto {
 
 // Read Ply functions
-plyio_status read_ply_header(const string& filename, FILE* fs, ply_format& format,
-    vector<ply_element>& elements, vector<string>& comments);
+plyio_status read_ply_header(const string& filename, FILE* fs,
+    ply_format& format, vector<ply_element>& elements,
+    vector<string>& comments);
 plyio_status read_ply_value(const string& filename, FILE* fs, ply_format format,
-    const ply_element& element, vector<double>& values, vector<vector<double>>& lists);
+    const ply_element& element, vector<double>& values,
+    vector<vector<double>>& lists);
 plyio_status read_ply_value(const string& filename, FILE* fs, ply_format format,
-    const ply_element& element, vector<float>& values, vector<vector<int>>& lists);
+    const ply_element& element, vector<float>& values,
+    vector<vector<int>>& lists);
 
 // Write Ply functions
-plyio_status write_ply_header(const string& filename, FILE* fs, ply_format format,
-    const vector<ply_element>& elements, const vector<string>& comments);
-plyio_status write_ply_value(const string& filename, FILE* fs, ply_format format,
-    const ply_element& element, vector<double>& values, vector<vector<double>>& lists);
-plyio_status write_ply_value(const string& filename, FILE* fs, ply_format format,
-    const ply_element& element, vector<float>& values, vector<vector<int>>& lists);
+plyio_status write_ply_header(const string& filename, FILE* fs,
+    ply_format format, const vector<ply_element>& elements,
+    const vector<string>& comments);
+plyio_status write_ply_value(const string& filename, FILE* fs,
+    ply_format format, const ply_element& element, vector<double>& values,
+    vector<vector<double>>& lists);
+plyio_status write_ply_value(const string& filename, FILE* fs,
+    ply_format format, const ply_element& element, vector<float>& values,
+    vector<vector<int>>& lists);
 
 // Helpers to get element and property indices
 int   find_ply_element(const vector<ply_element>& elements, const string& name);
 int   find_ply_property(const ply_element& element, const string& name);
-vec2i find_ply_property(const ply_element& element, const string& name1, const string& name2);
-vec3i find_ply_property(
-    const ply_element& element, const string& name1, const string& name2, const string& name3);
-vec4i find_ply_property(const ply_element& element, const string& name1, const string& name2,
-    const string& name3, const string& name4);
+vec2i find_ply_property(
+    const ply_element& element, const string& name1, const string& name2);
+vec3i find_ply_property(const ply_element& element, const string& name1,
+    const string& name2, const string& name3);
+vec4i find_ply_property(const ply_element& element, const string& name1,
+    const string& name2, const string& name3, const string& name4);
 
 }  // namespace yocto
 
@@ -271,7 +286,8 @@ struct obj_vertex {
 };
 
 inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
-  return a.position == b.position && a.texcoord == b.texcoord && a.normal == b.normal;
+  return a.position == b.position && a.texcoord == b.texcoord &&
+         a.normal == b.normal;
 }
 
 // Obj texture information.
@@ -400,8 +416,9 @@ struct objio_status {
 };
 
 // Load and save obj
-objio_status load_obj(const string& filename, obj_model& obj, bool geom_only = false,
-    bool split_elements = true, bool split_materials = false);
+objio_status load_obj(const string& filename, obj_model& obj,
+    bool geom_only = false, bool split_elements = true,
+    bool split_materials = false);
 objio_status save_obj(const string& filename, const obj_model& obj);
 
 // convert between roughness and exponent
@@ -412,44 +429,54 @@ float obj_roughness_to_exponent(float roughness);
 // to ensure that no duplication occurs, either use the facevarying interface,
 // or set `no_vertex_duplication`. In the latter case, the code will fallback
 // to position only if duplication occurs.
-void get_obj_triangles(const obj_model& obj, const obj_shape& shape, vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<string>& materials, vector<int>& ematerials, bool flip_texcoord = false);
-void get_obj_quads(const obj_model& obj, const obj_shape& shape, vector<vec4i>& quads,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<string>& materials, vector<int>& ematerials, bool flip_texcoord = false);
-void get_obj_lines(const obj_model& obj, const obj_shape& shape, vector<vec2i>& lines,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<string>& materials, vector<int>& ematerials, bool flip_texcoord = false);
-void get_obj_points(const obj_model& obj, const obj_shape& shape, vector<int>& points,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<string>& materials, vector<int>& ematerials, bool flip_texcoord = false);
-void get_obj_fvquads(const obj_model& obj, const obj_shape& shape, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
+    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
+void get_obj_quads(const obj_model& obj, const obj_shape& shape,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
+void get_obj_lines(const obj_model& obj, const obj_shape& shape,
+    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
+void get_obj_points(const obj_model& obj, const obj_shape& shape,
+    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, vector<string>& materials,
+    vector<int>& ematerials, bool flip_texcoord = false);
+void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
+    vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flip_texcoord = false);
 bool has_obj_quads(const obj_shape& shape);
 
 // Add obj shape
-void add_obj_triangles(obj_model& obj, const string& name, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+void add_obj_triangles(obj_model& obj, const string& name,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void add_obj_quads(obj_model& obj, const string& name, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+void add_obj_quads(obj_model& obj, const string& name,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void add_obj_lines(obj_model& obj, const string& name, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+void add_obj_lines(obj_model& obj, const string& name,
+    const vector<vec2i>& lines, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void add_obj_points(obj_model& obj, const string& name, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+void add_obj_points(obj_model& obj, const string& name,
+    const vector<int>& points, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void add_obj_fvquads(obj_model& obj, const string& name, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+void add_obj_fvquads(obj_model& obj, const string& name,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
 
@@ -480,21 +507,27 @@ struct obj_instance {
 };
 
 // Read obj/mtl/objx elements
-objio_status read_obj_command(const string& filename, FILE* fs, obj_command& command, string& name,
-    vec3f& value, vector<obj_vertex>& vertices, obj_vertex& vert_size);
-objio_status read_mtl_command(const string& filename, FILE* fs, mtl_command& command,
-    obj_material& material, bool fliptr = true);
-objio_status read_objx_command(const string& filename, FILE* fs, objx_command& command,
-    obj_camera& camera, obj_environment& environment, obj_instance& instance);
+objio_status read_obj_command(const string& filename, FILE* fs,
+    obj_command& command, string& name, vec3f& value,
+    vector<obj_vertex>& vertices, obj_vertex& vert_size);
+objio_status read_mtl_command(const string& filename, FILE* fs,
+    mtl_command& command, obj_material& material, bool fliptr = true);
+objio_status read_objx_command(const string& filename, FILE* fs,
+    objx_command& command, obj_camera& camera, obj_environment& environment,
+    obj_instance& instance);
 
 // Write obj/mtl/objx elements
-objio_status write_obj_comment(const string& filename, FILE* fs, const string& comment);
-objio_status write_obj_command(const string& filename, FILE* fs, obj_command command,
-    const string& name, const vec3f& value, const vector<obj_vertex>& vertices = {});
-objio_status write_mtl_command(const string& filename, FILE* fs, mtl_command command,
-    obj_material& material, const obj_texture_info& texture = {});
-objio_status write_objx_command(const string& filename, FILE* fs, objx_command command,
-    const obj_camera& camera, const obj_environment& environment, const obj_instance& instance);
+objio_status write_obj_comment(
+    const string& filename, FILE* fs, const string& comment);
+objio_status write_obj_command(const string& filename, FILE* fs,
+    obj_command command, const string& name, const vec3f& value,
+    const vector<obj_vertex>& vertices = {});
+objio_status write_mtl_command(const string& filename, FILE* fs,
+    mtl_command command, obj_material& material,
+    const obj_texture_info& texture = {});
+objio_status write_objx_command(const string& filename, FILE* fs,
+    objx_command command, const obj_camera& camera,
+    const obj_environment& environment, const obj_instance& instance);
 
 }  // namespace yocto
 
@@ -561,14 +594,17 @@ yamlio_status load_yaml(const string& filename, yaml_model& yaml);
 yamlio_status save_yaml(const string& filename, const yaml_model& yaml);
 
 // Load Yaml properties
-yamlio_status read_yaml_property(const string& filename, FILE* fs, string& group, string& key,
-    bool& newobj, bool& done, yaml_value& value);
+yamlio_status read_yaml_property(const string& filename, FILE* fs,
+    string& group, string& key, bool& newobj, bool& done, yaml_value& value);
 
 // Write Yaml properties
-yamlio_status write_yaml_comment(const string& filename, FILE* fs, const string& comment);
-yamlio_status write_yaml_property(const string& filename, FILE* fs, const string& object,
-    const string& key, bool newobj, const yaml_value& value);
-yamlio_status write_yaml_object(const string& filename, FILE* fs, const string& object);
+yamlio_status write_yaml_comment(
+    const string& filename, FILE* fs, const string& comment);
+yamlio_status write_yaml_property(const string& filename, FILE* fs,
+    const string& object, const string& key, bool newobj,
+    const yaml_value& value);
+yamlio_status write_yaml_object(
+    const string& filename, FILE* fs, const string& object);
 
 // type-cheked yaml value access
 bool get_yaml_value(const yaml_value& yaml, string& value);
@@ -580,8 +616,9 @@ bool get_yaml_value(const yaml_value& yaml, vec3f& value);
 bool get_yaml_value(const yaml_value& yaml, mat3f& value);
 bool get_yaml_value(const yaml_value& yaml, frame3f& value);
 template <typename T>
-inline bool get_yaml_value(const yaml_element& element, const string& name, const T& value);
-bool        has_yaml_value(const yaml_element& element, const string& name);
+inline bool get_yaml_value(
+    const yaml_element& element, const string& name, const T& value);
+bool has_yaml_value(const yaml_element& element, const string& name);
 
 // yaml value construction
 yaml_value make_yaml_value(const string& value);
@@ -593,7 +630,8 @@ yaml_value make_yaml_value(const vec3f& value);
 yaml_value make_yaml_value(const mat3f& value);
 yaml_value make_yaml_value(const frame3f& value);
 template <typename T>
-inline bool add_yaml_value(yaml_element& element, const string& name, const T& value);
+inline bool add_yaml_value(
+    yaml_element& element, const string& name, const T& value);
 
 }  // namespace yocto
 
@@ -834,21 +872,26 @@ enum struct pbrt_command {
 };
 
 // Read pbrt commands
-pbrtio_status read_pbrt_command(const string& filename, FILE* fs, pbrt_command& command,
-    string& name, string& type, frame3f& xform, vector<pbrt_value>& values);
-pbrtio_status read_pbrt_command(const string& filename, FILE* fs, pbrt_command& command,
-    string& name, string& type, frame3f& xform, vector<pbrt_value>& values, string& buffer);
+pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
+    pbrt_command& command, string& name, string& type, frame3f& xform,
+    vector<pbrt_value>& values);
+pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
+    pbrt_command& command, string& name, string& type, frame3f& xform,
+    vector<pbrt_value>& values, string& buffer);
 
 // Write pbrt commands
-pbrtio_status write_pbrt_comment(const string& filename, FILE* fs, const string& comment);
-pbrtio_status write_pbrt_command(const string& filename, FILE* fs, pbrt_command command,
-    const string& name, const string& type, const frame3f& xform, const vector<pbrt_value>& values,
+pbrtio_status write_pbrt_comment(
+    const string& filename, FILE* fs, const string& comment);
+pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
+    pbrt_command command, const string& name, const string& type,
+    const frame3f& xform, const vector<pbrt_value>& values,
     bool texture_as_float = false);
-pbrtio_status write_pbrt_command(const string& filename, FILE* fs, pbrt_command command,
-    const string& name = "", const frame3f& xform = identity3x4f);
-pbrtio_status write_pbrt_command(const string& filename, FILE* fs, pbrt_command command,
-    const string& name, const string& type, const vector<pbrt_value>& values,
-    bool texture_as_float = false);
+pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
+    pbrt_command command, const string& name = "",
+    const frame3f& xform = identity3x4f);
+pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
+    pbrt_command command, const string& name, const string& type,
+    const vector<pbrt_value>& values, bool texture_as_float = false);
 
 // type-cheked pbrt value access
 bool get_pbrt_value(const pbrt_value& pbrt, string& value);
@@ -865,25 +908,26 @@ bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value);
 bool get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value);
 bool get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value);
 template <typename T>
-inline bool get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, T& value);
+inline bool get_pbrt_value(
+    const vector<pbrt_value>& pbrt, const string& name, T& value);
 
 // pbrt value construction
-pbrt_value make_pbrt_value(
-    const string& name, const string& value, pbrt_value_type type = pbrt_value_type::string);
-pbrt_value make_pbrt_value(
-    const string& name, bool value, pbrt_value_type type = pbrt_value_type::boolean);
-pbrt_value make_pbrt_value(
-    const string& name, int value, pbrt_value_type type = pbrt_value_type::integer);
-pbrt_value make_pbrt_value(
-    const string& name, float value, pbrt_value_type type = pbrt_value_type::real);
-pbrt_value make_pbrt_value(
-    const string& name, const vec2f& value, pbrt_value_type type = pbrt_value_type::point2);
-pbrt_value make_pbrt_value(
-    const string& name, const vec3f& value, pbrt_value_type type = pbrt_value_type::color);
-pbrt_value make_pbrt_value(
-    const string& name, const vector<vec2f>& value, pbrt_value_type type = pbrt_value_type::point2);
-pbrt_value make_pbrt_value(
-    const string& name, const vector<vec3f>& value, pbrt_value_type type = pbrt_value_type::point);
+pbrt_value make_pbrt_value(const string& name, const string& value,
+    pbrt_value_type type = pbrt_value_type::string);
+pbrt_value make_pbrt_value(const string& name, bool value,
+    pbrt_value_type type = pbrt_value_type::boolean);
+pbrt_value make_pbrt_value(const string& name, int value,
+    pbrt_value_type type = pbrt_value_type::integer);
+pbrt_value make_pbrt_value(const string& name, float value,
+    pbrt_value_type type = pbrt_value_type::real);
+pbrt_value make_pbrt_value(const string& name, const vec2f& value,
+    pbrt_value_type type = pbrt_value_type::point2);
+pbrt_value make_pbrt_value(const string& name, const vec3f& value,
+    pbrt_value_type type = pbrt_value_type::color);
+pbrt_value make_pbrt_value(const string& name, const vector<vec2f>& value,
+    pbrt_value_type type = pbrt_value_type::point2);
+pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& value,
+    pbrt_value_type type = pbrt_value_type::point);
 pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
     pbrt_value_type type = pbrt_value_type::integer);
 
@@ -979,7 +1023,8 @@ gltfio_status load_gltf(const string& filename, gltf_model& gltf);
 namespace yocto {
 
 template <typename T>
-inline bool get_yaml_value(const yaml_element& element, const string& name, T& value) {
+inline bool get_yaml_value(
+    const yaml_element& element, const string& name, T& value) {
   for (auto& [key, value_] : element.key_values) {
     if (key == name) return get_yaml_value(value_, value);
   }
@@ -987,7 +1032,8 @@ inline bool get_yaml_value(const yaml_element& element, const string& name, T& v
 }
 
 template <typename T>
-inline bool add_yaml_value(yaml_element& element, const string& name, const T& value) {
+inline bool add_yaml_value(
+    yaml_element& element, const string& name, const T& value) {
   for (auto& [key, value] : element.key_values)
     if (key == name) return false;
   element.key_values.push_back({name, make_yaml_value(value)});
@@ -995,7 +1041,8 @@ inline bool add_yaml_value(yaml_element& element, const string& name, const T& v
 }
 
 template <typename T>
-inline bool get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, T& value) {
+inline bool get_pbrt_value(
+    const vector<pbrt_value>& pbrt, const string& name, T& value) {
   for (auto& p : pbrt) {
     if (p.name == name) {
       return get_pbrt_value(p, value);
@@ -1004,6 +1051,6 @@ inline bool get_pbrt_value(const vector<pbrt_value>& pbrt, const string& name, T
   return true;
 }
 
-}
+}  // namespace yocto
 
 #endif

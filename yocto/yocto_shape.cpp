@@ -7,9 +7,10 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_shape.h"
-#include "yocto_modelio.h"
 
 #include <deque>
+
+#include "yocto_modelio.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES

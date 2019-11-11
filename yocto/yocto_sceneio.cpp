@@ -33,9 +33,6 @@
 //
 
 #include "yocto_sceneio.h"
-#include "yocto_image.h"
-#include "yocto_modelio.h"
-#include "yocto_shape.h"
 
 #include <atomic>
 #include <cassert>
@@ -43,6 +40,10 @@
 #include <cstdlib>
 #include <deque>
 #include <future>
+
+#include "yocto_image.h"
+#include "yocto_modelio.h"
+#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PATH HELPERS

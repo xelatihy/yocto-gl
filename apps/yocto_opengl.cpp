@@ -37,10 +37,9 @@
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
 #endif
-#include "ext/glad/glad.h"
-
 #include <GLFW/glfw3.h>
 
+#include "ext/glad/glad.h"
 #include "ext/imgui/imgui.h"
 #include "ext/imgui/imgui_impl_glfw.h"
 #include "ext/imgui/imgui_impl_opengl3.h"
