@@ -10,7 +10,6 @@ jobs:
     - name: install dependencies
       run: |
         brew update
-        brew upgrade cmake
         brew install ninja
     - name: configure
       run: |

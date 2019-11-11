@@ -10,7 +10,7 @@ jobs:
     - name: install dependencies
       run: |
         sudo apt-get update --yes
-        sudo apt-get install --yes cmake ninja-build
+        sudo apt-get install --yes ninja-build
     - name: configure
       run: |
         mkdir build

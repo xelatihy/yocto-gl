@@ -10,7 +10,7 @@ jobs:
     - name: install dependencies
       run: |
         choco update
-        choco install cmake ninja
+        choco install ninja
     - name: configure
       run: |
         mkdir build
