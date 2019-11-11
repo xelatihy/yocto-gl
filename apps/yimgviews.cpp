@@ -26,11 +26,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_common.h"
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto;
+
+#include <future>
 
 struct app_state {
   // original data
@@ -41,23 +42,44 @@ struct app_state {
   image<vec4f> source = {};
 
   // diplay data
-  image<vec4f>      display          = {};
-  tonemap_params    tonemap_prms     = {};
-  colorgrade_params colorgrade_prms  = {};
-  bool              apply_colorgrade = false;
+  image<vec4f>      display    = {};
+  float             exposure   = 0;
+  bool              filmic     = false;
+  colorgrade_params params     = {};
+  bool              colorgrade = false;
 
   // viewing properties
-  opengl_image        gl_image  = {};
-  draw_glimage_params draw_prms = {};
+  opengl_image        glimage  = {};
+  draw_glimage_params glparams = {};
 };
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(const vec2i& size, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, size]() {
+          while (true) {
+            auto j = next_idx.fetch_add(1);
+            if (j >= size.y) break;
+            for (auto i = 0; i < size.x; i++) func({i, j});
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
 
 void update_display(app_state& app) {
   if (app.display.size() != app.source.size()) app.display = app.source;
-  auto regions = make_image_regions(app.source.size(), 128);
-  parallel_foreach(regions, [&app](const image_region& region) {
-    tonemap_region(app.display, app.source, region, app.tonemap_prms);
-    if (app.apply_colorgrade) {
-      colorgrade_region(app.display, app.display, region, app.colorgrade_prms);
+  parallel_for(app.source.size(), [&app](const vec2i& ij) {
+    if (app.colorgrade) {
+      app.display[ij] = colorgrade(app.source[ij], true, app.params);
+    } else {
+      app.display[ij] = tonemap(app.source[ij], app.exposure, app.filmic);
     }
   });
 }
@@ -65,12 +87,12 @@ void update_display(app_state& app) {
 void draw(const opengl_window& win) {
   auto& app = *(app_state*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
-  app.draw_prms.window      = get_glwindow_size(win);
-  app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
-  update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
-      app.draw_prms.window, app.draw_prms.fit);
-  draw_glimage(app.gl_image, app.draw_prms);
+  if (!app.glimage) update_glimage(app.glimage, app.display, false, false);
+  app.glparams.window      = get_glwindow_size(win);
+  app.glparams.framebuffer = get_glframebuffer_viewport(win);
+  update_imview(app.glparams.center, app.glparams.scale, app.display.size(),
+      app.glparams.window, app.glparams.fit);
+  draw_glimage(app.glimage, app.glparams);
   swap_glbuffers(win);
 }
 
@@ -89,10 +111,10 @@ void run_ui(app_state& app) {
 
     // handle mouse
     if (mouse_left) {
-      app.draw_prms.center += mouse_pos - last_pos;
+      app.glparams.center += mouse_pos - last_pos;
     }
     if (mouse_right) {
-      app.draw_prms.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+      app.glparams.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
     // draw
@@ -118,7 +140,8 @@ int main(int argc, const char* argv[]) {
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load image
-  load_image(app.filename, app.source);
+  if (!load_image(app.filename, app.source))
+    print_fatal("cannot load " + app.filename);
   update_display(app);
 
   // run ui

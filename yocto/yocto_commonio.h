@@ -1,18 +1,20 @@
 //
-// # Yocto/CommonIo: Tiny collection of IO utilities to support Yocto/GL
+// # Yocto/CommonIO: Tiny collection of IO utilities
 //
 //
-// Yocto/IoUtils is a collection of utilities used in writing other Yocto/GL
-// libraries and example applications. We support printing and parsing builting
-// and Yocto/Math values, parsing command line arguments, simple path
-// manipulation, file lading/saving.
+// Yocto/CommonIO is a collection of utilities used in writing Yocto/GL
+// libraries and example applications. We support printing and parsing builtin
+// types, parsing command line arguments, simple path manipulation, file
+// lading/saving.
 //
 //
 // ## Printing values
 //
-// Use `print_info()` to print a message, `print_fatal()` to print and exit,
-// and `print_timed()` to use a RIIA timer. Several overloads of `to_string()`
-// are provided for both the basic types and Yocto/Math types.
+// Use `print_info()` to print a message, `print_fatal()` to print and exit.
+// To time a block of code use `print_timed()` to use an RIIA timer or
+// call `print_elapsed()` to print the elapsed time as needed.
+// Several overloads of `to_string()` are provided for both the basic types
+// and Yocto/Math types.
 //
 //
 // ## Command-Line Parsing
@@ -49,6 +51,9 @@
 //
 // 1. load and save text files with `load_text()` and `save_text()`
 // 2. load and save binary files with `load_binary()` and `save_binary()`
+// 3. use `file` as a safe wrapper over C streams; use `open_file()`,
+//  `close_file()`, `read_line()`, `read_value()`, `write_text()` and
+//  `write_value()` to operate on the file.
 //
 //
 // LICENSE:
@@ -82,11 +87,25 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_common.h"
-#include "yocto_math.h"
-
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using byte = unsigned char;
+using std::string;
+using std::unordered_map;
+using std::vector;
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PRINT/FORMATTING UTILITIES
@@ -98,8 +117,15 @@ inline void print_info(const string& msg);
 // Prints a messgae to the console and exit with an error.
 inline void print_fatal(const string& msg);
 
+// Timer that prints as scope end. Create with `print_timed` and print with
+// `print_elapsed`.
+struct print_timer {
+  int64_t start_time = -1;
+  ~print_timer();  // print time if scope ends
+};
 // Print traces for timing and program debugging
-inline auto print_timed(const string& msg);
+inline print_timer print_timed(const string& msg);
+inline void        print_elapsed(print_timer& timer);
 
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
@@ -179,13 +205,20 @@ inline bool exists_file(const string& filename);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Result of io operations
+struct fileio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
 // Load/save a text file
-inline void load_text(const string& filename, string& str);
-inline void save_text(const string& filename, const string& str);
+inline fileio_status load_text(const string& filename, string& str);
+inline fileio_status save_text(const string& filename, const string& str);
 
 // Load/save a binary file
-inline void load_binary(const string& filename, vector<byte>& data);
-inline void save_binary(const string& filename, const vector<byte>& data);
+inline fileio_status load_binary(const string& filename, vector<byte>& data);
+inline fileio_status save_binary(
+    const string& filename, const vector<byte>& data);
 
 }  // namespace yocto
 
@@ -250,18 +283,18 @@ inline string format_num(uint64_t num) {
 }
 
 // Print traces for timing and program debugging
-inline auto print_timed(const string& msg) {
-  struct scoped_timer {
-    int64_t start_time = -1;
-    ~scoped_timer() {
-      printf(" in %s\n", format_duration(get_time_() - start_time).c_str());
-    }
-  };
+inline print_timer print_timed(const string& msg) {
   printf("%s", msg.c_str());
   fflush(stdout);
   // print_info(fmt + " [started]", args...);
-  return scoped_timer{get_time_()};
+  return print_timer{get_time_()};
 }
+inline void print_elapsed(print_timer& timer) {
+  if (timer.start_time < 0) return;
+  printf(" in %s\n", format_duration(get_time_() - timer.start_time).c_str());
+  timer.start_time = -1;
+}
+inline print_timer::~print_timer() { print_elapsed(*this); }
 
 }  // namespace yocto
 
@@ -352,57 +385,56 @@ inline bool exists_file(const string& filename) {
 namespace yocto {
 
 // Load a text file
-inline void load_text(const string& filename, string& str) {
+inline fileio_status load_text(const string& filename, string& str) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rt");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length) {
-    fclose(fs);
-    throw std::runtime_error("cannot read file " + filename);
-  }
-  fclose(fs);
+  if (fread(str.data(), 1, length, fs) != length)
+    return {filename + ": read error"};
+  return {};
 }
 
 // Save a text file
-inline void save_text(const string& filename, const string& str) {
+inline fileio_status save_text(const string& filename, const string& str) {
   auto fs = fopen(filename.c_str(), "wt");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
-  if (fprintf(fs, "%s", str.c_str()) < 0) {
-    fclose(fs);
-    throw std::runtime_error("cannot write file " + filename);
-  }
+  if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  if (fprintf(fs, "%s", str.c_str()) < 0) return {filename + ": write error"};
   fclose(fs);
+  return {};
 }
 
 // Load a binary file
-inline void load_binary(const string& filename, vector<byte>& data) {
+inline fileio_status load_binary(const string& filename, vector<byte>& data) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rb");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
+  if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length) {
-    fclose(fs);
-    throw std::runtime_error("cannot read file " + filename);
-  }
+  if (fread(data.data(), 1, length, fs) != length)
+    return {filename + ": read error"};
   fclose(fs);
+  return {};
 }
 
 // Save a binary file
-inline void save_binary(const string& filename, const vector<byte>& data) {
+inline fileio_status save_binary(
+    const string& filename, const vector<byte>& data) {
   auto fs = fopen(filename.c_str(), "wb");
-  if (!fs) throw std::runtime_error("cannot open file " + filename);
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
-    fclose(fs);
-    throw std::runtime_error("cannot write file " + filename);
-  }
+  if (!fs) return {filename + ": file not found"};
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size())
+    return {filename + ": rewritead error"};
   fclose(fs);
+  return {};
 }
 
 }  // namespace yocto
@@ -464,7 +496,7 @@ inline vector<string> split_cli_names(const string& name_) {
 
 inline void add_cli_option(cli_state& cli, const string& name, cli_type type,
     void* value, const string& usage, bool req, const vector<string>& choices) {
-  static auto type_name = hash_map<cli_type, string>{
+  static auto type_name = unordered_map<cli_type, string>{
       {cli_type::string_, "<string>"},
       {cli_type::int_, "<int>"},
       {cli_type::float_, "<float>"},
@@ -576,7 +608,7 @@ inline bool parse_cmdline_value(const string& str, bool& value) {
 
 inline bool parse_cli(cli_state& cli, int argc, const char** argv) {
   // check for errors
-  auto used = hash_map<string, int>{};
+  auto used = unordered_map<string, int>{};
   for (auto& option : cli.options) {
     if (option.name.empty()) throw std::runtime_error("name cannot be empty");
     auto names = split_cli_names(option.name);

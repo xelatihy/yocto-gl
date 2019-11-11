@@ -99,7 +99,8 @@ void my_draw_glwidgets(
         auto path = integrate_field(app.shape.triangles, app.shape.positions,
             data.face_adjacency, dummy_tags, 0, field, from, to);
 
-        positions += make_positions_from_path(path, app.shape.positions);
+        auto ppositions = make_positions_from_path(path, app.shape.positions);
+        positions.insert(positions.end(), ppositions.begin(), ppositions.end());
       }
       update_glpolyline(app, positions);
     }
@@ -132,15 +133,16 @@ int main(int num_args, const char* args[]) {
 
   // Parse command line.
   auto cli = make_cli("yimshproc", "interactive viewer for mesh processing");
-  add_cli_option(cli, "Model", input_filename, "Model filenames", true);
+  add_cli_option(cli, "model", input_filename, "model filenames", true);
   if (!parse_cli(cli, num_args, args)) exit(1);
 
   auto data = my_data{};
 
   // Create callbacks that interface with yimshproc.
   auto init = [&data](app_state& app) {
-    auto timer = print_timed("Init my data");
+    auto timer = print_timed("init my data");
     my_init(data, app);
+    print_elapsed(timer);
   };
   auto key_callback = [&data](app_state& app, int key, bool pressing) {
     my_keycallback(data, app, key, pressing);

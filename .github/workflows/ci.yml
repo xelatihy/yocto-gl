@@ -1,0 +1,36 @@
+name: build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+    steps:
+    - uses: actions/checkout@v1
+    - name: install ubuntu dependencies
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update --yes
+        sudo apt-get install --yes ninja-build
+    - name: install windows dependencies
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco update
+        choco install ninja
+    - name: install macos dependencies
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew update
+        brew install ninja
+    - name: configure
+      run: |
+        mkdir build
+        cd build
+        cmake .. -GNinja -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
+    - name: build
+      run: |
+        cd build
+        cmake --build .

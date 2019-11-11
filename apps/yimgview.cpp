@@ -26,14 +26,13 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_common.h"
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
+#include <future>
 #include <list>
-using std::list;
 
 struct image_stats {
   vec4f         min       = zero4f;
@@ -57,26 +56,26 @@ struct app_state {
   image_stats display_stats = {};
 
   // tonemapping values
-  tonemap_params    tonemap_prms     = {};
-  colorgrade_params colorgrade_prms  = {};
-  bool              apply_colorgrade = false;
+  float             exposure   = 0;
+  bool              filmic     = false;
+  colorgrade_params params     = {};
+  bool              colorgrade = false;
 
   // viewing properties
-  opengl_image        gl_image  = {};
-  draw_glimage_params draw_prms = {};
+  opengl_image        glimage   = {};
+  draw_glimage_params glparams  = {};
+  bool                glupdated = true;
 
-  // rendering properties
-  int                  render_region  = 0;
-  vector<image_region> render_regions = {};
-  bool                 render_stats   = false;
+  // error
+  string error = "";
 };
 
 struct app_states {
   // data
-  std::list<app_state>         states       = {};
-  int                          selected     = -1;
-  std::list<app_state>         loading      = {};
-  std::list<std::future<void>> loaders = {};
+  std::list<app_state>         states   = {};
+  int                          selected = -1;
+  std::list<app_state>         loading  = {};
+  std::list<std::future<bool>> loaders  = {};
 
   // get image
   app_state& get_selected() {
@@ -91,15 +90,29 @@ struct app_states {
   }
 
   // default options
-  tonemap_params    tonemap_prms    = {};
-  colorgrade_params colorgrade_prms = {};
+  float             exposure = 0;
+  bool              filmic   = false;
+  colorgrade_params params   = {};
 };
 
-// reset display
-void reset_display(app_state& app) {
-  if (app.display.size() != app.source.size()) app.display = app.source;
-  app.render_region  = 0;
-  app.render_regions = make_image_regions(app.source.size(), 256);
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(const vec2i& size, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, size]() {
+          while (true) {
+            auto j = next_idx.fetch_add(1);
+            if (j >= size.y) break;
+            for (auto i = 0; i < size.x; i++) func({i, j});
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
 }
 
 // compute min/max
@@ -123,22 +136,42 @@ void compute_stats(
   stats.average /= num_pixels;
 }
 
+void update_display(app_state& app) {
+  if (app.display.size() != app.source.size()) app.display = app.source;
+  parallel_for(app.source.size(), [&app](const vec2i& ij) {
+    if (app.colorgrade) {
+      app.display[ij] = colorgrade(app.source[ij], true, app.params);
+    } else {
+      app.display[ij] = tonemap(app.source[ij], app.exposure, app.filmic);
+    }
+  });
+  compute_stats(app.display_stats, app.display, false);
+  app.glupdated = true;
+}
+
 // add a new image
 void load_image_async(app_states& apps, const string& filename) {
-  auto& app           = apps.loading.emplace_back();
-  app.filename        = filename;
-  app.outname         = replace_extension(filename, ".display.png");
-  app.name            = get_filename(filename);
-  app.tonemap_prms    = app.tonemap_prms;
-  app.colorgrade_prms = app.colorgrade_prms;
-  apps.selected       = (int)apps.states.size() - 1;
-  apps.loaders.push_back(run_async([&app]() {
-    load_image(app.filename, app.source);
+  auto& app     = apps.loading.emplace_back();
+  app.filename  = filename;
+  app.outname   = replace_extension(filename, ".display.png");
+  app.name      = get_filename(filename);
+  app.exposure  = apps.exposure;
+  app.filmic    = apps.filmic;
+  app.params    = apps.params;
+  apps.selected = (int)apps.states.size() - 1;
+  apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
+    if (!load_image(app.filename, app.source)) {
+      app.error = "cannot load " + app.filename;
+      return false;
+    }
     compute_stats(app.source_stats, app.source, is_hdr_filename(app.filename));
-    app.display = tonemap_image(app.source, app.tonemap_prms);
-    if (app.apply_colorgrade)
-      app.display = colorgrade_image(app.display, app.colorgrade_prms);
+    if (app.colorgrade) {
+      app.display = colorgrade_image(app.display, true, app.params);
+    } else {
+      app.display = tonemap_image(app.source, app.exposure, app.filmic);
+    }
     compute_stats(app.display_stats, app.display, false);
+    return true;
   }));
 }
 
@@ -189,13 +222,22 @@ void draw_glwidgets(const opengl_window& win) {
       false);
   if (image_ok && begin_glheader(win, "tonemap")) {
     auto& app    = apps.get_selected();
-    auto& params = app.tonemap_prms;
     auto  edited = 0;
+    edited += draw_glslider(win, "exposure", app.exposure, -5, 5);
+    edited += draw_glcheckbox(win, "filmic", app.filmic);
+    if (edited) update_display(app);
+    end_glheader(win);
+  }
+  if (image_ok && begin_glheader(win, "colorgrade")) {
+    auto& app    = apps.get_selected();
+    auto& params = app.params;
+    auto  edited = 0;
+    edited += draw_glcheckbox(win, "apply colorgrade", app.colorgrade);
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
     edited += draw_glcoloredit(win, "tint", params.tint);
-    edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
+    edited += draw_glslider(win, "lincontrast", params.lincontrast, 0, 1);
     edited += draw_glslider(win, "logcontrast", params.logcontrast, 0, 1);
-    edited += draw_glslider(win, "saturation", params.saturation, 0, 1);
+    edited += draw_glslider(win, "linsaturation", params.linsaturation, 0, 1);
     edited += draw_glcheckbox(win, "filmic", params.filmic);
     continue_glline(win);
     edited += draw_glcheckbox(win, "srgb", params.srgb);
@@ -205,23 +247,16 @@ void draw_glwidgets(const opengl_window& win) {
       params.tint = wb / max(wb);
       edited += 1;
     }
-    if (edited) reset_display(app);
-    end_glheader(win);
-  }
-  if (image_ok && begin_glheader(win, "colorgrade")) {
-    auto& app    = apps.get_selected();
-    auto& params = app.colorgrade_prms;
-    auto  edited = 0;
-    edited += draw_glcheckbox(win, "apply colorgrade", app.apply_colorgrade);
     edited += draw_glslider(win, "contrast", params.contrast, 0, 1);
-    edited += draw_glslider(win, "ldr shadows", params.shadows, 0, 1);
-    edited += draw_glslider(win, "ldr midtones", params.midtones, 0, 1);
+    edited += draw_glslider(win, "saturation", params.saturation, 0, 1);
+    edited += draw_glslider(win, "shadows", params.shadows, 0, 1);
+    edited += draw_glslider(win, "midtones", params.midtones, 0, 1);
     edited += draw_glslider(win, "highlights", params.highlights, 0, 1);
     edited += draw_glcoloredit(win, "shadows color", params.shadows_color);
     edited += draw_glcoloredit(win, "midtones color", params.midtones_color);
     edited += draw_glcoloredit(
         win, "highlights color", params.highlights_color);
-    if (edited) reset_display(app);
+    if (edited) update_display(app);
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "inspect")) {
@@ -232,11 +267,11 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "image",
         std::to_string(app.source.size().x) + " x " +
             std::to_string(app.source.size().y));
-    draw_glslider(win, "zoom", app.draw_prms.scale, 0.1, 10);
-    draw_glcheckbox(win, "fit", app.draw_prms.fit);
+    draw_glslider(win, "zoom", app.glparams.scale, 0.1, 10);
+    draw_glcheckbox(win, "fit", app.glparams.fit);
     auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(mouse_pos, app.draw_prms.center,
-        app.draw_prms.scale, app.source.size());
+    auto ij        = get_image_coords(
+        mouse_pos, app.glparams.center, app.glparams.scale, app.source.size());
     draw_gldragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
     if (ij.x >= 0 && ij.x < app.source.size().x && ij.y >= 0 &&
@@ -265,13 +300,16 @@ void draw_glwidgets(const opengl_window& win) {
 void draw(const opengl_window& win) {
   auto& apps = *(app_states*)get_gluser_pointer(win);
   if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app                 = apps.get_selected();
-    app.draw_prms.window      = get_glwindow_size(win);
-    app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
-    if (!app.gl_image) update_glimage(app.gl_image, app.display, false, false);
-    update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
-        app.draw_prms.window, app.draw_prms.fit);
-    draw_glimage(app.gl_image, app.draw_prms);
+    auto& app                = apps.get_selected();
+    app.glparams.window      = get_glwindow_size(win);
+    app.glparams.framebuffer = get_glframebuffer_viewport(win);
+    if (!app.glimage || app.glupdated) {
+      update_glimage(app.glimage, app.display, false, false);
+      app.glupdated = false;
+    }
+    update_imview(app.glparams.center, app.glparams.scale, app.display.size(),
+        app.glparams.window, app.glparams.fit);
+    draw_glimage(app.glimage, app.glparams);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -280,43 +318,22 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_states& app) {
+  auto is_ready = [](const std::future<bool>& result) -> bool {
+    return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
+                                 std::future_status::ready;
+  };
+
   while (!app.loaders.empty() && is_ready(app.loaders.front())) {
-    try {
-      app.loaders.front().get();
-    } catch (const std::exception& e) {
+    if (!app.loaders.front().get()) {
       push_glmessage(win, "cannot load image " + app.loading.front().filename);
       log_glinfo(win, "cannot load image " + app.loading.front().filename);
-      log_glinfo(win, e.what());
+      log_glinfo(win, app.loading.front().error);
       break;
     }
     app.states.splice(app.states.end(), app.loading, app.loading.begin());
     app.loaders.pop_front();
-    reset_display(app.states.back());
+    update_display(app.states.back());
     if (app.selected < 0) app.selected = (int)app.states.size() - 1;
-  }
-  for (auto& app : app.states) {
-    if (app.render_region < app.render_regions.size()) {
-      auto num_regions = min(12, app.render_regions.size() - app.render_region);
-      parallel_for(num_regions, [&app](int idx) {
-        auto& region = app.render_regions[app.render_region + idx];
-        tonemap_region(app.display, app.source,
-            app.render_regions[app.render_region + idx], app.tonemap_prms);
-        if (app.apply_colorgrade) {
-          colorgrade_region(
-              app.display, app.display, region, app.colorgrade_prms);
-        }
-      });
-      if (!app.gl_image) {
-        update_glimage(app.gl_image, app.display, false, false);
-      } else {
-        for (auto idx = 0; idx < num_regions; idx++)
-          update_glimage_region(app.gl_image, app.display,
-              app.render_regions[app.render_region + idx]);
-      }
-      app.render_region += num_regions;
-    } else if (app.render_stats) {
-      compute_stats(app.display_stats, app.display, false);
-    }
   }
 }
 
@@ -345,11 +362,11 @@ void run_ui(app_states& apps) {
     // handle mouse
     if (mouse_left && !widgets_active) {
       auto& img = apps.get_selected();
-      img.draw_prms.center += mouse_pos - last_pos;
+      img.glparams.center += mouse_pos - last_pos;
     }
     if (mouse_right && !widgets_active) {
       auto& img = apps.get_selected();
-      img.draw_prms.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+      img.glparams.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
     // update

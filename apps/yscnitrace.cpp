@@ -26,20 +26,18 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_common.h"
 #include "../yocto/yocto_commonio.h"
-#include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
+#include <future>
 #include <list>
-#include <map>
 
 namespace yocto {
-void print_obj_camera(const yocto_camera& camera);
+void print_obj_camera(const sceneio_camera& camera);
 };  // namespace yocto
 
 // Application scene
@@ -51,37 +49,37 @@ struct app_state {
   string name      = "";
 
   // options
-  load_params    load_prms     = {};
-  save_params    save_prms     = {};
-  bvh_params     bvh_prms      = {};
-  trace_params   trace_prms    = {};
-  tonemap_params tonemap_prms  = {};
-  int            preview_ratio = 8;
+  trace_params params = {};
+  int          pratio = 8;
 
   // scene
-  yocto_scene scene      = {};
-  trace_bvh   bvh        = {};
-  bool        add_skyenv = false;
+  sceneio_model ioscene    = {};
+  trace_scene   scene      = {};
+  bool          add_skyenv = false;
 
   // rendering state
-  trace_lights lights  = {};
-  trace_state  state   = {};
-  image<vec4f> render  = {};
-  image<vec4f> display = {};
+  trace_state  state    = {};
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
-  opengl_image        gl_image       = {};
-  draw_glimage_params draw_prms      = {};
-  bool                navigation_fps = false;
+  opengl_image        glimage  = {};
+  draw_glimage_params glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
 
   // computation
-  bool                 render_preview = true;
-  int                  render_sample  = 0;
-  int                  render_region  = 0;
-  vector<image_region> render_regions = {};
+  int               render_sample  = 0;
+  std::atomic<bool> render_stop    = {};
+  std::future<void> render_future  = {};
+  int               render_counter = 0;
+
+  ~app_state() {
+    render_stop = true;
+    if (render_future.valid()) render_future.get();
+  }
 };
 
 // Application state
@@ -90,7 +88,7 @@ struct app_states {
   std::list<app_state>                   states;
   int                                    selected = -1;
   std::list<app_state>                   loading;
-  std::list<std::future<void>>           loaders;
+  std::list<std::future<sceneio_status>> loaders;
 
   // get image
   app_state& get_selected() {
@@ -105,59 +103,196 @@ struct app_states {
   }
 
   // default options
-  load_params    load_prms    = {};
-  save_params    save_prms    = {};
-  bvh_params     bvh_prms     = {};
-  trace_params   trace_prms   = {};
-  tonemap_params tonemap_prms = {};
-  bool           add_skyenv   = false;
+  trace_params params     = {};
+  bool         add_skyenv = false;
 };
 
+// convert scene objects
+void update_trace_camera(trace_camera& camera, const sceneio_camera& iocamera) {
+  camera.frame = iocamera.frame;
+  camera.film  = iocamera.aspect >= 1
+                    ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
+                    : vec2f{iocamera.film * iocamera.aspect, iocamera.film};
+  camera.lens     = iocamera.lens;
+  camera.focus    = iocamera.focus;
+  camera.aperture = iocamera.aperture;
+}
+void update_trace_texture(
+    trace_texture& texture, const sceneio_texture& iotexture) {
+  texture.hdr = iotexture.hdr;
+  texture.ldr = iotexture.ldr;
+}
+void update_trace_material(
+    trace_material& material, const sceneio_material& iomaterial) {
+  material.emission         = iomaterial.emission;
+  material.diffuse          = iomaterial.diffuse;
+  material.specular         = iomaterial.specular;
+  material.transmission     = iomaterial.transmission;
+  material.roughness        = iomaterial.roughness;
+  material.opacity          = iomaterial.opacity;
+  material.refract          = iomaterial.refract;
+  material.volemission      = iomaterial.volemission;
+  material.voltransmission  = iomaterial.voltransmission;
+  material.volmeanfreepath  = iomaterial.volmeanfreepath;
+  material.volscatter       = iomaterial.volscatter;
+  material.volscale         = iomaterial.volscale;
+  material.volanisotropy    = iomaterial.volanisotropy;
+  material.emission_tex     = iomaterial.emission_tex;
+  material.diffuse_tex      = iomaterial.diffuse_tex;
+  material.specular_tex     = iomaterial.specular_tex;
+  material.transmission_tex = iomaterial.transmission_tex;
+  material.roughness_tex    = iomaterial.roughness_tex;
+  material.opacity_tex      = iomaterial.opacity_tex;
+  material.subsurface_tex   = iomaterial.subsurface_tex;
+  material.normal_tex       = iomaterial.normal_tex;
+}
+void update_trace_shape(trace_shape& shape, const sceneio_shape& ioshape,
+    const sceneio_model& ioscene) {
+  if (needs_tesselation(ioscene, ioshape)) {
+    return update_trace_shape(
+        shape, tesselate_shape(ioscene, ioshape), ioscene);
+  }
+  shape.points        = ioshape.points;
+  shape.lines         = ioshape.lines;
+  shape.triangles     = ioshape.triangles;
+  shape.quads         = ioshape.quads;
+  shape.quadspos      = ioshape.quadspos;
+  shape.quadsnorm     = ioshape.quadsnorm;
+  shape.quadstexcoord = ioshape.quadstexcoord;
+  shape.positions     = ioshape.positions;
+  shape.normals       = ioshape.normals;
+  shape.texcoords     = ioshape.texcoords;
+  shape.colors        = ioshape.colors;
+  shape.radius        = ioshape.radius;
+  shape.tangents      = ioshape.tangents;
+}
+void update_trace_instance(
+    trace_instance& instance, const sceneio_instance& ioinstance) {
+  instance.frame    = ioinstance.frame;
+  instance.shape    = ioinstance.shape;
+  instance.material = ioinstance.material;
+}
+void update_trace_environment(
+    trace_environment& environment, const sceneio_environment& ioenvironment) {
+  environment.frame        = ioenvironment.frame;
+  environment.emission     = ioenvironment.emission;
+  environment.emission_tex = ioenvironment.emission_tex;
+}
+
+// Construct a scene from io
+trace_scene make_scene(const sceneio_model& ioscene) {
+  auto scene = trace_scene{};
+
+  for (auto& iocamera : ioscene.cameras) {
+    update_trace_camera(scene.cameras.emplace_back(), iocamera);
+  }
+  for (auto& iotexture : ioscene.textures) {
+    update_trace_texture(scene.textures.emplace_back(), iotexture);
+  }
+  for (auto& iomaterial : ioscene.materials) {
+    update_trace_material(scene.materials.emplace_back(), iomaterial);
+  }
+  for (auto& ioshape : ioscene.shapes) {
+    update_trace_shape(scene.shapes.emplace_back(), ioshape, ioscene);
+  }
+  for (auto& ioinstance : ioscene.instances) {
+    update_trace_instance(scene.instances.emplace_back(), ioinstance);
+  }
+  for (auto& ioenvironment : ioscene.environments) {
+    update_trace_environment(scene.environments.emplace_back(), ioenvironment);
+  }
+
+  return scene;
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(const vec2i& size, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, size]() {
+          while (true) {
+            auto j = next_idx.fetch_add(1);
+            if (j >= size.y) break;
+            for (auto i = 0; i < size.x; i++) func({i, j});
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
 void reset_display(app_state& app) {
-  auto image_size = camera_resolution(
-      app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-  app.render.resize(image_size);
-  app.display.resize(image_size);
-  app.render_preview = true;
-  app.render_sample  = 0;
-  app.render_region  = 0;
-  app.state          = make_trace_state(app.render.size(), app.trace_prms.seed);
-  app.render_regions = make_image_regions(
-      app.render.size(), app.trace_prms.region, true);
+  // stop render
+  app.render_stop = true;
+  if (app.render_future.valid()) app.render_future.get();
+
+  // reset state
+  app.state = make_state(app.scene, app.params);
+  app.render.resize(app.state.size());
+  app.display.resize(app.state.size());
+
+  // render preview
+  auto preview_prms = app.params;
+  preview_prms.resolution /= app.pratio;
+  preview_prms.samples = 1;
+  auto preview         = trace_image(app.scene, preview_prms);
+  preview              = tonemap_image(preview, app.exposure);
+  for (auto j = 0; j < app.display.size().y; j++) {
+    for (auto i = 0; i < app.display.size().x; i++) {
+      auto pi             = clamp(i / app.pratio, 0, preview.size().x - 1),
+           pj             = clamp(j / app.pratio, 0, preview.size().y - 1);
+      app.display[{i, j}] = preview[{pi, pj}];
+    }
+  }
+
+  // start renderer
+  app.render_counter = 0;
+  app.render_stop    = false;
+  app.render_future  = std::async(std::launch::async, [&app]() {
+    for (auto sample = 0; sample < app.params.samples; sample++) {
+      if (app.render_stop) return;
+      parallel_for(app.render.size(), [&app](const vec2i& ij) {
+        if (app.render_stop) return;
+        app.render[ij]  = trace_sample(app.state, app.scene, ij, app.params);
+        app.display[ij] = tonemap(app.render[ij], app.exposure);
+      });
+    }
+  });
 }
 
 void load_scene_async(app_states& apps, const string& filename) {
-  auto& app        = apps.loading.emplace_back();
-  app.filename     = filename;
-  app.imagename    = replace_extension(filename, ".png");
-  app.outname      = replace_extension(filename, ".edited.yaml");
-  app.name         = get_filename(app.filename);
-  app.load_prms    = app.load_prms;
-  app.save_prms    = app.save_prms;
-  app.trace_prms   = app.trace_prms;
-  app.bvh_prms     = app.bvh_prms;
-  app.tonemap_prms = app.tonemap_prms;
-  app.add_skyenv   = app.add_skyenv;
-  apps.loaders.push_back(run_async([&app]() {
-    load_scene(app.filename, app.scene);
-    make_bvh(app.bvh, app.scene, app.bvh_prms);
-    make_trace_lights(app.lights, app.scene);
-    if (app.lights.instances.empty() && app.lights.environments.empty() &&
-        is_sampler_lit(app.trace_prms)) {
-      app.trace_prms.sampler = trace_params::sampler_type::eyelight;
-    }
-    auto image_size = camera_resolution(
-        app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-    app.render.resize(image_size);
-    app.display.resize(image_size);
-    app.name = get_filename(app.filename) + " [" +
-               std::to_string(app.render.size().x) + "x" +
-               std::to_string(app.render.size().y) + " @ 0]";
-  }));
+  auto& app      = apps.loading.emplace_back();
+  app.filename   = filename;
+  app.imagename  = replace_extension(filename, ".png");
+  app.outname    = replace_extension(filename, ".edited.yaml");
+  app.name       = get_filename(app.filename);
+  app.params     = app.params;
+  app.add_skyenv = app.add_skyenv;
+  apps.loaders.push_back(
+      std::async(std::launch::async, [&app]() -> sceneio_status {
+        if (auto ret = load_scene(app.filename, app.ioscene); !ret) return ret;
+        app.scene = make_scene(app.ioscene);
+        init_bvh(app.scene, app.params);
+        init_lights(app.scene);
+        if (app.scene.lights.empty() && is_sampler_lit(app.params)) {
+          app.params.sampler = trace_sampler_type::eyelight;
+        }
+        app.state = make_state(app.scene, app.params);
+        app.render.resize(app.state.size());
+        app.display.resize(app.state.size());
+        app.name = get_filename(app.filename) + " [" +
+                   std::to_string(app.render.size().x) + "x" +
+                   std::to_string(app.render.size().y) + " @ 0]";
+        return {};
+      }));
 }
 
 bool draw_glwidgets_camera(const opengl_window& win, app_state& app, int id) {
-  auto& camera = app.scene.cameras[id];
+  auto& camera = app.ioscene.cameras[id];
   auto  edited = 0;
   edited += (int)draw_gltextinput(win, "name", camera.name);
   edited += (int)draw_glslider(win, "frame.x", camera.frame.x, -1, 1);
@@ -178,12 +313,13 @@ bool draw_glwidgets_camera(const opengl_window& win, app_state& app, int id) {
     camera.focus = length(from - to);
     edited += 1;
   }
+  if (edited) update_trace_camera(app.scene.cameras.at(id), camera);
   return edited;
 }
 
 /// Visit struct elements.
 bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
-  auto& texture      = app.scene.textures[id];
+  auto& texture      = app.ioscene.textures[id];
   auto  old_filename = texture.filename;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", texture.name);
@@ -194,6 +330,7 @@ bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
   draw_gllabel(win, "ldr",
       std::to_string(texture.ldr.size().x) + " x " +
           std::to_string(texture.ldr.size().y));
+  // TODO: update values
   if (edited && old_filename != texture.filename) {
     try {
       if (is_hdr_filename(texture.filename)) {
@@ -208,11 +345,12 @@ bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
     }
     // TODO: update lights
   }
+  if (edited) update_trace_texture(app.scene.textures.at(id), texture);
   return edited;
 }
 
 bool draw_glwidgets_material(const opengl_window& win, app_state& app, int id) {
-  auto& material = app.scene.materials[id];
+  auto& material = app.ioscene.materials[id];
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
@@ -232,28 +370,29 @@ bool draw_glwidgets_material(const opengl_window& win, app_state& app, int id) {
   edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
 
   edited += draw_glcombobox(
-      win, "emission_tex", material.emission_tex, app.scene.textures, true);
+      win, "emission_tex", material.emission_tex, app.ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "diffuse_tex", material.diffuse_tex, app.scene.textures, true);
+      win, "diffuse_tex", material.diffuse_tex, app.ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "metallic_tex", material.metallic_tex, app.scene.textures, true);
+      win, "metallic_tex", material.metallic_tex, app.ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "specular_tex", material.specular_tex, app.scene.textures, true);
+      win, "specular_tex", material.specular_tex, app.ioscene.textures, true);
   edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
-      app.scene.textures, true);
+      app.ioscene.textures, true);
+  edited += draw_glcombobox(win, "subsurface_tex", material.subsurface_tex,
+      app.ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "subsurface_tex", material.subsurface_tex, app.scene.textures, true);
+      win, "roughness_tex", material.roughness_tex, app.ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "roughness_tex", material.roughness_tex, app.scene.textures, true);
-  edited += draw_glcombobox(
-      win, "normal_tex", material.normal_tex, app.scene.textures, true);
+      win, "normal_tex", material.normal_tex, app.ioscene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   // TODO: update lights
+  if (edited) update_trace_material(app.scene.materials.at(id), material);
   return edited;
 }
 
 bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
-  auto& shape        = app.scene.shapes[id];
+  auto& shape        = app.ioscene.shapes[id];
   auto  old_filename = shape.filename;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", shape.name);
@@ -282,14 +421,17 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
       log_glinfo(win, "cannot load " + shape.filename);
       log_glinfo(win, e.what());
     }
-    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
-    // TODO: update lights
+    update_trace_shape(app.scene.shapes.at(id), shape, app.ioscene);
+    update_bvh(app.scene, {}, {id}, app.params);
+    init_lights(app.scene);
+  } else if (edited) {
+    update_trace_shape(app.scene.shapes.at(id), shape, app.ioscene);
   }
   return edited;
 }
 
 bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
-  auto& instance     = app.scene.instances[id];
+  auto& instance     = app.ioscene.instances[id];
   auto  old_instance = instance;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", instance.name);
@@ -298,20 +440,21 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
   edited += draw_glslider(win, "frame[2]", instance.frame.z, -1, 1);
   edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
   edited += draw_glcombobox(
-      win, "shape", instance.shape, app.scene.shapes, true);
+      win, "shape", instance.shape, app.ioscene.shapes, true);
   edited += draw_glcombobox(
-      win, "material", instance.material, app.scene.materials, true);
+      win, "material", instance.material, app.ioscene.materials, true);
+  if (edited) update_trace_instance(app.scene.instances.at(id), instance);
   if (edited && instance.shape != old_instance.shape)
-    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
+    update_bvh(app.scene, {}, {id}, app.params);
   if (edited && instance.frame != old_instance.frame)
-    update_bvh(app.bvh, app.scene, {}, {id}, app.bvh_prms);
+    update_bvh(app.scene, {}, {id}, app.params);
   // TODO: update lights
   return edited;
 }
 
 bool draw_glwidgets_environment(
     const opengl_window& win, app_state& app, int id) {
-  auto& environment = app.scene.environments[id];
+  auto& environment = app.ioscene.environments[id];
   auto  edited      = 0;
   edited += draw_gltextinput(win, "name", environment.name);
   edited += draw_glslider(win, "frame[0]", environment.frame.x, -1, 1);
@@ -320,10 +463,10 @@ bool draw_glwidgets_environment(
   edited += draw_glslider(win, "frame.o", environment.frame.o, -10, 10);
   edited += draw_glhdrcoloredit(win, "emission", environment.emission);
   edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
-      app.scene.textures, true);
-  if (edited) {
-    // TODO: update lights
-  }
+      app.ioscene.textures, true);
+  if (edited)
+    update_trace_environment(app.scene.environments.at(id), environment);
+  if (edited) init_lights(app.scene);
   return edited;
 }
 
@@ -344,12 +487,10 @@ void draw_glwidgets(const opengl_window& win) {
           "*.yaml;*.obj;*.pbrt")) {
     auto& app   = apps.get_selected();
     app.outname = save_path;
-    try {
-      save_scene(app.outname, app.scene);
-    } catch (std::exception& e) {
+    if (auto ret = save_scene(app.outname, app.ioscene); !ret) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
-      log_glinfo(win, e.what());
+      log_glinfo(win, ret.error);
     }
     save_path = "";
   }
@@ -390,8 +531,9 @@ void draw_glwidgets(const opengl_window& win) {
   if (scene_ok && begin_glheader(win, "trace")) {
     auto  edited  = 0;
     auto& app     = apps.get_selected();
-    auto& tparams = app.trace_prms;
-    edited += draw_glcombobox(win, "camera", tparams.camera, app.scene.cameras);
+    auto& tparams = app.params;
+    edited += draw_glcombobox(
+        win, "camera", tparams.camera, app.ioscene.cameras);
     edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
     edited += draw_glcombobox(
@@ -403,12 +545,8 @@ void draw_glwidgets(const opengl_window& win) {
     continue_glline(win);
     edited += draw_glcheckbox(win, "filter", tparams.tentfilter);
     edited += draw_glslider(win, "seed", (int&)tparams.seed, 0, 1000000);
-    edited += draw_glslider(win, "pratio", app.preview_ratio, 1, 64);
-    auto& dparams = app.tonemap_prms;
-    edited += draw_glslider(win, "exposure", dparams.exposure, -5, 5);
-    draw_glcheckbox(win, "filmic", dparams.filmic);
-    continue_glline(win);
-    edited += draw_glcheckbox(win, "srgb", dparams.srgb);
+    edited += draw_glslider(win, "pratio", app.pratio, 1, 64);
+    edited += draw_glslider(win, "exposure", app.exposure, -5, 5);
     if (edited) reset_display(app);
     end_glheader(win);
   }
@@ -422,23 +560,22 @@ void draw_glwidgets(const opengl_window& win) {
         std::to_string(app.render.size().x) + " x " +
             std::to_string(app.render.size().y) + " @ " +
             std::to_string(app.render_sample));
-    draw_glslider(win, "zoom", app.draw_prms.scale, 0.1, 10);
-    draw_glcheckbox(win, "zoom to fit", app.draw_prms.fit);
+    draw_glslider(win, "zoom", app.glparams.scale, 0.1, 10);
+    draw_glcheckbox(win, "zoom to fit", app.glparams.fit);
     continue_glline(win);
-    draw_glcheckbox(win, "fps", app.navigation_fps);
     if (draw_glbutton(win, "print cams")) {
-      for (auto& camera : app.scene.cameras) {
+      for (auto& camera : app.ioscene.cameras) {
         print_obj_camera(camera);
       }
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : format_stats(app.scene)) print_info(stat);
-      // for (auto stat : format_stats(app.bvh)) print_info(stat);
+      for (auto stat : scene_stats(app.ioscene)) print_info(stat);
+      // for (auto stat : scene_stats(app.bvh)) print_info(stat);
     }
     auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(mouse_pos, app.draw_prms.center,
-        app.draw_prms.scale, app.render.size());
+    auto ij        = get_image_coords(
+        mouse_pos, app.glparams.center, app.glparams.scale, app.render.size());
     draw_gldragger(win, "mouse", ij);
     if (ij.x >= 0 && ij.x < app.render.size().x && ij.y >= 0 &&
         ij.y < app.render.size().y) {
@@ -458,27 +595,27 @@ void draw_glwidgets(const opengl_window& win) {
     auto edited = 0;
     if (app.selection.first == "camera") {
       edited += draw_glcombobox(
-          win, "selection##2", app.selection.second, app.scene.cameras);
+          win, "selection##2", app.selection.second, app.ioscene.cameras);
       edited += draw_glwidgets_camera(win, app, app.selection.second);
     } else if (app.selection.first == "texture") {
       draw_glcombobox(
-          win, "selection##2", app.selection.second, app.scene.textures);
+          win, "selection##2", app.selection.second, app.ioscene.textures);
       edited += draw_glwidgets_texture(win, app, app.selection.second);
     } else if (app.selection.first == "material") {
       draw_glcombobox(
-          win, "selection##2", app.selection.second, app.scene.materials);
+          win, "selection##2", app.selection.second, app.ioscene.materials);
       edited += draw_glwidgets_material(win, app, app.selection.second);
     } else if (app.selection.first == "shape") {
       draw_glcombobox(
-          win, "selection##2", app.selection.second, app.scene.shapes);
+          win, "selection##2", app.selection.second, app.ioscene.shapes);
       edited += draw_glwidgets_shape(win, app, app.selection.second);
     } else if (app.selection.first == "instance") {
       draw_glcombobox(
-          win, "selection##2", app.selection.second, app.scene.instances);
+          win, "selection##2", app.selection.second, app.ioscene.instances);
       edited += draw_glwidgets_instance(win, app, app.selection.second);
     } else if (app.selection.first == "environment") {
       draw_glcombobox(
-          win, "selection##2", app.selection.second, app.scene.environments);
+          win, "selection##2", app.selection.second, app.ioscene.environments);
       edited += draw_glwidgets_environment(win, app, app.selection.second);
     }
     if (edited) reset_display(app);
@@ -494,14 +631,18 @@ void draw(const opengl_window& win) {
   auto& apps = *(app_states*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app                 = apps.get_selected();
-    app.draw_prms.window      = get_glwindow_size(win);
-    app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
-    if (!app.gl_image || app.gl_image.size() != app.display.size())
-      update_glimage(app.gl_image, app.display, false, false);
-    update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
-        app.draw_prms.window, app.draw_prms.fit);
-    draw_glimage(app.gl_image, app.draw_prms);
+    auto& app                = apps.get_selected();
+    app.glparams.window      = get_glwindow_size(win);
+    app.glparams.framebuffer = get_glframebuffer_viewport(win);
+    if (!app.glimage || app.glimage.size() != app.display.size() ||
+        !app.render_counter) {
+      update_glimage(app.glimage, app.display, false, false);
+    }
+    update_imview(app.glparams.center, app.glparams.scale, app.display.size(),
+        app.glparams.window, app.glparams.fit);
+    draw_glimage(app.glimage, app.glparams);
+    app.render_counter++;
+    if (app.render_counter > 10) app.render_counter = 0;
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -510,65 +651,22 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_states& app) {
+  auto is_ready = [](const std::future<sceneio_status>& result) -> bool {
+    return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
+                                 std::future_status::ready;
+  };
+
   while (!app.loaders.empty() && is_ready(app.loaders.front())) {
-    try {
-      app.loaders.front().get();
-    } catch (const std::exception& e) {
+    if (auto ret = app.loaders.front().get(); !ret) {
       push_glmessage(win, "cannot load scene " + app.loading.front().filename);
       log_glinfo(win, "cannot load scene " + app.loading.front().filename);
-      log_glinfo(win, e.what());
+      log_glinfo(win, ret.error);
       break;
     }
     app.states.splice(app.states.end(), app.loading, app.loading.begin());
     app.loaders.pop_front();
     reset_display(app.states.back());
     if (app.selected < 0) app.selected = (int)app.states.size() - 1;
-  }
-  for (auto& app : app.states) {
-    if (app.render_preview) {
-      // rendering preview
-      auto preview_prms = app.trace_prms;
-      preview_prms.resolution /= app.preview_ratio;
-      preview_prms.samples = 1;
-      auto preview = trace_image(app.scene, app.bvh, app.lights, preview_prms);
-      preview      = tonemap_image(preview, app.tonemap_prms);
-      for (auto j = 0; j < app.display.size().y; j++) {
-        for (auto i = 0; i < app.display.size().x; i++) {
-          auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
-               pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
-          app.display[{i, j}] = preview[{pi, pj}];
-        }
-      }
-      if (!app.gl_image || app.gl_image.size() != app.display.size()) {
-        update_glimage(app.gl_image, app.display, false, false);
-      } else {
-        update_glimage(app.gl_image, app.display, false, false);
-      }
-      app.render_preview = false;
-    } else if (app.render_sample < app.trace_prms.samples) {
-      // rendering blocks
-      auto num_regions = min(
-          128, app.render_regions.size() - app.render_region);
-      parallel_for(app.render_region, app.render_region + num_regions,
-          [&app](int region_id) {
-            trace_region(app.render, app.state, app.scene, app.bvh, app.lights,
-                app.render_regions[region_id], 1, app.trace_prms);
-            tonemap_region(app.display, app.render,
-                app.render_regions[region_id], app.tonemap_prms);
-          });
-      if (!app.gl_image || app.gl_image.size() != app.display.size()) {
-        update_glimage(app.gl_image, app.display, false, false);
-      } else {
-        for (auto idx = 0; idx < num_regions; idx++)
-          update_glimage_region(app.gl_image, app.display,
-              app.render_regions[app.render_region + idx]);
-      }
-      app.render_region += num_regions;
-      if (app.render_region >= app.render_regions.size()) {
-        app.render_region = 0;
-        app.render_sample += 1;
-      }
-    }
   }
 }
 
@@ -602,7 +700,7 @@ void run_ui(app_states& apps) {
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
       auto& app    = apps.get_selected();
-      auto& camera = app.scene.cameras.at(app.trace_prms.camera);
+      auto& camera = app.ioscene.cameras.at(app.params.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
       auto  rotate = zero2f;
@@ -612,6 +710,8 @@ void run_ui(app_states& apps) {
         pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
       pan.x = -pan.x;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
+      update_trace_camera(app.scene.cameras.at(app.params.camera), camera);
+      // TODO: update
       reset_display(app);
     }
 
@@ -619,14 +719,15 @@ void run_ui(app_states& apps) {
     if (scene_ok && (mouse_left || mouse_right) && alt_down &&
         !widgets_active) {
       auto& app = apps.get_selected();
-      auto  ij  = get_image_coords(mouse_pos, app.draw_prms.center,
-          app.draw_prms.scale, app.render.size());
+      auto  ij  = get_image_coords(mouse_pos, app.glparams.center,
+          app.glparams.scale, app.render.size());
       if (ij.x >= 0 && ij.x < app.render.size().x && ij.y >= 0 &&
           ij.y < app.render.size().y) {
-        auto& camera = app.scene.cameras.at(app.trace_prms.camera);
-        auto  ray    = eval_camera(
-            camera, ij, app.render.size(), {0.5f, 0.5f}, zero2f);
-        if (auto isec = intersect_scene_bvh(app.bvh, ray); isec.hit) {
+        auto& camera = app.scene.cameras.at(app.params.camera);
+        auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
+            vec2f{ij.x + 0.5f, ij.y + 0.5f} /
+                vec2f{(float)app.render.size().x, (float)app.render.size().y});
+        if (auto isec = intersect_scene_bvh(app.scene, ray); isec.hit) {
           app.selection = {"instance", isec.instance};
         }
       }
@@ -649,65 +750,29 @@ void run_ui(app_states& apps) {
 int main(int argc, const char* argv[]) {
   // application
   app_states app{};
-  app.trace_prms.batch = 1;
-  auto no_parallel     = false;
-  auto filenames       = vector<string>{};
-
-  // names for enums
-  auto sampler_namemap = std::map<string, trace_params::sampler_type>{};
-  for (auto type = 0; type < trace_sampler_names.size(); type++) {
-    sampler_namemap[trace_sampler_names[type]] =
-        (trace_params::sampler_type)type;
-  }
-  auto falsecolor_namemap = std::map<string, trace_params::falsecolor_type>{};
-  for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
-    falsecolor_namemap[trace_falsecolor_names[type]] =
-        (trace_params::falsecolor_type)type;
-  }
+  auto       filenames = vector<string>{};
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");
-  add_cli_option(cli, "--camera", app.trace_prms.camera, "Camera index.");
+  add_cli_option(cli, "--camera", app.params.camera, "Camera index.");
   add_cli_option(
-      cli, "--resolution,-r", app.trace_prms.resolution, "Image resolution.");
-  add_cli_option(
-      cli, "--samples,-s", app.trace_prms.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)app.trace_prms.sampler,
-      "Tracer type.", trace_sampler_names);
-  add_cli_option(cli, "--falsecolor,-F", (int&)app.trace_prms.falsecolor,
+      cli, "--resolution,-r", app.params.resolution, "Image resolution.");
+  add_cli_option(cli, "--samples,-s", app.params.samples, "Number of samples.");
+  add_cli_option(cli, "--tracer,-t", (int&)app.params.sampler, "Tracer type.",
+      trace_sampler_names);
+  add_cli_option(cli, "--falsecolor,-F", (int&)app.params.falsecolor,
       "Tracer false color type.", trace_falsecolor_names);
   add_cli_option(
-      cli, "--bounces", app.trace_prms.bounces, "Maximum number of bounces.");
-  add_cli_option(cli, "--clamp", app.trace_prms.clamp, "Final pixel clamping.");
-  add_cli_option(cli, "--filter", app.trace_prms.tentfilter, "Filter image.");
-  add_cli_option(cli, "--env-hidden/--no-env-hidden", app.trace_prms.envhidden,
+      cli, "--bounces", app.params.bounces, "Maximum number of bounces.");
+  add_cli_option(cli, "--clamp", app.params.clamp, "Final pixel clamping.");
+  add_cli_option(cli, "--filter", app.params.tentfilter, "Filter image.");
+  add_cli_option(cli, "--env-hidden/--no-env-hidden", app.params.envhidden,
       "Environments are hidden in renderer");
-  add_cli_option(cli, "--parallel,/--no-parallel", no_parallel,
-      "Disable parallel execution.");
   add_cli_option(
-      cli, "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
-  add_cli_option(
-      cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
-  add_cli_option(cli, "--srgb/--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
-  add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
-      app.bvh_prms.high_quality, "Use high quality bvh mode");
-#if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.bvh_prms.embree,
-      "Use Embree ratracer");
-  add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      app.bvh_prms.compact, "Embree runs in compact memory");
-#endif
+      cli, "--bvh", (int&)app.params.bvh, "Bvh type", trace_bvh_names);
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
-
-  // fix parallel code
-  if (no_parallel) {
-    app.bvh_prms.noparallel   = true;
-    app.load_prms.noparallel  = true;
-    app.save_prms.noparallel  = true;
-    app.trace_prms.noparallel = true;
-  }
 
   // loading images
   for (auto filename : filenames) load_scene_async(app, filename);

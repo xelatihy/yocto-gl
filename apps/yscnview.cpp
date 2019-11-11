@@ -26,15 +26,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_common.h"
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "yocto_opengl.h"
 using namespace yocto;
 
+#include <future>
 #include <list>
 
 #ifdef _WIN32
@@ -43,7 +42,7 @@ using namespace yocto;
 #endif
 
 namespace yocto {
-void print_obj_camera(const yocto_camera& camera);
+void print_obj_camera(const sceneio_camera& camera);
 };
 
 // Application state
@@ -55,34 +54,34 @@ struct app_state {
   string name      = "";
 
   // options
-  load_params         load_prms   = {};
-  save_params         save_prms   = {};
   draw_glscene_params drawgl_prms = {};
 
   // scene
-  yocto_scene scene = {};
+  sceneio_model scene = {};
 
   // rendering state
   opengl_scene glscene = {};
 
   // view image
-  bool   navigation_fps = false;
-  float  time           = 0;
-  string anim_group     = "";
-  vec2f  time_range     = zero2f;
-  bool   animate        = false;
+  float  time       = 0;
+  string anim_group = "";
+  vec2f  time_range = zero2f;
+  bool   animate    = false;
 
   // editing
   pair<string, int> selection = {"camera", 0};
+
+  // error
+  string error = "";
 };
 
 // Application state
 struct app_states {
   // data
-  std::list<app_state>         states;
-  int                          selected = -1;
-  std::list<app_state>         loading;
-  std::list<std::future<void>> loaders;
+  std::list<app_state>                   states;
+  int                                    selected = -1;
+  std::list<app_state>                   loading;
+  std::list<std::future<sceneio_status>> loaders;
 
   // get image
   app_state& get_selected() {
@@ -97,10 +96,22 @@ struct app_states {
   }
 
   // default options
-  load_params         load_prms   = {};
-  save_params         save_prms   = {};
   draw_glscene_params drawgl_prms = {};
 };
+
+// Compute animation range
+vec2f compute_animation_range(
+    const sceneio_model& scene, const string& anim_group = "") {
+  if (scene.animations.empty()) return zero2f;
+  auto range = vec2f{+flt_max, -flt_max};
+  for (auto& animation : scene.animations) {
+    if (anim_group != "" && animation.group != anim_group) continue;
+    range.x = min(range.x, animation.times.front());
+    range.y = max(range.y, animation.times.back());
+  }
+  if (range.y < range.x) return zero2f;
+  return range;
+}
 
 void load_scene_async(app_states& apps, const string& filename) {
   auto& app       = apps.loading.emplace_back();
@@ -108,26 +119,27 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.imagename   = replace_extension(filename, ".png");
   app.outname     = replace_extension(filename, ".edited.yaml");
   app.name        = get_filename(app.filename);
-  app.load_prms   = app.load_prms;
-  app.save_prms   = app.save_prms;
   app.drawgl_prms = app.drawgl_prms;
-  apps.loaders.push_back(run_async([&app]() {
-    load_scene(app.filename, app.scene);
-    update_tesselation(app.scene);
-    app.time_range = compute_animation_range(app.scene);
-    app.time       = app.time_range.x;
-  }));
+  apps.loaders.push_back(
+      std::async(std::launch::async, [&app]() -> sceneio_status {
+        if (auto ret = load_scene(app.filename, app.scene); !ret) return ret;
+        app.time_range = compute_animation_range(app.scene);
+        app.time       = app.time_range.x;
+        return {};
+      }));
 }
 
-void update_glcamera(opengl_camera& glcamera, const yocto_camera& camera) {
+void update_glcamera(opengl_camera& glcamera, const sceneio_camera& camera) {
   glcamera.frame  = camera.frame;
-  glcamera.yfov   = camera_yfov(camera);
-  glcamera.asepct = camera_aspect(camera);
+  glcamera.film   = camera.film;
+  glcamera.asepct = camera.aspect;
+  glcamera.lens   = camera.lens;
   glcamera.near   = 0.001f;
   glcamera.far    = 10000;
 }
 
-void update_gltexture(opengl_texture& gltexture, const yocto_texture& texture) {
+void update_gltexture(
+    opengl_texture& gltexture, const sceneio_texture& texture) {
   if (!texture.hdr.empty()) {
     init_gltexture(gltexture, texture.hdr, true, true, true);
   } else if (!texture.ldr.empty()) {
@@ -138,7 +150,7 @@ void update_gltexture(opengl_texture& gltexture, const yocto_texture& texture) {
 }
 
 void update_glmaterial(
-    opengl_material& glmaterial, const yocto_material& material) {
+    opengl_material& glmaterial, const sceneio_material& material) {
   glmaterial.emission     = material.emission;
   glmaterial.diffuse      = material.diffuse;
   glmaterial.specular     = material.specular;
@@ -152,7 +164,11 @@ void update_glmaterial(
   glmaterial.normal_map   = material.normal_tex;
 }
 
-void update_glshape(opengl_shape& glshape, const yocto_shape& shape) {
+void update_glshape(opengl_shape& glshape, const sceneio_shape& shape,
+    const sceneio_model& scene) {
+  if (needs_tesselation(scene, shape)) {
+    return update_glshape(glshape, tesselate_shape(scene, shape), scene);
+  }
   if (shape.quadspos.empty()) {
     if (!shape.positions.empty())
       init_glarraybuffer(glshape.positions, shape.positions, false);
@@ -175,13 +191,9 @@ void update_glshape(opengl_shape& glshape, const yocto_shape& shape) {
       init_glelementbuffer(glshape.quads, triangles, false);
     }
   } else {
-    auto quads     = vector<vec4i>{};
-    auto positions = vector<vec3f>{};
-    auto normals   = vector<vec3f>{};
-    auto texcoords = vector<vec2f>{};
-    split_facevarying(quads, positions, normals, texcoords, shape.quadspos,
-        shape.quadsnorm, shape.quadstexcoord, shape.positions, shape.normals,
-        shape.texcoords);
+    auto [quads, positions, normals, texcoords] = split_facevarying(
+        shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
+        shape.normals, shape.texcoords);
     if (!positions.empty())
       init_glarraybuffer(glshape.positions, positions, false);
     if (!normals.empty()) init_glarraybuffer(glshape.normals, normals, false);
@@ -195,13 +207,13 @@ void update_glshape(opengl_shape& glshape, const yocto_shape& shape) {
 }
 
 void update_glinstance(
-    opengl_instance& glinstance, const yocto_instance& instance) {
+    opengl_instance& glinstance, const sceneio_instance& instance) {
   glinstance.frame    = instance.frame;
   glinstance.shape    = instance.shape;
   glinstance.material = instance.material;
 }
 
-void update_gllights(opengl_scene& state, const yocto_scene& scene) {
+void update_gllights(opengl_scene& state, const sceneio_model& scene) {
   state.lights = {};
   for (auto& instance : scene.instances) {
     if (state.lights.size() >= 16) break;
@@ -209,7 +221,8 @@ void update_gllights(opengl_scene& state, const yocto_scene& scene) {
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) continue;
-    auto bbox = compute_bounds(shape);
+    auto bbox = invalidb3f;
+    for (auto& p : shape.positions) bbox = merge(bbox, p);
     auto pos  = (bbox.max + bbox.min) / 2;
     auto area = 0.0f;
     if (!shape.triangles.empty()) {
@@ -234,7 +247,7 @@ void update_gllights(opengl_scene& state, const yocto_scene& scene) {
   }
 }
 
-void make_glscene(opengl_scene& glscene, const yocto_scene& scene) {
+void make_glscene(opengl_scene& glscene, const sceneio_model& scene) {
   // load program
   make_glscene(glscene);
 
@@ -255,7 +268,7 @@ void make_glscene(opengl_scene& glscene, const yocto_scene& scene) {
 
   // shapes
   for (auto& shape : scene.shapes) {
-    update_glshape(glscene.shapes.emplace_back(), shape);
+    update_glshape(glscene.shapes.emplace_back(), shape, scene);
   }
 
   // instances
@@ -403,7 +416,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
     }
     // TODO: update lights
   }
-  if (edited) update_glshape(scene.glscene.shapes[id], shape);
+  if (edited) update_glshape(scene.glscene.shapes[id], shape, scene.scene);
   return edited;
 }
 
@@ -462,12 +475,10 @@ void draw_glwidgets(const opengl_window& win) {
           "*.yaml;*.obj;*.pbrt")) {
     auto& app   = apps.get_selected();
     app.outname = save_path;
-    try {
-      save_scene(app.outname, app.scene);
-    } catch (std::exception& e) {
+    if (auto ret = save_scene(app.outname, app.scene); !ret) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
-      log_glinfo(win, e.what());
+      log_glinfo(win, ret.error);
     }
     save_path = "";
   }
@@ -520,7 +531,6 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "outname", app.outname);
     draw_gllabel(win, "imagename", app.imagename);
     continue_glline(win);
-    draw_glcheckbox(win, "fps", app.navigation_fps);
     if (draw_glbutton(win, "print cams")) {
       for (auto& camera : app.scene.cameras) {
         print_obj_camera(camera);
@@ -528,7 +538,7 @@ void draw_glwidgets(const opengl_window& win) {
     }
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
-      for (auto stat : format_stats(app.scene)) print_info(stat);
+      for (auto stat : scene_stats(app.scene)) print_info(stat);
     }
     end_glheader(win);
   }
@@ -586,13 +596,16 @@ void draw(const opengl_window& win) {
 
 // update
 void update(const opengl_window& win, app_states& apps) {
+  auto is_ready = [](const std::future<sceneio_status>& result) -> bool {
+    return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
+                                 std::future_status::ready;
+  };
+
   while (!apps.loaders.empty() && is_ready(apps.loaders.front())) {
-    try {
-      apps.loaders.front().get();
-    } catch (const std::exception& e) {
+    if (!apps.loaders.front().get()) {
       push_glmessage(win, "cannot load scene " + apps.loading.front().filename);
       log_glinfo(win, "cannot load scene " + apps.loading.front().filename);
-      log_glinfo(win, e.what());
+      log_glinfo(win, apps.loading.front().error);
       break;
     }
     apps.states.splice(apps.states.end(), apps.loading, apps.loading.begin());
@@ -695,12 +708,6 @@ int main(int argc, const char* argv[]) {
       cli, "--noparallel", noparallel, "Disable parallel execution.");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
-
-  // fix parallel code
-  if (noparallel) {
-    app.load_prms.noparallel = true;
-    app.save_prms.noparallel = true;
-  }
 
   // loading images
   for (auto filename : filenames) load_scene_async(app, filename);

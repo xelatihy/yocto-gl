@@ -26,14 +26,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_common.h"
 #include "../yocto/yocto_commonio.h"
-#include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace yocto;
+
+#include <future>
 
 // Application state
 struct app_state {
@@ -43,109 +43,195 @@ struct app_state {
   string name      = "";
 
   // options
-  load_params    load_prms     = {};
-  save_params    save_prms     = {};
-  bvh_params     bvh_prms      = {};
-  trace_params   trace_prms    = {};
-  tonemap_params tonemap_prms  = {};
-  int            preview_ratio = 8;
+  trace_params params = {};
+  int          pratio = 8;
 
   // scene
-  yocto_scene scene      = {};
-  trace_bvh   bvh        = {};
+  trace_scene scene      = {};
   bool        add_skyenv = false;
 
   // rendering state
-  trace_lights lights  = {};
-  trace_state  state   = {};
-  image<vec4f> render  = {};
-  image<vec4f> display = {};
+  trace_state  state    = {};
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
-  opengl_image        gl_image       = {};
-  draw_glimage_params draw_prms      = {};
-  bool                navigation_fps = false;
+  opengl_image        glimage  = {};
+  draw_glimage_params glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
 
   // computation
-  bool                 render_preview = true;
-  int                  render_sample  = 0;
-  int                  render_region  = 0;
-  vector<image_region> render_regions = {};
+  int               render_sample  = 0;
+  std::atomic<bool> render_stop    = {};
+  std::future<void> render_future  = {};
+  int               render_counter = 0;
+
+  ~app_state() {
+    render_stop = true;
+    if (render_future.valid()) render_future.get();
+  }
 };
 
+// construct a scene from io
+trace_scene make_scene(const sceneio_model& ioscene) {
+  auto scene = trace_scene{};
+
+  for (auto& iocamera : ioscene.cameras) {
+    auto& camera = scene.cameras.emplace_back();
+    camera.frame = iocamera.frame;
+    camera.film  = iocamera.aspect >= 1
+                      ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
+                      : vec2f{iocamera.film * iocamera.aspect, iocamera.film};
+    camera.lens     = iocamera.lens;
+    camera.focus    = iocamera.focus;
+    camera.aperture = iocamera.aperture;
+  }
+
+  for (auto& iotexture : ioscene.textures) {
+    auto& texture = scene.textures.emplace_back();
+    texture.hdr   = iotexture.hdr;
+    texture.ldr   = iotexture.ldr;
+  }
+
+  for (auto& iomaterial : ioscene.materials) {
+    auto& material            = scene.materials.emplace_back();
+    material.emission         = iomaterial.emission;
+    material.diffuse          = iomaterial.diffuse;
+    material.specular         = iomaterial.specular;
+    material.transmission     = iomaterial.transmission;
+    material.roughness        = iomaterial.roughness;
+    material.opacity          = iomaterial.opacity;
+    material.refract          = iomaterial.refract;
+    material.volemission      = iomaterial.volemission;
+    material.voltransmission  = iomaterial.voltransmission;
+    material.volmeanfreepath  = iomaterial.volmeanfreepath;
+    material.volscatter       = iomaterial.volscatter;
+    material.volscale         = iomaterial.volscale;
+    material.volanisotropy    = iomaterial.volanisotropy;
+    material.emission_tex     = iomaterial.emission_tex;
+    material.diffuse_tex      = iomaterial.diffuse_tex;
+    material.specular_tex     = iomaterial.specular_tex;
+    material.transmission_tex = iomaterial.transmission_tex;
+    material.roughness_tex    = iomaterial.roughness_tex;
+    material.opacity_tex      = iomaterial.opacity_tex;
+    material.subsurface_tex   = iomaterial.subsurface_tex;
+    material.normal_tex       = iomaterial.normal_tex;
+  }
+
+  for (auto& ioshape_ : ioscene.shapes) {
+    auto& ioshape = (needs_tesselation(ioscene, ioshape_))
+                        ? tesselate_shape(ioscene, ioshape_)
+                        : ioshape_;
+    auto& shape         = scene.shapes.emplace_back();
+    shape.points        = ioshape.points;
+    shape.lines         = ioshape.lines;
+    shape.triangles     = ioshape.triangles;
+    shape.quads         = ioshape.quads;
+    shape.quadspos      = ioshape.quadspos;
+    shape.quadsnorm     = ioshape.quadsnorm;
+    shape.quadstexcoord = ioshape.quadstexcoord;
+    shape.positions     = ioshape.positions;
+    shape.normals       = ioshape.normals;
+    shape.texcoords     = ioshape.texcoords;
+    shape.colors        = ioshape.colors;
+    shape.radius        = ioshape.radius;
+    shape.tangents      = ioshape.tangents;
+  }
+
+  for (auto& ioinstance : ioscene.instances) {
+    auto& instance    = scene.instances.emplace_back();
+    instance.frame    = ioinstance.frame;
+    instance.shape    = ioinstance.shape;
+    instance.material = ioinstance.material;
+  }
+
+  for (auto& ioenvironment : ioscene.environments) {
+    auto& environment        = scene.environments.emplace_back();
+    environment.frame        = ioenvironment.frame;
+    environment.emission     = ioenvironment.emission;
+    environment.emission_tex = ioenvironment.emission_tex;
+  }
+
+  return scene;
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(const vec2i& size, Func&& func) {
+  auto             futures  = vector<std::future<void>>{};
+  auto             nthreads = std::thread::hardware_concurrency();
+  std::atomic<int> next_idx(0);
+  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+    futures.emplace_back(
+        std::async(std::launch::async, [&func, &next_idx, size]() {
+          while (true) {
+            auto j = next_idx.fetch_add(1);
+            if (j >= size.y) break;
+            for (auto i = 0; i < size.x; i++) func({i, j});
+          }
+        }));
+  }
+  for (auto& f : futures) f.get();
+}
+
 void reset_display(app_state& app) {
-  auto image_size = camera_resolution(
-      app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-  app.render.resize(image_size);
-  app.display.resize(image_size);
-  app.render_preview = true;
-  app.render_sample  = 0;
-  app.render_region  = 0;
-  app.state          = make_trace_state(app.render.size(), app.trace_prms.seed);
-  app.render_regions = make_image_regions(
-      app.render.size(), app.trace_prms.region, true);
+  // stop render
+  app.render_stop = true;
+  if (app.render_future.valid()) app.render_future.get();
+
+  // reset state
+  app.state = make_state(app.scene, app.params);
+  app.render.resize(app.state.size());
+  app.display.resize(app.state.size());
+
+  // render preview
+  auto preview_prms = app.params;
+  preview_prms.resolution /= app.pratio;
+  preview_prms.samples = 1;
+  auto preview         = trace_image(app.scene, preview_prms);
+  preview              = tonemap_image(preview, app.exposure);
+  for (auto j = 0; j < app.display.size().y; j++) {
+    for (auto i = 0; i < app.display.size().x; i++) {
+      auto pi             = clamp(i / app.pratio, 0, preview.size().x - 1),
+           pj             = clamp(j / app.pratio, 0, preview.size().y - 1);
+      app.display[{i, j}] = preview[{pi, pj}];
+    }
+  }
+
+  // start renderer
+  app.render_counter = 0;
+  app.render_stop    = false;
+  app.render_future  = std::async(std::launch::async, [&app]() {
+    for (auto sample = 0; sample < app.params.samples; sample++) {
+      if (app.render_stop) return;
+      parallel_for(app.render.size(), [&app](const vec2i& ij) {
+        if (app.render_stop) return;
+        app.render[ij]  = trace_sample(app.state, app.scene, ij, app.params);
+        app.display[ij] = tonemap(app.render[ij], app.exposure);
+      });
+    }
+  });
 }
 
 void draw(const opengl_window& win) {
   auto& app = *(app_state*)get_gluser_pointer(win);
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.gl_image || app.gl_image.size() != app.display.size())
-    update_glimage(app.gl_image, app.display, false, false);
-  app.draw_prms.window      = get_glwindow_size(win);
-  app.draw_prms.framebuffer = get_glframebuffer_viewport(win);
-  update_imview(app.draw_prms.center, app.draw_prms.scale, app.display.size(),
-      app.draw_prms.window, app.draw_prms.fit);
-  draw_glimage(app.gl_image, app.draw_prms);
-  swap_glbuffers(win);
-}
-
-void update(const opengl_window& win, app_state& app) {
-  if (app.render_preview) {
-    // rendering preview
-    auto preview_prms = app.trace_prms;
-    preview_prms.resolution /= app.preview_ratio;
-    preview_prms.samples = 1;
-    auto preview = trace_image(app.scene, app.bvh, app.lights, preview_prms);
-    preview      = tonemap_image(preview, app.tonemap_prms);
-    for (auto j = 0; j < app.display.size().y; j++) {
-      for (auto i = 0; i < app.display.size().x; i++) {
-        auto pi = clamp(i / app.preview_ratio, 0, preview.size().x - 1),
-             pj = clamp(j / app.preview_ratio, 0, preview.size().y - 1);
-        app.display[{i, j}] = preview[{pi, pj}];
-      }
-    }
-    if (!app.gl_image || app.gl_image.size() != app.display.size()) {
-      update_glimage(app.gl_image, app.display, false, false);
-    } else {
-      update_glimage(app.gl_image, app.display, false, false);
-    }
-    app.render_preview = false;
-  } else if (app.render_sample < app.trace_prms.samples) {
-    // rendering blocks
-    auto num_regions = min(128, app.render_regions.size() - app.render_region);
-    parallel_for(app.render_region, app.render_region + num_regions,
-        [&app](int region_id) {
-          trace_region(app.render, app.state, app.scene, app.bvh, app.lights,
-              app.render_regions[region_id], 1, app.trace_prms);
-          tonemap_region(app.display, app.render, app.render_regions[region_id],
-              app.tonemap_prms);
-        });
-    if (!app.gl_image || app.gl_image.size() != app.display.size()) {
-      update_glimage(app.gl_image, app.display, false, false);
-    } else {
-      for (auto idx = 0; idx < num_regions; idx++)
-        update_glimage_region(app.gl_image, app.display,
-            app.render_regions[app.render_region + idx]);
-    }
-    app.render_region += num_regions;
-    if (app.render_region >= app.render_regions.size()) {
-      app.render_region = 0;
-      app.render_sample += 1;
-    }
+  if (!app.glimage || app.glimage.size() != app.display.size() ||
+      !app.render_counter) {
+    update_glimage(app.glimage, app.display, false, false);
   }
+  app.glparams.window      = get_glwindow_size(win);
+  app.glparams.framebuffer = get_glframebuffer_viewport(win);
+  update_imview(app.glparams.center, app.glparams.scale, app.display.size(),
+      app.glparams.window, app.glparams.fit);
+  draw_glimage(app.glimage, app.glparams);
+  swap_glbuffers(win);
+  app.render_counter++;
+  if (app.render_counter > 10) app.render_counter = 0;
 }
 
 // run ui loop
@@ -166,7 +252,7 @@ void run_ui(app_state& app) {
 
     // handle mouse and keyboard for navigation
     if ((mouse_left || mouse_right) && !alt_down) {
-      auto& camera = app.scene.cameras.at(app.trace_prms.camera);
+      auto& camera = app.scene.cameras.at(app.params.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
       auto  rotate = zero2f;
@@ -178,9 +264,6 @@ void run_ui(app_state& app) {
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       reset_display(app);
     }
-
-    // update
-    update(win, app);
 
     // draw
     draw(win);
@@ -196,94 +279,62 @@ void run_ui(app_state& app) {
 int main(int argc, const char* argv[]) {
   // application
   app_state app{};
-  auto      no_parallel = false;
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");
-  add_cli_option(cli, "--camera", app.trace_prms.camera, "Camera index.");
+  add_cli_option(cli, "--camera", app.params.camera, "Camera index.");
   add_cli_option(
-      cli, "--resolution,-r", app.trace_prms.resolution, "Image resolution.");
-  add_cli_option(
-      cli, "--samples,-s", app.trace_prms.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)app.trace_prms.sampler,
-      "Tracer type.", trace_sampler_names);
-  add_cli_option(cli, "--falsecolor,-F", (int&)app.trace_prms.falsecolor,
+      cli, "--resolution,-r", app.params.resolution, "Image resolution.");
+  add_cli_option(cli, "--samples,-s", app.params.samples, "Number of samples.");
+  add_cli_option(cli, "--tracer,-t", (int&)app.params.sampler, "Tracer type.",
+      trace_sampler_names);
+  add_cli_option(cli, "--falsecolor,-F", (int&)app.params.falsecolor,
       "Tracer false color type.", trace_falsecolor_names);
   add_cli_option(
-      cli, "--bounces", app.trace_prms.bounces, "Maximum number of bounces.");
-  add_cli_option(cli, "--clamp", app.trace_prms.clamp, "Final pixel clamping.");
-  add_cli_option(cli, "--filter", app.trace_prms.tentfilter, "Filter image.");
-  add_cli_option(cli, "--env-hidden/--no-env-hidden", app.trace_prms.envhidden,
+      cli, "--bounces", app.params.bounces, "Maximum number of bounces.");
+  add_cli_option(cli, "--clamp", app.params.clamp, "Final pixel clamping.");
+  add_cli_option(cli, "--filter", app.params.tentfilter, "Filter image.");
+  add_cli_option(cli, "--env-hidden/--no-env-hidden", app.params.envhidden,
       "Environments are hidden in renderer");
-  add_cli_option(cli, "--parallel,/--no-parallel", no_parallel,
-      "Disable parallel execution.");
   add_cli_option(
-      cli, "--exposure,-e", app.tonemap_prms.exposure, "Hdr exposure");
-  add_cli_option(
-      cli, "--filmic/--no-filmic", app.tonemap_prms.filmic, "Hdr filmic");
-  add_cli_option(cli, "--srgb/--no-srgb", app.tonemap_prms.srgb, "Hdr srgb");
-  add_cli_option(cli, "--bvh-high-quality/--no-bvh-high-quality",
-      app.bvh_prms.high_quality, "Use high quality bvh mode");
-#if YOCTO_EMBREE
-  add_cli_option(cli, "--bvh-embree/--no-bvh-embree", app.bvh_prms.embree,
-      "Use Embree ratracer");
-  add_cli_option(cli, "--bvh-embree-compact/--no-bvh-embree-compact",
-      app.bvh_prms.compact, "Embree runs in compact memory");
-#endif
+      cli, "--bvh", (int&)app.params.bvh, "Bvh type", trace_bvh_names);
   add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
   add_cli_option(cli, "--output,-o", app.imagename, "Image output", false);
   add_cli_option(cli, "scene", app.filename, "Scene filename", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 
-  // fix parallel code
-  if (no_parallel) {
-    app.bvh_prms.noparallel   = true;
-    app.load_prms.noparallel  = true;
-    app.save_prms.noparallel  = true;
-    app.trace_prms.noparallel = true;
-  }
-
   // scene loading
-  try {
-    auto timer = print_timed("loading scene");
-    load_scene(app.filename, app.scene, app.load_prms);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  auto ioscene    = sceneio_model{};
+  auto load_timer = print_timed("loading scene");
+  if (auto ret = load_scene(app.filename, ioscene); !ret) {
+    print_fatal(ret.error);
   }
+  print_elapsed(load_timer);
 
-  // tesselate
-  {
-    auto timer = print_timed("tesselating");
-    update_tesselation(app.scene);
-  }
-
-  // add sky
-  if (app.add_skyenv) add_sky(app.scene);
+  // conversion
+  auto convert_timer = print_timed("converting");
+  app.scene          = make_scene(ioscene);
+  print_elapsed(convert_timer);
 
   // build bvh
-  {
-    auto timer = print_timed("building bvh");
-    make_bvh(app.bvh, app.scene, app.bvh_prms);
-  }
+  auto bvh_timer = print_timed("building bvh");
+  init_bvh(app.scene, app.params);
+  print_elapsed(bvh_timer);
 
   // init renderer
-  {
-    auto timer = print_timed("building lights");
-    make_trace_lights(app.lights, app.scene);
-  }
+  auto lights_timer = print_timed("building lights");
+  init_lights(app.scene);
+  print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (app.lights.instances.empty() && app.lights.environments.empty() &&
-      is_sampler_lit(app.trace_prms)) {
+  if (app.scene.lights.empty() && is_sampler_lit(app.params)) {
     print_info("no lights presents, switching to eyelight shader");
-    app.trace_prms.sampler = trace_params::sampler_type::eyelight;
+    app.params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  auto image_size = camera_resolution(
-      app.scene.cameras[app.trace_prms.camera], app.trace_prms.resolution);
-  app.render  = image{image_size, zero4f};
-  app.state   = make_trace_state(image_size, app.trace_prms.seed);
+  app.state   = make_state(app.scene, app.params);
+  app.render  = image{app.state.size(), zero4f};
   app.display = app.render;
   reset_display(app);
 

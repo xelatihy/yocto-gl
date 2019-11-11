@@ -37,18 +37,19 @@
 //
 
 #include "../yocto/yocto_commonio.h"
+#include "../yocto/yocto_image.h"
 #include "../yocto/yocto_modelio.h"
-#include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 using namespace yocto;
 
-#include "ext/json.hpp"
-#include "ext/sajson.h"
-
 #include <deque>
+#include <memory>
 #include <string_view>
 #include <unordered_set>
+
+#include "ext/json.hpp"
+#include "ext/sajson.h"
 
 using std::string_view;
 using std::unordered_set;
@@ -141,7 +142,7 @@ inline void from_json(const json& js, mat4f& val) {
 }
 
 // Add missing names and resolve duplicated names.
-void fix_names(yocto_scene& scene) {
+void fix_names(sceneio_model& scene) {
   auto fix_names = [](auto& values, const string& base) {
     auto count = 0;
     for (auto& value : values) {
@@ -181,7 +182,7 @@ void fix_names(yocto_scene& scene) {
   fix_filenames(scene.textures, "texture", "textures/", ".png");
   fix_filenames(scene.shapes, "shape", "shapes/", ".ply");
 }
-void rename_instances(yocto_scene& scene) {
+void rename_instances(sceneio_model& scene) {
   auto shape_names = vector<string>(scene.shapes.size());
   for (auto sid = 0; sid < scene.shapes.size(); sid++) {
     shape_names[sid] = get_basename(scene.shapes[sid].name);
@@ -213,16 +214,16 @@ struct disney_material {
 };
 
 void load_island_cameras(
-    const string& filename, const string& dirname, yocto_scene& scene) {
+    const string& filename, const string& dirname, sceneio_model& scene) {
   printf("%s\n", filename.c_str());
   auto js = json{};
   load_json(dirname + filename, js);
-  auto camera  = yocto_camera{};
+  auto camera  = sceneio_camera{};
   camera.name  = get_basename(filename);
   camera.lens  = js.at("focalLength").get<float>() * 0.001f;
   camera.focus = js.at("centerOfInterest").get<float>();
   // camera.aperture  = js.at("lensRadius").get<float>();
-  camera.film.y = camera.film.x / js.at("ratio").get<float>();
+  camera.aspect = js.at("ratio").get<float>();
   auto from     = js.at("eye").get<vec3f>();
   auto to       = js.at("look").get<vec3f>();
   auto up       = js.at("up").get<vec3f>();
@@ -232,40 +233,38 @@ void load_island_cameras(
 }
 
 void load_island_lights(
-    const string& filename, const string& dirname, yocto_scene& scene) {
+    const string& filename, const string& dirname, sceneio_model& scene) {
   printf("%s\n", filename.c_str());
   auto js = json{};
   load_json(dirname + filename, js);
   for (auto& [name, ljs] : js.items()) {
     if (ljs.at("type") == "quad") {
-      auto material     = yocto_material{};
+      auto material     = sceneio_material{};
       material.name     = name;
       material.emission = xyz(ljs.at("color").get<vec4f>()) *
                           pow(2.0f, ljs.at("exposure").get<float>());
       scene.materials.push_back(material);
-      auto shape     = yocto_shape{};
+      auto shape     = sceneio_shape{};
       shape.name     = "shapes/lights/" + name + ".ply";
       shape.filename = "shapes/lights/" + name + ".ply";
-      auto params    = proc_shape_params{};
-      params.type    = proc_shape_params::type_t::quad;
-      params.scale =
-          (ljs.at("width").get<float>() + ljs.at("height").get<float>());
-      make_proc_shape(shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, params);
+      auto size      = vec2f{
+          ljs.at("width").get<float>(), ljs.at("height").get<float>()};
+      make_rect(shape.quads, shape.positions, shape.normals, shape.texcoords,
+          {1, 1}, size, {1, 1});
       scene.shapes.push_back(shape);
-      auto instance     = yocto_instance{};
+      auto instance     = sceneio_instance{};
       instance.name     = name;
       instance.frame    = frame3f(ljs.at("translationMatrix").get<mat4f>());
       instance.shape    = (int)scene.shapes.size() - 1;
       instance.material = (int)scene.materials.size() - 1;
       scene.instances.push_back(instance);
     } else if (ljs.at("type") == "dome") {
-      auto texture     = yocto_texture{};
+      auto texture     = sceneio_texture{};
       texture.name     = ljs.at("map");
       texture.filename = ljs.at("map");
       load_image(dirname + texture.filename, texture.hdr);
       scene.textures.push_back(texture);
-      auto environment     = yocto_environment{};
+      auto environment     = sceneio_environment{};
       environment.name     = name;
       environment.emission = xyz(ljs.at("color").get<vec4f>()) *
                              pow(2.0f, ljs.at("exposure").get<float>());
@@ -279,7 +278,7 @@ void load_island_lights(
 }
 
 void load_island_materials(const string& filename, const string& dirname,
-    hash_map<string, disney_material>& mmap) {
+    unordered_map<string, disney_material>& mmap) {
   auto tjs = json{};
   load_json(dirname + "textures/textures.json", tjs);
   auto js = json{};
@@ -317,18 +316,19 @@ void load_island_materials(const string& filename, const string& dirname,
   }
 }
 
-void load_island_shape(vector<yocto_shape>& shapes,
-    vector<yocto_material>& materials, vector<disney_material>& dmaterials,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap,
-    yocto_scene& scene, const string& filename, const string& parent_name) {
+void load_island_shape(vector<sceneio_shape>& shapes,
+    vector<sceneio_material>& materials, vector<disney_material>& dmaterials,
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap,
+    unordered_map<string, int>& tmap, sceneio_model& scene,
+    const string& filename, const string& parent_name) {
   // obj vertices
   std::deque<vec3f> opos  = std::deque<vec3f>();
   std::deque<vec3f> onorm = std::deque<vec3f>();
 
   // vertex maps
-  hash_map<int, int> pos_map  = hash_map<int, int>();
-  hash_map<int, int> norm_map = hash_map<int, int>();
+  unordered_map<int, int> pos_map  = unordered_map<int, int>();
+  unordered_map<int, int> norm_map = unordered_map<int, int>();
 
   // last material and group name
   string gname      = ""s;
@@ -391,7 +391,7 @@ void load_island_shape(vector<yocto_shape>& shapes,
       materials.back().roughness    = 0;
       materials.back().refract      = true;
     }
-    shapes.push_back(yocto_shape{});
+    shapes.push_back(sceneio_shape{});
     shapes.back().name = "shapes/" + parent_name + "/" +
                          get_basename(filename) + "-" +
                          std::to_string((int)shapes.size()) + ".ply";
@@ -404,14 +404,16 @@ void load_island_shape(vector<yocto_shape>& shapes,
     norm_map.reserve(1024 * 1024);
   };
 
-  auto fs = open_file(filename);
+  auto fs       = fopen(filename.c_str(), "rt");
+  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
   auto command   = obj_command{};
   auto value     = vec3f{};
   auto name      = ""s;
   auto verts     = vector<obj_vertex>{};
   auto vert_size = obj_vertex{};
-  while (read_obj_command(fs, command, name, value, verts, vert_size)) {
+  while (
+      read_obj_command(filename, fs, command, name, value, verts, vert_size)) {
     switch (command) {
       case obj_command::vertex: opos.push_back(value); break;
       case obj_command::normal: onorm.push_back(value); break;
@@ -477,15 +479,16 @@ void load_island_shape(vector<yocto_shape>& shapes,
   }
 }
 
-void add_island_shape(yocto_scene& scene, const string& parent_name,
+void add_island_shape(sceneio_model& scene, const string& parent_name,
     const string& filename, const string& dirname,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap,
+    unordered_map<string, int>&             tmap) {
   if (smap.find(filename) != smap.end()) return;
   printf("%s\n", filename.c_str());
 
-  auto shapes      = vector<yocto_shape>{};
-  auto materials   = vector<yocto_material>{};
+  auto shapes      = vector<sceneio_shape>{};
+  auto materials   = vector<sceneio_material>{};
   auto dmaterials  = vector<disney_material>{};
   auto facevarying = false;
 
@@ -507,20 +510,16 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
   // conversion to non-facevarying
   if (!facevarying) {
     for (auto& shape : shapes) {
-      auto split_quads     = vector<vec4i>{};
-      auto split_positions = vector<vec3f>{};
-      auto split_normals   = vector<vec3f>{};
-      auto split_texcoords = vector<vec2f>{};
-      split_facevarying(split_quads, split_positions, split_normals,
-          split_texcoords, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-          shape.positions, shape.normals, shape.texcoords);
-      shape.quads         = split_quads;
-      shape.positions     = split_positions;
-      shape.normals       = split_normals;
-      shape.texcoords     = split_texcoords;
-      shape.quadspos      = {};
-      shape.quadsnorm     = {};
-      shape.quadstexcoord = {};
+      auto [split_quads, split_positions, split_normals,
+          split_texcoords] = split_facevarying(shape.quadspos, shape.quadsnorm,
+          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords);
+      shape.quads          = split_quads;
+      shape.positions      = split_positions;
+      shape.normals        = split_normals;
+      shape.texcoords      = split_texcoords;
+      shape.quadspos       = {};
+      shape.quadsnorm      = {};
+      shape.quadstexcoord  = {};
       if (shape.texcoords.empty()) {
         auto all_triangles = true;
         for (auto& q : shape.quads) {
@@ -561,11 +560,11 @@ void add_island_shape(yocto_scene& scene, const string& parent_name,
   }
 }
 
-void add_island_instance(yocto_scene& scene, const string& parent_name,
+void add_island_instance(sceneio_model& scene, const string& parent_name,
     const mat4f& xform, const vector<vec2i>& shapes) {
-  static auto name_counter = hash_map<string, int>{};
+  static auto name_counter = unordered_map<string, int>{};
   for (auto shape_material : shapes) {
-    auto instance = yocto_instance{};
+    auto instance = sceneio_instance{};
     instance.name = parent_name + "/" + parent_name + "-" +
                     std::to_string(name_counter[parent_name]++);
     instance.frame    = frame3f(xform);
@@ -575,11 +574,11 @@ void add_island_instance(yocto_scene& scene, const string& parent_name,
   }
 }
 
-void add_island_variant_instance(vector<yocto_instance>& instances,
+void add_island_variant_instance(vector<sceneio_instance>& instances,
     const string& parent_name, const mat4f& xform,
     const vector<vec2i>& shapes) {
   for (auto shape_material : shapes) {
-    auto instance     = yocto_instance{};
+    auto instance     = sceneio_instance{};
     instance.frame    = frame3f(xform);
     instance.shape    = shape_material.x;
     instance.material = shape_material.y;
@@ -588,9 +587,10 @@ void add_island_variant_instance(vector<yocto_instance>& instances,
 }
 
 void load_island_archive(const string& filename, const string& dirname,
-    yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap,
+    unordered_map<string, int>&             tmap) {
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
@@ -615,9 +615,11 @@ void load_island_archive(const string& filename, const string& dirname,
 }
 
 void load_island_variant_archive(const string& filename, const string& dirname,
-    yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
-    vector<yocto_instance>& instances, hash_map<string, vector<vec2i>>& smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
+    vector<sceneio_instance>&               instances,
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap,
+    unordered_map<string, int>&             tmap) {
   // elements
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
@@ -644,10 +646,11 @@ void load_island_variant_archive(const string& filename, const string& dirname,
 }
 
 void load_island_variants(const string& filename, const string& dirname,
-    yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
-    hash_map<string, vector<yocto_instance>>& instances,
-    hash_map<string, vector<vec2i>>&          smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
+    unordered_map<string, vector<sceneio_instance>>& instances,
+    unordered_map<string, vector<vec2i>>&            smap,
+    unordered_map<string, disney_material>&          mmap,
+    unordered_map<string, int>&                      tmap) {
   printf("%s\n", filename.c_str());
   auto js_ = json{};
   load_json(dirname + filename, js_);
@@ -678,10 +681,11 @@ void load_island_variants(const string& filename, const string& dirname,
 }
 
 void load_island_element(const string& filename, const string& dirname,
-    yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
-  hash_map<string, vector<yocto_instance>> variants;
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap,
+    unordered_map<string, int>&             tmap) {
+  unordered_map<string, vector<sceneio_instance>> variants;
   load_island_variants("json/isBayCedarA1/isBayCedarA1.json", dirname, scene,
       parent_name, identity4x4f, variants, smap, mmap, tmap);
 
@@ -711,9 +715,11 @@ void load_island_element(const string& filename, const string& dirname,
 }
 
 void load_island_curve(const string& filename, const string& dirname,
-    yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
-    float start_radius, float end_radius, hash_map<string, vector<vec2i>>& smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
+    float start_radius, float end_radius,
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap,
+    unordered_map<string, int>&             tmap) {
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
@@ -723,7 +729,7 @@ void load_island_curve(const string& filename, const string& dirname,
                  get_filename(filename) + ".ply";
   if (smap.find(outname) == smap.end()) {
     auto curves   = doc.get_root();
-    auto shape    = yocto_shape{};
+    auto shape    = sceneio_shape{};
     auto material = -1;
     for (auto j = 0; j < curves.get_length(); j++) {
       auto curve     = curves.get_array_element(j);
@@ -751,10 +757,11 @@ void load_island_curve(const string& filename, const string& dirname,
 }
 
 void load_island_curvetube(const string& filename, const string& dirname,
-    yocto_scene& scene, const string& parent_name, const mat4f& parent_xform,
+    sceneio_model& scene, const string& parent_name, const mat4f& parent_xform,
     float start_width, float end_width, const string& material_name,
-    hash_map<string, vector<vec2i>>&   smap,
-    hash_map<string, disney_material>& mmap, hash_map<string, int>& tmap) {
+    unordered_map<string, vector<vec2i>>&   smap,
+    unordered_map<string, disney_material>& mmap,
+    unordered_map<string, int>&             tmap) {
   printf("%s\n", filename.c_str());
   auto buffer = ""s;
   load_text(dirname + filename, buffer);
@@ -764,10 +771,10 @@ void load_island_curvetube(const string& filename, const string& dirname,
                  get_filename(filename) + ".ply";
   if (smap.find(outname) == smap.end()) {
     auto curves      = doc.get_root();
-    auto material    = yocto_material{};
+    auto material    = sceneio_material{};
     material.diffuse = mmap.at(material_name).color;
     scene.materials.push_back(material);
-    auto shape      = yocto_shape{};
+    auto shape      = sceneio_shape{};
     shape.name      = outname;
     shape.filename  = outname;
     auto ssmaterial = (int)scene.materials.size() - 1;
@@ -834,8 +841,8 @@ void load_island_curvetube(const string& filename, const string& dirname,
 }
 
 void load_island_elements(const string& filename, const string& dirname,
-    yocto_scene& scene, hash_map<string, vector<vec2i>>& smap,
-    hash_map<string, int>& tmap) {
+    sceneio_model& scene, unordered_map<string, vector<vec2i>>& smap,
+    unordered_map<string, int>& tmap) {
   // instancing model
   // - main shape: "geomObjFile" and "name" properties
   // - main instance: "transform"
@@ -864,7 +871,7 @@ void load_island_elements(const string& filename, const string& dirname,
   }
 
   // materials
-  auto mmap = hash_map<string, disney_material>{};
+  auto mmap = unordered_map<string, disney_material>{};
   load_island_materials(js.at("matFile"), dirname, mmap);
 
   // main instance
@@ -932,11 +939,10 @@ void load_island_elements(const string& filename, const string& dirname,
   // rename materials and shapes
 }
 
-void load_textures(
-    yocto_scene& scene, const string& dirname, const load_params& params);
+sceneio_status load_textures(
+    const string& filename, sceneio_model& scene, bool noparallel);
 
-void load_island_scene(
-    const string& filename, yocto_scene& scene, const load_params& params) {
+void load_island_scene(const string& filename, sceneio_model& scene) {
   try {
     auto js = json{};
     load_json(filename, js);
@@ -945,8 +951,8 @@ void load_island_scene(
     for (auto filename : js.at("cameras").get<vector<string>>()) {
       load_island_cameras(filename, dirname, scene);
     }
-    auto smap = hash_map<string, vector<vec2i>>{};
-    auto tmap = hash_map<string, int>{};
+    auto smap = unordered_map<string, vector<vec2i>>{};
+    auto tmap = unordered_map<string, int>{};
     for (auto filename : js.at("elements").get<vector<string>>()) {
       load_island_elements(filename, dirname, scene, smap, tmap);
     }
@@ -955,7 +961,8 @@ void load_island_scene(
     }
 
     // load meshes and textures
-    load_textures(scene, dirname, params);
+    if (!load_textures(filename, scene, false))
+      throw std::runtime_error("error loading textures");
   } catch (std::exception& e) {
     throw std::runtime_error("error loading scene "s + e.what());
   }
@@ -968,7 +975,7 @@ void load_island_scene(
   }
 
   // fix names
-  auto parent_shape_map = hash_map<string, vec2i>{};
+  auto parent_shape_map = unordered_map<string, vec2i>{};
   for (auto id = 0; id < scene.shapes.size(); id++) {
     auto parent_name = get_dirname(scene.shapes[id].filename).substr(7);
     parent_name      = parent_name.substr(0, parent_name.size() - 1);
@@ -993,7 +1000,7 @@ void load_island_scene(
       parent_shape_map[parent_name].x += 1;
     }
   }
-  auto parent_texture_map = hash_map<string, vec2i>{};
+  auto parent_texture_map = unordered_map<string, vec2i>{};
   for (auto id = 0; id < scene.textures.size(); id++) {
     auto parent_name = get_dirname(scene.textures[id].filename).substr(9);
     parent_name      = parent_name.substr(0, parent_name.size() - 1);
@@ -1026,14 +1033,12 @@ void load_island_scene(
 
   // fix scene
   if (scene.name == "") scene.name = get_basename(filename);
-  add_cameras(scene);
-  add_materials(scene);
+  // add_cameras(scene);
+  // add_materials(scene);
   fix_names(scene);
-  trim_memory(scene);
-  update_transforms(scene);
 
   // print stats
-  for (auto& stat : format_stats(scene)) printf("%s\n", stat.c_str());
+  for (auto& stat : scene_stats(scene)) printf("%s\n", stat.c_str());
 }
 
 }  // namespace yocto
@@ -1052,7 +1057,6 @@ bool mkdir(const string& dir) {
 
 int main(int argc, const char** argv) {
   // command line parameters
-  auto notextures     = false;
   auto mesh_filenames = true;
   auto mesh_directory = "shapes/"s;
   auto uniform_txt    = false;
@@ -1063,7 +1067,6 @@ int main(int argc, const char** argv) {
 
   // parse command line
   auto cli = make_cli("yislandproc", "Process scene");
-  add_cli_option(cli, "--notextures", notextures, "Disable textures.");
   add_cli_option(cli, "--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
       "Add mesh filenames.");
   add_cli_option(cli, "--mesh-directory", mesh_directory,
@@ -1076,30 +1079,27 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "scene", filename, "input scene", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 
-  // fix params
-  auto load_prms       = load_params();
-  auto save_prms       = save_params();
-  load_prms.notextures = notextures;
-  save_prms.notextures = notextures;
-
   // load scene
-  auto scene = yocto_scene{};
+  auto scene = sceneio_model{};
   try {
-    auto timer = print_timed("loading scene");
-    load_island_scene(filename, scene, load_prms);
+    auto load_timer = print_timed("loading scene");
+    load_island_scene(filename, scene);
+    print_elapsed(load_timer);
   } catch (const std::exception& e) {
     print_fatal(e.what());
   }
 
   // validate scene
   if (validate) {
-    auto timer = print_timed("validating scene");
-    print_validation(scene);
+    auto validate_timer = print_timed("validating scene");
+    auto errors         = scene_validation(scene);
+    print_elapsed(validate_timer);
+    for (auto& error : errors) print_info(error);
   }
 
   // print info
   if (info) {
-    for (auto stat : format_stats(scene)) print_info(stat);
+    for (auto stat : scene_stats(scene)) print_info(stat);
   }
 
 // add missing mesh names if necessary
@@ -1133,15 +1133,13 @@ int main(int argc, const char** argv) {
   }
 
   // save scene
-  try {
-    auto timer           = print_timed("saving scene");
-    save_prms.notextures = false;
-    save_prms.noparallel = false;
-    // save_prms.ply_instances = true;
-    save_scene(output, scene, save_prms);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  auto save_timer = print_timed("saving scene");
+  auto save_error = ""s;
+  // save_prms.ply_instances = true;
+  if (auto ret = save_scene(output, scene); !ret) {
+    print_fatal(ret.error);
   }
+  print_elapsed(save_timer);
 
   // done
   return 0;

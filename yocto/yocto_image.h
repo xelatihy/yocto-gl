@@ -12,6 +12,13 @@
 // used without dependencies.
 //
 //
+// ## Images
+//
+// Yocto/Math contains a simple image container that can be used to store
+// generic images. The container is similar in spirit to `std::vector`.
+// We provide only minimal image functions including lookup and sampling.
+//
+//
 // ## Image Utilities
 //
 // Yocto/Image supports a very small set of color and image utilities including
@@ -68,10 +75,10 @@
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -89,7 +96,6 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_common.h"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
@@ -150,11 +156,10 @@ inline bool operator!=(const image<T>& a, const image<T>& b);
 namespace yocto {
 
 // Evaluates a color image at a point `uv`.
-inline vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
-    bool no_interpolation = false, bool clamp_to_edge = false);
-inline vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
-    bool as_linear = false, bool no_interpolation = false,
-    bool clamp_to_edge = false);
+vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
+    bool no_interpolation, bool clamp_to_edge);
+vec4f eval_image(const image<vec4b>& img, const vec2f& uv, bool as_linear,
+    bool no_interpolation, bool clamp_to_edge);
 
 }  // namespace yocto
 
@@ -163,76 +168,39 @@ inline vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Image region
-struct image_region {
-  vec2i min = zero2i;
-  vec2i max = zero2i;
-
-  image_region();
-  image_region(const vec2i& min, const vec2i& max);
-
-  vec2i size() const;
-};
-
-// Splits an image into an array of regions
-vector<image_region> make_image_regions(
-    const vec2i& size, int region_size = 32, bool shuffled = false);
-
-// Gets pixels in an image region
-template <typename T>
-inline image<T> get_image_region(
-    const image<T>& img, const image_region& region);
-template <typename T>
-inline void set_region(
-    image<T>& img, const image<T>& region, const vec2i& offset);
-template <typename T>
-inline void get_region(
-    image<T>& clipped, const image<T>& img, const image_region& region);
-
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
-void         byte_to_float(image<vec4f>& fl, const image<vec4b>& bt);
-void         float_to_byte(image<vec4b>& bt, const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_rgb(const image<vec4f>& srgb);
 image<vec4f> rgb_to_srgb(const image<vec4f>& rgb);
 image<vec4f> srgb_to_rgb(const image<vec4b>& srgb);
 image<vec4b> rgb_to_srgbb(const image<vec4f>& rgb);
-void         srgb_to_rgb(image<vec4f>& rgb, const image<vec4f>& srgb);
-void         rgb_to_srgb(image<vec4f>& srgb, const image<vec4f>& rgb);
 
-// Tone mapping params
-struct tonemap_params {
-  float exposure    = 0;
-  vec3f tint        = {1, 1, 1};
-  float contrast    = 0.5;
-  float logcontrast = 0.5;
-  float saturation  = 0.5;
-  bool  filmic      = false;
-  bool  srgb        = true;
-};
+// Apply tone mapping
+vec3f tonemap(
+    const vec3f& hdr, float exposure, bool filmic = false, bool srgb = true);
+vec4f tonemap(
+    const vec4f& hdr, float exposure, bool filmic = false, bool srgb = true);
 
-// Equality operators
-inline bool operator==(const tonemap_params& a, const tonemap_params& b) {
-  return memcmp(&a, &b, sizeof(a)) == 0;
-}
-inline bool operator!=(const tonemap_params& a, const tonemap_params& b) {
-  return memcmp(&a, &b, sizeof(a)) != 0;
-}
-
-// Apply exposure and filmic tone mapping
-image<vec4f> tonemap_image(
-    const image<vec4f>& hdr, const tonemap_params& params);
-image<vec4b> tonemap_imageb(
-    const image<vec4f>& hdr, const tonemap_params& params);
-void tonemap_region(image<vec4f>& ldr, const image<vec4f>& hdr,
-    const image_region& region, const tonemap_params& params);
+// Apply tone mapping
+image<vec4f> tonemap_image(const image<vec4f>& hdr, float exposure,
+    bool filmic = false, bool srgb = true);
+image<vec4b> tonemap_imageb(const image<vec4f>& hdr, float exposure,
+    bool filmic = false, bool srgb = true);
 
 // minimal color grading
 struct colorgrade_params {
+  float exposure         = 0;
+  vec3f tint             = {1, 1, 1};
+  float lincontrast      = 0.5;
+  float logcontrast      = 0.5;
+  float linsaturation    = 0.5;
+  bool  filmic           = false;
+  bool  srgb             = true;
   float contrast         = 0.5;
+  float saturation       = 0.5;
   float shadows          = 0.5;
   float midtones         = 0.5;
   float highlights       = 0.5;
@@ -241,19 +209,15 @@ struct colorgrade_params {
   vec3f highlights_color = {1, 1, 1};
 };
 
-// Equality operators
-inline bool operator==(const colorgrade_params& a, const colorgrade_params& b) {
-  return memcmp(&a, &b, sizeof(a)) == 0;
-}
-inline bool operator!=(const colorgrade_params& a, const colorgrade_params& b) {
-  return memcmp(&a, &b, sizeof(a)) != 0;
-}
+// Apply color grading from a linear or srgb color to an srgb color.
+vec3f colorgrade(
+    const vec3f& rgb, bool linear, const colorgrade_params& params);
+vec4f colorgrade(
+    const vec4f& rgb, bool linear, const colorgrade_params& params);
 
-// color grade an image region
+// Color grade a linear or srgb image to an srgb image.
 image<vec4f> colorgrade_image(
-    const image<vec4f>& img, const colorgrade_params& params);
-void colorgrade_region(image<vec4f>& corrected, const image<vec4f>& img,
-    const image_region& region, const colorgrade_params& params);
+    const image<vec4f>& img, bool linear, const colorgrade_params& params);
 
 // determine white balance colors
 vec3f compute_white_balance(const image<vec4f>& img);
@@ -261,16 +225,10 @@ vec3f compute_white_balance(const image<vec4f>& img);
 // Resize an image.
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 image<vec4b> resize_image(const image<vec4b>& img, const vec2i& size);
-void         resize_image(
-            image<vec4f>& res, const image<vec4f>& img, const vec2i& size);
-void resize_image(
-    image<vec4b>& res, const image<vec4b>& img, const vec2i& size);
 
 // Compute the difference between two images
 image<vec4f> image_difference(
     const image<vec4f>& a, const image<vec4f>& b, bool disply_diff);
-void image_difference(image<vec4f>& diff, const image<vec4f>& a,
-    const image<vec4f>& b, bool disply_diff);
 
 }  // namespace yocto
 
@@ -282,13 +240,19 @@ namespace yocto {
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename);
 
-// Loads/saves a 4 channels float/byte image in linear color space.
-image<vec4f> load_image(const string& filename);
-void         load_image(const string& filename, image<vec4f>& img);
-void         save_image(const string& filename, const image<vec4f>& img);
-image<vec4b> load_imageb(const string& filename);
-void         load_imageb(const string& filename, image<vec4b>& img);
-void         save_imageb(const string& filename, const image<vec4b>& img);
+// Result of io operations
+struct imageio_status {
+  string   error = {};
+  explicit operator bool() const { return error.empty(); }
+};
+
+// Loads/saves a 4 channels float/byte image in linear/srgb color space.
+image<vec4f>   load_image(const string& filename);
+imageio_status load_image(const string& filename, image<vec4f>& img);
+imageio_status save_image(const string& filename, const image<vec4f>& img);
+image<vec4b>   load_imageb(const string& filename);
+imageio_status load_imageb(const string& filename, image<vec4b>& img);
+imageio_status save_imageb(const string& filename, const image<vec4b>& img);
 
 }  // namespace yocto
 
@@ -314,9 +278,46 @@ struct proc_image_params {
   vec4f  borderc = {0, 0, 0, 1};
 };
 
-// Make an image
-image<vec4f> make_proc_image(const proc_image_params& params);
-void make_proc_image(image<vec4f>& img, const proc_image_params& params);
+// Make a grid image.
+image<vec4f> make_grid(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
+    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+// Make a checker image.
+image<vec4f> make_checker(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0.2, 0.2, 0.2, 1},
+    const vec4f& color1 = vec4f{0.5, 0.5, 0.5, 1});
+// Make a bump map.
+image<vec4f> make_bumps(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a ramp
+image<vec4f> make_ramp(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a gamma ramp.
+image<vec4f> make_gammaramp(const vec2i& size, float scale = 1,
+    const vec4f& color0 = vec4f{0, 0, 0, 1},
+    const vec4f& color1 = vec4f{1, 1, 1, 1});
+// Make a uv ramp
+image<vec4f> make_uvramp(const vec2i& size, float scale = 1);
+// Make a uv grid
+image<vec4f> make_uvgrid(
+    const vec2i& size, float scale = 1, bool colored = true);
+// Make blackbody ramp.
+image<vec4f> make_blackbodyramp(
+    const vec2i& size, float scale = 1, float from = 1000, float to = 12000);
+// Make a noise image. Noise parameters: lacunarity, gain, octaves, offset.
+image<vec4f> make_noisemap(const vec2i& size, float scale = 1,
+    const vec4f& color0 = {0, 0, 0, 1}, const vec4f& color1 = {0, 0, 0, 1});
+image<vec4f> make_fbmmap(const vec2i& size, float scale = 1,
+    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {0, 0, 0, 1});
+image<vec4f> make_turbulencemap(const vec2i& size, float scale = 1,
+    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {0, 0, 0, 1});
+image<vec4f> make_ridgemap(const vec2i& size, float scale = 1,
+    const vec4f& noise = {2, 0.5, 8, 1}, const vec4f& color0 = {0, 0, 0, 1},
+    const vec4f& color1 = {0, 0, 0, 1});
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
@@ -326,51 +327,33 @@ void make_proc_image(image<vec4f>& img, const proc_image_params& params);
 image<vec4f> make_sunsky(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
     float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
-void         make_sunsky(image<vec4f>& img, const vec2i& size, float sun_angle,
-            float turbidity = 3, bool has_sun = false, float sun_intensity = 1,
-            float sun_radius = 1, const vec3f& ground_albedo = {0.2, 0.2, 0.2});
 // Make an image of multiple lights.
 image<vec4f> make_lights(const vec2i& size, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
-void         make_lights(image<vec4f>& img, const vec2i& size,
-            const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-            float lwidth = pif / 16, float lheight = pif / 16);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 image<vec4f> bump_to_normal(const image<vec4f>& img, float scale = 1);
-void         bump_to_normal(
-            image<vec4f>& norm, const image<vec4f>& img, float scale = 1);
 
 // Add a border to an image
-image<vec4f> add_border(const image<vec4f>& img, int width, const vec4f& color);
-void         add_border(
-            image<vec4f>& bordered, image<vec4f>& img, int width, const vec4f& color);
+image<vec4f> add_border(
+    const image<vec4f>& img, float width, const vec4f& color = {0, 0, 0, 1});
 
 // Make logo images. Image is resized to proper size.
 image<vec4b> make_logo(const string& name);
-void         make_logo(image<vec4f>& img, const string& name);
-void         make_logo(image<vec4b>& img, const string& name);
 image<vec4f> add_logo(
     const image<vec4f>& img, const string& name = "logo-medium");
 image<vec4b> add_logo(
     const image<vec4b>& img, const string& name = "logo-medium");
-void add_logo(image<vec4f>& with_logo, const image<vec4f>& img,
-    const string& name = "logo-medium");
-void add_logo(image<vec4b>& with_logo, const image<vec4b>& img,
-    const string& name = "logo-medium");
 
 // Make an image preset, useful for testing. See implementation for types.
 image<vec4f> make_image_preset(const string& type);
-void         make_image_preset(image<vec4f>& img, const string& type);
-void         make_image_preset(image<vec4b>& img, const string& type);
-void         make_image_preset(
-            image<vec4f>& hdr, image<vec4b>& ldr, const string& type);
+image<vec4b> make_image_presetb(const string& type);
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// VOLUME TYPE AND UTILITIES
+// VOLUME TYPE AND UTILITIES (EXPERIMENTAL)
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -418,11 +401,6 @@ inline bool operator==(const volume<T>& a, const volume<T>& b);
 template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b);
 
-// make a simple example volume
-void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
-    float exponent = 6);
-void make_volume_preset(volume<float>& vol, const string& type);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -431,7 +409,7 @@ void make_volume_preset(volume<float>& vol, const string& type);
 namespace yocto {
 
 // Evaluates a color image at a point `uv`.
-inline float eval_volume(const image<float>& img, const vec3f& uvw,
+float eval_volume(const image<float>& img, const vec3f& uvw,
     bool no_interpolation = false, bool clamp_to_edge = false);
 
 }  // namespace yocto
@@ -448,47 +426,21 @@ void save_volume(const string& filename, const volume<float>& vol);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// COLOR CONVERSION UTILITIES
+// EXAMPLE VOLUMES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Conversion between flots and bytes
-inline vec4b float_to_byte(const vec4f& a);
-inline vec4f byte_to_float(const vec4b& a);
+// make a simple example volume
+void make_voltest(volume<float>& vol, const vec3i& size, float scale = 10,
+    float exponent = 6);
+void make_volume_preset(volume<float>& vol, const string& type);
 
-// Luminance
-inline float luminance(const vec3f& a);
+}  // namespace yocto
 
-// sRGB non-linear curve
-inline float srgb_to_rgb(float srgb);
-inline float rgb_to_srgb(float rgb);
-inline vec3f srgb_to_rgb(const vec3f& srgb);
-inline vec4f srgb_to_rgb(const vec4f& srgb);
-inline vec3f rgb_to_srgb(const vec3f& rgb);
-inline vec4f rgb_to_srgb(const vec4f& rgb);
-
-// Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f contrast(const vec3f& rgb, float contrast, float grey);
-// Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey);
-// Apply saturation.
-inline vec3f saturate(const vec3f& rgb, float saturation,
-    const vec3f& weights = vec3f{0.333333f});
-
-// Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb);
-inline vec3f xyz_to_rgb(const vec3f& xyz);
-
-// Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz);
-inline vec3f xyY_to_xyz(const vec3f& xyY);
-
-// Approximate color of blackbody radiation from wavelength in nm.
-vec3f blackbody_to_rgb(float temperature);
-
-// Converts between HSV and RGB color spaces.
-vec3f hsv_to_rgb(const vec3f& hsv);
-vec3f rgb_to_hsv(const vec3f& rgb);
+// -----------------------------------------------------------------------------
+// COLOR CONVERSION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // RGB color spaces
 enum struct color_space {
@@ -517,19 +469,9 @@ vec3f xyz_to_color(const vec3f& xyz, color_space to);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-//
-//
-// IMPLEMENTATION
-//
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Image container ----------------
 
 // constructors
 template <typename T>
@@ -628,119 +570,6 @@ inline bool operator==(const image<T>& a, const image<T>& b) {
 template <typename T>
 inline bool operator!=(const image<T>& a, const image<T>& b) {
   return a.size() != b.size() || a.pixels != b.pixels;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMAGE SAMPLING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Lookup an image at coordinates `ij`
-inline vec4f lookup_image(
-    const image<vec4f>& img, const vec2i& ij, bool as_linear) {
-  return img[ij];
-}
-inline vec4f lookup_image(
-    const image<vec4b>& img, const vec2i& ij, bool as_linear) {
-  if (as_linear) {
-    return byte_to_float(img[ij]);
-  } else {
-    return srgb_to_rgb(byte_to_float(img[ij]));
-  }
-}
-
-// Evaluate a texture
-template <typename T>
-inline vec4f eval_image_generic(const image<T>& img, const vec2f& uv,
-    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (img.empty()) return zero4f;
-
-  // get image width/height
-  auto size = img.size();
-
-  // get coordinates normalized for tiling
-  auto s = 0.0f, t = 0.0f;
-  if (clamp_to_edge) {
-    s = clamp(uv.x, 0.0f, 1.0f) * size.x;
-    t = clamp(uv.y, 0.0f, 1.0f) * size.y;
-  } else {
-    s = fmod(uv.x, 1.0f) * size.x;
-    if (s < 0) s += size.x;
-    t = fmod(uv.y, 1.0f) * size.y;
-    if (t < 0) t += size.y;
-  }
-
-  // get image coordinates and residuals
-  auto i = clamp((int)s, 0, size.x - 1), j = clamp((int)t, 0, size.y - 1);
-  auto ii = (i + 1) % size.x, jj = (j + 1) % size.y;
-  auto u = s - i, v = t - j;
-
-  if (no_interpolation) return lookup_image(img, {i, j}, as_linear);
-
-  // handle interpolation
-  return lookup_image(img, {i, j}, as_linear) * (1 - u) * (1 - v) +
-         lookup_image(img, {i, jj}, as_linear) * (1 - u) * v +
-         lookup_image(img, {ii, j}, as_linear) * u * (1 - v) +
-         lookup_image(img, {ii, jj}, as_linear) * u * v;
-}
-
-// Evaluates a color image at a point `uv`.
-inline vec4f eval_image(const image<vec4f>& img, const vec2f& uv,
-    bool no_interpolation, bool clamp_to_edge) {
-  return eval_image_generic(img, uv, false, no_interpolation, clamp_to_edge);
-}
-inline vec4f eval_image(const image<vec4b>& img, const vec2f& uv,
-    bool as_linear, bool no_interpolation, bool clamp_to_edge) {
-  return eval_image_generic(
-      img, uv, as_linear, no_interpolation, clamp_to_edge);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMAGE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-inline image_region::image_region() {}
-inline image_region::image_region(const vec2i& min, const vec2i& max)
-    : min{min}, max{max} {}
-
-inline vec2i image_region::size() const { return max - min; }
-
-// Gets pixels in an image region
-template <typename T>
-inline image<T> get_image_region(
-    const image<T>& img, const image_region& region) {
-  auto clipped = image<T>{region.size()};
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-    }
-  }
-  return clipped;
-}
-template <typename T>
-inline void set_region(
-    image<T>& img, const image<T>& region, const vec2i& offset) {
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      if (!img.contains({i, j})) continue;
-      img[vec2i{i, j} + offset] = region[{i, j}];
-    }
-  }
-}
-template <typename T>
-inline void get_region(
-    image<T>& clipped, const image<T>& img, const image_region& region) {
-  clipped.resize(region.size());
-  for (auto j = 0; j < region.size().y; j++) {
-    for (auto i = 0; i < region.size().x; i++) {
-      clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-    }
-  }
 }
 
 }  // namespace yocto
@@ -847,152 +676,6 @@ inline bool operator==(const volume<T>& a, const volume<T>& b) {
 template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b) {
   return a.size() != b.size() || a.voxels != b.voxels;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// VOLUME SAMPLING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Lookup volume
-inline float lookup_volume(
-    const volume<float>& vol, const vec3i& ijk, bool as_linear) {
-  return vol[ijk];
-}
-
-// Evaluates a color image at a point `uv`.
-inline float eval_volume(const volume<float>& vol, const vec3f& uvw,
-    bool ldr_as_linear, bool no_interpolation, bool clamp_to_edge) {
-  if (vol.empty()) return 0;
-
-  // get coordinates normalized for tiling
-  auto s = clamp((uvw.x + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().x;
-  auto t = clamp((uvw.y + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().y;
-  auto r = clamp((uvw.z + 1.0f) * 0.5f, 0.0f, 1.0f) * vol.size().z;
-
-  // get image coordinates and residuals
-  auto i  = clamp((int)s, 0, vol.size().x - 1);
-  auto j  = clamp((int)t, 0, vol.size().y - 1);
-  auto k  = clamp((int)r, 0, vol.size().z - 1);
-  auto ii = (i + 1) % vol.size().x, jj = (j + 1) % vol.size().y,
-       kk = (k + 1) % vol.size().z;
-  auto u = s - i, v = t - j, w = r - k;
-
-  // nearest-neighbor interpolation
-  if (no_interpolation) {
-    i = u < 0.5 ? i : min(i + 1, vol.size().x - 1);
-    j = v < 0.5 ? j : min(j + 1, vol.size().y - 1);
-    k = w < 0.5 ? k : min(k + 1, vol.size().z - 1);
-    return lookup_volume(vol, {i, j, k}, ldr_as_linear);
-  }
-
-  // trilinear interpolation
-  return lookup_volume(vol, {i, j, k}, ldr_as_linear) * (1 - u) * (1 - v) *
-             (1 - w) +
-         lookup_volume(vol, {ii, j, k}, ldr_as_linear) * u * (1 - v) * (1 - w) +
-         lookup_volume(vol, {i, jj, k}, ldr_as_linear) * (1 - u) * v * (1 - w) +
-         lookup_volume(vol, {i, j, kk}, ldr_as_linear) * (1 - u) * (1 - v) * w +
-         lookup_volume(vol, {i, jj, kk}, ldr_as_linear) * (1 - u) * v * w +
-         lookup_volume(vol, {ii, j, kk}, ldr_as_linear) * u * (1 - v) * w +
-         lookup_volume(vol, {ii, jj, k}, ldr_as_linear) * u * v * (1 - w) +
-         lookup_volume(vol, {ii, jj, kk}, ldr_as_linear) * u * v * w;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// COLOR CONVERSION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Conversion between flots and bytes
-inline vec4b float_to_byte(const vec4f& a) {
-  return {(byte)clamp(int(a.x * 256), 0, 255),
-      (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),
-      (byte)clamp(int(a.w * 256), 0, 255)};
-}
-inline vec4f byte_to_float(const vec4b& a) {
-  return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
-}
-
-// Luminance
-inline float luminance(const vec3f& a) {
-  return (0.2126f * a.x + 0.7152f * a.y + 0.0722f * a.z);
-}
-
-// sRGB non-linear curve
-inline float srgb_to_rgb(float srgb) {
-  return (srgb <= 0.04045) ? srgb / 12.92f
-                           : pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
-}
-inline float rgb_to_srgb(float rgb) {
-  return (rgb <= 0.0031308f) ? 12.92f * rgb
-                             : (1 + 0.055f) * pow(rgb, 1 / 2.4f) - 0.055f;
-}
-inline vec3f srgb_to_rgb(const vec3f& srgb) {
-  return {srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z)};
-}
-inline vec4f srgb_to_rgb(const vec4f& srgb) {
-  return {
-      srgb_to_rgb(srgb.x), srgb_to_rgb(srgb.y), srgb_to_rgb(srgb.z), srgb.w};
-}
-inline vec3f rgb_to_srgb(const vec3f& rgb) {
-  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z)};
-}
-inline vec4f rgb_to_srgb(const vec4f& rgb) {
-  return {rgb_to_srgb(rgb.x), rgb_to_srgb(rgb.y), rgb_to_srgb(rgb.z), rgb.w};
-}
-
-// Apply contrast. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f contrast(const vec3f& rgb, float contrast, float grey) {
-  return max(zero3f, grey + (rgb - grey) * (contrast * 2));
-}
-// Apply contrast in log2. Grey should be 0.18 for linear and 0.5 for gamma.
-inline vec3f logcontrast(const vec3f& rgb, float logcontrast, float grey) {
-  auto epsilon  = (float)0.0001;
-  auto log_grey = log2(grey);
-  auto log_ldr  = log2(rgb + epsilon);
-  auto adjusted = log_grey + (log_ldr - log_grey) * (logcontrast * 2);
-  return max(zero3f, exp2(adjusted) - epsilon);
-}
-// Apply saturation.
-inline vec3f saturate(
-    const vec3f& rgb, float saturation, const vec3f& weights) {
-  auto grey = dot(weights, rgb);
-  return max(zero3f, grey + (rgb - grey) * (saturation * 2));
-}
-
-// Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb) {
-  // https://en.wikipedia.org/wiki/SRGB
-  static const auto mat = mat3f{
-      {0.4124, 0.2126, 0.0193},
-      {0.3576, 0.7152, 0.1192},
-      {0.1805, 0.0722, 0.9504},
-  };
-  return mat * rgb;
-}
-inline vec3f xyz_to_rgb(const vec3f& xyz) {
-  // https://en.wikipedia.org/wiki/SRGB
-  static const auto mat = mat3f{
-      {+3.2406, -0.9689, +0.0557},
-      {-1.5372, +1.8758, -0.2040},
-      {-0.4986, +0.0415, +1.0570},
-  };
-  return mat * xyz;
-}
-
-// Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz) {
-  if (xyz == zero3f) return zero3f;
-  return {
-      xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
-}
-inline vec3f xyY_to_xyz(const vec3f& xyY) {
-  if (xyY.y == 0) return zero3f;
-  return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 
 }  // namespace yocto

@@ -29,19 +29,16 @@
 
 #include "yocto_opengl.h"
 
-#include "../yocto/yocto_common.h"
-#include "../yocto/yocto_commonio.h"
-
 #include <algorithm>
 #include <cstdarg>
 #include <deque>
 #include <mutex>
 
+#include "ext/glad/glad.h"
+
 #ifdef __APPLE__
 #define GL_SILENCE_DEPRECATION
 #endif
-#include "ext/glad/glad.h"
-
 #include <GLFW/glfw3.h>
 
 #include "ext/imgui/imgui.h"
@@ -195,17 +192,6 @@ void update_glimage(
   } else {
     update_gltexture(glimage.texture, img, mipmap);
   }
-}
-
-void update_glimage_region(opengl_image& glimage, const image<vec4f>& img,
-    const image_region& region) {
-  if (!glimage) throw std::runtime_error("glimage is not initialized");
-  update_gltexture_region(glimage.texture, img, region, glimage.texture.mipmap);
-}
-void update_glimage_region(opengl_image& glimage, const image<vec4b>& img,
-    const image_region& region) {
-  if (!glimage) throw std::runtime_error("glimage is not initialized");
-  update_gltexture_region(glimage.texture, img, region, glimage.texture.mipmap);
 }
 
 // draw image
@@ -659,10 +645,15 @@ void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
 // Display a scene
 void draw_glscene(opengl_scene& state, const vec4i& viewport,
     const draw_glscene_params& params) {
-  auto& glcamera    = state.cameras.at(params.camera);
-  auto  camera_view = mat4f(inverse(glcamera.frame));
-  auto  camera_proj = perspective_mat(glcamera.yfov,
-      ((float)viewport.z) / ((float)viewport.w), params.near, params.far);
+  auto& glcamera      = state.cameras.at(params.camera);
+  auto  camera_aspect = (float)viewport.z / (float)viewport.w;
+  auto  camera_yfov =
+      camera_aspect >= 0
+          ? (2 * atan(glcamera.film / (camera_aspect * 2 * glcamera.lens)))
+          : (2 * atan(glcamera.film / (2 * glcamera.lens)));
+  auto camera_view = mat4f(inverse(glcamera.frame));
+  auto camera_proj = perspective_mat(
+      camera_yfov, camera_aspect, params.near, params.far);
 
   clear_glframebuffer(params.background);
   set_glviewport(viewport);
@@ -835,36 +826,12 @@ void update_gltexture(
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void update_gltexture_region(opengl_texture& texture, const image<vec4f>& img,
-    const image_region& region, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  auto clipped = image<vec4f>{};
-  get_region(clipped, img, region);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, region.min.x, region.min.y, region.size().x,
-      region.size().y, GL_RGBA, GL_FLOAT, clipped.data());
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
 void update_gltexture(
     opengl_texture& texture, const image<vec4b>& img, bool mipmap) {
   assert(glGetError() == GL_NO_ERROR);
   glBindTexture(GL_TEXTURE_2D, texture.texture_id);
   glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
       GL_UNSIGNED_BYTE, img.data());
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void update_gltexture_region(opengl_texture& texture, const image<vec4b>& img,
-    const image_region& region, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  auto clipped = image<vec4b>{};
-  get_region(clipped, img, region);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, region.min.x, region.min.y, region.size().x,
-      region.size().y, GL_RGBA, GL_UNSIGNED_BYTE, clipped.data());
   if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   assert(glGetError() == GL_NO_ERROR);
 }
@@ -1570,6 +1537,35 @@ bool draw_glmessages(const opengl_window& win) {
   }
 }
 
+// Utility to normalize a path
+static inline string normalize_path(const string& filename_) {
+  auto filename = filename_;
+  for (auto& c : filename)
+
+    if (c == '\\') c = '/';
+  if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+      filename[3] == '/') {
+    throw std::invalid_argument("absolute paths are not supported");
+    return filename_;
+  }
+  auto pos = (size_t)0;
+  while ((pos = filename.find("//")) != filename.npos)
+    filename = filename.substr(0, pos) + filename.substr(pos + 1);
+  return filename;
+}
+
+// Get extension (not including '.').
+static inline string get_extension(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return "";
+  return filename.substr(pos);
+}
+
 struct filedialog_state {
   string                     dirname       = "";
   string                     filename      = "";
@@ -1672,7 +1668,7 @@ struct filedialog_state {
 bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter) {
-  static auto states = hash_map<string, filedialog_state>{};
+  static auto states = unordered_map<string, filedialog_state>{};
   ImGui::SetNextWindowSize({500, 300}, ImGuiCond_FirstUseEver);
   if (ImGui::BeginPopupModal(lbl)) {
     if (states.find(lbl) == states.end()) {
@@ -1685,7 +1681,8 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
       state.set_dirname(dir_buffer);
     }
     auto current_item = -1;
-    if (ImGui::ListBox("entries", &current_item,
+    if (ImGui::ListBox(
+            "entries", &current_item,
             [](void* data, int idx, const char** out_text) -> bool {
               auto& state = *(filedialog_state*)data;
               *out_text   = state.entries[idx].first.c_str();
