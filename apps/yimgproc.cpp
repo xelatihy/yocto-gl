@@ -102,8 +102,9 @@ image<vec4f> filter_bilateral(
 
 int main(int argc, const char* argv[]) {
   // command line parameters
-  auto do_tonemap          = false;
-  auto tonemap_prms        = tonemap_params{};
+  auto tonemap_on             = false;
+  auto tonemap_exposure            = 0;
+  auto tonemap_filmic              = false;
   auto logo                = false;
   auto resize_width        = 0;
   auto resize_height       = 0;
@@ -119,19 +120,11 @@ int main(int argc, const char* argv[]) {
 
   // parse command line
   auto cli = make_cli("yimgproc", "Transform images");
-  add_cli_option(cli, "--tonemap/--no-tonemap,-t", do_tonemap, "Tonemap image");
+  add_cli_option(cli, "--tonemap/--no-tonemap,-t", tonemap_on, "Tonemap image");
   add_cli_option(
-      cli, "--exposure,-e", tonemap_prms.exposure, "Tonemap exposure");
-  add_cli_option(
-      cli, "--srgb/--no-srgb", tonemap_prms.srgb, "Tonemap to sRGB.");
-  add_cli_option(cli, "--filmic/--no-filmic,-f", tonemap_prms.filmic,
+      cli, "--exposure,-e", tonemap_exposure, "Tonemap exposure");
+  add_cli_option(cli, "--filmic/--no-filmic,-f", tonemap_filmic,
       "Tonemap uses filmic curve");
-  add_cli_option(
-      cli, "--logcontrast", tonemap_prms.logcontrast, "Tonemap log contrast");
-  add_cli_option(
-      cli, "--lincontrast", tonemap_prms.lincontrast, "Tonemap linear contrast");
-  add_cli_option(
-      cli, "--saturation", tonemap_prms.saturation, "Tonemap saturation");
   add_cli_option(cli, "--resize-width", resize_width,
       "resize size (0 to maintain aspect)");
   add_cli_option(cli, "--resize-height", resize_height,
@@ -202,20 +195,13 @@ int main(int argc, const char* argv[]) {
   }
 
   // hdr correction
-  if (do_tonemap) {
-    img = tonemap_image(img, tonemap_prms);
+  if (tonemap_on) {
+    img = tonemap_image(img, tonemap_exposure, tonemap_filmic, false);
   }
 
   // save
-  if (do_tonemap && tonemap_prms.srgb) {
-    if (!save_image(
-            output, logo ? add_logo(srgb_to_rgb(img)) : srgb_to_rgb(img))) {
-      print_fatal("cannor save " + output);
-    }
-  } else {
-    if (!save_image(output, logo ? add_logo(img) : img)) {
-      print_fatal("cannor save " + output);
-    }
+  if (!save_image(output, logo ? add_logo(img) : img)) {
+    print_fatal("cannor save " + output);
   }
 
   // check diff
