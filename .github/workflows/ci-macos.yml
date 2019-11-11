@@ -10,7 +10,8 @@ jobs:
     - name: install dependencies
       run: |
         brew update
-        brew install cmake ninja
+        brew upgrade cmake
+        brew install ninja
     - name: configure
       run: |
         mkdir build
