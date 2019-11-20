@@ -8,6 +8,10 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
+        generator: [ Ninja ]
+        include:
+          - os: windows-latest
+            generator: Visual Studio 16 2019 
     steps:
     - uses: actions/checkout@v1
     - name: install ubuntu dependencies
@@ -29,7 +33,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -GNinja -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
+        cmake .. -G${{ matrix.generator }} -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
     - name: build
       run: |
         cd build
