@@ -1,3 +1,7 @@
 {
-  "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools"
+  "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
+  "cmake.configureSettings": {
+    "YOCTO_EMBREE": "ON",
+    "YOCTO_OPENGL": "ON",
+  }
 }
