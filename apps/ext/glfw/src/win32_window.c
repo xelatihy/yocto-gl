@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 Win32 - www.glfw.org
+// GLFW 3.3 Win32 - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2019 Camilla Löwy <elmindreda@glfw.org>
@@ -23,8 +23,6 @@
 // 3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//========================================================================
-// Please use C89 style variable declarations in this file because VS 2010
 //========================================================================
 
 #include "internal.h"
@@ -411,7 +409,7 @@ static void updateFramebufferTransparency(const _GLFWwindow* window)
             // issue.  When set to black, something is making the hit test
             // not resize with the window frame.
             SetLayeredWindowAttributes(window->win32.handle,
-                                       RGB(255, 0, 255), 255, LWA_COLORKEY);
+                                       RGB(0, 193, 48), 255, LWA_COLORKEY);
         }
 
         DeleteObject(region);
@@ -481,7 +479,7 @@ static int translateKey(WPARAM wParam, LPARAM lParam)
         DWORD time;
 
         // Right side keys have the extended key bit set
-        if (HIWORD(lParam) & KF_EXTENDED)
+        if (lParam & 0x01000000)
             return GLFW_KEY_RIGHT_CONTROL;
 
         // HACK: Alt Gr sends Left Ctrl and then Right Alt in close sequence
@@ -497,7 +495,7 @@ static int translateKey(WPARAM wParam, LPARAM lParam)
                 next.message == WM_SYSKEYUP)
             {
                 if (next.wParam == VK_MENU &&
-                    (HIWORD(next.lParam) & KF_EXTENDED) &&
+                    (next.lParam & 0x01000000) &&
                     next.time == time)
                 {
                     // Next message is Right Alt down so discard this
@@ -631,8 +629,12 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
             //       clicking a caption button
             if (HIWORD(lParam) == WM_LBUTTONDOWN)
             {
-                if (LOWORD(lParam) != HTCLIENT)
+                if (LOWORD(lParam) == HTCLOSE ||
+                    LOWORD(lParam) == HTMINBUTTON ||
+                    LOWORD(lParam) == HTMAXBUTTON)
+                {
                     window->win32.frameAction = GLFW_TRUE;
+                }
             }
 
             break;
@@ -699,12 +701,7 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
 
                 // User trying to access application menu using ALT?
                 case SC_KEYMENU:
-                {
-                    if (!window->win32.keymenu)
-                        return 0;
-
-                    break;
-                }
+                    return 0;
             }
             break;
         }
@@ -736,10 +733,6 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
             }
 
             _glfwInputChar(window, (unsigned int) wParam, getKeyMods(), plain);
-
-            if (uMsg == WM_SYSCHAR && window->win32.keymenu)
-                break;
-
             return 0;
         }
 
@@ -749,8 +742,8 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
         case WM_SYSKEYUP:
         {
             const int key = translateKey(wParam, lParam);
-            const int scancode = (HIWORD(lParam) & 0x1ff);
-            const int action = (HIWORD(lParam) & KF_UP) ? GLFW_RELEASE : GLFW_PRESS;
+            const int scancode = (lParam >> 16) & 0x1ff;
+            const int action = ((lParam >> 31) & 1) ? GLFW_RELEASE : GLFW_PRESS;
             const int mods = getKeyMods();
 
             if (key == _GLFW_KEY_INVALID)
@@ -837,19 +830,7 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
             const int x = GET_X_LPARAM(lParam);
             const int y = GET_Y_LPARAM(lParam);
 
-            if (!window->win32.cursorTracked)
-            {
-                TRACKMOUSEEVENT tme;
-                ZeroMemory(&tme, sizeof(tme));
-                tme.cbSize = sizeof(tme);
-                tme.dwFlags = TME_LEAVE;
-                tme.hwndTrack = window->win32.handle;
-                TrackMouseEvent(&tme);
-
-                window->win32.cursorTracked = GLFW_TRUE;
-                _glfwInputCursorEnter(window, GLFW_TRUE);
-            }
-
+            // Disabled cursor motion input is provided by WM_INPUT
             if (window->cursorMode == GLFW_CURSOR_DISABLED)
             {
                 const int dx = x - window->win32.lastCursorPosX;
@@ -869,6 +850,19 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
 
             window->win32.lastCursorPosX = x;
             window->win32.lastCursorPosY = y;
+
+            if (!window->win32.cursorTracked)
+            {
+                TRACKMOUSEEVENT tme;
+                ZeroMemory(&tme, sizeof(tme));
+                tme.cbSize = sizeof(tme);
+                tme.dwFlags = TME_LEAVE;
+                tme.hwndTrack = window->win32.handle;
+                TrackMouseEvent(&tme);
+
+                window->win32.cursorTracked = GLFW_TRUE;
+                _glfwInputCursorEnter(window, GLFW_TRUE);
+            }
 
             return 0;
         }
@@ -948,9 +942,6 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
         case WM_ENTERSIZEMOVE:
         case WM_ENTERMENULOOP:
         {
-            if (window->win32.frameAction)
-                break;
-
             // HACK: Enable the cursor while the user is moving or
             //       resizing the window or using the window menu
             if (window->cursorMode == GLFW_CURSOR_DISABLED)
@@ -962,9 +953,6 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg,
         case WM_EXITSIZEMOVE:
         case WM_EXITMENULOOP:
         {
-            if (window->win32.frameAction)
-                break;
-
             // HACK: Disable the cursor once the user is done moving or
             //       resizing the window or using the menu
             if (window->cursorMode == GLFW_CURSOR_DISABLED)
@@ -1237,7 +1225,6 @@ static int createNativeWindow(_GLFWwindow* window,
         xpos = CW_USEDEFAULT;
         ypos = CW_USEDEFAULT;
 
-        window->win32.maximized = wndconfig->maximized;
         if (wndconfig->maximized)
             style |= WS_MAXIMIZE;
 
@@ -1284,15 +1271,13 @@ static int createNativeWindow(_GLFWwindow* window,
     }
 
     window->win32.scaleToMonitor = wndconfig->scaleToMonitor;
-    window->win32.keymenu = wndconfig->win32.keymenu;
 
-    // Adjust window rect to account for DPI scaling of the window frame and
-    // (if enabled) DPI scaling of the content area
-    // This cannot be done until we know what monitor the window was placed on
+    // Adjust window size to account for DPI scaling of the window frame and
+    // optionally DPI scaling of the content area
+    // This cannot be done until we know what monitor it was placed on
     if (!window->monitor)
     {
         RECT rect = { 0, 0, wndconfig->width, wndconfig->height };
-        WINDOWPLACEMENT wp = { sizeof(wp) };
 
         if (wndconfig->scaleToMonitor)
         {
@@ -1313,11 +1298,10 @@ static int createNativeWindow(_GLFWwindow* window,
         else
             AdjustWindowRectEx(&rect, style, FALSE, exStyle);
 
-        // Only update the restored window rect as the window may be maximized
-        GetWindowPlacement(window->win32.handle, &wp);
-        wp.rcNormalPosition = rect;
-        wp.showCmd = SW_HIDE;
-        SetWindowPlacement(window->win32.handle, &wp);
+        SetWindowPos(window->win32.handle, NULL,
+                     rect.left, rect.top,
+                     rect.right - rect.left, rect.bottom - rect.top,
+                     SWP_NOACTIVATE | SWP_NOZORDER);
     }
 
     DragAcceptFiles(window->win32.handle, TRUE);
@@ -1738,7 +1722,7 @@ void _glfwPlatformSetWindowMonitor(_GLFWwindow* window,
 
     _glfwInputWindowMonitor(window, monitor);
 
-    if (window->monitor)
+    if (monitor)
     {
         MONITORINFO mi = { sizeof(mi) };
         UINT flags = SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_NOCOPYBITS;
@@ -1944,8 +1928,8 @@ void _glfwPlatformPollEvents(void)
         window = GetPropW(handle, L"GLFW");
         if (window)
         {
-            const GLFWbool lshift = (GetAsyncKeyState(VK_LSHIFT) & 0x8000) != 0;
-            const GLFWbool rshift = (GetAsyncKeyState(VK_RSHIFT) & 0x8000) != 0;
+            const GLFWbool lshift = (GetAsyncKeyState(VK_LSHIFT) >> 15) & 1;
+            const GLFWbool rshift = (GetAsyncKeyState(VK_RSHIFT) >> 15) & 1;
 
             if (!lshift && window->keys[GLFW_KEY_LEFT_SHIFT] == GLFW_PRESS)
             {

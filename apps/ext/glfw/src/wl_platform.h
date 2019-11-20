@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 Wayland - www.glfw.org
+// GLFW 3.3 Wayland - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2014 Jonas Ådahl <jadahl@gmail.com>
 //
@@ -75,8 +75,8 @@ typedef VkBool32 (APIENTRY *PFN_vkGetPhysicalDeviceWaylandPresentationSupportKHR
 #define _GLFW_PLATFORM_MONITOR_STATE        _GLFWmonitorWayland wl
 #define _GLFW_PLATFORM_CURSOR_STATE         _GLFWcursorWayland  wl
 
-#define _GLFW_PLATFORM_CONTEXT_STATE         struct { int dummyContext; }
-#define _GLFW_PLATFORM_LIBRARY_CONTEXT_STATE struct { int dummyLibraryContext; }
+#define _GLFW_PLATFORM_CONTEXT_STATE
+#define _GLFW_PLATFORM_LIBRARY_CONTEXT_STATE
 
 struct wl_cursor_image {
     uint32_t width;
@@ -180,6 +180,7 @@ typedef struct _GLFWwindowWayland
     GLFWbool                    transparent;
     struct wl_surface*          surface;
     struct wl_egl_window*       native;
+    struct wl_shell_surface*    shellSurface;
     struct wl_callback*         callback;
 
     struct {
@@ -226,6 +227,7 @@ typedef struct _GLFWlibraryWayland
     struct wl_registry*         registry;
     struct wl_compositor*       compositor;
     struct wl_subcompositor*    subcompositor;
+    struct wl_shell*            shell;
     struct wl_shm*              shm;
     struct wl_seat*             seat;
     struct wl_pointer*          pointer;
@@ -330,7 +332,7 @@ typedef struct _GLFWlibraryWayland
 typedef struct _GLFWmonitorWayland
 {
     struct wl_output*           output;
-    uint32_t                    name;
+    int                         name;
     int                         currentMode;
 
     int                         x;

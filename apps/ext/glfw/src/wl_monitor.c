@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 Wayland - www.glfw.org
+// GLFW 3.3 Wayland - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2014 Jonas Ådahl <jadahl@gmail.com>
 //
@@ -22,8 +22,6 @@
 // 3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//========================================================================
-// It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
 #include "internal.h"
@@ -200,7 +198,7 @@ void _glfwPlatformGetVideoMode(_GLFWmonitor* monitor, GLFWvidmode* mode)
 GLFWbool _glfwPlatformGetGammaRamp(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
 {
     _glfwInputError(GLFW_PLATFORM_ERROR,
-                    "Wayland: Gamma ramp access is not available");
+                    "Wayland: Gamma ramp access it not available");
     return GLFW_FALSE;
 }
 

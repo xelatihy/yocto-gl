@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 X11 - www.glfw.org
+// GLFW 3.3 X11 - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2019 Camilla Löwy <elmindreda@glfw.org>
@@ -228,7 +228,7 @@ typedef struct _GLFWlibraryX11
     // Clipboard string (while the selection is owned)
     char*           clipboardString;
     // Key name string
-    char            keynames[GLFW_KEY_LAST + 1][5];
+    char            keyName[5];
     // X11 keycode to GLFW key LUT
     short int       keycodes[256];
     // GLFW key to X11 keycode LUT
@@ -239,8 +239,6 @@ typedef struct _GLFWlibraryX11
     _GLFWwindow*    disabledCursorWindow;
 
     // Window manager atoms
-    Atom            NET_SUPPORTED;
-    Atom            NET_SUPPORTING_WM_CHECK;
     Atom            WM_PROTOCOLS;
     Atom            WM_STATE;
     Atom            WM_DELETE_WINDOW;
@@ -323,14 +321,13 @@ typedef struct _GLFWlibraryX11
     } randr;
 
     struct {
-        GLFWbool     available;
-        GLFWbool     detectable;
-        int          majorOpcode;
-        int          eventBase;
-        int          errorBase;
-        int          major;
-        int          minor;
-        unsigned int group;
+        GLFWbool    available;
+        GLFWbool    detectable;
+        int         majorOpcode;
+        int         eventBase;
+        int         errorBase;
+        int         major;
+        int         minor;
     } xkb;
 
     struct {

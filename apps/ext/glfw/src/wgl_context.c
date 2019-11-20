@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 WGL - www.glfw.org
+// GLFW 3.3 WGL - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2019 Camilla Löwy <elmindreda@glfw.org>
@@ -23,8 +23,6 @@
 // 3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//========================================================================
-// Please use C89 style variable declarations in this file because VS 2010
 //========================================================================
 
 #include "internal.h"
@@ -77,8 +75,8 @@ static int choosePixelFormat(_GLFWwindow* window,
     {
         const int attrib = WGL_NUMBER_PIXEL_FORMATS_ARB;
 
-        if (!wglGetPixelFormatAttribivARB(window->context.wgl.dc,
-                                          1, 0, 1, &attrib, &nativeCount))
+        if (!_glfw.wgl.GetPixelFormatAttribivARB(window->context.wgl.dc,
+                                                 1, 0, 1, &attrib, &nativeCount))
         {
             _glfwInputErrorWin32(GLFW_PLATFORM_ERROR,
                                  "WGL: Failed to retrieve pixel format attribute");
@@ -141,10 +139,10 @@ static int choosePixelFormat(_GLFWwindow* window,
         {
             // Get pixel format attributes through "modern" extension
 
-            if (!wglGetPixelFormatAttribivARB(window->context.wgl.dc,
-                                              pixelFormat, 0,
-                                              attribCount,
-                                              attribs, values))
+            if (!_glfw.wgl.GetPixelFormatAttribivARB(window->context.wgl.dc,
+                                                     pixelFormat, 0,
+                                                     attribCount,
+                                                     attribs, values))
             {
                 _glfwInputErrorWin32(GLFW_PLATFORM_ERROR,
                                     "WGL: Failed to retrieve pixel format attributes");
@@ -362,7 +360,7 @@ static void swapIntervalWGL(int interval)
     }
 
     if (_glfw.wgl.EXT_swap_control)
-        wglSwapIntervalEXT(interval);
+        _glfw.wgl.SwapIntervalEXT(interval);
 }
 
 static int extensionSupportedWGL(const char* extension)
@@ -370,9 +368,9 @@ static int extensionSupportedWGL(const char* extension)
     const char* extensions = NULL;
 
     if (_glfw.wgl.GetExtensionsStringARB)
-        extensions = wglGetExtensionsStringARB(wglGetCurrentDC());
+        extensions = _glfw.wgl.GetExtensionsStringARB(wglGetCurrentDC());
     else if (_glfw.wgl.GetExtensionsStringEXT)
-        extensions = wglGetExtensionsStringEXT();
+        extensions = _glfw.wgl.GetExtensionsStringEXT();
 
     if (!extensions)
         return GLFW_FALSE;
@@ -389,6 +387,8 @@ static GLFWglproc getProcAddressWGL(const char* procname)
     return (GLFWglproc) GetProcAddress(_glfw.wgl.instance, procname);
 }
 
+// Destroy the OpenGL context
+//
 static void destroyContextWGL(_GLFWwindow* window)
 {
     if (window->context.wgl.handle)
@@ -693,7 +693,8 @@ GLFWbool _glfwCreateContextWGL(_GLFWwindow* window,
         setAttrib(0, 0);
 
         window->context.wgl.handle =
-            wglCreateContextAttribsARB(window->context.wgl.dc, share, attribs);
+            _glfw.wgl.CreateContextAttribsARB(window->context.wgl.dc,
+                                              share, attribs);
         if (!window->context.wgl.handle)
         {
             const DWORD error = GetLastError();

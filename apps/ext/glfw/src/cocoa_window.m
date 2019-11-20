@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 macOS - www.glfw.org
+// GLFW 3.3 macOS - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2009-2019 Camilla Löwy <elmindreda@glfw.org>
 //
@@ -23,8 +23,6 @@
 //    distribution.
 //
 //========================================================================
-// It is fine to use C99 in this file because it will not be built with VS
-//========================================================================
 
 #include "internal.h"
 
@@ -35,14 +33,15 @@
 //
 static NSUInteger getStyleMask(_GLFWwindow* window)
 {
-    NSUInteger styleMask = NSWindowStyleMaskMiniaturizable;
+    NSUInteger styleMask = 0;
 
     if (window->monitor || !window->decorated)
         styleMask |= NSWindowStyleMaskBorderless;
     else
     {
         styleMask |= NSWindowStyleMaskTitled |
-                     NSWindowStyleMaskClosable;
+                     NSWindowStyleMaskClosable |
+                     NSWindowStyleMaskMiniaturizable;
 
         if (window->resizable)
             styleMask |= NSWindowStyleMaskResizable;
@@ -611,8 +610,10 @@ static const NSRange kEmptyRange = { NSNotFound, 0 };
 
 - (void)scrollWheel:(NSEvent *)event
 {
-    double deltaX = [event scrollingDeltaX];
-    double deltaY = [event scrollingDeltaY];
+    double deltaX, deltaY;
+
+    deltaX = [event scrollingDeltaX];
+    deltaY = [event scrollingDeltaY];
 
     if ([event hasPreciseScrollingDeltas])
     {
@@ -729,8 +730,9 @@ static const NSRange kEmptyRange = { NSNotFound, 0 };
     else
         characters = (NSString*) string;
 
-    const NSUInteger length = [characters length];
-    for (NSUInteger i = 0;  i < length;  i++)
+    NSUInteger i, length = [characters length];
+
+    for (i = 0;  i < length;  i++)
     {
         const unichar codepoint = [characters characterAtIndex:i];
         if ((codepoint & 0xff00) == 0xf700)
@@ -815,7 +817,7 @@ static GLFWbool createNativeWindow(_GLFWwindow* window,
         [window->ns.object setLevel:NSMainMenuWindowLevel + 1];
     else
     {
-        [(NSWindow*) window->ns.object center];
+        [window->ns.object center];
         _glfw.ns.cascadePoint =
             NSPointToCGPoint([window->ns.object cascadeTopLeftFromPoint:
                               NSPointFromCGPoint(_glfw.ns.cascadePoint)]);
@@ -961,9 +963,6 @@ void _glfwPlatformDestroyWindow(_GLFWwindow* window)
     [window->ns.object close];
     window->ns.object = nil;
 
-    // HACK: Allow Cocoa to catch up before returning
-    _glfwPlatformPollEvents();
-
     } // autoreleasepool
 }
 
@@ -1034,14 +1033,7 @@ void _glfwPlatformSetWindowSize(_GLFWwindow* window, int width, int height)
             acquireMonitor(window);
     }
     else
-    {
-        NSRect contentRect =
-            [window->ns.object contentRectForFrameRect:[window->ns.object frame]];
-        contentRect.origin.y += contentRect.size.height - height;
-        contentRect.size = NSMakeSize(width, height);
-        [window->ns.object setFrame:[window->ns.object frameRectForContentRect:contentRect]
-                            display:YES];
-    }
+        [window->ns.object setContentSize:NSMakeSize(width, height)];
 
     } // autoreleasepool
 }
@@ -1230,7 +1222,7 @@ void _glfwPlatformSetWindowMonitor(_GLFWwindow* window,
     // HACK: Changing the style mask can cause the first responder to be cleared
     [window->ns.object makeFirstResponder:window->ns.view];
 
-    if (window->monitor)
+    if (monitor)
     {
         [window->ns.object setLevel:NSMainMenuWindowLevel + 1];
         [window->ns.object setHasShadow:NO];
@@ -1512,10 +1504,8 @@ const char* _glfwPlatformGetScancodeName(int scancode)
 {
     @autoreleasepool {
 
-    const int key = _glfw.ns.keycodes[scancode];
-
     UInt32 deadKeyState = 0;
-    UniChar characters[4];
+    UniChar characters[8];
     UniCharCount characterCount = 0;
 
     if (UCKeyTranslate([(NSData*) _glfw.ns.unicodeData bytes],
@@ -1540,12 +1530,12 @@ const char* _glfwPlatformGetScancodeName(int scancode)
                                                             characterCount,
                                                             kCFAllocatorNull);
     CFStringGetCString(string,
-                       _glfw.ns.keynames[key],
-                       sizeof(_glfw.ns.keynames[key]),
+                       _glfw.ns.keyName,
+                       sizeof(_glfw.ns.keyName),
                        kCFStringEncodingUTF8);
     CFRelease(string);
 
-    return _glfw.ns.keynames[key];
+    return _glfw.ns.keyName;
 
     } // autoreleasepool
 }

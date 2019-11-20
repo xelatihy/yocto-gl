@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 X11 - www.glfw.org
+// GLFW 3.3 X11 - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2019 Camilla Löwy <elmindreda@glfw.org>
@@ -23,8 +23,6 @@
 // 3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//========================================================================
-// It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
 #include "internal.h"
@@ -54,7 +52,7 @@ static int translateKeyCode(int scancode)
         // Note: This way we always force "NumLock = ON", which is intentional
         // since the returned key code should correspond to a physical
         // location.
-        keySym = XkbKeycodeToKeysym(_glfw.x11.display, scancode, _glfw.x11.xkb.group, 1);
+        keySym = XkbKeycodeToKeysym(_glfw.x11.display, scancode, 0, 1);
         switch (keySym)
         {
             case XK_KP_0:           return GLFW_KEY_KP_0;
@@ -76,7 +74,7 @@ static int translateKeyCode(int scancode)
 
         // Now try primary keysym for function keys (non-printable keys)
         // These should not depend on the current keyboard layout
-        keySym = XkbKeycodeToKeysym(_glfw.x11.display, scancode, _glfw.x11.xkb.group, 0);
+        keySym = XkbKeycodeToKeysym(_glfw.x11.display, scancode, 0, 0);
     }
     else
     {
@@ -331,13 +329,14 @@ static void createKeyTables(void)
 //
 static GLFWbool hasUsableInputMethodStyle(void)
 {
+    unsigned int i;
     GLFWbool found = GLFW_FALSE;
     XIMStyles* styles = NULL;
 
     if (XGetIMValues(_glfw.x11.im, XNQueryInputStyle, &styles, NULL) != NULL)
         return GLFW_FALSE;
 
-    for (unsigned int i = 0;  i < styles->count_styles;  i++)
+    for (i = 0;  i < styles->count_styles;  i++)
     {
         if (styles->supported_styles[i] == (XIMPreeditNothing | XIMStatusNothing))
         {
@@ -356,9 +355,10 @@ static Atom getSupportedAtom(Atom* supportedAtoms,
                              unsigned long atomCount,
                              const char* atomName)
 {
+    unsigned long i;
     const Atom atom = XInternAtom(_glfw.x11.display, atomName, False);
 
-    for (unsigned int i = 0;  i < atomCount;  i++)
+    for (i = 0;  i < atomCount;  i++)
     {
         if (supportedAtoms[i] == atom)
             return atom;
@@ -371,11 +371,18 @@ static Atom getSupportedAtom(Atom* supportedAtoms,
 //
 static void detectEWMH(void)
 {
-    // First we read the _NET_SUPPORTING_WM_CHECK property on the root window
-
     Window* windowFromRoot = NULL;
+    Window* windowFromChild = NULL;
+
+    // First we need a couple of atoms
+    const Atom supportingWmCheck =
+        XInternAtom(_glfw.x11.display, "_NET_SUPPORTING_WM_CHECK", False);
+    const Atom wmSupported =
+        XInternAtom(_glfw.x11.display, "_NET_SUPPORTED", False);
+
+    // Then we look for the _NET_SUPPORTING_WM_CHECK property of the root window
     if (!_glfwGetWindowPropertyX11(_glfw.x11.root,
-                                   _glfw.x11.NET_SUPPORTING_WM_CHECK,
+                                   supportingWmCheck,
                                    XA_WINDOW,
                                    (unsigned char**) &windowFromRoot))
     {
@@ -384,12 +391,10 @@ static void detectEWMH(void)
 
     _glfwGrabErrorHandlerX11();
 
-    // If it exists, it should be the XID of a top-level window
-    // Then we look for the same property on that window
-
-    Window* windowFromChild = NULL;
+    // It should be the ID of a child window (of the root)
+    // Then we look for the same property on the child window
     if (!_glfwGetWindowPropertyX11(*windowFromRoot,
-                                   _glfw.x11.NET_SUPPORTING_WM_CHECK,
+                                   supportingWmCheck,
                                    XA_WINDOW,
                                    (unsigned char**) &windowFromChild))
     {
@@ -399,8 +404,7 @@ static void detectEWMH(void)
 
     _glfwReleaseErrorHandlerX11();
 
-    // If the property exists, it should contain the XID of the window
-
+    // It should be the ID of that same child window
     if (*windowFromRoot != *windowFromChild)
     {
         XFree(windowFromRoot);
@@ -411,20 +415,19 @@ static void detectEWMH(void)
     XFree(windowFromRoot);
     XFree(windowFromChild);
 
-    // We are now fairly sure that an EWMH-compliant WM is currently running
-    // We can now start querying the WM about what features it supports by
-    // looking in the _NET_SUPPORTED property on the root window
-    // It should contain a list of supported EWMH protocol and state atoms
+    // We are now fairly sure that an EWMH-compliant window manager is running
 
-    Atom* supportedAtoms = NULL;
-    const unsigned long atomCount =
-        _glfwGetWindowPropertyX11(_glfw.x11.root,
-                                  _glfw.x11.NET_SUPPORTED,
-                                  XA_ATOM,
-                                  (unsigned char**) &supportedAtoms);
+    Atom* supportedAtoms;
+    unsigned long atomCount;
+
+    // Now we need to check the _NET_SUPPORTED property of the root window
+    // It should be a list of supported WM protocol and state atoms
+    atomCount = _glfwGetWindowPropertyX11(_glfw.x11.root,
+                                          wmSupported,
+                                          XA_ATOM,
+                                          (unsigned char**) &supportedAtoms);
 
     // See which of the atoms we support that are supported by the WM
-
     _glfw.x11.NET_WM_STATE =
         getSupportedAtom(supportedAtoms, atomCount, "_NET_WM_STATE");
     _glfw.x11.NET_WM_STATE_ABOVE =
@@ -659,14 +662,6 @@ static GLFWbool initExtensions(void)
             if (supported)
                 _glfw.x11.xkb.detectable = GLFW_TRUE;
         }
-
-        _glfw.x11.xkb.group = 0;
-        XkbStateRec state;
-        if (XkbGetState(_glfw.x11.display, XkbUseCoreKbd, &state) == Success)
-        {
-            XkbSelectEventDetails(_glfw.x11.display, XkbUseCoreKbd, XkbStateNotify, XkbAllStateComponentsMask, XkbGroupStateMask);
-            _glfw.x11.xkb.group = (unsigned int)state.group;
-        }
     }
 
 #if defined(__CYGWIN__)
@@ -712,6 +707,9 @@ static GLFWbool initExtensions(void)
     // the keyboard mapping.
     createKeyTables();
 
+    // Detect whether an EWMH-conformant window manager is running
+    detectEWMH();
+
     // String format atoms
     _glfw.x11.NULL_ = XInternAtom(_glfw.x11.display, "NULL", False);
     _glfw.x11.UTF8_STRING = XInternAtom(_glfw.x11.display, "UTF8_STRING", False);
@@ -755,10 +753,6 @@ static GLFWbool initExtensions(void)
         XInternAtom(_glfw.x11.display, "WM_STATE", False);
     _glfw.x11.WM_DELETE_WINDOW =
         XInternAtom(_glfw.x11.display, "WM_DELETE_WINDOW", False);
-    _glfw.x11.NET_SUPPORTED =
-        XInternAtom(_glfw.x11.display, "_NET_SUPPORTED", False);
-    _glfw.x11.NET_SUPPORTING_WM_CHECK =
-        XInternAtom(_glfw.x11.display, "_NET_SUPPORTING_WM_CHECK", False);
     _glfw.x11.NET_WM_ICON =
         XInternAtom(_glfw.x11.display, "_NET_WM_ICON", False);
     _glfw.x11.NET_WM_PING =
@@ -783,9 +777,6 @@ static GLFWbool initExtensions(void)
         _glfw.x11.NET_WM_CM_Sx = XInternAtom(_glfw.x11.display, name, False);
     }
 
-    // Detect whether an EWMH-conformant window manager is running
-    detectEWMH();
-
     return GLFW_TRUE;
 }
 
@@ -793,10 +784,13 @@ static GLFWbool initExtensions(void)
 //
 static void getSystemContentScale(float* xscale, float* yscale)
 {
-    // Start by assuming the default X11 DPI
-    // NOTE: Some desktop environments (KDE) may remove the Xft.dpi field when it
-    //       would be set to 96, so assume that is the case if we cannot find it
-    float xdpi = 96.f, ydpi = 96.f;
+    // NOTE: Fall back to the display-wide DPI instead of RandR monitor DPI if
+    //       Xft.dpi retrieval below fails as we don't currently have an exact
+    //       policy for which monitor a window is considered to "be on"
+    float xdpi = DisplayWidth(_glfw.x11.display, _glfw.x11.screen) *
+        25.4f / DisplayWidthMM(_glfw.x11.display, _glfw.x11.screen);
+    float ydpi = DisplayHeight(_glfw.x11.display, _glfw.x11.screen) *
+        25.4f / DisplayHeightMM(_glfw.x11.display, _glfw.x11.screen);
 
     // NOTE: Basing the scale on Xft.dpi where available should provide the most
     //       consistent user experience (matches Qt, Gtk, etc), although not
