@@ -12,3 +12,5 @@ cmake-build-release
 yocto1/
 apps1/
 tests1/
+.vs
+CMakeSettings.json

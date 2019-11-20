@@ -49,6 +49,11 @@
 #define CUTE_FILES_IMPLEMENTATION
 #include "ext/cute_files.h"
 
+#ifdef _WIN32
+#undef near
+#undef far
+#endif
+
 // -----------------------------------------------------------------------------
 // LOW-LEVEL OPENGL FUNCTIONS
 // -----------------------------------------------------------------------------
