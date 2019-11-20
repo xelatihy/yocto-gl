@@ -1,21 +1,21 @@
-name: build
+name: macos build
 
 on: [push]
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v1
-    - name: install dependencies
+    - name: install macos dependencies
       run: |
-        choco update
-        choco install ninja
+        brew update
+        brew install ninja
     - name: configure
       run: |
         mkdir build
         cd build
-        cmake .. -G"Visual Studio 16 2019" -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
+        cmake .. -GNinja -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
     - name: build
       run: |
         cd build
