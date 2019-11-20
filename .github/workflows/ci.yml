@@ -11,7 +11,7 @@ jobs:
         generator: [ Ninja ]
         include:
           - os: windows-latest
-            generator: Visual Studio 16 2019 
+            generator: "Visual Studio 16 2019"
     steps:
     - uses: actions/checkout@v1
     - name: install ubuntu dependencies
