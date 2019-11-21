@@ -72,13 +72,11 @@ add_executable(yscntrace apps/yscntrace.cpp)
 add_executable(yscnproc apps/yscnproc.cpp)
 add_executable(yimgproc apps/yimgproc.cpp)
 add_executable(ymshproc apps/ymshproc.cpp)
-add_executable(yislandproc apps/yislandproc.cpp)
 
 target_link_libraries(yscntrace yocto)
 target_link_libraries(yscnproc yocto)
 target_link_libraries(yimgproc yocto)
 target_link_libraries(ymshproc yocto)
-target_link_libraries(yislandproc yocto)
 
 if(YOCTO_OPENGL)
   find_package(OpenGL REQUIRED)
