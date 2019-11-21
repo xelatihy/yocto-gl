@@ -305,10 +305,10 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "transmission", "roughness", "material", "shape", "instance",
     "element", "highlight"};
-const auto trace_bvh_names        = vector<string>{
-    "default", "highquality", "middle", "balanced",
+const auto trace_bvh_names        = vector<string> {
+  "default", "highquality", "middle", "balanced",
 #if YOCTO_EMBREE
-    "embree-default", "embree-highquality", "embree-compact"
+      "embree-default", "embree-highquality", "embree-compact"
 #endif
 };
 

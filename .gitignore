@@ -1,16 +1,10 @@
 bin
-cmake
 build
-cmake-build-debug
-cmake-build-release
-.idea
 .vscode/.cmaketools.json
 *.hdr
 *.exr
 *.png
 .vscode/ipch/
-yocto1/
-apps1/
 tests1/
 .vs
 CMakeSettings.json

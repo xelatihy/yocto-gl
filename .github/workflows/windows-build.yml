@@ -15,8 +15,8 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G"Visual Studio 16 2019" -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
+        cmake .. -G"Visual Studio 16 2019" -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=OFF
     - name: build
       run: |
         cd build
-        cmake --build .
+        cmake --build . --parallel 8

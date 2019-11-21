@@ -10,13 +10,13 @@ jobs:
     - name: install macos dependencies
       run: |
         brew update
-        brew install ninja
+        brew install ninja embree
     - name: configure
       run: |
         mkdir build
         cd build
-        cmake .. -GNinja -DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
+        cmake .. -GNinja -DYOCTO_OPENGL=ON -DYOCTO_EMBREE=ON
     - name: build
       run: |
         cd build
-        cmake --build .
+        cmake --build . --parallel 8
