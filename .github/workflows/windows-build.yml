@@ -1,4 +1,4 @@
-name: windows build
+name: windows-build
 
 on: [push]
 
