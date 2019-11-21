@@ -1,4 +1,5 @@
 {
   "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
-  "cmake.parallelJobs": 8
+  "cmake.parallelJobs": 8,
+  "cmake.buildDirectory": "${workspaceFolder}/build/vscode"
 }
