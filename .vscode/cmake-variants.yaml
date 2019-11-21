@@ -1,0 +1,40 @@
+buildType:
+  default: debug
+  description: build type
+  choices:
+    debug:
+      short: debug
+      long: build in debug mode
+      buildType: Debug
+    release:
+      short: release
+      long: build in release mode
+      buildType: Release
+
+openGL:
+  default: enabled
+  choices:
+    enabled:
+      short: opengl
+      long: use OpenGL
+      settings:
+        YOCTO_OPENGL: yes
+    disabled:
+      short: no-opengl
+      long: no OpenGL
+      settings:
+        YOCTO_OPENGL: no
+
+embree:
+  default: enabled
+  choices:
+    enabled:
+      short: embree
+      long: use Embree
+      settings:
+        YOCTO_EMBREE: yes
+    disabled:
+      short: no-embree
+      long: no Embree
+      settings:
+        YOCTO_EMBREE: no

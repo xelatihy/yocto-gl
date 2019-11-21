@@ -1,8 +1,4 @@
 {
   "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
-  "cmake.parallelJobs": 8,
-  "cmake.configureSettings": {
-    "YOCTO_OPENGL": "ON",
-    "YOCTO_EMBREE": "ON",
-  }
+  "cmake.parallelJobs": 8
 }
