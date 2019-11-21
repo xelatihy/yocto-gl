@@ -134,22 +134,22 @@ Other external libraries are included with their own license.
 ## Compilation
 
 This library requires a C++17 compiler and is know to compiled on
-OsX (Xcode >= 10), Windows (MSVC 2017) and Linux (gcc >= 7, clang >= 4).
+OsX (Xcode >= 10), Windows (MSVC 2019) and Linux (gcc >= 7, clang >= 4).
 
 You can build the example applications using CMake with
     `mkdir build; cd build; cmake ..; cmake --build`
 
 Yocto/GL depends on `stb_image.h`, `stb_image_write.h`, `stb_image_resize.h` and
-`tinyexr.h` for image loading, saving and resizing,  `happly.hpp` and `cgltf.h`
-for PLY and glTF support, and `filesystem.hpp` to support C++17 filesystem API
-when missing. All dependencies are included in the distribution.
+`tinyexr.h` for image loading, saving and resizing,  `cgltf.h` for glTF support,
+and `filesystem.hpp` to support C++17 filesystem API when missing.
+All dependencies are included in the distribution.
 
-OpenGL utilities include the OpenGL libraries, use GLEW on Windows/Linux,
-GLFW for windows handling and Dear ImGui for UI support.
-Since OpenGL is quite onerous and hard to link, its support can be disabled
-by defining YGL_OPENGL to 1 before including this file. If you use any of
-the OpenGL calls, make sure to properly link to the OpenGL libraries on
-your system. OpenGL extensions use `glad.{h, cpp}` For ImGUI, build with the
-libraries `imgui.cpp`, `imgui_draw.cpp`, `imgui_impl_glfw_gl3.cpp`.
-For raytracing, we optionally link to Intel's Embree if `YGL_EMBREE` is
-defined at build time.
+We optionally support building OpenGL demos, which are handled by including
+glad, GLFW, ImGui as dependecies in apps. OpenGL support might eventually
+become part of the Yocto/GL libraries. OpenGL support is enabled by defining
+the cmake option `YOCTO_OPENGL`.
+
+Finally, we optionally support the use of Intel's Embree for ray casting.
+At this point, we rely pon prebuilt binaries distributed by Intel.
+See the main CMake file for how to link to it. Embree support is enabled by
+defining the cmake option `YOCTO_EMBREE`.
