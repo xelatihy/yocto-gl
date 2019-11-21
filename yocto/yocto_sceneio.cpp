@@ -40,6 +40,7 @@
 #include <cstdlib>
 #include <deque>
 #include <future>
+#include <cctype>
 
 #include "yocto_image.h"
 #include "yocto_modelio.h"
@@ -1674,7 +1675,7 @@ static sceneio_status save_obj(
   } else {
     for (auto& instance : scene.instances) {
       auto& shape     = scene.shapes[instance.shape];
-      auto  materials = vector{scene.materials[instance.material].name};
+      auto  materials = vector<string>{scene.materials[instance.material].name};
       auto  positions = shape.positions, normals = shape.normals;
       for (auto& p : positions) p = transform_point(instance.frame, p);
       for (auto& n : normals) n = transform_normal(instance.frame, n);

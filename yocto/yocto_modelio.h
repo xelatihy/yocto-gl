@@ -557,7 +557,6 @@ struct hash<yocto::obj_vertex> {
 namespace yocto {
 
 using std::string_view;
-using namespace std::literals::string_view_literals;
 
 // Yaml value type
 enum struct yaml_value_type { number, boolean, string, array };

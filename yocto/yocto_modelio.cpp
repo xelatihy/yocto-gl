@@ -6321,7 +6321,7 @@ static bool parse_yaml_varname(string_view& str, string_view& value) {
   return true;
 }
 static bool parse_yaml_varname(string_view& str, string& value) {
-  auto view = ""sv;
+  auto view = string_view{};
   if (!parse_yaml_varname(str, view)) return false;
   value = string{view};
   return true;
