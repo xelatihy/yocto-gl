@@ -66,7 +66,7 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
 #include <memory>
 #endif
 
@@ -186,7 +186,7 @@ struct trace_shape {
 
   // computed properties
   trace_bvh bvh = {};
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh = {};
 #endif
 };
@@ -230,7 +230,7 @@ struct trace_scene {
   // computed properties
   vector<trace_light> lights = {};
   trace_bvh           bvh    = {};
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh = {};
 #endif
 };
@@ -275,7 +275,7 @@ enum struct trace_bvh_type {
   highquality,
   middle,
   balanced,
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   embree_default,
   embree_highquality,
   embree_compact  // only for copy interface
@@ -307,7 +307,7 @@ const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "element", "highlight"};
 const auto trace_bvh_names        = vector<string> {
   "default", "highquality", "middle", "balanced",
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
       "embree-default", "embree-highquality", "embree-compact"
 #endif
 };

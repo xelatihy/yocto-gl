@@ -81,7 +81,7 @@
 
 #include "yocto_math.h"
 
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
 #include <memory>
 #endif
 
@@ -133,7 +133,7 @@ enum struct bvh_type {
   highquality,
   middle,
   balanced,
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   embree_default,
   embree_highquality,
   embree_compact  // only for copy interface
@@ -223,7 +223,7 @@ struct bvh_shape {
 
   // nodes
   bvh_tree bvh = {};
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh = {};
 #endif
 };
@@ -242,7 +242,7 @@ struct bvh_scene {
 
   // nodes
   bvh_tree bvh = {};
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh = {};
 #endif
 };

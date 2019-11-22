@@ -39,7 +39,7 @@
 #include <future>
 #include <thread>
 
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
 #endif
 
@@ -357,7 +357,7 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
 // Get Embree device
 std::atomic<ssize_t> bvh_embree_memory = 0;
 static RTCDevice     bvh_embree_device() {
@@ -1326,7 +1326,7 @@ bvh_intersection overlap_quads_bvh(const bvh_tree& bvh,
 namespace yocto {
 
 void init_shape_bvh(bvh_shape& shape, bvh_type type, bool parallel) {
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   // call Embree if needed
   if (type == bvh_type::embree_default ||
       type == bvh_type::embree_highquality ||
@@ -1388,7 +1388,7 @@ void init_scene_bvh(bvh_scene& scene, bvh_type type, bool parallel) {
   }
 
   // embree
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   if (type == bvh_type::embree_default ||
       type == bvh_type::embree_highquality ||
       type == bvh_type::embree_compact) {
@@ -1415,7 +1415,7 @@ void init_scene_bvh(bvh_scene& scene, bvh_type type, bool parallel) {
 }
 
 void update_shape_bvh(bvh_shape& shape) {
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   if (shape.embree_bvh) {
     throw std::runtime_error("embree shape refit not supported");
   }
@@ -1468,7 +1468,7 @@ void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
   // update shapes
   for (auto shape : updated_shapes) update_shape_bvh(scene.shapes[shape]);
 
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   if (scene.embree_bvh) {
     update_scene_embree_bvh(scene, updated_instances);
   }
@@ -1489,7 +1489,7 @@ void update_scene_bvh(bvh_scene& scene, const vector<int>& updated_instances,
 // Intersect ray with a bvh.
 static bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray_,
     int& element, vec2f& uv, float& distance, bool find_any) {
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   // call Embree if needed
   if (shape.embree_bvh) {
     return intersect_shape_embree_bvh(
@@ -1600,7 +1600,7 @@ static bool intersect_shape_bvh(const bvh_shape& shape, const ray3f& ray_,
 static bool intersect_scene_bvh(const bvh_scene& scene, const ray3f& ray_,
     int& instance, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   // call Embree if needed
   if (scene.embree_bvh) {
     return intersect_scene_embree_bvh(

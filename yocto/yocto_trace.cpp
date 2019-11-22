@@ -33,7 +33,7 @@
 #include <future>
 #include <mutex>
 
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>
 #endif
 
@@ -1294,7 +1294,7 @@ inline bool intersect_bbox(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
 // Get Embree device
 std::atomic<ssize_t> trace_embree_memory = 0;
 static RTCDevice     trace_embree_device() {
@@ -1879,7 +1879,7 @@ static void update_bvh(trace_bvh& bvh, const vector<bbox3f>& bboxes) {
 }
 
 static void init_bvh(trace_shape& shape, const trace_params& params) {
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   // call Embree if needed
   if (params.bvh == trace_bvh_type::embree_default ||
       params.bvh == trace_bvh_type::embree_highquality ||
@@ -1940,7 +1940,7 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
   }
 
   // embree
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   if (params.bvh == trace_bvh_type::embree_default ||
       params.bvh == trace_bvh_type::embree_highquality ||
       params.bvh == trace_bvh_type::embree_compact) {
@@ -1967,7 +1967,7 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
 }
 
 static void update_bvh(trace_shape& shape, const trace_params& params) {
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   if (shape.embree_bvh) {
     throw std::runtime_error("embree shape update not implemented");
   }
@@ -2020,7 +2020,7 @@ void update_bvh(trace_scene& scene, const vector<int>& updated_instances,
   // update shapes
   for (auto shape : updated_shapes) update_bvh(scene.shapes[shape], params);
 
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   if (scene.embree_bvh) {
     update_embree_bvh(scene, updated_instances);
   }
@@ -2041,7 +2041,7 @@ void update_bvh(trace_scene& scene, const vector<int>& updated_instances,
 // Intersect ray with a bvh.
 static bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray_,
     int& element, vec2f& uv, float& distance, bool find_any) {
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   // call Embree if needed
   if (shape.embree_bvh) {
     return intersect_shape_embree_bvh(
@@ -2152,7 +2152,7 @@ static bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray_,
 static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
     int& instance, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
-#if YOCTO_EMBREE
+#ifdef YOCTO_EMBREE
   // call Embree if needed
   if (scene.embree_bvh) {
     return intersect_scene_embree_bvh(
