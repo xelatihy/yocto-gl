@@ -1858,16 +1858,11 @@ inline T interpolate_triangle(
 template <typename T>
 inline T interpolate_quad(
     const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
-#if 1
   if (uv.x + uv.y <= 1) {
     return interpolate_triangle(p0, p1, p3, uv);
   } else {
     return interpolate_triangle(p2, p3, p1, 1 - uv);
   }
-#else
-  return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
-         p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
-#endif
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
@@ -1915,15 +1910,11 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
-#if 1
   if (current_uv.x + current_uv.y <= 1) {
     return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
   } else {
     return triangle_tangents_fromuv(p2, p3, p1, uv2, uv3, uv1);
   }
-#else
-  return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);
-#endif
 }
 
 }  // namespace yocto
