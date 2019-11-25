@@ -165,10 +165,10 @@ struct sceneio_shape {
 
 // Instance of a visible shape in the scene.
 struct sceneio_instance {
-  string  name     = "";
-  frame3f frame    = identity3x4f;
-  int     shape    = -1;
-  int     material = -1;
+  string          name      = "";
+  frame3f         frame     = identity3x4f;
+  int             shape     = -1;
+  int             material  = -1;
 };
 
 // Environment map.

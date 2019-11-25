@@ -169,6 +169,8 @@ vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
 vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
     const string& property1, const string& property2, const string& property3,
     float property4);
+vector<frame3f> get_ply_values(const ply_model& ply, const string& element,
+    const array<string, 12>& properties);
 
 vector<vector<int>> get_ply_lists(
     const ply_model& ply, const string& element, const string& property);
@@ -203,6 +205,8 @@ void add_ply_values(ply_model& ply, const vector<vec3f>& values,
 void add_ply_values(ply_model& ply, const vector<vec4f>& values,
     const string& element, const string& property1, const string& property2,
     const string& property3, const string& property4);
+void add_ply_values(ply_model& ply, const vector<frame3f>& values,
+    const string& element, const array<string, 12>& properties);
 
 void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
     const string& element, const string& property);
@@ -561,6 +565,8 @@ using std::string_view;
 // Yaml value type
 enum struct yaml_value_type { number, boolean, string, array };
 
+#if 0
+
 // Yaml value
 struct yaml_value {
   yaml_value_type   type    = yaml_value_type::number;
@@ -569,6 +575,19 @@ struct yaml_value {
   string            string_ = "";
   array<double, 16> array_  = {};
 };
+
+#else
+
+// Yaml value
+struct yaml_value {
+  yaml_value_type   type    = yaml_value_type::number;
+  float             number  = 0;
+  bool              boolean = false;
+  string            string_ = "";
+  array<float, 16>  array_  = {};
+};
+
+#endif
 
 // Yaml element
 struct yaml_element {
