@@ -6330,8 +6330,6 @@ bool has_yaml_value(const yaml_element& element, const string& name) {
   return false;
 }
 
-#if 0
-
 // construction
 yaml_value make_yaml_value(const string& value) {
   return {yaml_value_type::string, 0, false, value};
@@ -6363,42 +6361,6 @@ yaml_value make_yaml_value(const frame3f& value) {
   for (auto i = 0; i < 12; i++) yaml.array_[i] = (double)(&value.x.x)[i];
   return yaml;
 }
-
-#else
-
-// construction
-yaml_value make_yaml_value(const string& value) {
-  return {yaml_value_type::string, 0, false, value};
-}
-yaml_value make_yaml_value(bool value) {
-  return {yaml_value_type::boolean, 0, value};
-}
-yaml_value make_yaml_value(int value) {
-  return {yaml_value_type::number, (float)value};
-}
-yaml_value make_yaml_value(float value) {
-  return {yaml_value_type::number, value};
-}
-yaml_value make_yaml_value(const vec2f& value) {
-  return {
-      yaml_value_type::array, 2, false, "", {value.x, value.y}};
-}
-yaml_value make_yaml_value(const vec3f& value) {
-  return {yaml_value_type::array, 3, false, "",
-      {value.x, value.y, value.z}};
-}
-yaml_value make_yaml_value(const mat3f& value) {
-  auto yaml = yaml_value{yaml_value_type::array, 9};
-  for (auto i = 0; i < 9; i++) yaml.array_[i] = (&value.x.x)[i];
-  return yaml;
-}
-yaml_value make_yaml_value(const frame3f& value) {
-  auto yaml = yaml_value{yaml_value_type::array, 12};
-  for (auto i = 0; i < 12; i++) yaml.array_[i] = (&value.x.x)[i];
-  return yaml;
-}
-
-#endif
 
 static bool parse_value(string_view& str, yaml_value& value) {
   trim_whitespace(str);

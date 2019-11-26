@@ -565,8 +565,6 @@ using std::string_view;
 // Yaml value type
 enum struct yaml_value_type { number, boolean, string, array };
 
-#if 0
-
 // Yaml value
 struct yaml_value {
   yaml_value_type   type    = yaml_value_type::number;
@@ -575,19 +573,6 @@ struct yaml_value {
   string            string_ = "";
   array<double, 16> array_  = {};
 };
-
-#else
-
-// Yaml value
-struct yaml_value {
-  yaml_value_type   type    = yaml_value_type::number;
-  float             number  = 0;
-  bool              boolean = false;
-  string            string_ = "";
-  array<float, 16>  array_  = {};
-};
-
-#endif
 
 // Yaml element
 struct yaml_element {

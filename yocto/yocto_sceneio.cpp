@@ -1017,10 +1017,8 @@ static bool make_image_preset(
 
 sceneio_status load_yaml(const string& filename, sceneio_model& scene) {
   // open file
-  printf("starting loading yaml\n");
   auto yaml = yaml_model{};
   if (auto ret = load_yaml(filename, yaml); !ret) return {ret.error};
-  printf("ending loading yaml\n");
 
   auto tmap = unordered_map<string, int>{{"", -1}};
   auto vmap = unordered_map<string, int>{{"", -1}};
