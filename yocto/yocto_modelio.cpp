@@ -989,6 +989,17 @@ vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
     values[i] = {x[i], y[i], z[i], w};
   return values;
 }
+vector<frame3f> get_ply_values(const ply_model& ply, const string& element,
+    const array<string, 12>& properties) {
+  auto coords = array<vector<float>, 12>{};
+  for (auto idx = 0; idx < 12; idx++)
+    coords[idx] = get_ply_values(ply, element, properties[idx]);
+  auto values = vector<frame3f>(coords[0].size());
+  for (auto i = (size_t)0; i < values.size(); i++) {
+    for (auto c = 0; c < 12; c++) (&values[i].x.x)[c] = coords[c][i];
+  }
+  return values;
+}
 vector<vector<int>> get_ply_lists(
     const ply_model& ply, const string& element, const string& property) {
   if (!has_ply_property(ply, element, property)) return {};
@@ -3517,7 +3528,7 @@ static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
 
 // Pbrt measure subsurface parameters (sigma_prime_s, sigma_a in mm^-1)
 // from pbrt code at pbrt/code/medium.cpp
-// static 
+// static
 pair<vec3f, vec3f> get_pbrt_subsurface(const string& name) {
   static const unordered_map<string, pair<vec3f, vec3f>> params = {
       // From "A Practical Model for Subsurface Light Transport"

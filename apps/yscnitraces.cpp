@@ -76,7 +76,7 @@ struct app_state {
 };
 
 // construct a scene from io
-trace_scene make_scene(const sceneio_model& ioscene) {
+trace_scene make_scene(sceneio_model& ioscene) {
   auto scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
@@ -92,8 +92,8 @@ trace_scene make_scene(const sceneio_model& ioscene) {
 
   for (auto& iotexture : ioscene.textures) {
     auto& texture = scene.textures.emplace_back();
-    texture.hdr   = iotexture.hdr;
-    texture.ldr   = iotexture.ldr;
+    swap(texture.hdr, iotexture.hdr);
+    swap(texture.ldr, iotexture.ldr);
   }
 
   for (auto& iomaterial : ioscene.materials) {
@@ -122,23 +122,26 @@ trace_scene make_scene(const sceneio_model& ioscene) {
   }
 
   for (auto& ioshape_ : ioscene.shapes) {
-    auto& ioshape = (needs_tesselation(ioscene, ioshape_))
-                        ? tesselate_shape(ioscene, ioshape_)
-                        : ioshape_;
-    auto& shape         = scene.shapes.emplace_back();
-    shape.points        = ioshape.points;
-    shape.lines         = ioshape.lines;
-    shape.triangles     = ioshape.triangles;
-    shape.quads         = ioshape.quads;
-    shape.quadspos      = ioshape.quadspos;
-    shape.quadsnorm     = ioshape.quadsnorm;
-    shape.quadstexcoord = ioshape.quadstexcoord;
-    shape.positions     = ioshape.positions;
-    shape.normals       = ioshape.normals;
-    shape.texcoords     = ioshape.texcoords;
-    shape.colors        = ioshape.colors;
-    shape.radius        = ioshape.radius;
-    shape.tangents      = ioshape.tangents;
+    auto tshape = (needs_tesselation(ioscene, ioshape_))
+                      ? tesselate_shape(ioscene, ioshape_)
+                      : sceneio_shape{};
+    auto& ioshape = (needs_tesselation(ioscene, ioshape_)) ? tshape : ioshape_;
+    auto& shape   = scene.shapes.emplace_back();
+    swap(shape.points, ioshape.points);
+    swap(shape.lines, ioshape.lines);
+    swap(shape.triangles, ioshape.triangles);
+    swap(shape.quads, ioshape.quads);
+    swap(shape.quadspos, ioshape.quadspos);
+    swap(shape.quadsnorm, ioshape.quadsnorm);
+    swap(shape.quadstexcoord, ioshape.quadstexcoord);
+    swap(shape.positions, ioshape.positions);
+    swap(shape.normals, ioshape.normals);
+    swap(shape.texcoords, ioshape.texcoords);
+    swap(shape.colors, ioshape.colors);
+    swap(shape.radius, ioshape.radius);
+    swap(shape.tangents, ioshape.tangents);
+    tshape  = {};
+    ioshape = {};
   }
 
   for (auto& ioinstance : ioscene.instances) {
@@ -155,6 +158,7 @@ trace_scene make_scene(const sceneio_model& ioscene) {
     environment.emission_tex = ioenvironment.emission_tex;
   }
 
+  ioscene = {};
   return scene;
 }
 

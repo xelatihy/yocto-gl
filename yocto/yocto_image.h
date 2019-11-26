@@ -96,6 +96,8 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include <algorithm>
+
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
@@ -119,6 +121,7 @@ struct image {
   void   resize(const vec2i& size);
   void   assign(const vec2i& size, const T& value = {});
   void   shrink_to_fit();
+  void   swap(image& other);
 
   // element access
   T&       operator[](int i);
@@ -147,6 +150,10 @@ template <typename T>
 inline bool operator==(const image<T>& a, const image<T>& b);
 template <typename T>
 inline bool operator!=(const image<T>& a, const image<T>& b);
+
+// swap
+template <typename T>
+inline void swap(image<T>& a, image<T>& b);
 
 }  // namespace yocto
 
@@ -372,6 +379,7 @@ struct volume {
   void   resize(const vec3i& size);
   void   assign(const vec3i& size, const T& value);
   void   shrink_to_fit();
+  void   swap(volume& other);
 
   // element access
   T&       operator[](size_t i);
@@ -400,6 +408,10 @@ template <typename T>
 inline bool operator==(const volume<T>& a, const volume<T>& b);
 template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b);
+
+// swap
+template <typename T>
+inline void swap(volume<T>& a, volume<T>& b);
 
 }  // namespace yocto
 
@@ -515,6 +527,11 @@ template <typename T>
 inline void image<T>::shrink_to_fit() {
   pixels.shrink_to_fit();
 }
+template <typename T>
+inline void image<T>::swap(image<T>& other) {
+  std::swap(extent, other.extent);
+  pixels.swap(other.pixels);
+}
 
 // element access
 template <typename T>
@@ -572,6 +589,12 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
   return a.size() != b.size() || a.pixels != b.pixels;
 }
 
+// swap
+template <typename T>
+inline void swap(image<T>& a, image<T>& b) {
+  a.swap(b);
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -620,6 +643,11 @@ inline void volume<T>::assign(const vec3i& size, const T& value) {
 template <typename T>
 inline void volume<T>::shrink_to_fit() {
   voxels.shrink_to_fit();
+}
+template <typename T>
+inline void volume<T>::swap(volume<T>& other) {
+  std::swap(extent, other.extent);
+  voxels.swap(other.voxels);
 }
 
 // element access
@@ -676,6 +704,12 @@ inline bool operator==(const volume<T>& a, const volume<T>& b) {
 template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b) {
   return a.size() != b.size() || a.voxels != b.voxels;
+}
+
+// swap
+template <typename T>
+inline void swap(volume<T>& a, volume<T>& b) {
+  a.swap(b);
 }
 
 }  // namespace yocto
