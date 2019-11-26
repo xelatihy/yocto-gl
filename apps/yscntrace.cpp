@@ -100,6 +100,8 @@ trace_scene make_scene(sceneio_model& ioscene) {
     swap(shape.colors, ioshape.colors);
     swap(shape.radius, ioshape.radius);
     swap(shape.tangents, ioshape.tangents);
+    tshape = {};
+    ioshape = {};
   }
 
   for (auto& ioinstance : ioscene.instances) {
