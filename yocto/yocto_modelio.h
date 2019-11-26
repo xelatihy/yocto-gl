@@ -159,16 +159,16 @@ const ply_property& get_ply_property(
 
 vector<float> get_ply_values(
     const ply_model& ply, const string& element, const string& property);
-vector<vec2f> get_ply_values(const ply_model& ply, const string& element,
-    const string& property1, const string& property2);
-vector<vec3f> get_ply_values(const ply_model& ply, const string& element,
-    const string& property1, const string& property2, const string& property3);
-vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
-    const string& property1, const string& property2, const string& property3,
-    const string& property4);
-vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
-    const string& property1, const string& property2, const string& property3,
-    float property4);
+vector<vec2f>   get_ply_values(const ply_model& ply, const string& element,
+      const string& property1, const string& property2);
+vector<vec3f>   get_ply_values(const ply_model& ply, const string& element,
+      const string& property1, const string& property2, const string& property3);
+vector<vec4f>   get_ply_values(const ply_model& ply, const string& element,
+      const string& property1, const string& property2, const string& property3,
+      const string& property4);
+vector<vec4f>   get_ply_values(const ply_model& ply, const string& element,
+      const string& property1, const string& property2, const string& property3,
+      float property4);
 vector<frame3f> get_ply_values(const ply_model& ply, const string& element,
     const array<string, 12>& properties);
 

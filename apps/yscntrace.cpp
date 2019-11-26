@@ -100,7 +100,7 @@ trace_scene make_scene(sceneio_model& ioscene) {
     swap(shape.colors, ioshape.colors);
     swap(shape.radius, ioshape.radius);
     swap(shape.tangents, ioshape.tangents);
-    tshape = {};
+    tshape  = {};
     ioshape = {};
   }
 
@@ -118,7 +118,7 @@ trace_scene make_scene(sceneio_model& ioscene) {
     environment.emission_tex = ioenvironment.emission_tex;
   }
 
-  ioscene = {}; // clear
+  ioscene = {};  // clear
   return scene;
 }
 

@@ -96,9 +96,9 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_math.h"
-
 #include <algorithm>
+
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
@@ -152,7 +152,7 @@ template <typename T>
 inline bool operator!=(const image<T>& a, const image<T>& b);
 
 // swap
-template<typename T>
+template <typename T>
 inline void swap(image<T>& a, image<T>& b);
 
 }  // namespace yocto
@@ -410,7 +410,7 @@ template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b);
 
 // swap
-template<typename T>
+template <typename T>
 inline void swap(volume<T>& a, volume<T>& b);
 
 }  // namespace yocto
@@ -590,7 +590,7 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
 }
 
 // swap
-template<typename T>
+template <typename T>
 inline void swap(image<T>& a, image<T>& b) {
   a.swap(b);
 }
@@ -707,7 +707,7 @@ inline bool operator!=(const volume<T>& a, const volume<T>& b) {
 }
 
 // swap
-template<typename T>
+template <typename T>
 inline void swap(volume<T>& a, volume<T>& b) {
   a.swap(b);
 }
