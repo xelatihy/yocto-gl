@@ -7,18 +7,20 @@ def cli():
     pass
 
 @cli.command()
-def release():
+@click.option('--clear/--no-clear', default=False)
+def release(clear=False):
     os.makedirs('build/terminal/Release', exist_ok=True)
     os.chdir('build/terminal/Release')
     os.system('cmake ../../.. -GNinja -DCMAKE_BUILD_TYPE=Release -DYOCTO_EMBREE=ON')
-    os.system('cmake --build . --parallel 8')
+    os.system('cmake --build . --parallel 8' + (' --clean-first' if clear else ''))
 
 @cli.command()
-def debug():
+@click.option('--clear/--no-clear', default=False)
+def debug(clear=False):
     os.makedirs('build/terminal/Debug', exist_ok=True)
     os.chdir('build/terminal/Debug')
     os.system('cmake ../../.. -GNinja -DCMAKE_BUILD_TYPE=Debug -DYOCTO_EMBREE=ON')
-    os.system('cmake --build . --parallel 8')
+    os.system('cmake --build . --parallel 8' + (' --clean-first' if clear else ''))
 
 @cli.command()
 def xcode():
