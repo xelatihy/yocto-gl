@@ -854,7 +854,7 @@ opengl_arraybuffer::opengl_arraybuffer(opengl_arraybuffer&& other) {
 opengl_arraybuffer& opengl_arraybuffer::operator=(opengl_arraybuffer&& other) {
   std::swap(buffer_id, other.buffer_id);
   std::swap(num, other.num);
-  std::swap(elem_size, elem_size);
+  std::swap(elem_size, other.elem_size);
   return *this;
 }
 opengl_arraybuffer::~opengl_arraybuffer() { delete_glarraybuffer(*this); }
@@ -905,7 +905,7 @@ opengl_elementbuffer& opengl_elementbuffer::operator=(
     opengl_elementbuffer&& other) {
   std::swap(buffer_id, other.buffer_id);
   std::swap(num, other.num);
-  std::swap(elem_size, elem_size);
+  std::swap(elem_size, other.elem_size);
   return *this;
 }
 opengl_elementbuffer::~opengl_elementbuffer() { delete_glelementbuffer(*this); }
