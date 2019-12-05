@@ -1683,7 +1683,7 @@ static pair<int, int> split_nodes(vector<int>& primitives,
     int end, trace_bvh_type type) {
   switch (type) {
     case trace_bvh_type::default_:
-      return split_balanced(primitives, bboxes, centers, start, end);
+      return split_middle(primitives, bboxes, centers, start, end);
     case trace_bvh_type::highquality:
       return split_sah(primitives, bboxes, centers, start, end);
     case trace_bvh_type::middle:
