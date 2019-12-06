@@ -1660,10 +1660,8 @@ static pair<int, int> split_middle(vector<int>& primitives,
   if (csize.z >= csize.x && csize.z >= csize.y) axis = 2;
 
   // split the space in the middle along the largest axis
-  auto cmiddle = (cbbox.max + cbbox.min) / 2;
-  auto middle  = cmiddle[axis];
   mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [axis, middle, &centers](
+                  [axis, middle = center(cbbox)[axis], &centers](
                       auto a) { return centers[a][axis] < middle; }) -
               primitives.data());
 
@@ -1683,7 +1681,7 @@ static pair<int, int> split_nodes(vector<int>& primitives,
     int end, trace_bvh_type type) {
   switch (type) {
     case trace_bvh_type::default_:
-      return split_balanced(primitives, bboxes, centers, start, end);
+      return split_middle(primitives, bboxes, centers, start, end);
     case trace_bvh_type::highquality:
       return split_sah(primitives, bboxes, centers, start, end);
     case trace_bvh_type::middle:
@@ -1762,6 +1760,8 @@ static void build_bvh_serial(
   // cleanup
   nodes.shrink_to_fit();
 }
+
+#if 0
 
 // Build BVH nodes
 static void build_bvh_parallel(
@@ -1861,6 +1861,8 @@ static void build_bvh_parallel(
   nodes.shrink_to_fit();
 }
 
+#endif
+
 // Update bvh
 static void update_bvh(trace_bvh& bvh, const vector<bbox3f>& bboxes) {
   for (auto nodeid = (int)bvh.nodes.size() - 1; nodeid >= 0; nodeid--) {
@@ -1927,11 +1929,7 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
   }
 
   // build nodes
-  if (params.noparallel) {
-    build_bvh_serial(shape.bvh, bboxes, params.bvh);
-  } else {
-    build_bvh_parallel(shape.bvh, bboxes, params.bvh);
-  }
+  build_bvh_serial(shape.bvh, bboxes, params.bvh);
 }
 
 void init_bvh(trace_scene& scene, const trace_params& params) {
@@ -1959,11 +1957,7 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
   }
 
   // build nodes
-  if (params.noparallel) {
-    build_bvh_serial(scene.bvh, bboxes, params.bvh);
-  } else {
-    build_bvh_parallel(scene.bvh, bboxes, params.bvh);
-  }
+  build_bvh_serial(scene.bvh, bboxes, params.bvh);
 }
 
 static void update_bvh(trace_shape& shape, const trace_params& params) {
