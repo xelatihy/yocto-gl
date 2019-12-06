@@ -1015,7 +1015,8 @@ static bool make_image_preset(
 
 #if 1
 
-sceneio_status load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
+sceneio_status load_yaml(
+    const string& filename, sceneio_model& scene, bool noparallel) {
   // open file
   auto yaml = yaml_model{};
   if (auto ret = load_yaml(filename, yaml); !ret) return {ret.error};
@@ -1043,10 +1044,10 @@ sceneio_status load_yaml(const string& filename, sceneio_model& scene, bool nopa
 
   // hacked groups for large models
   struct sceneio_group {
-    string filename = "";
-    vector<frame3f> frames = {};
+    string          filename = "";
+    vector<frame3f> frames   = {};
   };
-  auto groups = vector<sceneio_group>{};
+  auto groups  = vector<sceneio_group>{};
   auto igroups = vector<int>{};
 
   // cameras
@@ -1239,7 +1240,8 @@ sceneio_status load_yaml(const string& filename, sceneio_model& scene, bool nopa
         auto& group = groups.emplace_back();
         if (!get_yaml_value(yelement, "instances", group.filename))
           return {filename + ": parse error"};
-        while (igroups.size() < scene.instances.size()) igroups.emplace_back() = -1;
+        while (igroups.size() < scene.instances.size())
+          igroups.emplace_back() = -1;
         igroups.back() = (int)groups.size() - 1;
       }
     } else if (yelement.name == "environments") {
@@ -1269,12 +1271,13 @@ sceneio_status load_yaml(const string& filename, sceneio_model& scene, bool nopa
   }
 
   // instance groups
-  if(!groups.empty()) {
+  if (!groups.empty()) {
     // load groups
-    if(noparallel) {
-      for(auto& group : groups) {
+    if (noparallel) {
+      for (auto& group : groups) {
         auto ply = ply_model{};
-        if (auto ret = load_ply(get_dirname(filename) + group.filename, ply); !ret)
+        if (auto ret = load_ply(get_dirname(filename) + group.filename, ply);
+            !ret)
           return {filename + ": missing instances (" + ret.error + ")"};
         group.frames = get_ply_values(ply, "frame",
             array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
@@ -1283,27 +1286,28 @@ sceneio_status load_yaml(const string& filename, sceneio_model& scene, bool nopa
     } else {
       auto mutex  = std::mutex{};
       auto status = sceneio_status{};
-      parallel_foreach(
-          groups, [&filename, &status, &mutex](sceneio_group& group) {
-            if (!status) return;
-            auto ply = ply_model{};
-            if (auto ret = load_ply(get_dirname(filename) + group.filename, ply); !ret) {
-              auto lock = std::lock_guard{mutex};
-              status = {filename + ": missing instances (" + ret.error + ")"};
-            } else {
-              group.frames = get_ply_values(ply, "frame",
-                  array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
-                      "zz", "ox", "oy", "oz"});
-            }
-          });
-      if(!status) return status;
+      parallel_foreach(groups, [&filename, &status, &mutex](
+                                   sceneio_group& group) {
+        if (!status) return;
+        auto ply = ply_model{};
+        if (auto ret = load_ply(get_dirname(filename) + group.filename, ply);
+            !ret) {
+          auto lock = std::lock_guard{mutex};
+          status    = {filename + ": missing instances (" + ret.error + ")"};
+        } else {
+          group.frames = get_ply_values(ply, "frame",
+              array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
+                  "zz", "ox", "oy", "oz"});
+        }
+      });
+      if (!status) return status;
     }
     auto instances = scene.instances;
     scene.instances.clear();
-    for(auto idx = 0; idx < instances.size(); idx++) {
-      auto& base   = instances[idx];
+    for (auto idx = 0; idx < instances.size(); idx++) {
+      auto& base  = instances[idx];
       auto& group = groups[igroups[idx]];
-      auto count = 0;
+      auto  count = 0;
       for (auto& frame : group.frames) {
         auto& instance    = scene.instances.emplace_back();
         instance.name     = base.name + std::to_string(count++);
