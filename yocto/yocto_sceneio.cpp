@@ -1015,7 +1015,7 @@ static bool make_image_preset(
 
 #if 1
 
-sceneio_status load_yaml(const string& filename, sceneio_model& scene) {
+sceneio_status load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
   // open file
   auto yaml = yaml_model{};
   if (auto ret = load_yaml(filename, yaml); !ret) return {ret.error};
@@ -1271,13 +1271,32 @@ sceneio_status load_yaml(const string& filename, sceneio_model& scene) {
   // instance groups
   if(!groups.empty()) {
     // load groups
-    for(auto& group : groups) {
-      auto ply = ply_model{};
-      if (auto ret = load_ply(get_dirname(filename) + group.filename, ply); !ret)
-        return {filename + ": missing instances (" + ret.error + ")"};
-      group.frames = get_ply_values(ply, "frame",
-          array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
-              "zz", "ox", "oy", "oz"});
+    if(noparallel) {
+      for(auto& group : groups) {
+        auto ply = ply_model{};
+        if (auto ret = load_ply(get_dirname(filename) + group.filename, ply); !ret)
+          return {filename + ": missing instances (" + ret.error + ")"};
+        group.frames = get_ply_values(ply, "frame",
+            array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
+                "zz", "ox", "oy", "oz"});
+      }
+    } else {
+      auto mutex  = std::mutex{};
+      auto status = sceneio_status{};
+      parallel_foreach(
+          groups, [&filename, &status, &mutex](sceneio_group& group) {
+            if (!status) return;
+            auto ply = ply_model{};
+            if (auto ret = load_ply(get_dirname(filename) + group.filename, ply); !ret) {
+              auto lock = std::lock_guard{mutex};
+              status = {filename + ": missing instances (" + ret.error + ")"};
+            } else {
+              group.frames = get_ply_values(ply, "frame",
+                  array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
+                      "zz", "ox", "oy", "oz"});
+            }
+          });
+      if(!status) return status;
     }
     auto instances = scene.instances;
     scene.instances.clear();
@@ -1615,7 +1634,7 @@ static sceneio_status load_yaml_scene(
   scene = {};
 
   // Parse yaml
-  if (auto ret = load_yaml(filename, scene); !ret) return ret;
+  if (auto ret = load_yaml(filename, scene, noparallel); !ret) return ret;
 
   // load shape and textures
   if (auto ret = load_shapes(filename, scene, noparallel); !ret) return ret;
