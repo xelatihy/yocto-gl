@@ -1041,6 +1041,14 @@ sceneio_status load_yaml(const string& filename, sceneio_model& scene) {
     }
   };
 
+  // hacked groups for large models
+  struct sceneio_group {
+    string filename = "";
+    vector<frame3f> frames = {};
+  };
+  auto groups = vector<sceneio_group>{};
+  auto igroups = vector<int>{};
+
   // cameras
   for (auto& yelement : yaml.elements) {
     if (yelement.name == "cameras") {
@@ -1228,25 +1236,11 @@ sceneio_status load_yaml(const string& filename, sceneio_model& scene) {
         instance.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
       }
       if (has_yaml_value(yelement, "instances")) {
-        auto instances = ""s;
-        if (!get_yaml_value(yelement, "instances", instances))
+        auto& group = groups.emplace_back();
+        if (!get_yaml_value(yelement, "instances", group.filename))
           return {filename + ": parse error"};
-        auto ply = ply_model{};
-        if (auto ret = load_ply(get_dirname(filename) + instances, ply); !ret)
-          return {filename + ": missing instances (" + ret.error + ")"};
-        auto frames = get_ply_values(ply, "frame",
-            array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
-                "zz", "ox", "oy", "oz"});
-        auto base   = scene.instances.back();
-        scene.instances.pop_back();
-        auto count = 0;
-        for (auto& frame : frames) {
-          auto& instance    = scene.instances.emplace_back();
-          instance.name     = base.name + std::to_string(count++);
-          instance.shape    = base.shape;
-          instance.material = base.material;
-          instance.frame    = frame;
-        }
+        while (igroups.size() < scene.instances.size()) igroups.emplace_back() = -1;
+        igroups.back() = (int)groups.size() - 1;
       }
     } else if (yelement.name == "environments") {
       auto& environment = scene.environments.emplace_back();
@@ -1270,6 +1264,33 @@ sceneio_status load_yaml(const string& filename, sceneio_model& scene) {
         if (!get_yaml_value(yelement, "lookat", lookat))
           return {filename + ": parse error"};
         environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+      }
+    }
+  }
+
+  // instance groups
+  if(!groups.empty()) {
+    // load groups
+    for(auto& group : groups) {
+      auto ply = ply_model{};
+      if (auto ret = load_ply(get_dirname(filename) + group.filename, ply); !ret)
+        return {filename + ": missing instances (" + ret.error + ")"};
+      group.frames = get_ply_values(ply, "frame",
+          array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
+              "zz", "ox", "oy", "oz"});
+    }
+    auto instances = scene.instances;
+    scene.instances.clear();
+    for(auto idx = 0; idx < instances.size(); idx++) {
+      auto& base   = instances[idx];
+      auto& group = groups[igroups[idx]];
+      auto count = 0;
+      for (auto& frame : group.frames) {
+        auto& instance    = scene.instances.emplace_back();
+        instance.name     = base.name + std::to_string(count++);
+        instance.shape    = base.shape;
+        instance.material = base.material;
+        instance.frame    = frame;
       }
     }
   }
