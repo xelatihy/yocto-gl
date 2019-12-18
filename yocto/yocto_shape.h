@@ -511,6 +511,23 @@ shapeio_status save_fvshape(const string& filename,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SHAPE STATS AND VALIDATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Get mesh statistics for printing
+vector<string> shape_stats(
+    const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
+    const vector<vec4f>& colors, const vector<float>& radius, 
+    bool verbose = false);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
 namespace yocto {

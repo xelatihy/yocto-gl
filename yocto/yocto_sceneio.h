@@ -253,6 +253,22 @@ sceneio_status save_scene(const string& filename, const sceneio_model& scene,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SCENE STATS AND VALIDATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Return scene statistics as list of strings.
+vector<string> scene_stats(const sceneio_model& scene, bool verbose = false);
+// Return validation errors as list of strings.
+vector<string> scene_validation(
+    const sceneio_model& scene, bool notextures = false);
+
+// Return an approximate scene bounding box.
+bbox3f compute_bounds(const sceneio_model& scene);
+
+}
+
+// -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -268,12 +284,6 @@ bool needs_tesselation(const sceneio_model& scene, const sceneio_shape& shape,
 // support animation in this manner long term.
 void update_transforms(
     sceneio_model& scene, float time = 0, const string& anim_group = "");
-
-// Return scene statistics as list of strings.
-vector<string> scene_stats(const sceneio_model& scene, bool verbose = false);
-// Return validation errors as list of strings.
-vector<string> scene_validation(
-    const sceneio_model& scene, bool notextures = false);
 
 }  // namespace yocto
 

@@ -221,6 +221,107 @@ inline T keyframe_bezier(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// SCENE STATS AND VALIDATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+vector<string> scene_stats(const sceneio_model& scene, bool verbose) {
+  auto accumulate = [](const auto& values, const auto& func) -> size_t {
+    auto sum = (size_t)0;
+    for (auto& value : values) sum += func(value);
+    return sum;
+  };
+  auto format = [](auto num) {
+    auto str = std::to_string(num);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+  auto format3 = [](auto num) {
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
+               std::to_string(num.z);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+
+  auto bbox = compute_bounds(scene);
+
+  auto stats = vector<string>{};
+  stats.push_back("cameras:      " + format(scene.cameras.size()));
+  stats.push_back("shapes:       " + format(scene.shapes.size()));
+  stats.push_back("instances:    " + format(scene.instances.size()));
+  stats.push_back("environments: " + format(scene.environments.size()));
+  stats.push_back("textures:     " + format(scene.textures.size()));
+  stats.push_back("materials:    " + format(scene.materials.size()));
+  stats.push_back("nodes:        " + format(scene.nodes.size()));
+  stats.push_back("animations:   " + format(scene.animations.size()));
+  stats.push_back(
+      "points:       " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.points.size(); })));
+  stats.push_back(
+      "lines:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.lines.size(); })));
+  stats.push_back("triangles:    " +
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.triangles.size(); })));
+  stats.push_back(
+      "quads:        " + format(accumulate(scene.shapes,
+                             [](auto& shape) { return shape.quads.size(); })));
+  stats.push_back("fvquads:      " +
+                  format(accumulate(scene.shapes,
+                      [](auto& shape) { return shape.quadspos.size(); })));
+  stats.push_back(
+      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.ldr.size().x * (size_t)texture.ldr.size().x;
+      })));
+  stats.push_back(
+      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
+        return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
+      })));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
+
+  return stats;
+}
+
+// Checks for validity of the scene.
+vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
+  auto errs        = vector<string>();
+  auto check_names = [&errs](const auto& vals, const string& base) {
+    auto used = unordered_map<string, int>();
+    used.reserve(vals.size());
+    for (auto& value : vals) used[value.name] += 1;
+    for (auto& [name, used] : used) {
+      if (name == "") {
+        errs.push_back("empty " + base + " name");
+      } else if (used > 1) {
+        errs.push_back("duplicated " + base + " name " + name);
+      }
+    }
+  };
+  auto check_empty_textures = [&errs](const vector<sceneio_texture>& vals) {
+    for (auto& value : vals) {
+      if (value.hdr.empty() && value.ldr.empty()) {
+        errs.push_back("empty texture " + value.name);
+      }
+    }
+  };
+
+  check_names(scene.cameras, "camera");
+  check_names(scene.shapes, "shape");
+  check_names(scene.textures, "texture");
+  check_names(scene.materials, "material");
+  check_names(scene.instances, "instance");
+  check_names(scene.environments, "environment");
+  check_names(scene.nodes, "node");
+  check_names(scene.animations, "animation");
+  if (!notextures) check_empty_textures(scene.textures);
+
+  return errs;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -303,64 +404,6 @@ void add_sky(sceneio_model& scene, float sun_angle) {
   scene.environments.push_back(environment);
 }
 
-vector<string> scene_stats(const sceneio_model& scene, bool verbose) {
-  auto accumulate = [](const auto& values, const auto& func) -> size_t {
-    auto sum = (size_t)0;
-    for (auto& value : values) sum += func(value);
-    return sum;
-  };
-  auto format = [](auto num) {
-    auto str = std::to_string(num);
-    while (str.size() < 13) str = " " + str;
-    return str;
-  };
-  auto format3 = [](auto num) {
-    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
-               std::to_string(num.z);
-    while (str.size() < 13) str = " " + str;
-    return str;
-  };
-
-  auto bbox = compute_bounds(scene);
-
-  auto stats = vector<string>{};
-  stats.push_back("cameras:      " + format(scene.cameras.size()));
-  stats.push_back("shapes:       " + format(scene.shapes.size()));
-  stats.push_back("instances:    " + format(scene.instances.size()));
-  stats.push_back("environments: " + format(scene.environments.size()));
-  stats.push_back("textures:     " + format(scene.textures.size()));
-  stats.push_back("materials:    " + format(scene.materials.size()));
-  stats.push_back("nodes:        " + format(scene.nodes.size()));
-  stats.push_back("animations:   " + format(scene.animations.size()));
-  stats.push_back(
-      "points:       " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.points.size(); })));
-  stats.push_back(
-      "lines:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.lines.size(); })));
-  stats.push_back("triangles:    " +
-                  format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.triangles.size(); })));
-  stats.push_back(
-      "quads:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.quads.size(); })));
-  stats.push_back("fvquads:      " +
-                  format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.quadspos.size(); })));
-  stats.push_back(
-      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.ldr.size().x * (size_t)texture.ldr.size().x;
-      })));
-  stats.push_back(
-      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
-      })));
-  stats.push_back("center:       " + format3(center(bbox)));
-  stats.push_back("size:         " + format3(size(bbox)));
-
-  return stats;
-}
-
 // Reduce memory usage
 void trim_memory(sceneio_model& scene) {
   for (auto& shape : scene.shapes) {
@@ -390,42 +433,6 @@ void trim_memory(sceneio_model& scene) {
   scene.environments.shrink_to_fit();
   scene.nodes.shrink_to_fit();
   scene.animations.shrink_to_fit();
-}
-
-// Checks for validity of the scene.
-vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
-  auto errs        = vector<string>();
-  auto check_names = [&errs](const auto& vals, const string& base) {
-    auto used = unordered_map<string, int>();
-    used.reserve(vals.size());
-    for (auto& value : vals) used[value.name] += 1;
-    for (auto& [name, used] : used) {
-      if (name == "") {
-        errs.push_back("empty " + base + " name");
-      } else if (used > 1) {
-        errs.push_back("duplicated " + base + " name " + name);
-      }
-    }
-  };
-  auto check_empty_textures = [&errs](const vector<sceneio_texture>& vals) {
-    for (auto& value : vals) {
-      if (value.hdr.empty() && value.ldr.empty()) {
-        errs.push_back("empty texture " + value.name);
-      }
-    }
-  };
-
-  check_names(scene.cameras, "camera");
-  check_names(scene.shapes, "shape");
-  check_names(scene.textures, "texture");
-  check_names(scene.materials, "material");
-  check_names(scene.instances, "instance");
-  check_names(scene.environments, "environment");
-  check_names(scene.nodes, "node");
-  check_names(scene.animations, "animation");
-  if (!notextures) check_empty_textures(scene.textures);
-
-  return errs;
 }
 
 // Apply subdivision and displacement rules.

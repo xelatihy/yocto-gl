@@ -3734,3 +3734,51 @@ shapeio_status save_fvshape(const string& filename,
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE STATS AND VALIDATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+vector<string> shape_stats(const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<float>& radius, bool verbose) {
+  auto format = [](auto num) {
+    auto str = std::to_string(num);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+  auto format3 = [](auto num) {
+    auto str = std::to_string(num.x) + " " + std::to_string(num.y) + " " +
+               std::to_string(num.z);
+    while (str.size() < 13) str = " " + str;
+    return str;
+  };
+
+  auto bbox = invalidb3f;
+  for (auto& pos : positions) bbox = merge(bbox, pos);
+
+  auto stats = vector<string>{};
+  stats.push_back("points:       " + format(points.size()));
+  stats.push_back("lines:        " + format(lines.size()));
+  stats.push_back("triangles:    " + format(triangles.size()));
+  stats.push_back("quads:        " + format(quads.size()));
+  stats.push_back("fvquads:      " + format(quadspos.size()));
+  stats.push_back("positions:    " + format(positions.size()));
+  stats.push_back("normals:      " + format(normals.size()));
+  stats.push_back("texcoords:    " + format(texcoords.size()));
+  stats.push_back("colors:       " + format(colors.size()));
+  stats.push_back("radius:       " + format(radius.size()));
+  stats.push_back("center:       " + format3(center(bbox)));
+  stats.push_back("size:         " + format3(size(bbox)));
+  stats.push_back("min:          " + format3(bbox.min));
+  stats.push_back("max:          " + format3(bbox.max));
+
+  return stats;
+}
+
+}  // namespace yocto
