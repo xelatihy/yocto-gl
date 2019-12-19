@@ -95,6 +95,7 @@ int main(int argc, const char** argv) {
 
   // print info
   if (info) {
+    print_info("scene stats ------------");
     for (auto stat : scene_stats(scene)) print_info(stat);
   }
 

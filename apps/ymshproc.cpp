@@ -48,6 +48,7 @@ int main(int argc, const char** argv) {
   auto scale                = vec3f{1};
   auto uscale               = 1.0f;
   auto translate            = zero3f;
+  auto info                 = false;
   auto output               = "out.ply"s;
   auto filename             = "mesh.ply"s;
 
@@ -68,16 +69,17 @@ int main(int argc, const char** argv) {
   add_cli_option(
       cli, "--trianglesonly", trianglesonly, "Remove all but triangles");
   add_cli_option(cli, "--smooth", smooth, "Compute smooth normals");
-  add_cli_option(cli, "--rotatey", rotate.y, "Rotate around y axis");
-  add_cli_option(cli, "--rotatex", rotate.x, "Rotate around x axis");
-  add_cli_option(cli, "--rotatez", rotate.z, "Rotate around z axis");
-  add_cli_option(cli, "--translatey", translate.y, "Translate along y axis");
-  add_cli_option(cli, "--translatex", translate.x, "Translate along x axis");
-  add_cli_option(cli, "--translatez", translate.z, "Translate along z axis");
-  add_cli_option(cli, "--scale", uscale, "Scale along xyz axes");
-  add_cli_option(cli, "--scaley", scale.y, "Scale along y axis");
-  add_cli_option(cli, "--scalex", scale.x, "Scale along x axis");
-  add_cli_option(cli, "--scalez", scale.z, "Scale along z axis");
+  add_cli_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
+  add_cli_option(cli, "--rotatex,-rx", rotate.x, "Rotate around x axis");
+  add_cli_option(cli, "--rotatez,-rz", rotate.z, "Rotate around z axis");
+  add_cli_option(cli, "--translatey,-ty", translate.y, "Translate along y axis");
+  add_cli_option(cli, "--translatex,-tx", translate.x, "Translate along x axis");
+  add_cli_option(cli, "--translatez,-tz", translate.z, "Translate along z axis");
+  add_cli_option(cli, "--scale,-s", uscale, "Scale along xyz axes");
+  add_cli_option(cli, "--scaley,-sy", scale.y, "Scale along y axis");
+  add_cli_option(cli, "--scalex,-sx", scale.x, "Scale along x axis");
+  add_cli_option(cli, "--scalez,-sz", scale.z, "Scale along z axis");
+  add_cli_option(cli, "--info,-i", info, "print mesh info");
   add_cli_option(cli, "--output,-o", output, "output mesh", true);
   add_cli_option(cli, "mesh", filename, "input mesh", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
@@ -97,19 +99,19 @@ int main(int argc, const char** argv) {
   auto quadstexcoord = vector<vec4i>{};
 
   // load mesh
-  try {
-    auto load_timer = print_timed("loading shape");
-    if (!facevarying) {
-      load_shape(filename, points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius);
-    } else {
-      load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
-          normals, texcoords);
-    }
-    print_elapsed(load_timer);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  auto load_timer = print_timed("loading shape");
+  if (!facevarying) {
+    if (auto ret = load_shape(filename, points, lines, triangles, quads,
+            positions, normals, texcoords, colors, radius);
+        !ret)
+      print_fatal(ret.error);
+  } else {
+    if (auto ret = load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
+            positions, normals, texcoords);
+        !ret)
+      print_fatal(ret.error);
   }
+  print_elapsed(load_timer);
 
   // remove data
   if (positiononly) {
@@ -131,6 +133,15 @@ int main(int argc, const char** argv) {
       triangles = quads_to_triangles(quads);
       quads     = {};
     }
+  }
+
+  // print info
+  if (info) {
+    print_info("shape stats ------------");
+    auto stats = shape_stats(points, lines, triangles, quads, quadspos,
+        quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
+        radius);
+    for (auto& stat : stats) print_info(stat);
   }
 
   // transform
@@ -241,20 +252,28 @@ int main(int argc, const char** argv) {
     radius    = {};
   }
 
-  // save mesh
-  try {
-    auto save_timer = print_timed("saving shape");
-    if (!quadspos.empty()) {
-      save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions,
-          normals, texcoords);
-    } else {
-      save_shape(output, points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius);
-    }
-    print_elapsed(save_timer);
-  } catch (const std::exception& e) {
-    print_fatal(e.what());
+  if (info) {
+    print_info("shape stats ------------");
+    auto stats = shape_stats(points, lines, triangles, quads, quadspos,
+        quadsnorm, quadstexcoord, positions, normals, texcoords, colors,
+        radius);
+    for (auto& stat : stats) print_info(stat);
   }
+
+  // save mesh
+  auto save_timer = print_timed("saving shape");
+  if (!quadspos.empty()) {
+    if (auto ret = save_fvshape(output, quadspos, quadsnorm, quadstexcoord,
+            positions, normals, texcoords);
+        !ret)
+      print_fatal(ret.error);
+  } else {
+    if (auto ret = save_shape(output, points, lines, triangles, quads,
+            positions, normals, texcoords, colors, radius);
+        !ret)
+      print_fatal(ret.error);
+  }
+  print_elapsed(save_timer);
 
   // done
   return 0;
