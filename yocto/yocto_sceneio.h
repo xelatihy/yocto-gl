@@ -250,6 +250,14 @@ sceneio_status load_scene(const string& filename, sceneio_model& scene,
 sceneio_status save_scene(const string& filename, const sceneio_model& scene,
     bool obj_instances = false, bool noparallel = false);
 
+// Load/save a shape in the supported formats. Filename is the scene filename.
+sceneio_status load_shape(const string& filename, sceneio_shape& shape);
+sceneio_status save_shape(const string& filename, const sceneio_shape& shape);
+
+// Load/save a texture in the supported formats. Filename is the scene filename.
+sceneio_status load_texture(const string& filename, sceneio_texture& texture);
+sceneio_status save_texture(const string& filename, const sceneio_texture& texture);
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

@@ -334,18 +334,10 @@ bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
   draw_gllabel(win, "ldr",
       std::to_string(texture.ldr.size().x) + " x " +
           std::to_string(texture.ldr.size().y));
-  // TODO: update values
   if (edited && old_filename != texture.filename) {
-    if (is_hdr_filename(texture.filename)) {
-      if(auto ret = load_image(texture.filename, texture.hdr); !ret) {
-        push_glmessage(ret.error);
-        log_glinfo(win, ret.error);
-      }
-    } else {
-      if(auto ret = load_imageb(texture.filename, texture.ldr); !ret) {
-        push_glmessage(ret.error);
-        log_glinfo(win, ret.error);
-      }
+    if(auto ret = load_texture(app.filename, texture); !ret) {
+      push_glmessage(ret.error);
+      log_glinfo(win, ret.error);
     }
   }
   return edited;
@@ -410,9 +402,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   draw_gllabel(win, "radius", std::to_string(shape.radius.size()));
   draw_gllabel(win, "tangsp", std::to_string(shape.tangents.size()));
   if (edited && old_filename != shape.filename) {
-    if(auto ret = load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.positions, shape.normals, shape.texcoords,
-        shape.colors, shape.radius); !ret) {
+    if(auto ret = load_shape(app.filename, shape); !ret) {
       push_glmessage("cannot load " + shape.filename);
       log_glinfo(win, "cannot load " + shape.filename);
     }
