@@ -319,11 +319,9 @@ bool draw_glwidgets_camera(const opengl_window& win, app_state& app, int id) {
     camera.focus = length(from - to);
     edited += 1;
   }
-  if (edited) update_trace_camera(app.scene.cameras.at(id), camera);
   return edited;
 }
 
-/// Visit struct elements.
 bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
   auto& texture      = app.ioscene.textures[id];
   auto  old_filename = texture.filename;
@@ -338,20 +336,18 @@ bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
           std::to_string(texture.ldr.size().y));
   // TODO: update values
   if (edited && old_filename != texture.filename) {
-    try {
-      if (is_hdr_filename(texture.filename)) {
-        load_image(texture.filename, texture.hdr);
-      } else {
-        load_imageb(texture.filename, texture.ldr);
+    if (is_hdr_filename(texture.filename)) {
+      if(auto ret = load_image(texture.filename, texture.hdr); !ret) {
+        push_glmessage(ret.error);
+        log_glinfo(win, ret.error);
       }
-    } catch (std::exception& e) {
-      push_glmessage("cannot load " + texture.filename);
-      log_glinfo(win, "cannot load " + texture.filename);
-      log_glinfo(win, e.what());
+    } else {
+      if(auto ret = load_imageb(texture.filename, texture.ldr); !ret) {
+        push_glmessage(ret.error);
+        log_glinfo(win, ret.error);
+      }
     }
-    // TODO: update lights
   }
-  if (edited) update_trace_texture(app.scene.textures.at(id), texture);
   return edited;
 }
 
@@ -391,8 +387,6 @@ bool draw_glwidgets_material(const opengl_window& win, app_state& app, int id) {
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, app.ioscene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
-  // TODO: update lights
-  if (edited) update_trace_material(app.scene.materials.at(id), material);
   return edited;
 }
 
@@ -408,8 +402,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   draw_gllabel(win, "quads", std::to_string(shape.quads.size()));
   draw_gllabel(win, "quads pos", std::to_string(shape.quadspos.size()));
   draw_gllabel(win, "quads norm", std::to_string(shape.quadsnorm.size()));
-  draw_gllabel(
-      win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
+  draw_gllabel(win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
   draw_gllabel(win, "pos", std::to_string(shape.positions.size()));
   draw_gllabel(win, "norm", std::to_string(shape.normals.size()));
   draw_gllabel(win, "texcoord", std::to_string(shape.texcoords.size()));
@@ -417,43 +410,26 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   draw_gllabel(win, "radius", std::to_string(shape.radius.size()));
   draw_gllabel(win, "tangsp", std::to_string(shape.tangents.size()));
   if (edited && old_filename != shape.filename) {
-    try {
-      load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.positions, shape.normals, shape.texcoords,
-          shape.colors, shape.radius);
-    } catch (std::exception& e) {
+    if(auto ret = load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
+        shape.quads, shape.positions, shape.normals, shape.texcoords,
+        shape.colors, shape.radius); !ret) {
       push_glmessage("cannot load " + shape.filename);
       log_glinfo(win, "cannot load " + shape.filename);
-      log_glinfo(win, e.what());
     }
-    update_trace_shape(app.scene.shapes.at(id), shape, app.ioscene);
-    update_bvh(app.scene, {}, {id}, app.params);
-    init_lights(app.scene);
-  } else if (edited) {
-    update_trace_shape(app.scene.shapes.at(id), shape, app.ioscene);
   }
   return edited;
 }
 
 bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
   auto& instance     = app.ioscene.instances[id];
-  auto  old_instance = instance;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", instance.name);
   edited += draw_glslider(win, "frame.x", instance.frame.x, -1, 1);
   edited += draw_glslider(win, "frame.y", instance.frame.y, -1, 1);
   edited += draw_glslider(win, "frame.z", instance.frame.z, -1, 1);
   edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
-  edited += draw_glcombobox(
-      win, "shape", instance.shape, app.ioscene.shapes, true);
-  edited += draw_glcombobox(
-      win, "material", instance.material, app.ioscene.materials, true);
-  if (edited) update_trace_instance(app.scene.instances.at(id), instance);
-  if (edited && instance.shape != old_instance.shape)
-    update_bvh(app.scene, {}, {id}, app.params);
-  if (edited && instance.frame != old_instance.frame)
-    update_bvh(app.scene, {}, {id}, app.params);
-  // TODO: update lights
+  edited += draw_glcombobox(win, "shape", instance.shape, app.ioscene.shapes, true);
+  edited += draw_glcombobox(win, "material", instance.material, app.ioscene.materials, true);
   return edited;
 }
 
@@ -469,9 +445,6 @@ bool draw_glwidgets_environment(
   edited += draw_glhdrcoloredit(win, "emission", environment.emission);
   edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
       app.ioscene.textures, true);
-  if (edited)
-    update_trace_environment(app.scene.environments.at(id), environment);
-  if (edited) init_lights(app.scene);
   return edited;
 }
 
@@ -592,70 +565,68 @@ void draw_glwidgets(const opengl_window& win) {
     auto& app = apps.get_selected();
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
-    auto edited = 0;
     if (app.selection.first == "camera") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.cameras);
-      edited += draw_glwidgets_camera(win, app, app.selection.second);
-      if (edited) {
+      if(draw_glwidgets_camera(win, app, app.selection.second)) {
         stop_display(app);
         update_trace_camera(app.scene.cameras[app.selection.second],
             app.ioscene.cameras[app.selection.second]);
+        reset_display(app);
       }
     } else if (app.selection.first == "texture") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.textures);
-      edited += draw_glwidgets_texture(win, app, app.selection.second);
-      if (edited) {
+      if(draw_glwidgets_texture(win, app, app.selection.second)) {
         stop_display(app);
         update_trace_texture(app.scene.textures[app.selection.second],
             app.ioscene.textures[app.selection.second]);
         // TODO: maybe we should update lights for this
+        reset_display(app);
       }
     } else if (app.selection.first == "material") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.materials);
-      edited += draw_glwidgets_material(win, app, app.selection.second);
-      if (edited) {
+      if(draw_glwidgets_material(win, app, app.selection.second)) {
         stop_display(app);
         update_trace_material(app.scene.materials[app.selection.second],
             app.ioscene.materials[app.selection.second]);
         init_lights(app.scene);
+        reset_display(app);
       }
     } else if (app.selection.first == "shape") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.shapes);
-      edited += draw_glwidgets_shape(win, app, app.selection.second);
-      if (edited) {
+      if(draw_glwidgets_shape(win, app, app.selection.second)) {
         stop_display(app);
         update_trace_shape(app.scene.shapes[app.selection.second],
             app.ioscene.shapes[app.selection.second], app.ioscene);
         update_bvh(app.scene, {}, {app.selection.second}, app.params);
         // TODO: maybe we should update lights for this
+        reset_display(app);
       }
     } else if (app.selection.first == "instance") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.instances);
-      edited += draw_glwidgets_instance(win, app, app.selection.second);
-      if (edited) {
+      if(draw_glwidgets_instance(win, app, app.selection.second)) {
         stop_display(app);
         update_trace_instance(app.scene.instances[app.selection.second],
             app.ioscene.instances[app.selection.second]);
         update_bvh(app.scene, {app.selection.second}, {}, app.params);
         // TODO: maybe we should update lights for this
+        reset_display(app);
       }
     } else if (app.selection.first == "environment") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.environments);
-      edited += draw_glwidgets_environment(win, app, app.selection.second);
-      if (edited) {
+      if(draw_glwidgets_environment(win, app, app.selection.second)) {
         stop_display(app);
         update_trace_environment(app.scene.environments[app.selection.second],
             app.ioscene.environments[app.selection.second]);
         init_lights(app.scene);
+        reset_display(app);
       }
     }
-    if (edited) reset_display(app);
     end_glheader(win);
   }
   if (begin_glheader(win, "log")) {
