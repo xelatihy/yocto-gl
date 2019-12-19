@@ -318,19 +318,18 @@ bool draw_glwidgets_texture(
       std::to_string(texture.ldr.size().x) + " x " +
           std::to_string(texture.ldr.size().y));
   if (edited && old_filename != texture.filename) {
-    try {
-      if (is_hdr_filename(texture.filename)) {
-        load_image(texture.filename, texture.hdr);
-      } else {
-        load_imageb(texture.filename, texture.ldr);
+    if (is_hdr_filename(texture.filename)) {
+      if(auto ret = load_image(texture.filename, texture.hdr); !ret) {
+        push_glmessage(ret.error);
+        log_glinfo(win, ret.error);
       }
-    } catch (std::exception& e) {
-      push_glmessage("cannot load " + texture.filename);
-      log_glinfo(win, "cannot load " + texture.filename);
-      log_glinfo(win, e.what());
+    } else {
+      if(auto ret = load_imageb(texture.filename, texture.ldr); !ret) {
+        push_glmessage(ret.error);
+        log_glinfo(win, ret.error);
+      }
     }
   }
-  if (edited) update_gltexture(scene.glscene.textures[id], texture);
   return edited;
 }
 
@@ -354,7 +353,6 @@ bool draw_glwidgets_material(
   edited += draw_glslider(win, "vol scale", material.volscale, 0, 1);
   edited += draw_glslider(win, "vol anisotropy", material.volanisotropy, -1, 1);
   edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
-
   edited += draw_glcombobox(
       win, "emission_tex", material.emission_tex, scene.scene.textures, true);
   edited += draw_glcombobox(
@@ -372,8 +370,6 @@ bool draw_glwidgets_material(
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, scene.scene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
-  // TODO: update lights
-  if (edited) update_glmaterial(scene.glscene.materials[id], material);
   return edited;
 }
 
@@ -405,18 +401,13 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& scene, int id) {
       scene.scene.textures, true);
   edited += draw_glslider(win, "displacement", shape.displacement, 0, 1);
   if (edited && old_filename != shape.filename) {
-    try {
-      load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
-          shape.quads, shape.positions, shape.normals, shape.texcoords,
-          shape.colors, shape.radius);
-    } catch (std::exception& e) {
-      push_glmessage("cannot load " + shape.filename);
-      log_glinfo(win, "cannot load " + shape.filename);
-      log_glinfo(win, e.what());
+    if(auto ret = load_shape(shape.filename, shape.points, shape.lines, shape.triangles,
+        shape.quads, shape.positions, shape.normals, shape.texcoords,
+        shape.colors, shape.radius); !ret) {
+      push_glmessage(ret.error);
+      log_glinfo(win, ret.error);
     }
-    // TODO: update lights
   }
-  if (edited) update_glshape(scene.glscene.shapes[id], shape, scene.scene);
   return edited;
 }
 
@@ -434,8 +425,6 @@ bool draw_glwidgets_instance(
       win, "shape", instance.shape, scene.scene.shapes, true);
   edited += draw_glcombobox(
       win, "material", instance.material, scene.scene.materials, true);
-  // TODO: update lights
-  if (edited) update_glinstance(scene.glscene.instances[id], instance);
   return edited;
 }
 
@@ -451,9 +440,6 @@ bool draw_glwidgets_environment(
   edited += draw_glhdrcoloredit(win, "emission", environment.emission);
   edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
       scene.scene.textures, true);
-  if (edited) {
-    // TODO: update lights
-  }
   return edited;
 }
 
@@ -494,8 +480,7 @@ void draw_glwidgets(const opengl_window& win) {
     set_glwindow_close(win, true);
   }
   if (apps.states.empty()) return;
-  draw_glcombobox(
-      win, "scene", apps.selected, (int)apps.states.size(),
+  draw_glcombobox(win, "scene", apps.selected, (int)apps.states.size(),
       [&apps](int idx) {
         auto it = apps.states.begin();
         std::advance(it, idx);
@@ -551,23 +536,33 @@ void draw_glwidgets(const opengl_window& win) {
     if (app.selection.first == "camera") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.cameras);
-      draw_glwidgets_camera(win, app, app.selection.second);
+      if (draw_glwidgets_camera(win, app, app.selection.second))
+        update_glcamera(app.glscene.cameras[app.selection.second],
+            app.scene.cameras[app.selection.second]);
     } else if (app.selection.first == "texture") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.textures);
-      draw_glwidgets_texture(win, app, app.selection.second);
+      if(draw_glwidgets_texture(win, app, app.selection.second))
+        update_gltexture(app.glscene.textures[app.selection.second],
+            app.scene.textures[app.selection.second]);
     } else if (app.selection.first == "material") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.materials);
-      draw_glwidgets_material(win, app, app.selection.second);
+      if(draw_glwidgets_material(win, app, app.selection.second))
+        update_glmaterial(app.glscene.materials[app.selection.second],
+            app.scene.materials[app.selection.second]);
     } else if (app.selection.first == "shape") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.shapes);
-      draw_glwidgets_shape(win, app, app.selection.second);
+      if(!draw_glwidgets_shape(win, app, app.selection.second))
+        update_glshape(app.glscene.shapes[app.selection.second],
+            app.scene.shapes[app.selection.second], app.scene);
     } else if (app.selection.first == "instance") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.instances);
-      draw_glwidgets_instance(win, app, app.selection.second);
+      if(draw_glwidgets_instance(win, app, app.selection.second))
+        update_glinstance(app.glscene.instances[app.selection.second],
+            app.scene.instances[app.selection.second]);
     } else if (app.selection.first == "environment") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.scene.environments);
