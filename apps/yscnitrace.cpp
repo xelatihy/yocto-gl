@@ -408,7 +408,8 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   draw_gllabel(win, "quads", std::to_string(shape.quads.size()));
   draw_gllabel(win, "quads pos", std::to_string(shape.quadspos.size()));
   draw_gllabel(win, "quads norm", std::to_string(shape.quadsnorm.size()));
-  draw_gllabel(win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
+  draw_gllabel(
+      win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
   draw_gllabel(win, "pos", std::to_string(shape.positions.size()));
   draw_gllabel(win, "norm", std::to_string(shape.normals.size()));
   draw_gllabel(win, "texcoord", std::to_string(shape.texcoords.size()));
@@ -504,7 +505,7 @@ void draw_glwidgets(const opengl_window& win) {
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto& app   = apps.get_selected();
     app.outname = save_path;
-    if(auto ret = save_image(app.imagename, app.display); !ret) {
+    if (auto ret = save_image(app.imagename, app.display); !ret) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
     }
@@ -521,8 +522,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  draw_glcombobox(
-      win, "scene", apps.selected, (int)apps.states.size(),
+  draw_glcombobox(win, "scene", apps.selected, (int)apps.states.size(),
       [&apps](int idx) {
         auto it = apps.states.begin();
         std::advance(it, idx);
@@ -533,11 +533,14 @@ void draw_glwidgets(const opengl_window& win) {
     auto  edited  = 0;
     auto& app     = apps.get_selected();
     auto& tparams = app.params;
-    edited += draw_glcombobox(win, "camera", tparams.camera, app.ioscene.cameras);
+    edited += draw_glcombobox(
+        win, "camera", tparams.camera, app.ioscene.cameras);
     edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
-    edited += draw_glcombobox(win, "tracer", (int&)tparams.sampler, trace_sampler_names);
-    edited += draw_glcombobox(win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+    edited += draw_glcombobox(
+        win, "tracer", (int&)tparams.sampler, trace_sampler_names);
+    edited += draw_glcombobox(
+        win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
     edited += draw_glslider(win, "nbounces", tparams.bounces, 1, 128);
     edited += draw_glcheckbox(win, "envhidden", tparams.envhidden);
     continue_glline(win);
@@ -585,7 +588,7 @@ void draw_glwidgets(const opengl_window& win) {
   }
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{
-      "camera", "shape", "environment", "instance", "materials", "textures"};
+        "camera", "shape", "environment", "instance", "material", "texture"};
     auto& app = apps.get_selected();
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
@@ -594,26 +597,63 @@ void draw_glwidgets(const opengl_window& win) {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.cameras);
       edited += draw_glwidgets_camera(win, app, app.selection.second);
+      if (edited) {
+        stop_display(app);
+        update_trace_camera(app.scene.cameras[app.selection.second],
+            app.ioscene.cameras[app.selection.second]);
+      }
     } else if (app.selection.first == "texture") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.textures);
       edited += draw_glwidgets_texture(win, app, app.selection.second);
+      if (edited) {
+        stop_display(app);
+        update_trace_texture(app.scene.textures[app.selection.second],
+            app.ioscene.textures[app.selection.second]);
+        // TODO: maybe we should update lights for this
+      }
     } else if (app.selection.first == "material") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.materials);
       edited += draw_glwidgets_material(win, app, app.selection.second);
+      if (edited) {
+        stop_display(app);
+        update_trace_material(app.scene.materials[app.selection.second],
+            app.ioscene.materials[app.selection.second]);
+        init_lights(app.scene);
+      }
     } else if (app.selection.first == "shape") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.shapes);
       edited += draw_glwidgets_shape(win, app, app.selection.second);
+      if (edited) {
+        stop_display(app);
+        update_trace_shape(app.scene.shapes[app.selection.second],
+            app.ioscene.shapes[app.selection.second], app.ioscene);
+        update_bvh(app.scene, {}, {app.selection.second}, app.params);
+        // TODO: maybe we should update lights for this
+      }
     } else if (app.selection.first == "instance") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.instances);
       edited += draw_glwidgets_instance(win, app, app.selection.second);
+      if (edited) {
+        stop_display(app);
+        update_trace_instance(app.scene.instances[app.selection.second],
+            app.ioscene.instances[app.selection.second]);
+        update_bvh(app.scene, {app.selection.second}, {}, app.params);
+        // TODO: maybe we should update lights for this
+      }
     } else if (app.selection.first == "environment") {
       draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.environments);
       edited += draw_glwidgets_environment(win, app, app.selection.second);
+      if (edited) {
+        stop_display(app);
+        update_trace_environment(app.scene.environments[app.selection.second],
+            app.ioscene.environments[app.selection.second]);
+        init_lights(app.scene);
+      }
     }
     if (edited) reset_display(app);
     end_glheader(win);
