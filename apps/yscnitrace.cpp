@@ -225,6 +225,12 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
+void stop_display(app_state& app) {
+  // stop render
+  app.render_stop = true;
+  if (app.render_future.valid()) app.render_future.get();
+}
+
 void reset_display(app_state& app) {
   // stop render
   app.render_stop = true;
@@ -368,7 +374,6 @@ bool draw_glwidgets_material(const opengl_window& win, app_state& app, int id) {
   edited += draw_glslider(win, "vol scale", material.volscale, 0, 1);
   edited += draw_glslider(win, "vol anisotropy", material.volanisotropy, -1, 1);
   edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
-
   edited += draw_glcombobox(
       win, "emission_tex", material.emission_tex, app.ioscene.textures, true);
   edited += draw_glcombobox(
@@ -403,8 +408,7 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   draw_gllabel(win, "quads", std::to_string(shape.quads.size()));
   draw_gllabel(win, "quads pos", std::to_string(shape.quadspos.size()));
   draw_gllabel(win, "quads norm", std::to_string(shape.quadsnorm.size()));
-  draw_gllabel(
-      win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
+  draw_gllabel(win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
   draw_gllabel(win, "pos", std::to_string(shape.positions.size()));
   draw_gllabel(win, "norm", std::to_string(shape.normals.size()));
   draw_gllabel(win, "texcoord", std::to_string(shape.texcoords.size()));
@@ -435,9 +439,9 @@ bool draw_glwidgets_instance(const opengl_window& win, app_state& app, int id) {
   auto  old_instance = instance;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", instance.name);
-  edited += draw_glslider(win, "frame[0]", instance.frame.x, -1, 1);
-  edited += draw_glslider(win, "frame[1]", instance.frame.y, -1, 1);
-  edited += draw_glslider(win, "frame[2]", instance.frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.x", instance.frame.x, -1, 1);
+  edited += draw_glslider(win, "frame.y", instance.frame.y, -1, 1);
+  edited += draw_glslider(win, "frame.z", instance.frame.z, -1, 1);
   edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
   edited += draw_glcombobox(
       win, "shape", instance.shape, app.ioscene.shapes, true);
@@ -457,9 +461,9 @@ bool draw_glwidgets_environment(
   auto& environment = app.ioscene.environments[id];
   auto  edited      = 0;
   edited += draw_gltextinput(win, "name", environment.name);
-  edited += draw_glslider(win, "frame[0]", environment.frame.x, -1, 1);
-  edited += draw_glslider(win, "frame[1]", environment.frame.y, -1, 1);
-  edited += draw_glslider(win, "frame[2]", environment.frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.x", environment.frame.x, -1, 1);
+  edited += draw_glslider(win, "frame.y", environment.frame.y, -1, 1);
+  edited += draw_glslider(win, "frame.z", environment.frame.z, -1, 1);
   edited += draw_glslider(win, "frame.o", environment.frame.o, -10, 10);
   edited += draw_glhdrcoloredit(win, "emission", environment.emission);
   edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
@@ -500,12 +504,9 @@ void draw_glwidgets(const opengl_window& win) {
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto& app   = apps.get_selected();
     app.outname = save_path;
-    try {
-      save_image(app.imagename, app.display);
-    } catch (std::exception& e) {
+    if(auto ret = save_image(app.imagename, app.display); !ret) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
-      log_glinfo(win, e.what());
     }
     save_path = "";
   }
@@ -532,16 +533,13 @@ void draw_glwidgets(const opengl_window& win) {
     auto  edited  = 0;
     auto& app     = apps.get_selected();
     auto& tparams = app.params;
-    edited += draw_glcombobox(
-        win, "camera", tparams.camera, app.ioscene.cameras);
+    edited += draw_glcombobox(win, "camera", tparams.camera, app.ioscene.cameras);
     edited += draw_glslider(win, "resolution", tparams.resolution, 180, 4096);
     edited += draw_glslider(win, "nsamples", tparams.samples, 16, 4096);
-    edited += draw_glcombobox(
-        win, "tracer", (int&)tparams.sampler, trace_sampler_names);
-    edited += draw_glcombobox(
-        win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
+    edited += draw_glcombobox(win, "tracer", (int&)tparams.sampler, trace_sampler_names);
+    edited += draw_glcombobox(win, "false color", (int&)tparams.falsecolor, trace_falsecolor_names);
     edited += draw_glslider(win, "nbounces", tparams.bounces, 1, 128);
-    edited += draw_glcheckbox(win, "env hidden", tparams.envhidden);
+    edited += draw_glcheckbox(win, "envhidden", tparams.envhidden);
     continue_glline(win);
     edited += draw_glcheckbox(win, "filter", tparams.tentfilter);
     edited += draw_glslider(win, "seed", (int&)tparams.seed, 0, 1000000);
@@ -571,7 +569,6 @@ void draw_glwidgets(const opengl_window& win) {
     continue_glline(win);
     if (draw_glbutton(win, "print stats")) {
       for (auto stat : scene_stats(app.ioscene)) print_info(stat);
-      // for (auto stat : scene_stats(app.bvh)) print_info(stat);
     }
     auto mouse_pos = get_glmouse_pos(win);
     auto ij        = get_image_coords(
@@ -588,13 +585,13 @@ void draw_glwidgets(const opengl_window& win) {
   }
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{
-        "camera", "shape", "environment", "instance", "materials", "textures"};
+      "camera", "shape", "environment", "instance", "materials", "textures"};
     auto& app = apps.get_selected();
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
     auto edited = 0;
     if (app.selection.first == "camera") {
-      edited += draw_glcombobox(
+      draw_glcombobox(
           win, "selection##2", app.selection.second, app.ioscene.cameras);
       edited += draw_glwidgets_camera(win, app, app.selection.second);
     } else if (app.selection.first == "texture") {
@@ -709,9 +706,9 @@ void run_ui(app_states& apps) {
       if (mouse_left && shift_down)
         pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
       pan.x = -pan.x;
+      stop_display(app);
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       update_trace_camera(app.scene.cameras.at(app.params.camera), camera);
-      // TODO: update
       reset_display(app);
     }
 
