@@ -35,6 +35,7 @@ using namespace yocto;
 
 #include <future>
 #include <list>
+#include <deque>
 
 #ifdef _WIN32
 #undef near
@@ -78,22 +79,10 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::list<app_state>                   states;
+  std::deque<app_state>                   states = {};
   int                                    selected = -1;
-  std::list<app_state>                   loading;
-  std::list<std::future<sceneio_status>> loaders;
-
-  // get image
-  app_state& get_selected() {
-    auto it = states.begin();
-    std::advance(it, selected);
-    return *it;
-  }
-  const app_state& get_selected() const {
-    auto it = states.begin();
-    std::advance(it, selected);
-    return *it;
-  }
+  std::deque<app_state>                   loading = {};
+  std::deque<std::future<sceneio_status>> loaders = {};
 
   // default options
   draw_glscene_params drawgl_prms = {};
@@ -449,7 +438,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
-    auto& app   = apps.get_selected();
+    auto& app   = apps.states[apps.selected];
     app.outname = save_path;
     if (auto ret = save_scene(app.outname, app.scene); !ret) {
       push_glmessage("cannot save " + app.outname);
@@ -472,13 +461,11 @@ void draw_glwidgets(const opengl_window& win) {
   if (apps.states.empty()) return;
   draw_glcombobox(win, "scene", apps.selected, (int)apps.states.size(),
       [&apps](int idx) {
-        auto it = apps.states.begin();
-        std::advance(it, idx);
-        return it->name.c_str();
+        return apps.states[idx].name.c_str();
       },
       false);
   if (scene_ok && begin_glheader(win, "view")) {
-    auto& app    = apps.get_selected();
+    auto& app    = apps.states[apps.selected];
     auto& params = app.drawgl_prms;
     draw_glcombobox(win, "camera", params.camera, app.scene.cameras);
     draw_glslider(win, "resolution", params.resolution, 0, 4096);
@@ -500,7 +487,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    auto& app = apps.get_selected();
+    auto& app = apps.states[apps.selected];
     draw_gllabel(win, "scene", get_filename(app.filename));
     draw_gllabel(win, "filename", app.filename);
     draw_gllabel(win, "outname", app.outname);
@@ -520,7 +507,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{
         "camera", "shape", "environment", "instance", "material", "texture"};
-    auto& app = apps.get_selected();
+    auto& app = apps.states[apps.selected];
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
     if (app.selection.first == "camera") {
@@ -570,7 +557,7 @@ void draw(const opengl_window& win) {
   auto& apps = *(app_states*)get_gluser_pointer(win);
 
   if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app = apps.get_selected();
+    auto& app = apps.states[apps.selected];
     draw_glscene(app.glscene, get_glframebuffer_viewport(win), app.drawgl_prms);
   }
   begin_glwidgets(win);
@@ -593,7 +580,8 @@ void update(const opengl_window& win, app_states& apps) {
       log_glinfo(win, apps.loading.front().error);
       break;
     }
-    apps.states.splice(apps.states.end(), apps.loading, apps.loading.begin());
+    apps.states.push_back(std::move(apps.loading.front()));
+    apps.loading.pop_front();
     apps.loaders.pop_front();
     make_glscene(apps.states.back().glscene, apps.states.back().scene);
     update_gllights(apps.states.back().glscene, apps.states.back().scene);
@@ -630,14 +618,14 @@ void run_ui(app_states& apps) {
 
     // update trasforms
     if (scene_ok) {
-      auto& app = apps.get_selected();
+      auto& app = apps.states[apps.selected];
       update_transforms(app.scene, app.time);
     }
 
     // handle mouse and keyboard for navigation
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
-      auto& app    = apps.get_selected();
+      auto& app = apps.states[apps.selected];
       auto& camera = app.scene.cameras.at(app.drawgl_prms.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
@@ -650,8 +638,8 @@ void run_ui(app_states& apps) {
     }
 
     // animation
-    if (scene_ok && apps.get_selected().animate) {
-      auto& app     = apps.get_selected();
+    if (scene_ok && apps.states[apps.selected].animate) {
+      auto& app = apps.states[apps.selected];
       auto  now     = std::chrono::high_resolution_clock::now();
       auto  elapsed = now - last_time;
       auto  time    = (double)(elapsed.count()) / 1000000000.0;
