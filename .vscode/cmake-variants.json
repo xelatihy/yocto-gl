@@ -1,0 +1,22 @@
+{
+  "buildType": {
+    "default": "x64-Debug",
+    "description": "Build type",
+    "choices": {
+      "x64-Debug": {
+        "short": "x64-Debug",
+        "buildType": "Debug",
+        "settings": {
+          "CMAKE_INSTALL_PREFIX": "${workspaceFolder}/bin/debug"
+        }
+      },
+      "x64-Release": {
+        "short": "x64-Release",
+        "buildType": "RelWithDebInfo",
+        "settings": {
+          "CMAKE_INSTALL_PREFIX": "${workspaceFolder}/bin"
+        }
+      }
+    }
+  }
+}
