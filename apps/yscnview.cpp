@@ -35,6 +35,7 @@ using namespace yocto;
 
 #include <deque>
 #include <future>
+#include <memory>
 using namespace std;
 
 #ifdef _WIN32
@@ -102,14 +103,14 @@ vec2f compute_animation_range(
   return range;
 }
 
-void load_scene_async(app_states& apps, const string& filename) {
-  auto& app       = apps.loading.emplace_back();
+void load_scene_async(app_states* apps, const string& filename) {
+  auto& app       = apps->loading.emplace_back();
   app.filename    = filename;
   app.imagename   = replace_extension(filename, ".png");
   app.outname     = replace_extension(filename, ".edited.yaml");
   app.name        = get_filename(app.filename);
   app.drawgl_prms = app.drawgl_prms;
-  apps.loaders.push_back(async(launch::async, [&app]() -> sceneio_status {
+  apps->loaders.push_back(async(launch::async, [&app]() -> sceneio_status {
     if (auto ret = load_scene(app.filename, app.scene); !ret) return ret;
     app.time_range = compute_animation_range(app.scene);
     app.time       = app.time_range.x;
@@ -419,9 +420,9 @@ bool draw_glwidgets_environment(
 
 // draw with shading
 void draw_glwidgets(const opengl_window& win) {
-  static string load_path = "", save_path = "", error_message = "";
-  auto&         apps     = *(app_states*)get_gluser_pointer(win);
-  auto          scene_ok = !apps.states.empty() && apps.selected >= 0;
+  static auto load_path = ""s, save_path = ""s, error_message = ""s;
+  auto        apps     = (app_states*)get_gluser_pointer(win);
+  auto        scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -433,7 +434,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
-    auto& app   = apps.states[apps.selected];
+    auto& app   = apps->states[apps->selected];
     app.outname = save_path;
     if (auto ret = save_scene(app.outname, app.scene); !ret) {
       push_glmessage("cannot save " + app.outname);
@@ -444,20 +445,20 @@ void draw_glwidgets(const opengl_window& win) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", scene_ok)) {
-    auto it = apps.states.begin();
-    advance(it, apps.selected);
-    apps.states.erase(it);
-    apps.selected = apps.states.empty() ? -1 : 0;
+    auto it = apps->states.begin();
+    advance(it, apps->selected);
+    apps->states.erase(it);
+    apps->selected = apps->states.empty() ? -1 : 0;
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  if (apps.states.empty()) return;
-  draw_glcombobox(win, "scene", apps.selected, (int)apps.states.size(),
-      [&apps](int idx) { return apps.states[idx].name.c_str(); }, false);
+  if (apps->states.empty()) return;
+  draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
+      [&apps](int idx) { return apps->states[idx].name.c_str(); }, false);
   if (scene_ok && begin_glheader(win, "view")) {
-    auto& app    = apps.states[apps.selected];
+    auto& app    = apps->states[apps->selected];
     auto& params = app.drawgl_prms;
     draw_glcombobox(win, "camera", params.camera, app.scene.cameras);
     draw_glslider(win, "resolution", params.resolution, 0, 4096);
@@ -479,7 +480,7 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (begin_glheader(win, "inspect")) {
-    auto& app = apps.states[apps.selected];
+    auto& app = apps->states[apps->selected];
     draw_gllabel(win, "scene", get_filename(app.filename));
     draw_gllabel(win, "filename", app.filename);
     draw_gllabel(win, "outname", app.outname);
@@ -499,7 +500,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{
         "camera", "shape", "environment", "instance", "material", "texture"};
-    auto& app = apps.states[apps.selected];
+    auto& app = apps->states[apps->selected];
     if (draw_glcombobox(win, "selection##1", app.selection.first, labels))
       app.selection.second = 0;
     if (app.selection.first == "camera") {
@@ -546,10 +547,10 @@ void draw_glwidgets(const opengl_window& win) {
 
 // draw with shading
 void draw(const opengl_window& win) {
-  auto& apps = *(app_states*)get_gluser_pointer(win);
+  auto apps = (app_states*)get_gluser_pointer(win);
 
-  if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app = apps.states[apps.selected];
+  if (!apps->states.empty() && apps->selected >= 0) {
+    auto& app = apps->states[apps->selected];
     draw_glscene(app.glscene, get_glframebuffer_viewport(win), app.drawgl_prms);
   }
   begin_glwidgets(win);
@@ -559,37 +560,38 @@ void draw(const opengl_window& win) {
 }
 
 // update
-void update(const opengl_window& win, app_states& apps) {
+void update(const opengl_window& win, app_states* apps) {
   auto is_ready = [](const future<sceneio_status>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
 
-  while (!apps.loaders.empty() && is_ready(apps.loaders.front())) {
-    if (!apps.loaders.front().get()) {
-      push_glmessage(win, "cannot load scene " + apps.loading.front().filename);
-      log_glinfo(win, "cannot load scene " + apps.loading.front().filename);
-      log_glinfo(win, apps.loading.front().error);
+  while (!apps->loaders.empty() && is_ready(apps->loaders.front())) {
+    if (!apps->loaders.front().get()) {
+      push_glmessage(
+          win, "cannot load scene " + apps->loading.front().filename);
+      log_glinfo(win, "cannot load scene " + apps->loading.front().filename);
+      log_glinfo(win, apps->loading.front().error);
       break;
     }
-    apps.states.push_back(move(apps.loading.front()));
-    apps.loading.pop_front();
-    apps.loaders.pop_front();
-    make_glscene(apps.states.back().glscene, apps.states.back().scene);
-    update_gllights(apps.states.back().glscene, apps.states.back().scene);
-    if (apps.selected < 0) apps.selected = (int)apps.states.size() - 1;
+    apps->states.push_back(move(apps->loading.front()));
+    apps->loading.pop_front();
+    apps->loaders.pop_front();
+    make_glscene(apps->states.back().glscene, apps->states.back().scene);
+    update_gllights(apps->states.back().glscene, apps->states.back().scene);
+    if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
   }
 }
 
 // run ui loop
-void run_ui(app_states& apps) {
+void run_ui(app_states* apps) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnview", &apps, draw);
+  init_glwindow(win, {1280 + 320, 720}, "yscnview", apps, draw);
   set_drop_glcallback(
       win, [](const opengl_window& win, const vector<string>& paths) {
-        auto& app = *(app_states*)get_gluser_pointer(win);
-        for (auto& path : paths) load_scene_async(app, path);
+        auto apps = (app_states*)get_gluser_pointer(win);
+        for (auto& path : paths) load_scene_async(apps, path);
       });
 
   // init widget
@@ -606,18 +608,18 @@ void run_ui(app_states& apps) {
     auto alt_down       = get_glalt_key(win);
     auto shift_down     = get_glshift_key(win);
     auto widgets_active = get_glwidgets_active(win);
-    auto scene_ok       = !apps.states.empty() && apps.selected >= 0;
+    auto scene_ok       = !apps->states.empty() && apps->selected >= 0;
 
     // update trasforms
     if (scene_ok) {
-      auto& app = apps.states[apps.selected];
+      auto& app = apps->states[apps->selected];
       update_transforms(app.scene, app.time);
     }
 
     // handle mouse and keyboard for navigation
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
-      auto& app    = apps.states[apps.selected];
+      auto& app    = apps->states[apps->selected];
       auto& camera = app.scene.cameras.at(app.drawgl_prms.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
@@ -630,8 +632,8 @@ void run_ui(app_states& apps) {
     }
 
     // animation
-    if (scene_ok && apps.states[apps.selected].animate) {
-      auto& app     = apps.states[apps.selected];
+    if (scene_ok && apps->states[apps->selected].animate) {
+      auto& app     = apps->states[apps->selected];
       auto  now     = chrono::high_resolution_clock::now();
       auto  elapsed = now - last_time;
       auto  time    = (double)(elapsed.count()) / 1000000000.0;
@@ -658,16 +660,16 @@ void run_ui(app_states& apps) {
 
 int main(int argc, const char* argv[]) {
   // initialize app
-  auto app        = app_states{};
+  auto apps       = new app_states{};
   auto filenames  = vector<string>{};
   auto noparallel = false;
 
   // parse command line
   auto cli = make_cli("yscnview", "views scenes inteactively");
-  add_cli_option(cli, "--camera", app.drawgl_prms.camera, "Camera index.");
-  add_cli_option(
-      cli, "--resolution,-r", app.drawgl_prms.resolution, "Image resolution.");
-  add_cli_option(cli, "--eyelight/--no-eyelight,-c", app.drawgl_prms.eyelight,
+  add_cli_option(cli, "--camera", apps->drawgl_prms.camera, "Camera index.");
+  add_cli_option(cli, "--resolution,-r", apps->drawgl_prms.resolution,
+      "Image resolution.");
+  add_cli_option(cli, "--eyelight/--no-eyelight,-c", apps->drawgl_prms.eyelight,
       "Eyelight rendering.");
   add_cli_option(
       cli, "--noparallel", noparallel, "Disable parallel execution.");
@@ -675,10 +677,13 @@ int main(int argc, const char* argv[]) {
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // loading images
-  for (auto filename : filenames) load_scene_async(app, filename);
+  for (auto filename : filenames) load_scene_async(apps, filename);
 
   // run ui
-  run_ui(app);
+  run_ui(apps);
+
+  // cleanup
+  delete apps;
 
   // done
   return 0;
