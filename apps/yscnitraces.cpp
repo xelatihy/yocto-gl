@@ -222,65 +222,6 @@ void reset_display(shared_ptr<app_state> app) {
   });
 }
 
-void draw(const opengl_window& win) {
-  auto app = static_pointer_cast<app_state>(get_gluser_typed_pointer(win));
-  clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app->glimage || app->glimage.size() != app->display.size() ||
-      !app->render_counter) {
-    update_glimage(app->glimage, app->display, false, false);
-  }
-  app->glparams.window      = get_glwindow_size(win);
-  app->glparams.framebuffer = get_glframebuffer_viewport(win);
-  update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
-      app->glparams.window, app->glparams.fit);
-  draw_glimage(app->glimage, app->glparams);
-  swap_glbuffers(win);
-  app->render_counter++;
-  if (app->render_counter > 10) app->render_counter = 0;
-}
-
-// run ui loop
-void run_ui(shared_ptr<app_state> app) {
-  // window
-  auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", app, draw);
-
-  // loop
-  auto mouse_pos = zero2f, last_pos = zero2f;
-  while (!should_glwindow_close(win)) {
-    last_pos         = mouse_pos;
-    mouse_pos        = get_glmouse_pos(win);
-    auto mouse_left  = get_glmouse_left(win);
-    auto mouse_right = get_glmouse_right(win);
-    auto alt_down    = get_glalt_key(win);
-    auto shift_down  = get_glshift_key(win);
-
-    // handle mouse and keyboard for navigation
-    if ((mouse_left || mouse_right) && !alt_down) {
-      auto& camera = app->scene.cameras.at(app->params.camera);
-      auto  dolly  = 0.0f;
-      auto  pan    = zero2f;
-      auto  rotate = zero2f;
-      if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
-      if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
-      if (mouse_left && shift_down)
-        pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
-      pan.x = -pan.x;
-      update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      reset_display(app);
-    }
-
-    // draw
-    draw(win);
-
-    // event hadling
-    process_glevents(win);
-  }
-
-  // clear
-  delete_glwindow(win);
-}
-
 int main(int argc, const char* argv[]) {
   // application
   auto app = make_shared<app_state>();
@@ -344,8 +285,49 @@ int main(int argc, const char* argv[]) {
   app->display = app->render;
   reset_display(app);
 
-  // run interactive
-  run_ui(app);
+  // window
+  auto win = opengl_window();
+  init_glwindow(win, {1280 + 320, 720}, "yscnitrace");
+
+  // callbacks
+  set_draw_glcallback(
+      win, [app](const opengl_window& win, vec2i window, vec4i viewport) {
+        if (!app->glimage || app->glimage.size() != app->display.size() ||
+            !app->render_counter) {
+          update_glimage(app->glimage, app->display, false, false);
+        }
+        app->glparams.window      = window;
+        app->glparams.framebuffer = viewport;
+        update_imview(app->glparams.center, app->glparams.scale,
+            app->display.size(), app->glparams.window, app->glparams.fit);
+        draw_glimage(app->glimage, app->glparams);
+        app->render_counter++;
+        if (app->render_counter > 10) app->render_counter = 0;
+      });
+  set_uiupdate_glcallback(
+      win, [app](const opengl_window& win, const opengl_input& input) {
+        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
+          auto& camera = app->scene.cameras.at(app->params.camera);
+          auto  dolly  = 0.0f;
+          auto  pan    = zero2f;
+          auto  rotate = zero2f;
+          if (input.mouse_left && !input.modifier_shift)
+            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+          if (input.mouse_right)
+            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+          if (input.mouse_left && input.modifier_shift)
+            pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+          pan.x = -pan.x;
+          update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
+          reset_display(app);
+        }
+      });
+
+  // run ui
+  run_ui(win);
+
+  // clear
+  delete_glwindow(win);
 
   // done
   return 0;
