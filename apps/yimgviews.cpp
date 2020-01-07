@@ -144,8 +144,28 @@ int main(int argc, const char* argv[]) {
     print_fatal("cannot load " + app->filename);
   update_display(app);
 
+  // create window
+  auto win = opengl_window();
+  init_glwindow(win, {1280, 720}, "yimview", app, draw);
+
+  // set callbacks
+  set_refresh_glcallback(win, draw);
+  set_draw_glcallback(win, draw);
+  set_uiupdate_glcallback(win, [app](const opengl_window& win, const opengl_input& input) {
+    // handle mouse
+    if (input.mouse_left) {
+      app->glparams.center += input.mouse_pos - input.mouse_last;
+    }
+    if (input.mouse_right) {
+      app->glparams.scale *= powf(2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+    }
+  });
+
   // run ui
-  run_ui(app);
+  run_ui(win);
+
+  // cleanup
+  delete_glwindow(win);
 
   // done
   return 0;
