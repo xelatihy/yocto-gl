@@ -451,19 +451,19 @@ using update_glcallback = std::function<void(const opengl_window&)>;
 
 // OpenGL window wrapper
 struct opengl_window {
-  GLFWwindow*         win            = nullptr;
-  draw_glcallback     draw_cb        = {};
-  widgets_glcallback  widgets_cb     = {};
-  drop_glcallback     drop_cb        = {};
-  key_glcallback      key_cb         = {};
-  click_glcallback    click_cb       = {};
-  scroll_glcallback   scroll_cb      = {};
-  update_glcallback   update_cb      = {};
-  uiupdate_glcallback uiupdate_cb    = {};
-  int                 widgets_width  = 0;
-  bool                widgets_left   = true;
-  opengl_input        input          = {};
-  vec4f               background     = {0.15f, 0.15f, 0.15f, 1.0f};
+  GLFWwindow*         win           = nullptr;
+  draw_glcallback     draw_cb       = {};
+  widgets_glcallback  widgets_cb    = {};
+  drop_glcallback     drop_cb       = {};
+  key_glcallback      key_cb        = {};
+  click_glcallback    click_cb      = {};
+  scroll_glcallback   scroll_cb     = {};
+  update_glcallback   update_cb     = {};
+  uiupdate_glcallback uiupdate_cb   = {};
+  int                 widgets_width = 0;
+  bool                widgets_left  = true;
+  opengl_input        input         = {};
+  vec4f               background    = {0.15f, 0.15f, 0.15f, 1.0f};
 };
 
 // Windows initialization
@@ -611,7 +611,8 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
 template <typename T>
 inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {
-  return draw_glcombobox(win, lbl, idx, (int)vals.size(),
+  return draw_glcombobox(
+      win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 

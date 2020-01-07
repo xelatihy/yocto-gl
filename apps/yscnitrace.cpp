@@ -444,7 +444,7 @@ bool draw_glwidgets_environment(
 
 void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   static string load_path = "", save_path = "", error_message = "";
-  auto scene_ok = !apps->states.empty() && apps->selected >= 0;
+  auto          scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yscnitrace")) return;
   draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -625,7 +625,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   }
 }
 
-void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window, vec4i viewport) {
+void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
+    vec4i viewport) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = window;
@@ -702,33 +703,35 @@ int main(int argc, const char* argv[]) {
   init_glwidgets(win);
 
   // callbacks
-  set_draw_glcallback(win, [apps](const opengl_window&   win, vec2i window, vec4i viewport){
-    draw(win, apps, window, viewport);
-  });
-  set_widgets_glcallback(win, [apps](const opengl_window& win){
-    draw_glwidgets(win, apps);
-  });
-  set_drop_glcallback(win, [apps](const opengl_window&   win,
-                               const vector<string>& paths) {
-    for (auto& path : paths) load_scene_async(apps, path);
-  });
-  set_update_glcallback(win, [apps](const opengl_window& win){
-    update(win, apps);
-  });
-  set_uiupdate_glcallback(win, [apps](const opengl_window& win, const opengl_input& input){
-    auto scene_ok       = !apps->states.empty() && apps->selected >= 0;
-    if(!scene_ok) return;
+  set_draw_glcallback(
+      win, [apps](const opengl_window& win, vec2i window, vec4i viewport) {
+        draw(win, apps, window, viewport);
+      });
+  set_widgets_glcallback(
+      win, [apps](const opengl_window& win) { draw_glwidgets(win, apps); });
+  set_drop_glcallback(
+      win, [apps](const opengl_window& win, const vector<string>& paths) {
+        for (auto& path : paths) load_scene_async(apps, path);
+      });
+  set_update_glcallback(
+      win, [apps](const opengl_window& win) { update(win, apps); });
+  set_uiupdate_glcallback(win, [apps](const opengl_window& win,
+                                   const opengl_input&     input) {
+    auto scene_ok = !apps->states.empty() && apps->selected >= 0;
+    if (!scene_ok) return;
 
     // handle mouse and keyboard for navigation
-    if (scene_ok && (input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
+    if (scene_ok && (input.mouse_left || input.mouse_right) &&
+        !input.modifier_alt && !input.widgets_active) {
       auto  app    = apps->states[apps->selected];
       auto& camera = app->ioscene.cameras.at(app->params.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
       auto  rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift) rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right) dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
       pan.x = -pan.x;
@@ -739,8 +742,8 @@ int main(int argc, const char* argv[]) {
     }
 
     // selection
-    if (scene_ok && (input.mouse_left || input.mouse_right) && input.modifier_alt &&
-        !input.widgets_active) {
+    if (scene_ok && (input.mouse_left || input.mouse_right) &&
+        input.modifier_alt && !input.widgets_active) {
       auto app = apps->states[apps->selected];
       auto ij  = get_image_coords(input.mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());

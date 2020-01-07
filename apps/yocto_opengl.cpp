@@ -1332,9 +1332,11 @@ void run_ui(opengl_window& win) {
 
     // time
     win.input.clock_last = win.input.clock_now;
-    win.input.clock_now = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    win.input.clock_now =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
     win.input.time_now = (double)win.input.clock_now / 1000000000.0;
-    win.input.time_delta = (double)(win.input.clock_now - win.input.clock_last) / 1000000000.0;
+    win.input.time_delta =
+        (double)(win.input.clock_now - win.input.clock_last) / 1000000000.0;
 
     // update ui
     if (win.uiupdate_cb) win.uiupdate_cb(win, win.input);
@@ -1754,7 +1756,8 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
       state.set_dirname(dir_buffer);
     }
     auto current_item = -1;
-    if (ImGui::ListBox("entries", &current_item,
+    if (ImGui::ListBox(
+            "entries", &current_item,
             [](void* data, int idx, const char** out_text) -> bool {
               auto& state = *(filedialog_state*)data;
               *out_text   = state.entries[idx].first.c_str();

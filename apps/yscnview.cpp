@@ -436,7 +436,7 @@ bool draw_glwidgets_environment(
 // draw with shading
 void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
-  auto scene_ok = !apps->states.empty() && apps->selected >= 0;
+  auto        scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -562,7 +562,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
 }
 
 // draw with shading
-void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window, vec4i framebuffer) {
+void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
+    vec4i framebuffer) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
     draw_glscene(
@@ -622,22 +623,22 @@ int main(int argc, const char* argv[]) {
   init_glwidgets(win);
 
   // callbacks
-  set_draw_glcallback(win, [apps](const opengl_window&   win, vec2i window, vec4i viewport){
-    draw(win, apps, window, viewport);
-  });
-  set_widgets_glcallback(win, [apps](const opengl_window& win){
-    draw_glwidgets(win, apps);
-  });
-  set_drop_glcallback(win, [apps](const opengl_window&   win,
-                               const vector<string>& paths) {
-    for (auto& path : paths) load_scene_async(apps, path);
-  });
-  set_update_glcallback(win, [apps](const opengl_window& win){
-    update(win, apps);
-  });
-  set_uiupdate_glcallback(win, [apps](const opengl_window& win, const opengl_input& input){
-    auto scene_ok       = !apps->states.empty() && apps->selected >= 0;
-    if(!scene_ok) return;
+  set_draw_glcallback(
+      win, [apps](const opengl_window& win, vec2i window, vec4i viewport) {
+        draw(win, apps, window, viewport);
+      });
+  set_widgets_glcallback(
+      win, [apps](const opengl_window& win) { draw_glwidgets(win, apps); });
+  set_drop_glcallback(
+      win, [apps](const opengl_window& win, const vector<string>& paths) {
+        for (auto& path : paths) load_scene_async(apps, path);
+      });
+  set_update_glcallback(
+      win, [apps](const opengl_window& win) { update(win, apps); });
+  set_uiupdate_glcallback(win, [apps](const opengl_window& win,
+                                   const opengl_input&     input) {
+    auto scene_ok = !apps->states.empty() && apps->selected >= 0;
+    if (!scene_ok) return;
 
     // update trasforms
     if (scene_ok) {
@@ -646,23 +647,26 @@ int main(int argc, const char* argv[]) {
     }
 
     // handle mouse and keyboard for navigation
-    if (scene_ok && (input.mouse_left || input.mouse_right) && !input.modifier_alt &&
-        !input.widgets_active) {
+    if (scene_ok && (input.mouse_left || input.mouse_right) &&
+        !input.modifier_alt && !input.widgets_active) {
       auto  app    = apps->states[apps->selected];
       auto& camera = app->scene.cameras.at(app->drawgl_prms.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
       auto  rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift) rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right) dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift) pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       update_glcamera(app->glscene.cameras[app->drawgl_prms.camera], camera);
     }
 
     // animation
     if (scene_ok && apps->states[apps->selected]->animate) {
-      auto app     = apps->states[apps->selected];
+      auto app = apps->states[apps->selected];
       app->time += min(1 / 60.0f, (float)input.time_delta);
       if (app->time < app->time_range.x || app->time > app->time_range.y)
         app->time = app->time_range.x;

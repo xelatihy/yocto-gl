@@ -1,4 +1,5 @@
 #include <memory>
+
 #include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
@@ -291,10 +292,13 @@ void clear(shared_ptr<app_state> app) {
       vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
 }
 
-void yimshproc(const string& input_filename, function<void(shared_ptr<app_state>)> init,
-    function<void(shared_ptr<app_state>, int, bool)>                key_callback,
-    function<void(shared_ptr<app_state>, int, vec2f, int, float)>   click_callback,
-    function<void(shared_ptr<app_state>, const opengl_window& win)> draw_glwidgets) {
+void yimshproc(const string&                         input_filename,
+    function<void(shared_ptr<app_state>)>            init,
+    function<void(shared_ptr<app_state>, int, bool)> key_callback,
+    function<void(shared_ptr<app_state>, int, vec2f, int, float)>
+        click_callback,
+    function<void(shared_ptr<app_state>, const opengl_window& win)>
+        draw_glwidgets) {
   auto app = make_shared<app_state>();
 
   // init shape
@@ -321,11 +325,12 @@ void yimshproc(const string& input_filename, function<void(shared_ptr<app_state>
   init_glwidgets(win);
 
   // callbacks
-  set_draw_glcallback(win, [app](const opengl_window& win, vec2i window, vec4i framebuffer) {
-  draw_glscene(
-      app->scene, get_glframebuffer_viewport(win, false), app->opengl_options);
-  });
-  set_widgets_glcallback(win, [app, draw_glwidgets](const opengl_window& win){
+  set_draw_glcallback(
+      win, [app](const opengl_window& win, vec2i window, vec4i framebuffer) {
+        draw_glscene(app->scene, get_glframebuffer_viewport(win, false),
+            app->opengl_options);
+      });
+  set_widgets_glcallback(win, [app, draw_glwidgets](const opengl_window& win) {
     draw_glwidgets(app, win);
   });
   set_click_glcallback(win, [app](const opengl_window& win, bool left,
@@ -364,21 +369,25 @@ void yimshproc(const string& input_filename, function<void(shared_ptr<app_state>
       win, [app](const opengl_window& win, int key, bool pressing) {
         app->key_callback(app, key, pressing);
       });
-  set_uiupdate_glcallback(win, [app](const opengl_window& win, const opengl_input& input) {
-    // Handle mouse and keyboard for navigation.
-    if ((input.mouse_left || input.mouse_right) && !input.modifier_alt && !input.widgets_active) {
-      auto& camera = app->camera;
-      auto  dolly  = 0.0f;
-      auto  pan    = zero2f;
-      auto  rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift) rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_left && input.modifier_shift) pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      rotate.y = -rotate.y;
-      pan.x    = -pan.x;
-      update_turntable(camera.frame, app->camera.focus, rotate, dolly, pan);
-      update_glcamera(app->scene.cameras[0], camera);
-    }
-  });
+  set_uiupdate_glcallback(
+      win, [app](const opengl_window& win, const opengl_input& input) {
+        // Handle mouse and keyboard for navigation.
+        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+            !input.widgets_active) {
+          auto& camera = app->camera;
+          auto  dolly  = 0.0f;
+          auto  pan    = zero2f;
+          auto  rotate = zero2f;
+          if (input.mouse_left && !input.modifier_shift)
+            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+          if (input.mouse_left && input.modifier_shift)
+            pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+          rotate.y = -rotate.y;
+          pan.x    = -pan.x;
+          update_turntable(camera.frame, app->camera.focus, rotate, dolly, pan);
+          update_glcamera(app->scene.cameras[0], camera);
+        }
+      });
 
   // cleanup
   delete_glwindow(win);

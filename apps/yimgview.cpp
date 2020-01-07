@@ -175,7 +175,7 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
 
 void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   static string load_path = "", save_path = "", error_message = "";
-  auto image_ok = !apps->states.empty() && apps->selected >= 0;
+  auto          image_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yimview")) return;
   draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
@@ -209,7 +209,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  draw_glcombobox(win, "image", apps->selected, (int)apps->states.size(),
+  draw_glcombobox(
+      win, "image", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
       false);
   if (image_ok && begin_glheader(win, "tonemap")) {
@@ -289,7 +290,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   }
 }
 
-void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window, vec4i viewport) {
+void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
+    vec4i viewport) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = window;
@@ -346,17 +348,14 @@ int main(int argc, const char* argv[]) {
   init_glwidgets(win);
 
   // callbacks
-  set_update_glcallback(win, [apps](const opengl_window& win){
-    update(win, apps);
-  });
+  set_update_glcallback(
+      win, [apps](const opengl_window& win) { update(win, apps); });
   set_draw_glcallback(
       win, [apps](const opengl_window& win, vec2i window, vec4i viewport) {
         draw(win, apps, window, viewport);
       });
   set_widgets_glcallback(
-      win, [apps](const opengl_window& win) {
-        draw_glwidgets(win, apps);
-      });
+      win, [apps](const opengl_window& win) { draw_glwidgets(win, apps); });
   set_uiupdate_glcallback(
       win, [apps](const opengl_window& win, const opengl_input& input) {
         // handle mouse
@@ -366,7 +365,8 @@ int main(int argc, const char* argv[]) {
         }
         if (input.mouse_right && !input.widgets_active) {
           auto app = apps->states[apps->selected];
-          app->glparams.scale *= powf(2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+          app->glparams.scale *= powf(
+              2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
         }
       });
   set_drop_glcallback(
