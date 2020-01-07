@@ -1345,25 +1345,25 @@ void delete_glwindow(opengl_window& win) {
 void run_ui(opengl_window& win) {
   while (!should_glwindow_close(win)) {
     // update input
-    win.input.mouse_last            = win.input.mouse_pos;
-    win.input.mouse_pos           = get_glmouse_pos(win);
+    win.input.mouse_last     = win.input.mouse_pos;
+    win.input.mouse_pos      = get_glmouse_pos(win);
     win.input.mouse_left     = get_glmouse_left(win);
     win.input.mouse_right    = get_glmouse_right(win);
-    win.input.modifier_alt       = get_glalt_key(win);
-    win.input.modifier_shift     = get_glshift_key(win);
-    win.input.modifier_ctrl     = get_glctrl_key(win);
-  if(win.widgets_width) {
+    win.input.modifier_alt   = get_glalt_key(win);
+    win.input.modifier_shift = get_glshift_key(win);
+    win.input.modifier_ctrl  = get_glctrl_key(win);
+    if (win.widgets_width) {
       win.input.widgets_active = get_glwidgets_active(win);
-  }
+    }
 
     // update ui
-    if(win.uiupdate_cb) win.uiupdate_cb(win, win.input);
+    if (win.uiupdate_cb) win.uiupdate_cb(win, win.input);
 
     // update
-    if(win.update_cb) win.update_cb(win);
+    if (win.update_cb) win.update_cb(win);
 
     // draw
-    if(win.draw_cb) win.draw_cb(win);
+    if (win.draw_cb) win.draw_cb(win);
 
     // event hadling
     process_glevents(win);

@@ -151,15 +151,17 @@ int main(int argc, const char* argv[]) {
   // set callbacks
   set_refresh_glcallback(win, draw);
   set_draw_glcallback(win, draw);
-  set_uiupdate_glcallback(win, [app](const opengl_window& win, const opengl_input& input) {
-    // handle mouse
-    if (input.mouse_left) {
-      app->glparams.center += input.mouse_pos - input.mouse_last;
-    }
-    if (input.mouse_right) {
-      app->glparams.scale *= powf(2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
-    }
-  });
+  set_uiupdate_glcallback(
+      win, [app](const opengl_window& win, const opengl_input& input) {
+        // handle mouse
+        if (input.mouse_left) {
+          app->glparams.center += input.mouse_pos - input.mouse_last;
+        }
+        if (input.mouse_right) {
+          app->glparams.scale *= powf(
+              2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+        }
+      });
 
   // run ui
   run_ui(win);
