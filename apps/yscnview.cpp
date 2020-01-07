@@ -77,13 +77,21 @@ struct app_state {
   string error = "";
 };
 
+// Load state
+struct load_state {
+  string         filename = "";
+  app_state*     app      = nullptr;
+  sceneio_status status   = {};
+};
+
 // Application state
 struct app_states {
   // data
-  deque<app_state*>              states   = {};
-  int                           selected = -1;
-  deque<app_state*>              loading  = {};
-  deque<future<sceneio_status>> loaders  = {};
+  deque<app_state*> states   = {};
+  int               selected = -1;
+
+  // loading
+  deque<future<load_state>> loaders = {};
 
   // default options
   draw_glscene_params drawgl_prms = {};
@@ -104,19 +112,22 @@ vec2f compute_animation_range(
 }
 
 void load_scene_async(app_states* apps, const string& filename) {
-  auto app       = new app_state{};
-  app->filename    = filename;
-  app->imagename   = replace_extension(filename, ".png");
-  app->outname     = replace_extension(filename, ".edited.yaml");
-  app->name        = get_filename(app->filename);
-  app->drawgl_prms = app->drawgl_prms;
-  apps->loading.push_back(app);
-  apps->loaders.push_back(async(launch::async, [app]() -> sceneio_status {
-    if (auto ret = load_scene(app->filename, app->scene); !ret) return ret;
-    app->time_range = compute_animation_range(app->scene);
-    app->time       = app->time_range.x;
-    return {};
-  }));
+  apps->loaders.push_back(
+      async(launch::async, [apps, filename]() -> load_state {
+        auto app         = new app_state{};
+        app->filename    = filename;
+        app->imagename   = replace_extension(filename, ".png");
+        app->outname     = replace_extension(filename, ".edited.yaml");
+        app->name        = get_filename(app->filename);
+        app->drawgl_prms = apps->drawgl_prms;
+        if (auto ret = load_scene(app->filename, app->scene); !ret) {
+          delete app;
+          return {filename, nullptr, ret};
+        }
+        app->time_range = compute_animation_range(app->scene);
+        app->time       = app->time_range.x;
+        return {filename, app, {}};
+      }));
 }
 
 void update_glcamera(opengl_camera& glcamera, const sceneio_camera& camera) {
@@ -343,8 +354,8 @@ bool draw_glwidgets_material(const opengl_window& win, app_state* app, int id) {
       win, "specular_tex", material.specular_tex, app->scene.textures, true);
   edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
       app->scene.textures, true);
-  edited += draw_glcombobox(
-      win, "subsurface_tex", material.subsurface_tex, app->scene.textures, true);
+  edited += draw_glcombobox(win, "subsurface_tex", material.subsurface_tex,
+      app->scene.textures, true);
   edited += draw_glcombobox(
       win, "roughness_tex", material.roughness_tex, app->scene.textures, true);
   edited += draw_glcombobox(
@@ -435,7 +446,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
-    auto app   = apps->states[apps->selected];
+    auto app     = apps->states[apps->selected];
     app->outname = save_path;
     if (auto ret = save_scene(app->outname, app->scene); !ret) {
       push_glmessage("cannot save " + app->outname);
@@ -459,7 +470,7 @@ void draw_glwidgets(const opengl_window& win) {
   draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
       [&apps](int idx) { return apps->states[idx]->name.c_str(); }, false);
   if (scene_ok && begin_glheader(win, "view")) {
-    auto app    = apps->states[apps->selected];
+    auto  app    = apps->states[apps->selected];
     auto& params = app->drawgl_prms;
     draw_glcombobox(win, "camera", params.camera, app->scene.cameras);
     draw_glslider(win, "resolution", params.resolution, 0, 4096);
@@ -469,7 +480,8 @@ void draw_glwidgets(const opengl_window& win) {
     continue_glline(win);
     draw_glcheckbox(win, "edges", params.edges);
     if (app->time_range != zero2f) {
-      draw_glslider(win, "time", app->time, app->time_range.x, app->time_range.y);
+      draw_glslider(
+          win, "time", app->time, app->time_range.x, app->time_range.y);
       draw_gltextinput(win, "anim group", app->anim_group);
       draw_glcheckbox(win, "animate", app->animate);
     }
@@ -552,7 +564,8 @@ void draw(const opengl_window& win) {
 
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
-    draw_glscene(app->glscene, get_glframebuffer_viewport(win), app->drawgl_prms);
+    draw_glscene(
+        app->glscene, get_glframebuffer_viewport(win), app->drawgl_prms);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -562,28 +575,25 @@ void draw(const opengl_window& win) {
 
 // update
 void update(const opengl_window& win, app_states* apps) {
-  auto is_ready = [](const future<sceneio_status>& result) -> bool {
+  auto is_ready = [](const future<load_state>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
 
   while (!apps->loaders.empty() && is_ready(apps->loaders.front())) {
-    if (!apps->loaders.front().get()) {
-      push_glmessage(
-          win, "cannot load scene " + apps->loading.front()->filename);
-      log_glinfo(win, "cannot load scene " + apps->loading.front()->filename);
-      log_glinfo(win, apps->loading.front()->error);
-      delete apps->loading.front();
-      apps->loading.pop_front();
-      apps->loaders.pop_front();
-      break;
-    }
-    apps->states.push_back(move(apps->loading.front()));
-    apps->loading.pop_front();
+    auto [filename, app, status] = apps->loaders.front().get();
     apps->loaders.pop_front();
-    make_glscene(apps->states.back()->glscene, apps->states.back()->scene);
-    update_gllights(apps->states.back()->glscene, apps->states.back()->scene);
-    if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
+    if (!status) {
+      push_glmessage(win, "cannot load scene " + filename);
+      log_glinfo(win, "cannot load scene " + filename);
+      log_glinfo(win, status.error);
+      break;
+    } else {
+      apps->states.push_back(app);
+      make_glscene(app->glscene, app->scene);
+      update_gllights(app->glscene, app->scene);
+      if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
+    }
   }
 }
 
@@ -623,7 +633,7 @@ void run_ui(app_states* apps) {
     // handle mouse and keyboard for navigation
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
-      auto app    = apps->states[apps->selected];
+      auto  app    = apps->states[apps->selected];
       auto& camera = app->scene.cameras.at(app->drawgl_prms.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
@@ -638,9 +648,9 @@ void run_ui(app_states* apps) {
     // animation
     if (scene_ok && apps->states[apps->selected]->animate) {
       auto app     = apps->states[apps->selected];
-      auto  now     = chrono::high_resolution_clock::now();
-      auto  elapsed = now - last_time;
-      auto  time    = (double)(elapsed.count()) / 1000000000.0;
+      auto now     = chrono::high_resolution_clock::now();
+      auto elapsed = now - last_time;
+      auto time    = (double)(elapsed.count()) / 1000000000.0;
       app->time += min(1 / 60.0f, (float)time);
       if (app->time < app->time_range.x || app->time > app->time_range.y)
         app->time = app->time_range.x;
