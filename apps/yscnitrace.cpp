@@ -442,10 +442,9 @@ bool draw_glwidgets_environment(
   return edited;
 }
 
-void draw_glwidgets(const opengl_window& win) {
+void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   static string load_path = "", save_path = "", error_message = "";
-  auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-  auto scene_ok = !apps->states.empty() && apps->selected >= 0;
+  auto          scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yscnitrace")) return;
   draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -626,13 +625,12 @@ void draw_glwidgets(const opengl_window& win) {
   }
 }
 
-void draw(const opengl_window& win) {
-  auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-  clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
+    vec4i viewport) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
-    app->glparams.window      = get_glwindow_size(win);
-    app->glparams.framebuffer = get_glframebuffer_viewport(win);
+    app->glparams.window      = window;
+    app->glparams.framebuffer = viewport;
     if (!app->glimage || app->glimage.size() != app->display.size() ||
         !app->render_counter) {
       update_glimage(app->glimage, app->display, false, false);
@@ -643,10 +641,6 @@ void draw(const opengl_window& win) {
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
   }
-  begin_glwidgets(win);
-  draw_glwidgets(win);
-  end_glwidgets(win);
-  swap_glbuffers(win);
 }
 
 void update(const opengl_window& win, shared_ptr<app_states> apps) {
@@ -668,83 +662,6 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
     }
   }
-}
-
-// run ui loop
-void run_ui(shared_ptr<app_states> apps) {
-  // window
-  auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", apps, draw);
-  set_drop_glcallback(win, [](const opengl_window&   win,
-                               const vector<string>& paths) {
-    auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-    for (auto& path : paths) load_scene_async(apps, path);
-  });
-
-  // init widgets
-  init_glwidgets(win);
-
-  // loop
-  auto mouse_pos = zero2f, last_pos = zero2f;
-  while (!should_glwindow_close(win)) {
-    last_pos            = mouse_pos;
-    mouse_pos           = get_glmouse_pos(win);
-    auto mouse_left     = get_glmouse_left(win);
-    auto mouse_right    = get_glmouse_right(win);
-    auto alt_down       = get_glalt_key(win);
-    auto shift_down     = get_glshift_key(win);
-    auto widgets_active = get_glwidgets_active(win);
-    auto scene_ok       = !apps->states.empty() && apps->selected >= 0;
-
-    // handle mouse and keyboard for navigation
-    if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
-        !widgets_active) {
-      auto  app    = apps->states[apps->selected];
-      auto& camera = app->ioscene.cameras.at(app->params.camera);
-      auto  dolly  = 0.0f;
-      auto  pan    = zero2f;
-      auto  rotate = zero2f;
-      if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
-      if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
-      if (mouse_left && shift_down)
-        pan = (mouse_pos - last_pos) * camera.focus / 200.0f;
-      pan.x = -pan.x;
-      stop_display(app);
-      update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      update_trace_camera(app->scene.cameras.at(app->params.camera), camera);
-      reset_display(app);
-    }
-
-    // selection
-    if (scene_ok && (mouse_left || mouse_right) && alt_down &&
-        !widgets_active) {
-      auto app = apps->states[apps->selected];
-      auto ij  = get_image_coords(mouse_pos, app->glparams.center,
-          app->glparams.scale, app->render.size());
-      if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
-          ij.y < app->render.size().y) {
-        auto& camera = app->scene.cameras.at(app->params.camera);
-        auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
-            vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
-                                                  (float)app->render.size().y});
-        if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
-          app->selection = {"instance", isec.instance};
-        }
-      }
-    }
-
-    // update
-    update(win, apps);
-
-    // draw
-    draw(win);
-
-    // event hadling
-    process_glevents(win);
-  }
-
-  // clear
-  delete_glwindow(win);
 }
 
 int main(int argc, const char* argv[]) {
@@ -778,8 +695,76 @@ int main(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
 
-  // run interactive
-  run_ui(apps);
+  // window
+  auto win = opengl_window();
+  init_glwindow(win, {1280 + 320, 720}, "yscnitrace");
+
+  // init widgets
+  init_glwidgets(win);
+
+  // callbacks
+  set_draw_glcallback(
+      win, [apps](const opengl_window& win, vec2i window, vec4i viewport) {
+        draw(win, apps, window, viewport);
+      });
+  set_widgets_glcallback(
+      win, [apps](const opengl_window& win) { draw_glwidgets(win, apps); });
+  set_drop_glcallback(
+      win, [apps](const opengl_window& win, const vector<string>& paths) {
+        for (auto& path : paths) load_scene_async(apps, path);
+      });
+  set_update_glcallback(
+      win, [apps](const opengl_window& win) { update(win, apps); });
+  set_uiupdate_glcallback(win, [apps](const opengl_window& win,
+                                   const opengl_input&     input) {
+    auto scene_ok = !apps->states.empty() && apps->selected >= 0;
+    if (!scene_ok) return;
+
+    // handle mouse and keyboard for navigation
+    if (scene_ok && (input.mouse_left || input.mouse_right) &&
+        !input.modifier_alt && !input.widgets_active) {
+      auto  app    = apps->states[apps->selected];
+      auto& camera = app->ioscene.cameras.at(app->params.camera);
+      auto  dolly  = 0.0f;
+      auto  pan    = zero2f;
+      auto  rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+      pan.x = -pan.x;
+      stop_display(app);
+      update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
+      update_trace_camera(app->scene.cameras.at(app->params.camera), camera);
+      reset_display(app);
+    }
+
+    // selection
+    if (scene_ok && (input.mouse_left || input.mouse_right) &&
+        input.modifier_alt && !input.widgets_active) {
+      auto app = apps->states[apps->selected];
+      auto ij  = get_image_coords(input.mouse_pos, app->glparams.center,
+          app->glparams.scale, app->render.size());
+      if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
+          ij.y < app->render.size().y) {
+        auto& camera = app->scene.cameras.at(app->params.camera);
+        auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
+            vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
+                                                  (float)app->render.size().y});
+        if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
+          app->selection = {"instance", isec.instance};
+        }
+      }
+    }
+  });
+
+  // run ui
+  run_ui(win);
+
+  // clear
+  delete_glwindow(win);
 
   // done
   return 0;

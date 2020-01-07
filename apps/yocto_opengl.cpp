@@ -1242,7 +1242,15 @@ namespace yocto {
 
 void _glfw_refresh_callback(GLFWwindow* glfw) {
   auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
-  if (win.refresh_cb) win.refresh_cb(win);
+  clear_glframebuffer(win.background);
+  if (win.draw_cb)
+    win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
+  if (win.widgets_cb) {
+    begin_glwidgets(win);
+    win.widgets_cb(win);
+    end_glwidgets(win);
+  }
+  swap_glbuffers(win);
 }
 
 void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
@@ -1271,8 +1279,7 @@ void _glfw_scroll_callback(GLFWwindow* glfw, double xoffset, double yoffset) {
   if (win.scroll_cb) win.scroll_cb(win, (float)yoffset);
 }
 
-void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
-    void* user_pointer, refresh_glcallback refresh_cb) {
+void init_glwindow(opengl_window& win, const vec2i& size, const string& title) {
   // init glfw
   if (!glfwInit())
     throw std::runtime_error("cannot initialize windowing system");
@@ -1291,47 +1298,16 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
   glfwSwapInterval(1);  // Enable vsync
 
   // set user data
-  glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback);
   glfwSetWindowUserPointer(win.win, &win);
-  win.user_ptr   = user_pointer;
-  win.refresh_cb = refresh_cb;
+
+  // set callbacks
+  glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback);
 
   // init gl extensions
   if (!gladLoadGL())
     throw std::runtime_error("cannot initialize OpenGL extensions");
 
-  glPointSize(10);
-}
-
-void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
-    shared_ptr<void> user_pointer, refresh_glcallback refresh_cb) {
-  // init glfw
-  if (!glfwInit())
-    throw std::runtime_error("cannot initialize windowing system");
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#if __APPLE__
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
-  // create window
-  win     = opengl_window();
-  win.win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
-  if (!win.win) throw std::runtime_error("cannot initialize windowing system");
-  glfwMakeContextCurrent(win.win);
-  glfwSwapInterval(1);  // Enable vsync
-
-  // set user data
-  glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback);
-  glfwSetWindowUserPointer(win.win, &win);
-  win.user_typed_ptr = user_pointer;
-  win.refresh_cb     = refresh_cb;
-
-  // init gl extensions
-  if (!gladLoadGL())
-    throw std::runtime_error("cannot initialize OpenGL extensions");
-
+  // TODO: check what this is, probably something for mesh processing
   glPointSize(10);
 }
 
@@ -1341,9 +1317,55 @@ void delete_glwindow(opengl_window& win) {
   win.win = nullptr;
 }
 
-void* get_gluser_pointer(const opengl_window& win) { return win.user_ptr; }
-shared_ptr<void> get_gluser_typed_pointer(const opengl_window& win) {
-  return win.user_typed_ptr;
+// Run loop
+void run_ui(opengl_window& win) {
+  while (!should_glwindow_close(win)) {
+    // update input
+    win.input.mouse_last     = win.input.mouse_pos;
+    win.input.mouse_pos      = get_glmouse_pos(win);
+    win.input.mouse_left     = get_glmouse_left(win);
+    win.input.mouse_right    = get_glmouse_right(win);
+    win.input.modifier_alt   = get_glalt_key(win);
+    win.input.modifier_shift = get_glshift_key(win);
+    win.input.modifier_ctrl  = get_glctrl_key(win);
+    if (win.widgets_width) win.input.widgets_active = get_glwidgets_active(win);
+
+    // time
+    win.input.clock_last = win.input.clock_now;
+    win.input.clock_now =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    win.input.time_now = (double)win.input.clock_now / 1000000000.0;
+    win.input.time_delta =
+        (double)(win.input.clock_now - win.input.clock_last) / 1000000000.0;
+
+    // update ui
+    if (win.uiupdate_cb) win.uiupdate_cb(win, win.input);
+
+    // update
+    if (win.update_cb) win.update_cb(win);
+
+    // draw
+    clear_glframebuffer(win.background);
+    if (win.draw_cb)
+      win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
+    if (win.widgets_cb) {
+      begin_glwidgets(win);
+      win.widgets_cb(win);
+      end_glwidgets(win);
+    }
+    swap_glbuffers(win);
+
+    // event hadling
+    process_glevents(win);
+  }
+}
+
+void set_draw_glcallback(opengl_window& win, draw_glcallback cb) {
+  win.draw_cb = cb;
+}
+
+void set_widgets_glcallback(opengl_window& win, widgets_glcallback cb) {
+  win.widgets_cb = cb;
 }
 
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb) {
@@ -1364,6 +1386,14 @@ void set_click_glcallback(opengl_window& win, click_glcallback cb) {
 void set_scroll_glcallback(opengl_window& win, scroll_glcallback cb) {
   win.scroll_cb = cb;
   glfwSetScrollCallback(win.win, _glfw_scroll_callback);
+}
+
+void set_uiupdate_glcallback(opengl_window& win, uiupdate_glcallback cb) {
+  win.uiupdate_cb = cb;
+}
+
+void set_update_glcallback(opengl_window& win, update_glcallback cb) {
+  win.update_cb = cb;
 }
 
 vec2i get_glframebuffer_size(const opengl_window& win, bool ignore_widgets) {
@@ -1445,6 +1475,11 @@ bool get_glalt_key(const opengl_window& win) {
 bool get_glshift_key(const opengl_window& win) {
   return glfwGetKey(win.win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
          glfwGetKey(win.win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+}
+
+bool get_glctrl_key(const opengl_window& win) {
+  return glfwGetKey(win.win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+         glfwGetKey(win.win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
 }
 
 void process_glevents(const opengl_window& win, bool wait) {

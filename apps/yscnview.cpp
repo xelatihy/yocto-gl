@@ -434,10 +434,9 @@ bool draw_glwidgets_environment(
 }
 
 // draw with shading
-void draw_glwidgets(const opengl_window& win) {
+void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
-  auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-  auto scene_ok = !apps->states.empty() && apps->selected >= 0;
+  auto        scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -563,18 +562,13 @@ void draw_glwidgets(const opengl_window& win) {
 }
 
 // draw with shading
-void draw(const opengl_window& win) {
-  auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-
+void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
+    vec4i framebuffer) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
     draw_glscene(
         app->glscene, get_glframebuffer_viewport(win), app->drawgl_prms);
   }
-  begin_glwidgets(win);
-  draw_glwidgets(win);
-  end_glwidgets(win);
-  swap_glbuffers(win);
 }
 
 // update
@@ -601,81 +595,6 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
   }
 }
 
-// run ui loop
-void run_ui(shared_ptr<app_states> apps) {
-  // window
-  auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnview", apps, draw);
-  set_drop_glcallback(win, [](const opengl_window&   win,
-                               const vector<string>& paths) {
-    auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-    for (auto& path : paths) load_scene_async(apps, path);
-  });
-
-  // init widget
-  init_glwidgets(win);
-
-  // loop
-  auto mouse_pos = zero2f, last_pos = zero2f;
-  auto last_time = chrono::high_resolution_clock::now();
-  while (!should_glwindow_close(win)) {
-    last_pos            = mouse_pos;
-    mouse_pos           = get_glmouse_pos(win);
-    auto mouse_left     = get_glmouse_left(win);
-    auto mouse_right    = get_glmouse_right(win);
-    auto alt_down       = get_glalt_key(win);
-    auto shift_down     = get_glshift_key(win);
-    auto widgets_active = get_glwidgets_active(win);
-    auto scene_ok       = !apps->states.empty() && apps->selected >= 0;
-
-    // update trasforms
-    if (scene_ok) {
-      auto app = apps->states[apps->selected];
-      update_transforms(app->scene, app->time);
-    }
-
-    // handle mouse and keyboard for navigation
-    if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
-        !widgets_active) {
-      auto  app    = apps->states[apps->selected];
-      auto& camera = app->scene.cameras.at(app->drawgl_prms.camera);
-      auto  dolly  = 0.0f;
-      auto  pan    = zero2f;
-      auto  rotate = zero2f;
-      if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
-      if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
-      if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-      update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      update_glcamera(app->glscene.cameras[app->drawgl_prms.camera], camera);
-    }
-
-    // animation
-    if (scene_ok && apps->states[apps->selected]->animate) {
-      auto app     = apps->states[apps->selected];
-      auto now     = chrono::high_resolution_clock::now();
-      auto elapsed = now - last_time;
-      auto time    = (double)(elapsed.count()) / 1000000000.0;
-      app->time += min(1 / 60.0f, (float)time);
-      if (app->time < app->time_range.x || app->time > app->time_range.y)
-        app->time = app->time_range.x;
-      update_transforms(app->scene, app->time);
-      last_time = now;
-    }
-
-    // update
-    update(win, apps);
-
-    // draw
-    draw(win);
-
-    // event hadling
-    process_glevents(win);
-  }
-
-  // clear
-  delete_glwindow(win);
-}
-
 int main(int argc, const char* argv[]) {
   // initialize app
   auto apps       = make_shared<app_states>();
@@ -697,8 +616,69 @@ int main(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
 
+  auto win = opengl_window();
+  init_glwindow(win, {1280 + 320, 720}, "yscnview");
+
+  // init widgets
+  init_glwidgets(win);
+
+  // callbacks
+  set_draw_glcallback(
+      win, [apps](const opengl_window& win, vec2i window, vec4i viewport) {
+        draw(win, apps, window, viewport);
+      });
+  set_widgets_glcallback(
+      win, [apps](const opengl_window& win) { draw_glwidgets(win, apps); });
+  set_drop_glcallback(
+      win, [apps](const opengl_window& win, const vector<string>& paths) {
+        for (auto& path : paths) load_scene_async(apps, path);
+      });
+  set_update_glcallback(
+      win, [apps](const opengl_window& win) { update(win, apps); });
+  set_uiupdate_glcallback(win, [apps](const opengl_window& win,
+                                   const opengl_input&     input) {
+    auto scene_ok = !apps->states.empty() && apps->selected >= 0;
+    if (!scene_ok) return;
+
+    // update trasforms
+    if (scene_ok) {
+      auto app = apps->states[apps->selected];
+      update_transforms(app->scene, app->time);
+    }
+
+    // handle mouse and keyboard for navigation
+    if (scene_ok && (input.mouse_left || input.mouse_right) &&
+        !input.modifier_alt && !input.widgets_active) {
+      auto  app    = apps->states[apps->selected];
+      auto& camera = app->scene.cameras.at(app->drawgl_prms.camera);
+      auto  dolly  = 0.0f;
+      auto  pan    = zero2f;
+      auto  rotate = zero2f;
+      if (input.mouse_left && !input.modifier_shift)
+        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+      if (input.mouse_right)
+        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+      if (input.mouse_left && input.modifier_shift)
+        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+      update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
+      update_glcamera(app->glscene.cameras[app->drawgl_prms.camera], camera);
+    }
+
+    // animation
+    if (scene_ok && apps->states[apps->selected]->animate) {
+      auto app = apps->states[apps->selected];
+      app->time += min(1 / 60.0f, (float)input.time_delta);
+      if (app->time < app->time_range.x || app->time > app->time_range.y)
+        app->time = app->time_range.x;
+      update_transforms(app->scene, app->time);
+    }
+  });
+
   // run ui
-  run_ui(apps);
+  run_ui(win);
+
+  // clear
+  delete_glwindow(win);
 
   // done
   return 0;

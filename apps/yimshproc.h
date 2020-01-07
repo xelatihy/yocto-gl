@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_commonio.h"
 #include "../yocto/yocto_sceneio.h"
@@ -9,10 +11,10 @@ using namespace std;
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
-  function<void(app_state&)>                         init;
-  function<void(app_state&, int, bool)>              key_callback;
-  function<void(app_state&, int, vec2f, int, float)> click_callback;
-  function<void(app_state&, const opengl_window&)>   draw_glwidgets;
+  function<void(shared_ptr<app_state>)>                         init;
+  function<void(shared_ptr<app_state>, int, bool)>              key_callback;
+  function<void(shared_ptr<app_state>, int, vec2f, int, float)> click_callback;
+  function<void(shared_ptr<app_state>, const opengl_window&)>   draw_glwidgets;
 
   // Geometry data
   sceneio_shape shape;
@@ -51,13 +53,13 @@ void delete_glshape(opengl_shape& glshape) {
   delete_glelementbuffer(glshape.edges);
 }
 
-void update_glshape(app_state& app) {
+void update_glshape(shared_ptr<app_state> app) {
   // @Issue: This app is specialized for a model that is a triangle mesh.
   //    Loading a generic shape is unsafe, maybe we should load only
   //    triangle meshes here...
 
-  auto& glshape = app.glshape();
-  auto& shape   = app.shape;
+  auto& glshape = app->glshape();
+  auto& shape   = app->shape;
   delete_glshape(glshape);
   if (shape.quadspos.empty()) {
     if (!shape.positions.empty())
@@ -96,8 +98,9 @@ void update_glshape(app_state& app) {
   }
 }
 
-void update_glpolyline(app_state& app, const vector<vec3f>& vertices) {
-  auto& glshape = app.glpolyline();
+void update_glpolyline(
+    shared_ptr<app_state> app, const vector<vec3f>& vertices) {
+  auto& glshape = app->glpolyline();
   delete_glshape(glshape);
   if (vertices.size()) {
     auto elements = vector<vec2i>(vertices.size() - 1);
@@ -107,8 +110,8 @@ void update_glpolyline(app_state& app, const vector<vec3f>& vertices) {
   }
 }
 
-void update_glpoints(app_state& app, const vector<vec3f>& points) {
-  auto& glshape = app.glpoints();
+void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
+  auto& glshape = app->glpoints();
   delete_glshape(glshape);
   if (points.size()) {
     auto elements = vector<int>(points.size());
@@ -120,26 +123,27 @@ void update_glpoints(app_state& app, const vector<vec3f>& points) {
   }
 }
 
-void update_glvector_field(
-    app_state& app, const vector<vec3f>& vector_field, float scale = 0.01) {
-  auto perface   = vector_field.size() == app.shape.triangles.size();
-  auto pervertex = vector_field.size() == app.shape.positions.size();
+void update_glvector_field(shared_ptr<app_state> app,
+    const vector<vec3f>& vector_field, float scale = 0.01) {
+  auto perface   = vector_field.size() == app->shape.triangles.size();
+  auto pervertex = vector_field.size() == app->shape.positions.size();
 
   if (!perface && !pervertex) {
     throw runtime_error("input vector field has wrong size\n");
   }
 
-  auto& glshape = app.glvector_field();
+  auto& glshape = app->glvector_field();
   delete_glshape(glshape);
-  auto size = perface ? app.shape.triangles.size() : app.shape.positions.size();
+  auto size = perface ? app->shape.triangles.size()
+                      : app->shape.positions.size();
   auto positions = vector<vec3f>(size * 2);
 
   // Per-face vector field
   if (perface) {
-    for (int i = 0; i < app.shape.triangles.size(); i++) {
-      auto x      = app.shape.positions[app.shape.triangles[i].x];
-      auto y      = app.shape.positions[app.shape.triangles[i].y];
-      auto z      = app.shape.positions[app.shape.triangles[i].z];
+    for (int i = 0; i < app->shape.triangles.size(); i++) {
+      auto x      = app->shape.positions[app->shape.triangles[i].x];
+      auto y      = app->shape.positions[app->shape.triangles[i].y];
+      auto z      = app->shape.positions[app->shape.triangles[i].z];
       auto normal = triangle_normal(x, y, z);
       normal *= 0.0001;
       auto center          = (x + y + z) / 3;
@@ -149,8 +153,8 @@ void update_glvector_field(
       positions[i * 2 + 1] = to;
     }
   } else {
-    for (int i = 0; i < app.shape.positions.size(); i++) {
-      auto from            = app.shape.positions[i];
+    for (int i = 0; i < app->shape.positions.size(); i++) {
+      auto from            = app->shape.positions[i];
       auto to              = from + scale * vector_field[i];
       positions[i * 2]     = from;
       positions[i * 2 + 1] = to;
@@ -165,21 +169,21 @@ void update_glvector_field(
   init_glelementbuffer(glshape.lines, elements, false);
 }
 
-void update_gledges(app_state& app) {
-  auto& glshape = app.gledges();
+void update_gledges(shared_ptr<app_state> app) {
+  auto& glshape = app->gledges();
   delete_glshape(glshape);
-  auto positions = app.shape.positions;
+  auto positions = app->shape.positions;
   for (int i = 0; i < positions.size(); i++) {
-    positions[i] += app.shape.normals[i] * 0.0001;
+    positions[i] += app->shape.normals[i] * 0.0001;
   }
   init_glarraybuffer(glshape.positions, positions, false);
 
   auto elements = vector<vec2i>();
-  elements.reserve(app.shape.triangles.size() * 3);
-  for (int i = 0; i < app.shape.triangles.size(); i++) {
+  elements.reserve(app->shape.triangles.size() * 3);
+  for (int i = 0; i < app->shape.triangles.size(); i++) {
     for (int k = 0; k < 3; k++) {
-      auto a = app.shape.triangles[i][k];
-      auto b = app.shape.triangles[i][(k + 1) % 3];
+      auto a = app->shape.triangles[i][k];
+      auto b = app->shape.triangles[i][(k + 1) % 3];
       if (a < b) {
         elements.push_back({a, b});
       }
@@ -196,213 +200,195 @@ void update_glcamera(opengl_camera& glcamera, const sceneio_camera& camera) {
   glcamera.far    = 10000;
 }
 
-void init_camera(app_state& app, const vec3f& from = vec3f{0, 0.5, 1.5},
-    const vec3f& to = {0, 0, 0}) {
-  app.camera              = sceneio_camera{};
-  auto up                 = vec3f{0, 1, 0};
-  app.camera.lens         = 0.02f;
-  app.camera.orthographic = false;
-  app.camera.aperture     = 0;
-  app.camera.frame        = lookat_frame(from, to, up);
-  app.camera.film         = 0.036f;
-  app.camera.aspect       = 0.036f / 0.015f;
-  app.camera.focus        = length(to - from);
-  app.camera_focus        = app.camera.focus;
+void init_camera(shared_ptr<app_state> app,
+    const vec3f& from = vec3f{0, 0.5, 1.5}, const vec3f& to = {0, 0, 0}) {
+  app->camera              = sceneio_camera{};
+  auto up                  = vec3f{0, 1, 0};
+  app->camera.lens         = 0.02f;
+  app->camera.orthographic = false;
+  app->camera.aperture     = 0;
+  app->camera.frame        = lookat_frame(from, to, up);
+  app->camera.film         = 0.036f;
+  app->camera.aspect       = 0.036f / 0.015f;
+  app->camera.focus        = length(to - from);
+  app->camera_focus        = app->camera.focus;
 }
 
-void init_bvh(app_state& app) {
+void init_bvh(shared_ptr<app_state> app) {
   make_triangles_bvh(
-      app.bvh, app.shape.triangles, app.shape.positions, app.shape.radius);
+      app->bvh, app->shape.triangles, app->shape.positions, app->shape.radius);
 }
 
-void hide_edges(app_state& app) {
-  app.show_edges                            = false;
-  app.scene.instances[app.gledges_id].shape = -1;
+void hide_edges(shared_ptr<app_state> app) {
+  app->show_edges                             = false;
+  app->scene.instances[app->gledges_id].shape = -1;
 }
-void show_edges(app_state& app) {
-  app.show_edges                            = true;
-  app.scene.instances[app.gledges_id].shape = app.gledges_id;
+void show_edges(shared_ptr<app_state> app) {
+  app->show_edges                             = true;
+  app->scene.instances[app->gledges_id].shape = app->gledges_id;
 }
 
-void init_opengl_scene(app_state& app) {
-  make_glscene(app.scene);
-  update_glcamera(app.scene.cameras.emplace_back(), app.camera);
+void init_opengl_scene(shared_ptr<app_state> app) {
+  make_glscene(app->scene);
+  update_glcamera(app->scene.cameras.emplace_back(), app->camera);
 
   auto shape_material      = opengl_material{};
   shape_material.diffuse   = {1, 0.2, 0};
   shape_material.roughness = 0.3;
-  app.scene.materials.push_back(shape_material);
+  app->scene.materials.push_back(shape_material);
 
   // @Issue: Right now we're missing APIs to color things easily.
   auto lines_material      = opengl_material{};
   lines_material.emission  = {1, 1, 1};
   lines_material.roughness = 0.0;
-  app.scene.materials.push_back(lines_material);
+  app->scene.materials.push_back(lines_material);
 
   // The model.
-  app.glshape_id = app.scene.shapes.size();
-  app.scene.shapes.push_back({});
+  app->glshape_id = app->scene.shapes.size();
+  app->scene.shapes.push_back({});
   update_glshape(app);
 
   // The points.
-  app.glpoints_id = app.scene.shapes.size();
-  app.scene.shapes.push_back({});
+  app->glpoints_id = app->scene.shapes.size();
+  app->scene.shapes.push_back({});
 
   // The vector field.
-  app.glvector_field_id = app.scene.shapes.size();
-  app.scene.shapes.push_back({});
+  app->glvector_field_id = app->scene.shapes.size();
+  app->scene.shapes.push_back({});
 
   // The edges.
-  app.gledges_id = app.scene.shapes.size();
-  app.scene.shapes.push_back({});
+  app->gledges_id = app->scene.shapes.size();
+  app->scene.shapes.push_back({});
   update_gledges(app);
 
   // The polyline.
-  app.glpolyline_id = app.scene.shapes.size();
-  app.scene.shapes.push_back({});
+  app->glpolyline_id = app->scene.shapes.size();
+  app->scene.shapes.push_back({});
 
   // Add instances.
-  app.scene.instances = vector<opengl_instance>(5);
-  for (int i = 0; i < app.scene.instances.size(); ++i) {
-    app.scene.instances[i].shape    = i;
-    app.scene.instances[i].material = i ? 1 : 0;
+  app->scene.instances = vector<opengl_instance>(5);
+  for (int i = 0; i < app->scene.instances.size(); ++i) {
+    app->scene.instances[i].shape    = i;
+    app->scene.instances[i].material = i ? 1 : 0;
   }
 
   // Hide edges.
-  if (!app.show_edges) hide_edges(app);
+  if (!app->show_edges) hide_edges(app);
 
   // Add lights.
-  app.scene.lights.push_back({{5, 5, 5}, {30, 30, 30}, 0});
-  app.scene.lights.push_back({{-5, 5, 5}, {30, 30, 30}, 0});
-  app.scene.lights.push_back({{0, 5, -5}, {30, 30, 30}, 0});
+  app->scene.lights.push_back({{5, 5, 5}, {30, 30, 30}, 0});
+  app->scene.lights.push_back({{-5, 5, 5}, {30, 30, 30}, 0});
+  app->scene.lights.push_back({{0, 5, -5}, {30, 30, 30}, 0});
 }
 
-void clear(app_state& app) {
-  for (int i = 0; i < app.scene.shapes.size(); i++) {
-    if (i == app.glshape_id) continue;
-    if (i == app.gledges_id) continue;
-    delete_glshape(app.scene.shapes[i]);
+void clear(shared_ptr<app_state> app) {
+  for (int i = 0; i < app->scene.shapes.size(); i++) {
+    if (i == app->glshape_id) continue;
+    if (i == app->gledges_id) continue;
+    delete_glshape(app->scene.shapes[i]);
   }
-  delete_glarraybuffer(app.glshape().colors);
-  init_glarraybuffer(app.glshape().colors,
-      vector<vec4f>(app.shape.positions.size(), {1, 1, 1, 1}));
+  delete_glarraybuffer(app->glshape().colors);
+  init_glarraybuffer(app->glshape().colors,
+      vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
 }
 
-void key_callback(const opengl_window& win, int key, bool pressing) {
-  auto& app = *(app_state*)get_gluser_pointer(win);
-  app.key_callback(app, key, pressing);
-}
-
-void click_callback(const opengl_window& win, bool left_click, bool press) {
-  auto& app   = *(app_state*)get_gluser_pointer(win);
-  auto  mouse = get_glmouse_pos_normalized(win, false);
-
-  // Ray trace camera ray.
-  if (!left_click && press) {
-    auto ray          = camera_ray(app.camera.frame, app.camera.lens,
-        app.camera.aspect >= 1
-            ? vec2f{app.camera.film, app.camera.film / app.camera.aspect}
-            : vec2f{app.camera.film * app.camera.aspect, app.camera.film},
-        mouse + 0.5f);
-    auto intersection = intersect_triangles_bvh(
-        app.bvh, app.shape.triangles, app.shape.positions, ray);
-
-    if (intersection.hit) {
-      auto uvw = vec3f{intersection.uv.x, intersection.uv.y,
-          1 - intersection.uv.x - intersection.uv.y};
-      int  k   = 0;
-      if (uvw.x > uvw.y && uvw.x > uvw.z) k = 1;
-      if (uvw.y > uvw.x && uvw.y > uvw.z) k = 2;
-      auto vertex = app.shape.triangles[intersection.element][k];
-      app.click_callback(app, intersection.element, intersection.uv, vertex,
-          intersection.distance);
-    }
-  }
-}
-
-void scroll_callback(const opengl_window& win, float yoffset) {
-  auto& app  = *(app_state*)get_gluser_pointer(win);
-  float zoom = yoffset > 0 ? 0.1 : -0.1;
-  update_turntable(app.camera.frame, app.camera.focus, zero2f, zoom, zero2f);
-  update_glcamera(app.scene.cameras[0], app.camera);
-}
-
-void draw(const opengl_window& win) {
-  auto& app = *(app_state*)get_gluser_pointer(win);
-  draw_glscene(
-      app.scene, get_glframebuffer_viewport(win, false), app.opengl_options);
-  begin_glwidgets(win);
-  app.draw_glwidgets(app, win);
-  end_glwidgets(win);
-  swap_glbuffers(win);
-}
-
-void run_app(app_state& app) {
-  // Init window.
-  auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yimshproc", &app, draw);
-  init_opengl_scene(app);
-
-  set_click_glcallback(win, click_callback);
-  set_scroll_glcallback(win, scroll_callback);
-  set_key_glcallback(win, key_callback);
-
-  init_glwidgets(win);
-
-  auto mouse_pos = zero2f, last_pos = zero2f;
-
-  // Render loop.
-  while (!should_glwindow_close(win)) {
-    last_pos            = mouse_pos;
-    mouse_pos           = get_glmouse_pos(win);
-    auto mouse_left     = get_glmouse_left(win);
-    auto mouse_right    = get_glmouse_right(win);
-    auto alt_down       = get_glalt_key(win);
-    auto shift_down     = get_glshift_key(win);
-    auto widgets_active = get_glwidgets_active(win);
-
-    // Handle mouse and keyboard for navigation.
-    if ((mouse_left || mouse_right) && !alt_down && !widgets_active) {
-      auto& camera = app.camera;
-      auto  dolly  = 0.0f;
-      auto  pan    = zero2f;
-      auto  rotate = zero2f;
-      if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
-      if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-      rotate.y = -rotate.y;
-      pan.x    = -pan.x;
-      update_turntable(camera.frame, app.camera.focus, rotate, dolly, pan);
-      update_glcamera(app.scene.cameras[0], camera);
-    }
-
-    draw(win);
-
-    // Event handling.
-    process_glevents(win);
-  }
-
-  delete_glwindow(win);
-}
-
-void yimshproc(const string& input_filename, function<void(app_state&)> init,
-    function<void(app_state&, int, bool)>                key_callback,
-    function<void(app_state&, int, vec2f, int, float)>   click_callback,
-    function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
-  auto app = app_state{};
+void yimshproc(const string&                         input_filename,
+    function<void(shared_ptr<app_state>)>            init,
+    function<void(shared_ptr<app_state>, int, bool)> key_callback,
+    function<void(shared_ptr<app_state>, int, vec2f, int, float)>
+        click_callback,
+    function<void(shared_ptr<app_state>, const opengl_window& win)>
+        draw_glwidgets) {
+  auto app = make_shared<app_state>();
 
   // init shape
-  load_shape(input_filename, app.shape.points, app.shape.lines,
-      app.shape.triangles, app.shape.quads, app.shape.positions,
-      app.shape.normals, app.shape.texcoords, app.shape.colors,
-      app.shape.radius);
+  load_shape(input_filename, app->shape.points, app->shape.lines,
+      app->shape.triangles, app->shape.quads, app->shape.positions,
+      app->shape.normals, app->shape.texcoords, app->shape.colors,
+      app->shape.radius);
   init_bvh(app);
   init_camera(app);
 
-  app.init           = init;
-  app.key_callback   = key_callback;
-  app.click_callback = click_callback;
-  app.draw_glwidgets = draw_glwidgets;  // @Issue: win not needed for widgets
+  app->init           = init;
+  app->key_callback   = key_callback;
+  app->click_callback = click_callback;
+  app->draw_glwidgets = draw_glwidgets;  // @Issue: win not needed for widgets
 
-  app.init(app);
-  run_app(app);
+  app->init(app);
+
+  // Init window.
+  auto win = opengl_window();
+  init_glwindow(win, {1280 + 320, 720}, "yimshproc");
+  init_opengl_scene(app);
+
+  // Init widgets.
+  init_glwidgets(win);
+
+  // callbacks
+  set_draw_glcallback(
+      win, [app](const opengl_window& win, vec2i window, vec4i framebuffer) {
+        draw_glscene(app->scene, get_glframebuffer_viewport(win, false),
+            app->opengl_options);
+      });
+  set_widgets_glcallback(win, [app, draw_glwidgets](const opengl_window& win) {
+    draw_glwidgets(app, win);
+  });
+  set_click_glcallback(win, [app](const opengl_window& win, bool left,
+                                bool press) {
+    auto mouse = get_glmouse_pos_normalized(win, false);
+
+    // Ray trace camera ray.
+    if (!left && press) {
+      auto ray          = camera_ray(app->camera.frame, app->camera.lens,
+          app->camera.aspect >= 1
+              ? vec2f{app->camera.film, app->camera.film / app->camera.aspect}
+              : vec2f{app->camera.film * app->camera.aspect, app->camera.film},
+          mouse + 0.5f);
+      auto intersection = intersect_triangles_bvh(
+          app->bvh, app->shape.triangles, app->shape.positions, ray);
+
+      if (intersection.hit) {
+        auto uvw = vec3f{intersection.uv.x, intersection.uv.y,
+            1 - intersection.uv.x - intersection.uv.y};
+        int  k   = 0;
+        if (uvw.x > uvw.y && uvw.x > uvw.z) k = 1;
+        if (uvw.y > uvw.x && uvw.y > uvw.z) k = 2;
+        auto vertex = app->shape.triangles[intersection.element][k];
+        app->click_callback(app, intersection.element, intersection.uv, vertex,
+            intersection.distance);
+      }
+    }
+  });
+  set_scroll_glcallback(win, [app](const opengl_window& win, float yoffset) {
+    float zoom = yoffset > 0 ? 0.1 : -0.1;
+    update_turntable(
+        app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
+    update_glcamera(app->scene.cameras[0], app->camera);
+  });
+  set_key_glcallback(
+      win, [app](const opengl_window& win, int key, bool pressing) {
+        app->key_callback(app, key, pressing);
+      });
+  set_uiupdate_glcallback(
+      win, [app](const opengl_window& win, const opengl_input& input) {
+        // Handle mouse and keyboard for navigation.
+        if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
+            !input.widgets_active) {
+          auto& camera = app->camera;
+          auto  dolly  = 0.0f;
+          auto  pan    = zero2f;
+          auto  rotate = zero2f;
+          if (input.mouse_left && !input.modifier_shift)
+            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+          if (input.mouse_left && input.modifier_shift)
+            pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+          rotate.y = -rotate.y;
+          pan.x    = -pan.x;
+          update_turntable(camera.frame, app->camera.focus, rotate, dolly, pan);
+          update_glcamera(app->scene.cameras[0], camera);
+        }
+      });
+
+  // cleanup
+  delete_glwindow(win);
 }

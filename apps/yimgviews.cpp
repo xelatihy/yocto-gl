@@ -55,7 +55,7 @@ struct app_state {
 };
 
 // Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
+// parallel algorithms. `Func` takes the pixel index as a vec2i.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
   auto        futures  = vector<future<void>>{};
@@ -84,50 +84,6 @@ void update_display(shared_ptr<app_state> app) {
   });
 }
 
-void draw(const opengl_window& win) {
-  auto app = static_pointer_cast<app_state>(get_gluser_typed_pointer(win));
-  clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app->glimage) update_glimage(app->glimage, app->display, false, false);
-  app->glparams.window      = get_glwindow_size(win);
-  app->glparams.framebuffer = get_glframebuffer_viewport(win);
-  update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
-      app->glparams.window, app->glparams.fit);
-  draw_glimage(app->glimage, app->glparams);
-  swap_glbuffers(win);
-}
-
-void run_ui(shared_ptr<app_state> app) {
-  // window
-  auto win = opengl_window();
-  init_glwindow(win, {1280, 720}, "yimview", app, draw);
-
-  // window values
-  auto mouse_pos = zero2f, last_pos = zero2f;
-  while (!should_glwindow_close(win)) {
-    last_pos         = mouse_pos;
-    mouse_pos        = get_glmouse_pos(win);
-    auto mouse_left  = get_glmouse_left(win);
-    auto mouse_right = get_glmouse_right(win);
-
-    // handle mouse
-    if (mouse_left) {
-      app->glparams.center += mouse_pos - last_pos;
-    }
-    if (mouse_right) {
-      app->glparams.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
-    }
-
-    // draw
-    draw(win);
-
-    // event hadling
-    process_glevents(win);
-  }
-
-  // cleanup
-  delete_glwindow(win);
-}
-
 int main(int argc, const char* argv[]) {
   // prepare application
   auto app       = make_shared<app_state>();
@@ -142,10 +98,42 @@ int main(int argc, const char* argv[]) {
   // load image
   if (!load_image(app->filename, app->source))
     print_fatal("cannot load " + app->filename);
+
+  // update display
   update_display(app);
 
+  // create window
+  auto win = opengl_window();
+  init_glwindow(win, {1280, 720}, "yimgviews");
+
+  // set callbacks
+  set_draw_glcallback(
+      win, [app](const opengl_window& win, vec2i window, vec4i viewport) {
+        app->glparams.window      = window;
+        app->glparams.framebuffer = viewport;
+        if (!app->glimage)
+          update_glimage(app->glimage, app->display, false, false);
+        update_imview(app->glparams.center, app->glparams.scale,
+            app->display.size(), app->glparams.window, app->glparams.fit);
+        draw_glimage(app->glimage, app->glparams);
+      });
+  set_uiupdate_glcallback(
+      win, [app](const opengl_window& win, const opengl_input& input) {
+        // handle mouse
+        if (input.mouse_left) {
+          app->glparams.center += input.mouse_pos - input.mouse_last;
+        }
+        if (input.mouse_right) {
+          app->glparams.scale *= powf(
+              2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
+        }
+      });
+
   // run ui
-  run_ui(app);
+  run_ui(win);
+
+  // cleanup
+  delete_glwindow(win);
 
   // done
   return 0;
