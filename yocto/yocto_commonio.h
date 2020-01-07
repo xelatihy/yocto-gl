@@ -80,8 +80,8 @@
 //
 //
 
-#ifndef _YOCTO_UTILS_H_
-#define _YOCTO_UTILS_H_
+#ifndef _YOCTO_COMMONIO_H_
+#define _YOCTO_COMMONIO_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
