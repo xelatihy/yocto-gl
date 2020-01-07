@@ -74,15 +74,21 @@ struct app_state {
 // load state
 struct load_state {
   string                filename = "";
-  shared_ptr<app_state> app      = {};
+  unique_ptr<app_state> app      = {};
   imageio_status        status   = {};
 };
 
 // app states
 struct app_states {
   // data
-  vector<shared_ptr<app_state>> states   = {};
+  vector<unique_ptr<app_state>> states   = {};
   int                           selected = -1;
+
+  // selectedfor
+  app_state* get_selected() {
+    if (selected < 0 || selected >= states.size()) return nullptr;
+    return states[selected].get();
+  }
 
   // loading
   deque<future<load_state>> loaders = {};
@@ -133,7 +139,7 @@ void compute_stats(
   stats.average /= num_pixels;
 }
 
-void update_display(shared_ptr<app_state> app) {
+void update_display(app_state* app) {
   if (app->display.size() != app->source.size()) app->display = app->source;
   parallel_for(app->source.size(), [app](const vec2i& ij) {
     if (app->colorgrade) {
@@ -147,10 +153,10 @@ void update_display(shared_ptr<app_state> app) {
 }
 
 // add a new image
-void load_image_async(shared_ptr<app_states> apps, const string& filename) {
+void load_image_async(app_states* apps, const string& filename) {
   apps->loaders.push_back(
       async(launch::async, [apps, filename]() -> load_state {
-        auto app       = make_shared<app_state>();
+        auto app       = make_unique<app_state>();
         app->filename  = filename;
         app->outname   = replace_extension(filename, ".display.png");
         app->name      = get_filename(filename);
@@ -169,11 +175,11 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
           app->display = tonemap_image(app->source, app->exposure, app->filmic);
         }
         compute_stats(app->display_stats, app->display, false);
-        return {filename, app, {}};
+        return {filename, move(app), {}};
       }));
 }
 
-void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
+void draw_glwidgets(const opengl_window& win, app_states* apps) {
   static string load_path = "", save_path = "", error_message = "";
   auto          image_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yimview")) return;
@@ -187,7 +193,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   if (draw_glfiledialog_button(win, "save", image_ok, "save image", save_path,
           true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto app     = apps->states[apps->selected];
+    auto app     = apps->get_selected();
     app->outname = save_path;
     try {
       save_image(app->outname, app->display);
@@ -211,10 +217,9 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   }
   draw_glcombobox(
       win, "image", apps->selected, (int)apps->states.size(),
-      [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
-      false);
+      [apps](int idx) { return apps->get_selected()->name.c_str(); }, false);
   if (image_ok && begin_glheader(win, "tonemap")) {
-    auto app    = apps->states[apps->selected];
+    auto app    = apps->get_selected();
     auto edited = 0;
     edited += draw_glslider(win, "exposure", app->exposure, -5, 5);
     edited += draw_glcheckbox(win, "filmic", app->filmic);
@@ -222,7 +227,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "colorgrade")) {
-    auto  app    = apps->states[apps->selected];
+    auto  app    = apps->get_selected();
     auto& params = app->params;
     auto  edited = 0;
     edited += draw_glcheckbox(win, "apply colorgrade", app->colorgrade);
@@ -253,7 +258,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "inspect")) {
-    auto app = apps->states[apps->selected];
+    auto app = apps->get_selected();
     draw_gllabel(win, "image", get_filename(app->filename));
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
@@ -290,10 +295,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   }
 }
 
-void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
-    vec4i viewport) {
+void draw(
+    const opengl_window& win, app_states* apps, vec2i window, vec4i viewport) {
   if (!apps->states.empty() && apps->selected >= 0) {
-    auto app                  = apps->states[apps->selected];
+    auto app                  = apps->get_selected();
     app->glparams.window      = window;
     app->glparams.framebuffer = viewport;
     if (!app->glimage || app->glupdated) {
@@ -306,7 +311,7 @@ void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
   }
 }
 
-void update(const opengl_window& win, shared_ptr<app_states> apps) {
+void update(const opengl_window& win, app_states* apps) {
   auto is_ready = [](const future<load_state>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -320,8 +325,8 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
       log_glinfo(win, "cannot load image " + filename);
       log_glinfo(win, status.error);
     } else {
-      apps->states.push_back(app);
-      update_display(app);
+      apps->states.push_back(move(app));
+      update_display(apps->states.back().get());
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
     }
   }
@@ -329,7 +334,8 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto apps      = make_shared<app_states>();
+  auto apps_     = make_unique<app_states>();
+  auto apps      = apps_.get();
   auto filenames = vector<string>{};
 
   // command line options
@@ -360,11 +366,11 @@ int main(int argc, const char* argv[]) {
       win, [apps](const opengl_window& win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left && !input.widgets_active) {
-          auto app = apps->states[apps->selected];
+          auto app = apps->get_selected();
           app->glparams.center += input.mouse_pos - input.mouse_last;
         }
         if (input.mouse_right && !input.widgets_active) {
-          auto app = apps->states[apps->selected];
+          auto app = apps->get_selected();
           app->glparams.scale *= powf(
               2, (input.mouse_pos.x - input.mouse_last.x) * 0.001f);
         }
