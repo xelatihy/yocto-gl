@@ -33,8 +33,6 @@
 #include "../yocto/yocto_trace.h"
 using namespace yocto;
 
-#include <map>
-
 // Construct a scene from io
 trace_scene make_scene(sceneio_model& ioscene) {
   auto scene = trace_scene{};
@@ -131,17 +129,6 @@ int main(int argc, const char* argv[]) {
   auto validate   = false;
   auto imfilename = "out.hdr"s;
   auto filename   = "scene.json"s;
-
-  // names for enums
-  auto sampler_namemap = std::map<string, trace_sampler_type>{};
-  for (auto type = 0; type < trace_sampler_names.size(); type++) {
-    sampler_namemap[trace_sampler_names[type]] = (trace_sampler_type)type;
-  }
-  auto falsecolor_namemap = std::map<string, trace_falsecolor_type>{};
-  for (auto type = 0; type < trace_falsecolor_names.size(); type++) {
-    falsecolor_namemap[trace_falsecolor_names[type]] =
-        (trace_falsecolor_type)type;
-  }
 
   // parse command line
   auto cli = make_cli("yscntrace", "Offline path tracing");
