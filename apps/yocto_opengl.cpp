@@ -1341,9 +1341,45 @@ void delete_glwindow(opengl_window& win) {
   win.win = nullptr;
 }
 
+// Run loop
+void run_ui(opengl_window& win) {
+  while (!should_glwindow_close(win)) {
+    // update input
+    win.input.mouse_last            = win.input.mouse_pos;
+    win.input.mouse_pos           = get_glmouse_pos(win);
+    win.input.mouse_left     = get_glmouse_left(win);
+    win.input.mouse_right    = get_glmouse_right(win);
+    win.input.modifier_alt       = get_glalt_key(win);
+    win.input.modifier_shift     = get_glshift_key(win);
+    win.input.modifier_ctrl     = get_glctrl_key(win);
+    win.input.widgets_active = get_glwidgets_active(win);
+
+    // update ui
+    if(win.uiupdate_cb) win.uiupdate_cb(win, win.input);
+
+    // update
+    if(win.update_cb) win.update_cb(win);
+
+    // draw
+    if(win.draw_cb) win.draw_cb(win);
+
+    // event hadling
+    process_glevents(win);
+  }
+}
+
 void* get_gluser_pointer(const opengl_window& win) { return win.user_ptr; }
 shared_ptr<void> get_gluser_typed_pointer(const opengl_window& win) {
   return win.user_typed_ptr;
+}
+
+void set_draw_glcallback(opengl_window& win, draw_glcallback cb) {
+  win.draw_cb = cb;
+}
+
+void set_refresh_glcallback(opengl_window& win, refresh_glcallback cb) {
+  win.refresh_cb = cb;
+  glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback);
 }
 
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb) {
@@ -1364,6 +1400,14 @@ void set_click_glcallback(opengl_window& win, click_glcallback cb) {
 void set_scroll_glcallback(opengl_window& win, scroll_glcallback cb) {
   win.scroll_cb = cb;
   glfwSetScrollCallback(win.win, _glfw_scroll_callback);
+}
+
+void set_uiupdate_glcallback(opengl_window& win, uiupdate_glcallback cb) {
+  win.uiupdate_cb = cb;
+}
+
+void set_update_glcallback(opengl_window& win, update_glcallback cb) {
+  win.update_cb = cb;
 }
 
 vec2i get_glframebuffer_size(const opengl_window& win, bool ignore_widgets) {
@@ -1445,6 +1489,11 @@ bool get_glalt_key(const opengl_window& win) {
 bool get_glshift_key(const opengl_window& win) {
   return glfwGetKey(win.win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
          glfwGetKey(win.win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+}
+
+bool get_glctrl_key(const opengl_window& win) {
+  return glfwGetKey(win.win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+         glfwGetKey(win.win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
 }
 
 void process_glevents(const opengl_window& win, bool wait) {

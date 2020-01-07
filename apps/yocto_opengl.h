@@ -407,30 +407,59 @@ namespace yocto {
 // Forward declaration of OpenGL window
 struct opengl_window;
 
+// Input state
+struct opengl_input {
+  bool  mouse_left     = false;  // left button
+  bool  mouse_right    = false;  // right button
+  bool  mouse_middle   = false;  // middle button
+  vec2f mouse_pos      = {};     // position excluding widgets
+  vec2f mouse_last     = {};     // last mouse position excluding widgets
+  vec2f mouse_delta    = {};     // last mouse delta excluding widgets
+  bool  modifier_alt   = false;  // alt modifier
+  bool  modifier_ctrl  = false;  // ctrl modifier
+  bool  modifier_shift = false;  // shift modifier
+  bool  widgets_active = false;  // widgets are active
+};
+
+// Draw callback called every frame and when resizing
+using draw_glcallback = std::function<void(const opengl_window&)>;
 // Draw callback called every frame and when resizing
 using refresh_glcallback = std::function<void(const opengl_window&)>;
 // Drop callback that returns that list of dropped strings.
 using drop_glcallback =
     std::function<void(const opengl_window&, const vector<string>&)>;
 // Key callback that returns ASCII key, pressed/released flag and modifier keys
-using key_glcallback    = std::function<void(const opengl_window& win, int key, bool pressed)>;
-// Mouse click callback that returns left/right button, pressed/released flag, 
+using key_glcallback =
+    std::function<void(const opengl_window& win, int key, bool pressed)>;
+// Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
-using click_glcallback  = std::function<void(const opengl_window&, bool left, bool pressed)>;
+using click_glcallback =
+    std::function<void(const opengl_window&, bool left, bool pressed)>;
 // Scroll callback that returns scroll amount
-using scroll_glcallback = std::function<void(const opengl_window&, float amount)>;
+using scroll_glcallback =
+    std::function<void(const opengl_window&, float amount)>;
+// Update functions called every frame
+using uiupdate_glcallback =
+    std::function<void(const opengl_window&, const opengl_input& input)>;
+// Update functions called every frame
+using update_glcallback = std::function<void(const opengl_window&)>;
 
+// OpenGL window wrapper
 struct opengl_window {
-  GLFWwindow*        win            = nullptr;
-  void*              user_ptr       = nullptr;
-  shared_ptr<void>   user_typed_ptr = nullptr;
-  refresh_glcallback refresh_cb     = {};
-  drop_glcallback    drop_cb        = {};
-  key_glcallback     key_cb         = {};
-  click_glcallback   click_cb       = {};
-  scroll_glcallback  scroll_cb      = {};
-  int                widgets_width  = 0;
-  bool               widgets_left   = true;
+  GLFWwindow*         win            = nullptr;
+  void*               user_ptr       = nullptr;
+  shared_ptr<void>    user_typed_ptr = nullptr;
+  draw_glcallback     draw_cb        = {};
+  refresh_glcallback  refresh_cb     = {};
+  drop_glcallback     drop_cb        = {};
+  key_glcallback      key_cb         = {};
+  click_glcallback    click_cb       = {};
+  scroll_glcallback   scroll_cb      = {};
+  update_glcallback   update_cb      = {};
+  uiupdate_glcallback uiupdate_cb    = {};
+  int                 widgets_width  = 0;
+  bool                widgets_left   = true;
+  opengl_input        input          = {};
 };
 
 // Windows initialization
@@ -443,10 +472,17 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
 void delete_glwindow(opengl_window& win);
 
 // Set callbacks
+void set_draw_glcallback(opengl_window& win, draw_glcallback draw_cb);
+void set_refresh_glcallback(opengl_window& win, refresh_glcallback refresh_cb);
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb);
 void set_key_glcallback(opengl_window& win, key_glcallback cb);
 void set_click_glcallback(opengl_window& win, click_glcallback cb);
 void set_scroll_glcallback(opengl_window& win, scroll_glcallback cb);
+void set_uiupdate_glcallback(opengl_window& win, uiupdate_glcallback cb);
+void set_update_glcallback(opengl_window& win, update_glcallback cb);
+
+// Run loop
+void run_ui(opengl_window& win);
 
 // Gets user pointer
 void*            get_gluser_pointer(const opengl_window& win);
@@ -469,6 +505,7 @@ bool get_glmouse_left(const opengl_window& win);
 bool get_glmouse_right(const opengl_window& win);
 bool get_glalt_key(const opengl_window& win);
 bool get_glshift_key(const opengl_window& win);
+bool get_glctrl_key(const opengl_window& win);
 
 void process_glevents(const opengl_window& win, bool wait = false);
 void swap_glbuffers(const opengl_window& win);
@@ -577,8 +614,7 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
 template <typename T>
 inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {
-  return draw_glcombobox(
-      win, lbl, idx, (int)vals.size(),
+  return draw_glcombobox(win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 
