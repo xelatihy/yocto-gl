@@ -255,7 +255,7 @@ void reset_display(shared_ptr<app_state>  app) {
   // start renderer
   app->render_counter = 0;
   app->render_stop    = false;
-  app->render_future  = async(launch::async, [&app]() {
+  app->render_future  = async(launch::async, [app]() {
     for (auto sample = 0; sample < app->params.samples; sample++) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [&app](const vec2i& ij) {
@@ -654,7 +654,6 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
       push_glmessage(win, "cannot load scene " + filename);
       log_glinfo(win, "cannot load scene " + filename);
       log_glinfo(win, status.error);
-      break;
     } else {
       apps->states.push_back(app);
       reset_display(app);
@@ -667,7 +666,7 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
 void run_ui(shared_ptr<app_states> apps) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", &apps, draw);
+  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", apps, draw);
   set_drop_glcallback(
       win, [](const opengl_window& win, const vector<string>& paths) {
         auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
