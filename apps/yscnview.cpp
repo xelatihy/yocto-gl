@@ -111,7 +111,7 @@ vec2f compute_animation_range(
   return range;
 }
 
-void load_scene_async(app_states* apps, const string& filename) {
+void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
   apps->loaders.push_back(
       async(launch::async, [apps, filename]() -> load_state {
         auto app         = make_shared<app_state>();
@@ -430,7 +430,7 @@ bool draw_glwidgets_environment(
 // draw with shading
 void draw_glwidgets(const opengl_window& win) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
-  auto        apps     = (app_states*)get_gluser_pointer(win);
+  auto        apps     = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
   auto        scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
@@ -571,7 +571,7 @@ void draw(const opengl_window& win) {
 }
 
 // update
-void update(const opengl_window& win, app_states* apps) {
+void update(const opengl_window& win, shared_ptr<app_states> apps) {
   auto is_ready = [](const future<load_state>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -595,13 +595,13 @@ void update(const opengl_window& win, app_states* apps) {
 }
 
 // run ui loop
-void run_ui(app_states* apps) {
+void run_ui(shared_ptr<app_states> apps) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnview", apps, draw);
+  init_glwindow(win, {1280 + 320, 720}, "yscnview", apps.get(), draw);
   set_drop_glcallback(
       win, [](const opengl_window& win, const vector<string>& paths) {
-        auto apps = (app_states*)get_gluser_pointer(win);
+        auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
         for (auto& path : paths) load_scene_async(apps, path);
       });
 
@@ -671,7 +671,7 @@ void run_ui(app_states* apps) {
 
 int main(int argc, const char* argv[]) {
   // initialize app
-  auto apps       = new app_states{};
+  auto apps       = make_shared<app_states>();
   auto filenames  = vector<string>{};
   auto noparallel = false;
 
@@ -692,9 +692,6 @@ int main(int argc, const char* argv[]) {
 
   // run ui
   run_ui(apps);
-
-  // cleanup
-  delete apps;
 
   // done
   return 0;
