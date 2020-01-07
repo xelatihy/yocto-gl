@@ -98,11 +98,13 @@ int main(int argc, const char* argv[]) {
   // load image
   if (!load_image(app->filename, app->source))
     print_fatal("cannot load " + app->filename);
+
+  // update display
   update_display(app);
 
   // create window
   auto win = opengl_window();
-  init_glwindow(win, {1280, 720}, "yimview");
+  init_glwindow(win, {1280, 720}, "yimgviews");
 
   // set callbacks
   set_draw_glcallback(
