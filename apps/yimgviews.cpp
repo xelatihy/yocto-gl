@@ -74,33 +74,33 @@ inline void parallel_for(const vec2i& size, Func&& func) {
   for (auto& f : futures) f.get();
 }
 
-void update_display(app_state& app) {
-  if (app.display.size() != app.source.size()) app.display = app.source;
-  parallel_for(app.source.size(), [&app](const vec2i& ij) {
-    if (app.colorgrade) {
-      app.display[ij] = colorgrade(app.source[ij], true, app.params);
+void update_display(shared_ptr<app_state> app) {
+  if (app->display.size() != app->source.size()) app->display = app->source;
+  parallel_for(app->source.size(), [&app](const vec2i& ij) {
+    if (app->colorgrade) {
+      app->display[ij] = colorgrade(app->source[ij], true, app->params);
     } else {
-      app.display[ij] = tonemap(app.source[ij], app.exposure, app.filmic);
+      app->display[ij] = tonemap(app->source[ij], app->exposure, app->filmic);
     }
   });
 }
 
 void draw(const opengl_window& win) {
-  auto& app = *(app_state*)get_gluser_pointer(win);
+  auto app = static_pointer_cast<app_state>(get_gluser_typed_pointer(win));
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.glimage) update_glimage(app.glimage, app.display, false, false);
-  app.glparams.window      = get_glwindow_size(win);
-  app.glparams.framebuffer = get_glframebuffer_viewport(win);
-  update_imview(app.glparams.center, app.glparams.scale, app.display.size(),
-      app.glparams.window, app.glparams.fit);
-  draw_glimage(app.glimage, app.glparams);
+  if (!app->glimage) update_glimage(app->glimage, app->display, false, false);
+  app->glparams.window      = get_glwindow_size(win);
+  app->glparams.framebuffer = get_glframebuffer_viewport(win);
+  update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
+      app->glparams.window, app->glparams.fit);
+  draw_glimage(app->glimage, app->glparams);
   swap_glbuffers(win);
 }
 
-void run_ui(app_state& app) {
+void run_ui(shared_ptr<app_state> app) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280, 720}, "yimview", &app, draw);
+  init_glwindow(win, {1280, 720}, "yimview", app, draw);
 
   // window values
   auto mouse_pos = zero2f, last_pos = zero2f;
@@ -112,10 +112,10 @@ void run_ui(app_state& app) {
 
     // handle mouse
     if (mouse_left) {
-      app.glparams.center += mouse_pos - last_pos;
+      app->glparams.center += mouse_pos - last_pos;
     }
     if (mouse_right) {
-      app.glparams.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+      app->glparams.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
     // draw
@@ -131,18 +131,18 @@ void run_ui(app_state& app) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto app       = app_state();
+  auto app       = make_shared<app_state>();
   auto filenames = vector<string>{};
 
   // command line options
   auto cli = make_cli("yimgview", "view images");
-  add_cli_option(cli, "--output,-o", app.outname, "image output");
-  add_cli_option(cli, "image", app.filename, "image filename", true);
+  add_cli_option(cli, "--output,-o", app->outname, "image output");
+  add_cli_option(cli, "image", app->filename, "image filename", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load image
-  if (!load_image(app.filename, app.source))
-    print_fatal("cannot load " + app.filename);
+  if (!load_image(app->filename, app->source))
+    print_fatal("cannot load " + app->filename);
   update_display(app);
 
   // run ui
