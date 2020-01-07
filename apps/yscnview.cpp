@@ -557,7 +557,7 @@ void draw_glwidgets(const opengl_window& win) {
 
 // draw with shading
 void draw(const opengl_window& win) {
-  auto apps = (app_states*)get_gluser_pointer(win);
+  auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
 
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
@@ -598,7 +598,7 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
 void run_ui(shared_ptr<app_states> apps) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnview", apps.get(), draw);
+  init_glwindow(win, {1280 + 320, 720}, "yscnview", apps, draw);
   set_drop_glcallback(
       win, [](const opengl_window& win, const vector<string>& paths) {
         auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
