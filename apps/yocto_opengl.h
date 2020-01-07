@@ -430,8 +430,6 @@ using draw_glcallback =
     std::function<void(const opengl_window&, vec2i window, vec4i viewport)>;
 // Draw callback for drawing widgets
 using widgets_glcallback = std::function<void(const opengl_window&)>;
-// Draw callback called every frame and when resizing
-using refresh_glcallback = std::function<void(const opengl_window&)>;
 // Drop callback that returns that list of dropped strings.
 using drop_glcallback =
     std::function<void(const opengl_window&, const vector<string>&)>;
@@ -454,11 +452,8 @@ using update_glcallback = std::function<void(const opengl_window&)>;
 // OpenGL window wrapper
 struct opengl_window {
   GLFWwindow*         win            = nullptr;
-  void*               user_ptr       = nullptr;
-  shared_ptr<void>    user_typed_ptr = nullptr;
   draw_glcallback     draw_cb        = {};
   widgets_glcallback  widgets_cb     = {};
-  refresh_glcallback  refresh_cb     = {};
   drop_glcallback     drop_cb        = {};
   key_glcallback      key_cb         = {};
   click_glcallback    click_cb       = {};
@@ -472,10 +467,6 @@ struct opengl_window {
 };
 
 // Windows initialization
-void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
-    void* user_pointer, refresh_glcallback refresh_cb);
-void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
-    shared_ptr<void> user_pointer, refresh_glcallback refresh_cb);
 void init_glwindow(opengl_window& win, const vec2i& size, const string& title);
 
 // Window cleanup
@@ -484,7 +475,6 @@ void delete_glwindow(opengl_window& win);
 // Set callbacks
 void set_draw_glcallback(opengl_window& win, draw_glcallback draw_cb);
 void set_widgets_glcallback(opengl_window& win, widgets_glcallback widgets_cb);
-void set_refresh_glcallback(opengl_window& win, refresh_glcallback refresh_cb);
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb);
 void set_key_glcallback(opengl_window& win, key_glcallback cb);
 void set_click_glcallback(opengl_window& win, click_glcallback cb);
@@ -494,10 +484,6 @@ void set_update_glcallback(opengl_window& win, update_glcallback cb);
 
 // Run loop
 void run_ui(opengl_window& win);
-
-// Gets user pointer
-void*            get_gluser_pointer(const opengl_window& win);
-shared_ptr<void> get_gluser_typed_pointer(const opengl_window& win);
 
 vec2i get_glwindow_size(const opengl_window& win, bool ignore_widgets = true);
 vec2i get_glframebuffer_size(

@@ -1242,11 +1242,6 @@ namespace yocto {
 
 void _glfw_refresh_callback(GLFWwindow* glfw) {
   auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
-  if (win.refresh_cb) win.refresh_cb(win);
-}
-
-void _glfw_refresh_callback_new(GLFWwindow* glfw) {
-  auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
   clear_glframebuffer(win.background);
   if (win.draw_cb)
     win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
@@ -1284,70 +1279,6 @@ void _glfw_scroll_callback(GLFWwindow* glfw, double xoffset, double yoffset) {
   if (win.scroll_cb) win.scroll_cb(win, (float)yoffset);
 }
 
-void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
-    void* user_pointer, refresh_glcallback refresh_cb) {
-  // init glfw
-  if (!glfwInit())
-    throw std::runtime_error("cannot initialize windowing system");
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#if __APPLE__
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
-  // create window
-  win     = opengl_window();
-  win.win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
-  if (!win.win) throw std::runtime_error("cannot initialize windowing system");
-  glfwMakeContextCurrent(win.win);
-  glfwSwapInterval(1);  // Enable vsync
-
-  // set user data
-  glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback);
-  glfwSetWindowUserPointer(win.win, &win);
-  win.user_ptr   = user_pointer;
-  win.refresh_cb = refresh_cb;
-
-  // init gl extensions
-  if (!gladLoadGL())
-    throw std::runtime_error("cannot initialize OpenGL extensions");
-
-  glPointSize(10);
-}
-
-void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
-    shared_ptr<void> user_pointer, refresh_glcallback refresh_cb) {
-  // init glfw
-  if (!glfwInit())
-    throw std::runtime_error("cannot initialize windowing system");
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#if __APPLE__
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
-  // create window
-  win     = opengl_window();
-  win.win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
-  if (!win.win) throw std::runtime_error("cannot initialize windowing system");
-  glfwMakeContextCurrent(win.win);
-  glfwSwapInterval(1);  // Enable vsync
-
-  // set user data
-  glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback);
-  glfwSetWindowUserPointer(win.win, &win);
-  win.user_typed_ptr = user_pointer;
-  win.refresh_cb     = refresh_cb;
-
-  // init gl extensions
-  if (!gladLoadGL())
-    throw std::runtime_error("cannot initialize OpenGL extensions");
-
-  glPointSize(10);
-}
-
 void init_glwindow(opengl_window& win, const vec2i& size, const string& title) {
   // init glfw
   if (!glfwInit())
@@ -1370,7 +1301,7 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title) {
   glfwSetWindowUserPointer(win.win, &win);
 
   // set callbacks
-  glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback_new);
+  glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback);
 
   // init gl extensions
   if (!gladLoadGL())
@@ -1425,11 +1356,6 @@ void run_ui(opengl_window& win) {
     // event hadling
     process_glevents(win);
   }
-}
-
-void* get_gluser_pointer(const opengl_window& win) { return win.user_ptr; }
-shared_ptr<void> get_gluser_typed_pointer(const opengl_window& win) {
-  return win.user_typed_ptr;
 }
 
 void set_draw_glcallback(opengl_window& win, draw_glcallback cb) {
