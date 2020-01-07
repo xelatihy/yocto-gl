@@ -465,7 +465,7 @@ void draw_glwidgets(const opengl_window& win) {
   }
   if (apps->states.empty()) return;
   draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
-      [&apps](int idx) { return apps->states[idx]->name.c_str(); }, false);
+      [apps](int idx) { return apps->states[idx]->name.c_str(); }, false);
   if (scene_ok && begin_glheader(win, "view")) {
     auto  app    = apps->states[apps->selected];
     auto& params = app->drawgl_prms;

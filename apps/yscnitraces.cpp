@@ -210,10 +210,10 @@ void reset_display(shared_ptr<app_state> app) {
   // start renderer
   app->render_counter = 0;
   app->render_stop    = false;
-  app->render_future  = async(launch::async, [&app]() {
+  app->render_future  = async(launch::async, [app]() {
     for (auto sample = 0; sample < app->params.samples; sample++) {
       if (app->render_stop) return;
-      parallel_for(app->render.size(), [&app](const vec2i& ij) {
+      parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
         app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
