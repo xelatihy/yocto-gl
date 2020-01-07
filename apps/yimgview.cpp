@@ -31,8 +31,8 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
+#include <deque>
 #include <future>
-#include <list>
 using namespace std;
 
 struct image_stats {
@@ -71,24 +71,21 @@ struct app_state {
   string error = "";
 };
 
+// load state
+struct load_state {
+  string                filename = "";
+  shared_ptr<app_state> app      = {};
+  imageio_status        status   = {};
+};
+
+// app states
 struct app_states {
   // data
-  list<app_state>         states   = {};
-  int                          selected = -1;
-  list<app_state>         loading  = {};
-  list<future<bool>> loaders  = {};
+  vector<shared_ptr<app_state>> states   = {};
+  int                           selected = -1;
 
-  // get image
-  app_state& get_selected() {
-    auto it = states.begin();
-    advance(it, selected);
-    return *it;
-  }
-  const app_state& get_selected() const {
-    auto it = states.begin();
-    advance(it, selected);
-    return *it;
-  }
+  // loading
+  deque<future<load_state>> loaders = {};
 
   // default options
   float             exposure = 0;
@@ -100,18 +97,17 @@ struct app_states {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<future<void>>{};
-  auto             nthreads = thread::hardware_concurrency();
+  auto        futures  = vector<future<void>>{};
+  auto        nthreads = thread::hardware_concurrency();
   atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        async(launch::async, [&func, &next_idx, size]() {
-          while (true) {
-            auto j = next_idx.fetch_add(1);
-            if (j >= size.y) break;
-            for (auto i = 0; i < size.x; i++) func({i, j});
-          }
-        }));
+    futures.emplace_back(async(launch::async, [&func, &next_idx, size]() {
+      while (true) {
+        auto j = next_idx.fetch_add(1);
+        if (j >= size.y) break;
+        for (auto i = 0; i < size.x; i++) func({i, j});
+      }
+    }));
   }
   for (auto& f : futures) f.get();
 }
@@ -137,49 +133,49 @@ void compute_stats(
   stats.average /= num_pixels;
 }
 
-void update_display(app_state& app) {
-  if (app.display.size() != app.source.size()) app.display = app.source;
-  parallel_for(app.source.size(), [&app](const vec2i& ij) {
-    if (app.colorgrade) {
-      app.display[ij] = colorgrade(app.source[ij], true, app.params);
+void update_display(shared_ptr<app_state> app) {
+  if (app->display.size() != app->source.size()) app->display = app->source;
+  parallel_for(app->source.size(), [app](const vec2i& ij) {
+    if (app->colorgrade) {
+      app->display[ij] = colorgrade(app->source[ij], true, app->params);
     } else {
-      app.display[ij] = tonemap(app.source[ij], app.exposure, app.filmic);
+      app->display[ij] = tonemap(app->source[ij], app->exposure, app->filmic);
     }
   });
-  compute_stats(app.display_stats, app.display, false);
-  app.glupdated = true;
+  compute_stats(app->display_stats, app->display, false);
+  app->glupdated = true;
 }
 
 // add a new image
-void load_image_async(app_states& apps, const string& filename) {
-  auto& app     = apps.loading.emplace_back();
-  app.filename  = filename;
-  app.outname   = replace_extension(filename, ".display.png");
-  app.name      = get_filename(filename);
-  app.exposure  = apps.exposure;
-  app.filmic    = apps.filmic;
-  app.params    = apps.params;
-  apps.selected = (int)apps.states.size() - 1;
-  apps.loaders.push_back(async(launch::async, [&app]() -> bool {
-    if (!load_image(app.filename, app.source)) {
-      app.error = "cannot load " + app.filename;
-      return false;
+void load_image_async(shared_ptr<app_states> apps, const string& filename) {
+  apps->loaders.push_back(async(launch::async, [apps, filename]() -> load_state {
+    auto app       = make_shared<app_state>();
+    app->filename  = filename;
+    app->outname   = replace_extension(filename, ".display.png");
+    app->name      = get_filename(filename);
+    app->exposure  = apps->exposure;
+    app->filmic    = apps->filmic;
+    app->params    = apps->params;
+    apps->selected = (int)apps->states.size() - 1;
+    if (auto ret = load_image(app->filename, app->source); !ret) {
+      return {filename, nullptr, ret};
     }
-    compute_stats(app.source_stats, app.source, is_hdr_filename(app.filename));
-    if (app.colorgrade) {
-      app.display = colorgrade_image(app.display, true, app.params);
+    compute_stats(
+        app->source_stats, app->source, is_hdr_filename(app->filename));
+    if (app->colorgrade) {
+      app->display = colorgrade_image(app->display, true, app->params);
     } else {
-      app.display = tonemap_image(app.source, app.exposure, app.filmic);
+      app->display = tonemap_image(app->source, app->exposure, app->filmic);
     }
-    compute_stats(app.display_stats, app.display, false);
-    return true;
+    compute_stats(app->display_stats, app->display, false);
+    return {filename, app, {}};
   }));
 }
 
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto&         apps     = *(app_states*)get_gluser_pointer(win);
-  auto          image_ok = !apps.states.empty() && apps.selected >= 0;
+  auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
+  auto image_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yimview")) return;
   draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
@@ -191,49 +187,46 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog_button(win, "save", image_ok, "save image", save_path,
           true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto& app   = apps.get_selected();
-    app.outname = save_path;
+    auto app     = apps->states[apps->selected];
+    app->outname = save_path;
     try {
-      save_image(app.outname, app.display);
+      save_image(app->outname, app->display);
     } catch (exception& e) {
-      push_glmessage("cannot save " + app.outname);
-      log_glinfo(win, "cannot save " + app.outname);
+      push_glmessage("cannot save " + app->outname);
+      log_glinfo(win, "cannot save " + app->outname);
       log_glinfo(win, e.what());
     }
     save_path = "";
   }
   continue_glline(win);
   if (draw_glbutton(win, "close", image_ok)) {
-    auto it = apps.states.begin();
-    advance(it, apps.selected);
-    apps.states.erase(it);
-    apps.selected = apps.states.empty() ? -1 : 0;
+    auto it = apps->states.begin();
+    advance(it, apps->selected);
+    apps->states.erase(it);
+    apps->selected = apps->states.empty() ? -1 : 0;
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  draw_glcombobox(
-      win, "image", apps.selected, (int)apps.states.size(),
-      [&apps](int idx) {
-        auto it = apps.states.begin();
-        advance(it, idx);
-        return it->name.c_str();
+  draw_glcombobox(win, "image", apps->selected, (int)apps->states.size(),
+      [apps](int idx) {
+        return apps->states[apps->selected]->name.c_str();
       },
       false);
   if (image_ok && begin_glheader(win, "tonemap")) {
-    auto& app    = apps.get_selected();
-    auto  edited = 0;
-    edited += draw_glslider(win, "exposure", app.exposure, -5, 5);
-    edited += draw_glcheckbox(win, "filmic", app.filmic);
+    auto app    = apps->states[apps->selected];
+    auto edited = 0;
+    edited += draw_glslider(win, "exposure", app->exposure, -5, 5);
+    edited += draw_glcheckbox(win, "filmic", app->filmic);
     if (edited) update_display(app);
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "colorgrade")) {
-    auto& app    = apps.get_selected();
-    auto& params = app.params;
+    auto  app    = apps->states[apps->selected];
+    auto& params = app->params;
     auto  edited = 0;
-    edited += draw_glcheckbox(win, "apply colorgrade", app.colorgrade);
+    edited += draw_glcheckbox(win, "apply colorgrade", app->colorgrade);
     edited += draw_glslider(win, "exposure", params.exposure, -5, 5);
     edited += draw_glcoloredit(win, "tint", params.tint);
     edited += draw_glslider(win, "lincontrast", params.lincontrast, 0, 1);
@@ -244,7 +237,7 @@ void draw_glwidgets(const opengl_window& win) {
     edited += draw_glcheckbox(win, "srgb", params.srgb);
     continue_glline(win);
     if (draw_glbutton(win, "auto wb")) {
-      auto wb     = 1 / xyz(app.source_stats.average);
+      auto wb     = 1 / xyz(app->source_stats.average);
       params.tint = wb / max(wb);
       edited += 1;
     }
@@ -261,35 +254,35 @@ void draw_glwidgets(const opengl_window& win) {
     end_glheader(win);
   }
   if (image_ok && begin_glheader(win, "inspect")) {
-    auto& app = apps.get_selected();
-    draw_gllabel(win, "image", get_filename(app.filename));
-    draw_gllabel(win, "filename", app.filename);
-    draw_gllabel(win, "outname", app.outname);
+    auto app = apps->states[apps->selected];
+    draw_gllabel(win, "image", get_filename(app->filename));
+    draw_gllabel(win, "filename", app->filename);
+    draw_gllabel(win, "outname", app->outname);
     draw_gllabel(win, "image",
-        to_string(app.source.size().x) + " x " +
-            to_string(app.source.size().y));
-    draw_glslider(win, "zoom", app.glparams.scale, 0.1, 10);
-    draw_glcheckbox(win, "fit", app.glparams.fit);
+        to_string(app->source.size().x) + " x " +
+            to_string(app->source.size().y));
+    draw_glslider(win, "zoom", app->glparams.scale, 0.1, 10);
+    draw_glcheckbox(win, "fit", app->glparams.fit);
     auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(
-        mouse_pos, app.glparams.center, app.glparams.scale, app.source.size());
+    auto ij        = get_image_coords(mouse_pos, app->glparams.center,
+        app->glparams.scale, app->source.size());
     draw_gldragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
-    if (ij.x >= 0 && ij.x < app.source.size().x && ij.y >= 0 &&
-        ij.y < app.source.size().y) {
-      img_pixel     = app.source[{ij.x, ij.y}];
-      display_pixel = app.display[{ij.x, ij.y}];
+    if (ij.x >= 0 && ij.x < app->source.size().x && ij.y >= 0 &&
+        ij.y < app->source.size().y) {
+      img_pixel     = app->source[{ij.x, ij.y}];
+      display_pixel = app->display[{ij.x, ij.y}];
     }
     draw_glcoloredit(win, "image", img_pixel);
     draw_gldragger(win, "display", display_pixel);
-    draw_gldragger(win, "image min", app.source_stats.min);
-    draw_gldragger(win, "image max", app.source_stats.max);
-    draw_gldragger(win, "image avg", app.source_stats.average);
-    draw_glhistogram(win, "image histo", app.source_stats.histogram);
-    draw_gldragger(win, "display min", app.display_stats.min);
-    draw_gldragger(win, "display max", app.display_stats.max);
-    draw_gldragger(win, "display avg", app.display_stats.average);
-    draw_glhistogram(win, "display histo", app.display_stats.histogram);
+    draw_gldragger(win, "image min", app->source_stats.min);
+    draw_gldragger(win, "image max", app->source_stats.max);
+    draw_gldragger(win, "image avg", app->source_stats.average);
+    draw_glhistogram(win, "image histo", app->source_stats.histogram);
+    draw_gldragger(win, "display min", app->display_stats.min);
+    draw_gldragger(win, "display max", app->display_stats.max);
+    draw_gldragger(win, "display avg", app->display_stats.average);
+    draw_glhistogram(win, "display histo", app->display_stats.histogram);
     end_glheader(win);
   }
   if (begin_glheader(win, "log")) {
@@ -299,18 +292,18 @@ void draw_glwidgets(const opengl_window& win) {
 }
 
 void draw(const opengl_window& win) {
-  auto& apps = *(app_states*)get_gluser_pointer(win);
-  if (!apps.states.empty() && apps.selected >= 0) {
-    auto& app                = apps.get_selected();
-    app.glparams.window      = get_glwindow_size(win);
-    app.glparams.framebuffer = get_glframebuffer_viewport(win);
-    if (!app.glimage || app.glupdated) {
-      update_glimage(app.glimage, app.display, false, false);
-      app.glupdated = false;
+  auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
+  if (!apps->states.empty() && apps->selected >= 0) {
+    auto app                  = apps->states[apps->selected];
+    app->glparams.window      = get_glwindow_size(win);
+    app->glparams.framebuffer = get_glframebuffer_viewport(win);
+    if (!app->glimage || app->glupdated) {
+      update_glimage(app->glimage, app->display, false, false);
+      app->glupdated = false;
     }
-    update_imview(app.glparams.center, app.glparams.scale, app.display.size(),
-        app.glparams.window, app.glparams.fit);
-    draw_glimage(app.glimage, app.glparams);
+    update_imview(app->glparams.center, app->glparams.scale,
+        app->display.size(), app->glparams.window, app->glparams.fit);
+    draw_glimage(app->glimage, app->glparams);
   }
   begin_glwidgets(win);
   draw_glwidgets(win);
@@ -318,33 +311,34 @@ void draw(const opengl_window& win) {
   swap_glbuffers(win);
 }
 
-void update(const opengl_window& win, app_states& app) {
-  auto is_ready = [](const future<bool>& result) -> bool {
-    return result.valid() && result.wait_for(chrono::microseconds(0)) ==
-                                 future_status::ready;
+void update(const opengl_window& win, shared_ptr<app_states> apps) {
+  auto is_ready = [](const future<load_state>& result) -> bool {
+    return result.valid() &&
+           result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
 
-  while (!app.loaders.empty() && is_ready(app.loaders.front())) {
-    if (!app.loaders.front().get()) {
-      push_glmessage(win, "cannot load image " + app.loading.front().filename);
-      log_glinfo(win, "cannot load image " + app.loading.front().filename);
-      log_glinfo(win, app.loading.front().error);
-      break;
+  while (!apps->loaders.empty() && is_ready(apps->loaders.front())) {
+    auto [filename, app, status] = apps->loaders.front().get();
+    apps->loaders.pop_front();
+    if (!status) {
+      push_glmessage(win, "cannot load image " + filename);
+      log_glinfo(win, "cannot load image " + filename);
+      log_glinfo(win, status.error);
+    } else {
+      apps->states.push_back(app);
+      update_display(app);
+      if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
     }
-    app.states.splice(app.states.end(), app.loading, app.loading.begin());
-    app.loaders.pop_front();
-    update_display(app.states.back());
-    if (app.selected < 0) app.selected = (int)app.states.size() - 1;
   }
 }
 
-void run_ui(app_states& apps) {
+void run_ui(shared_ptr<app_states> apps) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yimview", &apps, draw);
+  init_glwindow(win, {1280 + 320, 720}, "yimview", apps, draw);
   set_drop_glcallback(
       win, [](const opengl_window& win, const vector<string>& paths) {
-        auto& app = *(app_states*)get_gluser_pointer(win);
+        auto app = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
         for (auto path : paths) load_image_async(app, path);
       });
 
@@ -362,12 +356,12 @@ void run_ui(app_states& apps) {
 
     // handle mouse
     if (mouse_left && !widgets_active) {
-      auto& img = apps.get_selected();
-      img.glparams.center += mouse_pos - last_pos;
+      auto app = apps->states[apps->selected];
+      app->glparams.center += mouse_pos - last_pos;
     }
     if (mouse_right && !widgets_active) {
-      auto& img = apps.get_selected();
-      img.glparams.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+      auto app = apps->states[apps->selected];
+      app->glparams.scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
     }
 
     // update
@@ -386,7 +380,7 @@ void run_ui(app_states& apps) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto apps      = app_states();
+  auto apps      = make_shared<app_states>();
   auto filenames = vector<string>{};
 
   // command line options
