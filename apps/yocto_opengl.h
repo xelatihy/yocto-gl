@@ -406,11 +406,17 @@ namespace yocto {
 
 struct opengl_window;
 using refresh_glcallback = std::function<void(const opengl_window&)>;
+
+// Drop callback that returns that list of dropped strings.
 using drop_glcallback =
     std::function<void(const opengl_window&, const vector<string>&)>;
-using key_glcallback    = std::function<void(const opengl_window&, int, bool)>;
-using click_glcallback  = std::function<void(const opengl_window&, bool, bool)>;
-using scroll_glcallback = std::function<void(const opengl_window&, float)>;
+// Key callback that returns ASCII key, pressed/released flag and modifier keys
+using key_glcallback    = std::function<void(const opengl_window& win, int key, bool pressed)>;
+// Mouse click callback that returns left/right button, pressed/released flag, 
+// modifier keys
+using click_glcallback  = std::function<void(const opengl_window&, bool left, bool pressed)>;
+// Scroll callback that returns scroll amount
+using scroll_glcallback = std::function<void(const opengl_window&, float amount)>;
 
 struct opengl_window {
   GLFWwindow*        win            = nullptr;
@@ -425,17 +431,22 @@ struct opengl_window {
   bool               widgets_left   = true;
 };
 
+// Windows initialization
 void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
     void* user_pointer, refresh_glcallback refresh_cb);
 void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
     shared_ptr<void> user_pointer, refresh_glcallback refresh_cb);
+
+// Window cleanup
 void delete_glwindow(opengl_window& win);
 
+// Set callbacks
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb);
 void set_key_glcallback(opengl_window& win, key_glcallback cb);
 void set_click_glcallback(opengl_window& win, click_glcallback cb);
 void set_scroll_glcallback(opengl_window& win, scroll_glcallback cb);
 
+// Gets user pointer
 void*            get_gluser_pointer(const opengl_window& win);
 shared_ptr<void> get_gluser_typed_pointer(const opengl_window& win);
 
