@@ -404,9 +404,11 @@ void draw_gltriangles(const opengl_elementbuffer& buffer, int num);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Forward declaration of OpenGL window
 struct opengl_window;
-using refresh_glcallback = std::function<void(const opengl_window&)>;
 
+// Draw callback called every frame and when resizing
+using refresh_glcallback = std::function<void(const opengl_window&)>;
 // Drop callback that returns that list of dropped strings.
 using drop_glcallback =
     std::function<void(const opengl_window&, const vector<string>&)>;
