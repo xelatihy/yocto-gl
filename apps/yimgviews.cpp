@@ -55,7 +55,7 @@ struct app_state {
 };
 
 // Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
+// parallel algorithms. `Func` takes the pixel index as a vec2i.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
   auto        futures  = vector<future<void>>{};
