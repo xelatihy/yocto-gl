@@ -88,7 +88,7 @@ struct load_state {
 struct app_states {
   // data
   vector<shared_ptr<app_state>> states   = {};
-  int               selected = -1;
+  int                           selected = -1;
 
   // loading
   deque<future<load_state>> loaders = {};
@@ -120,7 +120,8 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->outname     = replace_extension(filename, ".edited.yaml");
         app->name        = get_filename(app->filename);
         app->drawgl_prms = apps->drawgl_prms;
-        if (auto ret = load_scene(app->filename, app->scene); !ret) return {filename, nullptr, ret};
+        if (auto ret = load_scene(app->filename, app->scene); !ret)
+          return {filename, nullptr, ret};
         app->time_range = compute_animation_range(app->scene);
         app->time       = app->time_range.x;
         return {filename, app, {}};
@@ -275,7 +276,8 @@ void make_glscene(opengl_scene& glscene, const sceneio_model& scene) {
   }
 }
 
-bool draw_glwidgets_camera(const opengl_window& win, shared_ptr<app_state> app, int id) {
+bool draw_glwidgets_camera(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& camera = app->scene.cameras[id];
   auto  edited = 0;
   edited += (int)draw_gltextinput(win, "name", camera.name);
@@ -301,7 +303,8 @@ bool draw_glwidgets_camera(const opengl_window& win, shared_ptr<app_state> app, 
 }
 
 /// Visit struct elements.
-bool draw_glwidgets_texture(const opengl_window& win, shared_ptr<app_state> app, int id) {
+bool draw_glwidgets_texture(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& texture      = app->scene.textures[id];
   auto  old_filename = texture.filename;
   auto  edited       = 0;
@@ -322,7 +325,8 @@ bool draw_glwidgets_texture(const opengl_window& win, shared_ptr<app_state> app,
   return edited;
 }
 
-bool draw_glwidgets_material(const opengl_window& win, shared_ptr<app_state> app, int id) {
+bool draw_glwidgets_material(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& material = app->scene.materials[id];
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
@@ -361,7 +365,8 @@ bool draw_glwidgets_material(const opengl_window& win, shared_ptr<app_state> app
   return edited;
 }
 
-bool draw_glwidgets_shape(const opengl_window& win, shared_ptr<app_state> app, int id) {
+bool draw_glwidgets_shape(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& shape        = app->scene.shapes[id];
   auto  old_filename = shape.filename;
   auto  edited       = 0;
@@ -396,7 +401,8 @@ bool draw_glwidgets_shape(const opengl_window& win, shared_ptr<app_state> app, i
   return edited;
 }
 
-bool draw_glwidgets_instance(const opengl_window& win, shared_ptr<app_state> app, int id) {
+bool draw_glwidgets_instance(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& instance     = app->scene.instances[id];
   auto  old_instance = instance;
   auto  edited       = 0;
@@ -430,8 +436,8 @@ bool draw_glwidgets_environment(
 // draw with shading
 void draw_glwidgets(const opengl_window& win) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
-  auto        apps     = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-  auto        scene_ok = !apps->states.empty() && apps->selected >= 0;
+  auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
+  auto scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yscnview")) return;
   draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -464,7 +470,8 @@ void draw_glwidgets(const opengl_window& win) {
     set_glwindow_close(win, true);
   }
   if (apps->states.empty()) return;
-  draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
+  draw_glcombobox(
+      win, "scene", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[idx]->name.c_str(); }, false);
   if (scene_ok && begin_glheader(win, "view")) {
     auto  app    = apps->states[apps->selected];
@@ -599,11 +606,11 @@ void run_ui(shared_ptr<app_states> apps) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yscnview", apps, draw);
-  set_drop_glcallback(
-      win, [](const opengl_window& win, const vector<string>& paths) {
-        auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-        for (auto& path : paths) load_scene_async(apps, path);
-      });
+  set_drop_glcallback(win, [](const opengl_window&   win,
+                               const vector<string>& paths) {
+    auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
+    for (auto& path : paths) load_scene_async(apps, path);
+  });
 
   // init widget
   init_glwidgets(win);

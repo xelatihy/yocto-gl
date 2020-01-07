@@ -256,7 +256,8 @@ sceneio_status save_shape(const string& filename, const sceneio_shape& shape);
 
 // Load/save a texture in the supported formats. Filename is the scene filename.
 sceneio_status load_texture(const string& filename, sceneio_texture& texture);
-sceneio_status save_texture(const string& filename, const sceneio_texture& texture);
+sceneio_status save_texture(
+    const string& filename, const sceneio_texture& texture);
 
 }  // namespace yocto
 
@@ -274,7 +275,7 @@ vector<string> scene_validation(
 // Return an approximate scene bounding box.
 bbox3f compute_bounds(const sceneio_model& scene);
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES

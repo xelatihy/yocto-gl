@@ -33,8 +33,8 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
-#include <future>
 #include <deque>
+#include <future>
 using namespace std;
 
 namespace yocto {
@@ -72,10 +72,10 @@ struct app_state {
   pair<string, int> selection = {"camera", 0};
 
   // computation
-  int               render_sample  = 0;
+  int          render_sample  = 0;
   atomic<bool> render_stop    = {};
   future<void> render_future  = {};
-  int               render_counter = 0;
+  int          render_counter = 0;
 
   ~app_state() {
     render_stop = true;
@@ -93,8 +93,8 @@ struct load_state {
 // Application state
 struct app_states {
   // data
-  vector<shared_ptr<app_state>>                   states = {};
-  int                                    selected = -1;
+  vector<shared_ptr<app_state>> states   = {};
+  int                           selected = -1;
 
   // loading
   deque<future<load_state>> loaders = {};
@@ -206,29 +206,28 @@ trace_scene make_scene(const sceneio_model& ioscene) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<future<void>>{};
-  auto             nthreads = thread::hardware_concurrency();
+  auto        futures  = vector<future<void>>{};
+  auto        nthreads = thread::hardware_concurrency();
   atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        async(launch::async, [&func, &next_idx, size]() {
-          while (true) {
-            auto j = next_idx.fetch_add(1);
-            if (j >= size.y) break;
-            for (auto i = 0; i < size.x; i++) func({i, j});
-          }
-        }));
+    futures.emplace_back(async(launch::async, [&func, &next_idx, size]() {
+      while (true) {
+        auto j = next_idx.fetch_add(1);
+        if (j >= size.y) break;
+        for (auto i = 0; i < size.x; i++) func({i, j});
+      }
+    }));
   }
   for (auto& f : futures) f.get();
 }
 
-void stop_display(shared_ptr<app_state>  app) {
+void stop_display(shared_ptr<app_state> app) {
   // stop render
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
 }
 
-void reset_display(shared_ptr<app_state>  app) {
+void reset_display(shared_ptr<app_state> app) {
   // stop render
   app->render_stop = true;
   if (app->render_future.valid()) app->render_future.get();
@@ -246,8 +245,8 @@ void reset_display(shared_ptr<app_state>  app) {
   preview              = tonemap_image(preview, app->exposure);
   for (auto j = 0; j < app->display.size().y; j++) {
     for (auto i = 0; i < app->display.size().x; i++) {
-      auto pi             = clamp(i / app->pratio, 0, preview.size().x - 1),
-           pj             = clamp(j / app->pratio, 0, preview.size().y - 1);
+      auto pi              = clamp(i / app->pratio, 0, preview.size().x - 1),
+           pj              = clamp(j / app->pratio, 0, preview.size().y - 1);
       app->display[{i, j}] = preview[{pi, pj}];
     }
   }
@@ -260,7 +259,7 @@ void reset_display(shared_ptr<app_state>  app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij]  = trace_sample(app->state, app->scene, ij, app->params);
+        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -277,7 +276,8 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->name       = get_filename(app->filename);
         app->params     = app->params;
         app->add_skyenv = app->add_skyenv;
-        if (auto ret = load_scene(app->filename, app->ioscene); !ret) return {filename, nullptr, ret};
+        if (auto ret = load_scene(app->filename, app->ioscene); !ret)
+          return {filename, nullptr, ret};
         app->scene = make_scene(app->ioscene);
         init_bvh(app->scene, app->params);
         init_lights(app->scene);
@@ -288,13 +288,14 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->render.resize(app->state.size());
         app->display.resize(app->state.size());
         app->name = get_filename(app->filename) + " [" +
-                   to_string(app->render.size().x) + "x" +
-                   to_string(app->render.size().y) + " @ 0]";
+                    to_string(app->render.size().x) + "x" +
+                    to_string(app->render.size().y) + " @ 0]";
         return {filename, app, {}};
       }));
 }
 
-bool draw_glwidgets_camera(const opengl_window& win, shared_ptr<app_state>  app, int id) {
+bool draw_glwidgets_camera(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& camera = app->ioscene.cameras[id];
   auto  edited = 0;
   edited += (int)draw_gltextinput(win, "name", camera.name);
@@ -319,7 +320,8 @@ bool draw_glwidgets_camera(const opengl_window& win, shared_ptr<app_state>  app,
   return edited;
 }
 
-bool draw_glwidgets_texture(const opengl_window& win, shared_ptr<app_state>  app, int id) {
+bool draw_glwidgets_texture(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& texture      = app->ioscene.textures[id];
   auto  old_filename = texture.filename;
   auto  edited       = 0;
@@ -332,7 +334,7 @@ bool draw_glwidgets_texture(const opengl_window& win, shared_ptr<app_state>  app
       to_string(texture.ldr.size().x) + " x " +
           to_string(texture.ldr.size().y));
   if (edited && old_filename != texture.filename) {
-    if(auto ret = load_texture(app->filename, texture); !ret) {
+    if (auto ret = load_texture(app->filename, texture); !ret) {
       push_glmessage(ret.error);
       log_glinfo(win, ret.error);
     }
@@ -340,7 +342,8 @@ bool draw_glwidgets_texture(const opengl_window& win, shared_ptr<app_state>  app
   return edited;
 }
 
-bool draw_glwidgets_material(const opengl_window& win, shared_ptr<app_state>  app, int id) {
+bool draw_glwidgets_material(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& material = app->ioscene.materials[id];
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
@@ -371,15 +374,16 @@ bool draw_glwidgets_material(const opengl_window& win, shared_ptr<app_state>  ap
       app->ioscene.textures, true);
   edited += draw_glcombobox(win, "subsurface_tex", material.subsurface_tex,
       app->ioscene.textures, true);
-  edited += draw_glcombobox(
-      win, "roughness_tex", material.roughness_tex, app->ioscene.textures, true);
+  edited += draw_glcombobox(win, "roughness_tex", material.roughness_tex,
+      app->ioscene.textures, true);
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, app->ioscene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   return edited;
 }
 
-bool draw_glwidgets_shape(const opengl_window& win, shared_ptr<app_state>  app, int id) {
+bool draw_glwidgets_shape(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& shape        = app->ioscene.shapes[id];
   auto  old_filename = shape.filename;
   auto  edited       = 0;
@@ -399,7 +403,7 @@ bool draw_glwidgets_shape(const opengl_window& win, shared_ptr<app_state>  app, 
   draw_gllabel(win, "radius", to_string(shape.radius.size()));
   draw_gllabel(win, "tangsp", to_string(shape.tangents.size()));
   if (edited && old_filename != shape.filename) {
-    if(auto ret = load_shape(app->filename, shape); !ret) {
+    if (auto ret = load_shape(app->filename, shape); !ret) {
       push_glmessage("cannot load " + shape.filename);
       log_glinfo(win, "cannot load " + shape.filename);
     }
@@ -407,21 +411,24 @@ bool draw_glwidgets_shape(const opengl_window& win, shared_ptr<app_state>  app, 
   return edited;
 }
 
-bool draw_glwidgets_instance(const opengl_window& win, shared_ptr<app_state>  app, int id) {
-  auto& instance     = app->ioscene.instances[id];
-  auto  edited       = 0;
+bool draw_glwidgets_instance(
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
+  auto& instance = app->ioscene.instances[id];
+  auto  edited   = 0;
   edited += draw_gltextinput(win, "name", instance.name);
   edited += draw_glslider(win, "frame.x", instance.frame.x, -1, 1);
   edited += draw_glslider(win, "frame.y", instance.frame.y, -1, 1);
   edited += draw_glslider(win, "frame.z", instance.frame.z, -1, 1);
   edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
-  edited += draw_glcombobox(win, "shape", instance.shape, app->ioscene.shapes, true);
-  edited += draw_glcombobox(win, "material", instance.material, app->ioscene.materials, true);
+  edited += draw_glcombobox(
+      win, "shape", instance.shape, app->ioscene.shapes, true);
+  edited += draw_glcombobox(
+      win, "material", instance.material, app->ioscene.materials, true);
   return edited;
 }
 
 bool draw_glwidgets_environment(
-    const opengl_window& win, shared_ptr<app_state>  app, int id) {
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& environment = app->ioscene.environments[id];
   auto  edited      = 0;
   edited += draw_gltextinput(win, "name", environment.name);
@@ -437,8 +444,8 @@ bool draw_glwidgets_environment(
 
 void draw_glwidgets(const opengl_window& win) {
   static string load_path = "", save_path = "", error_message = "";
-  auto         apps     = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-  auto          scene_ok = !apps->states.empty() && apps->selected >= 0;
+  auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
+  auto scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (!begin_glwidgets_window(win, "yscnitrace")) return;
   draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -450,7 +457,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
-    auto app   = apps->states[apps->selected];
+    auto app     = apps->states[apps->selected];
     app->outname = save_path;
     if (auto ret = save_scene(app->outname, app->ioscene); !ret) {
       push_glmessage("cannot save " + app->outname);
@@ -463,7 +470,7 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glfiledialog_button(win, "save image", scene_ok, "save image",
           save_path, true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto app   = apps->states[apps->selected];
+    auto app     = apps->states[apps->selected];
     app->outname = save_path;
     if (auto ret = save_image(app->imagename, app->display); !ret) {
       push_glmessage("cannot save " + app->outname);
@@ -482,12 +489,13 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
+  draw_glcombobox(
+      win, "scene", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
       false);
   if (scene_ok && begin_glheader(win, "trace")) {
     auto  edited  = 0;
-    auto app     = apps->states[apps->selected];
+    auto  app     = apps->states[apps->selected];
     auto& tparams = app->params;
     edited += draw_glcombobox(
         win, "camera", tparams.camera, app->ioscene.cameras);
@@ -530,8 +538,8 @@ void draw_glwidgets(const opengl_window& win) {
       for (auto stat : scene_stats(app->ioscene)) print_info(stat);
     }
     auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(
-        mouse_pos, app->glparams.center, app->glparams.scale, app->render.size());
+    auto ij        = get_image_coords(mouse_pos, app->glparams.center,
+        app->glparams.scale, app->render.size());
     draw_gldragger(win, "mouse", ij);
     if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
         ij.y < app->render.size().y) {
@@ -551,7 +559,7 @@ void draw_glwidgets(const opengl_window& win) {
     if (app->selection.first == "camera") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->ioscene.cameras);
-      if(draw_glwidgets_camera(win, app, app->selection.second)) {
+      if (draw_glwidgets_camera(win, app, app->selection.second)) {
         stop_display(app);
         update_trace_camera(app->scene.cameras[app->selection.second],
             app->ioscene.cameras[app->selection.second]);
@@ -560,7 +568,7 @@ void draw_glwidgets(const opengl_window& win) {
     } else if (app->selection.first == "texture") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->ioscene.textures);
-      if(draw_glwidgets_texture(win, app, app->selection.second)) {
+      if (draw_glwidgets_texture(win, app, app->selection.second)) {
         stop_display(app);
         update_trace_texture(app->scene.textures[app->selection.second],
             app->ioscene.textures[app->selection.second]);
@@ -570,7 +578,7 @@ void draw_glwidgets(const opengl_window& win) {
     } else if (app->selection.first == "material") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->ioscene.materials);
-      if(draw_glwidgets_material(win, app, app->selection.second)) {
+      if (draw_glwidgets_material(win, app, app->selection.second)) {
         stop_display(app);
         update_trace_material(app->scene.materials[app->selection.second],
             app->ioscene.materials[app->selection.second]);
@@ -580,7 +588,7 @@ void draw_glwidgets(const opengl_window& win) {
     } else if (app->selection.first == "shape") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->ioscene.shapes);
-      if(draw_glwidgets_shape(win, app, app->selection.second)) {
+      if (draw_glwidgets_shape(win, app, app->selection.second)) {
         stop_display(app);
         update_trace_shape(app->scene.shapes[app->selection.second],
             app->ioscene.shapes[app->selection.second], app->ioscene);
@@ -591,7 +599,7 @@ void draw_glwidgets(const opengl_window& win) {
     } else if (app->selection.first == "instance") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->ioscene.instances);
-      if(draw_glwidgets_instance(win, app, app->selection.second)) {
+      if (draw_glwidgets_instance(win, app, app->selection.second)) {
         stop_display(app);
         update_trace_instance(app->scene.instances[app->selection.second],
             app->ioscene.instances[app->selection.second]);
@@ -600,9 +608,9 @@ void draw_glwidgets(const opengl_window& win) {
         reset_display(app);
       }
     } else if (app->selection.first == "environment") {
-      draw_glcombobox(
-          win, "selection##2", app->selection.second, app->ioscene.environments);
-      if(draw_glwidgets_environment(win, app, app->selection.second)) {
+      draw_glcombobox(win, "selection##2", app->selection.second,
+          app->ioscene.environments);
+      if (draw_glwidgets_environment(win, app, app->selection.second)) {
         stop_display(app);
         update_trace_environment(app->scene.environments[app->selection.second],
             app->ioscene.environments[app->selection.second]);
@@ -622,15 +630,15 @@ void draw(const opengl_window& win) {
   auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!apps->states.empty() && apps->selected >= 0) {
-    auto app                = apps->states[apps->selected];
+    auto app                  = apps->states[apps->selected];
     app->glparams.window      = get_glwindow_size(win);
     app->glparams.framebuffer = get_glframebuffer_viewport(win);
     if (!app->glimage || app->glimage.size() != app->display.size() ||
         !app->render_counter) {
       update_glimage(app->glimage, app->display, false, false);
     }
-    update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
-        app->glparams.window, app->glparams.fit);
+    update_imview(app->glparams.center, app->glparams.scale,
+        app->display.size(), app->glparams.window, app->glparams.fit);
     draw_glimage(app->glimage, app->glparams);
     app->render_counter++;
     if (app->render_counter > 10) app->render_counter = 0;
@@ -643,8 +651,8 @@ void draw(const opengl_window& win) {
 
 void update(const opengl_window& win, shared_ptr<app_states> apps) {
   auto is_ready = [](const future<load_state>& result) -> bool {
-    return result.valid() && result.wait_for(chrono::microseconds(0)) ==
-                                 future_status::ready;
+    return result.valid() &&
+           result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
 
   while (!apps->loaders.empty() && is_ready(apps->loaders.front())) {
@@ -667,11 +675,11 @@ void run_ui(shared_ptr<app_states> apps) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yscnitrace", apps, draw);
-  set_drop_glcallback(
-      win, [](const opengl_window& win, const vector<string>& paths) {
-        auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-        for (auto& path : paths) load_scene_async(apps, path);
-      });
+  set_drop_glcallback(win, [](const opengl_window&   win,
+                               const vector<string>& paths) {
+    auto apps = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
+    for (auto& path : paths) load_scene_async(apps, path);
+  });
 
   // init widgets
   init_glwidgets(win);
@@ -691,7 +699,7 @@ void run_ui(shared_ptr<app_states> apps) {
     // handle mouse and keyboard for navigation
     if (scene_ok && (mouse_left || mouse_right) && !alt_down &&
         !widgets_active) {
-      auto app    = apps->states[apps->selected];
+      auto  app    = apps->states[apps->selected];
       auto& camera = app->ioscene.cameras.at(app->params.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
@@ -711,14 +719,14 @@ void run_ui(shared_ptr<app_states> apps) {
     if (scene_ok && (mouse_left || mouse_right) && alt_down &&
         !widgets_active) {
       auto app = apps->states[apps->selected];
-      auto  ij  = get_image_coords(mouse_pos, app->glparams.center,
+      auto ij  = get_image_coords(mouse_pos, app->glparams.center,
           app->glparams.scale, app->render.size());
       if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
           ij.y < app->render.size().y) {
         auto& camera = app->scene.cameras.at(app->params.camera);
         auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
-            vec2f{ij.x + 0.5f, ij.y + 0.5f} /
-                vec2f{(float)app->render.size().x, (float)app->render.size().y});
+            vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
+                                                  (float)app->render.size().y});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
           app->selection = {"instance", isec.instance};
         }
@@ -741,7 +749,7 @@ void run_ui(shared_ptr<app_states> apps) {
 
 int main(int argc, const char* argv[]) {
   // application
-  auto apps = make_shared<app_states>();
+  auto apps      = make_shared<app_states>();
   auto filenames = vector<string>{};
 
   // parse command line
@@ -749,7 +757,8 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--camera", apps->params.camera, "Camera index.");
   add_cli_option(
       cli, "--resolution,-r", apps->params.resolution, "Image resolution.");
-  add_cli_option(cli, "--samples,-s", apps->params.samples, "Number of samples.");
+  add_cli_option(
+      cli, "--samples,-s", apps->params.samples, "Number of samples.");
   add_cli_option(cli, "--tracer,-t", (int&)apps->params.sampler, "Tracer type.",
       trace_sampler_names);
   add_cli_option(cli, "--falsecolor,-F", (int&)apps->params.falsecolor,

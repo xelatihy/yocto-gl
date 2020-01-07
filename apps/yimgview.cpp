@@ -148,28 +148,29 @@ void update_display(shared_ptr<app_state> app) {
 
 // add a new image
 void load_image_async(shared_ptr<app_states> apps, const string& filename) {
-  apps->loaders.push_back(async(launch::async, [apps, filename]() -> load_state {
-    auto app       = make_shared<app_state>();
-    app->filename  = filename;
-    app->outname   = replace_extension(filename, ".display.png");
-    app->name      = get_filename(filename);
-    app->exposure  = apps->exposure;
-    app->filmic    = apps->filmic;
-    app->params    = apps->params;
-    apps->selected = (int)apps->states.size() - 1;
-    if (auto ret = load_image(app->filename, app->source); !ret) {
-      return {filename, nullptr, ret};
-    }
-    compute_stats(
-        app->source_stats, app->source, is_hdr_filename(app->filename));
-    if (app->colorgrade) {
-      app->display = colorgrade_image(app->display, true, app->params);
-    } else {
-      app->display = tonemap_image(app->source, app->exposure, app->filmic);
-    }
-    compute_stats(app->display_stats, app->display, false);
-    return {filename, app, {}};
-  }));
+  apps->loaders.push_back(
+      async(launch::async, [apps, filename]() -> load_state {
+        auto app       = make_shared<app_state>();
+        app->filename  = filename;
+        app->outname   = replace_extension(filename, ".display.png");
+        app->name      = get_filename(filename);
+        app->exposure  = apps->exposure;
+        app->filmic    = apps->filmic;
+        app->params    = apps->params;
+        apps->selected = (int)apps->states.size() - 1;
+        if (auto ret = load_image(app->filename, app->source); !ret) {
+          return {filename, nullptr, ret};
+        }
+        compute_stats(
+            app->source_stats, app->source, is_hdr_filename(app->filename));
+        if (app->colorgrade) {
+          app->display = colorgrade_image(app->display, true, app->params);
+        } else {
+          app->display = tonemap_image(app->source, app->exposure, app->filmic);
+        }
+        compute_stats(app->display_stats, app->display, false);
+        return {filename, app, {}};
+      }));
 }
 
 void draw_glwidgets(const opengl_window& win) {
@@ -209,10 +210,9 @@ void draw_glwidgets(const opengl_window& win) {
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  draw_glcombobox(win, "image", apps->selected, (int)apps->states.size(),
-      [apps](int idx) {
-        return apps->states[apps->selected]->name.c_str();
-      },
+  draw_glcombobox(
+      win, "image", apps->selected, (int)apps->states.size(),
+      [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
       false);
   if (image_ok && begin_glheader(win, "tonemap")) {
     auto app    = apps->states[apps->selected];
@@ -336,11 +336,11 @@ void run_ui(shared_ptr<app_states> apps) {
   // window
   auto win = opengl_window();
   init_glwindow(win, {1280 + 320, 720}, "yimview", apps, draw);
-  set_drop_glcallback(
-      win, [](const opengl_window& win, const vector<string>& paths) {
-        auto app = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
-        for (auto path : paths) load_image_async(app, path);
-      });
+  set_drop_glcallback(win, [](const opengl_window&   win,
+                               const vector<string>& paths) {
+    auto app = static_pointer_cast<app_states>(get_gluser_typed_pointer(win));
+    for (auto path : paths) load_image_async(app, path);
+  });
 
   // init widgets
   init_glwidgets(win);

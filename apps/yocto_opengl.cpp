@@ -1325,8 +1325,8 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
   // set user data
   glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback);
   glfwSetWindowUserPointer(win.win, &win);
-  win.user_typed_ptr   = user_pointer;
-  win.refresh_cb = refresh_cb;
+  win.user_typed_ptr = user_pointer;
+  win.refresh_cb     = refresh_cb;
 
   // init gl extensions
   if (!gladLoadGL())
@@ -1342,7 +1342,9 @@ void delete_glwindow(opengl_window& win) {
 }
 
 void* get_gluser_pointer(const opengl_window& win) { return win.user_ptr; }
-shared_ptr<void> get_gluser_typed_pointer(const opengl_window& win) { return win.user_typed_ptr; }
+shared_ptr<void> get_gluser_typed_pointer(const opengl_window& win) {
+  return win.user_typed_ptr;
+}
 
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb) {
   win.drop_cb = drop_cb;

@@ -72,9 +72,12 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "--rotatey,-ry", rotate.y, "Rotate around y axis");
   add_cli_option(cli, "--rotatex,-rx", rotate.x, "Rotate around x axis");
   add_cli_option(cli, "--rotatez,-rz", rotate.z, "Rotate around z axis");
-  add_cli_option(cli, "--translatey,-ty", translate.y, "Translate along y axis");
-  add_cli_option(cli, "--translatex,-tx", translate.x, "Translate along x axis");
-  add_cli_option(cli, "--translatez,-tz", translate.z, "Translate along z axis");
+  add_cli_option(
+      cli, "--translatey,-ty", translate.y, "Translate along y axis");
+  add_cli_option(
+      cli, "--translatex,-tx", translate.x, "Translate along x axis");
+  add_cli_option(
+      cli, "--translatez,-tz", translate.z, "Translate along z axis");
   add_cli_option(cli, "--scale,-s", uscale, "Scale along xyz axes");
   add_cli_option(cli, "--scaley,-sy", scale.y, "Scale along y axis");
   add_cli_option(cli, "--scalex,-sx", scale.x, "Scale along x axis");

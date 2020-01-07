@@ -58,18 +58,17 @@ struct app_state {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<future<void>>{};
-  auto             nthreads = thread::hardware_concurrency();
+  auto        futures  = vector<future<void>>{};
+  auto        nthreads = thread::hardware_concurrency();
   atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        async(launch::async, [&func, &next_idx, size]() {
-          while (true) {
-            auto j = next_idx.fetch_add(1);
-            if (j >= size.y) break;
-            for (auto i = 0; i < size.x; i++) func({i, j});
-          }
-        }));
+    futures.emplace_back(async(launch::async, [&func, &next_idx, size]() {
+      while (true) {
+        auto j = next_idx.fetch_add(1);
+        if (j >= size.y) break;
+        for (auto i = 0; i < size.x; i++) func({i, j});
+      }
+    }));
   }
   for (auto& f : futures) f.get();
 }

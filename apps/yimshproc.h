@@ -384,8 +384,7 @@ void run_app(app_state& app) {
   delete_glwindow(win);
 }
 
-void yimshproc(const string&                                  input_filename,
-    function<void(app_state&)>                           init,
+void yimshproc(const string& input_filename, function<void(app_state&)> init,
     function<void(app_state&, int, bool)>                key_callback,
     function<void(app_state&, int, vec2f, int, float)>   click_callback,
     function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
