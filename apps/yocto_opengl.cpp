@@ -1245,6 +1245,14 @@ void _glfw_refresh_callback(GLFWwindow* glfw) {
   if (win.refresh_cb) win.refresh_cb(win);
 }
 
+void _glfw_refresh_callback_new(GLFWwindow* glfw) {
+  auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
+  clear_glframebuffer(win.background);
+  if (win.draw_cb)
+    win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
+  swap_glbuffers(win);
+}
+
 void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
   auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
   if (win.drop_cb) {
@@ -1335,6 +1343,38 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
   glPointSize(10);
 }
 
+void init_glwindow(opengl_window& win, const vec2i& size, const string& title) {
+  // init glfw
+  if (!glfwInit())
+    throw std::runtime_error("cannot initialize windowing system");
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#if __APPLE__
+  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+  // create window
+  win     = opengl_window();
+  win.win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
+  if (!win.win) throw std::runtime_error("cannot initialize windowing system");
+  glfwMakeContextCurrent(win.win);
+  glfwSwapInterval(1);  // Enable vsync
+
+  // set user data
+  glfwSetWindowUserPointer(win.win, &win);
+
+  // set callbacks
+  glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback_new);
+
+  // init gl extensions
+  if (!gladLoadGL())
+    throw std::runtime_error("cannot initialize OpenGL extensions");
+
+  // TODO: check what this is, probably something for mesh processing
+  glPointSize(10);
+}
+
 void delete_glwindow(opengl_window& win) {
   glfwDestroyWindow(win.win);
   glfwTerminate();
@@ -1363,7 +1403,10 @@ void run_ui(opengl_window& win) {
     if (win.update_cb) win.update_cb(win);
 
     // draw
-    if (win.draw_cb) win.draw_cb(win);
+    clear_glframebuffer(win.background);
+    if (win.draw_cb)
+      win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
+    swap_glbuffers(win);
 
     // event hadling
     process_glevents(win);
@@ -1377,11 +1420,6 @@ shared_ptr<void> get_gluser_typed_pointer(const opengl_window& win) {
 
 void set_draw_glcallback(opengl_window& win, draw_glcallback cb) {
   win.draw_cb = cb;
-}
-
-void set_refresh_glcallback(opengl_window& win, refresh_glcallback cb) {
-  win.refresh_cb = cb;
-  glfwSetWindowRefreshCallback(win.win, _glfw_refresh_callback);
 }
 
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb) {
@@ -1772,8 +1810,7 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
       state.set_dirname(dir_buffer);
     }
     auto current_item = -1;
-    if (ImGui::ListBox(
-            "entries", &current_item,
+    if (ImGui::ListBox("entries", &current_item,
             [](void* data, int idx, const char** out_text) -> bool {
               auto& state = *(filedialog_state*)data;
               *out_text   = state.entries[idx].first.c_str();
