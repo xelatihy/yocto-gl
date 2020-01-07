@@ -36,8 +36,7 @@
 
 #include <functional>
 #include <memory>
-using std::make_unique;
-using std::unique_ptr;
+using std::shared_ptr;
 
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"

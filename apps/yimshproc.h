@@ -11,10 +11,10 @@ using namespace std;
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
-  function<void(app_state*)>                         init;
-  function<void(app_state*, int, bool)>              key_callback;
-  function<void(app_state*, int, vec2f, int, float)> click_callback;
-  function<void(app_state*, const opengl_window&)>   draw_glwidgets;
+  function<void(shared_ptr<app_state>)>                         init;
+  function<void(shared_ptr<app_state>, int, bool)>              key_callback;
+  function<void(shared_ptr<app_state>, int, vec2f, int, float)> click_callback;
+  function<void(shared_ptr<app_state>, const opengl_window&)>   draw_glwidgets;
 
   // Geometry data
   sceneio_shape shape;
@@ -53,7 +53,7 @@ void delete_glshape(opengl_shape& glshape) {
   delete_glelementbuffer(glshape.edges);
 }
 
-void update_glshape(app_state* app) {
+void update_glshape(shared_ptr<app_state> app) {
   // @Issue: This app is specialized for a model that is a triangle mesh.
   //    Loading a generic shape is unsafe, maybe we should load only
   //    triangle meshes here...
@@ -98,7 +98,8 @@ void update_glshape(app_state* app) {
   }
 }
 
-void update_glpolyline(app_state* app, const vector<vec3f>& vertices) {
+void update_glpolyline(
+    shared_ptr<app_state> app, const vector<vec3f>& vertices) {
   auto& glshape = app->glpolyline();
   delete_glshape(glshape);
   if (vertices.size()) {
@@ -109,7 +110,7 @@ void update_glpolyline(app_state* app, const vector<vec3f>& vertices) {
   }
 }
 
-void update_glpoints(app_state* app, const vector<vec3f>& points) {
+void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
   auto& glshape = app->glpoints();
   delete_glshape(glshape);
   if (points.size()) {
@@ -122,8 +123,8 @@ void update_glpoints(app_state* app, const vector<vec3f>& points) {
   }
 }
 
-void update_glvector_field(
-    app_state* app, const vector<vec3f>& vector_field, float scale = 0.01) {
+void update_glvector_field(shared_ptr<app_state> app,
+    const vector<vec3f>& vector_field, float scale = 0.01) {
   auto perface   = vector_field.size() == app->shape.triangles.size();
   auto pervertex = vector_field.size() == app->shape.positions.size();
 
@@ -168,7 +169,7 @@ void update_glvector_field(
   init_glelementbuffer(glshape.lines, elements, false);
 }
 
-void update_gledges(app_state* app) {
+void update_gledges(shared_ptr<app_state> app) {
   auto& glshape = app->gledges();
   delete_glshape(glshape);
   auto positions = app->shape.positions;
@@ -199,8 +200,8 @@ void update_glcamera(opengl_camera& glcamera, const sceneio_camera& camera) {
   glcamera.far    = 10000;
 }
 
-void init_camera(app_state* app, const vec3f& from = vec3f{0, 0.5, 1.5},
-    const vec3f& to = {0, 0, 0}) {
+void init_camera(shared_ptr<app_state> app,
+    const vec3f& from = vec3f{0, 0.5, 1.5}, const vec3f& to = {0, 0, 0}) {
   app->camera              = sceneio_camera{};
   auto up                  = vec3f{0, 1, 0};
   app->camera.lens         = 0.02f;
@@ -213,21 +214,21 @@ void init_camera(app_state* app, const vec3f& from = vec3f{0, 0.5, 1.5},
   app->camera_focus        = app->camera.focus;
 }
 
-void init_bvh(app_state* app) {
+void init_bvh(shared_ptr<app_state> app) {
   make_triangles_bvh(
       app->bvh, app->shape.triangles, app->shape.positions, app->shape.radius);
 }
 
-void hide_edges(app_state* app) {
+void hide_edges(shared_ptr<app_state> app) {
   app->show_edges                             = false;
   app->scene.instances[app->gledges_id].shape = -1;
 }
-void show_edges(app_state* app) {
+void show_edges(shared_ptr<app_state> app) {
   app->show_edges                             = true;
   app->scene.instances[app->gledges_id].shape = app->gledges_id;
 }
 
-void init_opengl_scene(app_state* app) {
+void init_opengl_scene(shared_ptr<app_state> app) {
   make_glscene(app->scene);
   update_glcamera(app->scene.cameras.emplace_back(), app->camera);
 
@@ -280,7 +281,7 @@ void init_opengl_scene(app_state* app) {
   app->scene.lights.push_back({{0, 5, -5}, {30, 30, 30}, 0});
 }
 
-void clear(app_state* app) {
+void clear(shared_ptr<app_state> app) {
   for (int i = 0; i < app->scene.shapes.size(); i++) {
     if (i == app->glshape_id) continue;
     if (i == app->gledges_id) continue;
@@ -291,12 +292,14 @@ void clear(app_state* app) {
       vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
 }
 
-void yimshproc(const string& input_filename, function<void(app_state*)> init,
-    function<void(app_state*, int, bool)>                key_callback,
-    function<void(app_state*, int, vec2f, int, float)>   click_callback,
-    function<void(app_state*, const opengl_window& win)> draw_glwidgets) {
-  auto app_ = make_unique<app_state>();
-  auto app  = app_.get();
+void yimshproc(const string&                         input_filename,
+    function<void(shared_ptr<app_state>)>            init,
+    function<void(shared_ptr<app_state>, int, bool)> key_callback,
+    function<void(shared_ptr<app_state>, int, vec2f, int, float)>
+        click_callback,
+    function<void(shared_ptr<app_state>, const opengl_window& win)>
+        draw_glwidgets) {
+  auto app = make_shared<app_state>();
 
   // init shape
   load_shape(input_filename, app->shape.points, app->shape.lines,
