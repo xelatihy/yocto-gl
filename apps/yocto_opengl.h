@@ -423,6 +423,8 @@ struct opengl_input {
 
 // Draw callback called every frame and when resizing
 using draw_glcallback = std::function<void(const opengl_window&, vec2i window, vec4i viewport)>;
+// Draw callback for drawing widgets
+using widgets_glcallback = std::function<void(const opengl_window&)>;
 // Draw callback called every frame and when resizing
 using refresh_glcallback = std::function<void(const opengl_window&)>;
 // Drop callback that returns that list of dropped strings.
@@ -450,6 +452,7 @@ struct opengl_window {
   void*               user_ptr       = nullptr;
   shared_ptr<void>    user_typed_ptr = nullptr;
   draw_glcallback     draw_cb        = {};
+  widgets_glcallback  widgets_cb = {};
   refresh_glcallback  refresh_cb     = {};
   drop_glcallback     drop_cb        = {};
   key_glcallback      key_cb         = {};
@@ -475,6 +478,7 @@ void delete_glwindow(opengl_window& win);
 
 // Set callbacks
 void set_draw_glcallback(opengl_window& win, draw_glcallback draw_cb);
+void set_widgets_glcallback(opengl_window& win, widgets_glcallback widgets_cb);
 void set_refresh_glcallback(opengl_window& win, refresh_glcallback refresh_cb);
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb);
 void set_key_glcallback(opengl_window& win, key_glcallback cb);

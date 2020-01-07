@@ -1250,6 +1250,11 @@ void _glfw_refresh_callback_new(GLFWwindow* glfw) {
   clear_glframebuffer(win.background);
   if (win.draw_cb)
     win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
+  if (win.widgets_cb) {
+    begin_glwidgets(win);
+    win.widgets_cb(win);
+    end_glwidgets(win);
+  }
   swap_glbuffers(win);
 }
 
@@ -1404,6 +1409,11 @@ void run_ui(opengl_window& win) {
     clear_glframebuffer(win.background);
     if (win.draw_cb)
       win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
+    if (win.widgets_cb) {
+      begin_glwidgets(win);
+      win.widgets_cb(win);
+      end_glwidgets(win);
+    }
     swap_glbuffers(win);
 
     // event hadling
@@ -1418,6 +1428,10 @@ shared_ptr<void> get_gluser_typed_pointer(const opengl_window& win) {
 
 void set_draw_glcallback(opengl_window& win, draw_glcallback cb) {
   win.draw_cb = cb;
+}
+
+void set_widgets_glcallback(opengl_window& win, widgets_glcallback cb) {
+  win.widgets_cb = cb;
 }
 
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb) {
