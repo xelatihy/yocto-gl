@@ -1399,6 +1399,12 @@ void run_ui(opengl_window& win) {
     win.input.modifier_ctrl  = get_glctrl_key(win);
     if (win.widgets_width) win.input.widgets_active = get_glwidgets_active(win);
 
+    // time
+    win.input.clock_last = win.input.clock_now;
+    win.input.clock_now = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    win.input.time_now = (double)win.input.clock_now / 1000000000.0;
+    win.input.time_delta = (double)(win.input.clock_now - win.input.clock_last) / 1000000000.0;
+
     // update ui
     if (win.uiupdate_cb) win.uiupdate_cb(win, win.input);
 
