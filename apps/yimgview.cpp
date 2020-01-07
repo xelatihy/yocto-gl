@@ -33,6 +33,7 @@ using namespace yocto;
 
 #include <future>
 #include <list>
+using namespace std;
 
 struct image_stats {
   vec4f         min       = zero4f;
@@ -72,20 +73,20 @@ struct app_state {
 
 struct app_states {
   // data
-  std::list<app_state>         states   = {};
+  list<app_state>         states   = {};
   int                          selected = -1;
-  std::list<app_state>         loading  = {};
-  std::list<std::future<bool>> loaders  = {};
+  list<app_state>         loading  = {};
+  list<future<bool>> loaders  = {};
 
   // get image
   app_state& get_selected() {
     auto it = states.begin();
-    std::advance(it, selected);
+    advance(it, selected);
     return *it;
   }
   const app_state& get_selected() const {
     auto it = states.begin();
-    std::advance(it, selected);
+    advance(it, selected);
     return *it;
   }
 
@@ -99,12 +100,12 @@ struct app_states {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(0);
+  auto             futures  = vector<future<void>>{};
+  auto             nthreads = thread::hardware_concurrency();
+  atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, size]() {
+        async(launch::async, [&func, &next_idx, size]() {
           while (true) {
             auto j = next_idx.fetch_add(1);
             if (j >= size.y) break;
@@ -159,7 +160,7 @@ void load_image_async(app_states& apps, const string& filename) {
   app.filmic    = apps.filmic;
   app.params    = apps.params;
   apps.selected = (int)apps.states.size() - 1;
-  apps.loaders.push_back(std::async(std::launch::async, [&app]() -> bool {
+  apps.loaders.push_back(async(launch::async, [&app]() -> bool {
     if (!load_image(app.filename, app.source)) {
       app.error = "cannot load " + app.filename;
       return false;
@@ -194,7 +195,7 @@ void draw_glwidgets(const opengl_window& win) {
     app.outname = save_path;
     try {
       save_image(app.outname, app.display);
-    } catch (std::exception& e) {
+    } catch (exception& e) {
       push_glmessage("cannot save " + app.outname);
       log_glinfo(win, "cannot save " + app.outname);
       log_glinfo(win, e.what());
@@ -204,7 +205,7 @@ void draw_glwidgets(const opengl_window& win) {
   continue_glline(win);
   if (draw_glbutton(win, "close", image_ok)) {
     auto it = apps.states.begin();
-    std::advance(it, apps.selected);
+    advance(it, apps.selected);
     apps.states.erase(it);
     apps.selected = apps.states.empty() ? -1 : 0;
   }
@@ -216,7 +217,7 @@ void draw_glwidgets(const opengl_window& win) {
       win, "image", apps.selected, (int)apps.states.size(),
       [&apps](int idx) {
         auto it = apps.states.begin();
-        std::advance(it, idx);
+        advance(it, idx);
         return it->name.c_str();
       },
       false);
@@ -265,8 +266,8 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "filename", app.filename);
     draw_gllabel(win, "outname", app.outname);
     draw_gllabel(win, "image",
-        std::to_string(app.source.size().x) + " x " +
-            std::to_string(app.source.size().y));
+        to_string(app.source.size().x) + " x " +
+            to_string(app.source.size().y));
     draw_glslider(win, "zoom", app.glparams.scale, 0.1, 10);
     draw_glcheckbox(win, "fit", app.glparams.fit);
     auto mouse_pos = get_glmouse_pos(win);
@@ -318,9 +319,9 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_states& app) {
-  auto is_ready = [](const std::future<bool>& result) -> bool {
-    return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
-                                 std::future_status::ready;
+  auto is_ready = [](const future<bool>& result) -> bool {
+    return result.valid() && result.wait_for(chrono::microseconds(0)) ==
+                                 future_status::ready;
   };
 
   while (!app.loaders.empty() && is_ready(app.loaders.front())) {

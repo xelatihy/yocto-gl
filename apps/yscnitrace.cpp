@@ -35,6 +35,7 @@ using namespace yocto;
 
 #include <future>
 #include <list>
+using namespace std;
 
 namespace yocto {
 void print_obj_camera(const sceneio_camera& camera);
@@ -72,8 +73,8 @@ struct app_state {
 
   // computation
   int               render_sample  = 0;
-  std::atomic<bool> render_stop    = {};
-  std::future<void> render_future  = {};
+  atomic<bool> render_stop    = {};
+  future<void> render_future  = {};
   int               render_counter = 0;
 
   ~app_state() {
@@ -85,20 +86,20 @@ struct app_state {
 // Application state
 struct app_states {
   // data
-  std::list<app_state>                   states;
+  list<app_state>                   states;
   int                                    selected = -1;
-  std::list<app_state>                   loading;
-  std::list<std::future<sceneio_status>> loaders;
+  list<app_state>                   loading;
+  list<future<sceneio_status>> loaders;
 
   // get image
   app_state& get_selected() {
     auto it = states.begin();
-    std::advance(it, selected);
+    advance(it, selected);
     return *it;
   }
   const app_state& get_selected() const {
     auto it = states.begin();
-    std::advance(it, selected);
+    advance(it, selected);
     return *it;
   }
 
@@ -209,12 +210,12 @@ trace_scene make_scene(const sceneio_model& ioscene) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(0);
+  auto             futures  = vector<future<void>>{};
+  auto             nthreads = thread::hardware_concurrency();
+  atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, size]() {
+        async(launch::async, [&func, &next_idx, size]() {
           while (true) {
             auto j = next_idx.fetch_add(1);
             if (j >= size.y) break;
@@ -258,7 +259,7 @@ void reset_display(app_state& app) {
   // start renderer
   app.render_counter = 0;
   app.render_stop    = false;
-  app.render_future  = std::async(std::launch::async, [&app]() {
+  app.render_future  = async(launch::async, [&app]() {
     for (auto sample = 0; sample < app.params.samples; sample++) {
       if (app.render_stop) return;
       parallel_for(app.render.size(), [&app](const vec2i& ij) {
@@ -279,7 +280,7 @@ void load_scene_async(app_states& apps, const string& filename) {
   app.params     = app.params;
   app.add_skyenv = app.add_skyenv;
   apps.loaders.push_back(
-      std::async(std::launch::async, [&app]() -> sceneio_status {
+      async(launch::async, [&app]() -> sceneio_status {
         if (auto ret = load_scene(app.filename, app.ioscene); !ret) return ret;
         app.scene = make_scene(app.ioscene);
         init_bvh(app.scene, app.params);
@@ -291,8 +292,8 @@ void load_scene_async(app_states& apps, const string& filename) {
         app.render.resize(app.state.size());
         app.display.resize(app.state.size());
         app.name = get_filename(app.filename) + " [" +
-                   std::to_string(app.render.size().x) + "x" +
-                   std::to_string(app.render.size().y) + " @ 0]";
+                   to_string(app.render.size().x) + "x" +
+                   to_string(app.render.size().y) + " @ 0]";
         return {};
       }));
 }
@@ -329,11 +330,11 @@ bool draw_glwidgets_texture(const opengl_window& win, app_state& app, int id) {
   edited += draw_gltextinput(win, "name", texture.name);
   edited += draw_gltextinput(win, "filename", texture.filename);
   draw_gllabel(win, "hdr",
-      std::to_string(texture.hdr.size().x) + " x " +
-          std::to_string(texture.hdr.size().y));
+      to_string(texture.hdr.size().x) + " x " +
+          to_string(texture.hdr.size().y));
   draw_gllabel(win, "ldr",
-      std::to_string(texture.ldr.size().x) + " x " +
-          std::to_string(texture.ldr.size().y));
+      to_string(texture.ldr.size().x) + " x " +
+          to_string(texture.ldr.size().y));
   if (edited && old_filename != texture.filename) {
     if(auto ret = load_texture(app.filename, texture); !ret) {
       push_glmessage(ret.error);
@@ -388,19 +389,19 @@ bool draw_glwidgets_shape(const opengl_window& win, app_state& app, int id) {
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", shape.name);
   edited += draw_gltextinput(win, "filename", shape.filename);
-  draw_gllabel(win, "points", std::to_string(shape.points.size()));
-  draw_gllabel(win, "lines", std::to_string(shape.lines.size()));
-  draw_gllabel(win, "triangles", std::to_string(shape.triangles.size()));
-  draw_gllabel(win, "quads", std::to_string(shape.quads.size()));
-  draw_gllabel(win, "quads pos", std::to_string(shape.quadspos.size()));
-  draw_gllabel(win, "quads norm", std::to_string(shape.quadsnorm.size()));
-  draw_gllabel(win, "quads texcoord", std::to_string(shape.quadstexcoord.size()));
-  draw_gllabel(win, "pos", std::to_string(shape.positions.size()));
-  draw_gllabel(win, "norm", std::to_string(shape.normals.size()));
-  draw_gllabel(win, "texcoord", std::to_string(shape.texcoords.size()));
-  draw_gllabel(win, "color", std::to_string(shape.colors.size()));
-  draw_gllabel(win, "radius", std::to_string(shape.radius.size()));
-  draw_gllabel(win, "tangsp", std::to_string(shape.tangents.size()));
+  draw_gllabel(win, "points", to_string(shape.points.size()));
+  draw_gllabel(win, "lines", to_string(shape.lines.size()));
+  draw_gllabel(win, "triangles", to_string(shape.triangles.size()));
+  draw_gllabel(win, "quads", to_string(shape.quads.size()));
+  draw_gllabel(win, "quads pos", to_string(shape.quadspos.size()));
+  draw_gllabel(win, "quads norm", to_string(shape.quadsnorm.size()));
+  draw_gllabel(win, "quads texcoord", to_string(shape.quadstexcoord.size()));
+  draw_gllabel(win, "pos", to_string(shape.positions.size()));
+  draw_gllabel(win, "norm", to_string(shape.normals.size()));
+  draw_gllabel(win, "texcoord", to_string(shape.texcoords.size()));
+  draw_gllabel(win, "color", to_string(shape.colors.size()));
+  draw_gllabel(win, "radius", to_string(shape.radius.size()));
+  draw_gllabel(win, "tangsp", to_string(shape.tangents.size()));
   if (edited && old_filename != shape.filename) {
     if(auto ret = load_shape(app.filename, shape); !ret) {
       push_glmessage("cannot load " + shape.filename);
@@ -477,7 +478,7 @@ void draw_glwidgets(const opengl_window& win) {
   continue_glline(win);
   if (draw_glbutton(win, "close", scene_ok)) {
     auto it = apps.states.begin();
-    std::advance(it, apps.selected);
+    advance(it, apps.selected);
     apps.states.erase(it);
     apps.selected = apps.states.empty() ? -1 : 0;
   }
@@ -488,7 +489,7 @@ void draw_glwidgets(const opengl_window& win) {
   draw_glcombobox(win, "scene", apps.selected, (int)apps.states.size(),
       [&apps](int idx) {
         auto it = apps.states.begin();
-        std::advance(it, idx);
+        advance(it, idx);
         return it->name.c_str();
       },
       false);
@@ -521,9 +522,9 @@ void draw_glwidgets(const opengl_window& win) {
     draw_gllabel(win, "outname", app.outname);
     draw_gllabel(win, "imagename", app.imagename);
     draw_gllabel(win, "image",
-        std::to_string(app.render.size().x) + " x " +
-            std::to_string(app.render.size().y) + " @ " +
-            std::to_string(app.render_sample));
+        to_string(app.render.size().x) + " x " +
+            to_string(app.render.size().y) + " @ " +
+            to_string(app.render_sample));
     draw_glslider(win, "zoom", app.glparams.scale, 0.1, 10);
     draw_glcheckbox(win, "zoom to fit", app.glparams.fit);
     continue_glline(win);
@@ -649,9 +650,9 @@ void draw(const opengl_window& win) {
 }
 
 void update(const opengl_window& win, app_states& app) {
-  auto is_ready = [](const std::future<sceneio_status>& result) -> bool {
-    return result.valid() && result.wait_for(std::chrono::microseconds(0)) ==
-                                 std::future_status::ready;
+  auto is_ready = [](const future<sceneio_status>& result) -> bool {
+    return result.valid() && result.wait_for(chrono::microseconds(0)) ==
+                                 future_status::ready;
   };
 
   while (!app.loaders.empty() && is_ready(app.loaders.front())) {
@@ -747,8 +748,8 @@ void run_ui(app_states& apps) {
 
 int main(int argc, const char* argv[]) {
   // application
-  app_states app{};
-  auto       filenames = vector<string>{};
+  auto app = app_states{};
+  auto filenames = vector<string>{};
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");

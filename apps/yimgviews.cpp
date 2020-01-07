@@ -32,6 +32,7 @@
 using namespace yocto;
 
 #include <future>
+using namespace std;
 
 struct app_state {
   // original data
@@ -57,12 +58,12 @@ struct app_state {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(0);
+  auto             futures  = vector<future<void>>{};
+  auto             nthreads = thread::hardware_concurrency();
+  atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, size]() {
+        async(launch::async, [&func, &next_idx, size]() {
           while (true) {
             auto j = next_idx.fetch_add(1);
             if (j >= size.y) break;

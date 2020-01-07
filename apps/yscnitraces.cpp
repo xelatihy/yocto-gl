@@ -34,6 +34,7 @@
 using namespace yocto;
 
 #include <future>
+using namespace std;
 
 // Application state
 struct app_state {
@@ -65,8 +66,8 @@ struct app_state {
 
   // computation
   int               render_sample  = 0;
-  std::atomic<bool> render_stop    = {};
-  std::future<void> render_future  = {};
+  atomic<bool> render_stop    = {};
+  future<void> render_future  = {};
   int               render_counter = 0;
 
   ~app_state() {
@@ -166,12 +167,12 @@ trace_scene make_scene(sceneio_model& ioscene) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(0);
+  auto             futures  = vector<future<void>>{};
+  auto             nthreads = thread::hardware_concurrency();
+  atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
     futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, size]() {
+        async(launch::async, [&func, &next_idx, size]() {
           while (true) {
             auto j = next_idx.fetch_add(1);
             if (j >= size.y) break;
@@ -209,7 +210,7 @@ void reset_display(app_state& app) {
   // start renderer
   app.render_counter = 0;
   app.render_stop    = false;
-  app.render_future  = std::async(std::launch::async, [&app]() {
+  app.render_future  = async(launch::async, [&app]() {
     for (auto sample = 0; sample < app.params.samples; sample++) {
       if (app.render_stop) return;
       parallel_for(app.render.size(), [&app](const vec2i& ij) {
@@ -282,7 +283,7 @@ void run_ui(app_state& app) {
 
 int main(int argc, const char* argv[]) {
   // application
-  app_state app{};
+  auto app = app_state{};
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");
