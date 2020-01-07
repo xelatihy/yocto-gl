@@ -223,7 +223,7 @@ void reset_display(shared_ptr<app_state> app) {
 }
 
 void draw(const opengl_window& win) {
-  auto app = (app_state*)get_gluser_pointer(win);
+  auto app = static_pointer_cast<app_state>(get_gluser_typed_pointer(win));
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
   if (!app->glimage || app->glimage.size() != app->display.size() ||
       !app->render_counter) {
@@ -243,7 +243,7 @@ void draw(const opengl_window& win) {
 void run_ui(shared_ptr<app_state> app) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", app.get(), draw);
+  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", app, draw);
 
   // loop
   auto mouse_pos = zero2f, last_pos = zero2f;
