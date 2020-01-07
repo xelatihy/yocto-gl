@@ -1,7 +1,7 @@
 {
   "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
+  "cmake.buildDirectory": "${workspaceFolder}/build/vscode/${variant:buildType}",
   "cmake.parallelJobs": 8,
-  "cmake.buildDirectory": "${workspaceFolder}/build/vscode/${buildType}",
   "files.associations": {
     "iosfwd": "cpp",
     "__functional_03": "cpp",

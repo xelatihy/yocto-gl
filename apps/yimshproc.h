@@ -5,13 +5,14 @@
 #include "../yocto/yocto_trace.h"
 #include "yocto_opengl.h"
 using namespace yocto;
+using namespace std;
 
 struct app_state {
   // Callbacks available for user to build its own behaviors
-  std::function<void(app_state&)>                         init;
-  std::function<void(app_state&, int, bool)>              key_callback;
-  std::function<void(app_state&, int, vec2f, int, float)> click_callback;
-  std::function<void(app_state&, const opengl_window&)>   draw_glwidgets;
+  function<void(app_state&)>                         init;
+  function<void(app_state&, int, bool)>              key_callback;
+  function<void(app_state&, int, vec2f, int, float)> click_callback;
+  function<void(app_state&, const opengl_window&)>   draw_glwidgets;
 
   // Geometry data
   sceneio_shape shape;
@@ -125,7 +126,7 @@ void update_glvector_field(
   auto pervertex = vector_field.size() == app.shape.positions.size();
 
   if (!perface && !pervertex) {
-    throw std::runtime_error("input vector field has wrong size\n");
+    throw runtime_error("input vector field has wrong size\n");
   }
 
   auto& glshape = app.glvector_field();
@@ -383,11 +384,10 @@ void run_app(app_state& app) {
   delete_glwindow(win);
 }
 
-void yimshproc(const string&                                  input_filename,
-    std::function<void(app_state&)>                           init,
-    std::function<void(app_state&, int, bool)>                key_callback,
-    std::function<void(app_state&, int, vec2f, int, float)>   click_callback,
-    std::function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
+void yimshproc(const string& input_filename, function<void(app_state&)> init,
+    function<void(app_state&, int, bool)>                key_callback,
+    function<void(app_state&, int, vec2f, int, float)>   click_callback,
+    function<void(app_state&, const opengl_window& win)> draw_glwidgets) {
   auto app = app_state{};
 
   // init shape

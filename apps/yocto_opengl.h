@@ -35,6 +35,8 @@
 // -----------------------------------------------------------------------------
 
 #include <functional>
+#include <memory>
+using std::shared_ptr;
 
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
@@ -411,19 +413,22 @@ using click_glcallback  = std::function<void(const opengl_window&, bool, bool)>;
 using scroll_glcallback = std::function<void(const opengl_window&, float)>;
 
 struct opengl_window {
-  GLFWwindow*        win           = nullptr;
-  void*              user_ptr      = nullptr;
-  refresh_glcallback refresh_cb    = {};
-  drop_glcallback    drop_cb       = {};
-  key_glcallback     key_cb        = {};
-  click_glcallback   click_cb      = {};
-  scroll_glcallback  scroll_cb     = {};
-  int                widgets_width = 0;
-  bool               widgets_left  = true;
+  GLFWwindow*        win            = nullptr;
+  void*              user_ptr       = nullptr;
+  shared_ptr<void>   user_typed_ptr = nullptr;
+  refresh_glcallback refresh_cb     = {};
+  drop_glcallback    drop_cb        = {};
+  key_glcallback     key_cb         = {};
+  click_glcallback   click_cb       = {};
+  scroll_glcallback  scroll_cb      = {};
+  int                widgets_width  = 0;
+  bool               widgets_left   = true;
 };
 
 void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
     void* user_pointer, refresh_glcallback refresh_cb);
+void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
+    shared_ptr<void> user_pointer, refresh_glcallback refresh_cb);
 void delete_glwindow(opengl_window& win);
 
 void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb);
@@ -431,7 +436,8 @@ void set_key_glcallback(opengl_window& win, key_glcallback cb);
 void set_click_glcallback(opengl_window& win, click_glcallback cb);
 void set_scroll_glcallback(opengl_window& win, scroll_glcallback cb);
 
-void* get_gluser_pointer(const opengl_window& win);
+void*            get_gluser_pointer(const opengl_window& win);
+shared_ptr<void> get_gluser_typed_pointer(const opengl_window& win);
 
 vec2i get_glwindow_size(const opengl_window& win, bool ignore_widgets = true);
 vec2i get_glframebuffer_size(

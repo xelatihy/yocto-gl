@@ -5,7 +5,7 @@
       "generator": "Ninja",
       "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
-      "buildRoot": "${projectDir}\\build\\vscmake\\${configurationType}",
+      "buildRoot": "${projectDir}\\build\\vscmake\\x64-Debug",
       "installRoot": "${projectDir}\\bin\\debug",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
@@ -16,12 +16,12 @@
       "name": "x64-Release",
       "generator": "Ninja",
       "configurationType": "RelWithDebInfo",
-      "buildRoot": "${projectDir}\\build\\vscmake\\${configurationType}",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\build\\vscmake\\x64-Release",
       "installRoot": "${projectDir}\\bin",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
       "variables": []
     }
   ]

@@ -34,11 +34,13 @@
 using namespace yocto;
 
 #include <future>
+#include <memory>
+using namespace std;
 
 // Application state
 struct app_state {
   // loading options
-  string filename  = "app.yaml";
+  string filename  = "scene.yaml";
   string imagename = "out.png";
   string name      = "";
 
@@ -64,10 +66,10 @@ struct app_state {
   pair<string, int> selection = {"camera", 0};
 
   // computation
-  int               render_sample  = 0;
-  std::atomic<bool> render_stop    = {};
-  std::future<void> render_future  = {};
-  int               render_counter = 0;
+  int          render_sample  = 0;
+  atomic<bool> render_stop    = {};
+  future<void> render_future  = {};
+  int          render_counter = 0;
 
   ~app_state() {
     render_stop = true;
@@ -166,83 +168,82 @@ trace_scene make_scene(sceneio_model& ioscene) {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(const vec2i& size, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(0);
+  auto        futures  = vector<future<void>>{};
+  auto        nthreads = thread::hardware_concurrency();
+  atomic<int> next_idx(0);
   for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, size]() {
-          while (true) {
-            auto j = next_idx.fetch_add(1);
-            if (j >= size.y) break;
-            for (auto i = 0; i < size.x; i++) func({i, j});
-          }
-        }));
+    futures.emplace_back(async(launch::async, [&func, &next_idx, size]() {
+      while (true) {
+        auto j = next_idx.fetch_add(1);
+        if (j >= size.y) break;
+        for (auto i = 0; i < size.x; i++) func({i, j});
+      }
+    }));
   }
   for (auto& f : futures) f.get();
 }
 
-void reset_display(app_state& app) {
+void reset_display(shared_ptr<app_state> app) {
   // stop render
-  app.render_stop = true;
-  if (app.render_future.valid()) app.render_future.get();
+  app->render_stop = true;
+  if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  app.state = make_state(app.scene, app.params);
-  app.render.resize(app.state.size());
-  app.display.resize(app.state.size());
+  app->state = make_state(app->scene, app->params);
+  app->render.resize(app->state.size());
+  app->display.resize(app->state.size());
 
   // render preview
-  auto preview_prms = app.params;
-  preview_prms.resolution /= app.pratio;
+  auto preview_prms = app->params;
+  preview_prms.resolution /= app->pratio;
   preview_prms.samples = 1;
-  auto preview         = trace_image(app.scene, preview_prms);
-  preview              = tonemap_image(preview, app.exposure);
-  for (auto j = 0; j < app.display.size().y; j++) {
-    for (auto i = 0; i < app.display.size().x; i++) {
-      auto pi             = clamp(i / app.pratio, 0, preview.size().x - 1),
-           pj             = clamp(j / app.pratio, 0, preview.size().y - 1);
-      app.display[{i, j}] = preview[{pi, pj}];
+  auto preview         = trace_image(app->scene, preview_prms);
+  preview              = tonemap_image(preview, app->exposure);
+  for (auto j = 0; j < app->display.size().y; j++) {
+    for (auto i = 0; i < app->display.size().x; i++) {
+      auto pi              = clamp(i / app->pratio, 0, preview.size().x - 1),
+           pj              = clamp(j / app->pratio, 0, preview.size().y - 1);
+      app->display[{i, j}] = preview[{pi, pj}];
     }
   }
 
   // start renderer
-  app.render_counter = 0;
-  app.render_stop    = false;
-  app.render_future  = std::async(std::launch::async, [&app]() {
-    for (auto sample = 0; sample < app.params.samples; sample++) {
-      if (app.render_stop) return;
-      parallel_for(app.render.size(), [&app](const vec2i& ij) {
-        if (app.render_stop) return;
-        app.render[ij]  = trace_sample(app.state, app.scene, ij, app.params);
-        app.display[ij] = tonemap(app.render[ij], app.exposure);
+  app->render_counter = 0;
+  app->render_stop    = false;
+  app->render_future  = async(launch::async, [app]() {
+    for (auto sample = 0; sample < app->params.samples; sample++) {
+      if (app->render_stop) return;
+      parallel_for(app->render.size(), [app](const vec2i& ij) {
+        if (app->render_stop) return;
+        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
+        app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
   });
 }
 
 void draw(const opengl_window& win) {
-  auto& app = *(app_state*)get_gluser_pointer(win);
+  auto app = static_pointer_cast<app_state>(get_gluser_typed_pointer(win));
   clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-  if (!app.glimage || app.glimage.size() != app.display.size() ||
-      !app.render_counter) {
-    update_glimage(app.glimage, app.display, false, false);
+  if (!app->glimage || app->glimage.size() != app->display.size() ||
+      !app->render_counter) {
+    update_glimage(app->glimage, app->display, false, false);
   }
-  app.glparams.window      = get_glwindow_size(win);
-  app.glparams.framebuffer = get_glframebuffer_viewport(win);
-  update_imview(app.glparams.center, app.glparams.scale, app.display.size(),
-      app.glparams.window, app.glparams.fit);
-  draw_glimage(app.glimage, app.glparams);
+  app->glparams.window      = get_glwindow_size(win);
+  app->glparams.framebuffer = get_glframebuffer_viewport(win);
+  update_imview(app->glparams.center, app->glparams.scale, app->display.size(),
+      app->glparams.window, app->glparams.fit);
+  draw_glimage(app->glimage, app->glparams);
   swap_glbuffers(win);
-  app.render_counter++;
-  if (app.render_counter > 10) app.render_counter = 0;
+  app->render_counter++;
+  if (app->render_counter > 10) app->render_counter = 0;
 }
 
 // run ui loop
-void run_ui(app_state& app) {
+void run_ui(shared_ptr<app_state> app) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", &app, draw);
+  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", app, draw);
 
   // loop
   auto mouse_pos = zero2f, last_pos = zero2f;
@@ -256,7 +257,7 @@ void run_ui(app_state& app) {
 
     // handle mouse and keyboard for navigation
     if ((mouse_left || mouse_right) && !alt_down) {
-      auto& camera = app.scene.cameras.at(app.params.camera);
+      auto& camera = app->scene.cameras.at(app->params.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
       auto  rotate = zero2f;
@@ -282,64 +283,65 @@ void run_ui(app_state& app) {
 
 int main(int argc, const char* argv[]) {
   // application
-  app_state app{};
+  auto app = make_shared<app_state>();
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");
-  add_cli_option(cli, "--camera", app.params.camera, "Camera index.");
+  add_cli_option(cli, "--camera", app->params.camera, "Camera index.");
   add_cli_option(
-      cli, "--resolution,-r", app.params.resolution, "Image resolution.");
-  add_cli_option(cli, "--samples,-s", app.params.samples, "Number of samples.");
-  add_cli_option(cli, "--tracer,-t", (int&)app.params.sampler, "Tracer type.",
+      cli, "--resolution,-r", app->params.resolution, "Image resolution.");
+  add_cli_option(
+      cli, "--samples,-s", app->params.samples, "Number of samples.");
+  add_cli_option(cli, "--tracer,-t", (int&)app->params.sampler, "Tracer type.",
       trace_sampler_names);
-  add_cli_option(cli, "--falsecolor,-F", (int&)app.params.falsecolor,
+  add_cli_option(cli, "--falsecolor,-F", (int&)app->params.falsecolor,
       "Tracer false color type.", trace_falsecolor_names);
   add_cli_option(
-      cli, "--bounces", app.params.bounces, "Maximum number of bounces.");
-  add_cli_option(cli, "--clamp", app.params.clamp, "Final pixel clamping.");
-  add_cli_option(cli, "--filter", app.params.tentfilter, "Filter image.");
-  add_cli_option(cli, "--env-hidden/--no-env-hidden", app.params.envhidden,
+      cli, "--bounces", app->params.bounces, "Maximum number of bounces.");
+  add_cli_option(cli, "--clamp", app->params.clamp, "Final pixel clamping.");
+  add_cli_option(cli, "--filter", app->params.tentfilter, "Filter image.");
+  add_cli_option(cli, "--env-hidden/--no-env-hidden", app->params.envhidden,
       "Environments are hidden in renderer");
   add_cli_option(
-      cli, "--bvh", (int&)app.params.bvh, "Bvh type", trace_bvh_names);
-  add_cli_option(cli, "--add-skyenv", app.add_skyenv, "Add sky envmap");
-  add_cli_option(cli, "--output,-o", app.imagename, "Image output", false);
-  add_cli_option(cli, "scene", app.filename, "Scene filename", true);
+      cli, "--bvh", (int&)app->params.bvh, "Bvh type", trace_bvh_names);
+  add_cli_option(cli, "--add-skyenv", app->add_skyenv, "Add sky envmap");
+  add_cli_option(cli, "--output,-o", app->imagename, "Image output", false);
+  add_cli_option(cli, "scene", app->filename, "Scene filename", true);
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // scene loading
   auto ioscene    = sceneio_model{};
   auto load_timer = print_timed("loading scene");
-  if (auto ret = load_scene(app.filename, ioscene); !ret) {
+  if (auto ret = load_scene(app->filename, ioscene); !ret) {
     print_fatal(ret.error);
   }
   print_elapsed(load_timer);
 
   // conversion
   auto convert_timer = print_timed("converting");
-  app.scene          = make_scene(ioscene);
+  app->scene         = make_scene(ioscene);
   print_elapsed(convert_timer);
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(app.scene, app.params);
+  init_bvh(app->scene, app->params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(app.scene);
+  init_lights(app->scene);
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (app.scene.lights.empty() && is_sampler_lit(app.params)) {
+  if (app->scene.lights.empty() && is_sampler_lit(app->params)) {
     print_info("no lights presents, switching to eyelight shader");
-    app.params.sampler = trace_sampler_type::eyelight;
+    app->params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  app.state   = make_state(app.scene, app.params);
-  app.render  = image{app.state.size(), zero4f};
-  app.display = app.render;
+  app->state   = make_state(app->scene, app->params);
+  app->render  = image{app->state.size(), zero4f};
+  app->display = app->render;
   reset_display(app);
 
   // run interactive
