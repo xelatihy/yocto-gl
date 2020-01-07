@@ -1392,9 +1392,7 @@ void run_ui(opengl_window& win) {
     win.input.modifier_alt   = get_glalt_key(win);
     win.input.modifier_shift = get_glshift_key(win);
     win.input.modifier_ctrl  = get_glctrl_key(win);
-    if (win.widgets_width) {
-      win.input.widgets_active = get_glwidgets_active(win);
-    }
+    if (win.widgets_width) win.input.widgets_active = get_glwidgets_active(win);
 
     // update ui
     if (win.uiupdate_cb) win.uiupdate_cb(win, win.input);
