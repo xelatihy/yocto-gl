@@ -300,8 +300,7 @@ void load_scene_async(app_states* apps, const string& filename) {
       }));
 }
 
-bool draw_glwidgets_camera(
-    const opengl_window& win, app_state* app, int id) {
+bool draw_glwidgets_camera(const opengl_window& win, app_state* app, int id) {
   auto& camera = app->ioscene.cameras[id];
   auto  edited = 0;
   edited += (int)draw_gltextinput(win, "name", camera.name);
@@ -326,8 +325,7 @@ bool draw_glwidgets_camera(
   return edited;
 }
 
-bool draw_glwidgets_texture(
-    const opengl_window& win, app_state* app, int id) {
+bool draw_glwidgets_texture(const opengl_window& win, app_state* app, int id) {
   auto& texture      = app->ioscene.textures[id];
   auto  old_filename = texture.filename;
   auto  edited       = 0;
@@ -348,8 +346,7 @@ bool draw_glwidgets_texture(
   return edited;
 }
 
-bool draw_glwidgets_material(
-    const opengl_window& win, app_state* app, int id) {
+bool draw_glwidgets_material(const opengl_window& win, app_state* app, int id) {
   auto& material = app->ioscene.materials[id];
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
@@ -388,8 +385,7 @@ bool draw_glwidgets_material(
   return edited;
 }
 
-bool draw_glwidgets_shape(
-    const opengl_window& win, app_state* app, int id) {
+bool draw_glwidgets_shape(const opengl_window& win, app_state* app, int id) {
   auto& shape        = app->ioscene.shapes[id];
   auto  old_filename = shape.filename;
   auto  edited       = 0;
@@ -417,8 +413,7 @@ bool draw_glwidgets_shape(
   return edited;
 }
 
-bool draw_glwidgets_instance(
-    const opengl_window& win, app_state* app, int id) {
+bool draw_glwidgets_instance(const opengl_window& win, app_state* app, int id) {
   auto& instance = app->ioscene.instances[id];
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", instance.name);
@@ -496,8 +491,7 @@ void draw_glwidgets(const opengl_window& win, app_states* apps) {
   }
   draw_glcombobox(
       win, "scene", apps->selected, (int)apps->states.size(),
-      [apps](int idx) { return apps->get_selected()->name.c_str(); },
-      false);
+      [apps](int idx) { return apps->get_selected()->name.c_str(); }, false);
   if (scene_ok && begin_glheader(win, "trace")) {
     auto  edited  = 0;
     auto  app     = apps->get_selected();
@@ -631,8 +625,8 @@ void draw_glwidgets(const opengl_window& win, app_states* apps) {
   }
 }
 
-void draw(const opengl_window& win, app_states* apps, vec2i window,
-    vec4i viewport) {
+void draw(
+    const opengl_window& win, app_states* apps, vec2i window, vec4i viewport) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->get_selected();
     app->glparams.window      = window;
@@ -672,8 +666,8 @@ void update(const opengl_window& win, app_states* apps) {
 
 int main(int argc, const char* argv[]) {
   // application
-  auto apps_ = make_unique<app_states>();
-  auto apps = apps_.get();
+  auto apps_     = make_unique<app_states>();
+  auto apps      = apps_.get();
   auto filenames = vector<string>{};
 
   // parse command line

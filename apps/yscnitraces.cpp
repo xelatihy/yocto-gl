@@ -225,7 +225,7 @@ void reset_display(app_state* app) {
 int main(int argc, const char* argv[]) {
   // application
   auto app_ = make_unique<app_state>();
-  auto app = app_.get();
+  auto app  = app_.get();
 
   // parse command line
   auto cli = make_cli("yscnitrace", "progressive path tracing");

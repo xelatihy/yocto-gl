@@ -86,8 +86,8 @@ void update_display(app_state* app) {
 
 int main(int argc, const char* argv[]) {
   // prepare application
-  auto app_       = make_unique<app_state>();
-  auto app = app_.get();
+  auto app_      = make_unique<app_state>();
+  auto app       = app_.get();
   auto filenames = vector<string>{};
 
   // command line options

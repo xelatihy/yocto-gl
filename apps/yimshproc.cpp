@@ -20,8 +20,7 @@ void my_init(my_data& data, app_state* app) {
       app->shape.triangles, data.face_adjacency, app->shape.positions);
 }
 
-void my_keycallback(
-    my_data& data, app_state* app, int key, bool pressing) {
+void my_keycallback(my_data& data, app_state* app, int key, bool pressing) {
   // Ignore release.
   if (!pressing) return;
 
@@ -44,8 +43,8 @@ void my_keycallback(
   }
 }
 
-void my_click_callback(my_data& data, app_state* app, int face,
-    const vec2f& uv, int vertex, float distance) {
+void my_click_callback(my_data& data, app_state* app, int face, const vec2f& uv,
+    int vertex, float distance) {
   printf("clicked vertex: %d\n", vertex);
   data.vertex_selection.push_back(vertex);
 
@@ -145,16 +144,13 @@ int main(int num_args, const char* args[]) {
     my_init(data, app);
     print_elapsed(timer);
   };
-  auto key_callback = [&data](
-                          app_state* app, int key, bool pressing) {
+  auto key_callback = [&data](app_state* app, int key, bool pressing) {
     my_keycallback(data, app, key, pressing);
   };
-  auto click_callback = [&data](app_state* a, int f, vec2f uv, int v,
-                            float d) {
+  auto click_callback = [&data](app_state* a, int f, vec2f uv, int v, float d) {
     my_click_callback(data, a, f, uv, v, d);
   };
-  auto draw_glwidgets = [&data](app_state* app,
-                            const opengl_window&      win) {
+  auto draw_glwidgets = [&data](app_state* app, const opengl_window& win) {
     my_draw_glwidgets(data, app, win);
   };
 

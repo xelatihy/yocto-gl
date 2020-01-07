@@ -282,8 +282,7 @@ void make_glscene(opengl_scene& glscene, const sceneio_model& scene) {
   }
 }
 
-bool draw_glwidgets_camera(
-    const opengl_window& win, app_state* app, int id) {
+bool draw_glwidgets_camera(const opengl_window& win, app_state* app, int id) {
   auto& camera = app->scene.cameras[id];
   auto  edited = 0;
   edited += (int)draw_gltextinput(win, "name", camera.name);
@@ -309,8 +308,7 @@ bool draw_glwidgets_camera(
 }
 
 /// Visit struct elements.
-bool draw_glwidgets_texture(
-    const opengl_window& win, app_state* app, int id) {
+bool draw_glwidgets_texture(const opengl_window& win, app_state* app, int id) {
   auto& texture      = app->scene.textures[id];
   auto  old_filename = texture.filename;
   auto  edited       = 0;
@@ -331,8 +329,7 @@ bool draw_glwidgets_texture(
   return edited;
 }
 
-bool draw_glwidgets_material(
-    const opengl_window& win, app_state* app, int id) {
+bool draw_glwidgets_material(const opengl_window& win, app_state* app, int id) {
   auto& material = app->scene.materials[id];
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
@@ -371,8 +368,7 @@ bool draw_glwidgets_material(
   return edited;
 }
 
-bool draw_glwidgets_shape(
-    const opengl_window& win, app_state* app, int id) {
+bool draw_glwidgets_shape(const opengl_window& win, app_state* app, int id) {
   auto& shape        = app->scene.shapes[id];
   auto  old_filename = shape.filename;
   auto  edited       = 0;
@@ -407,8 +403,7 @@ bool draw_glwidgets_shape(
   return edited;
 }
 
-bool draw_glwidgets_instance(
-    const opengl_window& win, app_state* app, int id) {
+bool draw_glwidgets_instance(const opengl_window& win, app_state* app, int id) {
   auto& instance     = app->scene.instances[id];
   auto  old_instance = instance;
   auto  edited       = 0;
@@ -603,8 +598,8 @@ void update(const opengl_window& win, app_states* apps) {
 
 int main(int argc, const char* argv[]) {
   // initialize app
-  auto apps_       = make_unique<app_states>();
-  auto apps = apps_.get();
+  auto apps_      = make_unique<app_states>();
+  auto apps       = apps_.get();
   auto filenames  = vector<string>{};
   auto noparallel = false;
 

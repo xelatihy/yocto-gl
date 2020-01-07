@@ -98,8 +98,7 @@ void update_glshape(app_state* app) {
   }
 }
 
-void update_glpolyline(
-    app_state* app, const vector<vec3f>& vertices) {
+void update_glpolyline(app_state* app, const vector<vec3f>& vertices) {
   auto& glshape = app->glpolyline();
   delete_glshape(glshape);
   if (vertices.size()) {
@@ -123,8 +122,8 @@ void update_glpoints(app_state* app, const vector<vec3f>& points) {
   }
 }
 
-void update_glvector_field(app_state* app,
-    const vector<vec3f>& vector_field, float scale = 0.01) {
+void update_glvector_field(
+    app_state* app, const vector<vec3f>& vector_field, float scale = 0.01) {
   auto perface   = vector_field.size() == app->shape.triangles.size();
   auto pervertex = vector_field.size() == app->shape.positions.size();
 
@@ -200,8 +199,8 @@ void update_glcamera(opengl_camera& glcamera, const sceneio_camera& camera) {
   glcamera.far    = 10000;
 }
 
-void init_camera(app_state* app,
-    const vec3f& from = vec3f{0, 0.5, 1.5}, const vec3f& to = {0, 0, 0}) {
+void init_camera(app_state* app, const vec3f& from = vec3f{0, 0.5, 1.5},
+    const vec3f& to = {0, 0, 0}) {
   app->camera              = sceneio_camera{};
   auto up                  = vec3f{0, 1, 0};
   app->camera.lens         = 0.02f;
@@ -292,15 +291,12 @@ void clear(app_state* app) {
       vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
 }
 
-void yimshproc(const string&                         input_filename,
-    function<void(app_state*)>            init,
-    function<void(app_state*, int, bool)> key_callback,
-    function<void(app_state*, int, vec2f, int, float)>
-        click_callback,
-    function<void(app_state*, const opengl_window& win)>
-        draw_glwidgets) {
+void yimshproc(const string& input_filename, function<void(app_state*)> init,
+    function<void(app_state*, int, bool)>                key_callback,
+    function<void(app_state*, int, vec2f, int, float)>   click_callback,
+    function<void(app_state*, const opengl_window& win)> draw_glwidgets) {
   auto app_ = make_unique<app_state>();
-  auto app = app_.get();
+  auto app  = app_.get();
 
   // init shape
   load_shape(input_filename, app->shape.points, app->shape.lines,

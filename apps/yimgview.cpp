@@ -215,7 +215,8 @@ void draw_glwidgets(const opengl_window& win, app_states* apps) {
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  draw_glcombobox(win, "image", apps->selected, (int)apps->states.size(),
+  draw_glcombobox(
+      win, "image", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->get_selected()->name.c_str(); }, false);
   if (image_ok && begin_glheader(win, "tonemap")) {
     auto app    = apps->get_selected();
@@ -294,8 +295,8 @@ void draw_glwidgets(const opengl_window& win, app_states* apps) {
   }
 }
 
-void draw(const opengl_window& win, app_states* apps, vec2i window,
-    vec4i viewport) {
+void draw(
+    const opengl_window& win, app_states* apps, vec2i window, vec4i viewport) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->get_selected();
     app->glparams.window      = window;
