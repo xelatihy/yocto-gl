@@ -243,7 +243,7 @@ void draw(const opengl_window& win) {
 void run_ui(shared_ptr<app_state> app) {
   // window
   auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", &app, draw);
+  init_glwindow(win, {1280 + 320, 720}, "yscnitrace", app.get(), draw);
 
   // loop
   auto mouse_pos = zero2f, last_pos = zero2f;
