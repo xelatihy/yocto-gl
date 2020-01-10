@@ -302,14 +302,56 @@ static void update_gltexture(
 
 static void init_gltexture(uint& texture_id, const vec2i& size, int nchan, const float* img,
     bool as_float, bool linear, bool mipmap) {
-  init_gltexture(texture_id, size, as_float, false, linear, mipmap);
-  update_gltexture(texture_id, size, nchan, img, mipmap);
+  assert(glGetError() == GL_NO_ERROR);
+  glGenTextures(1, &texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+  if (as_float) {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
+        GL_FLOAT, img);
+  } else {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
+        GL_FLOAT, img);
+  }
+  if (mipmap) {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+  }
+  assert(glGetError() == GL_NO_ERROR);
 }
 
 static void init_gltexture(uint& texture_id, const vec2i& size, int nchan, const byte* img,
     bool as_srgb, bool linear, bool mipmap) {
-  init_gltexture(texture_id, size, false, as_srgb, linear, mipmap);
-  update_gltexture(texture_id, size, nchan, img, mipmap);
+  assert(glGetError() == GL_NO_ERROR);
+  glGenTextures(1, &texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+  if (as_srgb) {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, size.x, size.y, 0, GL_RGBA,
+        GL_UNSIGNED_BYTE, img);
+  } else {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
+        GL_UNSIGNED_BYTE, img);
+  }
+  if (mipmap) {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+  }
+  assert(glGetError() == GL_NO_ERROR);
 }
 
 static void delete_gltexture(uint& texture_id) {
