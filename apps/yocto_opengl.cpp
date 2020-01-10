@@ -306,10 +306,10 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan, const
   glGenTextures(1, &texture_id);
   glBindTexture(GL_TEXTURE_2D, texture_id);
   if (as_float) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
+    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA32F : GL_RGB32F, size.x, size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB,
         GL_FLOAT, img);
   } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
+    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA : GL_RGB, size.x, size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB,
         GL_FLOAT, img);
   }
   if (mipmap) {
@@ -333,10 +333,10 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan, const
   glGenTextures(1, &texture_id);
   glBindTexture(GL_TEXTURE_2D, texture_id);
   if (as_srgb) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, size.x, size.y, 0, GL_RGBA,
+    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_SRGB_ALPHA : GL_SRGB, size.x, size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB,
         GL_UNSIGNED_BYTE, img);
   } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
+    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA : GL_RGB, size.x, size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB,
         GL_UNSIGNED_BYTE, img);
   }
   if (mipmap) {
