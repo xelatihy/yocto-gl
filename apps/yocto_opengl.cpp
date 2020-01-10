@@ -281,35 +281,35 @@ static void init_gltexture(uint& texture_id, const vec2i& size, bool as_float,
 }
 
 static void update_gltexture(
-    uint& texture_id, const image<vec4f>& img, bool mipmap) {
+    uint& texture_id, const vec2i& size, int nchan, const float* img, bool mipmap) {
   assert(glGetError() == GL_NO_ERROR);
   glBindTexture(GL_TEXTURE_2D, texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
-      GL_FLOAT, img.data());
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, nchan == 4 ? GL_RGBA : GL_RGB,
+      GL_FLOAT, img);
   if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   assert(glGetError() == GL_NO_ERROR);
 }
 
 static void update_gltexture(
-    uint& texture_id, const image<vec4b>& img, bool mipmap) {
+    uint& texture_id, const vec2i& size, int nchan, const byte* img, bool mipmap) {
   assert(glGetError() == GL_NO_ERROR);
   glBindTexture(GL_TEXTURE_2D, texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
-      GL_UNSIGNED_BYTE, img.data());
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, nchan == 4 ? GL_RGBA : GL_RGB,
+      GL_UNSIGNED_BYTE, img);
   if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   assert(glGetError() == GL_NO_ERROR);
 }
 
-static void init_gltexture(uint& texture_id, const image<vec4f>& img,
+static void init_gltexture(uint& texture_id, const vec2i& size, int nchan, const float* img,
     bool as_float, bool linear, bool mipmap) {
-  init_gltexture(texture_id, img.size(), as_float, false, linear, mipmap);
-  update_gltexture(texture_id, img, mipmap);
+  init_gltexture(texture_id, size, as_float, false, linear, mipmap);
+  update_gltexture(texture_id, size, nchan, img, mipmap);
 }
 
-static void init_gltexture(uint& texture_id, const image<vec4b>& img,
+static void init_gltexture(uint& texture_id, const vec2i& size, int nchan, const byte* img,
     bool as_srgb, bool linear, bool mipmap) {
-  init_gltexture(texture_id, img.size(), false, as_srgb, linear, mipmap);
-  update_gltexture(texture_id, img, mipmap);
+  init_gltexture(texture_id, size, false, as_srgb, linear, mipmap);
+  update_gltexture(texture_id, size, nchan, img, mipmap);
 }
 
 static void delete_gltexture(uint& texture_id) {
@@ -399,14 +399,14 @@ void update_glimage(
     opengl_image& glimage, const image<vec4f>& img, bool linear, bool mipmap) {
   init_glimage_program(glimage);
   if (!glimage.texture_id) {
-    init_gltexture(glimage.texture_id, img, false, linear, mipmap);
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false, linear, mipmap);
   } else if (glimage.texture_size != img.size() ||
              glimage.texture_linear != linear ||
              glimage.texture_mipmap != mipmap) {
     delete_gltexture(glimage.texture_id);
-    init_gltexture(glimage.texture_id, img, false, linear, mipmap);
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false, linear, mipmap);
   } else {
-    update_gltexture(glimage.texture_id, img, mipmap);
+    update_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
   glimage.texture_size = img.size();
   glimage.texture_linear = linear;
@@ -416,14 +416,14 @@ void update_glimage(
     opengl_image& glimage, const image<vec4b>& img, bool linear, bool mipmap) {
   init_glimage_program(glimage);
   if (!glimage.texture_id) {
-    init_gltexture(glimage.texture_id, img, false, linear, mipmap);
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false, linear, mipmap);
   } else if (glimage.texture_size != img.size() ||
              glimage.texture_linear != linear ||
              glimage.texture_mipmap != mipmap) {
     delete_gltexture(glimage.texture_id);
-    init_gltexture(glimage.texture_id, img, false, linear, mipmap);
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false, linear, mipmap);
   } else {
-    update_gltexture(glimage.texture_id, img, mipmap);
+    update_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
   glimage.texture_size = img.size();
   glimage.texture_linear = linear;
