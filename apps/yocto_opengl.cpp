@@ -847,9 +847,13 @@ void make_glscene(opengl_scene& glscene) {
 void clear_gllights(opengl_scene& scene) {
   scene._lights.clear();
 }
-void add_gllight(opengl_scene& scene, const vec3f& position,
+int add_gllight(opengl_scene& scene, const vec3f& position,
     const vec3f& emission, bool directional) {
   scene._lights.push_back({position, emission, directional ? 1 : 0});
+}
+void update_gllight(opengl_scene& scene, int idx, const vec3f& position,
+    const vec3f& emission, bool directional) {
+  scene._lights[idx] = {position, emission, directional ? 1 : 0};
 }
 bool has_max_gllights(opengl_scene& scene) {
   return scene._lights.size() >= 16;

@@ -290,7 +290,9 @@ void make_glscene(opengl_scene& scene);
 
 // add light
 void clear_gllights(opengl_scene& scene);
-void add_gllight(opengl_scene& scene, const vec3f& position,
+int add_gllight(opengl_scene& scene, const vec3f& position,
+    const vec3f& emission, bool directional);
+void update_gllight(opengl_scene& scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional);
 bool has_max_gllights(opengl_scene& scene);
 
