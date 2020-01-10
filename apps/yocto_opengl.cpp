@@ -167,21 +167,23 @@ static void delete_glprogram(
   array_id    = 0;
 }
 
-void init_glbuffer(uint& buffer_id, bool element, int size, int count, float* array) {
+void init_glbuffer(
+    uint& buffer_id, bool element, int size, int count, float* array) {
   assert(glGetError() == GL_NO_ERROR);
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
-  glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : 
-      GL_ARRAY_BUFFER, count * size * sizeof(float), array, GL_STATIC_DRAW);
+  glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
+      count * size * sizeof(float), array, GL_STATIC_DRAW);
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void init_glbuffer(uint& buffer_id, bool element, int size, int count, int* array) {
+void init_glbuffer(
+    uint& buffer_id, bool element, int size, int count, int* array) {
   assert(glGetError() == GL_NO_ERROR);
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
-  glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : 
-      GL_ARRAY_BUFFER, count * size * sizeof(int), array, GL_STATIC_DRAW);
+  glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
+      count * size * sizeof(int), array, GL_STATIC_DRAW);
   assert(glGetError() == GL_NO_ERROR);
 }
 
@@ -280,37 +282,37 @@ static void init_gltexture(uint& texture_id, const vec2i& size, bool as_float,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-static void update_gltexture(
-    uint& texture_id, const vec2i& size, int nchan, const float* img, bool mipmap) {
+static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
+    const float* img, bool mipmap) {
   assert(glGetError() == GL_NO_ERROR);
   glBindTexture(GL_TEXTURE_2D, texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, nchan == 4 ? GL_RGBA : GL_RGB,
-      GL_FLOAT, img);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
+      nchan == 4 ? GL_RGBA : GL_RGB, GL_FLOAT, img);
   if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   assert(glGetError() == GL_NO_ERROR);
 }
 
-static void update_gltexture(
-    uint& texture_id, const vec2i& size, int nchan, const byte* img, bool mipmap) {
+static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
+    const byte* img, bool mipmap) {
   assert(glGetError() == GL_NO_ERROR);
   glBindTexture(GL_TEXTURE_2D, texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y, nchan == 4 ? GL_RGBA : GL_RGB,
-      GL_UNSIGNED_BYTE, img);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.x, size.y,
+      nchan == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, img);
   if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
   assert(glGetError() == GL_NO_ERROR);
 }
 
-static void init_gltexture(uint& texture_id, const vec2i& size, int nchan, const float* img,
-    bool as_float, bool linear, bool mipmap) {
+static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
+    const float* img, bool as_float, bool linear, bool mipmap) {
   assert(glGetError() == GL_NO_ERROR);
   glGenTextures(1, &texture_id);
   glBindTexture(GL_TEXTURE_2D, texture_id);
   if (as_float) {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA32F : GL_RGB32F, size.x, size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB,
-        GL_FLOAT, img);
+    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA32F : GL_RGB32F, size.x,
+        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_FLOAT, img);
   } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA : GL_RGB, size.x, size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB,
-        GL_FLOAT, img);
+    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA : GL_RGB, size.x,
+        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_FLOAT, img);
   }
   if (mipmap) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -327,17 +329,17 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan, const
   assert(glGetError() == GL_NO_ERROR);
 }
 
-static void init_gltexture(uint& texture_id, const vec2i& size, int nchan, const byte* img,
-    bool as_srgb, bool linear, bool mipmap) {
+static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
+    const byte* img, bool as_srgb, bool linear, bool mipmap) {
   assert(glGetError() == GL_NO_ERROR);
   glGenTextures(1, &texture_id);
   glBindTexture(GL_TEXTURE_2D, texture_id);
   if (as_srgb) {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_SRGB_ALPHA : GL_SRGB, size.x, size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB,
-        GL_UNSIGNED_BYTE, img);
+    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_SRGB_ALPHA : GL_SRGB, size.x,
+        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, img);
   } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA : GL_RGB, size.x, size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB,
-        GL_UNSIGNED_BYTE, img);
+    glTexImage2D(GL_TEXTURE_2D, 0, nchan == 4 ? GL_RGBA : GL_RGB, size.x,
+        size.y, 0, nchan == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, img);
   }
   if (mipmap) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -427,13 +429,15 @@ void init_glimage_program(opengl_image& glimage) {
         )";
 #endif
 
-  auto texcoords =  vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-  auto triangles =  vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
+  auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+  auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
   init_glprogram(glimage.program_id, glimage.vertex_id, glimage.fragment_id,
       glimage.array_id, vert, frag);
-  init_glbuffer(glimage.texcoords_id, false, texcoords.size(), 2, &texcoords.front().x);
-  init_glbuffer(glimage.triangles_id, true, triangles.size(), 3, &triangles.front().x);
+  init_glbuffer(
+      glimage.texcoords_id, false, texcoords.size(), 2, &texcoords.front().x);
+  init_glbuffer(
+      glimage.triangles_id, true, triangles.size(), 3, &triangles.front().x);
 }
 
 // update image data
@@ -441,16 +445,18 @@ void update_glimage(
     opengl_image& glimage, const image<vec4f>& img, bool linear, bool mipmap) {
   init_glimage_program(glimage);
   if (!glimage.texture_id) {
-    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false, linear, mipmap);
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
+        linear, mipmap);
   } else if (glimage.texture_size != img.size() ||
              glimage.texture_linear != linear ||
              glimage.texture_mipmap != mipmap) {
     delete_gltexture(glimage.texture_id);
-    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false, linear, mipmap);
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
+        linear, mipmap);
   } else {
     update_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
-  glimage.texture_size = img.size();
+  glimage.texture_size   = img.size();
   glimage.texture_linear = linear;
   glimage.texture_mipmap = mipmap;
 }
@@ -458,16 +464,18 @@ void update_glimage(
     opengl_image& glimage, const image<vec4b>& img, bool linear, bool mipmap) {
   init_glimage_program(glimage);
   if (!glimage.texture_id) {
-    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false, linear, mipmap);
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
+        linear, mipmap);
   } else if (glimage.texture_size != img.size() ||
              glimage.texture_linear != linear ||
              glimage.texture_mipmap != mipmap) {
     delete_gltexture(glimage.texture_id);
-    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false, linear, mipmap);
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
+        linear, mipmap);
   } else {
     update_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
-  glimage.texture_size = img.size();
+  glimage.texture_size   = img.size();
   glimage.texture_linear = linear;
   glimage.texture_mipmap = mipmap;
 }
