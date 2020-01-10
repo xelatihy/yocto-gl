@@ -512,6 +512,16 @@ void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
   check_glerror();
 }
 
+// delete omage data
+void delete_glimage(opengl_image& glimage) {
+  delete_glprogram(glimage.program_id, glimage.vertex_id, glimage.fragment_id, glimage.array_id);
+  delete_glbuffer(glimage.texcoords_id);
+  delete_glbuffer(glimage.triangles_id);
+  delete_gltexture(glimage.texture_id);
+}
+
+opengl_image::~opengl_image() { delete_glimage(*this); }
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

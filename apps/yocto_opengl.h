@@ -127,6 +127,8 @@ struct opengl_image {
   vec2i texture_size = {0, 0};
   bool texture_linear = false;
   bool texture_mipmap = false;
+
+  ~opengl_image();
 };
 
 // OpenGL image drawing params
@@ -149,6 +151,9 @@ void update_glimage(opengl_image& glimage, const image<vec4b>& img,
 
 // draw image
 void draw_glimage(opengl_image& glimage, const draw_glimage_params& params);
+
+// delete omage data
+void delete_glimage(opengl_image& glimage);
 
 }  // namespace yocto
 
