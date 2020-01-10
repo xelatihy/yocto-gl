@@ -337,8 +337,10 @@ void update_glimage(
 // draw image
 void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
   check_glerror();
-  set_glviewport(params.framebuffer);
-  clear_glframebuffer(params.background);
+  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z, params.framebuffer.w);
+  glClearColor(params.background.x, params.background.y, params.background.z, params.background.w);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_DEPTH_TEST);
   glUseProgram(glimage.program_id);
   glActiveTexture(GL_TEXTURE0 + 0);
   glBindTexture(GL_TEXTURE_2D, glimage.texture.texture_id);
@@ -352,7 +354,8 @@ void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
   glBindBuffer(GL_ARRAY_BUFFER, glimage.texcoord.buffer_id);
   glEnableVertexAttribArray(glGetAttribLocation(glimage.program_id, "texcoord"));
   glVertexAttribPointer(glGetAttribLocation(glimage.program_id, "texcoord"), 2, GL_FLOAT, false, 0, nullptr);
-  draw_gltriangles(glimage.element, 2);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.element.buffer_id);
+  glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_INT, nullptr);
   glUseProgram(0);
   check_glerror();
 }
