@@ -117,9 +117,13 @@ struct opengl_image {
   vec2i                size() const { return texture.size; }
                        operator bool() const { return (bool)texture; }
   opengl_texture       texture  = {};
-  opengl_program       program  = {};
   opengl_arraybuffer   texcoord = {};
   opengl_elementbuffer element  = {};
+
+  uint program_id = 0;
+  uint vertex_id = 0;
+  uint fragment_id = 0;
+  uint array_id = 0;
 };
 
 // OpenGL image drawing params

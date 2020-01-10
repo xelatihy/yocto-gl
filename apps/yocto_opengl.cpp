@@ -101,9 +101,143 @@ void set_glblending(bool enabled) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
+    uint& array_id, const char* vertex, const char* fragment) {
+  assert(glGetError() == GL_NO_ERROR);
+  glGenVertexArrays(1, &array_id);
+  glBindVertexArray(array_id);
+  assert(glGetError() == GL_NO_ERROR);
+
+  int  errflags;
+  char errbuf[10000];
+
+  // create vertex
+  assert(glGetError() == GL_NO_ERROR);
+  vertex_id = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(vertex_id, 1, &vertex, NULL);
+  glCompileShader(vertex_id);
+  glGetShaderiv(vertex_id, GL_COMPILE_STATUS, &errflags);
+  if (!errflags) {
+    glGetShaderInfoLog(vertex_id, 10000, 0, errbuf);
+    throw std::runtime_error("shader not compiled with error\n"s + errbuf);
+  }
+  assert(glGetError() == GL_NO_ERROR);
+
+  // create fragment
+  assert(glGetError() == GL_NO_ERROR);
+  fragment_id = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(fragment_id, 1, &fragment, NULL);
+  glCompileShader(fragment_id);
+  glGetShaderiv(fragment_id, GL_COMPILE_STATUS, &errflags);
+  if (!errflags) {
+    glGetShaderInfoLog(fragment_id, 10000, 0, errbuf);
+    throw std::runtime_error("shader not compiled with error\n"s + errbuf);
+  }
+  assert(glGetError() == GL_NO_ERROR);
+
+  // create program
+  assert(glGetError() == GL_NO_ERROR);
+  program_id = glCreateProgram();
+  glAttachShader(program_id, vertex_id);
+  glAttachShader(program_id, fragment_id);
+  glLinkProgram(program_id);
+  glValidateProgram(program_id);
+  glGetProgramiv(program_id, GL_LINK_STATUS, &errflags);
+  if (!errflags) {
+    glGetProgramInfoLog(program_id, 10000, 0, errbuf);
+    throw std::runtime_error("program not linked with error\n"s + errbuf);
+  }
+  glGetProgramiv(program_id, GL_VALIDATE_STATUS, &errflags);
+  if (!errflags) {
+    glGetProgramInfoLog(program_id, 10000, 0, errbuf);
+    throw std::runtime_error("program not linked with error\n"s + errbuf);
+  }
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+void delete_glprogram(
+    uint& program_id, uint& vertex_id, uint& fragment_id, uint& array_id) {
+  if (program_id) glDeleteProgram(program_id);
+  if (vertex_id) glDeleteShader(vertex_id);
+  if (fragment_id) glDeleteShader(fragment_id);
+  if (array_id) glDeleteVertexArrays(1, &array_id);
+  program_id  = 0;
+  vertex_id   = 0;
+  fragment_id = 0;
+  array_id    = 0;
+}
+
+void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
+    bool as_srgb, bool linear, bool mipmap) {
+  if (texture) delete_gltexture(texture);
+  assert(glGetError() == GL_NO_ERROR);
+  glGenTextures(1, &texture.texture_id);
+  texture.size     = size;
+  texture.mipmap   = mipmap;
+  texture.is_srgb  = as_srgb;
+  texture.is_float = as_float;
+  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
+  if (as_float) {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
+        GL_FLOAT, nullptr);
+  } else if (as_srgb) {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, size.x, size.y, 0, GL_RGBA,
+        GL_UNSIGNED_BYTE, nullptr);
+  } else {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
+        GL_FLOAT, nullptr);
+  }
+  if (mipmap) {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+  } else {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+  }
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+void update_gltexture(
+    opengl_texture& texture, const image<vec4f>& img, bool mipmap) {
+  assert(glGetError() == GL_NO_ERROR);
+  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
+      GL_FLOAT, img.data());
+  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+void update_gltexture(
+    opengl_texture& texture, const image<vec4b>& img, bool mipmap) {
+  assert(glGetError() == GL_NO_ERROR);
+  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
+      GL_UNSIGNED_BYTE, img.data());
+  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+void delete_gltexture(opengl_texture& texture) {
+  if (!texture) return;
+  glDeleteTextures(1, &texture.texture_id);
+  texture.texture_id = 0;
+  texture.size       = zero2i;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL OPENGL IMAGE DRAWING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // init image program
 void init_glimage_program(opengl_image& glimage) {
-  if (glimage.program) return;
+  if (glimage.program_id) return;
   auto vert =
       R"(
       #version 330
@@ -162,7 +296,8 @@ void init_glimage_program(opengl_image& glimage) {
         )";
 #endif
 
-  init_glprogram(glimage.program, vert, frag);
+  init_glprogram(glimage.program_id, glimage.vertex_id, glimage.fragment_id,
+      glimage.array_id, vert, frag);
   init_glarraybuffer(
       glimage.texcoord, vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
   init_glelementbuffer(
@@ -204,17 +339,21 @@ void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
   check_glerror();
   set_glviewport(params.framebuffer);
   clear_glframebuffer(params.background);
-  bind_glprogram(glimage.program);
-  set_gluniform_texture(glimage.program, "txt", glimage.texture, 0);
-  set_gluniform(glimage.program, "window_size",
-      vec2f{(float)params.window.x, (float)params.window.y});
-  set_gluniform(glimage.program, "image_size",
-      vec2f{(float)glimage.texture.size.x, (float)glimage.texture.size.y});
-  set_gluniform(glimage.program, "image_center", params.center);
-  set_gluniform(glimage.program, "image_scale", params.scale);
-  set_glvertexattrib(glimage.program, "texcoord", glimage.texcoord, zero2f);
+  glUseProgram(glimage.program_id);
+  glActiveTexture(GL_TEXTURE0 + 0);
+  glBindTexture(GL_TEXTURE_2D, glimage.texture.texture_id);
+  glUniform1i(glGetUniformLocation(glimage.program_id, "txt"), 0);
+  glUniform2f(glGetUniformLocation(glimage.program_id, "window_size"),
+      (float)params.window.x, (float)params.window.y);
+  glUniform2f(glGetUniformLocation(glimage.program_id, "image_size"),
+      (float)glimage.texture.size.x, (float)glimage.texture.size.y);
+  glUniform2f(glGetUniformLocation(glimage.program_id, "image_center"), params.center.x, params.center.y);
+  glUniform1f(glGetUniformLocation(glimage.program_id, "image_scale"), params.scale);
+  glBindBuffer(GL_ARRAY_BUFFER, glimage.texcoord.buffer_id);
+  glEnableVertexAttribArray(glGetAttribLocation(glimage.program_id, "texcoord"));
+  glVertexAttribPointer(glGetAttribLocation(glimage.program_id, "texcoord"), 2, GL_FLOAT, false, 0, nullptr);
   draw_gltriangles(glimage.element, 2);
-  unbind_opengl_program();
+  glUseProgram(0);
   check_glerror();
 }
 
@@ -786,67 +925,6 @@ opengl_texture& opengl_texture::operator=(opengl_texture&& other) {
   return *this;
 }
 opengl_texture::~opengl_texture() { delete_gltexture(*this); }
-
-void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
-    bool as_srgb, bool linear, bool mipmap) {
-  if (texture) delete_gltexture(texture);
-  assert(glGetError() == GL_NO_ERROR);
-  glGenTextures(1, &texture.texture_id);
-  texture.size     = size;
-  texture.mipmap   = mipmap;
-  texture.is_srgb  = as_srgb;
-  texture.is_float = as_float;
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  if (as_float) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
-        GL_FLOAT, nullptr);
-  } else if (as_srgb) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, size.x, size.y, 0, GL_RGBA,
-        GL_UNSIGNED_BYTE, nullptr);
-  } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
-        GL_FLOAT, nullptr);
-  }
-  if (mipmap) {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-  } else {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-  }
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void update_gltexture(
-    opengl_texture& texture, const image<vec4f>& img, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
-      GL_FLOAT, img.data());
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void update_gltexture(
-    opengl_texture& texture, const image<vec4b>& img, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
-      GL_UNSIGNED_BYTE, img.data());
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void delete_gltexture(opengl_texture& texture) {
-  if (!texture) return;
-  glDeleteTextures(1, &texture.texture_id);
-  texture.texture_id = 0;
-  texture.size       = zero2i;
-}
 
 opengl_arraybuffer::opengl_arraybuffer(opengl_arraybuffer&& other) {
   operator=(std::forward<opengl_arraybuffer>(other));
@@ -1756,8 +1834,7 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
       state.set_dirname(dir_buffer);
     }
     auto current_item = -1;
-    if (ImGui::ListBox(
-            "entries", &current_item,
+    if (ImGui::ListBox("entries", &current_item,
             [](void* data, int idx, const char** out_text) -> bool {
               auto& state = *(filedialog_state*)data;
               *out_text   = state.entries[idx].first.c_str();
