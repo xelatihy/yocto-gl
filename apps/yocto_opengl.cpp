@@ -251,6 +251,72 @@ void delete_gltexture(opengl_texture& texture) {
   texture.size       = zero2i;
 }
 
+static void init_gltexture(uint& texture_id, const vec2i& size, bool as_float,
+    bool as_srgb, bool linear, bool mipmap) {
+  assert(glGetError() == GL_NO_ERROR);
+  glGenTextures(1, &texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+  if (as_float) {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
+        GL_FLOAT, nullptr);
+  } else if (as_srgb) {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, size.x, size.y, 0, GL_RGBA,
+        GL_UNSIGNED_BYTE, nullptr);
+  } else {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
+        GL_FLOAT, nullptr);
+  }
+  if (mipmap) {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+  } else {
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+        (linear) ? GL_LINEAR : GL_NEAREST);
+  }
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+static void update_gltexture(
+    uint& texture_id, const image<vec4f>& img, bool mipmap) {
+  assert(glGetError() == GL_NO_ERROR);
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
+      GL_FLOAT, img.data());
+  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+static void update_gltexture(
+    uint& texture_id, const image<vec4b>& img, bool mipmap) {
+  assert(glGetError() == GL_NO_ERROR);
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
+      GL_UNSIGNED_BYTE, img.data());
+  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+static void init_gltexture(uint& texture_id, const image<vec4f>& img,
+    bool as_float, bool linear, bool mipmap) {
+  init_gltexture(texture_id, img.size(), as_float, false, linear, mipmap);
+  update_gltexture(texture_id, img, mipmap);
+}
+
+static void init_gltexture(uint& texture_id, const image<vec4b>& img,
+    bool as_srgb, bool linear, bool mipmap) {
+  init_gltexture(texture_id, img.size(), false, as_srgb, linear, mipmap);
+  update_gltexture(texture_id, img, mipmap);
+}
+
+static void delete_gltexture(uint& texture_id) {
+  if (texture_id) glDeleteTextures(1, &texture_id);
+  texture_id = 0;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -332,30 +398,36 @@ void init_glimage_program(opengl_image& glimage) {
 void update_glimage(
     opengl_image& glimage, const image<vec4f>& img, bool linear, bool mipmap) {
   init_glimage_program(glimage);
-  if (!glimage.texture) {
-    init_gltexture(glimage.texture, img, false, linear, mipmap);
-  } else if (glimage.texture.size != img.size() ||
-             glimage.texture.linear != linear ||
-             glimage.texture.mipmap != mipmap) {
-    delete_gltexture(glimage.texture);
-    init_gltexture(glimage.texture, img, false, linear, mipmap);
+  if (!glimage.texture_id) {
+    init_gltexture(glimage.texture_id, img, false, linear, mipmap);
+  } else if (glimage.texture_size != img.size() ||
+             glimage.texture_linear != linear ||
+             glimage.texture_mipmap != mipmap) {
+    delete_gltexture(glimage.texture_id);
+    init_gltexture(glimage.texture_id, img, false, linear, mipmap);
   } else {
-    update_gltexture(glimage.texture, img, mipmap);
+    update_gltexture(glimage.texture_id, img, mipmap);
   }
+  glimage.texture_size = img.size();
+  glimage.texture_linear = linear;
+  glimage.texture_mipmap = mipmap;
 }
 void update_glimage(
     opengl_image& glimage, const image<vec4b>& img, bool linear, bool mipmap) {
   init_glimage_program(glimage);
-  if (!glimage.texture) {
-    init_gltexture(glimage.texture, img, false, linear, mipmap);
-  } else if (glimage.texture.size != img.size() ||
-             glimage.texture.linear != linear ||
-             glimage.texture.mipmap != mipmap) {
-    delete_gltexture(glimage.texture);
-    init_gltexture(glimage.texture, img, false, linear, mipmap);
+  if (!glimage.texture_id) {
+    init_gltexture(glimage.texture_id, img, false, linear, mipmap);
+  } else if (glimage.texture_size != img.size() ||
+             glimage.texture_linear != linear ||
+             glimage.texture_mipmap != mipmap) {
+    delete_gltexture(glimage.texture_id);
+    init_gltexture(glimage.texture_id, img, false, linear, mipmap);
   } else {
-    update_gltexture(glimage.texture, img, mipmap);
+    update_gltexture(glimage.texture_id, img, mipmap);
   }
+  glimage.texture_size = img.size();
+  glimage.texture_linear = linear;
+  glimage.texture_mipmap = mipmap;
 }
 
 // draw image
@@ -369,12 +441,12 @@ void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
   glEnable(GL_DEPTH_TEST);
   glUseProgram(glimage.program_id);
   glActiveTexture(GL_TEXTURE0 + 0);
-  glBindTexture(GL_TEXTURE_2D, glimage.texture.texture_id);
+  glBindTexture(GL_TEXTURE_2D, glimage.texture_id);
   glUniform1i(glGetUniformLocation(glimage.program_id, "txt"), 0);
   glUniform2f(glGetUniformLocation(glimage.program_id, "window_size"),
       (float)params.window.x, (float)params.window.y);
   glUniform2f(glGetUniformLocation(glimage.program_id, "image_size"),
-      (float)glimage.texture.size.x, (float)glimage.texture.size.y);
+      (float)glimage.texture_size.x, (float)glimage.texture_size.y);
   glUniform2f(glGetUniformLocation(glimage.program_id, "image_center"),
       params.center.x, params.center.y);
   glUniform1f(

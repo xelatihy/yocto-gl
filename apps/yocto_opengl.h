@@ -114,9 +114,8 @@ namespace yocto {
 
 // OpenGL image data
 struct opengl_image {
-  vec2i                size() const { return texture.size; }
-                       operator bool() const { return (bool)texture; }
-  opengl_texture       texture  = {};
+  vec2i                size() const { return texture_size; }
+                       operator bool() const { return (bool)texture_id; }
 
   uint program_id = 0;
   uint vertex_id = 0;
@@ -124,6 +123,10 @@ struct opengl_image {
   uint array_id = 0;
   uint texcoords_id = 0;
   uint triangles_id = 0;
+  uint texture_id = 0;
+  vec2i texture_size = {0, 0};
+  bool texture_linear = false;
+  bool texture_mipmap = false;
 };
 
 // OpenGL image drawing params
