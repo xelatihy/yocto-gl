@@ -101,7 +101,7 @@ void set_glblending(bool enabled) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
+static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
     uint& array_id, const char* vertex, const char* fragment) {
   assert(glGetError() == GL_NO_ERROR);
   glGenVertexArrays(1, &array_id);
@@ -155,7 +155,7 @@ void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-void delete_glprogram(
+static void delete_glprogram(
     uint& program_id, uint& vertex_id, uint& fragment_id, uint& array_id) {
   if (program_id) glDeleteProgram(program_id);
   if (vertex_id) glDeleteShader(vertex_id);
@@ -165,6 +165,29 @@ void delete_glprogram(
   vertex_id   = 0;
   fragment_id = 0;
   array_id    = 0;
+}
+
+void init_glbuffer(uint& buffer_id, bool element, int size, int count, float* array) {
+  assert(glGetError() == GL_NO_ERROR);
+  glGenBuffers(1, &buffer_id);
+  glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
+  glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : 
+      GL_ARRAY_BUFFER, count * size * sizeof(float), array, GL_STATIC_DRAW);
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+void init_glbuffer(uint& buffer_id, bool element, int size, int count, int* array) {
+  assert(glGetError() == GL_NO_ERROR);
+  glGenBuffers(1, &buffer_id);
+  glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
+  glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : 
+      GL_ARRAY_BUFFER, count * size * sizeof(int), array, GL_STATIC_DRAW);
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+static void delete_glbuffer(uint& buffer_id) {
+  if (buffer_id) glDeleteBuffers(1, &buffer_id);
+  buffer_id = 0;
 }
 
 void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
@@ -296,12 +319,13 @@ void init_glimage_program(opengl_image& glimage) {
         )";
 #endif
 
+  auto texcoords =  vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+  auto triangles =  vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
+
   init_glprogram(glimage.program_id, glimage.vertex_id, glimage.fragment_id,
       glimage.array_id, vert, frag);
-  init_glarraybuffer(
-      glimage.texcoord, vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
-  init_glelementbuffer(
-      glimage.element, vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
+  init_glbuffer(glimage.texcoords_id, false, texcoords.size(), 2, &texcoords.front().x);
+  init_glbuffer(glimage.triangles_id, true, triangles.size(), 3, &triangles.front().x);
 }
 
 // update image data
@@ -337,8 +361,10 @@ void update_glimage(
 // draw image
 void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
   check_glerror();
-  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z, params.framebuffer.w);
-  glClearColor(params.background.x, params.background.y, params.background.z, params.background.w);
+  glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
+      params.framebuffer.w);
+  glClearColor(params.background.x, params.background.y, params.background.z,
+      params.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   glUseProgram(glimage.program_id);
@@ -349,12 +375,16 @@ void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
       (float)params.window.x, (float)params.window.y);
   glUniform2f(glGetUniformLocation(glimage.program_id, "image_size"),
       (float)glimage.texture.size.x, (float)glimage.texture.size.y);
-  glUniform2f(glGetUniformLocation(glimage.program_id, "image_center"), params.center.x, params.center.y);
-  glUniform1f(glGetUniformLocation(glimage.program_id, "image_scale"), params.scale);
-  glBindBuffer(GL_ARRAY_BUFFER, glimage.texcoord.buffer_id);
-  glEnableVertexAttribArray(glGetAttribLocation(glimage.program_id, "texcoord"));
-  glVertexAttribPointer(glGetAttribLocation(glimage.program_id, "texcoord"), 2, GL_FLOAT, false, 0, nullptr);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.element.buffer_id);
+  glUniform2f(glGetUniformLocation(glimage.program_id, "image_center"),
+      params.center.x, params.center.y);
+  glUniform1f(
+      glGetUniformLocation(glimage.program_id, "image_scale"), params.scale);
+  glBindBuffer(GL_ARRAY_BUFFER, glimage.texcoords_id);
+  glEnableVertexAttribArray(
+      glGetAttribLocation(glimage.program_id, "texcoord"));
+  glVertexAttribPointer(glGetAttribLocation(glimage.program_id, "texcoord"), 2,
+      GL_FLOAT, false, 0, nullptr);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles_id);
   glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_INT, nullptr);
   glUseProgram(0);
   check_glerror();
