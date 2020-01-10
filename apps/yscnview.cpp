@@ -212,10 +212,10 @@ void update_glinstance(
   glinstance.material = instance.material;
 }
 
-void update_gllights(opengl_scene& state, const sceneio_model& scene) {
-  state.lights = {};
+void update_gllights(opengl_scene& glscene, const sceneio_model& scene) {
+  clear_gllights(glscene);
   for (auto& instance : scene.instances) {
-    if (state.lights.size() >= 16) break;
+    if (has_max_gllights(glscene)) break;
     if (instance.shape < 0) continue;
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[instance.material];
@@ -239,10 +239,7 @@ void update_gllights(opengl_scene& state, const sceneio_model& scene) {
       area += shape.positions.size();
     }
     auto  ke       = material.emission * area;
-    auto& light    = state.lights.emplace_back();
-    light.position = transform_point(instance.frame, pos);
-    light.emission = ke;
-    light.type     = 0;
+    add_gllight(glscene, transform_point(instance.frame, pos), ke, false);
   }
 }
 

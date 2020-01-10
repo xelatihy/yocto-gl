@@ -276,9 +276,9 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   if (!app->show_edges) hide_edges(app);
 
   // Add lights.
-  app->scene.lights.push_back({{5, 5, 5}, {30, 30, 30}, 0});
-  app->scene.lights.push_back({{-5, 5, 5}, {30, 30, 30}, 0});
-  app->scene.lights.push_back({{0, 5, -5}, {30, 30, 30}, 0});
+  add_gllight(app->scene, {5, 5, 5}, {30, 30, 30}, false);
+  add_gllight(app->scene, {-5, 5, 5}, {30, 30, 30}, false);
+  add_gllight(app->scene, {0, 5, -5}, {30, 30, 30}, false);
 }
 
 void clear(shared_ptr<app_state> app) {

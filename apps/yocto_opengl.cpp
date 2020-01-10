@@ -843,6 +843,18 @@ void make_glscene(opengl_scene& glscene) {
   init_glprogram(glscene.program, vertex, fragment);
 }
 
+// add light
+void clear_gllights(opengl_scene& scene) {
+  scene._lights.clear();
+}
+void add_gllight(opengl_scene& scene, const vec3f& position,
+    const vec3f& emission, bool directional) {
+  scene._lights.push_back({position, emission, directional ? 1 : 0});
+}
+bool has_max_gllights(opengl_scene& scene) {
+  return scene._lights.size() >= 16;
+}
+
 // Draw a shape
 void draw_glinstance(opengl_scene& state, const opengl_instance& instance,
     const draw_glscene_params& params) {
@@ -977,15 +989,15 @@ void draw_glscene(opengl_scene& state, const vec4i& viewport,
 
   if (!params.eyelight) {
     set_gluniform(state.program, "lamb", zero3f);
-    set_gluniform(state.program, "lnum", (int)state.lights.size());
-    for (auto i = 0; i < state.lights.size(); i++) {
+    set_gluniform(state.program, "lnum", (int)state._lights.size());
+    for (auto i = 0; i < state._lights.size(); i++) {
       auto is = std::to_string(i);
       set_gluniform(state.program, ("lpos[" + is + "]").c_str(),
-          state.lights[i].position);
+          state._lights[i].position);
       set_gluniform(
-          state.program, ("lke[" + is + "]").c_str(), state.lights[i].emission);
+          state.program, ("lke[" + is + "]").c_str(), state._lights[i].emission);
       set_gluniform(state.program, ("ltype[" + is + "]").c_str(),
-          (int)state.lights[i].type);
+          (int)state._lights[i].type);
     }
   }
 

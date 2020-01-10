@@ -114,19 +114,19 @@ namespace yocto {
 
 // OpenGL image data
 struct opengl_image {
-  vec2i                size() const { return texture_size; }
-                       operator bool() const { return (bool)texture_id; }
+  vec2i size() const { return texture_size; }
+        operator bool() const { return (bool)texture_id; }
 
-  uint program_id = 0;
-  uint vertex_id = 0;
-  uint fragment_id = 0;
-  uint array_id = 0;
-  uint texcoords_id = 0;
-  uint triangles_id = 0;
-  uint texture_id = 0;
-  vec2i texture_size = {0, 0};
-  bool texture_linear = false;
-  bool texture_mipmap = false;
+  uint  program_id     = 0;
+  uint  vertex_id      = 0;
+  uint  fragment_id    = 0;
+  uint  array_id       = 0;
+  uint  texcoords_id   = 0;
+  uint  triangles_id   = 0;
+  uint  texture_id     = 0;
+  vec2i texture_size   = {0, 0};
+  bool  texture_linear = false;
+  bool  texture_mipmap = false;
 
   ~opengl_image();
 };
@@ -263,7 +263,7 @@ struct opengl_scene {
   vector<opengl_shape>    shapes    = {};
   vector<opengl_material> materials = {};
   vector<opengl_texture>  textures  = {};
-  vector<opengl_light>    lights    = {};
+  vector<opengl_light>    _lights    = {};
   opengl_program          program   = {};
 };
 
@@ -287,6 +287,12 @@ struct draw_glscene_params {
 
 // Initialize an OpenGL scene
 void make_glscene(opengl_scene& scene);
+
+// add light
+void clear_gllights(opengl_scene& scene);
+void add_gllight(opengl_scene& scene, const vec3f& position,
+    const vec3f& emission, bool directional);
+bool has_max_gllights(opengl_scene& scene);
 
 // Draw an OpenGL scene
 void draw_glscene(opengl_scene& state, const vec4i& viewport,
@@ -623,8 +629,7 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
 template <typename T>
 inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {
-  return draw_glcombobox(
-      win, lbl, idx, (int)vals.size(),
+  return draw_glcombobox(win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 
