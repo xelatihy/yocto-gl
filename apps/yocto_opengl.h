@@ -226,11 +226,6 @@ struct opengl_shape {
 
 // OpenGL texture
 struct opengl_texture_ {
-  opengl_texture_() {}
-  opengl_texture_(opengl_texture_&&);
-  opengl_texture_& operator=(opengl_texture_&&);
-  ~opengl_texture_();
-
   uint  texture_id = 0;
   vec2i size       = {0, 0};
   bool  mipmap     = false;

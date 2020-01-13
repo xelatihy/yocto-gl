@@ -828,18 +828,9 @@ void main() {
 #pragma GCC diagnostic pop
 #endif
 
-opengl_texture_::opengl_texture_(opengl_texture_&& other) {
-  operator=(std::forward<opengl_texture_>(other));
-}
-opengl_texture_& opengl_texture_::operator=(opengl_texture_&& other) {
-  std::swap(texture_id, other.texture_id);
-  std::swap(size, other.size);
-  return *this;
-}
-opengl_texture_::~opengl_texture_() { delete_gltexture(texture_id); }
-
 opengl_scene::~opengl_scene() {
   delete_glprogram(program_id, vertex_id, fragment_id, array_id);
+  for(auto& texture : _textures) delete_gltexture(texture.texture_id);
 }
 
 // Initialize an OpenGL scene
