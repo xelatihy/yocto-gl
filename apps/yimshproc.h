@@ -34,20 +34,6 @@ struct app_state {
   int glshape_id, glpoints_id, glvector_field_id, gledges_id, glpolyline_id;
 };
 
-// @Issue: Maybe this in yocto_opengl.h?
-void delete_glshape(opengl_shape& glshape) {
-  delete_glarraybuffer(glshape.positions);
-  delete_glarraybuffer(glshape.normals);
-  delete_glarraybuffer(glshape.texcoords);
-  delete_glarraybuffer(glshape.colors);
-  delete_glarraybuffer(glshape.tangentsps);
-  delete_glelementbuffer(glshape.points);
-  delete_glelementbuffer(glshape.lines);
-  delete_glelementbuffer(glshape.triangles);
-  delete_glelementbuffer(glshape.quads);
-  delete_glelementbuffer(glshape.edges);
-}
-
 void update_glshape(shared_ptr<app_state> app) {
   // @Issue: This app is specialized for a model that is a triangle mesh.
   //    Loading a generic shape is unsafe, maybe we should load only
@@ -58,7 +44,7 @@ void update_glshape(shared_ptr<app_state> app) {
     set_glshape_normals(app->scene, app->glshape_id, shape.normals);
     set_glshape_texcoords(app->scene, app->glshape_id, shape.texcoords);
     set_glshape_colors(app->scene, app->glshape_id, shape.colors);
-    set_glshape_tangentsps(app->scene, app->glshape_id, shape.tangents);
+    set_glshape_tangents(app->scene, app->glshape_id, shape.tangents);
     set_glshape_points(app->scene, app->glshape_id, shape.points);
     set_glshape_lines(app->scene, app->glshape_id, shape.lines);
     set_glshape_triangles(app->scene, app->glshape_id, shape.triangles);

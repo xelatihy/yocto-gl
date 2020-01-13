@@ -142,7 +142,7 @@ void update_glshape(opengl_scene& glscene, int idx, const sceneio_shape& shape,
       set_glshape_texcoords(glscene, idx, shape.texcoords);
     if (!shape.colors.empty()) set_glshape_colors(glscene, idx, shape.colors);
     if (!shape.tangents.empty())
-      set_glshape_tangentsps(glscene, idx, shape.tangents);
+      set_glshape_tangents(glscene, idx, shape.tangents);
     if (!shape.points.empty()) set_glshape_points(glscene, idx, shape.points);
     if (!shape.lines.empty()) set_glshape_lines(glscene, idx, shape.lines);
     if (!shape.triangles.empty())
