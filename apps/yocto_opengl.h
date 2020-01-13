@@ -53,8 +53,9 @@ using std::unique_ptr;
 
 // OpenGL image data
 struct opengl_image {
-  vec2i size() const { return texture_size; }
-        operator bool() const { return (bool)texture_id; }
+  opengl_image() { }
+  opengl_image(const opengl_image&) = delete;
+  opengl_image& operator=(const opengl_image&) = delete;
 
   uint  program_id     = 0;
   uint  vertex_id      = 0;

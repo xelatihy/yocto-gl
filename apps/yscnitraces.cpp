@@ -292,13 +292,9 @@ int main(int argc, const char* argv[]) {
   // callbacks
   set_draw_glcallback(
       win, [app](const opengl_window& win, vec2i window, vec4i viewport) {
-        if (!app->glimage) {
-          app->glimage = unique_ptr<opengl_image>(make_glimage());
+        if (!app->glimage) app->glimage = unique_ptr<opengl_image>(make_glimage());
+        if(!app->render_counter)
           set_glimage(app->glimage.get(), app->display, false, false);
-        } else if(app->glimage->size() != app->display.size() ||
-            !app->render_counter) {
-          set_glimage(app->glimage.get(), app->display, false, false);
-        }
         app->glparams.window      = window;
         app->glparams.framebuffer = viewport;
         update_imview(app->glparams.center, app->glparams.scale,

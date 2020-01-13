@@ -631,13 +631,9 @@ void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = window;
     app->glparams.framebuffer = viewport;
-    if (!app->glimage) {
-      app->glimage = unique_ptr<opengl_image>(make_glimage());
+    if (!app->glimage) app->glimage = unique_ptr<opengl_image>(make_glimage());
+    if (!app->render_counter)
       set_glimage(app->glimage.get(), app->display, false, false);
-    } else if (app->glimage->size() != app->display.size() ||
-        !app->render_counter) {
-      set_glimage(app->glimage.get(), app->display, false, false);
-    }
     update_imview(app->glparams.center, app->glparams.scale,
         app->display.size(), app->glparams.window, app->glparams.fit);
     draw_glimage(app->glimage.get(), app->glparams);
