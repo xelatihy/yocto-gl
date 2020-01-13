@@ -59,8 +59,8 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  unique_ptr<opengl_image>        glimage  = {};
-  draw_glimage_params glparams = {};
+  unique_ptr<opengl_image> glimage  = {};
+  draw_glimage_params      glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -292,8 +292,9 @@ int main(int argc, const char* argv[]) {
   // callbacks
   set_draw_glcallback(
       win, [app](const opengl_window& win, vec2i window, vec4i viewport) {
-        if (!app->glimage) app->glimage = unique_ptr<opengl_image>(make_glimage());
-        if(!app->render_counter)
+        if (!app->glimage)
+          app->glimage = unique_ptr<opengl_image>(make_glimage());
+        if (!app->render_counter)
           set_glimage(app->glimage.get(), app->display, false, false);
         app->glparams.window      = window;
         app->glparams.framebuffer = viewport;

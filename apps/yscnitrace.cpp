@@ -65,8 +65,8 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  unique_ptr<opengl_image>        glimage  = {};
-  draw_glimage_params glparams = {};
+  unique_ptr<opengl_image> glimage  = {};
+  draw_glimage_params      glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};

@@ -346,7 +346,8 @@ void set_glimage(
     init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
-    update_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
+    update_gltexture(
+        glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
   glimage->texture_size   = img.size();
   glimage->texture_linear = linear;
@@ -364,7 +365,8 @@ void set_glimage(
     init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
-    update_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
+    update_gltexture(
+        glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
   glimage->texture_size   = img.size();
   glimage->texture_linear = linear;
@@ -405,8 +407,8 @@ void draw_glimage(opengl_image* glimage, const draw_glimage_params& params) {
 
 // delete omage data
 void delete_glimage(opengl_image* glimage) {
-  delete_glprogram(glimage->program_id, glimage->vertex_id, glimage->fragment_id,
-      glimage->array_id);
+  delete_glprogram(glimage->program_id, glimage->vertex_id,
+      glimage->fragment_id, glimage->array_id);
   delete_glbuffer(glimage->texcoords_id);
   delete_glbuffer(glimage->triangles_id);
   delete_gltexture(glimage->texture_id);
@@ -1771,7 +1773,8 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
       state.set_dirname(dir_buffer);
     }
     auto current_item = -1;
-    if (ImGui::ListBox("entries", &current_item,
+    if (ImGui::ListBox(
+            "entries", &current_item,
             [](void* data, int idx, const char** out_text) -> bool {
               auto& state = *(filedialog_state*)data;
               *out_text   = state.entries[idx].first.c_str();

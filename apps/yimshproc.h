@@ -38,7 +38,7 @@ void update_glshape(shared_ptr<app_state> app) {
   // @Issue: This app is specialized for a model that is a triangle mesh.
   //    Loading a generic shape is unsafe, maybe we should load only
   //    triangle meshes here...
-  auto& shape   = app->shape;
+  auto& shape = app->shape;
   if (shape.quadspos.empty()) {
     set_glshape_positions(app->scene, app->glshape_id, shape.positions);
     set_glshape_normals(app->scene, app->glshape_id, shape.normals);
@@ -75,7 +75,8 @@ void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
     auto elements = vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
     set_glshape_positions(app->scene, app->glpoints_id, points);
-    set_glshape_normals(app->scene, app->glpoints_id, vector<vec3f>(points.size(), {0, 0, 1}));
+    set_glshape_normals(
+        app->scene, app->glpoints_id, vector<vec3f>(points.size(), {0, 0, 1}));
     set_glshape_points(app->scene, app->glpoints_id, elements);
   }
 }
@@ -165,11 +166,11 @@ void init_bvh(shared_ptr<app_state> app) {
 }
 
 void hide_edges(shared_ptr<app_state> app) {
-  app->show_edges                             = false;
+  app->show_edges = false;
   set_glinstance_shape(app->scene, app->gledges_id, -1);
 }
 void show_edges(shared_ptr<app_state> app) {
-  app->show_edges                             = true;
+  app->show_edges = true;
   set_glinstance_shape(app->scene, app->gledges_id, app->gledges_id);
 }
 
@@ -177,15 +178,16 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   make_glscene(app->scene);
   add_glcamera(app->scene);
   set_glcamera_frame(app->scene, 0, app->camera.frame);
-  set_glcamera_lens(app->scene, 0, app->camera.lens, app->camera.aspect, app->camera.film);
+  set_glcamera_lens(
+      app->scene, 0, app->camera.lens, app->camera.aspect, app->camera.film);
   set_glcamera_planes(app->scene, 0, 0.001, 10000);
 
-  auto shape_material      = add_glmaterial(app->scene);
+  auto shape_material = add_glmaterial(app->scene);
   set_glmaterial_diffuse(app->scene, shape_material, {1, 0.2, 0});
   set_glmaterial_roughness(app->scene, shape_material, 0.3);
 
   // @Issue: Right now we're missing APIs to color things easily.
-  auto lines_material      = add_glmaterial(app->scene);
+  auto lines_material = add_glmaterial(app->scene);
   set_glmaterial_emission(app->scene, lines_material, {1, 1, 1});
   set_glmaterial_roughness(app->scene, lines_material, 0.0);
 
@@ -307,7 +309,8 @@ void yimshproc(const string&                         input_filename,
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
     set_glcamera_frame(app->scene, 0, app->camera.frame);
-    set_glcamera_lens(app->scene, 0, app->camera.lens, app->camera.aspect, app->camera.film);
+    set_glcamera_lens(
+        app->scene, 0, app->camera.lens, app->camera.aspect, app->camera.film);
     set_glcamera_planes(app->scene, 0, 0.001, 10000);
   });
   set_key_glcallback(

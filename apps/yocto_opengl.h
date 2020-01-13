@@ -53,7 +53,7 @@ using std::unique_ptr;
 
 // OpenGL image data
 struct opengl_image {
-  opengl_image() { }
+  opengl_image() {}
   opengl_image(const opengl_image&) = delete;
   opengl_image& operator=(const opengl_image&) = delete;
 
@@ -510,7 +510,8 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
 template <typename T>
 inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {
-  return draw_glcombobox(win, lbl, idx, (int)vals.size(),
+  return draw_glcombobox(
+      win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 

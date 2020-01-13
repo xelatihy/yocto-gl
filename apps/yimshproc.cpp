@@ -37,7 +37,8 @@ void my_keycallback(
     printf("Esc pressed!\n");
     init_camera(app);
     set_glcamera_frame(app->scene, 0, app->camera.frame);
-    set_glcamera_lens(app->scene, 0, app->camera.lens, app->camera.aspect, app->camera.film);
+    set_glcamera_lens(
+        app->scene, 0, app->camera.lens, app->camera.aspect, app->camera.film);
     set_glcamera_planes(app->scene, 0, 0.001, 10000);
   }
 

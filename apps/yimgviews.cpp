@@ -50,8 +50,8 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  unique_ptr<opengl_image>        glimage  = {};
-  draw_glimage_params glparams = {};
+  unique_ptr<opengl_image> glimage  = {};
+  draw_glimage_params      glparams = {};
 };
 
 // Simple parallel for used since our target platforms do not yet support

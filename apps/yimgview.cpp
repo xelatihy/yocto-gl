@@ -63,9 +63,9 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  unique_ptr<opengl_image>        glimage   = {};
-  draw_glimage_params glparams  = {};
-  bool                glupdated = true;
+  unique_ptr<opengl_image> glimage   = {};
+  draw_glimage_params      glparams  = {};
+  bool                     glupdated = true;
 
   // error
   string error = "";
