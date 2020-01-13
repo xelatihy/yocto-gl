@@ -192,14 +192,6 @@ void update_gledges(shared_ptr<app_state> app) {
   init_glelementbuffer(glshape.lines, elements, false);
 }
 
-void update_glcamera(opengl_camera& glcamera, const sceneio_camera& camera) {
-  glcamera.frame  = camera.frame;
-  glcamera.lens   = camera.lens;
-  glcamera.asepct = camera.aspect;
-  glcamera.near   = 0.001f;
-  glcamera.far    = 10000;
-}
-
 void init_camera(shared_ptr<app_state> app,
     const vec3f& from = vec3f{0, 0.5, 1.5}, const vec3f& to = {0, 0, 0}) {
   app->camera              = sceneio_camera{};
@@ -230,7 +222,10 @@ void show_edges(shared_ptr<app_state> app) {
 
 void init_opengl_scene(shared_ptr<app_state> app) {
   make_glscene(app->scene);
-  update_glcamera(app->scene.cameras.emplace_back(), app->camera);
+  add_glcamera(app->scene);
+  set_glcamera_frame(app->scene, 0, app->camera.frame);
+  set_glcamera_lens(app->scene, 0, app->camera.lens, app->camera.aspect, app->camera.film);
+  set_glcamera_planes(app->scene, 0, 0.001, 10000);
 
   auto shape_material      = opengl_material{};
   shape_material.diffuse   = {1, 0.2, 0};
@@ -363,7 +358,9 @@ void yimshproc(const string&                         input_filename,
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
-    update_glcamera(app->scene.cameras[0], app->camera);
+    set_glcamera_frame(app->scene, 0, app->camera.frame);
+    set_glcamera_lens(app->scene, 0, app->camera.lens, app->camera.aspect, app->camera.film);
+    set_glcamera_planes(app->scene, 0, 0.001, 10000);
   });
   set_key_glcallback(
       win, [app](const opengl_window& win, int key, bool pressing) {
@@ -385,7 +382,7 @@ void yimshproc(const string&                         input_filename,
           rotate.y = -rotate.y;
           pan.x    = -pan.x;
           update_turntable(camera.frame, app->camera.focus, rotate, dolly, pan);
-          update_glcamera(app->scene.cameras[0], camera);
+          set_glcamera_frame(app->scene, 0, camera.frame);
         }
       });
 

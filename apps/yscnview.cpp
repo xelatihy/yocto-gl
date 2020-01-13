@@ -249,15 +249,18 @@ void make_glscene(opengl_scene& glscene, const sceneio_model& scene) {
 
   // camera
   for (auto& camera : scene.cameras) {
-    update_glcamera(glscene.cameras.emplace_back(), camera);
+    auto id = add_glcamera(glscene);
+    set_glcamera_frame(glscene, id, camera.frame);
+    set_glcamera_lens(glscene, id, camera.lens, camera.aspect, camera.film);
   }
 
   // textures
   for (auto& texture : scene.textures) {
+    auto id = add_gltexture(glscene);
     if(!texture.hdr.empty()) {
-      add_gltexture(glscene, texture.hdr);
+      set_gltexture(glscene, id, texture.hdr);
     } else if(!texture.ldr.empty()) {
-      add_gltexture(glscene, texture.ldr);
+      set_gltexture(glscene, id, texture.ldr);
     }
   }
 
@@ -524,7 +527,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->scene.cameras);
       if (draw_glwidgets_camera(win, app, app->selection.second))
-        update_glcamera(app->glscene.cameras[app->selection.second],
+        update_glcamera(app->glscene._cameras[app->selection.second],
             app->scene.cameras[app->selection.second]);
     } else if (app->selection.first == "texture") {
       draw_glcombobox(
@@ -668,7 +671,7 @@ int main(int argc, const char* argv[]) {
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      update_glcamera(app->glscene.cameras[app->drawgl_prms.camera], camera);
+      update_glcamera(app->glscene._cameras[app->drawgl_prms.camera], camera);
     }
 
     // animation

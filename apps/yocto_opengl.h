@@ -273,11 +273,11 @@ struct opengl_light {
 
 // Opengl scene
 struct opengl_scene {
-  vector<opengl_camera>   cameras   = {};
+  vector<opengl_camera>   _cameras   = {};
   vector<opengl_instance> instances = {};
   vector<opengl_shape>    shapes    = {};
   vector<opengl_material> materials = {};
-  vector<opengl_texture_>  _textures = {};
+  vector<opengl_texture_> _textures = {};
   vector<opengl_light>    _lights   = {};
 
   // OpenGL state
@@ -311,11 +311,19 @@ struct draw_glscene_params {
 // Initialize an OpenGL scene
 void make_glscene(opengl_scene& scene);
 
+// add camera
+int  add_glcamera(opengl_scene& scene);
+void set_glcamera_frame(opengl_scene& scene, int idx, const frame3f frame);
+void set_glcamera_lens(opengl_scene& scene, int idx, float lens, float asepct, float film);
+void set_glcamera_planes(opengl_scene& scene, int idx, float near, float far);
+void clear_glcameras(opengl_scene& scene);
+
 // add texture
-int  add_gltexture(opengl_scene& scene, const image<vec4b>& img, bool as_srgb = true);
-int  add_gltexture(opengl_scene& scene, const image<vec4f>& img, bool as_float = true);
-void set_gltexture(opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb = false);
-void set_gltexture(opengl_scene& scene, int idx, const image<vec4f>& img, bool as_float = false);
+int add_gltexture(opengl_scene& scene);
+void set_gltexture(opengl_scene& scene, int idx, const image<vec4b>& img,
+    bool as_srgb = true);
+void set_gltexture(opengl_scene& scene, int idx, const image<vec4f>& img,
+    bool as_float = false);
 void clear_gltextures(opengl_scene& scene);
 
 // add light

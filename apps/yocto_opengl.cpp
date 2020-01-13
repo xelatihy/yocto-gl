@@ -253,35 +253,6 @@ void delete_gltexture(opengl_texture& texture) {
   texture.size       = zero2i;
 }
 
-static void init_gltexture(uint& texture_id, const vec2i& size, bool as_float,
-    bool as_srgb, bool linear, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glGenTextures(1, &texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  if (as_float) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
-        GL_FLOAT, nullptr);
-  } else if (as_srgb) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, size.x, size.y, 0, GL_RGBA,
-        GL_UNSIGNED_BYTE, nullptr);
-  } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
-        GL_FLOAT, nullptr);
-  }
-  if (mipmap) {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-  } else {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-  }
-  assert(glGetError() == GL_NO_ERROR);
-}
-
 static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
     const float* img, bool mipmap) {
   assert(glGetError() == GL_NO_ERROR);
@@ -860,15 +831,30 @@ void make_glscene(opengl_scene& glscene) {
       glscene.array_id, glscene_vertex, glscene_fragment);
 }
 
-// add texture
-int  add_gltexture(opengl_scene& scene, const image<vec4b>& img, bool as_srgb) {
-  scene._textures.emplace_back();
-  set_gltexture(scene, (int)scene._textures.size()-1, img, as_srgb);
-  return (int)scene._textures.size()-1;
+// add camera
+int  add_glcamera(opengl_scene& scene) {
+  scene._cameras.emplace_back();
+  return (int)scene._cameras.size()-1;
 }
-int  add_gltexture(opengl_scene& scene, const image<vec4f>& img, bool as_float) {
+void set_glcamera_frame(opengl_scene& scene, int idx, const frame3f frame) {
+  scene._cameras[idx].frame = frame;
+}
+void set_glcamera_lens(opengl_scene& scene, int idx, float lens, float asepct, float film) {
+  scene._cameras[idx].lens = lens;
+  scene._cameras[idx].asepct = asepct;
+  scene._cameras[idx].film = film;
+}
+void set_glcamera_planes(opengl_scene& scene, int idx, float near, float far) {
+  scene._cameras[idx].near = near;
+  scene._cameras[idx].far = far;
+}
+void clear_glcameras(opengl_scene& scene) {
+  scene._cameras.clear();
+}
+
+// add texture
+int  add_gltexture(opengl_scene& scene) {
   scene._textures.emplace_back();
-  set_gltexture(scene, (int)scene._textures.size()-1, img, as_float);
   return (int)scene._textures.size()-1;
 }
 void set_gltexture(opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb) {
@@ -1093,7 +1079,7 @@ void draw_glinstance(opengl_scene& glscene, const opengl_instance& instance,
 // Display a scene
 void draw_glscene(opengl_scene& glscene, const vec4i& viewport,
     const draw_glscene_params& params) {
-  auto& glcamera      = glscene.cameras.at(params.camera);
+  auto& glcamera      = glscene._cameras.at(params.camera);
   auto  camera_aspect = (float)viewport.z / (float)viewport.w;
   auto  camera_yfov =
       camera_aspect >= 0
