@@ -55,34 +55,7 @@
 #endif
 
 // -----------------------------------------------------------------------------
-// LOW-LEVEL OPENGL FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-void clear_glframebuffer(const vec4f& color, bool clear_depth) {
-  glClearColor(color.x, color.y, color.z, color.w);
-  if (clear_depth) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
-  } else {
-    glClear(GL_COLOR_BUFFER_BIT);
-  }
-}
-
-void set_glblending(bool enabled) {
-  if (enabled) {
-    glEnable(GL_BLEND);
-    glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
-  } else {
-    glDisable(GL_BLEND);
-  }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// HIGH-LEVEL OPENGL IMAGE DRAWING
+// OPENGL UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
