@@ -45,56 +45,7 @@ using std::shared_ptr;
 struct GLFWwindow;
 
 // -----------------------------------------------------------------------------
-// LOW-LEVEL OPENGL OBJECTS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// OpenGL texture
-struct opengl_texture {
-  opengl_texture() {}
-  opengl_texture(opengl_texture&&);
-  opengl_texture& operator=(opengl_texture&&);
-  ~opengl_texture();
-  operator bool() const { return (bool)texture_id; }
-
-  uint  texture_id = 0;
-  vec2i size       = {0, 0};
-  bool  mipmap     = false;
-  bool  linear     = false;
-  bool  is_srgb    = false;
-  bool  is_float   = false;
-};
-
-// OpenGL vertex buffer
-struct opengl_arraybuffer {
-  opengl_arraybuffer() {}
-  opengl_arraybuffer(opengl_arraybuffer&&);
-  opengl_arraybuffer& operator=(opengl_arraybuffer&&);
-  ~opengl_arraybuffer();
-  operator bool() const { return (bool)buffer_id; }
-
-  uint buffer_id = 0;
-  int  num       = 0;
-  int  elem_size = 0;
-};
-
-// OpenGL element buffer
-struct opengl_elementbuffer {
-  opengl_elementbuffer() {}
-  opengl_elementbuffer(opengl_elementbuffer&&);
-  opengl_elementbuffer& operator=(opengl_elementbuffer&&);
-  ~opengl_elementbuffer();
-  operator bool() const { return (bool)buffer_id; }
-
-  uint buffer_id = 0;
-  int  num       = 0;
-  int  elem_size = 0;
-};
-
-};  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// HIGH-LEVEL OPENGL IMAGE DRAWING
+// IMAGE DRAWING
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -144,7 +95,7 @@ void draw_glimage(opengl_image& glimage, const draw_glimage_params& params);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// HIGH-LEVEL OPENGL SCENE RENDERING
+// SCENE DRAWING
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -341,65 +292,6 @@ bool has_max_gllights(opengl_scene& scene);
 // Draw an OpenGL scene
 void draw_glscene(opengl_scene& state, const vec4i& viewport,
     const draw_glscene_params& params);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// LOW-LEVEL OPENGL FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-void clear_glframebuffer(const vec4f& color, bool clear_depth = true);
-
-void set_glviewport(const vec4i& viewport);
-
-void set_glwireframe(bool enabled);
-void set_glblending(bool enabled);
-
-void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
-    bool as_srgb, bool linear, bool mipmap);
-
-void update_gltexture(
-    opengl_texture& texture, const image<vec4f>& img, bool mipmap);
-
-inline void init_gltexture(opengl_texture& texture, const image<vec4f>& img,
-    bool as_float, bool linear, bool mipmap) {
-  init_gltexture(texture, img.size(), as_float, false, linear, mipmap);
-  update_gltexture(texture, img, mipmap);
-}
-
-void init_gltexture(opengl_texture& texture, const image<vec4b>& img,
-    bool as_srgb, bool linear, bool mipmap);
-void update_gltexture(
-    opengl_texture& texture, const image<vec4b>& img, bool mipmap);
-
-inline void init_gltexture(opengl_texture& texture, const image<vec4b>& img,
-    bool as_srgb, bool linear, bool mipmap) {
-  init_gltexture(texture, img.size(), false, as_srgb, linear, mipmap);
-  update_gltexture(texture, img, mipmap);
-}
-
-void delete_gltexture(opengl_texture& texture);
-
-void init_glarraybuffer(opengl_arraybuffer& buffer, const vector<float>& data,
-    bool dynamic = false);
-void init_glarraybuffer(opengl_arraybuffer& buffer, const vector<vec2f>& data,
-    bool dynamic = false);
-void init_glarraybuffer(opengl_arraybuffer& buffer, const vector<vec3f>& data,
-    bool dynamic = false);
-void init_glarraybuffer(opengl_arraybuffer& buffer, const vector<vec4f>& data,
-    bool dynamic = false);
-
-void delete_glarraybuffer(opengl_arraybuffer& buffer);
-
-void init_glelementbuffer(opengl_elementbuffer& buffer, const vector<int>& data,
-    bool dynamic = false);
-void init_glelementbuffer(opengl_elementbuffer& buffer,
-    const vector<vec2i>& data, bool dynamic = false);
-void init_glelementbuffer(opengl_elementbuffer& buffer,
-    const vector<vec3i>& data, bool dynamic = false);
-
-void delete_glelementbuffer(opengl_elementbuffer& buffer);
 
 }  // namespace yocto
 

@@ -210,67 +210,6 @@ static void delete_glbuffer(uint& buffer_id) {
   buffer_id = 0;
 }
 
-void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
-    bool as_srgb, bool linear, bool mipmap) {
-  if (texture) delete_gltexture(texture);
-  assert(glGetError() == GL_NO_ERROR);
-  glGenTextures(1, &texture.texture_id);
-  texture.size     = size;
-  texture.mipmap   = mipmap;
-  texture.is_srgb  = as_srgb;
-  texture.is_float = as_float;
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  if (as_float) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
-        GL_FLOAT, nullptr);
-  } else if (as_srgb) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, size.x, size.y, 0, GL_RGBA,
-        GL_UNSIGNED_BYTE, nullptr);
-  } else {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
-        GL_FLOAT, nullptr);
-  }
-  if (mipmap) {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-  } else {
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-  }
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void update_gltexture(
-    opengl_texture& texture, const image<vec4f>& img, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
-      GL_FLOAT, img.data());
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void update_gltexture(
-    opengl_texture& texture, const image<vec4b>& img, bool mipmap) {
-  assert(glGetError() == GL_NO_ERROR);
-  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
-      GL_UNSIGNED_BYTE, img.data());
-  if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void delete_gltexture(opengl_texture& texture) {
-  if (!texture) return;
-  glDeleteTextures(1, &texture.texture_id);
-  texture.texture_id = 0;
-  texture.size       = zero2i;
-}
-
 static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
     const float* img, bool mipmap) {
   assert(glGetError() == GL_NO_ERROR);
@@ -1294,8 +1233,10 @@ void draw_glscene(opengl_scene& glscene, const vec4i& viewport,
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
-  clear_glframebuffer(params.background);
-  set_glviewport(viewport);
+  glClearColor(params.background.x, params.background.y, params.background.z, params.background.w);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_DEPTH_TEST);
+  glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
 
   glUseProgram(glscene.program_id);
   glUniform3f(glGetUniformLocation(glscene.program_id, "cam_pos"),
@@ -1342,127 +1283,14 @@ void draw_glscene(opengl_scene& glscene, const vec4i& viewport,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// LOW-LEVEL OPENGL FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-opengl_texture::opengl_texture(opengl_texture&& other) {
-  operator=(std::forward<opengl_texture>(other));
-}
-opengl_texture& opengl_texture::operator=(opengl_texture&& other) {
-  std::swap(texture_id, other.texture_id);
-  std::swap(size, other.size);
-  return *this;
-}
-opengl_texture::~opengl_texture() { delete_gltexture(*this); }
-
-opengl_arraybuffer::opengl_arraybuffer(opengl_arraybuffer&& other) {
-  operator=(std::forward<opengl_arraybuffer>(other));
-}
-opengl_arraybuffer& opengl_arraybuffer::operator=(opengl_arraybuffer&& other) {
-  std::swap(buffer_id, other.buffer_id);
-  std::swap(num, other.num);
-  std::swap(elem_size, other.elem_size);
-  return *this;
-}
-opengl_arraybuffer::~opengl_arraybuffer() { delete_glarraybuffer(*this); }
-
-template <typename T>
-void init_glarray_buffer_impl(
-    opengl_arraybuffer& buffer, const vector<T>& array, bool dynamic) {
-  buffer           = opengl_arraybuffer{};
-  buffer.num       = size(array);
-  buffer.elem_size = sizeof(T);
-  assert(glGetError() == GL_NO_ERROR);
-  glGenBuffers(1, &buffer.buffer_id);
-  glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
-  glBufferData(GL_ARRAY_BUFFER, size(array) * sizeof(T), array.data(),
-      (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void init_glarraybuffer(
-    opengl_arraybuffer& buffer, const vector<float>& data, bool dynamic) {
-  init_glarray_buffer_impl(buffer, data, dynamic);
-}
-void init_glarraybuffer(
-    opengl_arraybuffer& buffer, const vector<vec2f>& data, bool dynamic) {
-  init_glarray_buffer_impl(buffer, data, dynamic);
-}
-void init_glarraybuffer(
-    opengl_arraybuffer& buffer, const vector<vec3f>& data, bool dynamic) {
-  init_glarray_buffer_impl(buffer, data, dynamic);
-}
-void init_glarraybuffer(
-    opengl_arraybuffer& buffer, const vector<vec4f>& data, bool dynamic) {
-  init_glarray_buffer_impl(buffer, data, dynamic);
-}
-
-void delete_glarraybuffer(opengl_arraybuffer& buffer) {
-  if (!buffer) return;
-  glDeleteBuffers(1, &buffer.buffer_id);
-  buffer.buffer_id = 0;
-  buffer.elem_size = 0;
-  buffer.num       = 0;
-}
-
-opengl_elementbuffer::opengl_elementbuffer(opengl_elementbuffer&& other) {
-  operator=(std::forward<opengl_elementbuffer>(other));
-}
-opengl_elementbuffer& opengl_elementbuffer::operator=(
-    opengl_elementbuffer&& other) {
-  std::swap(buffer_id, other.buffer_id);
-  std::swap(num, other.num);
-  std::swap(elem_size, other.elem_size);
-  return *this;
-}
-opengl_elementbuffer::~opengl_elementbuffer() { delete_glelementbuffer(*this); }
-
-template <typename T>
-void init_glelementbuffer_impl(
-    opengl_elementbuffer& buffer, const vector<T>& array, bool dynamic) {
-  buffer           = opengl_elementbuffer{};
-  buffer.num       = size(array);
-  buffer.elem_size = sizeof(T);
-  assert(glGetError() == GL_NO_ERROR);
-  glGenBuffers(1, &buffer.buffer_id);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.buffer_id);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, size(array) * sizeof(T), array.data(),
-      (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-  assert(glGetError() == GL_NO_ERROR);
-}
-
-void init_glelementbuffer(
-    opengl_elementbuffer& buffer, const vector<int>& data, bool dynamic) {
-  init_glelementbuffer_impl(buffer, data, dynamic);
-}
-void init_glelementbuffer(
-    opengl_elementbuffer& buffer, const vector<vec2i>& data, bool dynamic) {
-  init_glelementbuffer_impl(buffer, data, dynamic);
-}
-void init_glelementbuffer(
-    opengl_elementbuffer& buffer, const vector<vec3i>& data, bool dynamic) {
-  init_glelementbuffer_impl(buffer, data, dynamic);
-}
-
-void delete_glelementbuffer(opengl_elementbuffer& buffer) {
-  if (!buffer) return;
-  glDeleteBuffers(1, &buffer.buffer_id);
-  buffer.buffer_id = 0;
-  buffer.elem_size = 0;
-  buffer.num       = 0;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // OPENGL WINDOW
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 void _glfw_refresh_callback(GLFWwindow* glfw) {
   auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
-  clear_glframebuffer(win.background);
+  glClearColor(win.background.x, win.background.y, win.background.z, win.background.w);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (win.draw_cb)
     win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
   if (win.widgets_cb) {
@@ -1565,7 +1393,8 @@ void run_ui(opengl_window& win) {
     if (win.update_cb) win.update_cb(win);
 
     // draw
-    clear_glframebuffer(win.background);
+    glClearColor(win.background.x, win.background.y, win.background.z, win.background.w);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     if (win.draw_cb)
       win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
     if (win.widgets_cb) {
