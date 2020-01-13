@@ -210,9 +210,7 @@ void init_opengl_scene(shared_ptr<app_state> app) {
 
   // Add instances.
   for (int i = 0; i < 5; ++i) {
-    add_glinstance(app->scene.get());
-    set_glinstance_shape(app->scene.get(), i, i);
-    set_glinstance_material(app->scene.get(), i, i ? 1 : 0);
+    add_glinstance(app->scene.get(), identity3x4f, i, i ? 1 : 0);
   }
 
   // Hide edges.

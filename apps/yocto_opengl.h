@@ -280,7 +280,8 @@ void set_glshape_edges(
 void clean_glshapes(opengl_scene* scene);
 
 // add instance
-int  add_glinstance(opengl_scene* scene);
+int  add_glinstance(opengl_scene* scene, const frame3f& frame, int shape, int material);
+void set_glinstance(opengl_scene* scene, int idx, const frame3f& frame, int shape, int material);
 void set_glinstance_frame(opengl_scene* scene, int idx, const frame3f& frame);
 void set_glinstance_shape(opengl_scene* scene, int idx, int shape);
 void set_glinstance_material(opengl_scene* scene, int idx, int material);

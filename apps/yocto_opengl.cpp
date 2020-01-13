@@ -954,9 +954,18 @@ void clean_glshapes(opengl_scene* scene) {
 }
 
 // add instance
-int add_glinstance(opengl_scene* scene) {
+int add_glinstance(opengl_scene* scene, const frame3f& frame, int shape, int material) {
   scene->_instances.emplace_back();
-  return (int)scene->_instances.size() - 1;
+  auto idx = (int)scene->_instances.size() - 1;
+  scene->_instances[idx].frame = frame;
+  scene->_instances[idx].shape = shape;
+  scene->_instances[idx].material = material;
+  return idx;
+}
+void set_glinstance(opengl_scene* scene, int idx, const frame3f& frame, int shape, int material) {
+  scene->_instances[idx].frame = frame;
+  scene->_instances[idx].shape = shape;
+  scene->_instances[idx].material = material;
 }
 void set_glinstance_frame(opengl_scene* scene, int idx, const frame3f& frame) {
   scene->_instances[idx].frame = frame;
