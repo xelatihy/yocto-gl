@@ -167,11 +167,11 @@ void init_bvh(shared_ptr<app_state> app) {
 
 void hide_edges(shared_ptr<app_state> app) {
   app->show_edges = false;
-  set_glinstance_shape(app->scene.get(), app->gledges_id, -1);
+  set_glinstance(app->scene.get(), app->gledges_id, identity3x4f, -1, 1);
 }
 void show_edges(shared_ptr<app_state> app) {
   app->show_edges = true;
-  set_glinstance_shape(app->scene.get(), app->gledges_id, app->gledges_id);
+  set_glinstance(app->scene.get(), app->gledges_id, identity3x4f, app->gledges_id, 1);
 }
 
 void init_opengl_scene(shared_ptr<app_state> app) {
