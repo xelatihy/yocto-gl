@@ -137,7 +137,7 @@ struct opengl_shape {
 };
 
 // OpenGL texture
-struct opengl_texture_ {
+struct opengl_texture {
   uint  texture_id = 0;
   vec2i size       = {0, 0};
   bool  mipmap     = false;
@@ -189,7 +189,7 @@ struct opengl_scene {
   vector<opengl_instance> _instances = {};
   vector<opengl_shape>    _shapes    = {};
   vector<opengl_material> _materials = {};
-  vector<opengl_texture_> _textures  = {};
+  vector<opengl_texture*> _textures  = {};
   vector<opengl_light>    _lights    = {};
 
   // OpenGL state
