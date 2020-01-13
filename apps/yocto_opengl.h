@@ -49,20 +49,6 @@ struct GLFWwindow;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// OpenGL program
-struct opengl_program {
-  opengl_program() {}
-  opengl_program(opengl_program&&);
-  opengl_program& operator=(opengl_program&&);
-  ~opengl_program();
-  operator bool() const { return (bool)program_id; }
-
-  uint program_id             = 0;
-  uint vertex_shader_id       = 0;
-  uint fragment_shader_id     = 0;
-  uint vertex_array_object_id = 0;
-};
-
 // OpenGL texture
 struct opengl_texture {
   opengl_texture() {}
@@ -154,44 +140,6 @@ struct draw_glimage_params {
 
 // draw image
 void draw_glimage(opengl_image& glimage, const draw_glimage_params& params);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// HIGH-LEVEL OPENGL MESH DRAWING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// OpenGL image data
-struct opengl_mesh {
-  opengl_arraybuffer   positions = {};
-  opengl_arraybuffer   normals   = {};
-  opengl_arraybuffer   texcoords = {};
-  opengl_arraybuffer   colors    = {};
-  opengl_elementbuffer points    = {};
-  opengl_elementbuffer lines     = {};
-  opengl_elementbuffer triangles = {};
-  opengl_elementbuffer quads     = {};
-  opengl_elementbuffer edges     = {};
-  opengl_program       program   = {};
-};
-
-// update image data
-void update_glmesh(opengl_mesh& glmesh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords = {}, const vector<vec4f>& colors = {});
-void update_glmesh(opengl_mesh& glmesh, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords = {}, const vector<vec4f>& colors = {});
-void update_glmesh(opengl_mesh& glmesh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& tangents,
-    const vector<vec2f>& texcoords = {}, const vector<vec4f>& colors = {});
-void update_glmesh(opengl_mesh& glmesh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec2f>& texcoords = {},
-    const vector<vec4f>& colors = {});
-
-// draw mesh
-void draw_glmesh(opengl_mesh& glmesh, const frame3f& frame, const vec3f& color);
 
 }  // namespace yocto
 
@@ -408,14 +356,6 @@ void set_glviewport(const vec4i& viewport);
 void set_glwireframe(bool enabled);
 void set_glblending(bool enabled);
 
-void init_glprogram(
-    opengl_program& program, const char* vertex, const char* fragment);
-
-void delete_glprogram(opengl_program& program);
-
-void bind_glprogram(opengl_program& program);
-void unbind_opengl_program();
-
 void init_gltexture(opengl_texture& texture, const vec2i& size, bool as_float,
     bool as_srgb, bool linear, bool mipmap);
 
@@ -460,56 +400,6 @@ void init_glelementbuffer(opengl_elementbuffer& buffer,
     const vector<vec3i>& data, bool dynamic = false);
 
 void delete_glelementbuffer(opengl_elementbuffer& buffer);
-
-int get_gluniform_location(const opengl_program& program, const char* name);
-
-void set_gluniform(int locatiom, int value);
-void set_gluniform(int locatiom, const vec2i& value);
-void set_gluniform(int locatiom, const vec3i& value);
-void set_gluniform(int locatiom, const vec4i& value);
-void set_gluniform(int locatiom, float value);
-void set_gluniform(int locatiom, const vec2f& value);
-void set_gluniform(int locatiom, const vec3f& value);
-void set_gluniform(int locatiom, const vec4f& value);
-void set_gluniform(int locatiom, const mat4f& value);
-void set_gluniform(int locatiom, const frame3f& value);
-
-template <typename T>
-inline void set_gluniform(
-    const opengl_program& program, const char* name, const T& value) {
-  set_gluniform(get_gluniform_location(program, name), value);
-}
-
-void set_gluniform_texture(
-    int locatiom, const opengl_texture& texture, int unit);
-void set_gluniform_texture(opengl_program& program, const char* name,
-    const opengl_texture& texture, int unit);
-void set_gluniform_texture(
-    int locatiom, int locatiom_on, const opengl_texture& texture, int unit);
-void set_gluniform_texture(opengl_program& program, const char* name,
-    const char* name_on, const opengl_texture& texture, int unit);
-
-int get_glvertexattrib_location(
-    const opengl_program& program, const char* name);
-
-void set_glvertexattrib(
-    int locatiom, const opengl_arraybuffer& buffer, float value);
-void set_glvertexattrib(
-    int locatiom, const opengl_arraybuffer& buffer, const vec2f& value);
-void set_glvertexattrib(
-    int locatiom, const opengl_arraybuffer& buffer, const vec3f& value);
-void set_glvertexattrib(
-    int locatiom, const opengl_arraybuffer& buffer, const vec4f& value);
-
-template <typename T>
-inline void set_glvertexattrib(const opengl_program& program, const char* name,
-    const opengl_arraybuffer& buffer, const T& value) {
-  set_glvertexattrib(get_glvertexattrib_location(program, name), buffer, value);
-}
-
-void draw_glpoints(const opengl_elementbuffer& buffer, int num);
-void draw_gllines(const opengl_elementbuffer& buffer, int num);
-void draw_gltriangles(const opengl_elementbuffer& buffer, int num);
 
 }  // namespace yocto
 
