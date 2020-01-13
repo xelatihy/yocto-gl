@@ -264,7 +264,15 @@ struct opengl_scene {
   vector<opengl_material> materials = {};
   vector<opengl_texture>  textures  = {};
   vector<opengl_light>    _lights    = {};
-  opengl_program          program   = {};
+
+  // OpenGL state
+  uint program_id             = 0;
+  uint vertex_id       = 0;
+  uint fragment_id     = 0;
+  uint array_id = 0;
+
+  // cleanup
+  ~opengl_scene();
 };
 
 // Draw options
