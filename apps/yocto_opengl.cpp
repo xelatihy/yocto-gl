@@ -54,6 +54,8 @@
 #undef far
 #endif
 
+using std::make_unique;
+
 // -----------------------------------------------------------------------------
 // OPENGL UTILITIES
 // -----------------------------------------------------------------------------
@@ -255,8 +257,7 @@ static void delete_gltexture(uint& texture_id) {
 namespace yocto {
 
 // init image program
-void init_glimage_program(opengl_image& glimage) {
-  if (glimage.program_id) return;
+opengl_image* make_glimage() {
   auto vert =
       R"(
       #version 330
@@ -318,60 +319,60 @@ void init_glimage_program(opengl_image& glimage) {
   auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
   auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
-  init_glprogram(glimage.program_id, glimage.vertex_id, glimage.fragment_id,
-      glimage.array_id, vert, frag);
-  glGenBuffers(1, &glimage.texcoords_id);
-  glBindBuffer(GL_ARRAY_BUFFER, glimage.texcoords_id);
+  auto glimage = make_unique<opengl_image>();
+  init_glprogram(glimage->program_id, glimage->vertex_id, glimage->fragment_id,
+      glimage->array_id, vert, frag);
+  glGenBuffers(1, &glimage->texcoords_id);
+  glBindBuffer(GL_ARRAY_BUFFER, glimage->texcoords_id);
   glBufferData(GL_ARRAY_BUFFER, texcoords.size() * 2 * sizeof(float),
       texcoords.data(), GL_STATIC_DRAW);
-  glGenBuffers(1, &glimage.triangles_id);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles_id);
+  glGenBuffers(1, &glimage->triangles_id);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage->triangles_id);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * 3 * sizeof(int),
       triangles.data(), GL_STATIC_DRAW);
+  return glimage.release();
 }
 
 // update image data
-void update_glimage(
-    opengl_image& glimage, const image<vec4f>& img, bool linear, bool mipmap) {
-  init_glimage_program(glimage);
-  if (!glimage.texture_id) {
-    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
+void set_glimage(
+    opengl_image* glimage, const image<vec4f>& img, bool linear, bool mipmap) {
+  if (!glimage->texture_id) {
+    init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
-  } else if (glimage.texture_size != img.size() ||
-             glimage.texture_linear != linear ||
-             glimage.texture_mipmap != mipmap) {
-    delete_gltexture(glimage.texture_id);
-    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
+  } else if (glimage->texture_size != img.size() ||
+             glimage->texture_linear != linear ||
+             glimage->texture_mipmap != mipmap) {
+    delete_gltexture(glimage->texture_id);
+    init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
-    update_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, mipmap);
+    update_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
-  glimage.texture_size   = img.size();
-  glimage.texture_linear = linear;
-  glimage.texture_mipmap = mipmap;
+  glimage->texture_size   = img.size();
+  glimage->texture_linear = linear;
+  glimage->texture_mipmap = mipmap;
 }
-void update_glimage(
-    opengl_image& glimage, const image<vec4b>& img, bool linear, bool mipmap) {
-  init_glimage_program(glimage);
-  if (!glimage.texture_id) {
-    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
+void set_glimage(
+    opengl_image* glimage, const image<vec4b>& img, bool linear, bool mipmap) {
+  if (!glimage->texture_id) {
+    init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
-  } else if (glimage.texture_size != img.size() ||
-             glimage.texture_linear != linear ||
-             glimage.texture_mipmap != mipmap) {
-    delete_gltexture(glimage.texture_id);
-    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
+  } else if (glimage->texture_size != img.size() ||
+             glimage->texture_linear != linear ||
+             glimage->texture_mipmap != mipmap) {
+    delete_gltexture(glimage->texture_id);
+    init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
-    update_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, mipmap);
+    update_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
-  glimage.texture_size   = img.size();
-  glimage.texture_linear = linear;
-  glimage.texture_mipmap = mipmap;
+  glimage->texture_size   = img.size();
+  glimage->texture_linear = linear;
+  glimage->texture_mipmap = mipmap;
 }
 
 // draw image
-void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
+void draw_glimage(opengl_image* glimage, const draw_glimage_params& params) {
   assert(glGetError() == GL_NO_ERROR);
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);
@@ -379,39 +380,39 @@ void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
       params.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
-  glUseProgram(glimage.program_id);
+  glUseProgram(glimage->program_id);
   glActiveTexture(GL_TEXTURE0 + 0);
-  glBindTexture(GL_TEXTURE_2D, glimage.texture_id);
-  glUniform1i(glGetUniformLocation(glimage.program_id, "txt"), 0);
-  glUniform2f(glGetUniformLocation(glimage.program_id, "window_size"),
+  glBindTexture(GL_TEXTURE_2D, glimage->texture_id);
+  glUniform1i(glGetUniformLocation(glimage->program_id, "txt"), 0);
+  glUniform2f(glGetUniformLocation(glimage->program_id, "window_size"),
       (float)params.window.x, (float)params.window.y);
-  glUniform2f(glGetUniformLocation(glimage.program_id, "image_size"),
-      (float)glimage.texture_size.x, (float)glimage.texture_size.y);
-  glUniform2f(glGetUniformLocation(glimage.program_id, "image_center"),
+  glUniform2f(glGetUniformLocation(glimage->program_id, "image_size"),
+      (float)glimage->texture_size.x, (float)glimage->texture_size.y);
+  glUniform2f(glGetUniformLocation(glimage->program_id, "image_center"),
       params.center.x, params.center.y);
   glUniform1f(
-      glGetUniformLocation(glimage.program_id, "image_scale"), params.scale);
-  glBindBuffer(GL_ARRAY_BUFFER, glimage.texcoords_id);
+      glGetUniformLocation(glimage->program_id, "image_scale"), params.scale);
+  glBindBuffer(GL_ARRAY_BUFFER, glimage->texcoords_id);
   glEnableVertexAttribArray(
-      glGetAttribLocation(glimage.program_id, "texcoord"));
-  glVertexAttribPointer(glGetAttribLocation(glimage.program_id, "texcoord"), 2,
+      glGetAttribLocation(glimage->program_id, "texcoord"));
+  glVertexAttribPointer(glGetAttribLocation(glimage->program_id, "texcoord"), 2,
       GL_FLOAT, false, 0, nullptr);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles_id);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage->triangles_id);
   glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_INT, nullptr);
   glUseProgram(0);
   assert(glGetError() == GL_NO_ERROR);
 }
 
 // delete omage data
-void delete_glimage(opengl_image& glimage) {
-  delete_glprogram(glimage.program_id, glimage.vertex_id, glimage.fragment_id,
-      glimage.array_id);
-  delete_glbuffer(glimage.texcoords_id);
-  delete_glbuffer(glimage.triangles_id);
-  delete_gltexture(glimage.texture_id);
+void delete_glimage(opengl_image* glimage) {
+  delete_glprogram(glimage->program_id, glimage->vertex_id, glimage->fragment_id,
+      glimage->array_id);
+  delete_glbuffer(glimage->texcoords_id);
+  delete_glbuffer(glimage->triangles_id);
+  delete_gltexture(glimage->texture_id);
 }
 
-opengl_image::~opengl_image() { delete_glimage(*this); }
+opengl_image::~opengl_image() { delete_glimage(this); }
 
 }  // namespace yocto
 

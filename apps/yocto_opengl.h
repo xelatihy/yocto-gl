@@ -36,7 +36,6 @@
 
 #include <functional>
 #include <memory>
-using std::shared_ptr;
 
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_math.h"
@@ -48,6 +47,9 @@ struct GLFWwindow;
 // IMAGE DRAWING
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// using directives
+using std::unique_ptr;
 
 // OpenGL image data
 struct opengl_image {
@@ -68,14 +70,14 @@ struct opengl_image {
   ~opengl_image();
 };
 
-// update image data
-void update_glimage(opengl_image& glimage, const image<vec4f>& img,
-    bool linear = false, bool mipmap = false);
-void update_glimage(opengl_image& glimage, const image<vec4b>& img,
-    bool linear = false, bool mipmap = false);
+// create image drawing program
+opengl_image* make_glimage();
 
-// delete glmage data
-void delete_glimage(opengl_image& glimage);
+// update image data
+void set_glimage(opengl_image* glimage, const image<vec4f>& img,
+    bool linear = false, bool mipmap = false);
+void set_glimage(opengl_image* glimage, const image<vec4b>& img,
+    bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
 struct draw_glimage_params {
@@ -90,7 +92,7 @@ struct draw_glimage_params {
 };
 
 // draw image
-void draw_glimage(opengl_image& glimage, const draw_glimage_params& params);
+void draw_glimage(opengl_image* glimage, const draw_glimage_params& params);
 
 }  // namespace yocto
 

@@ -63,7 +63,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image        glimage   = {};
+  unique_ptr<opengl_image>        glimage   = {};
   draw_glimage_params glparams  = {};
   bool                glupdated = true;
 
@@ -296,13 +296,16 @@ void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = window;
     app->glparams.framebuffer = viewport;
-    if (!app->glimage || app->glupdated) {
-      update_glimage(app->glimage, app->display, false, false);
+    if (!app->glimage) {
+      app->glimage = unique_ptr<opengl_image>{make_glimage()};
+      set_glimage(app->glimage.get(), app->display, false, false);
+    } else if (app->glupdated) {
+      set_glimage(app->glimage.get(), app->display, false, false);
       app->glupdated = false;
     }
     update_imview(app->glparams.center, app->glparams.scale,
         app->display.size(), app->glparams.window, app->glparams.fit);
-    draw_glimage(app->glimage, app->glparams);
+    draw_glimage(app->glimage.get(), app->glparams);
   }
 }
 

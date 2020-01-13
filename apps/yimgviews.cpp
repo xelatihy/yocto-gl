@@ -50,7 +50,7 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image        glimage  = {};
+  unique_ptr<opengl_image>        glimage  = {};
   draw_glimage_params glparams = {};
 };
 
@@ -111,11 +111,13 @@ int main(int argc, const char* argv[]) {
       win, [app](const opengl_window& win, vec2i window, vec4i viewport) {
         app->glparams.window      = window;
         app->glparams.framebuffer = viewport;
-        if (!app->glimage)
-          update_glimage(app->glimage, app->display, false, false);
+        if (!app->glimage) {
+          app->glimage = unique_ptr<opengl_image>{make_glimage()};
+          set_glimage(app->glimage.get(), app->display, false, false);
+        }
         update_imview(app->glparams.center, app->glparams.scale,
             app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_glimage(app->glimage, app->glparams);
+        draw_glimage(app->glimage.get(), app->glparams);
       });
   set_uiupdate_glcallback(
       win, [app](const opengl_window& win, const opengl_input& input) {
