@@ -336,6 +336,21 @@ void set_glmaterial_opacity(opengl_scene& scene, int idx, float opacity, int opa
 void set_glmaterial_metallic(opengl_scene& scene, int idx, float metallic, int metallic_txt = -1);
 void set_glmaterial_normalmap(opengl_scene& scene, int idx, int normal_txt);
 void set_glmaterial_gltftextures(opengl_scene& scene, int idx, bool gltf_textures);
+void clean_glmaterias(opengl_scene& scene);
+
+// add shape
+int add_glshape(opengl_scene& scene);
+void set_glshape_positions(opengl_scene& scene, int idx, const vector<vec3f>& positions);
+void set_glshape_normals(opengl_scene& scene, int idx, const vector<vec3f>& normals);
+void set_glshape_texcoords(opengl_scene& scene, int idx, const vector<vec2f>& texcoords);
+void set_glshape_colors(opengl_scene& scene, int idx, const vector<vec4f>& colors);
+void set_glshape_tangentsps(opengl_scene& scene, int idx, const vector<vec4f>& tangentsps);
+void set_glshape_points(opengl_scene& scene, int idx, const vector<int>& points);
+void set_glshape_lines(opengl_scene& scene, int idx, const vector<vec2i>& lines);
+void set_glshape_triangles(opengl_scene& scene, int idx, const vector<vec3i>& triangles);
+void set_glshape_quads(opengl_scene& scene, int idx, const vector<vec4i>& quads);
+void set_glshape_edges(opengl_scene& scene, int idx, const vector<vec2i>& edges);
+void clean_glshapes(opengl_scene& scene);
 
 // add instance
 int add_glinstance(opengl_scene& scene);

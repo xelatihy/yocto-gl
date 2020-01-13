@@ -168,7 +168,7 @@ static void delete_glprogram(
 }
 
 void init_glbuffer(
-    uint& buffer_id, bool element, int size, int count, float* array) {
+    uint& buffer_id, bool element, int size, int count, const float* array) {
   assert(glGetError() == GL_NO_ERROR);
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
@@ -178,12 +178,30 @@ void init_glbuffer(
 }
 
 void init_glbuffer(
-    uint& buffer_id, bool element, int size, int count, int* array) {
+    uint& buffer_id, bool element, int size, int count, const int* array) {
   assert(glGetError() == GL_NO_ERROR);
   glGenBuffers(1, &buffer_id);
   glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
   glBufferData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
       count * size * sizeof(int), array, GL_STATIC_DRAW);
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+void update_glbuffer(
+    uint& buffer_id, bool element, int size, int count, const int* array) {
+  assert(glGetError() == GL_NO_ERROR);
+  glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
+  glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
+      size * count * sizeof(int), array);
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+void update_glbuffer(
+    uint& buffer_id, bool element, int size, int count, const float* array) {
+  assert(glGetError() == GL_NO_ERROR);
+  glBindBuffer(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, buffer_id);
+  glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
+      size * count * sizeof(float), array);
   assert(glGetError() == GL_NO_ERROR);
 }
 
@@ -832,112 +850,252 @@ void make_glscene(opengl_scene& glscene) {
 }
 
 // add camera
-int  add_glcamera(opengl_scene& scene) {
+int add_glcamera(opengl_scene& scene) {
   scene._cameras.emplace_back();
-  return (int)scene._cameras.size()-1;
+  return (int)scene._cameras.size() - 1;
 }
 void set_glcamera_frame(opengl_scene& scene, int idx, const frame3f frame) {
   scene._cameras[idx].frame = frame;
 }
-void set_glcamera_lens(opengl_scene& scene, int idx, float lens, float asepct, float film) {
-  scene._cameras[idx].lens = lens;
+void set_glcamera_lens(
+    opengl_scene& scene, int idx, float lens, float asepct, float film) {
+  scene._cameras[idx].lens   = lens;
   scene._cameras[idx].asepct = asepct;
-  scene._cameras[idx].film = film;
+  scene._cameras[idx].film   = film;
 }
 void set_glcamera_planes(opengl_scene& scene, int idx, float near, float far) {
   scene._cameras[idx].near = near;
-  scene._cameras[idx].far = far;
+  scene._cameras[idx].far  = far;
 }
-void clear_glcameras(opengl_scene& scene) {
-  scene._cameras.clear();
-}
+void clear_glcameras(opengl_scene& scene) { scene._cameras.clear(); }
 
 // add material
 int add_glmaterial(opengl_scene& scene) {
   scene._materials.emplace_back();
-  return (int)scene._materials.size()-1;
+  return (int)scene._materials.size() - 1;
 }
-void set_glmaterial_emission(opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
-  scene._materials[idx].emission = emission;
+void set_glmaterial_emission(
+    opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
+  scene._materials[idx].emission     = emission;
   scene._materials[idx].emission_map = emission_txt;
 }
-void set_glmaterial_diffuse(opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
-  scene._materials[idx].diffuse = diffuse;
+void set_glmaterial_diffuse(
+    opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
+  scene._materials[idx].diffuse     = diffuse;
   scene._materials[idx].diffuse_map = diffuse_txt;
 }
-void set_glmaterial_specular(opengl_scene& scene, int idx, const vec3f& specular, int specular_txt) {
-  scene._materials[idx].specular = specular;
+void set_glmaterial_specular(
+    opengl_scene& scene, int idx, const vec3f& specular, int specular_txt) {
+  scene._materials[idx].specular     = specular;
   scene._materials[idx].specular_map = specular_txt;
 }
-void set_glmaterial_roughness(opengl_scene& scene, int idx, float roughness, int roughness_txt) {
-  scene._materials[idx].roughness = roughness;
+void set_glmaterial_roughness(
+    opengl_scene& scene, int idx, float roughness, int roughness_txt) {
+  scene._materials[idx].roughness     = roughness;
   scene._materials[idx].roughness_map = roughness_txt;
 }
-void set_glmaterial_opacity(opengl_scene& scene, int idx, float opacity, int opacity_txt) {
+void set_glmaterial_opacity(
+    opengl_scene& scene, int idx, float opacity, int opacity_txt) {
   scene._materials[idx].opacity = opacity;
 }
-void set_glmaterial_metallic(opengl_scene& scene, int idx, float metallic, int metallic_txt) {
-  scene._materials[idx].metallic = metallic;
+void set_glmaterial_metallic(
+    opengl_scene& scene, int idx, float metallic, int metallic_txt) {
+  scene._materials[idx].metallic     = metallic;
   scene._materials[idx].metallic_map = metallic_txt;
 }
 void set_glmaterial_normalmap(opengl_scene& scene, int idx, int normal_txt) {
   scene._materials[idx].normal_map = normal_txt;
 }
-void set_glmaterial_gltftextures(opengl_scene& scene, int idx, bool gltf_textures) {
+void set_glmaterial_gltftextures(
+    opengl_scene& scene, int idx, bool gltf_textures) {
   scene._materials[idx].gltf_textures = gltf_textures;
 }
-void clear_glmaterials(opengl_scene& scene) {
-  scene._materials.clear();
-}
+void clear_glmaterials(opengl_scene& scene) { scene._materials.clear(); }
 
 // add texture
-int  add_gltexture(opengl_scene& scene) {
+int add_gltexture(opengl_scene& scene) {
   scene._textures.emplace_back();
-  return (int)scene._textures.size()-1;
+  return (int)scene._textures.size() - 1;
 }
-void set_gltexture(opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb) {
+void set_gltexture(
+    opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb) {
   auto& texture = scene._textures[idx];
-  if(!texture.texture_id) {
-    init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
-  } else if(texture.size != img.size() || texture.is_srgb != as_srgb || texture.is_float == true) {
+  if (!texture.texture_id) {
+    init_gltexture(
+        texture.texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
+  } else if (texture.size != img.size() || texture.is_srgb != as_srgb ||
+             texture.is_float == true) {
     delete_gltexture(texture.texture_id);
-    init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
+    init_gltexture(
+        texture.texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
   } else {
     update_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, true);
   }
 }
-void set_gltexture(opengl_scene& scene, int idx, const image<vec4f>& img, bool as_float) {
+void set_gltexture(
+    opengl_scene& scene, int idx, const image<vec4f>& img, bool as_float) {
   auto& texture = scene._textures[idx];
-  if(!texture.texture_id) {
-    init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_float, true, true);
-  } else if(texture.size != img.size() || texture.is_float != as_float || texture.is_srgb == true) {
+  if (!texture.texture_id) {
+    init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_float,
+        true, true);
+  } else if (texture.size != img.size() || texture.is_float != as_float ||
+             texture.is_srgb == true) {
     delete_gltexture(texture.texture_id);
-    init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_float, true, true);
+    init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_float,
+        true, true);
   } else {
     update_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, true);
   }
 }
 void clear_gltextures(opengl_scene& scene);
 
-// add light
-int  add_gllight(opengl_scene& scene, const vec3f& position,
-     const vec3f& emission, bool directional) {
-  scene._lights.push_back({position, emission, directional ? 1 : 0});
-  return (int)scene._lights.size() - 1;
+// add shape
+int add_glshape(opengl_scene& scene) {
+  scene.shapes.emplace_back();
+  return (int)scene.shapes.size() - 1;
 }
-void set_gllight(opengl_scene& scene, int idx, const vec3f& position,
-    const vec3f& emission, bool directional) {
-  scene._lights[idx] = {position, emission, directional ? 1 : 0};
+void set_glshape_positions(
+    opengl_scene& scene, int idx, const vector<vec3f>& positions) {
+  auto& shape = scene.shapes[idx];
+  if (!shape.positions) {
+    init_glarraybuffer(shape.positions, positions);
+  } else if (shape.positions.num != positions.size()) {
+    delete_glarraybuffer(shape.positions);
+    init_glarraybuffer(shape.positions, positions);
+  } else {
+    update_glbuffer(shape.positions.buffer_id, false, positions.size(), 3,
+        &positions.data()->x);
+  }
 }
-void clear_gllights(opengl_scene& scene) { scene._lights.clear(); }
-bool has_max_gllights(opengl_scene& scene) {
-  return scene._lights.size() >= 16;
+void set_glshape_normals(
+    opengl_scene& scene, int idx, const vector<vec3f>& normals) {
+  auto& shape = scene.shapes[idx];
+  if (!shape.normals) {
+    init_glarraybuffer(shape.normals, normals);
+  } else if (shape.normals.num != normals.size()) {
+    delete_glarraybuffer(shape.normals);
+    init_glarraybuffer(shape.normals, normals);
+  } else {
+    update_glbuffer(
+        shape.normals.buffer_id, false, normals.size(), 3, &normals.data()->x);
+  }
 }
+void set_glshape_texcoords(
+    opengl_scene& scene, int idx, const vector<vec2f>& texcoords) {
+  auto& shape = scene.shapes[idx];
+  if (!shape.texcoords) {
+    init_glarraybuffer(shape.texcoords, texcoords);
+  } else if (shape.texcoords.num != texcoords.size()) {
+    delete_glarraybuffer(shape.texcoords);
+    init_glarraybuffer(shape.texcoords, texcoords);
+  } else {
+    update_glbuffer(shape.texcoords.buffer_id, false, texcoords.size(), 2,
+        &texcoords.data()->x);
+  }
+}
+void set_glshape_colors(
+    opengl_scene& scene, int idx, const vector<vec4f>& colors) {
+  auto& shape = scene.shapes[idx];
+  if (!shape.colors) {
+    init_glarraybuffer(shape.colors, colors);
+  } else if (shape.colors.num != colors.size()) {
+    delete_glarraybuffer(shape.colors);
+    init_glarraybuffer(shape.colors, colors);
+  } else {
+    update_glbuffer(
+        shape.colors.buffer_id, false, colors.size(), 4, &colors.data()->x);
+  }
+}
+void set_glshape_tangentsps(
+    opengl_scene& scene, int idx, const vector<vec4f>& tangentsps) {
+  auto& shape = scene.shapes[idx];
+  if (!shape.tangentsps) {
+    init_glarraybuffer(shape.tangentsps, tangentsps);
+  } else if (shape.tangentsps.num != tangentsps.size()) {
+    delete_glarraybuffer(shape.tangentsps);
+    init_glarraybuffer(shape.tangentsps, tangentsps);
+  } else {
+    update_glbuffer(shape.tangentsps.buffer_id, false, tangentsps.size(), 4,
+        &tangentsps.data()->x);
+  }
+}
+void set_glshape_points(
+    opengl_scene& scene, int idx, const vector<int>& points) {
+  auto& shape = scene.shapes[idx];
+  if (!shape.points) {
+    init_glelementbuffer(shape.points, points);
+  } else if (shape.points.num != points.size()) {
+    delete_glelementbuffer(shape.points);
+    init_glelementbuffer(shape.points, points);
+  } else {
+    update_glbuffer(
+        shape.points.buffer_id, true, points.size(), 1, points.data());
+  }
+}
+void set_glshape_lines(
+    opengl_scene& scene, int idx, const vector<vec2i>& lines) {
+  auto& shape = scene.shapes[idx];
+  if (!shape.lines) {
+    init_glelementbuffer(shape.lines, lines);
+  } else if (shape.lines.num != lines.size()) {
+    delete_glelementbuffer(shape.lines);
+    init_glelementbuffer(shape.lines, lines);
+  } else {
+    update_glbuffer(
+        shape.lines.buffer_id, true, lines.size(), 2, &lines.data()->x);
+  }
+}
+void set_glshape_triangles(
+    opengl_scene& scene, int idx, const vector<vec3i>& triangles) {
+  auto& shape = scene.shapes[idx];
+  if (!shape.triangles) {
+    init_glelementbuffer(shape.triangles, triangles);
+  } else if (shape.triangles.num != triangles.size()) {
+    delete_glelementbuffer(shape.triangles);
+    init_glelementbuffer(shape.triangles, triangles);
+  } else {
+    update_glbuffer(
+        shape.lines.buffer_id, true, triangles.size(), 3, &triangles.data()->x);
+  }
+}
+void set_glshape_quads(
+    opengl_scene& scene, int idx, const vector<vec4i>& quads) {
+  auto triangles = vector<vec3i>{};
+  triangles.reserve(quads.size() * 2);
+  for (auto& q : quads) {
+    triangles.push_back({q.x, q.y, q.w});
+    if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
+  }
+  auto& shape = scene.shapes[idx];
+  if (!shape.quads) {
+    init_glelementbuffer(shape.quads, triangles);
+  } else if (shape.triangles.num != triangles.size()) {
+    delete_glelementbuffer(shape.quads);
+    init_glelementbuffer(shape.quads, triangles);
+  } else {
+    update_glbuffer(
+        shape.quads.buffer_id, true, triangles.size(), 3, &triangles.data()->x);
+  }
+}
+void set_glshape_edges(
+    opengl_scene& scene, int idx, const vector<vec2i>& edges) {
+  auto& shape = scene.shapes[idx];
+  if (!shape.edges) {
+    init_glelementbuffer(shape.edges, edges);
+  } else if (shape.edges.num != edges.size()) {
+    delete_glelementbuffer(shape.edges);
+    init_glelementbuffer(shape.edges, edges);
+  } else {
+    update_glbuffer(
+        shape.edges.buffer_id, true, edges.size(), 2, &edges.data()->x);
+  }
+}
+void clean_glshapes(opengl_scene& scene) { scene.shapes.clear(); }
 
 // add instance
 int add_glinstance(opengl_scene& scene) {
   scene._instances.emplace_back();
-  return (int)scene._instances.size()-1;
+  return (int)scene._instances.size() - 1;
 }
 void set_glinstance_frame(opengl_scene& scene, int idx, const frame3f& frame) {
   scene._instances[idx].frame = frame;
@@ -948,8 +1106,21 @@ void set_glinstance_shape(opengl_scene& scene, int idx, int shape) {
 void set_glinstance_material(opengl_scene& scene, int idx, int material) {
   scene._instances[idx].material = material;
 }
-void clear_glinstances(opengl_scene& scene) {
-  scene._instances.clear();
+void clear_glinstances(opengl_scene& scene) { scene._instances.clear(); }
+
+// add light
+int add_gllight(opengl_scene& scene, const vec3f& position,
+    const vec3f& emission, bool directional) {
+  scene._lights.push_back({position, emission, directional ? 1 : 0});
+  return (int)scene._lights.size() - 1;
+}
+void set_gllight(opengl_scene& scene, int idx, const vec3f& position,
+    const vec3f& emission, bool directional) {
+  scene._lights[idx] = {position, emission, directional ? 1 : 0};
+}
+void clear_gllights(opengl_scene& scene) { scene._lights.clear(); }
+bool has_max_gllights(opengl_scene& scene) {
+  return scene._lights.size() >= 16;
 }
 
 // Draw a shape
