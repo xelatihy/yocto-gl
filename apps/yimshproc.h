@@ -32,11 +32,6 @@ struct app_state {
 
   // Internal handles
   int glshape_id, glpoints_id, glvector_field_id, gledges_id, glpolyline_id;
-  opengl_shape& glshape() { return scene.shapes[glshape_id]; }
-  opengl_shape& glpoints() { return scene.shapes[glpoints_id]; }
-  opengl_shape& glvector_field() { return scene.shapes[glvector_field_id]; }
-  opengl_shape& gledges() { return scene.shapes[gledges_id]; }
-  opengl_shape& glpolyline() { return scene.shapes[glpolyline_id]; }
 };
 
 // @Issue: Maybe this in yocto_opengl.h?
@@ -57,69 +52,45 @@ void update_glshape(shared_ptr<app_state> app) {
   // @Issue: This app is specialized for a model that is a triangle mesh.
   //    Loading a generic shape is unsafe, maybe we should load only
   //    triangle meshes here...
-
-  auto& glshape = app->glshape();
   auto& shape   = app->shape;
-  delete_glshape(glshape);
   if (shape.quadspos.empty()) {
-    if (!shape.positions.empty())
-      init_glarraybuffer(glshape.positions, shape.positions, false);
-    if (!shape.normals.empty())
-      init_glarraybuffer(glshape.normals, shape.normals, false);
-    if (!shape.texcoords.empty())
-      init_glarraybuffer(glshape.texcoords, shape.texcoords, false);
-    if (!shape.colors.empty())
-      init_glarraybuffer(glshape.colors, shape.colors, false);
-    if (!shape.tangents.empty())
-      init_glarraybuffer(glshape.tangentsps, shape.tangents, false);
-    if (!shape.points.empty())
-      init_glelementbuffer(glshape.points, shape.points, false);
-    if (!shape.lines.empty())
-      init_glelementbuffer(glshape.lines, shape.lines, false);
-    if (!shape.triangles.empty())
-      init_glelementbuffer(glshape.triangles, shape.triangles, false);
-    if (!shape.quads.empty()) {
-      auto triangles = quads_to_triangles(shape.quads);
-      init_glelementbuffer(glshape.quads, triangles, false);
-    }
+    set_glshape_positions(app->scene, app->glshape_id, shape.positions);
+    set_glshape_normals(app->scene, app->glshape_id, shape.normals);
+    set_glshape_texcoords(app->scene, app->glshape_id, shape.texcoords);
+    set_glshape_colors(app->scene, app->glshape_id, shape.colors);
+    set_glshape_tangentsps(app->scene, app->glshape_id, shape.tangents);
+    set_glshape_points(app->scene, app->glshape_id, shape.points);
+    set_glshape_lines(app->scene, app->glshape_id, shape.lines);
+    set_glshape_triangles(app->scene, app->glshape_id, shape.triangles);
+    set_glshape_quads(app->scene, app->glshape_id, shape.quads);
   } else {
     auto [quads, positions, normals, texcoords] = split_facevarying(
         shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
         shape.normals, shape.texcoords);
-    if (!positions.empty())
-      init_glarraybuffer(glshape.positions, positions, false);
-    if (!normals.empty()) init_glarraybuffer(glshape.normals, normals, false);
-    if (!texcoords.empty())
-      init_glarraybuffer(glshape.texcoords, texcoords, false);
-    if (!quads.empty()) {
-      auto triangles = quads_to_triangles(quads);
-      init_glelementbuffer(glshape.quads, triangles, false);
-    }
+    set_glshape_positions(app->scene, app->glshape_id, positions);
+    set_glshape_normals(app->scene, app->glshape_id, normals);
+    set_glshape_texcoords(app->scene, app->glshape_id, texcoords);
+    set_glshape_quads(app->scene, app->glshape_id, quads);
   }
 }
 
 void update_glpolyline(
     shared_ptr<app_state> app, const vector<vec3f>& vertices) {
-  auto& glshape = app->glpolyline();
-  delete_glshape(glshape);
   if (vertices.size()) {
     auto elements = vector<vec2i>(vertices.size() - 1);
     for (int i = 0; i < elements.size(); i++) elements[i] = {i, i + 1};
-    init_glarraybuffer(glshape.positions, vertices, false);
-    init_glelementbuffer(glshape.lines, elements, false);
+    set_glshape_positions(app->scene, app->glpolyline_id, vertices);
+    set_glshape_lines(app->scene, app->glpolyline_id, elements);
   }
 }
 
 void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
-  auto& glshape = app->glpoints();
-  delete_glshape(glshape);
   if (points.size()) {
     auto elements = vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
-    init_glarraybuffer(glshape.positions, points, false);
-    init_glarraybuffer(
-        glshape.normals, vector<vec3f>(points.size(), {0, 0, 1}), false);
-    init_glelementbuffer(glshape.points, elements, false);
+    set_glshape_positions(app->scene, app->glpoints_id, points);
+    set_glshape_normals(app->scene, app->glpoints_id, vector<vec3f>(points.size(), {0, 0, 1}));
+    set_glshape_points(app->scene, app->glpoints_id, elements);
   }
 }
 
@@ -132,8 +103,6 @@ void update_glvector_field(shared_ptr<app_state> app,
     throw runtime_error("input vector field has wrong size\n");
   }
 
-  auto& glshape = app->glvector_field();
-  delete_glshape(glshape);
   auto size = perface ? app->shape.triangles.size()
                       : app->shape.positions.size();
   auto positions = vector<vec3f>(size * 2);
@@ -160,23 +129,21 @@ void update_glvector_field(shared_ptr<app_state> app,
       positions[i * 2 + 1] = to;
     }
   }
-  init_glarraybuffer(glshape.positions, positions, false);
+  set_glshape_positions(app->scene, app->glvector_field_id, positions);
 
   auto elements = vector<vec2i>(size);
   for (int i = 0; i < elements.size(); i++) {
     elements[i] = {2 * i, 2 * i + 1};
   }
-  init_glelementbuffer(glshape.lines, elements, false);
+  set_glshape_lines(app->scene, app->glvector_field_id, elements);
 }
 
 void update_gledges(shared_ptr<app_state> app) {
-  auto& glshape = app->gledges();
-  delete_glshape(glshape);
   auto positions = app->shape.positions;
   for (int i = 0; i < positions.size(); i++) {
     positions[i] += app->shape.normals[i] * 0.0001;
   }
-  init_glarraybuffer(glshape.positions, positions, false);
+  set_glshape_positions(app->scene, app->gledges_id, positions);
 
   auto elements = vector<vec2i>();
   elements.reserve(app->shape.triangles.size() * 3);
@@ -189,7 +156,7 @@ void update_gledges(shared_ptr<app_state> app) {
       }
     }
   }
-  init_glelementbuffer(glshape.lines, elements, false);
+  set_glshape_lines(app->scene, app->gledges_id, elements);
 }
 
 void init_camera(shared_ptr<app_state> app,
@@ -237,26 +204,21 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   set_glmaterial_roughness(app->scene, lines_material, 0.0);
 
   // The model.
-  app->glshape_id = app->scene.shapes.size();
-  app->scene.shapes.push_back({});
+  app->glshape_id = add_glshape(app->scene);
   update_glshape(app);
 
   // The points.
-  app->glpoints_id = app->scene.shapes.size();
-  app->scene.shapes.push_back({});
+  app->glpoints_id = add_glshape(app->scene);
 
   // The vector field.
-  app->glvector_field_id = app->scene.shapes.size();
-  app->scene.shapes.push_back({});
+  app->glvector_field_id = add_glshape(app->scene);
 
   // The edges.
-  app->gledges_id = app->scene.shapes.size();
-  app->scene.shapes.push_back({});
+  app->gledges_id = add_glshape(app->scene);
   update_gledges(app);
 
   // The polyline.
-  app->glpolyline_id = app->scene.shapes.size();
-  app->scene.shapes.push_back({});
+  app->glpolyline_id = add_glshape(app->scene);
 
   // Add instances.
   for (int i = 0; i < 5; ++i) {
@@ -275,14 +237,16 @@ void init_opengl_scene(shared_ptr<app_state> app) {
 }
 
 void clear(shared_ptr<app_state> app) {
-  for (int i = 0; i < app->scene.shapes.size(); i++) {
-    if (i == app->glshape_id) continue;
-    if (i == app->gledges_id) continue;
-    delete_glshape(app->scene.shapes[i]);
-  }
-  delete_glarraybuffer(app->glshape().colors);
-  init_glarraybuffer(app->glshape().colors,
-      vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
+  // TODO: not sure how this works
+  // TODO: fix me
+  // for (int i = 0; i < app->scene.shapes.size(); i++) {
+  //   if (i == app->glshape_id) continue;
+  //   if (i == app->gledges_id) continue;
+  //   delete_glshape(app->scene.shapes[i]);
+  // }
+  // delete_glarraybuffer(app->glshape().colors);
+  // init_glarraybuffer(app->glshape().colors,
+  //     vector<vec4f>(app->shape.positions.size(), {1, 1, 1, 1}));
 }
 
 void yimshproc(const string&                         input_filename,

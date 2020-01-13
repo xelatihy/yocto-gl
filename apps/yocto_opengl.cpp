@@ -951,12 +951,12 @@ void clear_gltextures(opengl_scene& scene);
 
 // add shape
 int add_glshape(opengl_scene& scene) {
-  scene.shapes.emplace_back();
-  return (int)scene.shapes.size() - 1;
+  scene._shapes.emplace_back();
+  return (int)scene._shapes.size() - 1;
 }
 void set_glshape_positions(
     opengl_scene& scene, int idx, const vector<vec3f>& positions) {
-  auto& shape = scene.shapes[idx];
+  auto& shape = scene._shapes[idx];
   if (!shape.positions) {
     init_glarraybuffer(shape.positions, positions);
   } else if (shape.positions.num != positions.size()) {
@@ -969,7 +969,7 @@ void set_glshape_positions(
 }
 void set_glshape_normals(
     opengl_scene& scene, int idx, const vector<vec3f>& normals) {
-  auto& shape = scene.shapes[idx];
+  auto& shape = scene._shapes[idx];
   if (!shape.normals) {
     init_glarraybuffer(shape.normals, normals);
   } else if (shape.normals.num != normals.size()) {
@@ -982,7 +982,7 @@ void set_glshape_normals(
 }
 void set_glshape_texcoords(
     opengl_scene& scene, int idx, const vector<vec2f>& texcoords) {
-  auto& shape = scene.shapes[idx];
+  auto& shape = scene._shapes[idx];
   if (!shape.texcoords) {
     init_glarraybuffer(shape.texcoords, texcoords);
   } else if (shape.texcoords.num != texcoords.size()) {
@@ -995,7 +995,7 @@ void set_glshape_texcoords(
 }
 void set_glshape_colors(
     opengl_scene& scene, int idx, const vector<vec4f>& colors) {
-  auto& shape = scene.shapes[idx];
+  auto& shape = scene._shapes[idx];
   if (!shape.colors) {
     init_glarraybuffer(shape.colors, colors);
   } else if (shape.colors.num != colors.size()) {
@@ -1008,7 +1008,7 @@ void set_glshape_colors(
 }
 void set_glshape_tangentsps(
     opengl_scene& scene, int idx, const vector<vec4f>& tangentsps) {
-  auto& shape = scene.shapes[idx];
+  auto& shape = scene._shapes[idx];
   if (!shape.tangentsps) {
     init_glarraybuffer(shape.tangentsps, tangentsps);
   } else if (shape.tangentsps.num != tangentsps.size()) {
@@ -1021,7 +1021,7 @@ void set_glshape_tangentsps(
 }
 void set_glshape_points(
     opengl_scene& scene, int idx, const vector<int>& points) {
-  auto& shape = scene.shapes[idx];
+  auto& shape = scene._shapes[idx];
   if (!shape.points) {
     init_glelementbuffer(shape.points, points);
   } else if (shape.points.num != points.size()) {
@@ -1034,7 +1034,7 @@ void set_glshape_points(
 }
 void set_glshape_lines(
     opengl_scene& scene, int idx, const vector<vec2i>& lines) {
-  auto& shape = scene.shapes[idx];
+  auto& shape = scene._shapes[idx];
   if (!shape.lines) {
     init_glelementbuffer(shape.lines, lines);
   } else if (shape.lines.num != lines.size()) {
@@ -1047,7 +1047,7 @@ void set_glshape_lines(
 }
 void set_glshape_triangles(
     opengl_scene& scene, int idx, const vector<vec3i>& triangles) {
-  auto& shape = scene.shapes[idx];
+  auto& shape = scene._shapes[idx];
   if (!shape.triangles) {
     init_glelementbuffer(shape.triangles, triangles);
   } else if (shape.triangles.num != triangles.size()) {
@@ -1066,7 +1066,7 @@ void set_glshape_quads(
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  auto& shape = scene.shapes[idx];
+  auto& shape = scene._shapes[idx];
   if (!shape.quads) {
     init_glelementbuffer(shape.quads, triangles);
   } else if (shape.triangles.num != triangles.size()) {
@@ -1079,7 +1079,7 @@ void set_glshape_quads(
 }
 void set_glshape_edges(
     opengl_scene& scene, int idx, const vector<vec2i>& edges) {
-  auto& shape = scene.shapes[idx];
+  auto& shape = scene._shapes[idx];
   if (!shape.edges) {
     init_glelementbuffer(shape.edges, edges);
   } else if (shape.edges.num != edges.size()) {
@@ -1090,7 +1090,7 @@ void set_glshape_edges(
         shape.edges.buffer_id, true, edges.size(), 2, &edges.data()->x);
   }
 }
-void clean_glshapes(opengl_scene& scene) { scene.shapes.clear(); }
+void clean_glshapes(opengl_scene& scene) { scene._shapes.clear(); }
 
 // add instance
 int add_glinstance(opengl_scene& scene) {
@@ -1126,11 +1126,11 @@ bool has_max_gllights(opengl_scene& scene) {
 // Draw a shape
 void draw_glinstance(opengl_scene& glscene, const opengl_instance& instance,
     const draw_glscene_params& params) {
-  if (instance.shape < 0 || instance.shape > glscene.shapes.size()) return;
+  if (instance.shape < 0 || instance.shape > glscene._shapes.size()) return;
   if (instance.material < 0 || instance.material > glscene._materials.size())
     return;
 
-  auto& shape    = glscene.shapes[instance.shape];
+  auto& shape    = glscene._shapes[instance.shape];
   auto& material = glscene._materials[instance.material];
 
   auto instance_xform     = mat4f(instance.frame);

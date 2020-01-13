@@ -275,7 +275,7 @@ struct opengl_light {
 struct opengl_scene {
   vector<opengl_camera>   _cameras   = {};
   vector<opengl_instance> _instances = {};
-  vector<opengl_shape>    shapes    = {};
+  vector<opengl_shape>    _shapes    = {};
   vector<opengl_material> _materials = {};
   vector<opengl_texture_> _textures = {};
   vector<opengl_light>    _lights   = {};
