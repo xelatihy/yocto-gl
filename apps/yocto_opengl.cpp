@@ -852,6 +852,41 @@ void clear_glcameras(opengl_scene& scene) {
   scene._cameras.clear();
 }
 
+// add material
+int add_glmaterial(opengl_scene& scene) {
+  scene._materials.emplace_back();
+  return (int)scene._materials.size()-1;
+}
+void set_glmaterial_emission(opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
+  scene._materials[idx].emission = emission;
+  scene._materials[idx].emission_map = emission_txt;
+}
+void set_glmaterial_diffuse(opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
+  scene._materials[idx].diffuse = diffuse;
+  scene._materials[idx].diffuse_map = diffuse_txt;
+}
+void set_glmaterial_specular(opengl_scene& scene, int idx, const vec3f& specular, int specular_txt) {
+  scene._materials[idx].specular = specular;
+  scene._materials[idx].specular_map = specular_txt;
+}
+void set_glmaterial_roughness(opengl_scene& scene, int idx, float roughness, int roughness_txt) {
+  scene._materials[idx].roughness = roughness;
+  scene._materials[idx].roughness_map = roughness_txt;
+}
+void set_glmaterial_opacity(opengl_scene& scene, int idx, float opacity, int opacity_txt) {
+  scene._materials[idx].opacity = opacity;
+}
+void set_glmaterial_metallic(opengl_scene& scene, int idx, float metallic, int metallic_txt) {
+  scene._materials[idx].metallic = metallic;
+  scene._materials[idx].metallic_map = metallic_txt;
+}
+void set_glmaterial_normalmap(opengl_scene& scene, int idx, int normal_txt) {
+  scene._materials[idx].normal_map = normal_txt;
+}
+void set_glmaterial_gltftextures(opengl_scene& scene, int idx, bool gltf_textures) {
+  scene._materials[idx].gltf_textures = gltf_textures;
+}
+
 // add texture
 int  add_gltexture(opengl_scene& scene) {
   scene._textures.emplace_back();
@@ -900,11 +935,11 @@ bool has_max_gllights(opengl_scene& scene) {
 void draw_glinstance(opengl_scene& glscene, const opengl_instance& instance,
     const draw_glscene_params& params) {
   if (instance.shape < 0 || instance.shape > glscene.shapes.size()) return;
-  if (instance.material < 0 || instance.material > glscene.materials.size())
+  if (instance.material < 0 || instance.material > glscene._materials.size())
     return;
 
   auto& shape    = glscene.shapes[instance.shape];
-  auto& material = glscene.materials[instance.material];
+  auto& material = glscene._materials[instance.material];
 
   auto instance_xform     = mat4f(instance.frame);
   auto instance_inv_xform = transpose(

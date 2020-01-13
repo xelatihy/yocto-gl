@@ -276,7 +276,7 @@ struct opengl_scene {
   vector<opengl_camera>   _cameras   = {};
   vector<opengl_instance> instances = {};
   vector<opengl_shape>    shapes    = {};
-  vector<opengl_material> materials = {};
+  vector<opengl_material> _materials = {};
   vector<opengl_texture_> _textures = {};
   vector<opengl_light>    _lights   = {};
 
@@ -325,6 +325,17 @@ void set_gltexture(opengl_scene& scene, int idx, const image<vec4b>& img,
 void set_gltexture(opengl_scene& scene, int idx, const image<vec4f>& img,
     bool as_float = false);
 void clear_gltextures(opengl_scene& scene);
+
+// add material
+int add_glmaterial(opengl_scene& scene);
+void set_glmaterial_emission(opengl_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
+void set_glmaterial_diffuse(opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt = -1);
+void set_glmaterial_specular(opengl_scene& scene, int idx, const vec3f& specular, int specular_txt = -1);
+void set_glmaterial_roughness(opengl_scene& scene, int idx, float roughness, int roughness_txt = -1);
+void set_glmaterial_opacity(opengl_scene& scene, int idx, float opacity, int opacity_txt = -1);
+void set_glmaterial_metallic(opengl_scene& scene, int idx, float metallic, int metallic_txt = -1);
+void set_glmaterial_normalmap(opengl_scene& scene, int idx, int normal_txt);
+void set_glmaterial_gltftextures(opengl_scene& scene, int idx, bool gltf_textures);
 
 // add light
 int  add_gllight(opengl_scene& scene, const vec3f& position,

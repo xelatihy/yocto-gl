@@ -227,16 +227,14 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   set_glcamera_lens(app->scene, 0, app->camera.lens, app->camera.aspect, app->camera.film);
   set_glcamera_planes(app->scene, 0, 0.001, 10000);
 
-  auto shape_material      = opengl_material{};
-  shape_material.diffuse   = {1, 0.2, 0};
-  shape_material.roughness = 0.3;
-  app->scene.materials.push_back(shape_material);
+  auto shape_material      = add_glmaterial(app->scene);
+  set_glmaterial_diffuse(app->scene, shape_material, {1, 0.2, 0});
+  set_glmaterial_roughness(app->scene, shape_material, 0.3);
 
   // @Issue: Right now we're missing APIs to color things easily.
-  auto lines_material      = opengl_material{};
-  lines_material.emission  = {1, 1, 1};
-  lines_material.roughness = 0.0;
-  app->scene.materials.push_back(lines_material);
+  auto lines_material      = add_glmaterial(app->scene);
+  set_glmaterial_emission(app->scene, lines_material, {1, 1, 1});
+  set_glmaterial_roughness(app->scene, lines_material, 0.0);
 
   // The model.
   app->glshape_id = app->scene.shapes.size();

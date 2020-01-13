@@ -266,7 +266,14 @@ void make_glscene(opengl_scene& glscene, const sceneio_model& scene) {
 
   // materials
   for (auto& material : scene.materials) {
-    update_glmaterial(glscene.materials.emplace_back(), material);
+    auto id = add_glmaterial(glscene);
+    set_glmaterial_emission(glscene, id, material.emission, material.emission_tex);
+    set_glmaterial_diffuse(glscene, id, material.diffuse, material.diffuse_tex);
+    set_glmaterial_specular(glscene, id, material.specular, material.specular_tex);
+    set_glmaterial_metallic(glscene, id, material.metallic, material.metallic_tex);
+    set_glmaterial_roughness(glscene, id, material.roughness, material.roughness_tex);
+    set_glmaterial_opacity(glscene, id, material.opacity, material.opacity_tex);
+    set_glmaterial_normalmap(glscene, id, material.normal_tex);
   }
 
   // shapes
@@ -533,20 +540,26 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->scene.textures);
       if (draw_glwidgets_texture(win, app, app->selection.second)) {
-        if(!app->scene.textures[app->selection.second].hdr.empty()) {
-          set_gltexture(app->glscene, app->selection.second,
-              app->scene.textures[app->selection.second].hdr);
-        } else if(!app->scene.textures[app->selection.second].hdr.empty()) {
-          set_gltexture(app->glscene, app->selection.second,
-              app->scene.textures[app->selection.second].ldr);
+        auto& texture = app->scene.textures[app->selection.second];
+        if(!texture.hdr.empty()) {
+          set_gltexture(app->glscene, app->selection.second, texture.hdr);
+        } else if(!texture.hdr.empty()) {
+          set_gltexture(app->glscene, app->selection.second, texture.ldr);
         }
       }
     } else if (app->selection.first == "material") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->scene.materials);
-      if (draw_glwidgets_material(win, app, app->selection.second))
-        update_glmaterial(app->glscene.materials[app->selection.second],
-            app->scene.materials[app->selection.second]);
+      if (draw_glwidgets_material(win, app, app->selection.second)) {
+        auto& material = app->scene.materials[app->selection.second];
+        set_glmaterial_emission(app->glscene, app->selection.second, material.emission, material.emission_tex);
+        set_glmaterial_diffuse(app->glscene, app->selection.second, material.diffuse, material.diffuse_tex);
+        set_glmaterial_specular(app->glscene, app->selection.second, material.specular, material.specular_tex);
+        set_glmaterial_metallic(app->glscene, app->selection.second, material.metallic, material.metallic_tex);
+        set_glmaterial_roughness(app->glscene, app->selection.second, material.roughness, material.roughness_tex);
+        set_glmaterial_opacity(app->glscene, app->selection.second, material.opacity, material.opacity_tex);
+        set_glmaterial_normalmap(app->glscene, app->selection.second, material.normal_tex);
+      }
     } else if (app->selection.first == "shape") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->scene.shapes);
