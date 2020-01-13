@@ -383,7 +383,7 @@ void draw_glimage(opengl_image* glimage, const draw_glimage_params& params) {
   assert(glGetError() == GL_NO_ERROR);
 }
 
-opengl_image::~opengl_image() {   
+opengl_image::~opengl_image() {
   if (program_id) glDeleteProgram(program_id);
   if (vertex_id) glDeleteShader(vertex_id);
   if (fragment_id) glDeleteShader(fragment_id);
@@ -391,7 +391,7 @@ opengl_image::~opengl_image() {
   if (texcoords_id) glDeleteBuffers(1, &texcoords_id);
   if (triangles_id) glDeleteBuffers(1, &triangles_id);
   if (texture_id) glDeleteTextures(1, &texture_id);
- }
+}
 
 }  // namespace yocto
 
@@ -806,28 +806,44 @@ void clear_glmaterials(opengl_scene* scene) { scene->_materials.clear(); }
 
 // add texture
 int add_gltexture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb) {
+  assert(glGetError() == GL_NO_ERROR);
   auto texture = scene->_textures.emplace_back(new opengl_texture{});
-  init_gltexture(
-      texture->texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
+  glGenTextures(1, &texture->texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB_ALPHA : GL_RGBA,
+      img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+  glTexParameteri(
+      GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  assert(glGetError() == GL_NO_ERROR);
   return (int)scene->_textures.size() - 1;
 }
 int add_gltexture(opengl_scene* scene, const image<vec4f>& img, bool as_float) {
+  assert(glGetError() == GL_NO_ERROR);
   auto texture = scene->_textures.emplace_back(new opengl_texture{});
-  init_gltexture(
-      texture->texture_id, img.size(), 4, &img.data()->x, as_float, true, true);
+  glGenTextures(1, &texture->texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA,
+      img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+  glTexParameteri(
+      GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  assert(glGetError() == GL_NO_ERROR);
   return (int)scene->_textures.size() - 1;
 }
 void set_gltexture(
     opengl_scene* scene, int idx, const image<vec4b>& img, bool as_srgb) {
   auto& texture = scene->_textures[idx];
   if (!texture->texture_id) {
-    init_gltexture(
-        texture->texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
+    init_gltexture(texture->texture_id, img.size(), 4, &img.data()->x, as_srgb,
+        true, true);
   } else if (texture->size != img.size() || texture->is_srgb != as_srgb ||
              texture->is_float == true) {
     glDeleteTextures(1, &texture->texture_id);
-    init_gltexture(
-        texture->texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
+    init_gltexture(texture->texture_id, img.size(), 4, &img.data()->x, as_srgb,
+        true, true);
   } else {
     update_gltexture(texture->texture_id, img.size(), 4, &img.data()->x, true);
   }
@@ -848,8 +864,8 @@ void set_gltexture(
   }
 }
 void clear_gltextures(opengl_scene* scene) {
-  for(auto texture : scene->_textures) {
-    if(texture->texture_id) glDeleteTextures(1, &texture->texture_id);
+  for (auto texture : scene->_textures) {
+    if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
     delete texture;
   }
   scene->_textures.clear();
@@ -969,17 +985,19 @@ void clean_glshapes(opengl_scene* scene) {
 }
 
 // add instance
-int add_glinstance(opengl_scene* scene, const frame3f& frame, int shape, int material) {
+int add_glinstance(
+    opengl_scene* scene, const frame3f& frame, int shape, int material) {
   scene->_instances.emplace_back();
-  auto idx = (int)scene->_instances.size() - 1;
-  scene->_instances[idx].frame = frame;
-  scene->_instances[idx].shape = shape;
+  auto idx                        = (int)scene->_instances.size() - 1;
+  scene->_instances[idx].frame    = frame;
+  scene->_instances[idx].shape    = shape;
   scene->_instances[idx].material = material;
   return idx;
 }
-void set_glinstance(opengl_scene* scene, int idx, const frame3f& frame, int shape, int material) {
-  scene->_instances[idx].frame = frame;
-  scene->_instances[idx].shape = shape;
+void set_glinstance(opengl_scene* scene, int idx, const frame3f& frame,
+    int shape, int material) {
+  scene->_instances[idx].frame    = frame;
+  scene->_instances[idx].shape    = shape;
   scene->_instances[idx].material = material;
 }
 void set_glinstance_frame(opengl_scene* scene, int idx, const frame3f& frame) {
@@ -1021,8 +1039,8 @@ void draw_glinstance(opengl_scene* glscene, const opengl_instance& instance,
   auto instance_xform     = mat4f(instance.frame);
   auto instance_inv_xform = transpose(
       mat4f(inverse(instance.frame, params.non_rigid_frames)));
-  glUniformMatrix4fv(glGetUniformLocation(glscene->program_id, "shape_xform"), 1,
-      false, &instance_xform.x.x);
+  glUniformMatrix4fv(glGetUniformLocation(glscene->program_id, "shape_xform"),
+      1, false, &instance_xform.x.x);
   glUniformMatrix4fv(
       glGetUniformLocation(glscene->program_id, "shape_xform_invtranspose"), 1,
       false, &instance_inv_xform.x.x);
@@ -1092,9 +1110,11 @@ void draw_glinstance(opengl_scene* glscene, const opengl_instance& instance,
     glActiveTexture(GL_TEXTURE0 + 4);
     glBindTexture(GL_TEXTURE_2D, normal_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_norm_txt"), 4);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_norm_txt_on"), 1);
+    glUniform1i(
+        glGetUniformLocation(glscene->program_id, "mat_norm_txt_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_norm_txt_on"), 0);
+    glUniform1i(
+        glGetUniformLocation(glscene->program_id, "mat_norm_txt_on"), 0);
   }
 
   glUniform1i(glGetUniformLocation(glscene->program_id, "elem_faceted"),
@@ -1134,8 +1154,9 @@ void draw_glinstance(opengl_scene* glscene, const opengl_instance& instance,
     glBindBuffer(GL_ARRAY_BUFFER, shape.colors_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(glscene->program_id, "vert_color"));
-    glVertexAttribPointer(glGetAttribLocation(glscene->program_id, "vert_color"),
-        4, GL_FLOAT, false, 0, nullptr);
+    glVertexAttribPointer(
+        glGetAttribLocation(glscene->program_id, "vert_color"), 4, GL_FLOAT,
+        false, 0, nullptr);
   } else {
     glVertexAttrib4f(
         glGetAttribLocation(glscene->program_id, "vert_color"), 1, 1, 1, 1);
@@ -1235,8 +1256,8 @@ void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
                       glscene->program_id, ("lpos[" + is + "]").c_str()),
           glscene->_lights[i].position.x, glscene->_lights[i].position.y,
           glscene->_lights[i].position.z);
-      glUniform3f(
-          glGetUniformLocation(glscene->program_id, ("lke[" + is + "]").c_str()),
+      glUniform3f(glGetUniformLocation(
+                      glscene->program_id, ("lke[" + is + "]").c_str()),
           glscene->_lights[i].emission.x, glscene->_lights[i].emission.y,
           glscene->_lights[i].emission.z);
       glUniform1i(glGetUniformLocation(
@@ -1781,8 +1802,7 @@ bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
       state.set_dirname(dir_buffer);
     }
     auto current_item = -1;
-    if (ImGui::ListBox(
-            "entries", &current_item,
+    if (ImGui::ListBox("entries", &current_item,
             [](void* data, int idx, const char** out_text) -> bool {
               auto& state = *(filedialog_state*)data;
               *out_text   = state.entries[idx].first.c_str();
