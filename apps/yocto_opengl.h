@@ -140,8 +140,6 @@ struct opengl_shape {
 struct opengl_texture {
   uint  texture_id = 0;
   vec2i size       = {0, 0};
-  bool  mipmap     = false;
-  bool  linear     = false;
   bool  is_srgb    = false;
   bool  is_float   = false;
 };

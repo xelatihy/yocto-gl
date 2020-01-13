@@ -816,6 +816,9 @@ int add_gltexture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb) {
       GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glGenerateMipmap(GL_TEXTURE_2D);
+  texture->size       = img.size();
+  texture->is_srgb    = as_srgb;
+  texture->is_float   = false;
   assert(glGetError() == GL_NO_ERROR);
   return (int)scene->_textures.size() - 1;
 }
@@ -824,44 +827,66 @@ int add_gltexture(opengl_scene* scene, const image<vec4f>& img, bool as_float) {
   auto texture = scene->_textures.emplace_back(new opengl_texture{});
   glGenTextures(1, &texture->texture_id);
   glBindTexture(GL_TEXTURE_2D, texture->texture_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA,
-      img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+  glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA, img.size().x,
+      img.size().y, 0, GL_RGBA, GL_FLOAT, img.data());
   glTexParameteri(
       GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glGenerateMipmap(GL_TEXTURE_2D);
+  texture->size       = img.size();
+  texture->is_srgb    = false;
+  texture->is_float   = as_float;
   assert(glGetError() == GL_NO_ERROR);
   return (int)scene->_textures.size() - 1;
 }
 void set_gltexture(
     opengl_scene* scene, int idx, const image<vec4b>& img, bool as_srgb) {
+  assert(glGetError() == GL_NO_ERROR);
   auto& texture = scene->_textures[idx];
-  if (!texture->texture_id) {
-    init_gltexture(texture->texture_id, img.size(), 4, &img.data()->x, as_srgb,
-        true, true);
-  } else if (texture->size != img.size() || texture->is_srgb != as_srgb ||
-             texture->is_float == true) {
-    glDeleteTextures(1, &texture->texture_id);
-    init_gltexture(texture->texture_id, img.size(), 4, &img.data()->x, as_srgb,
-        true, true);
+  if (texture->size != img.size() || texture->is_srgb != as_srgb ||
+      texture->is_float == true) {
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB_ALPHA : GL_RGBA,
+        img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+    glTexParameteri(
+        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    update_gltexture(texture->texture_id, img.size(), 4, &img.data()->x, true);
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+        img.size().x, img.size().y, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+    glGenerateMipmap(GL_TEXTURE_2D);
   }
+  texture->size       = img.size();
+  texture->is_srgb    = as_srgb;
+  texture->is_float   = false;
+  assert(glGetError() == GL_NO_ERROR);
 }
 void set_gltexture(
     opengl_scene* scene, int idx, const image<vec4f>& img, bool as_float) {
+  assert(glGetError() == GL_NO_ERROR);
   auto& texture = scene->_textures[idx];
-  if (!texture->texture_id) {
-    init_gltexture(texture->texture_id, img.size(), 4, &img.data()->x, as_float,
-        true, true);
-  } else if (texture->size != img.size() || texture->is_float != as_float ||
-             texture->is_srgb == true) {
-    glDeleteTextures(1, &texture->texture_id);
-    init_gltexture(texture->texture_id, img.size(), 4, &img.data()->x, as_float,
-        true, true);
+  if (texture->size != img.size() || texture->is_float != as_float ||
+      texture->is_srgb == true) {
+    glGenTextures(1, &texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA,
+        img.size().x, img.size().y, 0, GL_RGBA, GL_FLOAT, img.data());
+    glTexParameteri(
+        GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    update_gltexture(texture->texture_id, img.size(), 4, &img.data()->x, true);
+    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+        img.size().x, img.size().y, GL_RGBA, GL_FLOAT, img.data());
+    glGenerateMipmap(GL_TEXTURE_2D);
   }
+  texture->size       = img.size();
+  texture->is_srgb    = false;
+  texture->is_float   = as_float;
+  assert(glGetError() == GL_NO_ERROR);
 }
 void clear_gltextures(opengl_scene* scene) {
   for (auto texture : scene->_textures) {
