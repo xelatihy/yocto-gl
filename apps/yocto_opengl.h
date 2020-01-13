@@ -229,7 +229,9 @@ void set_glcamera_planes(opengl_scene* scene, int idx, float near, float far);
 void clear_glcameras(opengl_scene* scene);
 
 // add texture
-int  add_gltexture(opengl_scene* scene);
+int  add_gltexture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb = true);
+int  add_gltexture(opengl_scene* scene, const image<vec4f>& img,
+    bool as_float = false);
 void set_gltexture(
     opengl_scene* scene, int idx, const image<vec4b>& img, bool as_srgb = true);
 void set_gltexture(opengl_scene* scene, int idx, const image<vec4f>& img,

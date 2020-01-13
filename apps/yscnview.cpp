@@ -204,11 +204,10 @@ opengl_scene* make_glscene(const sceneio_model& scene) {
 
   // textures
   for (auto& texture : scene.textures) {
-    auto id = add_gltexture(glscene);
     if (!texture.hdr.empty()) {
-      set_gltexture(glscene, id, texture.hdr);
+      add_gltexture(glscene, texture.hdr);
     } else if (!texture.ldr.empty()) {
-      set_gltexture(glscene, id, texture.ldr);
+      add_gltexture(glscene, texture.ldr);
     }
   }
 

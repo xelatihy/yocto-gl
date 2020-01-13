@@ -804,9 +804,21 @@ void set_glmaterial_gltftextures(
 void clear_glmaterials(opengl_scene* scene) { scene->_materials.clear(); }
 
 // add texture
-int add_gltexture(opengl_scene* scene) {
+int add_gltexture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb) {
   scene->_textures.emplace_back();
-  return (int)scene->_textures.size() - 1;
+  auto idx = (int)scene->_textures.size() - 1;
+  auto& texture = scene->_textures[idx];
+  init_gltexture(
+      texture.texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
+  return idx;
+}
+int add_gltexture(opengl_scene* scene, const image<vec4f>& img, bool as_float) {
+  scene->_textures.emplace_back();
+  auto idx = (int)scene->_textures.size() - 1;
+  auto& texture = scene->_textures[idx];
+  init_gltexture(
+      texture.texture_id, img.size(), 4, &img.data()->x, as_float, true, true);
+  return idx;
 }
 void set_gltexture(
     opengl_scene* scene, int idx, const image<vec4b>& img, bool as_srgb) {
