@@ -59,10 +59,6 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void check_glerror() {
-  if (glGetError() != GL_NO_ERROR) printf("gl error\n");
-}
-
 void clear_glframebuffer(const vec4f& color, bool clear_depth) {
   glClearColor(color.x, color.y, color.z, color.w);
   if (clear_depth) {
@@ -71,17 +67,6 @@ void clear_glframebuffer(const vec4f& color, bool clear_depth) {
   } else {
     glClear(GL_COLOR_BUFFER_BIT);
   }
-}
-
-void set_glviewport(const vec4i& viewport) {
-  glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
-}
-
-void set_glwireframe(bool enabled) {
-  if (enabled)
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  else
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void set_glblending(bool enabled) {
@@ -410,7 +395,7 @@ void update_glimage(
 
 // draw image
 void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
-  check_glerror();
+  assert(glGetError() == GL_NO_ERROR);
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);
   glClearColor(params.background.x, params.background.y, params.background.z,
@@ -437,7 +422,7 @@ void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles_id);
   glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_INT, nullptr);
   glUseProgram(0);
-  check_glerror();
+  assert(glGetError() == GL_NO_ERROR);
 }
 
 // delete omage data
@@ -1271,13 +1256,13 @@ void draw_glscene(opengl_scene& glscene, const vec4i& viewport,
     }
   }
 
-  if (params.wireframe) set_glwireframe(true);
+  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   for (auto& instance : glscene._instances) {
     draw_glinstance(glscene, instance, params);
   }
 
   glUseProgram(0);
-  if (params.wireframe) set_glwireframe(false);
+  if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 }  // namespace yocto
