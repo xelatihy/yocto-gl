@@ -115,18 +115,6 @@ static void init_glprogram(uint& program_id, uint& vertex_id, uint& fragment_id,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-static void delete_glprogram(
-    uint& program_id, uint& vertex_id, uint& fragment_id, uint& array_id) {
-  if (program_id) glDeleteProgram(program_id);
-  if (vertex_id) glDeleteShader(vertex_id);
-  if (fragment_id) glDeleteShader(fragment_id);
-  if (array_id) glDeleteVertexArrays(1, &array_id);
-  program_id  = 0;
-  vertex_id   = 0;
-  fragment_id = 0;
-  array_id    = 0;
-}
-
 void init_glbuffer(
     uint& buffer_id, bool element, int size, int count, const float* array) {
   assert(glGetError() == GL_NO_ERROR);
@@ -163,11 +151,6 @@ void update_glbuffer(
   glBufferSubData(element ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, 0,
       size * count * sizeof(float), array);
   assert(glGetError() == GL_NO_ERROR);
-}
-
-static void delete_glbuffer(uint& buffer_id) {
-  if (buffer_id) glDeleteBuffers(1, &buffer_id);
-  buffer_id = 0;
 }
 
 static void update_gltexture(uint& texture_id, const vec2i& size, int nchan,
@@ -405,16 +388,15 @@ void draw_glimage(opengl_image* glimage, const draw_glimage_params& params) {
   assert(glGetError() == GL_NO_ERROR);
 }
 
-// delete omage data
-void delete_glimage(opengl_image* glimage) {
-  delete_glprogram(glimage->program_id, glimage->vertex_id,
-      glimage->fragment_id, glimage->array_id);
-  delete_glbuffer(glimage->texcoords_id);
-  delete_glbuffer(glimage->triangles_id);
-  delete_gltexture(glimage->texture_id);
-}
-
-opengl_image::~opengl_image() { delete_glimage(this); }
+opengl_image::~opengl_image() {   
+  if (program_id) glDeleteProgram(program_id);
+  if (vertex_id) glDeleteShader(vertex_id);
+  if (fragment_id) glDeleteShader(fragment_id);
+  if (array_id) glDeleteVertexArrays(1, &array_id);
+  if (texcoords_id) glDeleteBuffers(1, &texcoords_id);
+  if (triangles_id) glDeleteBuffers(1, &triangles_id);
+  if (texture_id) glDeleteTextures(1, &texture_id);
+ }
 
 }  // namespace yocto
 
@@ -733,19 +715,22 @@ void main() {
 #endif
 
 opengl_scene::~opengl_scene() {
-  delete_glprogram(program_id, vertex_id, fragment_id, array_id);
+  if (program_id) glDeleteProgram(program_id);
+  if (vertex_id) glDeleteShader(vertex_id);
+  if (fragment_id) glDeleteShader(fragment_id);
+  if (array_id) glDeleteVertexArrays(1, &array_id);
   for (auto& texture : _textures) delete_gltexture(texture.texture_id);
   for (auto& shape : _shapes) {
-    delete_glbuffer(shape.positions_id);
-    delete_glbuffer(shape.normals_id);
-    delete_glbuffer(shape.texcoords_id);
-    delete_glbuffer(shape.colors_id);
-    delete_glbuffer(shape.tangents_id);
-    delete_glbuffer(shape.points_id);
-    delete_glbuffer(shape.lines_id);
-    delete_glbuffer(shape.triangles_id);
-    delete_glbuffer(shape.quads_id);
-    delete_glbuffer(shape.edges_id);
+    if (shape.positions_id) glDeleteBuffers(1, &shape.positions_id);
+    if (shape.normals_id) glDeleteBuffers(1, &shape.normals_id);
+    if (shape.texcoords_id) glDeleteBuffers(1, &shape.texcoords_id);
+    if (shape.colors_id) glDeleteBuffers(1, &shape.colors_id);
+    if (shape.tangents_id) glDeleteBuffers(1, &shape.tangents_id);
+    if (shape.points_id) glDeleteBuffers(1, &shape.points_id);
+    if (shape.lines_id) glDeleteBuffers(1, &shape.lines_id);
+    if (shape.triangles_id) glDeleteBuffers(1, &shape.triangles_id);
+    if (shape.quads_id) glDeleteBuffers(1, &shape.quads_id);
+    if (shape.edges_id) glDeleteBuffers(1, &shape.edges_id);
   }
 }
 
@@ -869,7 +854,7 @@ void set_glshape_buffer(uint& array_id, int& array_num, bool element, int size,
     init_glbuffer(array_id, element, size, count, values);
     array_num = size;
   } else if (array_num != size) {
-    delete_glbuffer(array_id);
+    glDeleteBuffers(1, &array_id);
     init_glbuffer(array_id, element, size, count, values);
     array_num = size;
   } else {
@@ -882,7 +867,7 @@ void set_glshape_buffer(uint& array_id, int& array_num, bool element, int size,
     init_glbuffer(array_id, element, size, count, values);
     array_num = size;
   } else if (array_num != size) {
-    delete_glbuffer(array_id);
+    glDeleteBuffers(1, &array_id);
     init_glbuffer(array_id, element, size, count, values);
     array_num = size;
   } else {
@@ -957,16 +942,16 @@ void set_glshape_edges(
 }
 void clean_glshapes(opengl_scene* scene) {
   for (auto& shape : scene->_shapes) {
-    delete_glbuffer(shape.positions_id);
-    delete_glbuffer(shape.normals_id);
-    delete_glbuffer(shape.texcoords_id);
-    delete_glbuffer(shape.colors_id);
-    delete_glbuffer(shape.tangents_id);
-    delete_glbuffer(shape.points_id);
-    delete_glbuffer(shape.lines_id);
-    delete_glbuffer(shape.triangles_id);
-    delete_glbuffer(shape.quads_id);
-    delete_glbuffer(shape.edges_id);
+    if (shape.positions_id) glDeleteBuffers(1, &shape.positions_id);
+    if (shape.normals_id) glDeleteBuffers(1, &shape.normals_id);
+    if (shape.texcoords_id) glDeleteBuffers(1, &shape.texcoords_id);
+    if (shape.colors_id) glDeleteBuffers(1, &shape.colors_id);
+    if (shape.tangents_id) glDeleteBuffers(1, &shape.tangents_id);
+    if (shape.points_id) glDeleteBuffers(1, &shape.points_id);
+    if (shape.lines_id) glDeleteBuffers(1, &shape.lines_id);
+    if (shape.triangles_id) glDeleteBuffers(1, &shape.triangles_id);
+    if (shape.quads_id) glDeleteBuffers(1, &shape.quads_id);
+    if (shape.edges_id) glDeleteBuffers(1, &shape.edges_id);
   }
   scene->_shapes.clear();
 }
