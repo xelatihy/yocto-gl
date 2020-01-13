@@ -227,11 +227,6 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
   assert(glGetError() == GL_NO_ERROR);
 }
 
-static void delete_gltexture(uint& texture_id) {
-  if (texture_id) glDeleteTextures(1, &texture_id);
-  texture_id = 0;
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -325,7 +320,7 @@ void set_glimage(
   } else if (glimage->texture_size != img.size() ||
              glimage->texture_linear != linear ||
              glimage->texture_mipmap != mipmap) {
-    delete_gltexture(glimage->texture_id);
+    glDeleteTextures(1, &glimage->texture_id);
     init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
@@ -344,7 +339,7 @@ void set_glimage(
   } else if (glimage->texture_size != img.size() ||
              glimage->texture_linear != linear ||
              glimage->texture_mipmap != mipmap) {
-    delete_gltexture(glimage->texture_id);
+    glDeleteTextures(1, &glimage->texture_id);
     init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
@@ -719,7 +714,9 @@ opengl_scene::~opengl_scene() {
   if (vertex_id) glDeleteShader(vertex_id);
   if (fragment_id) glDeleteShader(fragment_id);
   if (array_id) glDeleteVertexArrays(1, &array_id);
-  for (auto& texture : _textures) delete_gltexture(texture.texture_id);
+  for (auto& texture : _textures) {
+    glDeleteTextures(1, &texture.texture_id);
+  }
   for (auto& shape : _shapes) {
     if (shape.positions_id) glDeleteBuffers(1, &shape.positions_id);
     if (shape.normals_id) glDeleteBuffers(1, &shape.normals_id);
@@ -819,7 +816,7 @@ void set_gltexture(
         texture.texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
   } else if (texture.size != img.size() || texture.is_srgb != as_srgb ||
              texture.is_float == true) {
-    delete_gltexture(texture.texture_id);
+    glDeleteTextures(1, &texture.texture_id);
     init_gltexture(
         texture.texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
   } else {
@@ -834,7 +831,7 @@ void set_gltexture(
         true, true);
   } else if (texture.size != img.size() || texture.is_float != as_float ||
              texture.is_srgb == true) {
-    delete_gltexture(texture.texture_id);
+    glDeleteTextures(1, &texture.texture_id);
     init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_float,
         true, true);
   } else {
