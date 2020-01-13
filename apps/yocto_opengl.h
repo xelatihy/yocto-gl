@@ -212,15 +212,15 @@ struct opengl_camera {
 
 // Opengl shape
 struct opengl_shape {
-  int positions_num  = 0;
+  int  positions_num = 0;
   uint positions_id  = 0;
-  int normals_num  = 0;
+  int  normals_num   = 0;
   uint normals_id    = 0;
-  int texcoords_num  = 0;
+  int  texcoords_num = 0;
   uint texcoords_id  = 0;
-  int colors_num  = 0;
+  int  colors_num    = 0;
   uint colors_id     = 0;
-  int tangents_num  = 0;
+  int  tangents_num  = 0;
   uint tangents_id   = 0;
   int  points_num    = 0;
   uint points_id     = 0;
