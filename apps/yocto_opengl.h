@@ -178,7 +178,7 @@ struct opengl_light {
 
 // Opengl scene
 struct opengl_scene {
-  opengl_scene() { }
+  opengl_scene() {}
   opengl_scene(const opengl_scene&) = delete;
   opengl_scene& operator=(const opengl_scene&) = delete;
   ~opengl_scene();
@@ -187,7 +187,7 @@ struct opengl_scene {
   vector<unique_ptr<opengl_instance>> _instances = {};
   vector<unique_ptr<opengl_shape>>    _shapes    = {};
   vector<unique_ptr<opengl_material>> _materials = {};
-  vector<unique_ptr<opengl_texture>> _textures  = {};
+  vector<unique_ptr<opengl_texture>>  _textures  = {};
   vector<unique_ptr<opengl_light>>    _lights    = {};
 
   // OpenGL state
@@ -227,9 +227,10 @@ void set_glcamera_planes(opengl_scene* scene, int idx, float near, float far);
 void clear_glcameras(opengl_scene* scene);
 
 // add texture
-int  add_gltexture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb = true);
-int  add_gltexture(opengl_scene* scene, const image<vec4f>& img,
-    bool as_float = false);
+int add_gltexture(
+    opengl_scene* scene, const image<vec4b>& img, bool as_srgb = true);
+int add_gltexture(
+    opengl_scene* scene, const image<vec4f>& img, bool as_float = false);
 void set_gltexture(
     opengl_scene* scene, int idx, const image<vec4b>& img, bool as_srgb = true);
 void set_gltexture(opengl_scene* scene, int idx, const image<vec4f>& img,
@@ -280,8 +281,10 @@ void set_glshape_edges(
 void clean_glshapes(opengl_scene* scene);
 
 // add instance
-int  add_glinstance(opengl_scene* scene, const frame3f& frame, int shape, int material);
-void set_glinstance(opengl_scene* scene, int idx, const frame3f& frame, int shape, int material);
+int add_glinstance(
+    opengl_scene* scene, const frame3f& frame, int shape, int material);
+void set_glinstance(opengl_scene* scene, int idx, const frame3f& frame,
+    int shape, int material);
 void set_glinstance_frame(opengl_scene* scene, int idx, const frame3f& frame);
 void set_glinstance_shape(opengl_scene* scene, int idx, int shape);
 void set_glinstance_material(opengl_scene* scene, int idx, int material);
@@ -513,8 +516,7 @@ bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
 template <typename T>
 inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {
-  return draw_glcombobox(
-      win, lbl, idx, (int)vals.size(),
+  return draw_glcombobox(win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 
