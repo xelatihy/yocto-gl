@@ -831,6 +831,18 @@ void main() {
 opengl_scene::~opengl_scene() {
   delete_glprogram(program_id, vertex_id, fragment_id, array_id);
   for(auto& texture : _textures) delete_gltexture(texture.texture_id);
+  for(auto& shape : _shapes) {
+    delete_glbuffer(shape.positions.buffer_id);
+    delete_glbuffer(shape.normals.buffer_id);
+    delete_glbuffer(shape.texcoords.buffer_id);
+    delete_glbuffer(shape.colors.buffer_id);
+    delete_glbuffer(shape.tangentsps.buffer_id);
+    delete_glbuffer(shape.points.buffer_id);
+    delete_glbuffer(shape.lines.buffer_id);
+    delete_glbuffer(shape.triangles.buffer_id);
+    delete_glbuffer(shape.quads.buffer_id);
+    delete_glbuffer(shape.edges.buffer_id);
+  }
 }
 
 // Initialize an OpenGL scene
