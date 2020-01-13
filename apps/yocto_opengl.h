@@ -224,6 +224,21 @@ struct opengl_shape {
   opengl_elementbuffer edges      = {};
 };
 
+// OpenGL texture
+struct opengl_texture_ {
+  opengl_texture_() {}
+  opengl_texture_(opengl_texture_&&);
+  opengl_texture_& operator=(opengl_texture_&&);
+  ~opengl_texture_();
+
+  uint  texture_id = 0;
+  vec2i size       = {0, 0};
+  bool  mipmap     = false;
+  bool  linear     = false;
+  bool  is_srgb    = false;
+  bool  is_float   = false;
+};
+
 // Opengl material
 struct opengl_material {
   vec3f emission      = zero3f;
@@ -262,7 +277,7 @@ struct opengl_scene {
   vector<opengl_instance> instances = {};
   vector<opengl_shape>    shapes    = {};
   vector<opengl_material> materials = {};
-  vector<opengl_texture>  _textures = {};
+  vector<opengl_texture_>  _textures = {};
   vector<opengl_light>    _lights   = {};
 
   // OpenGL state
