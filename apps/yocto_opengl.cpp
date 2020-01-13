@@ -886,6 +886,9 @@ void set_glmaterial_normalmap(opengl_scene& scene, int idx, int normal_txt) {
 void set_glmaterial_gltftextures(opengl_scene& scene, int idx, bool gltf_textures) {
   scene._materials[idx].gltf_textures = gltf_textures;
 }
+void clear_glmaterials(opengl_scene& scene) {
+  scene._materials.clear();
+}
 
 // add texture
 int  add_gltexture(opengl_scene& scene) {
@@ -929,6 +932,24 @@ void set_gllight(opengl_scene& scene, int idx, const vec3f& position,
 void clear_gllights(opengl_scene& scene) { scene._lights.clear(); }
 bool has_max_gllights(opengl_scene& scene) {
   return scene._lights.size() >= 16;
+}
+
+// add instance
+int add_glinstance(opengl_scene& scene) {
+  scene._instances.emplace_back();
+  return (int)scene._instances.size()-1;
+}
+void set_glinstance_frame(opengl_scene& scene, int idx, const frame3f& frame) {
+  scene._instances[idx].frame = frame;
+}
+void set_glinstance_shape(opengl_scene& scene, int idx, int shape) {
+  scene._instances[idx].shape = shape;
+}
+void set_glinstance_material(opengl_scene& scene, int idx, int material) {
+  scene._instances[idx].material = material;
+}
+void clear_glinstances(opengl_scene& scene) {
+  scene._instances.clear();
 }
 
 // Draw a shape

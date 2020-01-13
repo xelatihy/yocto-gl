@@ -274,7 +274,7 @@ struct opengl_light {
 // Opengl scene
 struct opengl_scene {
   vector<opengl_camera>   _cameras   = {};
-  vector<opengl_instance> instances = {};
+  vector<opengl_instance> _instances = {};
   vector<opengl_shape>    shapes    = {};
   vector<opengl_material> _materials = {};
   vector<opengl_texture_> _textures = {};
@@ -336,6 +336,13 @@ void set_glmaterial_opacity(opengl_scene& scene, int idx, float opacity, int opa
 void set_glmaterial_metallic(opengl_scene& scene, int idx, float metallic, int metallic_txt = -1);
 void set_glmaterial_normalmap(opengl_scene& scene, int idx, int normal_txt);
 void set_glmaterial_gltftextures(opengl_scene& scene, int idx, bool gltf_textures);
+
+// add instance
+int add_glinstance(opengl_scene& scene);
+void set_glinstance_frame(opengl_scene& scene, int idx, const frame3f& frame);
+void set_glinstance_shape(opengl_scene& scene, int idx, int shape);
+void set_glinstance_material(opengl_scene& scene, int idx, int material);
+void clear_glinstances(opengl_scene& scene);
 
 // add light
 int  add_gllight(opengl_scene& scene, const vec3f& position,
