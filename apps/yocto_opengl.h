@@ -216,84 +216,84 @@ struct draw_glscene_params {
 };
 
 // Initialize an OpenGL scene
-void make_glscene(opengl_scene& scene);
+opengl_scene* make_glscene();
 
 // add camera
-int  add_glcamera(opengl_scene& scene);
-void set_glcamera_frame(opengl_scene& scene, int idx, const frame3f frame);
+int  add_glcamera(opengl_scene* scene);
+void set_glcamera_frame(opengl_scene* scene, int idx, const frame3f frame);
 void set_glcamera_lens(
-    opengl_scene& scene, int idx, float lens, float asepct, float film);
-void set_glcamera_planes(opengl_scene& scene, int idx, float near, float far);
-void clear_glcameras(opengl_scene& scene);
+    opengl_scene* scene, int idx, float lens, float asepct, float film);
+void set_glcamera_planes(opengl_scene* scene, int idx, float near, float far);
+void clear_glcameras(opengl_scene* scene);
 
 // add texture
-int  add_gltexture(opengl_scene& scene);
+int  add_gltexture(opengl_scene* scene);
 void set_gltexture(
-    opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb = true);
-void set_gltexture(opengl_scene& scene, int idx, const image<vec4f>& img,
+    opengl_scene* scene, int idx, const image<vec4b>& img, bool as_srgb = true);
+void set_gltexture(opengl_scene* scene, int idx, const image<vec4f>& img,
     bool as_float = false);
-void clear_gltextures(opengl_scene& scene);
+void clear_gltextures(opengl_scene* scene);
 
 // add material
-int  add_glmaterial(opengl_scene& scene);
+int  add_glmaterial(opengl_scene* scene);
 void set_glmaterial_emission(
-    opengl_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
+    opengl_scene* scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_glmaterial_diffuse(
-    opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt = -1);
+    opengl_scene* scene, int idx, const vec3f& diffuse, int diffuse_txt = -1);
 void set_glmaterial_specular(
-    opengl_scene& scene, int idx, const vec3f& specular, int specular_txt = -1);
+    opengl_scene* scene, int idx, const vec3f& specular, int specular_txt = -1);
 void set_glmaterial_roughness(
-    opengl_scene& scene, int idx, float roughness, int roughness_txt = -1);
+    opengl_scene* scene, int idx, float roughness, int roughness_txt = -1);
 void set_glmaterial_opacity(
-    opengl_scene& scene, int idx, float opacity, int opacity_txt = -1);
+    opengl_scene* scene, int idx, float opacity, int opacity_txt = -1);
 void set_glmaterial_metallic(
-    opengl_scene& scene, int idx, float metallic, int metallic_txt = -1);
-void set_glmaterial_normalmap(opengl_scene& scene, int idx, int normal_txt);
+    opengl_scene* scene, int idx, float metallic, int metallic_txt = -1);
+void set_glmaterial_normalmap(opengl_scene* scene, int idx, int normal_txt);
 void set_glmaterial_gltftextures(
-    opengl_scene& scene, int idx, bool gltf_textures);
-void clean_glmaterias(opengl_scene& scene);
+    opengl_scene* scene, int idx, bool gltf_textures);
+void clean_glmaterias(opengl_scene* scene);
 
 // add shape
-int  add_glshape(opengl_scene& scene);
+int  add_glshape(opengl_scene* scene);
 void set_glshape_positions(
-    opengl_scene& scene, int idx, const vector<vec3f>& positions);
+    opengl_scene* scene, int idx, const vector<vec3f>& positions);
 void set_glshape_normals(
-    opengl_scene& scene, int idx, const vector<vec3f>& normals);
+    opengl_scene* scene, int idx, const vector<vec3f>& normals);
 void set_glshape_texcoords(
-    opengl_scene& scene, int idx, const vector<vec2f>& texcoords);
+    opengl_scene* scene, int idx, const vector<vec2f>& texcoords);
 void set_glshape_colors(
-    opengl_scene& scene, int idx, const vector<vec4f>& colors);
+    opengl_scene* scene, int idx, const vector<vec4f>& colors);
 void set_glshape_tangents(
-    opengl_scene& scene, int idx, const vector<vec4f>& tangents);
+    opengl_scene* scene, int idx, const vector<vec4f>& tangents);
 void set_glshape_points(
-    opengl_scene& scene, int idx, const vector<int>& points);
+    opengl_scene* scene, int idx, const vector<int>& points);
 void set_glshape_lines(
-    opengl_scene& scene, int idx, const vector<vec2i>& lines);
+    opengl_scene* scene, int idx, const vector<vec2i>& lines);
 void set_glshape_triangles(
-    opengl_scene& scene, int idx, const vector<vec3i>& triangles);
+    opengl_scene* scene, int idx, const vector<vec3i>& triangles);
 void set_glshape_quads(
-    opengl_scene& scene, int idx, const vector<vec4i>& quads);
+    opengl_scene* scene, int idx, const vector<vec4i>& quads);
 void set_glshape_edges(
-    opengl_scene& scene, int idx, const vector<vec2i>& edges);
-void clean_glshapes(opengl_scene& scene);
+    opengl_scene* scene, int idx, const vector<vec2i>& edges);
+void clean_glshapes(opengl_scene* scene);
 
 // add instance
-int  add_glinstance(opengl_scene& scene);
-void set_glinstance_frame(opengl_scene& scene, int idx, const frame3f& frame);
-void set_glinstance_shape(opengl_scene& scene, int idx, int shape);
-void set_glinstance_material(opengl_scene& scene, int idx, int material);
-void clear_glinstances(opengl_scene& scene);
+int  add_glinstance(opengl_scene* scene);
+void set_glinstance_frame(opengl_scene* scene, int idx, const frame3f& frame);
+void set_glinstance_shape(opengl_scene* scene, int idx, int shape);
+void set_glinstance_material(opengl_scene* scene, int idx, int material);
+void clear_glinstances(opengl_scene* scene);
 
 // add light
-int  add_gllight(opengl_scene& scene, const vec3f& position,
+int  add_gllight(opengl_scene* scene, const vec3f& position,
      const vec3f& emission, bool directional);
-void set_gllight(opengl_scene& scene, int idx, const vec3f& position,
+void set_gllight(opengl_scene* scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional);
-void clear_gllights(opengl_scene& scene);
-bool has_max_gllights(opengl_scene& scene);
+void clear_gllights(opengl_scene* scene);
+bool has_max_gllights(opengl_scene* scene);
 
 // Draw an OpenGL scene
-void draw_glscene(opengl_scene& state, const vec4i& viewport,
+void draw_glscene(opengl_scene* state, const vec4i& viewport,
     const draw_glscene_params& params);
 
 }  // namespace yocto
