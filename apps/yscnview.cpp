@@ -196,10 +196,7 @@ opengl_scene* make_glscene(const sceneio_model& scene) {
 
   // camera
   for (auto& camera : scene.cameras) {
-    auto id = add_glcamera(glscene);
-    set_glcamera_frame(glscene, id, camera.frame);
-    set_glcamera_lens(glscene, id, camera.lens, camera.aspect, camera.film);
-    set_glcamera_planes(glscene, id, 0.001, 10000);
+    add_glcamera(glscene, camera.frame, camera.lens, camera.aspect, camera.film, 0.001, 10000);
   }
 
   // textures
@@ -490,9 +487,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
           win, "selection##2", app->selection.second, app->scene.cameras);
       if (draw_glwidgets_camera(win, app, app->selection.second)) {
         auto& camera = app->scene.cameras[app->selection.second];
-        set_glcamera_frame(glscene, app->selection.second, camera.frame);
-        set_glcamera_lens(glscene, app->selection.second, camera.lens,
-            camera.aspect, camera.film);
+        set_glcamera(glscene, app->selection.second, camera.frame, camera.lens,
+            camera.aspect, camera.film, 0.001, 10000);
       }
     } else if (app->selection.first == "texture") {
       draw_glcombobox(
@@ -651,9 +647,8 @@ int main(int argc, const char* argv[]) {
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      set_glcamera_frame(app->glscene.get(), app->drawgl_prms.camera, camera.frame);
-      set_glcamera_lens(app->glscene.get(), app->drawgl_prms.camera, camera.lens,
-          camera.aspect, camera.film);
+      set_glcamera(app->glscene.get(), app->drawgl_prms.camera, camera.frame, camera.lens,
+          camera.aspect, camera.film, 0.001, 10000);
     }
 
     // animation

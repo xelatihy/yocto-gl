@@ -176,11 +176,7 @@ void show_edges(shared_ptr<app_state> app) {
 
 void init_opengl_scene(shared_ptr<app_state> app) {
   app->scene = unique_ptr<opengl_scene>{make_glscene()};
-  add_glcamera(app->scene.get());
-  set_glcamera_frame(app->scene.get(), 0, app->camera.frame);
-  set_glcamera_lens(
-      app->scene.get(), 0, app->camera.lens, app->camera.aspect, app->camera.film);
-  set_glcamera_planes(app->scene.get(), 0, 0.001, 10000);
+  add_glcamera(app->scene.get(), app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
 
   auto shape_material = add_glmaterial(app->scene.get());
   set_glmaterial_diffuse(app->scene.get(), shape_material, {1, 0.2, 0});
@@ -306,10 +302,7 @@ void yimshproc(const string&                         input_filename,
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
-    set_glcamera_frame(app->scene.get(), 0, app->camera.frame);
-    set_glcamera_lens(
-        app->scene.get(), 0, app->camera.lens, app->camera.aspect, app->camera.film);
-    set_glcamera_planes(app->scene.get(), 0, 0.001, 10000);
+    set_glcamera(app->scene.get(), 0, app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
   });
   set_key_glcallback(
       win, [app](const opengl_window& win, int key, bool pressing) {
@@ -331,7 +324,7 @@ void yimshproc(const string&                         input_filename,
           rotate.y = -rotate.y;
           pan.x    = -pan.x;
           update_turntable(camera.frame, app->camera.focus, rotate, dolly, pan);
-          set_glcamera_frame(app->scene.get(), 0, camera.frame);
+          set_glcamera(app->scene.get(), 0, camera.frame, camera.lens, camera.aspect, camera.film, 0.001, 10000);
         }
       });
 

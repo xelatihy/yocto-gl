@@ -219,11 +219,8 @@ struct draw_glscene_params {
 opengl_scene* make_glscene();
 
 // add camera
-int  add_glcamera(opengl_scene* scene);
-void set_glcamera_frame(opengl_scene* scene, int idx, const frame3f frame);
-void set_glcamera_lens(
-    opengl_scene* scene, int idx, float lens, float asepct, float film);
-void set_glcamera_planes(opengl_scene* scene, int idx, float near, float far);
+int  add_glcamera(opengl_scene* scene, const frame3f frame, float lens, float asepct, float film, float near, float far);
+void set_glcamera(opengl_scene* scene, int idx, const frame3f frame, float lens, float asepct, float film, float near, float far);
 void clear_glcameras(opengl_scene* scene);
 
 // add texture

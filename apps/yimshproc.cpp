@@ -36,10 +36,7 @@ void my_keycallback(
   if (key == esc) {
     printf("Esc pressed!\n");
     init_camera(app);
-    set_glcamera_frame(app->scene.get(), 0, app->camera.frame);
-    set_glcamera_lens(
-        app->scene.get(), 0, app->camera.lens, app->camera.aspect, app->camera.film);
-    set_glcamera_planes(app->scene.get(), 0, 0.001, 10000);
+    set_glcamera(app->scene.get(), 0, app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
   }
 
   if (key == 'z') {
