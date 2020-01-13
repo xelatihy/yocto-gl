@@ -170,13 +170,6 @@ void update_glshape(opengl_shape& glshape, const sceneio_shape& shape,
   }
 }
 
-void update_glinstance(
-    opengl_instance& glinstance, const sceneio_instance& instance) {
-  glinstance.frame    = instance.frame;
-  glinstance.shape    = instance.shape;
-  glinstance.material = instance.material;
-}
-
 void update_gllights(opengl_scene& glscene, const sceneio_model& scene) {
   clear_gllights(glscene);
   for (auto& instance : scene.instances) {
