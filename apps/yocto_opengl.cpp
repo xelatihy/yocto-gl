@@ -320,10 +320,14 @@ void init_glimage_program(opengl_image& glimage) {
 
   init_glprogram(glimage.program_id, glimage.vertex_id, glimage.fragment_id,
       glimage.array_id, vert, frag);
-  init_glbuffer(
-      glimage.texcoords_id, false, texcoords.size(), 2, &texcoords.front().x);
-  init_glbuffer(
-      glimage.triangles_id, true, triangles.size(), 3, &triangles.front().x);
+  glGenBuffers(1, &glimage.texcoords_id);
+  glBindBuffer(GL_ARRAY_BUFFER, glimage.texcoords_id);
+  glBufferData(GL_ARRAY_BUFFER, texcoords.size() * 2 * sizeof(float),
+      texcoords.data(), GL_STATIC_DRAW);
+  glGenBuffers(1, &glimage.triangles_id);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles_id);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * 3 * sizeof(int),
+      triangles.data(), GL_STATIC_DRAW);
 }
 
 // update image data
@@ -1191,7 +1195,8 @@ void draw_glscene(opengl_scene& glscene, const vec4i& viewport,
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
-  glClearColor(params.background.x, params.background.y, params.background.z, params.background.w);
+  glClearColor(params.background.x, params.background.y, params.background.z,
+      params.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
@@ -1247,7 +1252,8 @@ namespace yocto {
 
 void _glfw_refresh_callback(GLFWwindow* glfw) {
   auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
-  glClearColor(win.background.x, win.background.y, win.background.z, win.background.w);
+  glClearColor(
+      win.background.x, win.background.y, win.background.z, win.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (win.draw_cb)
     win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
@@ -1351,7 +1357,8 @@ void run_ui(opengl_window& win) {
     if (win.update_cb) win.update_cb(win);
 
     // draw
-    glClearColor(win.background.x, win.background.y, win.background.z, win.background.w);
+    glClearColor(
+        win.background.x, win.background.y, win.background.z, win.background.w);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     if (win.draw_cb)
       win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
