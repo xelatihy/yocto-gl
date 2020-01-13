@@ -263,13 +263,13 @@ struct opengl_scene {
   vector<opengl_shape>    shapes    = {};
   vector<opengl_material> materials = {};
   vector<opengl_texture>  textures  = {};
-  vector<opengl_light>    _lights    = {};
+  vector<opengl_light>    _lights   = {};
 
   // OpenGL state
-  uint program_id             = 0;
-  uint vertex_id       = 0;
-  uint fragment_id     = 0;
-  uint array_id = 0;
+  uint program_id  = 0;
+  uint vertex_id   = 0;
+  uint fragment_id = 0;
+  uint array_id    = 0;
 
   // cleanup
   ~opengl_scene();
@@ -298,8 +298,8 @@ void make_glscene(opengl_scene& scene);
 
 // add light
 void clear_gllights(opengl_scene& scene);
-int add_gllight(opengl_scene& scene, const vec3f& position,
-    const vec3f& emission, bool directional);
+int  add_gllight(opengl_scene& scene, const vec3f& position,
+     const vec3f& emission, bool directional);
 void update_gllight(opengl_scene& scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional);
 bool has_max_gllights(opengl_scene& scene);

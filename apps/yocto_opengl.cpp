@@ -875,8 +875,9 @@ void draw_glinstance(opengl_scene& glscene, const opengl_instance& instance,
   auto& shape    = glscene.shapes[instance.shape];
   auto& material = glscene.materials[instance.material];
 
-  auto instance_xform = mat4f(instance.frame);
-  auto instance_inv_xform = transpose(mat4f(inverse(instance.frame, params.non_rigid_frames)));
+  auto instance_xform     = mat4f(instance.frame);
+  auto instance_inv_xform = transpose(
+      mat4f(inverse(instance.frame, params.non_rigid_frames)));
   glUniformMatrix4fv(glGetUniformLocation(glscene.program_id, "shape_xform"), 1,
       false, &instance_xform.x.x);
   glUniformMatrix4fv(
@@ -912,83 +913,100 @@ void draw_glinstance(opengl_scene& glscene, const opengl_instance& instance,
     glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(GL_TEXTURE_2D, emission_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt"), 0);
-    glUniform1i(glGetUniformLocation(glscene.program_id,"mat_ke_txt_on"), 1);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene.program_id,"mat_ke_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt_on"), 0);
   }
   if (material.diffuse_map >= 0) {
     auto& diffuse_map = glscene.textures.at(material.diffuse_map);
     glActiveTexture(GL_TEXTURE0 + 1);
     glBindTexture(GL_TEXTURE_2D, diffuse_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt"), 1);
-    glUniform1i(glGetUniformLocation(glscene.program_id,"mat_kd_txt_on"), 1);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene.program_id,"mat_kd_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt_on"), 0);
   }
   if (material.metallic_map >= 0) {
     auto& specular_map = glscene.textures.at(material.specular_map);
     glActiveTexture(GL_TEXTURE0 + 2);
     glBindTexture(GL_TEXTURE_2D, specular_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt"), 2);
-    glUniform1i(glGetUniformLocation(glscene.program_id,"mat_ks_txt_on"), 1);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene.program_id,"mat_ks_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt_on"), 0);
   }
   if (material.roughness_map >= 0) {
     auto& roughness_map = glscene.textures.at(material.roughness_map);
     glActiveTexture(GL_TEXTURE0 + 3);
     glBindTexture(GL_TEXTURE_2D, roughness_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt"), 3);
-    glUniform1i(glGetUniformLocation(glscene.program_id,"mat_rs_txt_on"), 1);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene.program_id,"mat_rs_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt_on"), 0);
   }
   if (material.normal_map >= 0) {
     auto& normal_map = glscene.textures.at(material.normal_map);
     glActiveTexture(GL_TEXTURE0 + 4);
     glBindTexture(GL_TEXTURE_2D, normal_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_norm_txt"), 4);
-    glUniform1i(glGetUniformLocation(glscene.program_id,"mat_norm_txt_on"), 1);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_norm_txt_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene.program_id,"mat_norm_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_norm_txt_on"), 0);
   }
 
   glUniform1i(glGetUniformLocation(glscene.program_id, "elem_faceted"),
       (int)!shape.normals);
   if (shape.positions.buffer_id) {
     glBindBuffer(GL_ARRAY_BUFFER, shape.positions.buffer_id);
-    glEnableVertexAttribArray(glGetAttribLocation(glscene.program_id, "vert_pos"));
-    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_pos"), 3, GL_FLOAT, false, 0, nullptr);
+    glEnableVertexAttribArray(
+        glGetAttribLocation(glscene.program_id, "vert_pos"));
+    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_pos"),
+        3, GL_FLOAT, false, 0, nullptr);
   } else {
-    glVertexAttrib3f(glGetAttribLocation(glscene.program_id, "vert_pos"), 0, 0, 0);
+    glVertexAttrib3f(
+        glGetAttribLocation(glscene.program_id, "vert_pos"), 0, 0, 0);
   }
   if (shape.normals.buffer_id) {
     glBindBuffer(GL_ARRAY_BUFFER, shape.normals.buffer_id);
-    glEnableVertexAttribArray(glGetAttribLocation(glscene.program_id, "vert_norm"));
-    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_norm"), 3, GL_FLOAT, false, 0, nullptr);
+    glEnableVertexAttribArray(
+        glGetAttribLocation(glscene.program_id, "vert_norm"));
+    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_norm"),
+        3, GL_FLOAT, false, 0, nullptr);
   } else {
-    glVertexAttrib3f(glGetAttribLocation(glscene.program_id, "vert_norm"), 0, 0, 0);
+    glVertexAttrib3f(
+        glGetAttribLocation(glscene.program_id, "vert_norm"), 0, 0, 0);
   }
   if (shape.texcoords.buffer_id) {
     glBindBuffer(GL_ARRAY_BUFFER, shape.texcoords.buffer_id);
-    glEnableVertexAttribArray(glGetAttribLocation(glscene.program_id, "vert_texcoord"));
-    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_texcoord"), 2, GL_FLOAT, false, 0, nullptr);
+    glEnableVertexAttribArray(
+        glGetAttribLocation(glscene.program_id, "vert_texcoord"));
+    glVertexAttribPointer(
+        glGetAttribLocation(glscene.program_id, "vert_texcoord"), 2, GL_FLOAT,
+        false, 0, nullptr);
   } else {
-    glVertexAttrib2f(glGetAttribLocation(glscene.program_id, "vert_texcoord"), 0, 0);
+    glVertexAttrib2f(
+        glGetAttribLocation(glscene.program_id, "vert_texcoord"), 0, 0);
   }
   if (shape.colors.buffer_id) {
     glBindBuffer(GL_ARRAY_BUFFER, shape.colors.buffer_id);
-    glEnableVertexAttribArray(glGetAttribLocation(glscene.program_id, "vert_color"));
-    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_color"), 4, GL_FLOAT, false, 0, nullptr);
+    glEnableVertexAttribArray(
+        glGetAttribLocation(glscene.program_id, "vert_color"));
+    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_color"),
+        4, GL_FLOAT, false, 0, nullptr);
   } else {
-    glVertexAttrib4f(glGetAttribLocation(glscene.program_id, "vert_color"), 1, 1, 1, 1);
+    glVertexAttrib4f(
+        glGetAttribLocation(glscene.program_id, "vert_color"), 1, 1, 1, 1);
   }
   if (shape.tangentsps.buffer_id) {
     glBindBuffer(GL_ARRAY_BUFFER, shape.tangentsps.buffer_id);
-    glEnableVertexAttribArray(glGetAttribLocation(glscene.program_id, "vert_tangsp"));
-    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_tangsp"), 4, GL_FLOAT, false, 0, nullptr);
+    glEnableVertexAttribArray(
+        glGetAttribLocation(glscene.program_id, "vert_tangsp"));
+    glVertexAttribPointer(
+        glGetAttribLocation(glscene.program_id, "vert_tangsp"), 4, GL_FLOAT,
+        false, 0, nullptr);
   } else {
-    glVertexAttrib4f(glGetAttribLocation(glscene.program_id, "vert_tangsp"), 0, 0, 1, 1);
+    glVertexAttrib4f(
+        glGetAttribLocation(glscene.program_id, "vert_tangsp"), 0, 0, 1, 1);
   }
 
   if (shape.points) {
@@ -1044,23 +1062,34 @@ void draw_glscene(opengl_scene& glscene, const vec4i& viewport,
   set_glviewport(viewport);
 
   glUseProgram(glscene.program_id);
-  glUniform3f(glGetUniformLocation(glscene.program_id, "cam_pos"), glcamera.frame.o.x, glcamera.frame.o.y, glcamera.frame.o.z);
-  glUniformMatrix4fv(glGetUniformLocation(glscene.program_id, "cam_xform_inv"), 1, false, &camera_view.x.x);
-  glUniformMatrix4fv(glGetUniformLocation(glscene.program_id, "cam_proj"), 1, false, &camera_proj.x.x);
-  glUniform1i(glGetUniformLocation(glscene.program_id, "eyelight"), (int)params.eyelight);
-  glUniform1f(glGetUniformLocation(glscene.program_id, "exposure"), params.exposure);
+  glUniform3f(glGetUniformLocation(glscene.program_id, "cam_pos"),
+      glcamera.frame.o.x, glcamera.frame.o.y, glcamera.frame.o.z);
+  glUniformMatrix4fv(glGetUniformLocation(glscene.program_id, "cam_xform_inv"),
+      1, false, &camera_view.x.x);
+  glUniformMatrix4fv(glGetUniformLocation(glscene.program_id, "cam_proj"), 1,
+      false, &camera_proj.x.x);
+  glUniform1i(glGetUniformLocation(glscene.program_id, "eyelight"),
+      (int)params.eyelight);
+  glUniform1f(
+      glGetUniformLocation(glscene.program_id, "exposure"), params.exposure);
   glUniform1f(glGetUniformLocation(glscene.program_id, "gamma"), params.gamma);
 
   if (!params.eyelight) {
     glUniform3f(glGetUniformLocation(glscene.program_id, "lamb"), 0, 0, 0);
-    glUniform1i(glGetUniformLocation(glscene.program_id, "lnum"), (int)glscene._lights.size());
+    glUniform1i(glGetUniformLocation(glscene.program_id, "lnum"),
+        (int)glscene._lights.size());
     for (auto i = 0; i < glscene._lights.size(); i++) {
       auto is = std::to_string(i);
-      glUniform3f(glGetUniformLocation(glscene.program_id, ("lpos[" + is + "]").c_str()),
-          glscene._lights[i].position.x, glscene._lights[i].position.y, glscene._lights[i].position.z);
-      glUniform3f(glGetUniformLocation(glscene.program_id, ("lke[" + is + "]").c_str()),
-          glscene._lights[i].emission.x, glscene._lights[i].emission.y, glscene._lights[i].emission.z);
-      glUniform1i(glGetUniformLocation(glscene.program_id, ("ltype[" + is + "]").c_str()),
+      glUniform3f(glGetUniformLocation(
+                      glscene.program_id, ("lpos[" + is + "]").c_str()),
+          glscene._lights[i].position.x, glscene._lights[i].position.y,
+          glscene._lights[i].position.z);
+      glUniform3f(
+          glGetUniformLocation(glscene.program_id, ("lke[" + is + "]").c_str()),
+          glscene._lights[i].emission.x, glscene._lights[i].emission.y,
+          glscene._lights[i].emission.z);
+      glUniform1i(glGetUniformLocation(
+                      glscene.program_id, ("ltype[" + is + "]").c_str()),
           (int)glscene._lights[i].type);
     }
   }
