@@ -131,6 +131,15 @@ struct opengl_image {
   ~opengl_image();
 };
 
+// update image data
+void update_glimage(opengl_image& glimage, const image<vec4f>& img,
+    bool linear = false, bool mipmap = false);
+void update_glimage(opengl_image& glimage, const image<vec4b>& img,
+    bool linear = false, bool mipmap = false);
+
+// delete glmage data
+void delete_glimage(opengl_image& glimage);
+
 // OpenGL image drawing params
 struct draw_glimage_params {
   vec2i window      = {512, 512};
@@ -143,17 +152,8 @@ struct draw_glimage_params {
   vec4f background  = {0.15f, 0.15f, 0.15f, 1.0f};
 };
 
-// update image data
-void update_glimage(opengl_image& glimage, const image<vec4f>& img,
-    bool linear = false, bool mipmap = false);
-void update_glimage(opengl_image& glimage, const image<vec4b>& img,
-    bool linear = false, bool mipmap = false);
-
 // draw image
 void draw_glimage(opengl_image& glimage, const draw_glimage_params& params);
-
-// delete omage data
-void delete_glimage(opengl_image& glimage);
 
 }  // namespace yocto
 
