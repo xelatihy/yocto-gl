@@ -714,9 +714,8 @@ opengl_scene::~opengl_scene() {
   if (vertex_id) glDeleteShader(vertex_id);
   if (fragment_id) glDeleteShader(fragment_id);
   if (array_id) glDeleteVertexArrays(1, &array_id);
-  for (auto texture : _textures) {
+  for (auto& texture : _textures) {
     glDeleteTextures(1, &texture->texture_id);
-    delete texture;
   }
   for (auto& shape : _shapes) {
     if (shape.positions_id) glDeleteBuffers(1, &shape.positions_id);
@@ -807,7 +806,7 @@ void clear_glmaterials(opengl_scene* scene) { scene->_materials.clear(); }
 // add texture
 int add_gltexture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
-  auto texture = scene->_textures.emplace_back(new opengl_texture{});
+  auto texture = scene->_textures.emplace_back(make_unique<opengl_texture>()).get();
   glGenTextures(1, &texture->texture_id);
   glBindTexture(GL_TEXTURE_2D, texture->texture_id);
   glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB_ALPHA : GL_RGBA,
@@ -824,7 +823,7 @@ int add_gltexture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb) {
 }
 int add_gltexture(opengl_scene* scene, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
-  auto texture = scene->_textures.emplace_back(new opengl_texture{});
+  auto texture = scene->_textures.emplace_back(make_unique<opengl_texture>()).get();
   glGenTextures(1, &texture->texture_id);
   glBindTexture(GL_TEXTURE_2D, texture->texture_id);
   glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA, img.size().x,
@@ -889,9 +888,8 @@ void set_gltexture(
   assert(glGetError() == GL_NO_ERROR);
 }
 void clear_gltextures(opengl_scene* scene) {
-  for (auto texture : scene->_textures) {
+  for (auto& texture : scene->_textures) {
     if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
-    delete texture;
   }
   scene->_textures.clear();
 }
@@ -1095,7 +1093,7 @@ void draw_glinstance(opengl_scene* glscene, const opengl_instance& instance,
   glUniform1i(glGetUniformLocation(glscene->program_id, "mat_double_sided"),
       (int)params.double_sided);
   if (material.emission_map >= 0) {
-    auto emission_map = glscene->_textures.at(material.emission_map);
+    auto emission_map = glscene->_textures.at(material.emission_map).get();
     glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(GL_TEXTURE_2D, emission_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt"), 0);
@@ -1104,7 +1102,7 @@ void draw_glinstance(opengl_scene* glscene, const opengl_instance& instance,
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt_on"), 0);
   }
   if (material.diffuse_map >= 0) {
-    auto diffuse_map = glscene->_textures.at(material.diffuse_map);
+    auto diffuse_map = glscene->_textures.at(material.diffuse_map).get();
     glActiveTexture(GL_TEXTURE0 + 1);
     glBindTexture(GL_TEXTURE_2D, diffuse_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt"), 1);
@@ -1113,7 +1111,7 @@ void draw_glinstance(opengl_scene* glscene, const opengl_instance& instance,
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt_on"), 0);
   }
   if (material.metallic_map >= 0) {
-    auto specular_map = glscene->_textures.at(material.specular_map);
+    auto specular_map = glscene->_textures.at(material.specular_map).get();
     glActiveTexture(GL_TEXTURE0 + 2);
     glBindTexture(GL_TEXTURE_2D, specular_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt"), 2);
@@ -1122,7 +1120,7 @@ void draw_glinstance(opengl_scene* glscene, const opengl_instance& instance,
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt_on"), 0);
   }
   if (material.roughness_map >= 0) {
-    auto roughness_map = glscene->_textures.at(material.roughness_map);
+    auto roughness_map = glscene->_textures.at(material.roughness_map).get();
     glActiveTexture(GL_TEXTURE0 + 3);
     glBindTexture(GL_TEXTURE_2D, roughness_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt"), 3);
@@ -1131,7 +1129,7 @@ void draw_glinstance(opengl_scene* glscene, const opengl_instance& instance,
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt_on"), 0);
   }
   if (material.normal_map >= 0) {
-    auto normal_map = glscene->_textures.at(material.normal_map);
+    auto normal_map = glscene->_textures.at(material.normal_map).get();
     glActiveTexture(GL_TEXTURE0 + 4);
     glBindTexture(GL_TEXTURE_2D, normal_map->texture_id);
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_norm_txt"), 4);

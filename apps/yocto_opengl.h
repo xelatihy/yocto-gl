@@ -187,7 +187,7 @@ struct opengl_scene {
   vector<opengl_instance> _instances = {};
   vector<opengl_shape>    _shapes    = {};
   vector<opengl_material> _materials = {};
-  vector<opengl_texture*> _textures  = {};
+  vector<unique_ptr<opengl_texture>> _textures  = {};
   vector<opengl_light>    _lights    = {};
 
   // OpenGL state
