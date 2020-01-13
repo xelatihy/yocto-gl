@@ -249,7 +249,10 @@ void make_glscene(opengl_scene& glscene, const sceneio_model& scene) {
 
   // instances
   for (auto& instance : scene.instances) {
-    update_glinstance(glscene.instances.emplace_back(), instance);
+    auto id = add_glinstance(glscene);
+    set_glinstance_frame(glscene, id, instance.frame);
+    set_glinstance_shape(glscene, id, instance.shape);
+    set_glinstance_material(glscene, id, instance.material);
   }
 }
 
@@ -537,9 +540,12 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
     } else if (app->selection.first == "instance") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->scene.instances);
-      if (draw_glwidgets_instance(win, app, app->selection.second))
-        update_glinstance(app->glscene.instances[app->selection.second],
-            app->scene.instances[app->selection.second]);
+      if (draw_glwidgets_instance(win, app, app->selection.second)) {
+        auto& instance = app->scene.instances[app->selection.second];
+        set_glinstance_frame(app->glscene, app->selection.second, instance.frame);
+        set_glinstance_shape(app->glscene, app->selection.second, instance.shape);
+        set_glinstance_material(app->glscene, app->selection.second, instance.material);
+      }
     } else if (app->selection.first == "environment") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->scene.environments);

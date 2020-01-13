@@ -1182,7 +1182,7 @@ void draw_glscene(opengl_scene& glscene, const vec4i& viewport,
   }
 
   if (params.wireframe) set_glwireframe(true);
-  for (auto& instance : glscene.instances) {
+  for (auto& instance : glscene._instances) {
     draw_glinstance(glscene, instance, params);
   }
 
