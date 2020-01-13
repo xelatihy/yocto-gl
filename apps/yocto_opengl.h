@@ -180,6 +180,11 @@ struct opengl_light {
 
 // Opengl scene
 struct opengl_scene {
+  opengl_scene() { }
+  opengl_scene(const opengl_scene&) = delete;
+  opengl_scene& operator=(const opengl_scene&) = delete;
+  ~opengl_scene();
+
   vector<opengl_camera>   _cameras   = {};
   vector<opengl_instance> _instances = {};
   vector<opengl_shape>    _shapes    = {};
@@ -192,9 +197,6 @@ struct opengl_scene {
   uint vertex_id   = 0;
   uint fragment_id = 0;
   uint array_id    = 0;
-
-  // cleanup
-  ~opengl_scene();
 };
 
 // Draw options
