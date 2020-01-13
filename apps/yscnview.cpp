@@ -254,7 +254,11 @@ void make_glscene(opengl_scene& glscene, const sceneio_model& scene) {
 
   // textures
   for (auto& texture : scene.textures) {
-    update_gltexture(glscene.textures.emplace_back(), texture);
+    if(!texture.hdr.empty()) {
+      add_gltexture(glscene, texture.hdr);
+    } else if(!texture.ldr.empty()) {
+      add_gltexture(glscene, texture.ldr);
+    }
   }
 
   // materials
@@ -525,9 +529,15 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
     } else if (app->selection.first == "texture") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->scene.textures);
-      if (draw_glwidgets_texture(win, app, app->selection.second))
-        update_gltexture(app->glscene.textures[app->selection.second],
-            app->scene.textures[app->selection.second]);
+      if (draw_glwidgets_texture(win, app, app->selection.second)) {
+        if(!app->scene.textures[app->selection.second].hdr.empty()) {
+          set_gltexture(app->glscene, app->selection.second,
+              app->scene.textures[app->selection.second].hdr);
+        } else if(!app->scene.textures[app->selection.second].hdr.empty()) {
+          set_gltexture(app->glscene, app->selection.second,
+              app->scene.textures[app->selection.second].ldr);
+        }
+      }
     } else if (app->selection.first == "material") {
       draw_glcombobox(
           win, "selection##2", app->selection.second, app->scene.materials);

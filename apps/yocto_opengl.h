@@ -262,7 +262,7 @@ struct opengl_scene {
   vector<opengl_instance> instances = {};
   vector<opengl_shape>    shapes    = {};
   vector<opengl_material> materials = {};
-  vector<opengl_texture>  textures  = {};
+  vector<opengl_texture>  _textures = {};
   vector<opengl_light>    _lights   = {};
 
   // OpenGL state
@@ -296,12 +296,19 @@ struct draw_glscene_params {
 // Initialize an OpenGL scene
 void make_glscene(opengl_scene& scene);
 
+// add texture
+int  add_gltexture(opengl_scene& scene, const image<vec4b>& img, bool as_srgb = true);
+int  add_gltexture(opengl_scene& scene, const image<vec4f>& img, bool as_float = true);
+void set_gltexture(opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb = false);
+void set_gltexture(opengl_scene& scene, int idx, const image<vec4f>& img, bool as_float = false);
+void clear_gltextures(opengl_scene& scene);
+
 // add light
-void clear_gllights(opengl_scene& scene);
 int  add_gllight(opengl_scene& scene, const vec3f& position,
      const vec3f& emission, bool directional);
-void update_gllight(opengl_scene& scene, int idx, const vec3f& position,
+void set_gllight(opengl_scene& scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional);
+void clear_gllights(opengl_scene& scene);
 bool has_max_gllights(opengl_scene& scene);
 
 // Draw an OpenGL scene

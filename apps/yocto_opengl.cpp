@@ -850,17 +850,52 @@ void make_glscene(opengl_scene& glscene) {
       glscene.array_id, glscene_vertex, glscene_fragment);
 }
 
+// add texture
+int  add_gltexture(opengl_scene& scene, const image<vec4b>& img, bool as_srgb) {
+  scene._textures.emplace_back();
+  set_gltexture(scene, (int)scene._textures.size()-1, img, as_srgb);
+  return (int)scene._textures.size()-1;
+}
+int  add_gltexture(opengl_scene& scene, const image<vec4f>& img, bool as_float) {
+  scene._textures.emplace_back();
+  set_gltexture(scene, (int)scene._textures.size()-1, img, as_float);
+  return (int)scene._textures.size()-1;
+}
+void set_gltexture(opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb) {
+  auto& texture = scene._textures[idx];
+  if(!texture.texture_id) {
+    init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
+  } else if(texture.size != img.size() || texture.is_srgb != as_srgb || texture.is_float == true) {
+    delete_gltexture(texture.texture_id);
+    init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_srgb, true, true);
+  } else {
+    update_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, true);
+  }
+}
+void set_gltexture(opengl_scene& scene, int idx, const image<vec4f>& img, bool as_float) {
+  auto& texture = scene._textures[idx];
+  if(!texture.texture_id) {
+    init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_float, true, true);
+  } else if(texture.size != img.size() || texture.is_float != as_float || texture.is_srgb == true) {
+    delete_gltexture(texture.texture_id);
+    init_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, as_float, true, true);
+  } else {
+    update_gltexture(texture.texture_id, img.size(), 4, &img.data()->x, true);
+  }
+}
+void clear_gltextures(opengl_scene& scene);
+
 // add light
-void clear_gllights(opengl_scene& scene) { scene._lights.clear(); }
 int  add_gllight(opengl_scene& scene, const vec3f& position,
      const vec3f& emission, bool directional) {
   scene._lights.push_back({position, emission, directional ? 1 : 0});
   return (int)scene._lights.size() - 1;
 }
-void update_gllight(opengl_scene& scene, int idx, const vec3f& position,
+void set_gllight(opengl_scene& scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional) {
   scene._lights[idx] = {position, emission, directional ? 1 : 0};
 }
+void clear_gllights(opengl_scene& scene) { scene._lights.clear(); }
 bool has_max_gllights(opengl_scene& scene) {
   return scene._lights.size() >= 16;
 }
@@ -909,7 +944,7 @@ void draw_glinstance(opengl_scene& glscene, const opengl_instance& instance,
   glUniform1i(glGetUniformLocation(glscene.program_id, "mat_double_sided"),
       (int)params.double_sided);
   if (material.emission_map >= 0) {
-    auto& emission_map = glscene.textures.at(material.emission_map);
+    auto& emission_map = glscene._textures.at(material.emission_map);
     glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(GL_TEXTURE_2D, emission_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt"), 0);
@@ -918,7 +953,7 @@ void draw_glinstance(opengl_scene& glscene, const opengl_instance& instance,
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt_on"), 0);
   }
   if (material.diffuse_map >= 0) {
-    auto& diffuse_map = glscene.textures.at(material.diffuse_map);
+    auto& diffuse_map = glscene._textures.at(material.diffuse_map);
     glActiveTexture(GL_TEXTURE0 + 1);
     glBindTexture(GL_TEXTURE_2D, diffuse_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt"), 1);
@@ -927,7 +962,7 @@ void draw_glinstance(opengl_scene& glscene, const opengl_instance& instance,
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt_on"), 0);
   }
   if (material.metallic_map >= 0) {
-    auto& specular_map = glscene.textures.at(material.specular_map);
+    auto& specular_map = glscene._textures.at(material.specular_map);
     glActiveTexture(GL_TEXTURE0 + 2);
     glBindTexture(GL_TEXTURE_2D, specular_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt"), 2);
@@ -936,7 +971,7 @@ void draw_glinstance(opengl_scene& glscene, const opengl_instance& instance,
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt_on"), 0);
   }
   if (material.roughness_map >= 0) {
-    auto& roughness_map = glscene.textures.at(material.roughness_map);
+    auto& roughness_map = glscene._textures.at(material.roughness_map);
     glActiveTexture(GL_TEXTURE0 + 3);
     glBindTexture(GL_TEXTURE_2D, roughness_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt"), 3);
@@ -945,7 +980,7 @@ void draw_glinstance(opengl_scene& glscene, const opengl_instance& instance,
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt_on"), 0);
   }
   if (material.normal_map >= 0) {
-    auto& normal_map = glscene.textures.at(material.normal_map);
+    auto& normal_map = glscene._textures.at(material.normal_map);
     glActiveTexture(GL_TEXTURE0 + 4);
     glBindTexture(GL_TEXTURE_2D, normal_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_norm_txt"), 4);
