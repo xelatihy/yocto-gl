@@ -601,10 +601,7 @@ int main(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
 
-  auto win = make_glwindow({1280 + 320, 720}, "yscnview");
-
-  // init widgets
-  init_glwidgets(win);
+  auto win = make_glwindow({1280 + 320, 720}, "yscnview", true);
 
   // callbacks
   set_draw_glcallback(

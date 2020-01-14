@@ -286,7 +286,7 @@ int main(int argc, const char* argv[]) {
   reset_display(app);
 
   // window
-  auto win = make_glwindow({1280 + 320, 720}, "yscnitrace");
+  auto win = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(

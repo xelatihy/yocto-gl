@@ -344,10 +344,7 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win = make_glwindow({1280 + 320, 720}, "yimview");
-
-  // init widgets
-  init_glwidgets(win);
+  auto win = make_glwindow({1280 + 320, 720}, "yimview", true);
 
   // callbacks
   set_update_glcallback(

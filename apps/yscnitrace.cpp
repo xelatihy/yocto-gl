@@ -695,10 +695,7 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_scene_async(apps, filename);
 
   // window
-  auto win = make_glwindow({1280 + 320, 720}, "yscnitrace");
-
-  // init widgets
-  init_glwidgets(win);
+  auto win = make_glwindow({1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
   set_draw_glcallback(

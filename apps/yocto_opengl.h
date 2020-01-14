@@ -353,6 +353,7 @@ using update_glcallback = std::function<void(const opengl_window*)>;
 // OpenGL window wrapper
 struct opengl_window {
   GLFWwindow*         win           = nullptr;
+  string title = "";
   draw_glcallback     draw_cb       = {};
   widgets_glcallback  widgets_cb    = {};
   drop_glcallback     drop_cb       = {};
@@ -368,7 +369,8 @@ struct opengl_window {
 };
 
 // Windows initialization
-opengl_window* make_glwindow(const vec2i& size, const string& title);
+opengl_window* make_glwindow(const vec2i& size, const string& title, bool widgets, 
+    int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
 void delete_glwindow(opengl_window* win);
@@ -398,8 +400,6 @@ vec2f get_glmouse_pos_normalized(
 // OPENGL WIDGETS
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-void init_glwidgets(opengl_window* win, int width = 320, bool left = true);
 
 void begin_glwidgets(const opengl_window* win);
 void end_glwidgets(const opengl_window* win);

@@ -103,7 +103,7 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win = make_glwindow({1280, 720}, "yimgviews");
+  auto win = make_glwindow({1280, 720}, "yimgviews", false);
 
   // set callbacks
   set_draw_glcallback(

@@ -256,11 +256,8 @@ void yimshproc(const string&                         input_filename,
   app->init(app);
 
   // Init window.
-  auto win = make_glwindow({1280 + 320, 720}, "yimshproc");
+  auto win = make_glwindow({1280 + 320, 720}, "yimshproc", true);
   init_opengl_scene(app);
-
-  // Init widgets.
-  init_glwidgets(win);
 
   // callbacks
   set_draw_glcallback(

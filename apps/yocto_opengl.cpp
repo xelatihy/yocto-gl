@@ -1382,7 +1382,7 @@ void _glfw_scroll_callback(GLFWwindow* glfw, double xoffset, double yoffset) {
   if (win->scroll_cb) win->scroll_cb(win, (float)yoffset);
 }
 
-opengl_window* make_glwindow(const vec2i& size, const string& title) {
+opengl_window* make_glwindow(const vec2i& size, const string& title, bool widgets, int widgets_width, bool widgets_left) {
   // init glfw
   if (!glfwInit())
     throw std::runtime_error("cannot initialize windowing system");
@@ -1395,6 +1395,7 @@ opengl_window* make_glwindow(const vec2i& size, const string& title) {
 
   // create window
   auto win = new opengl_window();
+  win->title = title;
   win->win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
   if (!win->win) throw std::runtime_error("cannot initialize windowing system");
   glfwMakeContextCurrent(win->win);
@@ -1409,6 +1410,22 @@ opengl_window* make_glwindow(const vec2i& size, const string& title) {
   // init gl extensions
   if (!gladLoadGL())
     throw std::runtime_error("cannot initialize OpenGL extensions");
+
+  // widgets
+  if(widgets) {
+    ImGui::CreateContext();
+    ImGui::GetIO().IniFilename       = nullptr;
+    ImGui::GetStyle().WindowRounding = 0;
+    ImGui_ImplGlfw_InitForOpenGL(win->win, true);
+#ifndef __APPLE__
+    ImGui_ImplOpenGL3_Init();
+#else
+    ImGui_ImplOpenGL3_Init("#version 330");
+#endif
+    ImGui::StyleColorsDark();
+    win->widgets_width = widgets_width;
+    win->widgets_left  = widgets_left;
+  }
 
   return win;
 }
