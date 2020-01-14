@@ -146,9 +146,9 @@ struct opengl_texture {
 
 // Opengl material
 struct opengl_material {
-  vec3f emission      = zero3f;
-  vec3f diffuse       = zero3f;
-  vec3f specular      = zero3f;
+  vec3f emission      = {0, 0, 0};
+  vec3f diffuse       = {0, 0, 0};
+  vec3f specular      = {0, 0, 0};
   float metallic      = 0;
   float roughness     = 0;
   float opacity       = 1;
