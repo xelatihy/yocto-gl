@@ -106,7 +106,7 @@ namespace yocto {
 struct opengl_camera {
   frame3f frame  = identity3x4f;
   float   lens   = 0.050;
-  float   asepct = 1;
+  float   asepct = 1.000;
   float   film   = 0.036;
   float   near   = 0.001;
   float   far    = 10000;
