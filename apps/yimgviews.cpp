@@ -50,8 +50,8 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image        glimage  = {};
-  draw_glimage_params glparams = {};
+  unique_ptr<opengl_image> glimage  = {};
+  draw_glimage_params      glparams = {};
 };
 
 // Simple parallel for used since our target platforms do not yet support
@@ -103,22 +103,23 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win = opengl_window();
-  init_glwindow(win, {1280, 720}, "yimgviews");
+  auto win = make_glwindow({1280, 720}, "yimgviews", false);
 
   // set callbacks
   set_draw_glcallback(
-      win, [app](const opengl_window& win, vec2i window, vec4i viewport) {
-        app->glparams.window      = window;
-        app->glparams.framebuffer = viewport;
-        if (!app->glimage)
-          update_glimage(app->glimage, app->display, false, false);
+      win, [app](const opengl_window* win, const opengl_input& input) {
+        app->glparams.window      = input.window_size;
+        app->glparams.framebuffer = input.framebuffer_viewport;
+        if (!app->glimage) {
+          app->glimage = unique_ptr<opengl_image>{make_glimage()};
+          set_glimage(app->glimage.get(), app->display, false, false);
+        }
         update_imview(app->glparams.center, app->glparams.scale,
             app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_glimage(app->glimage, app->glparams);
+        draw_glimage(app->glimage.get(), app->glparams);
       });
   set_uiupdate_glcallback(
-      win, [app](const opengl_window& win, const opengl_input& input) {
+      win, [app](const opengl_window* win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left) {
           app->glparams.center += input.mouse_pos - input.mouse_last;

@@ -59,8 +59,8 @@ struct app_state {
   float        exposure = 0;
 
   // view scene
-  opengl_image        glimage  = {};
-  draw_glimage_params glparams = {};
+  unique_ptr<opengl_image> glimage  = {};
+  draw_glimage_params      glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -286,26 +286,25 @@ int main(int argc, const char* argv[]) {
   reset_display(app);
 
   // window
-  auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yscnitrace");
+  auto win = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(
-      win, [app](const opengl_window& win, vec2i window, vec4i viewport) {
-        if (!app->glimage || app->glimage.size() != app->display.size() ||
-            !app->render_counter) {
-          update_glimage(app->glimage, app->display, false, false);
-        }
-        app->glparams.window      = window;
-        app->glparams.framebuffer = viewport;
+      win, [app](const opengl_window* win, const opengl_input& input) {
+        if (!app->glimage)
+          app->glimage = unique_ptr<opengl_image>(make_glimage());
+        if (!app->render_counter)
+          set_glimage(app->glimage.get(), app->display, false, false);
+        app->glparams.window      = input.window_size;
+        app->glparams.framebuffer = input.framebuffer_viewport;
         update_imview(app->glparams.center, app->glparams.scale,
             app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_glimage(app->glimage, app->glparams);
+        draw_glimage(app->glimage.get(), app->glparams);
         app->render_counter++;
         if (app->render_counter > 10) app->render_counter = 0;
       });
   set_uiupdate_glcallback(
-      win, [app](const opengl_window& win, const opengl_input& input) {
+      win, [app](const opengl_window* win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto& camera = app->scene.cameras.at(app->params.camera);
           auto  dolly  = 0.0f;

@@ -63,9 +63,9 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  opengl_image        glimage   = {};
-  draw_glimage_params glparams  = {};
-  bool                glupdated = true;
+  unique_ptr<opengl_image> glimage   = {};
+  draw_glimage_params      glparams  = {};
+  bool                     glupdated = true;
 
   // error
   string error = "";
@@ -173,11 +173,10 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
       }));
 }
 
-void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
+void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          image_ok = !apps->states.empty() && apps->selected >= 0;
-  if (!begin_glwidgets_window(win, "yimview")) return;
-  draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
           false, "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
@@ -192,7 +191,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
     try {
       save_image(app->outname, app->display);
     } catch (exception& e) {
-      push_glmessage("cannot save " + app->outname);
+      push_glmessage(win, "cannot save " + app->outname);
       log_glinfo(win, "cannot save " + app->outname);
       log_glinfo(win, e.what());
     }
@@ -207,7 +206,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
-    set_glwindow_close(win, true);
+    set_close(win, true);
   }
   draw_glcombobox(
       win, "image", apps->selected, (int)apps->states.size(),
@@ -262,8 +261,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
             to_string(app->source.size().y));
     draw_glslider(win, "zoom", app->glparams.scale, 0.1, 10);
     draw_glcheckbox(win, "fit", app->glparams.fit);
-    auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(mouse_pos, app->glparams.center,
+    auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
         app->glparams.scale, app->source.size());
     draw_gldragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
@@ -290,23 +288,26 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
   }
 }
 
-void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
-    vec4i viewport) {
+void draw(const opengl_window* win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
-    app->glparams.window      = window;
-    app->glparams.framebuffer = viewport;
-    if (!app->glimage || app->glupdated) {
-      update_glimage(app->glimage, app->display, false, false);
+    app->glparams.window      = input.window_size;
+    app->glparams.framebuffer = input.framebuffer_viewport;
+    if (!app->glimage) {
+      app->glimage = unique_ptr<opengl_image>{make_glimage()};
+      set_glimage(app->glimage.get(), app->display, false, false);
+    } else if (app->glupdated) {
+      set_glimage(app->glimage.get(), app->display, false, false);
       app->glupdated = false;
     }
     update_imview(app->glparams.center, app->glparams.scale,
         app->display.size(), app->glparams.window, app->glparams.fit);
-    draw_glimage(app->glimage, app->glparams);
+    draw_glimage(app->glimage.get(), app->glparams);
   }
 }
 
-void update(const opengl_window& win, shared_ptr<app_states> apps) {
+void update(const opengl_window* win, shared_ptr<app_states> apps) {
   auto is_ready = [](const future<load_state>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -341,23 +342,23 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yimview");
-
-  // init widgets
-  init_glwidgets(win);
+  auto win = make_glwindow({1280 + 320, 720}, "yimview", true);
 
   // callbacks
   set_update_glcallback(
-      win, [apps](const opengl_window& win) { update(win, apps); });
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        update(win, apps);
+      });
   set_draw_glcallback(
-      win, [apps](const opengl_window& win, vec2i window, vec4i viewport) {
-        draw(win, apps, window, viewport);
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](const opengl_window& win) { draw_glwidgets(win, apps); });
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        draw_glwidgets(win, apps, input);
+      });
   set_uiupdate_glcallback(
-      win, [apps](const opengl_window& win, const opengl_input& input) {
+      win, [apps](const opengl_window* win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left && !input.widgets_active) {
           auto app = apps->states[apps->selected];
@@ -370,7 +371,8 @@ int main(int argc, const char* argv[]) {
         }
       });
   set_drop_glcallback(
-      win, [apps](const opengl_window& win, const vector<string>& paths) {
+      win, [apps](const opengl_window* win, const vector<string>& paths,
+               const opengl_input& input) {
         for (auto path : paths) load_image_async(apps, path);
       });
 
