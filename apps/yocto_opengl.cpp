@@ -1051,7 +1051,7 @@ void set_glinstance_material(opengl_scene* scene, int idx, int material) {
 void clear_glinstances(opengl_scene* scene) { scene->_instances.clear(); }
 
 // add light
-int add_gllight(opengl_scene* scene, const vec3f& position,
+int add_light(opengl_scene* scene, const vec3f& position,
     const vec3f& emission, bool directional) {
   auto light = scene->_lights.emplace_back(make_unique<opengl_light>()).get();
   light->position = position;
@@ -1059,15 +1059,15 @@ int add_gllight(opengl_scene* scene, const vec3f& position,
   light->type     = directional ? 1 : 0;
   return (int)scene->_lights.size() - 1;
 }
-void set_gllight(opengl_scene* scene, int idx, const vec3f& position,
+void set_light(opengl_scene* scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional) {
   auto light      = scene->_lights[idx].get();
   light->position = position;
   light->emission = emission;
   light->type     = directional ? 1 : 0;
 }
-void clear_gllights(opengl_scene* scene) { scene->_lights.clear(); }
-bool has_max_gllights(opengl_scene* scene) {
+void clear_lights(opengl_scene* scene) { scene->_lights.clear(); }
+bool has_max_lights(opengl_scene* scene) {
   return scene->_lights.size() >= 16;
 }
 

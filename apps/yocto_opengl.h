@@ -287,12 +287,12 @@ void set_glinstance(opengl_scene* scene, int idx, const frame3f& frame,
 void clear_glinstances(opengl_scene* scene);
 
 // add light
-int  add_gllight(opengl_scene* scene, const vec3f& position,
+int  add_light(opengl_scene* scene, const vec3f& position,
      const vec3f& emission, bool directional);
-void set_gllight(opengl_scene* scene, int idx, const vec3f& position,
+void set_light(opengl_scene* scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional);
-void clear_gllights(opengl_scene* scene);
-bool has_max_gllights(opengl_scene* scene);
+void clear_lights(opengl_scene* scene);
+bool has_max_lights(opengl_scene* scene);
 
 // Draw an OpenGL scene
 void draw_glscene(opengl_scene* state, const vec4i& viewport,
