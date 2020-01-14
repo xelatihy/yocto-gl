@@ -403,15 +403,6 @@ namespace yocto {
 bool begin_glheader(const opengl_window* win, const char* title);
 void end_glheader(const opengl_window* win);
 
-bool draw_glmessages(const opengl_window* win);
-void push_glmessage(const opengl_window* win, const string& message);
-bool draw_glfiledialog(const opengl_window* win, const char* lbl, string& path,
-    bool save, const string& dirname, const string& filename,
-    const string& filter);
-bool draw_glfiledialog_button(const opengl_window* win, const char* button_lbl,
-    bool button_active, const char* lbl, string& path, bool save,
-    const string& dirname, const string& filename, const string& filter);
-
 void draw_gllabel(
     const opengl_window* win, const char* lbl, const string& text);
 
@@ -493,6 +484,15 @@ void draw_glhistogram(
     const opengl_window* win, const char* lbl, const vector<vec3f>& values);
 void draw_glhistogram(
     const opengl_window* win, const char* lbl, const vector<vec4f>& values);
+
+bool draw_glmessages(const opengl_window* win);
+void push_glmessage(const opengl_window* win, const string& message);
+bool draw_glfiledialog(const opengl_window* win, const char* lbl, string& path,
+    bool save, const string& dirname, const string& filename,
+    const string& filter);
+bool draw_glfiledialog_button(const opengl_window* win, const char* button_lbl,
+    bool button_active, const char* lbl, string& path, bool save,
+    const string& dirname, const string& filename, const string& filter);
 
 void log_glinfo(const opengl_window* win, const string& msg);
 void log_glerror(const opengl_window* win, const string& msg);
