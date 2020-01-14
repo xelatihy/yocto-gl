@@ -33,12 +33,16 @@
 #include "../yocto/yocto_trace.h"
 using namespace yocto;
 
+#include <memory>
+using std::unique_ptr;
+using std::make_unique;
+
 // Construct a scene from io
-trace_scene make_scene(sceneio_model& ioscene) {
-  auto scene = trace_scene{};
+trace_scene* make_scene(sceneio_model& ioscene) {
+  auto scene = make_unique<trace_scene>();
 
   for (auto& iocamera : ioscene.cameras) {
-    auto& camera = scene.cameras.emplace_back();
+    auto& camera = scene->cameras.emplace_back();
     camera.frame = iocamera.frame;
     camera.film  = iocamera.aspect >= 1
                       ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
@@ -49,13 +53,13 @@ trace_scene make_scene(sceneio_model& ioscene) {
   }
 
   for (auto& iotexture : ioscene.textures) {
-    auto& texture = scene.textures.emplace_back();
+    auto& texture = scene->textures.emplace_back();
     swap(texture.hdr, iotexture.hdr);
     swap(texture.ldr, iotexture.ldr);
   }
 
   for (auto& iomaterial : ioscene.materials) {
-    auto& material            = scene.materials.emplace_back();
+    auto& material            = scene->materials.emplace_back();
     material.emission         = iomaterial.emission;
     material.diffuse          = iomaterial.diffuse;
     material.specular         = iomaterial.specular;
@@ -84,7 +88,7 @@ trace_scene make_scene(sceneio_model& ioscene) {
                       ? tesselate_shape(ioscene, ioshape_)
                       : sceneio_shape{};
     auto& ioshape = (needs_tesselation(ioscene, ioshape_)) ? tshape : ioshape_;
-    auto& shape   = scene.shapes.emplace_back();
+    auto& shape   = scene->shapes.emplace_back();
     swap(shape.points, ioshape.points);
     swap(shape.lines, ioshape.lines);
     swap(shape.triangles, ioshape.triangles);
@@ -103,21 +107,21 @@ trace_scene make_scene(sceneio_model& ioscene) {
   }
 
   for (auto& ioinstance : ioscene.instances) {
-    auto& instance    = scene.instances.emplace_back();
+    auto& instance    = scene->instances.emplace_back();
     instance.frame    = ioinstance.frame;
     instance.shape    = ioinstance.shape;
     instance.material = ioinstance.material;
   }
 
   for (auto& ioenvironment : ioscene.environments) {
-    auto& environment        = scene.environments.emplace_back();
+    auto& environment        = scene->environments.emplace_back();
     environment.frame        = ioenvironment.frame;
     environment.emission     = ioenvironment.emission;
     environment.emission_tex = ioenvironment.emission_tex;
   }
 
   ioscene = {};  // clear
-  return scene;
+  return scene.release();
 }
 
 int main(int argc, const char* argv[]) {
@@ -173,28 +177,28 @@ int main(int argc, const char* argv[]) {
 
   // convert scene
   auto convert_timer = print_timed("converting");
-  auto scene         = make_scene(ioscene);
+  auto scene         = unique_ptr<trace_scene>{make_scene(ioscene)};
   print_elapsed(convert_timer);
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(scene, params);
+  init_bvh(scene.get(), params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(scene);
+  init_lights(scene.get());
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (scene.lights.empty() && is_sampler_lit(params)) {
+  if (scene->lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, switching to eyelight shader");
     params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  auto state  = make_state(scene, params);
-  auto render = image{state.size(), zero4f};
+  auto state  = unique_ptr<trace_state>{make_state(scene.get(), params)};
+  auto render = image{state->size(), zero4f};
 
   // render
   for (auto sample = 0; sample < params.samples; sample += batch) {
@@ -202,7 +206,7 @@ int main(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(params.samples));
-    render           = trace_samples(state, scene, nsamples, params);
+    render           = trace_samples(state.get(), scene.get(), nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,

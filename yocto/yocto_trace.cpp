@@ -37,6 +37,9 @@
 #include <embree3/rtcore.h>
 #endif
 
+using std::unique_ptr;
+using std::make_unique;
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PARALLEL SUPPORT FUNCTIONS
 // -----------------------------------------------------------------------------
@@ -940,7 +943,7 @@ ray3f eval_camera(const trace_camera& camera, int idx, const vec2i& image_size,
 }
 
 // Evaluates the microfacet_brdf at a location.
-material_point eval_material(const trace_scene& scene,
+material_point eval_material(const trace_scene* scene,
     const trace_material& material, const vec2f& texcoord,
     const vec4f& shape_color) {
   // autoxiliary functions: delete is moving to yocto_trace
@@ -968,17 +971,17 @@ material_point eval_material(const trace_scene& scene,
 
   // textures
   if (material.emission_tex >= 0) {
-    auto& emission_tex = scene.textures[material.emission_tex];
+    auto& emission_tex = scene->textures[material.emission_tex];
     point.emission *= xyz(eval_texture(emission_tex, texcoord));
   }
   if (material.diffuse_tex >= 0) {
-    auto& diffuse_tex = scene.textures[material.diffuse_tex];
+    auto& diffuse_tex = scene->textures[material.diffuse_tex];
     auto  base_txt    = eval_texture(diffuse_tex, texcoord);
     point.diffuse *= xyz(base_txt);
     point.opacity *= base_txt.w;
   }
   if (material.metallic_tex >= 0) {
-    auto& metallic_tex = scene.textures[material.metallic_tex];
+    auto& metallic_tex = scene->textures[material.metallic_tex];
     auto  metallic_txt = eval_texture(metallic_tex, texcoord);
     metallic *= metallic_txt.z;
     if (material.gltf_textures) {
@@ -986,7 +989,7 @@ material_point eval_material(const trace_scene& scene,
     }
   }
   if (material.specular_tex >= 0) {
-    auto& specular_tex = scene.textures[material.specular_tex];
+    auto& specular_tex = scene->textures[material.specular_tex];
     auto  specular_txt = eval_texture(specular_tex, texcoord);
     point.specular *= xyz(specular_txt);
     if (material.gltf_textures) {
@@ -996,23 +999,23 @@ material_point eval_material(const trace_scene& scene,
     }
   }
   if (material.roughness_tex >= 0) {
-    auto& roughness_tex = scene.textures[material.roughness_tex];
+    auto& roughness_tex = scene->textures[material.roughness_tex];
     point.roughness *= eval_texture(roughness_tex, texcoord).x;
   }
   if (material.transmission_tex >= 0) {
-    auto& transmission_tex = scene.textures[material.transmission_tex];
+    auto& transmission_tex = scene->textures[material.transmission_tex];
     point.transmission *= xyz(eval_texture(transmission_tex, texcoord));
   }
   if (material.subsurface_tex >= 0) {
-    auto& subsurface_tex = scene.textures[material.subsurface_tex];
+    auto& subsurface_tex = scene->textures[material.subsurface_tex];
     point.volscatter *= xyz(eval_texture(subsurface_tex, texcoord));
   }
   if (material.opacity_tex >= 0) {
-    auto& opacity_tex = scene.textures[material.opacity_tex];
+    auto& opacity_tex = scene->textures[material.opacity_tex];
     point.opacity *= mean(xyz(eval_texture(opacity_tex, texcoord)));
   }
   if (material.coat_tex >= 0) {
-    auto& coat_tex = scene.textures[material.coat_tex];
+    auto& coat_tex = scene->textures[material.coat_tex];
     point.coat *= xyz(eval_texture(coat_tex, texcoord));
   }
   if (metallic) {
@@ -1040,21 +1043,21 @@ material_point eval_material(const trace_scene& scene,
 }
 
 // Instance values interpolated using barycentric coordinates.
-vec3f eval_position(const trace_scene& scene, const trace_instance& instance,
+vec3f eval_position(const trace_scene* scene, const trace_instance& instance,
     int element, const vec2f& uv) {
   return transform_point(
-      instance.frame, eval_position(scene.shapes[instance.shape], element, uv));
+      instance.frame, eval_position(scene->shapes[instance.shape], element, uv));
 }
-vec3f eval_normal(const trace_scene& scene, const trace_instance& instance,
+vec3f eval_normal(const trace_scene* scene, const trace_instance& instance,
     int element, const vec2f& uv, bool non_rigid_frame) {
-  auto normal = eval_normal(scene.shapes[instance.shape], element, uv);
+  auto normal = eval_normal(scene->shapes[instance.shape], element, uv);
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
-vec3f eval_shading_normal(const trace_scene& scene,
+vec3f eval_shading_normal(const trace_scene* scene,
     const trace_instance& instance, int element, const vec2f& uv,
     const vec3f& direction, bool non_rigid_frame) {
-  auto& shape    = scene.shapes[instance.shape];
-  auto& material = scene.materials[instance.material];
+  auto& shape    = scene->shapes[instance.shape];
+  auto& material = scene->materials[instance.material];
   if (!shape.points.empty()) {
     return -direction;
   } else if (!shape.lines.empty()) {
@@ -1065,7 +1068,7 @@ vec3f eval_shading_normal(const trace_scene& scene,
     if (material.refract) return normal;
     return dot(direction, normal) < 0 ? normal : -normal;
   } else {
-    auto& normal_tex = scene.textures[material.normal_tex];
+    auto& normal_tex = scene->textures[material.normal_tex];
     auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex,
                                   eval_texcoord(shape, element, uv), true));
     auto  basis      = eval_tangent_basis(shape, element, uv);
@@ -1077,16 +1080,16 @@ vec3f eval_shading_normal(const trace_scene& scene,
   }
 }
 // Instance element values.
-vec3f eval_element_normal(const trace_scene& scene,
+vec3f eval_element_normal(const trace_scene* scene,
     const trace_instance& instance, int element, bool non_rigid_frame) {
-  auto normal = eval_element_normal(scene.shapes[instance.shape], element);
+  auto normal = eval_element_normal(scene->shapes[instance.shape], element);
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
 // Instance material
-material_point eval_material(const trace_scene& scene,
+material_point eval_material(const trace_scene* scene,
     const trace_instance& instance, int element, const vec2f& uv) {
-  auto& shape     = scene.shapes[instance.shape];
-  auto& material  = scene.materials[instance.material];
+  auto& shape     = scene->shapes[instance.shape];
+  auto& material  = scene->materials[instance.material];
   auto  texcoords = eval_texcoord(shape, element, uv);
   auto  color     = eval_color(shape, element, uv);
   return eval_material(scene, material, texcoords, color);
@@ -1110,20 +1113,20 @@ vec3f eval_direction(
           sin(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif)});
 }
 // Evaluate the environment color.
-vec3f eval_environment(const trace_scene& scene,
+vec3f eval_environment(const trace_scene* scene,
     const trace_environment& environment, const vec3f& direction) {
   auto emission = environment.emission;
   if (environment.emission_tex >= 0) {
-    auto& emission_tex = scene.textures[environment.emission_tex];
+    auto& emission_tex = scene->textures[environment.emission_tex];
     emission *= xyz(
         eval_texture(emission_tex, eval_texcoord(environment, direction)));
   }
   return emission;
 }
 // Evaluate all environment color.
-vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
+vec3f eval_environment(const trace_scene* scene, const vec3f& direction) {
   auto emission = zero3f;
-  for (auto& environment : scene.environments)
+  for (auto& environment : scene->environments)
     emission += eval_environment(scene, environment, direction);
   return emission;
 }
@@ -1445,7 +1448,7 @@ static void init_embree_bvh(trace_shape& shape, const trace_params& params) {
       escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); }};
 }
 
-static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
+static void init_embree_bvh(trace_scene* scene, const trace_params& params) {
   // scene bvh
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
@@ -1453,10 +1456,10 @@ static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == trace_bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
-  for (auto instance_id = 0; instance_id < scene.instances.size();
+  for (auto instance_id = 0; instance_id < scene->instances.size();
        instance_id++) {
-    auto& instance  = scene.instances[instance_id];
-    auto& shape     = scene.shapes[instance.shape];
+    auto& instance  = scene->instances[instance_id];
+    auto& shape     = scene->shapes[instance.shape];
     auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
     rtcSetGeometryTransform(
@@ -1465,17 +1468,17 @@ static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
     rtcAttachGeometryByID(escene, egeometry, instance_id);
   }
   rtcCommitScene(escene);
-  scene.embree_bvh = std::shared_ptr<void>{
+  scene->embree_bvh = std::shared_ptr<void>{
       escene, [](void* ptr) { rtcReleaseScene((RTCScene)ptr); }};
 }
 
 static void update_embree_bvh(
-    trace_scene& scene, const vector<int>& updated_instances) {
+    trace_scene* scene, const vector<int>& updated_instances) {
   // scene bvh
-  auto escene = (RTCScene)scene.embree_bvh.get();
+  auto escene = (RTCScene)scene->embree_bvh.get();
   for (auto instance_id : updated_instances) {
-    auto& instance  = scene.instances[instance_id];
-    auto& shape     = scene.shapes[instance.shape];
+    auto& instance  = scene->instances[instance_id];
+    auto& shape     = scene->shapes[instance.shape];
     auto  egeometry = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
     rtcSetGeometryTransform(
@@ -1509,7 +1512,7 @@ static bool intersect_shape_embree_bvh(const trace_shape& shape,
   return true;
 }
 
-static bool intersect_scene_embree_bvh(const trace_scene& scene,
+static bool intersect_scene_embree_bvh(const trace_scene* scene,
     const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
     bool find_any) {
   RTCRayHit embree_ray;
@@ -1526,7 +1529,7 @@ static bool intersect_scene_embree_bvh(const trace_scene& scene,
   embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
   RTCIntersectContext embree_ctx;
   rtcInitIntersectContext(&embree_ctx);
-  rtcIntersect1((RTCScene)scene.embree_bvh.get(), &embree_ctx, &embree_ray);
+  rtcIntersect1((RTCScene)scene->embree_bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
   instance = (int)embree_ray.hit.instID[0];
   element  = (int)embree_ray.hit.primID;
@@ -1932,9 +1935,9 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
   build_bvh_serial(shape.bvh, bboxes, params.bvh);
 }
 
-void init_bvh(trace_scene& scene, const trace_params& params) {
-  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-    init_bvh(scene.shapes[idx], params);
+void init_bvh(trace_scene* scene, const trace_params& params) {
+  for (auto idx = 0; idx < scene->shapes.size(); idx++) {
+    init_bvh(scene->shapes[idx], params);
   }
 
   // embree
@@ -1947,17 +1950,17 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
 #endif
 
   // instance bboxes
-  auto bboxes = vector<bbox3f>(scene.instances.size());
+  auto bboxes = vector<bbox3f>(scene->instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& instance = scene.instances[idx];
-    auto& shape    = scene.shapes[instance.shape];
+    auto& instance = scene->instances[idx];
+    auto& shape    = scene->shapes[instance.shape];
     bboxes[idx]    = shape.bvh.nodes.empty()
                       ? invalidb3f
                       : transform_bbox(instance.frame, shape.bvh.nodes[0].bbox);
   }
 
   // build nodes
-  build_bvh_serial(scene.bvh, bboxes, params.bvh);
+  build_bvh_serial(scene->bvh, bboxes, params.bvh);
 }
 
 static void update_bvh(trace_shape& shape, const trace_params& params) {
@@ -2009,27 +2012,27 @@ static void update_bvh(trace_shape& shape, const trace_params& params) {
   update_bvh(shape.bvh, bboxes);
 }
 
-void update_bvh(trace_scene& scene, const vector<int>& updated_instances,
+void update_bvh(trace_scene* scene, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const trace_params& params) {
   // update shapes
-  for (auto shape : updated_shapes) update_bvh(scene.shapes[shape], params);
+  for (auto shape : updated_shapes) update_bvh(scene->shapes[shape], params);
 
 #ifdef YOCTO_EMBREE
-  if (scene.embree_bvh) {
+  if (scene->embree_bvh) {
     update_embree_bvh(scene, updated_instances);
   }
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>(scene.instances.size());
+  auto bboxes = vector<bbox3f>(scene->instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& instance = scene.instances[idx];
-    auto& sbvh     = scene.shapes[instance.shape].bvh;
+    auto& instance = scene->instances[idx];
+    auto& sbvh     = scene->shapes[instance.shape].bvh;
     bboxes[idx]    = transform_bbox(instance.frame, sbvh.nodes[0].bbox);
   }
 
   // update nodes
-  update_bvh(scene.bvh, bboxes);
+  update_bvh(scene->bvh, bboxes);
 }
 
 // Intersect ray with a bvh.
@@ -2143,19 +2146,19 @@ static bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh.
-static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
+static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
     int& instance, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
-  if (scene.embree_bvh) {
+  if (scene->embree_bvh) {
     return intersect_scene_embree_bvh(
         scene, ray_, instance, element, uv, distance, find_any);
   }
 #endif
 
   // check empty
-  if (scene.bvh.nodes.empty()) return false;
+  if (scene->bvh.nodes.empty()) return false;
 
   // node stack
   int  node_stack[128];
@@ -2176,7 +2179,7 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
   // walking stack
   while (node_cur) {
     // grab node
-    auto& node = scene.bvh.nodes[node_stack[--node_cur]];
+    auto& node = scene->bvh.nodes[node_stack[--node_cur]];
 
     // intersect bbox
     // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
@@ -2196,13 +2199,13 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& instance_ = scene.instances[scene.bvh.primitives[idx]];
+        auto& instance_ = scene->instances[scene->bvh.primitives[idx]];
         auto  inv_ray   = transform_ray(
             inverse(instance_.frame, non_rigid_frames), ray);
-        if (intersect_shape_bvh(scene.shapes[instance_.shape], inv_ray, element,
+        if (intersect_shape_bvh(scene->shapes[instance_.shape], inv_ray, element,
                 uv, distance, find_any)) {
           hit      = true;
-          instance = scene.bvh.primitives[idx];
+          instance = scene->bvh.primitives[idx];
           ray.tmax = distance;
         }
       }
@@ -2216,16 +2219,16 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh.
-static bool intersect_instance_bvh(const trace_scene& scene, int instance,
+static bool intersect_instance_bvh(const trace_scene* scene, int instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
-  auto& instance_ = scene.instances[instance];
+  auto& instance_ = scene->instances[instance];
   auto inv_ray = transform_ray(inverse(instance_.frame, non_rigid_frames), ray);
   return intersect_shape_bvh(
-      scene.shapes[instance_.shape], inv_ray, element, uv, distance, find_any);
+      scene->shapes[instance_.shape], inv_ray, element, uv, distance, find_any);
 }
 
-trace_intersection intersect_scene_bvh(const trace_scene& scene,
+trace_intersection intersect_scene_bvh(const trace_scene* scene,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = trace_intersection{};
   intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
@@ -2233,7 +2236,7 @@ trace_intersection intersect_scene_bvh(const trace_scene& scene,
       non_rigid_frames);
   return intersection;
 }
-trace_intersection intersect_instance_bvh(const trace_scene& scene,
+trace_intersection intersect_instance_bvh(const trace_scene* scene,
     int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection     = trace_intersection{};
   intersection.hit      = intersect_instance_bvh(scene, instance, ray,
@@ -2539,9 +2542,9 @@ static float sample_volscattering_pdf(const material_point& material,
 
 // Update environment CDF for sampling.
 static vector<float> sample_environment_cdf(
-    const trace_scene& scene, const trace_environment& environment) {
+    const trace_scene* scene, const trace_environment& environment) {
   if (environment.emission_tex < 0) return {};
-  auto& texture    = scene.textures[environment.emission_tex];
+  auto& texture    = scene->textures[environment.emission_tex];
   auto  size       = texture_size(texture);
   auto  texels_cdf = vector<float>(size.x * size.y);
   if (size != zero2i) {
@@ -2584,11 +2587,11 @@ static vector<float> sample_shape_cdf(const trace_shape& shape) {
 }
 
 // Picks a point on a light.
-static vec3f sample_light(const trace_scene& scene, const trace_light& light,
+static vec3f sample_light(const trace_scene* scene, const trace_light& light,
     const vec3f& p, float rel, const vec2f& ruv) {
   if (light.instance >= 0) {
-    auto& instance = scene.instances[light.instance];
-    auto& shape    = scene.shapes[instance.shape];
+    auto& instance = scene->instances[light.instance];
+    auto& shape    = scene->shapes[instance.shape];
     auto& cdf      = light.elem_cdf;
     auto  element  = sample_discrete(cdf, rel);
     auto  uv       = zero2f;
@@ -2603,10 +2606,10 @@ static vec3f sample_light(const trace_scene& scene, const trace_light& light,
     }
     return normalize(eval_position(scene, instance, element, uv) - p);
   } else if (light.environment >= 0) {
-    auto& environment = scene.environments[light.environment];
+    auto& environment = scene->environments[light.environment];
     if (environment.emission_tex >= 0) {
       auto& cdf          = light.elem_cdf;
-      auto& emission_tex = scene.textures[environment.emission_tex];
+      auto& emission_tex = scene->textures[environment.emission_tex];
       auto  idx          = sample_discrete(cdf, rel);
       auto  size         = texture_size(emission_tex);
       auto  u            = (idx % size.x + 0.5f) / size.x;
@@ -2621,11 +2624,11 @@ static vec3f sample_light(const trace_scene& scene, const trace_light& light,
 }
 
 // Sample pdf for a light point.
-static float sample_light_pdf(const trace_scene& scene,
+static float sample_light_pdf(const trace_scene* scene,
     const trace_light& light, const vec3f& position, const vec3f& direction) {
   if (light.instance >= 0) {
-    auto& instance = scene.instances[light.instance];
-    auto& material = scene.materials[instance.material];
+    auto& instance = scene->instances[light.instance];
+    auto& material = scene->materials[instance.material];
     if (material.emission == zero3f) return 0;
     auto& cdf = light.elem_cdf;
     // check all intersection
@@ -2636,7 +2639,7 @@ static float sample_light_pdf(const trace_scene& scene,
           scene, light.instance, {next_position, direction});
       if (!isec.hit) break;
       // accumulate pdf
-      auto& instance       = scene.instances[isec.instance];
+      auto& instance       = scene->instances[isec.instance];
       auto  light_position = eval_position(
           scene, instance, isec.element, isec.uv);
       auto light_normal = eval_normal(
@@ -2650,10 +2653,10 @@ static float sample_light_pdf(const trace_scene& scene,
     }
     return pdf;
   } else if (light.environment >= 0) {
-    auto& environment = scene.environments[light.environment];
+    auto& environment = scene->environments[light.environment];
     if (environment.emission_tex >= 0) {
       auto& cdf          = light.elem_cdf;
-      auto& emission_tex = scene.textures[environment.emission_tex];
+      auto& emission_tex = scene->textures[environment.emission_tex];
       auto  size         = texture_size(emission_tex);
       auto  texcoord     = eval_texcoord(environment, direction);
       auto  i            = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
@@ -2671,20 +2674,20 @@ static float sample_light_pdf(const trace_scene& scene,
 }
 
 // Sample lights wrt solid angle
-static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
+static vec3f sample_lights(const trace_scene* scene, const vec3f& position,
     float rl, float rel, const vec2f& ruv) {
-  auto light_id = sample_uniform(scene.lights.size(), rl);
-  return sample_light(scene, scene.lights[light_id], position, rel, ruv);
+  auto light_id = sample_uniform(scene->lights.size(), rl);
+  return sample_light(scene, scene->lights[light_id], position, rel, ruv);
 }
 
 // Sample lights pdf
 static float sample_lights_pdf(
-    const trace_scene& scene, const vec3f& position, const vec3f& direction) {
+    const trace_scene* scene, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
-  for (auto& light : scene.lights) {
+  for (auto& light : scene->lights) {
     pdf += sample_light_pdf(scene, light, position, direction);
   }
-  pdf *= sample_uniform_pdf(scene.lights.size());
+  pdf *= sample_uniform_pdf(scene->lights.size());
   return pdf;
 }
 
@@ -2709,7 +2712,7 @@ static ray3f sample_camera_tent(const trace_camera& camera, const vec2i& ij,
 }
 
 // Recursive path tracing.
-static pair<vec3f, bool> trace_path(const trace_scene& scene,
+static pair<vec3f, bool> trace_path(const trace_scene* scene,
     const vec3f& origin_, const vec3f& direction_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -2746,7 +2749,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     if (!in_volume) {
       // prepare shading point
       auto  outgoing = -direction;
-      auto& instance = scene.instances[intersection.instance];
+      auto& instance = scene->instances[intersection.instance];
       auto  position = eval_position(
           scene, instance, intersection.element, intersection.uv);
       auto normal   = eval_shading_normal(scene, instance, intersection.element,
@@ -2843,7 +2846,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
 }
 
 // Recursive path tracing.
-static pair<vec3f, bool> trace_naive(const trace_scene& scene,
+static pair<vec3f, bool> trace_naive(const trace_scene* scene,
     const vec3f& origin_, const vec3f& direction_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -2865,7 +2868,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     // prepare shading point
     auto  outgoing = -direction;
     auto  incoming = outgoing;
-    auto& instance = scene.instances[intersection.instance];
+    auto& instance = scene->instances[intersection.instance];
     auto  position = eval_position(
         scene, instance, intersection.element, intersection.uv);
     auto normal   = eval_shading_normal(scene, instance, intersection.element,
@@ -2915,7 +2918,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
 }
 
 // Eyelight for quick previewing.
-static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
+static pair<vec3f, bool> trace_eyelight(const trace_scene* scene,
     const vec3f& origin_, const vec3f& direction_, rng_state& rng,
     const trace_params& params) {
   // initialize
@@ -2936,7 +2939,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
 
     // prepare shading point
     auto  outgoing = -direction;
-    auto& instance = scene.instances[intersection.instance];
+    auto& instance = scene->instances[intersection.instance];
     auto  position = eval_position(
         scene, instance, intersection.element, intersection.uv);
     auto normal   = eval_shading_normal(scene, instance, intersection.element,
@@ -2975,7 +2978,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
 }
 
 // False color rendering
-static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
+static pair<vec3f, bool> trace_falsecolor(const trace_scene* scene,
     const vec3f& origin, const vec3f& direction, rng_state& rng,
     const trace_params& params) {
   // intersect next point
@@ -2985,9 +2988,9 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
   }
 
   // get scene elements
-  auto& instance = scene.instances[intersection.instance];
-  auto& shape    = scene.shapes[instance.shape];
-  // auto& material = scene.materials[instance.material];
+  auto& instance = scene->instances[intersection.instance];
+  auto& shape    = scene->shapes[instance.shape];
+  // auto& material = scene->materials[instance.material];
 
   // prepare shading point
   auto outgoing = -direction;
@@ -3076,7 +3079,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
 }
 
 // Trace a single ray from the camera using the given algorithm.
-using trace_sampler_func = pair<vec3f, bool> (*)(const trace_scene& scene,
+using trace_sampler_func = pair<vec3f, bool> (*)(const trace_scene* scene,
     const vec3f& position, const vec3f& direction, rng_state& rng,
     const trace_params& params);
 static trace_sampler_func get_trace_sampler_func(const trace_params& params) {
@@ -3107,18 +3110,18 @@ bool is_sampler_lit(const trace_params& params) {
 }
 
 // Trace a block of samples
-vec4f trace_sample(trace_state& state, const trace_scene& scene,
+vec4f trace_sample(trace_state* state, const trace_scene* scene,
     const vec2i& ij, const trace_params& params) {
-  auto& camera  = scene.cameras.at(params.camera);
+  auto& camera  = scene->cameras.at(params.camera);
   auto  sampler = get_trace_sampler_func(params);
-  auto& pixel   = state[ij];
-  auto  ray = params.tentfilter ? sample_camera_tent(camera, ij, state.size(),
+  auto& pixel   = state->at(ij);
+  auto  ray = params.tentfilter ? sample_camera_tent(camera, ij, state->size(),
                                      rand2f(pixel.rng), rand2f(pixel.rng))
-                               : sample_camera(camera, ij, state.size(),
+                               : sample_camera(camera, ij, state->size(),
                                      rand2f(pixel.rng), rand2f(pixel.rng));
   auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
   if (!hit) {
-    if (params.envhidden || scene.environments.empty()) {
+    if (params.envhidden || scene->environments.empty()) {
       radiance = zero3f;
       hit      = false;
     } else {
@@ -3136,34 +3139,34 @@ vec4f trace_sample(trace_state& state, const trace_scene& scene,
 }
 
 // Init a sequence of random number generators.
-trace_state make_state(const trace_scene& scene, const trace_params& params) {
+trace_state* make_state(const trace_scene* scene, const trace_params& params) {
   auto image_size = camera_resolution(
-      scene.cameras[params.camera], params.resolution);
-  auto state = trace_state{image_size, trace_pixel{}};
+      scene->cameras[params.camera], params.resolution);
+  auto state = make_unique<trace_state>(image_size, trace_pixel{});
   auto rng   = make_rng(1301081);
-  for (auto j = 0; j < state.size().y; j++) {
-    for (auto i = 0; i < state.size().x; i++) {
-      state[{i, j}].rng = make_rng(params.seed, rand1i(rng, 1 << 31) / 2 + 1);
+  for (auto j = 0; j < state->size().y; j++) {
+    for (auto i = 0; i < state->size().x; i++) {
+      state->at({i, j}).rng = make_rng(params.seed, rand1i(rng, 1 << 31) / 2 + 1);
     }
   }
-  return state;
+  return state.release();
 }
 
 // Init trace lights
-void init_lights(trace_scene& scene) {
-  scene.lights.clear();
-  for (auto idx = 0; idx < scene.instances.size(); idx++) {
-    auto& instance = scene.instances[idx];
-    auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
+void init_lights(trace_scene* scene) {
+  scene->lights.clear();
+  for (auto idx = 0; idx < scene->instances.size(); idx++) {
+    auto& instance = scene->instances[idx];
+    auto& shape    = scene->shapes[instance.shape];
+    auto& material = scene->materials[instance.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
-    scene.lights.push_back({idx, -1, sample_shape_cdf(shape)});
+    scene->lights.push_back({idx, -1, sample_shape_cdf(shape)});
   }
-  for (auto idx = 0; idx < scene.environments.size(); idx++) {
-    auto& environment = scene.environments[idx];
+  for (auto idx = 0; idx < scene->environments.size(); idx++) {
+    auto& environment = scene->environments[idx];
     if (environment.emission == zero3f) continue;
-    scene.lights.push_back(
+    scene->lights.push_back(
         {-1, idx, sample_environment_cdf(scene, environment)});
   }
 }
@@ -3189,9 +3192,9 @@ inline void parallel_for(const vec2i& size, Func&& func) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
+image<vec4f> trace_image(const trace_scene* scene, const trace_params& params) {
   auto state  = make_state(scene, params);
-  auto render = image{state.size(), zero4f};
+  auto render = image{state->size(), zero4f};
 
   if (params.noparallel) {
     for (auto j = 0; j < render.size().y; j++) {
@@ -3214,10 +3217,10 @@ image<vec4f> trace_image(const trace_scene& scene, const trace_params& params) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_samples(trace_state& state, const trace_scene& scene,
+image<vec4f> trace_samples(trace_state* state, const trace_scene* scene,
     int samples, const trace_params& params) {
-  auto render         = image<vec4f>{state.size()};
-  auto current_sample = state[zero2i].samples;
+  auto render         = image<vec4f>{state->size()};
+  auto current_sample = state->at(zero2i).samples;
   samples             = min(samples, params.samples - current_sample);
   if (params.noparallel) {
     for (auto j = 0; j < render.size().y; j++) {

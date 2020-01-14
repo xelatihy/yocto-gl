@@ -55,11 +55,11 @@ struct app_state {
 
   // scene
   sceneio_model ioscene    = {};
-  trace_scene   scene      = {};
+  unique_ptr<trace_scene>   scene      = {};
   bool          add_skyenv = false;
 
   // rendering state
-  trace_state  state    = {};
+  unique_ptr<trace_state>  state    = {};
   image<vec4f> render   = {};
   image<vec4f> display  = {};
   float        exposure = 0;
@@ -177,29 +177,29 @@ void update_trace_environment(
 }
 
 // Construct a scene from io
-trace_scene make_scene(const sceneio_model& ioscene) {
-  auto scene = trace_scene{};
+trace_scene* make_scene(const sceneio_model& ioscene) {
+  auto scene = make_unique<trace_scene>();
 
   for (auto& iocamera : ioscene.cameras) {
-    update_trace_camera(scene.cameras.emplace_back(), iocamera);
+    update_trace_camera(scene->cameras.emplace_back(), iocamera);
   }
   for (auto& iotexture : ioscene.textures) {
-    update_trace_texture(scene.textures.emplace_back(), iotexture);
+    update_trace_texture(scene->textures.emplace_back(), iotexture);
   }
   for (auto& iomaterial : ioscene.materials) {
-    update_trace_material(scene.materials.emplace_back(), iomaterial);
+    update_trace_material(scene->materials.emplace_back(), iomaterial);
   }
   for (auto& ioshape : ioscene.shapes) {
-    update_trace_shape(scene.shapes.emplace_back(), ioshape, ioscene);
+    update_trace_shape(scene->shapes.emplace_back(), ioshape, ioscene);
   }
   for (auto& ioinstance : ioscene.instances) {
-    update_trace_instance(scene.instances.emplace_back(), ioinstance);
+    update_trace_instance(scene->instances.emplace_back(), ioinstance);
   }
   for (auto& ioenvironment : ioscene.environments) {
-    update_trace_environment(scene.environments.emplace_back(), ioenvironment);
+    update_trace_environment(scene->environments.emplace_back(), ioenvironment);
   }
 
-  return scene;
+  return scene.release();
 }
 
 // Simple parallel for used since our target platforms do not yet support
@@ -233,15 +233,15 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  app->state = make_state(app->scene, app->params);
-  app->render.resize(app->state.size());
-  app->display.resize(app->state.size());
+  app->state = unique_ptr<trace_state>{make_state(app->scene.get(), app->params)};
+  app->render.resize(app->state->size());
+  app->display.resize(app->state->size());
 
   // render preview
   auto preview_prms = app->params;
   preview_prms.resolution /= app->pratio;
   preview_prms.samples = 1;
-  auto preview         = trace_image(app->scene, preview_prms);
+  auto preview         = trace_image(app->scene.get(), preview_prms);
   preview              = tonemap_image(preview, app->exposure);
   for (auto j = 0; j < app->display.size().y; j++) {
     for (auto i = 0; i < app->display.size().x; i++) {
@@ -259,7 +259,7 @@ void reset_display(shared_ptr<app_state> app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
+        app->render[ij] = trace_sample(app->state.get(), app->scene.get(), ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -278,15 +278,15 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->add_skyenv = app->add_skyenv;
         if (auto ret = load_scene(app->filename, app->ioscene); !ret)
           return {filename, nullptr, ret};
-        app->scene = make_scene(app->ioscene);
-        init_bvh(app->scene, app->params);
-        init_lights(app->scene);
-        if (app->scene.lights.empty() && is_sampler_lit(app->params)) {
+        app->scene = unique_ptr<trace_scene>{make_scene(app->ioscene)};
+        init_bvh(app->scene.get(), app->params);
+        init_lights(app->scene.get());
+        if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
           app->params.sampler = trace_sampler_type::eyelight;
         }
-        app->state = make_state(app->scene, app->params);
-        app->render.resize(app->state.size());
-        app->display.resize(app->state.size());
+        app->state = unique_ptr<trace_state>{make_state(app->scene.get(), app->params)};
+        app->render.resize(app->state->size());
+        app->display.resize(app->state->size());
         app->name = get_filename(app->filename) + " [" +
                     to_string(app->render.size().x) + "x" +
                     to_string(app->render.size().y) + " @ 0]";
@@ -558,7 +558,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->ioscene.cameras);
       if (draw_glwidgets_camera(win, app, app->selection.second)) {
         stop_display(app);
-        update_trace_camera(app->scene.cameras[app->selection.second],
+        update_trace_camera(app->scene->cameras[app->selection.second],
             app->ioscene.cameras[app->selection.second]);
         reset_display(app);
       }
@@ -567,7 +567,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->ioscene.textures);
       if (draw_glwidgets_texture(win, app, app->selection.second)) {
         stop_display(app);
-        update_trace_texture(app->scene.textures[app->selection.second],
+        update_trace_texture(app->scene->textures[app->selection.second],
             app->ioscene.textures[app->selection.second]);
         // TODO: maybe we should update lights for this
         reset_display(app);
@@ -577,9 +577,9 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->ioscene.materials);
       if (draw_glwidgets_material(win, app, app->selection.second)) {
         stop_display(app);
-        update_trace_material(app->scene.materials[app->selection.second],
+        update_trace_material(app->scene->materials[app->selection.second],
             app->ioscene.materials[app->selection.second]);
-        init_lights(app->scene);
+        init_lights(app->scene.get());
         reset_display(app);
       }
     } else if (app->selection.first == "shape") {
@@ -587,9 +587,9 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->ioscene.shapes);
       if (draw_glwidgets_shape(win, app, app->selection.second)) {
         stop_display(app);
-        update_trace_shape(app->scene.shapes[app->selection.second],
+        update_trace_shape(app->scene->shapes[app->selection.second],
             app->ioscene.shapes[app->selection.second], app->ioscene);
-        update_bvh(app->scene, {}, {app->selection.second}, app->params);
+        update_bvh(app->scene.get(), {}, {app->selection.second}, app->params);
         // TODO: maybe we should update lights for this
         reset_display(app);
       }
@@ -598,9 +598,9 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->ioscene.instances);
       if (draw_glwidgets_instance(win, app, app->selection.second)) {
         stop_display(app);
-        update_trace_instance(app->scene.instances[app->selection.second],
+        update_trace_instance(app->scene->instances[app->selection.second],
             app->ioscene.instances[app->selection.second]);
-        update_bvh(app->scene, {app->selection.second}, {}, app->params);
+        update_bvh(app->scene.get(), {app->selection.second}, {}, app->params);
         // TODO: maybe we should update lights for this
         reset_display(app);
       }
@@ -609,9 +609,9 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           app->ioscene.environments);
       if (draw_glwidgets_environment(win, app, app->selection.second)) {
         stop_display(app);
-        update_trace_environment(app->scene.environments[app->selection.second],
+        update_trace_environment(app->scene->environments[app->selection.second],
             app->ioscene.environments[app->selection.second]);
-        init_lights(app->scene);
+        init_lights(app->scene.get());
         reset_display(app);
       }
     }
@@ -735,7 +735,7 @@ int main(int argc, const char* argv[]) {
       pan.x = -pan.x;
       stop_display(app);
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      update_trace_camera(app->scene.cameras.at(app->params.camera), camera);
+      update_trace_camera(app->scene->cameras.at(app->params.camera), camera);
       reset_display(app);
     }
 
@@ -747,11 +747,11 @@ int main(int argc, const char* argv[]) {
           app->glparams.scale, app->render.size());
       if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
           ij.y < app->render.size().y) {
-        auto& camera = app->scene.cameras.at(app->params.camera);
+        auto& camera = app->scene->cameras.at(app->params.camera);
         auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
-        if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
+        if (auto isec = intersect_scene_bvh(app->scene.get(), ray); isec.hit) {
           app->selection = {"instance", isec.instance};
         }
       }

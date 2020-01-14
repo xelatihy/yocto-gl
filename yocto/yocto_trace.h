@@ -143,30 +143,30 @@ const auto trace_bvh_names        = vector<string>{
 };
 
 // Initialize state of the renderer.
-trace_state make_state(const trace_scene& scene, const trace_params& params);
+trace_state* make_state(const trace_scene* scene, const trace_params& params);
 
 // Initialize lights.
-void init_lights(trace_scene& scene);
+void init_lights(trace_scene* scene);
 
 // Build the bvh acceleration structure.
-void init_bvh(trace_scene& bvh, const trace_params& params);
+void init_bvh(trace_scene* bvh, const trace_params& params);
 
 // Refit bvh data
-void update_bvh(trace_scene& bvh, const vector<int>& updated_instances,
+void update_bvh(trace_scene* bvh, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const trace_scene& scene, const trace_params& params);
+image<vec4f> trace_image(const trace_scene* scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-image<vec4f> trace_samples(trace_state& state, const trace_scene& scene,
+image<vec4f> trace_samples(trace_state* state, const trace_scene* scene,
     int samples, const trace_params& params);
 
 // Progressively compute an image by calling trace_sample multiple times.
 // This is helpful when building async applications.
-vec4f trace_sample(trace_state& state, const trace_scene& scene,
+vec4f trace_sample(trace_state* state, const trace_scene* scene,
     const vec2i& ij, const trace_params& params);
 
 // Check is a sampler requires lights
@@ -351,8 +351,9 @@ struct trace_pixel {
 struct trace_state {
   trace_state() { }
   trace_state(const vec2i& size, const trace_pixel& value) : _extent{size}, _pixels((size_t)size.x*(size_t)size.y, value) { }
+  
   vec2i size() const { return _extent; }
-  trace_pixel& operator[](const vec2i& ij) { return _pixels[ij.y * _extent.x + ij.x]; }
+  trace_pixel& at(const vec2i& ij) { return _pixels[ij.y * _extent.x + ij.x]; }
 
   vec2i _extent = {0, 0};
   vector<trace_pixel> _pixels = {};
@@ -379,9 +380,9 @@ struct trace_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-trace_intersection intersect_scene_bvh(const trace_scene& scene,
+trace_intersection intersect_scene_bvh(const trace_scene* scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_scene& scene,
+trace_intersection intersect_instance_bvh(const trace_scene* scene,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
