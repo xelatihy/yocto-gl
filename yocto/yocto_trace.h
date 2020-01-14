@@ -71,6 +71,19 @@
 #endif
 
 // -----------------------------------------------------------------------------
+// HIGH LEVEL API
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Trace scene
+struct trace_scene;
+
+// Trace state
+struct trace_state;
+
+}
+
+// -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -252,7 +265,17 @@ struct trace_pixel {
   int       samples  = 0;
   rng_state rng      = {};
 };
-using trace_state = image<trace_pixel>;
+
+// State of the image being renderer
+struct trace_state {
+  trace_state() { }
+  trace_state(const vec2i& size, const trace_pixel& value) : _extent{size}, _pixels((size_t)size.x*(size_t)size.y, value) { }
+  vec2i size() const { return _extent; }
+  trace_pixel& operator[](const vec2i& ij) { return _pixels[ij.y * _extent.x + ij.x]; }
+
+  vec2i _extent = {0, 0};
+  vector<trace_pixel> _pixels = {};
+};
 
 // Type of tracing algorithm
 enum struct trace_sampler_type {
