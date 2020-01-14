@@ -1363,7 +1363,7 @@ void draw_glwindow(const opengl_window* win) {
     ImGui::SetNextWindowCollapsed(false);
     ImGui::SetNextWindowBgAlpha(1);
     if(ImGui::Begin(win->title.c_str(), nullptr,
-      // ImGuiWindowFlags_NoTitleBar |
+      ImGuiWindowFlags_NoTitleBar |
       ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
           ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings)) {
       draw_glmessages(win);
