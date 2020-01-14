@@ -40,18 +40,24 @@ void update_glshape(shared_ptr<app_state> app) {
   //    triangle meshes here...
   auto& shape = app->shape;
   if (!shape.points.empty()) {
-    set_shape(app->scene.get(), app->glshape_id, shape.points, shape.positions, shape.normals, shape.texcoords, shape.colors);
+    set_shape(app->scene.get(), app->glshape_id, shape.points, shape.positions,
+        shape.normals, shape.texcoords, shape.colors);
   } else if (!shape.lines.empty()) {
-    set_shape(app->scene.get(), app->glshape_id, shape.lines, shape.positions, shape.normals, shape.texcoords, shape.colors);
+    set_shape(app->scene.get(), app->glshape_id, shape.lines, shape.positions,
+        shape.normals, shape.texcoords, shape.colors);
   } else if (!shape.triangles.empty()) {
-    set_shape(app->scene.get(), app->glshape_id, shape.triangles, shape.positions, shape.normals, shape.texcoords, shape.colors, shape.tangents);
+    set_shape(app->scene.get(), app->glshape_id, shape.triangles,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.tangents);
   } else if (!shape.quads.empty()) {
-    set_shape(app->scene.get(), app->glshape_id, shape.quads, shape.positions, shape.normals, shape.texcoords, shape.colors, shape.tangents);
+    set_shape(app->scene.get(), app->glshape_id, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, shape.colors, shape.tangents);
   } else if (!shape.quadspos.empty()) {
     auto [quads, positions, normals, texcoords] = split_facevarying(
         shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
         shape.normals, shape.texcoords);
-    set_shape(app->scene.get(), app->glshape_id, quads, positions, normals, texcoords);
+    set_shape(app->scene.get(), app->glshape_id, quads, positions, normals,
+        texcoords);
   }
 }
 
@@ -69,7 +75,8 @@ void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
     auto elements = vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
     auto normals = vector<vec3f>(points.size(), {0, 0, 1});
-    set_shape(app->scene.get(), app->glpoints_id, elements, points, normals, {});
+    set_shape(
+        app->scene.get(), app->glpoints_id, elements, points, normals, {});
   }
 }
 
@@ -114,7 +121,8 @@ void update_glvector_field(shared_ptr<app_state> app,
     elements[i] = {2 * i, 2 * i + 1};
   }
 
-  set_shape(app->scene.get(), app->glvector_field_id, elements, positions, {}, {});
+  set_shape(
+      app->scene.get(), app->glvector_field_id, elements, positions, {}, {});
 }
 
 void update_gledges(shared_ptr<app_state> app) {

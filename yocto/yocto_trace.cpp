@@ -3419,8 +3419,8 @@ int add_shape(trace_scene* scene, const vector<vec4i>& quadspos,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords) {
   scene->shapes.emplace_back();
-  set_shape(scene, (int)scene->shapes.size() - 1, quadspos, quadsnorm, quadstexcoord, positions, normals,
-      texcoords);
+  set_shape(scene, (int)scene->shapes.size() - 1, quadspos, quadsnorm,
+      quadstexcoord, positions, normals, texcoords);
   return (int)scene->shapes.size() - 1;
 }
 void set_shape(trace_scene* scene, int idx, const vector<int>& points,

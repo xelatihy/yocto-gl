@@ -466,7 +466,8 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
   if (draw_glbutton(win, "quit")) {
     set_close(win, true);
   }
-  draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
+  draw_glcombobox(
+      win, "scene", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
       false);
   if (scene_ok && begin_glheader(win, "trace")) {
@@ -548,9 +549,9 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
       if (draw_glwidgets_texture(win, app, app->selection.second)) {
         stop_display(app);
         auto& iotexture = app->ioscene.textures[app->selection.second];
-        if(!iotexture.hdr.empty()) {
+        if (!iotexture.hdr.empty()) {
           set_texture(app->scene.get(), app->selection.second, iotexture.hdr);
-        } else if(!iotexture.ldr.empty()) {
+        } else if (!iotexture.ldr.empty()) {
           set_texture(app->scene.get(), app->selection.second, iotexture.ldr);
         }
         // TODO: maybe we should update lights for this

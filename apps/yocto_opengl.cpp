@@ -910,46 +910,50 @@ void clear_textures(opengl_scene* scene) {
 }
 
 // add shape
-int  add_shape(opengl_scene* scene) {
+int add_shape(opengl_scene* scene) {
   scene->_shapes.emplace_back(make_unique<opengl_shape>());
   return (int)scene->_shapes.size() - 1;
 }
-int  add_shape(opengl_scene* scene, const vector<int>& points,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
+int add_shape(opengl_scene* scene, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
   scene->_shapes.emplace_back(make_unique<opengl_shape>());
-  set_shape(scene, (int)scene->_shapes.size() - 1, points, positions, normals, texcoords, colors);
+  set_shape(scene, (int)scene->_shapes.size() - 1, points, positions, normals,
+      texcoords, colors);
   return (int)scene->_shapes.size() - 1;
 }
-int  add_shape(opengl_scene* scene, const vector<vec2i>& lines,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
+int add_shape(opengl_scene* scene, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
   scene->_shapes.emplace_back(make_unique<opengl_shape>());
-  set_shape(scene, (int)scene->_shapes.size() - 1, lines, positions, normals, texcoords, colors);
+  set_shape(scene, (int)scene->_shapes.size() - 1, lines, positions, normals,
+      texcoords, colors);
   return (int)scene->_shapes.size() - 1;
 }
-int  add_shape(opengl_scene* scene, const vector<vec3i>& triangles,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-     const vector<vec4f>& tangents) {
+int add_shape(opengl_scene* scene, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<vec4f>& tangents) {
   scene->_shapes.emplace_back(make_unique<opengl_shape>());
-  set_shape(scene, (int)scene->_shapes.size() - 1, triangles, positions, normals, texcoords, colors, tangents);
+  set_shape(scene, (int)scene->_shapes.size() - 1, triangles, positions,
+      normals, texcoords, colors, tangents);
   return (int)scene->_shapes.size() - 1;
 }
-int  add_shape(opengl_scene* scene, const vector<vec4i>& quads,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-     const vector<vec4f>& tangents) {
+int add_shape(opengl_scene* scene, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<vec4f>& tangents) {
   scene->_shapes.emplace_back(make_unique<opengl_shape>());
-  set_shape(scene, (int)scene->_shapes.size() - 1, quads, positions, normals, texcoords, colors, tangents);
+  set_shape(scene, (int)scene->_shapes.size() - 1, quads, positions, normals,
+      texcoords, colors, tangents);
   return (int)scene->_shapes.size() - 1;
 }
 
-static void set_glshape_buffer(uint& array_id, int& array_num, bool element, int size,
-    int count, const float* values) {
+static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
+    int size, int count, const float* values) {
   if (!size || !values) {
-    if(array_id) glDeleteBuffers(1, &array_id);
-    array_id = 0;
+    if (array_id) glDeleteBuffers(1, &array_id);
+    array_id  = 0;
     array_num = 0;
     return;
   }
@@ -964,11 +968,11 @@ static void set_glshape_buffer(uint& array_id, int& array_num, bool element, int
     update_glbuffer(array_id, element, size, 3, values);
   }
 }
-static void set_glshape_buffer(uint& array_id, int& array_num, bool element, int size,
-    int count, const int* values) {
+static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
+    int size, int count, const int* values) {
   if (!size || !values) {
-    if(array_id) glDeleteBuffers(1, &array_id);
-    array_id = 0;
+    if (array_id) glDeleteBuffers(1, &array_id);
+    array_id  = 0;
     array_num = 0;
     return;
   }
@@ -985,8 +989,8 @@ static void set_glshape_buffer(uint& array_id, int& array_num, bool element, int
 }
 
 void set_shape(opengl_scene* scene, int idx, const vector<int>& points,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
   auto& shape = scene->_shapes[idx];
   set_glshape_buffer(shape->positions_id, shape->positions_num, false,
       positions.size(), 3, (const float*)positions.data());
@@ -1000,8 +1004,8 @@ void set_shape(opengl_scene* scene, int idx, const vector<int>& points,
       1, (const int*)points.data());
 }
 void set_shape(opengl_scene* scene, int idx, const vector<vec2i>& lines,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
   auto& shape = scene->_shapes[idx];
   set_glshape_buffer(shape->positions_id, shape->positions_num, false,
       positions.size(), 3, (const float*)positions.data());
@@ -1011,13 +1015,13 @@ void set_shape(opengl_scene* scene, int idx, const vector<vec2i>& lines,
       texcoords.size(), 2, (const float*)texcoords.data());
   set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
       4, (const float*)colors.data());
-  set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(),
-      2, (const int*)lines.data());
+  set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(), 2,
+      (const int*)lines.data());
 }
 void set_shape(opengl_scene* scene, int idx, const vector<vec3i>& triangles,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-     const vector<vec4f>& tangents) {
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<vec4f>& tangents) {
   auto& shape = scene->_shapes[idx];
   set_glshape_buffer(shape->positions_id, shape->positions_num, false,
       positions.size(), 3, (const float*)positions.data());
@@ -1027,15 +1031,15 @@ void set_shape(opengl_scene* scene, int idx, const vector<vec3i>& triangles,
       texcoords.size(), 2, (const float*)texcoords.data());
   set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
       4, (const float*)colors.data());
-  set_glshape_buffer(shape->tangents_id, shape->tangents_num, false, tangents.size(),
-      4, (const float*)tangents.data());
-  set_glshape_buffer(shape->triangles_id, shape->triangles_num, true, triangles.size(),
-      3, (const int*)triangles.data());
+  set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
+      tangents.size(), 4, (const float*)tangents.data());
+  set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
+      triangles.size(), 3, (const int*)triangles.data());
 }
 void set_shape(opengl_scene* scene, int idx, const vector<vec4i>& quads,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-     const vector<vec4f>& tangents) {
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<vec4f>& tangents) {
   auto& shape = scene->_shapes[idx];
   set_glshape_buffer(shape->positions_id, shape->positions_num, false,
       positions.size(), 3, (const float*)positions.data());
@@ -1045,18 +1049,19 @@ void set_shape(opengl_scene* scene, int idx, const vector<vec4i>& quads,
       texcoords.size(), 2, (const float*)texcoords.data());
   set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
       4, (const float*)colors.data());
-  set_glshape_buffer(shape->tangents_id, shape->tangents_num, false, tangents.size(),
-      4, (const float*)tangents.data());
+  set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
+      tangents.size(), 4, (const float*)tangents.data());
   auto triangles = vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_glshape_buffer(shape->triangles_id, shape->triangles_num, true, triangles.size(),
-      3, (const int*)triangles.data());
+  set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
+      triangles.size(), 3, (const int*)triangles.data());
 }
-void set_shape_colors(opengl_scene* scene, int idx, const vector<vec4f>& colors) {
+void set_shape_colors(
+    opengl_scene* scene, int idx, const vector<vec4f>& colors) {
   auto& shape = scene->_shapes[idx];
   set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
       4, (const float*)colors.data());

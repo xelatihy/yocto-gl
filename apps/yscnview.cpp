@@ -134,13 +134,17 @@ void update_shape(opengl_scene* glscene, int idx, const sceneio_shape& shape,
     return update_shape(glscene, idx, tesselate_shape(scene, shape), scene);
   }
   if (!shape.points.empty()) {
-    set_shape(glscene, idx, shape.points, shape.positions, shape.normals, shape.texcoords, shape.colors);
+    set_shape(glscene, idx, shape.points, shape.positions, shape.normals,
+        shape.texcoords, shape.colors);
   } else if (!shape.lines.empty()) {
-    set_shape(glscene, idx, shape.lines, shape.positions, shape.normals, shape.texcoords, shape.colors);
+    set_shape(glscene, idx, shape.lines, shape.positions, shape.normals,
+        shape.texcoords, shape.colors);
   } else if (!shape.triangles.empty()) {
-    set_shape(glscene, idx, shape.triangles, shape.positions, shape.normals, shape.texcoords, shape.colors, shape.tangents);
+    set_shape(glscene, idx, shape.triangles, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.tangents);
   } else if (!shape.quads.empty()) {
-    set_shape(glscene, idx, shape.quads, shape.positions, shape.normals, shape.texcoords, shape.colors, shape.tangents);
+    set_shape(glscene, idx, shape.quads, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.tangents);
   } else if (!shape.quadspos.empty()) {
     auto [quads, positions, normals, texcoords] = split_facevarying(
         shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
