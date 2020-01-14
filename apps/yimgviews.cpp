@@ -106,17 +106,18 @@ int main(int argc, const char* argv[]) {
   auto win = make_glwindow({1280, 720}, "yimgviews", false);
 
   // set callbacks
-  set_draw_glcallback(win, [app](const opengl_window* win, const opengl_input& input) {
-    app->glparams.window      = input.window_size;
-    app->glparams.framebuffer = input.framebuffer_viewport;
-    if (!app->glimage) {
-      app->glimage = unique_ptr<opengl_image>{make_glimage()};
-      set_glimage(app->glimage.get(), app->display, false, false);
-    }
-    update_imview(app->glparams.center, app->glparams.scale,
-        app->display.size(), app->glparams.window, app->glparams.fit);
-    draw_glimage(app->glimage.get(), app->glparams);
-  });
+  set_draw_glcallback(
+      win, [app](const opengl_window* win, const opengl_input& input) {
+        app->glparams.window      = input.window_size;
+        app->glparams.framebuffer = input.framebuffer_viewport;
+        if (!app->glimage) {
+          app->glimage = unique_ptr<opengl_image>{make_glimage()};
+          set_glimage(app->glimage.get(), app->display, false, false);
+        }
+        update_imview(app->glparams.center, app->glparams.scale,
+            app->display.size(), app->glparams.window, app->glparams.fit);
+        draw_glimage(app->glimage.get(), app->glparams);
+      });
   set_uiupdate_glcallback(
       win, [app](const opengl_window* win, const opengl_input& input) {
         // handle mouse

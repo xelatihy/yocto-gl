@@ -1333,8 +1333,7 @@ static void draw_glwindow(const opengl_window* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
       win->background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  if (win->draw_cb) 
-    win->draw_cb(win, win->input);
+  if (win->draw_cb) win->draw_cb(win, win->input);
   if (win->widgets_cb) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -1418,22 +1417,26 @@ opengl_window* make_glwindow(const vec2i& size, const string& title,
         auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
         if (win->scroll_cb) win->scroll_cb(win, (float)yoffset, win->input);
       });
-  glfwSetWindowSizeCallback(win->win, [](GLFWwindow* glfw, int width, int height) {
-      auto win = (opengl_window*)glfwGetWindowUserPointer(glfw);
-    glfwGetWindowSize(
-        win->win, &win->input.window_size.x, &win->input.window_size.y);
-    if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
-    glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z, &win->input.framebuffer_viewport.w);
-    win->input.framebuffer_viewport.x = 0;
-    win->input.framebuffer_viewport.y = 0;
-    if (win->widgets_width) {
-      auto win_size = zero2i;
-      glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
-      auto offset = (int)(win->widgets_width * (float)win->input.framebuffer_viewport.z / win_size.x);
-      win->input.framebuffer_viewport.z -= offset;
-      if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
-    }
-  });
+  glfwSetWindowSizeCallback(
+      win->win, [](GLFWwindow* glfw, int width, int height) {
+        auto win = (opengl_window*)glfwGetWindowUserPointer(glfw);
+        glfwGetWindowSize(
+            win->win, &win->input.window_size.x, &win->input.window_size.y);
+        if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
+        glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z,
+            &win->input.framebuffer_viewport.w);
+        win->input.framebuffer_viewport.x = 0;
+        win->input.framebuffer_viewport.y = 0;
+        if (win->widgets_width) {
+          auto win_size = zero2i;
+          glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
+          auto offset = (int)(win->widgets_width *
+                              (float)win->input.framebuffer_viewport.z /
+                              win_size.x);
+          win->input.framebuffer_viewport.z -= offset;
+          if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
+        }
+      });
 
   // init gl extensions
   if (!gladLoadGL())
@@ -1491,13 +1494,16 @@ void run_ui(opengl_window* win) {
     glfwGetWindowSize(
         win->win, &win->input.window_size.x, &win->input.window_size.y);
     if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
-    glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z, &win->input.framebuffer_viewport.w);
+    glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z,
+        &win->input.framebuffer_viewport.w);
     win->input.framebuffer_viewport.x = 0;
     win->input.framebuffer_viewport.y = 0;
     if (win->widgets_width) {
       auto win_size = zero2i;
       glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
-      auto offset = (int)(win->widgets_width * (float)win->input.framebuffer_viewport.z / win_size.x);
+      auto offset = (int)(win->widgets_width *
+                          (float)win->input.framebuffer_viewport.z /
+                          win_size.x);
       win->input.framebuffer_viewport.z -= offset;
       if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
     }

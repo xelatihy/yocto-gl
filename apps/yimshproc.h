@@ -262,9 +262,11 @@ void yimshproc(const string&                         input_filename,
   init_opengl_scene(app);
 
   // callbacks
-  set_draw_glcallback(win, [app](const opengl_window* win, const opengl_input& input) {
-    draw_glscene(app->scene.get(), input.framebuffer_viewport, app->opengl_options);
-  });
+  set_draw_glcallback(
+      win, [app](const opengl_window* win, const opengl_input& input) {
+        draw_glscene(
+            app->scene.get(), input.framebuffer_viewport, app->opengl_options);
+      });
   set_widgets_glcallback(
       win, [app, draw_glwidgets](const opengl_window* win,
                const opengl_input& input) { draw_glwidgets(app, win); });

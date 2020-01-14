@@ -442,7 +442,8 @@ bool draw_glwidgets_environment(
   return edited;
 }
 
-void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps, const opengl_input& input) {
+void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -486,7 +487,8 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps, const
   if (draw_glbutton(win, "quit")) {
     set_close(win, true);
   }
-  draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
+  draw_glcombobox(
+      win, "scene", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
       false);
   if (scene_ok && begin_glheader(win, "trace")) {
@@ -533,7 +535,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps, const
     if (draw_glbutton(win, "print stats")) {
       for (auto stat : scene_stats(app->ioscene)) print_info(stat);
     }
-    auto ij        = get_image_coords(input.mouse_pos, app->glparams.center,
+    auto ij = get_image_coords(input.mouse_pos, app->glparams.center,
         app->glparams.scale, app->render.size());
     draw_gldragger(win, "mouse", ij);
     if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
@@ -621,7 +623,8 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps, const
   }
 }
 
-void draw(const opengl_window* win, shared_ptr<app_states> apps, const opengl_input& input) {
+void draw(const opengl_window* win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;

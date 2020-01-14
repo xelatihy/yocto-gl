@@ -397,7 +397,8 @@ bool draw_glwidgets_environment(
 }
 
 // draw with shading
-void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps, const opengl_input& input) {
+void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
   auto        scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -548,10 +549,12 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps, const
 }
 
 // draw with shading
-void draw(const opengl_window* win, shared_ptr<app_states> apps, const opengl_input& input) {
+void draw(const opengl_window* win, shared_ptr<app_states> apps,
+    const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
-    draw_glscene(app->glscene.get(), input.framebuffer_viewport, app->drawgl_prms);
+    draw_glscene(
+        app->glscene.get(), input.framebuffer_viewport, app->drawgl_prms);
   }
 }
 
@@ -603,9 +606,10 @@ int main(int argc, const char* argv[]) {
   auto win = make_glwindow({1280 + 320, 720}, "yscnview", true);
 
   // callbacks
-  set_draw_glcallback(win,
-      [apps](const opengl_window* win, 
-          const opengl_input& input) { draw(win, apps, input); });
+  set_draw_glcallback(
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        draw(win, apps, input);
+      });
   set_widgets_glcallback(
       win, [apps](const opengl_window* win, const opengl_input& input) {
         draw_glwidgets(win, apps, input);

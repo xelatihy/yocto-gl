@@ -289,18 +289,20 @@ int main(int argc, const char* argv[]) {
   auto win = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
-  set_draw_glcallback(win, [app](const opengl_window* win, const opengl_input& input) {
-    if (!app->glimage) app->glimage = unique_ptr<opengl_image>(make_glimage());
-    if (!app->render_counter)
-      set_glimage(app->glimage.get(), app->display, false, false);
-    app->glparams.window      = input.window_size;
-    app->glparams.framebuffer = input.framebuffer_viewport;
-    update_imview(app->glparams.center, app->glparams.scale,
-        app->display.size(), app->glparams.window, app->glparams.fit);
-    draw_glimage(app->glimage.get(), app->glparams);
-    app->render_counter++;
-    if (app->render_counter > 10) app->render_counter = 0;
-  });
+  set_draw_glcallback(
+      win, [app](const opengl_window* win, const opengl_input& input) {
+        if (!app->glimage)
+          app->glimage = unique_ptr<opengl_image>(make_glimage());
+        if (!app->render_counter)
+          set_glimage(app->glimage.get(), app->display, false, false);
+        app->glparams.window      = input.window_size;
+        app->glparams.framebuffer = input.framebuffer_viewport;
+        update_imview(app->glparams.center, app->glparams.scale,
+            app->display.size(), app->glparams.window, app->glparams.fit);
+        draw_glimage(app->glimage.get(), app->glparams);
+        app->render_counter++;
+        if (app->render_counter > 10) app->render_counter = 0;
+      });
   set_uiupdate_glcallback(
       win, [app](const opengl_window* win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
