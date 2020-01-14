@@ -416,16 +416,13 @@ bool draw_glfiledialog_button(const opengl_window* win, const char* button_lbl,
 void draw_gllabel(
     const opengl_window* win, const char* lbl, const string& text);
 
-bool begin_header_widget(const opengl_window* win, const char* label);
-void end_header_widget(const opengl_window* win);
-
 void draw_glseparator(const opengl_window* win);
 void continue_glline(const opengl_window* win);
 
-bool draw_glbutton(const opengl_window* win, const char* lbl);
-bool draw_glbutton(const opengl_window* win, const char* lbl, bool enabled);
+bool draw_glbutton(const opengl_window* win, const char* lbl, bool enabled = true);
 
 bool draw_gltextinput(const opengl_window* win, const char* lbl, string& value);
+
 bool draw_glslider(const opengl_window* win, const char* lbl, float& value,
     float min, float max);
 bool draw_glslider(const opengl_window* win, const char* lbl, vec2f& value,

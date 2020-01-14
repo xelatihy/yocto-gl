@@ -1865,9 +1865,6 @@ bool draw_glfiledialog_button(const opengl_window* win, const char* button_lbl,
   }
 }
 
-bool draw_glbutton(const opengl_window* win, const char* lbl) {
-  return ImGui::Button(lbl);
-}
 bool draw_glbutton(const opengl_window* win, const char* lbl, bool enabled) {
   if (enabled) {
     return ImGui::Button(lbl);
