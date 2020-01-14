@@ -395,12 +395,6 @@ vec2f get_glmouse_pos(const opengl_window& win, bool ignore_widgets = true);
 vec2f get_glmouse_pos_normalized(
     const opengl_window& win, bool ignore_widgets = true);
 
-bool get_glmouse_left(const opengl_window& win);
-bool get_glmouse_right(const opengl_window& win);
-bool get_glalt_key(const opengl_window& win);
-bool get_glshift_key(const opengl_window& win);
-bool get_glctrl_key(const opengl_window& win);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

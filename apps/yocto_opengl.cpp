@@ -1417,11 +1417,14 @@ void run_ui(opengl_window& win) {
     // update input
     win.input.mouse_last     = win.input.mouse_pos;
     win.input.mouse_pos      = get_glmouse_pos(win);
-    win.input.mouse_left     = get_glmouse_left(win);
-    win.input.mouse_right    = get_glmouse_right(win);
-    win.input.modifier_alt   = get_glalt_key(win);
-    win.input.modifier_shift = get_glshift_key(win);
-    win.input.modifier_ctrl  = get_glctrl_key(win);
+    win.input.mouse_left     = glfwGetMouseButton(win.win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    win.input.mouse_right    = glfwGetMouseButton(win.win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+    win.input.modifier_alt   = glfwGetKey(win.win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+         glfwGetKey(win.win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+    win.input.modifier_shift = glfwGetKey(win.win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+         glfwGetKey(win.win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+    win.input.modifier_ctrl  = glfwGetKey(win.win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+         glfwGetKey(win.win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
     if (win.widgets_width) win.input.widgets_active = get_glwidgets_active(win);
 
     // time
@@ -1548,28 +1551,6 @@ vec2f get_glmouse_pos_normalized(
     width -= win.widgets_width;
   }
   return {pos.x / width, pos.y / height};
-}
-
-bool get_glmouse_left(const opengl_window& win) {
-  return glfwGetMouseButton(win.win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-}
-bool get_glmouse_right(const opengl_window& win) {
-  return glfwGetMouseButton(win.win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-}
-
-bool get_glalt_key(const opengl_window& win) {
-  return glfwGetKey(win.win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-         glfwGetKey(win.win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
-}
-
-bool get_glshift_key(const opengl_window& win) {
-  return glfwGetKey(win.win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-         glfwGetKey(win.win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-}
-
-bool get_glctrl_key(const opengl_window& win) {
-  return glfwGetKey(win.win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-         glfwGetKey(win.win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
 }
 
 }  // namespace yocto
