@@ -1333,8 +1333,12 @@ void _glfw_refresh_callback(GLFWwindow* glfw) {
   glClearColor(
       win.background.x, win.background.y, win.background.z, win.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  if (win.draw_cb)
-    win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
+  if (win.draw_cb) {
+    auto window = zero2i;
+    glfwGetWindowSize(win.win, &window.x, &window.y);
+    if (win.widgets_width) window.x -= win.widgets_width;
+    win.draw_cb(win, window, get_glframebuffer_viewport(win));
+  }
   if (win.widgets_cb) {
     begin_glwidgets(win);
     win.widgets_cb(win);
@@ -1409,7 +1413,7 @@ void delete_glwindow(opengl_window& win) {
 
 // Run loop
 void run_ui(opengl_window& win) {
-  while (!should_glwindow_close(win)) {
+  while (!glfwWindowShouldClose(win.win)) {
     // update input
     win.input.mouse_last     = win.input.mouse_pos;
     win.input.mouse_pos      = get_glmouse_pos(win);
@@ -1438,8 +1442,12 @@ void run_ui(opengl_window& win) {
     glClearColor(
         win.background.x, win.background.y, win.background.z, win.background.w);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    if (win.draw_cb)
-      win.draw_cb(win, get_glwindow_size(win), get_glframebuffer_viewport(win));
+    if (win.draw_cb) {
+      auto window = zero2i;
+      glfwGetWindowSize(win.win, &window.x, &window.y);
+      if (win.widgets_width) window.x -= win.widgets_width;
+      win.draw_cb(win, window, get_glframebuffer_viewport(win));
+    }
     if (win.widgets_cb) {
       begin_glwidgets(win);
       win.widgets_cb(win);
@@ -1513,16 +1521,6 @@ vec4i get_glframebuffer_viewport(
   return viewport;
 }
 
-vec2i get_glwindow_size(const opengl_window& win, bool ignore_widgets) {
-  auto size = zero2i;
-  glfwGetWindowSize(win.win, &size.x, &size.y);
-  if (ignore_widgets && win.widgets_width) size.x -= win.widgets_width;
-  return size;
-}
-
-bool should_glwindow_close(const opengl_window& win) {
-  return glfwWindowShouldClose(win.win);
-}
 void set_glwindow_close(const opengl_window& win, bool close) {
   glfwSetWindowShouldClose(win.win, close ? GLFW_TRUE : GLFW_FALSE);
 }
@@ -1606,13 +1604,14 @@ void begin_glwidgets(const opengl_window& win) {
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
-  auto win_size = get_glwindow_size(win, false);
+  auto window = zero2i;
+  glfwGetWindowSize(win.win, &window.x, &window.y);
   if (win.widgets_left) {
     ImGui::SetNextWindowPos({0, 0});
-    ImGui::SetNextWindowSize({(float)win.widgets_width, (float)win_size.y});
+    ImGui::SetNextWindowSize({(float)win.widgets_width, (float)window.y});
   } else {
-    ImGui::SetNextWindowPos({(float)(win_size.x - win.widgets_width), 0});
-    ImGui::SetNextWindowSize({(float)win.widgets_width, (float)win_size.y});
+    ImGui::SetNextWindowPos({(float)(window.x - win.widgets_width), 0});
+    ImGui::SetNextWindowSize({(float)win.widgets_width, (float)window.y});
   }
   ImGui::SetNextWindowCollapsed(false);
   ImGui::SetNextWindowBgAlpha(1);
