@@ -268,8 +268,8 @@ void yimshproc(const string&                         input_filename,
     draw_glwidgets(app, win);
   });
   set_click_glcallback(win, [app](const opengl_window* win, bool left,
-                                bool press) {
-    auto mouse = get_glmouse_pos_normalized(win, false);
+                                bool press, const opengl_input& input) {
+    auto mouse = input.mouse_pos / vec2f{(float)input.window_size.x,(float)input.window_size.y};
 
     // Ray trace camera ray.
     if (!left && press) {
@@ -293,14 +293,14 @@ void yimshproc(const string&                         input_filename,
       }
     }
   });
-  set_scroll_glcallback(win, [app](const opengl_window* win, float yoffset) {
+  set_scroll_glcallback(win, [app](const opengl_window* win, float yoffset, const opengl_input& input) {
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
     set_camera(app->scene.get(), 0, app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
   });
   set_key_glcallback(
-      win, [app](const opengl_window* win, int key, bool pressing) {
+      win, [app](const opengl_window* win, int key, bool pressing, const opengl_input& input) {
         app->key_callback(app, key, pressing);
       });
   set_uiupdate_glcallback(

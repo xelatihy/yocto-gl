@@ -1417,18 +1417,18 @@ opengl_window* make_glwindow(const vec2i& size, const string& title,
   glfwSetKeyCallback(win->win,
       [](GLFWwindow * glfw, int key, int scancode, int action, int mods) {
         auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-        if (win->key_cb) win->key_cb(win, key, (bool)action);
+        if (win->key_cb) win->key_cb(win, key, (bool)action, win->input);
       });
   glfwSetMouseButtonCallback(
       win->win, [](GLFWwindow * glfw, int button, int action, int mods) {
         auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
         if (win->click_cb)
-          win->click_cb(win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action);
+          win->click_cb(win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action, win->input);
       });
   glfwSetScrollCallback(
       win->win, [](GLFWwindow * glfw, double xoffset, double yoffset) {
         auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-        if (win->scroll_cb) win->scroll_cb(win, (float)yoffset);
+        if (win->scroll_cb) win->scroll_cb(win, (float)yoffset, win->input);
       });
 
   // init gl extensions
@@ -1480,6 +1480,7 @@ void run_ui(opengl_window* win) {
     win->input.modifier_ctrl =
         glfwGetKey(win->win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
         glfwGetKey(win->win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+    glfwGetWindowSize(win->win, &win->input.window_size.x, &win->input.window_size.y);
     if (win->widgets_width) {
       auto io                   = &ImGui::GetIO();
       win->input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||

@@ -282,13 +282,13 @@ void clean_glshapes(opengl_scene* scene);
 // add instance
 int add_instance(
     opengl_scene* scene, const frame3f& frame, int shape, int material);
-void set_instance(opengl_scene* scene, int idx, const frame3f& frame,
-    int shape, int material);
+void set_instance(opengl_scene* scene, int idx, const frame3f& frame, int shape,
+    int material);
 void clear_instances(opengl_scene* scene);
 
 // add light
-int  add_light(opengl_scene* scene, const vec3f& position,
-     const vec3f& emission, bool directional);
+int add_light(opengl_scene* scene, const vec3f& position, const vec3f& emission,
+    bool directional);
 void set_light(opengl_scene* scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional);
 void clear_lights(opengl_scene* scene);
@@ -310,20 +310,21 @@ struct opengl_window;
 
 // Input state
 struct opengl_input {
-  bool     mouse_left     = false;  // left button
-  bool     mouse_right    = false;  // right button
-  bool     mouse_middle   = false;  // middle button
-  vec2f    mouse_pos      = {};     // position excluding widgets
-  vec2f    mouse_last     = {};     // last mouse position excluding widgets
-  vec2f    mouse_delta    = {};     // last mouse delta excluding widgets
-  bool     modifier_alt   = false;  // alt modifier
-  bool     modifier_ctrl  = false;  // ctrl modifier
-  bool     modifier_shift = false;  // shift modifier
-  bool     widgets_active = false;  // widgets are active
-  uint64_t clock_now      = 0;      // clock now
-  uint64_t clock_last     = 0;      // clock last
-  double   time_now       = 0;      // time now
-  double   time_delta     = 0;      // time delta
+  bool     mouse_left      = false;   // left button
+  bool     mouse_right     = false;   // right button
+  bool     mouse_middle    = false;   // middle button
+  vec2f    mouse_pos       = {};      // position excluding widgets
+  vec2f    mouse_last      = {};      // last mouse position excluding widgets
+  vec2f    mouse_delta     = {};      // last mouse delta excluding widgets
+  bool     modifier_alt    = false;   // alt modifier
+  bool     modifier_ctrl   = false;   // ctrl modifier
+  bool     modifier_shift  = false;   // shift modifier
+  bool     widgets_active  = false;   // widgets are active
+  uint64_t clock_now       = 0;       // clock now
+  uint64_t clock_last      = 0;       // clock last
+  double   time_now        = 0;       // time now
+  double   time_delta      = 0;       // time delta
+  vec2i    window_size     = {0, 0};  // window size
 };
 
 // Draw callback called every frame and when resizing
@@ -335,15 +336,15 @@ using widgets_glcallback = std::function<void(const opengl_window*)>;
 using drop_glcallback =
     std::function<void(const opengl_window*, const vector<string>&)>;
 // Key callback that returns ASCII key, pressed/released flag and modifier keys
-using key_glcallback =
-    std::function<void(const opengl_window*, int key, bool pressed)>;
+using key_glcallback = std::function<void(
+    const opengl_window*, int key, bool pressed, const opengl_input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
-using click_glcallback =
-    std::function<void(const opengl_window*, bool left, bool pressed)>;
+using click_glcallback = std::function<void(
+    const opengl_window*, bool left, bool pressed, const opengl_input& input)>;
 // Scroll callback that returns scroll amount
-using scroll_glcallback =
-    std::function<void(const opengl_window*, float amount)>;
+using scroll_glcallback = std::function<void(
+    const opengl_window*, float amount, const opengl_input& input)>;
 // Update functions called every frame
 using uiupdate_glcallback =
     std::function<void(const opengl_window*, const opengl_input& input)>;
@@ -353,7 +354,7 @@ using update_glcallback = std::function<void(const opengl_window*)>;
 // OpenGL window wrapper
 struct opengl_window {
   GLFWwindow*         win           = nullptr;
-  string title = "";
+  string              title         = "";
   draw_glcallback     draw_cb       = {};
   widgets_glcallback  widgets_cb    = {};
   drop_glcallback     drop_cb       = {};
@@ -369,8 +370,8 @@ struct opengl_window {
 };
 
 // Windows initialization
-opengl_window* make_glwindow(const vec2i& size, const string& title, bool widgets, 
-    int widgets_width = 320, bool widgets_left = true);
+opengl_window* make_glwindow(const vec2i& size, const string& title,
+    bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
 void delete_glwindow(opengl_window* win);
@@ -419,7 +420,8 @@ void draw_gllabel(
 void draw_glseparator(const opengl_window* win);
 void continue_glline(const opengl_window* win);
 
-bool draw_glbutton(const opengl_window* win, const char* lbl, bool enabled = true);
+bool draw_glbutton(
+    const opengl_window* win, const char* lbl, bool enabled = true);
 
 bool draw_gltextinput(const opengl_window* win, const char* lbl, string& value);
 
