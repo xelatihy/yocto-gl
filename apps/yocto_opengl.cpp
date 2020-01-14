@@ -1329,7 +1329,7 @@ void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void draw_glwindow(const opengl_window* win) {
+static void draw_glwindow(const opengl_window* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
       win->background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1377,37 +1377,6 @@ void draw_glwindow(const opengl_window* win) {
   glfwSwapBuffers(win->win);
 }
 
-void _glfw_refresh_callback(GLFWwindow* glfw) {
-  auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-  draw_glwindow(win);
-}
-
-void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
-  auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-  if (win->drop_cb) {
-    auto pathv = vector<string>();
-    for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
-    win->drop_cb(win, pathv);
-  }
-}
-
-void _glfw_key_callback(
-    GLFWwindow* glfw, int key, int scancode, int action, int mods) {
-  auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-  if (win->key_cb) win->key_cb(win, key, (bool)action);
-}
-
-void _glfw_click_callback(GLFWwindow* glfw, int button, int action, int mods) {
-  auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-  if (win->click_cb)
-    win->click_cb(win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action);
-}
-
-void _glfw_scroll_callback(GLFWwindow* glfw, double xoffset, double yoffset) {
-  auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-  if (win->scroll_cb) win->scroll_cb(win, (float)yoffset);
-}
-
 opengl_window* make_glwindow(const vec2i& size, const string& title,
     bool widgets, int widgets_width, bool widgets_left) {
   // init glfw
@@ -1432,7 +1401,35 @@ opengl_window* make_glwindow(const vec2i& size, const string& title,
   glfwSetWindowUserPointer(win->win, win);
 
   // set callbacks
-  glfwSetWindowRefreshCallback(win->win, _glfw_refresh_callback);
+  glfwSetWindowRefreshCallback(win->win, [](GLFWwindow* glfw) {
+    auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
+    draw_glwindow(win);
+  });
+  glfwSetDropCallback(
+      win->win, [](GLFWwindow* glfw, int num, const char** paths) {
+        auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
+        if (win->drop_cb) {
+          auto pathv = vector<string>();
+          for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
+          win->drop_cb(win, pathv);
+        }
+      });
+  glfwSetKeyCallback(win->win,
+      [](GLFWwindow * glfw, int key, int scancode, int action, int mods) {
+        auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
+        if (win->key_cb) win->key_cb(win, key, (bool)action);
+      });
+  glfwSetMouseButtonCallback(
+      win->win, [](GLFWwindow * glfw, int button, int action, int mods) {
+        auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
+        if (win->click_cb)
+          win->click_cb(win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action);
+      });
+  glfwSetScrollCallback(
+      win->win, [](GLFWwindow * glfw, double xoffset, double yoffset) {
+        auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
+        if (win->scroll_cb) win->scroll_cb(win, (float)yoffset);
+      });
 
   // init gl extensions
   if (!gladLoadGL())
@@ -1461,6 +1458,7 @@ void delete_glwindow(opengl_window* win) {
   glfwDestroyWindow(win->win);
   glfwTerminate();
   win->win = nullptr;
+  delete win;
 }
 
 // Run loop
@@ -1513,35 +1511,24 @@ void run_ui(opengl_window* win) {
 void set_draw_glcallback(opengl_window* win, draw_glcallback cb) {
   win->draw_cb = cb;
 }
-
 void set_widgets_glcallback(opengl_window* win, widgets_glcallback cb) {
   win->widgets_cb = cb;
 }
-
 void set_drop_glcallback(opengl_window* win, drop_glcallback drop_cb) {
   win->drop_cb = drop_cb;
-  glfwSetDropCallback(win->win, _glfw_drop_callback);
 }
-
 void set_key_glcallback(opengl_window* win, key_glcallback cb) {
   win->key_cb = cb;
-  glfwSetKeyCallback(win->win, _glfw_key_callback);
 }
-
 void set_click_glcallback(opengl_window* win, click_glcallback cb) {
   win->click_cb = cb;
-  glfwSetMouseButtonCallback(win->win, _glfw_click_callback);
 }
-
 void set_scroll_glcallback(opengl_window* win, scroll_glcallback cb) {
   win->scroll_cb = cb;
-  glfwSetScrollCallback(win->win, _glfw_scroll_callback);
 }
-
 void set_uiupdate_glcallback(opengl_window* win, uiupdate_glcallback cb) {
   win->uiupdate_cb = cb;
 }
-
 void set_update_glcallback(opengl_window* win, update_glcallback cb) {
   win->update_cb = cb;
 }
