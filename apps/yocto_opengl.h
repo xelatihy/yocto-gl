@@ -401,8 +401,6 @@ vec2f get_glmouse_pos_normalized(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool begin_glwidgets_window(const opengl_window* win, const char* title);
-
 bool begin_glheader(const opengl_window* win, const char* title);
 void end_glheader(const opengl_window* win);
 

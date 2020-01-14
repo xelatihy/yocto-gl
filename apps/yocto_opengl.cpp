@@ -1362,7 +1362,13 @@ void draw_glwindow(const opengl_window* win) {
     }
     ImGui::SetNextWindowCollapsed(false);
     ImGui::SetNextWindowBgAlpha(1);
-    win->widgets_cb(win);
+    if(ImGui::Begin(win->title.c_str(), nullptr,
+      // ImGuiWindowFlags_NoTitleBar |
+      ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+          ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings)) {
+      draw_glmessages(win);
+      win->widgets_cb(win);
+    }
     ImGui::End();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -1593,13 +1599,6 @@ void init_glwidgets(opengl_window* win, int width, bool left) {
   ImGui::StyleColorsDark();
   win->widgets_width = width;
   win->widgets_left  = left;
-}
-
-bool begin_glwidgets_window(const opengl_window* win, const char* title) {
-  return ImGui::Begin(title, nullptr,
-      // ImGuiWindowFlags_NoTitleBar |
-      ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-          ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 }
 
 bool begin_glheader(const opengl_window* win, const char* lbl) {

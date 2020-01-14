@@ -445,8 +445,6 @@ bool draw_glwidgets_environment(
 void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
   static string load_path = "", save_path = "", error_message = "";
   auto          scene_ok = !apps->states.empty() && apps->selected >= 0;
-  if (!begin_glwidgets_window(win, "yscnitrace")) return;
-  draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
           "./", "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);

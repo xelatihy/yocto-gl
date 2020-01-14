@@ -176,8 +176,6 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
 void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
   static string load_path = "", save_path = "", error_message = "";
   auto          image_ok = !apps->states.empty() && apps->selected >= 0;
-  if (!begin_glwidgets_window(win, "yimview")) return;
-  draw_glmessages(win);
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
           false, "./", "", "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     load_image_async(apps, load_path);
