@@ -1461,8 +1461,8 @@ static void init_embree_bvh(trace_scene* scene, const trace_params& params) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < scene->instances.size();
        instance_id++) {
-    auto& instance  = scene->instances[instance_id];
-    auto& shape     = scene->shapes[instance->shape];
+    auto instance  = &scene->instances[instance_id];
+    auto shape     = &scene->shapes[instance->shape];
     auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape->embree_bvh.get());
     rtcSetGeometryTransform(
@@ -1480,8 +1480,8 @@ static void update_embree_bvh(
   // scene bvh
   auto escene = (RTCScene)scene->embree_bvh.get();
   for (auto instance_id : updated_instances) {
-    auto& instance  = scene->instances[instance_id];
-    auto& shape     = scene->shapes[instance->shape];
+    auto instance  = &scene->instances[instance_id];
+    auto shape     = &scene->shapes[instance->shape];
     auto  egeometry = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape->embree_bvh.get());
     rtcSetGeometryTransform(
@@ -3384,8 +3384,8 @@ void clean_materias(trace_scene* scene) {
 
 // Add shape
 int  add_shape(trace_scene* scene) {
-  scene->materials.emplace_back();
-  return (int)scene->materials.size()-1;
+  scene->shapes.emplace_back();
+  return (int)scene->shapes.size()-1;
 }
 void set_shape_positions(
     trace_scene* scene, int idx, const vector<vec3f>& positions) {
