@@ -104,52 +104,6 @@ struct app_states {
   bool         add_skyenv = false;
 };
 
-// convert scene objects
-void update_trace_material(
-    trace_material& material, const sceneio_material& iomaterial) {
-  material.emission         = iomaterial.emission;
-  material.diffuse          = iomaterial.diffuse;
-  material.specular         = iomaterial.specular;
-  material.transmission     = iomaterial.transmission;
-  material.roughness        = iomaterial.roughness;
-  material.opacity          = iomaterial.opacity;
-  material.refract          = iomaterial.refract;
-  material.volemission      = iomaterial.volemission;
-  material.voltransmission  = iomaterial.voltransmission;
-  material.volmeanfreepath  = iomaterial.volmeanfreepath;
-  material.volscatter       = iomaterial.volscatter;
-  material.volscale         = iomaterial.volscale;
-  material.volanisotropy    = iomaterial.volanisotropy;
-  material.emission_tex     = iomaterial.emission_tex;
-  material.diffuse_tex      = iomaterial.diffuse_tex;
-  material.specular_tex     = iomaterial.specular_tex;
-  material.transmission_tex = iomaterial.transmission_tex;
-  material.roughness_tex    = iomaterial.roughness_tex;
-  material.opacity_tex      = iomaterial.opacity_tex;
-  material.subsurface_tex   = iomaterial.subsurface_tex;
-  material.normal_tex       = iomaterial.normal_tex;
-}
-void update_trace_shape(trace_shape& shape, const sceneio_shape& ioshape,
-    const sceneio_model& ioscene) {
-  if (needs_tesselation(ioscene, ioshape)) {
-    return update_trace_shape(
-        shape, tesselate_shape(ioscene, ioshape), ioscene);
-  }
-  shape.points        = ioshape.points;
-  shape.lines         = ioshape.lines;
-  shape.triangles     = ioshape.triangles;
-  shape.quads         = ioshape.quads;
-  shape.quadspos      = ioshape.quadspos;
-  shape.quadsnorm     = ioshape.quadsnorm;
-  shape.quadstexcoord = ioshape.quadstexcoord;
-  shape.positions     = ioshape.positions;
-  shape.normals       = ioshape.normals;
-  shape.texcoords     = ioshape.texcoords;
-  shape.colors        = ioshape.colors;
-  shape.radius        = ioshape.radius;
-  shape.tangents      = ioshape.tangents;
-}
-
 // Construct a scene from io
 trace_scene* make_scene(const sceneio_model& ioscene) {
   auto scene = make_unique<trace_scene>();
