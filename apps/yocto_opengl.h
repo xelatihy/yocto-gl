@@ -409,14 +409,7 @@ bool begin_glwidgets_window(const opengl_window& win, const char* title);
 bool begin_glheader(const opengl_window& win, const char* title);
 void end_glheader(const opengl_window& win);
 
-void open_glmodal(const opengl_window& win, const char* lbl);
-void clear_glmodal(const opengl_window& win);
-bool begin_glmodal(const opengl_window& win, const char* lbl);
-void end_glmodal(const opengl_window& win);
-bool is_glmodal_open(const opengl_window& win, const char* lbl);
-
 bool draw_glmessages(const opengl_window& win);
-void push_glmessage(const string& message);
 void push_glmessage(const opengl_window& win, const string& message);
 bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,

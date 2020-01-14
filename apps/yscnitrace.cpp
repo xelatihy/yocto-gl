@@ -335,7 +335,7 @@ bool draw_glwidgets_texture(
           to_string(texture.ldr.size().y));
   if (edited && old_filename != texture.filename) {
     if (auto ret = load_texture(app->filename, texture); !ret) {
-      push_glmessage(ret.error);
+      push_glmessage(win, ret.error);
       log_glinfo(win, ret.error);
     }
   }
@@ -404,7 +404,7 @@ bool draw_glwidgets_shape(
   draw_gllabel(win, "tangsp", to_string(shape.tangents.size()));
   if (edited && old_filename != shape.filename) {
     if (auto ret = load_shape(app->filename, shape); !ret) {
-      push_glmessage("cannot load " + shape.filename);
+      push_glmessage(win, "cannot load " + shape.filename);
       log_glinfo(win, "cannot load " + shape.filename);
     }
   }
@@ -459,7 +459,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
     auto app     = apps->states[apps->selected];
     app->outname = save_path;
     if (auto ret = save_scene(app->outname, app->ioscene); !ret) {
-      push_glmessage("cannot save " + app->outname);
+      push_glmessage(win, "cannot save " + app->outname);
       log_glinfo(win, "cannot save " + app->outname);
       log_glinfo(win, ret.error);
     }
@@ -472,7 +472,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
     auto app     = apps->states[apps->selected];
     app->outname = save_path;
     if (auto ret = save_image(app->imagename, app->display); !ret) {
-      push_glmessage("cannot save " + app->outname);
+      push_glmessage(win, "cannot save " + app->outname);
       log_glinfo(win, "cannot save " + app->outname);
     }
     save_path = "";

@@ -192,7 +192,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
     try {
       save_image(app->outname, app->display);
     } catch (exception& e) {
-      push_glmessage("cannot save " + app->outname);
+      push_glmessage(win, "cannot save " + app->outname);
       log_glinfo(win, "cannot save " + app->outname);
       log_glinfo(win, e.what());
     }

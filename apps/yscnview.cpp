@@ -280,7 +280,7 @@ bool draw_glwidgets_texture(
           to_string(texture.ldr.size().y));
   if (edited && old_filename != texture.filename) {
     if (auto ret = load_texture(app->filename, texture); !ret) {
-      push_glmessage(ret.error);
+      push_glmessage(win, ret.error);
       log_glinfo(win, ret.error);
     }
   }
@@ -356,7 +356,7 @@ bool draw_glwidgets_shape(
   edited += draw_glslider(win, "displacement", shape.displacement, 0, 1);
   if (edited && old_filename != shape.filename) {
     if (auto ret = load_shape(app->filename, shape); !ret) {
-      push_glmessage(ret.error);
+      push_glmessage(win, ret.error);
       log_glinfo(win, ret.error);
     }
   }
@@ -413,7 +413,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
     auto app     = apps->states[apps->selected];
     app->outname = save_path;
     if (auto ret = save_scene(app->outname, app->scene); !ret) {
-      push_glmessage("cannot save " + app->outname);
+      push_glmessage(win, "cannot save " + app->outname);
       log_glinfo(win, "cannot save " + app->outname);
       log_glinfo(win, ret.error);
     }

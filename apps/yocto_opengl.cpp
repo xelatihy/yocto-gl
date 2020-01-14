@@ -1650,10 +1650,6 @@ bool draw_glmessage(
 
 std::deque<string> _message_queue = {};
 std::mutex         _message_mutex;
-void               push_glmessage(const string& message) {
-  std::lock_guard lock(_message_mutex);
-  _message_queue.push_back(message);
-}
 void push_glmessage(const opengl_window& win, const string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
