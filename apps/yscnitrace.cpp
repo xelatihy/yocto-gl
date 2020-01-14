@@ -606,26 +606,29 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
       if (draw_glwidgets_material(win, app, app->selection.second)) {
         stop_display(app);
         auto& iomaterial = app->ioscene.materials[app->selection.second];
-        set_material_emission(
-            app->scene.get(), app->selection.second, iomaterial.emission, iomaterial.emission_tex);
-        set_material_diffuse(
-            app->scene.get(), app->selection.second, iomaterial.diffuse, iomaterial.diffuse_tex);
-        set_material_specular(
-            app->scene.get(), app->selection.second, iomaterial.specular, iomaterial.specular_tex);
-        set_material_metallic(
-            app->scene.get(), app->selection.second, iomaterial.metallic, iomaterial.metallic_tex);
-        set_material_transmission(app->scene.get(), app->selection.second, iomaterial.transmission,
-            iomaterial.transmission_tex);
-        set_material_roughness(
-            app->scene.get(), app->selection.second, iomaterial.roughness, iomaterial.roughness_tex);
-        set_material_opacity(
-            app->scene.get(), app->selection.second, iomaterial.opacity, iomaterial.opacity_tex);
-        set_material_refract(app->scene.get(), app->selection.second, iomaterial.refract);
-        set_material_normalmap(app->scene.get(), app->selection.second, iomaterial.normal_tex);
-        set_material_volume(app->scene.get(), app->selection.second, iomaterial.volemission,
-            iomaterial.voltransmission, iomaterial.volmeanfreepath,
-            iomaterial.volscatter, iomaterial.volscale,
-            iomaterial.volanisotropy, iomaterial.subsurface_tex);
+        set_material_emission(app->scene.get(), app->selection.second,
+            iomaterial.emission, iomaterial.emission_tex);
+        set_material_diffuse(app->scene.get(), app->selection.second,
+            iomaterial.diffuse, iomaterial.diffuse_tex);
+        set_material_specular(app->scene.get(), app->selection.second,
+            iomaterial.specular, iomaterial.specular_tex);
+        set_material_metallic(app->scene.get(), app->selection.second,
+            iomaterial.metallic, iomaterial.metallic_tex);
+        set_material_transmission(app->scene.get(), app->selection.second,
+            iomaterial.transmission, iomaterial.transmission_tex);
+        set_material_roughness(app->scene.get(), app->selection.second,
+            iomaterial.roughness, iomaterial.roughness_tex);
+        set_material_opacity(app->scene.get(), app->selection.second,
+            iomaterial.opacity, iomaterial.opacity_tex);
+        set_material_refract(
+            app->scene.get(), app->selection.second, iomaterial.refract);
+        set_material_normalmap(
+            app->scene.get(), app->selection.second, iomaterial.normal_tex);
+        set_material_volume(app->scene.get(), app->selection.second,
+            iomaterial.volemission, iomaterial.voltransmission,
+            iomaterial.volmeanfreepath, iomaterial.volscatter,
+            iomaterial.volscale, iomaterial.volanisotropy,
+            iomaterial.subsurface_tex);
         init_lights(app->scene.get());
         reset_display(app);
       }
@@ -634,8 +637,33 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->ioscene.shapes);
       if (draw_glwidgets_shape(win, app, app->selection.second)) {
         stop_display(app);
-        update_trace_shape(app->scene->shapes[app->selection.second],
-            app->ioscene.shapes[app->selection.second], app->ioscene);
+        auto& ioshape_ = app->ioscene.shapes[app->selection.second];
+        auto  tshape   = (needs_tesselation(app->ioscene, ioshape_))
+                          ? tesselate_shape(app->ioscene, ioshape_)
+                          : sceneio_shape{};
+        auto& ioshape = (needs_tesselation(app->ioscene, ioshape_)) ? tshape
+                                                                    : ioshape_;
+        if (!ioshape.points.empty()) {
+          set_shape(app->scene.get(), app->selection.second, ioshape.points,
+              ioshape.positions, ioshape.normals, ioshape.texcoords,
+              ioshape.colors, ioshape.radius);
+        } else if (!ioshape.lines.empty()) {
+          set_shape(app->scene.get(), app->selection.second, ioshape.lines,
+              ioshape.positions, ioshape.normals, ioshape.texcoords,
+              ioshape.colors, ioshape.radius);
+        } else if (!ioshape.triangles.empty()) {
+          set_shape(app->scene.get(), app->selection.second, ioshape.triangles,
+              ioshape.positions, ioshape.normals, ioshape.texcoords,
+              ioshape.colors, ioshape.tangents);
+        } else if (!ioshape.quads.empty()) {
+          set_shape(app->scene.get(), app->selection.second, ioshape.quads,
+              ioshape.positions, ioshape.normals, ioshape.texcoords,
+              ioshape.colors, ioshape.tangents);
+        } else if (!ioshape.quadspos.empty()) {
+          set_shape(app->scene.get(), app->selection.second, ioshape.quadspos,
+              ioshape.quadsnorm, ioshape.quadstexcoord, ioshape.positions,
+              ioshape.normals, ioshape.texcoords);
+        }
         update_bvh(app->scene.get(), {}, {app->selection.second}, app->params);
         // TODO: maybe we should update lights for this
         reset_display(app);
