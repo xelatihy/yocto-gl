@@ -386,9 +386,6 @@ void set_update_glcallback(opengl_window& win, update_glcallback cb);
 // Run loop
 void run_ui(opengl_window& win);
 
-vec4i get_glframebuffer_viewport(
-    const opengl_window& win, bool ignore_widgets = true);
-
 void set_glwindow_close(const opengl_window& win, bool close);
 
 vec2f get_glmouse_pos(const opengl_window& win, bool ignore_widgets = true);

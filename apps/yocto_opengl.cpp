@@ -1337,7 +1337,16 @@ void _glfw_refresh_callback(GLFWwindow* glfw) {
     auto window = zero2i;
     glfwGetWindowSize(win.win, &window.x, &window.y);
     if (win.widgets_width) window.x -= win.widgets_width;
-    win.draw_cb(win, window, get_glframebuffer_viewport(win));
+    auto viewport = zero4i;
+    glfwGetFramebufferSize(win.win, &viewport.z, &viewport.w);
+    if (win.widgets_width) {
+      auto win_size = zero2i;
+      glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
+      auto offset = (int)(win.widgets_width * (float)viewport.z / win_size.x);
+      viewport.z -= offset;
+      if (win.widgets_left) viewport.x += offset;
+    }
+    win.draw_cb(win, window, viewport);
   }
   if (win.widgets_cb) {
     begin_glwidgets(win);
@@ -1449,7 +1458,16 @@ void run_ui(opengl_window& win) {
       auto window = zero2i;
       glfwGetWindowSize(win.win, &window.x, &window.y);
       if (win.widgets_width) window.x -= win.widgets_width;
-      win.draw_cb(win, window, get_glframebuffer_viewport(win));
+    auto viewport = zero4i;
+    glfwGetFramebufferSize(win.win, &viewport.z, &viewport.w);
+    if (win.widgets_width) {
+      auto win_size = zero2i;
+      glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
+      auto offset = (int)(win.widgets_width * (float)viewport.z / win_size.x);
+      viewport.z -= offset;
+      if (win.widgets_left) viewport.x += offset;
+    }
+      win.draw_cb(win, window, viewport);
     }
     if (win.widgets_cb) {
       begin_glwidgets(win);
@@ -1508,20 +1526,6 @@ vec2i get_glframebuffer_size(const opengl_window& win, bool ignore_widgets) {
     size.x -= (int)(win.widgets_width * (float)size.x / (float)win_size.x);
   }
   return size;
-}
-
-vec4i get_glframebuffer_viewport(
-    const opengl_window& win, bool ignore_widgets) {
-  auto viewport = zero4i;
-  glfwGetFramebufferSize(win.win, &viewport.z, &viewport.w);
-  if (ignore_widgets && win.widgets_width) {
-    auto win_size = zero2i;
-    glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
-    auto offset = (int)(win.widgets_width * (float)viewport.z / win_size.x);
-    viewport.z -= offset;
-    if (win.widgets_left) viewport.x += offset;
-  }
-  return viewport;
 }
 
 void set_glwindow_close(const opengl_window& win, bool close) {

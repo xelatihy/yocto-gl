@@ -549,11 +549,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
 
 // draw with shading
 void draw(const opengl_window& win, shared_ptr<app_states> apps, vec2i window,
-    vec4i framebuffer) {
+    vec4i viewport) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
-    draw_glscene(
-        app->glscene.get(), get_glframebuffer_viewport(win), app->drawgl_prms);
+    draw_glscene(app->glscene.get(), viewport, app->drawgl_prms);
   }
 }
 
