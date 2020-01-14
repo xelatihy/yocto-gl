@@ -54,15 +54,15 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  sceneio_model ioscene    = {};
-  unique_ptr<trace_scene>   scene      = {};
-  bool          add_skyenv = false;
+  sceneio_model           ioscene    = {};
+  unique_ptr<trace_scene> scene      = {};
+  bool                    add_skyenv = false;
 
   // rendering state
-  unique_ptr<trace_state>  state    = {};
-  image<vec4f> render   = {};
-  image<vec4f> display  = {};
-  float        exposure = 0;
+  unique_ptr<trace_state> state    = {};
+  image<vec4f>            render   = {};
+  image<vec4f>            display  = {};
+  float                   exposure = 0;
 
   // view scene
   unique_ptr<opengl_image> glimage  = {};
@@ -233,7 +233,8 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  app->state = unique_ptr<trace_state>{make_state(app->scene.get(), app->params)};
+  app->state = unique_ptr<trace_state>{
+      make_state(app->scene.get(), app->params)};
   app->render.resize(app->state->size());
   app->display.resize(app->state->size());
 
@@ -259,7 +260,8 @@ void reset_display(shared_ptr<app_state> app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij] = trace_sample(app->state.get(), app->scene.get(), ij, app->params);
+        app->render[ij] = trace_sample(
+            app->state.get(), app->scene.get(), ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -284,7 +286,8 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
           app->params.sampler = trace_sampler_type::eyelight;
         }
-        app->state = unique_ptr<trace_state>{make_state(app->scene.get(), app->params)};
+        app->state = unique_ptr<trace_state>{
+            make_state(app->scene.get(), app->params)};
         app->render.resize(app->state->size());
         app->display.resize(app->state->size());
         app->name = get_filename(app->filename) + " [" +
@@ -609,7 +612,8 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           app->ioscene.environments);
       if (draw_glwidgets_environment(win, app, app->selection.second)) {
         stop_display(app);
-        update_trace_environment(app->scene->environments[app->selection.second],
+        update_trace_environment(
+            app->scene->environments[app->selection.second],
             app->ioscene.environments[app->selection.second]);
         init_lights(app->scene.get());
         reset_display(app);

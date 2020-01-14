@@ -37,8 +37,8 @@
 #include <embree3/rtcore.h>
 #endif
 
-using std::unique_ptr;
 using std::make_unique;
+using std::unique_ptr;
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PARALLEL SUPPORT FUNCTIONS
@@ -686,7 +686,8 @@ pair<vec3f, vec3f> eval_element_tangents(
     } else {
       return quad_tangents_fromuv(shape->positions[q.x], shape->positions[q.y],
           shape->positions[q.z], shape->positions[q.w], shape->texcoords[q.x],
-          shape->texcoords[q.y], shape->texcoords[q.z], shape->texcoords[q.w], uv);
+          shape->texcoords[q.y], shape->texcoords[q.z], shape->texcoords[q.w],
+          uv);
     }
   } else if (!shape->quadspos.empty()) {
     auto q = shape->quadspos[element];
@@ -698,8 +699,8 @@ pair<vec3f, vec3f> eval_element_tangents(
       auto qt = shape->quadstexcoord[element];
       return quad_tangents_fromuv(shape->positions[q.x], shape->positions[q.y],
           shape->positions[q.z], shape->positions[q.w], shape->texcoords[qt.x],
-          shape->texcoords[qt.y], shape->texcoords[qt.z], shape->texcoords[qt.w],
-          uv);
+          shape->texcoords[qt.y], shape->texcoords[qt.z],
+          shape->texcoords[qt.w], uv);
     }
   } else {
     return {zero3f, zero3f};
@@ -863,8 +864,8 @@ ray3f eval_perspective_camera(
     auto q1        = -q * distance1 / distance;
     auto d         = normalize(q1 - e);
     // auto q1 = - normalize(q) * camera->focus / normalize(q).z;
-    auto ray = ray3f{
-        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
+    auto ray = ray3f{transform_point(camera->frame, e),
+        transform_direction(camera->frame, d)};
     return ray;
   } else {
     auto e   = zero3f;
@@ -872,8 +873,8 @@ ray3f eval_perspective_camera(
         camera->film.y * (image_uv.y - 0.5f), distance};
     auto q1  = -q;
     auto d   = normalize(q1 - e);
-    auto ray = ray3f{
-        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
+    auto ray = ray3f{transform_point(camera->frame, e),
+        transform_direction(camera->frame, d)};
     return ray;
   }
 }
@@ -891,8 +892,8 @@ ray3f eval_orthographic_camera(
                                         (lens_uv.y - 0.5f) * camera->aperture,
                                         0};
     auto d = normalize(q1 - e);
-    auto ray = ray3f{
-        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
+    auto ray = ray3f{transform_point(camera->frame, e),
+        transform_direction(camera->frame, d)};
     return ray;
   } else {
     auto scale = 1 / camera->lens;
@@ -901,17 +902,19 @@ ray3f eval_orthographic_camera(
     auto q1    = -q;
     auto e     = vec3f{-q.x, -q.y, 0};
     auto d     = normalize(q1 - e);
-    auto ray   = ray3f{
-        transform_point(camera->frame, e), transform_direction(camera->frame, d)};
+    auto ray   = ray3f{transform_point(camera->frame, e),
+        transform_direction(camera->frame, d)};
     return ray;
   }
 }
 
 vec2i camera_resolution(const trace_camera* camera, int resolution) {
   if (camera->film.x > camera->film.y) {
-    return {resolution, (int)round(resolution * camera->film.y / camera->film.x)};
+    return {
+        resolution, (int)round(resolution * camera->film.y / camera->film.x)};
   } else {
-    return {(int)round(resolution * camera->film.x / camera->film.y), resolution};
+    return {
+        (int)round(resolution * camera->film.x / camera->film.y), resolution};
   }
 }
 
@@ -976,13 +979,13 @@ material_point eval_material(const trace_scene* scene,
   }
   if (material->diffuse_tex >= 0) {
     auto diffuse_tex = &scene->textures[material->diffuse_tex];
-    auto  base_txt    = eval_texture(diffuse_tex, texcoord);
+    auto base_txt    = eval_texture(diffuse_tex, texcoord);
     point.diffuse *= xyz(base_txt);
     point.opacity *= base_txt.w;
   }
   if (material->metallic_tex >= 0) {
     auto metallic_tex = &scene->textures[material->metallic_tex];
-    auto  metallic_txt = eval_texture(metallic_tex, texcoord);
+    auto metallic_txt = eval_texture(metallic_tex, texcoord);
     metallic *= metallic_txt.z;
     if (material->gltf_textures) {
       point.roughness *= metallic_txt.x;
@@ -990,7 +993,7 @@ material_point eval_material(const trace_scene* scene,
   }
   if (material->specular_tex >= 0) {
     auto specular_tex = &scene->textures[material->specular_tex];
-    auto  specular_txt = eval_texture(specular_tex, texcoord);
+    auto specular_txt = eval_texture(specular_tex, texcoord);
     point.specular *= xyz(specular_txt);
     if (material->gltf_textures) {
       auto glossiness = 1 - point.roughness;
@@ -1045,8 +1048,8 @@ material_point eval_material(const trace_scene* scene,
 // Instance values interpolated using barycentric coordinates.
 vec3f eval_position(const trace_scene* scene, const trace_instance* instance,
     int element, const vec2f& uv) {
-  return transform_point(
-      instance->frame, eval_position(&scene->shapes[instance->shape], element, uv));
+  return transform_point(instance->frame,
+      eval_position(&scene->shapes[instance->shape], element, uv));
 }
 vec3f eval_normal(const trace_scene* scene, const trace_instance* instance,
     int element, const vec2f& uv, bool non_rigid_frame) {
@@ -1069,9 +1072,9 @@ vec3f eval_shading_normal(const trace_scene* scene,
     return dot(direction, normal) < 0 ? normal : -normal;
   } else {
     auto normal_tex = &scene->textures[material->normal_tex];
-    auto  normalmap  = -1 + 2 * xyz(eval_texture(normal_tex,
+    auto normalmap  = -1 + 2 * xyz(eval_texture(normal_tex,
                                   eval_texcoord(shape, element, uv), true));
-    auto  basis      = eval_tangent_basis(shape, element, uv);
+    auto basis      = eval_tangent_basis(shape, element, uv);
     normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
     auto normal = normalize(basis.first * normalmap);
     normal      = transform_normal(instance->frame, normal, non_rigid_frame);
@@ -1090,8 +1093,8 @@ material_point eval_material(const trace_scene* scene,
     const trace_instance* instance, int element, const vec2f& uv) {
   auto shape     = &scene->shapes[instance->shape];
   auto material  = &scene->materials[instance->material];
-  auto  texcoords = eval_texcoord(shape, element, uv);
-  auto  color     = eval_color(shape, element, uv);
+  auto texcoords = eval_texcoord(shape, element, uv);
+  auto color     = eval_color(shape, element, uv);
   return eval_material(scene, material, texcoords, color);
 }
 
@@ -1954,9 +1957,9 @@ void init_bvh(trace_scene* scene, const trace_params& params) {
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto instance = &scene->instances[idx];
     auto shape    = &scene->shapes[instance->shape];
-    bboxes[idx]    = shape->bvh.nodes.empty()
-                      ? invalidb3f
-                      : transform_bbox(instance->frame, shape->bvh.nodes[0].bbox);
+    bboxes[idx]   = shape->bvh.nodes.empty() ? invalidb3f
+                                           : transform_bbox(instance->frame,
+                                                 shape->bvh.nodes[0].bbox);
   }
 
   // build nodes
@@ -2026,7 +2029,7 @@ void update_bvh(trace_scene* scene, const vector<int>& updated_instances,
   // build primitives
   auto bboxes = vector<bbox3f>(scene->instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto instance = &scene->instances[idx];
+    auto  instance = &scene->instances[idx];
     auto& sbvh     = scene->shapes[instance->shape].bvh;
     bboxes[idx]    = transform_bbox(instance->frame, sbvh.nodes[0].bbox);
   }
@@ -2109,8 +2112,8 @@ static bool intersect_shape_bvh(const trace_shape* shape, const ray3f& ray_,
     } else if (!shape->triangles.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& t = shape->triangles[shape->bvh.primitives[idx]];
-        if (intersect_triangle(ray, shape->positions[t.x], shape->positions[t.y],
-                shape->positions[t.z], uv, distance)) {
+        if (intersect_triangle(ray, shape->positions[t.x],
+                shape->positions[t.y], shape->positions[t.z], uv, distance)) {
           hit      = true;
           element  = shape->bvh.primitives[idx];
           ray.tmax = distance;
@@ -2200,10 +2203,10 @@ static bool intersect_scene_bvh(const trace_scene* scene, const ray3f& ray_,
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto instance_ = &scene->instances[scene->bvh.primitives[idx]];
-        auto  inv_ray   = transform_ray(
+        auto inv_ray   = transform_ray(
             inverse(instance_->frame, non_rigid_frames), ray);
-        if (intersect_shape_bvh(&scene->shapes[instance_->shape], inv_ray, element,
-                uv, distance, find_any)) {
+        if (intersect_shape_bvh(&scene->shapes[instance_->shape], inv_ray,
+                element, uv, distance, find_any)) {
           hit      = true;
           instance = scene->bvh.primitives[idx];
           ray.tmax = distance;
@@ -2223,9 +2226,10 @@ static bool intersect_instance_bvh(const trace_scene* scene, int instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
   auto instance_ = &scene->instances[instance];
-  auto inv_ray = transform_ray(inverse(instance_->frame, non_rigid_frames), ray);
-  return intersect_shape_bvh(
-      &scene->shapes[instance_->shape], inv_ray, element, uv, distance, find_any);
+  auto inv_ray   = transform_ray(
+      inverse(instance_->frame, non_rigid_frames), ray);
+  return intersect_shape_bvh(&scene->shapes[instance_->shape], inv_ray, element,
+      uv, distance, find_any);
 }
 
 trace_intersection intersect_scene_bvh(const trace_scene* scene,
@@ -2545,8 +2549,8 @@ static vector<float> sample_environment_cdf(
     const trace_scene* scene, const trace_environment* environment) {
   if (environment->emission_tex < 0) return {};
   auto texture    = &scene->textures[environment->emission_tex];
-  auto  size       = texture_size(texture);
-  auto  texels_cdf = vector<float>(size.x * size.y);
+  auto size       = texture_size(texture);
+  auto texels_cdf = vector<float>(size.x * size.y);
   if (size != zero2i) {
     for (auto i = 0; i < texels_cdf.size(); i++) {
       auto ij       = vec2i{i % size.x, i / size.x};
@@ -2590,8 +2594,8 @@ static vector<float> sample_shape_cdf(const trace_shape* shape) {
 static vec3f sample_light(const trace_scene* scene, const trace_light* light,
     const vec3f& p, float rel, const vec2f& ruv) {
   if (light->instance >= 0) {
-    auto instance = &scene->instances[light->instance];
-    auto shape    = &scene->shapes[instance->shape];
+    auto  instance = &scene->instances[light->instance];
+    auto  shape    = &scene->shapes[instance->shape];
     auto& cdf      = light->elem_cdf;
     auto  element  = sample_discrete(cdf, rel);
     auto  uv       = zero2f;
@@ -2609,7 +2613,7 @@ static vec3f sample_light(const trace_scene* scene, const trace_light* light,
     auto environment = &scene->environments[light->environment];
     if (environment->emission_tex >= 0) {
       auto& cdf          = light->elem_cdf;
-      auto emission_tex = &scene->textures[environment->emission_tex];
+      auto  emission_tex = &scene->textures[environment->emission_tex];
       auto  idx          = sample_discrete(cdf, rel);
       auto  size         = texture_size(emission_tex);
       auto  u            = (idx % size.x + 0.5f) / size.x;
@@ -2640,7 +2644,7 @@ static float sample_light_pdf(const trace_scene* scene,
       if (!isec.hit) break;
       // accumulate pdf
       auto instance       = &scene->instances[isec.instance];
-      auto  light_position = eval_position(
+      auto light_position = eval_position(
           scene, instance, isec.element, isec.uv);
       auto light_normal = eval_normal(
           scene, instance, isec.element, isec.uv, trace_non_rigid_frames);
@@ -2656,7 +2660,7 @@ static float sample_light_pdf(const trace_scene* scene,
     auto environment = &scene->environments[light->environment];
     if (environment->emission_tex >= 0) {
       auto& cdf          = light->elem_cdf;
-      auto emission_tex = &scene->textures[environment->emission_tex];
+      auto  emission_tex = &scene->textures[environment->emission_tex];
       auto  size         = texture_size(emission_tex);
       auto  texcoord     = eval_texcoord(environment, direction);
       auto  i            = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
@@ -2748,9 +2752,9 @@ static pair<vec3f, bool> trace_path(const trace_scene* scene,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto  outgoing = -direction;
+      auto outgoing = -direction;
       auto instance = &scene->instances[intersection.instance];
-      auto  position = eval_position(
+      auto position = eval_position(
           scene, instance, intersection.element, intersection.uv);
       auto normal   = eval_shading_normal(scene, instance, intersection.element,
           intersection.uv, direction, trace_non_rigid_frames);
@@ -2866,10 +2870,10 @@ static pair<vec3f, bool> trace_naive(const trace_scene* scene,
     }
 
     // prepare shading point
-    auto  outgoing = -direction;
-    auto  incoming = outgoing;
+    auto outgoing = -direction;
+    auto incoming = outgoing;
     auto instance = &scene->instances[intersection.instance];
-    auto  position = eval_position(
+    auto position = eval_position(
         scene, instance, intersection.element, intersection.uv);
     auto normal   = eval_shading_normal(scene, instance, intersection.element,
         intersection.uv, direction, trace_non_rigid_frames);
@@ -2938,9 +2942,9 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene* scene,
     }
 
     // prepare shading point
-    auto  outgoing = -direction;
+    auto outgoing = -direction;
     auto instance = &scene->instances[intersection.instance];
-    auto  position = eval_position(
+    auto position = eval_position(
         scene, instance, intersection.element, intersection.uv);
     auto normal   = eval_shading_normal(scene, instance, intersection.element,
         intersection.uv, direction, trace_non_rigid_frames);
@@ -3112,7 +3116,7 @@ bool is_sampler_lit(const trace_params& params) {
 // Trace a block of samples
 vec4f trace_sample(trace_state* state, const trace_scene* scene,
     const vec2i& ij, const trace_params& params) {
-  auto camera  = &scene->cameras.at(params.camera);
+  auto  camera  = &scene->cameras.at(params.camera);
   auto  sampler = get_trace_sampler_func(params);
   auto& pixel   = state->at(ij);
   auto  ray = params.tentfilter ? sample_camera_tent(camera, ij, state->size(),
@@ -3146,7 +3150,8 @@ trace_state* make_state(const trace_scene* scene, const trace_params& params) {
   auto rng   = make_rng(1301081);
   for (auto j = 0; j < state->size().y; j++) {
     for (auto i = 0; i < state->size().x; i++) {
-      state->at({i, j}).rng = make_rng(params.seed, rand1i(rng, 1 << 31) / 2 + 1);
+      state->at({i, j}).rng = make_rng(
+          params.seed, rand1i(rng, 1 << 31) / 2 + 1);
     }
   }
   return state.release();
@@ -3242,6 +3247,238 @@ image<vec4f> trace_samples(trace_state* state, const trace_scene* scene,
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SCENE CREATION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Scene creation
+trace_scene* make_trace_scene() {
+  auto scene = make_unique<trace_scene>();
+  return scene.release();
+}
+
+// Add cameras
+int  add_camera(trace_scene* scene, const frame3f& frame, float lens,
+     float aspect, float film, float aperture, float focus) {
+  scene->cameras.emplace_back();
+  set_camera(scene, (int)scene->cameras.size()-1, frame, lens, aspect, film, aperture, focus);
+  return (int)scene->cameras.size()-1;
+}
+void set_camera(trace_scene* scene, int idx, const frame3f& frame, float lens,
+    float aspect, float film, float aperture, float focus) {
+  auto camera = &scene->cameras[idx];
+  camera->frame = frame;
+  camera->lens = lens;
+  camera->film = aspect >= 1
+                      ? vec2f{film, film / aspect}
+                      : vec2f{film * aspect,
+                      film};
+  camera->aperture = aperture;
+  camera->focus = focus;
+}
+void clean_cameras(trace_scene* scene) {
+  scene->cameras.clear();
+}
+
+// Add texture
+int  add_texture(trace_scene* scene, const image<vec4b>& img) {
+  scene->textures.emplace_back();
+  set_texture(scene, (int)scene->textures.size()-1, img);
+  return (int)scene->textures.size()-1;
+}
+int  add_texture(trace_scene* scene, const image<vec4f>& img) {
+  scene->textures.emplace_back();
+  set_texture(scene, (int)scene->textures.size()-1, img);
+  return (int)scene->textures.size()-1;
+}
+void set_texture(trace_scene* scene, int idx, const image<vec4b>& img) {
+  auto texture = &scene->textures[idx];
+  texture->ldr = img;
+  texture->hdr = {};
+}
+void set_texture(trace_scene* scene, int idx, const image<vec4f>& img) {
+  auto texture = &scene->textures[idx];
+  texture->ldr = {};
+  texture->hdr = img;
+}
+void clean_textures(trace_scene* scene) {scene->textures.clear();}
+
+// Add material
+int  add_material(trace_scene* scene) {
+  scene->materials.emplace_back();
+  return (int)scene->materials.size()-1;
+}
+void set_material_emission(
+    trace_scene* scene, int idx, const vec3f& emission, int emission_txt) {
+  auto material = &scene->materials[idx];
+  material->emission = emission;
+  material->emission_tex = emission_txt;
+}
+void set_material_diffuse(
+    trace_scene* scene, int idx, const vec3f& diffuse, int diffuse_txt) {
+  auto material = &scene->materials[idx];
+  material->diffuse = diffuse;
+  material->diffuse_tex = diffuse_txt;
+}
+void set_material_specular(
+    trace_scene* scene, int idx, const vec3f& specular, int specular_txt) {
+  auto material = &scene->materials[idx];
+  material->specular = specular;
+  material->specular_tex = specular_txt;
+}
+void set_material_metallic(
+    trace_scene* scene, int idx, float metallic, int metallic_txt) {
+  auto material = &scene->materials[idx];
+  material->metallic = metallic;
+  material->metallic_tex = metallic_txt;
+}
+void set_material_transmission(trace_scene* scene, int idx,
+    const vec3f& transmission, int transmission_txt) {
+  auto material = &scene->materials[idx];
+  material->transmission = transmission;
+  material->transmission_tex = transmission_txt;
+}
+void set_material_roughness(
+    trace_scene* scene, int idx, float roughness, int roughness_txt) {
+  auto material = &scene->materials[idx];
+  material->roughness = roughness;
+  material->roughness_tex = roughness_txt;
+}
+void set_material_opacity(
+    trace_scene* scene, int idx, float opacity, int opacity_txt) {
+  auto material = &scene->materials[idx];
+  material->opacity = opacity;
+  material->opacity_tex = opacity_txt;
+}
+void set_material_refract(
+    trace_scene* scene, int idx, bool refract) {
+  auto material = &scene->materials[idx];
+  material->refract = refract;
+}
+void set_material_volume(trace_scene* scene, int idx, const vec3f& volemission,
+    const vec3f& voltransmission, const vec3f& volmeanfreepath,
+    const vec3f& volscatter, float volscale, float volanisotropy,
+    int subsurface_tex) {
+  auto material = &scene->materials[idx];
+  material->volemission = volemission;
+  material->voltransmission = voltransmission;
+  material->volmeanfreepath = volmeanfreepath;
+  material->volscatter = volscatter;
+  material->volscale = volscale;
+  material->volanisotropy = volanisotropy;
+  material->subsurface_tex = subsurface_tex;
+}
+void set_material_normalmap(trace_scene* scene, int idx, int normal_txt) {
+  auto material = &scene->materials[idx];
+  material->normal_tex = normal_txt;
+}
+void set_material_gltftextures(trace_scene* scene, int idx, bool gltf_textures) {
+  auto material = &scene->materials[idx];
+  material->gltf_textures = gltf_textures;
+}
+void clean_materias(trace_scene* scene) {
+  scene->materials.clear();
+}
+
+// Add shape
+int  add_shape(trace_scene* scene) {
+  scene->materials.emplace_back();
+  return (int)scene->materials.size()-1;
+}
+void set_shape_positions(
+    trace_scene* scene, int idx, const vector<vec3f>& positions) {
+  auto shape = &scene->shapes[idx];
+  shape->positions = positions;
+}
+void set_shape_normals(
+    trace_scene* scene, int idx, const vector<vec3f>& normals) {
+  auto shape = &scene->shapes[idx];
+  shape->normals = normals;
+}
+void set_shape_texcoords(
+    trace_scene* scene, int idx, const vector<vec2f>& texcoords) {
+  auto shape = &scene->shapes[idx];
+  shape->texcoords = texcoords;
+}
+void set_shape_colors(trace_scene* scene, int idx, const vector<vec4f>& colors) {
+  auto shape = &scene->shapes[idx];
+  shape->colors = colors;
+}
+void set_shape_radius(trace_scene* scene, int idx, const vector<float>& radius) {
+  auto shape = &scene->shapes[idx];
+  shape->radius = radius;
+}
+void set_shape_tangents(
+    trace_scene* scene, int idx, const vector<vec4f>& tangents) {
+  auto shape = &scene->shapes[idx];
+  shape->tangents = tangents;
+}
+void set_shape_points(trace_scene* scene, int idx, const vector<int>& points) {
+  auto shape = &scene->shapes[idx];
+  shape->points = points;
+}
+void set_shape_lines(trace_scene* scene, int idx, const vector<vec2i>& lines) {
+  auto shape = &scene->shapes[idx];
+  shape->lines = lines;
+}
+void set_shape_triangles(
+    trace_scene* scene, int idx, const vector<vec3i>& triangles) {
+  auto shape = &scene->shapes[idx];
+  shape->triangles = triangles;
+}
+void set_shape_quads(trace_scene* scene, int idx, const vector<vec4i>& quads) {
+  auto shape = &scene->shapes[idx];
+  shape->quads = quads;
+}
+void set_shape_fvquads(trace_scene* scene, int idx, const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord) {
+  auto shape = &scene->shapes[idx];
+  shape->quadspos = quadspos;
+  shape->quadsnorm = quadsnorm;
+  shape->quadstexcoord = quadstexcoord;
+}
+void clean_shapes(trace_scene* scene) {
+  scene->shapes.clear();
+}
+
+// Add instance
+int add_instance(
+    trace_scene* scene, const frame3f& frame, int shape, int material) {
+  scene->instances.emplace_back();
+  set_instance(scene, (int)scene->instances.size()-1, frame, shape, material);
+  return (int)scene->instances.size()-1;  
+}
+void set_instance(
+    trace_scene* scene, int idx, const frame3f& frame, int shape, int material) {
+  auto instance = &scene->instances[idx];
+  instance->frame = frame;
+  instance->shape = shape;
+  instance->material = material;
+}
+void clear_instances(trace_scene* scene) {
+  scene->instances.clear();
+}
+
+// Add environment
+int  add_environment(trace_scene* scene, const frame3f& frame,
+     const vec3f& emission, int emission_tex) {
+  scene->environments.emplace_back();
+  set_environment(scene, (int)scene->environments.size()-1, frame, emission, emission_tex);
+  return (int)scene->environments.size()-1;  
+}
+void set_environment(trace_scene* scene, int idx, const frame3f& frame,
+    const vec3f& emission, int emission_tex) {
+  auto environment = &scene->environments[idx];
+  environment->frame = frame;
+  environment->emission = emission;
+  environment->emission_tex = emission_tex;
+}
+void clear_environments(trace_scene* scene) {
+  scene->environments.clear();
+}
+
+}
 
 // -----------------------------------------------------------------------------
 // NUMERICAL TESTS FOR MONTE CARLO INTEGRATION
@@ -3382,3 +3619,4 @@ void print_integrate_func2_test(const Func& f, vec2f a, vec2f b, float expected,
 }
 
 }  // namespace yocto
+
