@@ -336,7 +336,7 @@ using drop_glcallback =
     std::function<void(const opengl_window*, const vector<string>&)>;
 // Key callback that returns ASCII key, pressed/released flag and modifier keys
 using key_glcallback =
-    std::function<void(const opengl_window* win, int key, bool pressed)>;
+    std::function<void(const opengl_window*, int key, bool pressed)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
 using click_glcallback =
