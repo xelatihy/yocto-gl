@@ -39,24 +39,25 @@ void update_glshape(shared_ptr<app_state> app) {
   //    Loading a generic shape is unsafe, maybe we should load only
   //    triangle meshes here...
   auto& shape = app->shape;
-  if (shape.quadspos.empty()) {
-    set_glshape_positions(app->scene.get(), app->glshape_id, shape.positions);
-    set_glshape_normals(app->scene.get(), app->glshape_id, shape.normals);
-    set_glshape_texcoords(app->scene.get(), app->glshape_id, shape.texcoords);
-    set_glshape_colors(app->scene.get(), app->glshape_id, shape.colors);
-    set_glshape_tangents(app->scene.get(), app->glshape_id, shape.tangents);
-    set_glshape_points(app->scene.get(), app->glshape_id, shape.points);
-    set_glshape_lines(app->scene.get(), app->glshape_id, shape.lines);
-    set_glshape_triangles(app->scene.get(), app->glshape_id, shape.triangles);
-    set_glshape_quads(app->scene.get(), app->glshape_id, shape.quads);
-  } else {
+  if (!shape.points.empty()) {
+    set_shape(app->scene.get(), app->glshape_id, shape.points, shape.positions,
+        shape.normals, shape.texcoords, shape.colors);
+  } else if (!shape.lines.empty()) {
+    set_shape(app->scene.get(), app->glshape_id, shape.lines, shape.positions,
+        shape.normals, shape.texcoords, shape.colors);
+  } else if (!shape.triangles.empty()) {
+    set_shape(app->scene.get(), app->glshape_id, shape.triangles,
+        shape.positions, shape.normals, shape.texcoords, shape.colors,
+        shape.tangents);
+  } else if (!shape.quads.empty()) {
+    set_shape(app->scene.get(), app->glshape_id, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, shape.colors, shape.tangents);
+  } else if (!shape.quadspos.empty()) {
     auto [quads, positions, normals, texcoords] = split_facevarying(
         shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
         shape.normals, shape.texcoords);
-    set_glshape_positions(app->scene.get(), app->glshape_id, positions);
-    set_glshape_normals(app->scene.get(), app->glshape_id, normals);
-    set_glshape_texcoords(app->scene.get(), app->glshape_id, texcoords);
-    set_glshape_quads(app->scene.get(), app->glshape_id, quads);
+    set_shape(app->scene.get(), app->glshape_id, quads, positions, normals,
+        texcoords);
   }
 }
 
@@ -65,8 +66,7 @@ void update_glpolyline(
   if (vertices.size()) {
     auto elements = vector<vec2i>(vertices.size() - 1);
     for (int i = 0; i < elements.size(); i++) elements[i] = {i, i + 1};
-    set_glshape_positions(app->scene.get(), app->glpolyline_id, vertices);
-    set_glshape_lines(app->scene.get(), app->glpolyline_id, elements);
+    set_shape(app->scene.get(), app->glpolyline_id, elements, vertices, {}, {});
   }
 }
 
@@ -74,10 +74,9 @@ void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
   if (points.size()) {
     auto elements = vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
-    set_glshape_positions(app->scene.get(), app->glpoints_id, points);
-    set_glshape_normals(app->scene.get(), app->glpoints_id,
-        vector<vec3f>(points.size(), {0, 0, 1}));
-    set_glshape_points(app->scene.get(), app->glpoints_id, elements);
+    auto normals = vector<vec3f>(points.size(), {0, 0, 1});
+    set_shape(
+        app->scene.get(), app->glpoints_id, elements, points, normals, {});
   }
 }
 
@@ -116,13 +115,14 @@ void update_glvector_field(shared_ptr<app_state> app,
       positions[i * 2 + 1] = to;
     }
   }
-  set_glshape_positions(app->scene.get(), app->glvector_field_id, positions);
 
   auto elements = vector<vec2i>(size);
   for (int i = 0; i < elements.size(); i++) {
     elements[i] = {2 * i, 2 * i + 1};
   }
-  set_glshape_lines(app->scene.get(), app->glvector_field_id, elements);
+
+  set_shape(
+      app->scene.get(), app->glvector_field_id, elements, positions, {}, {});
 }
 
 void update_gledges(shared_ptr<app_state> app) {
@@ -130,7 +130,6 @@ void update_gledges(shared_ptr<app_state> app) {
   for (int i = 0; i < positions.size(); i++) {
     positions[i] += app->shape.normals[i] * 0.0001;
   }
-  set_glshape_positions(app->scene.get(), app->gledges_id, positions);
 
   auto elements = vector<vec2i>();
   elements.reserve(app->shape.triangles.size() * 3);
@@ -143,7 +142,7 @@ void update_gledges(shared_ptr<app_state> app) {
       }
     }
   }
-  set_glshape_lines(app->scene.get(), app->gledges_id, elements);
+  set_shape(app->scene.get(), app->gledges_id, elements, positions, {}, {});
 }
 
 void init_camera(shared_ptr<app_state> app,
@@ -190,21 +189,21 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   set_material_roughness(app->scene.get(), lines_material, 0.0);
 
   // The model.
-  app->glshape_id = add_glshape(app->scene.get());
+  app->glshape_id = add_shape(app->scene.get());
   update_glshape(app);
 
   // The points.
-  app->glpoints_id = add_glshape(app->scene.get());
+  app->glpoints_id = add_shape(app->scene.get());
 
   // The vector field.
-  app->glvector_field_id = add_glshape(app->scene.get());
+  app->glvector_field_id = add_shape(app->scene.get());
 
   // The edges.
-  app->gledges_id = add_glshape(app->scene.get());
+  app->gledges_id = add_shape(app->scene.get());
   update_gledges(app);
 
   // The polyline.
-  app->glpolyline_id = add_glshape(app->scene.get());
+  app->glpolyline_id = add_shape(app->scene.get());
 
   // Add instances.
   for (int i = 0; i < 5; ++i) {

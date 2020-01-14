@@ -82,7 +82,7 @@ void my_draw_glwidgets(
         colors[i]   = vec4f(data.scalar_field[i]);
         colors[i].w = 1;
       }
-      set_glshape_colors(app->scene.get(), app->glshape_id, colors);
+      set_shape_colors(app->scene.get(), app->glshape_id, colors);
     }
   }
 

@@ -128,38 +128,32 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
       }));
 }
 
-void update_glshape(opengl_scene* glscene, int idx, const sceneio_shape& shape,
+void update_shape(opengl_scene* glscene, int idx, const sceneio_shape& shape,
     const sceneio_model& scene) {
   if (needs_tesselation(scene, shape)) {
-    return update_glshape(glscene, idx, tesselate_shape(scene, shape), scene);
+    return update_shape(glscene, idx, tesselate_shape(scene, shape), scene);
   }
-  if (shape.quadspos.empty()) {
-    if (!shape.positions.empty())
-      set_glshape_positions(glscene, idx, shape.positions);
-    if (!shape.normals.empty())
-      set_glshape_normals(glscene, idx, shape.normals);
-    if (!shape.texcoords.empty())
-      set_glshape_texcoords(glscene, idx, shape.texcoords);
-    if (!shape.colors.empty()) set_glshape_colors(glscene, idx, shape.colors);
-    if (!shape.tangents.empty())
-      set_glshape_tangents(glscene, idx, shape.tangents);
-    if (!shape.points.empty()) set_glshape_points(glscene, idx, shape.points);
-    if (!shape.lines.empty()) set_glshape_lines(glscene, idx, shape.lines);
-    if (!shape.triangles.empty())
-      set_glshape_triangles(glscene, idx, shape.triangles);
-    if (!shape.quads.empty()) set_glshape_quads(glscene, idx, shape.quads);
-  } else {
+  if (!shape.points.empty()) {
+    set_shape(glscene, idx, shape.points, shape.positions, shape.normals,
+        shape.texcoords, shape.colors);
+  } else if (!shape.lines.empty()) {
+    set_shape(glscene, idx, shape.lines, shape.positions, shape.normals,
+        shape.texcoords, shape.colors);
+  } else if (!shape.triangles.empty()) {
+    set_shape(glscene, idx, shape.triangles, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.tangents);
+  } else if (!shape.quads.empty()) {
+    set_shape(glscene, idx, shape.quads, shape.positions, shape.normals,
+        shape.texcoords, shape.colors, shape.tangents);
+  } else if (!shape.quadspos.empty()) {
     auto [quads, positions, normals, texcoords] = split_facevarying(
         shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
         shape.normals, shape.texcoords);
-    if (!positions.empty()) set_glshape_positions(glscene, idx, positions);
-    if (!normals.empty()) set_glshape_normals(glscene, idx, normals);
-    if (!texcoords.empty()) set_glshape_texcoords(glscene, idx, texcoords);
-    if (!quads.empty()) set_glshape_quads(glscene, idx, quads);
+    set_shape(glscene, idx, quads, positions, normals, texcoords);
   }
 }
 
-void update_gllights(opengl_scene* glscene, const sceneio_model& scene) {
+void update_lights(opengl_scene* glscene, const sceneio_model& scene) {
   clear_lights(glscene);
   for (auto& instance : scene.instances) {
     if (has_max_lights(glscene)) break;
@@ -190,7 +184,7 @@ void update_gllights(opengl_scene* glscene, const sceneio_model& scene) {
   }
 }
 
-opengl_scene* make_glscene(const sceneio_model& scene) {
+opengl_scene* make_scene(const sceneio_model& scene) {
   // load program
   auto glscene = make_glscene();
 
@@ -227,8 +221,8 @@ opengl_scene* make_glscene(const sceneio_model& scene) {
 
   // shapes
   for (auto& shape : scene.shapes) {
-    auto id = add_glshape(glscene);
-    update_glshape(glscene, id, shape, scene);
+    auto id = add_shape(glscene);
+    update_shape(glscene, id, shape, scene);
   }
 
   // instances
@@ -526,7 +520,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->scene.shapes);
       if (!draw_glwidgets_shape(win, app, app->selection.second)) {
         auto& shape = app->scene.shapes[app->selection.second];
-        update_glshape(glscene, app->selection.second, shape, app->scene);
+        update_shape(glscene, app->selection.second, shape, app->scene);
       }
     } else if (app->selection.first == "instance") {
       draw_glcombobox(
@@ -575,8 +569,8 @@ void update(const opengl_window* win, shared_ptr<app_states> apps) {
       break;
     } else {
       apps->states.push_back(app);
-      app->glscene = unique_ptr<opengl_scene>{make_glscene(app->scene)};
-      update_gllights(app->glscene.get(), app->scene);
+      app->glscene = unique_ptr<opengl_scene>{make_scene(app->scene)};
+      update_lights(app->glscene.get(), app->scene);
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
     }
   }

@@ -219,9 +219,9 @@ struct draw_glscene_params {
 opengl_scene* make_glscene();
 
 // add camera
-int  add_camera(opengl_scene* scene, const frame3f frame, float lens,
+int  add_camera(opengl_scene* scene, const frame3f& frame, float lens,
      float asepct, float film, float near, float far);
-void set_camera(opengl_scene* scene, int idx, const frame3f frame, float lens,
+void set_camera(opengl_scene* scene, int idx, const frame3f& frame, float lens,
     float asepct, float film, float near, float far);
 void clear_cameras(opengl_scene* scene);
 
@@ -253,31 +253,41 @@ void set_material_metallic(
 void set_material_normalmap(opengl_scene* scene, int idx, int normal_txt);
 void set_material_gltftextures(
     opengl_scene* scene, int idx, bool gltf_textures);
-void clean_materias(opengl_scene* scene);
+void clear_materias(opengl_scene* scene);
 
 // add shape
-int  add_glshape(opengl_scene* scene);
-void set_glshape_positions(
-    opengl_scene* scene, int idx, const vector<vec3f>& positions);
-void set_glshape_normals(
-    opengl_scene* scene, int idx, const vector<vec3f>& normals);
-void set_glshape_texcoords(
-    opengl_scene* scene, int idx, const vector<vec2f>& texcoords);
-void set_glshape_colors(
+int  add_shape(opengl_scene* scene);
+int  add_shape(opengl_scene* scene, const vector<int>& points,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
+int  add_shape(opengl_scene* scene, const vector<vec2i>& lines,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
+int  add_shape(opengl_scene* scene, const vector<vec3i>& triangles,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
+     const vector<vec4f>& tangents = {});
+int  add_shape(opengl_scene* scene, const vector<vec4i>& quads,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
+     const vector<vec4f>& tangents = {});
+void set_shape(opengl_scene* scene, int idx, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
+void set_shape(opengl_scene* scene, int idx, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
+void set_shape(opengl_scene* scene, int idx, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
+    const vector<vec4f>& tangents = {});
+void set_shape(opengl_scene* scene, int idx, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
+    const vector<vec4f>& tangents = {});
+void set_shape_colors(
     opengl_scene* scene, int idx, const vector<vec4f>& colors);
-void set_glshape_tangents(
-    opengl_scene* scene, int idx, const vector<vec4f>& tangents);
-void set_glshape_points(
-    opengl_scene* scene, int idx, const vector<int>& points);
-void set_glshape_lines(
-    opengl_scene* scene, int idx, const vector<vec2i>& lines);
-void set_glshape_triangles(
-    opengl_scene* scene, int idx, const vector<vec3i>& triangles);
-void set_glshape_quads(
-    opengl_scene* scene, int idx, const vector<vec4i>& quads);
-void set_glshape_edges(
-    opengl_scene* scene, int idx, const vector<vec2i>& edges);
-void clean_glshapes(opengl_scene* scene);
+void clear_shapes(opengl_scene* scene);
 
 // add instance
 int add_instance(
