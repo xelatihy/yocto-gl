@@ -1533,17 +1533,6 @@ void set_update_glcallback(opengl_window* win, update_glcallback cb) {
   win->update_cb = cb;
 }
 
-vec2i get_glframebuffer_size(const opengl_window* win, bool ignore_widgets) {
-  auto size = zero2i;
-  glfwGetFramebufferSize(win->win, &size.x, &size.y);
-  if (ignore_widgets && win->widgets_width) {
-    auto win_size = zero2i;
-    glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
-    size.x -= (int)(win->widgets_width * (float)size.x / (float)win_size.x);
-  }
-  return size;
-}
-
 void set_glwindow_close(const opengl_window* win, bool close) {
   glfwSetWindowShouldClose(win->win, close ? GLFW_TRUE : GLFW_FALSE);
 }
