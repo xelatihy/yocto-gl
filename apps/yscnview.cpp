@@ -196,32 +196,32 @@ opengl_scene* make_glscene(const sceneio_model& scene) {
 
   // camera
   for (auto& camera : scene.cameras) {
-    add_glcamera(glscene, camera.frame, camera.lens, camera.aspect, camera.film, 0.001, 10000);
+    add_camera(glscene, camera.frame, camera.lens, camera.aspect, camera.film, 0.001, 10000);
   }
 
   // textures
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty()) {
-      add_gltexture(glscene, texture.hdr);
+      add_texture(glscene, texture.hdr);
     } else if (!texture.ldr.empty()) {
-      add_gltexture(glscene, texture.ldr);
+      add_texture(glscene, texture.ldr);
     }
   }
 
   // materials
   for (auto& material : scene.materials) {
-    auto id = add_glmaterial(glscene);
-    set_glmaterial_emission(
+    auto id = add_material(glscene);
+    set_material_emission(
         glscene, id, material.emission, material.emission_tex);
-    set_glmaterial_diffuse(glscene, id, material.diffuse, material.diffuse_tex);
-    set_glmaterial_specular(
+    set_material_diffuse(glscene, id, material.diffuse, material.diffuse_tex);
+    set_material_specular(
         glscene, id, material.specular, material.specular_tex);
-    set_glmaterial_metallic(
+    set_material_metallic(
         glscene, id, material.metallic, material.metallic_tex);
-    set_glmaterial_roughness(
+    set_material_roughness(
         glscene, id, material.roughness, material.roughness_tex);
-    set_glmaterial_opacity(glscene, id, material.opacity, material.opacity_tex);
-    set_glmaterial_normalmap(glscene, id, material.normal_tex);
+    set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
+    set_material_normalmap(glscene, id, material.normal_tex);
   }
 
   // shapes
@@ -232,7 +232,7 @@ opengl_scene* make_glscene(const sceneio_model& scene) {
 
   // instances
   for (auto& instance : scene.instances) {
-    add_glinstance(glscene, instance.frame, instance.shape, instance.material);
+    add_instance(glscene, instance.frame, instance.shape, instance.material);
   }
 
   return glscene;
@@ -487,7 +487,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
           win, "selection##2", app->selection.second, app->scene.cameras);
       if (draw_glwidgets_camera(win, app, app->selection.second)) {
         auto& camera = app->scene.cameras[app->selection.second];
-        set_glcamera(glscene, app->selection.second, camera.frame, camera.lens,
+        set_camera(glscene, app->selection.second, camera.frame, camera.lens,
             camera.aspect, camera.film, 0.001, 10000);
       }
     } else if (app->selection.first == "texture") {
@@ -496,9 +496,9 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
       if (draw_glwidgets_texture(win, app, app->selection.second)) {
         auto& texture = app->scene.textures[app->selection.second];
         if (!texture.hdr.empty()) {
-          set_gltexture(glscene, app->selection.second, texture.hdr);
+          set_texture(glscene, app->selection.second, texture.hdr);
         } else if (!texture.hdr.empty()) {
-          set_gltexture(glscene, app->selection.second, texture.ldr);
+          set_texture(glscene, app->selection.second, texture.ldr);
         }
       }
     } else if (app->selection.first == "material") {
@@ -506,19 +506,19 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
           win, "selection##2", app->selection.second, app->scene.materials);
       if (draw_glwidgets_material(win, app, app->selection.second)) {
         auto& material = app->scene.materials[app->selection.second];
-        set_glmaterial_emission(glscene, app->selection.second,
+        set_material_emission(glscene, app->selection.second,
             material.emission, material.emission_tex);
-        set_glmaterial_diffuse(glscene, app->selection.second,
+        set_material_diffuse(glscene, app->selection.second,
             material.diffuse, material.diffuse_tex);
-        set_glmaterial_specular(glscene, app->selection.second,
+        set_material_specular(glscene, app->selection.second,
             material.specular, material.specular_tex);
-        set_glmaterial_metallic(glscene, app->selection.second,
+        set_material_metallic(glscene, app->selection.second,
             material.metallic, material.metallic_tex);
-        set_glmaterial_roughness(glscene, app->selection.second,
+        set_material_roughness(glscene, app->selection.second,
             material.roughness, material.roughness_tex);
-        set_glmaterial_opacity(glscene, app->selection.second,
+        set_material_opacity(glscene, app->selection.second,
             material.opacity, material.opacity_tex);
-        set_glmaterial_normalmap(
+        set_material_normalmap(
             glscene, app->selection.second, material.normal_tex);
       }
     } else if (app->selection.first == "shape") {
@@ -533,7 +533,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps) {
           win, "selection##2", app->selection.second, app->scene.instances);
       if (draw_glwidgets_instance(win, app, app->selection.second)) {
         auto& instance = app->scene.instances[app->selection.second];
-        set_glinstance(glscene, app->selection.second, instance.frame, instance.shape, instance.material);
+        set_instance(glscene, app->selection.second, instance.frame, instance.shape, instance.material);
       }
     } else if (app->selection.first == "environment") {
       draw_glcombobox(
@@ -647,7 +647,7 @@ int main(int argc, const char* argv[]) {
       if (input.mouse_left && input.modifier_shift)
         pan = (input.mouse_pos - input.mouse_last) / 100.0f;
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      set_glcamera(app->glscene.get(), app->drawgl_prms.camera, camera.frame, camera.lens,
+      set_camera(app->glscene.get(), app->drawgl_prms.camera, camera.frame, camera.lens,
           camera.aspect, camera.film, 0.001, 10000);
     }
 

@@ -167,25 +167,25 @@ void init_bvh(shared_ptr<app_state> app) {
 
 void hide_edges(shared_ptr<app_state> app) {
   app->show_edges = false;
-  set_glinstance(app->scene.get(), app->gledges_id, identity3x4f, -1, 1);
+  set_instance(app->scene.get(), app->gledges_id, identity3x4f, -1, 1);
 }
 void show_edges(shared_ptr<app_state> app) {
   app->show_edges = true;
-  set_glinstance(app->scene.get(), app->gledges_id, identity3x4f, app->gledges_id, 1);
+  set_instance(app->scene.get(), app->gledges_id, identity3x4f, app->gledges_id, 1);
 }
 
 void init_opengl_scene(shared_ptr<app_state> app) {
   app->scene = unique_ptr<opengl_scene>{make_glscene()};
-  add_glcamera(app->scene.get(), app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
+  add_camera(app->scene.get(), app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
 
-  auto shape_material = add_glmaterial(app->scene.get());
-  set_glmaterial_diffuse(app->scene.get(), shape_material, {1, 0.2, 0});
-  set_glmaterial_roughness(app->scene.get(), shape_material, 0.3);
+  auto shape_material = add_material(app->scene.get());
+  set_material_diffuse(app->scene.get(), shape_material, {1, 0.2, 0});
+  set_material_roughness(app->scene.get(), shape_material, 0.3);
 
   // @Issue: Right now we're missing APIs to color things easily.
-  auto lines_material = add_glmaterial(app->scene.get());
-  set_glmaterial_emission(app->scene.get(), lines_material, {1, 1, 1});
-  set_glmaterial_roughness(app->scene.get(), lines_material, 0.0);
+  auto lines_material = add_material(app->scene.get());
+  set_material_emission(app->scene.get(), lines_material, {1, 1, 1});
+  set_material_roughness(app->scene.get(), lines_material, 0.0);
 
   // The model.
   app->glshape_id = add_glshape(app->scene.get());
@@ -206,7 +206,7 @@ void init_opengl_scene(shared_ptr<app_state> app) {
 
   // Add instances.
   for (int i = 0; i < 5; ++i) {
-    add_glinstance(app->scene.get(), identity3x4f, i, i ? 1 : 0);
+    add_instance(app->scene.get(), identity3x4f, i, i ? 1 : 0);
   }
 
   // Hide edges.
@@ -302,7 +302,7 @@ void yimshproc(const string&                         input_filename,
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
-    set_glcamera(app->scene.get(), 0, app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
+    set_camera(app->scene.get(), 0, app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
   });
   set_key_glcallback(
       win, [app](const opengl_window& win, int key, bool pressing) {
@@ -324,7 +324,7 @@ void yimshproc(const string&                         input_filename,
           rotate.y = -rotate.y;
           pan.x    = -pan.x;
           update_turntable(camera.frame, app->camera.focus, rotate, dolly, pan);
-          set_glcamera(app->scene.get(), 0, camera.frame, camera.lens, camera.aspect, camera.film, 0.001, 10000);
+          set_camera(app->scene.get(), 0, camera.frame, camera.lens, camera.aspect, camera.film, 0.001, 10000);
         }
       });
 

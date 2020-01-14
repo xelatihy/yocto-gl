@@ -741,7 +741,7 @@ opengl_scene* make_glscene() {
 }
 
 // add camera
-int add_glcamera(opengl_scene* scene, const frame3f frame, float lens, float asepct, float film, float near, float far) {
+int add_camera(opengl_scene* scene, const frame3f frame, float lens, float asepct, float film, float near, float far) {
   auto camera = scene->_cameras.emplace_back(make_unique<opengl_camera>()).get();
   camera->frame = frame;
   camera->lens   = lens;
@@ -751,7 +751,7 @@ int add_glcamera(opengl_scene* scene, const frame3f frame, float lens, float ase
   camera->far  = far;
   return (int)scene->_cameras.size() - 1;
 }
-void set_glcamera(opengl_scene* scene, int idx, const frame3f frame, float lens, float asepct, float film, float near, float far) {
+void set_camera(opengl_scene* scene, int idx, const frame3f frame, float lens, float asepct, float film, float near, float far) {
   auto camera   = scene->_cameras[idx].get();
   camera->frame = frame;
   camera->lens   = lens;
@@ -760,53 +760,53 @@ void set_glcamera(opengl_scene* scene, int idx, const frame3f frame, float lens,
   camera->near = near;
   camera->far  = far;
 }
-void clear_glcameras(opengl_scene* scene) { scene->_cameras.clear(); }
+void clear_cameras(opengl_scene* scene) { scene->_cameras.clear(); }
 
 // add material
-int add_glmaterial(opengl_scene* scene) {
+int add_material(opengl_scene* scene) {
   scene->_materials.emplace_back(make_unique<opengl_material>());
   return (int)scene->_materials.size() - 1;
 }
-void set_glmaterial_emission(
+void set_material_emission(
     opengl_scene* scene, int idx, const vec3f& emission, int emission_txt) {
   auto material          = scene->_materials[idx].get();
   material->emission     = emission;
   material->emission_map = emission_txt;
 }
-void set_glmaterial_diffuse(
+void set_material_diffuse(
     opengl_scene* scene, int idx, const vec3f& diffuse, int diffuse_txt) {
   auto material         = scene->_materials[idx].get();
   material->diffuse     = diffuse;
   material->diffuse_map = diffuse_txt;
 }
-void set_glmaterial_specular(
+void set_material_specular(
     opengl_scene* scene, int idx, const vec3f& specular, int specular_txt) {
   auto material          = scene->_materials[idx].get();
   material->specular     = specular;
   material->specular_map = specular_txt;
 }
-void set_glmaterial_roughness(
+void set_material_roughness(
     opengl_scene* scene, int idx, float roughness, int roughness_txt) {
   auto material           = scene->_materials[idx].get();
   material->roughness     = roughness;
   material->roughness_map = roughness_txt;
 }
-void set_glmaterial_opacity(
+void set_material_opacity(
     opengl_scene* scene, int idx, float opacity, int opacity_txt) {
   auto material     = scene->_materials[idx].get();
   material->opacity = opacity;
 }
-void set_glmaterial_metallic(
+void set_material_metallic(
     opengl_scene* scene, int idx, float metallic, int metallic_txt) {
   auto material          = scene->_materials[idx].get();
   material->metallic     = metallic;
   material->metallic_map = metallic_txt;
 }
-void set_glmaterial_normalmap(opengl_scene* scene, int idx, int normal_txt) {
+void set_material_normalmap(opengl_scene* scene, int idx, int normal_txt) {
   auto material        = scene->_materials[idx].get();
   material->normal_map = normal_txt;
 }
-void set_glmaterial_gltftextures(
+void set_material_gltftextures(
     opengl_scene* scene, int idx, bool gltf_textures) {
   auto material           = scene->_materials[idx].get();
   material->gltf_textures = gltf_textures;
@@ -814,7 +814,7 @@ void set_glmaterial_gltftextures(
 void clear_glmaterials(opengl_scene* scene) { scene->_materials.clear(); }
 
 // add texture
-int add_gltexture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb) {
+int add_texture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
   auto texture =
       scene->_textures.emplace_back(make_unique<opengl_texture>()).get();
@@ -832,7 +832,7 @@ int add_gltexture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
   return (int)scene->_textures.size() - 1;
 }
-int add_gltexture(opengl_scene* scene, const image<vec4f>& img, bool as_float) {
+int add_texture(opengl_scene* scene, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
   auto texture =
       scene->_textures.emplace_back(make_unique<opengl_texture>()).get();
@@ -850,7 +850,7 @@ int add_gltexture(opengl_scene* scene, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
   return (int)scene->_textures.size() - 1;
 }
-void set_gltexture(
+void set_texture(
     opengl_scene* scene, int idx, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
   auto texture = scene->_textures[idx].get();
@@ -874,7 +874,7 @@ void set_gltexture(
   texture->is_float = false;
   assert(glGetError() == GL_NO_ERROR);
 }
-void set_gltexture(
+void set_texture(
     opengl_scene* scene, int idx, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
   auto texture = scene->_textures[idx].get();
@@ -899,7 +899,7 @@ void set_gltexture(
   texture->is_float = as_float;
   assert(glGetError() == GL_NO_ERROR);
 }
-void clear_gltextures(opengl_scene* scene) {
+void clear_textures(opengl_scene* scene) {
   for (auto& texture : scene->_textures) {
     if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
   }
@@ -1020,7 +1020,7 @@ void clean_glshapes(opengl_scene* scene) {
 }
 
 // add instance
-int add_glinstance(
+int add_instance(
     opengl_scene* scene, const frame3f& frame, int shape, int material) {
   auto instance =
       scene->_instances.emplace_back(make_unique<opengl_instance>()).get();
@@ -1029,7 +1029,7 @@ int add_glinstance(
   instance->material = material;
   return (int)scene->_instances.size() - 1;
 }
-void set_glinstance(opengl_scene* scene, int idx, const frame3f& frame,
+void set_instance(opengl_scene* scene, int idx, const frame3f& frame,
     int shape, int material) {
   auto instance      = scene->_instances[idx].get();
   instance->frame    = frame;
@@ -1048,7 +1048,7 @@ void set_glinstance_material(opengl_scene* scene, int idx, int material) {
   auto instance      = scene->_instances[idx].get();
   instance->material = material;
 }
-void clear_glinstances(opengl_scene* scene) { scene->_instances.clear(); }
+void clear_instances(opengl_scene* scene) { scene->_instances.clear(); }
 
 // add light
 int add_light(opengl_scene* scene, const vec3f& position,
