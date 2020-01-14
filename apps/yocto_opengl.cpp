@@ -1348,9 +1348,24 @@ void draw_glwindow(const opengl_window* win) {
     win->draw_cb(win, window, viewport);
   }
   if (win->widgets_cb) {
-    begin_glwidgets(win);
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    auto window = zero2i;
+    glfwGetWindowSize(win->win, &window.x, &window.y);
+    if (win->widgets_left) {
+      ImGui::SetNextWindowPos({0, 0});
+      ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window.y});
+    } else {
+      ImGui::SetNextWindowPos({(float)(window.x - win->widgets_width), 0});
+      ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window.y});
+    }
+    ImGui::SetNextWindowCollapsed(false);
+    ImGui::SetNextWindowBgAlpha(1);
     win->widgets_cb(win);
-    end_glwidgets(win);
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   }
   glfwSwapBuffers(win->win);
 }
@@ -1475,7 +1490,7 @@ void run_ui(opengl_window* win) {
 
     // draw
     draw_glwindow(win);
-    
+
     // event hadling
     glfwPollEvents();
   }
@@ -1578,29 +1593,6 @@ void init_glwidgets(opengl_window* win, int width, bool left) {
   ImGui::StyleColorsDark();
   win->widgets_width = width;
   win->widgets_left  = left;
-}
-
-void begin_glwidgets(const opengl_window* win) {
-  ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplGlfw_NewFrame();
-  ImGui::NewFrame();
-  auto window = zero2i;
-  glfwGetWindowSize(win->win, &window.x, &window.y);
-  if (win->widgets_left) {
-    ImGui::SetNextWindowPos({0, 0});
-    ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window.y});
-  } else {
-    ImGui::SetNextWindowPos({(float)(window.x - win->widgets_width), 0});
-    ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window.y});
-  }
-  ImGui::SetNextWindowCollapsed(false);
-  ImGui::SetNextWindowBgAlpha(1);
-}
-
-void end_glwidgets(const opengl_window* win) {
-  ImGui::End();
-  ImGui::Render();
-  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 bool begin_glwidgets_window(const opengl_window* win, const char* title) {
