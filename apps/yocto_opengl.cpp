@@ -1340,7 +1340,7 @@ void _glfw_refresh_callback(GLFWwindow* glfw) {
     win.widgets_cb(win);
     end_glwidgets(win);
   }
-  swap_glbuffers(win);
+  glfwSwapBuffers(glfw);
 }
 
 void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
@@ -1445,10 +1445,10 @@ void run_ui(opengl_window& win) {
       win.widgets_cb(win);
       end_glwidgets(win);
     }
-    swap_glbuffers(win);
+    glfwSwapBuffers(win.win);
 
     // event hadling
-    process_glevents(win);
+    glfwPollEvents();
   }
 }
 
@@ -1573,15 +1573,6 @@ bool get_glctrl_key(const opengl_window& win) {
   return glfwGetKey(win.win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
          glfwGetKey(win.win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
 }
-
-void process_glevents(const opengl_window& win, bool wait) {
-  if (wait)
-    glfwWaitEvents();
-  else
-    glfwPollEvents();
-}
-
-void swap_glbuffers(const opengl_window& win) { glfwSwapBuffers(win.win); }
 
 }  // namespace yocto
 

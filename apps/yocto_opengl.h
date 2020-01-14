@@ -405,9 +405,6 @@ bool get_glalt_key(const opengl_window& win);
 bool get_glshift_key(const opengl_window& win);
 bool get_glctrl_key(const opengl_window& win);
 
-void process_glevents(const opengl_window& win, bool wait = false);
-void swap_glbuffers(const opengl_window& win);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
