@@ -696,18 +696,22 @@ int main(int argc, const char* argv[]) {
   auto win = make_glwindow({1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
-  set_draw_glcallback(
-      win, [apps](const opengl_window* win, vec2i window, vec4i viewport) {
-        draw(win, apps, window, viewport);
-      });
+  set_draw_glcallback(win,
+      [apps](const opengl_window* win, vec2i window, vec4i viewport,
+          const opengl_input& input) { draw(win, apps, window, viewport); });
   set_widgets_glcallback(
-      win, [apps](const opengl_window* win) { draw_glwidgets(win, apps); });
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        draw_glwidgets(win, apps);
+      });
   set_drop_glcallback(
-      win, [apps](const opengl_window* win, const vector<string>& paths) {
+      win, [apps](const opengl_window* win, const vector<string>& paths,
+               const opengl_input& input) {
         for (auto& path : paths) load_scene_async(apps, path);
       });
   set_update_glcallback(
-      win, [apps](const opengl_window* win) { update(win, apps); });
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        update(win, apps);
+      });
   set_uiupdate_glcallback(win, [apps](const opengl_window* win,
                                    const opengl_input&     input) {
     auto scene_ok = !apps->states.empty() && apps->selected >= 0;

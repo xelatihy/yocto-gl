@@ -20,8 +20,8 @@ struct app_state {
   sceneio_shape shape;
 
   // OpenGL data
-  unique_ptr<opengl_scene>        scene          = {};
-  draw_glscene_params opengl_options = {};
+  unique_ptr<opengl_scene> scene          = {};
+  draw_glscene_params      opengl_options = {};
 
   // Interaction data
   float          time       = 0;
@@ -75,8 +75,8 @@ void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
     auto elements = vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
     set_glshape_positions(app->scene.get(), app->glpoints_id, points);
-    set_glshape_normals(
-        app->scene.get(), app->glpoints_id, vector<vec3f>(points.size(), {0, 0, 1}));
+    set_glshape_normals(app->scene.get(), app->glpoints_id,
+        vector<vec3f>(points.size(), {0, 0, 1}));
     set_glshape_points(app->scene.get(), app->glpoints_id, elements);
   }
 }
@@ -171,12 +171,14 @@ void hide_edges(shared_ptr<app_state> app) {
 }
 void show_edges(shared_ptr<app_state> app) {
   app->show_edges = true;
-  set_instance(app->scene.get(), app->gledges_id, identity3x4f, app->gledges_id, 1);
+  set_instance(
+      app->scene.get(), app->gledges_id, identity3x4f, app->gledges_id, 1);
 }
 
 void init_opengl_scene(shared_ptr<app_state> app) {
   app->scene = unique_ptr<opengl_scene>{make_glscene()};
-  add_camera(app->scene.get(), app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
+  add_camera(app->scene.get(), app->camera.frame, app->camera.lens,
+      app->camera.aspect, app->camera.film, 0.001, 10000);
 
   auto shape_material = add_material(app->scene.get());
   set_material_diffuse(app->scene.get(), shape_material, {1, 0.2, 0});
@@ -260,16 +262,17 @@ void yimshproc(const string&                         input_filename,
   init_opengl_scene(app);
 
   // callbacks
-  set_draw_glcallback(
-      win, [app](const opengl_window* win, vec2i window, vec4i viewport) {
-        draw_glscene(app->scene.get(), viewport, app->opengl_options);
-      });
-  set_widgets_glcallback(win, [app, draw_glwidgets](const opengl_window* win) {
-    draw_glwidgets(app, win);
+  set_draw_glcallback(win, [app](const opengl_window* win, vec2i window,
+                               vec4i viewport, const opengl_input& input) {
+    draw_glscene(app->scene.get(), viewport, app->opengl_options);
   });
+  set_widgets_glcallback(
+      win, [app, draw_glwidgets](const opengl_window* win,
+               const opengl_input& input) { draw_glwidgets(app, win); });
   set_click_glcallback(win, [app](const opengl_window* win, bool left,
                                 bool press, const opengl_input& input) {
-    auto mouse = input.mouse_pos / vec2f{(float)input.window_size.x,(float)input.window_size.y};
+    auto mouse = input.mouse_pos /
+                 vec2f{(float)input.window_size.x, (float)input.window_size.y};
 
     // Ray trace camera ray.
     if (!left && press) {
@@ -293,16 +296,18 @@ void yimshproc(const string&                         input_filename,
       }
     }
   });
-  set_scroll_glcallback(win, [app](const opengl_window* win, float yoffset, const opengl_input& input) {
+  set_scroll_glcallback(win, [app](const opengl_window* win, float yoffset,
+                                 const opengl_input& input) {
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
-    set_camera(app->scene.get(), 0, app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
+    set_camera(app->scene.get(), 0, app->camera.frame, app->camera.lens,
+        app->camera.aspect, app->camera.film, 0.001, 10000);
   });
-  set_key_glcallback(
-      win, [app](const opengl_window* win, int key, bool pressing, const opengl_input& input) {
-        app->key_callback(app, key, pressing);
-      });
+  set_key_glcallback(win, [app](const opengl_window* win, int key,
+                              bool pressing, const opengl_input& input) {
+    app->key_callback(app, key, pressing);
+  });
   set_uiupdate_glcallback(
       win, [app](const opengl_window* win, const opengl_input& input) {
         // Handle mouse and keyboard for navigation.
@@ -319,7 +324,8 @@ void yimshproc(const string&                         input_filename,
           rotate.y = -rotate.y;
           pan.x    = -pan.x;
           update_turntable(camera.frame, app->camera.focus, rotate, dolly, pan);
-          set_camera(app->scene.get(), 0, camera.frame, camera.lens, camera.aspect, camera.film, 0.001, 10000);
+          set_camera(app->scene.get(), 0, camera.frame, camera.lens,
+              camera.aspect, camera.film, 0.001, 10000);
         }
       });
 

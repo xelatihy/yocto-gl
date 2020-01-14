@@ -346,13 +346,16 @@ int main(int argc, const char* argv[]) {
 
   // callbacks
   set_update_glcallback(
-      win, [apps](const opengl_window* win) { update(win, apps); });
-  set_draw_glcallback(
-      win, [apps](const opengl_window* win, vec2i window, vec4i viewport) {
-        draw(win, apps, window, viewport);
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        update(win, apps);
       });
+  set_draw_glcallback(win,
+      [apps](const opengl_window* win, vec2i window, vec4i viewport,
+          const opengl_input& input) { draw(win, apps, window, viewport); });
   set_widgets_glcallback(
-      win, [apps](const opengl_window* win) { draw_glwidgets(win, apps); });
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        draw_glwidgets(win, apps);
+      });
   set_uiupdate_glcallback(
       win, [apps](const opengl_window* win, const opengl_input& input) {
         // handle mouse
@@ -367,7 +370,8 @@ int main(int argc, const char* argv[]) {
         }
       });
   set_drop_glcallback(
-      win, [apps](const opengl_window* win, const vector<string>& paths) {
+      win, [apps](const opengl_window* win, const vector<string>& paths,
+               const opengl_input& input) {
         for (auto path : paths) load_image_async(apps, path);
       });
 

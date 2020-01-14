@@ -36,7 +36,8 @@ void my_keycallback(
   if (key == esc) {
     printf("Esc pressed!\n");
     init_camera(app);
-    set_camera(app->scene.get(), 0, app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
+    set_camera(app->scene.get(), 0, app->camera.frame, app->camera.lens,
+        app->camera.aspect, app->camera.film, 0.001, 10000);
   }
 
   if (key == 'z') {

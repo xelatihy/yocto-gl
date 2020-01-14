@@ -1346,7 +1346,7 @@ static void draw_glwindow(const opengl_window* win) {
       viewport.z -= offset;
       if (win->widgets_left) viewport.x += offset;
     }
-    win->draw_cb(win, window, viewport);
+    win->draw_cb(win, window, viewport, win->input);
   }
   if (win->widgets_cb) {
     ImGui_ImplOpenGL3_NewFrame();
@@ -1368,7 +1368,7 @@ static void draw_glwindow(const opengl_window* win) {
                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
                 ImGuiWindowFlags_NoSavedSettings)) {
       draw_glmessages(win);
-      win->widgets_cb(win);
+      win->widgets_cb(win, win->input);
     }
     ImGui::End();
     ImGui::Render();
@@ -1411,22 +1411,23 @@ opengl_window* make_glwindow(const vec2i& size, const string& title,
         if (win->drop_cb) {
           auto pathv = vector<string>();
           for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
-          win->drop_cb(win, pathv);
+          win->drop_cb(win, pathv, win->input);
         }
       });
   glfwSetKeyCallback(win->win,
-      [](GLFWwindow * glfw, int key, int scancode, int action, int mods) {
+      [](GLFWwindow* glfw, int key, int scancode, int action, int mods) {
         auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
         if (win->key_cb) win->key_cb(win, key, (bool)action, win->input);
       });
   glfwSetMouseButtonCallback(
-      win->win, [](GLFWwindow * glfw, int button, int action, int mods) {
+      win->win, [](GLFWwindow* glfw, int button, int action, int mods) {
         auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
         if (win->click_cb)
-          win->click_cb(win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action, win->input);
+          win->click_cb(
+              win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action, win->input);
       });
   glfwSetScrollCallback(
-      win->win, [](GLFWwindow * glfw, double xoffset, double yoffset) {
+      win->win, [](GLFWwindow* glfw, double xoffset, double yoffset) {
         auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
         if (win->scroll_cb) win->scroll_cb(win, (float)yoffset, win->input);
       });
@@ -1480,7 +1481,8 @@ void run_ui(opengl_window* win) {
     win->input.modifier_ctrl =
         glfwGetKey(win->win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
         glfwGetKey(win->win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-    glfwGetWindowSize(win->win, &win->input.window_size.x, &win->input.window_size.y);
+    glfwGetWindowSize(
+        win->win, &win->input.window_size.x, &win->input.window_size.y);
     if (win->widgets_width) {
       auto io                   = &ImGui::GetIO();
       win->input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||
@@ -1499,7 +1501,7 @@ void run_ui(opengl_window* win) {
     if (win->uiupdate_cb) win->uiupdate_cb(win, win->input);
 
     // update
-    if (win->update_cb) win->update_cb(win);
+    if (win->update_cb) win->update_cb(win, win->input);
 
     // draw
     draw_glwindow(win);
@@ -1790,7 +1792,8 @@ bool draw_glfiledialog(const opengl_window* win, const char* lbl, string& path,
       state.set_dirname(dir_buffer);
     }
     auto current_item = -1;
-    if (ImGui::ListBox("entries", &current_item,
+    if (ImGui::ListBox(
+            "entries", &current_item,
             [](void* data, int idx, const char** out_text) -> bool {
               auto& state = *(filedialog_state*)data;
               *out_text   = state.entries[idx].first.c_str();

@@ -196,7 +196,8 @@ opengl_scene* make_glscene(const sceneio_model& scene) {
 
   // camera
   for (auto& camera : scene.cameras) {
-    add_camera(glscene, camera.frame, camera.lens, camera.aspect, camera.film, 0.001, 10000);
+    add_camera(glscene, camera.frame, camera.lens, camera.aspect, camera.film,
+        0.001, 10000);
   }
 
   // textures
@@ -476,7 +477,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
   if (scene_ok && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{
         "camera", "shape", "environment", "instance", "material", "texture"};
-    auto app = apps->states[apps->selected];
+    auto app     = apps->states[apps->selected];
     auto glscene = app->glscene.get();
     if (draw_glcombobox(win, "selection##1", app->selection.first, labels))
       app->selection.second = 0;
@@ -504,18 +505,18 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
           win, "selection##2", app->selection.second, app->scene.materials);
       if (draw_glwidgets_material(win, app, app->selection.second)) {
         auto& material = app->scene.materials[app->selection.second];
-        set_material_emission(glscene, app->selection.second,
-            material.emission, material.emission_tex);
-        set_material_diffuse(glscene, app->selection.second,
-            material.diffuse, material.diffuse_tex);
-        set_material_specular(glscene, app->selection.second,
-            material.specular, material.specular_tex);
-        set_material_metallic(glscene, app->selection.second,
-            material.metallic, material.metallic_tex);
+        set_material_emission(glscene, app->selection.second, material.emission,
+            material.emission_tex);
+        set_material_diffuse(glscene, app->selection.second, material.diffuse,
+            material.diffuse_tex);
+        set_material_specular(glscene, app->selection.second, material.specular,
+            material.specular_tex);
+        set_material_metallic(glscene, app->selection.second, material.metallic,
+            material.metallic_tex);
         set_material_roughness(glscene, app->selection.second,
             material.roughness, material.roughness_tex);
-        set_material_opacity(glscene, app->selection.second,
-            material.opacity, material.opacity_tex);
+        set_material_opacity(glscene, app->selection.second, material.opacity,
+            material.opacity_tex);
         set_material_normalmap(
             glscene, app->selection.second, material.normal_tex);
       }
@@ -531,7 +532,8 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
           win, "selection##2", app->selection.second, app->scene.instances);
       if (draw_glwidgets_instance(win, app, app->selection.second)) {
         auto& instance = app->scene.instances[app->selection.second];
-        set_instance(glscene, app->selection.second, instance.frame, instance.shape, instance.material);
+        set_instance(glscene, app->selection.second, instance.frame,
+            instance.shape, instance.material);
       }
     } else if (app->selection.first == "environment") {
       draw_glcombobox(
@@ -602,57 +604,61 @@ int main(int argc, const char* argv[]) {
   auto win = make_glwindow({1280 + 320, 720}, "yscnview", true);
 
   // callbacks
-  set_draw_glcallback(
-      win, [apps](const opengl_window* win, vec2i window, vec4i viewport) {
-        draw(win, apps, window, viewport);
-      });
+  set_draw_glcallback(win,
+      [apps](const opengl_window* win, vec2i window, vec4i viewport,
+          const opengl_input& input) { draw(win, apps, window, viewport); });
   set_widgets_glcallback(
-      win, [apps](const opengl_window* win) { draw_glwidgets(win, apps); });
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        draw_glwidgets(win, apps);
+      });
   set_drop_glcallback(
-      win, [apps](const opengl_window* win, const vector<string>& paths) {
+      win, [apps](const opengl_window* win, const vector<string>& paths,
+               const opengl_input& input) {
         for (auto& path : paths) load_scene_async(apps, path);
       });
   set_update_glcallback(
-      win, [apps](const opengl_window* win) { update(win, apps); });
-  set_uiupdate_glcallback(win, [apps](const opengl_window* win,
-                                   const opengl_input&     input) {
-    auto scene_ok = !apps->states.empty() && apps->selected >= 0;
-    if (!scene_ok) return;
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        update(win, apps);
+      });
+  set_uiupdate_glcallback(
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        auto scene_ok = !apps->states.empty() && apps->selected >= 0;
+        if (!scene_ok) return;
 
-    // update trasforms
-    if (scene_ok) {
-      auto app = apps->states[apps->selected];
-      update_transforms(app->scene, app->time);
-    }
+        // update trasforms
+        if (scene_ok) {
+          auto app = apps->states[apps->selected];
+          update_transforms(app->scene, app->time);
+        }
 
-    // handle mouse and keyboard for navigation
-    if (scene_ok && (input.mouse_left || input.mouse_right) &&
-        !input.modifier_alt && !input.widgets_active) {
-      auto  app    = apps->states[apps->selected];
-      auto& camera = app->scene.cameras.at(app->drawgl_prms.camera);
-      auto  dolly  = 0.0f;
-      auto  pan    = zero2f;
-      auto  rotate = zero2f;
-      if (input.mouse_left && !input.modifier_shift)
-        rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
-      if (input.mouse_right)
-        dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
-      if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-      update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      set_camera(app->glscene.get(), app->drawgl_prms.camera, camera.frame, camera.lens,
-          camera.aspect, camera.film, 0.001, 10000);
-    }
+        // handle mouse and keyboard for navigation
+        if (scene_ok && (input.mouse_left || input.mouse_right) &&
+            !input.modifier_alt && !input.widgets_active) {
+          auto  app    = apps->states[apps->selected];
+          auto& camera = app->scene.cameras.at(app->drawgl_prms.camera);
+          auto  dolly  = 0.0f;
+          auto  pan    = zero2f;
+          auto  rotate = zero2f;
+          if (input.mouse_left && !input.modifier_shift)
+            rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
+          if (input.mouse_right)
+            dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
+          if (input.mouse_left && input.modifier_shift)
+            pan = (input.mouse_pos - input.mouse_last) / 100.0f;
+          update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
+          set_camera(app->glscene.get(), app->drawgl_prms.camera, camera.frame,
+              camera.lens, camera.aspect, camera.film, 0.001, 10000);
+        }
 
-    // animation
-    if (scene_ok && apps->states[apps->selected]->animate) {
-      auto app = apps->states[apps->selected];
-      app->time += min(1 / 60.0f, (float)input.time_delta);
-      if (app->time < app->time_range.x || app->time > app->time_range.y)
-        app->time = app->time_range.x;
-      update_transforms(app->scene, app->time);
-    }
-  });
+        // animation
+        if (scene_ok && apps->states[apps->selected]->animate) {
+          auto app = apps->states[apps->selected];
+          app->time += min(1 / 60.0f, (float)input.time_delta);
+          if (app->time < app->time_range.x || app->time > app->time_range.y)
+            app->time = app->time_range.x;
+          update_transforms(app->scene, app->time);
+        }
+      });
 
   // run ui
   run_ui(win);

@@ -310,31 +310,32 @@ struct opengl_window;
 
 // Input state
 struct opengl_input {
-  bool     mouse_left      = false;   // left button
-  bool     mouse_right     = false;   // right button
-  bool     mouse_middle    = false;   // middle button
-  vec2f    mouse_pos       = {};      // position excluding widgets
-  vec2f    mouse_last      = {};      // last mouse position excluding widgets
-  vec2f    mouse_delta     = {};      // last mouse delta excluding widgets
-  bool     modifier_alt    = false;   // alt modifier
-  bool     modifier_ctrl   = false;   // ctrl modifier
-  bool     modifier_shift  = false;   // shift modifier
-  bool     widgets_active  = false;   // widgets are active
-  uint64_t clock_now       = 0;       // clock now
-  uint64_t clock_last      = 0;       // clock last
-  double   time_now        = 0;       // time now
-  double   time_delta      = 0;       // time delta
-  vec2i    window_size     = {0, 0};  // window size
+  bool     mouse_left     = false;   // left button
+  bool     mouse_right    = false;   // right button
+  bool     mouse_middle   = false;   // middle button
+  vec2f    mouse_pos      = {};      // position excluding widgets
+  vec2f    mouse_last     = {};      // last mouse position excluding widgets
+  vec2f    mouse_delta    = {};      // last mouse delta excluding widgets
+  bool     modifier_alt   = false;   // alt modifier
+  bool     modifier_ctrl  = false;   // ctrl modifier
+  bool     modifier_shift = false;   // shift modifier
+  bool     widgets_active = false;   // widgets are active
+  uint64_t clock_now      = 0;       // clock now
+  uint64_t clock_last     = 0;       // clock last
+  double   time_now       = 0;       // time now
+  double   time_delta     = 0;       // time delta
+  vec2i    window_size    = {0, 0};  // window size
 };
 
 // Draw callback called every frame and when resizing
-using draw_glcallback =
-    std::function<void(const opengl_window*, vec2i window, vec4i viewport)>;
+using draw_glcallback = std::function<void(const opengl_window*, vec2i window,
+    vec4i viewport, const opengl_input& input)>;
 // Draw callback for drawing widgets
-using widgets_glcallback = std::function<void(const opengl_window*)>;
+using widgets_glcallback =
+    std::function<void(const opengl_window*, const opengl_input& input)>;
 // Drop callback that returns that list of dropped strings.
-using drop_glcallback =
-    std::function<void(const opengl_window*, const vector<string>&)>;
+using drop_glcallback = std::function<void(
+    const opengl_window*, const vector<string>&, const opengl_input& input)>;
 // Key callback that returns ASCII key, pressed/released flag and modifier keys
 using key_glcallback = std::function<void(
     const opengl_window*, int key, bool pressed, const opengl_input& input)>;
@@ -349,7 +350,8 @@ using scroll_glcallback = std::function<void(
 using uiupdate_glcallback =
     std::function<void(const opengl_window*, const opengl_input& input)>;
 // Update functions called every frame
-using update_glcallback = std::function<void(const opengl_window*)>;
+using update_glcallback =
+    std::function<void(const opengl_window*, const opengl_input& input)>;
 
 // OpenGL window wrapper
 struct opengl_window {
@@ -392,8 +394,6 @@ void run_ui(opengl_window* win);
 void set_glwindow_close(const opengl_window* win, bool close);
 
 vec2f get_glmouse_pos(const opengl_window* win, bool ignore_widgets = true);
-vec2f get_glmouse_pos_normalized(
-    const opengl_window* win, bool ignore_widgets = true);
 
 }  // namespace yocto
 
@@ -482,7 +482,8 @@ bool draw_glcombobox(const opengl_window* win, const char* lbl, int& idx,
 template <typename T>
 inline bool draw_glcombobox(const opengl_window* win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {
-  return draw_glcombobox(win, lbl, idx, (int)vals.size(),
+  return draw_glcombobox(
+      win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 
