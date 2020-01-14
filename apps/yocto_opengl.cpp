@@ -1434,7 +1434,10 @@ void run_ui(opengl_window& win) {
          glfwGetKey(win.win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
     win.input.modifier_ctrl  = glfwGetKey(win.win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
          glfwGetKey(win.win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-    if (win.widgets_width) win.input.widgets_active = get_glwidgets_active(win);
+    if (win.widgets_width) {
+      auto io = &ImGui::GetIO();
+      win.input.widgets_active = io->WantTextInput || io->WantCaptureMouse || io->WantCaptureKeyboard;
+    }
 
     // time
     win.input.clock_last = win.input.clock_now;
@@ -1578,11 +1581,6 @@ void init_glwidgets(opengl_window& win, int width, bool left) {
   ImGui::StyleColorsDark();
   win.widgets_width = width;
   win.widgets_left  = left;
-}
-
-bool get_glwidgets_active(const opengl_window& win) {
-  auto io = &ImGui::GetIO();
-  return io->WantTextInput || io->WantCaptureMouse || io->WantCaptureKeyboard;
 }
 
 void begin_glwidgets(const opengl_window& win) {
