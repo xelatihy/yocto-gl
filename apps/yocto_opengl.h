@@ -171,8 +171,8 @@ struct opengl_instance {
 
 // Opengl light
 struct opengl_light {
-  vec3f position = zero3f;
-  vec3f emission = zero3f;
+  vec3f position = {0, 0, 0};
+  vec3f emission = {0, 0, 0};
   int   type     = 0;
 };
 
