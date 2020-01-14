@@ -1418,6 +1418,22 @@ opengl_window* make_glwindow(const vec2i& size, const string& title,
         auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
         if (win->scroll_cb) win->scroll_cb(win, (float)yoffset, win->input);
       });
+  glfwSetWindowSizeCallback(win->win, [](GLFWwindow* glfw, int width, int height) {
+      auto win = (opengl_window*)glfwGetWindowUserPointer(glfw);
+    glfwGetWindowSize(
+        win->win, &win->input.window_size.x, &win->input.window_size.y);
+    if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
+    glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z, &win->input.framebuffer_viewport.w);
+    win->input.framebuffer_viewport.x = 0;
+    win->input.framebuffer_viewport.y = 0;
+    if (win->widgets_width) {
+      auto win_size = zero2i;
+      glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
+      auto offset = (int)(win->widgets_width * (float)win->input.framebuffer_viewport.z / win_size.x);
+      win->input.framebuffer_viewport.z -= offset;
+      if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
+    }
+  });
 
   // init gl extensions
   if (!gladLoadGL())
