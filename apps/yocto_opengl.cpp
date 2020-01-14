@@ -1470,7 +1470,11 @@ void run_ui(opengl_window* win) {
   while (!glfwWindowShouldClose(win->win)) {
     // update input
     win->input.mouse_last = win->input.mouse_pos;
-    win->input.mouse_pos  = get_glmouse_pos(win);
+    auto mouse_posx = 0.0, mouse_posy = 0.0;
+    glfwGetCursorPos(win->win, &mouse_posx, &mouse_posy);
+    win->input.mouse_pos = vec2f{(float)mouse_posx, (float)mouse_posy};
+    if (win->widgets_width && win->widgets_left)
+      win->input.mouse_pos.x -= win->widgets_width;
     win->input.mouse_left = glfwGetMouseButton(
                                 win->win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
     win->input.mouse_right =
@@ -1550,33 +1554,8 @@ void set_update_glcallback(opengl_window* win, update_glcallback cb) {
   win->update_cb = cb;
 }
 
-void set_glwindow_close(const opengl_window* win, bool close) {
+void set_close(const opengl_window* win, bool close) {
   glfwSetWindowShouldClose(win->win, close ? GLFW_TRUE : GLFW_FALSE);
-}
-
-vec2f get_glmouse_pos(const opengl_window* win, bool ignore_widgets) {
-  double mouse_posx, mouse_posy;
-  glfwGetCursorPos(win->win, &mouse_posx, &mouse_posy);
-  auto pos = vec2f{(float)mouse_posx, (float)mouse_posy};
-  if (ignore_widgets && win->widgets_width && win->widgets_left) {
-    pos.x -= win->widgets_width;
-  }
-  return pos;
-}
-
-vec2f get_glmouse_pos_normalized(
-    const opengl_window* win, bool ignore_widgets) {
-  double mouse_posx, mouse_posy;
-  glfwGetCursorPos(win->win, &mouse_posx, &mouse_posy);
-  auto pos = vec2f{(float)mouse_posx, (float)mouse_posy};
-  int  width, height;
-  glfwGetWindowSize(win->win, &width, &height);
-
-  if (ignore_widgets && win->widgets_width && win->widgets_left) {
-    pos.x -= win->widgets_width;
-    width -= win->widgets_width;
-  }
-  return {pos.x / width, pos.y / height};
 }
 
 }  // namespace yocto

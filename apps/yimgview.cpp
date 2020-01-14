@@ -173,7 +173,7 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
       }));
 }
 
-void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
+void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps, const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          image_ok = !apps->states.empty() && apps->selected >= 0;
   if (draw_glfiledialog_button(win, "load", true, "load image", load_path,
@@ -205,7 +205,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
-    set_glwindow_close(win, true);
+    set_close(win, true);
   }
   draw_glcombobox(
       win, "image", apps->selected, (int)apps->states.size(),
@@ -260,8 +260,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
             to_string(app->source.size().y));
     draw_glslider(win, "zoom", app->glparams.scale, 0.1, 10);
     draw_glcheckbox(win, "fit", app->glparams.fit);
-    auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(mouse_pos, app->glparams.center,
+    auto ij        = get_image_coords(input.mouse_pos, app->glparams.center,
         app->glparams.scale, app->source.size());
     draw_gldragger(win, "mouse", ij);
     auto img_pixel = zero4f, display_pixel = zero4f;
@@ -353,7 +352,7 @@ int main(int argc, const char* argv[]) {
           const opengl_input& input) { draw(win, apps, input); });
   set_widgets_glcallback(
       win, [apps](const opengl_window* win, const opengl_input& input) {
-        draw_glwidgets(win, apps);
+        draw_glwidgets(win, apps, input);
       });
   set_uiupdate_glcallback(
       win, [apps](const opengl_window* win, const opengl_input& input) {

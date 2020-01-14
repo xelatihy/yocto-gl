@@ -397,7 +397,7 @@ bool draw_glwidgets_environment(
 }
 
 // draw with shading
-void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
+void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps, const opengl_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
   auto        scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -427,7 +427,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
-    set_glwindow_close(win, true);
+    set_close(win, true);
   }
   if (apps->states.empty()) return;
   draw_glcombobox(
@@ -608,7 +608,7 @@ int main(int argc, const char* argv[]) {
           const opengl_input& input) { draw(win, apps, input); });
   set_widgets_glcallback(
       win, [apps](const opengl_window* win, const opengl_input& input) {
-        draw_glwidgets(win, apps);
+        draw_glwidgets(win, apps, input);
       });
   set_drop_glcallback(
       win, [apps](const opengl_window* win, const vector<string>& paths,

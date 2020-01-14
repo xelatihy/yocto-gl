@@ -442,7 +442,7 @@ bool draw_glwidgets_environment(
   return edited;
 }
 
-void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
+void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps, const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          scene_ok = !apps->states.empty() && apps->selected >= 0;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
@@ -484,7 +484,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
-    set_glwindow_close(win, true);
+    set_close(win, true);
   }
   draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
@@ -533,8 +533,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
     if (draw_glbutton(win, "print stats")) {
       for (auto stat : scene_stats(app->ioscene)) print_info(stat);
     }
-    auto mouse_pos = get_glmouse_pos(win);
-    auto ij        = get_image_coords(mouse_pos, app->glparams.center,
+    auto ij        = get_image_coords(input.mouse_pos, app->glparams.center,
         app->glparams.scale, app->render.size());
     draw_gldragger(win, "mouse", ij);
     if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
@@ -700,7 +699,7 @@ int main(int argc, const char* argv[]) {
       });
   set_widgets_glcallback(
       win, [apps](const opengl_window* win, const opengl_input& input) {
-        draw_glwidgets(win, apps);
+        draw_glwidgets(win, apps, input);
       });
   set_drop_glcallback(
       win, [apps](const opengl_window* win, const vector<string>& paths,
