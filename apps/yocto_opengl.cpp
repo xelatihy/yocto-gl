@@ -741,7 +741,7 @@ opengl_scene* make_glscene() {
 }
 
 // add camera
-int add_camera(opengl_scene* scene, const frame3f frame, float lens,
+int add_camera(opengl_scene* scene, const frame3f& frame, float lens,
     float asepct, float film, float near, float far) {
   auto camera =
       scene->_cameras.emplace_back(make_unique<opengl_camera>()).get();
@@ -753,7 +753,7 @@ int add_camera(opengl_scene* scene, const frame3f frame, float lens,
   camera->far    = far;
   return (int)scene->_cameras.size() - 1;
 }
-void set_camera(opengl_scene* scene, int idx, const frame3f frame, float lens,
+void set_camera(opengl_scene* scene, int idx, const frame3f& frame, float lens,
     float asepct, float film, float near, float far) {
   auto camera    = scene->_cameras[idx].get();
   camera->frame  = frame;

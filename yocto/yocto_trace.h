@@ -78,6 +78,74 @@ namespace yocto {
 // Trace scene
 struct trace_scene;
 
+// Scene creation
+trace_scene* make_trace_scene();
+
+// Add cameras
+int add_camera(trace_scene* scene, const frame3f& frame, float lens,
+     float asepct, float film, float aperture, float focus);
+void set_camera(trace_scene* scene, const frame3f& frame, float lens,
+     float asepct, float film, float aperture, float focus);
+void clean_cameras(trace_scene* scene);
+
+// Add texture
+int add_texture(trace_scene* scene, const image<vec4b>& img);
+int add_texture(trace_scene* scene, const image<vec4f>& img);
+void set_texture(trace_scene* scene, const image<vec4b>& img);
+void set_texture(trace_scene* scene, const image<vec4f>& img);
+void clean_textures(trace_scene* scene);
+
+// Add material
+int  add_material(trace_scene* scene);
+void set_material_emission(
+    trace_scene* scene, int idx, const vec3f& emission, int emission_txt = -1);
+void set_material_diffuse(
+    trace_scene* scene, int idx, const vec3f& diffuse, int diffuse_txt = -1);
+void set_material_specular(
+    trace_scene* scene, int idx, const vec3f& specular, int specular_txt = -1);
+void set_material_roughness(
+    trace_scene* scene, int idx, float roughness, int roughness_txt = -1);
+void set_material_opacity(
+    trace_scene* scene, int idx, float opacity, int opacity_txt = -1);
+void set_material_metallic(
+    trace_scene* scene, int idx, float metallic, int metallic_txt = -1);
+void set_material_normalmap(trace_scene* scene, int idx, int normal_txt);
+void set_material_gltftextures(
+    trace_scene* scene, int idx, bool gltf_textures);
+void clean_materias(trace_scene* scene);
+
+// Add shape
+int add_shape(trace_scene* scene);
+void set_shape_positions(
+    trace_scene* scene, int idx, const vector<vec3f>& positions);
+void set_shape_normals(
+    trace_scene* scene, int idx, const vector<vec3f>& normals);
+void set_shape_texcoords(
+    trace_scene* scene, int idx, const vector<vec2f>& texcoords);
+void set_shape_colors(
+    trace_scene* scene, int idx, const vector<vec4f>& colors);
+void set_shape_tangents(
+    trace_scene* scene, int idx, const vector<vec4f>& tangents);
+void set_shape_points(
+    trace_scene* scene, int idx, const vector<int>& points);
+void set_shape_lines(
+    trace_scene* scene, int idx, const vector<vec2i>& lines);
+void set_shape_triangles(
+    trace_scene* scene, int idx, const vector<vec3i>& triangles);
+void set_shape_quads(
+    trace_scene* scene, int idx, const vector<vec4i>& quads);
+void set_shape_edges(
+    trace_scene* scene, int idx, const vector<vec2i>& edges);
+void clean_shapes(trace_scene* scene);
+
+// Add instance
+int add_instance(trace_scene* scene, const frame3f& frame, int shape, int material);
+void set_instance(trace_scene* scene, const frame3f& frame, int shape, int material);
+
+// Add environment
+int add_environment(trace_scene* scene, const frame3f& frame, const vec3f& emission, int emission_tex = -1);
+void set_environment(trace_scene* scene, const frame3f& frame, const vec3f& emission, int emission_tex = -1);
+
 // Trace state
 struct trace_state;
 
