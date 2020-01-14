@@ -37,50 +37,45 @@ using namespace yocto;
 using std::make_unique;
 using std::unique_ptr;
 
-// Construct a scene from io
+// construct a scene from io
 trace_scene* make_scene(sceneio_model& ioscene) {
   auto scene = make_unique<trace_scene>();
 
   for (auto& iocamera : ioscene.cameras) {
-    auto& camera = scene->cameras.emplace_back();
-    camera.frame = iocamera.frame;
-    camera.film  = iocamera.aspect >= 1
-                      ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
-                      : vec2f{iocamera.film * iocamera.aspect, iocamera.film};
-    camera.lens     = iocamera.lens;
-    camera.focus    = iocamera.focus;
-    camera.aperture = iocamera.aperture;
+    add_camera(scene.get(), iocamera.frame, iocamera.lens, iocamera.aspect,
+        iocamera.film, iocamera.aperture, iocamera.focus);
   }
 
   for (auto& iotexture : ioscene.textures) {
-    auto& texture = scene->textures.emplace_back();
-    swap(texture.hdr, iotexture.hdr);
-    swap(texture.ldr, iotexture.ldr);
+    if (!iotexture.hdr.empty()) {
+      add_texture(scene.get(), std::move(iotexture.hdr));
+    } else if (!iotexture.ldr.empty()) {
+      add_texture(scene.get(), std::move(iotexture.ldr));
+    }
   }
 
   for (auto& iomaterial : ioscene.materials) {
-    auto& material            = scene->materials.emplace_back();
-    material.emission         = iomaterial.emission;
-    material.diffuse          = iomaterial.diffuse;
-    material.specular         = iomaterial.specular;
-    material.transmission     = iomaterial.transmission;
-    material.roughness        = iomaterial.roughness;
-    material.opacity          = iomaterial.opacity;
-    material.refract          = iomaterial.refract;
-    material.volemission      = iomaterial.volemission;
-    material.voltransmission  = iomaterial.voltransmission;
-    material.volmeanfreepath  = iomaterial.volmeanfreepath;
-    material.volscatter       = iomaterial.volscatter;
-    material.volscale         = iomaterial.volscale;
-    material.volanisotropy    = iomaterial.volanisotropy;
-    material.emission_tex     = iomaterial.emission_tex;
-    material.diffuse_tex      = iomaterial.diffuse_tex;
-    material.specular_tex     = iomaterial.specular_tex;
-    material.transmission_tex = iomaterial.transmission_tex;
-    material.roughness_tex    = iomaterial.roughness_tex;
-    material.opacity_tex      = iomaterial.opacity_tex;
-    material.subsurface_tex   = iomaterial.subsurface_tex;
-    material.normal_tex       = iomaterial.normal_tex;
+    auto id = add_material(scene.get());
+    set_material_emission(
+        scene.get(), id, iomaterial.emission, iomaterial.emission_tex);
+    set_material_diffuse(
+        scene.get(), id, iomaterial.diffuse, iomaterial.diffuse_tex);
+    set_material_specular(
+        scene.get(), id, iomaterial.specular, iomaterial.specular_tex);
+    set_material_metallic(
+        scene.get(), id, iomaterial.metallic, iomaterial.metallic_tex);
+    set_material_transmission(
+        scene.get(), id, iomaterial.transmission, iomaterial.transmission_tex);
+    set_material_roughness(
+        scene.get(), id, iomaterial.roughness, iomaterial.roughness_tex);
+    set_material_opacity(
+        scene.get(), id, iomaterial.opacity, iomaterial.opacity_tex);
+    set_material_refract(scene.get(), id, iomaterial.refract);
+    set_material_normalmap(scene.get(), id, iomaterial.normal_tex);
+    set_material_volume(scene.get(), id, iomaterial.volemission,
+        iomaterial.voltransmission, iomaterial.volmeanfreepath,
+        iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
+        iomaterial.subsurface_tex);
   }
 
   for (auto& ioshape_ : ioscene.shapes) {
@@ -88,39 +83,33 @@ trace_scene* make_scene(sceneio_model& ioscene) {
                       ? tesselate_shape(ioscene, ioshape_)
                       : sceneio_shape{};
     auto& ioshape = (needs_tesselation(ioscene, ioshape_)) ? tshape : ioshape_;
-    auto& shape   = scene->shapes.emplace_back();
-    swap(shape.points, ioshape.points);
-    swap(shape.lines, ioshape.lines);
-    swap(shape.triangles, ioshape.triangles);
-    swap(shape.quads, ioshape.quads);
-    swap(shape.quadspos, ioshape.quadspos);
-    swap(shape.quadsnorm, ioshape.quadsnorm);
-    swap(shape.quadstexcoord, ioshape.quadstexcoord);
-    swap(shape.positions, ioshape.positions);
-    swap(shape.normals, ioshape.normals);
-    swap(shape.texcoords, ioshape.texcoords);
-    swap(shape.colors, ioshape.colors);
-    swap(shape.radius, ioshape.radius);
-    swap(shape.tangents, ioshape.tangents);
+    auto id = add_shape(scene.get());
+    set_shape_points(scene.get(), id, ioshape.points);
+    set_shape_lines(scene.get(), id, ioshape.lines);
+    set_shape_triangles(scene.get(), id, ioshape.triangles);
+    set_shape_quads(scene.get(), id, ioshape.quads);
+    set_shape_fvquads(scene.get(), id, ioshape.quadspos, ioshape.quadsnorm, ioshape.quadstexcoord);
+    set_shape_positions(scene.get(), id, ioshape.positions);
+    set_shape_normals(scene.get(), id, ioshape.normals);
+    set_shape_texcoords(scene.get(), id, ioshape.texcoords);
+    set_shape_colors(scene.get(), id, ioshape.colors);
+    set_shape_radius(scene.get(), id, ioshape.radius);
+    set_shape_tangents(scene.get(), id, ioshape.tangents);
     tshape  = {};
     ioshape = {};
   }
 
   for (auto& ioinstance : ioscene.instances) {
-    auto& instance    = scene->instances.emplace_back();
-    instance.frame    = ioinstance.frame;
-    instance.shape    = ioinstance.shape;
-    instance.material = ioinstance.material;
+    add_instance(
+        scene.get(), ioinstance.frame, ioinstance.shape, ioinstance.material);
   }
 
   for (auto& ioenvironment : ioscene.environments) {
-    auto& environment        = scene->environments.emplace_back();
-    environment.frame        = ioenvironment.frame;
-    environment.emission     = ioenvironment.emission;
-    environment.emission_tex = ioenvironment.emission_tex;
+    add_environment(scene.get(), ioenvironment.frame, ioenvironment.emission,
+        ioenvironment.emission_tex);
   }
 
-  ioscene = {};  // clear
+  ioscene = {};
   return scene.release();
 }
 

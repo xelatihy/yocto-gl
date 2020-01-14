@@ -84,10 +84,6 @@ trace_scene* make_scene(sceneio_model& ioscene) {
   for (auto& iocamera : ioscene.cameras) {
     add_camera(scene.get(), iocamera.frame, iocamera.lens, iocamera.aspect,
         iocamera.film, iocamera.aperture, iocamera.focus);
-    // camera.film  = iocamera.aspect >= 1
-    //                   ? vec2f{iocamera.film, iocamera.film / iocamera.aspect}
-    //                   : vec2f{iocamera.film * iocamera.aspect,
-    //                   iocamera.film};
   }
 
   for (auto& iotexture : ioscene.textures) {
