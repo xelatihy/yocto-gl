@@ -106,10 +106,9 @@ int main(int argc, const char* argv[]) {
   auto win = make_glwindow({1280, 720}, "yimgviews", false);
 
   // set callbacks
-  set_draw_glcallback(win, [app](const opengl_window* win, vec2i window,
-                               vec4i viewport, const opengl_input& input) {
-    app->glparams.window      = window;
-    app->glparams.framebuffer = viewport;
+  set_draw_glcallback(win, [app](const opengl_window* win, const opengl_input& input) {
+    app->glparams.window      = input.window_size;
+    app->glparams.framebuffer = input.framebuffer_viewport;
     if (!app->glimage) {
       app->glimage = unique_ptr<opengl_image>{make_glimage()};
       set_glimage(app->glimage.get(), app->display, false, false);

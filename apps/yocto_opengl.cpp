@@ -1333,21 +1333,8 @@ static void draw_glwindow(const opengl_window* win) {
   glClearColor(win->background.x, win->background.y, win->background.z,
       win->background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  if (win->draw_cb) {
-    auto window = zero2i;
-    glfwGetWindowSize(win->win, &window.x, &window.y);
-    if (win->widgets_width) window.x -= win->widgets_width;
-    auto viewport = zero4i;
-    glfwGetFramebufferSize(win->win, &viewport.z, &viewport.w);
-    if (win->widgets_width) {
-      auto win_size = zero2i;
-      glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
-      auto offset = (int)(win->widgets_width * (float)viewport.z / win_size.x);
-      viewport.z -= offset;
-      if (win->widgets_left) viewport.x += offset;
-    }
-    win->draw_cb(win, window, viewport, win->input);
-  }
+  if (win->draw_cb) 
+    win->draw_cb(win, win->input);
   if (win->widgets_cb) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -1483,6 +1470,17 @@ void run_ui(opengl_window* win) {
         glfwGetKey(win->win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
     glfwGetWindowSize(
         win->win, &win->input.window_size.x, &win->input.window_size.y);
+    if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
+    glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z, &win->input.framebuffer_viewport.w);
+    win->input.framebuffer_viewport.x = 0;
+    win->input.framebuffer_viewport.y = 0;
+    if (win->widgets_width) {
+      auto win_size = zero2i;
+      glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
+      auto offset = (int)(win->widgets_width * (float)win->input.framebuffer_viewport.z / win_size.x);
+      win->input.framebuffer_viewport.z -= offset;
+      if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
+    }
     if (win->widgets_width) {
       auto io                   = &ImGui::GetIO();
       win->input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||

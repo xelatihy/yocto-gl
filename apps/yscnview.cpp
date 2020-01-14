@@ -548,11 +548,10 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
 }
 
 // draw with shading
-void draw(const opengl_window* win, shared_ptr<app_states> apps, vec2i window,
-    vec4i viewport) {
+void draw(const opengl_window* win, shared_ptr<app_states> apps, const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
-    draw_glscene(app->glscene.get(), viewport, app->drawgl_prms);
+    draw_glscene(app->glscene.get(), input.framebuffer_viewport, app->drawgl_prms);
   }
 }
 
@@ -605,8 +604,8 @@ int main(int argc, const char* argv[]) {
 
   // callbacks
   set_draw_glcallback(win,
-      [apps](const opengl_window* win, vec2i window, vec4i viewport,
-          const opengl_input& input) { draw(win, apps, window, viewport); });
+      [apps](const opengl_window* win, 
+          const opengl_input& input) { draw(win, apps, input); });
   set_widgets_glcallback(
       win, [apps](const opengl_window* win, const opengl_input& input) {
         draw_glwidgets(win, apps);

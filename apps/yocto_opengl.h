@@ -310,26 +310,27 @@ struct opengl_window;
 
 // Input state
 struct opengl_input {
-  bool     mouse_left     = false;   // left button
-  bool     mouse_right    = false;   // right button
-  bool     mouse_middle   = false;   // middle button
-  vec2f    mouse_pos      = {};      // position excluding widgets
-  vec2f    mouse_last     = {};      // last mouse position excluding widgets
-  vec2f    mouse_delta    = {};      // last mouse delta excluding widgets
-  bool     modifier_alt   = false;   // alt modifier
-  bool     modifier_ctrl  = false;   // ctrl modifier
-  bool     modifier_shift = false;   // shift modifier
-  bool     widgets_active = false;   // widgets are active
-  uint64_t clock_now      = 0;       // clock now
-  uint64_t clock_last     = 0;       // clock last
-  double   time_now       = 0;       // time now
-  double   time_delta     = 0;       // time delta
-  vec2i    window_size    = {0, 0};  // window size
+  bool     mouse_left           = false;  // left button
+  bool     mouse_right          = false;  // right button
+  bool     mouse_middle         = false;  // middle button
+  vec2f    mouse_pos            = {};     // position excluding widgets
+  vec2f    mouse_last           = {};  // last mouse position excluding widgets
+  vec2f    mouse_delta          = {};  // last mouse delta excluding widgets
+  bool     modifier_alt         = false;         // alt modifier
+  bool     modifier_ctrl        = false;         // ctrl modifier
+  bool     modifier_shift       = false;         // shift modifier
+  bool     widgets_active       = false;         // widgets are active
+  uint64_t clock_now            = 0;             // clock now
+  uint64_t clock_last           = 0;             // clock last
+  double   time_now             = 0;             // time now
+  double   time_delta           = 0;             // time delta
+  vec2i    window_size          = {0, 0};        // window size
+  vec4i    framebuffer_viewport = {0, 0, 0, 0};  // framebuffer viewport
 };
 
 // Draw callback called every frame and when resizing
-using draw_glcallback = std::function<void(const opengl_window*, vec2i window,
-    vec4i viewport, const opengl_input& input)>;
+using draw_glcallback =
+    std::function<void(const opengl_window*, const opengl_input& input)>;
 // Draw callback for drawing widgets
 using widgets_glcallback =
     std::function<void(const opengl_window*, const opengl_input& input)>;
@@ -482,8 +483,7 @@ bool draw_glcombobox(const opengl_window* win, const char* lbl, int& idx,
 template <typename T>
 inline bool draw_glcombobox(const opengl_window* win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {
-  return draw_glcombobox(
-      win, lbl, idx, (int)vals.size(),
+  return draw_glcombobox(win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 

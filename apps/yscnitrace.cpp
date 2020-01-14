@@ -486,8 +486,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
   if (draw_glbutton(win, "quit")) {
     set_glwindow_close(win, true);
   }
-  draw_glcombobox(
-      win, "scene", apps->selected, (int)apps->states.size(),
+  draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
       false);
   if (scene_ok && begin_glheader(win, "trace")) {
@@ -623,12 +622,11 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps) {
   }
 }
 
-void draw(const opengl_window* win, shared_ptr<app_states> apps, vec2i window,
-    vec4i viewport) {
+void draw(const opengl_window* win, shared_ptr<app_states> apps, const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
-    app->glparams.window      = window;
-    app->glparams.framebuffer = viewport;
+    app->glparams.window      = input.window_size;
+    app->glparams.framebuffer = input.framebuffer_viewport;
     if (!app->glimage) app->glimage = unique_ptr<opengl_image>(make_glimage());
     if (!app->render_counter)
       set_glimage(app->glimage.get(), app->display, false, false);
@@ -696,9 +694,10 @@ int main(int argc, const char* argv[]) {
   auto win = make_glwindow({1280 + 320, 720}, "yscnitrace", true);
 
   // callbacks
-  set_draw_glcallback(win,
-      [apps](const opengl_window* win, vec2i window, vec4i viewport,
-          const opengl_input& input) { draw(win, apps, window, viewport); });
+  set_draw_glcallback(
+      win, [apps](const opengl_window* win, const opengl_input& input) {
+        draw(win, apps, input);
+      });
   set_widgets_glcallback(
       win, [apps](const opengl_window* win, const opengl_input& input) {
         draw_glwidgets(win, apps);
