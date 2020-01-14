@@ -593,10 +593,12 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->ioscene.textures);
       if (draw_glwidgets_texture(win, app, app->selection.second)) {
         stop_display(app);
-        auto& iocamera = app->ioscene.cameras[app->selection.second];
-        set_camera(app->scene.get(), app->selection.second, iocamera.frame,
-            iocamera.lens, iocamera.aspect, iocamera.film, iocamera.aperture,
-            iocamera.focus);
+        auto& iotexture = app->ioscene.textures[app->selection.second];
+        if(!iotexture.hdr.empty()) {
+          set_texture(app->scene.get(), app->selection.second, iotexture.hdr);
+        } else if(!iotexture.ldr.empty()) {
+          set_texture(app->scene.get(), app->selection.second, iotexture.ldr);
+        }
         // TODO: maybe we should update lights for this
         reset_display(app);
       }
