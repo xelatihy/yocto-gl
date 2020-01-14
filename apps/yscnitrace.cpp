@@ -181,22 +181,70 @@ trace_scene* make_scene(const sceneio_model& ioscene) {
   auto scene = make_unique<trace_scene>();
 
   for (auto& iocamera : ioscene.cameras) {
-    update_trace_camera(scene->cameras.emplace_back(), iocamera);
+    add_camera(scene.get(), iocamera.frame, iocamera.lens, iocamera.aspect,
+        iocamera.film, iocamera.aperture, iocamera.focus);
   }
   for (auto& iotexture : ioscene.textures) {
-    update_trace_texture(scene->textures.emplace_back(), iotexture);
+    if (!iotexture.hdr.empty()) {
+      add_texture(scene.get(), std::move(iotexture.hdr));
+    } else if (!iotexture.ldr.empty()) {
+      add_texture(scene.get(), std::move(iotexture.ldr));
+    }
   }
   for (auto& iomaterial : ioscene.materials) {
-    update_trace_material(scene->materials.emplace_back(), iomaterial);
+    auto id = add_material(scene.get());
+    set_material_emission(
+        scene.get(), id, iomaterial.emission, iomaterial.emission_tex);
+    set_material_diffuse(
+        scene.get(), id, iomaterial.diffuse, iomaterial.diffuse_tex);
+    set_material_specular(
+        scene.get(), id, iomaterial.specular, iomaterial.specular_tex);
+    set_material_metallic(
+        scene.get(), id, iomaterial.metallic, iomaterial.metallic_tex);
+    set_material_transmission(
+        scene.get(), id, iomaterial.transmission, iomaterial.transmission_tex);
+    set_material_roughness(
+        scene.get(), id, iomaterial.roughness, iomaterial.roughness_tex);
+    set_material_opacity(
+        scene.get(), id, iomaterial.opacity, iomaterial.opacity_tex);
+    set_material_refract(scene.get(), id, iomaterial.refract);
+    set_material_normalmap(scene.get(), id, iomaterial.normal_tex);
+    set_material_volume(scene.get(), id, iomaterial.volemission,
+        iomaterial.voltransmission, iomaterial.volmeanfreepath,
+        iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
+        iomaterial.subsurface_tex);
   }
-  for (auto& ioshape : ioscene.shapes) {
-    update_trace_shape(scene->shapes.emplace_back(), ioshape, ioscene);
+  for (auto& ioshape_ : ioscene.shapes) {
+    auto tshape = (needs_tesselation(ioscene, ioshape_))
+                      ? tesselate_shape(ioscene, ioshape_)
+                      : sceneio_shape{};
+    auto& ioshape = (needs_tesselation(ioscene, ioshape_)) ? tshape : ioshape_;
+    if (!ioshape.points.empty()) {
+      add_shape(scene.get(), ioshape.points, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.radius);
+    } else if (!ioshape.lines.empty()) {
+      add_shape(scene.get(), ioshape.lines, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.radius);
+    } else if (!ioshape.triangles.empty()) {
+      add_shape(scene.get(), ioshape.triangles, ioshape.positions,
+          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
+    } else if (!ioshape.quads.empty()) {
+      add_shape(scene.get(), ioshape.quads, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.tangents);
+    } else if (!ioshape.quadspos.empty()) {
+      add_shape(scene.get(), ioshape.quadspos, ioshape.quadsnorm,
+          ioshape.quadstexcoord, ioshape.positions, ioshape.normals,
+          ioshape.texcoords);
+    }
+    tshape  = {};
   }
   for (auto& ioinstance : ioscene.instances) {
-    update_trace_instance(scene->instances.emplace_back(), ioinstance);
+    add_instance(
+        scene.get(), ioinstance.frame, ioinstance.shape, ioinstance.material);
   }
   for (auto& ioenvironment : ioscene.environments) {
-    update_trace_environment(scene->environments.emplace_back(), ioenvironment);
+    add_environment(scene.get(), ioenvironment.frame, ioenvironment.emission,
+        ioenvironment.emission_tex);
   }
 
   return scene.release();
