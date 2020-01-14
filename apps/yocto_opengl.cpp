@@ -1328,8 +1328,7 @@ void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void _glfw_refresh_callback(GLFWwindow* glfw) {
-  auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
+void draw_glwindow(const opengl_window* win) {
   glClearColor(
       win->background.x, win->background.y, win->background.z, win->background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1353,7 +1352,12 @@ void _glfw_refresh_callback(GLFWwindow* glfw) {
     win->widgets_cb(win);
     end_glwidgets(win);
   }
-  glfwSwapBuffers(glfw);
+  glfwSwapBuffers(win->win);
+}
+
+void _glfw_refresh_callback(GLFWwindow* glfw) {
+  auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
+  draw_glwindow(win);
 }
 
 void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
@@ -1470,31 +1474,8 @@ void run_ui(opengl_window* win) {
     if (win->update_cb) win->update_cb(win);
 
     // draw
-    glClearColor(
-        win->background.x, win->background.y, win->background.z, win->background.w);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    if (win->draw_cb) {
-      auto window = zero2i;
-      glfwGetWindowSize(win->win, &window.x, &window.y);
-      if (win->widgets_width) window.x -= win->widgets_width;
-    auto viewport = zero4i;
-    glfwGetFramebufferSize(win->win, &viewport.z, &viewport.w);
-    if (win->widgets_width) {
-      auto win_size = zero2i;
-      glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
-      auto offset = (int)(win->widgets_width * (float)viewport.z / win_size.x);
-      viewport.z -= offset;
-      if (win->widgets_left) viewport.x += offset;
-    }
-      win->draw_cb(win, window, viewport);
-    }
-    if (win->widgets_cb) {
-      begin_glwidgets(win);
-      win->widgets_cb(win);
-      end_glwidgets(win);
-    }
-    glfwSwapBuffers(win->win);
-
+    draw_glwindow(win);
+    
     // event hadling
     glfwPollEvents();
   }
