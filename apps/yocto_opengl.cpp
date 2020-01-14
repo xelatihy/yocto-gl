@@ -741,24 +741,27 @@ opengl_scene* make_glscene() {
 }
 
 // add camera
-int add_camera(opengl_scene* scene, const frame3f frame, float lens, float asepct, float film, float near, float far) {
-  auto camera = scene->_cameras.emplace_back(make_unique<opengl_camera>()).get();
-  camera->frame = frame;
+int add_camera(opengl_scene* scene, const frame3f frame, float lens,
+    float asepct, float film, float near, float far) {
+  auto camera =
+      scene->_cameras.emplace_back(make_unique<opengl_camera>()).get();
+  camera->frame  = frame;
   camera->lens   = lens;
   camera->asepct = asepct;
   camera->film   = film;
-  camera->near = near;
-  camera->far  = far;
+  camera->near   = near;
+  camera->far    = far;
   return (int)scene->_cameras.size() - 1;
 }
-void set_camera(opengl_scene* scene, int idx, const frame3f frame, float lens, float asepct, float film, float near, float far) {
-  auto camera   = scene->_cameras[idx].get();
-  camera->frame = frame;
+void set_camera(opengl_scene* scene, int idx, const frame3f frame, float lens,
+    float asepct, float film, float near, float far) {
+  auto camera    = scene->_cameras[idx].get();
+  camera->frame  = frame;
   camera->lens   = lens;
   camera->asepct = asepct;
   camera->film   = film;
-  camera->near = near;
-  camera->far  = far;
+  camera->near   = near;
+  camera->far    = far;
 }
 void clear_cameras(opengl_scene* scene) { scene->_cameras.clear(); }
 
@@ -1029,8 +1032,8 @@ int add_instance(
   instance->material = material;
   return (int)scene->_instances.size() - 1;
 }
-void set_instance(opengl_scene* scene, int idx, const frame3f& frame,
-    int shape, int material) {
+void set_instance(opengl_scene* scene, int idx, const frame3f& frame, int shape,
+    int material) {
   auto instance      = scene->_instances[idx].get();
   instance->frame    = frame;
   instance->shape    = shape;
@@ -1051,8 +1054,8 @@ void set_glinstance_material(opengl_scene* scene, int idx, int material) {
 void clear_instances(opengl_scene* scene) { scene->_instances.clear(); }
 
 // add light
-int add_light(opengl_scene* scene, const vec3f& position,
-    const vec3f& emission, bool directional) {
+int add_light(opengl_scene* scene, const vec3f& position, const vec3f& emission,
+    bool directional) {
   auto light = scene->_lights.emplace_back(make_unique<opengl_light>()).get();
   light->position = position;
   light->emission = emission;
@@ -1067,9 +1070,7 @@ void set_light(opengl_scene* scene, int idx, const vec3f& position,
   light->type     = directional ? 1 : 0;
 }
 void clear_lights(opengl_scene* scene) { scene->_lights.clear(); }
-bool has_max_lights(opengl_scene* scene) {
-  return scene->_lights.size() >= 16;
-}
+bool has_max_lights(opengl_scene* scene) { return scene->_lights.size() >= 16; }
 
 // Draw a shape
 void draw_glinstance(opengl_scene* glscene, opengl_instance* instance,
@@ -1329,8 +1330,8 @@ void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
 namespace yocto {
 
 void draw_glwindow(const opengl_window* win) {
-  glClearColor(
-      win->background.x, win->background.y, win->background.z, win->background.w);
+  glClearColor(win->background.x, win->background.y, win->background.z,
+      win->background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (win->draw_cb) {
     auto window = zero2i;
@@ -1362,10 +1363,10 @@ void draw_glwindow(const opengl_window* win) {
     }
     ImGui::SetNextWindowCollapsed(false);
     ImGui::SetNextWindowBgAlpha(1);
-    if(ImGui::Begin(win->title.c_str(), nullptr,
-      ImGuiWindowFlags_NoTitleBar |
-      ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-          ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings)) {
+    if (ImGui::Begin(win->title.c_str(), nullptr,
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+                ImGuiWindowFlags_NoSavedSettings)) {
       draw_glmessages(win);
       win->widgets_cb(win);
     }
@@ -1407,7 +1408,8 @@ void _glfw_scroll_callback(GLFWwindow* glfw, double xoffset, double yoffset) {
   if (win->scroll_cb) win->scroll_cb(win, (float)yoffset);
 }
 
-opengl_window* make_glwindow(const vec2i& size, const string& title, bool widgets, int widgets_width, bool widgets_left) {
+opengl_window* make_glwindow(const vec2i& size, const string& title,
+    bool widgets, int widgets_width, bool widgets_left) {
   // init glfw
   if (!glfwInit())
     throw std::runtime_error("cannot initialize windowing system");
@@ -1419,7 +1421,7 @@ opengl_window* make_glwindow(const vec2i& size, const string& title, bool widget
 #endif
 
   // create window
-  auto win = new opengl_window();
+  auto win   = new opengl_window();
   win->title = title;
   win->win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
   if (!win->win) throw std::runtime_error("cannot initialize windowing system");
@@ -1437,7 +1439,7 @@ opengl_window* make_glwindow(const vec2i& size, const string& title, bool widget
     throw std::runtime_error("cannot initialize OpenGL extensions");
 
   // widgets
-  if(widgets) {
+  if (widgets) {
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename       = nullptr;
     ImGui::GetStyle().WindowRounding = 0;
@@ -1465,19 +1467,25 @@ void delete_glwindow(opengl_window* win) {
 void run_ui(opengl_window* win) {
   while (!glfwWindowShouldClose(win->win)) {
     // update input
-    win->input.mouse_last     = win->input.mouse_pos;
-    win->input.mouse_pos      = get_glmouse_pos(win);
-    win->input.mouse_left     = glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-    win->input.mouse_right    = glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-    win->input.modifier_alt   = glfwGetKey(win->win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-         glfwGetKey(win->win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
-    win->input.modifier_shift = glfwGetKey(win->win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-         glfwGetKey(win->win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-    win->input.modifier_ctrl  = glfwGetKey(win->win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-         glfwGetKey(win->win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+    win->input.mouse_last = win->input.mouse_pos;
+    win->input.mouse_pos  = get_glmouse_pos(win);
+    win->input.mouse_left = glfwGetMouseButton(
+                                win->win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    win->input.mouse_right =
+        glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+    win->input.modifier_alt =
+        glfwGetKey(win->win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+        glfwGetKey(win->win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+    win->input.modifier_shift =
+        glfwGetKey(win->win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+        glfwGetKey(win->win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+    win->input.modifier_ctrl =
+        glfwGetKey(win->win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+        glfwGetKey(win->win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
     if (win->widgets_width) {
-      auto io = &ImGui::GetIO();
-      win->input.widgets_active = io->WantTextInput || io->WantCaptureMouse || io->WantCaptureKeyboard;
+      auto io                   = &ImGui::GetIO();
+      win->input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||
+                                  io->WantCaptureKeyboard;
     }
 
     // time
