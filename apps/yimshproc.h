@@ -14,7 +14,7 @@ struct app_state {
   function<void(shared_ptr<app_state>)>                         init;
   function<void(shared_ptr<app_state>, int, bool)>              key_callback;
   function<void(shared_ptr<app_state>, int, vec2f, int, float)> click_callback;
-  function<void(shared_ptr<app_state>, const opengl_window&)>   draw_glwidgets;
+  function<void(shared_ptr<app_state>, const opengl_window*)>   draw_glwidgets;
 
   // Geometry data
   sceneio_shape shape;
@@ -236,7 +236,7 @@ void yimshproc(const string&                         input_filename,
     function<void(shared_ptr<app_state>, int, bool)> key_callback,
     function<void(shared_ptr<app_state>, int, vec2f, int, float)>
         click_callback,
-    function<void(shared_ptr<app_state>, const opengl_window& win)>
+    function<void(shared_ptr<app_state>, const opengl_window* win)>
         draw_glwidgets) {
   auto app = make_shared<app_state>();
 
@@ -256,8 +256,7 @@ void yimshproc(const string&                         input_filename,
   app->init(app);
 
   // Init window.
-  auto win = opengl_window();
-  init_glwindow(win, {1280 + 320, 720}, "yimshproc");
+  auto win = make_glwindow({1280 + 320, 720}, "yimshproc");
   init_opengl_scene(app);
 
   // Init widgets.
@@ -265,13 +264,13 @@ void yimshproc(const string&                         input_filename,
 
   // callbacks
   set_draw_glcallback(
-      win, [app](const opengl_window& win, vec2i window, vec4i viewport) {
+      win, [app](const opengl_window* win, vec2i window, vec4i viewport) {
         draw_glscene(app->scene.get(), viewport, app->opengl_options);
       });
-  set_widgets_glcallback(win, [app, draw_glwidgets](const opengl_window& win) {
+  set_widgets_glcallback(win, [app, draw_glwidgets](const opengl_window* win) {
     draw_glwidgets(app, win);
   });
-  set_click_glcallback(win, [app](const opengl_window& win, bool left,
+  set_click_glcallback(win, [app](const opengl_window* win, bool left,
                                 bool press) {
     auto mouse = get_glmouse_pos_normalized(win, false);
 
@@ -297,18 +296,18 @@ void yimshproc(const string&                         input_filename,
       }
     }
   });
-  set_scroll_glcallback(win, [app](const opengl_window& win, float yoffset) {
+  set_scroll_glcallback(win, [app](const opengl_window* win, float yoffset) {
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
     set_camera(app->scene.get(), 0, app->camera.frame, app->camera.lens, app->camera.aspect, app->camera.film, 0.001, 10000);
   });
   set_key_glcallback(
-      win, [app](const opengl_window& win, int key, bool pressing) {
+      win, [app](const opengl_window* win, int key, bool pressing) {
         app->key_callback(app, key, pressing);
       });
   set_uiupdate_glcallback(
-      win, [app](const opengl_window& win, const opengl_input& input) {
+      win, [app](const opengl_window* win, const opengl_input& input) {
         // Handle mouse and keyboard for navigation.
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
             !input.widgets_active) {
