@@ -83,18 +83,23 @@ trace_scene* make_scene(sceneio_model& ioscene) {
                       ? tesselate_shape(ioscene, ioshape_)
                       : sceneio_shape{};
     auto& ioshape = (needs_tesselation(ioscene, ioshape_)) ? tshape : ioshape_;
-    auto id = add_shape(scene.get());
-    set_shape_points(scene.get(), id, ioshape.points);
-    set_shape_lines(scene.get(), id, ioshape.lines);
-    set_shape_triangles(scene.get(), id, ioshape.triangles);
-    set_shape_quads(scene.get(), id, ioshape.quads);
-    set_shape_fvquads(scene.get(), id, ioshape.quadspos, ioshape.quadsnorm, ioshape.quadstexcoord);
-    set_shape_positions(scene.get(), id, ioshape.positions);
-    set_shape_normals(scene.get(), id, ioshape.normals);
-    set_shape_texcoords(scene.get(), id, ioshape.texcoords);
-    set_shape_colors(scene.get(), id, ioshape.colors);
-    set_shape_radius(scene.get(), id, ioshape.radius);
-    set_shape_tangents(scene.get(), id, ioshape.tangents);
+    if (!ioshape.points.empty()) {
+      add_shape(scene.get(), ioshape.points, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.radius);
+    } else if (!ioshape.lines.empty()) {
+      add_shape(scene.get(), ioshape.lines, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.radius);
+    } else if (!ioshape.triangles.empty()) {
+      add_shape(scene.get(), ioshape.triangles, ioshape.positions,
+          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
+    } else if (!ioshape.quads.empty()) {
+      add_shape(scene.get(), ioshape.quads, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.tangents);
+    } else if (!ioshape.quadspos.empty()) {
+      add_shape(scene.get(), ioshape.quadspos, ioshape.quadsnorm,
+          ioshape.quadstexcoord, ioshape.positions, ioshape.normals,
+          ioshape.texcoords);
+    }
     tshape  = {};
     ioshape = {};
   }

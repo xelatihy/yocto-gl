@@ -111,8 +111,7 @@ void set_material_roughness(
     trace_scene* scene, int idx, float roughness, int roughness_txt = -1);
 void set_material_opacity(
     trace_scene* scene, int idx, float opacity, int opacity_txt = -1);
-void set_material_refract(
-    trace_scene* scene, int idx, bool refract);
+void set_material_refract(trace_scene* scene, int idx, bool refract);
 void set_material_volume(trace_scene* scene, int idx, const vec3f& volemission,
     const vec3f& voltransmission, const vec3f& volmeanfreepath,
     const vec3f& volscatter, float volscale, float volanisotropy,
@@ -122,23 +121,46 @@ void set_material_gltftextures(trace_scene* scene, int idx, bool gltf_textures);
 void clear_materias(trace_scene* scene);
 
 // Add shape
-int  add_shape(trace_scene* scene);
-void set_shape_positions(
-    trace_scene* scene, int idx, const vector<vec3f>& positions);
-void set_shape_normals(
-    trace_scene* scene, int idx, const vector<vec3f>& normals);
-void set_shape_texcoords(
-    trace_scene* scene, int idx, const vector<vec2f>& texcoords);
-void set_shape_colors(trace_scene* scene, int idx, const vector<vec4f>& colors);
-void set_shape_radius(trace_scene* scene, int idx, const vector<float>& radius);
-void set_shape_tangents(
-    trace_scene* scene, int idx, const vector<vec4f>& tangents);
-void set_shape_points(trace_scene* scene, int idx, const vector<int>& points);
-void set_shape_lines(trace_scene* scene, int idx, const vector<vec2i>& lines);
-void set_shape_triangles(
-    trace_scene* scene, int idx, const vector<vec3i>& triangles);
-void set_shape_quads(trace_scene* scene, int idx, const vector<vec4i>& quads);
-void set_shape_fvquads(trace_scene* scene, int idx, const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
+int  add_shape(trace_scene* scene, const vector<int>& points,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+     const vector<float>& radius);
+int  add_shape(trace_scene* scene, const vector<vec2i>& lines,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+     const vector<float>& radius);
+int  add_shape(trace_scene* scene, const vector<vec3i>& triangles,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+     const vector<vec4f>& tangents);
+int  add_shape(trace_scene* scene, const vector<vec4i>& quads,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+     const vector<vec4f>& tangents);
+int  add_shape(trace_scene* scene, const vector<vec4i>& quadspos,
+     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords);
+void set_shape(trace_scene* scene, int idx, const vector<int>& points,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+     const vector<float>& radius);
+void set_shape(trace_scene* scene, int idx, const vector<vec2i>& lines,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+     const vector<float>& radius);
+void set_shape(trace_scene* scene, int idx, const vector<vec3i>& triangles,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+     const vector<vec4f>& tangents);
+void set_shape(trace_scene* scene, int idx, const vector<vec4i>& quads,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+     const vector<vec4f>& tangents);
+void set_shape(trace_scene* scene, int idx, const vector<vec4i>& quadspos,
+     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+     const vector<vec3f>& positions, const vector<vec3f>& normals,
+     const vector<vec2f>& texcoords);
 void clear_shapes(trace_scene* scene);
 
 // Add instance
