@@ -107,14 +107,6 @@ void set_material(
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
     } break;
-    case sceneio_material_type::metallic: {
-      set_material_diffuse(
-          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
-      set_material_metallic(
-          scene, idx, mean(iomaterial.specular), iomaterial.specular_tex);
-      set_material_roughness(
-          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-    }; break;
     case sceneio_material_type::transparent: {
       set_material_specular(
           scene, idx, iomaterial.specular, iomaterial.specular_tex);

@@ -134,14 +134,6 @@ void set_material(
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
     } break;
-    case sceneio_material_type::metallic: {
-      set_material_diffuse(
-          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
-      set_material_metallic(
-          scene, idx, mean(iomaterial.specular), iomaterial.specular_tex);
-      set_material_roughness(
-          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-    }; break;
     case sceneio_material_type::transparent: {
       set_material_specular(
           scene, idx, iomaterial.specular, iomaterial.specular_tex);
@@ -395,7 +387,6 @@ bool draw_glwidgets_material(
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
   edited += draw_glcoloredit(win, "diffuse", material.diffuse);
   edited += draw_glcoloredit(win, "specular", material.specular);
-  edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
   edited += draw_glcoloredit(win, "transmission", material.transmission);
   edited += draw_glcoloredit(win, "volume", material.volume);
@@ -406,8 +397,6 @@ bool draw_glwidgets_material(
   edited += draw_glcombobox(
       win, "diffuse_tex", material.diffuse_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "metallic_tex", material.metallic_tex, app->ioscene.textures, true);
-  edited += draw_glcombobox(
       win, "specular_tex", material.specular_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
       app->ioscene.textures, true);
@@ -417,7 +406,6 @@ bool draw_glwidgets_material(
       app->ioscene.textures, true);
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, app->ioscene.textures, true);
-  edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   return edited;
 }
 

@@ -92,7 +92,6 @@ enum struct sceneio_material_type {
   matte,
   substrate,
   reflective,
-  metallic,
   refractive,
   transparent,
   subsurface,
@@ -114,7 +113,6 @@ struct sceneio_material {
   vec3f transmission    = {0, 0, 0};
   vec3f volume          = {0, 0, 0};
   float roughness       = 0;
-  float metallic        = 0;
   float volanisotropy   = 0;
   float opacity         = 1;
 
@@ -123,18 +121,16 @@ struct sceneio_material {
   int  diffuse_tex      = -1;
   int  specular_tex     = -1;
   int  volume_tex       = -1;
-  int  metallic_tex     = -1;
   int  roughness_tex    = -1;
   int  transmission_tex = -1;
   int  subsurface_tex   = -1;
   int  opacity_tex      = -1;
   int  normal_tex       = -1;
-  bool gltf_textures    = false;  // glTF packed textures
 };
 
 // Names for material type
 const auto sceneio_material_names = vector<string>{"standard", "matte", "substrate",
-    "reflective", "metallic", "refractive", "transparent", "subsurface", "volume"};
+    "reflective", "refractive", "transparent", "subsurface", "volume"};
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
