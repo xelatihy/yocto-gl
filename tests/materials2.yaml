@@ -45,10 +45,10 @@ textures:
     preset: test-sky
 materials:
   - name: floor
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_tex: floor
+    base: [0.7, 0.7, 0.7]
+    base_tex: floor
   - name: transparent
-    diffuse: [0.7, 0.5, 0.5]
+    base: [0.7, 0.5, 0.5]
     roughness: 1
     opacity: 0.2
   - name: glass-sharp

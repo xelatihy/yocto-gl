@@ -45,8 +45,8 @@ textures:
     preset: test-sky
 materials:
   - name: floor
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_tex: floor
+    base: [0.7, 0.7, 0.7]
+    base_tex: floor
   - name: volume-jade
     specular: [0.04, 0.04, 0.04]
     roughness: 0
