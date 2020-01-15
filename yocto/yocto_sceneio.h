@@ -86,12 +86,26 @@ struct sceneio_texture {
   image<vec4b> ldr      = {};
 };
 
+// Material type
+enum struct sceneio_material_type {
+  standard,
+  plastic,
+  metal,
+  metallic,
+  glass,
+  thinglass,
+  volglass,
+  smoke,
+  skin
+};
+
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct sceneio_material {
-  string name = "";
+  string                name = "";
+  sceneio_material_type type = sceneio_material_type::standard;
 
   // lobes
   vec3f emission        = {0, 0, 0};
@@ -123,6 +137,10 @@ struct sceneio_material {
   int  normal_tex       = -1;
   bool gltf_textures    = false;  // glTF packed textures
 };
+
+// Names for material type
+const auto sceneio_material_names = vector<string>{"standard", "plastic",
+    "metal", "metallic", "glass", "thinglass", "volglass", "smoke", "skin"};
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
