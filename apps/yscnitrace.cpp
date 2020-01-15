@@ -110,6 +110,7 @@ void set_material(
   set_material_emission(
       scene, idx, iomaterial.emission, iomaterial.emission_tex);
   set_material_opacity(scene, idx, iomaterial.opacity, iomaterial.opacity_tex);
+  set_material_normalmap(scene, idx, iomaterial.normal_tex);
   switch (iomaterial.type) {
     case sceneio_material_type::standard:
     case sceneio_material_type::substrate: {
