@@ -123,8 +123,6 @@ materials:
     roughness: 0
     transmission: [1, 1, 1]
     voltransmission: [1, 0.5, 0.5]
-    volscale: 0.02
-    refract: true
   - name: volume-smoke
     transmission: [1, 1, 1]
     voltransmission: [0.5, 0.5, 0.5]

@@ -62,8 +62,7 @@ materials:
     type: refractive
     specular: [0.04, 0.04, 0.04]
     roughness: 0
-    base: [1, 0.5, 0.5]
-    volscale: 0.02
+    base: [1, 0.75, 0.75]
   - name: volume-smoke
     type: volume
     base: [0.5, 0.5, 0.5]
