@@ -115,7 +115,6 @@ struct sceneio_material {
   vec3f volume          = {0, 0, 0};
   float roughness       = 0;
   float metallic        = 0;
-  vec3f coat            = {0, 0, 0};
   vec3f transmission    = {0, 0, 0};
   vec3f voltransmission = {0, 0, 0};
   vec3f volmeanfreepath = {0, 0, 0};
@@ -136,7 +135,6 @@ struct sceneio_material {
   int  roughness_tex    = -1;
   int  transmission_tex = -1;
   int  subsurface_tex   = -1;
-  int  coat_tex         = -1;
   int  opacity_tex      = -1;
   int  normal_tex       = -1;
   bool gltf_textures    = false;  // glTF packed textures
