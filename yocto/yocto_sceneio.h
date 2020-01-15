@@ -113,8 +113,8 @@ struct sceneio_material {
   vec3f transmission    = {0, 0, 0};
   vec3f volume          = {0, 0, 0};
   float roughness       = 0;
-  float volanisotropy   = 0;
   float opacity         = 1;
+  float volanisotropy   = 0;
 
   // textures
   int  emission_tex     = -1;
