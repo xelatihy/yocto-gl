@@ -53,11 +53,11 @@ materials:
     specular: [0.04, 0.04, 0.04]
     roughness: 0
     base: [0.5, 0.5, 0.5]
-    subsurface: [0.3, 0.6, 0.3]
+    volume: [0.3, 0.6, 0.3]
   - name: volume-cloud
     type: volume
     base: [0.65, 0.65, 0.65]
-    subsurface: [0.9, 0.9, 0.9]
+    volume: [0.9, 0.9, 0.9]
   - name: volume-glass
     type: refractive
     specular: [0.04, 0.04, 0.04]
@@ -67,13 +67,13 @@ materials:
   - name: volume-smoke
     type: volume
     base: [0.5, 0.5, 0.5]
-    subsurface: [0.2, 0.2, 0.2]
+    volume: [0.2, 0.2, 0.2]
     volanisotropy: -0.8
   - name: volume-emissive
     type: volume
     base: [0.95, 0.95, 0.95]
     volemission: [15, 15, 10]
-    subsurface: [0.01, 0.01, 0.01]
+    volume: [0.01, 0.01, 0.01]
   - name: largearealight1
     type: matte
     emission: [10, 10, 10]

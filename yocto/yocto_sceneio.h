@@ -112,6 +112,7 @@ struct sceneio_material {
   vec3f diffuse         = {0, 0, 0};
   vec3f base            = {0, 0, 0};
   vec3f specular        = {0, 0, 0};
+  vec3f volume          = {0, 0, 0};
   float roughness       = 0;
   float metallic        = 0;
   vec3f coat            = {0, 0, 0};
@@ -130,6 +131,7 @@ struct sceneio_material {
   int  base_tex         = -1;
   int  diffuse_tex      = -1;
   int  specular_tex     = -1;
+  int  volume_tex       = -1;
   int  metallic_tex     = -1;
   int  roughness_tex    = -1;
   int  transmission_tex = -1;

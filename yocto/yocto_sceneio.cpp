@@ -1131,6 +1131,8 @@ sceneio_status load_yaml(
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "specular", material.specular))
         return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "volume", material.volume))
+        return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "roughness", material.roughness))
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "coat", material.coat))
@@ -1166,6 +1168,8 @@ sceneio_status load_yaml(
       if (!get_yaml_ref(yelement, "metallic_tex", material.metallic_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "specular_tex", material.specular_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "volume_tex", material.volume_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(
               yelement, "transmission_tex", material.transmission_tex, tmap))
@@ -1702,10 +1706,14 @@ static sceneio_status save_yaml(const string& filename,
     add_yaml_value(yelement, "name", material.name);
     if (material.type != sceneio_material_type::standard)
       add_yaml_value(yelement, "type", sceneio_material_names[(int)material.type]);
+    if(material.emission != zero3f)
     add_yaml_value(yelement, "emission", material.emission);
     add_yaml_value(yelement, "diffuse", material.diffuse);
     add_yaml_value(yelement, "base", material.base);
+    if(material.specular != zero3f)
     add_yaml_value(yelement, "specular", material.specular);
+    if(material.volume != zero3f)
+    add_yaml_value(yelement, "volume", material.volume);
     if (material.metallic)
       add_yaml_value(yelement, "metallic", material.metallic);
     if (material.transmission != zero3f)
@@ -1744,6 +1752,9 @@ static sceneio_status save_yaml(const string& filename,
     if (material.specular_tex >= 0)
       add_yaml_value(
           yelement, "specular_tex", scene.textures[material.specular_tex].name);
+    if (material.volume_tex >= 0)
+      add_yaml_value(
+          yelement, "volume_tex", scene.textures[material.volume_tex].name);
     if (material.roughness_tex >= 0)
       add_yaml_value(yelement, "roughness_tex",
           scene.textures[material.roughness_tex].name);

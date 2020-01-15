@@ -158,8 +158,8 @@ void set_material(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, iomaterial.volemission,
           iomaterial.base, iomaterial.volmeanfreepath,
-          iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
-          iomaterial.subsurface_tex);
+          iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
+          iomaterial.volume_tex);
       set_material_refract(scene, idx, iomaterial.refract);
     }; break;
     case sceneio_material_type::subsurface: {
@@ -170,8 +170,8 @@ void set_material(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, iomaterial.volemission,
           iomaterial.base, iomaterial.volmeanfreepath,
-          iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
-          iomaterial.subsurface_tex);
+          iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
+          iomaterial.volume_tex);
       set_material_refract(scene, idx, iomaterial.refract);
     }; break;
     case sceneio_material_type::volume: {
@@ -182,8 +182,8 @@ void set_material(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, iomaterial.volemission,
           iomaterial.base, iomaterial.volmeanfreepath,
-          iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
-          iomaterial.subsurface_tex);
+          iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
+          iomaterial.volume_tex);
       set_material_refract(scene, idx, iomaterial.refract);
     }; break;
   }
