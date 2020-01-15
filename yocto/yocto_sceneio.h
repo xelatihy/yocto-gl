@@ -90,12 +90,11 @@ struct sceneio_texture {
 enum struct sceneio_material_type {
   standard,
   matte,
-  plastic,
-  metal,
+  substrate,
+  reflective,
   metallic,
-  glass,
-  thinglass,
-  volglass,
+  refractive,
+  transparent,
   subsurface,
   volume,
 };
@@ -140,8 +139,8 @@ struct sceneio_material {
 };
 
 // Names for material type
-const auto sceneio_material_names = vector<string>{"standard", "matte", "plastic",
-    "metal", "metallic", "glass", "thinglass", "volglass", "subsurface", "volume"};
+const auto sceneio_material_names = vector<string>{"standard", "matte", "substrate",
+    "reflective", "metallic", "refractive", "transparent", "subsurface", "volume"};
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.

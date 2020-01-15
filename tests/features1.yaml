@@ -55,17 +55,17 @@ materials:
     diffuse: [0.7, 0.7, 0.7]
     diffuse_tex: floor
   - name: metal-rough
-    type: metal
+    type: reflective
     specular: [0.66, 0.45, 0.34]
     roughness: 0.2
   - name: plastic-rough-bumped
-    type: plastic
+    type: substrate
     specular: [0.04, 0.04, 0.04]
     diffuse: [0.5, 0.7, 0.5]
     roughness: 0.2
     normal_tex: bumps-normal
   - name: uvgrid-coated
-    type: plastic
+    type: substrate
     coat: [0.04, 0.04, 0.04]
     specular: [0.04, 0.04, 0.04]
     diffuse: [1, 1, 1]
@@ -80,7 +80,7 @@ materials:
     volscatter: [0.3, 0.6, 0.3]
     refract: true
   - name: volume-glass
-    type: volglass
+    type: refractive
     specular: [0.04, 0.04, 0.04]
     roughness: 0
     transmission: [1, 1, 1]
