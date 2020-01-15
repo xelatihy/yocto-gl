@@ -157,7 +157,7 @@ void set_material(
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, iomaterial.volemission,
-          iomaterial.base, iomaterial.volmeanfreepath,
+          iomaterial.base, zero3f,
           iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, true);
@@ -169,7 +169,7 @@ void set_material(
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, iomaterial.volemission,
-          iomaterial.base, iomaterial.volmeanfreepath,
+          iomaterial.base, zero3f,
           iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, true);
@@ -181,7 +181,7 @@ void set_material(
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, iomaterial.volemission,
-          iomaterial.base, iomaterial.volmeanfreepath,
+          iomaterial.base, zero3f,
           iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, false);
@@ -398,8 +398,6 @@ bool draw_glwidgets_material(
   edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
   edited += draw_glcoloredit(win, "transmission", material.transmission);
-  edited += draw_glcoloredit(win, "vol transmission", material.voltransmission);
-  edited += draw_glcoloredit(win, "vol meanfreepath", material.volmeanfreepath);
   edited += draw_glcoloredit(win, "vol scatter", material.volscatter);
   edited += draw_glcoloredit(win, "vol emission", material.volemission);
   edited += draw_glslider(win, "vol scale", material.volscale, 0, 1);

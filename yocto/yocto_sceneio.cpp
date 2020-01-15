@@ -1137,12 +1137,6 @@ sceneio_status load_yaml(
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "transmission", material.transmission))
         return {filename + ": parse error"};
-      if (!get_yaml_value(
-              yelement, "voltransmission", material.voltransmission))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(
-              yelement, "volmeanfreepath", material.volmeanfreepath))
-        return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "volscatter", material.volscatter))
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "volemission", material.volemission))
@@ -1713,19 +1707,12 @@ static sceneio_status save_yaml(const string& filename,
     if (material.transmission != zero3f)
       add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
-    if (material.voltransmission != zero3f)
-      add_yaml_value(yelement, "voltransmission", material.voltransmission);
-    if (material.volmeanfreepath != zero3f)
-      add_yaml_value(yelement, "volmeanfreepath", material.volmeanfreepath);
     if (material.volscatter != zero3f)
       add_yaml_value(yelement, "volscatter", material.volscatter);
     if (material.volemission != zero3f)
       add_yaml_value(yelement, "volemission", material.volemission);
     if (material.volanisotropy)
       add_yaml_value(yelement, "volanisotropy", material.volanisotropy);
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f)
-      add_yaml_value(yelement, "volscale", material.volscale);
     if (material.opacity != 1)
       add_yaml_value(yelement, "opacity", material.opacity);
     if (material.emission_tex >= 0)
@@ -1874,8 +1861,6 @@ static sceneio_status load_obj(
     material.roughness        = obj_exponent_to_roughness(omat.exponent);
     material.metallic         = omat.pbr_metallic;
     material.transmission     = omat.transmission;
-    material.voltransmission  = omat.vol_transmission;
-    material.volmeanfreepath  = omat.vol_meanfreepath;
     material.volemission      = omat.vol_emission;
     material.volscatter       = omat.vol_scattering;
     material.volanisotropy    = omat.vol_anisotropy;
@@ -2028,15 +2013,6 @@ static sceneio_status save_obj(
     omaterial.transmission_map  = get_texture(material.transmission_tex);
     omaterial.opacity_map       = get_texture(material.opacity_tex);
     omaterial.normal_map        = get_texture(material.normal_tex);
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f) {
-      omaterial.vol_transmission = material.voltransmission;
-      omaterial.vol_meanfreepath = material.volmeanfreepath;
-      omaterial.vol_emission     = material.volemission;
-      omaterial.vol_scattering   = material.volscatter;
-      omaterial.vol_anisotropy   = material.volanisotropy;
-      omaterial.vol_scale        = material.volscale;
-    }
   }
 
   // convert shapes
