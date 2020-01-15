@@ -160,7 +160,7 @@ void set_material(
           iomaterial.base, iomaterial.volmeanfreepath,
           iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
           iomaterial.volume_tex);
-      set_material_refract(scene, idx, iomaterial.refract);
+      set_material_refract(scene, idx, true);
     }; break;
     case sceneio_material_type::subsurface: {
       set_material_specular(
@@ -172,7 +172,7 @@ void set_material(
           iomaterial.base, iomaterial.volmeanfreepath,
           iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
           iomaterial.volume_tex);
-      set_material_refract(scene, idx, iomaterial.refract);
+      set_material_refract(scene, idx, true);
     }; break;
     case sceneio_material_type::volume: {
       set_material_specular(
@@ -184,7 +184,7 @@ void set_material(
           iomaterial.base, iomaterial.volmeanfreepath,
           iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
           iomaterial.volume_tex);
-      set_material_refract(scene, idx, iomaterial.refract);
+      set_material_refract(scene, idx, false);
     }; break;
   }
 }
@@ -398,7 +398,6 @@ bool draw_glwidgets_material(
   edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
   edited += draw_glcoloredit(win, "transmission", material.transmission);
-  edited += draw_glcheckbox(win, "refract", material.refract);
   edited += draw_glcoloredit(win, "vol transmission", material.voltransmission);
   edited += draw_glcoloredit(win, "vol meanfreepath", material.volmeanfreepath);
   edited += draw_glcoloredit(win, "vol scatter", material.volscatter);

@@ -70,7 +70,6 @@ trace_scene* make_scene(sceneio_model& ioscene) {
         scene.get(), id, iomaterial.roughness, iomaterial.roughness_tex);
     set_material_opacity(
         scene.get(), id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_refract(scene.get(), id, iomaterial.refract);
     set_material_normalmap(scene.get(), id, iomaterial.normal_tex);
     set_material_volume(scene.get(), id, iomaterial.volemission,
         iomaterial.voltransmission, iomaterial.volmeanfreepath,
@@ -146,7 +145,6 @@ trace_scene* make_scene(sceneio_model& ioscene) {
         scene.get(), id, iomaterial.roughness, iomaterial.roughness_tex);
     set_material_opacity(
         scene.get(), id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_refract(scene.get(), id, iomaterial.refract);
     set_material_normalmap(scene.get(), id, iomaterial.normal_tex);
     set_material_volume(scene.get(), id, iomaterial.volemission,
         iomaterial.voltransmission, iomaterial.volmeanfreepath,

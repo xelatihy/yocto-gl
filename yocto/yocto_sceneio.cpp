@@ -1137,8 +1137,6 @@ sceneio_status load_yaml(
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "transmission", material.transmission))
         return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "refract", material.refract))
-        return {filename + ": parse error"};
       if (!get_yaml_value(
               yelement, "voltransmission", material.voltransmission))
         return {filename + ": parse error"};
@@ -1715,7 +1713,6 @@ static sceneio_status save_yaml(const string& filename,
     if (material.transmission != zero3f)
       add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
-    if (material.refract) add_yaml_value(yelement, "refract", material.refract);
     if (material.voltransmission != zero3f)
       add_yaml_value(yelement, "voltransmission", material.voltransmission);
     if (material.volmeanfreepath != zero3f)
