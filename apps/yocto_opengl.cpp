@@ -565,11 +565,11 @@ bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke,
         return false;
     }
 
-    ke = color.xyz * mat_ke;
-    kd = color.xyz * mat_kd;
-    ks = color.xyz * mat_ks;
+    ke = mat_ke;
+    kd = mat_kd;
+    ks = mat_ks;
     rs = mat_rs;
-    op = color.w * mat_op;
+    op = mat_op;
 
     vec4 ke_txt = (mat_ke_txt_on) ? texture(mat_ke_txt,texcoord) : vec4(1,1,1,1);
     vec4 kd_txt = (mat_kd_txt_on) ? texture(mat_kd_txt,texcoord) : vec4(1,1,1,1);
@@ -579,29 +579,21 @@ bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke,
 
     // get material color from textures and adjust values
     if(mat_type == 1) {
-        ke *= ke_txt.xyz;
-        kd *= kd_txt.xyz;
+        ke *= ke_txt.xyz * color.xyz;
+        kd *= kd_txt.xyz * color.xyz;
         ks *= ks_txt.xyz;
         rs *= rs_txt.y;
         rs = rs*rs;
-        op *= op_txt.x * kd_txt.w;
+        op *= op_txt.x * kd_txt.w * color.w;
     } else if(mat_type == 2) {
-        ke *= ke_txt.xyz;
-        vec3 kb = kd * kd_txt.xyz;
+        ke *= ke_txt.xyz * color.xyz;
+        vec3 kb = kd * kd_txt.xyz * color.xyz;
         float km = ks.x * ks_txt.z;
         kd = kb * (1 - km);
         ks = kb * km + vec3(0.04) * (1 - km);
         rs *= ks_txt.y;
         rs = rs*rs;
-        op *= kd_txt.w;
-    } else if(mat_type == 3) {
-        ke *= ke_txt.xyz;
-        kd *= kd_txt.xyz;
-        ks *= ks_txt.xyz;
-        float gs = (1 - rs) * ks_txt.w;
-        rs = 1 - gs;
-        rs = rs*rs;
-        op *= kd_txt.w;
+        op *= kd_txt.w * color.w;
     }
 
     return true;
