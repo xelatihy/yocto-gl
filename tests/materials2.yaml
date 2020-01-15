@@ -45,33 +45,41 @@ textures:
     preset: test-sky
 materials:
   - name: floor
+    type: matte
     base: [0.7, 0.7, 0.7]
     base_tex: floor
   - name: transparent
+    type: matte
     base: [0.7, 0.5, 0.5]
     roughness: 1
     opacity: 0.2
   - name: glass-sharp
+    type: refractive
+    base: [1, 1, 1]
     specular: [0.04, 0.04, 0.04]
-    transmission: [1, 1, 1]
     roughness: 0
     refract: true
   - name: glass-rough
+    type: refractive
     specular: [0.04, 0.04, 0.04]
-    transmission: [1, 0.7, 0.7]
+    base: [1, 0.7, 0.7]
     roughness: 0.1
     refract: true
   - name: thinglass-sharp
+    type: transparent
     specular: [0.04, 0.04, 0.04]
-    transmission: [1, 1, 1]
+    base: [1, 1, 1]
     roughness: 0
   - name: thinglass-rough
+    type: transparent
     specular: [0.04, 0.04, 0.04]
-    transmission: [1, 0.7, 0.7]
+    base: [1, 0.7, 0.7]
     roughness: 0.05
   - name: largearealight1
+    type: matte
     emission: [10, 10, 10]
   - name: largearealight2
+    type: matte
     emission: [10, 10, 10]
 shapes:
   - name: floor
