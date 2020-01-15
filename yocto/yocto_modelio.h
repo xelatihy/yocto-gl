@@ -621,6 +621,12 @@ bool get_yaml_value(const yaml_value& yaml, frame3f& value);
 template <typename T>
 inline bool get_yaml_value(
     const yaml_element& element, const string& name, const T& value);
+template <typename T>
+inline bool get_yaml_value(
+    const yaml_value& yaml, const T& value, const vector<string>& names);
+template <typename T>
+inline bool get_yaml_value(
+    const yaml_element& element, const string& name, const T& value, const vector<string>& names);
 bool has_yaml_value(const yaml_element& element, const string& name);
 
 // yaml value construction
@@ -1030,6 +1036,25 @@ inline bool get_yaml_value(
     const yaml_element& element, const string& name, T& value) {
   for (auto& [key, value_] : element.key_values) {
     if (key == name) return get_yaml_value(value_, value);
+  }
+  return true;
+}
+
+template <typename T>
+inline bool get_yaml_value(const yaml_value& yaml, T& value, const vector<string>& names) {
+  if (yaml.type != yaml_value_type::string) return false;
+  auto& name = yaml.string_;
+  for(auto idx = 0; idx < names.size(); idx++) {
+    if(name == names[idx]) { value = (T)idx; return true; }
+  }
+  return false;
+}
+
+template <typename T>
+inline bool get_yaml_value(
+    const yaml_element& element, const string& name, T& value, const vector<string>& names) {
+  for (auto& [key, value_] : element.key_values) {
+    if (key == name) return get_yaml_value(value_, value, names);
   }
   return true;
 }

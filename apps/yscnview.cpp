@@ -211,8 +211,6 @@ opengl_scene* make_scene(const sceneio_model& scene) {
     set_material_diffuse(glscene, id, material.diffuse, material.diffuse_tex);
     set_material_specular(
         glscene, id, material.specular, material.specular_tex);
-    set_material_metallic(
-        glscene, id, material.metallic, material.metallic_tex);
     set_material_roughness(
         glscene, id, material.roughness, material.roughness_tex);
     set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
@@ -290,16 +288,9 @@ bool draw_glwidgets_material(
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
   edited += draw_glcoloredit(win, "diffuse", material.diffuse);
   edited += draw_glcoloredit(win, "specular", material.specular);
-  edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
-  edited += draw_glcoloredit(win, "coat", material.coat);
   edited += draw_glcoloredit(win, "transmission", material.transmission);
-  edited += draw_glcheckbox(win, "refract", material.refract);
-  edited += draw_glcoloredit(win, "vol transmission", material.voltransmission);
-  edited += draw_glcoloredit(win, "vol meanfreepath", material.volmeanfreepath);
-  edited += draw_glcoloredit(win, "vol scatter", material.volscatter);
-  edited += draw_glcoloredit(win, "vol emission", material.volemission);
-  edited += draw_glslider(win, "vol scale", material.volscale, 0, 1);
+  edited += draw_glcoloredit(win, "volume", material.volume);
   edited += draw_glslider(win, "vol anisotropy", material.volanisotropy, -1, 1);
   edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
   edited += draw_glcombobox(
@@ -307,18 +298,15 @@ bool draw_glwidgets_material(
   edited += draw_glcombobox(
       win, "diffuse_tex", material.diffuse_tex, app->scene.textures, true);
   edited += draw_glcombobox(
-      win, "metallic_tex", material.metallic_tex, app->scene.textures, true);
-  edited += draw_glcombobox(
       win, "specular_tex", material.specular_tex, app->scene.textures, true);
   edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
       app->scene.textures, true);
-  edited += draw_glcombobox(win, "subsurface_tex", material.subsurface_tex,
+  edited += draw_glcombobox(win, "volume_tex", material.volume_tex,
       app->scene.textures, true);
   edited += draw_glcombobox(
       win, "roughness_tex", material.roughness_tex, app->scene.textures, true);
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, app->scene.textures, true);
-  edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
   return edited;
 }
 
@@ -506,8 +494,6 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
             material.diffuse_tex);
         set_material_specular(glscene, app->selection.second, material.specular,
             material.specular_tex);
-        set_material_metallic(glscene, app->selection.second, material.metallic,
-            material.metallic_tex);
         set_material_roughness(glscene, app->selection.second,
             material.roughness, material.roughness_tex);
         set_material_opacity(glscene, app->selection.second, material.opacity,

@@ -1119,47 +1119,31 @@ sceneio_status load_yaml(
       auto& material = scene.materials.emplace_back();
       if (!get_yaml_value(yelement, "name", material.name))
         return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "type", material.type, sceneio_material_names))
+        return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "emission", material.emission))
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "diffuse", material.diffuse))
         return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "metallic", material.metallic))
-        return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "specular", material.specular))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "volume", material.volume))
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "roughness", material.roughness))
         return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "coat", material.coat))
-        return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "transmission", material.transmission))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "refract", material.refract))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(
-              yelement, "voltransmission", material.voltransmission))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(
-              yelement, "volmeanfreepath", material.volmeanfreepath))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "volscatter", material.volscatter))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "volemission", material.volemission))
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "volanisotropy", material.volanisotropy))
         return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "volscale", material.volscale))
-        return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "opacity", material.opacity))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "coat", material.coat))
         return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "emission_tex", material.emission_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "diffuse_tex", material.diffuse_tex, tmap))
         return {filename + ": parse error"};
-      if (!get_yaml_ref(yelement, "metallic_tex", material.metallic_tex, tmap))
-        return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "specular_tex", material.specular_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "volume_tex", material.volume_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(
               yelement, "transmission_tex", material.transmission_tex, tmap))
@@ -1168,13 +1152,11 @@ sceneio_status load_yaml(
               yelement, "roughness_tex", material.roughness_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(
-              yelement, "subsurface_tex", material.subsurface_tex, tmap))
+              yelement, "volume_tex", material.volume_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "gltf_textures", material.gltf_textures))
         return {filename + ": parse error"};
       if (has_yaml_value(yelement, "uri")) {
         if (!get_yaml_value(yelement, "uri", material.name))
@@ -1694,30 +1676,21 @@ static sceneio_status save_yaml(const string& filename,
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "materials";
     add_yaml_value(yelement, "name", material.name);
+    if (material.type != sceneio_material_type::standard)
+      add_yaml_value(yelement, "type", sceneio_material_names[(int)material.type]);
+    if(material.emission != zero3f)
     add_yaml_value(yelement, "emission", material.emission);
+    if(material.diffuse != zero3f)
     add_yaml_value(yelement, "diffuse", material.diffuse);
+    if(material.specular != zero3f)
     add_yaml_value(yelement, "specular", material.specular);
-    if (material.metallic)
-      add_yaml_value(yelement, "metallic", material.metallic);
+    if(material.volume != zero3f)
+    add_yaml_value(yelement, "volume", material.volume);
     if (material.transmission != zero3f)
       add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
-    if (material.refract) add_yaml_value(yelement, "refract", material.refract);
-    if (material.voltransmission != zero3f)
-      add_yaml_value(yelement, "voltransmission", material.voltransmission);
-    if (material.volmeanfreepath != zero3f)
-      add_yaml_value(yelement, "volmeanfreepath", material.volmeanfreepath);
-    if (material.volscatter != zero3f)
-      add_yaml_value(yelement, "volscatter", material.volscatter);
-    if (material.volemission != zero3f)
-      add_yaml_value(yelement, "volemission", material.volemission);
     if (material.volanisotropy)
       add_yaml_value(yelement, "volanisotropy", material.volanisotropy);
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f)
-      add_yaml_value(yelement, "volscale", material.volscale);
-    if (material.coat != zero3f)
-      add_yaml_value(yelement, "coat", material.coat);
     if (material.opacity != 1)
       add_yaml_value(yelement, "opacity", material.opacity);
     if (material.emission_tex >= 0)
@@ -1726,32 +1699,27 @@ static sceneio_status save_yaml(const string& filename,
     if (material.diffuse_tex >= 0)
       add_yaml_value(
           yelement, "diffuse_tex", scene.textures[material.diffuse_tex].name);
-    if (material.metallic_tex >= 0)
-      add_yaml_value(
-          yelement, "metallic_tex", scene.textures[material.metallic_tex].name);
     if (material.specular_tex >= 0)
       add_yaml_value(
           yelement, "specular_tex", scene.textures[material.specular_tex].name);
+    if (material.volume_tex >= 0)
+      add_yaml_value(
+          yelement, "volume_tex", scene.textures[material.volume_tex].name);
     if (material.roughness_tex >= 0)
       add_yaml_value(yelement, "roughness_tex",
           scene.textures[material.roughness_tex].name);
     if (material.transmission_tex >= 0)
       add_yaml_value(yelement, "transmission_tex",
           scene.textures[material.transmission_tex].name);
-    if (material.subsurface_tex >= 0)
-      add_yaml_value(yelement, "subsurface_tex",
-          scene.textures[material.subsurface_tex].name);
-    if (material.coat_tex >= 0)
-      add_yaml_value(
-          yelement, "coat_tex", scene.textures[material.coat_tex].name);
+    if (material.volume_tex >= 0)
+      add_yaml_value(yelement, "volume_tex",
+          scene.textures[material.volume_tex].name);
     if (material.opacity_tex >= 0)
       add_yaml_value(
           yelement, "opacity_tex", scene.textures[material.opacity_tex].name);
     if (material.normal_tex >= 0)
       add_yaml_value(
           yelement, "normal_tex", scene.textures[material.normal_tex].name);
-    if (material.gltf_textures)
-      add_yaml_value(yelement, "gltf_textures", material.gltf_textures);
   }
 
   for (auto& shape : scene.shapes) {
@@ -1861,23 +1829,14 @@ static sceneio_status load_obj(
     material.diffuse          = omat.diffuse;
     material.specular         = omat.specular;
     material.roughness        = obj_exponent_to_roughness(omat.exponent);
-    material.metallic         = omat.pbr_metallic;
-    material.coat             = omat.reflection;
     material.transmission     = omat.transmission;
-    material.voltransmission  = omat.vol_transmission;
-    material.volmeanfreepath  = omat.vol_meanfreepath;
-    material.volemission      = omat.vol_emission;
-    material.volscatter       = omat.vol_scattering;
     material.volanisotropy    = omat.vol_anisotropy;
-    material.volscale         = omat.vol_scale;
     material.opacity          = omat.opacity;
     material.emission_tex     = get_texture(omat.emission_map);
     material.diffuse_tex      = get_texture(omat.diffuse_map);
     material.specular_tex     = get_texture(omat.specular_map);
-    material.metallic_tex     = get_texture(omat.pbr_metallic_map);
     material.roughness_tex    = get_texture(omat.pbr_roughness_map);
     material.transmission_tex = get_texture(omat.transmission_map);
-    material.coat_tex         = get_texture(omat.reflection_map);
     material.opacity_tex      = get_texture(omat.opacity_map);
     material.normal_tex       = get_texture(omat.normal_map);
     material_map[omat.name]   = (int)scene.materials.size() - 1;
@@ -2008,28 +1967,15 @@ static sceneio_status save_obj(
     omaterial.diffuse           = material.diffuse;
     omaterial.specular          = material.specular;
     omaterial.exponent          = obj_roughness_to_exponent(material.roughness);
-    omaterial.pbr_metallic      = material.metallic;
-    omaterial.reflection        = material.coat;
     omaterial.transmission      = material.transmission;
     omaterial.opacity           = material.opacity;
     omaterial.emission_map      = get_texture(material.emission_tex);
     omaterial.diffuse_map       = get_texture(material.diffuse_tex);
     omaterial.specular_map      = get_texture(material.specular_tex);
-    omaterial.pbr_metallic_map  = get_texture(material.metallic_tex);
     omaterial.pbr_roughness_map = get_texture(material.roughness_tex);
     omaterial.transmission_map  = get_texture(material.transmission_tex);
-    omaterial.reflection_map    = get_texture(material.coat_tex);
     omaterial.opacity_map       = get_texture(material.opacity_tex);
     omaterial.normal_map        = get_texture(material.normal_tex);
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f) {
-      omaterial.vol_transmission = material.voltransmission;
-      omaterial.vol_meanfreepath = material.volmeanfreepath;
-      omaterial.vol_emission     = material.volemission;
-      omaterial.vol_scattering   = material.volscatter;
-      omaterial.vol_anisotropy   = material.volanisotropy;
-      omaterial.vol_scale        = material.volscale;
-    }
   }
 
   // convert shapes
@@ -2214,7 +2160,6 @@ static sceneio_status load_gltf(const string& filename, sceneio_model& scene) {
       material.opacity      = gmaterial.mr_base.w;
       material.specular     = vec3f{0.04f};
       material.diffuse_tex  = gmaterial.mr_base_tex;
-      material.metallic_tex = gmaterial.mr_metallic_tex;
     }
     material.normal_tex = gmaterial.normal_tex;
   }

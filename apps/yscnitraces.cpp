@@ -77,6 +77,83 @@ struct app_state {
   }
 };
 
+// set material values
+void set_material(
+    trace_scene* scene, int idx, const sceneio_material& iomaterial) {
+  set_material_emission(
+      scene, idx, iomaterial.emission, iomaterial.emission_tex);
+  set_material_opacity(scene, idx, iomaterial.opacity, iomaterial.opacity_tex);
+  set_material_normalmap(scene, idx, iomaterial.normal_tex);
+  switch (iomaterial.type) {
+    case sceneio_material_type::standard:
+    case sceneio_material_type::substrate: {
+      set_material_diffuse(
+          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
+      set_material_specular(
+          scene, idx, iomaterial.specular, iomaterial.specular_tex);
+      set_material_roughness(
+          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
+    }; break;
+    case sceneio_material_type::matte: {
+      set_material_diffuse(
+          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
+      set_material_specular(scene, idx, zero3f);
+      set_material_roughness(scene, idx, 1);
+    } break;
+    case sceneio_material_type::reflective: {
+      set_material_diffuse(scene, idx, zero3f);
+      set_material_specular(
+          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
+      set_material_roughness(
+          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
+    } break;
+    case sceneio_material_type::transparent: {
+      set_material_specular(
+          scene, idx, iomaterial.specular, iomaterial.specular_tex);
+      set_material_transmission(
+          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
+      set_material_roughness(
+          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
+    }; break;
+    case sceneio_material_type::refractive: {
+      set_material_specular(
+          scene, idx, iomaterial.specular, iomaterial.specular_tex);
+      set_material_transmission(scene, idx, {1, 1, 1});
+      set_material_roughness(
+          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
+      set_material_volume(scene, idx, zero3f,
+          iomaterial.diffuse, zero3f,
+          iomaterial.volume, 0.01, iomaterial.volanisotropy,
+          iomaterial.volume_tex);
+      set_material_refract(scene, idx, true);
+    }; break;
+    case sceneio_material_type::subsurface: {
+      set_material_specular(
+          scene, idx, iomaterial.specular, iomaterial.specular_tex);
+      set_material_transmission(scene, idx, {1, 1, 1});
+      set_material_roughness(
+          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
+      set_material_volume(scene, idx, zero3f,
+          iomaterial.diffuse, zero3f,
+          iomaterial.volume, 0.01, iomaterial.volanisotropy,
+          iomaterial.volume_tex);
+      set_material_refract(scene, idx, true);
+    }; break;
+    case sceneio_material_type::volume: {
+      set_material_specular(
+          scene, idx, iomaterial.specular, iomaterial.specular_tex);
+      set_material_transmission(scene, idx, {1, 1, 1});
+      set_material_roughness(
+          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
+      set_material_volume(scene, idx, zero3f,
+          iomaterial.diffuse, zero3f,
+          iomaterial.volume, 0.01, iomaterial.volanisotropy,
+          iomaterial.volume_tex);
+      set_material_refract(scene, idx, false);
+    }; break;
+  }
+}
+
 // construct a scene from io
 trace_scene* make_scene(sceneio_model& ioscene) {
   auto scene = make_unique<trace_scene>();
@@ -96,26 +173,7 @@ trace_scene* make_scene(sceneio_model& ioscene) {
 
   for (auto& iomaterial : ioscene.materials) {
     auto id = add_material(scene.get());
-    set_material_emission(
-        scene.get(), id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_diffuse(
-        scene.get(), id, iomaterial.diffuse, iomaterial.diffuse_tex);
-    set_material_specular(
-        scene.get(), id, iomaterial.specular, iomaterial.specular_tex);
-    set_material_metallic(
-        scene.get(), id, iomaterial.metallic, iomaterial.metallic_tex);
-    set_material_transmission(
-        scene.get(), id, iomaterial.transmission, iomaterial.transmission_tex);
-    set_material_roughness(
-        scene.get(), id, iomaterial.roughness, iomaterial.roughness_tex);
-    set_material_opacity(
-        scene.get(), id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_refract(scene.get(), id, iomaterial.refract);
-    set_material_normalmap(scene.get(), id, iomaterial.normal_tex);
-    set_material_volume(scene.get(), id, iomaterial.volemission,
-        iomaterial.voltransmission, iomaterial.volmeanfreepath,
-        iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
-        iomaterial.subsurface_tex);
+    set_material(scene.get(), id, iomaterial);
   }
 
   for (auto& ioshape_ : ioscene.shapes) {

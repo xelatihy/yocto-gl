@@ -86,43 +86,50 @@ struct sceneio_texture {
   image<vec4b> ldr      = {};
 };
 
+// Material type
+enum struct sceneio_material_type {
+  standard,
+  matte,
+  substrate,
+  reflective,
+  refractive,
+  transparent,
+  subsurface,
+  volume,
+};
+
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct sceneio_material {
-  string name = "";
+  string                name = "";
+  sceneio_material_type type = sceneio_material_type::standard;
 
   // lobes
   vec3f emission        = {0, 0, 0};
   vec3f diffuse         = {0, 0, 0};
   vec3f specular        = {0, 0, 0};
-  float roughness       = 0;
-  float metallic        = 0;
-  vec3f coat            = {0, 0, 0};
   vec3f transmission    = {0, 0, 0};
-  vec3f voltransmission = {0, 0, 0};
-  vec3f volmeanfreepath = {0, 0, 0};
-  vec3f volemission     = {0, 0, 0};
-  vec3f volscatter      = {0, 0, 0};
-  float volanisotropy   = 0;
-  float volscale        = 0.01;
+  vec3f volume          = {0, 0, 0};
+  float roughness       = 0;
   float opacity         = 1;
-  bool  refract         = false;
+  float volanisotropy   = 0;
 
   // textures
   int  emission_tex     = -1;
   int  diffuse_tex      = -1;
   int  specular_tex     = -1;
-  int  metallic_tex     = -1;
-  int  roughness_tex    = -1;
   int  transmission_tex = -1;
-  int  subsurface_tex   = -1;
-  int  coat_tex         = -1;
+  int  volume_tex       = -1;
+  int  roughness_tex    = -1;
   int  opacity_tex      = -1;
   int  normal_tex       = -1;
-  bool gltf_textures    = false;  // glTF packed textures
 };
+
+// Names for material type
+const auto sceneio_material_names = vector<string>{"standard", "matte", "substrate",
+    "reflective", "refractive", "transparent", "subsurface", "volume"};
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
