@@ -129,7 +129,7 @@ void set_material(
       set_material_transmission(scene, idx, {1, 1, 1});
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-      set_material_volume(scene, idx, iomaterial.volemission,
+      set_material_volume(scene, idx, zero3f,
           iomaterial.base, zero3f,
           iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
           iomaterial.volume_tex);
@@ -141,7 +141,7 @@ void set_material(
       set_material_transmission(scene, idx, {1, 1, 1});
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-      set_material_volume(scene, idx, iomaterial.volemission,
+      set_material_volume(scene, idx, zero3f,
           iomaterial.base, zero3f,
           iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
           iomaterial.volume_tex);
@@ -153,7 +153,7 @@ void set_material(
       set_material_transmission(scene, idx, {1, 1, 1});
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-      set_material_volume(scene, idx, iomaterial.volemission,
+      set_material_volume(scene, idx, zero3f,
           iomaterial.base, zero3f,
           iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
           iomaterial.volume_tex);

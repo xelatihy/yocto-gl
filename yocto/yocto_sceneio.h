@@ -116,8 +116,6 @@ struct sceneio_material {
   float roughness       = 0;
   float metallic        = 0;
   vec3f transmission    = {0, 0, 0};
-  vec3f volemission     = {0, 0, 0};
-  vec3f volscatter      = {0, 0, 0};
   float volanisotropy   = 0;
   float volscale        = 0.01;
   float opacity         = 1;

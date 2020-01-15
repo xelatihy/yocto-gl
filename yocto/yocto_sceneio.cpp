@@ -1137,10 +1137,6 @@ sceneio_status load_yaml(
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "transmission", material.transmission))
         return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "volscatter", material.volscatter))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "volemission", material.volemission))
-        return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "volanisotropy", material.volanisotropy))
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "volscale", material.volscale))
@@ -1707,10 +1703,6 @@ static sceneio_status save_yaml(const string& filename,
     if (material.transmission != zero3f)
       add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
-    if (material.volscatter != zero3f)
-      add_yaml_value(yelement, "volscatter", material.volscatter);
-    if (material.volemission != zero3f)
-      add_yaml_value(yelement, "volemission", material.volemission);
     if (material.volanisotropy)
       add_yaml_value(yelement, "volanisotropy", material.volanisotropy);
     if (material.opacity != 1)
@@ -1861,8 +1853,6 @@ static sceneio_status load_obj(
     material.roughness        = obj_exponent_to_roughness(omat.exponent);
     material.metallic         = omat.pbr_metallic;
     material.transmission     = omat.transmission;
-    material.volemission      = omat.vol_emission;
-    material.volscatter       = omat.vol_scattering;
     material.volanisotropy    = omat.vol_anisotropy;
     material.volscale         = omat.vol_scale;
     material.opacity          = omat.opacity;
