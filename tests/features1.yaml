@@ -52,36 +52,36 @@ textures:
 materials:
   - name: floor
     type: matte
-    base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    diffuse: [0.7, 0.7, 0.7]
+    diffuse_tex: floor
   - name: metal-rough
     type: reflective
-    base: [0.66, 0.45, 0.34]
+    diffuse: [0.66, 0.45, 0.34]
     roughness: 0.2
   - name: plastic-rough-bumped
     type: substrate
     specular: [0.04, 0.04, 0.04]
-    base: [0.5, 0.7, 0.5]
+    diffuse: [0.5, 0.7, 0.5]
     roughness: 0.2
     normal_tex: bumps-normal
   - name: uvgrid-coated
     type: substrate
     coat: [0.04, 0.04, 0.04]
     specular: [0.04, 0.04, 0.04]
-    base: [1, 1, 1]
+    diffuse: [1, 1, 1]
     roughness: 0.2
-    base_tex: uvgrid
+    diffuse_tex: uvgrid
   - name: volume-jade
     type: subsurface
     specular: [0.04, 0.04, 0.04]
     roughness: 0
-    base: [0.5, 0.5, 0.5]
+    diffuse: [0.5, 0.5, 0.5]
     volume: [0.3, 0.6, 0.3]
   - name: volume-glass
     type: refractive
     specular: [0.04, 0.04, 0.04]
     roughness: 0
-    base: [1, 0.75, 0.75]
+    diffuse: [1, 0.75, 0.75]
   - name: arealight1
     type: matte
     emission: [20, 20, 20]

@@ -48,20 +48,20 @@ textures:
     preset: test-sunsky
 materials:
   - name: floor
-    base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    diffuse: [0.7, 0.7, 0.7]
+    diffuse_tex: floor
   - name: uvgrid
     specular: [0.04, 0.04, 0.04]
-    base: [1, 1, 1]
+    diffuse: [1, 1, 1]
     roughness: 0.1
-    base_tex: uvgrid
+    diffuse_tex: uvgrid
   - name: plastic-sharp
     specular: [0.04, 0.04, 0.04]
-    base: [0.5, 0.5, 0.7]
+    diffuse: [0.5, 0.5, 0.7]
     roughness: 0.01
   - name: plastic-rough
     specular: [0.04, 0.04, 0.04]
-    base: [0.5, 0.7, 0.5]
+    diffuse: [0.5, 0.7, 0.5]
     roughness: 0.2
   - name: metal-sharp
     specular: [0.7, 0.7, 0.7]

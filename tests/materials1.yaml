@@ -46,29 +46,29 @@ textures:
 materials:
   - name: floor
     type: matte
-    base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    diffuse: [0.7, 0.7, 0.7]
+    diffuse_tex: floor
   - name: matte
     type: matte
-    base: [0.7, 0.7, 0.7]
+    diffuse: [0.7, 0.7, 0.7]
     roughness: 1
   - name: plastic-sharp
     type: substrate
     specular: [0.04, 0.04, 0.04]
-    base: [0.5, 0.5, 0.7]
+    diffuse: [0.5, 0.5, 0.7]
     roughness: 0.01
   - name: plastic-rough
     type: substrate
     specular: [0.04, 0.04, 0.04]
-    base: [0.5, 0.7, 0.5]
+    diffuse: [0.5, 0.7, 0.5]
     roughness: 0.2
   - name: metal-sharp
     type: reflective
-    base: [0.7, 0.7, 0.7]
+    diffuse: [0.7, 0.7, 0.7]
     roughness: 0
   - name: metal-rough
     type: reflective
-    base: [0.66, 0.45, 0.34]
+    diffuse: [0.66, 0.45, 0.34]
     roughness: 0.2
   - name: largearealight1
     type: matte

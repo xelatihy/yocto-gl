@@ -88,7 +88,7 @@ void set_material(
     case sceneio_material_type::standard:
     case sceneio_material_type::substrate: {
       set_material_diffuse(
-          scene, idx, iomaterial.base, iomaterial.base_tex);
+          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
       set_material_specular(
           scene, idx, iomaterial.specular, iomaterial.specular_tex);
       set_material_roughness(
@@ -96,20 +96,20 @@ void set_material(
     }; break;
     case sceneio_material_type::matte: {
       set_material_diffuse(
-          scene, idx, iomaterial.base, iomaterial.base_tex);
+          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
       set_material_specular(scene, idx, zero3f);
       set_material_roughness(scene, idx, 1);
     } break;
     case sceneio_material_type::reflective: {
       set_material_diffuse(scene, idx, zero3f);
       set_material_specular(
-          scene, idx, iomaterial.base, iomaterial.base_tex);
+          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
     } break;
     case sceneio_material_type::metallic: {
       set_material_diffuse(
-          scene, idx, iomaterial.base, iomaterial.base_tex);
+          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
       set_material_metallic(
           scene, idx, mean(iomaterial.specular), iomaterial.specular_tex);
       set_material_roughness(
@@ -119,7 +119,7 @@ void set_material(
       set_material_specular(
           scene, idx, iomaterial.specular, iomaterial.specular_tex);
       set_material_transmission(
-          scene, idx, iomaterial.base, iomaterial.base_tex);
+          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
     }; break;
@@ -130,7 +130,7 @@ void set_material(
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, zero3f,
-          iomaterial.base, zero3f,
+          iomaterial.diffuse, zero3f,
           iomaterial.volume, 0.01, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, true);
@@ -142,7 +142,7 @@ void set_material(
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, zero3f,
-          iomaterial.base, zero3f,
+          iomaterial.diffuse, zero3f,
           iomaterial.volume, 0.01, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, true);
@@ -154,7 +154,7 @@ void set_material(
       set_material_roughness(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, zero3f,
-          iomaterial.base, zero3f,
+          iomaterial.diffuse, zero3f,
           iomaterial.volume, 0.01, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, false);

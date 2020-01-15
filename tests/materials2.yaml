@@ -46,34 +46,34 @@ textures:
 materials:
   - name: floor
     type: matte
-    base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    diffuse: [0.7, 0.7, 0.7]
+    diffuse_tex: floor
   - name: transparent
     type: matte
-    base: [0.7, 0.5, 0.5]
+    diffuse: [0.7, 0.5, 0.5]
     roughness: 1
     opacity: 0.2
   - name: glass-sharp
     type: refractive
-    base: [1, 1, 1]
+    diffuse: [1, 1, 1]
     specular: [0.04, 0.04, 0.04]
     roughness: 0
     refract: true
   - name: glass-rough
     type: refractive
     specular: [0.04, 0.04, 0.04]
-    base: [1, 0.7, 0.7]
+    diffuse: [1, 0.7, 0.7]
     roughness: 0.1
     refract: true
   - name: thinglass-sharp
     type: transparent
     specular: [0.04, 0.04, 0.04]
-    base: [1, 1, 1]
+    diffuse: [1, 1, 1]
     roughness: 0
   - name: thinglass-rough
     type: transparent
     specular: [0.04, 0.04, 0.04]
-    base: [1, 0.7, 0.7]
+    diffuse: [1, 0.7, 0.7]
     roughness: 0.05
   - name: largearealight1
     type: matte

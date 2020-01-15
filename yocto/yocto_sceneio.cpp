@@ -1125,8 +1125,6 @@ sceneio_status load_yaml(
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "diffuse", material.diffuse))
         return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "base", material.base))
-        return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "metallic", material.metallic))
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "specular", material.specular))
@@ -1144,8 +1142,6 @@ sceneio_status load_yaml(
       if (!get_yaml_ref(yelement, "emission_tex", material.emission_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "diffuse_tex", material.diffuse_tex, tmap))
-        return {filename + ": parse error"};
-      if (!get_yaml_ref(yelement, "base_tex", material.base_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "metallic_tex", material.metallic_tex, tmap))
         return {filename + ": parse error"};
@@ -1690,8 +1686,8 @@ static sceneio_status save_yaml(const string& filename,
       add_yaml_value(yelement, "type", sceneio_material_names[(int)material.type]);
     if(material.emission != zero3f)
     add_yaml_value(yelement, "emission", material.emission);
+    if(material.diffuse != zero3f)
     add_yaml_value(yelement, "diffuse", material.diffuse);
-    add_yaml_value(yelement, "base", material.base);
     if(material.specular != zero3f)
     add_yaml_value(yelement, "specular", material.specular);
     if(material.volume != zero3f)
@@ -1711,9 +1707,6 @@ static sceneio_status save_yaml(const string& filename,
     if (material.diffuse_tex >= 0)
       add_yaml_value(
           yelement, "diffuse_tex", scene.textures[material.diffuse_tex].name);
-    if (material.base_tex >= 0)
-      add_yaml_value(
-          yelement, "base_tex", scene.textures[material.base_tex].name);
     if (material.metallic_tex >= 0)
       add_yaml_value(
           yelement, "metallic_tex", scene.textures[material.metallic_tex].name);

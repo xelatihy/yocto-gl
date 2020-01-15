@@ -46,31 +46,31 @@ textures:
 materials:
   - name: floor
     type: matte
-    base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    diffuse: [0.7, 0.7, 0.7]
+    diffuse_tex: floor
   - name: volume-jade
     type: subsurface
     specular: [0.04, 0.04, 0.04]
     roughness: 0
-    base: [0.5, 0.5, 0.5]
+    diffuse: [0.5, 0.5, 0.5]
     volume: [0.3, 0.6, 0.3]
   - name: volume-cloud
     type: volume
-    base: [0.65, 0.65, 0.65]
+    diffuse: [0.65, 0.65, 0.65]
     volume: [0.9, 0.9, 0.9]
   - name: volume-glass
     type: refractive
     specular: [0.04, 0.04, 0.04]
     roughness: 0
-    base: [1, 0.75, 0.75]
+    diffuse: [1, 0.75, 0.75]
   - name: volume-smoke
     type: volume
-    base: [0.5, 0.5, 0.5]
+    diffuse: [0.5, 0.5, 0.5]
     volume: [0.2, 0.2, 0.2]
     volanisotropy: -0.8
   - name: volume-emissive
     type: volume
-    base: [0.95, 0.95, 0.95]
+    diffuse: [0.95, 0.95, 0.95]
     volemission: [15, 15, 10]
     volume: [0.01, 0.01, 0.01]
   - name: largearealight1

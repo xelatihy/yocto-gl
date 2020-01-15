@@ -48,13 +48,13 @@ textures:
     preset: test-sky
 materials:
   - name: floor
-    base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    diffuse: [0.7, 0.7, 0.7]
+    diffuse_tex: floor
   - name: uvgrid
     specular: [0.04, 0.04, 0.04]
-    base: [1, 1, 1]
+    diffuse: [1, 1, 1]
     roughness: 0.1
-    base_tex: uvgrid
+    diffuse_tex: uvgrid
   - name: arealight1
     emission: [20, 20, 20]
   - name: arealight2
