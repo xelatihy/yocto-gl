@@ -91,7 +91,7 @@ void set_material(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, zero3f,
           iomaterial.base, zero3f,
-          iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
+          iomaterial.volume, 0.01, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, true);
     }; break;
@@ -103,7 +103,7 @@ void set_material(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, zero3f,
           iomaterial.base, zero3f,
-          iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
+          iomaterial.volume, 0.01, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, true);
     }; break;
@@ -115,7 +115,7 @@ void set_material(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, zero3f,
           iomaterial.base, zero3f,
-          iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
+          iomaterial.volume, 0.01, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, false);
     }; break;

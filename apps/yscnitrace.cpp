@@ -158,7 +158,7 @@ void set_material(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, zero3f,
           iomaterial.base, zero3f,
-          iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
+          iomaterial.volume, 0.01, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, true);
     }; break;
@@ -170,7 +170,7 @@ void set_material(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, zero3f,
           iomaterial.base, zero3f,
-          iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
+          iomaterial.volume, 0.01, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, true);
     }; break;
@@ -182,7 +182,7 @@ void set_material(
           scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
       set_material_volume(scene, idx, zero3f,
           iomaterial.base, zero3f,
-          iomaterial.volume, iomaterial.volscale, iomaterial.volanisotropy,
+          iomaterial.volume, 0.01, iomaterial.volanisotropy,
           iomaterial.volume_tex);
       set_material_refract(scene, idx, false);
     }; break;
@@ -399,7 +399,6 @@ bool draw_glwidgets_material(
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
   edited += draw_glcoloredit(win, "transmission", material.transmission);
   edited += draw_glcoloredit(win, "volume", material.volume);
-  edited += draw_glslider(win, "vol scale", material.volscale, 0, 1);
   edited += draw_glslider(win, "vol anisotropy", material.volanisotropy, -1, 1);
   edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
   edited += draw_glcombobox(

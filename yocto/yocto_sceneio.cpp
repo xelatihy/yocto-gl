@@ -1139,8 +1139,6 @@ sceneio_status load_yaml(
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "volanisotropy", material.volanisotropy))
         return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "volscale", material.volscale))
-        return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "opacity", material.opacity))
         return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "emission_tex", material.emission_tex, tmap))
@@ -1854,7 +1852,6 @@ static sceneio_status load_obj(
     material.metallic         = omat.pbr_metallic;
     material.transmission     = omat.transmission;
     material.volanisotropy    = omat.vol_anisotropy;
-    material.volscale         = omat.vol_scale;
     material.opacity          = omat.opacity;
     material.emission_tex     = get_texture(omat.emission_map);
     material.diffuse_tex      = get_texture(omat.diffuse_map);
