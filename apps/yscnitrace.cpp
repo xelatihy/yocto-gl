@@ -399,7 +399,7 @@ bool draw_glwidgets_material(
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
   edited += draw_glcoloredit(win, "transmission", material.transmission);
   edited += draw_glcoloredit(win, "volume", material.volume);
-  edited += draw_glslider(win, "vol anisotropy", material.volanisotropy, -1, 1);
+  edited += draw_glslider(win, "volanisotropy", material.volanisotropy, -1, 1);
   edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
   edited += draw_glcombobox(
       win, "emission_tex", material.emission_tex, app->ioscene.textures, true);

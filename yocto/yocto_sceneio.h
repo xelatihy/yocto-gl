@@ -112,10 +112,10 @@ struct sceneio_material {
   vec3f diffuse         = {0, 0, 0};
   vec3f base            = {0, 0, 0};
   vec3f specular        = {0, 0, 0};
+  vec3f transmission    = {0, 0, 0};
   vec3f volume          = {0, 0, 0};
   float roughness       = 0;
   float metallic        = 0;
-  vec3f transmission    = {0, 0, 0};
   float volanisotropy   = 0;
   float opacity         = 1;
 
