@@ -1119,7 +1119,7 @@ sceneio_status load_yaml(
       auto& material = scene.materials.emplace_back();
       if (!get_yaml_value(yelement, "name", material.name))
         return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "name", material.type, sceneio_material_names))
+      if (!get_yaml_value(yelement, "type", material.type, sceneio_material_names))
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "emission", material.emission))
         return {filename + ": parse error"};

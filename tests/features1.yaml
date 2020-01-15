@@ -51,23 +51,28 @@ textures:
     preset: test-sky
 materials:
   - name: floor
+    type: matte
     diffuse: [0.7, 0.7, 0.7]
     diffuse_tex: floor
   - name: metal-rough
+    type: metal
     specular: [0.66, 0.45, 0.34]
     roughness: 0.2
   - name: plastic-rough-bumped
+    type: plastic
     specular: [0.04, 0.04, 0.04]
     diffuse: [0.5, 0.7, 0.5]
     roughness: 0.2
     normal_tex: bumps-normal
   - name: uvgrid-coated
+    type: plastic
     coat: [0.04, 0.04, 0.04]
     specular: [0.04, 0.04, 0.04]
     diffuse: [1, 1, 1]
     roughness: 0.2
     diffuse_tex: uvgrid
   - name: volume-jade
+    type: subsurface
     specular: [0.04, 0.04, 0.04]
     roughness: 0
     transmission: [1, 1, 1]
@@ -75,6 +80,7 @@ materials:
     volscatter: [0.3, 0.6, 0.3]
     refract: true
   - name: volume-glass
+    type: volglass
     specular: [0.04, 0.04, 0.04]
     roughness: 0
     transmission: [1, 1, 1]
@@ -82,8 +88,10 @@ materials:
     volscale: 0.02
     refract: true
   - name: arealight1
+    type: matte
     emission: [20, 20, 20]
   - name: arealight2
+    type: matte
     emission: [20, 20, 20]
 shapes:
   - name: floor
