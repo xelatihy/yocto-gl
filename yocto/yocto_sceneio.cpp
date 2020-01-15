@@ -1152,7 +1152,7 @@ sceneio_status load_yaml(
               yelement, "roughness_tex", material.roughness_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(
-              yelement, "subsurface_tex", material.subsurface_tex, tmap))
+              yelement, "volume_tex", material.volume_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap))
         return {filename + ": parse error"};
@@ -1711,9 +1711,9 @@ static sceneio_status save_yaml(const string& filename,
     if (material.transmission_tex >= 0)
       add_yaml_value(yelement, "transmission_tex",
           scene.textures[material.transmission_tex].name);
-    if (material.subsurface_tex >= 0)
-      add_yaml_value(yelement, "subsurface_tex",
-          scene.textures[material.subsurface_tex].name);
+    if (material.volume_tex >= 0)
+      add_yaml_value(yelement, "volume_tex",
+          scene.textures[material.volume_tex].name);
     if (material.opacity_tex >= 0)
       add_yaml_value(
           yelement, "opacity_tex", scene.textures[material.opacity_tex].name);

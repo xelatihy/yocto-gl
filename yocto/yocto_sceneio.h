@@ -120,10 +120,9 @@ struct sceneio_material {
   int  emission_tex     = -1;
   int  diffuse_tex      = -1;
   int  specular_tex     = -1;
+  int  transmission_tex = -1;
   int  volume_tex       = -1;
   int  roughness_tex    = -1;
-  int  transmission_tex = -1;
-  int  subsurface_tex   = -1;
   int  opacity_tex      = -1;
   int  normal_tex       = -1;
 };
