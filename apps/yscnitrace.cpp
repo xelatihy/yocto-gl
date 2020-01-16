@@ -120,15 +120,14 @@ trace_scene* make_scene(const sceneio_model& ioscene) {
     }
   }
   for (auto& iomaterial : ioscene.materials) {
-        add_material(scene.get(),  
-            (trace_material_type)iomaterial.type,
-            iomaterial.emission, iomaterial.diffuse, iomaterial.specular,
-            iomaterial.transmission, iomaterial.volume, iomaterial.roughness,
-            iomaterial.opacity, iomaterial.volanisotropy,
-            iomaterial.emission_tex, iomaterial.diffuse_tex,
-            iomaterial.specular_tex, iomaterial.transmission_tex,
-            iomaterial.volume_tex, iomaterial.roughness_tex,
-            iomaterial.opacity_tex, iomaterial.normal_tex);
+    add_material(scene.get(), (trace_material_type)iomaterial.type,
+        iomaterial.emission, iomaterial.diffuse, iomaterial.specular,
+        iomaterial.transmission, iomaterial.volume, iomaterial.roughness,
+        iomaterial.opacity, iomaterial.volanisotropy, iomaterial.emission_tex,
+        iomaterial.diffuse_tex, iomaterial.specular_tex,
+        iomaterial.transmission_tex, iomaterial.volume_tex,
+        iomaterial.roughness_tex, iomaterial.opacity_tex,
+        iomaterial.normal_tex);
   }
   for (auto& ioshape_ : ioscene.shapes) {
     auto tshape = (needs_tesselation(ioscene, ioshape_))
@@ -446,7 +445,8 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
   if (draw_glbutton(win, "quit")) {
     set_close(win, true);
   }
-  draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
+  draw_glcombobox(
+      win, "scene", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
       false);
   if (scene_ok && begin_glheader(win, "trace")) {
@@ -542,15 +542,15 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
       if (draw_glwidgets_material(win, app, app->selection.second)) {
         stop_display(app);
         auto& iomaterial = app->ioscene.materials[app->selection.second];
-        set_material(app->scene.get(), app->selection.second, 
-            (trace_material_type)iomaterial.type,
-            iomaterial.emission, iomaterial.diffuse, iomaterial.specular,
-            iomaterial.transmission, iomaterial.volume, iomaterial.roughness,
-            iomaterial.opacity, iomaterial.volanisotropy,
-            iomaterial.emission_tex, iomaterial.diffuse_tex,
-            iomaterial.specular_tex, iomaterial.transmission_tex,
-            iomaterial.volume_tex, iomaterial.roughness_tex,
-            iomaterial.opacity_tex, iomaterial.normal_tex);
+        set_material(app->scene.get(), app->selection.second,
+            (trace_material_type)iomaterial.type, iomaterial.emission,
+            iomaterial.diffuse, iomaterial.specular, iomaterial.transmission,
+            iomaterial.volume, iomaterial.roughness, iomaterial.opacity,
+            iomaterial.volanisotropy, iomaterial.emission_tex,
+            iomaterial.diffuse_tex, iomaterial.specular_tex,
+            iomaterial.transmission_tex, iomaterial.volume_tex,
+            iomaterial.roughness_tex, iomaterial.opacity_tex,
+            iomaterial.normal_tex);
         init_lights(app->scene.get());
         reset_display(app);
       }

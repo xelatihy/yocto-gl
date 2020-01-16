@@ -179,11 +179,12 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   add_camera(app->scene.get(), app->camera.frame, app->camera.lens,
       app->camera.aspect, app->camera.film, 0.001, 10000);
 
-  auto shape_material = add_material(app->scene.get(), 
-    opengl_material_type::standard, zero3f, {1, 0.2, 0}, zero3f, 0.3);
+  auto shape_material = add_material(app->scene.get(),
+      opengl_material_type::standard, zero3f, {1, 0.2, 0}, zero3f, 0.3);
 
   // @Issue: Right now we're missing APIs to color things easily.
-  auto lines_material = add_material(app->scene.get(), opengl_material_type::standard, {1, 1, 1}, zero3f, zero3f, 0.0);
+  auto lines_material = add_material(app->scene.get(),
+      opengl_material_type::standard, {1, 1, 1}, zero3f, zero3f, 0.0);
 
   // The model.
   app->glshape_id = add_shape(app->scene.get());

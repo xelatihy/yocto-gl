@@ -95,15 +95,14 @@ trace_scene* make_scene(sceneio_model& ioscene) {
   }
 
   for (auto& iomaterial : ioscene.materials) {
-    add_material(scene.get(),
-        (trace_material_type)iomaterial.type,
+    add_material(scene.get(), (trace_material_type)iomaterial.type,
         iomaterial.emission, iomaterial.diffuse, iomaterial.specular,
         iomaterial.transmission, iomaterial.volume, iomaterial.roughness,
-        iomaterial.opacity, iomaterial.volanisotropy,
-        iomaterial.emission_tex, iomaterial.diffuse_tex,
-        iomaterial.specular_tex, iomaterial.transmission_tex,
-        iomaterial.volume_tex, iomaterial.roughness_tex,
-        iomaterial.opacity_tex, iomaterial.normal_tex);
+        iomaterial.opacity, iomaterial.volanisotropy, iomaterial.emission_tex,
+        iomaterial.diffuse_tex, iomaterial.specular_tex,
+        iomaterial.transmission_tex, iomaterial.volume_tex,
+        iomaterial.roughness_tex, iomaterial.opacity_tex,
+        iomaterial.normal_tex);
   }
 
   for (auto& ioshape_ : ioscene.shapes) {

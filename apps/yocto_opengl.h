@@ -145,26 +145,21 @@ struct opengl_texture {
 };
 
 // Opengl material type
-enum struct opengl_material_type {
-  standard,
-  matte,
-  substrate,
-  metallic
-};
+enum struct opengl_material_type { standard, matte, substrate, metallic };
 
 // Opengl material
 struct opengl_material {
-  opengl_material_type type = opengl_material_type::standard;
-  vec3f emission      = {0, 0, 0};
-  vec3f diffuse       = {0, 0, 0};
-  vec3f specular      = {0, 0, 0};
-  float roughness     = 0;
-  float opacity       = 1;
-  int   emission_map  = -1;
-  int   diffuse_map   = -1;
-  int   specular_map  = -1;
-  int   roughness_map = -1;
-  int   normal_map    = -1;
+  opengl_material_type type          = opengl_material_type::standard;
+  vec3f                emission      = {0, 0, 0};
+  vec3f                diffuse       = {0, 0, 0};
+  vec3f                specular      = {0, 0, 0};
+  float                roughness     = 0;
+  float                opacity       = 1;
+  int                  emission_map  = -1;
+  int                  diffuse_map   = -1;
+  int                  specular_map  = -1;
+  int                  roughness_map = -1;
+  int                  normal_map    = -1;
 };
 
 // Opengl instance group
@@ -243,15 +238,16 @@ void set_texture(opengl_scene* scene, int idx, const image<vec4f>& img,
 void clear_textures(opengl_scene* scene);
 
 // add material
-int  add_material(opengl_scene* scene, opengl_material_type type, 
-    const vec3f& emission, const vec3f& diffuse, const vec3f& specular, 
-    float roughness, float opacity = 1, int emission_map = -1, int diffuse_map = -1, 
-    int specular_map = -1, int roughness_map = -1, int normal_map = -1);
-void set_material(
-    opengl_scene* scene, int idx, opengl_material_type type, 
-    const vec3f& emission, const vec3f& diffuse, const vec3f& specular, 
-    float roughness, float opacity = 1, int emission_map = -1, int diffuse_map = -1, 
-    int specular_map = -1, int roughness_map = -1, int normal_map = -1);
+int  add_material(opengl_scene* scene, opengl_material_type type,
+     const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
+     float roughness, float opacity = 1, int emission_map = -1,
+     int diffuse_map = -1, int specular_map = -1, int roughness_map = -1,
+     int normal_map = -1);
+void set_material(opengl_scene* scene, int idx, opengl_material_type type,
+    const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
+    float roughness, float opacity = 1, int emission_map = -1,
+    int diffuse_map = -1, int specular_map = -1, int roughness_map = -1,
+    int normal_map = -1);
 void clear_materias(opengl_scene* scene);
 
 // add shape

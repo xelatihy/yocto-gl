@@ -1119,7 +1119,8 @@ sceneio_status load_yaml(
       auto& material = scene.materials.emplace_back();
       if (!get_yaml_value(yelement, "name", material.name))
         return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "type", material.type, sceneio_material_names))
+      if (!get_yaml_value(
+              yelement, "type", material.type, sceneio_material_names))
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "emission", material.emission))
         return {filename + ": parse error"};
@@ -1151,8 +1152,7 @@ sceneio_status load_yaml(
       if (!get_yaml_ref(
               yelement, "roughness_tex", material.roughness_tex, tmap))
         return {filename + ": parse error"};
-      if (!get_yaml_ref(
-              yelement, "volume_tex", material.volume_tex, tmap))
+      if (!get_yaml_ref(yelement, "volume_tex", material.volume_tex, tmap))
         return {filename + ": parse error"};
       if (!get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap))
         return {filename + ": parse error"};
@@ -1677,15 +1677,16 @@ static sceneio_status save_yaml(const string& filename,
     yelement.name  = "materials";
     add_yaml_value(yelement, "name", material.name);
     if (material.type != sceneio_material_type::standard)
-      add_yaml_value(yelement, "type", sceneio_material_names[(int)material.type]);
-    if(material.emission != zero3f)
-    add_yaml_value(yelement, "emission", material.emission);
-    if(material.diffuse != zero3f)
-    add_yaml_value(yelement, "diffuse", material.diffuse);
-    if(material.specular != zero3f)
-    add_yaml_value(yelement, "specular", material.specular);
-    if(material.volume != zero3f)
-    add_yaml_value(yelement, "volume", material.volume);
+      add_yaml_value(
+          yelement, "type", sceneio_material_names[(int)material.type]);
+    if (material.emission != zero3f)
+      add_yaml_value(yelement, "emission", material.emission);
+    if (material.diffuse != zero3f)
+      add_yaml_value(yelement, "diffuse", material.diffuse);
+    if (material.specular != zero3f)
+      add_yaml_value(yelement, "specular", material.specular);
+    if (material.volume != zero3f)
+      add_yaml_value(yelement, "volume", material.volume);
     if (material.transmission != zero3f)
       add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
@@ -1712,8 +1713,8 @@ static sceneio_status save_yaml(const string& filename,
       add_yaml_value(yelement, "transmission_tex",
           scene.textures[material.transmission_tex].name);
     if (material.volume_tex >= 0)
-      add_yaml_value(yelement, "volume_tex",
-          scene.textures[material.volume_tex].name);
+      add_yaml_value(
+          yelement, "volume_tex", scene.textures[material.volume_tex].name);
     if (material.opacity_tex >= 0)
       add_yaml_value(
           yelement, "opacity_tex", scene.textures[material.opacity_tex].name);
@@ -2156,10 +2157,10 @@ static sceneio_status load_gltf(const string& filename, sceneio_model& scene) {
       material.diffuse_tex  = gmaterial.sg_diffuse_tex;
       material.specular_tex = gmaterial.sg_specular_tex;
     } else if (gmaterial.has_metalrough) {
-      material.diffuse      = xyz(gmaterial.mr_base);
-      material.opacity      = gmaterial.mr_base.w;
-      material.specular     = vec3f{0.04f};
-      material.diffuse_tex  = gmaterial.mr_base_tex;
+      material.diffuse     = xyz(gmaterial.mr_base);
+      material.opacity     = gmaterial.mr_base.w;
+      material.specular    = vec3f{0.04f};
+      material.diffuse_tex = gmaterial.mr_base_tex;
     }
     material.normal_tex = gmaterial.normal_tex;
   }

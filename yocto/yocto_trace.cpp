@@ -1307,7 +1307,8 @@ static RTCDevice     trace_embree_device() {
   static RTCDevice device = nullptr;
   if (!device) {
     device = rtcNewDevice("");
-    rtcSetDeviceErrorFunction(device,
+    rtcSetDeviceErrorFunction(
+        device,
         [](void* ctx, RTCError code, const char* str) {
           switch (code) {
             case RTC_ERROR_UNKNOWN:
@@ -1326,7 +1327,8 @@ static RTCDevice     trace_embree_device() {
           }
         },
         nullptr);
-    rtcSetDeviceMemoryMonitorFunction(device,
+    rtcSetDeviceMemoryMonitorFunction(
+        device,
         [](void* userPtr, ssize_t bytes, bool post) {
           trace_embree_memory += bytes;
           return true;
@@ -3074,7 +3076,9 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene* scene,
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
       return {emission * abs(dot(outgoing, normal)), 1};
     }
-    default: { return {zero3f, false}; }
+    default: {
+      return {zero3f, false};
+    }
   }
 }
 
@@ -3301,19 +3305,18 @@ void clean_textures(trace_scene* scene) { scene->textures.clear(); }
 // Add material
 int add_material(trace_scene* scene, trace_material_type type,
     const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
-    float roughness, float opacity, int emission_map,
-    int diffuse_map, int specular_map, int normal_map) {
+    float roughness, float opacity, int emission_map, int diffuse_map,
+    int specular_map, int normal_map) {
   return add_material(scene, type, emission, diffuse, specular, zero3f, zero3f,
-      roughness, opacity, 0, emission_map, diffuse_map, specular_map, -1, -1, -1, -1,
-      normal_map);
+      roughness, opacity, 0, emission_map, diffuse_map, specular_map, -1, -1,
+      -1, -1, normal_map);
 }
 int add_material(trace_scene* scene, trace_material_type type,
     const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
     const vec3f& transmission, const vec3f& volume, float roughness,
-    float opacity, float volanisotropy, int emission_map,
-    int diffuse_map, int specular_map, int transmission_map,
-    int roughness_map, int opacity_map, int volume_map, 
-    int normal_map) {
+    float opacity, float volanisotropy, int emission_map, int diffuse_map,
+    int specular_map, int transmission_map, int roughness_map, int opacity_map,
+    int volume_map, int normal_map) {
   scene->materials.emplace_back();
   set_material(scene, (int)scene->materials.size() - 1, type, emission, diffuse,
       specular, transmission, volume, roughness, opacity, volanisotropy,
@@ -3323,84 +3326,79 @@ int add_material(trace_scene* scene, trace_material_type type,
 }
 void set_material(trace_scene* scene, int idx, trace_material_type type,
     const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
-    float roughness, float opacity, int emission_map,
-    int diffuse_map, int specular_map, int normal_map) {
-  set_material(scene, idx, type, emission, diffuse,
-      specular, zero3f, zero3f, roughness, opacity, 0,
-      emission_map, diffuse_map, specular_map, -1, -1,
+    float roughness, float opacity, int emission_map, int diffuse_map,
+    int specular_map, int normal_map) {
+  set_material(scene, idx, type, emission, diffuse, specular, zero3f, zero3f,
+      roughness, opacity, 0, emission_map, diffuse_map, specular_map, -1, -1,
       normal_map);
 }
 void set_material(trace_scene* scene, int idx, trace_material_type type,
-     const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
-     const vec3f& transmission, const vec3f& volume, float roughness,
-     float opacity, float volanisotropy, int emission_map,
-     int diffuse_map, int specular_map, int transmission_map, 
-     int volume_map, int roughness_map, int opacity_map, 
-     int normal_map) {
-  auto material = &scene->materials[idx];
-  *material = {};
-  material->emission = emission;
+    const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
+    const vec3f& transmission, const vec3f& volume, float roughness,
+    float opacity, float volanisotropy, int emission_map, int diffuse_map,
+    int specular_map, int transmission_map, int volume_map, int roughness_map,
+    int opacity_map, int normal_map) {
+  auto material          = &scene->materials[idx];
+  *material              = {};
+  material->emission     = emission;
   material->emission_tex = emission_map;
-  material->opacity = opacity;
-  material->opacity_tex = opacity_map;
-  material->normal_tex = normal_map;
-  switch (type)
-  {
+  material->opacity      = opacity;
+  material->opacity_tex  = opacity_map;
+  material->normal_tex   = normal_map;
+  switch (type) {
     case trace_material_type::matte: {
-      material->diffuse = diffuse;
+      material->diffuse     = diffuse;
       material->diffuse_tex = diffuse_map;
-    }
-    break;
+    } break;
     case trace_material_type::standard:
     case trace_material_type::substrate: {
-      material->diffuse = diffuse;
-      material->diffuse_tex = diffuse_map;
-      material->specular = specular;
-      material->specular_tex = specular_map;
-      material->roughness = roughness;
+      material->diffuse       = diffuse;
+      material->diffuse_tex   = diffuse_map;
+      material->specular      = specular;
+      material->specular_tex  = specular_map;
+      material->roughness     = roughness;
       material->roughness_tex = roughness_map;
-    } break;  
+    } break;
     case trace_material_type::reflective: {
-      material->specular = diffuse;
-      material->specular_tex = diffuse_map;
-      material->roughness = roughness;
+      material->specular      = diffuse;
+      material->specular_tex  = diffuse_map;
+      material->roughness     = roughness;
       material->roughness_tex = roughness_map;
-    } break;  
+    } break;
     case trace_material_type::transparent: {
-      material->transmission = transmission;
+      material->transmission     = transmission;
       material->transmission_tex = transmission_map;
-      material->roughness = roughness;
-      material->roughness_tex = roughness_map;
-      material->refract = false;
-    } break;  
+      material->roughness        = roughness;
+      material->roughness_tex    = roughness_map;
+      material->refract          = false;
+    } break;
     case trace_material_type::refractive: {
-      material->transmission = {1, 1, 1};
+      material->transmission     = {1, 1, 1};
       material->transmission_tex = transmission_map;
-      material->voltransmission = transmission;
-      material->roughness = roughness;
-      material->roughness_tex = roughness_map;
-      material->refract = true;
-    } break;  
+      material->voltransmission  = transmission;
+      material->roughness        = roughness;
+      material->roughness_tex    = roughness_map;
+      material->refract          = true;
+    } break;
     case trace_material_type::volume: {
-      material->transmission = {1, 1, 1};
+      material->transmission     = {1, 1, 1};
       material->transmission_tex = transmission_map;
-      material->roughness = 0;
-      material->roughness_tex = 0;
-      material->voltransmission = transmission;
-      material->volscatter = volume;
-      material->refract = false;
-    } break;  
+      material->roughness        = 0;
+      material->roughness_tex    = 0;
+      material->voltransmission  = transmission;
+      material->volscatter       = volume;
+      material->refract          = false;
+    } break;
     case trace_material_type::subsurface: {
-      material->transmission = {1, 1, 1};
+      material->transmission     = {1, 1, 1};
       material->transmission_tex = transmission_map;
-      material->roughness = roughness;
-      material->roughness_tex = roughness_map;
-      material->voltransmission = transmission;
-      material->volscatter = volume;
-      material->refract = true;
-    } break;  
-  default:
-    break;
+      material->roughness        = roughness;
+      material->roughness_tex    = roughness_map;
+      material->voltransmission  = transmission;
+      material->volscatter       = volume;
+      material->refract          = true;
+    } break;
+    default: break;
   }
 }
 void clean_materias(trace_scene* scene) { scene->materials.clear(); }

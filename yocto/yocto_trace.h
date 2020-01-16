@@ -129,7 +129,7 @@ void set_material(trace_scene* scene, int idx, trace_material_type type,
     const vec3f& transmission, const vec3f& volume, float roughness,
     float opacity = 1, float volanisotropy = 0, int emission_map = -1,
     int diffuse_map = -1, int specular_map = -1, int transmission_map = -1,
-    int volume_map = -1, int roughness_map = -1, int opacity_map = -1, 
+    int volume_map = -1, int roughness_map = -1, int opacity_map = -1,
     int normal_map = -1);
 void clear_materias(trace_scene* scene);
 

@@ -107,29 +107,30 @@ struct sceneio_material {
   sceneio_material_type type = sceneio_material_type::standard;
 
   // lobes
-  vec3f emission        = {0, 0, 0};
-  vec3f diffuse         = {0, 0, 0};
-  vec3f specular        = {0, 0, 0};
-  vec3f transmission    = {0, 0, 0};
-  vec3f volume          = {0, 0, 0};
-  float roughness       = 0;
-  float opacity         = 1;
-  float volanisotropy   = 0;
+  vec3f emission      = {0, 0, 0};
+  vec3f diffuse       = {0, 0, 0};
+  vec3f specular      = {0, 0, 0};
+  vec3f transmission  = {0, 0, 0};
+  vec3f volume        = {0, 0, 0};
+  float roughness     = 0;
+  float opacity       = 1;
+  float volanisotropy = 0;
 
   // textures
-  int  emission_tex     = -1;
-  int  diffuse_tex      = -1;
-  int  specular_tex     = -1;
-  int  transmission_tex = -1;
-  int  volume_tex       = -1;
-  int  roughness_tex    = -1;
-  int  opacity_tex      = -1;
-  int  normal_tex       = -1;
+  int emission_tex     = -1;
+  int diffuse_tex      = -1;
+  int specular_tex     = -1;
+  int transmission_tex = -1;
+  int volume_tex       = -1;
+  int roughness_tex    = -1;
+  int opacity_tex      = -1;
+  int normal_tex       = -1;
 };
 
 // Names for material type
-const auto sceneio_material_names = vector<string>{"standard", "matte", "substrate",
-    "reflective", "refractive", "transparent", "subsurface", "volume"};
+const auto sceneio_material_names = vector<string>{"standard", "matte",
+    "substrate", "reflective", "refractive", "transparent", "subsurface",
+    "volume"};
 
 // Shape data represented as indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
