@@ -3366,6 +3366,8 @@ void set_material(trace_scene* scene, int idx, trace_material_type type,
       material->roughness_tex = roughness_map;
     } break;
     case trace_material_type::transparent: {
+      material->specular         = specular;
+      material->specular_tex     = specular_map;
       material->transmission     = transmission;
       material->transmission_tex = transmission_map;
       material->roughness        = roughness;
@@ -3373,6 +3375,8 @@ void set_material(trace_scene* scene, int idx, trace_material_type type,
       material->refract          = false;
     } break;
     case trace_material_type::refractive: {
+      material->specular         = specular;
+      material->specular_tex     = specular_map;
       material->transmission     = {1, 1, 1};
       material->transmission_tex = transmission_map;
       material->roughness        = roughness;
@@ -3382,6 +3386,8 @@ void set_material(trace_scene* scene, int idx, trace_material_type type,
       material->refract          = true;
     } break;
     case trace_material_type::volume: {
+      material->specular         = specular;
+      material->specular_tex     = specular_map;
       material->transmission     = {1, 1, 1};
       material->transmission_tex = transmission_map;
       material->roughness        = 0;
@@ -3391,6 +3397,8 @@ void set_material(trace_scene* scene, int idx, trace_material_type type,
       material->refract          = false;
     } break;
     case trace_material_type::subsurface: {
+      material->specular         = specular;
+      material->specular_tex     = specular_map;
       material->transmission     = {1, 1, 1};
       material->transmission_tex = transmission_map;
       material->roughness        = roughness;
