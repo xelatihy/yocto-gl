@@ -75,13 +75,13 @@ materials:
     type: subsurface
     specular: [0.04, 0.04, 0.04]
     roughness: 0
-    diffuse: [0.5, 0.5, 0.5]
+    transmission: [0.5, 0.5, 0.5]
     volume: [0.3, 0.6, 0.3]
   - name: volume-glass
     type: refractive
     specular: [0.04, 0.04, 0.04]
     roughness: 0
-    diffuse: [1, 0.75, 0.75]
+    transmission: [1, 0.75, 0.75]
   - name: arealight1
     type: matte
     emission: [20, 20, 20]

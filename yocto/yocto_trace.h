@@ -95,29 +95,42 @@ void set_texture(trace_scene* scene, int idx, const image<vec4b>& img);
 void set_texture(trace_scene* scene, int idx, const image<vec4f>& img);
 void clear_textures(trace_scene* scene);
 
+// Material type
+enum struct trace_material_type {
+  standard,
+  matte,
+  substrate,
+  reflective,
+  refractive,
+  transparent,
+  subsurface,
+  volume,
+};
+
 // Add material
-int  add_material(trace_scene* scene);
-void set_material_emission(
-    trace_scene* scene, int idx, const vec3f& emission, int emission_txt = -1);
-void set_material_diffuse(
-    trace_scene* scene, int idx, const vec3f& diffuse, int diffuse_txt = -1);
-void set_material_specular(
-    trace_scene* scene, int idx, const vec3f& specular, int specular_txt = -1);
-void set_material_metallic(
-    trace_scene* scene, int idx, float metallic, int metallic_txt = -1);
-void set_material_transmission(trace_scene* scene, int idx,
-    const vec3f& transmission, int transmission_txt = -1);
-void set_material_roughness(
-    trace_scene* scene, int idx, float roughness, int roughness_txt = -1);
-void set_material_opacity(
-    trace_scene* scene, int idx, float opacity, int opacity_txt = -1);
-void set_material_refract(trace_scene* scene, int idx, bool refract);
-void set_material_volume(trace_scene* scene, int idx, const vec3f& volemission,
-    const vec3f& voltransmission, const vec3f& volmeanfreepath,
-    const vec3f& volscatter, float volscale, float volanisotropy,
-    int subsurface_tex = -1);
-void set_material_normalmap(trace_scene* scene, int idx, int normal_txt);
-void set_material_gltftextures(trace_scene* scene, int idx, bool gltf_textures);
+int  add_material(trace_scene* scene, trace_material_type type,
+     const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
+     float roughness, float opacity = 1, int emission_map = -1,
+     int diffuse_map = -1, int specular_map = -1, int normal_map = -1);
+int  add_material(trace_scene* scene, trace_material_type type,
+     const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
+     const vec3f& transmission, const vec3f& volume, float roughness,
+     float opacity = 1, float volanisotropy = 0, int emission_map = -1,
+     int diffuse_map = -1, int specular_map = -1, int transmission_map = -1,
+     int volume_map = -1, int roughness_map = -1, int opacity_map = -1,
+     int normal_map = -1);
+void set_material(trace_scene* scene, int idx, trace_material_type type,
+    const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
+    float roughness, float opacity = 1, int emission_map = -1,
+    int diffuse_map = -1, int specular_map = -1, int opacity_map = -1,
+    int normal_map = -1);
+void set_material(trace_scene* scene, int idx, trace_material_type type,
+    const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
+    const vec3f& transmission, const vec3f& volume, float roughness,
+    float opacity = 1, float volanisotropy = 0, int emission_map = -1,
+    int diffuse_map = -1, int specular_map = -1, int transmission_map = -1,
+    int volume_map = -1, int roughness_map = -1, int opacity_map = -1, 
+    int normal_map = -1);
 void clear_materias(trace_scene* scene);
 
 // Add shape

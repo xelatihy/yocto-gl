@@ -104,83 +104,6 @@ struct app_states {
   bool         add_skyenv = false;
 };
 
-// set material values
-void set_material(
-    trace_scene* scene, int idx, const sceneio_material& iomaterial) {
-  set_material_emission(
-      scene, idx, iomaterial.emission, iomaterial.emission_tex);
-  set_material_opacity(scene, idx, iomaterial.opacity, iomaterial.opacity_tex);
-  set_material_normalmap(scene, idx, iomaterial.normal_tex);
-  switch (iomaterial.type) {
-    case sceneio_material_type::standard:
-    case sceneio_material_type::substrate: {
-      set_material_diffuse(
-          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
-      set_material_specular(
-          scene, idx, iomaterial.specular, iomaterial.specular_tex);
-      set_material_roughness(
-          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-    }; break;
-    case sceneio_material_type::matte: {
-      set_material_diffuse(
-          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
-      set_material_specular(scene, idx, zero3f);
-      set_material_roughness(scene, idx, 1);
-    } break;
-    case sceneio_material_type::reflective: {
-      set_material_diffuse(scene, idx, zero3f);
-      set_material_specular(
-          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
-      set_material_roughness(
-          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-    } break;
-    case sceneio_material_type::transparent: {
-      set_material_specular(
-          scene, idx, iomaterial.specular, iomaterial.specular_tex);
-      set_material_transmission(
-          scene, idx, iomaterial.diffuse, iomaterial.diffuse_tex);
-      set_material_roughness(
-          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-    }; break;
-    case sceneio_material_type::refractive: {
-      set_material_specular(
-          scene, idx, iomaterial.specular, iomaterial.specular_tex);
-      set_material_transmission(scene, idx, {1, 1, 1});
-      set_material_roughness(
-          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-      set_material_volume(scene, idx, zero3f,
-          iomaterial.diffuse, zero3f,
-          iomaterial.volume, 0.01, iomaterial.volanisotropy,
-          iomaterial.volume_tex);
-      set_material_refract(scene, idx, true);
-    }; break;
-    case sceneio_material_type::subsurface: {
-      set_material_specular(
-          scene, idx, iomaterial.specular, iomaterial.specular_tex);
-      set_material_transmission(scene, idx, {1, 1, 1});
-      set_material_roughness(
-          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-      set_material_volume(scene, idx, zero3f,
-          iomaterial.diffuse, zero3f,
-          iomaterial.volume, 0.01, iomaterial.volanisotropy,
-          iomaterial.volume_tex);
-      set_material_refract(scene, idx, true);
-    }; break;
-    case sceneio_material_type::volume: {
-      set_material_specular(
-          scene, idx, iomaterial.specular, iomaterial.specular_tex);
-      set_material_transmission(scene, idx, {1, 1, 1});
-      set_material_roughness(
-          scene, idx, iomaterial.roughness, iomaterial.roughness_tex);
-      set_material_volume(scene, idx, zero3f,
-          iomaterial.diffuse, zero3f,
-          iomaterial.volume, 0.01, iomaterial.volanisotropy,
-          iomaterial.volume_tex);
-      set_material_refract(scene, idx, false);
-    }; break;
-  }
-}
-
 // Construct a scene from io
 trace_scene* make_scene(const sceneio_model& ioscene) {
   auto scene = make_unique<trace_scene>();
@@ -197,8 +120,15 @@ trace_scene* make_scene(const sceneio_model& ioscene) {
     }
   }
   for (auto& iomaterial : ioscene.materials) {
-    auto id = add_material(scene.get());
-    set_material(scene.get(), id, iomaterial);
+        add_material(scene.get(),  
+            (trace_material_type)iomaterial.type,
+            iomaterial.emission, iomaterial.diffuse, iomaterial.specular,
+            iomaterial.transmission, iomaterial.volume, iomaterial.roughness,
+            iomaterial.opacity, iomaterial.volanisotropy,
+            iomaterial.emission_tex, iomaterial.diffuse_tex,
+            iomaterial.specular_tex, iomaterial.transmission_tex,
+            iomaterial.volume_tex, iomaterial.roughness_tex,
+            iomaterial.opacity_tex, iomaterial.normal_tex);
   }
   for (auto& ioshape_ : ioscene.shapes) {
     auto tshape = (needs_tesselation(ioscene, ioshape_))
@@ -400,12 +330,12 @@ bool draw_glwidgets_material(
       win, "specular_tex", material.specular_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
       app->ioscene.textures, true);
-  edited += draw_glcombobox(win, "volume_tex", material.volume_tex,
-      app->ioscene.textures, true);
+  edited += draw_glcombobox(
+      win, "volume_tex", material.volume_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(win, "roughness_tex", material.roughness_tex,
       app->ioscene.textures, true);
-  edited += draw_glcombobox(win, "opacity_tex", material.opacity_tex,
-      app->ioscene.textures, true);
+  edited += draw_glcombobox(
+      win, "opacity_tex", material.opacity_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, app->ioscene.textures, true);
   return edited;
@@ -612,7 +542,15 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
       if (draw_glwidgets_material(win, app, app->selection.second)) {
         stop_display(app);
         auto& iomaterial = app->ioscene.materials[app->selection.second];
-        set_material(app->scene.get(), app->selection.second, iomaterial);
+        set_material(app->scene.get(), app->selection.second, 
+            (trace_material_type)iomaterial.type,
+            iomaterial.emission, iomaterial.diffuse, iomaterial.specular,
+            iomaterial.transmission, iomaterial.volume, iomaterial.roughness,
+            iomaterial.opacity, iomaterial.volanisotropy,
+            iomaterial.emission_tex, iomaterial.diffuse_tex,
+            iomaterial.specular_tex, iomaterial.transmission_tex,
+            iomaterial.volume_tex, iomaterial.roughness_tex,
+            iomaterial.opacity_tex, iomaterial.normal_tex);
         init_lights(app->scene.get());
         reset_display(app);
       }
