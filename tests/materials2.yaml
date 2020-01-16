@@ -55,25 +55,25 @@ materials:
     opacity: 0.2
   - name: glass-sharp
     type: refractive
-    diffuse: [1, 1, 1]
     specular: [0.04, 0.04, 0.04]
+    transmission: [1, 1, 1]
     roughness: 0
     refract: true
   - name: glass-rough
     type: refractive
     specular: [0.04, 0.04, 0.04]
-    diffuse: [1, 0.7, 0.7]
+    transmission: [1, 0.7, 0.7]
     roughness: 0.1
     refract: true
   - name: thinglass-sharp
     type: transparent
     specular: [0.04, 0.04, 0.04]
-    diffuse: [1, 1, 1]
+    transmission: [1, 1, 1]
     roughness: 0
   - name: thinglass-rough
     type: transparent
     specular: [0.04, 0.04, 0.04]
-    diffuse: [1, 0.7, 0.7]
+    transmission: [1, 0.7, 0.7]
     roughness: 0.05
   - name: largearealight1
     type: matte
