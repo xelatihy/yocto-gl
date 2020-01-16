@@ -3375,9 +3375,10 @@ void set_material(trace_scene* scene, int idx, trace_material_type type,
     case trace_material_type::refractive: {
       material->transmission     = {1, 1, 1};
       material->transmission_tex = transmission_map;
-      material->voltransmission  = transmission;
       material->roughness        = roughness;
       material->roughness_tex    = roughness_map;
+      material->voltransmission  = transmission;
+      material->volscatter       = volume;
       material->refract          = true;
     } break;
     case trace_material_type::volume: {
