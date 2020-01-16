@@ -744,53 +744,31 @@ void set_camera(opengl_scene* scene, int idx, const frame3f& frame, float lens,
 void clear_cameras(opengl_scene* scene) { scene->_cameras.clear(); }
 
 // add material
-int add_material(opengl_scene* scene) {
+int add_material(opengl_scene* scene, opengl_material_type type,
+    const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
+    float roughness, float opacity, int emission_map, int diffuse_map,
+    int specular_map, int roughness_map, int normal_map) {
   scene->_materials.emplace_back(make_unique<opengl_material>());
+  set_material(scene, (int)scene->_materials.size() - 1, type, emission,
+      diffuse, specular, roughness, opacity, emission_map, diffuse_map,
+      specular_map, roughness_map, normal_map);
   return (int)scene->_materials.size() - 1;
 }
-void set_material_emission(
-    opengl_scene* scene, int idx, const vec3f& emission, int emission_txt) {
-  auto material          = scene->_materials[idx].get();
-  material->emission     = emission;
-  material->emission_map = emission_txt;
-}
-void set_material_diffuse(
-    opengl_scene* scene, int idx, const vec3f& diffuse, int diffuse_txt) {
-  auto material         = scene->_materials[idx].get();
-  material->diffuse     = diffuse;
-  material->diffuse_map = diffuse_txt;
-}
-void set_material_specular(
-    opengl_scene* scene, int idx, const vec3f& specular, int specular_txt) {
-  auto material          = scene->_materials[idx].get();
-  material->specular     = specular;
-  material->specular_map = specular_txt;
-}
-void set_material_roughness(
-    opengl_scene* scene, int idx, float roughness, int roughness_txt) {
+void set_material(opengl_scene* scene, int idx, opengl_material_type type,
+    const vec3f& emission, const vec3f& diffuse, const vec3f& specular,
+    float roughness, float opacity, int emission_map, int diffuse_map,
+    int specular_map, int roughness_map, int normal_map) {
   auto material           = scene->_materials[idx].get();
+  material->emission      = emission;
+  material->diffuse       = diffuse;
+  material->specular      = specular;
   material->roughness     = roughness;
-  material->roughness_map = roughness_txt;
-}
-void set_material_opacity(
-    opengl_scene* scene, int idx, float opacity, int opacity_txt) {
-  auto material     = scene->_materials[idx].get();
-  material->opacity = opacity;
-}
-void set_material_metallic(
-    opengl_scene* scene, int idx, float metallic, int metallic_txt) {
-  auto material          = scene->_materials[idx].get();
-  material->metallic     = metallic;
-  material->metallic_map = metallic_txt;
-}
-void set_material_normalmap(opengl_scene* scene, int idx, int normal_txt) {
-  auto material        = scene->_materials[idx].get();
-  material->normal_map = normal_txt;
-}
-void set_material_gltftextures(
-    opengl_scene* scene, int idx, bool gltf_textures) {
-  auto material           = scene->_materials[idx].get();
-  material->gltf_textures = gltf_textures;
+  material->opacity       = opacity;
+  material->emission_map  = emission_map;
+  material->diffuse_map   = diffuse_map;
+  material->specular_map  = specular_map;
+  material->roughness_map = roughness_map;
+  material->normal_map    = normal_map;
 }
 void clear_glmaterials(opengl_scene* scene) { scene->_materials.clear(); }
 
@@ -1138,15 +1116,14 @@ void draw_glinstance(opengl_scene* glscene, opengl_instance* instance,
         glGetUniformLocation(glscene->program_id, "highlight"), 0, 0, 0, 0);
   }
 
-  auto mtype = 2;
-  if (material->gltf_textures) mtype = 3;
-  glUniform1i(glGetUniformLocation(glscene->program_id, "mat_type"), mtype);
+  glUniform1i(glGetUniformLocation(glscene->program_id, "mat_type"),
+      material->type == opengl_material_type::metallic ? 2 : 1);
   glUniform3f(glGetUniformLocation(glscene->program_id, "mat_ke"),
       material->emission.x, material->emission.y, material->emission.z);
   glUniform3f(glGetUniformLocation(glscene->program_id, "mat_kd"),
       material->diffuse.x, material->diffuse.y, material->diffuse.z);
   glUniform3f(glGetUniformLocation(glscene->program_id, "mat_ks"),
-      material->metallic, material->metallic, material->metallic);
+      material->specular.x, material->specular.y, material->specular.z);
   glUniform1f(
       glGetUniformLocation(glscene->program_id, "mat_rs"), material->roughness);
   glUniform1f(
@@ -1171,7 +1148,7 @@ void draw_glinstance(opengl_scene* glscene, opengl_instance* instance,
   } else {
     glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt_on"), 0);
   }
-  if (material->metallic_map >= 0) {
+  if (material->specular_map >= 0) {
     auto specular_map = glscene->_textures.at(material->specular_map).get();
     glActiveTexture(GL_TEXTURE0 + 2);
     glBindTexture(GL_TEXTURE_2D, specular_map->texture_id);
@@ -1829,8 +1806,7 @@ bool draw_glfiledialog(const opengl_window* win, const char* lbl, string& path,
       state.set_dirname(dir_buffer);
     }
     auto current_item = -1;
-    if (ImGui::ListBox(
-            "entries", &current_item,
+    if (ImGui::ListBox("entries", &current_item,
             [](void* data, int idx, const char** out_text) -> bool {
               auto& state = *(filedialog_state*)data;
               *out_text   = state.entries[idx].first.c_str();

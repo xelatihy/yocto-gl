@@ -153,6 +153,16 @@ void update_shape(opengl_scene* glscene, int idx, const sceneio_shape& shape,
   }
 }
 
+static auto glmaterial_type = unordered_map<sceneio_material_type, opengl_material_type>{
+  {sceneio_material_type::standard, opengl_material_type::standard},
+  {sceneio_material_type::matte, opengl_material_type::matte},
+  {sceneio_material_type::substrate, opengl_material_type::substrate},
+  {sceneio_material_type::volume, opengl_material_type::matte},
+  {sceneio_material_type::reflective, opengl_material_type::matte},
+  {sceneio_material_type::refractive, opengl_material_type::matte},
+  {sceneio_material_type::transparent, opengl_material_type::matte},
+};
+
 void update_lights(opengl_scene* glscene, const sceneio_model& scene) {
   clear_lights(glscene);
   for (auto& instance : scene.instances) {
@@ -205,16 +215,10 @@ opengl_scene* make_scene(const sceneio_model& scene) {
 
   // materials
   for (auto& material : scene.materials) {
-    auto id = add_material(glscene);
-    set_material_emission(
-        glscene, id, material.emission, material.emission_tex);
-    set_material_diffuse(glscene, id, material.diffuse, material.diffuse_tex);
-    set_material_specular(
-        glscene, id, material.specular, material.specular_tex);
-    set_material_roughness(
-        glscene, id, material.roughness, material.roughness_tex);
-    set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
-    set_material_normalmap(glscene, id, material.normal_tex);
+    add_material(glscene, glmaterial_type.at(material.type), 
+      material.emission, material.diffuse, material.specular, material.roughness, 
+      material.opacity, material.emission_tex, material.diffuse_tex, 
+      material.specular_tex, material.roughness_tex, material.normal_tex);
   }
 
   // shapes
@@ -488,18 +492,10 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->scene.materials);
       if (draw_glwidgets_material(win, app, app->selection.second)) {
         auto& material = app->scene.materials[app->selection.second];
-        set_material_emission(glscene, app->selection.second, material.emission,
-            material.emission_tex);
-        set_material_diffuse(glscene, app->selection.second, material.diffuse,
-            material.diffuse_tex);
-        set_material_specular(glscene, app->selection.second, material.specular,
-            material.specular_tex);
-        set_material_roughness(glscene, app->selection.second,
-            material.roughness, material.roughness_tex);
-        set_material_opacity(glscene, app->selection.second, material.opacity,
-            material.opacity_tex);
-        set_material_normalmap(
-            glscene, app->selection.second, material.normal_tex);
+        add_material(glscene, glmaterial_type.at(material.type), 
+          material.emission, material.diffuse, material.specular, material.roughness, 
+          material.opacity, material.emission_tex, material.diffuse_tex, 
+          material.specular_tex, material.roughness_tex, material.normal_tex);
       }
     } else if (app->selection.first == "shape") {
       draw_glcombobox(
