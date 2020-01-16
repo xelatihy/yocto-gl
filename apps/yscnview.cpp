@@ -157,10 +157,11 @@ static auto glmaterial_type = unordered_map<sceneio_material_type, opengl_materi
   {sceneio_material_type::standard, opengl_material_type::standard},
   {sceneio_material_type::matte, opengl_material_type::matte},
   {sceneio_material_type::substrate, opengl_material_type::substrate},
-  {sceneio_material_type::volume, opengl_material_type::matte},
   {sceneio_material_type::reflective, opengl_material_type::matte},
   {sceneio_material_type::refractive, opengl_material_type::matte},
   {sceneio_material_type::transparent, opengl_material_type::matte},
+  {sceneio_material_type::subsurface, opengl_material_type::matte},
+  {sceneio_material_type::volume, opengl_material_type::matte},
 };
 
 void update_lights(opengl_scene* glscene, const sceneio_model& scene) {
