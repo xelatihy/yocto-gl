@@ -105,7 +105,7 @@ struct app_states {
 };
 
 // Construct a scene from io
-trace_scene* make_scene(const sceneio_model& ioscene) {
+trace_scene* make_scene(sceneio_model& ioscene) {
   auto scene = make_unique<trace_scene>();
 
   for (auto& iocamera : ioscene.cameras) {
@@ -142,11 +142,10 @@ trace_scene* make_scene(const sceneio_model& ioscene) {
         iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
         iomaterial.subsurface_tex);
   }
-  for (auto& ioshape_ : ioscene.shapes) {
-    auto tshape = (needs_tesselation(ioscene, ioshape_))
-                      ? tesselate_shape(ioscene, ioshape_)
-                      : sceneio_shape{};
-    auto& ioshape = (needs_tesselation(ioscene, ioshape_)) ? tshape : ioshape_;
+  for (auto& iosubdiv : ioscene.subdivs) {
+    tesselate_subdiv(ioscene, iosubdiv);
+  }
+  for (auto& ioshape : ioscene.shapes) {
     if (!ioshape.points.empty()) {
       add_shape(scene.get(), ioshape.points, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
@@ -164,7 +163,6 @@ trace_scene* make_scene(const sceneio_model& ioscene) {
           ioshape.quadstexcoord, ioshape.positions, ioshape.normals,
           ioshape.texcoords);
     }
-    tshape = {};
   }
   for (auto& ioinstance : ioscene.instances) {
     add_instance(
