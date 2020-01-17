@@ -356,7 +356,7 @@ bool draw_glwidgets_shape(
 
 bool draw_glwidgets_subdiv(
     const opengl_window* win, shared_ptr<app_state> app, int id) {
-  auto& subdiv        = app->scene.subdivs[id];
+  auto& subdiv       = app->scene.subdivs[id];
   auto  old_filename = subdiv.filename;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", subdiv.name);
@@ -457,7 +457,8 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
     set_close(win, true);
   }
   if (apps->states.empty()) return;
-  draw_glcombobox(win, "scene", apps->selected, (int)apps->states.size(),
+  draw_glcombobox(
+      win, "scene", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[idx]->name.c_str(); }, false);
   if (scene_ok && begin_glheader(win, "view")) {
     auto  app    = apps->states[apps->selected];
@@ -501,10 +502,10 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "edit")) {
-    static auto labels = vector<string>{
-        "camera", "shape", "subdiv", "environment", "instance", "material", "texture"};
-    auto app     = apps->states[apps->selected];
-    auto glscene = app->glscene.get();
+    static auto labels  = vector<string>{"camera", "shape", "subdiv",
+        "environment", "instance", "material", "texture"};
+    auto        app     = apps->states[apps->selected];
+    auto        glscene = app->glscene.get();
     if (draw_glcombobox(win, "selection##1", app->selection.first, labels))
       app->selection.second = 0;
     if (app->selection.first == "camera") {
@@ -551,7 +552,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->scene.shapes);
       if (!draw_glwidgets_shape(win, app, app->selection.second)) {
         auto& shape = app->scene.shapes[app->selection.second];
-        auto idx = app->selection.second;
+        auto  idx   = app->selection.second;
         if (!shape.points.empty()) {
           set_shape(glscene, idx, shape.points, shape.positions, shape.normals,
               shape.texcoords, shape.colors);
@@ -559,15 +560,15 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           set_shape(glscene, idx, shape.lines, shape.positions, shape.normals,
               shape.texcoords, shape.colors);
         } else if (!shape.triangles.empty()) {
-          set_shape(glscene, idx, shape.triangles, shape.positions, shape.normals,
-              shape.texcoords, shape.colors, shape.tangents);
+          set_shape(glscene, idx, shape.triangles, shape.positions,
+              shape.normals, shape.texcoords, shape.colors, shape.tangents);
         } else if (!shape.quads.empty()) {
           set_shape(glscene, idx, shape.quads, shape.positions, shape.normals,
               shape.texcoords, shape.colors, shape.tangents);
         } else if (!shape.quadspos.empty()) {
           auto [quads, positions, normals, texcoords] = split_facevarying(
-              shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-              shape.normals, shape.texcoords);
+              shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+              shape.positions, shape.normals, shape.texcoords);
           set_shape(glscene, idx, quads, positions, normals, texcoords);
         }
       }
@@ -578,7 +579,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
         auto& subdiv = app->scene.subdivs[app->selection.second];
         tesselate_subdiv(app->scene, subdiv);
         auto& shape = app->scene.shapes[subdiv.shape];
-        auto idx = app->selection.second;
+        auto  idx   = app->selection.second;
         if (!shape.points.empty()) {
           set_shape(glscene, idx, shape.points, shape.positions, shape.normals,
               shape.texcoords, shape.colors);
@@ -586,15 +587,15 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           set_shape(glscene, idx, shape.lines, shape.positions, shape.normals,
               shape.texcoords, shape.colors);
         } else if (!shape.triangles.empty()) {
-          set_shape(glscene, idx, shape.triangles, shape.positions, shape.normals,
-              shape.texcoords, shape.colors, shape.tangents);
+          set_shape(glscene, idx, shape.triangles, shape.positions,
+              shape.normals, shape.texcoords, shape.colors, shape.tangents);
         } else if (!shape.quads.empty()) {
           set_shape(glscene, idx, shape.quads, shape.positions, shape.normals,
               shape.texcoords, shape.colors, shape.tangents);
         } else if (!shape.quadspos.empty()) {
           auto [quads, positions, normals, texcoords] = split_facevarying(
-              shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-              shape.normals, shape.texcoords);
+              shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
+              shape.positions, shape.normals, shape.texcoords);
           set_shape(glscene, idx, quads, positions, normals, texcoords);
         }
       }

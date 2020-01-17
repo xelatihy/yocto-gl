@@ -455,7 +455,8 @@ sceneio_subdiv subdivide_subdiv(const sceneio_subdiv& shape) {
     tie(tesselated.lines, tesselated.positions) = subdivide_lines(
         tesselated.lines, tesselated.positions, shape.subdivisions);
     if (shape.smooth)
-      tesselated.normals = compute_tangents(tesselated.lines, tesselated.positions);
+      tesselated.normals = compute_tangents(
+          tesselated.lines, tesselated.positions);
   } else if (!shape.triangles.empty()) {
     tie(ignore, tesselated.normals) = subdivide_triangles(
         tesselated.triangles, tesselated.normals, shape.subdivisions);
@@ -468,7 +469,8 @@ sceneio_subdiv subdivide_subdiv(const sceneio_subdiv& shape) {
     tie(tesselated.triangles, tesselated.positions) = subdivide_triangles(
         tesselated.triangles, tesselated.positions, shape.subdivisions);
     if (shape.smooth)
-      tesselated.normals = compute_normals(tesselated.triangles, tesselated.positions);
+      tesselated.normals = compute_normals(
+          tesselated.triangles, tesselated.positions);
   } else if (!shape.quads.empty() && !shape.catmullclark) {
     tie(ignore, tesselated.normals) = subdivide_quads(
         tesselated.quads, tesselated.normals, shape.subdivisions);
@@ -481,7 +483,8 @@ sceneio_subdiv subdivide_subdiv(const sceneio_subdiv& shape) {
     tie(tesselated.quads, tesselated.positions) = subdivide_quads(
         tesselated.quads, tesselated.positions, shape.subdivisions);
     if (tesselated.smooth)
-      tesselated.normals = compute_normals(tesselated.quads, tesselated.positions);
+      tesselated.normals = compute_normals(
+          tesselated.quads, tesselated.positions);
   } else if (!shape.quads.empty() && shape.catmullclark) {
     tie(ignore, tesselated.normals) = subdivide_catmullclark(
         tesselated.quads, tesselated.normals, shape.subdivisions);
@@ -494,7 +497,8 @@ sceneio_subdiv subdivide_subdiv(const sceneio_subdiv& shape) {
     tie(tesselated.quads, tesselated.positions) = subdivide_catmullclark(
         tesselated.quads, tesselated.positions, shape.subdivisions);
     if (tesselated.smooth)
-      tesselated.normals = compute_normals(tesselated.quads, tesselated.positions);
+      tesselated.normals = compute_normals(
+          tesselated.quads, tesselated.positions);
   } else if (!shape.quadspos.empty() && !shape.catmullclark) {
     std::tie(tesselated.quadsnorm, tesselated.normals) = subdivide_quads(
         tesselated.quadsnorm, tesselated.normals, shape.subdivisions);
@@ -503,18 +507,22 @@ sceneio_subdiv subdivide_subdiv(const sceneio_subdiv& shape) {
     std::tie(tesselated.quadspos, tesselated.positions) = subdivide_quads(
         tesselated.quadspos, tesselated.positions, shape.subdivisions);
     if (tesselated.smooth) {
-      tesselated.normals   = compute_normals(tesselated.quadspos, tesselated.positions);
+      tesselated.normals = compute_normals(
+          tesselated.quadspos, tesselated.positions);
       tesselated.quadsnorm = tesselated.quadspos;
     }
   } else if (!shape.quadspos.empty() && shape.catmullclark) {
-    std::tie(tesselated.quadstexcoord, tesselated.texcoords) = subdivide_catmullclark(
-        tesselated.quadstexcoord, tesselated.texcoords, shape.subdivisions, true);
+    std::tie(tesselated.quadstexcoord, tesselated.texcoords) =
+        subdivide_catmullclark(tesselated.quadstexcoord, tesselated.texcoords,
+            shape.subdivisions, true);
     std::tie(tesselated.quadsnorm, tesselated.normals) = subdivide_catmullclark(
         tesselated.quadsnorm, tesselated.normals, shape.subdivisions, true);
-    std::tie(tesselated.quadspos, tesselated.positions) = subdivide_catmullclark(
-        tesselated.quadspos, tesselated.positions, shape.subdivisions);
+    std::tie(tesselated.quadspos, tesselated.positions) =
+        subdivide_catmullclark(
+            tesselated.quadspos, tesselated.positions, shape.subdivisions);
     if (shape.smooth) {
-      tesselated.normals   = compute_normals(tesselated.quadspos, tesselated.positions);
+      tesselated.normals = compute_normals(
+          tesselated.quadspos, tesselated.positions);
       tesselated.quadsnorm = tesselated.quadspos;
     } else {
       tesselated.normals   = {};
@@ -562,7 +570,8 @@ sceneio_subdiv displace_subdiv(
       displaced.positions[vid] += normals[vid] * subdiv.displacement * disp;
     }
     if (subdiv.smooth || !subdiv.normals.empty()) {
-      displaced.normals = compute_normals(displaced.triangles, displaced.positions);
+      displaced.normals = compute_normals(
+          displaced.triangles, displaced.positions);
     }
   } else if (!subdiv.quads.empty()) {
     auto normals = subdiv.normals;
@@ -597,39 +606,40 @@ sceneio_subdiv displace_subdiv(
     }
     if (subdiv.smooth || !subdiv.normals.empty()) {
       displaced.quadsnorm = subdiv.quadspos;
-      displaced.normals   = compute_normals(displaced.quadspos, displaced.positions);
+      displaced.normals   = compute_normals(
+          displaced.quadspos, displaced.positions);
     }
   }
   return displaced;
 }
-void tesselate_subdiv(sceneio_model& scene,
-    const sceneio_subdiv& subdiv, bool no_quads, bool no_facevarying) {
+void tesselate_subdiv(sceneio_model& scene, const sceneio_subdiv& subdiv,
+    bool no_quads, bool no_facevarying) {
   auto tesselated = subdiv;
   if (tesselated.subdivisions) tesselated = subdivide_subdiv(tesselated);
   if (tesselated.displacement) tesselated = displace_subdiv(scene, tesselated);
   if (!subdiv.quadspos.empty() && no_facevarying) {
-    std::tie(tesselated.quads, tesselated.positions, tesselated.normals, tesselated.texcoords) =
-        split_facevarying(tesselated.quadspos, tesselated.quadsnorm,
-            tesselated.quadstexcoord, tesselated.positions, tesselated.normals,
-            tesselated.texcoords);
+    std::tie(tesselated.quads, tesselated.positions, tesselated.normals,
+        tesselated.texcoords) = split_facevarying(tesselated.quadspos,
+        tesselated.quadsnorm, tesselated.quadstexcoord, tesselated.positions,
+        tesselated.normals, tesselated.texcoords);
   }
   if (!tesselated.quads.empty() && no_quads) {
     tesselated.triangles = quads_to_triangles(tesselated.quads);
     tesselated.quads     = {};
   }
-  auto& shape = scene.shapes[tesselated.shape];
-  shape.points = tesselated.points;
-  shape.lines = tesselated.lines;
-  shape.triangles = tesselated.triangles;
-  shape.quads = tesselated.quads;
-  shape.quadspos = tesselated.quadspos;
-  shape.quadsnorm = tesselated.quadsnorm;
+  auto& shape         = scene.shapes[tesselated.shape];
+  shape.points        = tesselated.points;
+  shape.lines         = tesselated.lines;
+  shape.triangles     = tesselated.triangles;
+  shape.quads         = tesselated.quads;
+  shape.quadspos      = tesselated.quadspos;
+  shape.quadsnorm     = tesselated.quadsnorm;
   shape.quadstexcoord = tesselated.quadstexcoord;
-  shape.positions = tesselated.positions;
-  shape.normals = tesselated.normals;
-  shape.texcoords = tesselated.texcoords;
-  shape.colors = tesselated.colors;
-  shape.radius = tesselated.radius;
+  shape.positions     = tesselated.positions;
+  shape.normals       = tesselated.normals;
+  shape.texcoords     = tesselated.texcoords;
+  shape.colors        = tesselated.colors;
+  shape.radius        = tesselated.radius;
 }
 
 // Update animation transforms
@@ -995,7 +1005,8 @@ sceneio_status load_subdiv(const string& filename, sceneio_subdiv& subdiv) {
   }
 }
 
-sceneio_status save_subdiv(const string& filename, const sceneio_subdiv& subdiv) {
+sceneio_status save_subdiv(
+    const string& filename, const sceneio_subdiv& subdiv) {
   if (subdiv.quadspos.empty()) {
     if (auto ret = save_shape(get_dirname(filename) + subdiv.filename,
             subdiv.points, subdiv.lines, subdiv.triangles, subdiv.quads,
@@ -1056,8 +1067,8 @@ sceneio_status save_subdivs(
   } else {
     auto mutex  = std::mutex{};
     auto status = sceneio_status{};
-    parallel_foreach(
-        scene.subdivs, [&filename, &status, &mutex](const sceneio_subdiv& subdiv) {
+    parallel_foreach(scene.subdivs,
+        [&filename, &status, &mutex](const sceneio_subdiv& subdiv) {
           if (!status) return;
           if (auto ret = save_subdiv(filename, subdiv); !ret) {
             auto lock = std::lock_guard{mutex};
@@ -1344,16 +1355,16 @@ sceneio_status load_yaml(
       if (has_yaml_value(yelement, "uri")) {
         if (!get_yaml_value(yelement, "uri", subdiv.filename))
           return {filename + ": parse error"};
-        subdiv.name           = get_basename(subdiv.filename);
+        subdiv.name = get_basename(subdiv.filename);
       }
       if (has_yaml_value(yelement, "preset")) {
         auto preset = ""s;
         if (!get_yaml_value(yelement, "preset", preset))
           return {filename + ": parse error"};
         make_shape_preset(subdiv.points, subdiv.lines, subdiv.triangles,
-            subdiv.quads, subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
-            subdiv.positions, subdiv.normals, subdiv.texcoords, subdiv.colors,
-            subdiv.radius, preset);
+            subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
+            subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
+            subdiv.texcoords, subdiv.colors, subdiv.radius, preset);
         if (subdiv.filename.empty()) {
           subdiv.filename = "shapes/ypreset-" + preset + ".yvol";
         }
@@ -1915,8 +1926,7 @@ static sceneio_status save_yaml(const string& filename,
     add_yaml_value(yelement, "name", subdiv.name);
     add_yaml_value(yelement, "filename", subdiv.filename);
     if (subdiv.shape >= 0)
-      add_yaml_value(yelement, "shape",
-          scene.shapes[subdiv.shape].name);
+      add_yaml_value(yelement, "shape", scene.shapes[subdiv.shape].name);
     add_yaml_value(yelement, "subdivisions", subdiv.subdivisions);
     add_yaml_value(yelement, "catmullclark", subdiv.catmullclark);
     add_yaml_value(yelement, "smooth", subdiv.smooth);

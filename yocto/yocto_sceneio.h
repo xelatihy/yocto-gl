@@ -164,7 +164,7 @@ struct sceneio_shape {
 };
 
 // Subdiv data represented as indexed meshes of elements.
-// May contain points, lines, triangles, quads or 
+// May contain points, lines, triangles, quads or
 // face-varying quads.
 struct sceneio_subdiv {
   // shape data
@@ -298,7 +298,8 @@ sceneio_status save_shape(const string& filename, const sceneio_shape& shape);
 
 // Load/save a subdiv in the supported formats. Filename is the scene filename.
 sceneio_status load_subdiv(const string& filename, sceneio_subdiv& subdiv);
-sceneio_status save_subdiv(const string& filename, const sceneio_subdiv& subdiv);
+sceneio_status save_subdiv(
+    const string& filename, const sceneio_subdiv& subdiv);
 
 // Load/save a texture in the supported formats. Filename is the scene filename.
 sceneio_status load_texture(const string& filename, sceneio_texture& texture);
@@ -329,9 +330,8 @@ bbox3f compute_bounds(const sceneio_model& scene);
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdiv(sceneio_model& scene,
-    const sceneio_subdiv& subdiv, bool no_quads = false,
-    bool no_facevarying = false);
+void tesselate_subdiv(sceneio_model& scene, const sceneio_subdiv& subdiv,
+    bool no_quads = false, bool no_facevarying = false);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.

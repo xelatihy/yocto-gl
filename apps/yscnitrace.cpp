@@ -390,7 +390,7 @@ bool draw_glwidgets_shape(
 
 bool draw_glwidgets_subdiv(
     const opengl_window* win, shared_ptr<app_state> app, int id) {
-  auto& subdiv        = app->ioscene.subdivs[id];
+  auto& subdiv       = app->ioscene.subdivs[id];
   auto  old_filename = subdiv.filename;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", subdiv.name);
@@ -554,9 +554,9 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "edit")) {
-    static auto labels = vector<string>{
-        "camera", "shape", "subdiv", "environment", "instance", "material", "texture"};
-    auto app = apps->states[apps->selected];
+    static auto labels = vector<string>{"camera", "shape", "subdiv",
+        "environment", "instance", "material", "texture"};
+    auto        app    = apps->states[apps->selected];
     if (draw_glcombobox(win, "selection##1", app->selection.first, labels))
       app->selection.second = 0;
     if (app->selection.first == "camera") {
