@@ -101,9 +101,9 @@ int main(int argc, const char** argv) {
 
   // tesselate if needed
   if (get_extension(output) != ".yaml") {
-    for (auto& shape : scene.shapes) {
-      if (needs_tesselation(scene, shape))
-        shape = tesselate_shape(scene, shape);
+    for (auto& iosubdiv : scene.subdivs) {
+      tesselate_subdiv(scene, iosubdiv);
+      iosubdiv = {};
     }
   }
 

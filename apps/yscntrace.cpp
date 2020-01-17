@@ -78,11 +78,12 @@ trace_scene* make_scene(sceneio_model& ioscene) {
         iomaterial.subsurface_tex);
   }
 
-  for (auto& ioshape_ : ioscene.shapes) {
-    auto tshape = (needs_tesselation(ioscene, ioshape_))
-                      ? tesselate_shape(ioscene, ioshape_)
-                      : sceneio_shape{};
-    auto& ioshape = (needs_tesselation(ioscene, ioshape_)) ? tshape : ioshape_;
+  for (auto& iosubdiv : ioscene.subdivs) {
+    tesselate_subdiv(ioscene, iosubdiv);
+    iosubdiv = {};
+  }
+
+  for (auto& ioshape : ioscene.shapes) {
     if (!ioshape.points.empty()) {
       add_shape(scene.get(), ioshape.points, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
@@ -100,83 +101,6 @@ trace_scene* make_scene(sceneio_model& ioscene) {
           ioshape.quadstexcoord, ioshape.positions, ioshape.normals,
           ioshape.texcoords);
     }
-    tshape  = {};
-    ioshape = {};
-  }
-
-  for (auto& ioinstance : ioscene.instances) {
-    add_instance(
-        scene.get(), ioinstance.frame, ioinstance.shape, ioinstance.material);
-  }
-
-  for (auto& ioenvironment : ioscene.environments) {
-    add_environment(scene.get(), ioenvironment.frame, ioenvironment.emission,
-        ioenvironment.emission_tex);
-  }
-
-  ioscene = {};
-  return scene.release();
-
-  for (auto& iocamera : ioscene.cameras) {
-    add_camera(scene.get(), iocamera.frame, iocamera.lens, iocamera.aspect,
-        iocamera.film, iocamera.aperture, iocamera.focus);
-  }
-
-  for (auto& iotexture : ioscene.textures) {
-    if (!iotexture.hdr.empty()) {
-      add_texture(scene.get(), std::move(iotexture.hdr));
-    } else if (!iotexture.ldr.empty()) {
-      add_texture(scene.get(), std::move(iotexture.ldr));
-    }
-  }
-
-  for (auto& iomaterial : ioscene.materials) {
-    auto id = add_material(scene.get());
-    set_material_emission(
-        scene.get(), id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_diffuse(
-        scene.get(), id, iomaterial.diffuse, iomaterial.diffuse_tex);
-    set_material_specular(
-        scene.get(), id, iomaterial.specular, iomaterial.specular_tex);
-    set_material_metallic(
-        scene.get(), id, iomaterial.metallic, iomaterial.metallic_tex);
-    set_material_transmission(
-        scene.get(), id, iomaterial.transmission, iomaterial.transmission_tex);
-    set_material_roughness(
-        scene.get(), id, iomaterial.roughness, iomaterial.roughness_tex);
-    set_material_opacity(
-        scene.get(), id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_refract(scene.get(), id, iomaterial.refract);
-    set_material_normalmap(scene.get(), id, iomaterial.normal_tex);
-    set_material_volume(scene.get(), id, iomaterial.volemission,
-        iomaterial.voltransmission, iomaterial.volmeanfreepath,
-        iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
-        iomaterial.subsurface_tex);
-  }
-
-  for (auto& ioshape_ : ioscene.shapes) {
-    auto tshape = (needs_tesselation(ioscene, ioshape_))
-                      ? tesselate_shape(ioscene, ioshape_)
-                      : sceneio_shape{};
-    auto& ioshape = (needs_tesselation(ioscene, ioshape_)) ? tshape : ioshape_;
-    if (!ioshape.points.empty()) {
-      add_shape(scene.get(), ioshape.points, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.radius);
-    } else if (!ioshape.lines.empty()) {
-      add_shape(scene.get(), ioshape.lines, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.radius);
-    } else if (!ioshape.triangles.empty()) {
-      add_shape(scene.get(), ioshape.triangles, ioshape.positions,
-          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
-    } else if (!ioshape.quads.empty()) {
-      add_shape(scene.get(), ioshape.quads, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.tangents);
-    } else if (!ioshape.quadspos.empty()) {
-      add_shape(scene.get(), ioshape.quadspos, ioshape.quadsnorm,
-          ioshape.quadstexcoord, ioshape.positions, ioshape.normals,
-          ioshape.texcoords);
-    }
-    tshape  = {};
     ioshape = {};
   }
 

@@ -105,7 +105,7 @@ struct app_states {
 };
 
 // Construct a scene from io
-trace_scene* make_scene(const sceneio_model& ioscene) {
+trace_scene* make_scene(sceneio_model& ioscene) {
   auto scene = make_unique<trace_scene>();
 
   for (auto& iocamera : ioscene.cameras) {
@@ -142,11 +142,10 @@ trace_scene* make_scene(const sceneio_model& ioscene) {
         iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
         iomaterial.subsurface_tex);
   }
-  for (auto& ioshape_ : ioscene.shapes) {
-    auto tshape = (needs_tesselation(ioscene, ioshape_))
-                      ? tesselate_shape(ioscene, ioshape_)
-                      : sceneio_shape{};
-    auto& ioshape = (needs_tesselation(ioscene, ioshape_)) ? tshape : ioshape_;
+  for (auto& iosubdiv : ioscene.subdivs) {
+    tesselate_subdiv(ioscene, iosubdiv);
+  }
+  for (auto& ioshape : ioscene.shapes) {
     if (!ioshape.points.empty()) {
       add_shape(scene.get(), ioshape.points, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
@@ -164,7 +163,6 @@ trace_scene* make_scene(const sceneio_model& ioscene) {
           ioshape.quadstexcoord, ioshape.positions, ioshape.normals,
           ioshape.texcoords);
     }
-    tshape = {};
   }
   for (auto& ioinstance : ioscene.instances) {
     add_instance(
@@ -390,6 +388,35 @@ bool draw_glwidgets_shape(
   return edited;
 }
 
+bool draw_glwidgets_subdiv(
+    const opengl_window* win, shared_ptr<app_state> app, int id) {
+  auto& subdiv       = app->ioscene.subdivs[id];
+  auto  old_filename = subdiv.filename;
+  auto  edited       = 0;
+  edited += draw_gltextinput(win, "name", subdiv.name);
+  edited += draw_gltextinput(win, "filename", subdiv.filename);
+  draw_gllabel(win, "points", to_string(subdiv.points.size()));
+  draw_gllabel(win, "lines", to_string(subdiv.lines.size()));
+  draw_gllabel(win, "triangles", to_string(subdiv.triangles.size()));
+  draw_gllabel(win, "quads", to_string(subdiv.quads.size()));
+  draw_gllabel(win, "quads pos", to_string(subdiv.quadspos.size()));
+  draw_gllabel(win, "quads norm", to_string(subdiv.quadsnorm.size()));
+  draw_gllabel(win, "quads texcoord", to_string(subdiv.quadstexcoord.size()));
+  draw_gllabel(win, "pos", to_string(subdiv.positions.size()));
+  draw_gllabel(win, "norm", to_string(subdiv.normals.size()));
+  draw_gllabel(win, "texcoord", to_string(subdiv.texcoords.size()));
+  draw_gllabel(win, "color", to_string(subdiv.colors.size()));
+  draw_gllabel(win, "radius", to_string(subdiv.radius.size()));
+  draw_gllabel(win, "tangsp", to_string(subdiv.tangents.size()));
+  if (edited && old_filename != subdiv.filename) {
+    if (auto ret = load_subdiv(app->filename, subdiv); !ret) {
+      push_glmessage(win, "cannot load " + subdiv.filename);
+      log_glinfo(win, "cannot load " + subdiv.filename);
+    }
+  }
+  return edited;
+}
+
 bool draw_glwidgets_instance(
     const opengl_window* win, shared_ptr<app_state> app, int id) {
   auto& instance = app->ioscene.instances[id];
@@ -527,9 +554,9 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "edit")) {
-    static auto labels = vector<string>{
-        "camera", "shape", "environment", "instance", "material", "texture"};
-    auto app = apps->states[apps->selected];
+    static auto labels = vector<string>{"camera", "shape", "subdiv",
+        "environment", "instance", "material", "texture"};
+    auto        app    = apps->states[apps->selected];
     if (draw_glcombobox(win, "selection##1", app->selection.first, labels))
       app->selection.second = 0;
     if (app->selection.first == "camera") {
@@ -594,17 +621,45 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           win, "selection##2", app->selection.second, app->ioscene.shapes);
       if (draw_glwidgets_shape(win, app, app->selection.second)) {
         stop_display(app);
-        auto& ioshape_ = app->ioscene.shapes[app->selection.second];
-        auto  tshape   = (needs_tesselation(app->ioscene, ioshape_))
-                          ? tesselate_shape(app->ioscene, ioshape_)
-                          : sceneio_shape{};
-        auto& ioshape = (needs_tesselation(app->ioscene, ioshape_)) ? tshape
-                                                                    : ioshape_;
+        auto& ioshape = app->ioscene.shapes[app->selection.second];
         if (!ioshape.points.empty()) {
           set_shape(app->scene.get(), app->selection.second, ioshape.points,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.radius);
         } else if (!ioshape.lines.empty()) {
+          set_shape(app->scene.get(), app->selection.second, ioshape.lines,
+              ioshape.positions, ioshape.normals, ioshape.texcoords,
+              ioshape.colors, ioshape.radius);
+        } else if (!ioshape.triangles.empty()) {
+          set_shape(app->scene.get(), app->selection.second, ioshape.triangles,
+              ioshape.positions, ioshape.normals, ioshape.texcoords,
+              ioshape.colors, ioshape.tangents);
+        } else if (!ioshape.quads.empty()) {
+          set_shape(app->scene.get(), app->selection.second, ioshape.quads,
+              ioshape.positions, ioshape.normals, ioshape.texcoords,
+              ioshape.colors, ioshape.tangents);
+        } else if (!ioshape.quadspos.empty()) {
+          set_shape(app->scene.get(), app->selection.second, ioshape.quadspos,
+              ioshape.quadsnorm, ioshape.quadstexcoord, ioshape.positions,
+              ioshape.normals, ioshape.texcoords);
+        }
+        update_bvh(app->scene.get(), {}, {app->selection.second}, app->params);
+        // TODO: maybe we should update lights for this
+        reset_display(app);
+      }
+    } else if (app->selection.first == "subdiv") {
+      draw_glcombobox(
+          win, "selection##2", app->selection.second, app->ioscene.subdivs);
+      if (draw_glwidgets_subdiv(win, app, app->selection.second)) {
+        stop_display(app);
+        auto& iosubdiv = app->ioscene.subdivs[app->selection.second];
+        tesselate_subdiv(app->ioscene, iosubdiv);
+        auto& ioshape = app->ioscene.shapes[iosubdiv.shape];
+        if (!ioshape.points.empty()) {
+          set_shape(app->scene.get(), app->selection.second, ioshape.points,
+              ioshape.positions, ioshape.normals, ioshape.texcoords,
+              ioshape.colors, ioshape.radius);
+        } else if (!iosubdiv.lines.empty()) {
           set_shape(app->scene.get(), app->selection.second, ioshape.lines,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.radius);

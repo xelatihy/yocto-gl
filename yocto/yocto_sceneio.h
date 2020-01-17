@@ -163,6 +163,47 @@ struct sceneio_shape {
   int   displacement_tex = -1;
 };
 
+// Subdiv data represented as indexed meshes of elements.
+// May contain points, lines, triangles, quads or
+// face-varying quads.
+struct sceneio_subdiv {
+  // shape data
+  string name     = "";
+  string filename = "";
+
+  // reference to subdivided shape
+  int shape = -1;
+
+  // primitives
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
+
+  // face-varying primitives
+  vector<vec4i> quadspos      = {};
+  vector<vec4i> quadsnorm     = {};
+  vector<vec4i> quadstexcoord = {};
+
+  // vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
+
+  // subdision properties
+  int  subdivisions = 0;
+  bool catmullclark = false;
+  bool smooth       = false;
+  bool facevarying  = false;
+
+  // displacement information
+  float displacement     = 0;
+  int   displacement_tex = -1;
+};
+
 // Instance of a visible shape in the scene.
 struct sceneio_instance {
   string  name     = "";
@@ -222,6 +263,7 @@ struct sceneio_model {
   string                      name         = "";
   vector<sceneio_camera>      cameras      = {};
   vector<sceneio_shape>       shapes       = {};
+  vector<sceneio_subdiv>      subdivs      = {};
   vector<sceneio_instance>    instances    = {};
   vector<sceneio_material>    materials    = {};
   vector<sceneio_texture>     textures     = {};
@@ -254,6 +296,11 @@ sceneio_status save_scene(const string& filename, const sceneio_model& scene,
 sceneio_status load_shape(const string& filename, sceneio_shape& shape);
 sceneio_status save_shape(const string& filename, const sceneio_shape& shape);
 
+// Load/save a subdiv in the supported formats. Filename is the scene filename.
+sceneio_status load_subdiv(const string& filename, sceneio_subdiv& subdiv);
+sceneio_status save_subdiv(
+    const string& filename, const sceneio_subdiv& subdiv);
+
 // Load/save a texture in the supported formats. Filename is the scene filename.
 sceneio_status load_texture(const string& filename, sceneio_texture& texture);
 sceneio_status save_texture(
@@ -283,10 +330,7 @@ bbox3f compute_bounds(const sceneio_model& scene);
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-sceneio_shape tesselate_shape(const sceneio_model& scene,
-    const sceneio_shape& shape, bool no_quads = false,
-    bool no_facevarying = false);
-bool needs_tesselation(const sceneio_model& scene, const sceneio_shape& shape,
+void tesselate_subdiv(sceneio_model& scene, const sceneio_subdiv& subdiv,
     bool no_quads = false, bool no_facevarying = false);
 
 // Update node transforms. Eventually this will be deprecated as we do not
