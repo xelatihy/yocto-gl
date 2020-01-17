@@ -1784,6 +1784,7 @@ static sceneio_status load_yaml_scene(
 
   // load shape and textures
   if (auto ret = load_shapes(filename, scene, noparallel); !ret) return ret;
+  if (auto ret = load_subdivs(filename, scene, noparallel); !ret) return ret;
   if (auto ret = load_textures(filename, scene, noparallel); !ret) return ret;
 
   // fix scene
@@ -1906,6 +1907,26 @@ static sceneio_status save_yaml(const string& filename,
       add_yaml_value(yelement, "displacement", shape.displacement);
   }
 
+  for (auto& subdiv : scene.subdivs) {
+    auto& yelement = yaml.elements.emplace_back();
+    yelement.name  = "subdivs";
+    add_yaml_value(yelement, "name", subdiv.name);
+    add_yaml_value(yelement, "filename", subdiv.filename);
+    if (subdiv.shape >= 0)
+      add_yaml_value(yelement, "shape",
+          scene.shapes[subdiv.shape].name);
+    add_yaml_value(yelement, "subdivisions", subdiv.subdivisions);
+    add_yaml_value(yelement, "catmullclark", subdiv.catmullclark);
+    add_yaml_value(yelement, "smooth", subdiv.smooth);
+    if (subdiv.facevarying)
+      add_yaml_value(yelement, "facevarying", subdiv.facevarying);
+    if (subdiv.displacement_tex >= 0)
+      add_yaml_value(yelement, "displacement_tex",
+          scene.textures[subdiv.displacement_tex].name);
+    if (subdiv.displacement_tex >= 0)
+      add_yaml_value(yelement, "displacement", subdiv.displacement);
+  }
+
   for (auto& instance : scene.instances) {
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "instances";
@@ -1940,6 +1961,7 @@ static sceneio_status save_yaml_scene(
   // save yaml file
   if (auto ret = save_yaml(filename, scene); !ret) return ret;
   if (auto ret = save_shapes(filename, scene, noparallel); !ret) return ret;
+  if (auto ret = save_subdivs(filename, scene, noparallel); !ret) return ret;
   if (auto ret = save_textures(filename, scene, noparallel); !ret) return ret;
 
   return {};
