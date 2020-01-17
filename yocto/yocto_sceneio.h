@@ -329,11 +329,6 @@ bbox3f compute_bounds(const sceneio_model& scene);
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-sceneio_shape tesselate_shape(const sceneio_model& scene,
-    const sceneio_shape& shape, bool no_quads = false,
-    bool no_facevarying = false);
-bool needs_tesselation(const sceneio_model& scene, const sceneio_shape& shape,
-    bool no_quads = false, bool no_facevarying = false);
 void tesselate_subdiv(sceneio_model& scene,
     const sceneio_subdiv& subdiv, bool no_quads = false,
     bool no_facevarying = false);
