@@ -96,10 +96,6 @@ trace_scene* make_scene(sceneio_model& ioscene) {
     } else if (!ioshape.quads.empty()) {
       add_shape(scene.get(), ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
-    } else if (!ioshape.quadspos.empty()) {
-      add_shape(scene.get(), ioshape.quadspos, ioshape.quadsnorm,
-          ioshape.quadstexcoord, ioshape.positions, ioshape.normals,
-          ioshape.texcoords);
     }
     ioshape = {};
   }

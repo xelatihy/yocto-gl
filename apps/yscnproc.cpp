@@ -125,13 +125,8 @@ int main(int argc, const char** argv) {
   if (mesh_filenames) {
     auto sid = 0;
     for (auto& shape : scene.shapes) {
-      if (!shape.quadspos.empty()) {
-        shape.filename = shape_directory + "shape_" + std::to_string(sid) +
-                         ".obj";
-      } else {
-        shape.filename = shape_directory + "shape_" + std::to_string(sid) +
-                         ".ply";
-      }
+      shape.filename = shape_directory + "shape_" + std::to_string(sid) +
+                        ".ply";
       sid++;
     }
   }

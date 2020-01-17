@@ -248,6 +248,7 @@ vector<string> scene_stats(const sceneio_model& scene, bool verbose) {
   auto stats = vector<string>{};
   stats.push_back("cameras:      " + format(scene.cameras.size()));
   stats.push_back("shapes:       " + format(scene.shapes.size()));
+  stats.push_back("subdivs:      " + format(scene.subdivs.size()));
   stats.push_back("instances:    " + format(scene.instances.size()));
   stats.push_back("environments: " + format(scene.environments.size()));
   stats.push_back("textures:     " + format(scene.textures.size()));
@@ -266,8 +267,20 @@ vector<string> scene_stats(const sceneio_model& scene, bool verbose) {
   stats.push_back(
       "quads:        " + format(accumulate(scene.shapes,
                              [](auto& shape) { return shape.quads.size(); })));
-  stats.push_back("fvquads:      " +
-                  format(accumulate(scene.shapes,
+  stats.push_back(
+      "spoints:      " + format(accumulate(scene.subdivs,
+                             [](auto& shape) { return shape.points.size(); })));
+  stats.push_back(
+      "slines:       " + format(accumulate(scene.subdivs,
+                             [](auto& shape) { return shape.lines.size(); })));
+  stats.push_back("striangles:   " +
+                  format(accumulate(scene.subdivs,
+                      [](auto& shape) { return shape.triangles.size(); })));
+  stats.push_back(
+      "squads:       " + format(accumulate(scene.subdivs,
+                             [](auto& shape) { return shape.quads.size(); })));
+  stats.push_back("sfvquads:     " +
+                  format(accumulate(scene.subdivs,
                       [](auto& shape) { return shape.quadspos.size(); })));
   stats.push_back(
       "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
@@ -411,15 +424,27 @@ void trim_memory(sceneio_model& scene) {
     shape.lines.shrink_to_fit();
     shape.triangles.shrink_to_fit();
     shape.quads.shrink_to_fit();
-    shape.quadspos.shrink_to_fit();
-    shape.quadsnorm.shrink_to_fit();
-    shape.quadstexcoord.shrink_to_fit();
     shape.positions.shrink_to_fit();
     shape.normals.shrink_to_fit();
     shape.texcoords.shrink_to_fit();
     shape.colors.shrink_to_fit();
     shape.radius.shrink_to_fit();
     shape.tangents.shrink_to_fit();
+  }
+  for (auto& subdiv : scene.subdivs) {
+    subdiv.points.shrink_to_fit();
+    subdiv.lines.shrink_to_fit();
+    subdiv.triangles.shrink_to_fit();
+    subdiv.quads.shrink_to_fit();
+    subdiv.quadspos.shrink_to_fit();
+    subdiv.quadsnorm.shrink_to_fit();
+    subdiv.quadstexcoord.shrink_to_fit();
+    subdiv.positions.shrink_to_fit();
+    subdiv.normals.shrink_to_fit();
+    subdiv.texcoords.shrink_to_fit();
+    subdiv.colors.shrink_to_fit();
+    subdiv.radius.shrink_to_fit();
+    subdiv.tangents.shrink_to_fit();
   }
   for (auto& texture : scene.textures) {
     texture.ldr.shrink_to_fit();
@@ -612,12 +637,13 @@ sceneio_subdiv displace_subdiv(
   }
   return displaced;
 }
-void tesselate_subdiv(sceneio_model& scene, const sceneio_subdiv& subdiv,
-    bool no_quads, bool no_facevarying) {
+
+void tesselate_subdiv(
+    sceneio_model& scene, const sceneio_subdiv& subdiv, bool no_quads) {
   auto tesselated = subdiv;
   if (tesselated.subdivisions) tesselated = subdivide_subdiv(tesselated);
   if (tesselated.displacement) tesselated = displace_subdiv(scene, tesselated);
-  if (!subdiv.quadspos.empty() && no_facevarying) {
+  if (!subdiv.quadspos.empty()) {
     std::tie(tesselated.quads, tesselated.positions, tesselated.normals,
         tesselated.texcoords) = split_facevarying(tesselated.quadspos,
         tesselated.quadsnorm, tesselated.quadstexcoord, tesselated.positions,
@@ -627,19 +653,16 @@ void tesselate_subdiv(sceneio_model& scene, const sceneio_subdiv& subdiv,
     tesselated.triangles = quads_to_triangles(tesselated.quads);
     tesselated.quads     = {};
   }
-  auto& shape         = scene.shapes[tesselated.shape];
-  shape.points        = tesselated.points;
-  shape.lines         = tesselated.lines;
-  shape.triangles     = tesselated.triangles;
-  shape.quads         = tesselated.quads;
-  shape.quadspos      = tesselated.quadspos;
-  shape.quadsnorm     = tesselated.quadsnorm;
-  shape.quadstexcoord = tesselated.quadstexcoord;
-  shape.positions     = tesselated.positions;
-  shape.normals       = tesselated.normals;
-  shape.texcoords     = tesselated.texcoords;
-  shape.colors        = tesselated.colors;
-  shape.radius        = tesselated.radius;
+  auto& shape     = scene.shapes[tesselated.shape];
+  shape.points    = tesselated.points;
+  shape.lines     = tesselated.lines;
+  shape.triangles = tesselated.triangles;
+  shape.quads     = tesselated.quads;
+  shape.positions = tesselated.positions;
+  shape.normals   = tesselated.normals;
+  shape.texcoords = tesselated.texcoords;
+  shape.colors    = tesselated.colors;
+  shape.radius    = tesselated.radius;
 }
 
 // Update animation transforms
@@ -737,7 +760,7 @@ static sceneio_status save_yaml_scene(
 
 // Load/save a scene from/to OBJ.
 static sceneio_status load_obj_scene(const string& filename,
-    sceneio_model& scene, bool facevarying, bool noparallel);
+    sceneio_model& scene, bool noparallel);
 static sceneio_status save_obj_scene(const string& filename,
     const sceneio_model& scene, bool instances, bool noparallel);
 
@@ -761,12 +784,12 @@ static sceneio_status save_pbrt_scene(
 
 // Load a scene
 sceneio_status load_scene(const string& filename, sceneio_model& scene,
-    bool obj_facevarying, bool noparallel) {
+    bool noparallel) {
   auto ext = get_extension(filename);
   if (ext == ".yaml" || ext == ".YAML") {
     return load_yaml_scene(filename, scene, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return load_obj_scene(filename, scene, obj_facevarying, noparallel);
+    return load_obj_scene(filename, scene, noparallel);
   } else if (ext == ".gltf" || ext == ".GLTF") {
     return load_gltf_scene(filename, scene, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
@@ -781,12 +804,12 @@ sceneio_status load_scene(const string& filename, sceneio_model& scene,
 
 // Save a scene
 sceneio_status save_scene(const string& filename, const sceneio_model& scene,
-    bool obj_instances, bool noparallel) {
+    bool noparallel) {
   auto ext = get_extension(filename);
   if (ext == ".yaml" || ext == ".YAML") {
     return save_yaml_scene(filename, scene, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return save_obj_scene(filename, scene, obj_instances, noparallel);
+    return save_obj_scene(filename, scene, false, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
     return save_pbrt_scene(filename, scene, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
@@ -887,48 +910,26 @@ sceneio_status save_textures(
 }
 
 sceneio_status load_shape(const string& filename, sceneio_shape& shape) {
-  if (!shape.facevarying) {
-    if (auto ret = load_shape(get_dirname(filename) + shape.filename,
-            shape.points, shape.lines, shape.triangles, shape.quads,
-            shape.positions, shape.normals, shape.texcoords, shape.colors,
-            shape.radius);
-        !ret) {
-      return {filename + ": missing shape (" + ret.error + ")"};
-    } else {
-      return {};
-    }
+  if (auto ret = load_shape(get_dirname(filename) + shape.filename,
+          shape.points, shape.lines, shape.triangles, shape.quads,
+          shape.positions, shape.normals, shape.texcoords, shape.colors,
+          shape.radius);
+      !ret) {
+    return {filename + ": missing shape (" + ret.error + ")"};
   } else {
-    if (auto ret = load_fvshape(get_dirname(filename) + shape.filename,
-            shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-            shape.positions, shape.normals, shape.texcoords);
-        !ret) {
-      return {filename + ": missing shape (" + ret.error + ")"};
-    } else {
-      return {};
-    }
+    return {};
   }
 }
 
 sceneio_status save_shape(const string& filename, const sceneio_shape& shape) {
-  if (shape.quadspos.empty()) {
-    if (auto ret = save_shape(get_dirname(filename) + shape.filename,
-            shape.points, shape.lines, shape.triangles, shape.quads,
-            shape.positions, shape.normals, shape.texcoords, shape.colors,
-            shape.radius);
-        !ret) {
-      return {filename + ": missing shape (" + ret.error + ")"};
-    } else {
-      return {};
-    }
+  if (auto ret = save_shape(get_dirname(filename) + shape.filename,
+          shape.points, shape.lines, shape.triangles, shape.quads,
+          shape.positions, shape.normals, shape.texcoords, shape.colors,
+          shape.radius);
+      !ret) {
+    return {filename + ": missing shape (" + ret.error + ")"};
   } else {
-    if (auto ret = save_fvshape(get_dirname(filename) + shape.filename,
-            shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-            shape.positions, shape.normals, shape.texcoords);
-        !ret) {
-      return {filename + ": missing shape (" + ret.error + ")"};
-    } else {
-      return {};
-    }
+    return {};
   }
 }
 
@@ -1299,19 +1300,6 @@ sceneio_status load_yaml(
         return {filename + ": parse error"};
       if (!get_yaml_value(yelement, "filename", shape.filename))
         return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "subdivisions", shape.subdivisions))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "catmullclark", shape.catmullclark))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "smooth", shape.smooth))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "facevarying", shape.facevarying))
-        return {filename + ": parse error"};
-      if (!get_yaml_ref(
-              yelement, "displacement_tex", shape.displacement_tex, tmap))
-        return {filename + ": parse error"};
-      if (!get_yaml_value(yelement, "displacement", shape.displacement))
-        return {filename + ": parse error"};
       if (has_yaml_value(yelement, "uri")) {
         if (!get_yaml_value(yelement, "uri", shape.filename))
           return {filename + ": parse error"};
@@ -1323,9 +1311,8 @@ sceneio_status load_yaml(
         if (!get_yaml_value(yelement, "preset", preset))
           return {filename + ": parse error"};
         make_shape_preset(shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-            shape.positions, shape.normals, shape.texcoords, shape.colors,
-            shape.radius, preset);
+            shape.quads, shape.positions, shape.normals, shape.texcoords,
+            shape.colors, shape.radius, preset);
         if (shape.filename.empty()) {
           shape.filename = "shapes/ypreset-" + preset + ".yvol";
         }
@@ -1908,16 +1895,6 @@ static sceneio_status save_yaml(const string& filename,
     yelement.name  = "shapes";
     add_yaml_value(yelement, "name", shape.name);
     add_yaml_value(yelement, "filename", shape.filename);
-    add_yaml_value(yelement, "subdivisions", shape.subdivisions);
-    add_yaml_value(yelement, "catmullclark", shape.catmullclark);
-    add_yaml_value(yelement, "smooth", shape.smooth);
-    if (shape.facevarying)
-      add_yaml_value(yelement, "facevarying", shape.facevarying);
-    if (shape.displacement_tex >= 0)
-      add_yaml_value(yelement, "displacement_tex",
-          scene.textures[shape.displacement_tex].name);
-    if (shape.displacement_tex >= 0)
-      add_yaml_value(yelement, "displacement", shape.displacement);
   }
 
   for (auto& subdiv : scene.subdivs) {
@@ -1987,7 +1964,7 @@ static sceneio_status save_yaml_scene(
 namespace yocto {
 
 static sceneio_status load_obj(
-    const string& filename, sceneio_model& scene, bool facevarying) {
+    const string& filename, sceneio_model& scene) {
   // load obj
   auto obj = obj_model{};
   if (auto ret = load_obj(filename, obj, false, true, true); !ret)
@@ -2066,10 +2043,10 @@ static sceneio_status load_obj(
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
     auto has_quads  = has_obj_quads(oshape);
-    if (!oshape.faces.empty() && !facevarying && !has_quads) {
+    if (!oshape.faces.empty() && !has_quads) {
       get_obj_triangles(obj, oshape, shape.triangles, shape.positions,
           shape.normals, shape.texcoords, materials, ematerials, true);
-    } else if (!oshape.faces.empty() && !facevarying && has_quads) {
+    } else if (!oshape.faces.empty() && has_quads) {
       get_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
           shape.texcoords, materials, ematerials, true);
     } else if (!oshape.lines.empty()) {
@@ -2078,10 +2055,6 @@ static sceneio_status load_obj(
     } else if (!oshape.points.empty()) {
       get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals,
           shape.texcoords, materials, ematerials, true);
-    } else if (!oshape.faces.empty() && facevarying) {
-      get_obj_fvquads(obj, oshape, shape.quadspos, shape.quadsnorm,
-          shape.quadstexcoord, shape.positions, shape.normals, shape.texcoords,
-          materials, ematerials, true);
     } else {
       return {filename + ": empty shape"};
     }
@@ -2125,11 +2098,11 @@ static sceneio_status load_obj(
 
 // Loads an OBJ
 static sceneio_status load_obj_scene(const string& filename,
-    sceneio_model& scene, bool facevarying, bool noparallel) {
+    sceneio_model& scene, bool noparallel) {
   scene = {};
 
   // Parse obj
-  if (auto ret = load_obj(filename, scene, facevarying); !ret) return ret;
+  if (auto ret = load_obj(filename, scene); !ret) return ret;
   if (auto ret = load_textures(filename, scene, noparallel); !ret) return ret;
 
   // fix scene
@@ -2216,10 +2189,6 @@ static sceneio_status save_obj(
       } else if (!shape.points.empty()) {
         add_obj_points(obj, shape.name, shape.points, shape.positions,
             shape.normals, shape.texcoords, {}, {}, true);
-      } else if (!shape.quadspos.empty()) {
-        add_obj_fvquads(obj, shape.name, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, shape.positions, shape.normals,
-            shape.texcoords, {}, {}, true);
       } else {
         throw std::runtime_error("do not support empty shapes");
       }
@@ -2246,10 +2215,6 @@ static sceneio_status save_obj(
       } else if (!shape.points.empty()) {
         add_obj_points(obj, instance.name, shape.points, positions, normals,
             shape.texcoords, materials, {}, true);
-      } else if (!shape.quadspos.empty()) {
-        add_obj_fvquads(obj, instance.name, shape.quadspos, shape.quadsnorm,
-            shape.quadstexcoord, positions, normals, shape.texcoords, materials,
-            {}, true);
       } else {
         return {filename + ": do not support empty shapes"};
       }
@@ -2329,14 +2294,9 @@ static sceneio_status save_ply_scene(
     const string& filename, const sceneio_model& scene, bool noparallel) {
   if (scene.shapes.empty()) return {filename + ": empty scene"};
   auto& shape = scene.shapes.front();
-  if (shape.quadspos.empty()) {
-    save_shape(filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.positions, shape.normals, shape.texcoords,
-        shape.colors, shape.radius);
-  } else {
-    save_fvshape(filename, shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-        shape.positions, shape.normals, shape.texcoords);
-  }
+  save_shape(filename, shape.points, shape.lines, shape.triangles,
+      shape.quads, shape.positions, shape.normals, shape.texcoords,
+      shape.colors, shape.radius);
   return {};
 }
 
@@ -2719,22 +2679,12 @@ sceneio_status save_pbrt_scene(
   // save meshes
   auto dirname = get_dirname(filename);
   for (auto& shape : scene.shapes) {
-    if (shape.quadspos.empty()) {
-      if (auto ret = save_shape(
-              replace_extension(dirname + shape.filename, ".ply"), shape.points,
-              shape.lines, shape.triangles, shape.quads, shape.positions,
-              shape.normals, shape.texcoords, shape.colors, shape.radius);
-          !ret) {
-        return {filename + ": missing shape (" + ret.error + ")"};
-      }
-    } else {
-      if (auto ret = save_fvshape(
-              replace_extension(dirname + shape.filename, ".ply"),
-              shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-              shape.positions, shape.normals, shape.texcoords);
-          !ret) {
-        return {filename + ": missing shape (" + ret.error + ")"};
-      }
+    if (auto ret = save_shape(
+            replace_extension(dirname + shape.filename, ".ply"), shape.points,
+            shape.lines, shape.triangles, shape.quads, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.radius);
+        !ret) {
+      return {filename + ": missing shape (" + ret.error + ")"};
     }
   }
 

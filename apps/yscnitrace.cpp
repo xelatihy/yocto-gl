@@ -158,10 +158,6 @@ trace_scene* make_scene(sceneio_model& ioscene) {
     } else if (!ioshape.quads.empty()) {
       add_shape(scene.get(), ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
-    } else if (!ioshape.quadspos.empty()) {
-      add_shape(scene.get(), ioshape.quadspos, ioshape.quadsnorm,
-          ioshape.quadstexcoord, ioshape.positions, ioshape.normals,
-          ioshape.texcoords);
     }
   }
   for (auto& ioinstance : ioscene.instances) {
@@ -370,9 +366,6 @@ bool draw_glwidgets_shape(
   draw_gllabel(win, "lines", to_string(shape.lines.size()));
   draw_gllabel(win, "triangles", to_string(shape.triangles.size()));
   draw_gllabel(win, "quads", to_string(shape.quads.size()));
-  draw_gllabel(win, "quads pos", to_string(shape.quadspos.size()));
-  draw_gllabel(win, "quads norm", to_string(shape.quadsnorm.size()));
-  draw_gllabel(win, "quads texcoord", to_string(shape.quadstexcoord.size()));
   draw_gllabel(win, "pos", to_string(shape.positions.size()));
   draw_gllabel(win, "norm", to_string(shape.normals.size()));
   draw_gllabel(win, "texcoord", to_string(shape.texcoords.size()));
@@ -638,10 +631,6 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           set_shape(app->scene.get(), app->selection.second, ioshape.quads,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.tangents);
-        } else if (!ioshape.quadspos.empty()) {
-          set_shape(app->scene.get(), app->selection.second, ioshape.quadspos,
-              ioshape.quadsnorm, ioshape.quadstexcoord, ioshape.positions,
-              ioshape.normals, ioshape.texcoords);
         }
         update_bvh(app->scene.get(), {}, {app->selection.second}, app->params);
         // TODO: maybe we should update lights for this
@@ -671,10 +660,6 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
           set_shape(app->scene.get(), app->selection.second, ioshape.quads,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.tangents);
-        } else if (!ioshape.quadspos.empty()) {
-          set_shape(app->scene.get(), app->selection.second, ioshape.quadspos,
-              ioshape.quadsnorm, ioshape.quadstexcoord, ioshape.positions,
-              ioshape.normals, ioshape.texcoords);
         }
         update_bvh(app->scene.get(), {}, {app->selection.second}, app->params);
         // TODO: maybe we should update lights for this

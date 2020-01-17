@@ -139,11 +139,6 @@ struct sceneio_shape {
   vector<vec3i> triangles = {};
   vector<vec4i> quads     = {};
 
-  // face-varying primitives
-  vector<vec4i> quadspos      = {};
-  vector<vec4i> quadsnorm     = {};
-  vector<vec4i> quadstexcoord = {};
-
   // vertex data
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
@@ -151,16 +146,6 @@ struct sceneio_shape {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
-
-  // subdision properties
-  int  subdivisions = 0;
-  bool catmullclark = false;
-  bool smooth       = false;
-  bool facevarying  = false;
-
-  // displacement information
-  float displacement     = 0;
-  int   displacement_tex = -1;
 };
 
 // Subdiv data represented as indexed meshes of elements.
@@ -288,9 +273,9 @@ struct sceneio_status {
 
 // Load/save a scene in the supported formats.
 sceneio_status load_scene(const string& filename, sceneio_model& scene,
-    bool obj_facevarying = false, bool noparallel = false);
+    bool noparallel = false);
 sceneio_status save_scene(const string& filename, const sceneio_model& scene,
-    bool obj_instances = false, bool noparallel = false);
+    bool noparallel = false);
 
 // Load/save a shape in the supported formats. Filename is the scene filename.
 sceneio_status load_shape(const string& filename, sceneio_shape& shape);
@@ -331,7 +316,7 @@ namespace yocto {
 
 // Apply subdivision and displacement rules.
 void tesselate_subdiv(sceneio_model& scene, const sceneio_subdiv& subdiv,
-    bool no_quads = false, bool no_facevarying = false);
+    bool no_quads = false);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.

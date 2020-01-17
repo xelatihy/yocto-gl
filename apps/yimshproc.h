@@ -52,12 +52,6 @@ void update_glshape(shared_ptr<app_state> app) {
   } else if (!shape.quads.empty()) {
     set_shape(app->scene.get(), app->glshape_id, shape.quads, shape.positions,
         shape.normals, shape.texcoords, shape.colors, shape.tangents);
-  } else if (!shape.quadspos.empty()) {
-    auto [quads, positions, normals, texcoords] = split_facevarying(
-        shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-        shape.normals, shape.texcoords);
-    set_shape(app->scene.get(), app->glshape_id, quads, positions, normals,
-        texcoords);
   }
 }
 

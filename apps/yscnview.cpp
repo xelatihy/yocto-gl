@@ -213,11 +213,6 @@ opengl_scene* make_scene(sceneio_model& scene) {
     } else if (!shape.quads.empty()) {
       set_shape(glscene, id, shape.quads, shape.positions, shape.normals,
           shape.texcoords, shape.colors, shape.tangents);
-    } else if (!shape.quadspos.empty()) {
-      auto [quads, positions, normals, texcoords] = split_facevarying(
-          shape.quadspos, shape.quadsnorm, shape.quadstexcoord, shape.positions,
-          shape.normals, shape.texcoords);
-      set_shape(glscene, id, quads, positions, normals, texcoords);
     }
   }
 
@@ -329,22 +324,12 @@ bool draw_glwidgets_shape(
   draw_gllabel(win, "lines", to_string(shape.lines.size()));
   draw_gllabel(win, "triangles", to_string(shape.triangles.size()));
   draw_gllabel(win, "quads", to_string(shape.quads.size()));
-  draw_gllabel(win, "quads pos", to_string(shape.quadspos.size()));
-  draw_gllabel(win, "quads norm", to_string(shape.quadsnorm.size()));
-  draw_gllabel(win, "quads texcoord", to_string(shape.quadstexcoord.size()));
   draw_gllabel(win, "pos", to_string(shape.positions.size()));
   draw_gllabel(win, "norm", to_string(shape.normals.size()));
   draw_gllabel(win, "texcoord", to_string(shape.texcoords.size()));
   draw_gllabel(win, "color", to_string(shape.colors.size()));
   draw_gllabel(win, "radius", to_string(shape.radius.size()));
   draw_gllabel(win, "tangsp", to_string(shape.tangents.size()));
-  edited += draw_glslider(win, "subdivisions", shape.subdivisions, 0, 10);
-  edited += draw_glcheckbox(win, "catmullclark", shape.catmullclark);
-  edited += draw_glcheckbox(win, "smooth", shape.smooth);
-  edited += draw_glcheckbox(win, "facevarying", shape.facevarying);
-  edited += draw_glcombobox(win, "displacement_tex", shape.displacement_tex,
-      app->scene.textures, true);
-  edited += draw_glslider(win, "displacement", shape.displacement, 0, 1);
   if (edited && old_filename != shape.filename) {
     if (auto ret = load_shape(app->filename, shape); !ret) {
       push_glmessage(win, ret.error);
@@ -565,11 +550,6 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
         } else if (!shape.quads.empty()) {
           set_shape(glscene, idx, shape.quads, shape.positions, shape.normals,
               shape.texcoords, shape.colors, shape.tangents);
-        } else if (!shape.quadspos.empty()) {
-          auto [quads, positions, normals, texcoords] = split_facevarying(
-              shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-              shape.positions, shape.normals, shape.texcoords);
-          set_shape(glscene, idx, quads, positions, normals, texcoords);
         }
       }
     } else if (app->selection.first == "subdiv") {
@@ -592,11 +572,6 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
         } else if (!shape.quads.empty()) {
           set_shape(glscene, idx, shape.quads, shape.positions, shape.normals,
               shape.texcoords, shape.colors, shape.tangents);
-        } else if (!shape.quadspos.empty()) {
-          auto [quads, positions, normals, texcoords] = split_facevarying(
-              shape.quadspos, shape.quadsnorm, shape.quadstexcoord,
-              shape.positions, shape.normals, shape.texcoords);
-          set_shape(glscene, idx, quads, positions, normals, texcoords);
         }
       }
     } else if (app->selection.first == "instance") {
