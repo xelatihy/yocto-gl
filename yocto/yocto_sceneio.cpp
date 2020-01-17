@@ -1341,7 +1341,6 @@ sceneio_status load_yaml(
         if (!get_yaml_value(yelement, "uri", subdiv.filename))
           return {filename + ": parse error"};
         subdiv.name           = get_basename(subdiv.filename);
-        smap[subdiv.filename] = (int)scene.subdivs.size() - 1;
       }
       if (has_yaml_value(yelement, "preset")) {
         auto preset = ""s;
@@ -1355,7 +1354,6 @@ sceneio_status load_yaml(
           subdiv.filename = "shapes/ypreset-" + preset + ".yvol";
         }
       }
-      smap[subdiv.name] = (int)scene.subdivs.size() - 1;
     } else if (yelement.name == "instances") {
       auto& instance = scene.instances.emplace_back();
       if (!get_yaml_value(yelement, "name", instance.name))
