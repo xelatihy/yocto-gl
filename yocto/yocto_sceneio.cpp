@@ -950,8 +950,7 @@ sceneio_status save_shapes(
   // save shapes
   if (noparallel) {
     for (auto& shape : scene.shapes) {
-      if (auto ret = save_shape(filename, shape); !ret)
-        return {filename + ": missing shape (" + ret.error + ")"};
+      if (auto ret = save_shape(filename, shape); !ret) return ret;
     }
     return {};
   } else {
@@ -961,6 +960,102 @@ sceneio_status save_shapes(
         scene.shapes, [&filename, &status, &mutex](const sceneio_shape& shape) {
           if (!status) return;
           if (auto ret = save_shape(filename, shape); !ret) {
+            auto lock = std::lock_guard{mutex};
+            status    = ret;
+          }
+        });
+    return {};
+  }
+}
+
+sceneio_status load_subdiv(const string& filename, sceneio_subdiv& subdiv) {
+  if (!subdiv.facevarying) {
+    if (auto ret = load_shape(get_dirname(filename) + subdiv.filename,
+            subdiv.points, subdiv.lines, subdiv.triangles, subdiv.quads,
+            subdiv.positions, subdiv.normals, subdiv.texcoords, subdiv.colors,
+            subdiv.radius);
+        !ret) {
+      return {filename + ": missing subdivs (" + ret.error + ")"};
+    } else {
+      return {};
+    }
+  } else {
+    if (auto ret = load_fvshape(get_dirname(filename) + subdiv.filename,
+            subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+            subdiv.positions, subdiv.normals, subdiv.texcoords);
+        !ret) {
+      return {filename + ": missing subdivs (" + ret.error + ")"};
+    } else {
+      return {};
+    }
+  }
+}
+
+sceneio_status save_subdiv(const string& filename, const sceneio_subdiv& subdiv) {
+  if (subdiv.quadspos.empty()) {
+    if (auto ret = save_shape(get_dirname(filename) + subdiv.filename,
+            subdiv.points, subdiv.lines, subdiv.triangles, subdiv.quads,
+            subdiv.positions, subdiv.normals, subdiv.texcoords, subdiv.colors,
+            subdiv.radius);
+        !ret) {
+      return {filename + ": missing subdiv (" + ret.error + ")"};
+    } else {
+      return {};
+    }
+  } else {
+    if (auto ret = save_fvshape(get_dirname(filename) + subdiv.filename,
+            subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+            subdiv.positions, subdiv.normals, subdiv.texcoords);
+        !ret) {
+      return {filename + ": missing subdiv (" + ret.error + ")"};
+    } else {
+      return {};
+    }
+  }
+}
+
+// Load json meshes
+sceneio_status load_subdivs(
+    const string& filename, sceneio_model& scene, bool noparallel) {
+  // load shapes
+  if (noparallel) {
+    for (auto& subdiv : scene.subdivs) {
+      if (!subdiv.positions.empty()) continue;
+      if (auto ret = load_subdiv(filename, subdiv); !ret) return ret;
+    }
+    return {};
+  } else {
+    auto mutex  = std::mutex{};
+    auto status = sceneio_status{};
+    parallel_foreach(
+        scene.subdivs, [&filename, &status, &mutex](sceneio_subdiv& subdiv) {
+          if (!status) return;
+          if (!subdiv.positions.empty()) return;
+          if (auto ret = load_subdiv(filename, subdiv); !ret) {
+            auto lock = std::lock_guard{mutex};
+            status    = ret;
+          }
+        });
+    return status;
+  }
+}
+
+// Save json meshes
+sceneio_status save_subdivs(
+    const string& filename, const sceneio_model& scene, bool noparallel) {
+  // save shapes
+  if (noparallel) {
+    for (auto& subdiv : scene.subdivs) {
+      if (auto ret = save_subdiv(filename, subdiv); !ret) return ret;
+    }
+    return {};
+  } else {
+    auto mutex  = std::mutex{};
+    auto status = sceneio_status{};
+    parallel_foreach(
+        scene.subdivs, [&filename, &status, &mutex](const sceneio_subdiv& subdiv) {
+          if (!status) return;
+          if (auto ret = save_subdiv(filename, subdiv); !ret) {
             auto lock = std::lock_guard{mutex};
             status    = ret;
           }
@@ -1221,6 +1316,46 @@ sceneio_status load_yaml(
         }
       }
       smap[shape.name] = (int)scene.shapes.size() - 1;
+    } else if (yelement.name == "subdivs") {
+      auto& subdiv = scene.subdivs.emplace_back();
+      if (!get_yaml_value(yelement, "name", subdiv.name))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "filename", subdiv.filename))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(yelement, "shape", subdiv.shape, smap))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "subdivisions", subdiv.subdivisions))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "catmullclark", subdiv.catmullclark))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "smooth", subdiv.smooth))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "facevarying", subdiv.facevarying))
+        return {filename + ": parse error"};
+      if (!get_yaml_ref(
+              yelement, "displacement_tex", subdiv.displacement_tex, tmap))
+        return {filename + ": parse error"};
+      if (!get_yaml_value(yelement, "displacement", subdiv.displacement))
+        return {filename + ": parse error"};
+      if (has_yaml_value(yelement, "uri")) {
+        if (!get_yaml_value(yelement, "uri", subdiv.filename))
+          return {filename + ": parse error"};
+        subdiv.name           = get_basename(subdiv.filename);
+        smap[subdiv.filename] = (int)scene.subdivs.size() - 1;
+      }
+      if (has_yaml_value(yelement, "preset")) {
+        auto preset = ""s;
+        if (!get_yaml_value(yelement, "preset", preset))
+          return {filename + ": parse error"};
+        make_shape_preset(subdiv.points, subdiv.lines, subdiv.triangles,
+            subdiv.quads, subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+            subdiv.positions, subdiv.normals, subdiv.texcoords, subdiv.colors,
+            subdiv.radius, preset);
+        if (subdiv.filename.empty()) {
+          subdiv.filename = "shapes/ypreset-" + preset + ".yvol";
+        }
+      }
+      smap[subdiv.name] = (int)scene.subdivs.size() - 1;
     } else if (yelement.name == "instances") {
       auto& instance = scene.instances.emplace_back();
       if (!get_yaml_value(yelement, "name", instance.name))
