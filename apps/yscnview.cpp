@@ -223,7 +223,7 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
 }
 
 bool draw_glwidgets_camera(
-    const opengl_window* win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& camera = app->scene.cameras[id];
   auto  edited = 0;
   edited += (int)draw_gltextinput(win, "name", camera.name);
@@ -250,7 +250,7 @@ bool draw_glwidgets_camera(
 
 /// Visit struct elements.
 bool draw_glwidgets_texture(
-    const opengl_window* win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& texture      = app->scene.textures[id];
   auto  old_filename = texture.filename;
   auto  edited       = 0;
@@ -272,7 +272,7 @@ bool draw_glwidgets_texture(
 }
 
 bool draw_glwidgets_material(
-    const opengl_window* win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& material = app->scene.materials[id];
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
@@ -312,7 +312,7 @@ bool draw_glwidgets_material(
 }
 
 bool draw_glwidgets_shape(
-    const opengl_window* win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& shape        = app->scene.shapes[id];
   auto  old_filename = shape.filename;
   auto  edited       = 0;
@@ -338,7 +338,7 @@ bool draw_glwidgets_shape(
 }
 
 bool draw_glwidgets_subdiv(
-    const opengl_window* win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& subdiv       = app->scene.subdivs[id];
   auto  old_filename = subdiv.filename;
   auto  edited       = 0;
@@ -374,7 +374,7 @@ bool draw_glwidgets_subdiv(
 }
 
 bool draw_glwidgets_instance(
-    const opengl_window* win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& instance     = app->scene.instances[id];
   auto  old_instance = instance;
   auto  edited       = 0;
@@ -391,7 +391,7 @@ bool draw_glwidgets_instance(
 }
 
 bool draw_glwidgets_environment(
-    const opengl_window* win, shared_ptr<app_state> app, int id) {
+    const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& environment = app->scene.environments[id];
   auto  edited      = 0;
   edited += draw_gltextinput(win, "name", environment.name);
@@ -406,7 +406,7 @@ bool draw_glwidgets_environment(
 }
 
 // draw with shading
-void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
+void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   static auto load_path = ""s, save_path = ""s, error_message = ""s;
   auto        scene_ok = !apps->states.empty() && apps->selected >= 0;
@@ -593,7 +593,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
 }
 
 // draw with shading
-void draw(const opengl_window* win, shared_ptr<app_states> apps,
+void draw(const opengl_window& win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
@@ -602,7 +602,7 @@ void draw(const opengl_window* win, shared_ptr<app_states> apps,
 }
 
 // update
-void update(const opengl_window* win, shared_ptr<app_states> apps) {
+void update(const opengl_window& win, shared_ptr<app_states> apps) {
   auto is_ready = [](const future<load_state>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -646,28 +646,29 @@ int main(int argc, const char* argv[]) {
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
 
-  auto win = make_glwindow({1280 + 320, 720}, "yscnview", true);
+  auto win = opengl_window{};
+  init_glwindow(win, {1280 + 320, 720}, "yscnview", true);
 
   // callbacks
   set_draw_glcallback(
-      win, [apps](const opengl_window* win, const opengl_input& input) {
+      win, [apps](const opengl_window& win, const opengl_input& input) {
         draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](const opengl_window* win, const opengl_input& input) {
+      win, [apps](const opengl_window& win, const opengl_input& input) {
         draw_glwidgets(win, apps, input);
       });
   set_drop_glcallback(
-      win, [apps](const opengl_window* win, const vector<string>& paths,
+      win, [apps](const opengl_window& win, const vector<string>& paths,
                const opengl_input& input) {
         for (auto& path : paths) load_scene_async(apps, path);
       });
   set_update_glcallback(
-      win, [apps](const opengl_window* win, const opengl_input& input) {
+      win, [apps](const opengl_window& win, const opengl_input& input) {
         update(win, apps);
       });
   set_uiupdate_glcallback(
-      win, [apps](const opengl_window* win, const opengl_input& input) {
+      win, [apps](const opengl_window& win, const opengl_input& input) {
         auto scene_ok = !apps->states.empty() && apps->selected >= 0;
         if (!scene_ok) return;
 
@@ -710,7 +711,7 @@ int main(int argc, const char* argv[]) {
   run_ui(win);
 
   // clear
-  delete_glwindow(win);
+  clear_glwindow(win);
 
   // done
   return 0;

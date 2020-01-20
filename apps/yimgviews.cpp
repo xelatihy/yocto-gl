@@ -103,11 +103,12 @@ int main(int argc, const char* argv[]) {
   update_display(app);
 
   // create window
-  auto win = make_glwindow({1280, 720}, "yimgviews", false);
+  auto win = opengl_window{};
+  init_glwindow(win, {1280, 720}, "yimgviews", false);
 
   // set callbacks
   set_draw_glcallback(
-      win, [app](const opengl_window* win, const opengl_input& input) {
+      win, [app](const opengl_window& win, const opengl_input& input) {
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
         if (!is_initialized(app->glimage)) {
@@ -119,7 +120,7 @@ int main(int argc, const char* argv[]) {
         draw_glimage(app->glimage, app->glparams);
       });
   set_uiupdate_glcallback(
-      win, [app](const opengl_window* win, const opengl_input& input) {
+      win, [app](const opengl_window& win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left) {
           app->glparams.center += input.mouse_pos - input.mouse_last;
@@ -134,7 +135,7 @@ int main(int argc, const char* argv[]) {
   run_ui(win);
 
   // cleanup
-  delete_glwindow(win);
+  clear_glwindow(win);
 
   // done
   return 0;

@@ -273,11 +273,12 @@ int main(int argc, const char* argv[]) {
   reset_display(app);
 
   // window
-  auto win = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
+  auto win = opengl_window{};
+  init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(
-      win, [app](const opengl_window* win, const opengl_input& input) {
+      win, [app](const opengl_window& win, const opengl_input& input) {
         if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
@@ -290,7 +291,7 @@ int main(int argc, const char* argv[]) {
         if (app->render_counter > 10) app->render_counter = 0;
       });
   set_uiupdate_glcallback(
-      win, [app](const opengl_window* win, const opengl_input& input) {
+      win, [app](const opengl_window& win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
           auto& camera = app->scene.cameras.at(app->params.camera);
           auto  dolly  = 0.0f;
@@ -312,7 +313,7 @@ int main(int argc, const char* argv[]) {
   run_ui(win);
 
   // clear
-  delete_glwindow(win);
+  clear_glwindow(win);
 
   // done
   return 0;
