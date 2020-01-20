@@ -892,47 +892,46 @@ void clear_glmaterials(opengl_scene& scene) { scene._materials.clear(); }
 // add texture
 int add_texture(opengl_scene& scene, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
-  auto texture =
-      scene._textures.emplace_back(make_unique<opengl_texture>()).get();
-  glGenTextures(1, &texture->texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  auto& texture = scene._textures.emplace_back();
+  glGenTextures(1, &texture.texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
   glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB_ALPHA : GL_RGBA,
       img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
   glTexParameteri(
       GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glGenerateMipmap(GL_TEXTURE_2D);
-  texture->size     = img.size();
-  texture->is_srgb  = as_srgb;
-  texture->is_float = false;
+  texture.size     = img.size();
+  texture.is_srgb  = as_srgb;
+  texture.is_float = false;
   assert(glGetError() == GL_NO_ERROR);
   return (int)scene._textures.size() - 1;
 }
 int add_texture(opengl_scene& scene, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
-  auto texture =
-      scene._textures.emplace_back(make_unique<opengl_texture>()).get();
-  glGenTextures(1, &texture->texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  auto& texture =
+      scene._textures.emplace_back();
+  glGenTextures(1, &texture.texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
   glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA, img.size().x,
       img.size().y, 0, GL_RGBA, GL_FLOAT, img.data());
   glTexParameteri(
       GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glGenerateMipmap(GL_TEXTURE_2D);
-  texture->size     = img.size();
-  texture->is_srgb  = false;
-  texture->is_float = as_float;
+  texture.size     = img.size();
+  texture.is_srgb  = false;
+  texture.is_float = as_float;
   assert(glGetError() == GL_NO_ERROR);
   return (int)scene._textures.size() - 1;
 }
 void set_texture(
     opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
-  auto texture = scene._textures[idx].get();
-  if (texture->size != img.size() || texture->is_srgb != as_srgb ||
-      texture->is_float == true) {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  auto& texture = scene._textures[idx];
+  if (texture.size != img.size() || texture.is_srgb != as_srgb ||
+      texture.is_float == true) {
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB_ALPHA : GL_RGBA,
         img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
     glTexParameteri(
@@ -940,24 +939,24 @@ void set_texture(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
         GL_UNSIGNED_BYTE, img.data());
     glGenerateMipmap(GL_TEXTURE_2D);
   }
-  texture->size     = img.size();
-  texture->is_srgb  = as_srgb;
-  texture->is_float = false;
+  texture.size     = img.size();
+  texture.is_srgb  = as_srgb;
+  texture.is_float = false;
   assert(glGetError() == GL_NO_ERROR);
 }
 void set_texture(
     opengl_scene& scene, int idx, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
-  auto texture = scene._textures[idx].get();
-  if (texture->size != img.size() || texture->is_float != as_float ||
-      texture->is_srgb == true) {
-    glGenTextures(1, &texture->texture_id);
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  auto& texture = scene._textures[idx];
+  if (texture.size != img.size() || texture.is_float != as_float ||
+      texture.is_srgb == true) {
+    glGenTextures(1, &texture.texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA,
         img.size().x, img.size().y, 0, GL_RGBA, GL_FLOAT, img.data());
     glTexParameteri(
@@ -965,32 +964,32 @@ void set_texture(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
         GL_FLOAT, img.data());
     glGenerateMipmap(GL_TEXTURE_2D);
   }
-  texture->size     = img.size();
-  texture->is_srgb  = false;
-  texture->is_float = as_float;
+  texture.size     = img.size();
+  texture.is_srgb  = false;
+  texture.is_float = as_float;
   assert(glGetError() == GL_NO_ERROR);
 }
 void clear_textures(opengl_scene& scene) {
   for (auto& texture : scene._textures) {
-    if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
+    if (texture.texture_id) glDeleteTextures(1, &texture.texture_id);
   }
   scene._textures.clear();
 }
 
 // add shape
 int add_shape(opengl_scene& scene) {
-  scene._shapes.emplace_back(make_unique<opengl_shape>());
+  scene._shapes.emplace_back();
   return (int)scene._shapes.size() - 1;
 }
 int add_shape(opengl_scene& scene, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
-  scene._shapes.emplace_back(make_unique<opengl_shape>());
+  scene._shapes.emplace_back();
   set_shape(scene, (int)scene._shapes.size() - 1, points, positions, normals,
       texcoords, colors);
   return (int)scene._shapes.size() - 1;
@@ -998,7 +997,7 @@ int add_shape(opengl_scene& scene, const vector<int>& points,
 int add_shape(opengl_scene& scene, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
-  scene._shapes.emplace_back(make_unique<opengl_shape>());
+  scene._shapes.emplace_back();
   set_shape(scene, (int)scene._shapes.size() - 1, lines, positions, normals,
       texcoords, colors);
   return (int)scene._shapes.size() - 1;
@@ -1007,7 +1006,7 @@ int add_shape(opengl_scene& scene, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<vec4f>& tangents) {
-  scene._shapes.emplace_back(make_unique<opengl_shape>());
+  scene._shapes.emplace_back();
   set_shape(scene, (int)scene._shapes.size() - 1, triangles, positions, normals,
       texcoords, colors, tangents);
   return (int)scene._shapes.size() - 1;
@@ -1016,7 +1015,7 @@ int add_shape(opengl_scene& scene, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<vec4f>& tangents) {
-  scene._shapes.emplace_back(make_unique<opengl_shape>());
+  scene._shapes.emplace_back();
   set_shape(scene, (int)scene._shapes.size() - 1, quads, positions, normals,
       texcoords, colors, tangents);
   return (int)scene._shapes.size() - 1;
@@ -1065,30 +1064,30 @@ void set_shape(opengl_scene& scene, int idx, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
   auto& shape = scene._shapes[idx];
-  set_glshape_buffer(shape->positions_id, shape->positions_num, false,
+  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape->normals_id, shape->normals_num, false,
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false,
       normals.size(), 3, (const float*)normals.data());
-  set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
+  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(),
       4, (const float*)colors.data());
-  set_glshape_buffer(shape->points_id, shape->points_num, true, points.size(),
+  set_glshape_buffer(shape.points_id, shape.points_num, true, points.size(),
       1, (const int*)points.data());
 }
 void set_shape(opengl_scene& scene, int idx, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
   auto& shape = scene._shapes[idx];
-  set_glshape_buffer(shape->positions_id, shape->positions_num, false,
+  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape->normals_id, shape->normals_num, false,
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false,
       normals.size(), 3, (const float*)normals.data());
-  set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
+  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(),
       4, (const float*)colors.data());
-  set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(), 2,
+  set_glshape_buffer(shape.lines_id, shape.lines_num, true, lines.size(), 2,
       (const int*)lines.data());
 }
 void set_shape(opengl_scene& scene, int idx, const vector<vec3i>& triangles,
@@ -1096,17 +1095,17 @@ void set_shape(opengl_scene& scene, int idx, const vector<vec3i>& triangles,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<vec4f>& tangents) {
   auto& shape = scene._shapes[idx];
-  set_glshape_buffer(shape->positions_id, shape->positions_num, false,
+  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape->normals_id, shape->normals_num, false,
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false,
       normals.size(), 3, (const float*)normals.data());
-  set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
+  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(),
       4, (const float*)colors.data());
-  set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
+  set_glshape_buffer(shape.tangents_id, shape.tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
-  set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
+  set_glshape_buffer(shape.triangles_id, shape.triangles_num, true,
       triangles.size(), 3, (const int*)triangles.data());
 }
 void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
@@ -1114,15 +1113,15 @@ void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<vec4f>& tangents) {
   auto& shape = scene._shapes[idx];
-  set_glshape_buffer(shape->positions_id, shape->positions_num, false,
+  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape->normals_id, shape->normals_num, false,
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false,
       normals.size(), 3, (const float*)normals.data());
-  set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
+  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(),
       4, (const float*)colors.data());
-  set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
+  set_glshape_buffer(shape.tangents_id, shape.tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
   auto triangles = vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
@@ -1130,27 +1129,27 @@ void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
+  set_glshape_buffer(shape.triangles_id, shape.triangles_num, true,
       triangles.size(), 3, (const int*)triangles.data());
 }
 void set_shape_colors(
     opengl_scene& scene, int idx, const vector<vec4f>& colors) {
   auto& shape = scene._shapes[idx];
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(),
       4, (const float*)colors.data());
 }
 void clear_glshapes(opengl_scene& scene) {
   for (auto& shape : scene._shapes) {
-    if (shape->positions_id) glDeleteBuffers(1, &shape->positions_id);
-    if (shape->normals_id) glDeleteBuffers(1, &shape->normals_id);
-    if (shape->texcoords_id) glDeleteBuffers(1, &shape->texcoords_id);
-    if (shape->colors_id) glDeleteBuffers(1, &shape->colors_id);
-    if (shape->tangents_id) glDeleteBuffers(1, &shape->tangents_id);
-    if (shape->points_id) glDeleteBuffers(1, &shape->points_id);
-    if (shape->lines_id) glDeleteBuffers(1, &shape->lines_id);
-    if (shape->triangles_id) glDeleteBuffers(1, &shape->triangles_id);
-    if (shape->quads_id) glDeleteBuffers(1, &shape->quads_id);
-    if (shape->edges_id) glDeleteBuffers(1, &shape->edges_id);
+    if (shape.positions_id) glDeleteBuffers(1, &shape.positions_id);
+    if (shape.normals_id) glDeleteBuffers(1, &shape.normals_id);
+    if (shape.texcoords_id) glDeleteBuffers(1, &shape.texcoords_id);
+    if (shape.colors_id) glDeleteBuffers(1, &shape.colors_id);
+    if (shape.tangents_id) glDeleteBuffers(1, &shape.tangents_id);
+    if (shape.points_id) glDeleteBuffers(1, &shape.points_id);
+    if (shape.lines_id) glDeleteBuffers(1, &shape.lines_id);
+    if (shape.triangles_id) glDeleteBuffers(1, &shape.triangles_id);
+    if (shape.quads_id) glDeleteBuffers(1, &shape.quads_id);
+    if (shape.edges_id) glDeleteBuffers(1, &shape.edges_id);
   }
   scene._shapes.clear();
 }
@@ -1249,45 +1248,45 @@ void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
   glUniform1i(glGetUniformLocation(glscene.program_id, "mat_double_sided"),
       (int)params.double_sided);
   if (material.emission_map >= 0) {
-    auto emission_map = glscene._textures.at(material.emission_map).get();
+    auto& emission_map = glscene._textures.at(material.emission_map);
     glActiveTexture(GL_TEXTURE0 + 0);
-    glBindTexture(GL_TEXTURE_2D, emission_map->texture_id);
+    glBindTexture(GL_TEXTURE_2D, emission_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt"), 0);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt_on"), 1);
   } else {
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt_on"), 0);
   }
   if (material.diffuse_map >= 0) {
-    auto diffuse_map = glscene._textures.at(material.diffuse_map).get();
+    auto& diffuse_map = glscene._textures.at(material.diffuse_map);
     glActiveTexture(GL_TEXTURE0 + 1);
-    glBindTexture(GL_TEXTURE_2D, diffuse_map->texture_id);
+    glBindTexture(GL_TEXTURE_2D, diffuse_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt"), 1);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt_on"), 1);
   } else {
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt_on"), 0);
   }
   if (material.metallic_map >= 0) {
-    auto specular_map = glscene._textures.at(material.specular_map).get();
+    auto& specular_map = glscene._textures.at(material.specular_map);
     glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_2D, specular_map->texture_id);
+    glBindTexture(GL_TEXTURE_2D, specular_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt"), 2);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt_on"), 1);
   } else {
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt_on"), 0);
   }
   if (material.roughness_map >= 0) {
-    auto roughness_map = glscene._textures.at(material.roughness_map).get();
+    auto& roughness_map = glscene._textures.at(material.roughness_map);
     glActiveTexture(GL_TEXTURE0 + 3);
-    glBindTexture(GL_TEXTURE_2D, roughness_map->texture_id);
+    glBindTexture(GL_TEXTURE_2D, roughness_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt"), 3);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt_on"), 1);
   } else {
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt_on"), 0);
   }
   if (material.normal_map >= 0) {
-    auto normal_map = glscene._textures.at(material.normal_map).get();
+    auto& normal_map = glscene._textures.at(material.normal_map);
     glActiveTexture(GL_TEXTURE0 + 4);
-    glBindTexture(GL_TEXTURE_2D, normal_map->texture_id);
+    glBindTexture(GL_TEXTURE_2D, normal_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_norm_txt"), 4);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_norm_txt_on"), 1);
   } else {
@@ -1295,9 +1294,9 @@ void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
   }
 
   glUniform1i(glGetUniformLocation(glscene.program_id, "elem_faceted"),
-      (int)!shape->normals_id);
-  if (shape->positions_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->positions_id);
+      (int)!shape.normals_id);
+  if (shape.positions_id) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape.positions_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(glscene.program_id, "vert_pos"));
     glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_pos"),
@@ -1306,8 +1305,8 @@ void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
     glVertexAttrib3f(
         glGetAttribLocation(glscene.program_id, "vert_pos"), 0, 0, 0);
   }
-  if (shape->normals_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->normals_id);
+  if (shape.normals_id) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape.normals_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(glscene.program_id, "vert_norm"));
     glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_norm"),
@@ -1316,8 +1315,8 @@ void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
     glVertexAttrib3f(
         glGetAttribLocation(glscene.program_id, "vert_norm"), 0, 0, 0);
   }
-  if (shape->texcoords_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->texcoords_id);
+  if (shape.texcoords_id) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape.texcoords_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(glscene.program_id, "vert_texcoord"));
     glVertexAttribPointer(
@@ -1327,8 +1326,8 @@ void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
     glVertexAttrib2f(
         glGetAttribLocation(glscene.program_id, "vert_texcoord"), 0, 0);
   }
-  if (shape->colors_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->colors_id);
+  if (shape.colors_id) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape.colors_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(glscene.program_id, "vert_color"));
     glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_color"),
@@ -1337,8 +1336,8 @@ void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
     glVertexAttrib4f(
         glGetAttribLocation(glscene.program_id, "vert_color"), 1, 1, 1, 1);
   }
-  if (shape->tangents_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->tangents_id);
+  if (shape.tangents_id) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape.tangents_id);
     glEnableVertexAttribArray(
         glGetAttribLocation(glscene.program_id, "vert_tangsp"));
     glVertexAttribPointer(
@@ -1349,27 +1348,27 @@ void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
         glGetAttribLocation(glscene.program_id, "vert_tangsp"), 0, 0, 1, 1);
   }
 
-  if (shape->points_id) {
+  if (shape.points_id) {
     glUniform1i(glGetUniformLocation(glscene.program_id, "elem_type"), 1);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->points_id);
-    glDrawElements(GL_POINTS, shape->points_num, GL_UNSIGNED_INT, nullptr);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.points_id);
+    glDrawElements(GL_POINTS, shape.points_num, GL_UNSIGNED_INT, nullptr);
   }
-  if (shape->lines_id) {
+  if (shape.lines_id) {
     glUniform1i(glGetUniformLocation(glscene.program_id, "elem_type"), 2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->lines_id);
-    glDrawElements(GL_LINES, shape->lines_num * 2, GL_UNSIGNED_INT, nullptr);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.lines_id);
+    glDrawElements(GL_LINES, shape.lines_num * 2, GL_UNSIGNED_INT, nullptr);
   }
-  if (shape->triangles_id) {
+  if (shape.triangles_id) {
     glUniform1i(glGetUniformLocation(glscene.program_id, "elem_type"), 3);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->triangles_id);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.triangles_id);
     glDrawElements(
-        GL_TRIANGLES, shape->triangles_num * 3, GL_UNSIGNED_INT, nullptr);
+        GL_TRIANGLES, shape.triangles_num * 3, GL_UNSIGNED_INT, nullptr);
   }
-  if (shape->quads_id) {
+  if (shape.quads_id) {
     glUniform1i(glGetUniformLocation(glscene.program_id, "elem_type"), 3);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->quads_id);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.quads_id);
     glDrawElements(
-        GL_TRIANGLES, shape->quads_num * 3, GL_UNSIGNED_INT, nullptr);
+        GL_TRIANGLES, shape.quads_num * 3, GL_UNSIGNED_INT, nullptr);
   }
 
 #if 0
