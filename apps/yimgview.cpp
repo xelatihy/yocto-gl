@@ -75,7 +75,8 @@ struct app_state {
 struct load_state {
   string                filename = "";
   shared_ptr<app_state> app      = {};
-  imageio_status        status   = {};
+  bool ok = false;
+  string error = "";
 };
 
 // app states
@@ -158,8 +159,9 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
         app->filmic    = apps->filmic;
         app->params    = apps->params;
         apps->selected = (int)apps->states.size() - 1;
-        if (auto ret = load_image(app->filename, app->source); !ret) {
-          return {filename, nullptr, ret};
+        auto error = ""s;
+        if (!load_image(app->filename, app->source, error)) {
+          return {filename, nullptr,false, error};
         }
         compute_stats(
             app->source_stats, app->source, is_hdr_filename(app->filename));
@@ -169,7 +171,7 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
           app->display = tonemap_image(app->source, app->exposure, app->filmic);
         }
         compute_stats(app->display_stats, app->display, false);
-        return {filename, app, {}};
+        return {filename, app, true, ""};
       }));
 }
 
@@ -312,12 +314,12 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
   };
 
   while (!apps->loaders.empty() && is_ready(apps->loaders.front())) {
-    auto [filename, app, status] = apps->loaders.front().get();
+    auto [filename, app, ok, error] = apps->loaders.front().get();
     apps->loaders.pop_front();
-    if (!status) {
+    if (!ok) {
       push_glmessage(win, "cannot load image " + filename);
       log_glinfo(win, "cannot load image " + filename);
-      log_glinfo(win, status.error);
+      log_glinfo(win, error);
     } else {
       apps->states.push_back(app);
       update_display(app);

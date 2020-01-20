@@ -821,18 +821,18 @@ sceneio_status save_scene(
 
 sceneio_status load_texture(const string& filename, sceneio_texture& texture) {
   if (is_hdr_filename(texture.filename)) {
-    if (auto ret = load_image(
-            get_dirname(filename) + texture.filename, texture.hdr);
-        !ret) {
-      return {filename + ": missing texture (" + ret.error + ")"};
+    auto error = ""s;
+    if (!load_image(
+            get_dirname(filename) + texture.filename, texture.hdr, error)) {
+      return {filename + ": missing texture (" + error + ")"};
     } else {
       return {};
     }
   } else {
-    if (auto ret = load_imageb(
-            get_dirname(filename) + texture.filename, texture.ldr);
-        !ret) {
-      return {filename + ": missing texture (" + ret.error + ")"};
+    auto error = ""s;
+    if (!load_imageb(
+            get_dirname(filename) + texture.filename, texture.ldr, error)) {
+      return {filename + ": missing texture (" + error + ")"};
     } else {
       return {};
     }
@@ -842,18 +842,18 @@ sceneio_status load_texture(const string& filename, sceneio_texture& texture) {
 sceneio_status save_texture(
     const string& filename, const sceneio_texture& texture) {
   if (!texture.hdr.empty()) {
-    if (auto ret = save_image(
-            get_dirname(filename) + texture.filename, texture.hdr);
-        !ret) {
-      return {filename + ": missing texture (" + ret.error + ")"};
+    auto error = ""s;
+    if (save_image(
+            get_dirname(filename) + texture.filename, texture.hdr, error)) {
+      return {filename + ": missing texture (" + error + ")"};
     } else {
       return {};
     }
   } else {
-    if (auto ret = save_imageb(
-            get_dirname(filename) + texture.filename, texture.ldr);
-        !ret) {
-      return {filename + ": missing texture (" + ret.error + ")"};
+    auto error = ""s;
+    if (save_imageb(
+            get_dirname(filename) + texture.filename, texture.ldr, error)) {
+      return {filename + ": missing texture (" + error + ")"};
     } else {
       return {};
     }

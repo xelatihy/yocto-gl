@@ -200,14 +200,16 @@ int main(int argc, const char* argv[]) {
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
-      if (auto ret = save_image(outfilename, render); !ret)
-        print_fatal(ret.error);
+      auto save_error = ""s;
+      if (!save_image(outfilename, render, save_error))
+        print_fatal(save_error);
     }
   }
 
   // save image
   auto save_timer = print_timed("saving image");
-  if (auto ret = save_image(imfilename, render); !ret) print_fatal(ret.error);
+  auto save_error = ""s;
+  if (!save_image(imfilename, render, save_error)) print_fatal(save_error);
   print_elapsed(save_timer);
 
   // done

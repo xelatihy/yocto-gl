@@ -247,19 +247,22 @@ namespace yocto {
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename);
 
-// Result of io operations
-struct imageio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
+image<vec4f>   load_image(const string& filename, string& error);
+bool load_image(const string& filename, image<vec4f>& img, string& error);
+bool save_image(const string& filename, const image<vec4f>& img, string& error);
+image<vec4b>   load_imageb(const string& filename, string& error);
+bool load_imageb(const string& filename, image<vec4b>& img, string& error);
+bool save_imageb(const string& filename, const image<vec4b>& img, string& error);
+
+// Loads/saves a 4 channels float/byte image in linear/srgb color space. 
+// Throws exception on error.
 image<vec4f>   load_image(const string& filename);
-imageio_status load_image(const string& filename, image<vec4f>& img);
-imageio_status save_image(const string& filename, const image<vec4f>& img);
-image<vec4b>   load_imageb(const string& filename);
-imageio_status load_imageb(const string& filename, image<vec4b>& img);
-imageio_status save_imageb(const string& filename, const image<vec4b>& img);
+void load_image(const string& filename, image<vec4f>& img);
+void save_image(const string& filename, const image<vec4f>& img);
+image<vec4b>   load_imageb(const string& filename, string& error);
+void load_imageb(const string& filename, image<vec4b>& img);
+void save_imageb(const string& filename, const image<vec4b>& img);
 
 }  // namespace yocto
 

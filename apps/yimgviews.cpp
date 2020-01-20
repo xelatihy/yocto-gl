@@ -96,7 +96,8 @@ int main(int argc, const char* argv[]) {
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load image
-  if (!load_image(app->filename, app->source))
+  auto load_error = ""s;
+  if (!load_image(app->filename, app->source, load_error))
     print_fatal("cannot load " + app->filename);
 
   // update display
