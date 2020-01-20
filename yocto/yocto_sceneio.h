@@ -272,8 +272,8 @@ struct sceneio_status {
 };
 
 // Load/save a scene in the supported formats.
-sceneio_status load_scene(const string& filename, sceneio_model& scene,
-    bool noparallel = false);
+sceneio_status load_scene(
+    const string& filename, sceneio_model& scene, bool noparallel = false);
 sceneio_status save_scene(const string& filename, const sceneio_model& scene,
     bool noparallel = false);
 
@@ -315,8 +315,8 @@ bbox3f compute_bounds(const sceneio_model& scene);
 namespace yocto {
 
 // Apply subdivision and displacement rules.
-void tesselate_subdiv(sceneio_model& scene, const sceneio_subdiv& subdiv,
-    bool no_quads = false);
+void tesselate_subdiv(
+    sceneio_model& scene, const sceneio_subdiv& subdiv, bool no_quads = false);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.

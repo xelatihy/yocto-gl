@@ -38,41 +38,39 @@ using std::make_unique;
 using std::unique_ptr;
 
 // construct a scene from io
-trace_scene* make_scene(sceneio_model& ioscene) {
-  auto scene = make_unique<trace_scene>();
+void init_scene(trace_scene& scene, sceneio_model& ioscene) {
+  scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
-    add_camera(scene.get(), iocamera.frame, iocamera.lens, iocamera.aspect,
+    add_camera(scene, iocamera.frame, iocamera.lens, iocamera.aspect,
         iocamera.film, iocamera.aperture, iocamera.focus);
   }
 
   for (auto& iotexture : ioscene.textures) {
     if (!iotexture.hdr.empty()) {
-      add_texture(scene.get(), std::move(iotexture.hdr));
+      add_texture(scene, std::move(iotexture.hdr));
     } else if (!iotexture.ldr.empty()) {
-      add_texture(scene.get(), std::move(iotexture.ldr));
+      add_texture(scene, std::move(iotexture.ldr));
     }
   }
 
   for (auto& iomaterial : ioscene.materials) {
-    auto id = add_material(scene.get());
+    auto id = add_material(scene);
     set_material_emission(
-        scene.get(), id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_diffuse(
-        scene.get(), id, iomaterial.diffuse, iomaterial.diffuse_tex);
+        scene, id, iomaterial.emission, iomaterial.emission_tex);
+    set_material_diffuse(scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
     set_material_specular(
-        scene.get(), id, iomaterial.specular, iomaterial.specular_tex);
+        scene, id, iomaterial.specular, iomaterial.specular_tex);
     set_material_metallic(
-        scene.get(), id, iomaterial.metallic, iomaterial.metallic_tex);
+        scene, id, iomaterial.metallic, iomaterial.metallic_tex);
     set_material_transmission(
-        scene.get(), id, iomaterial.transmission, iomaterial.transmission_tex);
+        scene, id, iomaterial.transmission, iomaterial.transmission_tex);
     set_material_roughness(
-        scene.get(), id, iomaterial.roughness, iomaterial.roughness_tex);
-    set_material_opacity(
-        scene.get(), id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_refract(scene.get(), id, iomaterial.refract);
-    set_material_normalmap(scene.get(), id, iomaterial.normal_tex);
-    set_material_volume(scene.get(), id, iomaterial.volemission,
+        scene, id, iomaterial.roughness, iomaterial.roughness_tex);
+    set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
+    set_material_refract(scene, id, iomaterial.refract);
+    set_material_normalmap(scene, id, iomaterial.normal_tex);
+    set_material_volume(scene, id, iomaterial.volemission,
         iomaterial.voltransmission, iomaterial.volmeanfreepath,
         iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
         iomaterial.subsurface_tex);
@@ -85,16 +83,16 @@ trace_scene* make_scene(sceneio_model& ioscene) {
 
   for (auto& ioshape : ioscene.shapes) {
     if (!ioshape.points.empty()) {
-      add_shape(scene.get(), ioshape.points, ioshape.positions, ioshape.normals,
+      add_shape(scene, ioshape.points, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.lines.empty()) {
-      add_shape(scene.get(), ioshape.lines, ioshape.positions, ioshape.normals,
+      add_shape(scene, ioshape.lines, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.triangles.empty()) {
-      add_shape(scene.get(), ioshape.triangles, ioshape.positions,
-          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
+      add_shape(scene, ioshape.triangles, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.tangents);
     } else if (!ioshape.quads.empty()) {
-      add_shape(scene.get(), ioshape.quads, ioshape.positions, ioshape.normals,
+      add_shape(scene, ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
     }
     ioshape = {};
@@ -102,16 +100,15 @@ trace_scene* make_scene(sceneio_model& ioscene) {
 
   for (auto& ioinstance : ioscene.instances) {
     add_instance(
-        scene.get(), ioinstance.frame, ioinstance.shape, ioinstance.material);
+        scene, ioinstance.frame, ioinstance.shape, ioinstance.material);
   }
 
   for (auto& ioenvironment : ioscene.environments) {
-    add_environment(scene.get(), ioenvironment.frame, ioenvironment.emission,
+    add_environment(scene, ioenvironment.frame, ioenvironment.emission,
         ioenvironment.emission_tex);
   }
 
   ioscene = {};
-  return scene.release();
 }
 
 int main(int argc, const char* argv[]) {
@@ -167,28 +164,30 @@ int main(int argc, const char* argv[]) {
 
   // convert scene
   auto convert_timer = print_timed("converting");
-  auto scene         = unique_ptr<trace_scene>{make_scene(ioscene)};
+  auto scene         = trace_scene{};
+  init_scene(scene, ioscene);
   print_elapsed(convert_timer);
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(scene.get(), params);
+  init_bvh(scene, params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(scene.get());
+  init_lights(scene);
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (scene->lights.empty() && is_sampler_lit(params)) {
+  if (scene.lights.empty() && is_sampler_lit(params)) {
     print_info("no lights presents, switching to eyelight shader");
     params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  auto state  = unique_ptr<trace_state>{make_state(scene.get(), params)};
-  auto render = image{state->size(), zero4f};
+  auto state = trace_state{};
+  init_state(state, scene, params);
+  auto render = image{state.size(), zero4f};
 
   // render
   for (auto sample = 0; sample < params.samples; sample += batch) {
@@ -196,7 +195,7 @@ int main(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(params.samples));
-    render = trace_samples(state.get(), scene.get(), nsamples, params);
+    render           = trace_samples(state, scene, nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,

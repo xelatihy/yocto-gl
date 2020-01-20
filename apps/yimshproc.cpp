@@ -36,7 +36,7 @@ void my_keycallback(
   if (key == esc) {
     printf("Esc pressed!\n");
     init_camera(app);
-    set_camera(app->scene.get(), 0, app->camera.frame, app->camera.lens,
+    set_camera(app->scene, 0, app->camera.frame, app->camera.lens,
         app->camera.aspect, app->camera.film, 0.001, 10000);
   }
 
@@ -58,7 +58,7 @@ void my_click_callback(my_data& data, shared_ptr<app_state> app, int face,
 }
 
 void my_draw_glwidgets(
-    my_data& data, shared_ptr<app_state> app, const opengl_window* win) {
+    my_data& data, shared_ptr<app_state> app, const opengl_window& win) {
   if (draw_glbutton(win, "Geodesic gradient field")) {
     if (data.vertex_selection.size() > 1) {
       data.scalar_field = compute_geodesic_distances(
@@ -82,7 +82,7 @@ void my_draw_glwidgets(
         colors[i]   = vec4f(data.scalar_field[i]);
         colors[i].w = 1;
       }
-      set_shape_colors(app->scene.get(), app->glshape_id, colors);
+      set_shape_colors(app->scene, app->glshape_id, colors);
     }
   }
 
@@ -155,7 +155,7 @@ int main(int num_args, const char* args[]) {
     my_click_callback(data, a, f, uv, v, d);
   };
   auto draw_glwidgets = [&data](shared_ptr<app_state> app,
-                            const opengl_window*      win) {
+                            const opengl_window&      win) {
     my_draw_glwidgets(data, app, win);
   };
 

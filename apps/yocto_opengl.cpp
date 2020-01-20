@@ -235,7 +235,7 @@ static void init_gltexture(uint& texture_id, const vec2i& size, int nchan,
 namespace yocto {
 
 // init image program
-opengl_image* make_glimage() {
+void init_glimage(opengl_image& glimage) {
   auto vert =
       R"(
       #version 330
@@ -294,65 +294,63 @@ opengl_image* make_glimage() {
         )";
 #endif
 
+  if (glimage.program_id) return;
+
   auto texcoords = vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
   auto triangles = vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
-  auto glimage = make_unique<opengl_image>();
-  init_glprogram(glimage->program_id, glimage->vertex_id, glimage->fragment_id,
-      glimage->array_id, vert, frag);
-  glGenBuffers(1, &glimage->texcoords_id);
-  glBindBuffer(GL_ARRAY_BUFFER, glimage->texcoords_id);
+  init_glprogram(glimage.program_id, glimage.vertex_id, glimage.fragment_id,
+      glimage.array_id, vert, frag);
+  glGenBuffers(1, &glimage.texcoords_id);
+  glBindBuffer(GL_ARRAY_BUFFER, glimage.texcoords_id);
   glBufferData(GL_ARRAY_BUFFER, texcoords.size() * 2 * sizeof(float),
       texcoords.data(), GL_STATIC_DRAW);
-  glGenBuffers(1, &glimage->triangles_id);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage->triangles_id);
+  glGenBuffers(1, &glimage.triangles_id);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles_id);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangles.size() * 3 * sizeof(int),
       triangles.data(), GL_STATIC_DRAW);
-  return glimage.release();
 }
 
 // update image data
 void set_glimage(
-    opengl_image* glimage, const image<vec4f>& img, bool linear, bool mipmap) {
-  if (!glimage->texture_id) {
-    init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
+    opengl_image& glimage, const image<vec4f>& img, bool linear, bool mipmap) {
+  if (!glimage.texture_id) {
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
-  } else if (glimage->texture_size != img.size() ||
-             glimage->texture_linear != linear ||
-             glimage->texture_mipmap != mipmap) {
-    glDeleteTextures(1, &glimage->texture_id);
-    init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
+  } else if (glimage.texture_size != img.size() ||
+             glimage.texture_linear != linear ||
+             glimage.texture_mipmap != mipmap) {
+    glDeleteTextures(1, &glimage.texture_id);
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
-    update_gltexture(
-        glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
+    update_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
-  glimage->texture_size   = img.size();
-  glimage->texture_linear = linear;
-  glimage->texture_mipmap = mipmap;
+  glimage.texture_size   = img.size();
+  glimage.texture_linear = linear;
+  glimage.texture_mipmap = mipmap;
 }
 void set_glimage(
-    opengl_image* glimage, const image<vec4b>& img, bool linear, bool mipmap) {
-  if (!glimage->texture_id) {
-    init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
+    opengl_image& glimage, const image<vec4b>& img, bool linear, bool mipmap) {
+  if (!glimage.texture_id) {
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
-  } else if (glimage->texture_size != img.size() ||
-             glimage->texture_linear != linear ||
-             glimage->texture_mipmap != mipmap) {
-    glDeleteTextures(1, &glimage->texture_id);
-    init_gltexture(glimage->texture_id, img.size(), 4, &img.data()->x, false,
+  } else if (glimage.texture_size != img.size() ||
+             glimage.texture_linear != linear ||
+             glimage.texture_mipmap != mipmap) {
+    glDeleteTextures(1, &glimage.texture_id);
+    init_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, false,
         linear, mipmap);
   } else {
-    update_gltexture(
-        glimage->texture_id, img.size(), 4, &img.data()->x, mipmap);
+    update_gltexture(glimage.texture_id, img.size(), 4, &img.data()->x, mipmap);
   }
-  glimage->texture_size   = img.size();
-  glimage->texture_linear = linear;
-  glimage->texture_mipmap = mipmap;
+  glimage.texture_size   = img.size();
+  glimage.texture_linear = linear;
+  glimage.texture_mipmap = mipmap;
 }
 
 // draw image
-void draw_glimage(opengl_image* glimage, const draw_glimage_params& params) {
+void draw_glimage(opengl_image& glimage, const draw_glimage_params& params) {
   assert(glGetError() == GL_NO_ERROR);
   glViewport(params.framebuffer.x, params.framebuffer.y, params.framebuffer.z,
       params.framebuffer.w);
@@ -360,27 +358,31 @@ void draw_glimage(opengl_image* glimage, const draw_glimage_params& params) {
       params.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
-  glUseProgram(glimage->program_id);
+  glUseProgram(glimage.program_id);
   glActiveTexture(GL_TEXTURE0 + 0);
-  glBindTexture(GL_TEXTURE_2D, glimage->texture_id);
-  glUniform1i(glGetUniformLocation(glimage->program_id, "txt"), 0);
-  glUniform2f(glGetUniformLocation(glimage->program_id, "window_size"),
+  glBindTexture(GL_TEXTURE_2D, glimage.texture_id);
+  glUniform1i(glGetUniformLocation(glimage.program_id, "txt"), 0);
+  glUniform2f(glGetUniformLocation(glimage.program_id, "window_size"),
       (float)params.window.x, (float)params.window.y);
-  glUniform2f(glGetUniformLocation(glimage->program_id, "image_size"),
-      (float)glimage->texture_size.x, (float)glimage->texture_size.y);
-  glUniform2f(glGetUniformLocation(glimage->program_id, "image_center"),
+  glUniform2f(glGetUniformLocation(glimage.program_id, "image_size"),
+      (float)glimage.texture_size.x, (float)glimage.texture_size.y);
+  glUniform2f(glGetUniformLocation(glimage.program_id, "image_center"),
       params.center.x, params.center.y);
   glUniform1f(
-      glGetUniformLocation(glimage->program_id, "image_scale"), params.scale);
-  glBindBuffer(GL_ARRAY_BUFFER, glimage->texcoords_id);
+      glGetUniformLocation(glimage.program_id, "image_scale"), params.scale);
+  glBindBuffer(GL_ARRAY_BUFFER, glimage.texcoords_id);
   glEnableVertexAttribArray(
-      glGetAttribLocation(glimage->program_id, "texcoord"));
-  glVertexAttribPointer(glGetAttribLocation(glimage->program_id, "texcoord"), 2,
+      glGetAttribLocation(glimage.program_id, "texcoord"));
+  glVertexAttribPointer(glGetAttribLocation(glimage.program_id, "texcoord"), 2,
       GL_FLOAT, false, 0, nullptr);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage->triangles_id);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, glimage.triangles_id);
   glDrawElements(GL_TRIANGLES, 2 * 3, GL_UNSIGNED_INT, nullptr);
   glUseProgram(0);
   assert(glGetError() == GL_NO_ERROR);
+}
+
+bool is_initialized(const opengl_image& glimage) {
+  return (bool)glimage.program_id;
 }
 
 opengl_image::~opengl_image() {
@@ -709,157 +711,225 @@ void main() {
 #pragma GCC diagnostic pop
 #endif
 
+opengl_texture::~opengl_texture() {
+  if (texture_id) glDeleteTextures(1, &texture_id);
+}
+
+opengl_texture::opengl_texture(opengl_texture&& other) {
+  if (this == &other) return;
+  std::swap(texture_id, other.texture_id);
+  std::swap(size, other.size);
+  std::swap(is_srgb, other.is_srgb);
+  std::swap(is_float, other.is_float);
+}
+
+opengl_texture& opengl_texture::operator=(opengl_texture&& other) {
+  if (this == &other) return *this;
+  std::swap(texture_id, other.texture_id);
+  std::swap(size, other.size);
+  std::swap(is_srgb, other.is_srgb);
+  std::swap(is_float, other.is_float);
+  return *this;
+}
+
+opengl_shape::~opengl_shape() {
+  if (positions_id) glDeleteBuffers(1, &positions_id);
+  if (normals_id) glDeleteBuffers(1, &normals_id);
+  if (texcoords_id) glDeleteBuffers(1, &texcoords_id);
+  if (colors_id) glDeleteBuffers(1, &colors_id);
+  if (tangents_id) glDeleteBuffers(1, &tangents_id);
+  if (points_id) glDeleteBuffers(1, &points_id);
+  if (lines_id) glDeleteBuffers(1, &lines_id);
+  if (triangles_id) glDeleteBuffers(1, &triangles_id);
+  if (quads_id) glDeleteBuffers(1, &quads_id);
+  if (edges_id) glDeleteBuffers(1, &edges_id);
+}
+
+opengl_shape::opengl_shape(opengl_shape&& other) {
+  if (this == &other) return;
+  std::swap(positions_num, other.positions_num);
+  std::swap(positions_id, other.positions_id);
+  std::swap(normals_num, other.normals_num);
+  std::swap(normals_id, other.normals_id);
+  std::swap(texcoords_num, other.texcoords_num);
+  std::swap(texcoords_id, other.texcoords_id);
+  std::swap(colors_num, other.colors_num);
+  std::swap(colors_id, other.colors_id);
+  std::swap(tangents_num, other.tangents_num);
+  std::swap(tangents_id, other.tangents_id);
+  std::swap(points_num, other.points_num);
+  std::swap(points_id, other.points_id);
+  std::swap(lines_num, other.lines_num);
+  std::swap(lines_id, other.lines_id);
+  std::swap(triangles_num, other.triangles_num);
+  std::swap(triangles_id, other.triangles_id);
+  std::swap(quads_num, other.quads_num);
+  std::swap(quads_id, other.quads_id);
+  std::swap(edges_num, other.edges_num);
+  std::swap(edges_id, other.edges_id);
+}
+
+opengl_shape& opengl_shape::operator=(opengl_shape&& other) {
+  if (this == &other) return *this;
+  std::swap(positions_num, other.positions_num);
+  std::swap(positions_id, other.positions_id);
+  std::swap(normals_num, other.normals_num);
+  std::swap(normals_id, other.normals_id);
+  std::swap(texcoords_num, other.texcoords_num);
+  std::swap(texcoords_id, other.texcoords_id);
+  std::swap(colors_num, other.colors_num);
+  std::swap(colors_id, other.colors_id);
+  std::swap(tangents_num, other.tangents_num);
+  std::swap(tangents_id, other.tangents_id);
+  std::swap(points_num, other.points_num);
+  std::swap(points_id, other.points_id);
+  std::swap(lines_num, other.lines_num);
+  std::swap(lines_id, other.lines_id);
+  std::swap(triangles_num, other.triangles_num);
+  std::swap(triangles_id, other.triangles_id);
+  std::swap(quads_num, other.quads_num);
+  std::swap(quads_id, other.quads_id);
+  std::swap(edges_num, other.edges_num);
+  std::swap(edges_id, other.edges_id);
+  return *this;
+}
+
 opengl_scene::~opengl_scene() {
   if (program_id) glDeleteProgram(program_id);
   if (vertex_id) glDeleteShader(vertex_id);
   if (fragment_id) glDeleteShader(fragment_id);
   if (array_id) glDeleteVertexArrays(1, &array_id);
-  for (auto& texture : _textures) {
-    glDeleteTextures(1, &texture->texture_id);
-  }
-  for (auto& shape : _shapes) {
-    if (shape->positions_id) glDeleteBuffers(1, &shape->positions_id);
-    if (shape->normals_id) glDeleteBuffers(1, &shape->normals_id);
-    if (shape->texcoords_id) glDeleteBuffers(1, &shape->texcoords_id);
-    if (shape->colors_id) glDeleteBuffers(1, &shape->colors_id);
-    if (shape->tangents_id) glDeleteBuffers(1, &shape->tangents_id);
-    if (shape->points_id) glDeleteBuffers(1, &shape->points_id);
-    if (shape->lines_id) glDeleteBuffers(1, &shape->lines_id);
-    if (shape->triangles_id) glDeleteBuffers(1, &shape->triangles_id);
-    if (shape->quads_id) glDeleteBuffers(1, &shape->quads_id);
-    if (shape->edges_id) glDeleteBuffers(1, &shape->edges_id);
-  }
 }
 
 // Initialize an OpenGL scene
-opengl_scene* make_glscene() {
-  auto glscene = make_unique<opengl_scene>();
+void init_glscene(opengl_scene& glscene) {
+  if (glscene.program_id) return;
   // load program
-  init_glprogram(glscene->program_id, glscene->vertex_id, glscene->fragment_id,
-      glscene->array_id, glscene_vertex, glscene_fragment);
-  return glscene.release();
+  init_glprogram(glscene.program_id, glscene.vertex_id, glscene.fragment_id,
+      glscene.array_id, glscene_vertex, glscene_fragment);
+}
+
+bool is_initialized(const opengl_scene& glscene) {
+  return (bool)glscene.program_id;
 }
 
 // add camera
-int add_camera(opengl_scene* scene, const frame3f& frame, float lens,
+int add_camera(opengl_scene& scene, const frame3f& frame, float lens,
     float asepct, float film, float near, float far) {
-  auto camera =
-      scene->_cameras.emplace_back(make_unique<opengl_camera>()).get();
-  camera->frame  = frame;
-  camera->lens   = lens;
-  camera->asepct = asepct;
-  camera->film   = film;
-  camera->near   = near;
-  camera->far    = far;
-  return (int)scene->_cameras.size() - 1;
+  auto& camera  = scene._cameras.emplace_back();
+  camera.frame  = frame;
+  camera.lens   = lens;
+  camera.asepct = asepct;
+  camera.film   = film;
+  camera.near   = near;
+  camera.far    = far;
+  return (int)scene._cameras.size() - 1;
 }
-void set_camera(opengl_scene* scene, int idx, const frame3f& frame, float lens,
+void set_camera(opengl_scene& scene, int idx, const frame3f& frame, float lens,
     float asepct, float film, float near, float far) {
-  auto camera    = scene->_cameras[idx].get();
-  camera->frame  = frame;
-  camera->lens   = lens;
-  camera->asepct = asepct;
-  camera->film   = film;
-  camera->near   = near;
-  camera->far    = far;
+  auto& camera  = scene._cameras[idx];
+  camera.frame  = frame;
+  camera.lens   = lens;
+  camera.asepct = asepct;
+  camera.film   = film;
+  camera.near   = near;
+  camera.far    = far;
 }
-void clear_cameras(opengl_scene* scene) { scene->_cameras.clear(); }
+void clear_cameras(opengl_scene& scene) { scene._cameras.clear(); }
 
 // add material
-int add_material(opengl_scene* scene) {
-  scene->_materials.emplace_back(make_unique<opengl_material>());
-  return (int)scene->_materials.size() - 1;
+int add_material(opengl_scene& scene) {
+  scene._materials.emplace_back();
+  return (int)scene._materials.size() - 1;
 }
 void set_material_emission(
-    opengl_scene* scene, int idx, const vec3f& emission, int emission_txt) {
-  auto material          = scene->_materials[idx].get();
-  material->emission     = emission;
-  material->emission_map = emission_txt;
+    opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
+  auto& material        = scene._materials[idx];
+  material.emission     = emission;
+  material.emission_map = emission_txt;
 }
 void set_material_diffuse(
-    opengl_scene* scene, int idx, const vec3f& diffuse, int diffuse_txt) {
-  auto material         = scene->_materials[idx].get();
-  material->diffuse     = diffuse;
-  material->diffuse_map = diffuse_txt;
+    opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
+  auto& material       = scene._materials[idx];
+  material.diffuse     = diffuse;
+  material.diffuse_map = diffuse_txt;
 }
 void set_material_specular(
-    opengl_scene* scene, int idx, const vec3f& specular, int specular_txt) {
-  auto material          = scene->_materials[idx].get();
-  material->specular     = specular;
-  material->specular_map = specular_txt;
+    opengl_scene& scene, int idx, const vec3f& specular, int specular_txt) {
+  auto& material        = scene._materials[idx];
+  material.specular     = specular;
+  material.specular_map = specular_txt;
 }
 void set_material_roughness(
-    opengl_scene* scene, int idx, float roughness, int roughness_txt) {
-  auto material           = scene->_materials[idx].get();
-  material->roughness     = roughness;
-  material->roughness_map = roughness_txt;
+    opengl_scene& scene, int idx, float roughness, int roughness_txt) {
+  auto& material         = scene._materials[idx];
+  material.roughness     = roughness;
+  material.roughness_map = roughness_txt;
 }
 void set_material_opacity(
-    opengl_scene* scene, int idx, float opacity, int opacity_txt) {
-  auto material     = scene->_materials[idx].get();
-  material->opacity = opacity;
+    opengl_scene& scene, int idx, float opacity, int opacity_txt) {
+  auto& material   = scene._materials[idx];
+  material.opacity = opacity;
 }
 void set_material_metallic(
-    opengl_scene* scene, int idx, float metallic, int metallic_txt) {
-  auto material          = scene->_materials[idx].get();
-  material->metallic     = metallic;
-  material->metallic_map = metallic_txt;
+    opengl_scene& scene, int idx, float metallic, int metallic_txt) {
+  auto& material        = scene._materials[idx];
+  material.metallic     = metallic;
+  material.metallic_map = metallic_txt;
 }
-void set_material_normalmap(opengl_scene* scene, int idx, int normal_txt) {
-  auto material        = scene->_materials[idx].get();
-  material->normal_map = normal_txt;
+void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt) {
+  auto& material      = scene._materials[idx];
+  material.normal_map = normal_txt;
 }
 void set_material_gltftextures(
-    opengl_scene* scene, int idx, bool gltf_textures) {
-  auto material           = scene->_materials[idx].get();
-  material->gltf_textures = gltf_textures;
+    opengl_scene& scene, int idx, bool gltf_textures) {
+  auto& material         = scene._materials[idx];
+  material.gltf_textures = gltf_textures;
 }
-void clear_glmaterials(opengl_scene* scene) { scene->_materials.clear(); }
+void clear_glmaterials(opengl_scene& scene) { scene._materials.clear(); }
 
 // add texture
-int add_texture(opengl_scene* scene, const image<vec4b>& img, bool as_srgb) {
+int add_texture(opengl_scene& scene, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
-  auto texture =
-      scene->_textures.emplace_back(make_unique<opengl_texture>()).get();
-  glGenTextures(1, &texture->texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  auto& texture = scene._textures.emplace_back();
+  glGenTextures(1, &texture.texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
   glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB_ALPHA : GL_RGBA,
       img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
   glTexParameteri(
       GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glGenerateMipmap(GL_TEXTURE_2D);
-  texture->size     = img.size();
-  texture->is_srgb  = as_srgb;
-  texture->is_float = false;
+  texture.size     = img.size();
+  texture.is_srgb  = as_srgb;
+  texture.is_float = false;
   assert(glGetError() == GL_NO_ERROR);
-  return (int)scene->_textures.size() - 1;
+  return (int)scene._textures.size() - 1;
 }
-int add_texture(opengl_scene* scene, const image<vec4f>& img, bool as_float) {
+int add_texture(opengl_scene& scene, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
-  auto texture =
-      scene->_textures.emplace_back(make_unique<opengl_texture>()).get();
-  glGenTextures(1, &texture->texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  auto& texture = scene._textures.emplace_back();
+  glGenTextures(1, &texture.texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture.texture_id);
   glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA, img.size().x,
       img.size().y, 0, GL_RGBA, GL_FLOAT, img.data());
   glTexParameteri(
       GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glGenerateMipmap(GL_TEXTURE_2D);
-  texture->size     = img.size();
-  texture->is_srgb  = false;
-  texture->is_float = as_float;
+  texture.size     = img.size();
+  texture.is_srgb  = false;
+  texture.is_float = as_float;
   assert(glGetError() == GL_NO_ERROR);
-  return (int)scene->_textures.size() - 1;
+  return (int)scene._textures.size() - 1;
 }
 void set_texture(
-    opengl_scene* scene, int idx, const image<vec4b>& img, bool as_srgb) {
+    opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
-  auto texture = scene->_textures[idx].get();
-  if (texture->size != img.size() || texture->is_srgb != as_srgb ||
-      texture->is_float == true) {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  auto& texture = scene._textures[idx];
+  if (texture.size != img.size() || texture.is_srgb != as_srgb ||
+      texture.is_float == true) {
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0, as_srgb ? GL_SRGB_ALPHA : GL_RGBA,
         img.size().x, img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
     glTexParameteri(
@@ -867,24 +937,24 @@ void set_texture(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
         GL_UNSIGNED_BYTE, img.data());
     glGenerateMipmap(GL_TEXTURE_2D);
   }
-  texture->size     = img.size();
-  texture->is_srgb  = as_srgb;
-  texture->is_float = false;
+  texture.size     = img.size();
+  texture.is_srgb  = as_srgb;
+  texture.is_float = false;
   assert(glGetError() == GL_NO_ERROR);
 }
 void set_texture(
-    opengl_scene* scene, int idx, const image<vec4f>& img, bool as_float) {
+    opengl_scene& scene, int idx, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
-  auto texture = scene->_textures[idx].get();
-  if (texture->size != img.size() || texture->is_float != as_float ||
-      texture->is_srgb == true) {
-    glGenTextures(1, &texture->texture_id);
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+  auto& texture = scene._textures[idx];
+  if (texture.size != img.size() || texture.is_float != as_float ||
+      texture.is_srgb == true) {
+    glGenTextures(1, &texture.texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA,
         img.size().x, img.size().y, 0, GL_RGBA, GL_FLOAT, img.data());
     glTexParameteri(
@@ -892,61 +962,61 @@ void set_texture(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
-    glBindTexture(GL_TEXTURE_2D, texture->texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
         GL_FLOAT, img.data());
     glGenerateMipmap(GL_TEXTURE_2D);
   }
-  texture->size     = img.size();
-  texture->is_srgb  = false;
-  texture->is_float = as_float;
+  texture.size     = img.size();
+  texture.is_srgb  = false;
+  texture.is_float = as_float;
   assert(glGetError() == GL_NO_ERROR);
 }
-void clear_textures(opengl_scene* scene) {
-  for (auto& texture : scene->_textures) {
-    if (texture->texture_id) glDeleteTextures(1, &texture->texture_id);
+void clear_textures(opengl_scene& scene) {
+  for (auto& texture : scene._textures) {
+    if (texture.texture_id) glDeleteTextures(1, &texture.texture_id);
   }
-  scene->_textures.clear();
+  scene._textures.clear();
 }
 
 // add shape
-int add_shape(opengl_scene* scene) {
-  scene->_shapes.emplace_back(make_unique<opengl_shape>());
-  return (int)scene->_shapes.size() - 1;
+int add_shape(opengl_scene& scene) {
+  scene._shapes.emplace_back();
+  return (int)scene._shapes.size() - 1;
 }
-int add_shape(opengl_scene* scene, const vector<int>& points,
+int add_shape(opengl_scene& scene, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
-  scene->_shapes.emplace_back(make_unique<opengl_shape>());
-  set_shape(scene, (int)scene->_shapes.size() - 1, points, positions, normals,
+  scene._shapes.emplace_back();
+  set_shape(scene, (int)scene._shapes.size() - 1, points, positions, normals,
       texcoords, colors);
-  return (int)scene->_shapes.size() - 1;
+  return (int)scene._shapes.size() - 1;
 }
-int add_shape(opengl_scene* scene, const vector<vec2i>& lines,
+int add_shape(opengl_scene& scene, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
-  scene->_shapes.emplace_back(make_unique<opengl_shape>());
-  set_shape(scene, (int)scene->_shapes.size() - 1, lines, positions, normals,
+  scene._shapes.emplace_back();
+  set_shape(scene, (int)scene._shapes.size() - 1, lines, positions, normals,
       texcoords, colors);
-  return (int)scene->_shapes.size() - 1;
+  return (int)scene._shapes.size() - 1;
 }
-int add_shape(opengl_scene* scene, const vector<vec3i>& triangles,
+int add_shape(opengl_scene& scene, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<vec4f>& tangents) {
-  scene->_shapes.emplace_back(make_unique<opengl_shape>());
-  set_shape(scene, (int)scene->_shapes.size() - 1, triangles, positions,
-      normals, texcoords, colors, tangents);
-  return (int)scene->_shapes.size() - 1;
-}
-int add_shape(opengl_scene* scene, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  scene->_shapes.emplace_back(make_unique<opengl_shape>());
-  set_shape(scene, (int)scene->_shapes.size() - 1, quads, positions, normals,
+  scene._shapes.emplace_back();
+  set_shape(scene, (int)scene._shapes.size() - 1, triangles, positions, normals,
       texcoords, colors, tangents);
-  return (int)scene->_shapes.size() - 1;
+  return (int)scene._shapes.size() - 1;
+}
+int add_shape(opengl_scene& scene, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
+    const vector<vec4f>& tangents) {
+  scene._shapes.emplace_back();
+  set_shape(scene, (int)scene._shapes.size() - 1, quads, positions, normals,
+      texcoords, colors, tangents);
+  return (int)scene._shapes.size() - 1;
 }
 
 static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
@@ -988,68 +1058,68 @@ static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
   }
 }
 
-void set_shape(opengl_scene* scene, int idx, const vector<int>& points,
+void set_shape(opengl_scene& scene, int idx, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
-  auto& shape = scene->_shapes[idx];
-  set_glshape_buffer(shape->positions_id, shape->positions_num, false,
+  auto& shape = scene._shapes[idx];
+  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape->normals_id, shape->normals_num, false,
-      normals.size(), 3, (const float*)normals.data());
-  set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
+      3, (const float*)normals.data());
+  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
-      4, (const float*)colors.data());
-  set_glshape_buffer(shape->points_id, shape->points_num, true, points.size(),
-      1, (const int*)points.data());
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
+      (const float*)colors.data());
+  set_glshape_buffer(shape.points_id, shape.points_num, true, points.size(), 1,
+      (const int*)points.data());
 }
-void set_shape(opengl_scene* scene, int idx, const vector<vec2i>& lines,
+void set_shape(opengl_scene& scene, int idx, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
-  auto& shape = scene->_shapes[idx];
-  set_glshape_buffer(shape->positions_id, shape->positions_num, false,
+  auto& shape = scene._shapes[idx];
+  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape->normals_id, shape->normals_num, false,
-      normals.size(), 3, (const float*)normals.data());
-  set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
+      3, (const float*)normals.data());
+  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
-      4, (const float*)colors.data());
-  set_glshape_buffer(shape->lines_id, shape->lines_num, true, lines.size(), 2,
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
+      (const float*)colors.data());
+  set_glshape_buffer(shape.lines_id, shape.lines_num, true, lines.size(), 2,
       (const int*)lines.data());
 }
-void set_shape(opengl_scene* scene, int idx, const vector<vec3i>& triangles,
+void set_shape(opengl_scene& scene, int idx, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<vec4f>& tangents) {
-  auto& shape = scene->_shapes[idx];
-  set_glshape_buffer(shape->positions_id, shape->positions_num, false,
+  auto& shape = scene._shapes[idx];
+  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape->normals_id, shape->normals_num, false,
-      normals.size(), 3, (const float*)normals.data());
-  set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
+      3, (const float*)normals.data());
+  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
-      4, (const float*)colors.data());
-  set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
+      (const float*)colors.data());
+  set_glshape_buffer(shape.tangents_id, shape.tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
-  set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
+  set_glshape_buffer(shape.triangles_id, shape.triangles_num, true,
       triangles.size(), 3, (const int*)triangles.data());
 }
-void set_shape(opengl_scene* scene, int idx, const vector<vec4i>& quads,
+void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
     const vector<vec4f>& tangents) {
-  auto& shape = scene->_shapes[idx];
-  set_glshape_buffer(shape->positions_id, shape->positions_num, false,
+  auto& shape = scene._shapes[idx];
+  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape->normals_id, shape->normals_num, false,
-      normals.size(), 3, (const float*)normals.data());
-  set_glshape_buffer(shape->texcoords_id, shape->texcoords_num, false,
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
+      3, (const float*)normals.data());
+  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
-      4, (const float*)colors.data());
-  set_glshape_buffer(shape->tangents_id, shape->tangents_num, false,
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
+      (const float*)colors.data());
+  set_glshape_buffer(shape.tangents_id, shape.tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
   auto triangles = vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
@@ -1057,259 +1127,254 @@ void set_shape(opengl_scene* scene, int idx, const vector<vec4i>& quads,
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_glshape_buffer(shape->triangles_id, shape->triangles_num, true,
+  set_glshape_buffer(shape.triangles_id, shape.triangles_num, true,
       triangles.size(), 3, (const int*)triangles.data());
 }
 void set_shape_colors(
-    opengl_scene* scene, int idx, const vector<vec4f>& colors) {
-  auto& shape = scene->_shapes[idx];
-  set_glshape_buffer(shape->colors_id, shape->colors_num, false, colors.size(),
-      4, (const float*)colors.data());
+    opengl_scene& scene, int idx, const vector<vec4f>& colors) {
+  auto& shape = scene._shapes[idx];
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
+      (const float*)colors.data());
 }
-void clear_glshapes(opengl_scene* scene) {
-  for (auto& shape : scene->_shapes) {
-    if (shape->positions_id) glDeleteBuffers(1, &shape->positions_id);
-    if (shape->normals_id) glDeleteBuffers(1, &shape->normals_id);
-    if (shape->texcoords_id) glDeleteBuffers(1, &shape->texcoords_id);
-    if (shape->colors_id) glDeleteBuffers(1, &shape->colors_id);
-    if (shape->tangents_id) glDeleteBuffers(1, &shape->tangents_id);
-    if (shape->points_id) glDeleteBuffers(1, &shape->points_id);
-    if (shape->lines_id) glDeleteBuffers(1, &shape->lines_id);
-    if (shape->triangles_id) glDeleteBuffers(1, &shape->triangles_id);
-    if (shape->quads_id) glDeleteBuffers(1, &shape->quads_id);
-    if (shape->edges_id) glDeleteBuffers(1, &shape->edges_id);
+void clear_glshapes(opengl_scene& scene) {
+  for (auto& shape : scene._shapes) {
+    if (shape.positions_id) glDeleteBuffers(1, &shape.positions_id);
+    if (shape.normals_id) glDeleteBuffers(1, &shape.normals_id);
+    if (shape.texcoords_id) glDeleteBuffers(1, &shape.texcoords_id);
+    if (shape.colors_id) glDeleteBuffers(1, &shape.colors_id);
+    if (shape.tangents_id) glDeleteBuffers(1, &shape.tangents_id);
+    if (shape.points_id) glDeleteBuffers(1, &shape.points_id);
+    if (shape.lines_id) glDeleteBuffers(1, &shape.lines_id);
+    if (shape.triangles_id) glDeleteBuffers(1, &shape.triangles_id);
+    if (shape.quads_id) glDeleteBuffers(1, &shape.quads_id);
+    if (shape.edges_id) glDeleteBuffers(1, &shape.edges_id);
   }
-  scene->_shapes.clear();
+  scene._shapes.clear();
 }
 
 // add instance
 int add_instance(
-    opengl_scene* scene, const frame3f& frame, int shape, int material) {
-  auto instance =
-      scene->_instances.emplace_back(make_unique<opengl_instance>()).get();
-  instance->frame    = frame;
-  instance->shape    = shape;
-  instance->material = material;
-  return (int)scene->_instances.size() - 1;
+    opengl_scene& scene, const frame3f& frame, int shape, int material) {
+  auto& instance    = scene._instances.emplace_back();
+  instance.frame    = frame;
+  instance.shape    = shape;
+  instance.material = material;
+  return (int)scene._instances.size() - 1;
 }
-void set_instance(opengl_scene* scene, int idx, const frame3f& frame, int shape,
+void set_instance(opengl_scene& scene, int idx, const frame3f& frame, int shape,
     int material) {
-  auto instance      = scene->_instances[idx].get();
-  instance->frame    = frame;
-  instance->shape    = shape;
-  instance->material = material;
+  auto& instance    = scene._instances[idx];
+  instance.frame    = frame;
+  instance.shape    = shape;
+  instance.material = material;
 }
-void set_glinstance_frame(opengl_scene* scene, int idx, const frame3f& frame) {
-  auto instance   = scene->_instances[idx].get();
-  instance->frame = frame;
+void set_glinstance_frame(opengl_scene& scene, int idx, const frame3f& frame) {
+  auto& instance = scene._instances[idx];
+  instance.frame = frame;
 }
-void set_glinstance_shape(opengl_scene* scene, int idx, int shape) {
-  auto instance   = scene->_instances[idx].get();
-  instance->shape = shape;
+void set_glinstance_shape(opengl_scene& scene, int idx, int shape) {
+  auto& instance = scene._instances[idx];
+  instance.shape = shape;
 }
-void set_glinstance_material(opengl_scene* scene, int idx, int material) {
-  auto instance      = scene->_instances[idx].get();
-  instance->material = material;
+void set_glinstance_material(opengl_scene& scene, int idx, int material) {
+  auto& instance    = scene._instances[idx];
+  instance.material = material;
 }
-void clear_instances(opengl_scene* scene) { scene->_instances.clear(); }
+void clear_instances(opengl_scene& scene) { scene._instances.clear(); }
 
 // add light
-int add_light(opengl_scene* scene, const vec3f& position, const vec3f& emission,
+int add_light(opengl_scene& scene, const vec3f& position, const vec3f& emission,
     bool directional) {
-  auto light = scene->_lights.emplace_back(make_unique<opengl_light>()).get();
-  light->position = position;
-  light->emission = emission;
-  light->type     = directional ? 1 : 0;
-  return (int)scene->_lights.size() - 1;
+  auto& light    = scene._lights.emplace_back();
+  light.position = position;
+  light.emission = emission;
+  light.type     = directional ? 1 : 0;
+  return (int)scene._lights.size() - 1;
 }
-void set_light(opengl_scene* scene, int idx, const vec3f& position,
+void set_light(opengl_scene& scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional) {
-  auto light      = scene->_lights[idx].get();
-  light->position = position;
-  light->emission = emission;
-  light->type     = directional ? 1 : 0;
+  auto& light    = scene._lights[idx];
+  light.position = position;
+  light.emission = emission;
+  light.type     = directional ? 1 : 0;
 }
-void clear_lights(opengl_scene* scene) { scene->_lights.clear(); }
-bool has_max_lights(opengl_scene* scene) { return scene->_lights.size() >= 16; }
+void clear_lights(opengl_scene& scene) { scene._lights.clear(); }
+bool has_max_lights(opengl_scene& scene) { return scene._lights.size() >= 16; }
 
 // Draw a shape
-void draw_glinstance(opengl_scene* glscene, opengl_instance* instance,
+void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
     const draw_glscene_params& params) {
-  if (instance->shape < 0 || instance->shape > glscene->_shapes.size()) return;
-  if (instance->material < 0 || instance->material > glscene->_materials.size())
+  if (instance.shape < 0 || instance.shape > glscene._shapes.size()) return;
+  if (instance.material < 0 || instance.material > glscene._materials.size())
     return;
 
-  auto& shape    = glscene->_shapes[instance->shape];
-  auto& material = glscene->_materials[instance->material];
+  auto& shape    = glscene._shapes[instance.shape];
+  auto& material = glscene._materials[instance.material];
 
-  auto instance_xform     = mat4f(instance->frame);
+  auto instance_xform     = mat4f(instance.frame);
   auto instance_inv_xform = transpose(
-      mat4f(inverse(instance->frame, params.non_rigid_frames)));
-  glUniformMatrix4fv(glGetUniformLocation(glscene->program_id, "shape_xform"),
-      1, false, &instance_xform.x.x);
+      mat4f(inverse(instance.frame, params.non_rigid_frames)));
+  glUniformMatrix4fv(glGetUniformLocation(glscene.program_id, "shape_xform"), 1,
+      false, &instance_xform.x.x);
   glUniformMatrix4fv(
-      glGetUniformLocation(glscene->program_id, "shape_xform_invtranspose"), 1,
+      glGetUniformLocation(glscene.program_id, "shape_xform_invtranspose"), 1,
       false, &instance_inv_xform.x.x);
   glUniform1f(
-      glGetUniformLocation(glscene->program_id, "shape_normal_offset"), 0.0f);
-  if (instance->highlighted) {
+      glGetUniformLocation(glscene.program_id, "shape_normal_offset"), 0.0f);
+  if (instance.highlighted) {
     glUniform4f(
-        glGetUniformLocation(glscene->program_id, "highlight"), 1, 1, 0, 1);
+        glGetUniformLocation(glscene.program_id, "highlight"), 1, 1, 0, 1);
   } else {
     glUniform4f(
-        glGetUniformLocation(glscene->program_id, "highlight"), 0, 0, 0, 0);
+        glGetUniformLocation(glscene.program_id, "highlight"), 0, 0, 0, 0);
   }
 
   auto mtype = 2;
-  if (material->gltf_textures) mtype = 3;
-  glUniform1i(glGetUniformLocation(glscene->program_id, "mat_type"), mtype);
-  glUniform3f(glGetUniformLocation(glscene->program_id, "mat_ke"),
-      material->emission.x, material->emission.y, material->emission.z);
-  glUniform3f(glGetUniformLocation(glscene->program_id, "mat_kd"),
-      material->diffuse.x, material->diffuse.y, material->diffuse.z);
-  glUniform3f(glGetUniformLocation(glscene->program_id, "mat_ks"),
-      material->metallic, material->metallic, material->metallic);
+  if (material.gltf_textures) mtype = 3;
+  glUniform1i(glGetUniformLocation(glscene.program_id, "mat_type"), mtype);
+  glUniform3f(glGetUniformLocation(glscene.program_id, "mat_ke"),
+      material.emission.x, material.emission.y, material.emission.z);
+  glUniform3f(glGetUniformLocation(glscene.program_id, "mat_kd"),
+      material.diffuse.x, material.diffuse.y, material.diffuse.z);
+  glUniform3f(glGetUniformLocation(glscene.program_id, "mat_ks"),
+      material.metallic, material.metallic, material.metallic);
   glUniform1f(
-      glGetUniformLocation(glscene->program_id, "mat_rs"), material->roughness);
+      glGetUniformLocation(glscene.program_id, "mat_rs"), material.roughness);
   glUniform1f(
-      glGetUniformLocation(glscene->program_id, "mat_op"), material->opacity);
-  glUniform1i(glGetUniformLocation(glscene->program_id, "mat_double_sided"),
+      glGetUniformLocation(glscene.program_id, "mat_op"), material.opacity);
+  glUniform1i(glGetUniformLocation(glscene.program_id, "mat_double_sided"),
       (int)params.double_sided);
-  if (material->emission_map >= 0) {
-    auto emission_map = glscene->_textures.at(material->emission_map).get();
+  if (material.emission_map >= 0) {
+    auto& emission_map = glscene._textures.at(material.emission_map);
     glActiveTexture(GL_TEXTURE0 + 0);
-    glBindTexture(GL_TEXTURE_2D, emission_map->texture_id);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt"), 0);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt_on"), 1);
+    glBindTexture(GL_TEXTURE_2D, emission_map.texture_id);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ke_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt_on"), 0);
   }
-  if (material->diffuse_map >= 0) {
-    auto diffuse_map = glscene->_textures.at(material->diffuse_map).get();
+  if (material.diffuse_map >= 0) {
+    auto& diffuse_map = glscene._textures.at(material.diffuse_map);
     glActiveTexture(GL_TEXTURE0 + 1);
-    glBindTexture(GL_TEXTURE_2D, diffuse_map->texture_id);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt"), 1);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt_on"), 1);
+    glBindTexture(GL_TEXTURE_2D, diffuse_map.texture_id);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt"), 1);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_kd_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt_on"), 0);
   }
-  if (material->metallic_map >= 0) {
-    auto specular_map = glscene->_textures.at(material->specular_map).get();
+  if (material.metallic_map >= 0) {
+    auto& specular_map = glscene._textures.at(material.specular_map);
     glActiveTexture(GL_TEXTURE0 + 2);
-    glBindTexture(GL_TEXTURE_2D, specular_map->texture_id);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt"), 2);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt_on"), 1);
+    glBindTexture(GL_TEXTURE_2D, specular_map.texture_id);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt"), 2);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_ks_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt_on"), 0);
   }
-  if (material->roughness_map >= 0) {
-    auto roughness_map = glscene->_textures.at(material->roughness_map).get();
+  if (material.roughness_map >= 0) {
+    auto& roughness_map = glscene._textures.at(material.roughness_map);
     glActiveTexture(GL_TEXTURE0 + 3);
-    glBindTexture(GL_TEXTURE_2D, roughness_map->texture_id);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt"), 3);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt_on"), 1);
+    glBindTexture(GL_TEXTURE_2D, roughness_map.texture_id);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt"), 3);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt_on"), 1);
   } else {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_rs_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt_on"), 0);
   }
-  if (material->normal_map >= 0) {
-    auto normal_map = glscene->_textures.at(material->normal_map).get();
+  if (material.normal_map >= 0) {
+    auto& normal_map = glscene._textures.at(material.normal_map);
     glActiveTexture(GL_TEXTURE0 + 4);
-    glBindTexture(GL_TEXTURE_2D, normal_map->texture_id);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "mat_norm_txt"), 4);
-    glUniform1i(
-        glGetUniformLocation(glscene->program_id, "mat_norm_txt_on"), 1);
+    glBindTexture(GL_TEXTURE_2D, normal_map.texture_id);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_norm_txt"), 4);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_norm_txt_on"), 1);
   } else {
-    glUniform1i(
-        glGetUniformLocation(glscene->program_id, "mat_norm_txt_on"), 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "mat_norm_txt_on"), 0);
   }
 
-  glUniform1i(glGetUniformLocation(glscene->program_id, "elem_faceted"),
-      (int)!shape->normals_id);
-  if (shape->positions_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->positions_id);
+  glUniform1i(glGetUniformLocation(glscene.program_id, "elem_faceted"),
+      (int)!shape.normals_id);
+  if (shape.positions_id) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape.positions_id);
     glEnableVertexAttribArray(
-        glGetAttribLocation(glscene->program_id, "vert_pos"));
-    glVertexAttribPointer(glGetAttribLocation(glscene->program_id, "vert_pos"),
+        glGetAttribLocation(glscene.program_id, "vert_pos"));
+    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_pos"),
         3, GL_FLOAT, false, 0, nullptr);
   } else {
     glVertexAttrib3f(
-        glGetAttribLocation(glscene->program_id, "vert_pos"), 0, 0, 0);
+        glGetAttribLocation(glscene.program_id, "vert_pos"), 0, 0, 0);
   }
-  if (shape->normals_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->normals_id);
+  if (shape.normals_id) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape.normals_id);
     glEnableVertexAttribArray(
-        glGetAttribLocation(glscene->program_id, "vert_norm"));
-    glVertexAttribPointer(glGetAttribLocation(glscene->program_id, "vert_norm"),
+        glGetAttribLocation(glscene.program_id, "vert_norm"));
+    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_norm"),
         3, GL_FLOAT, false, 0, nullptr);
   } else {
     glVertexAttrib3f(
-        glGetAttribLocation(glscene->program_id, "vert_norm"), 0, 0, 0);
+        glGetAttribLocation(glscene.program_id, "vert_norm"), 0, 0, 0);
   }
-  if (shape->texcoords_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->texcoords_id);
+  if (shape.texcoords_id) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape.texcoords_id);
     glEnableVertexAttribArray(
-        glGetAttribLocation(glscene->program_id, "vert_texcoord"));
+        glGetAttribLocation(glscene.program_id, "vert_texcoord"));
     glVertexAttribPointer(
-        glGetAttribLocation(glscene->program_id, "vert_texcoord"), 2, GL_FLOAT,
+        glGetAttribLocation(glscene.program_id, "vert_texcoord"), 2, GL_FLOAT,
         false, 0, nullptr);
   } else {
     glVertexAttrib2f(
-        glGetAttribLocation(glscene->program_id, "vert_texcoord"), 0, 0);
+        glGetAttribLocation(glscene.program_id, "vert_texcoord"), 0, 0);
   }
-  if (shape->colors_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->colors_id);
+  if (shape.colors_id) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape.colors_id);
     glEnableVertexAttribArray(
-        glGetAttribLocation(glscene->program_id, "vert_color"));
+        glGetAttribLocation(glscene.program_id, "vert_color"));
+    glVertexAttribPointer(glGetAttribLocation(glscene.program_id, "vert_color"),
+        4, GL_FLOAT, false, 0, nullptr);
+  } else {
+    glVertexAttrib4f(
+        glGetAttribLocation(glscene.program_id, "vert_color"), 1, 1, 1, 1);
+  }
+  if (shape.tangents_id) {
+    glBindBuffer(GL_ARRAY_BUFFER, shape.tangents_id);
+    glEnableVertexAttribArray(
+        glGetAttribLocation(glscene.program_id, "vert_tangsp"));
     glVertexAttribPointer(
-        glGetAttribLocation(glscene->program_id, "vert_color"), 4, GL_FLOAT,
+        glGetAttribLocation(glscene.program_id, "vert_tangsp"), 4, GL_FLOAT,
         false, 0, nullptr);
   } else {
     glVertexAttrib4f(
-        glGetAttribLocation(glscene->program_id, "vert_color"), 1, 1, 1, 1);
-  }
-  if (shape->tangents_id) {
-    glBindBuffer(GL_ARRAY_BUFFER, shape->tangents_id);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(glscene->program_id, "vert_tangsp"));
-    glVertexAttribPointer(
-        glGetAttribLocation(glscene->program_id, "vert_tangsp"), 4, GL_FLOAT,
-        false, 0, nullptr);
-  } else {
-    glVertexAttrib4f(
-        glGetAttribLocation(glscene->program_id, "vert_tangsp"), 0, 0, 1, 1);
+        glGetAttribLocation(glscene.program_id, "vert_tangsp"), 0, 0, 1, 1);
   }
 
-  if (shape->points_id) {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "elem_type"), 1);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->points_id);
-    glDrawElements(GL_POINTS, shape->points_num, GL_UNSIGNED_INT, nullptr);
+  if (shape.points_id) {
+    glUniform1i(glGetUniformLocation(glscene.program_id, "elem_type"), 1);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.points_id);
+    glDrawElements(GL_POINTS, shape.points_num, GL_UNSIGNED_INT, nullptr);
   }
-  if (shape->lines_id) {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "elem_type"), 2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->lines_id);
-    glDrawElements(GL_LINES, shape->lines_num * 2, GL_UNSIGNED_INT, nullptr);
+  if (shape.lines_id) {
+    glUniform1i(glGetUniformLocation(glscene.program_id, "elem_type"), 2);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.lines_id);
+    glDrawElements(GL_LINES, shape.lines_num * 2, GL_UNSIGNED_INT, nullptr);
   }
-  if (shape->triangles_id) {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "elem_type"), 3);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->triangles_id);
+  if (shape.triangles_id) {
+    glUniform1i(glGetUniformLocation(glscene.program_id, "elem_type"), 3);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.triangles_id);
     glDrawElements(
-        GL_TRIANGLES, shape->triangles_num * 3, GL_UNSIGNED_INT, nullptr);
+        GL_TRIANGLES, shape.triangles_num * 3, GL_UNSIGNED_INT, nullptr);
   }
-  if (shape->quads_id) {
-    glUniform1i(glGetUniformLocation(glscene->program_id, "elem_type"), 3);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape->quads_id);
-    glDrawElements(
-        GL_TRIANGLES, shape->quads_num * 3, GL_UNSIGNED_INT, nullptr);
+  if (shape.quads_id) {
+    glUniform1i(glGetUniformLocation(glscene.program_id, "elem_type"), 3);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.quads_id);
+    glDrawElements(GL_TRIANGLES, shape.quads_num * 3, GL_UNSIGNED_INT, nullptr);
   }
 
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
         enable_glculling(false);
         check_glerror();
-        set_gluniform(glscene->program, "mtype"), 0);
-        glUniform3f(glGetUniformLocation(glscene->program, "ke"), 0, 0, 0);
-        set_gluniform(glscene->program, "op"), material->op);
-        set_gluniform(glscene->program, "shp_normal_offset"), 0.01f);
+        set_gluniform(glscene.program, "mtype"), 0);
+        glUniform3f(glGetUniformLocation(glscene.program, "ke"), 0, 0, 0);
+        set_gluniform(glscene.program, "op"), material.op);
+        set_gluniform(glscene.program, "shp_normal_offset"), 0.01f);
         check_glerror();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
         glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
@@ -1322,15 +1387,15 @@ void draw_glinstance(opengl_scene* glscene, opengl_instance* instance,
 }
 
 // Display a scene
-void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
+void draw_glscene(opengl_scene& glscene, const vec4i& viewport,
     const draw_glscene_params& params) {
-  auto& glcamera      = glscene->_cameras.at(params.camera);
+  auto& glcamera      = glscene._cameras.at(params.camera);
   auto  camera_aspect = (float)viewport.z / (float)viewport.w;
   auto  camera_yfov =
       camera_aspect >= 0
-          ? (2 * atan(glcamera->film / (camera_aspect * 2 * glcamera->lens)))
-          : (2 * atan(glcamera->film / (2 * glcamera->lens)));
-  auto camera_view = mat4f(inverse(glcamera->frame));
+          ? (2 * atan(glcamera.film / (camera_aspect * 2 * glcamera.lens)))
+          : (2 * atan(glcamera.film / (2 * glcamera.lens)));
+  auto camera_view = mat4f(inverse(glcamera.frame));
   auto camera_proj = perspective_mat(
       camera_yfov, camera_aspect, params.near, params.far);
 
@@ -1340,42 +1405,42 @@ void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
   glEnable(GL_DEPTH_TEST);
   glViewport(viewport.x, viewport.y, viewport.z, viewport.w);
 
-  glUseProgram(glscene->program_id);
-  glUniform3f(glGetUniformLocation(glscene->program_id, "cam_pos"),
-      glcamera->frame.o.x, glcamera->frame.o.y, glcamera->frame.o.z);
-  glUniformMatrix4fv(glGetUniformLocation(glscene->program_id, "cam_xform_inv"),
+  glUseProgram(glscene.program_id);
+  glUniform3f(glGetUniformLocation(glscene.program_id, "cam_pos"),
+      glcamera.frame.o.x, glcamera.frame.o.y, glcamera.frame.o.z);
+  glUniformMatrix4fv(glGetUniformLocation(glscene.program_id, "cam_xform_inv"),
       1, false, &camera_view.x.x);
-  glUniformMatrix4fv(glGetUniformLocation(glscene->program_id, "cam_proj"), 1,
+  glUniformMatrix4fv(glGetUniformLocation(glscene.program_id, "cam_proj"), 1,
       false, &camera_proj.x.x);
-  glUniform1i(glGetUniformLocation(glscene->program_id, "eyelight"),
+  glUniform1i(glGetUniformLocation(glscene.program_id, "eyelight"),
       (int)params.eyelight);
   glUniform1f(
-      glGetUniformLocation(glscene->program_id, "exposure"), params.exposure);
-  glUniform1f(glGetUniformLocation(glscene->program_id, "gamma"), params.gamma);
+      glGetUniformLocation(glscene.program_id, "exposure"), params.exposure);
+  glUniform1f(glGetUniformLocation(glscene.program_id, "gamma"), params.gamma);
 
   if (!params.eyelight) {
-    glUniform3f(glGetUniformLocation(glscene->program_id, "lamb"), 0, 0, 0);
-    glUniform1i(glGetUniformLocation(glscene->program_id, "lnum"),
-        (int)glscene->_lights.size());
-    for (auto i = 0; i < glscene->_lights.size(); i++) {
+    glUniform3f(glGetUniformLocation(glscene.program_id, "lamb"), 0, 0, 0);
+    glUniform1i(glGetUniformLocation(glscene.program_id, "lnum"),
+        (int)glscene._lights.size());
+    for (auto i = 0; i < glscene._lights.size(); i++) {
       auto is = std::to_string(i);
       glUniform3f(glGetUniformLocation(
-                      glscene->program_id, ("lpos[" + is + "]").c_str()),
-          glscene->_lights[i]->position.x, glscene->_lights[i]->position.y,
-          glscene->_lights[i]->position.z);
-      glUniform3f(glGetUniformLocation(
-                      glscene->program_id, ("lke[" + is + "]").c_str()),
-          glscene->_lights[i]->emission.x, glscene->_lights[i]->emission.y,
-          glscene->_lights[i]->emission.z);
+                      glscene.program_id, ("lpos[" + is + "]").c_str()),
+          glscene._lights[i].position.x, glscene._lights[i].position.y,
+          glscene._lights[i].position.z);
+      glUniform3f(
+          glGetUniformLocation(glscene.program_id, ("lke[" + is + "]").c_str()),
+          glscene._lights[i].emission.x, glscene._lights[i].emission.y,
+          glscene._lights[i].emission.z);
       glUniform1i(glGetUniformLocation(
-                      glscene->program_id, ("ltype[" + is + "]").c_str()),
-          (int)glscene->_lights[i]->type);
+                      glscene.program_id, ("ltype[" + is + "]").c_str()),
+          (int)glscene._lights[i].type);
     }
   }
 
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  for (auto& instance : glscene->_instances) {
-    draw_glinstance(glscene, instance.get(), params);
+  for (auto& instance : glscene._instances) {
+    draw_glinstance(glscene, instance, params);
   }
 
   glUseProgram(0);
@@ -1389,42 +1454,44 @@ void draw_glscene(opengl_scene* glscene, const vec4i& viewport,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void draw_glwindow(const opengl_window* win) {
-  glClearColor(win->background.x, win->background.y, win->background.z,
-      win->background.w);
+static void draw_glwindow(const opengl_window& win) {
+  glClearColor(
+      win.background.x, win.background.y, win.background.z, win.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  if (win->draw_cb) win->draw_cb(win, win->input);
-  if (win->widgets_cb) {
+  if (win.draw_cb) win.draw_cb(win, win.input);
+  if (win.widgets_cb) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     auto window = zero2i;
-    glfwGetWindowSize(win->win, &window.x, &window.y);
-    if (win->widgets_left) {
+    glfwGetWindowSize(win.win, &window.x, &window.y);
+    if (win.widgets_left) {
       ImGui::SetNextWindowPos({0, 0});
-      ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window.y});
+      ImGui::SetNextWindowSize({(float)win.widgets_width, (float)window.y});
     } else {
-      ImGui::SetNextWindowPos({(float)(window.x - win->widgets_width), 0});
-      ImGui::SetNextWindowSize({(float)win->widgets_width, (float)window.y});
+      ImGui::SetNextWindowPos({(float)(window.x - win.widgets_width), 0});
+      ImGui::SetNextWindowSize({(float)win.widgets_width, (float)window.y});
     }
     ImGui::SetNextWindowCollapsed(false);
     ImGui::SetNextWindowBgAlpha(1);
-    if (ImGui::Begin(win->title.c_str(), nullptr,
+    if (ImGui::Begin(win.title.c_str(), nullptr,
             ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
                 ImGuiWindowFlags_NoSavedSettings)) {
       draw_glmessages(win);
-      win->widgets_cb(win, win->input);
+      win.widgets_cb(win, win.input);
     }
     ImGui::End();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   }
-  glfwSwapBuffers(win->win);
+  glfwSwapBuffers(win.win);
 }
 
-opengl_window* make_glwindow(const vec2i& size, const string& title,
+void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
     bool widgets, int widgets_width, bool widgets_left) {
+  if (win.win) return;
+
   // init glfw
   if (!glfwInit())
     throw std::runtime_error("cannot initialize windowing system");
@@ -1436,67 +1503,65 @@ opengl_window* make_glwindow(const vec2i& size, const string& title,
 #endif
 
   // create window
-  auto win   = new opengl_window();
-  win->title = title;
-  win->win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
-  if (!win->win) throw std::runtime_error("cannot initialize windowing system");
-  glfwMakeContextCurrent(win->win);
+  win.title = title;
+  win.win   = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
+  if (!win.win) throw std::runtime_error("cannot initialize windowing system");
+  glfwMakeContextCurrent(win.win);
   glfwSwapInterval(1);  // Enable vsync
 
   // set user data
-  glfwSetWindowUserPointer(win->win, win);
+  glfwSetWindowUserPointer(win.win, &win);
 
   // set callbacks
-  glfwSetWindowRefreshCallback(win->win, [](GLFWwindow* glfw) {
-    auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
+  glfwSetWindowRefreshCallback(win.win, [](GLFWwindow* glfw) {
+    auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
     draw_glwindow(win);
   });
   glfwSetDropCallback(
-      win->win, [](GLFWwindow* glfw, int num, const char** paths) {
-        auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-        if (win->drop_cb) {
+      win.win, [](GLFWwindow* glfw, int num, const char** paths) {
+        auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
+        if (win.drop_cb) {
           auto pathv = vector<string>();
           for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
-          win->drop_cb(win, pathv, win->input);
+          win.drop_cb(win, pathv, win.input);
         }
       });
-  glfwSetKeyCallback(win->win,
+  glfwSetKeyCallback(win.win,
       [](GLFWwindow* glfw, int key, int scancode, int action, int mods) {
-        auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-        if (win->key_cb) win->key_cb(win, key, (bool)action, win->input);
+        auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
+        if (win.key_cb) win.key_cb(win, key, (bool)action, win.input);
       });
   glfwSetMouseButtonCallback(
-      win->win, [](GLFWwindow* glfw, int button, int action, int mods) {
-        auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-        if (win->click_cb)
-          win->click_cb(
-              win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action, win->input);
+      win.win, [](GLFWwindow* glfw, int button, int action, int mods) {
+        auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
+        if (win.click_cb)
+          win.click_cb(
+              win, button == GLFW_MOUSE_BUTTON_LEFT, (bool)action, win.input);
       });
   glfwSetScrollCallback(
-      win->win, [](GLFWwindow* glfw, double xoffset, double yoffset) {
-        auto win = (const opengl_window*)glfwGetWindowUserPointer(glfw);
-        if (win->scroll_cb) win->scroll_cb(win, (float)yoffset, win->input);
+      win.win, [](GLFWwindow* glfw, double xoffset, double yoffset) {
+        auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
+        if (win.scroll_cb) win.scroll_cb(win, (float)yoffset, win.input);
       });
-  glfwSetWindowSizeCallback(
-      win->win, [](GLFWwindow* glfw, int width, int height) {
-        auto win = (opengl_window*)glfwGetWindowUserPointer(glfw);
-        glfwGetWindowSize(
-            win->win, &win->input.window_size.x, &win->input.window_size.y);
-        if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
-        glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z,
-            &win->input.framebuffer_viewport.w);
-        win->input.framebuffer_viewport.x = 0;
-        win->input.framebuffer_viewport.y = 0;
-        if (win->widgets_width) {
-          auto win_size = zero2i;
-          glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
-          auto offset = (int)(win->widgets_width *
-                              (float)win->input.framebuffer_viewport.z /
-                              win_size.x);
-          win->input.framebuffer_viewport.z -= offset;
-          if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
-        }
-      });
+  glfwSetWindowSizeCallback(win.win, [](GLFWwindow* glfw, int width,
+                                         int height) {
+    auto& win = *(opengl_window*)glfwGetWindowUserPointer(glfw);
+    glfwGetWindowSize(
+        win.win, &win.input.window_size.x, &win.input.window_size.y);
+    if (win.widgets_width) win.input.window_size.x -= win.widgets_width;
+    glfwGetFramebufferSize(win.win, &win.input.framebuffer_viewport.z,
+        &win.input.framebuffer_viewport.w);
+    win.input.framebuffer_viewport.x = 0;
+    win.input.framebuffer_viewport.y = 0;
+    if (win.widgets_width) {
+      auto win_size = zero2i;
+      glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
+      auto offset = (int)(win.widgets_width *
+                          (float)win.input.framebuffer_viewport.z / win_size.x);
+      win.input.framebuffer_viewport.z -= offset;
+      if (win.widgets_left) win.input.framebuffer_viewport.x += offset;
+    }
+  });
 
   // init gl extensions
   if (!gladLoadGL())
@@ -1507,85 +1572,81 @@ opengl_window* make_glwindow(const vec2i& size, const string& title,
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename       = nullptr;
     ImGui::GetStyle().WindowRounding = 0;
-    ImGui_ImplGlfw_InitForOpenGL(win->win, true);
+    ImGui_ImplGlfw_InitForOpenGL(win.win, true);
 #ifndef __APPLE__
     ImGui_ImplOpenGL3_Init();
 #else
     ImGui_ImplOpenGL3_Init("#version 330");
 #endif
     ImGui::StyleColorsDark();
-    win->widgets_width = widgets_width;
-    win->widgets_left  = widgets_left;
+    win.widgets_width = widgets_width;
+    win.widgets_left  = widgets_left;
   }
-
-  return win;
 }
 
-void delete_glwindow(opengl_window* win) {
-  glfwDestroyWindow(win->win);
+void clear_glwindow(opengl_window& win) {
+  glfwDestroyWindow(win.win);
   glfwTerminate();
-  win->win = nullptr;
-  delete win;
+  win.win = nullptr;
 }
 
 // Run loop
-void run_ui(opengl_window* win) {
-  while (!glfwWindowShouldClose(win->win)) {
+void run_ui(opengl_window& win) {
+  while (!glfwWindowShouldClose(win.win)) {
     // update input
-    win->input.mouse_last = win->input.mouse_pos;
+    win.input.mouse_last = win.input.mouse_pos;
     auto mouse_posx = 0.0, mouse_posy = 0.0;
-    glfwGetCursorPos(win->win, &mouse_posx, &mouse_posy);
-    win->input.mouse_pos = vec2f{(float)mouse_posx, (float)mouse_posy};
-    if (win->widgets_width && win->widgets_left)
-      win->input.mouse_pos.x -= win->widgets_width;
-    win->input.mouse_left = glfwGetMouseButton(
-                                win->win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-    win->input.mouse_right =
-        glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-    win->input.modifier_alt =
-        glfwGetKey(win->win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-        glfwGetKey(win->win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
-    win->input.modifier_shift =
-        glfwGetKey(win->win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-        glfwGetKey(win->win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-    win->input.modifier_ctrl =
-        glfwGetKey(win->win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-        glfwGetKey(win->win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+    glfwGetCursorPos(win.win, &mouse_posx, &mouse_posy);
+    win.input.mouse_pos = vec2f{(float)mouse_posx, (float)mouse_posy};
+    if (win.widgets_width && win.widgets_left)
+      win.input.mouse_pos.x -= win.widgets_width;
+    win.input.mouse_left = glfwGetMouseButton(
+                               win.win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    win.input.mouse_right = glfwGetMouseButton(
+                                win.win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+    win.input.modifier_alt =
+        glfwGetKey(win.win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+        glfwGetKey(win.win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+    win.input.modifier_shift =
+        glfwGetKey(win.win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+        glfwGetKey(win.win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+    win.input.modifier_ctrl =
+        glfwGetKey(win.win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+        glfwGetKey(win.win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
     glfwGetWindowSize(
-        win->win, &win->input.window_size.x, &win->input.window_size.y);
-    if (win->widgets_width) win->input.window_size.x -= win->widgets_width;
-    glfwGetFramebufferSize(win->win, &win->input.framebuffer_viewport.z,
-        &win->input.framebuffer_viewport.w);
-    win->input.framebuffer_viewport.x = 0;
-    win->input.framebuffer_viewport.y = 0;
-    if (win->widgets_width) {
+        win.win, &win.input.window_size.x, &win.input.window_size.y);
+    if (win.widgets_width) win.input.window_size.x -= win.widgets_width;
+    glfwGetFramebufferSize(win.win, &win.input.framebuffer_viewport.z,
+        &win.input.framebuffer_viewport.w);
+    win.input.framebuffer_viewport.x = 0;
+    win.input.framebuffer_viewport.y = 0;
+    if (win.widgets_width) {
       auto win_size = zero2i;
-      glfwGetWindowSize(win->win, &win_size.x, &win_size.y);
-      auto offset = (int)(win->widgets_width *
-                          (float)win->input.framebuffer_viewport.z /
-                          win_size.x);
-      win->input.framebuffer_viewport.z -= offset;
-      if (win->widgets_left) win->input.framebuffer_viewport.x += offset;
+      glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
+      auto offset = (int)(win.widgets_width *
+                          (float)win.input.framebuffer_viewport.z / win_size.x);
+      win.input.framebuffer_viewport.z -= offset;
+      if (win.widgets_left) win.input.framebuffer_viewport.x += offset;
     }
-    if (win->widgets_width) {
-      auto io                   = &ImGui::GetIO();
-      win->input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||
-                                  io->WantCaptureKeyboard;
+    if (win.widgets_width) {
+      auto io                  = &ImGui::GetIO();
+      win.input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||
+                                 io->WantCaptureKeyboard;
     }
 
     // time
-    win->input.clock_last = win->input.clock_now;
-    win->input.clock_now =
+    win.input.clock_last = win.input.clock_now;
+    win.input.clock_now =
         std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    win->input.time_now = (double)win->input.clock_now / 1000000000.0;
-    win->input.time_delta =
-        (double)(win->input.clock_now - win->input.clock_last) / 1000000000.0;
+    win.input.time_now = (double)win.input.clock_now / 1000000000.0;
+    win.input.time_delta =
+        (double)(win.input.clock_now - win.input.clock_last) / 1000000000.0;
 
     // update ui
-    if (win->uiupdate_cb) win->uiupdate_cb(win, win->input);
+    if (win.uiupdate_cb) win.uiupdate_cb(win, win.input);
 
     // update
-    if (win->update_cb) win->update_cb(win, win->input);
+    if (win.update_cb) win.update_cb(win, win.input);
 
     // draw
     draw_glwindow(win);
@@ -1595,33 +1656,33 @@ void run_ui(opengl_window* win) {
   }
 }
 
-void set_draw_glcallback(opengl_window* win, draw_glcallback cb) {
-  win->draw_cb = cb;
+void set_draw_glcallback(opengl_window& win, draw_glcallback cb) {
+  win.draw_cb = cb;
 }
-void set_widgets_glcallback(opengl_window* win, widgets_glcallback cb) {
-  win->widgets_cb = cb;
+void set_widgets_glcallback(opengl_window& win, widgets_glcallback cb) {
+  win.widgets_cb = cb;
 }
-void set_drop_glcallback(opengl_window* win, drop_glcallback drop_cb) {
-  win->drop_cb = drop_cb;
+void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb) {
+  win.drop_cb = drop_cb;
 }
-void set_key_glcallback(opengl_window* win, key_glcallback cb) {
-  win->key_cb = cb;
+void set_key_glcallback(opengl_window& win, key_glcallback cb) {
+  win.key_cb = cb;
 }
-void set_click_glcallback(opengl_window* win, click_glcallback cb) {
-  win->click_cb = cb;
+void set_click_glcallback(opengl_window& win, click_glcallback cb) {
+  win.click_cb = cb;
 }
-void set_scroll_glcallback(opengl_window* win, scroll_glcallback cb) {
-  win->scroll_cb = cb;
+void set_scroll_glcallback(opengl_window& win, scroll_glcallback cb) {
+  win.scroll_cb = cb;
 }
-void set_uiupdate_glcallback(opengl_window* win, uiupdate_glcallback cb) {
-  win->uiupdate_cb = cb;
+void set_uiupdate_glcallback(opengl_window& win, uiupdate_glcallback cb) {
+  win.uiupdate_cb = cb;
 }
-void set_update_glcallback(opengl_window* win, update_glcallback cb) {
-  win->update_cb = cb;
+void set_update_glcallback(opengl_window& win, update_glcallback cb) {
+  win.update_cb = cb;
 }
 
-void set_close(const opengl_window* win, bool close) {
-  glfwSetWindowShouldClose(win->win, close ? GLFW_TRUE : GLFW_FALSE);
+void set_close(const opengl_window& win, bool close) {
+  glfwSetWindowShouldClose(win.win, close ? GLFW_TRUE : GLFW_FALSE);
 }
 
 }  // namespace yocto
@@ -1631,43 +1692,43 @@ void set_close(const opengl_window* win, bool close) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void init_glwidgets(opengl_window* win, int width, bool left) {
+void init_glwidgets(opengl_window& win, int width, bool left) {
   // init widgets
   ImGui::CreateContext();
   ImGui::GetIO().IniFilename       = nullptr;
   ImGui::GetStyle().WindowRounding = 0;
-  ImGui_ImplGlfw_InitForOpenGL(win->win, true);
+  ImGui_ImplGlfw_InitForOpenGL(win.win, true);
 #ifndef __APPLE__
   ImGui_ImplOpenGL3_Init();
 #else
   ImGui_ImplOpenGL3_Init("#version 330");
 #endif
   ImGui::StyleColorsDark();
-  win->widgets_width = width;
-  win->widgets_left  = left;
+  win.widgets_width = width;
+  win.widgets_left  = left;
 }
 
-bool begin_glheader(const opengl_window* win, const char* lbl) {
+bool begin_glheader(const opengl_window& win, const char* lbl) {
   if (!ImGui::CollapsingHeader(lbl)) return false;
   ImGui::PushID(lbl);
   return true;
 }
-void end_glheader(const opengl_window* win) { ImGui::PopID(); }
+void end_glheader(const opengl_window& win) { ImGui::PopID(); }
 
-void open_glmodal(const opengl_window* win, const char* lbl) {
+void open_glmodal(const opengl_window& win, const char* lbl) {
   ImGui::OpenPopup(lbl);
 }
-void clear_glmodal(const opengl_window* win) { ImGui::CloseCurrentPopup(); }
-bool begin_glmodal(const opengl_window* win, const char* lbl) {
+void clear_glmodal(const opengl_window& win) { ImGui::CloseCurrentPopup(); }
+bool begin_glmodal(const opengl_window& win, const char* lbl) {
   return ImGui::BeginPopupModal(lbl);
 }
-void end_glmodal(const opengl_window* win) { ImGui::EndPopup(); }
-bool is_glmodal_open(const opengl_window* win, const char* lbl) {
+void end_glmodal(const opengl_window& win) { ImGui::EndPopup(); }
+bool is_glmodal_open(const opengl_window& win, const char* lbl) {
   return ImGui::IsPopupOpen(lbl);
 }
 
 bool draw_glmessage(
-    const opengl_window* win, const char* lbl, const string& message) {
+    const opengl_window& win, const char* lbl, const string& message) {
   if (ImGui::BeginPopupModal(lbl)) {
     auto open = true;
     ImGui::Text("%s", message.c_str());
@@ -1684,11 +1745,11 @@ bool draw_glmessage(
 
 std::deque<string> _message_queue = {};
 std::mutex         _message_mutex;
-void push_glmessage(const opengl_window* win, const string& message) {
+void push_glmessage(const opengl_window& win, const string& message) {
   std::lock_guard lock(_message_mutex);
   _message_queue.push_back(message);
 }
-bool draw_glmessages(const opengl_window* win) {
+bool draw_glmessages(const opengl_window& win) {
   std::lock_guard lock(_message_mutex);
   if (_message_queue.empty()) return false;
   if (!is_glmodal_open(win, "<message>")) {
@@ -1835,7 +1896,7 @@ struct filedialog_state {
     return true;
   }
 };
-bool draw_glfiledialog(const opengl_window* win, const char* lbl, string& path,
+bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter) {
   static auto states = unordered_map<string, filedialog_state>{};
@@ -1891,7 +1952,7 @@ bool draw_glfiledialog(const opengl_window* win, const char* lbl, string& path,
     return false;
   }
 }
-bool draw_glfiledialog_button(const opengl_window* win, const char* button_lbl,
+bool draw_glfiledialog_button(const opengl_window& win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
     const string& dirname, const string& filename, const string& filter) {
   if (is_glmodal_open(win, lbl)) {
@@ -1904,7 +1965,7 @@ bool draw_glfiledialog_button(const opengl_window* win, const char* button_lbl,
   }
 }
 
-bool draw_glbutton(const opengl_window* win, const char* lbl, bool enabled) {
+bool draw_glbutton(const opengl_window& win, const char* lbl, bool enabled) {
   if (enabled) {
     return ImGui::Button(lbl);
   } else {
@@ -1918,16 +1979,16 @@ bool draw_glbutton(const opengl_window* win, const char* lbl, bool enabled) {
 }
 
 void draw_gllabel(
-    const opengl_window* win, const char* lbl, const string& label) {
+    const opengl_window& win, const char* lbl, const string& label) {
   ImGui::LabelText(lbl, "%s", label.c_str());
 }
 
-void draw_glseparator(const opengl_window* win) { ImGui::Separator(); }
+void draw_glseparator(const opengl_window& win) { ImGui::Separator(); }
 
-void continue_glline(const opengl_window* win) { ImGui::SameLine(); }
+void continue_glline(const opengl_window& win) { ImGui::SameLine(); }
 
 bool draw_gltextinput(
-    const opengl_window* win, const char* lbl, string& value) {
+    const opengl_window& win, const char* lbl, string& value) {
   char buffer[4096];
   auto num = 0;
   for (auto c : value) buffer[num++] = c;
@@ -1937,90 +1998,90 @@ bool draw_gltextinput(
   return edited;
 }
 
-bool draw_glslider(const opengl_window* win, const char* lbl, float& value,
+bool draw_glslider(const opengl_window& win, const char* lbl, float& value,
     float min, float max) {
   return ImGui::SliderFloat(lbl, &value, min, max);
 }
-bool draw_glslider(const opengl_window* win, const char* lbl, vec2f& value,
+bool draw_glslider(const opengl_window& win, const char* lbl, vec2f& value,
     float min, float max) {
   return ImGui::SliderFloat2(lbl, &value.x, min, max);
 }
-bool draw_glslider(const opengl_window* win, const char* lbl, vec3f& value,
+bool draw_glslider(const opengl_window& win, const char* lbl, vec3f& value,
     float min, float max) {
   return ImGui::SliderFloat3(lbl, &value.x, min, max);
 }
-bool draw_glslider(const opengl_window* win, const char* lbl, vec4f& value,
+bool draw_glslider(const opengl_window& win, const char* lbl, vec4f& value,
     float min, float max) {
   return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
 
 bool draw_glslider(
-    const opengl_window* win, const char* lbl, int& value, int min, int max) {
+    const opengl_window& win, const char* lbl, int& value, int min, int max) {
   return ImGui::SliderInt(lbl, &value, min, max);
 }
 bool draw_glslider(
-    const opengl_window* win, const char* lbl, vec2i& value, int min, int max) {
+    const opengl_window& win, const char* lbl, vec2i& value, int min, int max) {
   return ImGui::SliderInt2(lbl, &value.x, min, max);
 }
 bool draw_glslider(
-    const opengl_window* win, const char* lbl, vec3i& value, int min, int max) {
+    const opengl_window& win, const char* lbl, vec3i& value, int min, int max) {
   return ImGui::SliderInt3(lbl, &value.x, min, max);
 }
 bool draw_glslider(
-    const opengl_window* win, const char* lbl, vec4i& value, int min, int max) {
+    const opengl_window& win, const char* lbl, vec4i& value, int min, int max) {
   return ImGui::SliderInt4(lbl, &value.x, min, max);
 }
 
-bool draw_gldragger(const opengl_window* win, const char* lbl, float& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, float& value,
     float speed, float min, float max) {
   return ImGui::DragFloat(lbl, &value, speed, min, max);
 }
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec2f& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec2f& value,
     float speed, float min, float max) {
   return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
 }
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec3f& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec3f& value,
     float speed, float min, float max) {
   return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
 }
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec4f& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec4f& value,
     float speed, float min, float max) {
   return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_gldragger(const opengl_window* win, const char* lbl, int& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, int& value,
     float speed, int min, int max) {
   return ImGui::DragInt(lbl, &value, speed, min, max);
 }
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec2i& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec2i& value,
     float speed, int min, int max) {
   return ImGui::DragInt2(lbl, &value.x, speed, min, max);
 }
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec3i& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec3i& value,
     float speed, int min, int max) {
   return ImGui::DragInt3(lbl, &value.x, speed, min, max);
 }
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec4i& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec4i& value,
     float speed, int min, int max) {
   return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_glcheckbox(const opengl_window* win, const char* lbl, bool& value) {
+bool draw_glcheckbox(const opengl_window& win, const char* lbl, bool& value) {
   return ImGui::Checkbox(lbl, &value);
 }
 
-bool draw_glcoloredit(const opengl_window* win, const char* lbl, vec3f& value) {
+bool draw_glcoloredit(const opengl_window& win, const char* lbl, vec3f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit3(lbl, &value.x, flags);
 }
 
-bool draw_glcoloredit(const opengl_window* win, const char* lbl, vec4f& value) {
+bool draw_glcoloredit(const opengl_window& win, const char* lbl, vec4f& value) {
   auto flags = ImGuiColorEditFlags_Float;
   return ImGui::ColorEdit4(lbl, &value.x, flags);
 }
 
 bool draw_glhdrcoloredit(
-    const opengl_window* win, const char* lbl, vec3f& value) {
+    const opengl_window& win, const char* lbl, vec3f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(color);
@@ -2039,7 +2100,7 @@ bool draw_glhdrcoloredit(
   }
 }
 bool draw_glhdrcoloredit(
-    const opengl_window* win, const char* lbl, vec4f& value) {
+    const opengl_window& win, const char* lbl, vec4f& value) {
   auto color    = value;
   auto exposure = 0.0f;
   auto scale    = max(xyz(color));
@@ -2059,7 +2120,7 @@ bool draw_glhdrcoloredit(
   }
 }
 
-bool draw_glcombobox(const opengl_window* win, const char* lbl, int& value,
+bool draw_glcombobox(const opengl_window& win, const char* lbl, int& value,
     const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
   auto old_val = value;
@@ -2073,7 +2134,7 @@ bool draw_glcombobox(const opengl_window* win, const char* lbl, int& value,
   return value != old_val;
 }
 
-bool draw_glcombobox(const opengl_window* win, const char* lbl, string& value,
+bool draw_glcombobox(const opengl_window& win, const char* lbl, string& value,
     const vector<string>& labels) {
   if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
   auto old_val = value;
@@ -2088,7 +2149,7 @@ bool draw_glcombobox(const opengl_window* win, const char* lbl, string& value,
   return value != old_val;
 }
 
-bool draw_glcombobox(const opengl_window* win, const char* lbl, int& idx,
+bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     int num, const std::function<const char*(int)>& labels, bool include_null) {
   if (num <= 0) idx = -1;
   if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>")) return false;
@@ -2110,23 +2171,23 @@ bool draw_glcombobox(const opengl_window* win, const char* lbl, int& idx,
 }
 
 void draw_glhistogram(
-    const opengl_window* win, const char* lbl, const float* values, int count) {
+    const opengl_window& win, const char* lbl, const float* values, int count) {
   ImGui::PlotHistogram(lbl, values, count);
 }
 void draw_glhistogram(
-    const opengl_window* win, const char* lbl, const vector<float>& values) {
+    const opengl_window& win, const char* lbl, const vector<float>& values) {
   ImGui::PlotHistogram(lbl, values.data(), (int)values.size(), 0, nullptr,
       flt_max, flt_max, {0, 0}, 4);
 }
 void draw_glhistogram(
-    const opengl_window* win, const char* lbl, const vector<vec2f>& values) {
+    const opengl_window& win, const char* lbl, const vector<vec2f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec2f));
 }
 void draw_glhistogram(
-    const opengl_window* win, const char* lbl, const vector<vec3f>& values) {
+    const opengl_window& win, const char* lbl, const vector<vec3f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2135,7 +2196,7 @@ void draw_glhistogram(
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec3f));
 }
 void draw_glhistogram(
-    const opengl_window* win, const char* lbl, const vector<vec4f>& values) {
+    const opengl_window& win, const char* lbl, const vector<vec4f>& values) {
   ImGui::PlotHistogram((lbl + " x"s).c_str(), (const float*)values.data() + 0,
       (int)values.size(), 0, nullptr, flt_max, flt_max, {0, 0}, sizeof(vec4f));
   ImGui::PlotHistogram((lbl + " y"s).c_str(), (const float*)values.data() + 1,
@@ -2207,22 +2268,22 @@ struct ImGuiAppLog {
 
 std::mutex  _log_mutex;
 ImGuiAppLog _log_widget;
-void        log_glinfo(const opengl_window* win, const string& msg) {
+void        log_glinfo(const opengl_window& win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "info");
   _log_mutex.unlock();
 }
-void log_glerror(const opengl_window* win, const string& msg) {
+void log_glerror(const opengl_window& win, const string& msg) {
   _log_mutex.lock();
   _log_widget.AddLog(msg.c_str(), "errn");
   _log_mutex.unlock();
 }
-void clear_gllogs(const opengl_window* win) {
+void clear_gllogs(const opengl_window& win) {
   _log_mutex.lock();
   _log_widget.Clear();
   _log_mutex.unlock();
 }
-void draw_gllog(const opengl_window* win) {
+void draw_gllog(const opengl_window& win) {
   _log_mutex.lock();
   _log_widget.Draw();
   _log_mutex.unlock();

@@ -49,18 +49,18 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  unique_ptr<trace_scene> scene      = {};
-  bool                    add_skyenv = false;
+  trace_scene scene      = {};
+  bool        add_skyenv = false;
 
   // rendering state
-  unique_ptr<trace_state> state    = {};
-  image<vec4f>            render   = {};
-  image<vec4f>            display  = {};
-  float                   exposure = 0;
+  trace_state  state    = {};
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
-  unique_ptr<opengl_image> glimage  = {};
-  draw_glimage_params      glparams = {};
+  opengl_image        glimage  = {};
+  draw_glimage_params glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -78,41 +78,39 @@ struct app_state {
 };
 
 // construct a scene from io
-trace_scene* make_scene(sceneio_model& ioscene) {
-  auto scene = make_unique<trace_scene>();
+void init_scene(trace_scene& scene, sceneio_model& ioscene) {
+  scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
-    add_camera(scene.get(), iocamera.frame, iocamera.lens, iocamera.aspect,
+    add_camera(scene, iocamera.frame, iocamera.lens, iocamera.aspect,
         iocamera.film, iocamera.aperture, iocamera.focus);
   }
 
   for (auto& iotexture : ioscene.textures) {
     if (!iotexture.hdr.empty()) {
-      add_texture(scene.get(), std::move(iotexture.hdr));
+      add_texture(scene, std::move(iotexture.hdr));
     } else if (!iotexture.ldr.empty()) {
-      add_texture(scene.get(), std::move(iotexture.ldr));
+      add_texture(scene, std::move(iotexture.ldr));
     }
   }
 
   for (auto& iomaterial : ioscene.materials) {
-    auto id = add_material(scene.get());
+    auto id = add_material(scene);
     set_material_emission(
-        scene.get(), id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_diffuse(
-        scene.get(), id, iomaterial.diffuse, iomaterial.diffuse_tex);
+        scene, id, iomaterial.emission, iomaterial.emission_tex);
+    set_material_diffuse(scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
     set_material_specular(
-        scene.get(), id, iomaterial.specular, iomaterial.specular_tex);
+        scene, id, iomaterial.specular, iomaterial.specular_tex);
     set_material_metallic(
-        scene.get(), id, iomaterial.metallic, iomaterial.metallic_tex);
+        scene, id, iomaterial.metallic, iomaterial.metallic_tex);
     set_material_transmission(
-        scene.get(), id, iomaterial.transmission, iomaterial.transmission_tex);
+        scene, id, iomaterial.transmission, iomaterial.transmission_tex);
     set_material_roughness(
-        scene.get(), id, iomaterial.roughness, iomaterial.roughness_tex);
-    set_material_opacity(
-        scene.get(), id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_refract(scene.get(), id, iomaterial.refract);
-    set_material_normalmap(scene.get(), id, iomaterial.normal_tex);
-    set_material_volume(scene.get(), id, iomaterial.volemission,
+        scene, id, iomaterial.roughness, iomaterial.roughness_tex);
+    set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
+    set_material_refract(scene, id, iomaterial.refract);
+    set_material_normalmap(scene, id, iomaterial.normal_tex);
+    set_material_volume(scene, id, iomaterial.volemission,
         iomaterial.voltransmission, iomaterial.volmeanfreepath,
         iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
         iomaterial.subsurface_tex);
@@ -125,16 +123,16 @@ trace_scene* make_scene(sceneio_model& ioscene) {
 
   for (auto& ioshape : ioscene.shapes) {
     if (!ioshape.points.empty()) {
-      add_shape(scene.get(), ioshape.points, ioshape.positions, ioshape.normals,
+      add_shape(scene, ioshape.points, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.lines.empty()) {
-      add_shape(scene.get(), ioshape.lines, ioshape.positions, ioshape.normals,
+      add_shape(scene, ioshape.lines, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.triangles.empty()) {
-      add_shape(scene.get(), ioshape.triangles, ioshape.positions,
-          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
+      add_shape(scene, ioshape.triangles, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.tangents);
     } else if (!ioshape.quads.empty()) {
-      add_shape(scene.get(), ioshape.quads, ioshape.positions, ioshape.normals,
+      add_shape(scene, ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
     }
     ioshape = {};
@@ -142,16 +140,15 @@ trace_scene* make_scene(sceneio_model& ioscene) {
 
   for (auto& ioinstance : ioscene.instances) {
     add_instance(
-        scene.get(), ioinstance.frame, ioinstance.shape, ioinstance.material);
+        scene, ioinstance.frame, ioinstance.shape, ioinstance.material);
   }
 
   for (auto& ioenvironment : ioscene.environments) {
-    add_environment(scene.get(), ioenvironment.frame, ioenvironment.emission,
+    add_environment(scene, ioenvironment.frame, ioenvironment.emission,
         ioenvironment.emission_tex);
   }
 
   ioscene = {};
-  return scene.release();
 }
 
 // Simple parallel for used since our target platforms do not yet support
@@ -179,16 +176,15 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  app->state = unique_ptr<trace_state>{
-      make_state(app->scene.get(), app->params)};
-  app->render.resize(app->state->size());
-  app->display.resize(app->state->size());
+  init_state(app->state, app->scene, app->params);
+  app->render.resize(app->state.size());
+  app->display.resize(app->state.size());
 
   // render preview
   auto preview_prms = app->params;
   preview_prms.resolution /= app->pratio;
   preview_prms.samples = 1;
-  auto preview         = trace_image(app->scene.get(), preview_prms);
+  auto preview         = trace_image(app->scene, preview_prms);
   preview              = tonemap_image(preview, app->exposure);
   for (auto j = 0; j < app->display.size().y; j++) {
     for (auto i = 0; i < app->display.size().x; i++) {
@@ -206,8 +202,7 @@ void reset_display(shared_ptr<app_state> app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij] = trace_sample(
-            app->state.get(), app->scene.get(), ij, app->params);
+        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -252,54 +247,53 @@ int main(int argc, const char* argv[]) {
 
   // conversion
   auto convert_timer = print_timed("converting");
-  app->scene         = unique_ptr<trace_scene>{make_scene(ioscene)};
+  init_scene(app->scene, ioscene);
   print_elapsed(convert_timer);
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
-  init_bvh(app->scene.get(), app->params);
+  init_bvh(app->scene, app->params);
   print_elapsed(bvh_timer);
 
   // init renderer
   auto lights_timer = print_timed("building lights");
-  init_lights(app->scene.get());
+  init_lights(app->scene);
   print_elapsed(lights_timer);
 
   // fix renderer type if no lights
-  if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
+  if (app->scene.lights.empty() && is_sampler_lit(app->params)) {
     print_info("no lights presents, switching to eyelight shader");
     app->params.sampler = trace_sampler_type::eyelight;
   }
 
   // allocate buffers
-  app->state = unique_ptr<trace_state>{
-      make_state(app->scene.get(), app->params)};
-  app->render  = image{app->state->size(), zero4f};
+  init_state(app->state, app->scene, app->params);
+  app->render  = image{app->state.size(), zero4f};
   app->display = app->render;
   reset_display(app);
 
   // window
-  auto win = make_glwindow({1280 + 320, 720}, "yscnitraces", false);
+  auto win = opengl_window{};
+  init_glwindow(win, {1280 + 320, 720}, "yscnitraces", false);
 
   // callbacks
   set_draw_glcallback(
-      win, [app](const opengl_window* win, const opengl_input& input) {
-        if (!app->glimage)
-          app->glimage = unique_ptr<opengl_image>(make_glimage());
+      win, [app](const opengl_window& win, const opengl_input& input) {
+        if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
-          set_glimage(app->glimage.get(), app->display, false, false);
+          set_glimage(app->glimage, app->display, false, false);
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
         update_imview(app->glparams.center, app->glparams.scale,
             app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_glimage(app->glimage.get(), app->glparams);
+        draw_glimage(app->glimage, app->glparams);
         app->render_counter++;
         if (app->render_counter > 10) app->render_counter = 0;
       });
   set_uiupdate_glcallback(
-      win, [app](const opengl_window* win, const opengl_input& input) {
+      win, [app](const opengl_window& win, const opengl_input& input) {
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt) {
-          auto& camera = app->scene->cameras.at(app->params.camera);
+          auto& camera = app->scene.cameras.at(app->params.camera);
           auto  dolly  = 0.0f;
           auto  pan    = zero2f;
           auto  rotate = zero2f;
@@ -319,7 +313,7 @@ int main(int argc, const char* argv[]) {
   run_ui(win);
 
   // clear
-  delete_glwindow(win);
+  clear_glwindow(win);
 
   // done
   return 0;

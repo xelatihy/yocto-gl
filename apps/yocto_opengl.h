@@ -72,12 +72,13 @@ struct opengl_image {
 };
 
 // create image drawing program
-opengl_image* make_glimage();
+void init_glimage(opengl_image& glimage);
+bool is_initialized(const opengl_image& glimage);
 
 // update image data
-void set_glimage(opengl_image* glimage, const image<vec4f>& img,
+void set_glimage(opengl_image& glimage, const image<vec4f>& img,
     bool linear = false, bool mipmap = false);
-void set_glimage(opengl_image* glimage, const image<vec4b>& img,
+void set_glimage(opengl_image& glimage, const image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
@@ -93,7 +94,7 @@ struct draw_glimage_params {
 };
 
 // draw image
-void draw_glimage(opengl_image* glimage, const draw_glimage_params& params);
+void draw_glimage(opengl_image& glimage, const draw_glimage_params& params);
 
 }  // namespace yocto
 
@@ -134,6 +135,13 @@ struct opengl_shape {
   uint quads_id      = 0;
   int  edges_num     = 0;
   uint edges_id      = 0;
+
+  opengl_shape() {}
+  opengl_shape(const opengl_shape&) = delete;
+  opengl_shape& operator=(const opengl_shape&) = delete;
+  ~opengl_shape();
+  opengl_shape(opengl_shape&&);
+  opengl_shape& operator=(opengl_shape&&);
 };
 
 // OpenGL texture
@@ -142,6 +150,13 @@ struct opengl_texture {
   vec2i size       = {0, 0};
   bool  is_srgb    = false;
   bool  is_float   = false;
+
+  opengl_texture() {}
+  opengl_texture(const opengl_texture&) = delete;
+  opengl_texture& operator=(opengl_texture&) = delete;
+  ~opengl_texture();
+  opengl_texture(opengl_texture&&);
+  opengl_texture& operator=(opengl_texture&&);
 };
 
 // Opengl material
@@ -183,12 +198,12 @@ struct opengl_scene {
   opengl_scene& operator=(const opengl_scene&) = delete;
   ~opengl_scene();
 
-  vector<unique_ptr<opengl_camera>>   _cameras   = {};
-  vector<unique_ptr<opengl_instance>> _instances = {};
-  vector<unique_ptr<opengl_shape>>    _shapes    = {};
-  vector<unique_ptr<opengl_material>> _materials = {};
-  vector<unique_ptr<opengl_texture>>  _textures  = {};
-  vector<unique_ptr<opengl_light>>    _lights    = {};
+  vector<opengl_camera>   _cameras   = {};
+  vector<opengl_instance> _instances = {};
+  vector<opengl_shape>    _shapes    = {};
+  vector<opengl_material> _materials = {};
+  vector<opengl_texture>  _textures  = {};
+  vector<opengl_light>    _lights    = {};
 
   // OpenGL state
   uint program_id  = 0;
@@ -216,96 +231,97 @@ struct draw_glscene_params {
 };
 
 // Initialize an OpenGL scene
-opengl_scene* make_glscene();
+void init_glscene(opengl_scene& scene);
+bool is_initialized(opengl_scene& scene);
 
 // add camera
-int  add_camera(opengl_scene* scene, const frame3f& frame, float lens,
+int  add_camera(opengl_scene& scene, const frame3f& frame, float lens,
      float asepct, float film, float near, float far);
-void set_camera(opengl_scene* scene, int idx, const frame3f& frame, float lens,
+void set_camera(opengl_scene& scene, int idx, const frame3f& frame, float lens,
     float asepct, float film, float near, float far);
-void clear_cameras(opengl_scene* scene);
+void clear_cameras(opengl_scene& scene);
 
 // add texture
 int add_texture(
-    opengl_scene* scene, const image<vec4b>& img, bool as_srgb = true);
+    opengl_scene& scene, const image<vec4b>& img, bool as_srgb = true);
 int add_texture(
-    opengl_scene* scene, const image<vec4f>& img, bool as_float = false);
+    opengl_scene& scene, const image<vec4f>& img, bool as_float = false);
 void set_texture(
-    opengl_scene* scene, int idx, const image<vec4b>& img, bool as_srgb = true);
-void set_texture(opengl_scene* scene, int idx, const image<vec4f>& img,
+    opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb = true);
+void set_texture(opengl_scene& scene, int idx, const image<vec4f>& img,
     bool as_float = false);
-void clear_textures(opengl_scene* scene);
+void clear_textures(opengl_scene& scene);
 
 // add material
-int  add_material(opengl_scene* scene);
+int  add_material(opengl_scene& scene);
 void set_material_emission(
-    opengl_scene* scene, int idx, const vec3f& emission, int emission_txt = -1);
+    opengl_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_material_diffuse(
-    opengl_scene* scene, int idx, const vec3f& diffuse, int diffuse_txt = -1);
+    opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt = -1);
 void set_material_specular(
-    opengl_scene* scene, int idx, const vec3f& specular, int specular_txt = -1);
+    opengl_scene& scene, int idx, const vec3f& specular, int specular_txt = -1);
 void set_material_roughness(
-    opengl_scene* scene, int idx, float roughness, int roughness_txt = -1);
+    opengl_scene& scene, int idx, float roughness, int roughness_txt = -1);
 void set_material_opacity(
-    opengl_scene* scene, int idx, float opacity, int opacity_txt = -1);
+    opengl_scene& scene, int idx, float opacity, int opacity_txt = -1);
 void set_material_metallic(
-    opengl_scene* scene, int idx, float metallic, int metallic_txt = -1);
-void set_material_normalmap(opengl_scene* scene, int idx, int normal_txt);
+    opengl_scene& scene, int idx, float metallic, int metallic_txt = -1);
+void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt);
 void set_material_gltftextures(
-    opengl_scene* scene, int idx, bool gltf_textures);
-void clear_materias(opengl_scene* scene);
+    opengl_scene& scene, int idx, bool gltf_textures);
+void clear_materias(opengl_scene& scene);
 
 // add shape
-int  add_shape(opengl_scene* scene);
-int  add_shape(opengl_scene* scene, const vector<int>& points,
+int  add_shape(opengl_scene& scene);
+int  add_shape(opengl_scene& scene, const vector<int>& points,
      const vector<vec3f>& positions, const vector<vec3f>& normals,
      const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
-int  add_shape(opengl_scene* scene, const vector<vec2i>& lines,
+int  add_shape(opengl_scene& scene, const vector<vec2i>& lines,
      const vector<vec3f>& positions, const vector<vec3f>& normals,
      const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
-int  add_shape(opengl_scene* scene, const vector<vec3i>& triangles,
+int  add_shape(opengl_scene& scene, const vector<vec3i>& triangles,
      const vector<vec3f>& positions, const vector<vec3f>& normals,
      const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
      const vector<vec4f>& tangents = {});
-int  add_shape(opengl_scene* scene, const vector<vec4i>& quads,
+int  add_shape(opengl_scene& scene, const vector<vec4i>& quads,
      const vector<vec3f>& positions, const vector<vec3f>& normals,
      const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
      const vector<vec4f>& tangents = {});
-void set_shape(opengl_scene* scene, int idx, const vector<int>& points,
+void set_shape(opengl_scene& scene, int idx, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
-void set_shape(opengl_scene* scene, int idx, const vector<vec2i>& lines,
+void set_shape(opengl_scene& scene, int idx, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
-void set_shape(opengl_scene* scene, int idx, const vector<vec3i>& triangles,
+void set_shape(opengl_scene& scene, int idx, const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
     const vector<vec4f>& tangents = {});
-void set_shape(opengl_scene* scene, int idx, const vector<vec4i>& quads,
+void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
     const vector<vec4f>& tangents = {});
 void set_shape_colors(
-    opengl_scene* scene, int idx, const vector<vec4f>& colors);
-void clear_shapes(opengl_scene* scene);
+    opengl_scene& scene, int idx, const vector<vec4f>& colors);
+void clear_shapes(opengl_scene& scene);
 
 // add instance
 int add_instance(
-    opengl_scene* scene, const frame3f& frame, int shape, int material);
-void set_instance(opengl_scene* scene, int idx, const frame3f& frame, int shape,
+    opengl_scene& scene, const frame3f& frame, int shape, int material);
+void set_instance(opengl_scene& scene, int idx, const frame3f& frame, int shape,
     int material);
-void clear_instances(opengl_scene* scene);
+void clear_instances(opengl_scene& scene);
 
 // add light
-int add_light(opengl_scene* scene, const vec3f& position, const vec3f& emission,
+int add_light(opengl_scene& scene, const vec3f& position, const vec3f& emission,
     bool directional);
-void set_light(opengl_scene* scene, int idx, const vec3f& position,
+void set_light(opengl_scene& scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional);
-void clear_lights(opengl_scene* scene);
-bool has_max_lights(opengl_scene* scene);
+void clear_lights(opengl_scene& scene);
+bool has_max_lights(opengl_scene& scene);
 
 // Draw an OpenGL scene
-void draw_glscene(opengl_scene* state, const vec4i& viewport,
+void draw_glscene(opengl_scene& state, const vec4i& viewport,
     const draw_glscene_params& params);
 
 }  // namespace yocto
@@ -340,29 +356,29 @@ struct opengl_input {
 
 // Draw callback called every frame and when resizing
 using draw_glcallback =
-    std::function<void(const opengl_window*, const opengl_input& input)>;
+    std::function<void(const opengl_window&, const opengl_input& input)>;
 // Draw callback for drawing widgets
 using widgets_glcallback =
-    std::function<void(const opengl_window*, const opengl_input& input)>;
+    std::function<void(const opengl_window&, const opengl_input& input)>;
 // Drop callback that returns that list of dropped strings.
 using drop_glcallback = std::function<void(
-    const opengl_window*, const vector<string>&, const opengl_input& input)>;
+    const opengl_window&, const vector<string>&, const opengl_input& input)>;
 // Key callback that returns ASCII key, pressed/released flag and modifier keys
 using key_glcallback = std::function<void(
-    const opengl_window*, int key, bool pressed, const opengl_input& input)>;
+    const opengl_window&, int key, bool pressed, const opengl_input& input)>;
 // Mouse click callback that returns left/right button, pressed/released flag,
 // modifier keys
 using click_glcallback = std::function<void(
-    const opengl_window*, bool left, bool pressed, const opengl_input& input)>;
+    const opengl_window&, bool left, bool pressed, const opengl_input& input)>;
 // Scroll callback that returns scroll amount
 using scroll_glcallback = std::function<void(
-    const opengl_window*, float amount, const opengl_input& input)>;
+    const opengl_window&, float amount, const opengl_input& input)>;
 // Update functions called every frame
 using uiupdate_glcallback =
-    std::function<void(const opengl_window*, const opengl_input& input)>;
+    std::function<void(const opengl_window&, const opengl_input& input)>;
 // Update functions called every frame
 using update_glcallback =
-    std::function<void(const opengl_window*, const opengl_input& input)>;
+    std::function<void(const opengl_window&, const opengl_input& input)>;
 
 // OpenGL window wrapper
 struct opengl_window {
@@ -383,25 +399,25 @@ struct opengl_window {
 };
 
 // Windows initialization
-opengl_window* make_glwindow(const vec2i& size, const string& title,
+void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
     bool widgets, int widgets_width = 320, bool widgets_left = true);
 
 // Window cleanup
-void delete_glwindow(opengl_window* win);
+void clear_glwindow(opengl_window& win);
 
 // Set callbacks
-void set_draw_glcallback(opengl_window* win, draw_glcallback draw_cb);
-void set_widgets_glcallback(opengl_window* win, widgets_glcallback widgets_cb);
-void set_drop_glcallback(opengl_window* win, drop_glcallback drop_cb);
-void set_key_glcallback(opengl_window* win, key_glcallback cb);
-void set_click_glcallback(opengl_window* win, click_glcallback cb);
-void set_scroll_glcallback(opengl_window* win, scroll_glcallback cb);
-void set_uiupdate_glcallback(opengl_window* win, uiupdate_glcallback cb);
-void set_update_glcallback(opengl_window* win, update_glcallback cb);
+void set_draw_glcallback(opengl_window& win, draw_glcallback draw_cb);
+void set_widgets_glcallback(opengl_window& win, widgets_glcallback widgets_cb);
+void set_drop_glcallback(opengl_window& win, drop_glcallback drop_cb);
+void set_key_glcallback(opengl_window& win, key_glcallback cb);
+void set_click_glcallback(opengl_window& win, click_glcallback cb);
+void set_scroll_glcallback(opengl_window& win, scroll_glcallback cb);
+void set_uiupdate_glcallback(opengl_window& win, uiupdate_glcallback cb);
+void set_update_glcallback(opengl_window& win, update_glcallback cb);
 
 // Run loop
-void run_ui(opengl_window* win);
-void set_close(const opengl_window* win, bool close);
+void run_ui(opengl_window& win);
+void set_close(const opengl_window& win, bool close);
 
 }  // namespace yocto
 
@@ -410,76 +426,76 @@ void set_close(const opengl_window* win, bool close);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool begin_glheader(const opengl_window* win, const char* title);
-void end_glheader(const opengl_window* win);
+bool begin_glheader(const opengl_window& win, const char* title);
+void end_glheader(const opengl_window& win);
 
 void draw_gllabel(
-    const opengl_window* win, const char* lbl, const string& text);
+    const opengl_window& win, const char* lbl, const string& text);
 
-void draw_glseparator(const opengl_window* win);
-void continue_glline(const opengl_window* win);
+void draw_glseparator(const opengl_window& win);
+void continue_glline(const opengl_window& win);
 
 bool draw_glbutton(
-    const opengl_window* win, const char* lbl, bool enabled = true);
+    const opengl_window& win, const char* lbl, bool enabled = true);
 
-bool draw_gltextinput(const opengl_window* win, const char* lbl, string& value);
+bool draw_gltextinput(const opengl_window& win, const char* lbl, string& value);
 
-bool draw_glslider(const opengl_window* win, const char* lbl, float& value,
+bool draw_glslider(const opengl_window& win, const char* lbl, float& value,
     float min, float max);
-bool draw_glslider(const opengl_window* win, const char* lbl, vec2f& value,
+bool draw_glslider(const opengl_window& win, const char* lbl, vec2f& value,
     float min, float max);
-bool draw_glslider(const opengl_window* win, const char* lbl, vec3f& value,
+bool draw_glslider(const opengl_window& win, const char* lbl, vec3f& value,
     float min, float max);
-bool draw_glslider(const opengl_window* win, const char* lbl, vec4f& value,
+bool draw_glslider(const opengl_window& win, const char* lbl, vec4f& value,
     float min, float max);
 
 bool draw_glslider(
-    const opengl_window* win, const char* lbl, int& value, int min, int max);
+    const opengl_window& win, const char* lbl, int& value, int min, int max);
 bool draw_glslider(
-    const opengl_window* win, const char* lbl, vec2i& value, int min, int max);
+    const opengl_window& win, const char* lbl, vec2i& value, int min, int max);
 bool draw_glslider(
-    const opengl_window* win, const char* lbl, vec3i& value, int min, int max);
+    const opengl_window& win, const char* lbl, vec3i& value, int min, int max);
 bool draw_glslider(
-    const opengl_window* win, const char* lbl, vec4i& value, int min, int max);
+    const opengl_window& win, const char* lbl, vec4i& value, int min, int max);
 
-bool draw_gldragger(const opengl_window* win, const char* lbl, float& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, float& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec2f& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec2f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec3f& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec3f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec4f& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec4f& value,
     float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 
-bool draw_gldragger(const opengl_window* win, const char* lbl, int& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, int& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec2i& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec2i& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec3i& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec3i& value,
     float speed = 1, int min = 0, int max = 0);
-bool draw_gldragger(const opengl_window* win, const char* lbl, vec4i& value,
+bool draw_gldragger(const opengl_window& win, const char* lbl, vec4i& value,
     float speed = 1, int min = 0, int max = 0);
 
-bool draw_glcheckbox(const opengl_window* win, const char* lbl, bool& value);
+bool draw_glcheckbox(const opengl_window& win, const char* lbl, bool& value);
 
-bool draw_glcoloredit(const opengl_window* win, const char* lbl, vec3f& value);
-bool draw_glcoloredit(const opengl_window* win, const char* lbl, vec4f& value);
+bool draw_glcoloredit(const opengl_window& win, const char* lbl, vec3f& value);
+bool draw_glcoloredit(const opengl_window& win, const char* lbl, vec4f& value);
 
 bool draw_glhdrcoloredit(
-    const opengl_window* win, const char* lbl, vec3f& value);
+    const opengl_window& win, const char* lbl, vec3f& value);
 bool draw_glhdrcoloredit(
-    const opengl_window* win, const char* lbl, vec4f& value);
+    const opengl_window& win, const char* lbl, vec4f& value);
 
-bool draw_glcombobox(const opengl_window* win, const char* lbl, int& idx,
+bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<string>& labels);
-bool draw_glcombobox(const opengl_window* win, const char* lbl, string& value,
+bool draw_glcombobox(const opengl_window& win, const char* lbl, string& value,
     const vector<string>& labels);
-bool draw_glcombobox(const opengl_window* win, const char* lbl, int& idx,
+bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     int num, const std::function<const char*(int)>& labels,
     bool include_null = false);
 
 template <typename T>
-inline bool draw_glcombobox(const opengl_window* win, const char* lbl, int& idx,
+inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
     const vector<T>& vals, bool include_null = false) {
   return draw_glcombobox(
       win, lbl, idx, (int)vals.size(),
@@ -487,27 +503,27 @@ inline bool draw_glcombobox(const opengl_window* win, const char* lbl, int& idx,
 }
 
 void draw_glhistogram(
-    const opengl_window* win, const char* lbl, const vector<float>& values);
+    const opengl_window& win, const char* lbl, const vector<float>& values);
 void draw_glhistogram(
-    const opengl_window* win, const char* lbl, const vector<vec2f>& values);
+    const opengl_window& win, const char* lbl, const vector<vec2f>& values);
 void draw_glhistogram(
-    const opengl_window* win, const char* lbl, const vector<vec3f>& values);
+    const opengl_window& win, const char* lbl, const vector<vec3f>& values);
 void draw_glhistogram(
-    const opengl_window* win, const char* lbl, const vector<vec4f>& values);
+    const opengl_window& win, const char* lbl, const vector<vec4f>& values);
 
-bool draw_glmessages(const opengl_window* win);
-void push_glmessage(const opengl_window* win, const string& message);
-bool draw_glfiledialog(const opengl_window* win, const char* lbl, string& path,
+bool draw_glmessages(const opengl_window& win);
+void push_glmessage(const opengl_window& win, const string& message);
+bool draw_glfiledialog(const opengl_window& win, const char* lbl, string& path,
     bool save, const string& dirname, const string& filename,
     const string& filter);
-bool draw_glfiledialog_button(const opengl_window* win, const char* button_lbl,
+bool draw_glfiledialog_button(const opengl_window& win, const char* button_lbl,
     bool button_active, const char* lbl, string& path, bool save,
     const string& dirname, const string& filename, const string& filter);
 
-void log_glinfo(const opengl_window* win, const string& msg);
-void log_glerror(const opengl_window* win, const string& msg);
-void clear_gllogs(const opengl_window* win);
-void draw_gllog(const opengl_window* win);
+void log_glinfo(const opengl_window& win, const string& msg);
+void log_glerror(const opengl_window& win, const string& msg);
+void clear_gllogs(const opengl_window& win);
+void draw_gllog(const opengl_window& win);
 
 }  // namespace yocto
 

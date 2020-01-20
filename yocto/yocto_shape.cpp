@@ -3484,8 +3484,8 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
     vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
     vector<float>& radius, const string& type) {
-  auto quadspos = vector<vec4i>{};
-  auto quadsnorm = vector<vec4i>{};
+  auto quadspos      = vector<vec4i>{};
+  auto quadsnorm     = vector<vec4i>{};
   auto quadstexcoord = vector<vec4i>{};
   make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
       quadstexcoord, positions, normals, texcoords, colors, radius, type);

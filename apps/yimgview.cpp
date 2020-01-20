@@ -63,9 +63,9 @@ struct app_state {
   bool              colorgrade = false;
 
   // viewing properties
-  unique_ptr<opengl_image> glimage   = {};
-  draw_glimage_params      glparams  = {};
-  bool                     glupdated = true;
+  opengl_image        glimage   = {};
+  draw_glimage_params glparams  = {};
+  bool                glupdated = true;
 
   // error
   string error = "";
@@ -173,7 +173,7 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
       }));
 }
 
-void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
+void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
   auto          image_ok = !apps->states.empty() && apps->selected >= 0;
@@ -288,26 +288,24 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
   }
 }
 
-void draw(const opengl_window* win, shared_ptr<app_states> apps,
+void draw(const opengl_window& win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app                  = apps->states[apps->selected];
     app->glparams.window      = input.window_size;
     app->glparams.framebuffer = input.framebuffer_viewport;
-    if (!app->glimage) {
-      app->glimage = unique_ptr<opengl_image>{make_glimage()};
-      set_glimage(app->glimage.get(), app->display, false, false);
-    } else if (app->glupdated) {
-      set_glimage(app->glimage.get(), app->display, false, false);
+    if (!is_initialized(app->glimage)) init_glimage(app->glimage);
+    if (app->glupdated) {
+      set_glimage(app->glimage, app->display, false, false);
       app->glupdated = false;
     }
     update_imview(app->glparams.center, app->glparams.scale,
         app->display.size(), app->glparams.window, app->glparams.fit);
-    draw_glimage(app->glimage.get(), app->glparams);
+    draw_glimage(app->glimage, app->glparams);
   }
 }
 
-void update(const opengl_window* win, shared_ptr<app_states> apps) {
+void update(const opengl_window& win, shared_ptr<app_states> apps) {
   auto is_ready = [](const future<load_state>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
@@ -342,23 +340,24 @@ int main(int argc, const char* argv[]) {
   for (auto filename : filenames) load_image_async(apps, filename);
 
   // window
-  auto win = make_glwindow({1280 + 320, 720}, "yimview", true);
+  auto win = opengl_window{};
+  init_glwindow(win, {1280 + 320, 720}, "yimview", true);
 
   // callbacks
   set_update_glcallback(
-      win, [apps](const opengl_window* win, const opengl_input& input) {
+      win, [apps](const opengl_window& win, const opengl_input& input) {
         update(win, apps);
       });
   set_draw_glcallback(
-      win, [apps](const opengl_window* win, const opengl_input& input) {
+      win, [apps](const opengl_window& win, const opengl_input& input) {
         draw(win, apps, input);
       });
   set_widgets_glcallback(
-      win, [apps](const opengl_window* win, const opengl_input& input) {
+      win, [apps](const opengl_window& win, const opengl_input& input) {
         draw_glwidgets(win, apps, input);
       });
   set_uiupdate_glcallback(
-      win, [apps](const opengl_window* win, const opengl_input& input) {
+      win, [apps](const opengl_window& win, const opengl_input& input) {
         // handle mouse
         if (input.mouse_left && !input.widgets_active) {
           auto app = apps->states[apps->selected];
@@ -371,7 +370,7 @@ int main(int argc, const char* argv[]) {
         }
       });
   set_drop_glcallback(
-      win, [apps](const opengl_window* win, const vector<string>& paths,
+      win, [apps](const opengl_window& win, const vector<string>& paths,
                const opengl_input& input) {
         for (auto path : paths) load_image_async(apps, path);
       });
@@ -380,7 +379,7 @@ int main(int argc, const char* argv[]) {
   run_ui(win);
 
   // cleanup
-  delete_glwindow(win);
+  clear_glwindow(win);
 
   // done
   return 0;
