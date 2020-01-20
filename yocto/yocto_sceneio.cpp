@@ -759,8 +759,8 @@ static sceneio_status save_yaml_scene(
     const string& filename, const sceneio_model& scene, bool noparallel);
 
 // Load/save a scene from/to OBJ.
-static sceneio_status load_obj_scene(const string& filename,
-    sceneio_model& scene, bool noparallel);
+static sceneio_status load_obj_scene(
+    const string& filename, sceneio_model& scene, bool noparallel);
 static sceneio_status save_obj_scene(const string& filename,
     const sceneio_model& scene, bool instances, bool noparallel);
 
@@ -783,8 +783,8 @@ static sceneio_status save_pbrt_scene(
     const string& filename, const sceneio_model& scene, bool noparallel);
 
 // Load a scene
-sceneio_status load_scene(const string& filename, sceneio_model& scene,
-    bool noparallel) {
+sceneio_status load_scene(
+    const string& filename, sceneio_model& scene, bool noparallel) {
   auto ext = get_extension(filename);
   if (ext == ".yaml" || ext == ".YAML") {
     return load_yaml_scene(filename, scene, noparallel);
@@ -803,8 +803,8 @@ sceneio_status load_scene(const string& filename, sceneio_model& scene,
 }
 
 // Save a scene
-sceneio_status save_scene(const string& filename, const sceneio_model& scene,
-    bool noparallel) {
+sceneio_status save_scene(
+    const string& filename, const sceneio_model& scene, bool noparallel) {
   auto ext = get_extension(filename);
   if (ext == ".yaml" || ext == ".YAML") {
     return save_yaml_scene(filename, scene, noparallel);
@@ -1963,8 +1963,7 @@ static sceneio_status save_yaml_scene(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static sceneio_status load_obj(
-    const string& filename, sceneio_model& scene) {
+static sceneio_status load_obj(const string& filename, sceneio_model& scene) {
   // load obj
   auto obj = obj_model{};
   if (auto ret = load_obj(filename, obj, false, true, true); !ret)
@@ -2097,8 +2096,8 @@ static sceneio_status load_obj(
 }
 
 // Loads an OBJ
-static sceneio_status load_obj_scene(const string& filename,
-    sceneio_model& scene, bool noparallel) {
+static sceneio_status load_obj_scene(
+    const string& filename, sceneio_model& scene, bool noparallel) {
   scene = {};
 
   // Parse obj
@@ -2294,9 +2293,9 @@ static sceneio_status save_ply_scene(
     const string& filename, const sceneio_model& scene, bool noparallel) {
   if (scene.shapes.empty()) return {filename + ": empty scene"};
   auto& shape = scene.shapes.front();
-  save_shape(filename, shape.points, shape.lines, shape.triangles,
-      shape.quads, shape.positions, shape.normals, shape.texcoords,
-      shape.colors, shape.radius);
+  save_shape(filename, shape.points, shape.lines, shape.triangles, shape.quads,
+      shape.positions, shape.normals, shape.texcoords, shape.colors,
+      shape.radius);
   return {};
 }
 

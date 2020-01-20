@@ -58,8 +58,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     auto id = add_material(scene);
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_diffuse(
-        scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
+    set_material_diffuse(scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
     set_material_specular(
         scene, id, iomaterial.specular, iomaterial.specular_tex);
     set_material_metallic(
@@ -68,8 +67,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
         scene, id, iomaterial.transmission, iomaterial.transmission_tex);
     set_material_roughness(
         scene, id, iomaterial.roughness, iomaterial.roughness_tex);
-    set_material_opacity(
-        scene, id, iomaterial.opacity, iomaterial.opacity_tex);
+    set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
     set_material_refract(scene, id, iomaterial.refract);
     set_material_normalmap(scene, id, iomaterial.normal_tex);
     set_material_volume(scene, id, iomaterial.volemission,
@@ -91,8 +89,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
       add_shape(scene, ioshape.lines, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.triangles.empty()) {
-      add_shape(scene, ioshape.triangles, ioshape.positions,
-          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
+      add_shape(scene, ioshape.triangles, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.tangents);
     } else if (!ioshape.quads.empty()) {
       add_shape(scene, ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
@@ -166,7 +164,7 @@ int main(int argc, const char* argv[]) {
 
   // convert scene
   auto convert_timer = print_timed("converting");
-  auto scene = trace_scene{};
+  auto scene         = trace_scene{};
   init_scene(scene, ioscene);
   print_elapsed(convert_timer);
 
@@ -187,7 +185,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // allocate buffers
-  auto state  = trace_state{};
+  auto state = trace_state{};
   init_state(state, scene, params);
   auto render = image{state.size(), zero4f};
 
@@ -197,7 +195,7 @@ int main(int argc, const char* argv[]) {
     auto batch_timer = print_timed("rendering samples " +
                                    std::to_string(sample) + "/" +
                                    std::to_string(params.samples));
-    render = trace_samples(state, scene, nsamples, params);
+    render           = trace_samples(state, scene, nsamples, params);
     print_elapsed(batch_timer);
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,

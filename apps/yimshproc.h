@@ -20,8 +20,8 @@ struct app_state {
   sceneio_shape shape;
 
   // OpenGL data
-  opengl_scene scene          = {};
-  draw_glscene_params      opengl_options = {};
+  opengl_scene        scene          = {};
+  draw_glscene_params opengl_options = {};
 
   // Interaction data
   float          time       = 0;
@@ -46,9 +46,8 @@ void update_glshape(shared_ptr<app_state> app) {
     set_shape(app->scene, app->glshape_id, shape.lines, shape.positions,
         shape.normals, shape.texcoords, shape.colors);
   } else if (!shape.triangles.empty()) {
-    set_shape(app->scene, app->glshape_id, shape.triangles,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.tangents);
+    set_shape(app->scene, app->glshape_id, shape.triangles, shape.positions,
+        shape.normals, shape.texcoords, shape.colors, shape.tangents);
   } else if (!shape.quads.empty()) {
     set_shape(app->scene, app->glshape_id, shape.quads, shape.positions,
         shape.normals, shape.texcoords, shape.colors, shape.tangents);
@@ -69,8 +68,7 @@ void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
     auto elements = vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
     auto normals = vector<vec3f>(points.size(), {0, 0, 1});
-    set_shape(
-        app->scene, app->glpoints_id, elements, points, normals, {});
+    set_shape(app->scene, app->glpoints_id, elements, points, normals, {});
   }
 }
 
@@ -115,8 +113,7 @@ void update_glvector_field(shared_ptr<app_state> app,
     elements[i] = {2 * i, 2 * i + 1};
   }
 
-  set_shape(
-      app->scene, app->glvector_field_id, elements, positions, {}, {});
+  set_shape(app->scene, app->glvector_field_id, elements, positions, {}, {});
 }
 
 void update_gledges(shared_ptr<app_state> app) {
@@ -164,8 +161,7 @@ void hide_edges(shared_ptr<app_state> app) {
 }
 void show_edges(shared_ptr<app_state> app) {
   app->show_edges = true;
-  set_instance(
-      app->scene, app->gledges_id, identity3x4f, app->gledges_id, 1);
+  set_instance(app->scene, app->gledges_id, identity3x4f, app->gledges_id, 1);
 }
 
 void init_opengl_scene(shared_ptr<app_state> app) {
@@ -255,11 +251,10 @@ void yimshproc(const string&                         input_filename,
   init_opengl_scene(app);
 
   // callbacks
-  set_draw_glcallback(
-      win, [app](const opengl_window* win, const opengl_input& input) {
-        draw_glscene(
-            app->scene, input.framebuffer_viewport, app->opengl_options);
-      });
+  set_draw_glcallback(win, [app](const opengl_window* win,
+                               const opengl_input&    input) {
+    draw_glscene(app->scene, input.framebuffer_viewport, app->opengl_options);
+  });
   set_widgets_glcallback(
       win, [app, draw_glwidgets](const opengl_window* win,
                const opengl_input& input) { draw_glwidgets(app, win); });
@@ -318,8 +313,8 @@ void yimshproc(const string&                         input_filename,
           rotate.y = -rotate.y;
           pan.x    = -pan.x;
           update_turntable(camera.frame, app->camera.focus, rotate, dolly, pan);
-          set_camera(app->scene, 0, camera.frame, camera.lens,
-              camera.aspect, camera.film, 0.001, 10000);
+          set_camera(app->scene, 0, camera.frame, camera.lens, camera.aspect,
+              camera.film, 0.001, 10000);
         }
       });
 

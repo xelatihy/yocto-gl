@@ -54,19 +54,19 @@ struct app_state {
   int          pratio = 8;
 
   // scene
-  sceneio_model           ioscene    = {};
-  trace_scene scene      = {};
-  bool                    add_skyenv = false;
+  sceneio_model ioscene    = {};
+  trace_scene   scene      = {};
+  bool          add_skyenv = false;
 
   // rendering state
-  trace_state state    = {};
-  image<vec4f>            render   = {};
-  image<vec4f>            display  = {};
-  float                   exposure = 0;
+  trace_state  state    = {};
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
-  opengl_image glimage  = {};
-  draw_glimage_params      glparams = {};
+  opengl_image        glimage  = {};
+  draw_glimage_params glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -123,8 +123,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     auto id = add_material(scene);
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_diffuse(
-        scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
+    set_material_diffuse(scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
     set_material_specular(
         scene, id, iomaterial.specular, iomaterial.specular_tex);
     set_material_metallic(
@@ -133,8 +132,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
         scene, id, iomaterial.transmission, iomaterial.transmission_tex);
     set_material_roughness(
         scene, id, iomaterial.roughness, iomaterial.roughness_tex);
-    set_material_opacity(
-        scene, id, iomaterial.opacity, iomaterial.opacity_tex);
+    set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
     set_material_refract(scene, id, iomaterial.refract);
     set_material_normalmap(scene, id, iomaterial.normal_tex);
     set_material_volume(scene, id, iomaterial.volemission,
@@ -153,8 +151,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
       add_shape(scene, ioshape.lines, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.triangles.empty()) {
-      add_shape(scene, ioshape.triangles, ioshape.positions,
-          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
+      add_shape(scene, ioshape.triangles, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.tangents);
     } else if (!ioshape.quads.empty()) {
       add_shape(scene, ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
@@ -227,8 +225,7 @@ void reset_display(shared_ptr<app_state> app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij] = trace_sample(
-            app->state, app->scene, ij, app->params);
+        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -679,9 +676,8 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
       if (draw_glwidgets_environment(win, app, app->selection.second)) {
         stop_display(app);
         auto& ioenvironment = app->ioscene.environments[app->selection.second];
-        set_environment(app->scene, app->selection.second,
-            ioenvironment.frame, ioenvironment.emission,
-            ioenvironment.emission_tex);
+        set_environment(app->scene, app->selection.second, ioenvironment.frame,
+            ioenvironment.emission, ioenvironment.emission_tex);
         init_lights(app->scene);
         reset_display(app);
       }
@@ -806,9 +802,8 @@ int main(int argc, const char* argv[]) {
       pan.x = -pan.x;
       stop_display(app);
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      set_camera(app->scene, app->params.camera, camera.frame,
-          camera.lens, camera.aspect, camera.film, camera.aperture,
-          camera.focus);
+      set_camera(app->scene, app->params.camera, camera.frame, camera.lens,
+          camera.aspect, camera.film, camera.aperture, camera.focus);
       reset_display(app);
     }
 

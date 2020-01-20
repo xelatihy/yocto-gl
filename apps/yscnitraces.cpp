@@ -50,17 +50,17 @@ struct app_state {
 
   // scene
   trace_scene scene      = {};
-  bool                    add_skyenv = false;
+  bool        add_skyenv = false;
 
   // rendering state
-  trace_state state    = {};
-  image<vec4f>            render   = {};
-  image<vec4f>            display  = {};
-  float                   exposure = 0;
+  trace_state  state    = {};
+  image<vec4f> render   = {};
+  image<vec4f> display  = {};
+  float        exposure = 0;
 
   // view scene
-  opengl_image glimage  = {};
-  draw_glimage_params      glparams = {};
+  opengl_image        glimage  = {};
+  draw_glimage_params glparams = {};
 
   // editing
   pair<string, int> selection = {"camera", 0};
@@ -98,8 +98,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     auto id = add_material(scene);
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_diffuse(
-        scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
+    set_material_diffuse(scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
     set_material_specular(
         scene, id, iomaterial.specular, iomaterial.specular_tex);
     set_material_metallic(
@@ -108,8 +107,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
         scene, id, iomaterial.transmission, iomaterial.transmission_tex);
     set_material_roughness(
         scene, id, iomaterial.roughness, iomaterial.roughness_tex);
-    set_material_opacity(
-        scene, id, iomaterial.opacity, iomaterial.opacity_tex);
+    set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
     set_material_refract(scene, id, iomaterial.refract);
     set_material_normalmap(scene, id, iomaterial.normal_tex);
     set_material_volume(scene, id, iomaterial.volemission,
@@ -131,8 +129,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
       add_shape(scene, ioshape.lines, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.triangles.empty()) {
-      add_shape(scene, ioshape.triangles, ioshape.positions,
-          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
+      add_shape(scene, ioshape.triangles, ioshape.positions, ioshape.normals,
+          ioshape.texcoords, ioshape.colors, ioshape.tangents);
     } else if (!ioshape.quads.empty()) {
       add_shape(scene, ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
@@ -204,8 +202,7 @@ void reset_display(shared_ptr<app_state> app) {
       if (app->render_stop) return;
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
-        app->render[ij] = trace_sample(
-            app->state, app->scene, ij, app->params);
+        app->render[ij] = trace_sample(app->state, app->scene, ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -281,8 +278,7 @@ int main(int argc, const char* argv[]) {
   // callbacks
   set_draw_glcallback(
       win, [app](const opengl_window* win, const opengl_input& input) {
-        if (!is_initialized(app->glimage))
-          init_glimage(app->glimage);
+        if (!is_initialized(app->glimage)) init_glimage(app->glimage);
         if (!app->render_counter)
           set_glimage(app->glimage, app->display, false, false);
         app->glparams.window      = input.window_size;

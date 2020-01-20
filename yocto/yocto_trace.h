@@ -239,7 +239,8 @@ const auto trace_bvh_names        = vector<string>{
 };
 
 // Initialize state of the renderer.
-void init_state(trace_state& state, const trace_scene& scene, const trace_params& params);
+void init_state(
+    trace_state& state, const trace_scene& scene, const trace_params& params);
 
 // Initialize lights.
 void init_lights(trace_scene& scene);

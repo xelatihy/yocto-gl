@@ -135,6 +135,13 @@ struct opengl_shape {
   uint quads_id      = 0;
   int  edges_num     = 0;
   uint edges_id      = 0;
+
+  opengl_shape() {}
+  opengl_shape(const opengl_shape&) = delete;
+  opengl_shape& operator=(const opengl_shape&) = delete;
+  ~opengl_shape();
+  opengl_shape(opengl_shape&&);
+  opengl_shape& operator                       =(opengl_shape&&);
 };
 
 // OpenGL texture
@@ -143,6 +150,13 @@ struct opengl_texture {
   vec2i size       = {0, 0};
   bool  is_srgb    = false;
   bool  is_float   = false;
+
+  opengl_texture() {}
+  opengl_texture(const opengl_texture&) = delete;
+  opengl_texture& operator=(opengl_texture&) = delete;
+  ~opengl_texture();
+  opengl_texture(opengl_texture&&);
+  opengl_texture& operator                   =(opengl_texture&&);
 };
 
 // Opengl material
