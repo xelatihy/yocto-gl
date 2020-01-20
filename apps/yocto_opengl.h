@@ -198,7 +198,7 @@ struct opengl_scene {
   opengl_scene& operator=(const opengl_scene&) = delete;
   ~opengl_scene();
 
-  vector<unique_ptr<opengl_camera>>   _cameras   = {};
+  vector<opengl_camera>   _cameras   = {};
   vector<unique_ptr<opengl_instance>> _instances = {};
   vector<unique_ptr<opengl_shape>>    _shapes    = {};
   vector<unique_ptr<opengl_material>> _materials = {};
