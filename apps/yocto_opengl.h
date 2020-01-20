@@ -141,7 +141,7 @@ struct opengl_shape {
   opengl_shape& operator=(const opengl_shape&) = delete;
   ~opengl_shape();
   opengl_shape(opengl_shape&&);
-  opengl_shape& operator                       =(opengl_shape&&);
+  opengl_shape& operator=(opengl_shape&&);
 };
 
 // OpenGL texture
@@ -156,7 +156,7 @@ struct opengl_texture {
   opengl_texture& operator=(opengl_texture&) = delete;
   ~opengl_texture();
   opengl_texture(opengl_texture&&);
-  opengl_texture& operator                   =(opengl_texture&&);
+  opengl_texture& operator=(opengl_texture&&);
 };
 
 // Opengl material

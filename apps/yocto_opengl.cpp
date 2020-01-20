@@ -712,7 +712,7 @@ void main() {
 #endif
 
 opengl_texture::~opengl_texture() {
-  if(texture_id) glDeleteTextures(1, &texture_id);
+  if (texture_id) glDeleteTextures(1, &texture_id);
 }
 
 opengl_texture::opengl_texture(opengl_texture&& other) {
@@ -744,7 +744,6 @@ opengl_shape::~opengl_shape() {
   if (quads_id) glDeleteBuffers(1, &quads_id);
   if (edges_id) glDeleteBuffers(1, &edges_id);
 }
-
 
 opengl_shape::opengl_shape(opengl_shape&& other) {
   if (this == &other) return;
@@ -817,7 +816,7 @@ bool is_initialized(const opengl_scene& glscene) {
 // add camera
 int add_camera(opengl_scene& scene, const frame3f& frame, float lens,
     float asepct, float film, float near, float far) {
-  auto& camera = scene._cameras.emplace_back();
+  auto& camera  = scene._cameras.emplace_back();
   camera.frame  = frame;
   camera.lens   = lens;
   camera.asepct = asepct;
@@ -828,7 +827,7 @@ int add_camera(opengl_scene& scene, const frame3f& frame, float lens,
 }
 void set_camera(opengl_scene& scene, int idx, const frame3f& frame, float lens,
     float asepct, float film, float near, float far) {
-  auto& camera    = scene._cameras[idx];
+  auto& camera  = scene._cameras[idx];
   camera.frame  = frame;
   camera.lens   = lens;
   camera.asepct = asepct;
@@ -845,46 +844,46 @@ int add_material(opengl_scene& scene) {
 }
 void set_material_emission(
     opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
-  auto& material          = scene._materials[idx];
+  auto& material        = scene._materials[idx];
   material.emission     = emission;
   material.emission_map = emission_txt;
 }
 void set_material_diffuse(
     opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
-  auto& material         = scene._materials[idx];
+  auto& material       = scene._materials[idx];
   material.diffuse     = diffuse;
   material.diffuse_map = diffuse_txt;
 }
 void set_material_specular(
     opengl_scene& scene, int idx, const vec3f& specular, int specular_txt) {
-  auto& material          = scene._materials[idx];
+  auto& material        = scene._materials[idx];
   material.specular     = specular;
   material.specular_map = specular_txt;
 }
 void set_material_roughness(
     opengl_scene& scene, int idx, float roughness, int roughness_txt) {
-  auto& material           = scene._materials[idx];
+  auto& material         = scene._materials[idx];
   material.roughness     = roughness;
   material.roughness_map = roughness_txt;
 }
 void set_material_opacity(
     opengl_scene& scene, int idx, float opacity, int opacity_txt) {
-  auto& material     = scene._materials[idx];
+  auto& material   = scene._materials[idx];
   material.opacity = opacity;
 }
 void set_material_metallic(
     opengl_scene& scene, int idx, float metallic, int metallic_txt) {
-  auto& material          = scene._materials[idx];
+  auto& material        = scene._materials[idx];
   material.metallic     = metallic;
   material.metallic_map = metallic_txt;
 }
 void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt) {
-  auto& material        = scene._materials[idx];
+  auto& material      = scene._materials[idx];
   material.normal_map = normal_txt;
 }
 void set_material_gltftextures(
     opengl_scene& scene, int idx, bool gltf_textures) {
-  auto& material           = scene._materials[idx];
+  auto& material         = scene._materials[idx];
   material.gltf_textures = gltf_textures;
 }
 void clear_glmaterials(opengl_scene& scene) { scene._materials.clear(); }
@@ -909,8 +908,7 @@ int add_texture(opengl_scene& scene, const image<vec4b>& img, bool as_srgb) {
 }
 int add_texture(opengl_scene& scene, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
-  auto& texture =
-      scene._textures.emplace_back();
+  auto& texture = scene._textures.emplace_back();
   glGenTextures(1, &texture.texture_id);
   glBindTexture(GL_TEXTURE_2D, texture.texture_id);
   glTexImage2D(GL_TEXTURE_2D, 0, as_float ? GL_RGBA32F : GL_RGBA, img.size().x,
@@ -1066,14 +1064,14 @@ void set_shape(opengl_scene& scene, int idx, const vector<int>& points,
   auto& shape = scene._shapes[idx];
   set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape.normals_id, shape.normals_num, false,
-      normals.size(), 3, (const float*)normals.data());
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
+      3, (const float*)normals.data());
   set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(),
-      4, (const float*)colors.data());
-  set_glshape_buffer(shape.points_id, shape.points_num, true, points.size(),
-      1, (const int*)points.data());
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
+      (const float*)colors.data());
+  set_glshape_buffer(shape.points_id, shape.points_num, true, points.size(), 1,
+      (const int*)points.data());
 }
 void set_shape(opengl_scene& scene, int idx, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
@@ -1081,12 +1079,12 @@ void set_shape(opengl_scene& scene, int idx, const vector<vec2i>& lines,
   auto& shape = scene._shapes[idx];
   set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape.normals_id, shape.normals_num, false,
-      normals.size(), 3, (const float*)normals.data());
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
+      3, (const float*)normals.data());
   set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(),
-      4, (const float*)colors.data());
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
+      (const float*)colors.data());
   set_glshape_buffer(shape.lines_id, shape.lines_num, true, lines.size(), 2,
       (const int*)lines.data());
 }
@@ -1097,12 +1095,12 @@ void set_shape(opengl_scene& scene, int idx, const vector<vec3i>& triangles,
   auto& shape = scene._shapes[idx];
   set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape.normals_id, shape.normals_num, false,
-      normals.size(), 3, (const float*)normals.data());
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
+      3, (const float*)normals.data());
   set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(),
-      4, (const float*)colors.data());
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
+      (const float*)colors.data());
   set_glshape_buffer(shape.tangents_id, shape.tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
   set_glshape_buffer(shape.triangles_id, shape.triangles_num, true,
@@ -1115,12 +1113,12 @@ void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
   auto& shape = scene._shapes[idx];
   set_glshape_buffer(shape.positions_id, shape.positions_num, false,
       positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape.normals_id, shape.normals_num, false,
-      normals.size(), 3, (const float*)normals.data());
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
+      3, (const float*)normals.data());
   set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
       texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(),
-      4, (const float*)colors.data());
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
+      (const float*)colors.data());
   set_glshape_buffer(shape.tangents_id, shape.tangents_num, false,
       tangents.size(), 4, (const float*)tangents.data());
   auto triangles = vector<vec3i>{};
@@ -1135,8 +1133,8 @@ void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
 void set_shape_colors(
     opengl_scene& scene, int idx, const vector<vec4f>& colors) {
   auto& shape = scene._shapes[idx];
-  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(),
-      4, (const float*)colors.data());
+  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
+      (const float*)colors.data());
 }
 void clear_glshapes(opengl_scene& scene) {
   for (auto& shape : scene._shapes) {
@@ -1157,8 +1155,7 @@ void clear_glshapes(opengl_scene& scene) {
 // add instance
 int add_instance(
     opengl_scene& scene, const frame3f& frame, int shape, int material) {
-  auto& instance =
-      scene._instances.emplace_back();
+  auto& instance    = scene._instances.emplace_back();
   instance.frame    = frame;
   instance.shape    = shape;
   instance.material = material;
@@ -1166,21 +1163,21 @@ int add_instance(
 }
 void set_instance(opengl_scene& scene, int idx, const frame3f& frame, int shape,
     int material) {
-  auto& instance      = scene._instances[idx];
+  auto& instance    = scene._instances[idx];
   instance.frame    = frame;
   instance.shape    = shape;
   instance.material = material;
 }
 void set_glinstance_frame(opengl_scene& scene, int idx, const frame3f& frame) {
-  auto& instance   = scene._instances[idx];
+  auto& instance = scene._instances[idx];
   instance.frame = frame;
 }
 void set_glinstance_shape(opengl_scene& scene, int idx, int shape) {
-  auto& instance   = scene._instances[idx];
+  auto& instance = scene._instances[idx];
   instance.shape = shape;
 }
 void set_glinstance_material(opengl_scene& scene, int idx, int material) {
-  auto& instance      = scene._instances[idx];
+  auto& instance    = scene._instances[idx];
   instance.material = material;
 }
 void clear_instances(opengl_scene& scene) { scene._instances.clear(); }
@@ -1188,7 +1185,7 @@ void clear_instances(opengl_scene& scene) { scene._instances.clear(); }
 // add light
 int add_light(opengl_scene& scene, const vec3f& position, const vec3f& emission,
     bool directional) {
-  auto& light = scene._lights.emplace_back();
+  auto& light    = scene._lights.emplace_back();
   light.position = position;
   light.emission = emission;
   light.type     = directional ? 1 : 0;
@@ -1196,7 +1193,7 @@ int add_light(opengl_scene& scene, const vec3f& position, const vec3f& emission,
 }
 void set_light(opengl_scene& scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional) {
-  auto& light      = scene._lights[idx];
+  auto& light    = scene._lights[idx];
   light.position = position;
   light.emission = emission;
   light.type     = directional ? 1 : 0;
@@ -1367,8 +1364,7 @@ void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
   if (shape.quads_id) {
     glUniform1i(glGetUniformLocation(glscene.program_id, "elem_type"), 3);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shape.quads_id);
-    glDrawElements(
-        GL_TRIANGLES, shape.quads_num * 3, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, shape.quads_num * 3, GL_UNSIGNED_INT, nullptr);
   }
 
 #if 0
@@ -1459,8 +1455,8 @@ void draw_glscene(opengl_scene& glscene, const vec4i& viewport,
 namespace yocto {
 
 static void draw_glwindow(const opengl_window& win) {
-  glClearColor(win.background.x, win.background.y, win.background.z,
-      win.background.w);
+  glClearColor(
+      win.background.x, win.background.y, win.background.z, win.background.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   if (win.draw_cb) win.draw_cb(win, win.input);
   if (win.widgets_cb) {
@@ -1494,7 +1490,7 @@ static void draw_glwindow(const opengl_window& win) {
 
 void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
     bool widgets, int widgets_width, bool widgets_left) {
-  if(win.win) return;
+  if (win.win) return;
 
   // init glfw
   if (!glfwInit())
@@ -1508,7 +1504,7 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
 
   // create window
   win.title = title;
-  win.win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
+  win.win   = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
   if (!win.win) throw std::runtime_error("cannot initialize windowing system");
   glfwMakeContextCurrent(win.win);
   glfwSwapInterval(1);  // Enable vsync
@@ -1547,26 +1543,25 @@ void init_glwindow(opengl_window& win, const vec2i& size, const string& title,
         auto& win = *(const opengl_window*)glfwGetWindowUserPointer(glfw);
         if (win.scroll_cb) win.scroll_cb(win, (float)yoffset, win.input);
       });
-  glfwSetWindowSizeCallback(
-      win.win, [](GLFWwindow* glfw, int width, int height) {
-        auto& win = *(opengl_window*)glfwGetWindowUserPointer(glfw);
-        glfwGetWindowSize(
-            win.win, &win.input.window_size.x, &win.input.window_size.y);
-        if (win.widgets_width) win.input.window_size.x -= win.widgets_width;
-        glfwGetFramebufferSize(win.win, &win.input.framebuffer_viewport.z,
-            &win.input.framebuffer_viewport.w);
-        win.input.framebuffer_viewport.x = 0;
-        win.input.framebuffer_viewport.y = 0;
-        if (win.widgets_width) {
-          auto win_size = zero2i;
-          glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
-          auto offset = (int)(win.widgets_width *
-                              (float)win.input.framebuffer_viewport.z /
-                              win_size.x);
-          win.input.framebuffer_viewport.z -= offset;
-          if (win.widgets_left) win.input.framebuffer_viewport.x += offset;
-        }
-      });
+  glfwSetWindowSizeCallback(win.win, [](GLFWwindow* glfw, int width,
+                                         int height) {
+    auto& win = *(opengl_window*)glfwGetWindowUserPointer(glfw);
+    glfwGetWindowSize(
+        win.win, &win.input.window_size.x, &win.input.window_size.y);
+    if (win.widgets_width) win.input.window_size.x -= win.widgets_width;
+    glfwGetFramebufferSize(win.win, &win.input.framebuffer_viewport.z,
+        &win.input.framebuffer_viewport.w);
+    win.input.framebuffer_viewport.x = 0;
+    win.input.framebuffer_viewport.y = 0;
+    if (win.widgets_width) {
+      auto win_size = zero2i;
+      glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
+      auto offset = (int)(win.widgets_width *
+                          (float)win.input.framebuffer_viewport.z / win_size.x);
+      win.input.framebuffer_viewport.z -= offset;
+      if (win.widgets_left) win.input.framebuffer_viewport.x += offset;
+    }
+  });
 
   // init gl extensions
   if (!gladLoadGL())
@@ -1606,9 +1601,9 @@ void run_ui(opengl_window& win) {
     if (win.widgets_width && win.widgets_left)
       win.input.mouse_pos.x -= win.widgets_width;
     win.input.mouse_left = glfwGetMouseButton(
-                                win.win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-    win.input.mouse_right =
-        glfwGetMouseButton(win.win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+                               win.win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    win.input.mouse_right = glfwGetMouseButton(
+                                win.win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
     win.input.modifier_alt =
         glfwGetKey(win.win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
         glfwGetKey(win.win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
@@ -1629,15 +1624,14 @@ void run_ui(opengl_window& win) {
       auto win_size = zero2i;
       glfwGetWindowSize(win.win, &win_size.x, &win_size.y);
       auto offset = (int)(win.widgets_width *
-                          (float)win.input.framebuffer_viewport.z /
-                          win_size.x);
+                          (float)win.input.framebuffer_viewport.z / win_size.x);
       win.input.framebuffer_viewport.z -= offset;
       if (win.widgets_left) win.input.framebuffer_viewport.x += offset;
     }
     if (win.widgets_width) {
-      auto io                   = &ImGui::GetIO();
+      auto io                  = &ImGui::GetIO();
       win.input.widgets_active = io->WantTextInput || io->WantCaptureMouse ||
-                                  io->WantCaptureKeyboard;
+                                 io->WantCaptureKeyboard;
     }
 
     // time
