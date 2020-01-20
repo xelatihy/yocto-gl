@@ -36,7 +36,7 @@ void my_keycallback(
   if (key == esc) {
     printf("Esc pressed!\n");
     init_camera(app);
-    set_camera(app->scene.get(), 0, app->camera.frame, app->camera.lens,
+    set_camera(app->scene, 0, app->camera.frame, app->camera.lens,
         app->camera.aspect, app->camera.film, 0.001, 10000);
   }
 
@@ -82,7 +82,7 @@ void my_draw_glwidgets(
         colors[i]   = vec4f(data.scalar_field[i]);
         colors[i].w = 1;
       }
-      set_shape_colors(app->scene.get(), app->glshape_id, colors);
+      set_shape_colors(app->scene, app->glshape_id, colors);
     }
   }
 

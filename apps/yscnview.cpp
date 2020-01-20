@@ -62,7 +62,7 @@ struct app_state {
   sceneio_model scene = {};
 
   // rendering state
-  unique_ptr<opengl_scene> glscene = {};
+  opengl_scene glscene = {};
 
   // view image
   float  time       = 0;
@@ -128,7 +128,7 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
       }));
 }
 
-void update_lights(opengl_scene* glscene, const sceneio_model& scene) {
+void update_lights(opengl_scene& glscene, const sceneio_model& scene) {
   clear_lights(glscene);
   for (auto& instance : scene.instances) {
     if (has_max_lights(glscene)) break;
@@ -159,9 +159,9 @@ void update_lights(opengl_scene* glscene, const sceneio_model& scene) {
   }
 }
 
-opengl_scene* make_scene(sceneio_model& scene) {
+void init_scene(opengl_scene& glscene, sceneio_model& scene) {
   // load program
-  auto glscene = make_glscene();
+  init_glscene(glscene);
 
   // camera
   for (auto& camera : scene.cameras) {
@@ -220,8 +220,6 @@ opengl_scene* make_scene(sceneio_model& scene) {
   for (auto& instance : scene.instances) {
     add_instance(glscene, instance.frame, instance.shape, instance.material);
   }
-
-  return glscene;
 }
 
 bool draw_glwidgets_camera(
@@ -490,7 +488,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
     static auto labels  = vector<string>{"camera", "shape", "subdiv",
         "environment", "instance", "material", "texture"};
     auto        app     = apps->states[apps->selected];
-    auto        glscene = app->glscene.get();
+    auto&        glscene = app->glscene;
     if (draw_glcombobox(win, "selection##1", app->selection.first, labels))
       app->selection.second = 0;
     if (app->selection.first == "camera") {
@@ -599,8 +597,7 @@ void draw(const opengl_window* win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   if (!apps->states.empty() && apps->selected >= 0) {
     auto app = apps->states[apps->selected];
-    draw_glscene(
-        app->glscene.get(), input.framebuffer_viewport, app->drawgl_prms);
+    draw_glscene(app->glscene, input.framebuffer_viewport, app->drawgl_prms);
   }
 }
 
@@ -621,8 +618,8 @@ void update(const opengl_window* win, shared_ptr<app_states> apps) {
       break;
     } else {
       apps->states.push_back(app);
-      app->glscene = unique_ptr<opengl_scene>{make_scene(app->scene)};
-      update_lights(app->glscene.get(), app->scene);
+      init_scene(app->glscene, app->scene);
+      update_lights(app->glscene, app->scene);
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
     }
   }
@@ -695,7 +692,7 @@ int main(int argc, const char* argv[]) {
           if (input.mouse_left && input.modifier_shift)
             pan = (input.mouse_pos - input.mouse_last) / 100.0f;
           update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-          set_camera(app->glscene.get(), app->drawgl_prms.camera, camera.frame,
+          set_camera(app->glscene, app->drawgl_prms.camera, camera.frame,
               camera.lens, camera.aspect, camera.film, 0.001, 10000);
         }
 
