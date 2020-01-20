@@ -55,11 +55,11 @@ struct app_state {
 
   // scene
   sceneio_model           ioscene    = {};
-  unique_ptr<trace_scene> scene      = {};
+  trace_scene scene      = {};
   bool                    add_skyenv = false;
 
   // rendering state
-  unique_ptr<trace_state> state    = {};
+  trace_state state    = {};
   image<vec4f>            render   = {};
   image<vec4f>            display  = {};
   float                   exposure = 0;
@@ -105,39 +105,39 @@ struct app_states {
 };
 
 // Construct a scene from io
-trace_scene* make_scene(sceneio_model& ioscene) {
-  auto scene = make_unique<trace_scene>();
+void init_scene(trace_scene& scene, sceneio_model& ioscene) {
+  scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
-    add_camera(scene.get(), iocamera.frame, iocamera.lens, iocamera.aspect,
+    add_camera(scene, iocamera.frame, iocamera.lens, iocamera.aspect,
         iocamera.film, iocamera.aperture, iocamera.focus);
   }
   for (auto& iotexture : ioscene.textures) {
     if (!iotexture.hdr.empty()) {
-      add_texture(scene.get(), std::move(iotexture.hdr));
+      add_texture(scene, std::move(iotexture.hdr));
     } else if (!iotexture.ldr.empty()) {
-      add_texture(scene.get(), std::move(iotexture.ldr));
+      add_texture(scene, std::move(iotexture.ldr));
     }
   }
   for (auto& iomaterial : ioscene.materials) {
-    auto id = add_material(scene.get());
+    auto id = add_material(scene);
     set_material_emission(
-        scene.get(), id, iomaterial.emission, iomaterial.emission_tex);
+        scene, id, iomaterial.emission, iomaterial.emission_tex);
     set_material_diffuse(
-        scene.get(), id, iomaterial.diffuse, iomaterial.diffuse_tex);
+        scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
     set_material_specular(
-        scene.get(), id, iomaterial.specular, iomaterial.specular_tex);
+        scene, id, iomaterial.specular, iomaterial.specular_tex);
     set_material_metallic(
-        scene.get(), id, iomaterial.metallic, iomaterial.metallic_tex);
+        scene, id, iomaterial.metallic, iomaterial.metallic_tex);
     set_material_transmission(
-        scene.get(), id, iomaterial.transmission, iomaterial.transmission_tex);
+        scene, id, iomaterial.transmission, iomaterial.transmission_tex);
     set_material_roughness(
-        scene.get(), id, iomaterial.roughness, iomaterial.roughness_tex);
+        scene, id, iomaterial.roughness, iomaterial.roughness_tex);
     set_material_opacity(
-        scene.get(), id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_refract(scene.get(), id, iomaterial.refract);
-    set_material_normalmap(scene.get(), id, iomaterial.normal_tex);
-    set_material_volume(scene.get(), id, iomaterial.volemission,
+        scene, id, iomaterial.opacity, iomaterial.opacity_tex);
+    set_material_refract(scene, id, iomaterial.refract);
+    set_material_normalmap(scene, id, iomaterial.normal_tex);
+    set_material_volume(scene, id, iomaterial.volemission,
         iomaterial.voltransmission, iomaterial.volmeanfreepath,
         iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
         iomaterial.subsurface_tex);
@@ -147,29 +147,27 @@ trace_scene* make_scene(sceneio_model& ioscene) {
   }
   for (auto& ioshape : ioscene.shapes) {
     if (!ioshape.points.empty()) {
-      add_shape(scene.get(), ioshape.points, ioshape.positions, ioshape.normals,
+      add_shape(scene, ioshape.points, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.lines.empty()) {
-      add_shape(scene.get(), ioshape.lines, ioshape.positions, ioshape.normals,
+      add_shape(scene, ioshape.lines, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.triangles.empty()) {
-      add_shape(scene.get(), ioshape.triangles, ioshape.positions,
+      add_shape(scene, ioshape.triangles, ioshape.positions,
           ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
     } else if (!ioshape.quads.empty()) {
-      add_shape(scene.get(), ioshape.quads, ioshape.positions, ioshape.normals,
+      add_shape(scene, ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
     }
   }
   for (auto& ioinstance : ioscene.instances) {
     add_instance(
-        scene.get(), ioinstance.frame, ioinstance.shape, ioinstance.material);
+        scene, ioinstance.frame, ioinstance.shape, ioinstance.material);
   }
   for (auto& ioenvironment : ioscene.environments) {
-    add_environment(scene.get(), ioenvironment.frame, ioenvironment.emission,
+    add_environment(scene, ioenvironment.frame, ioenvironment.emission,
         ioenvironment.emission_tex);
   }
-
-  return scene.release();
 }
 
 // Simple parallel for used since our target platforms do not yet support
@@ -203,16 +201,15 @@ void reset_display(shared_ptr<app_state> app) {
   if (app->render_future.valid()) app->render_future.get();
 
   // reset state
-  app->state = unique_ptr<trace_state>{
-      make_state(app->scene.get(), app->params)};
-  app->render.resize(app->state->size());
-  app->display.resize(app->state->size());
+  init_state(app->state, app->scene, app->params);
+  app->render.resize(app->state.size());
+  app->display.resize(app->state.size());
 
   // render preview
   auto preview_prms = app->params;
   preview_prms.resolution /= app->pratio;
   preview_prms.samples = 1;
-  auto preview         = trace_image(app->scene.get(), preview_prms);
+  auto preview         = trace_image(app->scene, preview_prms);
   preview              = tonemap_image(preview, app->exposure);
   for (auto j = 0; j < app->display.size().y; j++) {
     for (auto i = 0; i < app->display.size().x; i++) {
@@ -231,7 +228,7 @@ void reset_display(shared_ptr<app_state> app) {
       parallel_for(app->render.size(), [app](const vec2i& ij) {
         if (app->render_stop) return;
         app->render[ij] = trace_sample(
-            app->state.get(), app->scene.get(), ij, app->params);
+            app->state, app->scene, ij, app->params);
         app->display[ij] = tonemap(app->render[ij], app->exposure);
       });
     }
@@ -250,16 +247,15 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->add_skyenv = app->add_skyenv;
         if (auto ret = load_scene(app->filename, app->ioscene); !ret)
           return {filename, nullptr, ret};
-        app->scene = unique_ptr<trace_scene>{make_scene(app->ioscene)};
-        init_bvh(app->scene.get(), app->params);
-        init_lights(app->scene.get());
-        if (app->scene->lights.empty() && is_sampler_lit(app->params)) {
+        init_scene(app->scene, app->ioscene);
+        init_bvh(app->scene, app->params);
+        init_lights(app->scene);
+        if (app->scene.lights.empty() && is_sampler_lit(app->params)) {
           app->params.sampler = trace_sampler_type::eyelight;
         }
-        app->state = unique_ptr<trace_state>{
-            make_state(app->scene.get(), app->params)};
-        app->render.resize(app->state->size());
-        app->display.resize(app->state->size());
+        init_state(app->state, app->scene, app->params);
+        app->render.resize(app->state.size());
+        app->display.resize(app->state.size());
         app->name = get_filename(app->filename) + " [" +
                     to_string(app->render.size().x) + "x" +
                     to_string(app->render.size().y) + " @ 0]";
@@ -558,7 +554,7 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
       if (draw_glwidgets_camera(win, app, app->selection.second)) {
         stop_display(app);
         auto& iocamera = app->ioscene.cameras[app->selection.second];
-        set_camera(app->scene.get(), app->selection.second, iocamera.frame,
+        set_camera(app->scene, app->selection.second, iocamera.frame,
             iocamera.lens, iocamera.aspect, iocamera.film, iocamera.aperture,
             iocamera.focus);
         reset_display(app);
@@ -570,9 +566,9 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
         stop_display(app);
         auto& iotexture = app->ioscene.textures[app->selection.second];
         if (!iotexture.hdr.empty()) {
-          set_texture(app->scene.get(), app->selection.second, iotexture.hdr);
+          set_texture(app->scene, app->selection.second, iotexture.hdr);
         } else if (!iotexture.ldr.empty()) {
-          set_texture(app->scene.get(), app->selection.second, iotexture.ldr);
+          set_texture(app->scene, app->selection.second, iotexture.ldr);
         }
         // TODO: maybe we should update lights for this
         reset_display(app);
@@ -583,30 +579,30 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
       if (draw_glwidgets_material(win, app, app->selection.second)) {
         stop_display(app);
         auto& iomaterial = app->ioscene.materials[app->selection.second];
-        set_material_emission(app->scene.get(), app->selection.second,
+        set_material_emission(app->scene, app->selection.second,
             iomaterial.emission, iomaterial.emission_tex);
-        set_material_diffuse(app->scene.get(), app->selection.second,
+        set_material_diffuse(app->scene, app->selection.second,
             iomaterial.diffuse, iomaterial.diffuse_tex);
-        set_material_specular(app->scene.get(), app->selection.second,
+        set_material_specular(app->scene, app->selection.second,
             iomaterial.specular, iomaterial.specular_tex);
-        set_material_metallic(app->scene.get(), app->selection.second,
+        set_material_metallic(app->scene, app->selection.second,
             iomaterial.metallic, iomaterial.metallic_tex);
-        set_material_transmission(app->scene.get(), app->selection.second,
+        set_material_transmission(app->scene, app->selection.second,
             iomaterial.transmission, iomaterial.transmission_tex);
-        set_material_roughness(app->scene.get(), app->selection.second,
+        set_material_roughness(app->scene, app->selection.second,
             iomaterial.roughness, iomaterial.roughness_tex);
-        set_material_opacity(app->scene.get(), app->selection.second,
+        set_material_opacity(app->scene, app->selection.second,
             iomaterial.opacity, iomaterial.opacity_tex);
         set_material_refract(
-            app->scene.get(), app->selection.second, iomaterial.refract);
+            app->scene, app->selection.second, iomaterial.refract);
         set_material_normalmap(
-            app->scene.get(), app->selection.second, iomaterial.normal_tex);
-        set_material_volume(app->scene.get(), app->selection.second,
+            app->scene, app->selection.second, iomaterial.normal_tex);
+        set_material_volume(app->scene, app->selection.second,
             iomaterial.volemission, iomaterial.voltransmission,
             iomaterial.volmeanfreepath, iomaterial.volscatter,
             iomaterial.volscale, iomaterial.volanisotropy,
             iomaterial.subsurface_tex);
-        init_lights(app->scene.get());
+        init_lights(app->scene);
         reset_display(app);
       }
     } else if (app->selection.first == "shape") {
@@ -616,23 +612,23 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
         stop_display(app);
         auto& ioshape = app->ioscene.shapes[app->selection.second];
         if (!ioshape.points.empty()) {
-          set_shape(app->scene.get(), app->selection.second, ioshape.points,
+          set_shape(app->scene, app->selection.second, ioshape.points,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.radius);
         } else if (!ioshape.lines.empty()) {
-          set_shape(app->scene.get(), app->selection.second, ioshape.lines,
+          set_shape(app->scene, app->selection.second, ioshape.lines,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.radius);
         } else if (!ioshape.triangles.empty()) {
-          set_shape(app->scene.get(), app->selection.second, ioshape.triangles,
+          set_shape(app->scene, app->selection.second, ioshape.triangles,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.tangents);
         } else if (!ioshape.quads.empty()) {
-          set_shape(app->scene.get(), app->selection.second, ioshape.quads,
+          set_shape(app->scene, app->selection.second, ioshape.quads,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.tangents);
         }
-        update_bvh(app->scene.get(), {}, {app->selection.second}, app->params);
+        update_bvh(app->scene, {}, {app->selection.second}, app->params);
         // TODO: maybe we should update lights for this
         reset_display(app);
       }
@@ -645,23 +641,23 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
         tesselate_subdiv(app->ioscene, iosubdiv);
         auto& ioshape = app->ioscene.shapes[iosubdiv.shape];
         if (!ioshape.points.empty()) {
-          set_shape(app->scene.get(), app->selection.second, ioshape.points,
+          set_shape(app->scene, app->selection.second, ioshape.points,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.radius);
         } else if (!iosubdiv.lines.empty()) {
-          set_shape(app->scene.get(), app->selection.second, ioshape.lines,
+          set_shape(app->scene, app->selection.second, ioshape.lines,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.radius);
         } else if (!ioshape.triangles.empty()) {
-          set_shape(app->scene.get(), app->selection.second, ioshape.triangles,
+          set_shape(app->scene, app->selection.second, ioshape.triangles,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.tangents);
         } else if (!ioshape.quads.empty()) {
-          set_shape(app->scene.get(), app->selection.second, ioshape.quads,
+          set_shape(app->scene, app->selection.second, ioshape.quads,
               ioshape.positions, ioshape.normals, ioshape.texcoords,
               ioshape.colors, ioshape.tangents);
         }
-        update_bvh(app->scene.get(), {}, {app->selection.second}, app->params);
+        update_bvh(app->scene, {}, {app->selection.second}, app->params);
         // TODO: maybe we should update lights for this
         reset_display(app);
       }
@@ -671,9 +667,9 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
       if (draw_glwidgets_instance(win, app, app->selection.second)) {
         stop_display(app);
         auto& ioinstance = app->ioscene.instances[app->selection.second];
-        set_instance(app->scene.get(), app->selection.second, ioinstance.frame,
+        set_instance(app->scene, app->selection.second, ioinstance.frame,
             ioinstance.shape, ioinstance.material);
-        update_bvh(app->scene.get(), {app->selection.second}, {}, app->params);
+        update_bvh(app->scene, {app->selection.second}, {}, app->params);
         // TODO: maybe we should update lights for this
         reset_display(app);
       }
@@ -683,10 +679,10 @@ void draw_glwidgets(const opengl_window* win, shared_ptr<app_states> apps,
       if (draw_glwidgets_environment(win, app, app->selection.second)) {
         stop_display(app);
         auto& ioenvironment = app->ioscene.environments[app->selection.second];
-        set_environment(app->scene.get(), app->selection.second,
+        set_environment(app->scene, app->selection.second,
             ioenvironment.frame, ioenvironment.emission,
             ioenvironment.emission_tex);
-        init_lights(app->scene.get());
+        init_lights(app->scene);
         reset_display(app);
       }
     }
@@ -810,7 +806,7 @@ int main(int argc, const char* argv[]) {
       pan.x = -pan.x;
       stop_display(app);
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      set_camera(app->scene.get(), app->params.camera, camera.frame,
+      set_camera(app->scene, app->params.camera, camera.frame,
           camera.lens, camera.aspect, camera.film, camera.aperture,
           camera.focus);
       reset_display(app);
@@ -824,11 +820,11 @@ int main(int argc, const char* argv[]) {
           app->glparams.scale, app->render.size());
       if (ij.x >= 0 && ij.x < app->render.size().x && ij.y >= 0 &&
           ij.y < app->render.size().y) {
-        auto& camera = app->scene->cameras.at(app->params.camera);
+        auto& camera = app->scene.cameras.at(app->params.camera);
         auto  ray    = camera_ray(camera.frame, camera.lens, camera.film,
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
-        if (auto isec = intersect_scene_bvh(app->scene.get(), ray); isec.hit) {
+        if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
           app->selection = {"instance", isec.instance};
         }
       }
