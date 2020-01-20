@@ -199,11 +199,11 @@ struct opengl_scene {
   ~opengl_scene();
 
   vector<opengl_camera>   _cameras   = {};
-  vector<unique_ptr<opengl_instance>> _instances = {};
+  vector<opengl_instance> _instances = {};
   vector<unique_ptr<opengl_shape>>    _shapes    = {};
-  vector<unique_ptr<opengl_material>> _materials = {};
+  vector<opengl_material> _materials = {};
   vector<unique_ptr<opengl_texture>>  _textures  = {};
-  vector<unique_ptr<opengl_light>>    _lights    = {};
+  vector<opengl_light>    _lights    = {};
 
   // OpenGL state
   uint program_id  = 0;
