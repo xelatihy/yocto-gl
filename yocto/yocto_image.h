@@ -260,7 +260,7 @@ bool save_imageb(const string& filename, const image<vec4b>& img, string& error)
 image<vec4f>   load_image(const string& filename);
 void load_image(const string& filename, image<vec4f>& img);
 void save_image(const string& filename, const image<vec4f>& img);
-image<vec4b>   load_imageb(const string& filename, string& error);
+image<vec4b>   load_imageb(const string& filename);
 void load_imageb(const string& filename, image<vec4b>& img);
 void save_imageb(const string& filename, const image<vec4b>& img);
 

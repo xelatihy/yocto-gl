@@ -1699,7 +1699,7 @@ bool load_image(const string& filename, image<vec4f>& img, string& error) {
 }
 
 // Saves an hdr image.
-void save_image(const string& filename, image<vec4f>& img) {
+void save_image(const string& filename, const image<vec4f>& img) {
   auto error = ""s;
   if (!save_image(filename, img, error)) throw std::runtime_error(error);
 }
@@ -1741,10 +1741,11 @@ bool save_image(
 }
 
 // Loads an ldr image.
-void load_imageb(const string& filename) {
+image<vec4b> load_imageb(const string& filename) {
   auto img   = image<vec4b>{};
   auto error = ""s;
   if (!load_imageb(filename, img, error)) throw std::runtime_error(error);
+  return img;
 }
 
 // Loads an ldr image.
