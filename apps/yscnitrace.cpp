@@ -460,8 +460,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
   if (draw_glfiledialog_button(win, "save image", scene_ok, "save image",
           save_path, true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto app     = apps->states[apps->selected];
-    app->outname = save_path;
+    auto app        = apps->states[apps->selected];
+    app->outname    = save_path;
     auto save_error = ""s;
     if (!save_image(app->imagename, app->display, save_error)) {
       push_glmessage(win, "cannot save " + app->outname);

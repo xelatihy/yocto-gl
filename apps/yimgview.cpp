@@ -75,8 +75,8 @@ struct app_state {
 struct load_state {
   string                filename = "";
   shared_ptr<app_state> app      = {};
-  bool ok = false;
-  string error = "";
+  bool                  ok       = false;
+  string                error    = "";
 };
 
 // app states
@@ -159,9 +159,9 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
         app->filmic    = apps->filmic;
         app->params    = apps->params;
         apps->selected = (int)apps->states.size() - 1;
-        auto error = ""s;
+        auto error     = ""s;
         if (!load_image(app->filename, app->source, error)) {
-          return {filename, nullptr,false, error};
+          return {filename, nullptr, false, error};
         }
         compute_stats(
             app->source_stats, app->source, is_hdr_filename(app->filename));

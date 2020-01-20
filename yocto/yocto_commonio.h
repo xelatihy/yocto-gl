@@ -423,12 +423,11 @@ inline bool save_text(
 
 inline void load_text(const string& filename, string& str) {
   auto error = string{};
-  if(!load_text(filename, str, error)) throw std::runtime_error(error);
+  if (!load_text(filename, str, error)) throw std::runtime_error(error);
 }
-inline void save_text(
-    const string& filename, const string& str) {
+inline void save_text(const string& filename, const string& str) {
   auto error = string{};
-  if(!save_text(filename, str, error)) throw std::runtime_error(error);
+  if (!save_text(filename, str, error)) throw std::runtime_error(error);
 }
 
 // Load a binary file
@@ -470,15 +469,13 @@ inline bool save_binary(
   return true;
 }
 
-inline void load_binary(
-    const string& filename, vector<byte>& data) {
+inline void load_binary(const string& filename, vector<byte>& data) {
   auto error = string{};
-  if(!load_binary(filename, data, error)) throw std::runtime_error(error);
+  if (!load_binary(filename, data, error)) throw std::runtime_error(error);
 }
-inline void save_binary(
-    const string& filename, const vector<byte>& data) {
+inline void save_binary(const string& filename, const vector<byte>& data) {
   auto error = string{};
-  if(!save_binary(filename, data, error)) throw std::runtime_error(error);
+  if (!save_binary(filename, data, error)) throw std::runtime_error(error);
 }
 }  // namespace yocto
 

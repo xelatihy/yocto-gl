@@ -200,9 +200,8 @@ int main(int argc, const char* argv[]) {
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
-      auto save_error = ""s;
-      if (!save_image(outfilename, render, save_error))
-        print_fatal(save_error);
+      auto save_error  = ""s;
+      if (!save_image(outfilename, render, save_error)) print_fatal(save_error);
     }
   }
 
