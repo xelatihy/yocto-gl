@@ -59,7 +59,7 @@ struct app_state {
   float                   exposure = 0;
 
   // view scene
-  unique_ptr<opengl_image> glimage  = {};
+  opengl_image glimage  = {};
   draw_glimage_params      glparams = {};
 
   // editing
@@ -281,15 +281,15 @@ int main(int argc, const char* argv[]) {
   // callbacks
   set_draw_glcallback(
       win, [app](const opengl_window* win, const opengl_input& input) {
-        if (!app->glimage)
-          app->glimage = unique_ptr<opengl_image>(make_glimage());
+        if (!is_initialized(app->glimage))
+          init_glimage(app->glimage);
         if (!app->render_counter)
-          set_glimage(app->glimage.get(), app->display, false, false);
+          set_glimage(app->glimage, app->display, false, false);
         app->glparams.window      = input.window_size;
         app->glparams.framebuffer = input.framebuffer_viewport;
         update_imview(app->glparams.center, app->glparams.scale,
             app->display.size(), app->glparams.window, app->glparams.fit);
-        draw_glimage(app->glimage.get(), app->glparams);
+        draw_glimage(app->glimage, app->glparams);
         app->render_counter++;
         if (app->render_counter > 10) app->render_counter = 0;
       });

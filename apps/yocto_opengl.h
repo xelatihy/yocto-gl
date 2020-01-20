@@ -72,12 +72,13 @@ struct opengl_image {
 };
 
 // create image drawing program
-opengl_image* make_glimage();
+void init_glimage(opengl_image& glimage);
+bool is_initialized(const opengl_image& glimage);
 
 // update image data
-void set_glimage(opengl_image* glimage, const image<vec4f>& img,
+void set_glimage(opengl_image& glimage, const image<vec4f>& img,
     bool linear = false, bool mipmap = false);
-void set_glimage(opengl_image* glimage, const image<vec4b>& img,
+void set_glimage(opengl_image& glimage, const image<vec4b>& img,
     bool linear = false, bool mipmap = false);
 
 // OpenGL image drawing params
@@ -93,7 +94,7 @@ struct draw_glimage_params {
 };
 
 // draw image
-void draw_glimage(opengl_image* glimage, const draw_glimage_params& params);
+void draw_glimage(opengl_image& glimage, const draw_glimage_params& params);
 
 }  // namespace yocto
 
