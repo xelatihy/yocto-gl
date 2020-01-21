@@ -387,23 +387,23 @@ template <typename Arg, typename... Args>
 static void format_values(
     string& str, const string& fmt, const Arg& arg, const Args&... args) {
   auto pos = fmt.find("{}");
-  if (pos == string::npos) throw std::runtime_error("bad format string");
+  if (pos == string::npos) throw std::invalid_argument("bad format string");
   str += fmt.substr(0, pos);
   format_value(str, arg);
   format_values(str, fmt.substr(pos + 2), args...);
 }
 
 template <typename... Args>
-static bool format_values(FILE* fs, const string& fmt, const Args&... args) {
+static void format_values(FILE* fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
-  return fputs(str.c_str(), fs) >= 0;
+  if(fputs(str.c_str(), fs) < 0) throw std::invalid_argument{"write error"};
 }
 template <typename T>
-static bool format_value(FILE* fs, const T& value) {
+static void format_value(FILE* fs, const T& value) {
   auto str = ""s;
   format_value(str, value);
-  return fputs(str.c_str(), fs) >= 0;
+  if(fputs(str.c_str(), fs) < 0) throw std::invalid_argument{"write error"};
 }
 
 }  // namespace yocto
