@@ -238,9 +238,8 @@ void add_ply_points(ply_model& ply, const vector<int>& values);
 namespace yocto {
 
 // Read Ply functions
-void read_ply_header(const string& filename, FILE* fs,
-    ply_format& format, vector<ply_element>& elements,
-    vector<string>& comments);
+void read_ply_header(const string& filename, FILE* fs, ply_format& format,
+    vector<ply_element>& elements, vector<string>& comments);
 void read_ply_value(const string& filename, FILE* fs, ply_format format,
     const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists);
@@ -249,14 +248,13 @@ void read_ply_value(const string& filename, FILE* fs, ply_format format,
     vector<vector<int>>& lists);
 
 // Write Ply functions
-void write_ply_header(const string& filename, FILE* fs,
-    ply_format format, const vector<ply_element>& elements,
-    const vector<string>& comments);
-void write_ply_value(const string& filename, FILE* fs,
-    ply_format format, const ply_element& element, vector<double>& values,
+void write_ply_header(const string& filename, FILE* fs, ply_format format,
+    const vector<ply_element>& elements, const vector<string>& comments);
+void write_ply_value(const string& filename, FILE* fs, ply_format format,
+    const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists);
-void write_ply_value(const string& filename, FILE* fs,
-    ply_format format, const ply_element& element, vector<float>& values,
+void write_ply_value(const string& filename, FILE* fs, ply_format format,
+    const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists);
 
 // Helpers to get element and property indices
@@ -408,9 +406,8 @@ struct obj_model {
 };
 
 // Load and save obj
-void load_obj(const string& filename, obj_model& obj,
-    bool geom_only = false, bool split_elements = true,
-    bool split_materials = false);
+void load_obj(const string& filename, obj_model& obj, bool geom_only = false,
+    bool split_elements = true, bool split_materials = false);
 void save_obj(const string& filename, const obj_model& obj);
 
 // convert between roughness and exponent
@@ -499,27 +496,24 @@ struct obj_instance {
 };
 
 // Read obj/mtl/objx elements
-bool read_obj_command(const string& filename, FILE* fs,
-    obj_command& command, string& name, vec3f& value,
-    vector<obj_vertex>& vertices, obj_vertex& vert_size);
-bool read_mtl_command(const string& filename, FILE* fs,
-    mtl_command& command, obj_material& material, bool fliptr = true);
-bool read_objx_command(const string& filename, FILE* fs,
-    objx_command& command, obj_camera& camera, obj_environment& environment,
-    obj_instance& instance);
+bool read_obj_command(const string& filename, FILE* fs, obj_command& command,
+    string& name, vec3f& value, vector<obj_vertex>& vertices,
+    obj_vertex& vert_size);
+bool read_mtl_command(const string& filename, FILE* fs, mtl_command& command,
+    obj_material& material, bool fliptr = true);
+bool read_objx_command(const string& filename, FILE* fs, objx_command& command,
+    obj_camera& camera, obj_environment& environment, obj_instance& instance);
 
 // Write obj/mtl/objx elements
-void write_obj_comment(
-    const string& filename, FILE* fs, const string& comment);
-void write_obj_command(const string& filename, FILE* fs,
-    obj_command command, const string& name, const vec3f& value,
+void write_obj_comment(const string& filename, FILE* fs, const string& comment);
+void write_obj_command(const string& filename, FILE* fs, obj_command command,
+    const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices = {});
-void write_mtl_command(const string& filename, FILE* fs,
-    mtl_command command, obj_material& material,
-    const obj_texture_info& texture = {});
-void write_objx_command(const string& filename, FILE* fs,
-    objx_command command, const obj_camera& camera,
-    const obj_environment& environment, const obj_instance& instance);
+void write_mtl_command(const string& filename, FILE* fs, mtl_command command,
+    obj_material& material, const obj_texture_info& texture = {});
+void write_objx_command(const string& filename, FILE* fs, objx_command command,
+    const obj_camera& camera, const obj_environment& environment,
+    const obj_instance& instance);
 
 }  // namespace yocto
 
@@ -579,17 +573,15 @@ void load_yaml(const string& filename, yaml_model& yaml);
 void save_yaml(const string& filename, const yaml_model& yaml);
 
 // Load Yaml properties
-bool read_yaml_property(const string& filename, FILE* fs,
-    string& group, string& key, bool& newobj, bool& done, yaml_value& value);
+bool read_yaml_property(const string& filename, FILE* fs, string& group,
+    string& key, bool& newobj, bool& done, yaml_value& value);
 
 // Write Yaml properties
 void write_yaml_comment(
     const string& filename, FILE* fs, const string& comment);
-void write_yaml_property(const string& filename, FILE* fs,
-    const string& object, const string& key, bool newobj,
-    const yaml_value& value);
-void write_yaml_object(
-    const string& filename, FILE* fs, const string& object);
+void write_yaml_property(const string& filename, FILE* fs, const string& object,
+    const string& key, bool newobj, const yaml_value& value);
+void write_yaml_object(const string& filename, FILE* fs, const string& object);
 
 // type-cheked yaml value access
 void get_yaml_value(const yaml_value& yaml, string& value);
@@ -851,26 +843,23 @@ enum struct pbrt_command {
 };
 
 // Read pbrt commands
-bool read_pbrt_command(const string& filename, FILE* fs,
-    pbrt_command& command, string& name, string& type, frame3f& xform,
-    vector<pbrt_value>& values);
-bool read_pbrt_command(const string& filename, FILE* fs,
-    pbrt_command& command, string& name, string& type, frame3f& xform,
-    vector<pbrt_value>& values, string& buffer);
+bool read_pbrt_command(const string& filename, FILE* fs, pbrt_command& command,
+    string& name, string& type, frame3f& xform, vector<pbrt_value>& values);
+bool read_pbrt_command(const string& filename, FILE* fs, pbrt_command& command,
+    string& name, string& type, frame3f& xform, vector<pbrt_value>& values,
+    string& buffer);
 
 // Write pbrt commands
 void write_pbrt_comment(
     const string& filename, FILE* fs, const string& comment);
-void write_pbrt_command(const string& filename, FILE* fs,
-    pbrt_command command, const string& name, const string& type,
-    const frame3f& xform, const vector<pbrt_value>& values,
-    bool texture_as_float = false);
-void write_pbrt_command(const string& filename, FILE* fs,
-    pbrt_command command, const string& name = "",
-    const frame3f& xform = identity3x4f);
-void write_pbrt_command(const string& filename, FILE* fs,
-    pbrt_command command, const string& name, const string& type,
+void write_pbrt_command(const string& filename, FILE* fs, pbrt_command command,
+    const string& name, const string& type, const frame3f& xform,
     const vector<pbrt_value>& values, bool texture_as_float = false);
+void write_pbrt_command(const string& filename, FILE* fs, pbrt_command command,
+    const string& name = "", const frame3f& xform = identity3x4f);
+void write_pbrt_command(const string& filename, FILE* fs, pbrt_command command,
+    const string& name, const string& type, const vector<pbrt_value>& values,
+    bool texture_as_float = false);
 
 // type-cheked pbrt value access
 bool get_pbrt_value(const pbrt_value& pbrt, string& value);

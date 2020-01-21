@@ -3502,8 +3502,7 @@ namespace yocto {
 static void throw_format_error(const string& filename) {
   throw std::runtime_error{filename + ": unknown format"};
 }
-static void throw_emptyshape_error(
-    const string& filename) {
+static void throw_emptyshape_error(const string& filename) {
   throw std::runtime_error{filename + ": empty shape"};
 }
 
@@ -3652,7 +3651,7 @@ void save_shape(const string& filename, const vector<int>& points,
     auto err = ""s;
     save_obj(filename, obj);
   } else {
-      throw_format_error(filename);
+    throw_format_error(filename);
   }
 }
 
@@ -3678,32 +3677,31 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
     quadspos  = get_ply_quads(ply);
     if (!normals.empty()) quadsnorm = quadspos;
     if (!texcoords.empty()) quadstexcoord = quadspos;
-    if (positions.empty())       throw_emptyshape_error(filename);
+    if (positions.empty()) throw_emptyshape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_model();
     auto err = ""s;
     load_obj(filename, obj, true);
-    if (obj.shapes.empty())       throw_emptyshape_error(filename);
-    if (obj.shapes.size() > 1)       throw_emptyshape_error(filename);
+    if (obj.shapes.empty()) throw_emptyshape_error(filename);
+    if (obj.shapes.size() > 1) throw_emptyshape_error(filename);
     auto& shape = obj.shapes.front();
-    if (shape.faces.empty())       throw_emptyshape_error(filename);
+    if (shape.faces.empty()) throw_emptyshape_error(filename);
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
     get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
-      throw_emptyshape_error(filename);
+    throw_emptyshape_error(filename);
   } else {
-      throw_format_error(filename);
+    throw_format_error(filename);
     ;
   }
 }
 
 // Save ply mesh
-void save_fvshape(const string& filename,
-    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, bool ascii,
-    bool flip_texcoord) {
+void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, bool ascii, bool flip_texcoord) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto [split_quads, split_positions, split_normals, split_texturecoords] =
@@ -3722,7 +3720,7 @@ void save_fvshape(const string& filename,
     // Save
     save_obj(filename, obj);
   } else {
-          throw_format_error(filename);
+    throw_format_error(filename);
   }
 }
 
