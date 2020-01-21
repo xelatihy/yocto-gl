@@ -294,7 +294,7 @@ bool draw_glwidgets_texture(
   if (edited && old_filename != texture.filename) {
     try {
       load_texture(app->filename, texture);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
     }
@@ -362,7 +362,7 @@ bool draw_glwidgets_shape(
   if (edited && old_filename != shape.filename) {
     try {
       load_shape(app->filename, shape);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
     }
@@ -392,8 +392,8 @@ bool draw_glwidgets_subdiv(
   draw_gllabel(win, "tangsp", to_string(subdiv.tangents.size()));
   if (edited && old_filename != subdiv.filename) {
     try {
-        load_subdiv(app->filename, subdiv);
-    } catch(std::exception& e) {
+      load_subdiv(app->filename, subdiv);
+    } catch (std::exception& e) {
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
     }
@@ -449,7 +449,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     app->outname = save_path;
     try {
       save_scene(app->outname, app->ioscene);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
     }
@@ -459,11 +459,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
   if (draw_glfiledialog_button(win, "save image", scene_ok, "save image",
           save_path, true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto app        = apps->states[apps->selected];
-    app->outname    = save_path;
+    auto app     = apps->states[apps->selected];
+    app->outname = save_path;
     try {
       save_image(app->imagename, app->display);
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
     }
@@ -721,7 +721,7 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
       apps->states.push_back(app);
       reset_display(app);
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       apps->loaders.pop_front();
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
@@ -835,12 +835,11 @@ void run_app(int argc, const char* argv[]) {
   clear_glwindow(win);
 }
 
-
 int main(int argc, const char* argv[]) {
   try {
     run_app(argc, argv);
     return 0;
-  } catch(std::exception& e) {
+  } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;
   }

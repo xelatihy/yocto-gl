@@ -166,7 +166,7 @@ int main(int argc, const char* argv[]) {
   try {
     run_app(argc, argv);
     return 0;
-  } catch(std::exception& e) {
+  } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;
   }

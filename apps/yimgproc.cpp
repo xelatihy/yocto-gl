@@ -170,7 +170,8 @@ void run_app(int argc, const char* argv[]) {
   // diff
   if (diff_filename != "") {
     auto diff = load_image(diff_filename);
-    if (img.size() != diff.size()) throw std::runtime_error("image sizes are different");
+    if (img.size() != diff.size())
+      throw std::runtime_error("image sizes are different");
     img = image_difference(img, diff, true);
   }
 
@@ -195,7 +196,7 @@ void run_app(int argc, const char* argv[]) {
   // check diff
   if (diff_filename != "" && diff_signal) {
     for (auto& c : img) {
-      if (max(xyz(c)) > diff_threshold) 
+      if (max(xyz(c)) > diff_threshold)
         throw std::runtime_error("image content differs");
     }
   }
@@ -205,7 +206,7 @@ int main(int argc, const char* argv[]) {
   try {
     run_app(argc, argv);
     return 0;
-  } catch(std::exception& e) {
+  } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;
   }

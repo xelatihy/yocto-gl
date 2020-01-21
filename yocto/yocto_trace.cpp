@@ -1460,7 +1460,7 @@ static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
        instance_id++) {
     auto& instance  = scene.instances[instance_id];
     auto& shape     = scene.shapes[instance.shape];
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
+    auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
@@ -1479,7 +1479,7 @@ static void update_embree_bvh(
   for (auto instance_id : updated_instances) {
     auto& instance  = scene.instances[instance_id];
     auto& shape     = scene.shapes[instance.shape];
-    auto egeometry = rtcGetGeometry(escene, instance_id);
+    auto  egeometry = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);

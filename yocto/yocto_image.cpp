@@ -1657,7 +1657,8 @@ void load_image(const string& filename, image<vec4f>& img) {
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0) throw_read_error(filename);
+    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
+      throw_read_error(filename);
     if (!pixels) throw_read_error(filename);
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
@@ -1683,18 +1684,20 @@ void load_image(const string& filename, image<vec4f>& img) {
 }
 
 // Saves an hdr image.
-void save_image(
-    const string& filename, const image<vec4f>& img) {
+void save_image(const string& filename, const image<vec4f>& img) {
   auto ext = get_extension(filename);
   if (ext == ".hdr" || ext == ".HDR") {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) throw_write_error(filename);
+            (float*)img.data()))
+      throw_write_error(filename);
   } else if (ext == ".pfm" || ext == ".PFM") {
     if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) throw_write_error(filename);
+            (float*)img.data()))
+      throw_write_error(filename);
   } else if (ext == ".exr" || ext == ".EXR") {
     if (SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
-            filename.c_str()) < 0) throw_write_error(filename);
+            filename.c_str()) < 0)
+      throw_write_error(filename);
   } else if (!is_hdr_filename(filename)) {
     save_imageb(filename, rgb_to_srgbb(img));
   } else {
@@ -1704,7 +1707,7 @@ void save_image(
 
 // Loads an ldr image.
 image<vec4b> load_imageb(const string& filename) {
-  auto img   = image<vec4b>{};
+  auto img = image<vec4b>{};
   load_imageb(filename, img);
   return img;
 }
@@ -1733,21 +1736,24 @@ void load_imageb(const string& filename, image<vec4b>& img) {
 }
 
 // Saves an ldr image.
-void save_imageb(
-    const string& filename, const image<vec4b>& img) {
+void save_imageb(const string& filename, const image<vec4b>& img) {
   auto ext = get_extension(filename);
   if (ext == ".png" || ext == ".PNG") {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data(), img.size().x * 4)) throw_write_error(filename);
+            img.data(), img.size().x * 4))
+      throw_write_error(filename);
   } else if (ext == ".jpg" || ext == ".JPG") {
     if (!stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) throw_write_error(filename);
+            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75))
+      throw_write_error(filename);
   } else if (ext == ".tga" || ext == ".TGA") {
     if (!stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) throw_write_error(filename);
+            filename.c_str(), img.size().x, img.size().y, 4, img.data()))
+      throw_write_error(filename);
   } else if (ext == ".bmp" || ext == ".BMP") {
     if (!stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) throw_write_error(filename);
+            filename.c_str(), img.size().x, img.size().y, 4, img.data()))
+      throw_write_error(filename);
   } else if (is_hdr_filename(filename)) {
     save_image(filename, srgb_to_rgb(img));
   } else {
@@ -1913,7 +1919,8 @@ void load_volume(const string& filename, volume<float>& vol) {
 // Saves volume data in binary format.
 void save_volume(const string& filename, const volume<float>& vol) {
   if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z, 1,
-          vol.data())) throw_write_error(filename);
+          vol.data()))
+    throw_write_error(filename);
 }
 
 }  // namespace impl

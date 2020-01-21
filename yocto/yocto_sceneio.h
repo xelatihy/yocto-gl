@@ -279,14 +279,12 @@ void save_shape(const string& filename, const sceneio_shape& shape);
 // Load/save a subdiv in the supported formats. Filename is the scene filename.
 // Throws on error.
 void load_subdiv(const string& filename, sceneio_subdiv& subdiv);
-void save_subdiv(
-    const string& filename, const sceneio_subdiv& subdiv);
+void save_subdiv(const string& filename, const sceneio_subdiv& subdiv);
 
 // Load/save a texture in the supported formats. Filename is the scene filename.
 // Throws on error.
 void load_texture(const string& filename, sceneio_texture& texture);
-void save_texture(
-    const string& filename, const sceneio_texture& texture);
+void save_texture(const string& filename, const sceneio_texture& texture);
 
 }  // namespace yocto
 

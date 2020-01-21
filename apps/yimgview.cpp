@@ -309,7 +309,7 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
       apps->states.push_back(app);
       update_display(app);
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
-    } catch(std::exception& e) {
+    } catch (std::exception& e) {
       apps->loaders.pop_front();
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
@@ -377,7 +377,7 @@ int main(int argc, const char* argv[]) {
   try {
     run_app(argc, argv);
     return 0;
-  } catch(std::exception& e) {
+  } catch (std::exception& e) {
     print_fatal(e.what());
     return 1;
   }
