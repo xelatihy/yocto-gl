@@ -47,7 +47,7 @@ bool mkdir(const string& dir) {
 #endif
 }
 
-int main(int argc, const char** argv) {
+void run_app(int argc, const char** argv) {
   // command line parameters
   auto mesh_filenames   = false;
   auto shape_directory  = "shapes/"s;
@@ -151,7 +151,15 @@ int main(int argc, const char** argv) {
     print_fatal(ret.error);
   }
   print_elapsed(save_timer);
+}
 
-  // done
-  return 0;
+
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch(std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

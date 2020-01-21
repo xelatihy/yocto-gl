@@ -130,7 +130,7 @@ void my_draw_glwidgets(
   }
 }
 
-int main(int num_args, const char* args[]) {
+void run_app(int num_args, const char* args[]) {
   string input_filename = "model.obj";
 
   // Parse command line.
@@ -160,4 +160,14 @@ int main(int num_args, const char* args[]) {
   };
 
   yimshproc(input_filename, init, key_callback, click_callback, draw_glwidgets);
+}
+
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch(std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

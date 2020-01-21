@@ -462,10 +462,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
     auto app        = apps->states[apps->selected];
     app->outname    = save_path;
-    auto save_error = ""s;
-    if (!save_image(app->imagename, app->display, save_error)) {
-      push_glmessage(win, "cannot save " + app->outname);
-      log_glinfo(win, "cannot save " + app->outname);
+    try {
+      save_image(app->imagename, app->display);
+    } catch(std::exception& e) {
+      push_glmessage(win, e.what());
+      log_glinfo(win, e.what());
     }
     save_path = "";
   }
@@ -729,7 +730,7 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
   }
 }
 
-int main(int argc, const char* argv[]) {
+void run_app(int argc, const char* argv[]) {
   // application
   auto apps      = make_shared<app_states>();
   auto filenames = vector<string>{};
@@ -833,7 +834,15 @@ int main(int argc, const char* argv[]) {
 
   // clear
   clear_glwindow(win);
+}
 
-  // done
-  return 0;
+
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch(std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

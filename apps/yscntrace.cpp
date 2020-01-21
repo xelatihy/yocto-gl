@@ -111,7 +111,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   ioscene = {};
 }
 
-int main(int argc, const char* argv[]) {
+void run_app(int argc, const char* argv[]) {
   // options
   auto params     = trace_params{};
   auto batch      = 16;
@@ -200,17 +200,23 @@ int main(int argc, const char* argv[]) {
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
-      auto save_error  = ""s;
-      if (!save_image(outfilename, render, save_error)) print_fatal(save_error);
+      save_image(outfilename, render);
     }
   }
 
   // save image
   auto save_timer = print_timed("saving image");
-  auto save_error = ""s;
-  if (!save_image(imfilename, render, save_error)) print_fatal(save_error);
+  save_image(imfilename, render);
   print_elapsed(save_timer);
+}
 
-  // done
-  return 0;
+
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch(std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

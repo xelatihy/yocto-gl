@@ -84,7 +84,7 @@ void update_display(shared_ptr<app_state> app) {
   });
 }
 
-int main(int argc, const char* argv[]) {
+void run_app(int argc, const char* argv[]) {
   // prepare application
   auto app       = make_shared<app_state>();
   auto filenames = vector<string>{};
@@ -96,9 +96,7 @@ int main(int argc, const char* argv[]) {
   if (!parse_cli(cli, argc, argv)) exit(1);
 
   // load image
-  auto load_error = ""s;
-  if (!load_image(app->filename, app->source, load_error))
-    print_fatal("cannot load " + app->filename);
+  load_image(app->filename, app->source);
 
   // update display
   update_display(app);
@@ -137,7 +135,14 @@ int main(int argc, const char* argv[]) {
 
   // cleanup
   clear_glwindow(win);
+}
 
-  // done
-  return 0;
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch(std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

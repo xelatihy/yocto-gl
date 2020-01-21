@@ -209,7 +209,7 @@ void reset_display(shared_ptr<app_state> app) {
   });
 }
 
-int main(int argc, const char* argv[]) {
+void run_app(int argc, const char* argv[]) {
   // application
   auto app = make_shared<app_state>();
 
@@ -314,7 +314,15 @@ int main(int argc, const char* argv[]) {
 
   // clear
   clear_glwindow(win);
+}
 
-  // done
-  return 0;
+
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch(std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

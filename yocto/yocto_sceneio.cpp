@@ -820,43 +820,31 @@ sceneio_status save_scene(
 }
 
 sceneio_status load_texture(const string& filename, sceneio_texture& texture) {
+  try {
   if (is_hdr_filename(texture.filename)) {
-    auto error = ""s;
-    if (!load_image(
-            get_dirname(filename) + texture.filename, texture.hdr, error)) {
-      return {filename + ": missing texture (" + error + ")"};
-    } else {
-      return {};
-    }
+    load_image(
+            get_dirname(filename) + texture.filename, texture.hdr);
   } else {
-    auto error = ""s;
-    if (!load_imageb(
-            get_dirname(filename) + texture.filename, texture.ldr, error)) {
-      return {filename + ": missing texture (" + error + ")"};
-    } else {
-      return {};
-    }
+    load_imageb(
+            get_dirname(filename) + texture.filename, texture.ldr);
+  }
+  } catch(std::exception& e) {
+    return {filename + ": missing texture (" + e.what() + ")"};
   }
 }
 
 sceneio_status save_texture(
     const string& filename, const sceneio_texture& texture) {
+  try {
   if (!texture.hdr.empty()) {
-    auto error = ""s;
-    if (save_image(
-            get_dirname(filename) + texture.filename, texture.hdr, error)) {
-      return {filename + ": missing texture (" + error + ")"};
-    } else {
-      return {};
-    }
+    save_image(
+            get_dirname(filename) + texture.filename, texture.hdr);
   } else {
-    auto error = ""s;
-    if (save_imageb(
-            get_dirname(filename) + texture.filename, texture.ldr, error)) {
-      return {filename + ": missing texture (" + error + ")"};
-    } else {
-      return {};
-    }
+    save_imageb(
+            get_dirname(filename) + texture.filename, texture.ldr);
+  }
+  } catch(std::exception& e) {
+    return {filename + ": missing texture (" + e.what() + ")"};
   }
 }
 

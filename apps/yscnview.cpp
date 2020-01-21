@@ -625,7 +625,7 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
   }
 }
 
-int main(int argc, const char* argv[]) {
+void run_app(int argc, const char* argv[]) {
   // initialize app
   auto apps       = make_shared<app_states>();
   auto filenames  = vector<string>{};
@@ -712,7 +712,15 @@ int main(int argc, const char* argv[]) {
 
   // clear
   clear_glwindow(win);
+}
 
-  // done
-  return 0;
+
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch(std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }
