@@ -1,10 +1,10 @@
 //
 // # Yocto/ModelIO: Tiny library for Ply/Obj/Pbrt/Yaml/glTF parsing and writing
 //
-// Yocto/ModelIO is a tiny library for loading and saving Ply/Obj/Pbrt/Yaml/glTF.
-// In Yocto/ModelIO, all model data is loaded and saved at once. Each format 
-// is parsed in a manner that is as close as possible to the original. Data
-// can be accessed directly or via converters.
+// Yocto/ModelIO is a tiny library for loading and saving
+// Ply/Obj/Pbrt/Yaml/glTF. In Yocto/ModelIO, all model data is loaded and saved
+// at once. Each format is parsed in a manner that is as close as possible to
+// the original. Data can be accessed directly or via converters.
 //
 
 //

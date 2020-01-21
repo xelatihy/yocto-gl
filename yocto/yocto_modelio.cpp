@@ -520,40 +520,8 @@ static void throw_dependent_error(file_wrapper& fs, const string& err) {
 static void throw_parse_error(file_wrapper& fs, const string& err) {
   throw std::runtime_error{fs.filename + ": parse error [" + err + "]"};
 }
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// PLY CONVERSION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Helpers for throwing
-static void throw_read_error(const string& filename) {
-  throw std::runtime_error{filename + ": parse error"};
-}
-static void throw_format_error(const string& filename) {
-  throw std::runtime_error{filename + ": unknown format"};
-}
-static void throw_missing_reference_error(
-    const string& filename, const string& type, const string& name) {
-  throw std::runtime_error{filename + ": missing " + type + " " + name};
-}
-static void throw_unknowncommand_error(
-    const string& filename, const string& cmd) {
-  throw std::runtime_error{filename + ": unknown command " + cmd};
-}
-static void throw_unknowntype_error(
-    const string& filename, const string& tname) {
-  throw std::runtime_error{filename + ": unknown type " + tname};
-}
-static void throw_unsupportedtype_error(
-    const string& filename, const string& type, const string& name) {
-  throw std::runtime_error{
-      filename + ": unsupported type " + name + " for " + type};
-}
-static void throw_stack_error(const string& filename) {
-  throw std::runtime_error{filename + ": stack error"};
+static void throw_read_error(file_wrapper& fs) {
+  throw std::runtime_error{fs.filename + ": read error"};
 }
 
 }  // namespace yocto
@@ -610,14 +578,14 @@ void load_ply(const string& filename, ply_model& ply) {
 
     // check magic number
     if (first_line) {
-      if (cmd != "ply") throw std::invalid_argument{"bad header"};
+      if (cmd != "ply") throw_parse_error(fs, "bad header");
       first_line = false;
       continue;
     }
 
     // possible token values
     if (cmd == "ply") {
-      if (!first_line) throw std::invalid_argument{"bad header"};
+      if (!first_line) throw_parse_error(fs, "bad header");
     } else if (cmd == "format") {
       auto fmt = ""s;
       parse_value(fs, str, fmt);
@@ -628,7 +596,7 @@ void load_ply(const string& filename, ply_model& ply) {
       } else if (fmt == "binary_big_endian") {
         ply.format = ply_format::binary_big_endian;
       } else {
-        throw_format_error(filename);
+        throw_parse_error(fs, "bad header");
       }
     } else if (cmd == "comment") {
       skip_whitespace(str);
@@ -641,7 +609,7 @@ void load_ply(const string& filename, ply_model& ply) {
       parse_value(fs, str, elem.name);
       parse_value(fs, str, elem.count);
     } else if (cmd == "property") {
-      if (ply.elements.empty()) throw std::invalid_argument{"bad header"};
+      if (ply.elements.empty()) throw_parse_error(fs, "bad header");
       auto& prop  = ply.elements.back().properties.emplace_back();
       auto  tname = ""s;
       parse_value(fs, str, tname);
@@ -650,15 +618,15 @@ void load_ply(const string& filename, ply_model& ply) {
         parse_value(fs, str, tname);
         auto itype = type_map.at(tname);
         if (itype != ply_type::u8)
-          throw_unknowntype_error(filename, "[" + tname + "]");
+          throw_parse_error(fs, "unknown type" + tname);
         parse_value(fs, str, tname);
         if (type_map.find(tname) == type_map.end())
-          throw std::invalid_argument{"unknown type " + tname};
+          throw_parse_error(fs, "unknown type" + tname);
         prop.type = type_map.at(tname);
       } else {
         prop.is_list = false;
         if (type_map.find(tname) == type_map.end())
-          throw std::invalid_argument{"unknown type " + tname};
+          throw_parse_error(fs, "unknown type" + tname);
         prop.type = type_map.at(tname);
       }
       parse_value(fs, str, prop.name);
@@ -666,7 +634,7 @@ void load_ply(const string& filename, ply_model& ply) {
       end_header = true;
       break;
     } else {
-      throw std::invalid_argument{"unknown command " + cmd};
+      throw_parse_error(fs, "unknown command " + cmd);
     }
   }
 
@@ -698,7 +666,7 @@ void load_ply(const string& filename, ply_model& ply) {
     char buffer[4096];
     for (auto& elem : ply.elements) {
       for (auto idx = 0; idx < elem.count; idx++) {
-        if (!read_line(fs, buffer, sizeof(buffer))) throw_read_error(filename);
+        if (!read_line(fs, buffer, sizeof(buffer))) throw_read_error(fs);
         auto str = string_view{buffer};
         for (auto& prop : elem.properties) {
           if (prop.is_list) {
@@ -1639,7 +1607,7 @@ static void load_objx(const string& filename, obj_model& obj) {
       parse_value(fs, str, object);
       parse_value(fs, str, frame);
       if (shape_map.find(object) == shape_map.end()) {
-        throw_missing_reference_error(filename, "object", object);
+        throw_parse_error(fs, "unknown object " + object);
       }
       for (auto idx : shape_map.at(object)) {
         obj.shapes[idx].instances.push_back(frame);
@@ -2811,7 +2779,7 @@ static void convert_pbrt_films(
         film.filename = "out.png"s;
         get_pbrt_value(values, "filename", film.filename);
       } else {
-        throw std::invalid_argument{"unknown type " + film.type};
+        throw std::invalid_argument{"unknown film " + film.type};
       }
     } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": conversion error"};
@@ -2827,8 +2795,8 @@ static void convert_pbrt_cameras(const string& filename,
   for (auto& film : films) {
     film_aspect = (float)film.resolution.x / (float)film.resolution.y;
   }
-  try {
-    for (auto& camera : cameras) {
+  for (auto& camera : cameras) {
+    try {
       auto& values   = camera.values;
       camera.frame   = inverse((frame3f)camera.frame);
       camera.frame.z = -camera.frame.z;
@@ -2859,11 +2827,11 @@ static void convert_pbrt_cameras(const string& filename,
         get_pbrt_value(values, "focusdistance", camera.focus);
         camera.aspect = film_aspect;
       } else {
-        throw_unsupportedtype_error(filename, "camera", camera.type);
+        throw std::invalid_argument{"unknown camera " + camera.type};
       }
+    } catch (std::invalid_argument& e) {
+      throw std::runtime_error{filename + ": conversion error"};
     }
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": conversion error"};
   }
 }
 
@@ -2886,8 +2854,8 @@ static void convert_pbrt_textures(const string& filename,
     texture.constant = color;
   };
 
-  try {
-    for (auto& texture : textures) {
+  for (auto& texture : textures) {
+    try {
       auto& values = texture.values;
       if (texture.type == "imagemap") {
         texture.filename = "";
@@ -2943,11 +2911,11 @@ static void convert_pbrt_textures(const string& filename,
       } else if (texture.type == "wrinkled") {
         make_placeholder(texture);
       } else {
-        throw_unsupportedtype_error(filename, "texture", texture.type);
+        throw std::invalid_argument{"unknown texture " + texture.type};
       }
+    } catch (std::invalid_argument& e) {
+      throw std::runtime_error{filename + ": conversion error"};
     }
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": conversion error"};
   }
 }
 
@@ -3248,7 +3216,8 @@ static void make_pbrt_shape(vector<vec3i>& triangles, vector<vec3f>& positions,
 static void make_pbrt_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float radius) {
-  make_pbrt_shape(triangles, positions, normals, texcoords, steps,
+  make_pbrt_shape(
+      triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
         return radius *
@@ -3262,7 +3231,8 @@ static void make_pbrt_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
 static void make_pbrt_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float radius) {
-  make_pbrt_shape(triangles, positions, normals, texcoords, steps,
+  make_pbrt_shape(
+      triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         auto a = 2 * pif * uv.x;
         return radius * (1 - uv.y) * vec3f{cos(a), sin(a), 0};
@@ -3274,7 +3244,8 @@ static void make_pbrt_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
 static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float radius) {
-  make_pbrt_shape(triangles, positions, normals, texcoords, steps,
+  make_pbrt_shape(
+      triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         return vec3f{(uv.x - 0.5f) * radius, (uv.y - 0.5f) * radius, 0};
       },
@@ -3286,8 +3257,8 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 // Convert pbrt shapes
 static void convert_pbrt_shapes(
     const string& filename, vector<pbrt_shape>& shapes, bool verbose = false) {
-  try {
-    for (auto& shape : shapes) {
+  for (auto& shape : shapes) {
+    try {
       auto& values = shape.values;
       if (shape.type == "trianglemesh") {
         shape.positions = {};
@@ -3320,19 +3291,19 @@ static void convert_pbrt_shapes(
         make_pbrt_disk(shape.triangles, shape.positions, shape.normals,
             shape.texcoords, {32, 1}, radius);
       } else {
-        throw_unsupportedtype_error(filename, "shape", shape.type);
+        throw std::invalid_argument{"unknown shape " + shape.type};
       }
+    } catch (std::invalid_argument& e) {
+      throw std::runtime_error{filename + ": conversion error"};
     }
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": conversion error"};
   }
 }
 
 // Convert pbrt arealights
 static void convert_pbrt_arealights(const string& filename,
     vector<pbrt_arealight>& lights, bool verbose = false) {
-  try {
-    for (auto& light : lights) {
+  for (auto& light : lights) {
+    try {
       auto& values = light.values;
       if (light.type == "diffuse") {
         auto l = vec3f{1}, scale = vec3f{1};
@@ -3340,19 +3311,19 @@ static void convert_pbrt_arealights(const string& filename,
         get_pbrt_value(values, "scale", scale);
         light.emission = l * scale;
       } else {
-        throw_unsupportedtype_error(filename, "arealight", light.type);
+        throw std::invalid_argument{"unknown arealight " + light.type};
       }
+    } catch (std::invalid_argument& e) {
+      throw std::runtime_error{filename + ": conversion error"};
     }
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": conversion error"};
   }
 }
 
 // Convert pbrt lights
 static void convert_pbrt_lights(
     const string& filename, vector<pbrt_light>& lights, bool verbose = false) {
-  try {
-    for (auto& light : lights) {
+  for (auto& light : lights) {
+    try {
       auto& values = light.values;
       if (light.type == "distant") {
         auto l = vec3f{1}, scale = vec3f{1};
@@ -3394,19 +3365,19 @@ static void convert_pbrt_lights(
         make_pbrt_sphere(light.area_triangles, light.area_positions,
             light.area_normals, texcoords, {4, 2}, 0.0025f);
       } else {
-        throw_unsupportedtype_error(filename, "arealight", light.type);
+        throw std::invalid_argument{"unknown light " + light.type};
       }
+    } catch (std::invalid_argument& e) {
+      throw std::runtime_error{filename + ": conversion error"};
     }
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": conversion error"};
   }
 }
 
 static void convert_pbrt_environments(const string& filename,
     vector<pbrt_environment>& environments, vector<pbrt_texture>& textures,
     bool verbose = false) {
-  try {
-    for (auto& light : environments) {
+  for (auto& light : environments) {
+    try {
       auto& values = light.values;
       if (light.type == "infinite") {
         auto l = vec3f{1}, scale = vec3f{1};
@@ -3423,11 +3394,11 @@ static void convert_pbrt_environments(const string& filename,
         light.frend = light.frend *
                       frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
       } else {
-        throw_unsupportedtype_error(filename, "light", light.type);
+        throw std::invalid_argument{"unknown light " + light.type};
       }
+    } catch (std::invalid_argument& e) {
+      throw std::runtime_error{filename + ": conversion error"};
     }
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": conversion error"};
   }
 }
 
@@ -3485,18 +3456,18 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
     if (cmd == "WorldBegin") {
       stack.push_back({});
     } else if (cmd == "WorldEnd") {
-      if (stack.empty()) throw_stack_error(filename);
+      if (stack.empty()) throw_parse_error(fs, "bad stack");
       stack.pop_back();
-      if (stack.size() != 1) throw_stack_error(filename);
+      if (stack.size() != 1) throw_parse_error(fs, "bad stack");
     } else if (cmd == "AttributeBegin") {
       stack.push_back(stack.back());
     } else if (cmd == "AttributeEnd") {
-      if (stack.empty()) throw_stack_error(filename);
+      if (stack.empty()) throw_parse_error(fs, "bad stack");
       stack.pop_back();
     } else if (cmd == "TransformBegin") {
       stack.push_back(stack.back());
     } else if (cmd == "TransformEnd") {
-      if (stack.empty()) throw_stack_error(filename);
+      if (stack.empty()) throw_parse_error(fs, "bad stack");
       stack.pop_back();
     } else if (cmd == "ObjectBegin") {
       stack.push_back(stack.back());
@@ -3509,7 +3480,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       auto object = ""s;
       parse_pbrt_param(fs, str, object);
       if (objects.find(object) == objects.end())
-        throw_missing_reference_error(filename, "object", object);
+        throw_parse_error(fs, "unknown object " + object);
       for (auto shape_id : objects.at(object)) {
         auto& shape = pbrt.shapes[shape_id];
         shape.instance_frames.push_back(stack.back().transform_start);
@@ -3528,7 +3499,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
         stack.back().active_transform_start = true;
         stack.back().active_transform_end   = true;
       } else {
-        throw_stack_error(filename);
+        throw_parse_error(fs, "bad coordsys");
       }
     } else if (cmd == "Transform") {
       auto xf = identity4x4f;
@@ -3685,7 +3656,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
         throw_dependent_error(fs, e.what());
       }
     } else {
-      throw_unknowncommand_error(filename, cmd);
+      throw_parse_error(fs, "unknown command " + cmd);
     }
   }
 }
@@ -4258,7 +4229,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   auto data   = (cgltf_data*)nullptr;
   auto result = cgltf_parse_file(&params, filename.c_str(), &data);
   if (result != cgltf_result_success) {
-    throw_read_error(filename);
+    throw std::runtime_error{filename + ": read error"};
   }
   auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
       data, cgltf_free};
@@ -4266,7 +4237,7 @@ void load_gltf(const string& filename, gltf_model& scene) {
   if (dirname != "") dirname += "/";
   if (cgltf_load_buffers(&params, data, dirname.c_str()) !=
       cgltf_result_success) {
-    throw std::runtime_error("could not load gltf buffers " + filename);
+    throw std::runtime_error(filename + ": error reading buffers");
   }
 
   // convert textures
@@ -4719,10 +4690,11 @@ static void parse_yaml_varname(string_view& str, string& value) {
   value = string{view};
 }
 
-static void parse_yaml_varname(file_wrapper& fs, string_view& str, string& value) {
+static void parse_yaml_varname(
+    file_wrapper& fs, string_view& str, string& value) {
   try {
     parse_yaml_varname(str, value);
-  } catch(std::invalid_argument& e) {
+  } catch (std::invalid_argument& e) {
     throw std::runtime_error{fs.filename + ": parse error [" + e.what() + "]"};
   }
 }
@@ -4894,7 +4866,8 @@ void load_yaml(const string& filename, yaml_model& yaml) {
       // new group
       parse_yaml_varname(fs, line, key);
       skip_whitespace(line);
-      if (line.empty() || line.front() != ':') throw_parse_error(fs, "bad format");
+      if (line.empty() || line.front() != ':')
+        throw_parse_error(fs, "bad format");
       line.remove_prefix(1);
       if (!line.empty() && !is_whitespace(line)) {
         group = "";
@@ -4941,36 +4914,36 @@ static void format_value(string& str, const yaml_value& value) {
 void save_yaml(const string& filename, const yaml_model& yaml) {
   auto fs = open_file(filename, "wt");
 
-    // save comments
-    format_values(fs, "#\n");
-    format_values(fs, "# Written by Yocto/GL\n");
-    format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
-    format_values(fs, "#\n\n");
-    for (auto& comment : yaml.comments) {
-      format_values(fs, "# {}\n", comment);
-    }
-    format_values(fs, "\n");
+  // save comments
+  format_values(fs, "#\n");
+  format_values(fs, "# Written by Yocto/GL\n");
+  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(fs, "#\n\n");
+  for (auto& comment : yaml.comments) {
+    format_values(fs, "# {}\n", comment);
+  }
+  format_values(fs, "\n");
 
-    auto group = ""s;
-    for (auto& element : yaml.elements) {
-      if (group != element.name) {
-        group = element.name;
-        if (group != "") {
-          format_values(fs, "\n{}:\n", group);
-        } else {
-          format_values(fs, "\n");
-        }
-      }
-      auto first = true;
-      for (auto& [key, value] : element.key_values) {
-        if (group != "") {
-          format_values(fs, "  {} {}: {}\n", first ? "-" : " ", key, value);
-          first = false;
-        } else {
-          format_values(fs, "{}: {}\n", key, value);
-        }
+  auto group = ""s;
+  for (auto& element : yaml.elements) {
+    if (group != element.name) {
+      group = element.name;
+      if (group != "") {
+        format_values(fs, "\n{}:\n", group);
+      } else {
+        format_values(fs, "\n");
       }
     }
+    auto first = true;
+    for (auto& [key, value] : element.key_values) {
+      if (group != "") {
+        format_values(fs, "  {} {}: {}\n", first ? "-" : " ", key, value);
+        first = false;
+      } else {
+        format_values(fs, "{}: {}\n", key, value);
+      }
+    }
+  }
 }
 
 }  // namespace yocto
