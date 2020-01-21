@@ -6262,45 +6262,37 @@ static bool parse_yaml_varname(string_view& str, string& value) {
 }
 
 // parse yaml value
-bool get_yaml_value(const yaml_value& yaml, string& value) {
-  if (yaml.type != yaml_value_type::string) return false;
+void get_yaml_value(const yaml_value& yaml, string& value) {
+  if (yaml.type != yaml_value_type::string) throw std::invalid_argument{"string expected"};
   value = yaml.string_;
-  return true;
 }
-bool get_yaml_value(const yaml_value& yaml, bool& value) {
-  if (yaml.type != yaml_value_type::boolean) return false;
+void get_yaml_value(const yaml_value& yaml, bool& value) {
+  if (yaml.type != yaml_value_type::boolean) throw std::invalid_argument{"bool expected"};
   value = yaml.boolean;
-  return true;
 }
-bool get_yaml_value(const yaml_value& yaml, int& value) {
-  if (yaml.type != yaml_value_type::number) return false;
+void get_yaml_value(const yaml_value& yaml, int& value) {
+  if (yaml.type != yaml_value_type::number) throw std::invalid_argument{"int expected"};
   value = (int)yaml.number;
-  return true;
 }
-bool get_yaml_value(const yaml_value& yaml, float& value) {
-  if (yaml.type != yaml_value_type::number) return false;
+void get_yaml_value(const yaml_value& yaml, float& value) {
+  if (yaml.type != yaml_value_type::number) throw std::invalid_argument{"float expected"};
   value = (float)yaml.number;
-  return true;
 }
-bool get_yaml_value(const yaml_value& yaml, vec2f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 2) return false;
+void get_yaml_value(const yaml_value& yaml, vec2f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 2) throw std::invalid_argument{"float2 expected"};
   value = {(float)yaml.array_[0], (float)yaml.array_[1]};
-  return true;
 }
-bool get_yaml_value(const yaml_value& yaml, vec3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 3) return false;
+void get_yaml_value(const yaml_value& yaml, vec3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 3) throw std::invalid_argument{"float3 expected"};
   value = {(float)yaml.array_[0], (float)yaml.array_[1], (float)yaml.array_[2]};
-  return true;
 }
-bool get_yaml_value(const yaml_value& yaml, mat3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 9) return false;
+void get_yaml_value(const yaml_value& yaml, mat3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 9) throw std::invalid_argument{"float9 expected"};
   for (auto i = 0; i < 9; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-  return true;
 }
-bool get_yaml_value(const yaml_value& yaml, frame3f& value) {
-  if (yaml.type != yaml_value_type::array || yaml.number != 12) return false;
+void get_yaml_value(const yaml_value& yaml, frame3f& value) {
+  if (yaml.type != yaml_value_type::array || yaml.number != 12) throw std::invalid_argument{"float12 expected"};
   for (auto i = 0; i < 12; i++) (&value.x.x)[i] = (float)yaml.array_[i];
-  return true;
 }
 bool has_yaml_value(const yaml_element& element, const string& name) {
   for (auto& [key, _] : element.key_values) {

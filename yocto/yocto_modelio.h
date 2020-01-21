@@ -592,16 +592,16 @@ void write_yaml_object(
     const string& filename, FILE* fs, const string& object);
 
 // type-cheked yaml value access
-bool get_yaml_value(const yaml_value& yaml, string& value);
-bool get_yaml_value(const yaml_value& yaml, bool& value);
-bool get_yaml_value(const yaml_value& yaml, int& value);
-bool get_yaml_value(const yaml_value& yaml, float& value);
-bool get_yaml_value(const yaml_value& yaml, vec2f& value);
-bool get_yaml_value(const yaml_value& yaml, vec3f& value);
-bool get_yaml_value(const yaml_value& yaml, mat3f& value);
-bool get_yaml_value(const yaml_value& yaml, frame3f& value);
+void get_yaml_value(const yaml_value& yaml, string& value);
+void get_yaml_value(const yaml_value& yaml, bool& value);
+void get_yaml_value(const yaml_value& yaml, int& value);
+void get_yaml_value(const yaml_value& yaml, float& value);
+void get_yaml_value(const yaml_value& yaml, vec2f& value);
+void get_yaml_value(const yaml_value& yaml, vec3f& value);
+void get_yaml_value(const yaml_value& yaml, mat3f& value);
+void get_yaml_value(const yaml_value& yaml, frame3f& value);
 template <typename T>
-inline bool get_yaml_value(
+inline void get_yaml_value(
     const yaml_element& element, const string& name, const T& value);
 bool has_yaml_value(const yaml_element& element, const string& name);
 
@@ -615,7 +615,7 @@ yaml_value make_yaml_value(const vec3f& value);
 yaml_value make_yaml_value(const mat3f& value);
 yaml_value make_yaml_value(const frame3f& value);
 template <typename T>
-inline bool add_yaml_value(
+inline void add_yaml_value(
     yaml_element& element, const string& name, const T& value);
 
 }  // namespace yocto
@@ -997,21 +997,19 @@ void load_gltf(const string& filename, gltf_model& gltf);
 namespace yocto {
 
 template <typename T>
-inline bool get_yaml_value(
+inline void get_yaml_value(
     const yaml_element& element, const string& name, T& value) {
   for (auto& [key, value_] : element.key_values) {
     if (key == name) return get_yaml_value(value_, value);
   }
-  return true;
 }
 
 template <typename T>
-inline bool add_yaml_value(
+inline void add_yaml_value(
     yaml_element& element, const string& name, const T& value) {
   for (auto& [key, value] : element.key_values)
-    if (key == name) return false;
+    if (key == name) throw std::invalid_argument{"value exists"};
   element.key_values.push_back({name, make_yaml_value(value)});
-  return true;
 }
 
 template <typename T>
