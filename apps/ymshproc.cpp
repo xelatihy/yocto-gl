@@ -104,15 +104,11 @@ int main(int argc, const char** argv) {
   // load mesh
   auto load_timer = print_timed("loading shape");
   if (!facevarying) {
-    if (auto ret = load_shape(filename, points, lines, triangles, quads,
+    load_shape(filename, points, lines, triangles, quads,
             positions, normals, texcoords, colors, radius);
-        !ret)
-      print_fatal(ret.error);
   } else {
-    if (auto ret = load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
+    load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
             positions, normals, texcoords);
-        !ret)
-      print_fatal(ret.error);
   }
   print_elapsed(load_timer);
 
@@ -266,15 +262,11 @@ int main(int argc, const char** argv) {
   // save mesh
   auto save_timer = print_timed("saving shape");
   if (!quadspos.empty()) {
-    if (auto ret = save_fvshape(output, quadspos, quadsnorm, quadstexcoord,
+    save_fvshape(output, quadspos, quadsnorm, quadstexcoord,
             positions, normals, texcoords);
-        !ret)
-      print_fatal(ret.error);
   } else {
-    if (auto ret = save_shape(output, points, lines, triangles, quads,
+    save_shape(output, points, lines, triangles, quads,
             positions, normals, texcoords, colors, radius);
-        !ret)
-      print_fatal(ret.error);
   }
   print_elapsed(save_timer);
 

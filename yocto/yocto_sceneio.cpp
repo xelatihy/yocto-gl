@@ -762,7 +762,7 @@ static void throw_format_error(const string& filename) {
 static void throw_dependent_error(const string& filename, const string& err) {
   throw std::runtime_error{filename + ": error in resource (" + err + ")"};
 }
-static void throw_empty_shape_error(
+static void throw_emptyshape_error(
     const string& filename, const string& name) {
   throw std::runtime_error{filename + ": empty shape " + name};
 }
@@ -1966,7 +1966,7 @@ static void load_obj(const string& filename, sceneio_model& scene) {
       get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals,
           shape.texcoords, materials, ematerials, true);
     } else {
-      throw_empty_shape_error(filename, oshape.name);
+      throw_emptyshape_error(filename, oshape.name);
     }
     // get material
     if (oshape.materials.size() != 1) {
@@ -2095,7 +2095,7 @@ static void save_obj(
         add_obj_points(obj, shape.name, shape.points, shape.positions,
             shape.normals, shape.texcoords, {}, {}, true);
       } else {
-        throw_empty_shape_error(filename, shape.name);
+        throw_emptyshape_error(filename, shape.name);
       }
     }
     for (auto& instance : scene.instances) {
@@ -2121,7 +2121,7 @@ static void save_obj(
         add_obj_points(obj, instance.name, shape.points, positions, normals,
             shape.texcoords, materials, {}, true);
       } else {
-        throw_empty_shape_error(filename, shape.name);
+        throw_emptyshape_error(filename, shape.name);
       }
     }
   }
@@ -2193,7 +2193,7 @@ static void load_ply_scene(
 
 static void save_ply_scene(
     const string& filename, const sceneio_model& scene, bool noparallel) {
-  if (scene.shapes.empty()) throw_empty_shape_error(filename, "");
+  if (scene.shapes.empty()) throw_emptyshape_error(filename, "");
   auto& shape = scene.shapes.front();
   save_shape(filename, shape.points, shape.lines, shape.triangles, shape.quads,
       shape.positions, shape.normals, shape.texcoords, shape.colors,
