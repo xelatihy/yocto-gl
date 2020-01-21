@@ -454,7 +454,7 @@ void parse_value(file_wrapper& fs, string_view& str, T& value) {
   try {
     parse_value(str, value);
   } catch (std::exception& e) {
-    throw std::runtime_error{fs.filename + ": parse error"};
+    throw std::runtime_error{fs.filename + ": parse error [" + e.what() + "]"};
   }
 }
 
@@ -517,6 +517,9 @@ static void format_value(file_wrapper& fs, const T& value) {
 static void throw_dependent_error(file_wrapper& fs, const string& err) {
   throw std::runtime_error{fs.filename + ": error in resource (" + err + ")"};
 }
+static void throw_parse_error(file_wrapper& fs, const string& err) {
+  throw std::runtime_error{fs.filename + ": parse error [" + err + "]"};
+}
 
 }  // namespace yocto
 
@@ -526,9 +529,6 @@ static void throw_dependent_error(file_wrapper& fs, const string& err) {
 namespace yocto {
 
 // Helpers for throwing
-static void throw_notfound_error(const string& filename) {
-  throw std::runtime_error{filename + ": file not found"};
-}
 static void throw_read_error(const string& filename) {
   throw std::runtime_error{filename + ": parse error"};
 }
@@ -4701,10 +4701,10 @@ static void remove_yaml_comment(string_view& str, char comment_char = '#') {
   str.remove_suffix(cpy.size());
 }
 
-static bool parse_yaml_varname(string_view& str, string_view& value) {
+static void parse_yaml_varname(string_view& str, string_view& value) {
   skip_whitespace(str);
-  if (str.empty()) return false;
-  if (!is_alpha(str.front())) return false;
+  if (str.empty()) throw std::invalid_argument{"string expected"};
+  if (!is_alpha(str.front())) throw std::invalid_argument{"string expected"};
   auto pos = 0;
   while (is_alpha(str[pos]) || str[pos] == '_' || is_digit(str[pos])) {
     pos += 1;
@@ -4712,13 +4712,19 @@ static bool parse_yaml_varname(string_view& str, string_view& value) {
   }
   value = str.substr(0, pos);
   str.remove_prefix(pos);
-  return true;
 }
-static bool parse_yaml_varname(string_view& str, string& value) {
+static void parse_yaml_varname(string_view& str, string& value) {
   auto view = string_view{};
-  if (!parse_yaml_varname(str, view)) return false;
+  parse_yaml_varname(str, view);
   value = string{view};
-  return true;
+}
+
+static void parse_yaml_varname(file_wrapper& fs, string_view& str, string& value) {
+  try {
+    parse_yaml_varname(str, value);
+  } catch(std::invalid_argument& e) {
+    throw std::runtime_error{fs.filename + ": parse error [" + e.what() + "]"};
+  }
 }
 
 // parse yaml value
@@ -4848,16 +4854,14 @@ static void parse_value(string_view& str, yaml_value& value) {
 
 // Load/save yaml
 void load_yaml(const string& filename, yaml_model& yaml) {
-  auto fs = fopen(filename.c_str(), "rt");
-  if (!fs) throw_notfound_error(filename);
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  auto fs = open_file(filename, "rt");
 
   // read the file line by line
   auto group = ""s;
   auto key   = ""s;
   auto value = yaml_value{};
   char buffer[4096];
-  while (fgets(buffer, sizeof(buffer), fs)) {
+  while (read_line(fs, buffer, sizeof(buffer))) {
     // line
     auto line = string_view{buffer};
     remove_yaml_comment(line);
@@ -4867,9 +4871,9 @@ void load_yaml(const string& filename, yaml_model& yaml) {
     // peek commands
     if (is_space(line.front())) {
       // indented property
-      if (group == "") throw std::invalid_argument{"bad format"};
+      if (group == "") throw_parse_error(fs, "bad format");
       skip_whitespace(line);
-      if (line.empty()) throw std::invalid_argument{"bad format"};
+      if (line.empty()) throw_parse_error(fs, "bad format");
       if (line.front() == '-') {
         auto& element = yaml.elements.emplace_back();
         element.name  = group;
@@ -4882,16 +4886,15 @@ void load_yaml(const string& filename, yaml_model& yaml) {
       parse_yaml_varname(line, key);
       skip_whitespace(line);
       if (line.empty() || line.front() != ':')
-        throw std::invalid_argument{"bad format"};
+        throw_parse_error(fs, "bad format");
       line.remove_prefix(1);
-      parse_value(line, value);
+      parse_value(fs, line, value);
       yaml.elements.back().key_values.push_back({key, value});
     } else if (is_alpha(line.front())) {
       // new group
-      parse_yaml_varname(line, key);
+      parse_yaml_varname(fs, line, key);
       skip_whitespace(line);
-      if (line.empty() || line.front() != ':')
-        throw std::invalid_argument{"bad format"};
+      if (line.empty() || line.front() != ':') throw_parse_error(fs, "bad format");
       line.remove_prefix(1);
       if (!line.empty() && !is_whitespace(line)) {
         group = "";
@@ -4899,14 +4902,14 @@ void load_yaml(const string& filename, yaml_model& yaml) {
           auto& element = yaml.elements.emplace_back();
           element.name  = group;
         }
-        parse_value(line, value);
+        parse_value(fs, line, value);
         yaml.elements.back().key_values.push_back({key, value});
       } else {
         group = key;
         key   = "";
       }
     } else {
-      throw std::invalid_argument{"bad format"};
+      throw_parse_error(fs, "bad format");
     }
   }
 }
@@ -4936,11 +4939,8 @@ static void format_value(string& str, const yaml_value& value) {
 }
 
 void save_yaml(const string& filename, const yaml_model& yaml) {
-  auto fs = fopen(filename.c_str(), "wt");
-  if (!fs) throw_notfound_error(filename);
-  auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
+  auto fs = open_file(filename, "wt");
 
-  try {
     // save comments
     format_values(fs, "#\n");
     format_values(fs, "# Written by Yocto/GL\n");
@@ -4971,122 +4971,6 @@ void save_yaml(const string& filename, const yaml_model& yaml) {
         }
       }
     }
-
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": write error"};
-  }
-}
-
-bool read_yaml_property(const string& filename, FILE* fs, string& group,
-    string& key, bool& newobj, bool& done, yaml_value& value) {
-  // read the file line by line
-  try {
-    char buffer[4096];
-    while (fgets(buffer, sizeof(buffer), fs)) {
-      // str
-      auto str = string_view{buffer};
-      remove_yaml_comment(str);
-      if (str.empty()) continue;
-      if (is_whitespace(str)) continue;
-
-      // peek commands
-      if (is_space(str.front())) {
-        // indented property
-        if (group == "") throw std::invalid_argument{"bad format"};
-        skip_whitespace(str);
-        if (str.empty()) throw std::invalid_argument{"bad format"};
-        if (str.front() == '-') {
-          newobj = true;
-          str.remove_prefix(1);
-          skip_whitespace(str);
-        } else {
-          newobj = false;
-        }
-        parse_yaml_varname(str, key);
-        skip_whitespace(str);
-        if (str.empty() || str.front() != ':')
-          throw std::invalid_argument{"bad format"};
-        str.remove_prefix(1);
-        parse_value(str, value);
-        return true;
-      } else if (is_alpha(str.front())) {
-        // new group
-        parse_yaml_varname(str, key);
-        skip_whitespace(str);
-        if (str.empty() || str.front() != ':')
-          throw std::invalid_argument{"bad format"};
-        str.remove_prefix(1);
-        if (!str.empty() && !is_whitespace(str)) {
-          group = "";
-          parse_value(str, value);
-          return true;
-        } else {
-          group = key;
-          key   = "";
-          return true;
-        }
-      } else {
-        str = {};
-      }
-    }
-
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": parse error"};
-  }
-
-  if (ferror(fs)) throw_read_error(filename);
-
-  done = true;
-  return false;
-}
-
-static vector<string> split_yaml_string(
-    const string& str, const string& delim) {
-  auto tokens = vector<string>{};
-  auto last = (size_t)0, next = (size_t)0;
-  while ((next = str.find(delim, last)) != string::npos) {
-    tokens.push_back(str.substr(last, next - last));
-    last = next + delim.size();
-  }
-  if (last < str.size()) tokens.push_back(str.substr(last));
-  return tokens;
-}
-
-void write_yaml_comment(
-    const string& filename, FILE* fs, const string& comment) {
-  auto lines = split_yaml_string(comment, "\n");
-  for (auto& line : lines) {
-    format_values(fs, "# {}\n", line);
-  }
-  format_values(fs, "\n");
-}
-
-// Save yaml property
-void write_yaml_property(const string& filename, FILE* fs, const string& object,
-    const string& key, bool newobj, const yaml_value& value) {
-  try {
-    if (key.empty()) {
-      format_values(fs, "\n{}:\n", object);
-    } else {
-      if (!object.empty()) {
-        format_values(fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value);
-      } else {
-        format_values(fs, "{}: {}\n", key, value);
-      }
-    }
-
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": write error"};
-  }
-}
-
-void write_yaml_object(const string& filename, FILE* fs, const string& object) {
-  try {
-    format_values(fs, "\n{}:\n", object);
-
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": write error"};
-  }
 }
 
 }  // namespace yocto
