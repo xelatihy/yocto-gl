@@ -407,17 +407,11 @@ struct obj_model {
   vector<obj_environment> environments = {};
 };
 
-// Result of io operations
-struct objio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Load and save obj
-objio_status load_obj(const string& filename, obj_model& obj,
+void load_obj(const string& filename, obj_model& obj,
     bool geom_only = false, bool split_elements = true,
     bool split_materials = false);
-objio_status save_obj(const string& filename, const obj_model& obj);
+void save_obj(const string& filename, const obj_model& obj);
 
 // convert between roughness and exponent
 float obj_exponent_to_roughness(float exponent);
@@ -505,25 +499,25 @@ struct obj_instance {
 };
 
 // Read obj/mtl/objx elements
-objio_status read_obj_command(const string& filename, FILE* fs,
+bool read_obj_command(const string& filename, FILE* fs,
     obj_command& command, string& name, vec3f& value,
     vector<obj_vertex>& vertices, obj_vertex& vert_size);
-objio_status read_mtl_command(const string& filename, FILE* fs,
+bool read_mtl_command(const string& filename, FILE* fs,
     mtl_command& command, obj_material& material, bool fliptr = true);
-objio_status read_objx_command(const string& filename, FILE* fs,
+bool read_objx_command(const string& filename, FILE* fs,
     objx_command& command, obj_camera& camera, obj_environment& environment,
     obj_instance& instance);
 
 // Write obj/mtl/objx elements
-objio_status write_obj_comment(
+void write_obj_comment(
     const string& filename, FILE* fs, const string& comment);
-objio_status write_obj_command(const string& filename, FILE* fs,
+void write_obj_command(const string& filename, FILE* fs,
     obj_command command, const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices = {});
-objio_status write_mtl_command(const string& filename, FILE* fs,
+void write_mtl_command(const string& filename, FILE* fs,
     mtl_command command, obj_material& material,
     const obj_texture_info& texture = {});
-objio_status write_objx_command(const string& filename, FILE* fs,
+void write_objx_command(const string& filename, FILE* fs,
     objx_command command, const obj_camera& camera,
     const obj_environment& environment, const obj_instance& instance);
 

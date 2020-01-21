@@ -1817,7 +1817,7 @@ static bool parse_value(string_view& str, obj_texture_info& info) {
 }
 
 // Read obj
-static objio_status load_mtl(
+static void load_mtl(
     const string& filename, obj_model& obj, bool fliptr = true) {
   // open file
   auto fs = fopen(filename.c_str(), "rt");
@@ -1973,12 +1973,10 @@ static objio_status load_mtl(
 
   // remove placeholder material
   obj.materials.erase(obj.materials.begin());
-
-  return {};
 }
 
 // Read obj
-static objio_status load_objx(const string& filename, obj_model& obj) {
+static void load_objx(const string& filename, obj_model& obj) {
   // open file
   auto fs = fopen(filename.c_str(), "rt");
   if (!fs) throw_notfound_error(filename);
@@ -2034,7 +2032,7 @@ static objio_status load_objx(const string& filename, obj_model& obj) {
       if (!parse_value(str, object)) throw_parse_error(filename);
       if (!parse_value(str, frame)) throw_parse_error(filename);
       if (shape_map.find(object) == shape_map.end()) {
-        return {filename + ": missing object " + object};
+        throw_missing_reference_error(filename, "object",  object);
       }
       for (auto idx : shape_map.at(object)) {
         obj.shapes[idx].instances.push_back(frame);
@@ -2045,13 +2043,11 @@ static objio_status load_objx(const string& filename, obj_model& obj) {
   }
 
   // check error
-  if (ferror(fs)) return {filename + "read error"};
-
-  return {};
+  if (ferror(fs)) throw_read_error(filename);
 }
 
 // Read obj
-objio_status load_obj(const string& filename, obj_model& obj, bool geom_only,
+void load_obj(const string& filename, obj_model& obj, bool geom_only,
     bool split_elements, bool split_materials) {
   // open file
   auto fs = fopen(filename.c_str(), "rt");
@@ -2210,23 +2206,27 @@ objio_status load_obj(const string& filename, obj_model& obj, bool geom_only,
   }
 
   // exit if done
-  if (geom_only) return {};
+  if (geom_only) return;
 
   // load materials
   auto dirname = get_dirname(filename);
   for (auto& mtllib : mtllibs) {
-    if (auto ret = load_mtl(dirname + mtllib, obj); !ret)
-      return {filename + ": mtl error (" + ret.error + ")"};
+    try {
+      load_mtl(dirname + mtllib, obj);
+    } catch(std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // load extensions
   auto extfilename = replace_extension(filename, ".objx");
   if (exists_file(extfilename)) {
-    if (auto ret = load_objx(extfilename, obj); !ret)
-      return {filename + ": objx error (" + ret.error + ")"};
+    try {
+      load_objx(extfilename, obj);
+    } catch(std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
-
-  return {};
 }
 
 // Format values
@@ -2249,7 +2249,7 @@ static void format_value(string& str, const obj_vertex& value) {
 }
 
 // Save obj
-static objio_status save_mtl(const string& filename, const obj_model& obj) {
+static void save_mtl(const string& filename, const obj_model& obj) {
   // open file
   auto fs = fopen(filename.c_str(), "wt");
   if (!fs) throw_notfound_error(filename);
@@ -2377,12 +2377,10 @@ static objio_status save_mtl(const string& filename, const obj_model& obj) {
         throw_write_error(filename);
     if (!format_values(fs, "\n")) throw_write_error(filename);
   }
-
-  return {};
 }
 
 // Save obj
-static objio_status save_objx(const string& filename, const obj_model& obj) {
+static void save_objx(const string& filename, const obj_model& obj) {
   // open file
   auto fs = fopen(filename.c_str(), "wt");
   if (!fs) throw_notfound_error(filename);
@@ -2422,12 +2420,10 @@ static objio_status save_objx(const string& filename, const obj_model& obj) {
       format_values(fs, "i {} {}\n", shape.name, frame);
     }
   }
-
-  return {};
 }
 
 // Save obj
-objio_status save_obj(const string& filename, const obj_model& obj) {
+void save_obj(const string& filename, const obj_model& obj) {
   // open file
   auto fs = fopen(filename.c_str(), "wt");
   if (!fs) throw_notfound_error(filename);
@@ -2496,19 +2492,15 @@ objio_status save_obj(const string& filename, const obj_model& obj) {
 
   // save mtl
   if (!obj.materials.empty()) {
-    if (auto ret = save_mtl(replace_extension(filename, ".mtl"), obj); !ret)
-      return ret;
+    save_mtl(replace_extension(filename, ".mtl"), obj);
   }
 
   // save objx
   if (!obj.cameras.empty() || !obj.environments.empty() ||
       std::any_of(obj.shapes.begin(), obj.shapes.end(),
           [](auto& shape) { return !shape.instances.empty(); })) {
-    if (auto ret = save_objx(replace_extension(filename, ".objx"), obj); !ret)
-      return ret;
+    save_objx(replace_extension(filename, ".objx"), obj);
   }
-
-  return {};
 }
 
 // convert between roughness and exponent
@@ -2833,7 +2825,7 @@ void add_obj_fvquads(obj_model& obj, const string& name,
 }  // namespace yocto
 
 // Read obj
-objio_status read_obj_command(const string& filename, FILE* fs,
+bool read_obj_command(const string& filename, FILE* fs,
     obj_command& command, string& name, vec3f& value,
     vector<obj_vertex>& vertices, obj_vertex& vert_size) {
   // read the file str by str
@@ -2855,18 +2847,18 @@ objio_status read_obj_command(const string& filename, FILE* fs,
       command = obj_command::vertex;
       if (!parse_value(str, value)) throw_parse_error(filename);
       vert_size.position += 1;
-      return {};
+      return true;
     } else if (cmd == "vn") {
       command = obj_command::normal;
       if (!parse_value(str, value)) throw_parse_error(filename);
       vert_size.normal += 1;
-      return {};
+      return true;
     } else if (cmd == "vt") {
       command = obj_command::texcoord;
       if (!parse_value(str, (vec2f&)value)) throw_parse_error(filename);
       value.z = 0;
       vert_size.texcoord += 1;
-      return {};
+      return true;
     } else if (cmd == "f" || cmd == "l" || cmd == "p") {
       vertices.clear();
       skip_whitespace(str);
@@ -2885,27 +2877,27 @@ objio_status read_obj_command(const string& filename, FILE* fs,
       if (cmd == "f") command = obj_command::face;
       if (cmd == "l") command = obj_command::str;
       if (cmd == "p") command = obj_command::point;
-      return {};
+      return true;
     } else if (cmd == "o") {
       command = obj_command::object;
       if (!parse_value_or_empty(str, name)) throw_parse_error(filename);
-      return {};
+      return true;
     } else if (cmd == "usemtl") {
       command = obj_command::usemtl;
       if (!parse_value_or_empty(str, name)) throw_parse_error(filename);
-      return {};
+      return true;
     } else if (cmd == "g") {
       command = obj_command::group;
       if (!parse_value_or_empty(str, name)) throw_parse_error(filename);
-      return {};
+      return true;
     } else if (cmd == "s") {
       command = obj_command::smoothing;
       if (!parse_value_or_empty(str, name)) throw_parse_error(filename);
-      return {};
+      return true;
     } else if (cmd == "mtllib") {
       command = obj_command::mtllib;
       if (!parse_value(str, name)) throw_parse_error(filename);
-      return {};
+      return true;
     } else {
       // unused
     }
@@ -2914,11 +2906,11 @@ objio_status read_obj_command(const string& filename, FILE* fs,
   // check error
   if (ferror(fs)) throw_read_error(filename);
 
-  return {"eof"};
+  return false;
 }
 
 // Read mtl
-objio_status read_mtl_command(const string& filename, FILE* fs,
+bool read_mtl_command(const string& filename, FILE* fs,
     mtl_command& command, obj_material& material, bool fliptr) {
   material = {};
 
@@ -2943,7 +2935,7 @@ objio_status read_mtl_command(const string& filename, FILE* fs,
       if (found) {
         command = mtl_command::material;
         fseek(fs, pos, SEEK_SET);
-        return {};
+        return true;
       } else {
         found = true;
       }
@@ -3069,17 +3061,17 @@ objio_status read_mtl_command(const string& filename, FILE* fs,
 
   if (found) {
     command = mtl_command::material;
-    return {};
+    return true;
   }
 
   // check error
-  if (ferror(fs)) return {filename + "read error"};
+  if (ferror(fs)) throw_read_error(filename);
 
-  return {"eof"};
+  return false;
 }
 
 // Read objx
-objio_status read_objx_command(const string& filename, FILE* fs,
+bool read_objx_command(const string& filename, FILE* fs,
     objx_command& command, obj_camera& camera, obj_environment& environment,
     obj_instance& instance) {
   // read the file str by str
@@ -3109,7 +3101,7 @@ objio_status read_objx_command(const string& filename, FILE* fs,
       if (!parse_value(str, camera.aperture))
         throw_parse_error(filename);
       if (!parse_value(str, camera.frame)) throw_parse_error(filename);
-      return {};
+      return true;
     } else if (cmd == "e") {
       command = objx_command::environment;
       if (!parse_value(str, environment.name))
@@ -3120,23 +3112,23 @@ objio_status read_objx_command(const string& filename, FILE* fs,
         throw_parse_error(filename);
       if (!parse_value(str, environment.frame))
         throw_parse_error(filename);
-      return {};
+      return true;
     } else if (cmd == "i") {
       command = objx_command::instance;
       if (!parse_value(str, instance.object))
         throw_parse_error(filename);
       if (!parse_value(str, instance.frame))
         throw_parse_error(filename);
-      return {};
+      return true;
     }
   }
 
-  if (found) return {};
+  if (found) return true;
 
   // check error
   if (ferror(fs)) throw_read_error(filename);
 
-  return {"eof"};
+  return false;
 }
 
 static vector<string> split_obj_string(const string& str, const string& delim) {
@@ -3151,17 +3143,16 @@ static vector<string> split_obj_string(const string& str, const string& delim) {
 }
 
 // Write obj elements
-objio_status write_obj_comment(
+void write_obj_comment(
     const string& filename, FILE* fs, const string& comment) {
   auto lines = split_obj_string(comment, "\n");
   for (auto& str : lines) {
     if (!format_values(fs, "# {}\n", str)) throw_write_error(filename);
   }
   if (!format_values(fs, "\n")) throw_write_error(filename);
-  return {};
 }
 
-objio_status write_obj_command(const string& filename, FILE* fs,
+void write_obj_command(const string& filename, FILE* fs,
     obj_command command, const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices) {
   switch (command) {
@@ -3214,11 +3205,9 @@ objio_status write_obj_command(const string& filename, FILE* fs,
     case obj_command::objxlib: break;
     case obj_command::error: break;
   }
-
-  return {};
 }
 
-objio_status write_mtl_command(const string& filename, FILE* fs,
+void write_mtl_command(const string& filename, FILE* fs,
     mtl_command command, const obj_material& material) {
   // write material
   switch (command) {
@@ -3332,11 +3321,9 @@ objio_status write_mtl_command(const string& filename, FILE* fs,
       break;
     case mtl_command::error: break;
   }
-
-  return {};
 }
 
-objio_status write_objx_command(const string& filename, FILE* fs,
+void write_objx_command(const string& filename, FILE* fs,
     objx_command command, const obj_camera& camera,
     const obj_environment& environment, const obj_instance& instance) {
   switch (command) {
@@ -3361,8 +3348,6 @@ objio_status write_objx_command(const string& filename, FILE* fs,
     } break;
     case objx_command::error: break;
   }
-
-  return {};
 }
 
 }  // namespace yocto

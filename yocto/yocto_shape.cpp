@@ -3574,7 +3574,7 @@ shapeio_status load_shape(const string& filename, vector<int>& points,
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
     auto obj = obj_model();
-    if (auto ret = load_obj(filename, obj, true); !ret) return error(ret.error);
+    load_obj(filename, obj, true);
 
     // get shape
     if (obj.shapes.empty()) return error("empty shape");
@@ -3654,11 +3654,9 @@ shapeio_status save_shape(const string& filename, const vector<int>& points,
       return error("empty shape");
     }
     auto err = ""s;
-    if (!save_obj(filename, obj)) return error(err);
-    return ok();
+    save_obj(filename, obj);
   } else {
     return error("unsupported format");
-    ;
   }
 }
 
@@ -3694,7 +3692,7 @@ shapeio_status load_fvshape(const string& filename, vector<vec4i>& quadspos,
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_model();
     auto err = ""s;
-    if (!load_obj(filename, obj, true)) return error(err);
+    load_obj(filename, obj, true);
     if (obj.shapes.empty()) return error("empty shape");
     if (obj.shapes.size() > 1) return error("diffent element types");
     auto& shape = obj.shapes.front();
@@ -3717,7 +3715,6 @@ shapeio_status save_fvshape(const string& filename,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords, bool ascii,
     bool flip_texcoord) {
-  auto ok    = []() { return shapeio_status{}; };
   auto error = [&filename](const string& err) {
     return shapeio_status{filename + ": " + err};
   };
@@ -3738,8 +3735,7 @@ shapeio_status save_fvshape(const string& filename,
         normals, texcoords, {}, {}, flip_texcoord);
 
     // Save
-    if (auto ret = save_obj(filename, obj); !ret) return error(ret.error);
-    return ok();
+    save_obj(filename, obj);
   } else {
     return error("unsupported format");
   }
