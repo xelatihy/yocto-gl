@@ -141,15 +141,9 @@ struct ply_model {
   vector<ply_element> elements = {};
 };
 
-// Result of io operations
-struct plyio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Load and save ply
-plyio_status load_ply(const string& filename, ply_model& ply);
-plyio_status save_ply(const string& filename, const ply_model& ply);
+void load_ply(const string& filename, ply_model& ply);
+void save_ply(const string& filename, const ply_model& ply);
 
 // Get ply properties
 bool has_ply_property(
@@ -244,24 +238,24 @@ void add_ply_points(ply_model& ply, const vector<int>& values);
 namespace yocto {
 
 // Read Ply functions
-plyio_status read_ply_header(const string& filename, FILE* fs,
+void read_ply_header(const string& filename, FILE* fs,
     ply_format& format, vector<ply_element>& elements,
     vector<string>& comments);
-plyio_status read_ply_value(const string& filename, FILE* fs, ply_format format,
+void read_ply_value(const string& filename, FILE* fs, ply_format format,
     const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists);
-plyio_status read_ply_value(const string& filename, FILE* fs, ply_format format,
+void read_ply_value(const string& filename, FILE* fs, ply_format format,
     const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists);
 
 // Write Ply functions
-plyio_status write_ply_header(const string& filename, FILE* fs,
+void write_ply_header(const string& filename, FILE* fs,
     ply_format format, const vector<ply_element>& elements,
     const vector<string>& comments);
-plyio_status write_ply_value(const string& filename, FILE* fs,
+void write_ply_value(const string& filename, FILE* fs,
     ply_format format, const ply_element& element, vector<double>& values,
     vector<vector<double>>& lists);
-plyio_status write_ply_value(const string& filename, FILE* fs,
+void write_ply_value(const string& filename, FILE* fs,
     ply_format format, const ply_element& element, vector<float>& values,
     vector<vector<int>>& lists);
 

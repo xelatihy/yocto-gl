@@ -3551,7 +3551,7 @@ shapeio_status load_shape(const string& filename, vector<int>& points,
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply = ply_model{};
-    if (auto ret = load_ply(filename, ply); !ret) return error(ret.error);
+    load_ply(filename, ply);
 
     // gets vertex
     positions = get_ply_positions(ply);
@@ -3634,7 +3634,7 @@ shapeio_status save_shape(const string& filename, const vector<int>& points,
     add_ply_faces(ply, triangles, quads);
     add_ply_lines(ply, lines);
     add_ply_points(ply, points);
-    if (auto ret = save_ply(filename, ply); !ret) return error(ret.error);
+    save_ply(filename, ply);
     return ok();
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_model{};
@@ -3682,7 +3682,7 @@ shapeio_status load_fvshape(const string& filename, vector<vec4i>& quadspos,
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    if (auto ret = load_ply(filename, ply); !ret) return error(ret.error);
+    load_ply(filename, ply);
     positions = get_ply_positions(ply);
     normals   = get_ply_normals(ply);
     texcoords = get_ply_texcoords(ply, flip_texcoord);
