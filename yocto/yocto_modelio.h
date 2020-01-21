@@ -824,15 +824,9 @@ struct pbrt_model {
   vector<pbrt_accelerator> accelerators = {};
 };
 
-// Result of io operations
-struct pbrtio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Load/save pbrt
-pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt);
-pbrtio_status save_pbrt(const string& filename, const pbrt_model& pbrt);
+void load_pbrt(const string& filename, pbrt_model& pbrt);
+void save_pbrt(const string& filename, const pbrt_model& pbrt);
 
 }  // namespace yocto
 
@@ -857,24 +851,24 @@ enum struct pbrt_command {
 };
 
 // Read pbrt commands
-pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
+bool read_pbrt_command(const string& filename, FILE* fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values);
-pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
+bool read_pbrt_command(const string& filename, FILE* fs,
     pbrt_command& command, string& name, string& type, frame3f& xform,
     vector<pbrt_value>& values, string& buffer);
 
 // Write pbrt commands
-pbrtio_status write_pbrt_comment(
+void write_pbrt_comment(
     const string& filename, FILE* fs, const string& comment);
-pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
+void write_pbrt_command(const string& filename, FILE* fs,
     pbrt_command command, const string& name, const string& type,
     const frame3f& xform, const vector<pbrt_value>& values,
     bool texture_as_float = false);
-pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
+void write_pbrt_command(const string& filename, FILE* fs,
     pbrt_command command, const string& name = "",
     const frame3f& xform = identity3x4f);
-pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
+void write_pbrt_command(const string& filename, FILE* fs,
     pbrt_command command, const string& name, const string& type,
     const vector<pbrt_value>& values, bool texture_as_float = false);
 
@@ -992,13 +986,8 @@ struct gltf_model {
   vector<gltf_scene>    scenes    = {};
 };
 
-// Result of io operations
-struct gltfio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
-gltfio_status load_gltf(const string& filename, gltf_model& gltf);
+// Load gltf file.
+void load_gltf(const string& filename, gltf_model& gltf);
 
 }  // namespace yocto
 
