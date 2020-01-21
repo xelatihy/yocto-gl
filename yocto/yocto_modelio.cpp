@@ -397,13 +397,13 @@ template <typename... Args>
 static void format_values(FILE* fs, const string& fmt, const Args&... args) {
   auto str = ""s;
   format_values(str, fmt, args...);
-  if(fputs(str.c_str(), fs) < 0) throw std::invalid_argument{"write error"};
+  if (fputs(str.c_str(), fs) < 0) throw std::invalid_argument{"write error"};
 }
 template <typename T>
 static void format_value(FILE* fs, const T& value) {
   auto str = ""s;
   format_value(str, value);
-  if(fputs(str.c_str(), fs) < 0) throw std::invalid_argument{"write error"};
+  if (fputs(str.c_str(), fs) < 0) throw std::invalid_argument{"write error"};
 }
 
 }  // namespace yocto
@@ -416,9 +416,6 @@ namespace yocto {
 // Helpers for throwing
 static void throw_notfound_error(const string& filename) {
   throw std::runtime_error{filename + ": file not found"};
-}
-static void throw_write_error(const string& filename) {
-  throw std::runtime_error{filename + ": parse error"};
 }
 static void throw_read_error(const string& filename) {
   throw std::runtime_error{filename + ": parse error"};
@@ -736,155 +733,138 @@ void save_ply(const string& filename, const ply_model& ply) {
       {ply_format::binary_little_endian, "binary_little_endian"},
       {ply_format::binary_big_endian, "binary_big_endian"}};
 
-  // header
-  if (!format_values(fs, "ply\n")) throw_write_error(filename);
-  if (!format_values(fs, "format {} 1.0\n", format_map.at(ply.format)))
-    throw_write_error(filename);
-  if (!format_values(fs, "comment Written by Yocto/GL\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n"))
-    throw_write_error(filename);
-  for (auto& comment : ply.comments)
-    if (!format_values(fs, "comment {}\n", comment))
-      throw_write_error(filename);
-  for (auto& elem : ply.elements) {
-    if (!format_values(fs, "element {} {}\n", elem.name, (uint64_t)elem.count))
-      throw_write_error(filename);
-    for (auto& prop : elem.properties) {
-      if (prop.is_list) {
-        if (!format_values(fs, "property list uchar {} {}\n",
-                type_map[prop.type], prop.name))
-          throw_write_error(filename);
-      } else {
-        if (!format_values(
-                fs, "property {} {}\n", type_map[prop.type], prop.name))
-          throw_write_error(filename);
+  try {
+    // header
+    format_values(fs, "ply\n");
+    format_values(fs, "format {} 1.0\n", format_map.at(ply.format));
+    format_values(fs, "comment Written by Yocto/GL\n");
+    format_values(fs, "comment https://github.com/xelatihy/yocto-gl\n");
+    for (auto& comment : ply.comments)
+      format_values(fs, "comment {}\n", comment);
+    for (auto& elem : ply.elements) {
+      format_values(fs, "element {} {}\n", elem.name, (uint64_t)elem.count);
+      for (auto& prop : elem.properties) {
+        if (prop.is_list) {
+          format_values(fs, "property list uchar {} {}\n", type_map[prop.type],
+              prop.name);
+        } else {
+          format_values(fs, "property {} {}\n", type_map[prop.type], prop.name);
+        }
       }
     }
-  }
-  if (!format_values(fs, "end_header\n")) throw_write_error(filename);
 
-  auto write_value = [](FILE* fs, auto value_, bool big_endian) -> bool {
+    format_values(fs, "end_header\n");
+
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
+  }
+
+  auto write_value = [](FILE* fs, auto value_, bool big_endian) -> void {
     auto value = big_endian ? swap_endian(value_) : value_;
-    return fwrite(&value, sizeof(value), 1, fs) == 1;
+    if (fwrite(&value, sizeof(value), 1, fs) != 1)
+      throw std::invalid_argument{"write error"};
   };
 
   // properties
   if (ply.format == ply_format::ascii) {
-    for (auto& elem : ply.elements) {
-      auto cur = vector<size_t>(elem.properties.size(), 0);
-      for (auto idx = 0; idx < elem.count; idx++) {
-        for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
-          auto& prop = elem.properties[pidx];
-          if (prop.is_list)
-            if (!format_values(fs, "{} ", (int)prop.ldata_u8[idx]))
-              throw_write_error(filename);
-          auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
-          for (auto i = 0; i < vcount; i++) {
-            switch (prop.type) {
-              case ply_type::i8:
-                if (!format_values(fs, "{} ", prop.data_i8[cur[idx]++]))
-                  throw_write_error(filename);
-                break;
-              case ply_type::i16:
-                if (!format_values(fs, "{} ", prop.data_i16[cur[idx]++]))
-                  throw_write_error(filename);
-                break;
-              case ply_type::i32:
-                if (!format_values(fs, "{} ", prop.data_i32[cur[idx]++]))
-                  throw_write_error(filename);
-                break;
-              case ply_type::i64:
-                if (!format_values(fs, "{} ", prop.data_i64[cur[idx]++]))
-                  throw_write_error(filename);
-                break;
-              case ply_type::u8:
-                if (!format_values(fs, "{} ", prop.data_u8[cur[idx]++]))
-                  throw_write_error(filename);
-                break;
-              case ply_type::u16:
-                if (!format_values(fs, "{} ", prop.data_u16[cur[idx]++]))
-                  throw_write_error(filename);
-                break;
-              case ply_type::u32:
-                if (!format_values(fs, "{} ", prop.data_u32[cur[idx]++]))
-                  throw_write_error(filename);
-                break;
-              case ply_type::u64:
-                if (!format_values(fs, "{} ", prop.data_u64[cur[idx]++]))
-                  throw_write_error(filename);
-                break;
-              case ply_type::f32:
-                if (!format_values(fs, "{} ", prop.data_f32[cur[idx]++]))
-                  throw_write_error(filename);
-                break;
-              case ply_type::f64:
-                if (!format_values(fs, "{} ", prop.data_f64[cur[idx]++]))
-                  throw_write_error(filename);
-                break;
+    try {
+      for (auto& elem : ply.elements) {
+        auto cur = vector<size_t>(elem.properties.size(), 0);
+        for (auto idx = 0; idx < elem.count; idx++) {
+          for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
+            auto& prop = elem.properties[pidx];
+            if (prop.is_list) format_values(fs, "{} ", (int)prop.ldata_u8[idx]);
+            auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
+            for (auto i = 0; i < vcount; i++) {
+              switch (prop.type) {
+                case ply_type::i8:
+                  format_values(fs, "{} ", prop.data_i8[cur[idx]++]);
+                  break;
+                case ply_type::i16:
+                  format_values(fs, "{} ", prop.data_i16[cur[idx]++]);
+                  break;
+                case ply_type::i32:
+                  format_values(fs, "{} ", prop.data_i32[cur[idx]++]);
+                  break;
+                case ply_type::i64:
+                  format_values(fs, "{} ", prop.data_i64[cur[idx]++]);
+                  break;
+                case ply_type::u8:
+                  format_values(fs, "{} ", prop.data_u8[cur[idx]++]);
+                  break;
+                case ply_type::u16:
+                  format_values(fs, "{} ", prop.data_u16[cur[idx]++]);
+                  break;
+                case ply_type::u32:
+                  format_values(fs, "{} ", prop.data_u32[cur[idx]++]);
+                  break;
+                case ply_type::u64:
+                  format_values(fs, "{} ", prop.data_u64[cur[idx]++]);
+                  break;
+                case ply_type::f32:
+                  format_values(fs, "{} ", prop.data_f32[cur[idx]++]);
+                  break;
+                case ply_type::f64:
+                  format_values(fs, "{} ", prop.data_f64[cur[idx]++]);
+                  break;
+              }
             }
+            format_values(fs, "\n");
           }
-          if (!format_values(fs, "\n")) throw_write_error(filename);
         }
       }
+    } catch (std::invalid_argument& e) {
+      throw std::runtime_error{filename + ": write error"};
     }
   } else {
-    auto big_endian = ply.format == ply_format::binary_big_endian;
-    for (auto& elem : ply.elements) {
-      auto cur = vector<size_t>(elem.properties.size(), 0);
-      for (auto idx = 0; idx < elem.count; idx++) {
-        for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
-          auto& prop = elem.properties[pidx];
-          if (prop.is_list)
-            if (!write_value(fs, prop.ldata_u8[idx], big_endian))
-              throw_write_error(filename);
-          auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
-          for (auto i = 0; i < vcount; i++) {
-            switch (prop.type) {
-              case ply_type::i8:
-                if (!write_value(fs, prop.data_i8[cur[pidx]++], big_endian))
-                  throw_write_error(filename);
-                break;
-              case ply_type::i16:
-                if (!write_value(fs, prop.data_i16[cur[pidx]++], big_endian))
-                  throw_write_error(filename);
-                break;
-              case ply_type::i32:
-                if (!write_value(fs, prop.data_i32[cur[pidx]++], big_endian))
-                  throw_write_error(filename);
-                break;
-              case ply_type::i64:
-                if (!write_value(fs, prop.data_i64[cur[pidx]++], big_endian))
-                  throw_write_error(filename);
-                break;
-              case ply_type::u8:
-                if (!write_value(fs, prop.data_u8[cur[pidx]++], big_endian))
-                  throw_write_error(filename);
-                break;
-              case ply_type::u16:
-                if (!write_value(fs, prop.data_u16[cur[pidx]++], big_endian))
-                  throw_write_error(filename);
-                break;
-              case ply_type::u32:
-                if (!write_value(fs, prop.data_u32[cur[pidx]++], big_endian))
-                  throw_write_error(filename);
-                break;
-              case ply_type::u64:
-                if (!write_value(fs, prop.data_u64[cur[pidx]++], big_endian))
-                  throw_write_error(filename);
-                break;
-              case ply_type::f32:
-                if (!write_value(fs, prop.data_f32[cur[pidx]++], big_endian))
-                  throw_write_error(filename);
-                break;
-              case ply_type::f64:
-                if (!write_value(fs, prop.data_f64[cur[pidx]++], big_endian))
-                  throw_write_error(filename);
-                break;
+    try {
+      auto big_endian = ply.format == ply_format::binary_big_endian;
+      for (auto& elem : ply.elements) {
+        auto cur = vector<size_t>(elem.properties.size(), 0);
+        for (auto idx = 0; idx < elem.count; idx++) {
+          for (auto pidx = 0; pidx < elem.properties.size(); pidx++) {
+            auto& prop = elem.properties[pidx];
+            if (prop.is_list) write_value(fs, prop.ldata_u8[idx], big_endian);
+            auto vcount = prop.is_list ? prop.ldata_u8[idx] : 1;
+            for (auto i = 0; i < vcount; i++) {
+              switch (prop.type) {
+                case ply_type::i8:
+                  write_value(fs, prop.data_i8[cur[pidx]++], big_endian);
+                  break;
+                case ply_type::i16:
+                  write_value(fs, prop.data_i16[cur[pidx]++], big_endian);
+                  break;
+                case ply_type::i32:
+                  write_value(fs, prop.data_i32[cur[pidx]++], big_endian);
+                  break;
+                case ply_type::i64:
+                  write_value(fs, prop.data_i64[cur[pidx]++], big_endian);
+                  break;
+                case ply_type::u8:
+                  write_value(fs, prop.data_u8[cur[pidx]++], big_endian);
+                  break;
+                case ply_type::u16:
+                  write_value(fs, prop.data_u16[cur[pidx]++], big_endian);
+                  break;
+                case ply_type::u32:
+                  write_value(fs, prop.data_u32[cur[pidx]++], big_endian);
+                  break;
+                case ply_type::u64:
+                  write_value(fs, prop.data_u64[cur[pidx]++], big_endian);
+                  break;
+                case ply_type::f32:
+                  write_value(fs, prop.data_f32[cur[pidx]++], big_endian);
+                  break;
+                case ply_type::f64:
+                  write_value(fs, prop.data_f64[cur[pidx]++], big_endian);
+                  break;
+              }
             }
           }
         }
       }
+    } catch (std::invalid_argument& e) {
+      throw std::runtime_error{filename + ": write error"};
     }
   }
 }
@@ -1314,17 +1294,17 @@ void add_ply_points(ply_model& ply, const vector<int>& values) {
 template <typename T, typename VT>
 static void read_ply_prop(FILE* fs, VT& value, bool big_endian) {
   auto read_value = [](FILE* fs, auto& value, bool big_endian) -> void {
-    if(fread(&value, sizeof(value), 1, fs) != 1) throw std::invalid_argument{"read error"};
+    if (fread(&value, sizeof(value), 1, fs) != 1)
+      throw std::invalid_argument{"read error"};
     if (big_endian) value = swap_endian(value);
   };
 
   auto tvalue = T{};
   read_value(fs, tvalue, big_endian);
-  value       = (VT)tvalue;
+  value = (VT)tvalue;
 }
 template <typename VT>
-static void read_ply_prop(
-    FILE* fs, ply_type type, VT& value, bool big_endian) {
+static void read_ply_prop(FILE* fs, ply_type type, VT& value, bool big_endian) {
   switch (type) {
     case ply_type::i8: return read_ply_prop<int8_t>(fs, value, big_endian);
     case ply_type::i16: return read_ply_prop<int16_t>(fs, value, big_endian);
@@ -1485,51 +1465,51 @@ static void read_ply_value_generic(const string& filename, FILE* fs,
   // read property values
   if (format == ply_format::ascii) {
     try {
-    char buffer[4096];
-    if (!fgets(buffer, sizeof(buffer), fs)) throw_read_error(filename);
-    auto str = string_view{buffer};
-    for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
-      auto& prop  = element.properties[pidx];
-      auto& value = values[pidx];
-      auto& list  = lists[pidx];
-      if (!prop.is_list) {
-        parse_ply_prop(str, prop.type, value);
-      } else {
-        parse_ply_prop(str, ply_type::u8, value);
-        list.resize((int)value);
-        for (auto i = 0; i < (int)value; i++)
-          parse_ply_prop(str, prop.type, list[i]);
+      char buffer[4096];
+      if (!fgets(buffer, sizeof(buffer), fs)) throw_read_error(filename);
+      auto str = string_view{buffer};
+      for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
+        auto& prop  = element.properties[pidx];
+        auto& value = values[pidx];
+        auto& list  = lists[pidx];
+        if (!prop.is_list) {
+          parse_ply_prop(str, prop.type, value);
+        } else {
+          parse_ply_prop(str, ply_type::u8, value);
+          list.resize((int)value);
+          for (auto i = 0; i < (int)value; i++)
+            parse_ply_prop(str, prop.type, list[i]);
+        }
       }
-    }
-    } catch(std::invalid_argument& e) {
+    } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": parse error [" + e.what() + "]"};
     }
   } else {
     try {
-    for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
-      auto& prop  = element.properties[pidx];
-      auto& value = values[pidx];
-      auto& list  = lists[pidx];
-      if (!prop.is_list) {
-        read_ply_prop(
-                fs, prop.type, value, format == ply_format::binary_big_endian);
-      } else {
-        read_ply_prop(fs, ply_type::u8, value,
+      for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
+        auto& prop  = element.properties[pidx];
+        auto& value = values[pidx];
+        auto& list  = lists[pidx];
+        if (!prop.is_list) {
+          read_ply_prop(
+              fs, prop.type, value, format == ply_format::binary_big_endian);
+        } else {
+          read_ply_prop(
+              fs, ply_type::u8, value, format == ply_format::binary_big_endian);
+          list.resize((int)value);
+          for (auto i = 0; i < (int)value; i++)
+            read_ply_prop(fs, prop.type, list[i],
                 format == ply_format::binary_big_endian);
-        list.resize((int)value);
-        for (auto i = 0; i < (int)value; i++)
-          read_ply_prop(fs, prop.type, list[i],
-                  format == ply_format::binary_big_endian);
+        }
       }
-    }
-    } catch(std::invalid_argument& e) {
+    } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": read error"};
     }
   }
 }
 
 template <typename VT>
-static bool format_ply_prop(FILE* fs, ply_type type, VT value) {
+static void format_ply_prop(FILE* fs, ply_type type, VT value) {
   switch (type) {
     case ply_type::i8: return format_value(fs, (int8_t)value);
     case ply_type::i16: return format_value(fs, (int16_t)value);
@@ -1542,14 +1522,15 @@ static bool format_ply_prop(FILE* fs, ply_type type, VT value) {
     case ply_type::f32: return format_value(fs, (float)value);
     case ply_type::f64: return format_value(fs, (double)value);
   }
-  return false;
+  throw std::invalid_argument{"unknown type"};
 }
 
 template <typename VT>
-static bool write_ply_prop(FILE* fs, ply_type type, VT value, bool big_endian) {
-  auto write_value = [](FILE* fs, auto value_, bool big_endian) -> bool {
+static void write_ply_prop(FILE* fs, ply_type type, VT value, bool big_endian) {
+  auto write_value = [](FILE* fs, auto value_, bool big_endian) -> void {
     auto value = big_endian ? swap_endian(value_) : value_;
-    return fwrite(&value, sizeof(value), 1, fs) == 1;
+    if (fwrite(&value, sizeof(value), 1, fs) != 1)
+      throw std::invalid_argument{"write error"};
   };
 
   switch (type) {
@@ -1564,7 +1545,7 @@ static bool write_ply_prop(FILE* fs, ply_type type, VT value, bool big_endian) {
     case ply_type::f32: return write_value(fs, (float)value, big_endian);
     case ply_type::f64: return write_value(fs, (double)value, big_endian);
   }
-  return false;
+  throw std::invalid_argument{"unknown type"};
 }
 
 // Write Ply functions
@@ -1577,40 +1558,38 @@ void write_ply_header(const string& filename, FILE* fs, ply_format format,
       {ply_type::u32, "uint"}, {ply_type::u64, "ulong"},
       {ply_type::f32, "float"}, {ply_type::f64, "double"}};
 
-  if (!format_values(fs, "ply\n")) throw_write_error(filename);
-  switch (format) {
-    case ply_format::ascii:
-      if (!format_values(fs, "format ascii 1.0\n")) throw_write_error(filename);
-      break;
-    case ply_format::binary_little_endian:
-      if (!format_values(fs, "format binary_little_endian 1.0\n"))
-        throw_write_error(filename);
-      break;
-    case ply_format::binary_big_endian:
-      if (!format_values(fs, "format binary_big_endian 1.0\n"))
-        throw_write_error(filename);
-      break;
-  }
-  for (auto& comment : comments)
-    if (!format_values(fs, "comment " + comment + "\n"))
-      throw_write_error(filename);
-  for (auto& elem : elements) {
-    if (!format_values(fs,
-            "element " + elem.name + " " + std::to_string(elem.count) + "\n"))
-      throw_write_error(filename);
-    for (auto& prop : elem.properties) {
-      if (prop.is_list) {
-        if (!format_values(fs, "property list uchar " + type_map[prop.type] +
-                                   " " + prop.name + "\n"))
-          throw_write_error(filename);
-      } else {
-        if (!format_values(
-                fs, "property " + type_map[prop.type] + " " + prop.name + "\n"))
-          throw_write_error(filename);
+  try {
+    format_values(fs, "ply\n");
+    switch (format) {
+      case ply_format::ascii: format_values(fs, "format ascii 1.0\n"); break;
+      case ply_format::binary_little_endian:
+        format_values(fs, "format binary_little_endian 1.0\n");
+        break;
+      case ply_format::binary_big_endian:
+        format_values(fs, "format binary_big_endian 1.0\n");
+        break;
+    }
+    for (auto& comment : comments)
+      format_values(fs, "comment " + comment + "\n");
+    for (auto& elem : elements) {
+      format_values(
+          fs, "element " + elem.name + " " + std::to_string(elem.count) + "\n");
+      for (auto& prop : elem.properties) {
+        if (prop.is_list) {
+          format_values(fs, "property list uchar " + type_map[prop.type] + " " +
+                                prop.name + "\n");
+        } else {
+          format_values(
+              fs, "property " + type_map[prop.type] + " " + prop.name + "\n");
+        }
       }
     }
+
+    format_values(fs, "end_header\n");
+
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
   }
-  if (!format_values(fs, "end_header\n")) throw_write_error(filename);
 }
 
 template <typename VT, typename LT>
@@ -1618,41 +1597,41 @@ static void write_ply_value_generic(const string& filename, FILE* fs,
     ply_format format, const ply_element& element, vector<VT>& values,
     vector<vector<LT>>& lists) {
   if (format == ply_format::ascii) {
-    for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
-      auto& prop = element.properties[pidx];
-      if (pidx)
-        if (!format_value(fs, " ")) throw_write_error(filename);
-      if (!prop.is_list) {
-        if (!format_ply_prop(fs, prop.type, values[pidx]))
-          throw_write_error(filename);
-      } else {
-        if (!format_ply_prop(fs, ply_type::u8, values[pidx]))
-          throw_write_error(filename);
-        for (auto i = 0; i < (int)lists[pidx].size(); i++) {
-          if (i)
-            if (!format_value(fs, " ")) throw_write_error(filename);
-          if (!format_ply_prop(fs, prop.type, lists[pidx][i]))
-            throw_write_error(filename);
+    try {
+      for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
+        auto& prop = element.properties[pidx];
+        if (pidx) format_value(fs, " ");
+        if (!prop.is_list) {
+          format_ply_prop(fs, prop.type, values[pidx]);
+        } else {
+          format_ply_prop(fs, ply_type::u8, values[pidx]);
+          for (auto i = 0; i < (int)lists[pidx].size(); i++) {
+            if (i) format_value(fs, " ");
+            format_ply_prop(fs, prop.type, lists[pidx][i]);
+          }
         }
+        format_value(fs, "\n");
       }
-      if (!format_value(fs, "\n")) throw_write_error(filename);
+    } catch (std::invalid_argument& e) {
+      throw std::runtime_error{filename + ": write error"};
     }
   } else {
-    for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
-      auto& prop = element.properties[pidx];
-      if (!prop.is_list) {
-        if (!write_ply_prop(fs, prop.type, values[pidx],
-                format == ply_format::binary_big_endian))
-          throw_write_error(filename);
-      } else {
-        if (!write_ply_prop(fs, ply_type::u8, values[pidx],
-                format == ply_format::binary_big_endian))
-          throw_write_error(filename);
-        for (auto i = 0; i < (int)lists[pidx].size(); i++)
-          if (!write_ply_prop(fs, prop.type, lists[pidx][i],
-                  format == ply_format::binary_big_endian))
-            throw_write_error(filename);
+    try {
+      for (auto pidx = 0; pidx < element.properties.size(); pidx++) {
+        auto& prop = element.properties[pidx];
+        if (!prop.is_list) {
+          write_ply_prop(fs, prop.type, values[pidx],
+              format == ply_format::binary_big_endian);
+        } else {
+          write_ply_prop(fs, ply_type::u8, values[pidx],
+              format == ply_format::binary_big_endian);
+          for (auto i = 0; i < (int)lists[pidx].size(); i++)
+            write_ply_prop(fs, prop.type, lists[pidx][i],
+                format == ply_format::binary_big_endian);
+        }
       }
+    } catch (std::invalid_argument& e) {
+      throw std::runtime_error{filename + ": write error"};
     }
   }
 }
@@ -2186,126 +2165,90 @@ static void save_mtl(const string& filename, const obj_model& obj) {
   if (!fs) throw_notfound_error(filename);
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
-  // save comments
-  if (!format_values(fs, "#\n")) throw_write_error(filename);
-  if (!format_values(fs, "# Written by Yocto/GL\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "#\n\n")) throw_write_error(filename);
-  for (auto& comment : obj.comments) {
-    if (!format_values(fs, "# {}\n", comment)) throw_write_error(filename);
-  }
-  if (!format_values(fs, "\n")) throw_write_error(filename);
+  try {
+    // save comments
+    format_values(fs, "#\n");
+    format_values(fs, "# Written by Yocto/GL\n");
+    format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+    format_values(fs, "#\n\n");
+    for (auto& comment : obj.comments) {
+      format_values(fs, "# {}\n", comment);
+    }
+    format_values(fs, "\n");
 
-  // write material
-  for (auto& material : obj.materials) {
-    if (!format_values(fs, "newmtl {}\n", material.name))
-      throw_write_error(filename);
-    if (!format_values(fs, "illum {}\n", material.illum))
-      throw_write_error(filename);
-    if (material.emission != zero3f)
-      if (!format_values(fs, "Ke {}\n", material.emission))
-        throw_write_error(filename);
-    if (material.ambient != zero3f)
-      if (!format_values(fs, "Ka {}\n", material.ambient))
-        throw_write_error(filename);
-    if (!format_values(fs, "Kd {}\n", material.diffuse))
-      throw_write_error(filename);
-    if (!format_values(fs, "Ks {}\n", material.specular))
-      throw_write_error(filename);
-    if (material.reflection != zero3f)
-      if (!format_values(fs, "Kr {}\n", material.reflection))
-        throw_write_error(filename);
-    if (material.transmission != zero3f)
-      if (!format_values(fs, "Kt {}\n", material.transmission))
-        throw_write_error(filename);
-    format_values(fs, "Ns {}\n", (int)material.exponent);
-    if (material.opacity != 1)
-      if (!format_values(fs, "d {}\n", material.opacity))
-        throw_write_error(filename);
-    if (!material.emission_map.path.empty())
-      if (!format_values(fs, "map_Ke {}\n", material.emission_map))
-        throw_write_error(filename);
-    if (!material.diffuse_map.path.empty())
-      if (!format_values(fs, "map_Kd {}\n", material.diffuse_map))
-        throw_write_error(filename);
-    if (!material.specular_map.path.empty())
-      if (!format_values(fs, "map_Ks {}\n", material.specular_map))
-        throw_write_error(filename);
-    if (!material.transmission_map.path.empty())
-      if (!format_values(fs, "map_Kt {}\n", material.transmission_map))
-        throw_write_error(filename);
-    if (!material.reflection_map.path.empty())
-      if (!format_values(fs, "map_Kr {}\n", material.reflection_map))
-        throw_write_error(filename);
-    if (!material.exponent_map.path.empty())
-      if (!format_values(fs, "map_Ns {}\n", material.exponent_map))
-        throw_write_error(filename);
-    if (!material.opacity_map.path.empty())
-      if (!format_values(fs, "map_d {}\n", material.opacity_map))
-        throw_write_error(filename);
-    if (!material.bump_map.path.empty())
-      if (!format_values(fs, "map_bump {}\n", material.bump_map))
-        throw_write_error(filename);
-    if (!material.displacement_map.path.empty())
-      if (!format_values(fs, "map_disp {}\n", material.displacement_map))
-        throw_write_error(filename);
-    if (!material.normal_map.path.empty())
-      if (!format_values(fs, "map_norm {}\n", material.normal_map))
-        throw_write_error(filename);
-    if (material.pbr_roughness)
-      if (!format_values(fs, "Pr {}\n", material.pbr_roughness))
-        throw_write_error(filename);
-    if (material.pbr_metallic)
-      if (!format_values(fs, "Pm {}\n", material.pbr_metallic))
-        throw_write_error(filename);
-    if (material.pbr_sheen)
-      if (!format_values(fs, "Ps {}\n", material.pbr_sheen))
-        throw_write_error(filename);
-    if (material.pbr_clearcoat)
-      if (!format_values(fs, "Pc {}\n", material.pbr_clearcoat))
-        throw_write_error(filename);
-    if (material.pbr_coatroughness)
-      if (!format_values(fs, "Pcr {}\n", material.pbr_coatroughness))
-        throw_write_error(filename);
-    if (!material.pbr_roughness_map.path.empty())
-      if (!format_values(fs, "map_Pr {}\n", material.pbr_roughness_map))
-        throw_write_error(filename);
-    if (!material.pbr_metallic_map.path.empty())
-      if (!format_values(fs, "map_Pm {}\n", material.pbr_metallic_map))
-        throw_write_error(filename);
-    if (!material.pbr_sheen_map.path.empty())
-      if (!format_values(fs, "map_Ps {}\n", material.pbr_sheen_map))
-        throw_write_error(filename);
-    if (!material.pbr_clearcoat_map.path.empty())
-      if (!format_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map))
-        throw_write_error(filename);
-    if (!material.pbr_coatroughness_map.path.empty())
-      if (!format_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map))
-        throw_write_error(filename);
-    if (material.vol_transmission != zero3f)
-      if (!format_values(fs, "Vt {}\n", material.vol_transmission))
-        throw_write_error(filename);
-    if (material.vol_meanfreepath != zero3f)
-      if (!format_values(fs, "Vp {}\n", material.vol_meanfreepath))
-        throw_write_error(filename);
-    if (material.vol_emission != zero3f)
-      if (!format_values(fs, "Ve {}\n", material.vol_emission))
-        throw_write_error(filename);
-    if (material.vol_scattering != zero3f)
-      if (!format_values(fs, "Vs {}\n", material.vol_scattering))
-        throw_write_error(filename);
-    if (material.vol_anisotropy)
-      if (!format_values(fs, "Vg {}\n", material.vol_anisotropy))
-        throw_write_error(filename);
-    if (material.vol_scale)
-      if (!format_values(fs, "Vr {}\n", material.vol_scale))
-        throw_write_error(filename);
-    if (!material.vol_scattering_map.path.empty())
-      if (!format_values(fs, "map_Vs {}\n", material.vol_scattering_map))
-        throw_write_error(filename);
-    if (!format_values(fs, "\n")) throw_write_error(filename);
+    // write material
+    for (auto& material : obj.materials) {
+      format_values(fs, "newmtl {}\n", material.name);
+      format_values(fs, "illum {}\n", material.illum);
+      if (material.emission != zero3f)
+        format_values(fs, "Ke {}\n", material.emission);
+      if (material.ambient != zero3f)
+        format_values(fs, "Ka {}\n", material.ambient);
+      format_values(fs, "Kd {}\n", material.diffuse);
+      format_values(fs, "Ks {}\n", material.specular);
+      if (material.reflection != zero3f)
+        format_values(fs, "Kr {}\n", material.reflection);
+      if (material.transmission != zero3f)
+        format_values(fs, "Kt {}\n", material.transmission);
+      format_values(fs, "Ns {}\n", (int)material.exponent);
+      if (material.opacity != 1) format_values(fs, "d {}\n", material.opacity);
+      if (!material.emission_map.path.empty())
+        format_values(fs, "map_Ke {}\n", material.emission_map);
+      if (!material.diffuse_map.path.empty())
+        format_values(fs, "map_Kd {}\n", material.diffuse_map);
+      if (!material.specular_map.path.empty())
+        format_values(fs, "map_Ks {}\n", material.specular_map);
+      if (!material.transmission_map.path.empty())
+        format_values(fs, "map_Kt {}\n", material.transmission_map);
+      if (!material.reflection_map.path.empty())
+        format_values(fs, "map_Kr {}\n", material.reflection_map);
+      if (!material.exponent_map.path.empty())
+        format_values(fs, "map_Ns {}\n", material.exponent_map);
+      if (!material.opacity_map.path.empty())
+        format_values(fs, "map_d {}\n", material.opacity_map);
+      if (!material.bump_map.path.empty())
+        format_values(fs, "map_bump {}\n", material.bump_map);
+      if (!material.displacement_map.path.empty())
+        format_values(fs, "map_disp {}\n", material.displacement_map);
+      if (!material.normal_map.path.empty())
+        format_values(fs, "map_norm {}\n", material.normal_map);
+      if (material.pbr_roughness)
+        format_values(fs, "Pr {}\n", material.pbr_roughness);
+      if (material.pbr_metallic)
+        format_values(fs, "Pm {}\n", material.pbr_metallic);
+      if (material.pbr_sheen) format_values(fs, "Ps {}\n", material.pbr_sheen);
+      if (material.pbr_clearcoat)
+        format_values(fs, "Pc {}\n", material.pbr_clearcoat);
+      if (material.pbr_coatroughness)
+        format_values(fs, "Pcr {}\n", material.pbr_coatroughness);
+      if (!material.pbr_roughness_map.path.empty())
+        format_values(fs, "map_Pr {}\n", material.pbr_roughness_map);
+      if (!material.pbr_metallic_map.path.empty())
+        format_values(fs, "map_Pm {}\n", material.pbr_metallic_map);
+      if (!material.pbr_sheen_map.path.empty())
+        format_values(fs, "map_Ps {}\n", material.pbr_sheen_map);
+      if (!material.pbr_clearcoat_map.path.empty())
+        format_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map);
+      if (!material.pbr_coatroughness_map.path.empty())
+        format_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map);
+      if (material.vol_transmission != zero3f)
+        format_values(fs, "Vt {}\n", material.vol_transmission);
+      if (material.vol_meanfreepath != zero3f)
+        format_values(fs, "Vp {}\n", material.vol_meanfreepath);
+      if (material.vol_emission != zero3f)
+        format_values(fs, "Ve {}\n", material.vol_emission);
+      if (material.vol_scattering != zero3f)
+        format_values(fs, "Vs {}\n", material.vol_scattering);
+      if (material.vol_anisotropy)
+        format_values(fs, "Vg {}\n", material.vol_anisotropy);
+      if (material.vol_scale) format_values(fs, "Vr {}\n", material.vol_scale);
+      if (!material.vol_scattering_map.path.empty())
+        format_values(fs, "map_Vs {}\n", material.vol_scattering_map);
+      format_values(fs, "\n");
+    }
+
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
   }
 }
 
@@ -2316,38 +2259,42 @@ static void save_objx(const string& filename, const obj_model& obj) {
   if (!fs) throw_notfound_error(filename);
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
-  // save comments
-  if (!format_values(fs, "#\n")) throw_write_error(filename);
-  if (!format_values(fs, "# Written by Yocto/GL\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "#\n\n")) throw_write_error(filename);
-  for (auto& comment : obj.comments) {
-    if (!format_values(fs, "# {}\n", comment)) throw_write_error(filename);
-  }
-  if (!format_values(fs, "\n")) throw_write_error(filename);
-
-  // cameras
-  for (auto& camera : obj.cameras) {
-    format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name, camera.ortho,
-        camera.width, camera.height, camera.lens, camera.focus, camera.aperture,
-        camera.frame);
-  }
-
-  // environments
-  for (auto& environment : obj.environments) {
-    format_values(fs, "e {} {} {} {}\n", environment.name, environment.emission,
-        environment.emission_map.path.empty() ? "\"\""s
-                                              : environment.emission_map.path,
-        environment.frame);
-  }
-
-  // instances
-  for (auto& shape : obj.shapes) {
-    for (auto& frame : shape.instances) {
-      format_values(fs, "i {} {}\n", shape.name, frame);
+  try {
+    // save comments
+    format_values(fs, "#\n");
+    format_values(fs, "# Written by Yocto/GL\n");
+    format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+    format_values(fs, "#\n\n");
+    for (auto& comment : obj.comments) {
+      format_values(fs, "# {}\n", comment);
     }
+    format_values(fs, "\n");
+
+    // cameras
+    for (auto& camera : obj.cameras) {
+      format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
+          camera.ortho, camera.width, camera.height, camera.lens, camera.focus,
+          camera.aperture, camera.frame);
+    }
+
+    // environments
+    for (auto& environment : obj.environments) {
+      format_values(fs, "e {} {} {} {}\n", environment.name,
+          environment.emission,
+          environment.emission_map.path.empty() ? "\"\""s
+                                                : environment.emission_map.path,
+          environment.frame);
+    }
+
+    // instances
+    for (auto& shape : obj.shapes) {
+      for (auto& frame : shape.instances) {
+        format_values(fs, "i {} {}\n", shape.name, frame);
+      }
+    }
+
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
   }
 }
 
@@ -2358,61 +2305,61 @@ void save_obj(const string& filename, const obj_model& obj) {
   if (!fs) throw_notfound_error(filename);
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
-  // save comments
-  if (!format_values(fs, "#\n")) throw_write_error(filename);
-  if (!format_values(fs, "# Written by Yocto/GL\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "#\n\n")) throw_write_error(filename);
-  for (auto& comment : obj.comments) {
-    if (!format_values(fs, "# {}\n", comment)) throw_write_error(filename);
-  }
-  if (!format_values(fs, "\n")) throw_write_error(filename);
-
-  // save material library
-  if (!obj.materials.empty()) {
-    format_values(
-        fs, "mtllib {}\n\n", replace_extension(get_filename(filename), ".mtl"));
-  }
-
-  // save objects
-  auto vert_size = obj_vertex{0, 0, 0};
-  for (auto& shape : obj.shapes) {
-    if (!format_values(fs, "o {}\n", shape.name)) throw_write_error(filename);
-    for (auto& p : shape.positions)
-      if (!format_values(fs, "v {}\n", p)) throw_write_error(filename);
-    for (auto& n : shape.normals)
-      if (!format_values(fs, "vn {}\n", n)) throw_write_error(filename);
-    for (auto& t : shape.texcoords)
-      if (!format_values(fs, "vt {}\n", t)) throw_write_error(filename);
-    auto element_labels = vector<string>{"f", "l", "p"};
-    auto element_groups = vector<const vector<obj_element>*>{
-        &shape.faces, &shape.lines, &shape.points};
-    for (auto element_idx = 0; element_idx < 3; element_idx++) {
-      auto& label        = element_labels[element_idx];
-      auto& elements     = *element_groups[element_idx];
-      auto  cur_material = -1, cur_vertex = 0;
-      for (auto& element : elements) {
-        if (!shape.materials.empty() && cur_material != element.material) {
-          format_values(fs, "usemtl {}\n", shape.materials[element.material]);
-          cur_material = element.material;
-        }
-        if (!format_values(fs, "{}", label)) throw_write_error(filename);
-        for (auto c = 0; c < element.size; c++) {
-          auto vert = shape.vertices[cur_vertex++];
-          if (vert.position) vert.position += vert_size.position;
-          if (vert.normal) vert.normal += vert_size.normal;
-          if (vert.texcoord) vert.texcoord += vert_size.texcoord;
-          if (!format_values(fs, " {}", vert)) throw_write_error(filename);
-        }
-        if (!format_values(fs, "\n")) throw_write_error(filename);
-      }
+  try {
+    // save comments
+    format_values(fs, "#\n");
+    format_values(fs, "# Written by Yocto/GL\n");
+    format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+    format_values(fs, "#\n\n");
+    for (auto& comment : obj.comments) {
+      format_values(fs, "# {}\n", comment);
     }
-    if (!format_values(fs, "\n")) throw_write_error(filename);
-    vert_size.position += (int)shape.positions.size();
-    vert_size.normal += (int)shape.normals.size();
-    vert_size.texcoord += (int)shape.texcoords.size();
+    format_values(fs, "\n");
+
+    // save material library
+    if (!obj.materials.empty()) {
+      format_values(fs, "mtllib {}\n\n",
+          replace_extension(get_filename(filename), ".mtl"));
+    }
+
+    // save objects
+    auto vert_size = obj_vertex{0, 0, 0};
+    for (auto& shape : obj.shapes) {
+      format_values(fs, "o {}\n", shape.name);
+      for (auto& p : shape.positions) format_values(fs, "v {}\n", p);
+      for (auto& n : shape.normals) format_values(fs, "vn {}\n", n);
+      for (auto& t : shape.texcoords) format_values(fs, "vt {}\n", t);
+      auto element_labels = vector<string>{"f", "l", "p"};
+      auto element_groups = vector<const vector<obj_element>*>{
+          &shape.faces, &shape.lines, &shape.points};
+      for (auto element_idx = 0; element_idx < 3; element_idx++) {
+        auto& label        = element_labels[element_idx];
+        auto& elements     = *element_groups[element_idx];
+        auto  cur_material = -1, cur_vertex = 0;
+        for (auto& element : elements) {
+          if (!shape.materials.empty() && cur_material != element.material) {
+            format_values(fs, "usemtl {}\n", shape.materials[element.material]);
+            cur_material = element.material;
+          }
+          format_values(fs, "{}", label);
+          for (auto c = 0; c < element.size; c++) {
+            auto vert = shape.vertices[cur_vertex++];
+            if (vert.position) vert.position += vert_size.position;
+            if (vert.normal) vert.normal += vert_size.normal;
+            if (vert.texcoord) vert.texcoord += vert_size.texcoord;
+            format_values(fs, " {}", vert);
+          }
+          format_values(fs, "\n");
+        }
+      }
+      format_values(fs, "\n");
+      vert_size.position += (int)shape.positions.size();
+      vert_size.normal += (int)shape.normals.size();
+      vert_size.texcoord += (int)shape.texcoords.size();
+    }
+
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
   }
 
   // save mtl
@@ -3040,199 +2987,160 @@ static vector<string> split_obj_string(const string& str, const string& delim) {
 // Write obj elements
 void write_obj_comment(
     const string& filename, FILE* fs, const string& comment) {
-  auto lines = split_obj_string(comment, "\n");
-  for (auto& str : lines) {
-    if (!format_values(fs, "# {}\n", str)) throw_write_error(filename);
+  try {
+    auto lines = split_obj_string(comment, "\n");
+    for (auto& str : lines) {
+      format_values(fs, "# {}\n", str);
+    }
+    format_values(fs, "\n");
+
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
   }
-  if (!format_values(fs, "\n")) throw_write_error(filename);
 }
 
 void write_obj_command(const string& filename, FILE* fs, obj_command command,
     const string& name, const vec3f& value,
     const vector<obj_vertex>& vertices) {
-  switch (command) {
-    case obj_command::vertex:
-      if (!format_values(fs, "v {}\n", value)) throw_write_error(filename);
-      break;
-    case obj_command::normal:
-      if (!format_values(fs, "vn {}\n", value)) throw_write_error(filename);
-      break;
-    case obj_command::texcoord:
-      if (!format_values(fs, "vt {}\n", value)) throw_write_error(filename);
-      break;
-    case obj_command::face:
-    case obj_command::str:
-    case obj_command::point:
-      if (command == obj_command::face)
-        if (!format_values(fs, "f ")) throw_write_error(filename);
-      if (command == obj_command::str)
-        if (!format_values(fs, "l ")) throw_write_error(filename);
-      if (command == obj_command::point)
-        if (!format_values(fs, "p ")) throw_write_error(filename);
-      for (auto& vert : vertices)
-        if (!format_values(fs, " {}", vert)) throw_write_error(filename);
-      if (!format_values(fs, "\n")) throw_write_error(filename);
-      break;
-    case obj_command::object:
-      if (!format_values(fs, "o {}\n", name)) throw_write_error(filename);
-      break;
-    case obj_command::group:
-      if (!format_values(fs, "g {}\n", name)) throw_write_error(filename);
-      break;
-    case obj_command::usemtl:
-      if (!format_values(fs, "usemtl {}\n", name)) throw_write_error(filename);
-      break;
-    case obj_command::smoothing:
-      if (!format_values(fs, "s {}\n", name)) throw_write_error(filename);
-      break;
-    case obj_command::mtllib:
-      if (!format_values(fs, "mtllib {}\n", name)) throw_write_error(filename);
-      break;
-    case obj_command::objxlib: break;
-    case obj_command::error: break;
+  try {
+    switch (command) {
+      case obj_command::vertex: format_values(fs, "v {}\n", value); break;
+      case obj_command::normal: format_values(fs, "vn {}\n", value); break;
+      case obj_command::texcoord: format_values(fs, "vt {}\n", value); break;
+      case obj_command::face:
+      case obj_command::str:
+      case obj_command::point:
+        if (command == obj_command::face) format_values(fs, "f ");
+        if (command == obj_command::str) format_values(fs, "l ");
+        if (command == obj_command::point) format_values(fs, "p ");
+        for (auto& vert : vertices) format_values(fs, " {}", vert);
+        format_values(fs, "\n");
+        break;
+      case obj_command::object: format_values(fs, "o {}\n", name); break;
+      case obj_command::group: format_values(fs, "g {}\n", name); break;
+      case obj_command::usemtl: format_values(fs, "usemtl {}\n", name); break;
+      case obj_command::smoothing: format_values(fs, "s {}\n", name); break;
+      case obj_command::mtllib: format_values(fs, "mtllib {}\n", name); break;
+      case obj_command::objxlib: break;
+      case obj_command::error: break;
+    }
+
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
   }
 }
 
 void write_mtl_command(const string& filename, FILE* fs, mtl_command command,
     const obj_material& material) {
-  // write material
-  switch (command) {
-    case mtl_command::material:
-      if (!format_values(fs, "newmtl {}\n", material.name))
-        throw_write_error(filename);
-      if (!format_values(fs, "illum {}\n", material.illum))
-        throw_write_error(filename);
-      if (material.emission != zero3f)
-        if (!format_values(fs, "Ke {}\n", material.emission))
-          throw_write_error(filename);
-      if (material.ambient != zero3f)
-        if (!format_values(fs, "Ka {}\n", material.ambient))
-          throw_write_error(filename);
-      if (!format_values(fs, "Kd {}\n", material.diffuse))
-        throw_write_error(filename);
-      if (!format_values(fs, "Ks {}\n", material.specular))
-        throw_write_error(filename);
-      if (material.reflection != zero3f)
-        if (!format_values(fs, "Kr {}\n", material.reflection))
-          throw_write_error(filename);
-      if (material.transmission != zero3f)
-        if (!format_values(fs, "Kt {}\n", material.transmission))
-          throw_write_error(filename);
-      format_values(fs, "Ns {}\n", (int)material.exponent);
-      if (material.opacity != 1)
-        if (!format_values(fs, "d {}\n", material.opacity))
-          throw_write_error(filename);
-      if (!material.emission_map.path.empty())
-        if (!format_values(fs, "map_Ke {}\n", material.emission_map))
-          throw_write_error(filename);
-      if (!material.diffuse_map.path.empty())
-        if (!format_values(fs, "map_Kd {}\n", material.diffuse_map))
-          throw_write_error(filename);
-      if (!material.specular_map.path.empty())
-        if (!format_values(fs, "map_Ks {}\n", material.specular_map))
-          throw_write_error(filename);
-      if (!material.transmission_map.path.empty())
-        if (!format_values(fs, "map_Kt {}\n", material.transmission_map))
-          throw_write_error(filename);
-      if (!material.reflection_map.path.empty())
-        if (!format_values(fs, "map_Kr {}\n", material.reflection_map))
-          throw_write_error(filename);
-      if (!material.exponent_map.path.empty())
-        if (!format_values(fs, "map_Ns {}\n", material.exponent_map))
-          throw_write_error(filename);
-      if (!material.opacity_map.path.empty())
-        if (!format_values(fs, "map_d {}\n", material.opacity_map))
-          throw_write_error(filename);
-      if (!material.bump_map.path.empty())
-        if (!format_values(fs, "map_bump {}\n", material.bump_map))
-          throw_write_error(filename);
-      if (!material.displacement_map.path.empty())
-        if (!format_values(fs, "map_disp {}\n", material.displacement_map))
-          throw_write_error(filename);
-      if (!material.normal_map.path.empty())
-        if (!format_values(fs, "map_norm {}\n", material.normal_map))
-          throw_write_error(filename);
-      if (material.pbr_roughness)
-        if (!format_values(fs, "Pr {}\n", material.pbr_roughness))
-          throw_write_error(filename);
-      if (material.pbr_metallic)
-        if (!format_values(fs, "Pm {}\n", material.pbr_metallic))
-          throw_write_error(filename);
-      if (material.pbr_sheen)
-        if (!format_values(fs, "Ps {}\n", material.pbr_sheen))
-          throw_write_error(filename);
-      if (material.pbr_clearcoat)
-        if (!format_values(fs, "Pc {}\n", material.pbr_clearcoat))
-          throw_write_error(filename);
-      if (material.pbr_coatroughness)
-        if (!format_values(fs, "Pcr {}\n", material.pbr_coatroughness))
-          throw_write_error(filename);
-      if (!material.pbr_roughness_map.path.empty())
-        if (!format_values(fs, "map_Pr {}\n", material.pbr_roughness_map))
-          throw_write_error(filename);
-      if (!material.pbr_metallic_map.path.empty())
-        if (!format_values(fs, "map_Pm {}\n", material.pbr_metallic_map))
-          throw_write_error(filename);
-      if (!material.pbr_sheen_map.path.empty())
-        if (!format_values(fs, "map_Ps {}\n", material.pbr_sheen_map))
-          throw_write_error(filename);
-      if (!material.pbr_clearcoat_map.path.empty())
-        if (!format_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map))
-          throw_write_error(filename);
-      if (!material.pbr_coatroughness_map.path.empty())
-        if (!format_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map))
-          throw_write_error(filename);
-      if (material.vol_transmission != zero3f)
-        if (!format_values(fs, "Vt {}\n", material.vol_transmission))
-          throw_write_error(filename);
-      if (material.vol_meanfreepath != zero3f)
-        if (!format_values(fs, "Vp {}\n", material.vol_meanfreepath))
-          throw_write_error(filename);
-      if (material.vol_emission != zero3f)
-        if (!format_values(fs, "Ve {}\n", material.vol_emission))
-          throw_write_error(filename);
-      if (material.vol_scattering != zero3f)
-        if (!format_values(fs, "Vs {}\n", material.vol_scattering))
-          throw_write_error(filename);
-      if (material.vol_anisotropy)
-        if (!format_values(fs, "Vg {}\n", material.vol_anisotropy))
-          throw_write_error(filename);
-      if (material.vol_scale)
-        if (!format_values(fs, "Vr {}\n", material.vol_scale))
-          throw_write_error(filename);
-      if (!material.vol_scattering_map.path.empty())
-        if (!format_values(fs, "map_Vs {}\n", material.vol_scattering_map))
-          throw_write_error(filename);
-      if (!format_values(fs, "\n")) throw_write_error(filename);
-      break;
-    case mtl_command::error: break;
+  try {
+    // write material
+    switch (command) {
+      case mtl_command::material:
+        format_values(fs, "newmtl {}\n", material.name);
+        format_values(fs, "illum {}\n", material.illum);
+        if (material.emission != zero3f)
+          format_values(fs, "Ke {}\n", material.emission);
+        if (material.ambient != zero3f)
+          format_values(fs, "Ka {}\n", material.ambient);
+        format_values(fs, "Kd {}\n", material.diffuse);
+        format_values(fs, "Ks {}\n", material.specular);
+        if (material.reflection != zero3f)
+          format_values(fs, "Kr {}\n", material.reflection);
+        if (material.transmission != zero3f)
+          format_values(fs, "Kt {}\n", material.transmission);
+        format_values(fs, "Ns {}\n", (int)material.exponent);
+        if (material.opacity != 1)
+          format_values(fs, "d {}\n", material.opacity);
+        if (!material.emission_map.path.empty())
+          format_values(fs, "map_Ke {}\n", material.emission_map);
+        if (!material.diffuse_map.path.empty())
+          format_values(fs, "map_Kd {}\n", material.diffuse_map);
+        if (!material.specular_map.path.empty())
+          format_values(fs, "map_Ks {}\n", material.specular_map);
+        if (!material.transmission_map.path.empty())
+          format_values(fs, "map_Kt {}\n", material.transmission_map);
+        if (!material.reflection_map.path.empty())
+          format_values(fs, "map_Kr {}\n", material.reflection_map);
+        if (!material.exponent_map.path.empty())
+          format_values(fs, "map_Ns {}\n", material.exponent_map);
+        if (!material.opacity_map.path.empty())
+          format_values(fs, "map_d {}\n", material.opacity_map);
+        if (!material.bump_map.path.empty())
+          format_values(fs, "map_bump {}\n", material.bump_map);
+        if (!material.displacement_map.path.empty())
+          format_values(fs, "map_disp {}\n", material.displacement_map);
+        if (!material.normal_map.path.empty())
+          format_values(fs, "map_norm {}\n", material.normal_map);
+        if (material.pbr_roughness)
+          format_values(fs, "Pr {}\n", material.pbr_roughness);
+        if (material.pbr_metallic)
+          format_values(fs, "Pm {}\n", material.pbr_metallic);
+        if (material.pbr_sheen)
+          format_values(fs, "Ps {}\n", material.pbr_sheen);
+        if (material.pbr_clearcoat)
+          format_values(fs, "Pc {}\n", material.pbr_clearcoat);
+        if (material.pbr_coatroughness)
+          format_values(fs, "Pcr {}\n", material.pbr_coatroughness);
+        if (!material.pbr_roughness_map.path.empty())
+          format_values(fs, "map_Pr {}\n", material.pbr_roughness_map);
+        if (!material.pbr_metallic_map.path.empty())
+          format_values(fs, "map_Pm {}\n", material.pbr_metallic_map);
+        if (!material.pbr_sheen_map.path.empty())
+          format_values(fs, "map_Ps {}\n", material.pbr_sheen_map);
+        if (!material.pbr_clearcoat_map.path.empty())
+          format_values(fs, "map_Pc {}\n", material.pbr_clearcoat_map);
+        if (!material.pbr_coatroughness_map.path.empty())
+          format_values(fs, "map_Pcr {}\n", material.pbr_coatroughness_map);
+        if (material.vol_transmission != zero3f)
+          format_values(fs, "Vt {}\n", material.vol_transmission);
+        if (material.vol_meanfreepath != zero3f)
+          format_values(fs, "Vp {}\n", material.vol_meanfreepath);
+        if (material.vol_emission != zero3f)
+          format_values(fs, "Ve {}\n", material.vol_emission);
+        if (material.vol_scattering != zero3f)
+          format_values(fs, "Vs {}\n", material.vol_scattering);
+        if (material.vol_anisotropy)
+          format_values(fs, "Vg {}\n", material.vol_anisotropy);
+        if (material.vol_scale)
+          format_values(fs, "Vr {}\n", material.vol_scale);
+        if (!material.vol_scattering_map.path.empty())
+          format_values(fs, "map_Vs {}\n", material.vol_scattering_map);
+        format_values(fs, "\n");
+        break;
+      case mtl_command::error: break;
+    }
+
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
   }
 }
 
 void write_objx_command(const string& filename, FILE* fs, objx_command command,
     const obj_camera& camera, const obj_environment& environment,
     const obj_instance& instance) {
-  switch (command) {
-    case objx_command::camera: {
-      if (!format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
-              camera.ortho, camera.width, camera.height, camera.lens,
-              camera.focus, camera.aperture, camera.frame))
-        throw_write_error(filename);
-    } break;
-    case objx_command::environment: {
-      if (!format_values(fs, "e {} {} {} {}\n", environment.name,
-              environment.emission,
-              environment.emission_map.path.empty()
-                  ? "\"\""s
-                  : environment.emission_map.path,
-              environment.frame))
-        throw_write_error(filename);
-    } break;
-    case objx_command::instance: {
-      if (!format_values(fs, "i {} {}\n", instance.object, instance.frame))
-        throw_write_error(filename);
-    } break;
-    case objx_command::error: break;
+  try {
+    switch (command) {
+      case objx_command::camera: {
+        format_values(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
+            camera.ortho, camera.width, camera.height, camera.lens,
+            camera.focus, camera.aperture, camera.frame);
+      } break;
+      case objx_command::environment: {
+        format_values(fs, "e {} {} {} {}\n", environment.name,
+            environment.emission,
+            environment.emission_map.path.empty()
+                ? "\"\""s
+                : environment.emission_map.path,
+            environment.frame);
+      } break;
+      case objx_command::instance: {
+        format_values(fs, "i {} {}\n", instance.object, instance.frame);
+      } break;
+      case objx_command::error: break;
+    }
+
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
   }
 }
 
@@ -3317,7 +3225,8 @@ static void parse_pbrt_param(string_view& str, T& value) {
   if (!str.data()) throw std::invalid_argument{"invalid param"};
   if (parens) {
     skip_whitespace(str);
-    if (!str.empty() && str.front() == '[') throw std::invalid_argument{"invalid param"};
+    if (!str.empty() && str.front() == '[')
+      throw std::invalid_argument{"invalid param"};
     str.remove_prefix(1);
   }
 }
@@ -3651,20 +3560,20 @@ static void parse_pbrt_params(string_view& str, vector<pbrt_value>& values) {
 // convert pbrt films
 static void convert_pbrt_films(
     const string& filename, vector<pbrt_film>& films, bool verbose = false) {
-    try {
-  for (auto& film : films) {
-    auto& values = film.values;
-    if (film.type == "image") {
-      film.resolution = {512, 512};
-      get_pbrt_value(values, "xresolution", film.resolution.x);
-      get_pbrt_value(values, "yresolution", film.resolution.y);
-      film.filename = "out.png"s;
-      get_pbrt_value(values, "filename", film.filename);
-    } else {
-      throw std::invalid_argument{" unknown type " + film.type};
+  try {
+    for (auto& film : films) {
+      auto& values = film.values;
+      if (film.type == "image") {
+        film.resolution = {512, 512};
+        get_pbrt_value(values, "xresolution", film.resolution.x);
+        get_pbrt_value(values, "yresolution", film.resolution.y);
+        film.filename = "out.png"s;
+        get_pbrt_value(values, "filename", film.filename);
+      } else {
+        throw std::invalid_argument{" unknown type " + film.type};
+      }
     }
-  }
-  } catch(std::invalid_argument& e) {
+  } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
   }
 }
@@ -3678,41 +3587,41 @@ static void convert_pbrt_cameras(const string& filename,
     film_aspect = (float)film.resolution.x / (float)film.resolution.y;
   }
   try {
-  for (auto& camera : cameras) {
-    auto& values   = camera.values;
-    camera.frame   = inverse((frame3f)camera.frame);
-    camera.frame.z = -camera.frame.z;
-    if (camera.type == "perspective") {
-      auto fov = 90.0f;
-      get_pbrt_value(values, "fov", fov);
-      // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
-      camera.aspect = film_aspect;
-      if (camera.aspect >= 1) {
-        camera.lens = (0.036 / camera.aspect) / (2 * tan(radians(fov) / 2));
+    for (auto& camera : cameras) {
+      auto& values   = camera.values;
+      camera.frame   = inverse((frame3f)camera.frame);
+      camera.frame.z = -camera.frame.z;
+      if (camera.type == "perspective") {
+        auto fov = 90.0f;
+        get_pbrt_value(values, "fov", fov);
+        // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
+        camera.aspect = film_aspect;
+        if (camera.aspect >= 1) {
+          camera.lens = (0.036 / camera.aspect) / (2 * tan(radians(fov) / 2));
+        } else {
+          camera.lens = (0.036 * camera.aspect) / (2 * tan(radians(fov) / 2));
+        }
+        get_pbrt_value(values, "frameaspectratio", camera.aspect);
+        camera.focus = 10.0f;
+        get_pbrt_value(values, "focaldistance", camera.focus);
+      } else if (camera.type == "realistic") {
+        auto lensfile = ""s;
+        get_pbrt_value(values, "lensfile", lensfile);
+        lensfile        = lensfile.substr(0, lensfile.size() - 4);
+        lensfile        = lensfile.substr(lensfile.find('.') + 1);
+        lensfile        = lensfile.substr(0, lensfile.size() - 2);
+        auto lens       = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
+        camera.lens     = 2 * atan(0.036f / (2 * lens));
+        camera.aperture = 0.0f;
+        get_pbrt_value(values, "aperturediameter", camera.aperture);
+        camera.focus = 10.0f;
+        get_pbrt_value(values, "focusdistance", camera.focus);
+        camera.aspect = film_aspect;
       } else {
-        camera.lens = (0.036 * camera.aspect) / (2 * tan(radians(fov) / 2));
+        throw_unsupportedtype_error(filename, "camera", camera.type);
       }
-      get_pbrt_value(values, "frameaspectratio", camera.aspect);
-      camera.focus = 10.0f;
-      get_pbrt_value(values, "focaldistance", camera.focus);
-    } else if (camera.type == "realistic") {
-      auto lensfile = ""s;
-      get_pbrt_value(values, "lensfile", lensfile);
-      lensfile        = lensfile.substr(0, lensfile.size() - 4);
-      lensfile        = lensfile.substr(lensfile.find('.') + 1);
-      lensfile        = lensfile.substr(0, lensfile.size() - 2);
-      auto lens       = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
-      camera.lens     = 2 * atan(0.036f / (2 * lens));
-      camera.aperture = 0.0f;
-      get_pbrt_value(values, "aperturediameter", camera.aperture);
-      camera.focus = 10.0f;
-      get_pbrt_value(values, "focusdistance", camera.focus);
-      camera.aspect = film_aspect;
-    } else {
-      throw_unsupportedtype_error(filename, "camera", camera.type);
     }
-  }
-  } catch(std::invalid_argument& e) {
+  } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
   }
 }
@@ -3736,67 +3645,67 @@ static void convert_pbrt_textures(const string& filename,
     texture.constant = color;
   };
 
-try {
-  for (auto& texture : textures) {
-    auto& values = texture.values;
-    if (texture.type == "imagemap") {
-      texture.filename = "";
-      get_pbrt_value(values, "filename", texture.filename);
-    } else if (texture.type == "constant") {
-      texture.constant = vec3f{1};
-      get_pbrt_value(values, "value", texture.constant);
-    } else if (texture.type == "bilerp") {
-      make_placeholder(texture, {1, 0, 0});
-    } else if (texture.type == "checkerboard") {
-      // auto tex1     = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
-      // auto tex2     = get_pbrt_value(values, "tex2", pair{vec3f{0}, ""s});
-      // auto rgb1     = tex1.second == "" ? tex1.first : vec3f{0.4f, 0.4f,
-      // 0.4f}; auto rgb2     = tex1.second == "" ? tex2.first : vec3f{0.6f,
-      // 0.6f, 0.6f}; auto params   = proc_image_params{}; params.type   =
-      // proc_image_params::type_t::checker; params.color0 = {rgb1.x, rgb1.y,
-      // rgb1.z, 1}; params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1}; params.scale
-      // = 2; make_proc_image(texture.hdr, params); float_to_byte(texture.ldr,
-      // texture.hdr); texture.hdr = {};
-      make_placeholder(texture, vec3f{0.5});
-    } else if (texture.type == "dots") {
-      make_placeholder(texture, vec3f{0.5});
-    } else if (texture.type == "fbm") {
-      make_placeholder(texture, vec3f{0.5});
-    } else if (texture.type == "marble") {
-      make_placeholder(texture, vec3f{0.5});
-    } else if (texture.type == "mix") {
-      auto tex1 = pair{vec3f{0}, ""s}, tex2 = pair{vec3f{1}, ""s};
-      get_pbrt_value(values, "tex1", tex1);
-      get_pbrt_value(values, "tex2", tex2);
-      if (!get_filename(tex1.second).empty()) {
-        texture.filename = get_filename(tex1.second);
-      } else if (!get_filename(tex2.second).empty()) {
-        texture.filename = get_filename(tex2.second);
-      } else {
+  try {
+    for (auto& texture : textures) {
+      auto& values = texture.values;
+      if (texture.type == "imagemap") {
+        texture.filename = "";
+        get_pbrt_value(values, "filename", texture.filename);
+      } else if (texture.type == "constant") {
+        texture.constant = vec3f{1};
+        get_pbrt_value(values, "value", texture.constant);
+      } else if (texture.type == "bilerp") {
+        make_placeholder(texture, {1, 0, 0});
+      } else if (texture.type == "checkerboard") {
+        // auto tex1     = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
+        // auto tex2     = get_pbrt_value(values, "tex2", pair{vec3f{0}, ""s});
+        // auto rgb1     = tex1.second == "" ? tex1.first : vec3f{0.4f, 0.4f,
+        // 0.4f}; auto rgb2     = tex1.second == "" ? tex2.first : vec3f{0.6f,
+        // 0.6f, 0.6f}; auto params   = proc_image_params{}; params.type   =
+        // proc_image_params::type_t::checker; params.color0 = {rgb1.x, rgb1.y,
+        // rgb1.z, 1}; params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1}; params.scale
+        // = 2; make_proc_image(texture.hdr, params); float_to_byte(texture.ldr,
+        // texture.hdr); texture.hdr = {};
+        make_placeholder(texture, vec3f{0.5});
+      } else if (texture.type == "dots") {
+        make_placeholder(texture, vec3f{0.5});
+      } else if (texture.type == "fbm") {
+        make_placeholder(texture, vec3f{0.5});
+      } else if (texture.type == "marble") {
+        make_placeholder(texture, vec3f{0.5});
+      } else if (texture.type == "mix") {
+        auto tex1 = pair{vec3f{0}, ""s}, tex2 = pair{vec3f{1}, ""s};
+        get_pbrt_value(values, "tex1", tex1);
+        get_pbrt_value(values, "tex2", tex2);
+        if (!get_filename(tex1.second).empty()) {
+          texture.filename = get_filename(tex1.second);
+        } else if (!get_filename(tex2.second).empty()) {
+          texture.filename = get_filename(tex2.second);
+        } else {
+          make_placeholder(texture);
+        }
+      } else if (texture.type == "scale") {
+        auto tex1 = pair{vec3f{1}, ""s}, tex2 = pair{vec3f{1}, ""s};
+        get_pbrt_value(values, "tex1", tex2);
+        get_pbrt_value(values, "tex2", tex1);
+        if (!get_filename(tex1.second).empty()) {
+          texture.filename = get_filename(tex1.second);
+        } else if (!get_filename(tex2.second).empty()) {
+          texture.filename = get_filename(tex2.second);
+        } else {
+          make_placeholder(texture);
+        }
+      } else if (texture.type == "uv") {
         make_placeholder(texture);
-      }
-    } else if (texture.type == "scale") {
-      auto tex1 = pair{vec3f{1}, ""s}, tex2 = pair{vec3f{1}, ""s};
-      get_pbrt_value(values, "tex1", tex2);
-      get_pbrt_value(values, "tex2", tex1);
-      if (!get_filename(tex1.second).empty()) {
-        texture.filename = get_filename(tex1.second);
-      } else if (!get_filename(tex2.second).empty()) {
-        texture.filename = get_filename(tex2.second);
-      } else {
+      } else if (texture.type == "windy") {
         make_placeholder(texture);
+      } else if (texture.type == "wrinkled") {
+        make_placeholder(texture);
+      } else {
+        throw_unsupportedtype_error(filename, "texture", texture.type);
       }
-    } else if (texture.type == "uv") {
-      make_placeholder(texture);
-    } else if (texture.type == "windy") {
-      make_placeholder(texture);
-    } else if (texture.type == "wrinkled") {
-      make_placeholder(texture);
-    } else {
-      throw_unsupportedtype_error(filename, "texture", texture.type);
     }
-  }
-  } catch(std::invalid_argument& e) {
+  } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
   }
 }
@@ -3860,209 +3769,209 @@ static void convert_pbrt_materials(const string& filename,
   };
 
   try {
-  // convert materials
-  for (auto& material : materials) {
-    auto& values = material.values;
-    if (material.type == "uber") {
-      get_scaled_texture(values, "Kd", material.diffuse,
-              material.diffuse_map, vec3f{0.25});
-      get_scaled_texture(values, "Ks", material.specular,
-              material.specular_map, vec3f{0.25});
-      get_scaled_texture(values, "Kt", material.transmission,
-              material.transmission_map, vec3f{0});
-      get_scaled_texture(values, "opacity", material.opacity,
-              material.opacity_map, vec3f{1});
-      get_scaled_texture(
-              values, "eta", material.eta, material.eta_map, vec3f{1.5});
-      get_pbrt_roughness(values, material.roughness, 0.1f);
-      material.sspecular = material.specular *
-                           eta_to_reflectivity(material.eta);
-    } else if (material.type == "plastic") {
-      get_scaled_texture(values, "Kd", material.diffuse,
-              material.diffuse_map, vec3f{0.25});
-      get_scaled_texture(values, "Ks", material.specular,
-              material.specular_map, vec3f{0.25});
-      get_scaled_texture(
-              values, "eta", material.eta, material.eta_map, vec3f{1.5});
-      material.roughness = vec2f{0.1f};
-      get_pbrt_roughness(values, material.roughness, 0.1);
-      material.sspecular = material.specular *
-                           eta_to_reflectivity(material.eta);
-    } else if (material.type == "translucent") {
-      get_scaled_texture(values, "Kd", material.diffuse,
-              material.diffuse_map, vec3f{0.25});
-      get_scaled_texture(values, "Ks", material.specular,
-              material.specular_map, vec3f{0.25});
-      get_scaled_texture(
-              values, "eta", material.eta, material.eta_map, vec3f{1.5});
-      get_pbrt_roughness(values, material.roughness, 0.1);
-      material.sspecular = material.specular *
-                           eta_to_reflectivity(material.eta);
-    } else if (material.type == "matte") {
-      get_scaled_texture(
-              values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
-      material.roughness = vec2f{1};
-    } else if (material.type == "mirror") {
-      get_scaled_texture(values, "Kr", material.specular,
-              material.specular_map, vec3f{0.9});
-      material.eta       = zero3f;
-      material.etak      = zero3f;
-      material.roughness = zero2f;
-      material.sspecular = material.specular;
-    } else if (material.type == "metal") {
-      get_scaled_texture(
-              values, "Kr", material.specular, material.specular_map, vec3f{1});
-      get_scaled_texture(values, "eta", material.eta, material.eta_map,
-              vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
-      get_scaled_texture(values, "k", material.etak, material.etak_map,
-              vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
-      material.roughness = vec2f{0.01f};
-      get_pbrt_roughness(values, material.roughness, 0.01);
-      material.sspecular = material.specular *
-                           eta_to_reflectivity(material.eta, material.etak);
-    } else if (material.type == "substrate") {
-      get_scaled_texture(
-              values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
-      get_scaled_texture(values, "Ks", material.specular,
-              material.specular_map, vec3f{0.5});
-      get_scaled_texture(
-              values, "eta", material.eta, material.eta_map, vec3f{1.5});
-      material.roughness = vec2f{0.1f};
-      get_pbrt_roughness(values, material.roughness, 0.1);
-      material.sspecular = material.specular *
-                           eta_to_reflectivity(material.eta);
-    } else if (material.type == "glass") {
-      get_scaled_texture(
-              values, "Kr", material.specular, material.specular_map, vec3f{1});
-      get_scaled_texture(values, "Kt", material.transmission,
-              material.transmission_map, vec3f{1});
-      get_scaled_texture(
-              values, "eta", material.eta, material.eta_map, vec3f{1.5});
-      material.roughness = vec2f{0};
-      get_pbrt_roughness(values, material.roughness, 0);
-      material.sspecular = material.specular *
-                           eta_to_reflectivity(material.eta);
-      material.refract = true;
-    } else if (material.type == "hair") {
-      get_scaled_texture(values, "color", material.diffuse,
-              material.diffuse_map, vec3f{0});
-      material.roughness = {1, 1};
-      if (verbose) printf("hair material not properly supported\n");
-    } else if (material.type == "disney") {
-      get_scaled_texture(values, "color", material.diffuse,
-              material.diffuse_map, vec3f{0.5});
-      material.roughness = {1, 1};
-      if (verbose) printf("disney material not properly supported\n");
-    } else if (material.type == "kdsubsurface") {
-      get_scaled_texture(
-              values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
-      get_scaled_texture(
-              values, "Kr", material.specular, material.specular_map, vec3f{1});
-      get_scaled_texture(
-              values, "eta", material.eta, material.eta_map, vec3f{1.5});
-      material.roughness = vec2f{0};
-      get_pbrt_roughness(values, material.roughness, 0);
-      material.sspecular = material.specular *
-                           eta_to_reflectivity(material.eta);
-      if (verbose) printf("kdsubsurface material not properly supported\n");
-    } else if (material.type == "subsurface") {
-      get_scaled_texture(
-              values, "Kr", material.specular, material.specular_map, vec3f{1});
-      get_scaled_texture(values, "Kt", material.transmission,
-              material.transmission_map, vec3f{1});
-      get_scaled_texture(
-              values, "eta", material.eta, material.eta_map, vec3f{1.5});
-      material.roughness = vec2f{0};
-      get_pbrt_roughness(values, material.roughness, 0);
-      material.sspecular = material.specular *
-                           eta_to_reflectivity(material.eta);
-      auto scale = 1.0f;
-      get_pbrt_value(values, "scale", scale);
-      material.volscale = 1 / scale;
-      auto sigma_a = zero3f, sigma_s = zero3f;
-      auto sigma_a_tex = ""s, sigma_s_tex = ""s;
-      get_scaled_texture(values, "sigma_a", sigma_a, sigma_a_tex,
-              vec3f{0011, .0024, .014});
-      get_scaled_texture(values, "sigma_prime_s", sigma_s, sigma_s_tex,
-              vec3f{2.55, 3.12, 3.77});
-      material.volmeanfreepath = 1 / (sigma_a + sigma_s);
-      material.volscatter      = sigma_s / (sigma_a + sigma_s);
-      if (verbose) printf("subsurface material not properly supported\n");
-    } else if (material.type == "mix") {
-      auto namedmaterial1 = ""s, namedmaterial2 = ""s;
-      get_pbrt_value(values, "namedmaterial1", namedmaterial1);
-      get_pbrt_value(values, "namedmaterial2", namedmaterial2);
-      auto matname = (!namedmaterial1.empty()) ? namedmaterial1
-                                               : namedmaterial2;
-      auto matit = std::find_if(materials.begin(), materials.end(),
-          [&matname](auto& material) { return material.name == matname; });
-      if (matit == materials.end())
-        throw std::invalid_argument("cannot find material " + matname);
-      auto saved_name = material.name;
-      material        = *matit;
-      material.name   = saved_name;
-      if (verbose) printf("mix material not properly supported\n");
-    } else if (material.type == "fourier") {
-      auto bsdffile = ""s;
-      get_pbrt_value(values, "bsdffile", bsdffile);
-      if (bsdffile.rfind("/") != string::npos)
-        bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
-      if (bsdffile == "paint.bsdf") {
-        material.diffuse   = {0.6f, 0.6f, 0.6f};
-        material.specular  = {1, 1, 1};
-        material.eta       = vec3f{1.5};
-        material.roughness = vec2f{0.2};
-        // material.roughness = get_pbrt_roughnessf(0.2f, true);
+    // convert materials
+    for (auto& material : materials) {
+      auto& values = material.values;
+      if (material.type == "uber") {
+        get_scaled_texture(
+            values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
+        get_scaled_texture(values, "Ks", material.specular,
+            material.specular_map, vec3f{0.25});
+        get_scaled_texture(values, "Kt", material.transmission,
+            material.transmission_map, vec3f{0});
+        get_scaled_texture(values, "opacity", material.opacity,
+            material.opacity_map, vec3f{1});
+        get_scaled_texture(
+            values, "eta", material.eta, material.eta_map, vec3f{1.5});
+        get_pbrt_roughness(values, material.roughness, 0.1f);
         material.sspecular = material.specular *
                              eta_to_reflectivity(material.eta);
-      } else if (bsdffile == "ceramic.bsdf") {
-        material.diffuse   = {0.6f, 0.6f, 0.6f};
-        material.specular  = {1, 1, 1};
-        material.eta       = vec3f{1.5};
-        material.roughness = vec2f{0.25};
-        // material.roughness = get_pbrt_roughnessf(0.25, true);
+      } else if (material.type == "plastic") {
+        get_scaled_texture(
+            values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
+        get_scaled_texture(values, "Ks", material.specular,
+            material.specular_map, vec3f{0.25});
+        get_scaled_texture(
+            values, "eta", material.eta, material.eta_map, vec3f{1.5});
+        material.roughness = vec2f{0.1f};
+        get_pbrt_roughness(values, material.roughness, 0.1);
         material.sspecular = material.specular *
                              eta_to_reflectivity(material.eta);
-      } else if (bsdffile == "leather.bsdf") {
-        material.diffuse   = {0.6f, 0.57f, 0.48f};
-        material.specular  = {1, 1, 1};
-        material.eta       = vec3f{1.5};
-        material.roughness = vec2f{0.3};
-        // material.roughness = get_pbrt_roughnessf(0.3, true);
+      } else if (material.type == "translucent") {
+        get_scaled_texture(
+            values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.25});
+        get_scaled_texture(values, "Ks", material.specular,
+            material.specular_map, vec3f{0.25});
+        get_scaled_texture(
+            values, "eta", material.eta, material.eta_map, vec3f{1.5});
+        get_pbrt_roughness(values, material.roughness, 0.1);
         material.sspecular = material.specular *
                              eta_to_reflectivity(material.eta);
-      } else if (bsdffile == "coated_copper.bsdf") {
-        material.specular  = vec3f{1};
-        material.eta       = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
-        material.etak      = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
-        material.roughness = vec2f{0.01};
-        // material.roughness = get_pbrt_roughnessf(0.01, true);
+      } else if (material.type == "matte") {
+        get_scaled_texture(
+            values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
+        material.roughness = vec2f{1};
+      } else if (material.type == "mirror") {
+        get_scaled_texture(
+            values, "Kr", material.specular, material.specular_map, vec3f{0.9});
+        material.eta       = zero3f;
+        material.etak      = zero3f;
+        material.roughness = zero2f;
+        material.sspecular = material.specular;
+      } else if (material.type == "metal") {
+        get_scaled_texture(
+            values, "Kr", material.specular, material.specular_map, vec3f{1});
+        get_scaled_texture(values, "eta", material.eta, material.eta_map,
+            vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
+        get_scaled_texture(values, "k", material.etak, material.etak_map,
+            vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
+        material.roughness = vec2f{0.01f};
+        get_pbrt_roughness(values, material.roughness, 0.01);
         material.sspecular = material.specular *
                              eta_to_reflectivity(material.eta, material.etak);
-      } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
-        material.specular     = {1, 1, 1};
-        material.eta          = vec3f{1.5};
-        material.transmission = {1, 1, 1};
-        material.roughness    = vec2f{0.2};
-        // material.roughness = get_pbrt_roughness(0.2, true);
+      } else if (material.type == "substrate") {
+        get_scaled_texture(
+            values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
+        get_scaled_texture(
+            values, "Ks", material.specular, material.specular_map, vec3f{0.5});
+        get_scaled_texture(
+            values, "eta", material.eta, material.eta_map, vec3f{1.5});
+        material.roughness = vec2f{0.1f};
+        get_pbrt_roughness(values, material.roughness, 0.1);
         material.sspecular = material.specular *
                              eta_to_reflectivity(material.eta);
-      } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
-        material.specular  = vec3f{1, 1, 1};
-        material.eta       = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
-        material.etak      = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
-        material.roughness = vec2f{0.2};
-        // material.roughness = get_pbrt_roughness(0.2, true);
+      } else if (material.type == "glass") {
+        get_scaled_texture(
+            values, "Kr", material.specular, material.specular_map, vec3f{1});
+        get_scaled_texture(values, "Kt", material.transmission,
+            material.transmission_map, vec3f{1});
+        get_scaled_texture(
+            values, "eta", material.eta, material.eta_map, vec3f{1.5});
+        material.roughness = vec2f{0};
+        get_pbrt_roughness(values, material.roughness, 0);
         material.sspecular = material.specular *
-                             eta_to_reflectivity(material.eta, material.etak);
+                             eta_to_reflectivity(material.eta);
+        material.refract = true;
+      } else if (material.type == "hair") {
+        get_scaled_texture(
+            values, "color", material.diffuse, material.diffuse_map, vec3f{0});
+        material.roughness = {1, 1};
+        if (verbose) printf("hair material not properly supported\n");
+      } else if (material.type == "disney") {
+        get_scaled_texture(values, "color", material.diffuse,
+            material.diffuse_map, vec3f{0.5});
+        material.roughness = {1, 1};
+        if (verbose) printf("disney material not properly supported\n");
+      } else if (material.type == "kdsubsurface") {
+        get_scaled_texture(
+            values, "Kd", material.diffuse, material.diffuse_map, vec3f{0.5});
+        get_scaled_texture(
+            values, "Kr", material.specular, material.specular_map, vec3f{1});
+        get_scaled_texture(
+            values, "eta", material.eta, material.eta_map, vec3f{1.5});
+        material.roughness = vec2f{0};
+        get_pbrt_roughness(values, material.roughness, 0);
+        material.sspecular = material.specular *
+                             eta_to_reflectivity(material.eta);
+        if (verbose) printf("kdsubsurface material not properly supported\n");
+      } else if (material.type == "subsurface") {
+        get_scaled_texture(
+            values, "Kr", material.specular, material.specular_map, vec3f{1});
+        get_scaled_texture(values, "Kt", material.transmission,
+            material.transmission_map, vec3f{1});
+        get_scaled_texture(
+            values, "eta", material.eta, material.eta_map, vec3f{1.5});
+        material.roughness = vec2f{0};
+        get_pbrt_roughness(values, material.roughness, 0);
+        material.sspecular = material.specular *
+                             eta_to_reflectivity(material.eta);
+        auto scale = 1.0f;
+        get_pbrt_value(values, "scale", scale);
+        material.volscale = 1 / scale;
+        auto sigma_a = zero3f, sigma_s = zero3f;
+        auto sigma_a_tex = ""s, sigma_s_tex = ""s;
+        get_scaled_texture(
+            values, "sigma_a", sigma_a, sigma_a_tex, vec3f{0011, .0024, .014});
+        get_scaled_texture(values, "sigma_prime_s", sigma_s, sigma_s_tex,
+            vec3f{2.55, 3.12, 3.77});
+        material.volmeanfreepath = 1 / (sigma_a + sigma_s);
+        material.volscatter      = sigma_s / (sigma_a + sigma_s);
+        if (verbose) printf("subsurface material not properly supported\n");
+      } else if (material.type == "mix") {
+        auto namedmaterial1 = ""s, namedmaterial2 = ""s;
+        get_pbrt_value(values, "namedmaterial1", namedmaterial1);
+        get_pbrt_value(values, "namedmaterial2", namedmaterial2);
+        auto matname = (!namedmaterial1.empty()) ? namedmaterial1
+                                                 : namedmaterial2;
+        auto matit = std::find_if(materials.begin(), materials.end(),
+            [&matname](auto& material) { return material.name == matname; });
+        if (matit == materials.end())
+          throw std::invalid_argument("cannot find material " + matname);
+        auto saved_name = material.name;
+        material        = *matit;
+        material.name   = saved_name;
+        if (verbose) printf("mix material not properly supported\n");
+      } else if (material.type == "fourier") {
+        auto bsdffile = ""s;
+        get_pbrt_value(values, "bsdffile", bsdffile);
+        if (bsdffile.rfind("/") != string::npos)
+          bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
+        if (bsdffile == "paint.bsdf") {
+          material.diffuse   = {0.6f, 0.6f, 0.6f};
+          material.specular  = {1, 1, 1};
+          material.eta       = vec3f{1.5};
+          material.roughness = vec2f{0.2};
+          // material.roughness = get_pbrt_roughnessf(0.2f, true);
+          material.sspecular = material.specular *
+                               eta_to_reflectivity(material.eta);
+        } else if (bsdffile == "ceramic.bsdf") {
+          material.diffuse   = {0.6f, 0.6f, 0.6f};
+          material.specular  = {1, 1, 1};
+          material.eta       = vec3f{1.5};
+          material.roughness = vec2f{0.25};
+          // material.roughness = get_pbrt_roughnessf(0.25, true);
+          material.sspecular = material.specular *
+                               eta_to_reflectivity(material.eta);
+        } else if (bsdffile == "leather.bsdf") {
+          material.diffuse   = {0.6f, 0.57f, 0.48f};
+          material.specular  = {1, 1, 1};
+          material.eta       = vec3f{1.5};
+          material.roughness = vec2f{0.3};
+          // material.roughness = get_pbrt_roughnessf(0.3, true);
+          material.sspecular = material.specular *
+                               eta_to_reflectivity(material.eta);
+        } else if (bsdffile == "coated_copper.bsdf") {
+          material.specular = vec3f{1};
+          material.eta  = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
+          material.etak = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
+          material.roughness = vec2f{0.01};
+          // material.roughness = get_pbrt_roughnessf(0.01, true);
+          material.sspecular = material.specular *
+                               eta_to_reflectivity(material.eta, material.etak);
+        } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
+          material.specular     = {1, 1, 1};
+          material.eta          = vec3f{1.5};
+          material.transmission = {1, 1, 1};
+          material.roughness    = vec2f{0.2};
+          // material.roughness = get_pbrt_roughness(0.2, true);
+          material.sspecular = material.specular *
+                               eta_to_reflectivity(material.eta);
+        } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
+          material.specular = vec3f{1, 1, 1};
+          material.eta  = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
+          material.etak = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
+          material.roughness = vec2f{0.2};
+          // material.roughness = get_pbrt_roughness(0.2, true);
+          material.sspecular = material.specular *
+                               eta_to_reflectivity(material.eta, material.etak);
+        } else {
+          throw std::invalid_argument{"unknown bsdffile " + bsdffile};
+        }
       } else {
-        throw std::invalid_argument{"unknown bsdffile " + bsdffile};
+        throw std::invalid_argument{"unknown material type " + material.type};
       }
-    } else {
-      throw std::invalid_argument{"unknown material type " + material.type};
     }
-  }
-  } catch(std::invalid_argument& e) {
+  } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
   }
 }
@@ -4136,44 +4045,44 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 // Convert pbrt shapes
 static void convert_pbrt_shapes(
     const string& filename, vector<pbrt_shape>& shapes, bool verbose = false) {
-      try {
-  for (auto& shape : shapes) {
-    auto& values = shape.values;
-    if (shape.type == "trianglemesh") {
-      shape.positions = {};
-      shape.normals   = {};
-      shape.texcoords = {};
-      shape.triangles = {};
-      get_pbrt_value(values, "P", shape.positions);
-      get_pbrt_value(values, "N", shape.normals);
-      get_pbrt_value(values, "uv", shape.texcoords);
-      for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
-      get_pbrt_value(values, "indices", shape.triangles);
-    } else if (shape.type == "loopsubdiv") {
-      shape.positions = {};
-      shape.triangles = {};
-      get_pbrt_value(values, "P", shape.positions);
-      get_pbrt_value(values, "indices", shape.triangles);
-      shape.normals.resize(shape.positions.size());
-      // compute_normals(shape.normals, shape.triangles, shape.positions);
-    } else if (shape.type == "plymesh") {
-      shape.filename = ""s;
-      get_pbrt_value(values, "filename", shape.filename);
-    } else if (shape.type == "sphere") {
-      auto radius = 1.0f;
-      get_pbrt_value(values, "radius", radius);
-      make_pbrt_sphere(shape.triangles, shape.positions, shape.normals,
-          shape.texcoords, {32, 16}, radius);
-    } else if (shape.type == "disk") {
-      auto radius = 1.0f;
-      get_pbrt_value(values, "radius", radius);
-      make_pbrt_disk(shape.triangles, shape.positions, shape.normals,
-          shape.texcoords, {32, 1}, radius);
-    } else {
-      throw_unsupportedtype_error(filename, "shape", shape.type);
+  try {
+    for (auto& shape : shapes) {
+      auto& values = shape.values;
+      if (shape.type == "trianglemesh") {
+        shape.positions = {};
+        shape.normals   = {};
+        shape.texcoords = {};
+        shape.triangles = {};
+        get_pbrt_value(values, "P", shape.positions);
+        get_pbrt_value(values, "N", shape.normals);
+        get_pbrt_value(values, "uv", shape.texcoords);
+        for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
+        get_pbrt_value(values, "indices", shape.triangles);
+      } else if (shape.type == "loopsubdiv") {
+        shape.positions = {};
+        shape.triangles = {};
+        get_pbrt_value(values, "P", shape.positions);
+        get_pbrt_value(values, "indices", shape.triangles);
+        shape.normals.resize(shape.positions.size());
+        // compute_normals(shape.normals, shape.triangles, shape.positions);
+      } else if (shape.type == "plymesh") {
+        shape.filename = ""s;
+        get_pbrt_value(values, "filename", shape.filename);
+      } else if (shape.type == "sphere") {
+        auto radius = 1.0f;
+        get_pbrt_value(values, "radius", radius);
+        make_pbrt_sphere(shape.triangles, shape.positions, shape.normals,
+            shape.texcoords, {32, 16}, radius);
+      } else if (shape.type == "disk") {
+        auto radius = 1.0f;
+        get_pbrt_value(values, "radius", radius);
+        make_pbrt_disk(shape.triangles, shape.positions, shape.normals,
+            shape.texcoords, {32, 1}, radius);
+      } else {
+        throw_unsupportedtype_error(filename, "shape", shape.type);
+      }
     }
-  }
-  } catch(std::invalid_argument& e) {
+  } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
   }
 }
@@ -4181,19 +4090,19 @@ static void convert_pbrt_shapes(
 // Convert pbrt arealights
 static void convert_pbrt_arealights(const string& filename,
     vector<pbrt_arealight>& lights, bool verbose = false) {
-      try {
-  for (auto& light : lights) {
-    auto& values = light.values;
-    if (light.type == "diffuse") {
-      auto l = vec3f{1}, scale = vec3f{1};
-      get_pbrt_value(values, "L", l);
-      get_pbrt_value(values, "scale", scale);
-      light.emission = l * scale;
-    } else {
-      throw_unsupportedtype_error(filename, "arealight", light.type);
+  try {
+    for (auto& light : lights) {
+      auto& values = light.values;
+      if (light.type == "diffuse") {
+        auto l = vec3f{1}, scale = vec3f{1};
+        get_pbrt_value(values, "L", l);
+        get_pbrt_value(values, "scale", scale);
+        light.emission = l * scale;
+      } else {
+        throw_unsupportedtype_error(filename, "arealight", light.type);
+      }
     }
-  }
-  } catch(std::invalid_argument& e) {
+  } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
   }
 }
@@ -4201,53 +4110,53 @@ static void convert_pbrt_arealights(const string& filename,
 // Convert pbrt lights
 static void convert_pbrt_lights(
     const string& filename, vector<pbrt_light>& lights, bool verbose = false) {
-      try {
-  for (auto& light : lights) {
-    auto& values = light.values;
-    if (light.type == "distant") {
-      auto l = vec3f{1}, scale = vec3f{1};
-      get_pbrt_value(values, "L", l);
-      get_pbrt_value(values, "scale", scale);
-      light.emission = l * scale;
-      light.from     = zero3f;
-      light.to       = vec3f{0, 0, 1};
-      get_pbrt_value(values, "from", light.from);
-      get_pbrt_value(values, "to", light.to);
-      light.distant       = true;
-      auto distant_dist   = 100;
-      auto size           = distant_dist * sin(5 * pif / 180);
-      light.area_emission = light.emission * (distant_dist * distant_dist) /
-                            (size * size);
-      light.area_frame =
-          light.frame *
-          lookat_frame(normalize(light.from - light.to) * distant_dist, zero3f,
-              {0, 1, 0}, true);
-      light.area_frend =
-          light.frend *
-          lookat_frame(normalize(light.from - light.to) * distant_dist, zero3f,
-              {0, 1, 0}, true);
-      auto texcoords = vector<vec2f>{};
-      make_pbrt_quad(light.area_triangles, light.area_positions,
-          light.area_normals, texcoords, {4, 2}, size);
-    } else if (light.type == "point" || light.type == "goniometric" ||
-               light.type == "spot") {
-      auto i = vec3f{1}, scale = vec3f{1};
-      get_pbrt_value(values, "I", i);
-      get_pbrt_value(values, "scale", scale);
-      light.emission = i * scale;
-      light.from     = zero3f;
-      get_pbrt_value(values, "from", light.from);
-      light.area_emission = light.emission;
-      light.area_frame    = light.frame * translation_frame(light.from);
-      light.area_frend    = light.frend * translation_frame(light.from);
-      auto texcoords      = vector<vec2f>{};
-      make_pbrt_sphere(light.area_triangles, light.area_positions,
-          light.area_normals, texcoords, {4, 2}, 0.0025f);
-    } else {
-      throw_unsupportedtype_error(filename, "arealight", light.type);
+  try {
+    for (auto& light : lights) {
+      auto& values = light.values;
+      if (light.type == "distant") {
+        auto l = vec3f{1}, scale = vec3f{1};
+        get_pbrt_value(values, "L", l);
+        get_pbrt_value(values, "scale", scale);
+        light.emission = l * scale;
+        light.from     = zero3f;
+        light.to       = vec3f{0, 0, 1};
+        get_pbrt_value(values, "from", light.from);
+        get_pbrt_value(values, "to", light.to);
+        light.distant       = true;
+        auto distant_dist   = 100;
+        auto size           = distant_dist * sin(5 * pif / 180);
+        light.area_emission = light.emission * (distant_dist * distant_dist) /
+                              (size * size);
+        light.area_frame = light.frame *
+                           lookat_frame(
+                               normalize(light.from - light.to) * distant_dist,
+                               zero3f, {0, 1, 0}, true);
+        light.area_frend = light.frend *
+                           lookat_frame(
+                               normalize(light.from - light.to) * distant_dist,
+                               zero3f, {0, 1, 0}, true);
+        auto texcoords = vector<vec2f>{};
+        make_pbrt_quad(light.area_triangles, light.area_positions,
+            light.area_normals, texcoords, {4, 2}, size);
+      } else if (light.type == "point" || light.type == "goniometric" ||
+                 light.type == "spot") {
+        auto i = vec3f{1}, scale = vec3f{1};
+        get_pbrt_value(values, "I", i);
+        get_pbrt_value(values, "scale", scale);
+        light.emission = i * scale;
+        light.from     = zero3f;
+        get_pbrt_value(values, "from", light.from);
+        light.area_emission = light.emission;
+        light.area_frame    = light.frame * translation_frame(light.from);
+        light.area_frend    = light.frend * translation_frame(light.from);
+        auto texcoords      = vector<vec2f>{};
+        make_pbrt_sphere(light.area_triangles, light.area_positions,
+            light.area_normals, texcoords, {4, 2}, 0.0025f);
+      } else {
+        throw_unsupportedtype_error(filename, "arealight", light.type);
+      }
     }
-  }
-  } catch(std::invalid_argument& e) {
+  } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
   }
 }
@@ -4255,28 +4164,28 @@ static void convert_pbrt_lights(
 static void convert_pbrt_environments(const string& filename,
     vector<pbrt_environment>& environments, vector<pbrt_texture>& textures,
     bool verbose = false) {
-      try {
-  for (auto& light : environments) {
-    auto& values = light.values;
-    if (light.type == "infinite") {
-      auto l = vec3f{1}, scale = vec3f{1};
-      get_pbrt_value(values, "L", l);
-      get_pbrt_value(values, "scale", scale);
-      light.emission = scale * l;
-      light.filename = ""s;
-      get_pbrt_value(values, "mapname", light.filename);
-      // environment.frame =
-      // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
-      // * stack.back().frame;
-      light.frame = light.frame *
-                    frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-      light.frend = light.frend *
-                    frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
-    } else {
-      throw_unsupportedtype_error(filename, "light", light.type);
+  try {
+    for (auto& light : environments) {
+      auto& values = light.values;
+      if (light.type == "infinite") {
+        auto l = vec3f{1}, scale = vec3f{1};
+        get_pbrt_value(values, "L", l);
+        get_pbrt_value(values, "scale", scale);
+        light.emission = scale * l;
+        light.filename = ""s;
+        get_pbrt_value(values, "mapname", light.filename);
+        // environment.frame =
+        // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
+        // * stack.back().frame;
+        light.frame = light.frame *
+                      frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+        light.frend = light.frend *
+                      frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+      } else {
+        throw_unsupportedtype_error(filename, "light", light.type);
+      }
     }
-  }
-  } catch(std::invalid_argument& e) {
+  } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
   }
 }
@@ -4329,220 +4238,220 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
 
   // parse command by command
   try {
-  auto line     = ""s;
-  auto line_num = 0;
-  while (read_pbrt_cmdline(fs, line, line_num)) {
-    auto str = string_view{line};
-    // get command
-    auto cmd = ""s;
-    parse_pbrt_command(str, cmd);
-    if (cmd == "WorldBegin") {
-      stack.push_back({});
-    } else if (cmd == "WorldEnd") {
-      if (stack.empty()) throw_stack_error(filename);
-      stack.pop_back();
-      if (stack.size() != 1) throw_stack_error(filename);
-    } else if (cmd == "AttributeBegin") {
-      stack.push_back(stack.back());
-    } else if (cmd == "AttributeEnd") {
-      if (stack.empty()) throw_stack_error(filename);
-      stack.pop_back();
-    } else if (cmd == "TransformBegin") {
-      stack.push_back(stack.back());
-    } else if (cmd == "TransformEnd") {
-      if (stack.empty()) throw_stack_error(filename);
-      stack.pop_back();
-    } else if (cmd == "ObjectBegin") {
-      stack.push_back(stack.back());
-      parse_pbrt_param(str, cur_object);
-      objects[cur_object] = {};
-    } else if (cmd == "ObjectEnd") {
-      stack.pop_back();
-      cur_object = "";
-    } else if (cmd == "ObjectInstance") {
-      auto object = ""s;
-      parse_pbrt_param(str, object);
-      if (objects.find(object) == objects.end())
-        throw_missing_reference_error(filename, "object", object);
-      for (auto shape_id : objects.at(object)) {
-        auto& shape = pbrt.shapes[shape_id];
-        shape.instance_frames.push_back(stack.back().transform_start);
-        shape.instance_frends.push_back(stack.back().transform_end);
-      }
-    } else if (cmd == "ActiveTransform") {
-      auto name = ""s;
-      parse_pbrt_command(str, name);
-      if (name == "StartTime") {
-        stack.back().active_transform_start = true;
-        stack.back().active_transform_end   = false;
-      } else if (name == "EndTime") {
-        stack.back().active_transform_start = false;
-        stack.back().active_transform_end   = true;
-      } else if (name == "All") {
-        stack.back().active_transform_start = true;
-        stack.back().active_transform_end   = true;
+    auto line     = ""s;
+    auto line_num = 0;
+    while (read_pbrt_cmdline(fs, line, line_num)) {
+      auto str = string_view{line};
+      // get command
+      auto cmd = ""s;
+      parse_pbrt_command(str, cmd);
+      if (cmd == "WorldBegin") {
+        stack.push_back({});
+      } else if (cmd == "WorldEnd") {
+        if (stack.empty()) throw_stack_error(filename);
+        stack.pop_back();
+        if (stack.size() != 1) throw_stack_error(filename);
+      } else if (cmd == "AttributeBegin") {
+        stack.push_back(stack.back());
+      } else if (cmd == "AttributeEnd") {
+        if (stack.empty()) throw_stack_error(filename);
+        stack.pop_back();
+      } else if (cmd == "TransformBegin") {
+        stack.push_back(stack.back());
+      } else if (cmd == "TransformEnd") {
+        if (stack.empty()) throw_stack_error(filename);
+        stack.pop_back();
+      } else if (cmd == "ObjectBegin") {
+        stack.push_back(stack.back());
+        parse_pbrt_param(str, cur_object);
+        objects[cur_object] = {};
+      } else if (cmd == "ObjectEnd") {
+        stack.pop_back();
+        cur_object = "";
+      } else if (cmd == "ObjectInstance") {
+        auto object = ""s;
+        parse_pbrt_param(str, object);
+        if (objects.find(object) == objects.end())
+          throw_missing_reference_error(filename, "object", object);
+        for (auto shape_id : objects.at(object)) {
+          auto& shape = pbrt.shapes[shape_id];
+          shape.instance_frames.push_back(stack.back().transform_start);
+          shape.instance_frends.push_back(stack.back().transform_end);
+        }
+      } else if (cmd == "ActiveTransform") {
+        auto name = ""s;
+        parse_pbrt_command(str, name);
+        if (name == "StartTime") {
+          stack.back().active_transform_start = true;
+          stack.back().active_transform_end   = false;
+        } else if (name == "EndTime") {
+          stack.back().active_transform_start = false;
+          stack.back().active_transform_end   = true;
+        } else if (name == "All") {
+          stack.back().active_transform_start = true;
+          stack.back().active_transform_end   = true;
+        } else {
+          throw_stack_error(filename);
+        }
+      } else if (cmd == "Transform") {
+        auto xf = identity4x4f;
+        parse_pbrt_param(str, xf);
+        set_transform(stack.back(), frame3f{xf});
+      } else if (cmd == "ConcatTransform") {
+        auto xf = identity4x4f;
+        parse_pbrt_param(str, xf);
+        concat_transform(stack.back(), frame3f{xf});
+      } else if (cmd == "Scale") {
+        auto v = zero3f;
+        parse_pbrt_param(str, v);
+        concat_transform(stack.back(), scaling_frame(v));
+      } else if (cmd == "Translate") {
+        auto v = zero3f;
+        parse_pbrt_param(str, v);
+        concat_transform(stack.back(), translation_frame(v));
+      } else if (cmd == "Rotate") {
+        auto v = zero4f;
+        parse_pbrt_param(str, v);
+        concat_transform(
+            stack.back(), rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
+      } else if (cmd == "LookAt") {
+        auto from = zero3f, to = zero3f, up = zero3f;
+        parse_pbrt_param(str, from);
+        parse_pbrt_param(str, to);
+        parse_pbrt_param(str, up);
+        auto frame = lookat_frame(from, to, up, true);
+        concat_transform(stack.back(), inverse(frame));
+      } else if (cmd == "ReverseOrientation") {
+        stack.back().reverse = !stack.back().reverse;
+      } else if (cmd == "CoordinateSystem") {
+        auto name = ""s;
+        parse_pbrt_param(str, name);
+        coordsys[name].transform_start = stack.back().transform_start;
+        coordsys[name].transform_end   = stack.back().transform_end;
+      } else if (cmd == "CoordSysTransform") {
+        auto name = ""s;
+        parse_pbrt_param(str, name);
+        if (coordsys.find(name) != coordsys.end()) {
+          stack.back().transform_start = coordsys.at(name).transform_start;
+          stack.back().transform_end   = coordsys.at(name).transform_end;
+        }
+      } else if (cmd == "Integrator") {
+        auto& integrator = pbrt.integrators.emplace_back();
+        parse_pbrt_param(str, integrator.type);
+        parse_pbrt_params(str, integrator.values);
+      } else if (cmd == "Sampler") {
+        auto& sampler = pbrt.samplers.emplace_back();
+        parse_pbrt_param(str, sampler.type);
+        parse_pbrt_params(str, sampler.values);
+      } else if (cmd == "PixelFilter") {
+        auto& filter = pbrt.filters.emplace_back();
+        parse_pbrt_param(str, filter.type);
+        parse_pbrt_params(str, filter.values);
+      } else if (cmd == "Film") {
+        auto& film = pbrt.films.emplace_back();
+        parse_pbrt_param(str, film.type);
+        parse_pbrt_params(str, film.values);
+      } else if (cmd == "Accelerator") {
+        auto& accelerator = pbrt.accelerators.emplace_back();
+        parse_pbrt_param(str, accelerator.type);
+        parse_pbrt_params(str, accelerator.values);
+      } else if (cmd == "Camera") {
+        auto& camera = pbrt.cameras.emplace_back();
+        parse_pbrt_param(str, camera.type);
+        parse_pbrt_params(str, camera.values);
+        camera.frame = stack.back().transform_start;
+        camera.frend = stack.back().transform_end;
+      } else if (cmd == "Texture") {
+        auto& texture  = pbrt.textures.emplace_back();
+        auto  comptype = ""s;
+        parse_pbrt_param(str, texture.name);
+        parse_pbrt_param(str, comptype);
+        parse_pbrt_param(str, texture.type);
+        parse_pbrt_params(str, texture.values);
+      } else if (cmd == "Material") {
+        static auto material_id = 0;
+        auto&       material    = pbrt.materials.emplace_back();
+        material.name           = "material_" + std::to_string(material_id++);
+        parse_pbrt_param(str, material.type);
+        parse_pbrt_params(str, material.values);
+        if (material.type == "") {
+          stack.back().material = "";
+          pbrt.materials.pop_back();
+        } else {
+          stack.back().material = material.name;
+        }
+      } else if (cmd == "MakeNamedMaterial") {
+        auto& material = pbrt.materials.emplace_back();
+        parse_pbrt_param(str, material.name);
+        parse_pbrt_params(str, material.values);
+        material.type = "";
+        for (auto& value : material.values)
+          if (value.name == "type") material.type = value.value1s;
+      } else if (cmd == "NamedMaterial") {
+        parse_pbrt_param(str, stack.back().material);
+      } else if (cmd == "Shape") {
+        auto& shape = pbrt.shapes.emplace_back();
+        parse_pbrt_param(str, shape.type);
+        parse_pbrt_params(str, shape.values);
+        shape.frame     = stack.back().transform_start;
+        shape.frend     = stack.back().transform_end;
+        shape.material  = stack.back().material;
+        shape.arealight = stack.back().arealight;
+        shape.interior  = stack.back().medium_interior;
+        shape.exterior  = stack.back().medium_exterior;
+        if (cur_object != "") {
+          shape.is_instanced = true;
+          objects[cur_object].push_back((int)pbrt.shapes.size() - 1);
+        } else {
+          shape.instance_frames.push_back(identity3x4f);
+          shape.instance_frends.push_back(identity3x4f);
+        }
+      } else if (cmd == "AreaLightSource") {
+        static auto arealight_id = 0;
+        auto&       arealight    = pbrt.arealights.emplace_back();
+        arealight.name = "arealight_" + std::to_string(arealight_id++);
+        parse_pbrt_param(str, arealight.type);
+        parse_pbrt_params(str, arealight.values);
+        arealight.frame        = stack.back().transform_start;
+        arealight.frend        = stack.back().transform_end;
+        stack.back().arealight = arealight.name;
+      } else if (cmd == "LightSource") {
+        auto& light = pbrt.lights.emplace_back();
+        parse_pbrt_param(str, light.type);
+        parse_pbrt_params(str, light.values);
+        light.frame = stack.back().transform_start;
+        light.frend = stack.back().transform_end;
+        if (light.type == "infinite") {
+          auto& environment  = pbrt.environments.emplace_back();
+          environment.type   = light.type;
+          environment.values = light.values;
+          environment.frame  = light.frame;
+          environment.frend  = light.frend;
+          pbrt.lights.pop_back();
+        }
+      } else if (cmd == "MakeNamedMedium") {
+        auto& medium = pbrt.mediums.emplace_back();
+        parse_pbrt_param(str, medium.name);
+        parse_pbrt_params(str, medium.values);
+        medium.type = "";
+        for (auto& value : medium.values)
+          if (value.name == "type") medium.type = value.value1s;
+      } else if (cmd == "MediumInterface") {
+        parse_pbrt_param(str, stack.back().medium_interior);
+        parse_pbrt_param(str, stack.back().medium_exterior);
+      } else if (cmd == "Include") {
+        auto includename = ""s;
+        parse_pbrt_param(str, includename);
+        try {
+          load_pbrt(get_dirname(filename) + includename, pbrt, ctx);
+        } catch (std::exception& e) {
+          throw_dependent_error(filename, e.what());
+        }
       } else {
-        throw_stack_error(filename);
+        throw_unknowncommand_error(filename, cmd);
       }
-    } else if (cmd == "Transform") {
-      auto xf = identity4x4f;
-      parse_pbrt_param(str, xf);
-      set_transform(stack.back(), frame3f{xf});
-    } else if (cmd == "ConcatTransform") {
-      auto xf = identity4x4f;
-      parse_pbrt_param(str, xf);
-      concat_transform(stack.back(), frame3f{xf});
-    } else if (cmd == "Scale") {
-      auto v = zero3f;
-      parse_pbrt_param(str, v);
-      concat_transform(stack.back(), scaling_frame(v));
-    } else if (cmd == "Translate") {
-      auto v = zero3f;
-      parse_pbrt_param(str, v);
-      concat_transform(stack.back(), translation_frame(v));
-    } else if (cmd == "Rotate") {
-      auto v = zero4f;
-      parse_pbrt_param(str, v);
-      concat_transform(
-          stack.back(), rotation_frame(vec3f{v.y, v.z, v.w}, radians(v.x)));
-    } else if (cmd == "LookAt") {
-      auto from = zero3f, to = zero3f, up = zero3f;
-      parse_pbrt_param(str, from);
-      parse_pbrt_param(str, to);
-      parse_pbrt_param(str, up);
-      auto frame = lookat_frame(from, to, up, true);
-      concat_transform(stack.back(), inverse(frame));
-    } else if (cmd == "ReverseOrientation") {
-      stack.back().reverse = !stack.back().reverse;
-    } else if (cmd == "CoordinateSystem") {
-      auto name = ""s;
-      parse_pbrt_param(str, name);
-      coordsys[name].transform_start = stack.back().transform_start;
-      coordsys[name].transform_end   = stack.back().transform_end;
-    } else if (cmd == "CoordSysTransform") {
-      auto name = ""s;
-      parse_pbrt_param(str, name);
-      if (coordsys.find(name) != coordsys.end()) {
-        stack.back().transform_start = coordsys.at(name).transform_start;
-        stack.back().transform_end   = coordsys.at(name).transform_end;
-      }
-    } else if (cmd == "Integrator") {
-      auto& integrator = pbrt.integrators.emplace_back();
-      parse_pbrt_param(str, integrator.type);
-      parse_pbrt_params(str, integrator.values);
-    } else if (cmd == "Sampler") {
-      auto& sampler = pbrt.samplers.emplace_back();
-      parse_pbrt_param(str, sampler.type);
-      parse_pbrt_params(str, sampler.values);
-    } else if (cmd == "PixelFilter") {
-      auto& filter = pbrt.filters.emplace_back();
-      parse_pbrt_param(str, filter.type);
-      parse_pbrt_params(str, filter.values);
-    } else if (cmd == "Film") {
-      auto& film = pbrt.films.emplace_back();
-      parse_pbrt_param(str, film.type);
-      parse_pbrt_params(str, film.values);
-    } else if (cmd == "Accelerator") {
-      auto& accelerator = pbrt.accelerators.emplace_back();
-      parse_pbrt_param(str, accelerator.type);
-      parse_pbrt_params(str, accelerator.values);
-    } else if (cmd == "Camera") {
-      auto& camera = pbrt.cameras.emplace_back();
-      parse_pbrt_param(str, camera.type);
-      parse_pbrt_params(str, camera.values);
-      camera.frame = stack.back().transform_start;
-      camera.frend = stack.back().transform_end;
-    } else if (cmd == "Texture") {
-      auto& texture  = pbrt.textures.emplace_back();
-      auto  comptype = ""s;
-      parse_pbrt_param(str, texture.name);
-      parse_pbrt_param(str, comptype);
-      parse_pbrt_param(str, texture.type);
-      parse_pbrt_params(str, texture.values);
-    } else if (cmd == "Material") {
-      static auto material_id = 0;
-      auto&       material    = pbrt.materials.emplace_back();
-      material.name           = "material_" + std::to_string(material_id++);
-      parse_pbrt_param(str, material.type);
-      parse_pbrt_params(str, material.values);
-      if (material.type == "") {
-        stack.back().material = "";
-        pbrt.materials.pop_back();
-      } else {
-        stack.back().material = material.name;
-      }
-    } else if (cmd == "MakeNamedMaterial") {
-      auto& material = pbrt.materials.emplace_back();
-      parse_pbrt_param(str, material.name);
-      parse_pbrt_params(str, material.values);
-      material.type = "";
-      for (auto& value : material.values)
-        if (value.name == "type") material.type = value.value1s;
-    } else if (cmd == "NamedMaterial") {
-      parse_pbrt_param(str, stack.back().material);
-    } else if (cmd == "Shape") {
-      auto& shape = pbrt.shapes.emplace_back();
-      parse_pbrt_param(str, shape.type);
-      parse_pbrt_params(str, shape.values);
-      shape.frame     = stack.back().transform_start;
-      shape.frend     = stack.back().transform_end;
-      shape.material  = stack.back().material;
-      shape.arealight = stack.back().arealight;
-      shape.interior  = stack.back().medium_interior;
-      shape.exterior  = stack.back().medium_exterior;
-      if (cur_object != "") {
-        shape.is_instanced = true;
-        objects[cur_object].push_back((int)pbrt.shapes.size() - 1);
-      } else {
-        shape.instance_frames.push_back(identity3x4f);
-        shape.instance_frends.push_back(identity3x4f);
-      }
-    } else if (cmd == "AreaLightSource") {
-      static auto arealight_id = 0;
-      auto&       arealight    = pbrt.arealights.emplace_back();
-      arealight.name           = "arealight_" + std::to_string(arealight_id++);
-      parse_pbrt_param(str, arealight.type);
-      parse_pbrt_params(str, arealight.values);
-      arealight.frame        = stack.back().transform_start;
-      arealight.frend        = stack.back().transform_end;
-      stack.back().arealight = arealight.name;
-    } else if (cmd == "LightSource") {
-      auto& light = pbrt.lights.emplace_back();
-      parse_pbrt_param(str, light.type);
-      parse_pbrt_params(str, light.values);
-      light.frame = stack.back().transform_start;
-      light.frend = stack.back().transform_end;
-      if (light.type == "infinite") {
-        auto& environment  = pbrt.environments.emplace_back();
-        environment.type   = light.type;
-        environment.values = light.values;
-        environment.frame  = light.frame;
-        environment.frend  = light.frend;
-        pbrt.lights.pop_back();
-      }
-    } else if (cmd == "MakeNamedMedium") {
-      auto& medium = pbrt.mediums.emplace_back();
-      parse_pbrt_param(str, medium.name);
-      parse_pbrt_params(str, medium.values);
-      medium.type = "";
-      for (auto& value : medium.values)
-        if (value.name == "type") medium.type = value.value1s;
-    } else if (cmd == "MediumInterface") {
-      parse_pbrt_param(str, stack.back().medium_interior);
-      parse_pbrt_param(str, stack.back().medium_exterior);
-    } else if (cmd == "Include") {
-      auto includename = ""s;
-      parse_pbrt_param(str, includename);
-      try {
-        load_pbrt(get_dirname(filename) + includename, pbrt, ctx);
-      } catch (std::exception& e) {
-        throw_dependent_error(filename, e.what());
-      }
-    } else {
-      throw_unknowncommand_error(filename, cmd);
     }
-  }
-  } catch(std::invalid_argument& e) {
+  } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": parse error [" + e.what() + "]"};
   }
 }
@@ -4645,249 +4554,231 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
   if (!fs) throw_notfound_error(filename);
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
-  // save comments
-  if (!format_values(fs, "#\n")) throw_write_error(filename);
-  if (!format_values(fs, "# Written by Yocto/GL\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "#\n\n")) throw_write_error(filename);
-  for (auto& comment : pbrt.comments) {
-    if (!format_values(fs, "# {}\n", comment)) throw_write_error(filename);
-  }
-  if (!format_values(fs, "\n")) throw_write_error(filename);
-
-  for (auto& camera_ : pbrt.cameras) {
-    auto camera = camera_;
-    if (camera.type == "") {
-      camera.type = "perspective";
-      camera.values.push_back(make_pbrt_value(
-          "fov", 2 * tan(0.036f / (2 * camera.lens)) * 180 / pif));
+  try {
+    // save comments
+    format_values(fs, "#\n");
+    format_values(fs, "# Written by Yocto/GL\n");
+    format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+    format_values(fs, "#\n\n");
+    for (auto& comment : pbrt.comments) {
+      format_values(fs, "# {}\n", comment);
     }
-    if (!format_values(fs, "LookAt {} {} {}\n", camera.frame.o,
-            camera.frame.o - camera.frame.z, camera.frame.y))
-      throw_write_error(filename);
-    if (!format_values(fs, "Camera \"{}\" {}\n", camera.type, camera.values))
-      throw_write_error(filename);
-  }
+    format_values(fs, "\n");
 
-  for (auto& film_ : pbrt.films) {
-    auto film = film_;
-    if (film.type == "") {
-      film.type = "image";
-      film.values.push_back(make_pbrt_value("xresolution", film.resolution.x));
-      film.values.push_back(make_pbrt_value("yresolution", film.resolution.y));
-      film.values.push_back(make_pbrt_value("filename", film.filename));
-    }
-    if (!format_values(fs, "Film \"{}\" {}\n", film.type, film.values))
-      throw_write_error(filename);
-  }
-
-  for (auto& integrator_ : pbrt.integrators) {
-    auto integrator = integrator_;
-    if (!format_values(
-            fs, "Integrator \"{}\" {}\n", integrator.type, integrator.values))
-      throw_write_error(filename);
-  }
-
-  for (auto& sampler_ : pbrt.samplers) {
-    auto sampler = sampler_;
-    if (!format_values(fs, "Sampler \"{}\" {}\n", sampler.type, sampler.values))
-      throw_write_error(filename);
-  }
-
-  for (auto& filter_ : pbrt.filters) {
-    auto filter = filter_;
-    if (!format_values(
-            fs, "PixelFilter \"{}\" {}\n", filter.type, filter.values))
-      throw_write_error(filename);
-  }
-
-  for (auto& accelerator_ : pbrt.accelerators) {
-    auto accelerator = accelerator_;
-    if (!format_values(fs, "Accelerator \"{}\" {}\n", accelerator.type,
-            accelerator.values))
-      throw_write_error(filename);
-  }
-
-  if (!format_values(fs, "\nWorldBegin\n\n")) throw_write_error(filename);
-
-  for (auto& texture_ : pbrt.textures) {
-    auto texture = texture_;
-    if (texture.type == "") {
-      if (texture.filename.empty()) {
-        texture.type = "constant";
-        texture.values.push_back(make_pbrt_value("value", texture.constant));
-      } else {
-        texture.type = "imagemap";
-        texture.values.push_back(make_pbrt_value("filename", texture.filename));
+    for (auto& camera_ : pbrt.cameras) {
+      auto camera = camera_;
+      if (camera.type == "") {
+        camera.type = "perspective";
+        camera.values.push_back(make_pbrt_value(
+            "fov", 2 * tan(0.036f / (2 * camera.lens)) * 180 / pif));
       }
+      format_values(fs, "LookAt {} {} {}\n", camera.frame.o,
+          camera.frame.o - camera.frame.z, camera.frame.y);
+      format_values(fs, "Camera \"{}\" {}\n", camera.type, camera.values);
     }
-    if (!format_values(fs, "Texture \"{}\" \"color\" \"{}\" {}\n", texture.name,
-            texture.type, texture.values))
-      throw_write_error(filename);
-  }
 
-  auto reflectivity_to_eta = [](const vec3f& reflectivity) {
-    return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
-  };
-  for (auto& material_ : pbrt.materials) {
-    auto material = material_;
-    if (material.type == "") {
-      if (material.specular != zero3f && material.transmission != zero3f &&
-          material.refract) {
-        material.type = "glass";
-        material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
-        material.values.push_back(
-            make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
-        material.values.push_back(make_pbrt_value(
-            "eta", mean(reflectivity_to_eta(material.specular))));
-        material.values.push_back(make_pbrt_value("remaproughness", false));
-      } else if (mean(material.specular) > 0.1f &&
-                 material.transmission == zero3f) {
-        material.type = "metal";
-        material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
-        material.values.push_back(
-            make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
-        material.values.push_back(
-            make_pbrt_value("eta", reflectivity_to_eta(material.specular)));
-        material.values.push_back(make_pbrt_value("remaproughness", false));
-      } else {
-        material.type = "uber";
-        if (material.diffuse_map.empty()) {
-          material.values.push_back(make_pbrt_value("Kd", material.diffuse));
-        } else if (material.diffuse != zero3f) {
-          material.values.push_back(make_pbrt_value(
-              "Kd", material.diffuse_map, pbrt_value_type::texture));
+    for (auto& film_ : pbrt.films) {
+      auto film = film_;
+      if (film.type == "") {
+        film.type = "image";
+        film.values.push_back(
+            make_pbrt_value("xresolution", film.resolution.x));
+        film.values.push_back(
+            make_pbrt_value("yresolution", film.resolution.y));
+        film.values.push_back(make_pbrt_value("filename", film.filename));
+      }
+      format_values(fs, "Film \"{}\" {}\n", film.type, film.values);
+    }
+
+    for (auto& integrator_ : pbrt.integrators) {
+      auto integrator = integrator_;
+      format_values(
+          fs, "Integrator \"{}\" {}\n", integrator.type, integrator.values);
+    }
+
+    for (auto& sampler_ : pbrt.samplers) {
+      auto sampler = sampler_;
+      format_values(fs, "Sampler \"{}\" {}\n", sampler.type, sampler.values);
+    }
+
+    for (auto& filter_ : pbrt.filters) {
+      auto filter = filter_;
+      format_values(fs, "PixelFilter \"{}\" {}\n", filter.type, filter.values);
+    }
+
+    for (auto& accelerator_ : pbrt.accelerators) {
+      auto accelerator = accelerator_;
+      format_values(
+          fs, "Accelerator \"{}\" {}\n", accelerator.type, accelerator.values);
+    }
+
+    format_values(fs, "\nWorldBegin\n\n");
+
+    for (auto& texture_ : pbrt.textures) {
+      auto texture = texture_;
+      if (texture.type == "") {
+        if (texture.filename.empty()) {
+          texture.type = "constant";
+          texture.values.push_back(make_pbrt_value("value", texture.constant));
+        } else {
+          texture.type = "imagemap";
+          texture.values.push_back(
+              make_pbrt_value("filename", texture.filename));
         }
-        if (material.specular != zero3f) {
-          material.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
+      }
+      format_values(fs, "Texture \"{}\" \"color\" \"{}\" {}\n", texture.name,
+          texture.type, texture.values);
+    }
+
+    auto reflectivity_to_eta = [](const vec3f& reflectivity) {
+      return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
+    };
+    for (auto& material_ : pbrt.materials) {
+      auto material = material_;
+      if (material.type == "") {
+        if (material.specular != zero3f && material.transmission != zero3f &&
+            material.refract) {
+          material.type = "glass";
+          material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
           material.values.push_back(
               make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
           material.values.push_back(make_pbrt_value(
               "eta", mean(reflectivity_to_eta(material.specular))));
           material.values.push_back(make_pbrt_value("remaproughness", false));
-        }
-        if (material.transmission != zero3f) {
+        } else if (mean(material.specular) > 0.1f &&
+                   material.transmission == zero3f) {
+          material.type = "metal";
+          material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
           material.values.push_back(
-              make_pbrt_value("Kt", material.transmission));
-        }
-        if (!material.opacity_map.empty()) {
-          material.values.push_back(make_pbrt_value(
-              "opacity", material.opacity_map, pbrt_value_type::texture));
-        } else if (material.opacity != vec3f{1}) {
+              make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
           material.values.push_back(
-              make_pbrt_value("opacity", material.opacity));
+              make_pbrt_value("eta", reflectivity_to_eta(material.specular)));
+          material.values.push_back(make_pbrt_value("remaproughness", false));
+        } else {
+          material.type = "uber";
+          if (material.diffuse_map.empty()) {
+            material.values.push_back(make_pbrt_value("Kd", material.diffuse));
+          } else if (material.diffuse != zero3f) {
+            material.values.push_back(make_pbrt_value(
+                "Kd", material.diffuse_map, pbrt_value_type::texture));
+          }
+          if (material.specular != zero3f) {
+            material.values.push_back(make_pbrt_value("Ks", vec3f{1, 1, 1}));
+            material.values.push_back(
+                make_pbrt_value("roughness", pow(mean(material.roughness), 2)));
+            material.values.push_back(make_pbrt_value(
+                "eta", mean(reflectivity_to_eta(material.specular))));
+            material.values.push_back(make_pbrt_value("remaproughness", false));
+          }
+          if (material.transmission != zero3f) {
+            material.values.push_back(
+                make_pbrt_value("Kt", material.transmission));
+          }
+          if (!material.opacity_map.empty()) {
+            material.values.push_back(make_pbrt_value(
+                "opacity", material.opacity_map, pbrt_value_type::texture));
+          } else if (material.opacity != vec3f{1}) {
+            material.values.push_back(
+                make_pbrt_value("opacity", material.opacity));
+          }
         }
       }
+      format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
+          material.name, material.type, material.values);
     }
-    if (!format_values(fs,
-            "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
-            material.name, material.type, material.values))
-      throw_write_error(filename);
-  }
 
-  for (auto& medium_ : pbrt.mediums) {
-    auto medium = medium_;
-    if (!format_values(fs, "MakeNamedMedium \"{}\" \"string type\" \"{}\" {}\n",
-            medium.name, medium.type, medium.values))
-      throw_write_error(filename);
-  }
+    for (auto& medium_ : pbrt.mediums) {
+      auto medium = medium_;
+      format_values(fs, "MakeNamedMedium \"{}\" \"string type\" \"{}\" {}\n",
+          medium.name, medium.type, medium.values);
+    }
 
-  for (auto& light_ : pbrt.lights) {
-    auto light = light_;
-    if (light.type == "") {
-      if (light.distant) {
-        light.type = "distance";
-        light.values.push_back(make_pbrt_value("L", light.emission));
-      } else {
-        light.type = "point";
-        light.values.push_back(make_pbrt_value("I", light.emission));
+    for (auto& light_ : pbrt.lights) {
+      auto light = light_;
+      if (light.type == "") {
+        if (light.distant) {
+          light.type = "distance";
+          light.values.push_back(make_pbrt_value("L", light.emission));
+        } else {
+          light.type = "point";
+          light.values.push_back(make_pbrt_value("I", light.emission));
+        }
       }
+      format_values(fs, "AttributeBegin\n");
+      format_values(fs, "Transform {}\n", (mat4f)light.frame);
+      format_values(fs, "LightSource \"{}\" {}\n", light.type, light.values);
+      format_values(fs, "AttributeEnd\n");
     }
-    if (!format_values(fs, "AttributeBegin\n")) throw_write_error(filename);
-    if (!format_values(fs, "Transform {}\n", (mat4f)light.frame))
-      throw_write_error(filename);
-    if (!format_values(fs, "LightSource \"{}\" {}\n", light.type, light.values))
-      throw_write_error(filename);
-    if (!format_values(fs, "AttributeEnd\n")) throw_write_error(filename);
-  }
 
-  for (auto& environment_ : pbrt.environments) {
-    auto environment = environment_;
-    if (environment.type == "") {
-      environment.type = "infinite";
-      environment.values.push_back(make_pbrt_value("L", environment.emission));
-      environment.values.push_back(
-          make_pbrt_value("mapname", environment.filename));
+    for (auto& environment_ : pbrt.environments) {
+      auto environment = environment_;
+      if (environment.type == "") {
+        environment.type = "infinite";
+        environment.values.push_back(
+            make_pbrt_value("L", environment.emission));
+        environment.values.push_back(
+            make_pbrt_value("mapname", environment.filename));
+      }
+      format_values(fs, "AttributeBegin\n");
+      format_values(fs, "Transform {}\n", (mat4f)environment.frame);
+      format_values(
+          fs, "LightSource \"{}\" {}\n", environment.type, environment.values);
+      format_values(fs, "AttributeEnd\n");
     }
-    if (!format_values(fs, "AttributeBegin\n")) throw_write_error(filename);
-    if (!format_values(fs, "Transform {}\n", (mat4f)environment.frame))
-      throw_write_error(filename);
-    if (!format_values(fs, "LightSource \"{}\" {}\n", environment.type,
-            environment.values))
-      throw_write_error(filename);
-    if (!format_values(fs, "AttributeEnd\n")) throw_write_error(filename);
-  }
 
-  auto arealights_map = unordered_map<string, string>{};
-  for (auto& arealight_ : pbrt.arealights) {
-    auto arealight = arealight_;
-    if (arealight.type == "") {
-      arealight.type = "diffuse";
-      arealight.values.push_back(make_pbrt_value("L", arealight.emission));
+    auto arealights_map = unordered_map<string, string>{};
+    for (auto& arealight_ : pbrt.arealights) {
+      auto arealight = arealight_;
+      if (arealight.type == "") {
+        arealight.type = "diffuse";
+        arealight.values.push_back(make_pbrt_value("L", arealight.emission));
+      }
+      format_values(arealights_map[arealight.name],
+          "AreaLightSource \"{}\" {}\n", arealight.type, arealight.values);
     }
-    format_values(arealights_map[arealight.name], "AreaLightSource \"{}\" {}\n",
-        arealight.type, arealight.values);
-  }
 
-  auto object_id = 0;
-  for (auto& shape_ : pbrt.shapes) {
-    auto shape = shape_;
-    if (shape.type == "") {
-      if (!shape.filename.empty()) {
-        shape.type = "plymesh";
-        shape.values.push_back(make_pbrt_value("filename", shape.filename));
-      } else {
-        shape.type = "trianglemesh";
-        shape.values.push_back(make_pbrt_value("indices", shape.triangles));
-        shape.values.push_back(
-            make_pbrt_value("P", shape.positions, pbrt_value_type::point));
-        if (!shape.normals.empty())
+    auto object_id = 0;
+    for (auto& shape_ : pbrt.shapes) {
+      auto shape = shape_;
+      if (shape.type == "") {
+        if (!shape.filename.empty()) {
+          shape.type = "plymesh";
+          shape.values.push_back(make_pbrt_value("filename", shape.filename));
+        } else {
+          shape.type = "trianglemesh";
+          shape.values.push_back(make_pbrt_value("indices", shape.triangles));
           shape.values.push_back(
-              make_pbrt_value("N", shape.triangles, pbrt_value_type::normal));
-        if (!shape.texcoords.empty())
-          shape.values.push_back(make_pbrt_value("uv", shape.texcoords));
+              make_pbrt_value("P", shape.positions, pbrt_value_type::point));
+          if (!shape.normals.empty())
+            shape.values.push_back(
+                make_pbrt_value("N", shape.triangles, pbrt_value_type::normal));
+          if (!shape.texcoords.empty())
+            shape.values.push_back(make_pbrt_value("uv", shape.texcoords));
+        }
+      }
+      auto object = "object" + std::to_string(object_id++);
+      if (shape.is_instanced) format_values(fs, "ObjectBegin \"{}\"\n", object);
+      format_values(fs, "AttributeBegin\n");
+      format_values(fs, "Transform {}\n", (mat4f)shape.frame);
+      format_values(fs, "NamedMaterial \"{}\"\n", shape.material);
+      if (shape.arealight != "")
+        format_values(fs, arealights_map.at(shape.arealight));
+      format_values(fs, "Shape \"{}\" {}\n", shape.type, shape.values);
+      format_values(fs, "AttributeEnd\n");
+      if (shape.is_instanced) format_values(fs, "ObjectEnd\n");
+      for (auto& iframe : shape.instance_frames) {
+        format_values(fs, "AttributeBegin\n");
+        format_values(fs, "Transform {}\n", (mat4f)iframe);
+        format_values(fs, "ObjectInstance \"{}\"\n", object);
+        format_values(fs, "AttributeEnd\n");
       }
     }
-    auto object = "object" + std::to_string(object_id++);
-    if (shape.is_instanced)
-      if (!format_values(fs, "ObjectBegin \"{}\"\n", object))
-        throw_write_error(filename);
-    if (!format_values(fs, "AttributeBegin\n")) throw_write_error(filename);
-    if (!format_values(fs, "Transform {}\n", (mat4f)shape.frame))
-      throw_write_error(filename);
-    if (!format_values(fs, "NamedMaterial \"{}\"\n", shape.material))
-      throw_write_error(filename);
-    if (shape.arealight != "")
-      if (!format_values(fs, arealights_map.at(shape.arealight)))
-        throw_write_error(filename);
-    if (!format_values(fs, "Shape \"{}\" {}\n", shape.type, shape.values))
-      throw_write_error(filename);
-    if (!format_values(fs, "AttributeEnd\n")) throw_write_error(filename);
-    if (shape.is_instanced)
-      if (!format_values(fs, "ObjectEnd\n")) throw_write_error(filename);
-    for (auto& iframe : shape.instance_frames) {
-      if (!format_values(fs, "AttributeBegin\n")) throw_write_error(filename);
-      if (!format_values(fs, "Transform {}\n", (mat4f)iframe))
-        throw_write_error(filename);
-      if (!format_values(fs, "ObjectInstance \"{}\"\n", object))
-        throw_write_error(filename);
-      if (!format_values(fs, "AttributeEnd\n")) throw_write_error(filename);
-    }
-  }
 
-  if (!format_values(fs, "\nWorldEnd\n\n")) throw_write_error(filename);
+    format_values(fs, "\nWorldEnd\n\n");
+
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
+  }
 }
 
 // Read pbrt commands
@@ -5104,9 +4995,9 @@ void write_pbrt_comment(
     const string& filename, FILE* fs, const string& comment) {
   auto lines = split_pbrt_string(comment, "\n");
   for (auto& line : lines) {
-    if (!format_values(fs, "# {}\n", line)) throw_write_error(filename);
+    format_values(fs, "# {}\n", line);
   }
-  if (!format_values(fs, "\n")) throw_write_error(filename);
+  format_values(fs, "\n");
 }
 
 void write_pbrt_values(
@@ -5192,115 +5083,86 @@ void write_pbrt_command(const string& filename, FILE* fs, pbrt_command command,
     const string& name, const string& type, const frame3f& xform,
     const vector<pbrt_value>& values, bool texture_float) {
   switch (command) {
-    case pbrt_command::world_begin:
-      if (!format_values(fs, "WorldBegin\n")) throw_write_error(filename);
-      break;
-    case pbrt_command::world_end:
-      if (!format_values(fs, "WorldEnd\n")) throw_write_error(filename);
-      break;
+    case pbrt_command::world_begin: format_values(fs, "WorldBegin\n"); break;
+    case pbrt_command::world_end: format_values(fs, "WorldEnd\n"); break;
     case pbrt_command::attribute_begin:
-      if (!format_values(fs, "AttributeBegin\n")) throw_write_error(filename);
+      format_values(fs, "AttributeBegin\n");
       break;
     case pbrt_command::attribute_end:
-      if (!format_values(fs, "AttributeEnd\n")) throw_write_error(filename);
+      format_values(fs, "AttributeEnd\n");
       break;
     case pbrt_command::transform_begin:
-      if (!format_values(fs, "TransformBegin\n")) throw_write_error(filename);
+      format_values(fs, "TransformBegin\n");
       break;
     case pbrt_command::transform_end:
-      if (!format_values(fs, "TransformEnd\n")) throw_write_error(filename);
+      format_values(fs, "TransformEnd\n");
       break;
     case pbrt_command::object_begin:
-      if (!format_values(fs, "ObjectBegin \"{}\"\n", name))
-        throw_write_error(filename);
+      format_values(fs, "ObjectBegin \"{}\"\n", name);
       break;
-    case pbrt_command::object_end:
-      if (!format_values(fs, "ObjectEnd\n")) throw_write_error(filename);
-      break;
+    case pbrt_command::object_end: format_values(fs, "ObjectEnd\n"); break;
     case pbrt_command::object_instance:
-      if (!format_values(fs, "ObjectInstance \"{}\"\n", name))
-        throw_write_error(filename);
+      format_values(fs, "ObjectInstance \"{}\"\n", name);
       break;
     case pbrt_command::sampler:
-      if (!format_values(fs, "Sampler \"{}\" {}\n", type, values))
-        throw_write_error(filename);
+      format_values(fs, "Sampler \"{}\" {}\n", type, values);
       break;
     case pbrt_command::integrator:
-      if (!format_values(fs, "Integrator \"{}\" {}\n", type, values))
-        throw_write_error(filename);
+      format_values(fs, "Integrator \"{}\" {}\n", type, values);
       break;
     case pbrt_command::accelerator:
-      if (!format_values(fs, "Accelerator \"{}\" {}\n", type, values))
-        throw_write_error(filename);
+      format_values(fs, "Accelerator \"{}\" {}\n", type, values);
       break;
     case pbrt_command::film:
-      if (!format_values(fs, "Film \"{}\" {}\n", type, values))
-        throw_write_error(filename);
+      format_values(fs, "Film \"{}\" {}\n", type, values);
       break;
     case pbrt_command::filter:
-      if (!format_values(fs, "Filter \"{}\" {}\n", type, values))
-        throw_write_error(filename);
+      format_values(fs, "Filter \"{}\" {}\n", type, values);
       break;
     case pbrt_command::camera:
-      if (!format_values(fs, "Camera \"{}\" {}\n", type, values))
-        throw_write_error(filename);
+      format_values(fs, "Camera \"{}\" {}\n", type, values);
       break;
     case pbrt_command::shape:
-      if (!format_values(fs, "Shape \"{}\" {}\n", type, values))
-        throw_write_error(filename);
+      format_values(fs, "Shape \"{}\" {}\n", type, values);
       break;
     case pbrt_command::light:
-      if (!format_values(fs, "LightSource \"{}\" {}\n", type, values))
-        throw_write_error(filename);
+      format_values(fs, "LightSource \"{}\" {}\n", type, values);
       break;
     case pbrt_command::material:
-      if (!format_values(fs, "Material \"{}\" {}\n", type, values))
-        throw_write_error(filename);
+      format_values(fs, "Material \"{}\" {}\n", type, values);
       break;
     case pbrt_command::arealight:
-      if (!format_values(fs, "AreaLightSource \"{}\" {}\n", type, values))
-        throw_write_error(filename);
+      format_values(fs, "AreaLightSource \"{}\" {}\n", type, values);
       break;
     case pbrt_command::named_texture:
-      if (!format_values(fs, "Texture \"{}\" \"{}\" \"{}\" {}\n", name,
-              texture_float ? "float" : "rgb", type, values))
-        throw_write_error(filename);
+      format_values(fs, "Texture \"{}\" \"{}\" \"{}\" {}\n", name,
+          texture_float ? "float" : "rgb", type, values);
       break;
     case pbrt_command::named_medium:
-      if (!format_values(fs,
-              "MakeNamedMedium \"{}\" \"string type\" \"{}\" {}\n", name, type,
-              values))
-        throw_write_error(filename);
+      format_values(fs, "MakeNamedMedium \"{}\" \"string type\" \"{}\" {}\n",
+          name, type, values);
       break;
     case pbrt_command::named_material:
-      if (!format_values(fs,
-              "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n", name,
-              type, values))
-        throw_write_error(filename);
+      format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
+          name, type, values);
       break;
     case pbrt_command::include:
-      if (!format_values(fs, "Include \"{}\"\n", name))
-        throw_write_error(filename);
+      format_values(fs, "Include \"{}\"\n", name);
       break;
     case pbrt_command::reverse_orientation:
-      if (!format_values(fs, "ReverseOrientation\n"))
-        throw_write_error(filename);
+      format_values(fs, "ReverseOrientation\n");
       break;
     case pbrt_command::set_transform:
-      if (!format_values(fs, "Transform {}\n", (mat4f)xform))
-        throw_write_error(filename);
+      format_values(fs, "Transform {}\n", (mat4f)xform);
       break;
     case pbrt_command::concat_transform:
-      if (!format_values(fs, "ConcatTransform {}\n", (mat4f)xform))
-        throw_write_error(filename);
+      format_values(fs, "ConcatTransform {}\n", (mat4f)xform);
       break;
     case pbrt_command::lookat_transform:
-      if (!format_values(fs, "LookAt {} {} {}\n", xform.x, xform.y, xform.z))
-        throw_write_error(filename);
+      format_values(fs, "LookAt {} {} {}\n", xform.x, xform.y, xform.z);
       break;
     case pbrt_command::use_material:
-      if (!format_values(fs, "NamedMaterial \"{}\"\n", name))
-        throw_write_error(filename);
+      format_values(fs, "NamedMaterial \"{}\"\n", name);
       break;
     case pbrt_command::medium_interface: {
       auto interior = ""s, exterior = ""s;
@@ -5315,21 +5177,16 @@ void write_pbrt_command(const string& filename, FILE* fs, pbrt_command command,
         else
           interior.push_back(c);
       }
-      if (!format_values(
-              fs, "MediumInterface \"{}\" \"{}\"\n", interior, exterior))
-        throw_write_error(filename);
+      format_values(fs, "MediumInterface \"{}\" \"{}\"\n", interior, exterior);
     } break;
     case pbrt_command::active_transform:
-      if (!format_values(fs, "ActiveTransform \"{}\"\n", name))
-        throw_write_error(filename);
+      format_values(fs, "ActiveTransform \"{}\"\n", name);
       break;
     case pbrt_command::coordinate_system_set:
-      if (!format_values(fs, "CoordinateSystem \"{}\"\n", name))
-        throw_write_error(filename);
+      format_values(fs, "CoordinateSystem \"{}\"\n", name);
       break;
     case pbrt_command::coordinate_system_transform:
-      if (!format_values(fs, "CoordinateSysTransform \"{}\"\n", name))
-        throw_write_error(filename);
+      format_values(fs, "CoordinateSysTransform \"{}\"\n", name);
       break;
     case pbrt_command::error: break;
   }
@@ -6168,7 +6025,8 @@ static void parse_value(string_view& str, yaml_value& value) {
         str.remove_prefix(1);
         break;
       } else {
-throw std::invalid_argument{"bad format"};      }
+        throw std::invalid_argument{"bad format"};
+      }
     }
   } else if (is_digit(str.front()) || str.front() == '-' ||
              str.front() == '+') {
@@ -6183,7 +6041,8 @@ throw std::invalid_argument{"bad format"};      }
     }
   }
   skip_whitespace(str);
-  if (!str.empty() && !is_whitespace(str)) throw std::invalid_argument{"bad format"};
+  if (!str.empty() && !is_whitespace(str))
+    throw std::invalid_argument{"bad format"};
 }
 
 // Load/save yaml
@@ -6209,7 +6068,7 @@ void load_yaml(const string& filename, yaml_model& yaml) {
       // indented property
       if (group == "") throw std::invalid_argument{"bad format"};
       skip_whitespace(line);
-      if (line.empty())throw std::invalid_argument{"bad format"};
+      if (line.empty()) throw std::invalid_argument{"bad format"};
       if (line.front() == '-') {
         auto& element = yaml.elements.emplace_back();
         element.name  = group;
@@ -6221,7 +6080,8 @@ void load_yaml(const string& filename, yaml_model& yaml) {
       }
       parse_yaml_varname(line, key);
       skip_whitespace(line);
-      if (line.empty() || line.front() != ':') throw std::invalid_argument{"bad format"};
+      if (line.empty() || line.front() != ':')
+        throw std::invalid_argument{"bad format"};
       line.remove_prefix(1);
       parse_value(line, value);
       yaml.elements.back().key_values.push_back({key, value});
@@ -6229,7 +6089,8 @@ void load_yaml(const string& filename, yaml_model& yaml) {
       // new group
       parse_yaml_varname(line, key);
       skip_whitespace(line);
-      if (line.empty() || line.front() != ':') throw std::invalid_argument{"bad format"};
+      if (line.empty() || line.front() != ':')
+        throw std::invalid_argument{"bad format"};
       line.remove_prefix(1);
       if (!line.empty() && !is_whitespace(line)) {
         group = "";
@@ -6278,45 +6139,48 @@ void save_yaml(const string& filename, const yaml_model& yaml) {
   if (!fs) throw_notfound_error(filename);
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
 
+  try {
+
   // save comments
-  if (!format_values(fs, "#\n")) throw_write_error(filename);
-  if (!format_values(fs, "# Written by Yocto/GL\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "# https://github.com/xelatihy/yocto-gl\n"))
-    throw_write_error(filename);
-  if (!format_values(fs, "#\n\n")) throw_write_error(filename);
+  format_values(fs, "#\n");
+  format_values(fs, "# Written by Yocto/GL\n");
+  format_values(fs, "# https://github.com/xelatihy/yocto-gl\n");
+  format_values(fs, "#\n\n");
   for (auto& comment : yaml.comments) {
-    if (!format_values(fs, "# {}\n", comment)) throw_write_error(filename);
+    format_values(fs, "# {}\n", comment);
   }
-  if (!format_values(fs, "\n")) throw_write_error(filename);
+  format_values(fs, "\n");
 
   auto group = ""s;
   for (auto& element : yaml.elements) {
     if (group != element.name) {
       group = element.name;
       if (group != "") {
-        if (!format_values(fs, "\n{}:\n", group)) throw_write_error(filename);
+        format_values(fs, "\n{}:\n", group);
       } else {
-        if (!format_values(fs, "\n")) throw_write_error(filename);
+        format_values(fs, "\n");
       }
     }
     auto first = true;
     for (auto& [key, value] : element.key_values) {
       if (group != "") {
-        if (!format_values(fs, "  {} {}: {}\n", first ? "-" : " ", key, value))
-          throw_write_error(filename);
+        format_values(fs, "  {} {}: {}\n", first ? "-" : " ", key, value);
         first = false;
       } else {
-        if (!format_values(fs, "{}: {}\n", key, value))
-          throw_write_error(filename);
+        format_values(fs, "{}: {}\n", key, value);
       }
     }
+  }
+  
+  } catch(std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
   }
 }
 
 bool read_yaml_property(const string& filename, FILE* fs, string& group,
     string& key, bool& newobj, bool& done, yaml_value& value) {
   // read the file line by line
+  try {
   char buffer[4096];
   while (fgets(buffer, sizeof(buffer), fs)) {
     // str
@@ -6340,7 +6204,8 @@ bool read_yaml_property(const string& filename, FILE* fs, string& group,
       }
       parse_yaml_varname(str, key);
       skip_whitespace(str);
-      if (str.empty() || str.front() != ':') throw std::invalid_argument{"bad format"};
+      if (str.empty() || str.front() != ':')
+        throw std::invalid_argument{"bad format"};
       str.remove_prefix(1);
       parse_value(str, value);
       return true;
@@ -6348,7 +6213,8 @@ bool read_yaml_property(const string& filename, FILE* fs, string& group,
       // new group
       parse_yaml_varname(str, key);
       skip_whitespace(str);
-      if (str.empty() || str.front() != ':') throw std::invalid_argument{"bad format"};
+      if (str.empty() || str.front() != ':')
+        throw std::invalid_argument{"bad format"};
       str.remove_prefix(1);
       if (!str.empty() && !is_whitespace(str)) {
         group = "";
@@ -6362,6 +6228,10 @@ bool read_yaml_property(const string& filename, FILE* fs, string& group,
     } else {
       str = {};
     }
+  }
+  
+  } catch(std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": parse error"};
   }
 
   if (ferror(fs)) throw_read_error(filename);
@@ -6386,29 +6256,38 @@ void write_yaml_comment(
     const string& filename, FILE* fs, const string& comment) {
   auto lines = split_yaml_string(comment, "\n");
   for (auto& line : lines) {
-    if (!format_values(fs, "# {}\n", line)) throw_write_error(filename);
+    format_values(fs, "# {}\n", line);
   }
-  if (!format_values(fs, "\n")) throw_write_error(filename);
+  format_values(fs, "\n");
 }
 
 // Save yaml property
 void write_yaml_property(const string& filename, FILE* fs, const string& object,
     const string& key, bool newobj, const yaml_value& value) {
+      try {
   if (key.empty()) {
-    if (!format_values(fs, "\n{}:\n", object)) throw_write_error(filename);
+    format_values(fs, "\n{}:\n", object);
   } else {
     if (!object.empty()) {
-      if (!format_values(fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value))
-        throw_write_error(filename);
+      format_values(fs, "  {} {}: {}\n", newobj ? "-" : " ", key, value);
     } else {
-      if (!format_values(fs, "{}: {}\n", key, value))
-        throw_write_error(filename);
+      format_values(fs, "{}: {}\n", key, value);
     }
+  }
+  
+  } catch(std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
   }
 }
 
 void write_yaml_object(const string& filename, FILE* fs, const string& object) {
-  if (!format_values(fs, "\n{}:\n", object)) throw_write_error(filename);
+  try {
+
+  format_values(fs, "\n{}:\n", object);
+  
+  } catch(std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": write error"};
+  }
 }
 
 }  // namespace yocto
