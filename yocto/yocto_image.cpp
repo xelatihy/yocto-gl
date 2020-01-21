@@ -1627,16 +1627,16 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Helpers for throwing
-void throw_read_error(const string& filename) {
+static void throw_read_error(const string& filename) {
   throw std::runtime_error{filename + ": read error"};
 }
-void throw_write_error(const string& filename) {
+static void throw_write_error(const string& filename) {
   throw std::runtime_error{filename + ": write error"};
 }
-void throw_preset_error(const string& filename) {
+static void throw_preset_error(const string& filename) {
   throw std::runtime_error{filename + ": unknown preset"};
 }
-void throw_format_error(const string& filename) {
+static void throw_format_error(const string& filename) {
   throw std::runtime_error{filename + ": unknown format"};
 }
 

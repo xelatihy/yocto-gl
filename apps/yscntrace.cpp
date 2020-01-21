@@ -149,9 +149,7 @@ void run_app(int argc, const char* argv[]) {
   // scene loading
   auto ioscene    = sceneio_model{};
   auto load_timer = print_timed("loading scene");
-  if (auto ret = load_scene(filename, ioscene); !ret) {
-    print_fatal(ret.error);
-  }
+  load_scene(filename, ioscene);
   print_elapsed(load_timer);
 
   // add components

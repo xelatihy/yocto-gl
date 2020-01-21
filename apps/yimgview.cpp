@@ -310,6 +310,7 @@ void update(const opengl_window& win, shared_ptr<app_states> apps) {
       update_display(app);
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
     } catch(std::exception& e) {
+      apps->loaders.pop_front();
       push_glmessage(win, e.what());
       log_glinfo(win, e.what());
     }

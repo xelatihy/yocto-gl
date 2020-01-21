@@ -80,9 +80,7 @@ void run_app(int argc, const char** argv) {
   // load scene
   auto scene      = sceneio_model{};
   auto load_timer = print_timed("loading scene");
-  if (auto ret = load_scene(filename, scene); !ret) {
-    print_fatal(ret.error);
-  }
+  load_scene(filename, scene);
   print_elapsed(load_timer);
 
   // validate scene
@@ -147,9 +145,7 @@ void run_app(int argc, const char** argv) {
 
   // save scene
   auto save_timer = print_timed("saving scene");
-  if (auto ret = save_scene(output, scene, obj_instances); !ret) {
-    print_fatal(ret.error);
-  }
+  save_scene(output, scene, obj_instances);
   print_elapsed(save_timer);
 }
 
