@@ -574,27 +574,21 @@ struct yaml_model {
   vector<yaml_element> elements = {};
 };
 
-// // Result of io operations
-struct yamlio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Load/save yaml
-yamlio_status load_yaml(const string& filename, yaml_model& yaml);
-yamlio_status save_yaml(const string& filename, const yaml_model& yaml);
+void load_yaml(const string& filename, yaml_model& yaml);
+void save_yaml(const string& filename, const yaml_model& yaml);
 
 // Load Yaml properties
-yamlio_status read_yaml_property(const string& filename, FILE* fs,
+bool read_yaml_property(const string& filename, FILE* fs,
     string& group, string& key, bool& newobj, bool& done, yaml_value& value);
 
 // Write Yaml properties
-yamlio_status write_yaml_comment(
+void write_yaml_comment(
     const string& filename, FILE* fs, const string& comment);
-yamlio_status write_yaml_property(const string& filename, FILE* fs,
+void write_yaml_property(const string& filename, FILE* fs,
     const string& object, const string& key, bool newobj,
     const yaml_value& value);
-yamlio_status write_yaml_object(
+void write_yaml_object(
     const string& filename, FILE* fs, const string& object);
 
 // type-cheked yaml value access
