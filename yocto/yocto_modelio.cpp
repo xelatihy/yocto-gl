@@ -535,9 +535,6 @@ static void throw_read_error(const string& filename) {
 static void throw_format_error(const string& filename) {
   throw std::runtime_error{filename + ": unknown format"};
 }
-static void throw_dependent_error(const string& filename, const string& err) {
-  throw std::runtime_error{filename + ": error in resource (" + err + ")"};
-}
 static void throw_missing_reference_error(
     const string& filename, const string& type, const string& name) {
   throw std::runtime_error{filename + ": missing " + type + " " + name};
@@ -3179,9 +3176,9 @@ static bool read_pbrt_cmdline(file_wrapper& fs, string& cmd) {
 }
 
 // parse a quoted string
-static bool parse_pbrt_command(string_view& str, string& value) {
+static void parse_pbrt_command(string_view& str, string& value) {
   skip_whitespace(str);
-  if (!isalpha((int)str.front())) return {};
+  if (!isalpha((int)str.front())) throw std::invalid_argument{"expected command"};
   auto pos = str.find_first_not_of(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
   if (pos == string_view::npos) {
@@ -3191,10 +3188,9 @@ static bool parse_pbrt_command(string_view& str, string& value) {
     value.assign(str.substr(0, pos));
     str.remove_prefix(pos + 1);
   }
-  return true;
 }
 
-static bool parse_pbrt_command(file_wrapper& fs, string_view& str, string& value) {
+static void parse_pbrt_command(file_wrapper& fs, string_view& str, string& value) {
   try {
     parse_pbrt_command(str, value);
   } catch(std::exception& e) {
@@ -3243,16 +3239,6 @@ static void parse_pbrt_nametype(string_view& str_, string& name, string& type) {
   str.remove_prefix(pos2);
   name = string(str);
 }
-
-// parse pbrt value with optional parens
-static void parse_pbrt_nametype(file_wrapper& fs, string_view& str, string& name, string& type) {
-  try {
-    parse_pbrt_nametype(str, name, type);
-  } catch(std::exception& e) {
-    throw std::runtime_error{fs.filename + ": parse error"};
-  }
-}
-
 
 static pair<vec3f, vec3f> get_pbrt_etak(const string& name) {
   static const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
