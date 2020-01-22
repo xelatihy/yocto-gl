@@ -3216,7 +3216,8 @@ static void make_pbrt_shape(vector<vec3i>& triangles, vector<vec3f>& positions,
 static void make_pbrt_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float radius) {
-  make_pbrt_shape(triangles, positions, normals, texcoords, steps,
+  make_pbrt_shape(
+      triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
         return radius *
@@ -3230,7 +3231,8 @@ static void make_pbrt_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
 static void make_pbrt_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float radius) {
-  make_pbrt_shape(triangles, positions, normals, texcoords, steps,
+  make_pbrt_shape(
+      triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         auto a = 2 * pif * uv.x;
         return radius * (1 - uv.y) * vec3f{cos(a), sin(a), 0};
@@ -3242,7 +3244,8 @@ static void make_pbrt_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
 static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float radius) {
-  make_pbrt_shape(triangles, positions, normals, texcoords, steps,
+  make_pbrt_shape(
+      triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         return vec3f{(uv.x - 0.5f) * radius, (uv.y - 0.5f) * radius, 0};
       },
