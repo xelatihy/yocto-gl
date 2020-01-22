@@ -143,8 +143,11 @@ namespace yocto {
 // Initialize a command line parser.
 struct cli_state;
 inline cli_state make_cli(const string& cmd, const string& usage);
-// check if any error occurred and exit appropriately
-inline bool parse_cli(cli_state& cli, int argc, const char** argv);
+// check if any error occurred and throws cli_error in that case
+inline void parse_cli(cli_state& cli, int argc, const char** argv);
+// check if any error occurred returning the error
+inline bool parse_cli(
+    cli_state& cli, int argc, const char** argv, string& usage);
 
 // Parse an int, float, string, and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
@@ -206,20 +209,19 @@ inline bool exists_file(const string& filename);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Result of io operations
-struct fileio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Load/save a text file
-inline fileio_status load_text(const string& filename, string& str);
-inline fileio_status save_text(const string& filename, const string& str);
+inline bool load_text(const string& filename, string& str, string& error);
+inline bool save_text(const string& filename, const string& str, string& error);
+inline void load_text(const string& filename, string& str);
+inline void save_text(const string& filename, const string& str);
 
 // Load/save a binary file
-inline fileio_status load_binary(const string& filename, vector<byte>& data);
-inline fileio_status save_binary(
-    const string& filename, const vector<byte>& data);
+inline bool load_binary(
+    const string& filename, vector<byte>& data, string& error);
+inline bool save_binary(
+    const string& filename, const vector<byte>& data, string& error);
+inline void load_binary(const string& filename, vector<byte>& data);
+inline void save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace yocto
 
@@ -386,58 +388,98 @@ inline bool exists_file(const string& filename) {
 namespace yocto {
 
 // Load a text file
-inline fileio_status load_text(const string& filename, string& str) {
+inline bool load_text(const string& filename, string& str, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rt");
-  if (!fs) return {filename + ": file not found"};
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   str.resize(length);
-  if (fread(str.data(), 1, length, fs) != length)
-    return {filename + ": read error"};
-  return {};
+  if (fread(str.data(), 1, length, fs) != length) {
+    error = filename + ": read error";
+    return false;
+  }
+  return true;
 }
 
 // Save a text file
-inline fileio_status save_text(const string& filename, const string& str) {
+inline bool save_text(
+    const string& filename, const string& str, string& error) {
   auto fs = fopen(filename.c_str(), "wt");
-  if (!fs) return {filename + ": file not found"};
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fprintf(fs, "%s", str.c_str()) < 0) return {filename + ": write error"};
+  if (fprintf(fs, "%s", str.c_str()) < 0) {
+    error = filename + ": write error";
+    return false;
+  }
   fclose(fs);
-  return {};
+  return true;
+}
+
+inline void load_text(const string& filename, string& str) {
+  auto error = string{};
+  if (!load_text(filename, str, error)) throw std::runtime_error(error);
+}
+inline void save_text(const string& filename, const string& str) {
+  auto error = string{};
+  if (!save_text(filename, str, error)) throw std::runtime_error(error);
 }
 
 // Load a binary file
-inline fileio_status load_binary(const string& filename, vector<byte>& data) {
+inline bool load_binary(
+    const string& filename, vector<byte>& data, string& error) {
   // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
   auto fs = fopen(filename.c_str(), "rb");
-  if (!fs) return {filename + ": file not found"};
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
   fseek(fs, 0, SEEK_END);
   auto length = ftell(fs);
   fseek(fs, 0, SEEK_SET);
   data.resize(length);
-  if (fread(data.data(), 1, length, fs) != length)
-    return {filename + ": read error"};
+  if (fread(data.data(), 1, length, fs) != length) {
+    error = filename + ": read error";
+    return false;
+  }
   fclose(fs);
-  return {};
+  return true;
 }
 
 // Save a binary file
-inline fileio_status save_binary(
-    const string& filename, const vector<byte>& data) {
+inline bool save_binary(
+    const string& filename, const vector<byte>& data, string& error) {
   auto fs = fopen(filename.c_str(), "wb");
-  if (!fs) return {filename + ": file not found"};
+  if (!fs) {
+    error = filename + ": file not found";
+    return false;
+  }
   auto fs_guard = std::unique_ptr<FILE, decltype(&fclose)>{fs, fclose};
-  if (fwrite(data.data(), 1, data.size(), fs) != data.size())
-    return {filename + ": rewritead error"};
+  if (fwrite(data.data(), 1, data.size(), fs) != data.size()) {
+    error = filename + ": rewritead error";
+    return false;
+  }
   fclose(fs);
-  return {};
+  return true;
 }
 
+inline void load_binary(const string& filename, vector<byte>& data) {
+  auto error = string{};
+  if (!load_binary(filename, data, error)) throw std::runtime_error(error);
+}
+inline void save_binary(const string& filename, const vector<byte>& data) {
+  auto error = string{};
+  if (!save_binary(filename, data, error)) throw std::runtime_error(error);
+}
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -573,16 +615,21 @@ inline void add_cli_option(cli_state& cli, const string& name, int& value,
       cli, name, cli_type::enum_, &value, usage, req, choices);
 }
 
-inline bool print_cli_help(cli_state& cli, const string& error) {
-  if (error != "") printf("error: %s\n\n", error.c_str());
-  printf("usage: %s%s%s%s\n\n", cli.name.c_str(),
-      cli.usage_options.empty() ? "" : " [options]",
-      cli.usage_arguments.empty() ? "" : " <arguments>", cli.usage.c_str());
+struct cli_error : std::runtime_error {
+  cli_error(const string& message) : std::runtime_error{message} {}
+};
+
+inline void throw_cli_error(cli_state& cli, const string& error) {
+  auto message = string{};
+  if (error != "") message += "error: " + error + "\n\n";
+  message +=
+      "usage: " + cli.name + (cli.usage_options.empty() ? "" : " [options]") +
+      (cli.usage_arguments.empty() ? "" : " <arguments>") + cli.usage + "\n\n";
   if (!cli.usage_options.empty())
-    printf("options:\n%s\n", cli.usage_options.c_str());
+    message += "options:\n" + cli.usage_options + "\n";
   if (!cli.usage_options.empty())
-    printf("arguments:\n%s\n", cli.usage_arguments.c_str());
-  return error.empty();
+    message += "arguments:\n" + cli.usage_arguments + "\n";
+  throw cli_error{message};
 }
 
 inline bool parse_cmdline_value(const string& str, int& value) {
@@ -607,7 +654,7 @@ inline bool parse_cmdline_value(const string& str, bool& value) {
   }
 }
 
-inline bool parse_cli(cli_state& cli, int argc, const char** argv) {
+inline void parse_cli(cli_state& cli, int argc, const char** argv) {
   // check for errors
   auto used = unordered_map<string, int>{};
   for (auto& option : cli.options) {
@@ -636,7 +683,7 @@ inline bool parse_cli(cli_state& cli, int argc, const char** argv) {
         args.erase(args.begin() + pos);
       } else {
         if (pos + 1 >= args.size())
-          return print_cli_help(cli, "missing value for " + name);
+          throw_cli_error(cli, "missing value for " + name);
         auto value = args[pos + 1];
         args.erase(args.begin() + pos, args.begin() + pos + 2);
         if (option.type == cli_type::string_) {
@@ -644,21 +691,21 @@ inline bool parse_cli(cli_state& cli, int argc, const char** argv) {
           option.set             = true;
         } else if (option.type == cli_type::int_) {
           if (!parse_cmdline_value(value, *(int*)option.value))
-            return print_cli_help(cli, "incorrect value for " + name);
+            throw_cli_error(cli, "incorrect value for " + name);
           option.set = true;
         } else if (option.type == cli_type::float_) {
           if (!parse_cmdline_value(value, *(float*)option.value))
-            return print_cli_help(cli, "incorrect value for " + name);
+            throw_cli_error(cli, "incorrect value for " + name);
           option.set = true;
         } else if (option.type == cli_type::bool_) {
           if (!parse_cmdline_value(value, *(bool*)option.value))
-            return print_cli_help(cli, "incorrect value for " + name);
+            throw_cli_error(cli, "incorrect value for " + name);
           option.set = true;
         } else if (option.type == cli_type::enum_) {
           auto pos = std::find(
               option.choices.begin(), option.choices.end(), value);
           if (pos == option.choices.end())
-            return print_cli_help(cli, "incorrect value for " + name);
+            throw_cli_error(cli, "incorrect value for " + name);
           else
             *(int*)option.value = (int)(pos - option.choices.begin());
           option.set = true;
@@ -668,19 +715,18 @@ inline bool parse_cli(cli_state& cli, int argc, const char** argv) {
       }
     }
     if (option.req && !option.set) {
-      print_cli_help(cli, "missing value for " + option.name);
+      throw_cli_error(cli, "missing value for " + option.name);
     }
   }
   // check unknown options
   for (auto& arg : args) {
-    if (arg.find("-") == 0) return print_cli_help(cli, "unknown option " + arg);
+    if (arg.find("-") == 0) throw_cli_error(cli, "unknown option " + arg);
   }
   // parse positional
   for (auto& option : cli.options) {
     if (option.name[0] == '-') continue;
     if (args.empty()) {
-      if (option.req)
-        return print_cli_help(cli, "missing value for " + option.name);
+      if (option.req) throw_cli_error(cli, "missing value for " + option.name);
     } else if (option.type == cli_type::string_vector_) {
       *(vector<string>*)option.value = args;
       option.set                     = true;
@@ -693,15 +739,15 @@ inline bool parse_cli(cli_state& cli, int argc, const char** argv) {
         option.set             = true;
       } else if (option.type == cli_type::int_) {
         if (!parse_cmdline_value(value, *(int*)option.value))
-          return print_cli_help(cli, "incorrect value for " + option.name);
+          throw_cli_error(cli, "incorrect value for " + option.name);
         option.set = true;
       } else if (option.type == cli_type::float_) {
         if (!parse_cmdline_value(value, *(float*)option.value))
-          return print_cli_help(cli, "incorrect value for " + option.name);
+          throw_cli_error(cli, "incorrect value for " + option.name);
         option.set = true;
       } else if (option.type == cli_type::bool_) {
         if (!parse_cmdline_value(value, *(bool*)option.value))
-          return print_cli_help(cli, "incorrect value for " + option.name);
+          throw_cli_error(cli, "incorrect value for " + option.name);
         option.set = true;
       } else {
         throw std::runtime_error("unsupported type");
@@ -710,8 +756,7 @@ inline bool parse_cli(cli_state& cli, int argc, const char** argv) {
   }
   // check remaining
   if (!args.empty())
-    return print_cli_help(cli, "mismatched value for " + args.front());
-  return true;
+    throw_cli_error(cli, "mismatched value for " + args.front());
 }
 
 }  // namespace yocto

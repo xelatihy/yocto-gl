@@ -265,31 +265,26 @@ struct sceneio_model {
 
 namespace yocto {
 
-// Scene io status
-struct sceneio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
-// Load/save a scene in the supported formats.
-sceneio_status load_scene(
+// Load/save a scene in the supported formats. Throws on error.
+void load_scene(
     const string& filename, sceneio_model& scene, bool noparallel = false);
-sceneio_status save_scene(const string& filename, const sceneio_model& scene,
+void save_scene(const string& filename, const sceneio_model& scene,
     bool noparallel = false);
 
 // Load/save a shape in the supported formats. Filename is the scene filename.
-sceneio_status load_shape(const string& filename, sceneio_shape& shape);
-sceneio_status save_shape(const string& filename, const sceneio_shape& shape);
+// Throws on error.
+void load_shape(const string& filename, sceneio_shape& shape);
+void save_shape(const string& filename, const sceneio_shape& shape);
 
 // Load/save a subdiv in the supported formats. Filename is the scene filename.
-sceneio_status load_subdiv(const string& filename, sceneio_subdiv& subdiv);
-sceneio_status save_subdiv(
-    const string& filename, const sceneio_subdiv& subdiv);
+// Throws on error.
+void load_subdiv(const string& filename, sceneio_subdiv& subdiv);
+void save_subdiv(const string& filename, const sceneio_subdiv& subdiv);
 
 // Load/save a texture in the supported formats. Filename is the scene filename.
-sceneio_status load_texture(const string& filename, sceneio_texture& texture);
-sceneio_status save_texture(
-    const string& filename, const sceneio_texture& texture);
+// Throws on error.
+void load_texture(const string& filename, sceneio_texture& texture);
+void save_texture(const string& filename, const sceneio_texture& texture);
 
 }  // namespace yocto
 

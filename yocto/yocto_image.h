@@ -247,19 +247,14 @@ namespace yocto {
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename);
 
-// Result of io operations
-struct imageio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Loads/saves a 4 channels float/byte image in linear/srgb color space.
-image<vec4f>   load_image(const string& filename);
-imageio_status load_image(const string& filename, image<vec4f>& img);
-imageio_status save_image(const string& filename, const image<vec4f>& img);
-image<vec4b>   load_imageb(const string& filename);
-imageio_status load_imageb(const string& filename, image<vec4b>& img);
-imageio_status save_imageb(const string& filename, const image<vec4b>& img);
+// Throws exception on error.
+image<vec4f> load_image(const string& filename);
+void         load_image(const string& filename, image<vec4f>& img);
+void         save_image(const string& filename, const image<vec4f>& img);
+image<vec4b> load_imageb(const string& filename);
+void         load_imageb(const string& filename, image<vec4b>& img);
+void         save_imageb(const string& filename, const image<vec4b>& img);
 
 }  // namespace yocto
 

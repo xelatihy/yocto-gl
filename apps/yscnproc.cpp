@@ -47,7 +47,7 @@ bool mkdir(const string& dir) {
 #endif
 }
 
-int main(int argc, const char** argv) {
+void run_app(int argc, const char** argv) {
   // command line parameters
   auto mesh_filenames   = false;
   auto shape_directory  = "shapes/"s;
@@ -75,14 +75,12 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "--validate", validate, "Validate scene");
   add_cli_option(cli, "--output,-o", output, "output scene", true);
   add_cli_option(cli, "scene", filename, "input scene", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // load scene
   auto scene      = sceneio_model{};
   auto load_timer = print_timed("loading scene");
-  if (auto ret = load_scene(filename, scene); !ret) {
-    print_fatal(ret.error);
-  }
+  load_scene(filename, scene);
   print_elapsed(load_timer);
 
   // validate scene
@@ -147,11 +145,16 @@ int main(int argc, const char** argv) {
 
   // save scene
   auto save_timer = print_timed("saving scene");
-  if (auto ret = save_scene(output, scene, obj_instances); !ret) {
-    print_fatal(ret.error);
-  }
+  save_scene(output, scene, obj_instances);
   print_elapsed(save_timer);
+}
 
-  // done
-  return 0;
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch (std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

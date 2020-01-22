@@ -111,7 +111,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   ioscene = {};
 }
 
-int main(int argc, const char* argv[]) {
+void run_app(int argc, const char* argv[]) {
   // options
   auto params     = trace_params{};
   auto batch      = 16;
@@ -144,14 +144,12 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--output-image,-o", imfilename, "Image filename");
   add_cli_option(cli, "--validate", validate, "Validate scene");
   add_cli_option(cli, "scene", filename, "Scene filename", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // scene loading
   auto ioscene    = sceneio_model{};
   auto load_timer = print_timed("loading scene");
-  if (auto ret = load_scene(filename, ioscene); !ret) {
-    print_fatal(ret.error);
-  }
+  load_scene(filename, ioscene);
   print_elapsed(load_timer);
 
   // add components
@@ -200,16 +198,22 @@ int main(int argc, const char* argv[]) {
     if (save_batch) {
       auto outfilename = replace_extension(imfilename,
           "-s" + std::to_string(sample + nsamples) + get_extension(imfilename));
-      if (auto ret = save_image(outfilename, render); !ret)
-        print_fatal(ret.error);
+      save_image(outfilename, render);
     }
   }
 
   // save image
   auto save_timer = print_timed("saving image");
-  if (auto ret = save_image(imfilename, render); !ret) print_fatal(ret.error);
+  save_image(imfilename, render);
   print_elapsed(save_timer);
+}
 
-  // done
-  return 0;
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch (std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

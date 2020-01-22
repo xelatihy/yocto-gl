@@ -71,13 +71,6 @@ struct app_state {
   string error = "";
 };
 
-// load state
-struct load_state {
-  string                filename = "";
-  shared_ptr<app_state> app      = {};
-  imageio_status        status   = {};
-};
-
 // app states
 struct app_states {
   // data
@@ -85,7 +78,7 @@ struct app_states {
   int                           selected = -1;
 
   // loading
-  deque<future<load_state>> loaders = {};
+  deque<future<shared_ptr<app_state>>> loaders = {};
 
   // default options
   float             exposure = 0;
@@ -149,7 +142,7 @@ void update_display(shared_ptr<app_state> app) {
 // add a new image
 void load_image_async(shared_ptr<app_states> apps, const string& filename) {
   apps->loaders.push_back(
-      async(launch::async, [apps, filename]() -> load_state {
+      async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
         auto app       = make_shared<app_state>();
         app->filename  = filename;
         app->outname   = replace_extension(filename, ".display.png");
@@ -158,9 +151,7 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
         app->filmic    = apps->filmic;
         app->params    = apps->params;
         apps->selected = (int)apps->states.size() - 1;
-        if (auto ret = load_image(app->filename, app->source); !ret) {
-          return {filename, nullptr, ret};
-        }
+        load_image(app->filename, app->source);
         compute_stats(
             app->source_stats, app->source, is_hdr_filename(app->filename));
         if (app->colorgrade) {
@@ -169,7 +160,7 @@ void load_image_async(shared_ptr<app_states> apps, const string& filename) {
           app->display = tonemap_image(app->source, app->exposure, app->filmic);
         }
         compute_stats(app->display_stats, app->display, false);
-        return {filename, app, {}};
+        return app;
       }));
 }
 
@@ -306,27 +297,27 @@ void draw(const opengl_window& win, shared_ptr<app_states> apps,
 }
 
 void update(const opengl_window& win, shared_ptr<app_states> apps) {
-  auto is_ready = [](const future<load_state>& result) -> bool {
+  auto is_ready = [](const future<shared_ptr<app_state>>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
 
   while (!apps->loaders.empty() && is_ready(apps->loaders.front())) {
-    auto [filename, app, status] = apps->loaders.front().get();
-    apps->loaders.pop_front();
-    if (!status) {
-      push_glmessage(win, "cannot load image " + filename);
-      log_glinfo(win, "cannot load image " + filename);
-      log_glinfo(win, status.error);
-    } else {
+    try {
+      auto app = apps->loaders.front().get();
+      apps->loaders.pop_front();
       apps->states.push_back(app);
       update_display(app);
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
+    } catch (std::exception& e) {
+      apps->loaders.pop_front();
+      push_glmessage(win, e.what());
+      log_glinfo(win, e.what());
     }
   }
 }
 
-int main(int argc, const char* argv[]) {
+void run_app(int argc, const char* argv[]) {
   // prepare application
   auto apps      = make_shared<app_states>();
   auto filenames = vector<string>{};
@@ -334,7 +325,7 @@ int main(int argc, const char* argv[]) {
   // command line options
   auto cli = make_cli("yimgview", "view images");
   add_cli_option(cli, "images", filenames, "image filenames", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // loading images
   for (auto filename : filenames) load_image_async(apps, filename);
@@ -380,7 +371,14 @@ int main(int argc, const char* argv[]) {
 
   // cleanup
   clear_glwindow(win);
+}
 
-  // done
-  return 0;
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch (std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

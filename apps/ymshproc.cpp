@@ -85,7 +85,7 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "--info,-i", info, "print mesh info");
   add_cli_option(cli, "--output,-o", output, "output mesh", true);
   add_cli_option(cli, "mesh", filename, "input mesh", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // mesh data
   auto positions     = vector<vec3f>{};
@@ -104,15 +104,11 @@ int main(int argc, const char** argv) {
   // load mesh
   auto load_timer = print_timed("loading shape");
   if (!facevarying) {
-    if (auto ret = load_shape(filename, points, lines, triangles, quads,
-            positions, normals, texcoords, colors, radius);
-        !ret)
-      print_fatal(ret.error);
+    load_shape(filename, points, lines, triangles, quads, positions, normals,
+        texcoords, colors, radius);
   } else {
-    if (auto ret = load_fvshape(filename, quadspos, quadsnorm, quadstexcoord,
-            positions, normals, texcoords);
-        !ret)
-      print_fatal(ret.error);
+    load_fvshape(filename, quadspos, quadsnorm, quadstexcoord, positions,
+        normals, texcoords);
   }
   print_elapsed(load_timer);
 
@@ -266,15 +262,11 @@ int main(int argc, const char** argv) {
   // save mesh
   auto save_timer = print_timed("saving shape");
   if (!quadspos.empty()) {
-    if (auto ret = save_fvshape(output, quadspos, quadsnorm, quadstexcoord,
-            positions, normals, texcoords);
-        !ret)
-      print_fatal(ret.error);
+    save_fvshape(output, quadspos, quadsnorm, quadstexcoord, positions, normals,
+        texcoords);
   } else {
-    if (auto ret = save_shape(output, points, lines, triangles, quads,
-            positions, normals, texcoords, colors, radius);
-        !ret)
-      print_fatal(ret.error);
+    save_shape(output, points, lines, triangles, quads, positions, normals,
+        texcoords, colors, radius);
   }
   print_elapsed(save_timer);
 

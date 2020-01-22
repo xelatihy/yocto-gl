@@ -1,60 +1,10 @@
 //
 // # Yocto/ModelIO: Tiny library for Ply/Obj/Pbrt/Yaml/glTF parsing and writing
 //
-// Yocto/Ply is a tiny library for loading and saving Ply/Obj/Pbrt/Yaml/glTF.
-// Yocto/ModelIO supports two interfaces: a simple interface where all model
-// data is loaded and saved at once and a low-level interface where single
-// commands values are read and written one at a time.
-//
-//
-// ## Low-Level Ply Loading
-//
-// Load a PLY by first opening the file and reading its header. Then, for each
-// element, read the values of its lists and non-lists properties. Example:
-//
-//    auto ply = fopen(filename, "rb");                // open for reading
-//    auto format = ply_format{};                      // initialize format
-//    auto elemnts = vector<ply_element>{};            // initialize elements
-//    auto comments = vector<string>{};                // initialize comments
-//    read_ply_header(ply, fromat elements, comments); // read ply header
-//    for(auto& element : elements) {                  // iterate elements
-//      // initialize the element's property values and lists
-//      // using either doubles or vector<float> and vector<vector<int>>
-//      auto values = vector<double>(element.properties.size());
-//      auto lists - vector<vector<double>>(element.properties.size());
-//      for(auto i = 0; i < element.count; i ++) {             // iterate values
-//        read_ply_value(ply, format, element, values, lists); // read props
-//        // values contains values for non-list properties
-//        // lists contains the values for list properties
-//    }
-//
-// For convenience during parsing, you can use `find_ply_property()` to
-// determine the index of the property you may be interested in.
-//
-//
-// ## Load-Level PLY Saving
-//
-// Write a PLY by first opening the file for writing and deciding whether to
-// use ASCII or binary (we recommend tha letter). Then fill in the elements
-// and comments and write its header. Finally, write its values one by one.
-// Example:
-//
-//    auto fs = fopen(filename, "rb");                   // open for writing
-//    auto format = ply_format::binary_little_endian;    // initialize format
-//    auto elemnts = vector<ply_element>{};              // initialize elements
-//    auto comments = vector<string>{};                  // initialize comments
-//    // add eleements and comments to the previous lists
-//    write_ply_header(ply, format, elements, comments); // read ply header
-//    for(auto& element : elements) {                    // iterate elements
-//      // initialize the element's property values and lists
-//      // using either doubles or vector<float> and vector<vector<int>>
-//      auto values = vector<double>(element.properties.size());
-//      auto lists - vector<vector<double>>(element.properties.size());
-//      for(auto i = 0; i < element.count; i ++) {       // iterate values
-//        values = {...}; lists = {...};                 // set values/lists
-//        write_ply_value(ply, foramt, element, values, lists); // write props
-//    }
-//
+// Yocto/ModelIO is a tiny library for loading and saving
+// Ply/Obj/Pbrt/Yaml/glTF. In Yocto/ModelIO, all model data is loaded and saved
+// at once. Each format is parsed in a manner that is as close as possible to
+// the original. Data can be accessed directly or via converters.
 //
 
 //
@@ -141,15 +91,9 @@ struct ply_model {
   vector<ply_element> elements = {};
 };
 
-// Result of io operations
-struct plyio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Load and save ply
-plyio_status load_ply(const string& filename, ply_model& ply);
-plyio_status save_ply(const string& filename, const ply_model& ply);
+void load_ply(const string& filename, ply_model& ply);
+void save_ply(const string& filename, const ply_model& ply);
 
 // Get ply properties
 bool has_ply_property(
@@ -235,45 +179,6 @@ void add_ply_triangles(ply_model& ply, const vector<vec3i>& values);
 void add_ply_quads(ply_model& ply, const vector<vec4i>& values);
 void add_ply_lines(ply_model& ply, const vector<vec2i>& values);
 void add_ply_points(ply_model& ply, const vector<int>& values);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// LOW_LEVEL PLY LOADING AND SAVING
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Read Ply functions
-plyio_status read_ply_header(const string& filename, FILE* fs,
-    ply_format& format, vector<ply_element>& elements,
-    vector<string>& comments);
-plyio_status read_ply_value(const string& filename, FILE* fs, ply_format format,
-    const ply_element& element, vector<double>& values,
-    vector<vector<double>>& lists);
-plyio_status read_ply_value(const string& filename, FILE* fs, ply_format format,
-    const ply_element& element, vector<float>& values,
-    vector<vector<int>>& lists);
-
-// Write Ply functions
-plyio_status write_ply_header(const string& filename, FILE* fs,
-    ply_format format, const vector<ply_element>& elements,
-    const vector<string>& comments);
-plyio_status write_ply_value(const string& filename, FILE* fs,
-    ply_format format, const ply_element& element, vector<double>& values,
-    vector<vector<double>>& lists);
-plyio_status write_ply_value(const string& filename, FILE* fs,
-    ply_format format, const ply_element& element, vector<float>& values,
-    vector<vector<int>>& lists);
-
-// Helpers to get element and property indices
-int   find_ply_element(const vector<ply_element>& elements, const string& name);
-int   find_ply_property(const ply_element& element, const string& name);
-vec2i find_ply_property(
-    const ply_element& element, const string& name1, const string& name2);
-vec3i find_ply_property(const ply_element& element, const string& name1,
-    const string& name2, const string& name3);
-vec4i find_ply_property(const ply_element& element, const string& name1,
-    const string& name2, const string& name3, const string& name4);
 
 }  // namespace yocto
 
@@ -413,17 +318,10 @@ struct obj_model {
   vector<obj_environment> environments = {};
 };
 
-// Result of io operations
-struct objio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Load and save obj
-objio_status load_obj(const string& filename, obj_model& obj,
-    bool geom_only = false, bool split_elements = true,
-    bool split_materials = false);
-objio_status save_obj(const string& filename, const obj_model& obj);
+void load_obj(const string& filename, obj_model& obj, bool geom_only = false,
+    bool split_elements = true, bool split_materials = false);
+void save_obj(const string& filename, const obj_model& obj);
 
 // convert between roughness and exponent
 float obj_exponent_to_roughness(float exponent);
@@ -487,55 +385,6 @@ void add_obj_fvquads(obj_model& obj, const string& name,
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// LOW-LEVEL INTERFACE
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Obj/Mtl/Objx command
-enum struct obj_command {
-  // clang-format off
-  vertex, normal, texcoord,         // data in value
-  face, str, point,                 // data in vertices
-  object, group, usemtl, smoothing, // data in name
-  mtllib, objxlib,                  // data in name
-  error                             // no data
-  // clang-format on
-};
-enum struct mtl_command { material, error };
-enum struct objx_command { camera, environment, instance, error };
-
-// Obj instance
-struct obj_instance {
-  string  object = "";
-  frame3f frame  = identity3x4f;
-};
-
-// Read obj/mtl/objx elements
-objio_status read_obj_command(const string& filename, FILE* fs,
-    obj_command& command, string& name, vec3f& value,
-    vector<obj_vertex>& vertices, obj_vertex& vert_size);
-objio_status read_mtl_command(const string& filename, FILE* fs,
-    mtl_command& command, obj_material& material, bool fliptr = true);
-objio_status read_objx_command(const string& filename, FILE* fs,
-    objx_command& command, obj_camera& camera, obj_environment& environment,
-    obj_instance& instance);
-
-// Write obj/mtl/objx elements
-objio_status write_obj_comment(
-    const string& filename, FILE* fs, const string& comment);
-objio_status write_obj_command(const string& filename, FILE* fs,
-    obj_command command, const string& name, const vec3f& value,
-    const vector<obj_vertex>& vertices = {});
-objio_status write_mtl_command(const string& filename, FILE* fs,
-    mtl_command command, obj_material& material,
-    const obj_texture_info& texture = {});
-objio_status write_objx_command(const string& filename, FILE* fs,
-    objx_command command, const obj_camera& camera,
-    const obj_environment& environment, const obj_instance& instance);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
 // HELPER FOR DICTIONARIES
 // -----------------------------------------------------------------------------
 namespace std {
@@ -586,40 +435,21 @@ struct yaml_model {
   vector<yaml_element> elements = {};
 };
 
-// // Result of io operations
-struct yamlio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Load/save yaml
-yamlio_status load_yaml(const string& filename, yaml_model& yaml);
-yamlio_status save_yaml(const string& filename, const yaml_model& yaml);
-
-// Load Yaml properties
-yamlio_status read_yaml_property(const string& filename, FILE* fs,
-    string& group, string& key, bool& newobj, bool& done, yaml_value& value);
-
-// Write Yaml properties
-yamlio_status write_yaml_comment(
-    const string& filename, FILE* fs, const string& comment);
-yamlio_status write_yaml_property(const string& filename, FILE* fs,
-    const string& object, const string& key, bool newobj,
-    const yaml_value& value);
-yamlio_status write_yaml_object(
-    const string& filename, FILE* fs, const string& object);
+void load_yaml(const string& filename, yaml_model& yaml);
+void save_yaml(const string& filename, const yaml_model& yaml);
 
 // type-cheked yaml value access
-bool get_yaml_value(const yaml_value& yaml, string& value);
-bool get_yaml_value(const yaml_value& yaml, bool& value);
-bool get_yaml_value(const yaml_value& yaml, int& value);
-bool get_yaml_value(const yaml_value& yaml, float& value);
-bool get_yaml_value(const yaml_value& yaml, vec2f& value);
-bool get_yaml_value(const yaml_value& yaml, vec3f& value);
-bool get_yaml_value(const yaml_value& yaml, mat3f& value);
-bool get_yaml_value(const yaml_value& yaml, frame3f& value);
+void get_yaml_value(const yaml_value& yaml, string& value);
+void get_yaml_value(const yaml_value& yaml, bool& value);
+void get_yaml_value(const yaml_value& yaml, int& value);
+void get_yaml_value(const yaml_value& yaml, float& value);
+void get_yaml_value(const yaml_value& yaml, vec2f& value);
+void get_yaml_value(const yaml_value& yaml, vec3f& value);
+void get_yaml_value(const yaml_value& yaml, mat3f& value);
+void get_yaml_value(const yaml_value& yaml, frame3f& value);
 template <typename T>
-inline bool get_yaml_value(
+inline void get_yaml_value(
     const yaml_element& element, const string& name, const T& value);
 bool has_yaml_value(const yaml_element& element, const string& name);
 
@@ -633,7 +463,7 @@ yaml_value make_yaml_value(const vec3f& value);
 yaml_value make_yaml_value(const mat3f& value);
 yaml_value make_yaml_value(const frame3f& value);
 template <typename T>
-inline bool add_yaml_value(
+inline void add_yaml_value(
     yaml_element& element, const string& name, const T& value);
 
 }  // namespace yocto
@@ -842,76 +672,26 @@ struct pbrt_model {
   vector<pbrt_accelerator> accelerators = {};
 };
 
-// Result of io operations
-struct pbrtio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
 // Load/save pbrt
-pbrtio_status load_pbrt(const string& filename, pbrt_model& pbrt);
-pbrtio_status save_pbrt(const string& filename, const pbrt_model& pbrt);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// LOW-LEVEL INTERFACE
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Pbrt command
-enum struct pbrt_command {
-  // clang-format off
-  world_begin, world_end, attribute_begin, attribute_end,
-  transform_begin, transform_end, reverse_orientation,
-  set_transform, concat_transform, lookat_transform,
-  object_instance, object_begin, object_end, include,      
-  sampler, integrator, accelerator, film, filter, camera, shape, light,
-  material, arealight, named_texture, named_medium, named_material,             
-  use_material, medium_interface, active_transform,
-  coordinate_system_set, coordinate_system_transform,
-  error
-  // clang-format on
-};
-
-// Read pbrt commands
-pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
-    pbrt_command& command, string& name, string& type, frame3f& xform,
-    vector<pbrt_value>& values);
-pbrtio_status read_pbrt_command(const string& filename, FILE* fs,
-    pbrt_command& command, string& name, string& type, frame3f& xform,
-    vector<pbrt_value>& values, string& buffer);
-
-// Write pbrt commands
-pbrtio_status write_pbrt_comment(
-    const string& filename, FILE* fs, const string& comment);
-pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
-    pbrt_command command, const string& name, const string& type,
-    const frame3f& xform, const vector<pbrt_value>& values,
-    bool texture_as_float = false);
-pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
-    pbrt_command command, const string& name = "",
-    const frame3f& xform = identity3x4f);
-pbrtio_status write_pbrt_command(const string& filename, FILE* fs,
-    pbrt_command command, const string& name, const string& type,
-    const vector<pbrt_value>& values, bool texture_as_float = false);
+void load_pbrt(const string& filename, pbrt_model& pbrt);
+void save_pbrt(const string& filename, const pbrt_model& pbrt);
 
 // type-cheked pbrt value access
-bool get_pbrt_value(const pbrt_value& pbrt, string& value);
-bool get_pbrt_value(const pbrt_value& pbrt, bool& value);
-bool get_pbrt_value(const pbrt_value& pbrt, int& value);
-bool get_pbrt_value(const pbrt_value& pbrt, float& value);
-bool get_pbrt_value(const pbrt_value& pbrt, vec2f& value);
-bool get_pbrt_value(const pbrt_value& pbrt, vec3f& value);
-bool get_pbrt_value(const pbrt_value& pbrt, vector<float>& value);
-bool get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& value);
-bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& value);
-bool get_pbrt_value(const pbrt_value& pbrt, vector<int>& value);
-bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value);
-bool get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value);
-bool get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value);
+void get_pbrt_value(const pbrt_value& pbrt, string& value);
+void get_pbrt_value(const pbrt_value& pbrt, bool& value);
+void get_pbrt_value(const pbrt_value& pbrt, int& value);
+void get_pbrt_value(const pbrt_value& pbrt, float& value);
+void get_pbrt_value(const pbrt_value& pbrt, vec2f& value);
+void get_pbrt_value(const pbrt_value& pbrt, vec3f& value);
+void get_pbrt_value(const pbrt_value& pbrt, vector<float>& value);
+void get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& value);
+void get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& value);
+void get_pbrt_value(const pbrt_value& pbrt, vector<int>& value);
+void get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value);
+void get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value);
+void get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value);
 template <typename T>
-inline bool get_pbrt_value(
+inline void get_pbrt_value(
     const vector<pbrt_value>& pbrt, const string& name, T& value);
 
 // pbrt value construction
@@ -1010,13 +790,8 @@ struct gltf_model {
   vector<gltf_scene>    scenes    = {};
 };
 
-// Result of io operations
-struct gltfio_status {
-  string   error = {};
-  explicit operator bool() const { return error.empty(); }
-};
-
-gltfio_status load_gltf(const string& filename, gltf_model& gltf);
+// Load gltf file.
+void load_gltf(const string& filename, gltf_model& gltf);
 
 }  // namespace yocto
 
@@ -1026,32 +801,29 @@ gltfio_status load_gltf(const string& filename, gltf_model& gltf);
 namespace yocto {
 
 template <typename T>
-inline bool get_yaml_value(
+inline void get_yaml_value(
     const yaml_element& element, const string& name, T& value) {
   for (auto& [key, value_] : element.key_values) {
     if (key == name) return get_yaml_value(value_, value);
   }
-  return true;
 }
 
 template <typename T>
-inline bool add_yaml_value(
+inline void add_yaml_value(
     yaml_element& element, const string& name, const T& value) {
   for (auto& [key, value] : element.key_values)
-    if (key == name) return false;
+    if (key == name) throw std::invalid_argument{"value exists"};
   element.key_values.push_back({name, make_yaml_value(value)});
-  return true;
 }
 
 template <typename T>
-inline bool get_pbrt_value(
+inline void get_pbrt_value(
     const vector<pbrt_value>& pbrt, const string& name, T& value) {
   for (auto& p : pbrt) {
     if (p.name == name) {
       return get_pbrt_value(p, value);
     }
   }
-  return true;
 }
 
 }  // namespace yocto

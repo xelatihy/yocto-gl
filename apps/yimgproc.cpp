@@ -100,7 +100,7 @@ image<vec4f> filter_bilateral(
 
 }  // namespace yocto
 
-int main(int argc, const char* argv[]) {
+void run_app(int argc, const char* argv[]) {
   // command line parameters
   auto tonemap_on          = false;
   auto tonemap_exposure    = 0;
@@ -142,32 +142,26 @@ int main(int argc, const char* argv[]) {
   add_cli_option(cli, "--diff-threshold,", diff_threshold, "diff threshold");
   add_cli_option(cli, "--output,-o", output, "output image filename", true);
   add_cli_option(cli, "filename", filename, "input image filename", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
+
+  // error string buffer
+  auto error = ""s;
 
   // load
-  auto img = image<vec4f>();
-  if (!load_image(filename, img)) {
-    print_fatal("cannor load " + filename);
-  }
+  auto img = load_image(filename);
 
   // set alpha
   if (alpha_filename != "") {
-    auto alpha = image<vec4f>();
-    if (!load_image(alpha_filename, alpha)) {
-      print_fatal("cannor load " + alpha_filename);
-    }
-    if (img.size() != alpha.size()) print_fatal("bad image size");
+    auto alpha = load_image(alpha_filename);
+    if (img.size() != alpha.size()) throw std::runtime_error("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++) img[{i, j}].w = alpha[{i, j}].w;
   }
 
   // set alpha
   if (coloralpha_filename != "") {
-    auto alpha = image<vec4f>();
-    if (!load_image(coloralpha_filename, alpha)) {
-      print_fatal("cannor load " + coloralpha_filename);
-    }
-    if (img.size() != alpha.size()) print_fatal("bad image size");
+    auto alpha = load_image(coloralpha_filename);
+    if (img.size() != alpha.size()) throw std::runtime_error("bad image size");
     for (auto j = 0; j < img.size().y; j++)
       for (auto i = 0; i < img.size().x; i++)
         img[{i, j}].w = mean(xyz(alpha[{i, j}]));
@@ -175,11 +169,9 @@ int main(int argc, const char* argv[]) {
 
   // diff
   if (diff_filename != "") {
-    auto diff = image<vec4f>();
-    if (!load_image(diff_filename, diff)) {
-      print_fatal("cannor load " + diff_filename);
-    }
-    if (img.size() != diff.size()) print_fatal("image sizes are different");
+    auto diff = load_image(diff_filename);
+    if (img.size() != diff.size())
+      throw std::runtime_error("image sizes are different");
     img = image_difference(img, diff, true);
   }
 
@@ -199,17 +191,23 @@ int main(int argc, const char* argv[]) {
   }
 
   // save
-  if (!save_image(output, logo ? add_logo(img) : img)) {
-    print_fatal("cannor save " + output);
-  }
+  save_image(output, logo ? add_logo(img) : img);
 
   // check diff
   if (diff_filename != "" && diff_signal) {
     for (auto& c : img) {
-      if (max(xyz(c)) > diff_threshold) print_fatal("image content differs");
+      if (max(xyz(c)) > diff_threshold)
+        throw std::runtime_error("image content differs");
     }
   }
+}
 
-  // done
-  return 0;
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch (std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

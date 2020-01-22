@@ -3498,6 +3498,14 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Helpers for throwing
+static void throw_format_error(const string& filename) {
+  throw std::runtime_error{filename + ": unknown format"};
+}
+static void throw_emptyshape_error(const string& filename) {
+  throw std::runtime_error{filename + ": empty shape"};
+}
+
 // Utility to normalize a path
 static inline string normalize_path(const string& filename_) {
   auto filename = filename_;
@@ -3528,15 +3536,10 @@ static inline string get_extension(const string& filename_) {
 }
 
 // Load ply mesh
-shapeio_status load_shape(const string& filename, vector<int>& points,
+void load_shape(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<vec4f>& colors, vector<float>& radius, bool flip_texcoord) {
-  auto ok    = []() { return shapeio_status{}; };
-  auto error = [&filename](const string& err) {
-    return shapeio_status{filename + ": " + err};
-  };
-
   points    = {};
   lines     = {};
   triangles = {};
@@ -3551,7 +3554,7 @@ shapeio_status load_shape(const string& filename, vector<int>& points,
   if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply = ply_model{};
-    if (auto ret = load_ply(filename, ply); !ret) return error(ret.error);
+    load_ply(filename, ply);
 
     // gets vertex
     positions = get_ply_positions(ply);
@@ -3569,19 +3572,18 @@ shapeio_status load_shape(const string& filename, vector<int>& points,
     lines  = get_ply_lines(ply);
     points = get_ply_points(ply);
 
-    if (positions.empty()) return error("empty shape");
-    return ok();
+    if (positions.empty()) throw_emptyshape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
     // load obj
     auto obj = obj_model();
-    if (auto ret = load_obj(filename, obj, true); !ret) return error(ret.error);
+    load_obj(filename, obj, true);
 
     // get shape
-    if (obj.shapes.empty()) return error("empty shape");
-    if (obj.shapes.size() > 1) return error("diffent element types");
+    if (obj.shapes.empty()) throw_emptyshape_error(filename);
+    if (obj.shapes.size() > 1) throw_emptyshape_error(filename);
     auto& shape = obj.shapes.front();
     if (shape.points.empty() && shape.lines.empty() && shape.faces.empty())
-      return ok();
+      return;
 
     // decide what to do and get properties
     auto materials  = vector<string>{};
@@ -3600,28 +3602,22 @@ shapeio_status load_shape(const string& filename, vector<int>& points,
       get_obj_points(obj, shape, points, positions, normals, texcoords,
           materials, ematerials, flip_texcoord);
     } else {
-      return error("empty shape");
+      throw_emptyshape_error(filename);
     }
 
-    if (positions.empty()) return error("empty shape");
-    return ok();
+    if (positions.empty()) throw_emptyshape_error(filename);
   } else {
-    return error("unsupported format");
+    throw_format_error(filename);
   }
 }
 
 // Save ply mesh
-shapeio_status save_shape(const string& filename, const vector<int>& points,
+void save_shape(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
     bool flip_texcoord) {
-  auto ok    = []() { return shapeio_status{}; };
-  auto error = [&filename](const string& err) {
-    return shapeio_status{filename + ": " + err};
-  };
-
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
@@ -3634,8 +3630,7 @@ shapeio_status save_shape(const string& filename, const vector<int>& points,
     add_ply_faces(ply, triangles, quads);
     add_ply_lines(ply, lines);
     add_ply_points(ply, points);
-    if (auto ret = save_ply(filename, ply); !ret) return error(ret.error);
-    return ok();
+    save_ply(filename, ply);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_model{};
     if (!triangles.empty()) {
@@ -3651,27 +3646,20 @@ shapeio_status save_shape(const string& filename, const vector<int>& points,
       add_obj_points(obj, "", points, positions, normals, texcoords, {}, {},
           flip_texcoord);
     } else {
-      return error("empty shape");
+      throw_emptyshape_error(filename);
     }
     auto err = ""s;
-    if (!save_obj(filename, obj)) return error(err);
-    return ok();
+    save_obj(filename, obj);
   } else {
-    return error("unsupported format");
-    ;
+    throw_format_error(filename);
   }
 }
 
 // Load ply mesh
-shapeio_status load_fvshape(const string& filename, vector<vec4i>& quadspos,
+void load_fvshape(const string& filename, vector<vec4i>& quadspos,
     vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
     vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     bool flip_texcoord) {
-  auto ok    = []() { return shapeio_status{}; };
-  auto error = [&filename](const string& err) {
-    return shapeio_status{filename + ": " + err};
-  };
-
   quadspos      = {};
   quadsnorm     = {};
   quadstexcoord = {};
@@ -3682,46 +3670,38 @@ shapeio_status load_fvshape(const string& filename, vector<vec4i>& quadspos,
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    if (auto ret = load_ply(filename, ply); !ret) return error(ret.error);
+    load_ply(filename, ply);
     positions = get_ply_positions(ply);
     normals   = get_ply_normals(ply);
     texcoords = get_ply_texcoords(ply, flip_texcoord);
     quadspos  = get_ply_quads(ply);
     if (!normals.empty()) quadsnorm = quadspos;
     if (!texcoords.empty()) quadstexcoord = quadspos;
-    if (positions.empty()) return error("empty shape");
-    return ok();
+    if (positions.empty()) throw_emptyshape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_model();
     auto err = ""s;
-    if (!load_obj(filename, obj, true)) return error(err);
-    if (obj.shapes.empty()) return error("empty shape");
-    if (obj.shapes.size() > 1) return error("diffent element types");
+    load_obj(filename, obj, true);
+    if (obj.shapes.empty()) throw_emptyshape_error(filename);
+    if (obj.shapes.size() > 1) throw_emptyshape_error(filename);
     auto& shape = obj.shapes.front();
-    if (shape.faces.empty()) return error("empty shape");
+    if (shape.faces.empty()) throw_emptyshape_error(filename);
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
     get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
-    if (positions.empty()) return error("empty shape");
-    return ok();
+    throw_emptyshape_error(filename);
   } else {
-    return error("unsupported format");
+    throw_format_error(filename);
     ;
   }
 }
 
 // Save ply mesh
-shapeio_status save_fvshape(const string& filename,
-    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
-    const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords, bool ascii,
-    bool flip_texcoord) {
-  auto ok    = []() { return shapeio_status{}; };
-  auto error = [&filename](const string& err) {
-    return shapeio_status{filename + ": " + err};
-  };
-
+void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, bool ascii, bool flip_texcoord) {
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto [split_quads, split_positions, split_normals, split_texturecoords] =
@@ -3738,10 +3718,9 @@ shapeio_status save_fvshape(const string& filename,
         normals, texcoords, {}, {}, flip_texcoord);
 
     // Save
-    if (auto ret = save_obj(filename, obj); !ret) return error(ret.error);
-    return ok();
+    save_obj(filename, obj);
   } else {
-    return error("unsupported format");
+    throw_format_error(filename);
   }
 }
 

@@ -77,13 +77,6 @@ struct app_state {
   string error = "";
 };
 
-// Load state
-struct load_state {
-  string                filename = "";
-  shared_ptr<app_state> app      = nullptr;
-  sceneio_status        status   = {};
-};
-
 // Application state
 struct app_states {
   // data
@@ -91,7 +84,7 @@ struct app_states {
   int                           selected = -1;
 
   // loading
-  deque<future<load_state>> loaders = {};
+  deque<future<shared_ptr<app_state>>> loaders = {};
 
   // default options
   draw_glscene_params drawgl_prms = {};
@@ -113,18 +106,17 @@ vec2f compute_animation_range(
 
 void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
   apps->loaders.push_back(
-      async(launch::async, [apps, filename]() -> load_state {
+      async(launch::async, [apps, filename]() -> shared_ptr<app_state> {
         auto app         = make_shared<app_state>();
         app->filename    = filename;
         app->imagename   = replace_extension(filename, ".png");
         app->outname     = replace_extension(filename, ".edited.yaml");
         app->name        = get_filename(app->filename);
         app->drawgl_prms = apps->drawgl_prms;
-        if (auto ret = load_scene(app->filename, app->scene); !ret)
-          return {filename, nullptr, ret};
+        load_scene(app->filename, app->scene);
         app->time_range = compute_animation_range(app->scene);
         app->time       = app->time_range.x;
-        return {filename, app, {}};
+        return app;
       }));
 }
 
@@ -263,9 +255,11 @@ bool draw_glwidgets_texture(
       to_string(texture.ldr.size().x) + " x " +
           to_string(texture.ldr.size().y));
   if (edited && old_filename != texture.filename) {
-    if (auto ret = load_texture(app->filename, texture); !ret) {
-      push_glmessage(win, ret.error);
-      log_glinfo(win, ret.error);
+    try {
+      load_texture(app->filename, texture);
+    } catch (std::exception& e) {
+      push_glmessage(win, e.what());
+      log_glinfo(win, e.what());
     }
   }
   return edited;
@@ -329,9 +323,11 @@ bool draw_glwidgets_shape(
   draw_gllabel(win, "radius", to_string(shape.radius.size()));
   draw_gllabel(win, "tangsp", to_string(shape.tangents.size()));
   if (edited && old_filename != shape.filename) {
-    if (auto ret = load_shape(app->filename, shape); !ret) {
-      push_glmessage(win, ret.error);
-      log_glinfo(win, ret.error);
+    try {
+      load_shape(app->filename, shape);
+    } catch (std::exception& e) {
+      push_glmessage(win, e.what());
+      log_glinfo(win, e.what());
     }
   }
   return edited;
@@ -365,9 +361,11 @@ bool draw_glwidgets_subdiv(
       app->scene.textures, true);
   edited += draw_glslider(win, "displacement", subdiv.displacement, 0, 1);
   if (edited && old_filename != subdiv.filename) {
-    if (auto ret = load_subdiv(app->filename, subdiv); !ret) {
-      push_glmessage(win, ret.error);
-      log_glinfo(win, ret.error);
+    try {
+      load_subdiv(app->filename, subdiv);
+    } catch (std::exception& e) {
+      push_glmessage(win, e.what());
+      log_glinfo(win, e.what());
     }
   }
   return edited;
@@ -421,10 +419,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
           "*.yaml;*.obj;*.pbrt")) {
     auto app     = apps->states[apps->selected];
     app->outname = save_path;
-    if (auto ret = save_scene(app->outname, app->scene); !ret) {
-      push_glmessage(win, "cannot save " + app->outname);
-      log_glinfo(win, "cannot save " + app->outname);
-      log_glinfo(win, ret.error);
+    try {
+      save_scene(app->outname, app->scene);
+    } catch (std::exception& e) {
+      push_glmessage(win, e.what());
+      log_glinfo(win, e.what());
     }
     save_path = "";
   }
@@ -603,29 +602,28 @@ void draw(const opengl_window& win, shared_ptr<app_states> apps,
 
 // update
 void update(const opengl_window& win, shared_ptr<app_states> apps) {
-  auto is_ready = [](const future<load_state>& result) -> bool {
+  auto is_ready = [](const future<shared_ptr<app_state>>& result) -> bool {
     return result.valid() &&
            result.wait_for(chrono::microseconds(0)) == future_status::ready;
   };
 
   while (!apps->loaders.empty() && is_ready(apps->loaders.front())) {
-    auto [filename, app, status] = apps->loaders.front().get();
-    apps->loaders.pop_front();
-    if (!status) {
-      push_glmessage(win, "cannot load scene " + filename);
-      log_glinfo(win, "cannot load scene " + filename);
-      log_glinfo(win, status.error);
-      break;
-    } else {
+    try {
+      auto app = apps->loaders.front().get();
+      apps->loaders.pop_front();
       apps->states.push_back(app);
       init_scene(app->glscene, app->scene);
       update_lights(app->glscene, app->scene);
       if (apps->selected < 0) apps->selected = (int)apps->states.size() - 1;
+    } catch (std::exception& e) {
+      apps->loaders.pop_front();
+      push_glmessage(win, e.what());
+      log_glinfo(win, e.what());
     }
   }
 }
 
-int main(int argc, const char* argv[]) {
+void run_app(int argc, const char* argv[]) {
   // initialize app
   auto apps       = make_shared<app_states>();
   auto filenames  = vector<string>{};
@@ -641,7 +639,7 @@ int main(int argc, const char* argv[]) {
   add_cli_option(
       cli, "--noparallel", noparallel, "Disable parallel execution.");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
@@ -712,7 +710,14 @@ int main(int argc, const char* argv[]) {
 
   // clear
   clear_glwindow(win);
+}
 
-  // done
-  return 0;
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch (std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

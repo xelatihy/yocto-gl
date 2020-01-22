@@ -130,13 +130,13 @@ void my_draw_glwidgets(
   }
 }
 
-int main(int num_args, const char* args[]) {
+void run_app(int argc, const char* argv[]) {
   string input_filename = "model.obj";
 
   // Parse command line.
   auto cli = make_cli("yimshproc", "interactive viewer for mesh processing");
   add_cli_option(cli, "model", input_filename, "model filenames", true);
-  if (!parse_cli(cli, num_args, args)) exit(1);
+  parse_cli(cli, argc, argv);
 
   auto data = my_data{};
 
@@ -160,4 +160,14 @@ int main(int num_args, const char* args[]) {
   };
 
   yimshproc(input_filename, init, key_callback, click_callback, draw_glwidgets);
+}
+
+int main(int argc, const char* argv[]) {
+  try {
+    run_app(argc, argv);
+    return 0;
+  } catch (std::exception& e) {
+    print_fatal(e.what());
+    return 1;
+  }
 }

@@ -1336,7 +1336,7 @@ static RTCDevice     trace_embree_device() {
 }
 
 // Initialize Embree BVH
-static void init_embree_bvh(trace_shape* shape, const trace_params& params) {
+static void init_embree_bvh(trace_shape& shape, const trace_params& params) {
   auto edevice = trace_embree_device();
   auto escene  = rtcNewScene(edevice);
   if (params.bvh == trace_bvh_type::embree_compact)
@@ -1458,9 +1458,9 @@ static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   for (auto instance_id = 0; instance_id < scene.instances.size();
        instance_id++) {
-    auto instance  = &scene.instances[instance_id];
-    auto shape     = &scene.shapes[instance.shape];
-    auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
+    auto& instance  = scene.instances[instance_id];
+    auto& shape     = scene.shapes[instance.shape];
+    auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
@@ -1477,9 +1477,9 @@ static void update_embree_bvh(
   // scene bvh
   auto escene = (RTCScene)scene.embree_bvh.get();
   for (auto instance_id : updated_instances) {
-    auto instance  = &scene.instances[instance_id];
-    auto shape     = &scene.shapes[instance.shape];
-    auto egeometry = rtcGetGeometry(escene, instance_id);
+    auto& instance  = scene.instances[instance_id];
+    auto& shape     = scene.shapes[instance.shape];
+    auto  egeometry = rtcGetGeometry(escene, instance_id);
     rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
     rtcSetGeometryTransform(
         egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
