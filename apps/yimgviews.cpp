@@ -93,7 +93,7 @@ void run_app(int argc, const char* argv[]) {
   auto cli = make_cli("yimgview", "view images");
   add_cli_option(cli, "--output,-o", app->outname, "image output");
   add_cli_option(cli, "image", app->filename, "image filename", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // load image
   load_image(app->filename, app->source);

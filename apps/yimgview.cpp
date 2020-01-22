@@ -325,7 +325,7 @@ void run_app(int argc, const char* argv[]) {
   // command line options
   auto cli = make_cli("yimgview", "view images");
   add_cli_option(cli, "images", filenames, "image filenames", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // loading images
   for (auto filename : filenames) load_image_async(apps, filename);

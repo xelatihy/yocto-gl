@@ -235,7 +235,7 @@ void run_app(int argc, const char* argv[]) {
   add_cli_option(cli, "--add-skyenv", app->add_skyenv, "Add sky envmap");
   add_cli_option(cli, "--output,-o", app->imagename, "Image output", false);
   add_cli_option(cli, "scene", app->filename, "Scene filename", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // scene loading
   auto ioscene    = sceneio_model{};

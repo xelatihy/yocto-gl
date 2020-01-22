@@ -130,13 +130,13 @@ void my_draw_glwidgets(
   }
 }
 
-void run_app(int num_args, const char* args[]) {
+void run_app(int argc, const char* argv[]) {
   string input_filename = "model.obj";
 
   // Parse command line.
   auto cli = make_cli("yimshproc", "interactive viewer for mesh processing");
   add_cli_option(cli, "model", input_filename, "model filenames", true);
-  if (!parse_cli(cli, num_args, args)) exit(1);
+  parse_cli(cli, argc, argv);
 
   auto data = my_data{};
 

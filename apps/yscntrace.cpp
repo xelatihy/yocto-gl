@@ -144,7 +144,7 @@ void run_app(int argc, const char* argv[]) {
   add_cli_option(cli, "--output-image,-o", imfilename, "Image filename");
   add_cli_option(cli, "--validate", validate, "Validate scene");
   add_cli_option(cli, "scene", filename, "Scene filename", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // scene loading
   auto ioscene    = sceneio_model{};

@@ -755,7 +755,7 @@ void run_app(int argc, const char* argv[]) {
       cli, "--bvh", (int&)apps->params.bvh, "Bvh type", trace_bvh_names);
   add_cli_option(cli, "--add-skyenv", apps->add_skyenv, "Add sky envmap");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);

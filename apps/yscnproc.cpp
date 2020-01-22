@@ -75,7 +75,7 @@ void run_app(int argc, const char** argv) {
   add_cli_option(cli, "--validate", validate, "Validate scene");
   add_cli_option(cli, "--output,-o", output, "output scene", true);
   add_cli_option(cli, "scene", filename, "input scene", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // load scene
   auto scene      = sceneio_model{};

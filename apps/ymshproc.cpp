@@ -85,7 +85,7 @@ int main(int argc, const char** argv) {
   add_cli_option(cli, "--info,-i", info, "print mesh info");
   add_cli_option(cli, "--output,-o", output, "output mesh", true);
   add_cli_option(cli, "mesh", filename, "input mesh", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // mesh data
   auto positions     = vector<vec3f>{};

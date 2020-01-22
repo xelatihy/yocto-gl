@@ -639,7 +639,7 @@ void run_app(int argc, const char* argv[]) {
   add_cli_option(
       cli, "--noparallel", noparallel, "Disable parallel execution.");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
-  if (!parse_cli(cli, argc, argv)) exit(1);
+  parse_cli(cli, argc, argv);
 
   // loading images
   for (auto filename : filenames) load_scene_async(apps, filename);
