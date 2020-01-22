@@ -3216,8 +3216,7 @@ static void make_pbrt_shape(vector<vec3i>& triangles, vector<vec3f>& positions,
 static void make_pbrt_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float radius) {
-  make_pbrt_shape(
-      triangles, positions, normals, texcoords, steps,
+  make_pbrt_shape(triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         auto pt = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
         return radius *
@@ -3231,8 +3230,7 @@ static void make_pbrt_sphere(vector<vec3i>& triangles, vector<vec3f>& positions,
 static void make_pbrt_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float radius) {
-  make_pbrt_shape(
-      triangles, positions, normals, texcoords, steps,
+  make_pbrt_shape(triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         auto a = 2 * pif * uv.x;
         return radius * (1 - uv.y) * vec3f{cos(a), sin(a), 0};
@@ -3244,8 +3242,7 @@ static void make_pbrt_disk(vector<vec3i>& triangles, vector<vec3f>& positions,
 static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const vec2i& steps,
     float radius) {
-  make_pbrt_shape(
-      triangles, positions, normals, texcoords, steps,
+  make_pbrt_shape(triangles, positions, normals, texcoords, steps,
       [radius](const vec2f& uv) {
         return vec3f{(uv.x - 0.5f) * radius, (uv.y - 0.5f) * radius, 0};
       },
@@ -3976,75 +3973,67 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
 }
 
 // get pbrt value
-bool get_pbrt_value(const pbrt_value& pbrt, string& value) {
+void get_pbrt_value(const pbrt_value& pbrt, string& value) {
   if (pbrt.type == pbrt_value_type::string ||
       pbrt.type == pbrt_value_type::texture) {
     value = pbrt.value1s;
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected string"};
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, bool& value) {
+void get_pbrt_value(const pbrt_value& pbrt, bool& value) {
   if (pbrt.type == pbrt_value_type::boolean) {
     value = pbrt.value1b;
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected bool"};
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, int& value) {
+void get_pbrt_value(const pbrt_value& pbrt, int& value) {
   if (pbrt.type == pbrt_value_type::integer) {
     value = pbrt.value1i;
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected int"};
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, float& value) {
+void get_pbrt_value(const pbrt_value& pbrt, float& value) {
   if (pbrt.type == pbrt_value_type::real) {
     value = pbrt.value1f;
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected float"};
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, vec2f& value) {
+void get_pbrt_value(const pbrt_value& pbrt, vec2f& value) {
   if (pbrt.type == pbrt_value_type::point2 ||
       pbrt.type == pbrt_value_type::vector2) {
     value = pbrt.value2f;
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected float2"};
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, vec3f& value) {
+void get_pbrt_value(const pbrt_value& pbrt, vec3f& value) {
   if (pbrt.type == pbrt_value_type::point ||
       pbrt.type == pbrt_value_type::vector ||
       pbrt.type == pbrt_value_type::normal ||
       pbrt.type == pbrt_value_type::color) {
     value = pbrt.value3f;
-    return true;
   } else if (pbrt.type == pbrt_value_type::real) {
     value = vec3f{pbrt.value1f};
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected float3"};
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, vector<float>& value) {
+void get_pbrt_value(const pbrt_value& pbrt, vector<float>& value) {
   if (pbrt.type == pbrt_value_type::real) {
     if (!pbrt.vector1f.empty()) {
       value = pbrt.vector1f;
     } else {
       value = {pbrt.value1f};
     }
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected float array"};
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& value) {
+void get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& value) {
   if (pbrt.type == pbrt_value_type::point2 ||
       pbrt.type == pbrt_value_type::vector2) {
     if (!pbrt.vector2f.empty()) {
@@ -4052,19 +4041,17 @@ bool get_pbrt_value(const pbrt_value& pbrt, vector<vec2f>& value) {
     } else {
       value = {pbrt.value2f};
     }
-    return true;
   } else if (pbrt.type == pbrt_value_type::real) {
     if (pbrt.vector1f.empty() || pbrt.vector1f.size() % 2)
       throw std::runtime_error("bad pbrt type");
     value.resize(pbrt.vector1f.size() / 2);
     for (auto i = 0; i < value.size(); i++)
       value[i] = {pbrt.vector1f[i * 2 + 0], pbrt.vector1f[i * 2 + 1]};
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected float2 array"};
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& value) {
+void get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& value) {
   if (pbrt.type == pbrt_value_type::point ||
       pbrt.type == pbrt_value_type::vector ||
       pbrt.type == pbrt_value_type::normal ||
@@ -4074,45 +4061,42 @@ bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3f>& value) {
     } else {
       value = {pbrt.value3f};
     }
-    return true;
   } else if (pbrt.type == pbrt_value_type::real) {
     if (pbrt.vector1f.empty() || pbrt.vector1f.size() % 3)
-      throw std::runtime_error("bad pbrt type");
+      throw std::invalid_argument{"expected float3 array"};
     value.resize(pbrt.vector1f.size() / 3);
     for (auto i = 0; i < value.size(); i++)
       value[i] = {pbrt.vector1f[i * 3 + 0], pbrt.vector1f[i * 3 + 1],
           pbrt.vector1f[i * 3 + 2]};
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected float3 array"};
   }
 }
 
-bool get_pbrt_value(const pbrt_value& pbrt, vector<int>& value) {
+void get_pbrt_value(const pbrt_value& pbrt, vector<int>& value) {
   if (pbrt.type == pbrt_value_type::integer) {
     if (!pbrt.vector1i.empty()) {
       value = pbrt.vector1i;
     } else {
       value = {pbrt.vector1i};
     }
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected int array"};
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value) {
+void get_pbrt_value(const pbrt_value& pbrt, vector<vec3i>& value) {
   if (pbrt.type == pbrt_value_type::integer) {
-    if (pbrt.vector1i.empty() || pbrt.vector1i.size() % 3) return false;
+    if (pbrt.vector1i.empty() || pbrt.vector1i.size() % 3)
+      throw std::invalid_argument{"expected int3 array"};
     value.resize(pbrt.vector1i.size() / 3);
     for (auto i = 0; i < value.size(); i++)
       value[i] = {pbrt.vector1i[i * 3 + 0], pbrt.vector1i[i * 3 + 1],
           pbrt.vector1i[i * 3 + 2]};
-    return true;
   } else {
-    return false;
+    throw std::invalid_argument{"expected int3 array"};
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value) {
+void get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value) {
   if (pbrt.type == pbrt_value_type::string) {
     value.first = 0;
     return get_pbrt_value(pbrt, value.second);
@@ -4121,7 +4105,7 @@ bool get_pbrt_value(const pbrt_value& pbrt, pair<float, string>& value) {
     return get_pbrt_value(pbrt, value.first);
   }
 }
-bool get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value) {
+void get_pbrt_value(const pbrt_value& pbrt, pair<vec3f, string>& value) {
   if (pbrt.type == pbrt_value_type::string ||
       pbrt.type == pbrt_value_type::texture) {
     value.first = zero3f;
