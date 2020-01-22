@@ -146,7 +146,8 @@ inline cli_state make_cli(const string& cmd, const string& usage);
 // check if any error occurred and throws cli_error in that case
 inline void parse_cli(cli_state& cli, int argc, const char** argv);
 // check if any error occurred returning the error
-inline bool parse_cli(cli_state& cli, int argc, const char** argv, string& usage);
+inline bool parse_cli(
+    cli_state& cli, int argc, const char** argv, string& usage);
 
 // Parse an int, float, string, and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
@@ -615,18 +616,19 @@ inline void add_cli_option(cli_state& cli, const string& name, int& value,
 }
 
 struct cli_error : std::runtime_error {
-  cli_error(const string& message) : std::runtime_error{message} { }
+  cli_error(const string& message) : std::runtime_error{message} {}
 };
 
 inline void throw_cli_error(cli_state& cli, const string& error) {
   auto message = string{};
   if (error != "") message += "error: " + error + "\n\n";
-  message += "usage: " + cli.name + 
-      (cli.usage_options.empty() ? "" : " [options]") +
-      (cli.usage_arguments.empty() ? "" : " <arguments>") + cli.usage
-      + "\n\n";
-  if (!cli.usage_options.empty()) message += "options:\n" + cli.usage_options + "\n";
-  if (!cli.usage_options.empty()) message += "arguments:\n" + cli.usage_arguments + "\n";
+  message +=
+      "usage: " + cli.name + (cli.usage_options.empty() ? "" : " [options]") +
+      (cli.usage_arguments.empty() ? "" : " <arguments>") + cli.usage + "\n\n";
+  if (!cli.usage_options.empty())
+    message += "options:\n" + cli.usage_options + "\n";
+  if (!cli.usage_options.empty())
+    message += "arguments:\n" + cli.usage_arguments + "\n";
   throw cli_error{message};
 }
 
@@ -724,8 +726,7 @@ inline void parse_cli(cli_state& cli, int argc, const char** argv) {
   for (auto& option : cli.options) {
     if (option.name[0] == '-') continue;
     if (args.empty()) {
-      if (option.req)
-        throw_cli_error(cli, "missing value for " + option.name);
+      if (option.req) throw_cli_error(cli, "missing value for " + option.name);
     } else if (option.type == cli_type::string_vector_) {
       *(vector<string>*)option.value = args;
       option.set                     = true;
