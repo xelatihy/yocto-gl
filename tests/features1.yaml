@@ -54,7 +54,8 @@ materials:
     diffuse: [0.7, 0.7, 0.7]
     diffuse_tex: floor
   - name: metal-rough
-    specular: [0.66, 0.45, 0.34]
+    diffuse: [0.66, 0.45, 0.34]
+    metallic: 1
     roughness: 0.2
   - name: plastic-rough-bumped
     specular: [0.04, 0.04, 0.04]
