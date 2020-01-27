@@ -126,7 +126,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_material_roughness(
         scene, id, iomaterial.roughness, iomaterial.roughness_tex);
     set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_refract(scene, id, iomaterial.refract);
+    set_material_refract(scene, id, !iomaterial.thin);
     set_material_normalmap(scene, id, iomaterial.normal_tex);
     set_material_volume(scene, id, iomaterial.volemission,
         iomaterial.voltransmission, iomaterial.volmeanfreepath,
@@ -314,8 +314,8 @@ bool draw_glwidgets_material(
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
   edited += draw_glslider(win, "coat", material.coat, 0, 1);
   edited += draw_glslider(win, "transmission", material.transmission, 0, 1);
-  edited += draw_glcheckbox(win, "refract", material.refract);
   edited += draw_glcoloredit(win, "spectint", material.spectint);
+  edited += draw_glcheckbox(win, "thin", material.thin);
   edited += draw_glcoloredit(win, "vol transmission", material.voltransmission);
   edited += draw_glcoloredit(win, "vol meanfreepath", material.volmeanfreepath);
   edited += draw_glcoloredit(win, "vol scatter", material.volscatter);
@@ -596,7 +596,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         set_material_opacity(app->scene, app->selection.second,
             iomaterial.opacity, iomaterial.opacity_tex);
         set_material_refract(
-            app->scene, app->selection.second, iomaterial.refract);
+            app->scene, app->selection.second, !iomaterial.thin);
         set_material_normalmap(
             app->scene, app->selection.second, iomaterial.normal_tex);
         set_material_volume(app->scene, app->selection.second,

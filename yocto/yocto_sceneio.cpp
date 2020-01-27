@@ -1145,7 +1145,7 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
         get_yaml_value(yelement, "roughness", material.roughness);
         get_yaml_value(yelement, "coat", material.coat);
         get_yaml_value(yelement, "transmission", material.transmission);
-        get_yaml_value(yelement, "refract", material.refract);
+        get_yaml_value(yelement, "thin", material.thin);
         get_yaml_value(yelement, "voltransmission", material.voltransmission);
         get_yaml_value(yelement, "volmeanfreepath", material.volmeanfreepath);
         get_yaml_value(yelement, "volscatter", material.volscatter);
@@ -1680,7 +1680,7 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     add_yaml_value(yelement, "coat", material.coat);
     add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
-    if (material.refract) add_yaml_value(yelement, "refract", material.refract);
+    add_yaml_value(yelement, "thin", material.thin);
     if (material.voltransmission != zero3f)
       add_yaml_value(yelement, "voltransmission", material.voltransmission);
     if (material.volmeanfreepath != zero3f)

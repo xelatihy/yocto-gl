@@ -109,7 +109,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_material_roughness(
         scene, id, iomaterial.roughness, iomaterial.roughness_tex);
     set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_refract(scene, id, iomaterial.refract);
+    set_material_refract(scene, id, !iomaterial.thin);
     set_material_normalmap(scene, id, iomaterial.normal_tex);
     set_material_volume(scene, id, iomaterial.volemission,
         iomaterial.voltransmission, iomaterial.volmeanfreepath,

@@ -110,7 +110,7 @@ struct sceneio_material {
   float volanisotropy   = 0;
   float volscale        = 0.01;
   float opacity         = 1;
-  bool  refract         = false;
+  bool  thin            = false;
 
   // textures
   int  emission_tex     = -1;

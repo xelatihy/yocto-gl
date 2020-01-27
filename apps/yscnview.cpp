@@ -279,7 +279,7 @@ bool draw_glwidgets_material(
   edited += draw_glslider(win, "coat", material.coat, 0, 1);
   edited += draw_glslider(win, "transmission", material.transmission, 0, 1);
   edited += draw_glcoloredit(win, "spectint", material.spectint);
-  edited += draw_glcheckbox(win, "refract", material.refract);
+  edited += draw_glcheckbox(win, "thin", material.thin);
   edited += draw_glcoloredit(win, "vol transmission", material.voltransmission);
   edited += draw_glcoloredit(win, "vol meanfreepath", material.volmeanfreepath);
   edited += draw_glcoloredit(win, "vol scatter", material.volscatter);
