@@ -348,6 +348,30 @@ vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak) {
 
 // Compute the fresnel term for dielectrics. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+float fresnel_dielectric(float eta, float cosw) {
+  if (cosw < 0) {
+    eta  = 1 / eta;
+    cosw = -cosw;
+  }
+
+  auto sin2 = 1 - cosw * cosw;
+  auto eta2 = eta * eta;
+
+  auto cos2t = 1 - sin2 / eta2;
+  if (cos2t < 0) return 1;  // tir
+
+  auto t0 = sqrt(cos2t);
+  auto t1 = eta * t0;
+  auto t2 = eta * cosw;
+
+  auto rs = (cosw - t1) / (cosw + t1);
+  auto rp = (t0 - t2) / (t0 + t2);
+
+  return (rs * rs + rp * rp) / 2;
+}
+
+// Compute the fresnel term for dielectrics. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 vec3f fresnel_dielectric(const vec3f& eta_, float cosw) {
   auto eta = eta_;
   if (cosw < 0) {
