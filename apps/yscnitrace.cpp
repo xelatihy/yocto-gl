@@ -130,8 +130,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_material_normalmap(scene, id, iomaterial.normal_tex);
     set_material_volume(scene, id, zero3f,
         (iomaterial.thin ? zero3f : iomaterial.diffuse), zero3f,
-        iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
-        iomaterial.subsurface_tex);
+        iomaterial.scattering, iomaterial.radius, iomaterial.phaseg,
+        iomaterial.scattering_tex);
   }
   for (auto& iosubdiv : ioscene.subdivs) {
     tesselate_subdiv(ioscene, iosubdiv);
@@ -316,9 +316,9 @@ bool draw_glwidgets_material(
   edited += draw_glslider(win, "transmission", material.transmission, 0, 1);
   edited += draw_glcoloredit(win, "spectint", material.spectint);
   edited += draw_glcheckbox(win, "thin", material.thin);
-  edited += draw_glcoloredit(win, "vol scatter", material.volscatter);
-  edited += draw_glslider(win, "vol scale", material.volscale, 0, 1);
-  edited += draw_glslider(win, "vol anisotropy", material.volanisotropy, -1, 1);
+  edited += draw_glcoloredit(win, "scattering", material.scattering);
+  edited += draw_glslider(win, "radius", material.radius, 0, 1);
+  edited += draw_glslider(win, "phaseg", material.phaseg, -1, 1);
   edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
   edited += draw_glcombobox(
       win, "emission_tex", material.emission_tex, app->ioscene.textures, true);
@@ -330,7 +330,7 @@ bool draw_glwidgets_material(
       win, "specular_tex", material.specular_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
       app->ioscene.textures, true);
-  edited += draw_glcombobox(win, "subsurface_tex", material.subsurface_tex,
+  edited += draw_glcombobox(win, "scattering_tex", material.scattering_tex,
       app->ioscene.textures, true);
   edited += draw_glcombobox(win, "roughness_tex", material.roughness_tex,
       app->ioscene.textures, true);
@@ -598,9 +598,9 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
             app->scene, app->selection.second, iomaterial.normal_tex);
         set_material_volume(app->scene, app->selection.second,
             zero3f, iomaterial.thin ? zero3f : iomaterial.diffuse,
-            zero3f, iomaterial.volscatter,
-            iomaterial.volscale, iomaterial.volanisotropy,
-            iomaterial.subsurface_tex);
+            zero3f, iomaterial.scattering,
+            iomaterial.radius, iomaterial.phaseg,
+            iomaterial.scattering_tex);
         init_lights(app->scene);
         reset_display(app);
       }

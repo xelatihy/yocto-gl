@@ -114,8 +114,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_material_normalmap(scene, id, iomaterial.normal_tex);
     set_material_volume(scene, id, zero3f,
         iomaterial.thin ? zero3f : iomaterial.diffuse, zero3f,
-        iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
-        iomaterial.subsurface_tex);
+        iomaterial.scattering, iomaterial.radius, iomaterial.phaseg,
+        iomaterial.scattering_tex);
   }
 
   for (auto& iosubdiv : ioscene.subdivs) {

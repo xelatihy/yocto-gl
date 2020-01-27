@@ -103,9 +103,9 @@ struct sceneio_material {
   vec3f spectint        = {1, 1, 1};
   float coat            = 0;
   float transmission    = 0;
-  vec3f volscatter      = {0, 0, 0};
-  float volanisotropy   = 0;
-  float volscale        = 0.01;
+  vec3f scattering      = {0, 0, 0};
+  float phaseg          = 0;
+  float radius          = 0.01;
   float opacity         = 1;
   bool  thin            = false;
 
@@ -117,7 +117,7 @@ struct sceneio_material {
   int  roughness_tex    = -1;
   int  transmission_tex = -1;
   int  spectint_tex     = -1;
-  int  subsurface_tex   = -1;
+  int  scattering_tex      = -1;
   int  coat_tex         = -1;
   int  opacity_tex      = -1;
   int  normal_tex       = -1;

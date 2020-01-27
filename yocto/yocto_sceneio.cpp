@@ -1146,9 +1146,9 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
         get_yaml_value(yelement, "coat", material.coat);
         get_yaml_value(yelement, "transmission", material.transmission);
         get_yaml_value(yelement, "thin", material.thin);
-        get_yaml_value(yelement, "volscatter", material.volscatter);
-        get_yaml_value(yelement, "volanisotropy", material.volanisotropy);
-        get_yaml_value(yelement, "volscale", material.volscale);
+        get_yaml_value(yelement, "scattering", material.scattering);
+        get_yaml_value(yelement, "phaseg", material.phaseg);
+        get_yaml_value(yelement, "radius", material.radius);
         get_yaml_value(yelement, "opacity", material.opacity);
         get_yaml_value(yelement, "coat", material.coat);
         get_yaml_ref(yelement, "emission_tex", material.emission_tex, tmap);
@@ -1158,7 +1158,7 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
         get_yaml_ref(
             yelement, "transmission_tex", material.transmission_tex, tmap);
         get_yaml_ref(yelement, "roughness_tex", material.roughness_tex, tmap);
-        get_yaml_ref(yelement, "subsurface_tex", material.subsurface_tex, tmap);
+        get_yaml_ref(yelement, "scattering_tex", material.scattering_tex, tmap);
         get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap);
         get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap);
         get_yaml_value(yelement, "gltf_textures", material.gltf_textures);
@@ -1641,6 +1641,12 @@ static void load_yaml_scene(
 // Save yaml
 static void save_yaml(const string& filename, const sceneio_model& scene,
     bool ply_instances = false, const string& instances_name = "") {
+
+  auto add_yaml_ref = [](yaml_element& yelement, const string& name, int ref, auto& refs) {
+    if(ref < 0) return;
+    add_yaml_value(yelement, name, refs[ref].name);
+  };
+    
   auto yaml = yaml_model{};
 
   for (auto stat : scene_stats(scene)) yaml.comments.push_back(stat);
@@ -1678,40 +1684,29 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
     add_yaml_value(yelement, "thin", material.thin);
-    add_yaml_value(yelement, "volscatter", material.volscatter);
-    add_yaml_value(yelement, "volanisotropy", material.volanisotropy);
-    add_yaml_value(yelement, "volscale", material.volscale);
+    add_yaml_value(yelement, "scattering", material.scattering);
+    add_yaml_value(yelement, "phaseg", material.phaseg);
+    add_yaml_value(yelement, "radius", material.radius);
     add_yaml_value(yelement, "opacity", material.opacity);
-    if (material.emission_tex >= 0)
-      add_yaml_value(
-          yelement, "emission_tex", scene.textures[material.emission_tex].name);
-    if (material.diffuse_tex >= 0)
-      add_yaml_value(
-          yelement, "diffuse_tex", scene.textures[material.diffuse_tex].name);
-    if (material.metallic_tex >= 0)
-      add_yaml_value(
-          yelement, "metallic_tex", scene.textures[material.metallic_tex].name);
-    if (material.specular_tex >= 0)
-      add_yaml_value(
-          yelement, "specular_tex", scene.textures[material.specular_tex].name);
-    if (material.roughness_tex >= 0)
-      add_yaml_value(yelement, "roughness_tex",
-          scene.textures[material.roughness_tex].name);
-    if (material.transmission_tex >= 0)
-      add_yaml_value(yelement, "transmission_tex",
-          scene.textures[material.transmission_tex].name);
-    if (material.subsurface_tex >= 0)
-      add_yaml_value(yelement, "subsurface_tex",
-          scene.textures[material.subsurface_tex].name);
-    if (material.coat_tex >= 0)
-      add_yaml_value(
-          yelement, "coat_tex", scene.textures[material.coat_tex].name);
-    if (material.opacity_tex >= 0)
-      add_yaml_value(
-          yelement, "opacity_tex", scene.textures[material.opacity_tex].name);
-    if (material.normal_tex >= 0)
-      add_yaml_value(
-          yelement, "normal_tex", scene.textures[material.normal_tex].name);
+    add_yaml_ref(yelement, "emission_tex", material.emission_tex, scene.textures);
+      add_yaml_ref(
+          yelement, "diffuse_tex", material.diffuse_tex, scene.textures);
+      add_yaml_ref(
+          yelement, "metallic_tex", material.metallic_tex, scene.textures);
+      add_yaml_ref(
+          yelement, "specular_tex", material.specular_tex, scene.textures);
+      add_yaml_ref(yelement, "roughness_tex",
+          material.roughness_tex, scene.textures);
+      add_yaml_ref(yelement, "transmission_tex",
+          material.transmission_tex, scene.textures);
+      add_yaml_ref(yelement, "scattering_tex",
+          material.scattering_tex, scene.textures);
+      add_yaml_ref(
+          yelement, "coat_tex", material.coat_tex, scene.textures);
+      add_yaml_ref(
+          yelement, "opacity_tex", material.opacity_tex, scene.textures);
+      add_yaml_ref(
+          yelement, "normal_tex", material.normal_tex, scene.textures);
     if (material.gltf_textures)
       add_yaml_value(yelement, "gltf_textures", material.gltf_textures);
   }
@@ -1831,9 +1826,9 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     material.metallic         = omat.pbr_metallic;
     material.coat             = omat.pbr_clearcoat;
     material.transmission     = mean(omat.transmission);
-    material.volscatter       = omat.vol_scattering;
-    material.volanisotropy    = omat.vol_anisotropy;
-    material.volscale         = omat.vol_scale;
+    material.scattering       = omat.vol_scattering;
+    material.phaseg           = omat.vol_anisotropy;
+    material.radius           = omat.vol_scale;
     material.opacity          = omat.opacity;
     material.thin             = true;
     material.emission_tex     = get_texture(omat.emission_map);

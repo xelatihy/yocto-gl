@@ -280,9 +280,9 @@ bool draw_glwidgets_material(
   edited += draw_glslider(win, "transmission", material.transmission, 0, 1);
   edited += draw_glcoloredit(win, "spectint", material.spectint);
   edited += draw_glcheckbox(win, "thin", material.thin);
-  edited += draw_glcoloredit(win, "vol scatter", material.volscatter);
-  edited += draw_glslider(win, "vol scale", material.volscale, 0, 1);
-  edited += draw_glslider(win, "vol anisotropy", material.volanisotropy, -1, 1);
+  edited += draw_glcoloredit(win, "scattering", material.scattering);
+  edited += draw_glslider(win, "radius", material.radius, 0, 1);
+  edited += draw_glslider(win, "phaseg", material.phaseg, -1, 1);
   edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
   edited += draw_glcombobox(
       win, "emission_tex", material.emission_tex, app->scene.textures, true);
@@ -294,7 +294,7 @@ bool draw_glwidgets_material(
       win, "specular_tex", material.specular_tex, app->scene.textures, true);
   edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
       app->scene.textures, true);
-  edited += draw_glcombobox(win, "subsurface_tex", material.subsurface_tex,
+  edited += draw_glcombobox(win, "scattering_tex", material.scattering_tex,
       app->scene.textures, true);
   edited += draw_glcombobox(
       win, "roughness_tex", material.roughness_tex, app->scene.textures, true);
