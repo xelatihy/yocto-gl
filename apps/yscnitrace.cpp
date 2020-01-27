@@ -118,7 +118,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
         scene, id, iomaterial.emission, iomaterial.emission_tex);
     set_material_diffuse(scene, id,
         (1 - iomaterial.transmission) * iomaterial.base,
-        iomaterial.diffuse_tex);
+        iomaterial.base_tex);
     set_material_specular(scene, id,
         iomaterial.specular * eta_to_reflectivity(iomaterial.ior),
         iomaterial.specular_tex);
@@ -328,7 +328,7 @@ bool draw_glwidgets_material(
   edited += draw_glcombobox(
       win, "emission_tex", material.emission_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "diffuse_tex", material.diffuse_tex, app->ioscene.textures, true);
+      win, "base_tex", material.base_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
       win, "metallic_tex", material.metallic_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
@@ -586,7 +586,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
             iomaterial.emission, iomaterial.emission_tex);
         set_material_diffuse(app->scene, app->selection.second,
             (1 - iomaterial.transmission) * iomaterial.base,
-            iomaterial.diffuse_tex);
+            iomaterial.base_tex);
         set_material_specular(app->scene, app->selection.second,
             iomaterial.specular * eta_to_reflectivity(iomaterial.ior),
             iomaterial.specular_tex);

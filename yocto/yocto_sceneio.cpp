@@ -1152,7 +1152,7 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
         get_yaml_value(yelement, "opacity", material.opacity);
         get_yaml_value(yelement, "coat", material.coat);
         get_yaml_ref(yelement, "emission_tex", material.emission_tex, tmap);
-        get_yaml_ref(yelement, "diffuse_tex", material.diffuse_tex, tmap);
+        get_yaml_ref(yelement, "base_tex", material.base_tex, tmap);
         get_yaml_ref(yelement, "metallic_tex", material.metallic_tex, tmap);
         get_yaml_ref(yelement, "specular_tex", material.specular_tex, tmap);
         get_yaml_ref(
@@ -1690,7 +1690,7 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     add_yaml_value(yelement, "opacity", material.opacity);
     add_yaml_ref(
         yelement, "emission_tex", material.emission_tex, scene.textures);
-    add_yaml_ref(yelement, "diffuse_tex", material.diffuse_tex, scene.textures);
+    add_yaml_ref(yelement, "base_tex", material.base_tex, scene.textures);
     add_yaml_ref(
         yelement, "metallic_tex", material.metallic_tex, scene.textures);
     add_yaml_ref(
@@ -1829,7 +1829,7 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     material.opacity          = omat.opacity;
     material.thin             = true;
     material.emission_tex     = get_texture(omat.emission_map);
-    material.diffuse_tex      = get_texture(omat.diffuse_map);
+    material.base_tex      = get_texture(omat.diffuse_map);
     material.specular_tex     = get_texture(omat.specular_map);
     material.metallic_tex     = get_texture(omat.pbr_metallic_map);
     material.roughness_tex    = get_texture(omat.pbr_roughness_map);
@@ -1961,7 +1961,7 @@ static void save_obj(
     omaterial.transmission      = vec3f{material.transmission};
     omaterial.opacity           = material.opacity;
     omaterial.emission_map      = get_texture(material.emission_tex);
-    omaterial.diffuse_map       = get_texture(material.diffuse_tex);
+    omaterial.diffuse_map       = get_texture(material.base_tex);
     omaterial.specular_map      = get_texture(material.specular_tex);
     omaterial.pbr_metallic_map  = get_texture(material.metallic_tex);
     omaterial.pbr_roughness_map = get_texture(material.roughness_tex);
@@ -2129,13 +2129,13 @@ static void load_gltf(const string& filename, sceneio_model& scene) {
       material.opacity = gmaterial.sg_diffuse.w;
       // TODO: better specular
       // material.specular     = gmaterial.sg_specular;
-      material.diffuse_tex = gmaterial.sg_diffuse_tex;
+      material.base_tex = gmaterial.sg_diffuse_tex;
       // material.specular_tex = gmaterial.sg_specular_tex;
     } else if (gmaterial.has_metalrough) {
       material.base      = xyz(gmaterial.mr_base);
       material.opacity      = gmaterial.mr_base.w;
       material.specular     = 1;
-      material.diffuse_tex  = gmaterial.mr_base_tex;
+      material.base_tex  = gmaterial.mr_base_tex;
       material.metallic_tex = gmaterial.mr_metallic_tex;
     }
     material.normal_tex = gmaterial.normal_tex;
@@ -2278,7 +2278,7 @@ static void load_pbrt(
     material.roughness = mean(pmaterial.roughness);
     material.opacity   = pmaterial.opacity == vec3f{1} ? 1
                                                      : mean(pmaterial.opacity);
-    material.diffuse_tex         = get_texture(pmaterial.diffuse_map);
+    material.base_tex         = get_texture(pmaterial.diffuse_map);
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
   }
 
@@ -2418,8 +2418,8 @@ static void save_pbrt(const string& filename, const sceneio_model& scene) {
     // pmaterial.specular     = material.specular;
     // pmaterial.transmission = material.transmission;
     pmaterial.roughness   = {material.roughness, material.roughness};
-    pmaterial.diffuse_map = material.diffuse_tex >= 0
-                                ? scene.textures[material.diffuse_tex].name
+    pmaterial.diffuse_map = material.base_tex >= 0
+                                ? scene.textures[material.base_tex].name
                                 : ""s;
     auto& parealight    = pbrt.arealights.emplace_back();
     parealight.name     = material.name;
