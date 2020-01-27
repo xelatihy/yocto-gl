@@ -58,26 +58,26 @@ materials:
     metallic: 1
     roughness: 0.2
   - name: plastic-rough-bumped
-    specular: [0.04, 0.04, 0.04]
     diffuse: [0.5, 0.7, 0.5]
+    specular: 1
     roughness: 0.2
     normal_tex: bumps-normal
   - name: uvgrid-coated
     coat: [0.04, 0.04, 0.04]
-    specular: [0.04, 0.04, 0.04]
     diffuse: [1, 1, 1]
+    specular: 1
     roughness: 0.2
     diffuse_tex: uvgrid
   - name: volume-jade
-    specular: [0.04, 0.04, 0.04]
     roughness: 0
+    specular: 1
     transmission: [1, 1, 1]
     voltransmission: [0.5, 0.5, 0.5]
     volscatter: [0.3, 0.6, 0.3]
     refract: true
   - name: volume-glass
-    specular: [0.04, 0.04, 0.04]
     roughness: 0
+    specular: 1
     transmission: [1, 1, 1]
     voltransmission: [1, 0.5, 0.5]
     volscale: 0.02

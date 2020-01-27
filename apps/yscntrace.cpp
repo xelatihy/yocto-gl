@@ -60,7 +60,9 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
         scene, id, iomaterial.emission, iomaterial.emission_tex);
     set_material_diffuse(scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
     set_material_specular(
-        scene, id, iomaterial.specular, iomaterial.specular_tex);
+        scene, id, 
+        iomaterial.specular * eta_to_reflectivity(iomaterial.ior), 
+        iomaterial.specular_tex);
     set_material_metallic(
         scene, id, iomaterial.metallic, iomaterial.metallic_tex);
     set_material_transmission(

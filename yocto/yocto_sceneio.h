@@ -96,9 +96,11 @@ struct sceneio_material {
   // lobes
   vec3f emission        = {0, 0, 0};
   vec3f diffuse         = {0, 0, 0};
-  vec3f specular        = {0, 0, 0};
+  float specular        = 0;
   float roughness       = 0;
   float metallic        = 0;
+  float ior             = 1.5;
+  vec3f spectint        = {1, 1, 1};
   vec3f coat            = {0, 0, 0};
   vec3f transmission    = {0, 0, 0};
   vec3f voltransmission = {0, 0, 0};
@@ -117,6 +119,7 @@ struct sceneio_material {
   int  metallic_tex     = -1;
   int  roughness_tex    = -1;
   int  transmission_tex = -1;
+  int  spectint_tex     = -1;
   int  subsurface_tex   = -1;
   int  coat_tex         = -1;
   int  opacity_tex      = -1;
@@ -317,6 +320,12 @@ void tesselate_subdiv(
 // support animation in this manner long term.
 void update_transforms(
     sceneio_model& scene, float time = 0, const string& anim_group = "");
+
+// TODO: remove
+inline vec3f eta_to_reflectivity(float eta) {
+    return vec3f{((eta - 1) * (eta - 1)) /
+           ((eta + 1) * (eta + 1))};
+}
 
 }  // namespace yocto
 

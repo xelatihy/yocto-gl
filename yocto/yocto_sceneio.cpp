@@ -1842,8 +1842,9 @@ static void load_obj(const string& filename, sceneio_model& scene) {
         omat.name, "material", (int)scene.materials.size());
     material.emission         = omat.emission;
     material.diffuse          = omat.diffuse;
-    material.specular         = omat.specular;
+    material.specular         = omat.specular != zero3f ? 1 : 0;
     material.roughness        = obj_exponent_to_roughness(omat.exponent);
+    material.ior              = omat.ior;
     material.metallic         = omat.pbr_metallic;
     material.coat             = omat.reflection;
     material.transmission     = omat.transmission;
@@ -1980,7 +1981,7 @@ static void save_obj(
     omaterial.illum             = 2;
     omaterial.emission          = material.emission;
     omaterial.diffuse           = material.diffuse;
-    omaterial.specular          = material.specular;
+    omaterial.specular          = material.specular ? vec3f{1, 1, 1} : vec3f{0, 0, 0};
     omaterial.exponent          = obj_roughness_to_exponent(material.roughness);
     omaterial.pbr_metallic      = material.metallic;
     omaterial.reflection        = material.coat;
@@ -2162,13 +2163,14 @@ static void load_gltf(const string& filename, sceneio_model& scene) {
     if (gmaterial.has_specgloss) {
       material.diffuse      = xyz(gmaterial.sg_diffuse);
       material.opacity      = gmaterial.sg_diffuse.w;
-      material.specular     = gmaterial.sg_specular;
+      // TODO: better specular
+      // material.specular     = gmaterial.sg_specular;
       material.diffuse_tex  = gmaterial.sg_diffuse_tex;
-      material.specular_tex = gmaterial.sg_specular_tex;
+      // material.specular_tex = gmaterial.sg_specular_tex;
     } else if (gmaterial.has_metalrough) {
       material.diffuse      = xyz(gmaterial.mr_base);
       material.opacity      = gmaterial.mr_base.w;
-      material.specular     = vec3f{0.04f};
+      material.specular     = 1;
       material.diffuse_tex  = gmaterial.mr_base_tex;
       material.metallic_tex = gmaterial.mr_metallic_tex;
     }
@@ -2306,8 +2308,9 @@ static void load_pbrt(
     material.name  = make_safe_name(
         pmaterial.name, "material", (int)scene.materials.size());
     material.diffuse      = pmaterial.diffuse;
-    material.specular     = pmaterial.sspecular;
-    material.transmission = pmaterial.transmission;
+    // TODO: better conversion
+    // material.specular     = pmaterial.specular;
+    // material.transmission = pmaterial.transmission;
     material.roughness    = mean(pmaterial.roughness);
     material.opacity      = pmaterial.opacity == vec3f{1} ? 1
                                                      : mean(pmaterial.opacity);
@@ -2447,8 +2450,9 @@ static void save_pbrt(const string& filename, const sceneio_model& scene) {
     auto& pmaterial        = pbrt.materials.emplace_back();
     pmaterial.name         = material.name;
     pmaterial.diffuse      = material.diffuse;
-    pmaterial.specular     = material.specular;
-    pmaterial.transmission = material.transmission;
+    // TODO: better conversion
+    // pmaterial.specular     = material.specular;
+    // pmaterial.transmission = material.transmission;
     pmaterial.roughness    = {material.roughness, material.roughness};
     pmaterial.diffuse_map  = material.diffuse_tex >= 0
                                 ? scene.textures[material.diffuse_tex].name
