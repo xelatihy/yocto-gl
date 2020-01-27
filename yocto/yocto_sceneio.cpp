@@ -386,7 +386,7 @@ void add_materials(sceneio_model& scene) {
     if (material_id < 0) {
       auto material    = sceneio_material{};
       material.name    = "default";
-      material.diffuse = {0.2f, 0.2f, 0.2f};
+      material.base = {0.2f, 0.2f, 0.2f};
       scene.materials.push_back(material);
       material_id = (int)scene.materials.size() - 1;
     }
@@ -1139,7 +1139,7 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
         auto& material = scene.materials.emplace_back();
         get_yaml_value(yelement, "name", material.name);
         get_yaml_value(yelement, "emission", material.emission);
-        get_yaml_value(yelement, "diffuse", material.diffuse);
+        get_yaml_value(yelement, "base", material.base);
         get_yaml_value(yelement, "metallic", material.metallic);
         get_yaml_value(yelement, "specular", material.specular);
         get_yaml_value(yelement, "roughness", material.roughness);
@@ -1677,7 +1677,7 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     yelement.name  = "materials";
     add_yaml_value(yelement, "name", material.name);
     add_yaml_value(yelement, "emission", material.emission);
-    add_yaml_value(yelement, "diffuse", material.diffuse);
+    add_yaml_value(yelement, "base", material.base);
     add_yaml_value(yelement, "specular", material.specular);
     add_yaml_value(yelement, "metallic", material.metallic);
     add_yaml_value(yelement, "coat", material.coat);
@@ -1816,7 +1816,7 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     material.name  = make_safe_name(
         omat.name, "material", (int)scene.materials.size());
     material.emission         = omat.emission;
-    material.diffuse          = omat.diffuse;
+    material.base             = omat.diffuse;
     material.specular         = omat.specular != zero3f ? 1 : 0;
     material.roughness        = obj_exponent_to_roughness(omat.exponent);
     material.ior              = omat.ior;
@@ -1953,7 +1953,7 @@ static void save_obj(
     omaterial.name     = material.name;
     omaterial.illum    = 2;
     omaterial.emission = material.emission;
-    omaterial.diffuse  = material.diffuse;
+    omaterial.diffuse  = material.base;
     omaterial.specular = material.specular ? vec3f{1, 1, 1} : vec3f{0, 0, 0};
     omaterial.exponent = obj_roughness_to_exponent(material.roughness);
     omaterial.pbr_metallic      = material.metallic;
@@ -2125,14 +2125,14 @@ static void load_gltf(const string& filename, sceneio_model& scene) {
     material.emission     = gmaterial.emission;
     material.emission_tex = gmaterial.emission_tex;
     if (gmaterial.has_specgloss) {
-      material.diffuse = xyz(gmaterial.sg_diffuse);
+      material.base = xyz(gmaterial.sg_diffuse);
       material.opacity = gmaterial.sg_diffuse.w;
       // TODO: better specular
       // material.specular     = gmaterial.sg_specular;
       material.diffuse_tex = gmaterial.sg_diffuse_tex;
       // material.specular_tex = gmaterial.sg_specular_tex;
     } else if (gmaterial.has_metalrough) {
-      material.diffuse      = xyz(gmaterial.mr_base);
+      material.base      = xyz(gmaterial.mr_base);
       material.opacity      = gmaterial.mr_base.w;
       material.specular     = 1;
       material.diffuse_tex  = gmaterial.mr_base_tex;
@@ -2271,7 +2271,7 @@ static void load_pbrt(
     auto& material = scene.materials.emplace_back();
     material.name  = make_safe_name(
         pmaterial.name, "material", (int)scene.materials.size());
-    material.diffuse = pmaterial.diffuse;
+    material.base = pmaterial.diffuse;
     // TODO: better conversion
     // material.specular     = pmaterial.specular;
     // material.transmission = pmaterial.transmission;
@@ -2413,7 +2413,7 @@ static void save_pbrt(const string& filename, const sceneio_model& scene) {
   for (auto& material : scene.materials) {
     auto& pmaterial   = pbrt.materials.emplace_back();
     pmaterial.name    = material.name;
-    pmaterial.diffuse = material.diffuse;
+    pmaterial.diffuse = material.base;
     // TODO: better conversion
     // pmaterial.specular     = material.specular;
     // pmaterial.transmission = material.transmission;
@@ -2486,25 +2486,25 @@ void make_cornellbox_scene(sceneio_model& scene) {
   camera.aspect           = 1;
   auto& floor_mat         = scene.materials.emplace_back();
   floor_mat.name          = "floor";
-  floor_mat.diffuse       = {0.725, 0.71, 0.68};
+  floor_mat.base       = {0.725, 0.71, 0.68};
   auto& ceiling_mat       = scene.materials.emplace_back();
   ceiling_mat.name        = "ceiling";
-  ceiling_mat.diffuse     = {0.725, 0.71, 0.68};
+  ceiling_mat.base     = {0.725, 0.71, 0.68};
   auto& backwall_mat      = scene.materials.emplace_back();
   backwall_mat.name       = "backwall";
-  backwall_mat.diffuse    = {0.725, 0.71, 0.68};
+  backwall_mat.base    = {0.725, 0.71, 0.68};
   auto& rightwall_mat     = scene.materials.emplace_back();
   rightwall_mat.name      = "rightwall";
-  rightwall_mat.diffuse   = {0.14, 0.45, 0.091};
+  rightwall_mat.base   = {0.14, 0.45, 0.091};
   auto& leftwall_mat      = scene.materials.emplace_back();
   leftwall_mat.name       = "leftwall";
-  leftwall_mat.diffuse    = {0.63, 0.065, 0.05};
+  leftwall_mat.base    = {0.63, 0.065, 0.05};
   auto& shortbox_mat      = scene.materials.emplace_back();
   shortbox_mat.name       = "shortbox";
-  shortbox_mat.diffuse    = {0.725, 0.71, 0.68};
+  shortbox_mat.base    = {0.725, 0.71, 0.68};
   auto& tallbox_mat       = scene.materials.emplace_back();
   tallbox_mat.name        = "tallbox";
-  tallbox_mat.diffuse     = {0.725, 0.71, 0.68};
+  tallbox_mat.base     = {0.725, 0.71, 0.68};
   auto& light_mat         = scene.materials.emplace_back();
   light_mat.name          = "light";
   light_mat.emission      = {17, 12, 4};

@@ -95,7 +95,7 @@ struct sceneio_material {
 
   // lobes
   vec3f emission     = {0, 0, 0};
-  vec3f diffuse      = {0, 0, 0};
+  vec3f base         = {0, 0, 0};
   float specular     = 0;
   float roughness    = 0;
   float metallic     = 0;

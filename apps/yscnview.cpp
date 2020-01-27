@@ -176,7 +176,7 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
     set_material_emission(
         glscene, id, material.emission, material.emission_tex);
     set_material_diffuse(glscene, id,
-        (1 - material.transmission) * material.diffuse, material.diffuse_tex);
+        (1 - material.transmission) * material.base, material.diffuse_tex);
     set_material_specular(glscene, id,
         material.specular * eta_to_reflectivity(material.ior),
         material.specular_tex);
@@ -273,7 +273,7 @@ bool draw_glwidgets_material(
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
-  edited += draw_glcoloredit(win, "diffuse", material.diffuse);
+  edited += draw_glcoloredit(win, "base", material.base);
   edited += draw_glslider(win, "specular", material.specular, 0, 1);
   edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
@@ -519,7 +519,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         set_material_emission(glscene, app->selection.second, material.emission,
             material.emission_tex);
         set_material_diffuse(glscene, app->selection.second,
-            (1 - material.transmission) * material.diffuse,
+            (1 - material.transmission) * material.base,
             material.diffuse_tex);
         set_material_specular(glscene, app->selection.second,
             material.specular * eta_to_reflectivity(material.ior),

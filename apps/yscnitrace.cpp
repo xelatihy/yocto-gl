@@ -117,7 +117,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
     set_material_diffuse(scene, id,
-        (1 - iomaterial.transmission) * iomaterial.diffuse,
+        (1 - iomaterial.transmission) * iomaterial.base,
         iomaterial.diffuse_tex);
     set_material_specular(scene, id,
         iomaterial.specular * eta_to_reflectivity(iomaterial.ior),
@@ -126,7 +126,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
         scene, id, iomaterial.metallic, iomaterial.metallic_tex);
     set_material_transmission(scene, id,
         iomaterial.transmission *
-            (iomaterial.thin ? iomaterial.diffuse : vec3f{1}),
+            (iomaterial.thin ? iomaterial.base : vec3f{1}),
         iomaterial.transmission_tex);
     set_material_roughness(
         scene, id, iomaterial.roughness, iomaterial.roughness_tex);
@@ -134,7 +134,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_material_refract(scene, id, !iomaterial.thin);
     set_material_normalmap(scene, id, iomaterial.normal_tex);
     set_material_volume(scene, id, zero3f,
-        (iomaterial.thin ? zero3f : iomaterial.diffuse), zero3f,
+        (iomaterial.thin ? zero3f : iomaterial.base), zero3f,
         iomaterial.scattering, iomaterial.radius, iomaterial.phaseg,
         iomaterial.scattering_tex);
   }
@@ -313,7 +313,7 @@ bool draw_glwidgets_material(
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
-  edited += draw_glcoloredit(win, "diffuse", material.diffuse);
+  edited += draw_glcoloredit(win, "base", material.base);
   edited += draw_glslider(win, "specular", material.specular, 0, 1);
   edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
@@ -585,7 +585,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         set_material_emission(app->scene, app->selection.second,
             iomaterial.emission, iomaterial.emission_tex);
         set_material_diffuse(app->scene, app->selection.second,
-            (1 - iomaterial.transmission) * iomaterial.diffuse,
+            (1 - iomaterial.transmission) * iomaterial.base,
             iomaterial.diffuse_tex);
         set_material_specular(app->scene, app->selection.second,
             iomaterial.specular * eta_to_reflectivity(iomaterial.ior),
@@ -594,7 +594,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
             iomaterial.metallic, iomaterial.metallic_tex);
         set_material_transmission(app->scene, app->selection.second,
             iomaterial.transmission *
-                (iomaterial.thin ? iomaterial.diffuse : vec3f{1}),
+                (iomaterial.thin ? iomaterial.base : vec3f{1}),
             iomaterial.transmission_tex);
         set_material_roughness(app->scene, app->selection.second,
             iomaterial.roughness, iomaterial.roughness_tex);
@@ -605,7 +605,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         set_material_normalmap(
             app->scene, app->selection.second, iomaterial.normal_tex);
         set_material_volume(app->scene, app->selection.second, zero3f,
-            iomaterial.thin ? zero3f : iomaterial.diffuse, zero3f,
+            iomaterial.thin ? zero3f : iomaterial.base, zero3f,
             iomaterial.scattering, iomaterial.radius, iomaterial.phaseg,
             iomaterial.scattering_tex);
         init_lights(app->scene);
