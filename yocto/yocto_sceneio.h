@@ -103,9 +103,6 @@ struct sceneio_material {
   vec3f spectint        = {1, 1, 1};
   float coat            = 0;
   float transmission    = 0;
-  vec3f voltransmission = {0, 0, 0};
-  vec3f volmeanfreepath = {0, 0, 0};
-  vec3f volemission     = {0, 0, 0};
   vec3f volscatter      = {0, 0, 0};
   float volanisotropy   = 0;
   float volscale        = 0.01;

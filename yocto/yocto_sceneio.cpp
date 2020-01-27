@@ -1146,10 +1146,7 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
         get_yaml_value(yelement, "coat", material.coat);
         get_yaml_value(yelement, "transmission", material.transmission);
         get_yaml_value(yelement, "thin", material.thin);
-        get_yaml_value(yelement, "voltransmission", material.voltransmission);
-        get_yaml_value(yelement, "volmeanfreepath", material.volmeanfreepath);
         get_yaml_value(yelement, "volscatter", material.volscatter);
-        get_yaml_value(yelement, "volemission", material.volemission);
         get_yaml_value(yelement, "volanisotropy", material.volanisotropy);
         get_yaml_value(yelement, "volscale", material.volscale);
         get_yaml_value(yelement, "opacity", material.opacity);
@@ -1681,19 +1678,9 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
     add_yaml_value(yelement, "thin", material.thin);
-    if (material.voltransmission != zero3f)
-      add_yaml_value(yelement, "voltransmission", material.voltransmission);
-    if (material.volmeanfreepath != zero3f)
-      add_yaml_value(yelement, "volmeanfreepath", material.volmeanfreepath);
-    if (material.volscatter != zero3f)
-      add_yaml_value(yelement, "volscatter", material.volscatter);
-    if (material.volemission != zero3f)
-      add_yaml_value(yelement, "volemission", material.volemission);
-    if (material.volanisotropy)
-      add_yaml_value(yelement, "volanisotropy", material.volanisotropy);
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f)
-      add_yaml_value(yelement, "volscale", material.volscale);
+    add_yaml_value(yelement, "volscatter", material.volscatter);
+    add_yaml_value(yelement, "volanisotropy", material.volanisotropy);
+    add_yaml_value(yelement, "volscale", material.volscale);
     add_yaml_value(yelement, "opacity", material.opacity);
     if (material.emission_tex >= 0)
       add_yaml_value(
@@ -1844,13 +1831,11 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     material.metallic         = omat.pbr_metallic;
     material.coat             = omat.pbr_clearcoat;
     material.transmission     = mean(omat.transmission);
-    material.voltransmission  = omat.vol_transmission;
-    material.volmeanfreepath  = omat.vol_meanfreepath;
-    material.volemission      = omat.vol_emission;
     material.volscatter       = omat.vol_scattering;
     material.volanisotropy    = omat.vol_anisotropy;
     material.volscale         = omat.vol_scale;
     material.opacity          = omat.opacity;
+    material.thin             = true;
     material.emission_tex     = get_texture(omat.emission_map);
     material.diffuse_tex      = get_texture(omat.diffuse_map);
     material.specular_tex     = get_texture(omat.specular_map);
@@ -1992,15 +1977,6 @@ static void save_obj(
     omaterial.pbr_clearcoat_map = get_texture(material.coat_tex);
     omaterial.opacity_map       = get_texture(material.opacity_tex);
     omaterial.normal_map        = get_texture(material.normal_tex);
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f) {
-      omaterial.vol_transmission = material.voltransmission;
-      omaterial.vol_meanfreepath = material.volmeanfreepath;
-      omaterial.vol_emission     = material.volemission;
-      omaterial.vol_scattering   = material.volscatter;
-      omaterial.vol_anisotropy   = material.volanisotropy;
-      omaterial.vol_scale        = material.volscale;
-    }
   }
 
   // convert shapes
