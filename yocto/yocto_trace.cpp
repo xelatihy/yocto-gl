@@ -651,6 +651,7 @@ struct material_point {
   vec3f emission      = {0, 0, 0};
   vec3f diffuse       = {0, 0, 0};
   vec3f specular      = {0, 0, 0};
+  vec3f metal         = {0, 0, 0};
   vec3f coat          = {0, 0, 0};
   vec3f transmission  = {0, 0, 0};
   float roughness     = 0;
@@ -1042,8 +1043,9 @@ material_point eval_material(const trace_scene& scene,
   auto point = material_point{};
   // factors
   point.emission     = emission;
-  point.diffuse      = base * (1 - material.transmission);
-  point.specular     = specular * eta_to_reflectivity(ior);
+  point.diffuse      = base * (1 - metallic) * (1 - material.transmission);
+  point.specular     = specular * (1 - metallic) * eta_to_reflectivity(ior);
+  point.metal        = base * metallic;
   point.roughness    = roughness;
   point.coat         = coat * eta_to_reflectivity(1.5);
   point.transmission = transmission *
@@ -1056,10 +1058,6 @@ material_point eval_material(const trace_scene& scene,
   point.volanisotropy  = phaseg;
   auto volscale        = radius;
 
-  if (metallic) {
-    point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;
-    point.diffuse  = metallic * point.diffuse * (1 - metallic);
-  }
   if (point.transmission != zero3f) {
     point.eta = mean(reflectivity_to_eta(point.specular));
   }
@@ -2340,6 +2338,18 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
                abs(dot(normal, incoming));
   }
 
+  if (material.metal != zero3f && same_hemi) {
+    auto halfway = normalize(incoming + outgoing);
+    auto F       = fresnel_schlick(
+        material.metal, abs(dot(halfway, outgoing)), entering);
+    auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+    auto G = eval_microfacetG(
+        material.roughness, up_normal, halfway, outgoing, incoming);
+    brdfcos += (1 - coat) * F * D * G /
+               abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
+               abs(dot(normal, incoming));
+  }
+
   if (material.coat != zero3f && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_schlick(
@@ -2405,6 +2415,10 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
   if (material.specular != zero3f && same_hemi) {
     brdfcos += (1 - coat) * spec;
   }
+  if (material.metal != zero3f && same_hemi) {
+    brdfcos += (1 - coat) * fresnel_schlick(
+      material.metal, abs(dot(normal, outgoing)), entering);
+  }
   if (material.coat != zero3f && same_hemi) {
     brdfcos += coat;
   }
@@ -2415,17 +2429,22 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
   return brdfcos;
 }
 
-static vec4f compute_brdf_pdfs(const material_point& material,
+static array<float, 5> compute_brdf_pdfs(const material_point& material,
     const vec3f& normal, const vec3f& outgoing) {
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
   auto coat     = fresnel_schlick(
       material.coat, abs(dot(outgoing, normal)), entering);
   auto spec = fresnel_schlick(
       material.specular, abs(dot(outgoing, normal)), entering);
-  auto weights = vec4f{max((1 - coat) * (1 - spec) * material.diffuse),
-      max((1 - coat) * spec), max(coat),
+  auto met = fresnel_schlick(
+      material.metal, abs(dot(outgoing, normal)), entering);
+  auto weights = array<float, 5>{max((1 - coat) * (1 - spec) * material.diffuse),
+      max((1 - coat) * spec), max((1 - coat) * met),  max(coat),
       max((1 - coat) * (1 - spec) * material.transmission)};
-  weights /= sum(weights);
+  auto sum = 0.0f;
+  for(auto weight : weights) sum += weight;
+  if(!sum) return weights;
+  for(auto& weight : weights) weight /= sum;
   return weights;
 }
 
@@ -2447,11 +2466,16 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
   }
 
   if (rnl < weights[0] + weights[1] + weights[2]) {
-    auto halfway = sample_microfacet(coat_roughness, up_normal, rn);
+    auto halfway = sample_microfacet(material.roughness, up_normal, rn);
     return reflect(outgoing, halfway);
   }
 
   if (rnl < weights[0] + weights[1] + weights[2] + weights[3]) {
+    auto halfway = sample_microfacet(coat_roughness, up_normal, rn);
+    return reflect(outgoing, halfway);
+  }
+
+  if (rnl < weights[0] + weights[1] + weights[2] + weights[3] + weights[4]) {
     if (material.refract) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
       return refract_notir(outgoing, halfway,
@@ -2483,6 +2507,10 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
   }
 
   if (rnl < weights[0] + weights[1] + weights[2] + weights[3]) {
+    return reflect(outgoing, up_normal);
+  }
+
+  if (rnl < weights[0] + weights[1] + weights[2] + weights[3] + weights[4]) {
     if (material.refract) {
       return refract_notir(outgoing, up_normal,
           dot(normal, outgoing) > 0 ? 1 / material.eta : material.eta);
@@ -2519,27 +2547,34 @@ static float sample_brdf_pdf(const material_point& material,
   if (weights[2] && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
     pdf += weights[2] *
+           sample_microfacet_pdf(material.roughness, up_normal, halfway) /
+           (4 * abs(dot(outgoing, halfway)));
+  }
+
+  if (weights[3] && same_hemi) {
+    auto halfway = normalize(incoming + outgoing);
+    pdf += weights[3] *
            sample_microfacet_pdf(coat_roughness, up_normal, halfway) /
            (4 * abs(dot(outgoing, halfway)));
   }
 
-  if (weights[3] && material.refract && !same_hemi) {
+  if (weights[4] && material.refract && !same_hemi) {
     auto halfway_vector = dot(outgoing, normal) > 0
                               ? -(outgoing + material.eta * incoming)
                               : (material.eta * outgoing + incoming);
     auto halfway = normalize(halfway_vector);
     // [Walter 2007] equation 17
-    pdf += weights[3] *
+    pdf += weights[4] *
            sample_microfacet_pdf(material.roughness, up_normal, halfway) *
            abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
   }
 
-  if (weights[3] && !material.refract && !same_hemi) {
+  if (weights[4] && !material.refract && !same_hemi) {
     auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
     auto ir        = reflect(-incoming, up_normal);
     auto halfway   = normalize(ir + outgoing);
     auto d = sample_microfacet_pdf(material.roughness, up_normal, halfway);
-    pdf += weights[3] * d / (4 * abs(dot(outgoing, halfway)));
+    pdf += weights[4] * d / (4 * abs(dot(outgoing, halfway)));
   }
 
   return pdf;
@@ -2555,7 +2590,8 @@ static float sample_delta_pdf(const material_point& material,
   auto pdf = 0.0f;
   if (weights[1] && same_hemi) pdf += weights[1];
   if (weights[2] && same_hemi) pdf += weights[2];
-  if (weights[3] && !same_hemi) pdf += weights[3];
+  if (weights[3] && same_hemi) pdf += weights[3];
+  if (weights[4] && !same_hemi) pdf += weights[4];
   return pdf;
 }
 
