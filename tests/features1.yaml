@@ -51,33 +51,33 @@ textures:
     preset: test-sky
 materials:
   - name: floor
-    diffuse: [0.7, 0.7, 0.7]
+    base: [0.7, 0.7, 0.7]
     diffuse_tex: floor
     specular: 0
   - name: metal-rough
-    diffuse: [0.66, 0.45, 0.34]
+    base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
   - name: plastic-rough-bumped
-    diffuse: [0.5, 0.7, 0.5]
+    base: [0.5, 0.7, 0.5]
     specular: 1
     roughness: 0.2
     normal_tex: bumps-normal
   - name: uvgrid-coated
-    diffuse: [1, 1, 1]
+    base: [1, 1, 1]
     specular: 1
     roughness: 0.2
     coat: 1
     diffuse_tex: uvgrid
   - name: volume-jade
-    diffuse: [0.5, 0.5, 0.5]
+    base: [0.5, 0.5, 0.5]
     roughness: 0
     specular: 1
     transmission: 1
     scattering: [0.3, 0.6, 0.3]
     thin: false
   - name: volume-glass
-    diffuse: [1, 0.5, 0.5]
+    base: [1, 0.5, 0.5]
     roughness: 0
     specular: 1
     transmission: 1
