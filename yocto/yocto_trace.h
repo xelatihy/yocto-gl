@@ -96,23 +96,22 @@ void clear_textures(trace_scene& scene);
 int  add_material(trace_scene& scene);
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
-void set_material_diffuse(
-    trace_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt = -1);
+void set_material_base(
+    trace_scene& scene, int idx, const vec3f& _base, int _base_txt = -1);
 void set_material_specular(
-    trace_scene& scene, int idx, const vec3f& specular, int specular_txt = -1);
+    trace_scene& scene, int idx, float specular = 1, int specular_txt = -1);
+void set_material_ior(trace_scene& scene, int idx, float ior);
 void set_material_metallic(
     trace_scene& scene, int idx, float metallic, int metallic_txt = -1);
-void set_material_transmission(trace_scene& scene, int idx,
-    const vec3f& transmission, int transmission_txt = -1);
+void set_material_transmission(trace_scene& scene, int idx, float transmission,
+    bool thin, float radius, int transmission_txt = -1);
 void set_material_roughness(
     trace_scene& scene, int idx, float roughness, int roughness_txt = -1);
 void set_material_opacity(
     trace_scene& scene, int idx, float opacity, int opacity_txt = -1);
-void set_material_refract(trace_scene& scene, int idx, bool refract);
-void set_material_volume(trace_scene& scene, int idx, const vec3f& volemission,
-    const vec3f& voltransmission, const vec3f& volmeanfreepath,
-    const vec3f& volscatter, float volscale, float volanisotropy,
-    int subsurface_tex = -1);
+void set_material_thin(trace_scene& scene, int idx, bool thin);
+void set_material_scattering(trace_scene& scene, int idx,
+    const vec3f& scattering, float phaseg, int scattering_tex = -1);
 void set_material_normalmap(trace_scene& scene, int idx, int normal_txt);
 void set_material_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
 void clear_materias(trace_scene& scene);
@@ -331,30 +330,30 @@ struct trace_texture {
 // For the documentation on the values, please see the OBJ format.
 struct trace_material {
   // lobes
-  vec3f emission        = {0, 0, 0};
-  vec3f diffuse         = {0, 0, 0};
-  vec3f specular        = {0, 0, 0};
-  float roughness       = 0;
-  float metallic        = 0;
-  vec3f coat            = {0, 0, 0};
-  vec3f transmission    = {0, 0, 0};
-  vec3f voltransmission = {0, 0, 0};
-  vec3f volmeanfreepath = {0, 0, 0};
-  vec3f volemission     = {0, 0, 0};
-  vec3f volscatter      = {0, 0, 0};
-  float volanisotropy   = 0;
-  float volscale        = 0.01;
-  float opacity         = 1;
-  bool  refract         = false;
+  vec3f emission     = {0, 0, 0};
+  vec3f base         = {0, 0, 0};
+  float specular     = 0;
+  float roughness    = 0;
+  float metallic     = 0;
+  float ior          = 1.5;
+  vec3f spectint     = {1, 1, 1};
+  float coat         = 0;
+  float transmission = 0;
+  vec3f scattering   = {0, 0, 0};
+  float phaseg       = 0;
+  float radius       = 0.01;
+  float opacity      = 1;
+  bool  thin         = false;
 
   // textures
   int  emission_tex     = -1;
-  int  diffuse_tex      = -1;
+  int  base_tex         = -1;
   int  specular_tex     = -1;
   int  metallic_tex     = -1;
   int  roughness_tex    = -1;
   int  transmission_tex = -1;
-  int  subsurface_tex   = -1;
+  int  spectint_tex     = -1;
+  int  scattering_tex   = -1;
   int  coat_tex         = -1;
   int  opacity_tex      = -1;
   int  normal_tex       = -1;

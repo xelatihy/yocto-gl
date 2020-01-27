@@ -950,23 +950,27 @@ material_point eval_material(const trace_scene& scene,
   auto reflectivity_to_eta = [](const vec3f& reflectivity) -> vec3f {
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
   };
+  auto eta_to_reflectivity = [](float eta) {
+    return vec3f{((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1))};
+  };
 
   auto point = material_point{};
   // factors
-  point.emission       = material.emission * xyz(shape_color);
-  point.diffuse        = material.diffuse * xyz(shape_color);
-  point.specular       = material.specular;
-  auto metallic        = material.metallic;
-  point.roughness      = material.roughness;
-  point.coat           = material.coat;
-  point.transmission   = material.transmission;
-  point.refract        = material.refract && material.transmission != zero3f;
-  auto voltransmission = material.voltransmission;
-  auto volmeanfreepath = material.volmeanfreepath;
-  point.volemission    = material.volemission;
-  point.volscatter     = material.volscatter;
-  point.volanisotropy  = material.volanisotropy;
-  auto volscale        = material.volscale;
+  point.emission     = material.emission * xyz(shape_color);
+  point.diffuse      = material.base * xyz(shape_color) * (1 - material.transmission);
+  point.specular     = material.specular * eta_to_reflectivity(material.ior);
+  auto metallic      = material.metallic;
+  point.roughness    = material.roughness;
+  point.coat         = material.coat * eta_to_reflectivity(1.5);
+  point.transmission = material.transmission *
+                       (material.thin ? material.base : vec3f{1});
+  point.refract        = !material.thin && material.transmission;
+  auto voltransmission = !material.thin ? material.base : zero3f;
+  auto volmeanfreepath = zero3f;
+  point.volemission    = zero3f;
+  point.volscatter     = material.scattering;
+  point.volanisotropy  = material.phaseg;
+  auto volscale        = material.radius;
   point.opacity        = material.opacity * shape_color.w;
 
   // textures
@@ -974,9 +978,9 @@ material_point eval_material(const trace_scene& scene,
     auto emission_tex = &scene.textures[material.emission_tex];
     point.emission *= xyz(eval_texture(emission_tex, texcoord));
   }
-  if (material.diffuse_tex >= 0) {
-    auto diffuse_tex = &scene.textures[material.diffuse_tex];
-    auto base_txt    = eval_texture(diffuse_tex, texcoord);
+  if (material.base_tex >= 0) {
+    auto base_tex = &scene.textures[material.base_tex];
+    auto base_txt = eval_texture(base_tex, texcoord);
     point.diffuse *= xyz(base_txt);
     point.opacity *= base_txt.w;
   }
@@ -1006,9 +1010,9 @@ material_point eval_material(const trace_scene& scene,
     auto transmission_tex = &scene.textures[material.transmission_tex];
     point.transmission *= xyz(eval_texture(transmission_tex, texcoord));
   }
-  if (material.subsurface_tex >= 0) {
-    auto subsurface_tex = &scene.textures[material.subsurface_tex];
-    point.volscatter *= xyz(eval_texture(subsurface_tex, texcoord));
+  if (material.scattering_tex >= 0) {
+    auto scattering_tex = &scene.textures[material.scattering_tex];
+    point.volscatter *= xyz(eval_texture(scattering_tex, texcoord));
   }
   if (material.opacity_tex >= 0) {
     auto opacity_tex = &scene.textures[material.opacity_tex];
@@ -1065,7 +1069,7 @@ vec3f eval_shading_normal(const trace_scene& scene,
     return orthonormalize(-direction, normal);
   } else if (material.normal_tex < 0) {
     auto normal = eval_normal(scene, instance, element, uv, non_rigid_frame);
-    if (material.refract) return normal;
+    if (!material.thin) return normal;
     return dot(direction, normal) < 0 ? normal : -normal;
   } else {
     auto normal_tex = &scene.textures[material.normal_tex];
@@ -1075,7 +1079,7 @@ vec3f eval_shading_normal(const trace_scene& scene,
     normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
     auto normal = normalize(basis.first * normalmap);
     normal      = transform_normal(instance.frame, normal, non_rigid_frame);
-    if (material.refract) return normal;
+    if (!material.thin) return normal;
     return dot(direction, normal) < 0 ? normal : -normal;
   }
 }
@@ -3304,14 +3308,14 @@ void set_material_emission(
   material.emission     = emission;
   material.emission_tex = emission_txt;
 }
-void set_material_diffuse(
-    trace_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
-  auto& material       = scene.materials[idx];
-  material.diffuse     = diffuse;
-  material.diffuse_tex = diffuse_txt;
+void set_material_base(
+    trace_scene& scene, int idx, const vec3f& base, int base_txt) {
+  auto& material    = scene.materials[idx];
+  material.base     = base;
+  material.base_tex = base_txt;
 }
 void set_material_specular(
-    trace_scene& scene, int idx, const vec3f& specular, int specular_txt) {
+    trace_scene& scene, int idx, float specular, int specular_txt) {
   auto& material        = scene.materials[idx];
   material.specular     = specular;
   material.specular_tex = specular_txt;
@@ -3322,11 +3326,21 @@ void set_material_metallic(
   material.metallic     = metallic;
   material.metallic_tex = metallic_txt;
 }
-void set_material_transmission(trace_scene& scene, int idx,
-    const vec3f& transmission, int transmission_txt) {
+void set_material_ior(trace_scene& scene, int idx, float ior) {
+  auto& material = scene.materials[idx];
+  material.ior   = ior;
+}
+void set_material_transmission(trace_scene& scene, int idx, float transmission,
+    bool thin, float radius, int transmission_txt) {
   auto& material            = scene.materials[idx];
   material.transmission     = transmission;
+  material.thin             = thin;
+  material.radius           = radius;
   material.transmission_tex = transmission_txt;
+}
+void set_material_thin(trace_scene& scene, int idx, bool thin) {
+  auto& material = scene.materials[idx];
+  material.thin  = thin;
 }
 void set_material_roughness(
     trace_scene& scene, int idx, float roughness, int roughness_txt) {
@@ -3340,22 +3354,12 @@ void set_material_opacity(
   material.opacity     = opacity;
   material.opacity_tex = opacity_txt;
 }
-void set_material_refract(trace_scene& scene, int idx, bool refract) {
-  auto& material   = scene.materials[idx];
-  material.refract = refract;
-}
-void set_material_volume(trace_scene& scene, int idx, const vec3f& volemission,
-    const vec3f& voltransmission, const vec3f& volmeanfreepath,
-    const vec3f& volscatter, float volscale, float volanisotropy,
-    int subsurface_tex) {
-  auto& material           = scene.materials[idx];
-  material.volemission     = volemission;
-  material.voltransmission = voltransmission;
-  material.volmeanfreepath = volmeanfreepath;
-  material.volscatter      = volscatter;
-  material.volscale        = volscale;
-  material.volanisotropy   = volanisotropy;
-  material.subsurface_tex  = subsurface_tex;
+void set_material_scattering(trace_scene& scene, int idx,
+    const vec3f& scattering, float phaseg, int scattering_tex) {
+  auto& material          = scene.materials[idx];
+  material.scattering     = scattering;
+  material.phaseg         = phaseg;
+  material.scattering_tex = scattering_tex;
 }
 void set_material_normalmap(trace_scene& scene, int idx, int normal_txt) {
   auto& material      = scene.materials[idx];
