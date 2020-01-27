@@ -98,22 +98,27 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     auto id = add_material(scene);
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_diffuse(scene, id, iomaterial.diffuse, iomaterial.diffuse_tex);
-    set_material_specular(
-        scene, id, iomaterial.specular, iomaterial.specular_tex);
+    set_material_diffuse(scene, id,
+        (1 - iomaterial.transmission) * iomaterial.base,
+        iomaterial.base_tex);
+    set_material_specular(scene, id,
+        iomaterial.specular * eta_to_reflectivity(iomaterial.ior),
+        iomaterial.specular_tex);
     set_material_metallic(
         scene, id, iomaterial.metallic, iomaterial.metallic_tex);
-    set_material_transmission(
-        scene, id, iomaterial.transmission, iomaterial.transmission_tex);
+    set_material_transmission(scene, id,
+        iomaterial.transmission *
+            (iomaterial.thin ? iomaterial.base : vec3f{1}),
+        iomaterial.transmission_tex);
     set_material_roughness(
         scene, id, iomaterial.roughness, iomaterial.roughness_tex);
     set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_refract(scene, id, iomaterial.refract);
+    set_material_refract(scene, id, !iomaterial.thin);
     set_material_normalmap(scene, id, iomaterial.normal_tex);
-    set_material_volume(scene, id, iomaterial.volemission,
-        iomaterial.voltransmission, iomaterial.volmeanfreepath,
-        iomaterial.volscatter, iomaterial.volscale, iomaterial.volanisotropy,
-        iomaterial.subsurface_tex);
+    set_material_volume(scene, id, zero3f,
+        iomaterial.thin ? zero3f : iomaterial.base, zero3f,
+        iomaterial.scattering, iomaterial.radius, iomaterial.phaseg,
+        iomaterial.scattering_tex);
   }
 
   for (auto& iosubdiv : ioscene.subdivs) {

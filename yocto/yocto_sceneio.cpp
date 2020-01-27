@@ -386,7 +386,7 @@ void add_materials(sceneio_model& scene) {
     if (material_id < 0) {
       auto material    = sceneio_material{};
       material.name    = "default";
-      material.diffuse = {0.2f, 0.2f, 0.2f};
+      material.base = {0.2f, 0.2f, 0.2f};
       scene.materials.push_back(material);
       material_id = (int)scene.materials.size() - 1;
     }
@@ -1139,29 +1139,26 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
         auto& material = scene.materials.emplace_back();
         get_yaml_value(yelement, "name", material.name);
         get_yaml_value(yelement, "emission", material.emission);
-        get_yaml_value(yelement, "diffuse", material.diffuse);
+        get_yaml_value(yelement, "base", material.base);
         get_yaml_value(yelement, "metallic", material.metallic);
         get_yaml_value(yelement, "specular", material.specular);
         get_yaml_value(yelement, "roughness", material.roughness);
         get_yaml_value(yelement, "coat", material.coat);
         get_yaml_value(yelement, "transmission", material.transmission);
-        get_yaml_value(yelement, "refract", material.refract);
-        get_yaml_value(yelement, "voltransmission", material.voltransmission);
-        get_yaml_value(yelement, "volmeanfreepath", material.volmeanfreepath);
-        get_yaml_value(yelement, "volscatter", material.volscatter);
-        get_yaml_value(yelement, "volemission", material.volemission);
-        get_yaml_value(yelement, "volanisotropy", material.volanisotropy);
-        get_yaml_value(yelement, "volscale", material.volscale);
+        get_yaml_value(yelement, "thin", material.thin);
+        get_yaml_value(yelement, "scattering", material.scattering);
+        get_yaml_value(yelement, "phaseg", material.phaseg);
+        get_yaml_value(yelement, "radius", material.radius);
         get_yaml_value(yelement, "opacity", material.opacity);
         get_yaml_value(yelement, "coat", material.coat);
         get_yaml_ref(yelement, "emission_tex", material.emission_tex, tmap);
-        get_yaml_ref(yelement, "diffuse_tex", material.diffuse_tex, tmap);
+        get_yaml_ref(yelement, "base_tex", material.base_tex, tmap);
         get_yaml_ref(yelement, "metallic_tex", material.metallic_tex, tmap);
         get_yaml_ref(yelement, "specular_tex", material.specular_tex, tmap);
         get_yaml_ref(
             yelement, "transmission_tex", material.transmission_tex, tmap);
         get_yaml_ref(yelement, "roughness_tex", material.roughness_tex, tmap);
-        get_yaml_ref(yelement, "subsurface_tex", material.subsurface_tex, tmap);
+        get_yaml_ref(yelement, "scattering_tex", material.scattering_tex, tmap);
         get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap);
         get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap);
         get_yaml_value(yelement, "gltf_textures", material.gltf_textures);
@@ -1644,6 +1641,12 @@ static void load_yaml_scene(
 // Save yaml
 static void save_yaml(const string& filename, const sceneio_model& scene,
     bool ply_instances = false, const string& instances_name = "") {
+  auto add_yaml_ref = [](yaml_element& yelement, const string& name, int ref,
+                          auto& refs) {
+    if (ref < 0) return;
+    add_yaml_value(yelement, name, refs[ref].name);
+  };
+
   auto yaml = yaml_model{};
 
   for (auto stat : scene_stats(scene)) yaml.comments.push_back(stat);
@@ -1674,61 +1677,33 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     yelement.name  = "materials";
     add_yaml_value(yelement, "name", material.name);
     add_yaml_value(yelement, "emission", material.emission);
-    add_yaml_value(yelement, "diffuse", material.diffuse);
+    add_yaml_value(yelement, "base", material.base);
     add_yaml_value(yelement, "specular", material.specular);
-    if (material.metallic)
-      add_yaml_value(yelement, "metallic", material.metallic);
-    if (material.transmission != zero3f)
-      add_yaml_value(yelement, "transmission", material.transmission);
+    add_yaml_value(yelement, "metallic", material.metallic);
+    add_yaml_value(yelement, "coat", material.coat);
+    add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
-    if (material.refract) add_yaml_value(yelement, "refract", material.refract);
-    if (material.voltransmission != zero3f)
-      add_yaml_value(yelement, "voltransmission", material.voltransmission);
-    if (material.volmeanfreepath != zero3f)
-      add_yaml_value(yelement, "volmeanfreepath", material.volmeanfreepath);
-    if (material.volscatter != zero3f)
-      add_yaml_value(yelement, "volscatter", material.volscatter);
-    if (material.volemission != zero3f)
-      add_yaml_value(yelement, "volemission", material.volemission);
-    if (material.volanisotropy)
-      add_yaml_value(yelement, "volanisotropy", material.volanisotropy);
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f)
-      add_yaml_value(yelement, "volscale", material.volscale);
-    if (material.coat != zero3f)
-      add_yaml_value(yelement, "coat", material.coat);
-    if (material.opacity != 1)
-      add_yaml_value(yelement, "opacity", material.opacity);
-    if (material.emission_tex >= 0)
-      add_yaml_value(
-          yelement, "emission_tex", scene.textures[material.emission_tex].name);
-    if (material.diffuse_tex >= 0)
-      add_yaml_value(
-          yelement, "diffuse_tex", scene.textures[material.diffuse_tex].name);
-    if (material.metallic_tex >= 0)
-      add_yaml_value(
-          yelement, "metallic_tex", scene.textures[material.metallic_tex].name);
-    if (material.specular_tex >= 0)
-      add_yaml_value(
-          yelement, "specular_tex", scene.textures[material.specular_tex].name);
-    if (material.roughness_tex >= 0)
-      add_yaml_value(yelement, "roughness_tex",
-          scene.textures[material.roughness_tex].name);
-    if (material.transmission_tex >= 0)
-      add_yaml_value(yelement, "transmission_tex",
-          scene.textures[material.transmission_tex].name);
-    if (material.subsurface_tex >= 0)
-      add_yaml_value(yelement, "subsurface_tex",
-          scene.textures[material.subsurface_tex].name);
-    if (material.coat_tex >= 0)
-      add_yaml_value(
-          yelement, "coat_tex", scene.textures[material.coat_tex].name);
-    if (material.opacity_tex >= 0)
-      add_yaml_value(
-          yelement, "opacity_tex", scene.textures[material.opacity_tex].name);
-    if (material.normal_tex >= 0)
-      add_yaml_value(
-          yelement, "normal_tex", scene.textures[material.normal_tex].name);
+    add_yaml_value(yelement, "thin", material.thin);
+    add_yaml_value(yelement, "scattering", material.scattering);
+    add_yaml_value(yelement, "phaseg", material.phaseg);
+    add_yaml_value(yelement, "radius", material.radius);
+    add_yaml_value(yelement, "opacity", material.opacity);
+    add_yaml_ref(
+        yelement, "emission_tex", material.emission_tex, scene.textures);
+    add_yaml_ref(yelement, "base_tex", material.base_tex, scene.textures);
+    add_yaml_ref(
+        yelement, "metallic_tex", material.metallic_tex, scene.textures);
+    add_yaml_ref(
+        yelement, "specular_tex", material.specular_tex, scene.textures);
+    add_yaml_ref(
+        yelement, "roughness_tex", material.roughness_tex, scene.textures);
+    add_yaml_ref(yelement, "transmission_tex", material.transmission_tex,
+        scene.textures);
+    add_yaml_ref(
+        yelement, "scattering_tex", material.scattering_tex, scene.textures);
+    add_yaml_ref(yelement, "coat_tex", material.coat_tex, scene.textures);
+    add_yaml_ref(yelement, "opacity_tex", material.opacity_tex, scene.textures);
+    add_yaml_ref(yelement, "normal_tex", material.normal_tex, scene.textures);
     if (material.gltf_textures)
       add_yaml_value(yelement, "gltf_textures", material.gltf_textures);
   }
@@ -1841,26 +1816,25 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     material.name  = make_safe_name(
         omat.name, "material", (int)scene.materials.size());
     material.emission         = omat.emission;
-    material.diffuse          = omat.diffuse;
-    material.specular         = omat.specular;
+    material.base             = omat.diffuse;
+    material.specular         = omat.specular != zero3f ? 1 : 0;
     material.roughness        = obj_exponent_to_roughness(omat.exponent);
+    material.ior              = omat.ior;
     material.metallic         = omat.pbr_metallic;
-    material.coat             = omat.reflection;
-    material.transmission     = omat.transmission;
-    material.voltransmission  = omat.vol_transmission;
-    material.volmeanfreepath  = omat.vol_meanfreepath;
-    material.volemission      = omat.vol_emission;
-    material.volscatter       = omat.vol_scattering;
-    material.volanisotropy    = omat.vol_anisotropy;
-    material.volscale         = omat.vol_scale;
+    material.coat             = omat.pbr_clearcoat;
+    material.transmission     = mean(omat.transmission);
+    material.scattering       = omat.vol_scattering;
+    material.phaseg           = omat.vol_anisotropy;
+    material.radius           = omat.vol_scale;
     material.opacity          = omat.opacity;
+    material.thin             = true;
     material.emission_tex     = get_texture(omat.emission_map);
-    material.diffuse_tex      = get_texture(omat.diffuse_map);
+    material.base_tex      = get_texture(omat.diffuse_map);
     material.specular_tex     = get_texture(omat.specular_map);
     material.metallic_tex     = get_texture(omat.pbr_metallic_map);
     material.roughness_tex    = get_texture(omat.pbr_roughness_map);
     material.transmission_tex = get_texture(omat.transmission_map);
-    material.coat_tex         = get_texture(omat.reflection_map);
+    material.coat_tex         = get_texture(omat.pbr_clearcoat_map);
     material.opacity_tex      = get_texture(omat.opacity_map);
     material.normal_tex       = get_texture(omat.normal_map);
     material_map[omat.name]   = (int)scene.materials.size() - 1;
@@ -1975,35 +1949,26 @@ static void save_obj(
 
   // convert materials and textures
   for (auto& material : scene.materials) {
-    auto& omaterial             = obj.materials.emplace_back();
-    omaterial.name              = material.name;
-    omaterial.illum             = 2;
-    omaterial.emission          = material.emission;
-    omaterial.diffuse           = material.diffuse;
-    omaterial.specular          = material.specular;
-    omaterial.exponent          = obj_roughness_to_exponent(material.roughness);
+    auto& omaterial    = obj.materials.emplace_back();
+    omaterial.name     = material.name;
+    omaterial.illum    = 2;
+    omaterial.emission = material.emission;
+    omaterial.diffuse  = material.base;
+    omaterial.specular = material.specular ? vec3f{1, 1, 1} : vec3f{0, 0, 0};
+    omaterial.exponent = obj_roughness_to_exponent(material.roughness);
     omaterial.pbr_metallic      = material.metallic;
-    omaterial.reflection        = material.coat;
-    omaterial.transmission      = material.transmission;
+    omaterial.pbr_clearcoat     = material.coat;
+    omaterial.transmission      = vec3f{material.transmission};
     omaterial.opacity           = material.opacity;
     omaterial.emission_map      = get_texture(material.emission_tex);
-    omaterial.diffuse_map       = get_texture(material.diffuse_tex);
+    omaterial.diffuse_map       = get_texture(material.base_tex);
     omaterial.specular_map      = get_texture(material.specular_tex);
     omaterial.pbr_metallic_map  = get_texture(material.metallic_tex);
     omaterial.pbr_roughness_map = get_texture(material.roughness_tex);
     omaterial.transmission_map  = get_texture(material.transmission_tex);
-    omaterial.reflection_map    = get_texture(material.coat_tex);
+    omaterial.pbr_clearcoat_map = get_texture(material.coat_tex);
     omaterial.opacity_map       = get_texture(material.opacity_tex);
     omaterial.normal_map        = get_texture(material.normal_tex);
-    if (material.voltransmission != zero3f ||
-        material.volmeanfreepath != zero3f) {
-      omaterial.vol_transmission = material.voltransmission;
-      omaterial.vol_meanfreepath = material.volmeanfreepath;
-      omaterial.vol_emission     = material.volemission;
-      omaterial.vol_scattering   = material.volscatter;
-      omaterial.vol_anisotropy   = material.volanisotropy;
-      omaterial.vol_scale        = material.volscale;
-    }
   }
 
   // convert shapes
@@ -2160,16 +2125,17 @@ static void load_gltf(const string& filename, sceneio_model& scene) {
     material.emission     = gmaterial.emission;
     material.emission_tex = gmaterial.emission_tex;
     if (gmaterial.has_specgloss) {
-      material.diffuse      = xyz(gmaterial.sg_diffuse);
-      material.opacity      = gmaterial.sg_diffuse.w;
-      material.specular     = gmaterial.sg_specular;
-      material.diffuse_tex  = gmaterial.sg_diffuse_tex;
-      material.specular_tex = gmaterial.sg_specular_tex;
+      material.base = xyz(gmaterial.sg_diffuse);
+      material.opacity = gmaterial.sg_diffuse.w;
+      // TODO: better specular
+      // material.specular     = gmaterial.sg_specular;
+      material.base_tex = gmaterial.sg_diffuse_tex;
+      // material.specular_tex = gmaterial.sg_specular_tex;
     } else if (gmaterial.has_metalrough) {
-      material.diffuse      = xyz(gmaterial.mr_base);
+      material.base      = xyz(gmaterial.mr_base);
       material.opacity      = gmaterial.mr_base.w;
-      material.specular     = vec3f{0.04f};
-      material.diffuse_tex  = gmaterial.mr_base_tex;
+      material.specular     = 1;
+      material.base_tex  = gmaterial.mr_base_tex;
       material.metallic_tex = gmaterial.mr_metallic_tex;
     }
     material.normal_tex = gmaterial.normal_tex;
@@ -2305,13 +2271,14 @@ static void load_pbrt(
     auto& material = scene.materials.emplace_back();
     material.name  = make_safe_name(
         pmaterial.name, "material", (int)scene.materials.size());
-    material.diffuse      = pmaterial.diffuse;
-    material.specular     = pmaterial.sspecular;
-    material.transmission = pmaterial.transmission;
-    material.roughness    = mean(pmaterial.roughness);
-    material.opacity      = pmaterial.opacity == vec3f{1} ? 1
+    material.base = pmaterial.diffuse;
+    // TODO: better conversion
+    // material.specular     = pmaterial.specular;
+    // material.transmission = pmaterial.transmission;
+    material.roughness = mean(pmaterial.roughness);
+    material.opacity   = pmaterial.opacity == vec3f{1} ? 1
                                                      : mean(pmaterial.opacity);
-    material.diffuse_tex         = get_texture(pmaterial.diffuse_map);
+    material.base_tex         = get_texture(pmaterial.diffuse_map);
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
   }
 
@@ -2444,14 +2411,15 @@ static void save_pbrt(const string& filename, const sceneio_model& scene) {
 
   // convert materials
   for (auto& material : scene.materials) {
-    auto& pmaterial        = pbrt.materials.emplace_back();
-    pmaterial.name         = material.name;
-    pmaterial.diffuse      = material.diffuse;
-    pmaterial.specular     = material.specular;
-    pmaterial.transmission = material.transmission;
-    pmaterial.roughness    = {material.roughness, material.roughness};
-    pmaterial.diffuse_map  = material.diffuse_tex >= 0
-                                ? scene.textures[material.diffuse_tex].name
+    auto& pmaterial   = pbrt.materials.emplace_back();
+    pmaterial.name    = material.name;
+    pmaterial.diffuse = material.base;
+    // TODO: better conversion
+    // pmaterial.specular     = material.specular;
+    // pmaterial.transmission = material.transmission;
+    pmaterial.roughness   = {material.roughness, material.roughness};
+    pmaterial.diffuse_map = material.base_tex >= 0
+                                ? scene.textures[material.base_tex].name
                                 : ""s;
     auto& parealight    = pbrt.arealights.emplace_back();
     parealight.name     = material.name;
@@ -2518,25 +2486,25 @@ void make_cornellbox_scene(sceneio_model& scene) {
   camera.aspect           = 1;
   auto& floor_mat         = scene.materials.emplace_back();
   floor_mat.name          = "floor";
-  floor_mat.diffuse       = {0.725, 0.71, 0.68};
+  floor_mat.base       = {0.725, 0.71, 0.68};
   auto& ceiling_mat       = scene.materials.emplace_back();
   ceiling_mat.name        = "ceiling";
-  ceiling_mat.diffuse     = {0.725, 0.71, 0.68};
+  ceiling_mat.base     = {0.725, 0.71, 0.68};
   auto& backwall_mat      = scene.materials.emplace_back();
   backwall_mat.name       = "backwall";
-  backwall_mat.diffuse    = {0.725, 0.71, 0.68};
+  backwall_mat.base    = {0.725, 0.71, 0.68};
   auto& rightwall_mat     = scene.materials.emplace_back();
   rightwall_mat.name      = "rightwall";
-  rightwall_mat.diffuse   = {0.14, 0.45, 0.091};
+  rightwall_mat.base   = {0.14, 0.45, 0.091};
   auto& leftwall_mat      = scene.materials.emplace_back();
   leftwall_mat.name       = "leftwall";
-  leftwall_mat.diffuse    = {0.63, 0.065, 0.05};
+  leftwall_mat.base    = {0.63, 0.065, 0.05};
   auto& shortbox_mat      = scene.materials.emplace_back();
   shortbox_mat.name       = "shortbox";
-  shortbox_mat.diffuse    = {0.725, 0.71, 0.68};
+  shortbox_mat.base    = {0.725, 0.71, 0.68};
   auto& tallbox_mat       = scene.materials.emplace_back();
   tallbox_mat.name        = "tallbox";
-  tallbox_mat.diffuse     = {0.725, 0.71, 0.68};
+  tallbox_mat.base     = {0.725, 0.71, 0.68};
   auto& light_mat         = scene.materials.emplace_back();
   light_mat.name          = "light";
   light_mat.emission      = {17, 12, 4};

@@ -175,9 +175,11 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
     auto id = add_material(glscene);
     set_material_emission(
         glscene, id, material.emission, material.emission_tex);
-    set_material_diffuse(glscene, id, material.diffuse, material.diffuse_tex);
-    set_material_specular(
-        glscene, id, material.specular, material.specular_tex);
+    set_material_diffuse(glscene, id,
+        (1 - material.transmission) * material.base, material.base_tex);
+    set_material_specular(glscene, id,
+        material.specular * eta_to_reflectivity(material.ior),
+        material.specular_tex);
     set_material_metallic(
         glscene, id, material.metallic, material.metallic_tex);
     set_material_roughness(
@@ -271,34 +273,34 @@ bool draw_glwidgets_material(
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", material.name);
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
-  edited += draw_glcoloredit(win, "diffuse", material.diffuse);
-  edited += draw_glcoloredit(win, "specular", material.specular);
+  edited += draw_glcoloredit(win, "base", material.base);
+  edited += draw_glslider(win, "specular", material.specular, 0, 1);
   edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
-  edited += draw_glcoloredit(win, "coat", material.coat);
-  edited += draw_glcoloredit(win, "transmission", material.transmission);
-  edited += draw_glcheckbox(win, "refract", material.refract);
-  edited += draw_glcoloredit(win, "vol transmission", material.voltransmission);
-  edited += draw_glcoloredit(win, "vol meanfreepath", material.volmeanfreepath);
-  edited += draw_glcoloredit(win, "vol scatter", material.volscatter);
-  edited += draw_glcoloredit(win, "vol emission", material.volemission);
-  edited += draw_glslider(win, "vol scale", material.volscale, 0, 1);
-  edited += draw_glslider(win, "vol anisotropy", material.volanisotropy, -1, 1);
+  edited += draw_glslider(win, "coat", material.coat, 0, 1);
+  edited += draw_glslider(win, "transmission", material.transmission, 0, 1);
+  edited += draw_glcoloredit(win, "spectint", material.spectint);
+  edited += draw_glcheckbox(win, "thin", material.thin);
+  edited += draw_glcoloredit(win, "scattering", material.scattering);
+  edited += draw_glslider(win, "radius", material.radius, 0, 1);
+  edited += draw_glslider(win, "phaseg", material.phaseg, -1, 1);
   edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
   edited += draw_glcombobox(
       win, "emission_tex", material.emission_tex, app->scene.textures, true);
   edited += draw_glcombobox(
-      win, "diffuse_tex", material.diffuse_tex, app->scene.textures, true);
+      win, "base_tex", material.base_tex, app->scene.textures, true);
   edited += draw_glcombobox(
       win, "metallic_tex", material.metallic_tex, app->scene.textures, true);
   edited += draw_glcombobox(
       win, "specular_tex", material.specular_tex, app->scene.textures, true);
   edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
       app->scene.textures, true);
-  edited += draw_glcombobox(win, "subsurface_tex", material.subsurface_tex,
+  edited += draw_glcombobox(win, "scattering_tex", material.scattering_tex,
       app->scene.textures, true);
   edited += draw_glcombobox(
       win, "roughness_tex", material.roughness_tex, app->scene.textures, true);
+  edited += draw_glcombobox(
+      win, "spectint_tex", material.spectint_tex, app->scene.textures, true);
   edited += draw_glcombobox(
       win, "normal_tex", material.normal_tex, app->scene.textures, true);
   edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
@@ -516,9 +518,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         auto& material = app->scene.materials[app->selection.second];
         set_material_emission(glscene, app->selection.second, material.emission,
             material.emission_tex);
-        set_material_diffuse(glscene, app->selection.second, material.diffuse,
-            material.diffuse_tex);
-        set_material_specular(glscene, app->selection.second, material.specular,
+        set_material_diffuse(glscene, app->selection.second,
+            (1 - material.transmission) * material.base,
+            material.base_tex);
+        set_material_specular(glscene, app->selection.second,
+            material.specular * eta_to_reflectivity(material.ior),
             material.specular_tex);
         set_material_metallic(glscene, app->selection.second, material.metallic,
             material.metallic_tex);
