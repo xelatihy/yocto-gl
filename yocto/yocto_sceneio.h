@@ -94,20 +94,20 @@ struct sceneio_material {
   string name = "";
 
   // lobes
-  vec3f emission        = {0, 0, 0};
-  vec3f diffuse         = {0, 0, 0};
-  float specular        = 0;
-  float roughness       = 0;
-  float metallic        = 0;
-  float ior             = 1.5;
-  vec3f spectint        = {1, 1, 1};
-  float coat            = 0;
-  float transmission    = 0;
-  vec3f scattering      = {0, 0, 0};
-  float phaseg          = 0;
-  float radius          = 0.01;
-  float opacity         = 1;
-  bool  thin            = false;
+  vec3f emission     = {0, 0, 0};
+  vec3f diffuse      = {0, 0, 0};
+  float specular     = 0;
+  float roughness    = 0;
+  float metallic     = 0;
+  float ior          = 1.5;
+  vec3f spectint     = {1, 1, 1};
+  float coat         = 0;
+  float transmission = 0;
+  vec3f scattering   = {0, 0, 0};
+  float phaseg       = 0;
+  float radius       = 0.01;
+  float opacity      = 1;
+  bool  thin         = false;
 
   // textures
   int  emission_tex     = -1;
@@ -117,7 +117,7 @@ struct sceneio_material {
   int  roughness_tex    = -1;
   int  transmission_tex = -1;
   int  spectint_tex     = -1;
-  int  scattering_tex      = -1;
+  int  scattering_tex   = -1;
   int  coat_tex         = -1;
   int  opacity_tex      = -1;
   int  normal_tex       = -1;
@@ -320,8 +320,7 @@ void update_transforms(
 
 // TODO: remove
 inline vec3f eta_to_reflectivity(float eta) {
-    return vec3f{((eta - 1) * (eta - 1)) /
-           ((eta + 1) * (eta + 1))};
+  return vec3f{((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1))};
 }
 
 }  // namespace yocto

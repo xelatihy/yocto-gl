@@ -1641,12 +1641,12 @@ static void load_yaml_scene(
 // Save yaml
 static void save_yaml(const string& filename, const sceneio_model& scene,
     bool ply_instances = false, const string& instances_name = "") {
-
-  auto add_yaml_ref = [](yaml_element& yelement, const string& name, int ref, auto& refs) {
-    if(ref < 0) return;
+  auto add_yaml_ref = [](yaml_element& yelement, const string& name, int ref,
+                          auto& refs) {
+    if (ref < 0) return;
     add_yaml_value(yelement, name, refs[ref].name);
   };
-    
+
   auto yaml = yaml_model{};
 
   for (auto stat : scene_stats(scene)) yaml.comments.push_back(stat);
@@ -1688,25 +1688,22 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     add_yaml_value(yelement, "phaseg", material.phaseg);
     add_yaml_value(yelement, "radius", material.radius);
     add_yaml_value(yelement, "opacity", material.opacity);
-    add_yaml_ref(yelement, "emission_tex", material.emission_tex, scene.textures);
-      add_yaml_ref(
-          yelement, "diffuse_tex", material.diffuse_tex, scene.textures);
-      add_yaml_ref(
-          yelement, "metallic_tex", material.metallic_tex, scene.textures);
-      add_yaml_ref(
-          yelement, "specular_tex", material.specular_tex, scene.textures);
-      add_yaml_ref(yelement, "roughness_tex",
-          material.roughness_tex, scene.textures);
-      add_yaml_ref(yelement, "transmission_tex",
-          material.transmission_tex, scene.textures);
-      add_yaml_ref(yelement, "scattering_tex",
-          material.scattering_tex, scene.textures);
-      add_yaml_ref(
-          yelement, "coat_tex", material.coat_tex, scene.textures);
-      add_yaml_ref(
-          yelement, "opacity_tex", material.opacity_tex, scene.textures);
-      add_yaml_ref(
-          yelement, "normal_tex", material.normal_tex, scene.textures);
+    add_yaml_ref(
+        yelement, "emission_tex", material.emission_tex, scene.textures);
+    add_yaml_ref(yelement, "diffuse_tex", material.diffuse_tex, scene.textures);
+    add_yaml_ref(
+        yelement, "metallic_tex", material.metallic_tex, scene.textures);
+    add_yaml_ref(
+        yelement, "specular_tex", material.specular_tex, scene.textures);
+    add_yaml_ref(
+        yelement, "roughness_tex", material.roughness_tex, scene.textures);
+    add_yaml_ref(yelement, "transmission_tex", material.transmission_tex,
+        scene.textures);
+    add_yaml_ref(
+        yelement, "scattering_tex", material.scattering_tex, scene.textures);
+    add_yaml_ref(yelement, "coat_tex", material.coat_tex, scene.textures);
+    add_yaml_ref(yelement, "opacity_tex", material.opacity_tex, scene.textures);
+    add_yaml_ref(yelement, "normal_tex", material.normal_tex, scene.textures);
     if (material.gltf_textures)
       add_yaml_value(yelement, "gltf_textures", material.gltf_textures);
   }
@@ -1952,13 +1949,13 @@ static void save_obj(
 
   // convert materials and textures
   for (auto& material : scene.materials) {
-    auto& omaterial             = obj.materials.emplace_back();
-    omaterial.name              = material.name;
-    omaterial.illum             = 2;
-    omaterial.emission          = material.emission;
-    omaterial.diffuse           = material.diffuse;
-    omaterial.specular          = material.specular ? vec3f{1, 1, 1} : vec3f{0, 0, 0};
-    omaterial.exponent          = obj_roughness_to_exponent(material.roughness);
+    auto& omaterial    = obj.materials.emplace_back();
+    omaterial.name     = material.name;
+    omaterial.illum    = 2;
+    omaterial.emission = material.emission;
+    omaterial.diffuse  = material.diffuse;
+    omaterial.specular = material.specular ? vec3f{1, 1, 1} : vec3f{0, 0, 0};
+    omaterial.exponent = obj_roughness_to_exponent(material.roughness);
     omaterial.pbr_metallic      = material.metallic;
     omaterial.pbr_clearcoat     = material.coat;
     omaterial.transmission      = vec3f{material.transmission};
@@ -2128,11 +2125,11 @@ static void load_gltf(const string& filename, sceneio_model& scene) {
     material.emission     = gmaterial.emission;
     material.emission_tex = gmaterial.emission_tex;
     if (gmaterial.has_specgloss) {
-      material.diffuse      = xyz(gmaterial.sg_diffuse);
-      material.opacity      = gmaterial.sg_diffuse.w;
+      material.diffuse = xyz(gmaterial.sg_diffuse);
+      material.opacity = gmaterial.sg_diffuse.w;
       // TODO: better specular
       // material.specular     = gmaterial.sg_specular;
-      material.diffuse_tex  = gmaterial.sg_diffuse_tex;
+      material.diffuse_tex = gmaterial.sg_diffuse_tex;
       // material.specular_tex = gmaterial.sg_specular_tex;
     } else if (gmaterial.has_metalrough) {
       material.diffuse      = xyz(gmaterial.mr_base);
@@ -2274,12 +2271,12 @@ static void load_pbrt(
     auto& material = scene.materials.emplace_back();
     material.name  = make_safe_name(
         pmaterial.name, "material", (int)scene.materials.size());
-    material.diffuse      = pmaterial.diffuse;
+    material.diffuse = pmaterial.diffuse;
     // TODO: better conversion
     // material.specular     = pmaterial.specular;
     // material.transmission = pmaterial.transmission;
-    material.roughness    = mean(pmaterial.roughness);
-    material.opacity      = pmaterial.opacity == vec3f{1} ? 1
+    material.roughness = mean(pmaterial.roughness);
+    material.opacity   = pmaterial.opacity == vec3f{1} ? 1
                                                      : mean(pmaterial.opacity);
     material.diffuse_tex         = get_texture(pmaterial.diffuse_map);
     material_map[pmaterial.name] = (int)scene.materials.size() - 1;
@@ -2414,14 +2411,14 @@ static void save_pbrt(const string& filename, const sceneio_model& scene) {
 
   // convert materials
   for (auto& material : scene.materials) {
-    auto& pmaterial        = pbrt.materials.emplace_back();
-    pmaterial.name         = material.name;
-    pmaterial.diffuse      = material.diffuse;
+    auto& pmaterial   = pbrt.materials.emplace_back();
+    pmaterial.name    = material.name;
+    pmaterial.diffuse = material.diffuse;
     // TODO: better conversion
     // pmaterial.specular     = material.specular;
     // pmaterial.transmission = material.transmission;
-    pmaterial.roughness    = {material.roughness, material.roughness};
-    pmaterial.diffuse_map  = material.diffuse_tex >= 0
+    pmaterial.roughness   = {material.roughness, material.roughness};
+    pmaterial.diffuse_map = material.diffuse_tex >= 0
                                 ? scene.textures[material.diffuse_tex].name
                                 : ""s;
     auto& parealight    = pbrt.arealights.emplace_back();

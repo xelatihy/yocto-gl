@@ -175,9 +175,10 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
     auto id = add_material(glscene);
     set_material_emission(
         glscene, id, material.emission, material.emission_tex);
-    set_material_diffuse(glscene, id, (1 - material.transmission) * material.diffuse, material.diffuse_tex);
-    set_material_specular(
-        glscene, id, material.specular * eta_to_reflectivity(material.ior), 
+    set_material_diffuse(glscene, id,
+        (1 - material.transmission) * material.diffuse, material.diffuse_tex);
+    set_material_specular(glscene, id,
+        material.specular * eta_to_reflectivity(material.ior),
         material.specular_tex);
     set_material_metallic(
         glscene, id, material.metallic, material.metallic_tex);
@@ -517,9 +518,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         auto& material = app->scene.materials[app->selection.second];
         set_material_emission(glscene, app->selection.second, material.emission,
             material.emission_tex);
-        set_material_diffuse(glscene, app->selection.second, (1 - material.transmission) * material.diffuse,
+        set_material_diffuse(glscene, app->selection.second,
+            (1 - material.transmission) * material.diffuse,
             material.diffuse_tex);
-        set_material_specular(glscene, app->selection.second, 
+        set_material_specular(glscene, app->selection.second,
             material.specular * eta_to_reflectivity(material.ior),
             material.specular_tex);
         set_material_metallic(glscene, app->selection.second, material.metallic,

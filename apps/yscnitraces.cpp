@@ -98,14 +98,17 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     auto id = add_material(scene);
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_diffuse(scene, id, (1 - iomaterial.transmission) * iomaterial.diffuse, iomaterial.diffuse_tex);
-    set_material_specular(
-        scene, id, iomaterial.specular * eta_to_reflectivity(iomaterial.ior), 
+    set_material_diffuse(scene, id,
+        (1 - iomaterial.transmission) * iomaterial.diffuse,
+        iomaterial.diffuse_tex);
+    set_material_specular(scene, id,
+        iomaterial.specular * eta_to_reflectivity(iomaterial.ior),
         iomaterial.specular_tex);
     set_material_metallic(
         scene, id, iomaterial.metallic, iomaterial.metallic_tex);
-    set_material_transmission(
-        scene, id, iomaterial.transmission * (iomaterial.thin ? iomaterial.diffuse : vec3f{1}), 
+    set_material_transmission(scene, id,
+        iomaterial.transmission *
+            (iomaterial.thin ? iomaterial.diffuse : vec3f{1}),
         iomaterial.transmission_tex);
     set_material_roughness(
         scene, id, iomaterial.roughness, iomaterial.roughness_tex);
