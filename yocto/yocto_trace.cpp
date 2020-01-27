@@ -969,7 +969,8 @@ ray3f eval_camera(const trace_camera& camera, int idx, const vec2i& image_size,
 // Evaluates the microfacet_brdf at a location.
 material_point eval_material(const trace_scene& scene,
     const trace_material& material, const vec2f& texcoord,
-    const vec4f& shape_color) {
+    const vec4f& shape_color, const vec3f& normal, 
+    const vec3f& outgoing) {
   // autoxiliary functions: delete is moving to yocto_trace
   auto reflectivity_to_eta = [](const vec3f& reflectivity) -> vec3f {
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
@@ -1115,12 +1116,13 @@ vec3f eval_element_normal(const trace_scene& scene,
 }
 // Instance material
 material_point eval_material(const trace_scene& scene,
-    const trace_instance& instance, int element, const vec2f& uv) {
+    const trace_instance& instance, int element, const vec2f& uv,
+    const vec3f& normal, const vec3f& outgoing) {
   auto& shape     = scene.shapes[instance.shape];
   auto& material  = scene.materials[instance.material];
   auto  texcoords = eval_texcoord(shape, element, uv);
   auto  color     = eval_color(shape, element, uv);
-  return eval_material(scene, material, texcoords, color);
+  return eval_material(scene, material, texcoords, color, normal, outgoing);
 }
 
 // Environment texture coordinates from the direction.
@@ -2783,7 +2785,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
       auto normal   = eval_shading_normal(scene, instance, intersection.element,
           intersection.uv, outgoing, trace_non_rigid_frames);
       auto material = eval_material(
-          scene, instance, intersection.element, intersection.uv);
+          scene, instance, intersection.element, intersection.uv, normal, outgoing);
 
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -2902,7 +2904,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     auto normal   = eval_shading_normal(scene, instance, intersection.element,
         intersection.uv, outgoing, trace_non_rigid_frames);
     auto material = eval_material(
-        scene, instance, intersection.element, intersection.uv);
+        scene, instance, intersection.element, intersection.uv, normal, outgoing);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -2973,7 +2975,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
     auto normal   = eval_shading_normal(scene, instance, intersection.element,
         intersection.uv, outgoing, trace_non_rigid_frames);
     auto material = eval_material(
-        scene, instance, intersection.element, intersection.uv);
+        scene, instance, intersection.element, intersection.uv, normal, outgoing);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -3027,7 +3029,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
   auto normal   = eval_shading_normal(scene, instance, intersection.element,
       intersection.uv, outgoing, trace_non_rigid_frames);
   auto material = eval_material(
-      scene, instance, intersection.element, intersection.uv);
+      scene, instance, intersection.element, intersection.uv, normal, outgoing);
 
   switch (params.falsecolor) {
     case trace_falsecolor_type::normal: {
