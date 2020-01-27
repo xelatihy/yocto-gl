@@ -1058,31 +1058,23 @@ material_point eval_material(const trace_scene& scene,
   point.transmission = weight * transmission *
                        (material.thin ? base : vec3f{1});
   weight *= 1 - transmission;
-  point.diffuse        = weight * base;
-  point.roughness      = roughness * roughness;
-  point.eta            = ior;
-  point.opacity        = opacity;
-  point.refract        = !material.thin && transmission;
-  auto voltransmission = !material.thin ? material.base : zero3f;
-  auto volmeanfreepath = zero3f;
-  point.volemission    = zero3f;
-  point.volscatter     = scattering;
-  point.volanisotropy  = phaseg;
-  auto volscale        = radius;
+  point.diffuse    = weight * base;
+  point.roughness  = roughness * roughness;
+  point.eta        = ior;
+  point.opacity    = opacity;
+  point.refract    = !material.thin && transmission;
+  point.voldensity = (!material.thin && transmission)
+                         ? -log(clamp(material.base, 0.0001f, 1.0f)) / radius
+                         : zero3f;
+  point.volemission   = zero3f;
+  point.volscatter    = scattering;
+  point.volanisotropy = phaseg;
 
   if (point.diffuse != zero3f || point.roughness) {
     point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
   }
   if (point.opacity > 0.999f) point.opacity = 1;
-  if (voltransmission != zero3f || volmeanfreepath != zero3f) {
-    if (voltransmission != zero3f) {
-      point.voldensity = -log(clamp(voltransmission, 0.0001f, 1.0f)) / volscale;
-    } else {
-      point.voldensity = 1 / (volmeanfreepath * volscale);
-    }
-  } else {
-    point.voldensity = zero3f;
-  }
+
   return point;
 }
 
