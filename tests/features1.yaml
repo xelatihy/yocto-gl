@@ -53,6 +53,7 @@ materials:
   - name: floor
     diffuse: [0.7, 0.7, 0.7]
     diffuse_tex: floor
+    specular: 0
   - name: metal-rough
     diffuse: [0.66, 0.45, 0.34]
     metallic: 1
