@@ -312,7 +312,7 @@ bool draw_glwidgets_material(
   edited += draw_glslider(win, "specular", material.specular, 0, 1);
   edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
-  edited += draw_glcoloredit(win, "coat", material.coat);
+  edited += draw_glslider(win, "coat", material.coat, 0, 1);
   edited += draw_glcoloredit(win, "transmission", material.transmission);
   edited += draw_glcheckbox(win, "refract", material.refract);
   edited += draw_glcoloredit(win, "spectint", material.spectint);

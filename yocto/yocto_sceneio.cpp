@@ -1676,10 +1676,9 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     add_yaml_value(yelement, "emission", material.emission);
     add_yaml_value(yelement, "diffuse", material.diffuse);
     add_yaml_value(yelement, "specular", material.specular);
-    if (material.metallic)
-      add_yaml_value(yelement, "metallic", material.metallic);
-    if (material.transmission != zero3f)
-      add_yaml_value(yelement, "transmission", material.transmission);
+    add_yaml_value(yelement, "metallic", material.metallic);
+    add_yaml_value(yelement, "coat", material.coat);
+    add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
     if (material.refract) add_yaml_value(yelement, "refract", material.refract);
     if (material.voltransmission != zero3f)
@@ -1695,10 +1694,7 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     if (material.voltransmission != zero3f ||
         material.volmeanfreepath != zero3f)
       add_yaml_value(yelement, "volscale", material.volscale);
-    if (material.coat != zero3f)
-      add_yaml_value(yelement, "coat", material.coat);
-    if (material.opacity != 1)
-      add_yaml_value(yelement, "opacity", material.opacity);
+    add_yaml_value(yelement, "opacity", material.opacity);
     if (material.emission_tex >= 0)
       add_yaml_value(
           yelement, "emission_tex", scene.textures[material.emission_tex].name);
@@ -1846,7 +1842,7 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     material.roughness        = obj_exponent_to_roughness(omat.exponent);
     material.ior              = omat.ior;
     material.metallic         = omat.pbr_metallic;
-    material.coat             = omat.reflection;
+    material.coat             = omat.pbr_clearcoat;
     material.transmission     = omat.transmission;
     material.voltransmission  = omat.vol_transmission;
     material.volmeanfreepath  = omat.vol_meanfreepath;
@@ -1861,7 +1857,7 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     material.metallic_tex     = get_texture(omat.pbr_metallic_map);
     material.roughness_tex    = get_texture(omat.pbr_roughness_map);
     material.transmission_tex = get_texture(omat.transmission_map);
-    material.coat_tex         = get_texture(omat.reflection_map);
+    material.coat_tex         = get_texture(omat.pbr_clearcoat_map);
     material.opacity_tex      = get_texture(omat.opacity_map);
     material.normal_tex       = get_texture(omat.normal_map);
     material_map[omat.name]   = (int)scene.materials.size() - 1;
@@ -1984,7 +1980,7 @@ static void save_obj(
     omaterial.specular          = material.specular ? vec3f{1, 1, 1} : vec3f{0, 0, 0};
     omaterial.exponent          = obj_roughness_to_exponent(material.roughness);
     omaterial.pbr_metallic      = material.metallic;
-    omaterial.reflection        = material.coat;
+    omaterial.pbr_clearcoar     = material.coat;
     omaterial.transmission      = material.transmission;
     omaterial.opacity           = material.opacity;
     omaterial.emission_map      = get_texture(material.emission_tex);
@@ -1993,7 +1989,7 @@ static void save_obj(
     omaterial.pbr_metallic_map  = get_texture(material.metallic_tex);
     omaterial.pbr_roughness_map = get_texture(material.roughness_tex);
     omaterial.transmission_map  = get_texture(material.transmission_tex);
-    omaterial.reflection_map    = get_texture(material.coat_tex);
+    omaterial.pbr_clearcoat     = get_texture(material.clearcoat_tex);
     omaterial.opacity_map       = get_texture(material.opacity_tex);
     omaterial.normal_map        = get_texture(material.normal_tex);
     if (material.voltransmission != zero3f ||
