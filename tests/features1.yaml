@@ -64,22 +64,24 @@ materials:
     roughness: 0.2
     normal_tex: bumps-normal
   - name: uvgrid-coated
-    coat: [0.04, 0.04, 0.04]
     diffuse: [1, 1, 1]
     specular: 1
     roughness: 0.2
+    coat: 1
     diffuse_tex: uvgrid
   - name: volume-jade
+    diffuse: [1, 1, 1]
     roughness: 0
     specular: 1
-    transmission: [1, 1, 1]
+    transmission: 1
     voltransmission: [0.5, 0.5, 0.5]
     volscatter: [0.3, 0.6, 0.3]
     refract: true
   - name: volume-glass
+    diffuse: [1, 1, 1]
     roughness: 0
     specular: 1
-    transmission: [1, 1, 1]
+    transmission: 1
     voltransmission: [1, 0.5, 0.5]
     volscale: 0.02
     refract: true
