@@ -958,19 +958,19 @@ material_point eval_material(const trace_scene& scene,
   };
 
   // initialize factors
-  auto emission = material.emission * xyz(shape_color);
-  auto base = material.base * xyz(shape_color);
-  auto specular  = material.specular;
-  auto metallic  = material.metallic;
-  auto roughness = material.roughness;
-  auto ior  = material.ior;
-  auto coat      = material.coat;
-  auto transmission    = material.transmission;
+  auto emission     = material.emission * xyz(shape_color);
+  auto base         = material.base * xyz(shape_color);
+  auto specular     = material.specular;
+  auto metallic     = material.metallic;
+  auto roughness    = material.roughness;
+  auto ior          = material.ior;
+  auto coat         = material.coat;
+  auto transmission = material.transmission;
   auto thin         = material.thin || !material.transmission;
-  auto scattering    = material.scattering;
-  auto phaseg = material.phaseg;
-  auto radius      = material.radius;
-  auto opacity       = material.opacity * shape_color.w;
+  auto scattering   = material.scattering;
+  auto phaseg       = material.phaseg;
+  auto radius       = material.radius;
+  auto opacity      = material.opacity * shape_color.w;
 
   // lookup textures
   if (material.emission_tex >= 0) {
@@ -1026,17 +1026,19 @@ material_point eval_material(const trace_scene& scene,
 
   auto point = material_point{};
   // factors
-  point.emission = emission;
-  point.diffuse  = base * (1 - metallic) * (1 - transmission);
-  point.specular = specular * (1 - metallic) * eta_to_reflectivity(vec3f{ior});
-  point.metal = metallic * base;
-  point.roughness      = roughness * roughness;
-  point.eta = mean(reflectivity_to_eta(point.specular));
-  point.coat           = coat * eta_to_reflectivity(vec3f{1.5});
-  point.transmission   = vec3f{transmission};
-  point.refract        = !thin;
-  point.volemission   = zero3f;
-  point.voldensity    = voltransmission != zero3f ? -log(clamp(voltransmission, 0.0001f, 1.0f)) / radius : zero3f;
+  point.emission  = emission;
+  point.diffuse   = base * (1 - metallic) * (1 - transmission);
+  point.specular  = specular * (1 - metallic) * eta_to_reflectivity(vec3f{ior});
+  point.metal     = metallic * base;
+  point.roughness = roughness * roughness;
+  point.eta       = mean(reflectivity_to_eta(point.specular));
+  point.coat      = coat * eta_to_reflectivity(vec3f{1.5});
+  point.transmission = vec3f{transmission};
+  point.refract      = !thin;
+  point.volemission  = zero3f;
+  point.voldensity   = voltransmission != zero3f
+                         ? -log(clamp(voltransmission, 0.0001f, 1.0f)) / radius
+                         : zero3f;
   point.volscatter    = scattering;
   point.volanisotropy = phaseg;
   point.opacity       = opacity;
@@ -2407,13 +2409,14 @@ static array<float, 5> compute_brdf_pdfs(const material_point& material,
       material.specular, abs(dot(outgoing, normal)), entering);
   auto met = fresnel_schlick(
       material.metal, abs(dot(outgoing, normal)), entering);
-  auto weights = array<float, 5>{max((1 - coat) * (1 - spec) * material.diffuse),
-      max((1 - coat) * spec), max((1 - coat) * met), max(coat),
+  auto weights = array<float, 5>{
+      max((1 - coat) * (1 - spec) * material.diffuse), max((1 - coat) * spec),
+      max((1 - coat) * met), max(coat),
       max((1 - coat) * (1 - spec) * material.transmission)};
   auto sum = 0.0f;
-  for(auto weight : weights) sum += weight;
-  if(!sum) return weights;
-  for(auto& weight : weights) weight /= sum;
+  for (auto weight : weights) sum += weight;
+  if (!sum) return weights;
+  for (auto& weight : weights) weight /= sum;
   return weights;
 }
 
