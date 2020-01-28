@@ -959,16 +959,14 @@ material_point eval_material(const trace_scene& scene,
 
   // initialize factors
   auto emission = material.emission * xyz(shape_color);
-  auto diffuse = material.base * xyz(shape_color) * (1 - material.transmission);
-  auto specular  = material.specular * eta_to_reflectivity(vec3f{material.ior});
+  auto base = material.base * xyz(shape_color);
+  auto specular  = material.specular;
   auto metallic  = material.metallic;
   auto roughness = material.roughness;
-  auto coat      = material.coat * eta_to_reflectivity(vec3f{1.5});
-  auto transmission    = vec3f{material.transmission};
-  auto refract         = !material.thin && material.transmission;
-  auto voltransmission = (!material.thin && material.transmission)
-                             ? material.transmission * material.base
-                             : zero3f;
+  auto ior  = material.ior;
+  auto coat      = material.coat;
+  auto transmission    = material.transmission;
+  auto thin         = material.thin || !material.transmission;
   auto scattering    = material.scattering;
   auto phaseg = material.phaseg;
   auto radius      = material.radius;
@@ -982,7 +980,7 @@ material_point eval_material(const trace_scene& scene,
   if (material.base_tex >= 0) {
     auto base_tex = &scene.textures[material.base_tex];
     auto base_txt = eval_texture(base_tex, texcoord);
-    diffuse *= xyz(base_txt);
+    base *= xyz(base_txt);
     opacity *= base_txt.w;
   }
   if (material.metallic_tex >= 0) {
@@ -994,7 +992,7 @@ material_point eval_material(const trace_scene& scene,
   if (material.specular_tex >= 0) {
     auto specular_tex = &scene.textures[material.specular_tex];
     auto specular_txt = eval_texture(specular_tex, texcoord);
-    specular *= xyz(specular_txt);
+    specular *= specular_txt.x;
     if (material.gltf_textures) {
       auto glossiness = 1 - roughness;
       glossiness *= specular_txt.w;
@@ -1007,7 +1005,7 @@ material_point eval_material(const trace_scene& scene,
   }
   if (material.transmission_tex >= 0) {
     auto transmission_tex = &scene.textures[material.transmission_tex];
-    transmission *= xyz(eval_texture(transmission_tex, texcoord));
+    transmission *= eval_texture(transmission_tex, texcoord).x;
   }
   if (material.scattering_tex >= 0) {
     auto scattering_tex = &scene.textures[material.scattering_tex];
@@ -1019,20 +1017,24 @@ material_point eval_material(const trace_scene& scene,
   }
   if (material.coat_tex >= 0) {
     auto coat_tex = &scene.textures[material.coat_tex];
-    coat *= xyz(eval_texture(coat_tex, texcoord));
+    coat *= eval_texture(coat_tex, texcoord).x;
   }
+
+  auto voltransmission = (!material.thin && material.transmission)
+                             ? material.transmission * material.base
+                             : zero3f;
 
   auto point = material_point{};
   // factors
   point.emission = emission;
-  point.diffuse  = diffuse * (1 - metallic);
-  point.specular = specular * (1 - metallic);
-  point.metal = metallic * diffuse;
+  point.diffuse  = base * (1 - metallic) * (1 - transmission);
+  point.specular = specular * (1 - metallic) * eta_to_reflectivity(vec3f{ior});
+  point.metal = metallic * base;
   point.roughness      = roughness * roughness;
   point.eta = mean(reflectivity_to_eta(point.specular));
-  point.coat           = coat;
-  point.transmission   = transmission;
-  point.refract        = refract;
+  point.coat           = coat * eta_to_reflectivity(vec3f{1.5});
+  point.transmission   = vec3f{transmission};
+  point.refract        = !thin;
   point.volemission   = zero3f;
   point.voldensity    = voltransmission != zero3f ? -log(clamp(voltransmission, 0.0001f, 1.0f)) / radius : zero3f;
   point.volscatter    = scattering;
