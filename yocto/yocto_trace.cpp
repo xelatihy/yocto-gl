@@ -956,75 +956,86 @@ material_point eval_material(const trace_scene& scene,
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
   };
 
-  auto point = material_point{};
-  // factors
-  point.emission = material.emission * xyz(shape_color);
-  point.diffuse  = material.base * xyz(shape_color) *
-                  (1 - material.transmission);
-  point.specular = material.specular * eta_to_reflectivity(vec3f{material.ior});
+  // initialize factors
+  auto emission = material.emission * xyz(shape_color);
+  auto diffuse = material.base * xyz(shape_color) * (1 - material.transmission);
+  auto specular  = material.specular * eta_to_reflectivity(vec3f{material.ior});
   auto metallic  = material.metallic;
-  point.roughness      = material.roughness;
-  point.coat           = material.coat * eta_to_reflectivity(vec3f{1.5});
-  point.transmission   = vec3f{material.transmission};
-  point.refract        = !material.thin && material.transmission;
+  auto roughness = material.roughness;
+  auto coat      = material.coat * eta_to_reflectivity(vec3f{1.5});
+  auto transmission    = vec3f{material.transmission};
+  auto refract         = !material.thin && material.transmission;
   auto voltransmission = (!material.thin && material.transmission)
                              ? material.transmission * material.base
                              : zero3f;
-  point.volemission   = zero3f;
-  point.volscatter    = material.scattering;
-  point.volanisotropy = material.phaseg;
-  auto volscale       = material.radius;
-  point.opacity       = material.opacity * shape_color.w;
+  auto scattering    = material.scattering;
+  auto phaseg = material.phaseg;
+  auto radius      = material.radius;
+  auto opacity       = material.opacity * shape_color.w;
 
-  // textures
+  // lookup textures
   if (material.emission_tex >= 0) {
     auto emission_tex = &scene.textures[material.emission_tex];
-    point.emission *= xyz(eval_texture(emission_tex, texcoord));
+    emission *= xyz(eval_texture(emission_tex, texcoord));
   }
   if (material.base_tex >= 0) {
     auto base_tex = &scene.textures[material.base_tex];
     auto base_txt = eval_texture(base_tex, texcoord);
-    point.diffuse *= xyz(base_txt);
-    point.opacity *= base_txt.w;
+    diffuse *= xyz(base_txt);
+    opacity *= base_txt.w;
   }
   if (material.metallic_tex >= 0) {
     auto metallic_tex = &scene.textures[material.metallic_tex];
     auto metallic_txt = eval_texture(metallic_tex, texcoord);
     metallic *= metallic_txt.z;
-    if (material.gltf_textures) {
-      point.roughness *= metallic_txt.x;
-    }
+    if (material.gltf_textures) roughness *= metallic_txt.x;
   }
   if (material.specular_tex >= 0) {
     auto specular_tex = &scene.textures[material.specular_tex];
     auto specular_txt = eval_texture(specular_tex, texcoord);
-    point.specular *= xyz(specular_txt);
+    specular *= xyz(specular_txt);
     if (material.gltf_textures) {
-      auto glossiness = 1 - point.roughness;
+      auto glossiness = 1 - roughness;
       glossiness *= specular_txt.w;
-      point.roughness = 1 - glossiness;
+      roughness = 1 - glossiness;
     }
   }
   if (material.roughness_tex >= 0) {
     auto roughness_tex = &scene.textures[material.roughness_tex];
-    point.roughness *= eval_texture(roughness_tex, texcoord).x;
+    roughness *= eval_texture(roughness_tex, texcoord).x;
   }
   if (material.transmission_tex >= 0) {
     auto transmission_tex = &scene.textures[material.transmission_tex];
-    point.transmission *= xyz(eval_texture(transmission_tex, texcoord));
+    transmission *= xyz(eval_texture(transmission_tex, texcoord));
   }
   if (material.scattering_tex >= 0) {
     auto scattering_tex = &scene.textures[material.scattering_tex];
-    point.volscatter *= xyz(eval_texture(scattering_tex, texcoord));
+    scattering *= xyz(eval_texture(scattering_tex, texcoord));
   }
   if (material.opacity_tex >= 0) {
     auto opacity_tex = &scene.textures[material.opacity_tex];
-    point.opacity *= mean(xyz(eval_texture(opacity_tex, texcoord)));
+    opacity *= mean(xyz(eval_texture(opacity_tex, texcoord)));
   }
   if (material.coat_tex >= 0) {
     auto coat_tex = &scene.textures[material.coat_tex];
-    point.coat *= xyz(eval_texture(coat_tex, texcoord));
+    coat *= xyz(eval_texture(coat_tex, texcoord));
   }
+
+  auto point = material_point{};
+  // factors
+  point.emission = emission;
+  point.diffuse  = diffuse;
+  point.specular = specular;
+  point.roughness      = roughness;
+  point.coat           = coat;
+  point.transmission   = transmission;
+  point.refract        = refract;
+  point.volemission   = zero3f;
+  point.volscatter    = scattering;
+  point.volanisotropy = phaseg;
+  point.opacity       = opacity;
+
+  // textures
   if (metallic) {
     point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;
     point.diffuse  = metallic * point.diffuse * (1 - metallic);
@@ -1038,7 +1049,7 @@ material_point eval_material(const trace_scene& scene,
   }
   if (point.opacity > 0.999f) point.opacity = 1;
   if (voltransmission != zero3f) {
-    point.voldensity = -log(clamp(voltransmission, 0.0001f, 1.0f)) / volscale;
+    point.voldensity = -log(clamp(voltransmission, 0.0001f, 1.0f)) / radius;
   } else {
     point.voldensity = zero3f;
   }
