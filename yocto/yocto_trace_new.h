@@ -114,7 +114,7 @@ void set_material_scattering(trace_scene& scene, int idx,
     const vec3f& scattering, float phaseg, int scattering_tex = -1);
 void set_material_normalmap(trace_scene& scene, int idx, int normal_txt);
 void set_material_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
-void clear_materials(trace_scene& scene);
+void clear_materias(trace_scene& scene);
 
 // Add shape
 int  add_shape(trace_scene& scene, const vector<int>& points,
