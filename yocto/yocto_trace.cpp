@@ -2434,12 +2434,12 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
   }
 
   if (rnl < weights[0] + weights[1] + weights[2]) {
-    auto halfway = sample_microfacet(coat_roughness, up_normal, rn);
+    auto halfway = sample_microfacet(material.roughness, up_normal, rn);
     return reflect(outgoing, halfway);
   }
 
   if (rnl < weights[0] + weights[1] + weights[2] + weights[3]) {
-    auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+    auto halfway = sample_microfacet(coat_roughness, up_normal, rn);
     return reflect(outgoing, halfway);
   }
 
