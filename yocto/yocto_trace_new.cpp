@@ -26,12 +26,12 @@
 // SOFTWARE.
 //
 
-#include "yocto_trace.h"
-
 #include <atomic>
 #include <deque>
 #include <future>
 #include <mutex>
+
+#include "yocto_trace.h"
 
 #ifdef YOCTO_EMBREE
 #include <embree3/rtcore.h>

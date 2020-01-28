@@ -642,7 +642,7 @@ struct material_point {
 
 // constant values
 static const auto coat_reflectivity = vec3f{0.04, 0.04, 0.04};
-static const auto coat_roughness = 0.03f * 0.03f;
+static const auto coat_roughness    = 0.03f * 0.03f;
 
 // Shape element normal.
 vec3f eval_element_normal(const trace_shape& shape, int element) {
@@ -958,20 +958,23 @@ material_point eval_material(const trace_scene& scene,
 
   auto point = material_point{};
   // factors
-  point.emission       = material.emission * xyz(shape_color);
-  point.diffuse        = material.base * xyz(shape_color) * (1 - material.transmission);
-  point.specular       = material.specular * eta_to_reflectivity(vec3f{material.ior});
-  auto metallic        = material.metallic;
+  point.emission = material.emission * xyz(shape_color);
+  point.diffuse  = material.base * xyz(shape_color) *
+                  (1 - material.transmission);
+  point.specular = material.specular * eta_to_reflectivity(vec3f{material.ior});
+  auto metallic  = material.metallic;
   point.roughness      = material.roughness;
   point.coat           = material.coat * eta_to_reflectivity(vec3f{1.5});
   point.transmission   = vec3f{material.transmission};
   point.refract        = !material.thin && material.transmission;
-  auto voltransmission = (!material.thin && material.transmission) ? material.transmission * material.base : zero3f;
-  point.volemission    = zero3f;
-  point.volscatter     = material.scattering;
-  point.volanisotropy  = material.phaseg;
-  auto volscale        = material.radius;
-  point.opacity        = material.opacity * shape_color.w;
+  auto voltransmission = (!material.thin && material.transmission)
+                             ? material.transmission * material.base
+                             : zero3f;
+  point.volemission   = zero3f;
+  point.volscatter    = material.scattering;
+  point.volanisotropy = material.phaseg;
+  auto volscale       = material.radius;
+  point.opacity       = material.opacity * shape_color.w;
 
   // textures
   if (material.emission_tex >= 0) {
@@ -980,7 +983,7 @@ material_point eval_material(const trace_scene& scene,
   }
   if (material.base_tex >= 0) {
     auto base_tex = &scene.textures[material.base_tex];
-    auto base_txt    = eval_texture(base_tex, texcoord);
+    auto base_txt = eval_texture(base_tex, texcoord);
     point.diffuse *= xyz(base_txt);
     point.opacity *= base_txt.w;
   }
@@ -1087,7 +1090,8 @@ vec3f eval_element_normal(const trace_scene& scene,
 }
 // Instance material
 material_point eval_material(const trace_scene& scene,
-    const trace_instance& instance, int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
+    const trace_instance& instance, int element, const vec2f& uv,
+    const vec3f& normal, const vec3f& outgoing) {
   auto& shape     = scene.shapes[instance.shape];
   auto& material  = scene.materials[instance.material];
   auto  texcoords = eval_texcoord(shape, element, uv);
@@ -2751,8 +2755,8 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
           scene, instance, intersection.element, intersection.uv);
       auto normal   = eval_shading_normal(scene, instance, intersection.element,
           intersection.uv, outgoing, trace_non_rigid_frames);
-      auto material = eval_material(
-          scene, instance, intersection.element, intersection.uv, normal, outgoing);
+      auto material = eval_material(scene, instance, intersection.element,
+          intersection.uv, normal, outgoing);
 
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -2870,8 +2874,8 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
         scene, instance, intersection.element, intersection.uv);
     auto normal   = eval_shading_normal(scene, instance, intersection.element,
         intersection.uv, outgoing, trace_non_rigid_frames);
-    auto material = eval_material(
-        scene, instance, intersection.element, intersection.uv, normal, outgoing);
+    auto material = eval_material(scene, instance, intersection.element,
+        intersection.uv, normal, outgoing);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -2941,8 +2945,8 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
         scene, instance, intersection.element, intersection.uv);
     auto normal   = eval_shading_normal(scene, instance, intersection.element,
         intersection.uv, outgoing, trace_non_rigid_frames);
-    auto material = eval_material(
-        scene, instance, intersection.element, intersection.uv, normal, outgoing);
+    auto material = eval_material(scene, instance, intersection.element,
+        intersection.uv, normal, outgoing);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {

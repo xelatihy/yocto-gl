@@ -519,8 +519,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         set_material_emission(glscene, app->selection.second, material.emission,
             material.emission_tex);
         set_material_diffuse(glscene, app->selection.second,
-            (1 - material.transmission) * material.base,
-            material.base_tex);
+            (1 - material.transmission) * material.base, material.base_tex);
         set_material_specular(glscene, app->selection.second,
             material.specular * eta_to_reflectivity(material.ior),
             material.specular_tex);
