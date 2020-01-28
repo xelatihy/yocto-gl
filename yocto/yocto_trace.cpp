@@ -1020,10 +1020,6 @@ material_point eval_material(const trace_scene& scene,
     coat *= eval_texture(coat_tex, texcoord).x;
   }
 
-  auto voltransmission = (!material.thin && material.transmission)
-                             ? material.transmission * material.base
-                             : zero3f;
-
   auto point = material_point{};
   // factors
   point.emission  = emission;
@@ -1031,13 +1027,13 @@ material_point eval_material(const trace_scene& scene,
   point.specular  = specular * (1 - metallic) * eta_to_reflectivity(vec3f{ior});
   point.metal     = metallic * base;
   point.roughness = roughness * roughness;
-  point.eta       = mean(reflectivity_to_eta(point.specular));
+  point.eta       = ior;
   point.coat      = coat * eta_to_reflectivity(vec3f{1.5});
-  point.transmission = vec3f{transmission};
+  point.transmission = transmission * (thin ? base : vec3f{1});
   point.refract      = !thin;
   point.volemission  = zero3f;
-  point.voldensity   = voltransmission != zero3f
-                         ? -log(clamp(voltransmission, 0.0001f, 1.0f)) / radius
+  point.voldensity   = (transmission && !thin)
+                         ? -log(clamp(base, 0.0001f, 1.0f)) / radius
                          : zero3f;
   point.volscatter    = scattering;
   point.volanisotropy = phaseg;
