@@ -1024,35 +1024,24 @@ material_point eval_material(const trace_scene& scene,
   auto point = material_point{};
   // factors
   point.emission = emission;
-  point.diffuse  = diffuse;
-  point.specular = specular;
-  point.roughness      = roughness;
+  point.diffuse  = diffuse * (1 - metallic);
+  point.specular = specular * (1 - metallic) + metallic * diffuse;
+  point.roughness      = roughness * roughness;
+  point.eta = mean(reflectivity_to_eta(point.specular));
   point.coat           = coat;
   point.transmission   = transmission;
   point.refract        = refract;
   point.volemission   = zero3f;
+  point.voldensity    = voltransmission != zero3f ? -log(clamp(voltransmission, 0.0001f, 1.0f)) / radius : zero3f;
   point.volscatter    = scattering;
   point.volanisotropy = phaseg;
   point.opacity       = opacity;
 
   // textures
-  if (metallic) {
-    point.specular = point.specular * (1 - metallic) + metallic * point.diffuse;
-    point.diffuse  = metallic * point.diffuse * (1 - metallic);
-  }
-  if (point.transmission != zero3f) {
-    point.eta = mean(reflectivity_to_eta(point.specular));
-  }
   if (point.diffuse != zero3f || point.roughness) {
-    point.roughness = point.roughness * point.roughness;
     point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
   }
   if (point.opacity > 0.999f) point.opacity = 1;
-  if (voltransmission != zero3f) {
-    point.voldensity = -log(clamp(voltransmission, 0.0001f, 1.0f)) / radius;
-  } else {
-    point.voldensity = zero3f;
-  }
   return point;
 }
 
