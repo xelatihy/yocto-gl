@@ -626,9 +626,9 @@ namespace yocto {
 struct material_point {
   vec3f emission      = {0, 0, 0};
   vec3f diffuse       = {0, 0, 0};
-  vec3f specular_      = {0, 0, 0};
-  vec3f metal_         = {0, 0, 0};
-  vec3f coat_          = {0, 0, 0};
+  vec3f specular      = {0, 0, 0};
+  vec3f metal         = {0, 0, 0};
+  vec3f coat          = {0, 0, 0};
   vec3f transmission  = {0, 0, 0};
   float roughness     = 0;
   vec3f voldensity    = {0, 0, 0};
@@ -1026,11 +1026,11 @@ material_point eval_material(const trace_scene& scene,
   // factors
   auto weight = vec3f{1, 1, 1};
   point.emission  = weight * emission;
-  point.coat_      = weight * coat;
-  weight *= 1 - point.coat_ * coatf;
-  point.metal_     = weight * metallic;
+  point.coat      = weight * coat;
+  weight *= 1 - point.coat * coatf;
+  point.metal     = weight * metallic;
   weight *= 1 - metallic;
-  point.specular_  = weight * specular;
+  point.specular  = weight * specular;
   weight *= 1 - specular * specf;
   point.transmission = weight * transmission * (thin ? base : vec3f{1});
   weight *= 1 - transmission;
@@ -2297,38 +2297,38 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
                abs(dot(normal, incoming));
   }
 
-  if (material.specular_ != zero3f && same_hemi) {
+  if (material.specular != zero3f && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_schlick(
         material.sreflectivity, abs(dot(halfway, outgoing)), entering);
     auto D = eval_microfacetD(material.roughness, up_normal, halfway);
     auto G = eval_microfacetG(
         material.roughness, up_normal, halfway, outgoing, incoming);
-    brdfcos += material.specular_ * F * D * G /
+    brdfcos += material.specular * F * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
 
-  if (material.metal_ != zero3f && same_hemi) {
+  if (material.metal != zero3f && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_schlick(
         material.mreflectivity, abs(dot(halfway, outgoing)), entering);
     auto D = eval_microfacetD(material.roughness, up_normal, halfway);
     auto G = eval_microfacetG(
         material.roughness, up_normal, halfway, outgoing, incoming);
-    brdfcos += material.metal_ * F * D * G /
+    brdfcos += material.metal * F * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
 
-  if (material.coat_ != zero3f && same_hemi) {
+  if (material.coat != zero3f && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_schlick(
         coat_reflectivity, abs(dot(halfway, outgoing)), entering);
     auto D = eval_microfacetD(coat_roughness, up_normal, halfway);
     auto G = eval_microfacetG(
         material.roughness, up_normal, halfway, outgoing, incoming);
-    brdfcos += material.coat_ * F * D * G /
+    brdfcos += material.coat * F * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
@@ -2379,16 +2379,16 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
 
   auto brdfcos = zero3f;
 
-  if (material.specular_ != zero3f && same_hemi) {
-    brdfcos += material.specular_ * fresnel_schlick(
+  if (material.specular != zero3f && same_hemi) {
+    brdfcos += material.specular * fresnel_schlick(
       material.sreflectivity, abs(dot(normal, outgoing)), entering);
   }
-  if (material.metal_ != zero3f && same_hemi) {
-    brdfcos += material.metal_ * fresnel_schlick(
+  if (material.metal != zero3f && same_hemi) {
+    brdfcos += material.metal * fresnel_schlick(
       material.mreflectivity, abs(dot(normal, outgoing)), entering);
   }
-  if (material.coat_ != zero3f && same_hemi) {
-    brdfcos += material.coat_ * fresnel_schlick(
+  if (material.coat != zero3f && same_hemi) {
+    brdfcos += material.coat * fresnel_schlick(
       coat_reflectivity, abs(dot(outgoing, normal)), entering);
   }
   if (material.transmission != zero3f && !same_hemi) {
@@ -2401,11 +2401,11 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
 static array<float, 5> compute_brdf_pdfs(const material_point& material,
     const vec3f& normal, const vec3f& outgoing) {
   auto entering = !material.refract || dot(normal, outgoing) >= 0;
-  auto coat     = material.coat_ * fresnel_schlick(
+  auto coat     = material.coat * fresnel_schlick(
       coat_reflectivity, abs(dot(outgoing, normal)), entering);
-  auto spec = material.specular_ * fresnel_schlick(
+  auto spec = material.specular * fresnel_schlick(
       material.sreflectivity, abs(dot(outgoing, normal)), entering);
-  auto met = material.metal_ * fresnel_schlick(
+  auto met = material.metal * fresnel_schlick(
       material.mreflectivity, abs(dot(outgoing, normal)), entering);
   auto weights = array<float, 5>{
       max(material.diffuse), max(spec),
@@ -3083,13 +3083,13 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
       return {material.diffuse, 1};
     }
     case trace_falsecolor_type::specular: {
-      return {material.specular_, 1};
+      return {material.specular, 1};
     }
     case trace_falsecolor_type::coat: {
-      return {material.coat_, 1};
+      return {material.coat, 1};
     }
     case trace_falsecolor_type::metal: {
-      return {material.metal_, 1};
+      return {material.metal, 1};
     }
     case trace_falsecolor_type::transmission: {
       return {material.transmission, 1};
