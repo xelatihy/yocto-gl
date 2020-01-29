@@ -663,13 +663,11 @@ struct material_point {
   float opacity       = 1;
   float ior           = 1;
   vec3f mreflectivity  = {0, 0, 0};
-  vec3f sreflectivity  = {0, 0, 0};
   bool  thin       = false;
 };
 
 // constant values
 static const auto coat_ior = 1.5;
-static const auto coat_reflectivity = vec3f{0.04, 0.04, 0.04};
 static const auto coat_roughness    = 0.03f * 0.03f;
 
 // Shape element normal.
@@ -1059,7 +1057,6 @@ material_point eval_material(const trace_scene& scene,
   point.refraction = thin ? zero3f : weight * transmission;
   weight *= 1 - transmission;
   point.diffuse   = weight * base;
-  point.sreflectivity = eta_to_reflectivity(vec3f{ior});
   point.mreflectivity = base;
   point.roughness = roughness * roughness;
   point.ior       = ior;
@@ -2423,13 +2420,9 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
 
 static array<float, 6> compute_brdf_pdfs(const material_point& material,
     const vec3f& normal, const vec3f& outgoing) {
-  auto entering = material.thin || dot(normal, outgoing) >= 0;
-  auto coat     = material.coat * fresnel_schlick(
-      coat_reflectivity, abs(dot(outgoing, normal)), entering);
-  auto spec = material.specular * fresnel_schlick(
-      material.sreflectivity, abs(dot(outgoing, normal)), entering);
-  auto met = material.metal * fresnel_schlick(
-      material.mreflectivity, abs(dot(outgoing, normal)), entering);
+  auto coat     = material.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal));
+  auto spec = material.specular * fresnel_dielectric(material.ior, dot(outgoing, normal));
+  auto met = material.metal * fresnel_schlick(material.mreflectivity, abs(dot(outgoing, normal)));
   auto weights = array<float, 6>{
       max(material.diffuse), max(spec),
       max(met), max(coat), max(material.refraction),
