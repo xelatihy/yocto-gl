@@ -663,6 +663,8 @@ struct material_point {
   float opacity       = 1;
   float ior           = 1;
   vec3f mreflectivity  = {0, 0, 0};
+  vec3f meta  = {0, 0, 0};
+  vec3f metak  = {0, 0, 0};
   bool  thin       = false;
 };
 
@@ -1058,6 +1060,8 @@ material_point eval_material(const trace_scene& scene,
   weight *= 1 - transmission;
   point.diffuse   = weight * base;
   point.mreflectivity = base;
+  point.meta = reflectivity_to_eta(base);
+  point.metak = zero3f;
   point.roughness = roughness * roughness;
   point.ior       = ior;
   point.thin      = thin;
@@ -2308,7 +2312,6 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
   if (!material.roughness) return zero3f;
 
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
-  auto entering  = material.thin || dot(normal, outgoing) >= 0;
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
   auto brdfcos = zero3f;
@@ -2331,8 +2334,8 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
   if (material.metal != zero3f && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
-    auto F       = fresnel_schlick(
-        material.mreflectivity, abs(dot(halfway, outgoing)), entering);
+    auto F       = fresnel_conductor(material.meta, material.metak,
+        dot(halfway, outgoing));
     auto D = eval_microfacetD(material.roughness, up_normal, halfway);
     auto G = eval_microfacetG(
         material.roughness, up_normal, halfway, outgoing, incoming);
@@ -2392,7 +2395,6 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
   if (material.roughness) return zero3f;
 
-  auto entering  = material.thin || dot(normal, outgoing) >= 0;
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
   auto brdfcos = zero3f;
@@ -2402,8 +2404,8 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
       material.ior, dot(normal, outgoing));
   }
   if (material.metal != zero3f && same_hemi) {
-    brdfcos += material.metal * fresnel_schlick(
-      material.mreflectivity, abs(dot(normal, outgoing)), entering);
+    brdfcos += material.metal * fresnel_conductor(material.meta, material.metak,
+      dot(normal, outgoing));
   }
   if (material.coat != zero3f && same_hemi) {
     brdfcos += material.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal));
