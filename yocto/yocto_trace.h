@@ -187,8 +187,8 @@ enum struct trace_sampler_type {
 enum struct trace_falsecolor_type {
   // clang-format off
   normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
-  diffuse, specular, transmission, roughness, material, shape, instance, 
-  element, highlight
+  diffuse, specular, coat, metal, transmission, roughness, material, shape, 
+  instance, element, highlight
   // clang-format on
 };
 // Strategy used to build the bvh
@@ -228,8 +228,8 @@ const auto trace_sampler_names = vector<string>{
 
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
-    "specular", "transmission", "roughness", "material", "shape", "instance",
-    "element", "highlight"};
+    "specular", "coat", "metal", "transmission", "roughness", "material", 
+    "shape", "instance", "element", "highlight"};
 const auto trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
