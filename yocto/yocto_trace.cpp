@@ -653,7 +653,7 @@ struct material_point {
   vec3f specular      = {0, 0, 0};
   vec3f metal         = {0, 0, 0};
   vec3f coat          = {0, 0, 0};
-  vec3f transmission_ = {0, 0, 0};
+  vec3f transmission = {0, 0, 0};
   vec3f refraction    = {0, 0, 0};
   float roughness     = 0;
   vec3f voldensity    = {0, 0, 0};
@@ -1053,7 +1053,7 @@ material_point eval_material(const trace_scene& scene,
   weight *= 1 - metallic;
   point.specular  = weight * specular;
   weight *= 1 - specular * specf;
-  point.transmission_ = !thin ? zero3f : weight * transmission * base;
+  point.transmission = !thin ? zero3f : weight * transmission * base;
   point.refraction = thin ? zero3f : weight * transmission;
   weight *= 1 - transmission;
   point.diffuse   = weight * base;
@@ -2372,7 +2372,7 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
                abs(dot(normal, incoming));
   }
 
-  if (material.transmission_ != zero3f && !same_hemi) {
+  if (material.transmission != zero3f && !same_hemi) {
     auto ir      = reflect(-incoming, up_normal);
     auto halfway = normalize(ir + outgoing);
     // auto F       = fresnel_schlick(
@@ -2380,7 +2380,7 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     auto D = eval_microfacetD(material.roughness, up_normal, halfway);
     auto G = eval_microfacetG(
         material.roughness, up_normal, halfway, outgoing, ir);
-    brdfcos += material.transmission_ * D * G /
+    brdfcos += material.transmission * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
@@ -2411,8 +2411,8 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
   if (material.refraction != zero3f && !same_hemi) {
     brdfcos += material.refraction;
   }
-  if (material.transmission_ != zero3f && !same_hemi) {
-    brdfcos += material.transmission_;
+  if (material.transmission != zero3f && !same_hemi) {
+    brdfcos += material.transmission;
   }
 
   return brdfcos;
@@ -2426,7 +2426,7 @@ static array<float, 6> compute_brdf_pdfs(const material_point& material,
   auto weights = array<float, 6>{
       max(material.diffuse), max(spec),
       max(met), max(coat), max(material.refraction),
-      max(material.transmission_)};
+      max(material.transmission)};
   auto sum = 0.0f;
   for (auto weight : weights) sum += weight;
   if (!sum) return weights;
@@ -3108,7 +3108,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
       return {material.metal, 1};
     }
     case trace_falsecolor_type::transmission: {
-      return {material.transmission_, 1};
+      return {material.transmission, 1};
     }
     case trace_falsecolor_type::refraction: {
       return {material.refraction, 1};
