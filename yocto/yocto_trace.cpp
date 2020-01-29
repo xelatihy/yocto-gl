@@ -348,6 +348,30 @@ vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak) {
 
 // Compute the fresnel term for dielectrics. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+float fresnel_dielectric(float eta, float cosw) {
+  if (cosw < 0) {
+    eta  = 1 / eta;
+    cosw = -cosw;
+  }
+
+  auto sin2 = 1 - cosw * cosw;
+  auto eta2 = eta * eta;
+
+  auto cos2t = 1 - sin2 / eta2;
+  if (cos2t < 0) return 1;  // tir
+
+  auto t0 = sqrt(cos2t);
+  auto t1 = eta * t0;
+  auto t2 = eta * cosw;
+
+  auto rs = (cosw - t1) / (cosw + t1);
+  auto rp = (t0 - t2) / (t0 + t2);
+
+  return (rs * rs + rp * rp) / 2;
+}
+
+// Compute the fresnel term for dielectrics. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 vec3f fresnel_dielectric(const vec3f& eta_, float cosw) {
   auto eta = eta_;
   if (cosw < 0) {
@@ -637,13 +661,14 @@ struct material_point {
   vec3f volscatter    = {0, 0, 0};
   float volanisotropy = 0;
   float opacity       = 1;
-  float eta           = 1;
+  float ior           = 1;
   vec3f mreflectivity  = {0, 0, 0};
   vec3f sreflectivity  = {0, 0, 0};
   bool  thin       = false;
 };
 
 // constant values
+static const auto coat_ior = 1.5;
 static const auto coat_reflectivity = vec3f{0.04, 0.04, 0.04};
 static const auto coat_roughness    = 0.03f * 0.03f;
 
@@ -1017,11 +1042,8 @@ material_point eval_material(const trace_scene& scene,
     coat *= eval_texture(coat_tex, texcoord).x;
   }
 
-  auto entering  = thin || dot(normal, outgoing) >= 0;
-  auto coatf      = fresnel_schlick(
-      coat_reflectivity, abs(dot(outgoing, normal)), entering);
-  auto specf = fresnel_schlick(
-      eta_to_reflectivity(vec3f{ior}), abs(dot(normal, outgoing)), entering);
+  auto coatf      = fresnel_dielectric(coat_ior, dot(outgoing, normal));
+  auto specf      = fresnel_dielectric(ior, dot(outgoing, normal));
 
   auto point = material_point{};
   // factors
@@ -1040,7 +1062,7 @@ material_point eval_material(const trace_scene& scene,
   point.sreflectivity = eta_to_reflectivity(vec3f{ior});
   point.mreflectivity = base;
   point.roughness = roughness * roughness;
-  point.eta       = ior;
+  point.ior       = ior;
   point.thin      = thin;
   point.volemission  = zero3f;
   point.voldensity   = (transmission && !thin)
@@ -2301,8 +2323,7 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
 
   if (material.specular != zero3f && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
-    auto F       = fresnel_schlick(
-        material.sreflectivity, abs(dot(halfway, outgoing)), entering);
+    auto F       = fresnel_dielectric(material.ior, dot(halfway, outgoing));
     auto D = eval_microfacetD(material.roughness, up_normal, halfway);
     auto G = eval_microfacetG(
         material.roughness, up_normal, halfway, outgoing, incoming);
@@ -2336,10 +2357,9 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
   }
 
   if (material.refraction != zero3f && !same_hemi) {
-    auto eta            = material.eta;
     auto halfway_vector = dot(outgoing, normal) > 0
-                              ? -(outgoing + eta * incoming)
-                              : (eta * outgoing + incoming);
+                              ? -(outgoing + material.ior * incoming)
+                              : (material.ior * outgoing + incoming);
     auto halfway = normalize(halfway_vector);
     // auto F       = fresnel_schlick(
     //     material.reflectance, abs(dot(halfway, outgoing)), entering);
@@ -2452,8 +2472,7 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
 
   if (rnl < weights[0] + weights[1] + weights[2] + weights[3] + weights[4]) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
-      return refract_notir(outgoing, halfway,
-          dot(normal, outgoing) > 0 ? 1 / material.eta : material.eta);
+      return refract_notir(outgoing, halfway, dot(normal, outgoing) > 0 ? 1 / material.ior : material.ior);
   }
 
   if (rnl < weights[0] + weights[1] + weights[2] + weights[3] + weights[4] + weights[5]) {
@@ -2487,7 +2506,7 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
 
   if (rnl < weights[0] + weights[1] + weights[2] + weights[3] + weights[4]) {
       return refract_notir(outgoing, up_normal,
-          dot(normal, outgoing) > 0 ? 1 / material.eta : material.eta);
+          dot(normal, outgoing) > 0 ? 1 / material.ior : material.ior);
   }
 
   if (rnl < weights[0] + weights[1] + weights[2] + weights[3] + weights[4] + weights[5]) {
@@ -2535,8 +2554,8 @@ static float sample_brdf_pdf(const material_point& material,
 
   if (weights[4] && !same_hemi) {
     auto halfway_vector = dot(outgoing, normal) > 0
-                              ? -(outgoing + material.eta * incoming)
-                              : (material.eta * outgoing + incoming);
+                              ? -(outgoing + material.ior * incoming)
+                              : (material.ior * outgoing + incoming);
     auto halfway = normalize(halfway_vector);
     // [Walter 2007] equation 17
     pdf += weights[4] *
