@@ -228,7 +228,7 @@ const auto trace_sampler_names = vector<string>{
 
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
-    "specular", "coat", "metal", "transmission", "refraction", "roughness", 
+    "specular", "coat", "metal", "transmission", "refraction", "roughness",
     "material", "shape", "instance", "element", "highlight"};
 const auto trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
