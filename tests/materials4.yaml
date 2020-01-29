@@ -58,7 +58,7 @@ materials:
     base: [0.65, 0.65, 0.65]
     transmission: 1
     scattering: [0.9, 0.9, 0.9]
-    ior: 1.001
+    ior: 1
   - name: volume-glass
     specular: 1
     roughness: 0
@@ -71,12 +71,13 @@ materials:
     base: [0.5, 0.5, 0.5]
     scattering: [0.2, 0.2, 0.2]
     phaseg: -0.8
-    ior: 1.001
+    ior: 1
   - name: volume-emissive
     transmission: 1
     base: [0.95, 0.95, 0.95]
     # volemission: [15, 15, 10]
     scattering: [0.01, 0.01, 0.01]
+    ior: 1
   - name: largearealight1
     emission: [10, 10, 10]
   - name: largearealight2

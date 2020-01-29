@@ -1146,6 +1146,7 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
         get_yaml_value(yelement, "coat", material.coat);
         get_yaml_value(yelement, "transmission", material.transmission);
         get_yaml_value(yelement, "thin", material.thin);
+        get_yaml_value(yelement, "ior", material.ior);
         get_yaml_value(yelement, "scattering", material.scattering);
         get_yaml_value(yelement, "phaseg", material.phaseg);
         get_yaml_value(yelement, "radius", material.radius);
@@ -1684,6 +1685,7 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     add_yaml_value(yelement, "transmission", material.transmission);
     add_yaml_value(yelement, "roughness", material.roughness);
     add_yaml_value(yelement, "thin", material.thin);
+    add_yaml_value(yelement, "ior", material.ior);
     add_yaml_value(yelement, "scattering", material.scattering);
     add_yaml_value(yelement, "phaseg", material.phaseg);
     add_yaml_value(yelement, "radius", material.radius);
