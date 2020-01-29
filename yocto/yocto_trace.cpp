@@ -1017,23 +1017,28 @@ material_point eval_material(const trace_scene& scene,
   }
 
   auto entering  = thin || dot(normal, outgoing) >= 0;
-  auto coatw      = vec3f{coat} * fresnel_schlick(
+  auto coatf      = fresnel_schlick(
       coat_reflectivity, abs(dot(outgoing, normal)), entering);
-  auto specw = vec3f{specular * (1 - metallic)}  * fresnel_schlick(
+  auto specf = fresnel_schlick(
       eta_to_reflectivity(vec3f{ior}), abs(dot(normal, outgoing)), entering);
 
   auto point = material_point{};
   // factors
-  point.emission  = emission;
-  point.diffuse   = (1 - coatw) * (1 - specw) * base * (1 - metallic) * (1 - transmission);
-  point.specular_  = (1 - coatw) * vec3f{specular * (1 - metallic)};
+  auto weight = vec3f{1, 1, 1};
+  point.emission  = weight * emission;
+  point.coat_      = weight * coat;
+  weight *= 1 - point.coat_ * coatf;
+  point.metal_     = weight * metallic;
+  weight *= 1 - metallic;
+  point.specular_  = weight * specular;
+  weight *= 1 - specular * specf;
+  point.transmission = weight * transmission * (thin ? base : vec3f{1});
+  weight *= 1 - transmission;
+  point.diffuse   = weight * base;
   point.sreflectivity = eta_to_reflectivity(vec3f{ior});
-  point.metal_     = (1 - coatw) * vec3f{metallic};
   point.mreflectivity = base;
   point.roughness = roughness * roughness;
   point.eta       = ior;
-  point.coat_      = vec3f{coat};
-  point.transmission = (1 - coatw) * (1 - specw) * transmission * (thin ? base : vec3f{1});
   point.refract      = !thin;
   point.volemission  = zero3f;
   point.voldensity   = (transmission && !thin)
