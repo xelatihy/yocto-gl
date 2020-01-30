@@ -890,7 +890,6 @@ material_point eval_material(const trace_scene& scene,
     point.metal = weight * metallic;
     weight *= 1 - metallic;
     point.srefraction = weight * specular;
-    weight *= 1 - specular * specf;
     point.refraction = weight * transmission;
     weight *= 1 - transmission;
     point.diffuse       = weight * base;
@@ -2244,8 +2243,7 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
                               ? -(outgoing + material.ior * incoming)
                               : (material.ior * outgoing + incoming);
     auto halfway = normalize(halfway_vector);
-    // auto F       = fresnel_schlick(
-    //     material.reflectance, abs(dot(halfway, outgoing)), entering);
+    auto F       = fresnel_dielectric(material.ior, dot(halfway, outgoing));
     auto D = eval_microfacetD(material.roughness, up_normal, halfway);
     auto G = eval_microfacetG(
         material.roughness, up_normal, halfway, outgoing, incoming);
@@ -2254,7 +2252,7 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
                      (dot(outgoing, normal) * dot(incoming, normal));
 
     // [Walter 2007] equation 21
-    brdfcos += material.refraction * abs(dot_terms) * D * G /
+    brdfcos += material.refraction * abs(dot_terms) * (1 - F) * D * G /
                dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
   }
 
@@ -2297,7 +2295,8 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
     brdfcos += material.transmission;
   }
   if (material.refraction != zero3f && !same_hemi) {
-    brdfcos += material.refraction;
+    brdfcos += material.refraction * (1-
+               fresnel_dielectric(material.ior, dot(normal, outgoing)));
   }
   if (material.srefraction != zero3f && same_hemi) {
     brdfcos += material.srefraction *
