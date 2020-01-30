@@ -485,6 +485,8 @@ struct material_point {
   float coat_pdf         = 0;
   float transmission_pdf = 0;
   float refraction_pdf   = 0;
+  vec3f srefraction         = {0, 0, 0};
+  float srefraction_pdf   = 0;
 };
 
 // constant values
@@ -2297,10 +2299,12 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
     return sample_hemisphere_cos(up_normal, rn);
   }
 
+  if(!material.refraction_pdf) {
   cdf += material.specular_pdf;
   if (rnl < cdf) {
     auto halfway = sample_microfacet(material.roughness, up_normal, rn);
     return reflect(outgoing, halfway);
+  }
   }
 
   cdf += material.metal_pdf;
@@ -2315,6 +2319,13 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
     return reflect(outgoing, halfway);
   }
 
+  cdf += material.transmission_pdf;
+  if (rnl < cdf) {
+    auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+    auto ir      = reflect(outgoing, halfway);
+    return -reflect(ir, up_normal);
+  }
+
   cdf += material.refraction_pdf;
   if (rnl < cdf) {
     auto halfway = sample_microfacet(material.roughness, up_normal, rn);
@@ -2322,11 +2333,12 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
         dot(normal, outgoing) > 0 ? 1 / material.ior : material.ior);
   }
 
-  cdf += material.transmission_pdf;
+  if(material.refraction_pdf) {
+  cdf += material.specular_pdf;
   if (rnl < cdf) {
     auto halfway = sample_microfacet(material.roughness, up_normal, rn);
-    auto ir      = reflect(outgoing, halfway);
-    return -reflect(ir, up_normal);
+    return reflect(outgoing, halfway);
+  }
   }
 
   return zero3f;
@@ -2342,9 +2354,11 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
   auto cdf = 0.0f;
   cdf += material.diffuse_pdf;
 
+  if(!material.refraction_pdf) {
   cdf += material.specular_pdf;
   if (rnl < cdf) {
     return reflect(outgoing, up_normal);
+  }
   }
 
   cdf += material.metal_pdf;
@@ -2357,15 +2371,22 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
     return reflect(outgoing, up_normal);
   }
 
+  cdf += material.transmission_pdf;
+  if (rnl < cdf) {
+    return -outgoing;
+  }
+
   cdf += material.refraction_pdf;
   if (rnl < cdf) {
     return refract_notir(outgoing, up_normal,
         dot(normal, outgoing) > 0 ? 1 / material.ior : material.ior);
   }
 
-  cdf += material.transmission_pdf;
+  if(material.refraction_pdf) {
+  cdf += material.specular_pdf;
   if (rnl < cdf) {
-    return -outgoing;
+    return reflect(outgoing, up_normal);
+  }
   }
 
   return zero3f;
@@ -2386,7 +2407,7 @@ static float sample_brdf_pdf(const material_point& material,
            sample_hemisphere_cos_pdf(up_normal, incoming);
   }
 
-  if (material.specular_pdf && same_hemi) {
+  if (material.specular_pdf && !material.refraction_pdf && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
     pdf += material.specular_pdf *
            sample_microfacet_pdf(material.roughness, up_normal, halfway) /
@@ -2407,6 +2428,14 @@ static float sample_brdf_pdf(const material_point& material,
            (4 * abs(dot(outgoing, halfway)));
   }
 
+  if (material.transmission_pdf && !same_hemi) {
+    auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
+    auto ir        = reflect(-incoming, up_normal);
+    auto halfway   = normalize(ir + outgoing);
+    auto d = sample_microfacet_pdf(material.roughness, up_normal, halfway);
+    pdf += material.transmission_pdf * d / (4 * abs(dot(outgoing, halfway)));
+  }
+
   if (material.refraction_pdf && !same_hemi) {
     auto halfway_vector = dot(outgoing, normal) > 0
                               ? -(outgoing + material.ior * incoming)
@@ -2418,12 +2447,11 @@ static float sample_brdf_pdf(const material_point& material,
            abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
   }
 
-  if (material.transmission_pdf && !same_hemi) {
-    auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
-    auto ir        = reflect(-incoming, up_normal);
-    auto halfway   = normalize(ir + outgoing);
-    auto d = sample_microfacet_pdf(material.roughness, up_normal, halfway);
-    pdf += material.transmission_pdf * d / (4 * abs(dot(outgoing, halfway)));
+  if (material.specular_pdf && material.refraction_pdf && same_hemi) {
+    auto halfway = normalize(incoming + outgoing);
+    pdf += material.specular_pdf *
+           sample_microfacet_pdf(material.roughness, up_normal, halfway) /
+           (4 * abs(dot(outgoing, halfway)));
   }
 
   return pdf;
@@ -2436,11 +2464,12 @@ static float sample_delta_pdf(const material_point& material,
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
   auto pdf = 0.0f;
-  if (material.specular_pdf && same_hemi) pdf += material.specular_pdf;
+  if (material.specular_pdf && !material.refraction_pdf && same_hemi) pdf += material.specular_pdf;
   if (material.metal_pdf && same_hemi) pdf += material.metal_pdf;
   if (material.coat_pdf && same_hemi) pdf += material.coat_pdf;
-  if (material.refraction_pdf && !same_hemi) pdf += material.refraction_pdf;
   if (material.transmission_pdf && !same_hemi) pdf += material.transmission_pdf;
+  if (material.refraction_pdf && !same_hemi) pdf += material.refraction_pdf;
+  if (material.specular_pdf && material.refraction_pdf && same_hemi) pdf += material.specular_pdf;
   return pdf;
 }
 
