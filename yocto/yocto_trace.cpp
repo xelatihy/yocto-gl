@@ -133,6 +133,20 @@ inline float sample_hemisphere_cos_pdf(const vec3f& direction) {
   return (direction.z <= 0) ? 0 : direction.z / pif;
 }
 
+// Sample an hemispherical direction with cosine distribution.
+inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv) {
+  auto z               = sqrt(ruv.y);
+  auto r               = sqrt(1 - z * z);
+  auto phi             = 2 * pif * ruv.x;
+  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  return transform_direction(basis_fromz(normal), local_direction);
+}
+inline float sample_hemisphere_cos_pdf(
+    const vec3f& normal, const vec3f& direction) {
+  auto cosw = dot(normal, direction);
+  return (cosw <= 0) ? 0 : cosw / pif;
+}
+
 // Sample an hemispherical direction with cosine power distribution.
 inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv) {
   auto z   = pow(ruv.y, 1 / (exponent + 1));
@@ -223,24 +237,9 @@ vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
                         pow(clamp(1 - abs(direction_cosine), 0.0f, 1.0f), 5.0f);
 }
 
-// Schlick approximation of the Fresnel term. Handles the refraction case.
-vec3f fresnel_schlick(
-    const vec3f& specular, float direction_cosine, bool entering) {
-  if (specular == zero3f) return zero3f;
-  if (!entering) {
-    // apply snell law to get proper angle
-    // sin = sin*eta -> cos = sqrt(1 - (1 - cos^2)*eta^2)
-    auto eta         = mean(reflectivity_to_eta(specular));
-    direction_cosine = sqrt(clamp(
-        1 - (1 - direction_cosine * direction_cosine) * eta * eta, 0.0, 1.0));
-  }
-  return specular + (1 - specular) *
-                        pow(clamp(1 - abs(direction_cosine), 0.0f, 1.0f), 5.0f);
-}
-
 // Evaluates the GGX distribution and geometric term
-float eval_microfacetD(
-    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx) {
+float eval_microfacetD(float roughness, const vec3f& normal,
+    const vec3f& half_vector, bool ggx = true) {
   auto cosine = dot(normal, half_vector);
   if (cosine <= 0) return 0;
   auto roughness_square = roughness * roughness;
@@ -256,7 +255,7 @@ float eval_microfacetD(
   }
 }
 float evaluate_microfacetG1(float roughness, const vec3f& normal,
-    const vec3f& half_vector, const vec3f& direction, bool ggx) {
+    const vec3f& half_vector, const vec3f& direction, bool ggx = true) {
   auto cosine = dot(normal, direction);
   if (dot(half_vector, direction) * cosine <= 0) return 0;
   auto roughness_square = roughness * roughness;
@@ -278,12 +277,12 @@ float evaluate_microfacetG1(float roughness, const vec3f& normal,
 }
 float eval_microfacetG(float roughness, const vec3f& normal,
     const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx) {
+    bool ggx = true) {
   return evaluate_microfacetG1(roughness, normal, half_vector, outgoing, ggx) *
          evaluate_microfacetG1(roughness, normal, half_vector, incoming, ggx);
 }
 vec3f sample_microfacet(
-    float roughness, const vec3f& normal, const vec2f& rn, bool ggx) {
+    float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true) {
   auto phi              = 2 * pif * rn.x;
   auto roughness_square = roughness * roughness;
   auto tangent_square   = 0.0f;
@@ -298,20 +297,16 @@ vec3f sample_microfacet(
   auto local_half_vector = vec3f{cos(phi) * radius, sin(phi) * radius, cosine};
   return transform_direction(basis_fromz(normal), local_half_vector);
 }
-float sample_microfacet_pdf(
-    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx) {
+float sample_microfacet_pdf(float roughness, const vec3f& normal,
+    const vec3f& half_vector, bool ggx = true) {
   auto cosine = dot(normal, half_vector);
   if (cosine < 0) return 0;
   return eval_microfacetD(roughness, normal, half_vector, ggx) * cosine;
 }
 
-// Phong exponent to roughness.
-float exponent_to_roughness(float exponent) {
-  return sqrtf(2 / (exponent + 2));
-}
-
 // Specular to  eta.
-vec3f reflectivity_to_eta(const vec3f& reflectivity) {
+vec3f reflectivity_to_eta(const vec3f& reflectivity_) {
+  auto reflectivity = clamp(reflectivity_, 0.0f, 0.99f);
   return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
 }
 
@@ -398,6 +393,7 @@ vec3f fresnel_dielectric(const vec3f& eta_, float cosw) {
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) {
+  if (cosw <= 0) return zero3f;
   if (etak == zero3f) return fresnel_dielectric(eta, cosw);
 
   cosw       = clamp(cosw, (float)-1, (float)1);
@@ -455,188 +451,6 @@ vec3f sample_phasefunction(float g, const vec2f& u) {
 float eval_phasefunction(float cos_theta, float g) {
   auto denom = 1 + g * g + 2 * g * cos_theta;
   return (1 - g * g) / (4 * pif * denom * sqrt(denom));
-}
-
-// Tabulated ior for metals
-// https://github.com/tunabrain/tungsten
-const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
-    {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
-                {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
-    {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
-               {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
-    {"Al", {{1.6574599595f, 0.8803689579f, 0.5212287346f},
-               {9.2238691996f, 6.2695232477f, 4.8370012281f}}},
-    {"AlAs", {{3.6051023902f, 3.2329365777f, 2.2175611545f},
-                 {0.0006670247f, -0.0004999400f, 0.0074261204f}}},
-    {"AlSb", {{-0.0485225705f, 4.1427547893f, 4.6697691348f},
-                 {-0.0363741915f, 0.0937665154f, 1.3007390124f}}},
-    {"Au", {{0.1431189557f, 0.3749570432f, 1.4424785571f},
-               {3.9831604247f, 2.3857207478f, 1.6032152899f}}},
-    {"Be", {{4.1850592788f, 3.1850604423f, 2.7840913457f},
-               {3.8354398268f, 3.0101260162f, 2.8690088743f}}},
-    {"Cr", {{4.3696828663f, 2.9167024892f, 1.6547005413f},
-               {5.2064337956f, 4.2313645277f, 3.7549467933f}}},
-    {"CsI", {{2.1449030413f, 1.7023164587f, 1.6624194173f},
-                {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"Cu", {{0.2004376970f, 0.9240334304f, 1.1022119527f},
-               {3.9129485033f, 2.4528477015f, 2.1421879552f}}},
-    {"Cu2O", {{3.5492833755f, 2.9520622449f, 2.7369202137f},
-                 {0.1132179294f, 0.1946659670f, 0.6001681264f}}},
-    {"CuO", {{3.2453822204f, 2.4496293965f, 2.1974114493f},
-                {0.5202739621f, 0.5707372756f, 0.7172250613f}}},
-    {"d-C", {{2.7112524747f, 2.3185812849f, 2.2288565009f},
-                {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"Hg", {{2.3989314904f, 1.4400254917f, 0.9095512090f},
-               {6.3276269444f, 4.3719414152f, 3.4217899270f}}},
-    {"HgTe", {{4.7795267752f, 3.2309984581f, 2.6600252401f},
-                 {1.6319827058f, 1.5808189339f, 1.7295753852f}}},
-    {"Ir", {{3.0864098394f, 2.0821938440f, 1.6178866805f},
-               {5.5921510077f, 4.0671757150f, 3.2672611269f}}},
-    {"K", {{0.0640493070f, 0.0464100621f, 0.0381842017f},
-              {2.1042155920f, 1.3489364357f, 0.9132113889f}}},
-    {"Li", {{0.2657871942f, 0.1956102432f, 0.2209198538f},
-               {3.5401743407f, 2.3111306542f, 1.6685930000f}}},
-    {"MgO", {{2.0895885542f, 1.6507224525f, 1.5948759692f},
-                {0.0000000000f, -0.0000000000f, 0.0000000000f}}},
-    {"Mo", {{4.4837010280f, 3.5254578255f, 2.7760769438f},
-               {4.1111307988f, 3.4208716252f, 3.1506031404f}}},
-    {"Na", {{0.0602665320f, 0.0561412435f, 0.0619909494f},
-               {3.1792906496f, 2.1124800781f, 1.5790940266f}}},
-    {"Nb", {{3.4201353595f, 2.7901921379f, 2.3955856658f},
-               {3.4413817900f, 2.7376437930f, 2.5799132708f}}},
-    {"Ni", {{2.3672753521f, 1.6633583302f, 1.4670554172f},
-               {4.4988329911f, 3.0501643957f, 2.3454274399f}}},
-    {"Rh", {{2.5857954933f, 1.8601866068f, 1.5544279524f},
-               {6.7822927110f, 4.7029501026f, 3.9760892461f}}},
-    {"Se-e", {{5.7242724833f, 4.1653992967f, 4.0816099264f},
-                 {0.8713747439f, 1.1052845009f, 1.5647788766f}}},
-    {"Se", {{4.0592611085f, 2.8426947380f, 2.8207582835f},
-               {0.7543791750f, 0.6385150558f, 0.5215872029f}}},
-    {"SiC", {{3.1723450205f, 2.5259677964f, 2.4793623897f},
-                {0.0000007284f, -0.0000006859f, 0.0000100150f}}},
-    {"SnTe", {{4.5251865890f, 1.9811525984f, 1.2816819226f},
-                 {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"Ta", {{2.0625846607f, 2.3930915569f, 2.6280684948f},
-               {2.4080467973f, 1.7413705864f, 1.9470377016f}}},
-    {"Te-e", {{7.5090397678f, 4.2964603080f, 2.3698732430f},
-                 {5.5842076830f, 4.9476231084f, 3.9975145063f}}},
-    {"Te", {{7.3908396088f, 4.4821028985f, 2.6370708478f},
-               {3.2561412892f, 3.5273908133f, 3.2921683116f}}},
-    {"ThF4", {{1.8307187117f, 1.4422274283f, 1.3876488528f},
-                 {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"TiC", {{3.7004673762f, 2.8374356509f, 2.5823030278f},
-                {3.2656905818f, 2.3515586388f, 2.1727857800f}}},
-    {"TiN", {{1.6484691607f, 1.1504482522f, 1.3797795097f},
-                {3.3684596226f, 1.9434888540f, 1.1020123347f}}},
-    {"TiO2-e", {{3.1065574823f, 2.5131551146f, 2.5823844157f},
-                   {0.0000289537f, -0.0000251484f, 0.0001775555f}}},
-    {"TiO2", {{3.4566203131f, 2.8017076558f, 2.9051485020f},
-                 {0.0001026662f, -0.0000897534f, 0.0006356902f}}},
-    {"VC", {{3.6575665991f, 2.7527298065f, 2.5326814570f},
-               {3.0683516659f, 2.1986687713f, 1.9631816252f}}},
-    {"VN", {{2.8656011588f, 2.1191817791f, 1.9400767149f},
-               {3.0323264950f, 2.0561075580f, 1.6162930914f}}},
-    {"V", {{4.2775126218f, 3.5131538236f, 2.7611257461f},
-              {3.4911844504f, 2.8893580874f, 3.1116965117f}}},
-    {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
-              {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
-};
-
-// Get a complex ior table with keys the metal name and values (eta, etak)
-pair<vec3f, vec3f> get_conductor_eta(const string& name) {
-  if (metal_ior_table.find(name) == metal_ior_table.end())
-    return {zero3f, zero3f};
-  return metal_ior_table.at(name);
-}
-
-// Stores sigma_prime_s, sigma_a
-static unordered_map<string, pair<vec3f, vec3f>> subsurface_params_table = {
-    // From "A Practical Model for Subsurface Light Transport"
-    // Jensen, Marschner, Levoy, Hanrahan
-    // Proc SIGGRAPH 2001
-    {"Apple", {{2.29, 2.39, 1.97}, {0.0030, 0.0034, 0.046}}},
-    {"Chicken1", {{0.15, 0.21, 0.38}, {0.015, 0.077, 0.19}}},
-    {"Chicken2", {{0.19, 0.25, 0.32}, {0.018, 0.088, 0.20}}},
-    {"Cream", {{7.38, 5.47, 3.15}, {0.0002, 0.0028, 0.0163}}},
-    {"Ketchup", {{0.18, 0.07, 0.03}, {0.061, 0.97, 1.45}}},
-    {"Marble", {{2.19, 2.62, 3.00}, {0.0021, 0.0041, 0.0071}}},
-    {"Potato", {{0.68, 0.70, 0.55}, {0.0024, 0.0090, 0.12}}},
-    {"Skimmilk", {{0.70, 1.22, 1.90}, {0.0014, 0.0025, 0.0142}}},
-    {"Skin1", {{0.74, 0.88, 1.01}, {0.032, 0.17, 0.48}}},
-    {"Skin2", {{1.09, 1.59, 1.79}, {0.013, 0.070, 0.145}}},
-    {"Spectralon", {{11.6, 20.4, 14.9}, {0.00, 0.00, 0.00}}},
-    {"Wholemilk", {{2.55, 3.21, 3.77}, {0.0011, 0.0024, 0.014}}},
-    // From "Acquiring Scattering Properties of Participating Media by
-    // Dilution",
-    // Narasimhan, Gupta, Donner, Ramamoorthi, Nayar, Jensen
-    // Proc SIGGRAPH 2006
-    {"Lowfat Milk", {{0.89187, 1.5136, 2.532}, {0.002875, 0.00575, 0.0115}}},
-    {"Reduced Milk",
-        {{2.4858, 3.1669, 4.5214}, {0.0025556, 0.0051111, 0.012778}}},
-    {"Regular Milk", {{4.5513, 5.8294, 7.136}, {0.0015333, 0.0046, 0.019933}}},
-    {"Espresso", {{0.72378, 0.84557, 1.0247}, {4.7984, 6.5751, 8.8493}}},
-    {"Mint Mocha Coffee", {{0.31602, 0.38538, 0.48131}, {3.772, 5.8228, 7.82}}},
-    {"Lowfat Soy Milk",
-        {{0.30576, 0.34233, 0.61664}, {0.0014375, 0.0071875, 0.035937}}},
-    {"Regular Soy Milk",
-        {{0.59223, 0.73866, 1.4693}, {0.0019167, 0.0095833, 0.065167}}},
-    {"Lowfat Chocolate Milk",
-        {{0.64925, 0.83916, 1.1057}, {0.0115, 0.0368, 0.1564}}},
-    {"Regular Chocolate Milk",
-        {{1.4585, 2.1289, 2.9527}, {0.010063, 0.043125, 0.14375}}},
-    {"Coke", {{8.9053e-05, 8.372e-05, 0}, {0.10014, 0.16503, 0.2468}}},
-    {"Pepsi", {{6.1697e-05, 4.2564e-05, 0}, {0.091641, 0.14158, 0.20729}}},
-    {"Sprite", {{6.0306e-06, 6.4139e-06, 6.5504e-06},
-                   {0.001886, 0.0018308, 0.0020025}}},
-    {"Gatorade",
-        {{0.0024574, 0.003007, 0.0037325}, {0.024794, 0.019289, 0.008878}}},
-    {"Chardonnay",
-        {{1.7982e-05, 1.3758e-05, 1.2023e-05}, {0.010782, 0.011855, 0.023997}}},
-    {"White Zinfandel",
-        {{1.7501e-05, 1.9069e-05, 1.288e-05}, {0.012072, 0.016184, 0.019843}}},
-    {"Merlot", {{2.1129e-05, 0, 0}, {0.11632, 0.25191, 0.29434}}},
-    {"Budweiser Beer",
-        {{2.4356e-05, 2.4079e-05, 1.0564e-05}, {0.011492, 0.024911, 0.057786}}},
-    {"Coors Light Beer",
-        {{5.0922e-05, 4.301e-05, 0}, {0.006164, 0.013984, 0.034983}}},
-    {"Clorox",
-        {{0.0024035, 0.0031373, 0.003991}, {0.0033542, 0.014892, 0.026297}}},
-    {"Apple Juice",
-        {{0.00013612, 0.00015836, 0.000227}, {0.012957, 0.023741, 0.052184}}},
-    {"Cranberry Juice",
-        {{0.00010402, 0.00011646, 7.8139e-05}, {0.039437, 0.094223, 0.12426}}},
-    {"Grape Juice", {{5.382e-05, 0, 0}, {0.10404, 0.23958, 0.29325}}},
-    {"Ruby Grapefruit Juice",
-        {{0.011002, 0.010927, 0.011036}, {0.085867, 0.18314, 0.25262}}},
-    {"White Grapefruit Juice",
-        {{0.22826, 0.23998, 0.32748}, {0.0138, 0.018831, 0.056781}}},
-    {"Shampoo",
-        {{0.0007176, 0.0008303, 0.0009016}, {0.014107, 0.045693, 0.061717}}},
-    {"Strawberry Shampoo",
-        {{0.00015671, 0.00015947, 1.518e-05}, {0.01449, 0.05796, 0.075823}}},
-    {"Head & Shoulders Shampoo",
-        {{0.023805, 0.028804, 0.034306}, {0.084621, 0.15688, 0.20365}}},
-    {"Lemon Tea Powder",
-        {{0.040224, 0.045264, 0.051081}, {2.4288, 4.5757, 7.2127}}},
-    {"Orange Powder",
-        {{0.00015617, 0.00017482, 0.0001762}, {0.001449, 0.003441, 0.007863}}},
-    {"Pink Lemonade Powder",
-        {{0.00012103, 0.00013073, 0.00012528}, {0.001165, 0.002366, 0.003195}}},
-    {"Cappuccino Powder", {{1.8436, 2.5851, 2.1662}, {35.844, 49.547, 61.084}}},
-    {"Salt Powder",
-        {{0.027333, 0.032451, 0.031979}, {0.28415, 0.3257, 0.34148}}},
-    {"Sugar Powder",
-        {{0.00022272, 0.00025513, 0.000271}, {0.012638, 0.031051, 0.050124}}},
-    {"Suisse Mocha Powder",
-        {{2.7979, 3.5452, 4.3365}, {17.502, 27.004, 35.433}}},
-    {"Pacific Ocean Surface Water",
-        {{0.0001764, 0.00032095, 0.00019617}, {0.031845, 0.031324, 0.030147}}}};
-
-// Get subsurface params
-pair<vec3f, vec3f> get_subsurface_params(const string& name) {
-  if (subsurface_params_table.find(name) == subsurface_params_table.end())
-    return {zero3f, zero3f};
-  return subsurface_params_table.at(name);
 }
 
 }  // namespace yocto
@@ -1081,14 +895,18 @@ material_point eval_material(const trace_scene& scene,
   if (point.diffuse != zero3f || point.roughness) {
     point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
   }
+  if (point.specular == zero3f && point.metal == zero3f &&
+      point.transmission == zero3f && point.refraction == zero3f) {
+    point.roughness = 1;
+  }
   if (point.opacity > 0.999f) point.opacity = 1;
 
   // weights
   point.diffuse_pdf  = max(point.diffuse);
   point.specular_pdf = max(
       point.specular * fresnel_dielectric(point.ior, dot(outgoing, normal)));
-  point.metal_pdf = max(point.metal * fresnel_schlick(point.mreflectivity,
-                                          abs(dot(outgoing, normal))));
+  point.metal_pdf = max(point.metal * fresnel_conductor(point.meta, point.metak,
+                                          dot(outgoing, normal)));
   point.coat_pdf  = max(
       point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal)));
   point.transmission_pdf = max(point.transmission);
@@ -2461,7 +2279,7 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
 
   cdf += material.diffuse_pdf;
   if (rnl < cdf) {
-    return sample_hemisphere(up_normal, rn);
+    return sample_hemisphere_cos(up_normal, rn);
   }
 
   cdf += material.specular_pdf;
@@ -2549,7 +2367,8 @@ static float sample_brdf_pdf(const material_point& material,
   auto pdf = 0.0f;
 
   if (material.diffuse_pdf && same_hemi) {
-    pdf += material.diffuse_pdf * sample_hemisphere_pdf(up_normal, incoming);
+    pdf += material.diffuse_pdf *
+           sample_hemisphere_cos_pdf(up_normal, incoming);
   }
 
   if (material.specular_pdf && same_hemi) {
@@ -2806,12 +2625,13 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     const vec3f& origin_, const vec3f& direction_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance     = zero3f;
-  auto weight       = vec3f{1, 1, 1};
-  auto origin       = origin_;
-  auto direction    = direction_;
-  auto volume_stack = vector<pair<material_point, int>>{};
-  auto hit          = false;
+  auto radiance      = zero3f;
+  auto weight        = vec3f{1, 1, 1};
+  auto origin        = origin_;
+  auto direction     = direction_;
+  auto volume_stack  = vector<pair<material_point, int>>{};
+  auto max_roughness = 0.0f;
+  auto hit           = false;
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
@@ -2846,6 +2666,12 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
           intersection.uv, outgoing, trace_non_rigid_frames);
       auto material = eval_material(scene, instance, intersection.element,
           intersection.uv, normal, outgoing);
+
+      // correct roughness
+      if (params.nocaustics) {
+        max_roughness      = max(material.roughness, max_roughness);
+        material.roughness = max_roughness;
+      }
 
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
