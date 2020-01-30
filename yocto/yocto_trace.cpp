@@ -223,21 +223,6 @@ vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
                         pow(clamp(1 - abs(direction_cosine), 0.0f, 1.0f), 5.0f);
 }
 
-// Schlick approximation of the Fresnel term. Handles the refraction case.
-vec3f fresnel_schlick(
-    const vec3f& specular, float direction_cosine, bool entering) {
-  if (specular == zero3f) return zero3f;
-  if (!entering) {
-    // apply snell law to get proper angle
-    // sin = sin*eta -> cos = sqrt(1 - (1 - cos^2)*eta^2)
-    auto eta         = mean(reflectivity_to_eta(specular));
-    direction_cosine = sqrt(clamp(
-        1 - (1 - direction_cosine * direction_cosine) * eta * eta, 0.0, 1.0));
-  }
-  return specular + (1 - specular) *
-                        pow(clamp(1 - abs(direction_cosine), 0.0f, 1.0f), 5.0f);
-}
-
 // Evaluates the GGX distribution and geometric term
 float eval_microfacetD(
     float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx) {
