@@ -486,46 +486,4 @@ trace_intersection intersect_instance_bvh(const trace_scene& scene,
 
 }  // namespace yocto
 
-// -----------------------------------------------------------------------------
-// PATH TRACING SUPPORT FUNCTION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Phong exponent to roughness.
-float exponent_to_roughness(float n);
-
-// Specular to fresnel eta.
-vec3f              reflectivity_to_eta(const vec3f& reflectivity);
-vec3f              eta_to_reflectivity(const vec3f& eta);
-pair<vec3f, vec3f> reflectivity_to_eta(
-    const vec3f& reflectivity, const vec3f& edge_tint);
-vec3f eta_to_reflectivity(const vec3f& eta, const vec3f& etak);
-vec3f eta_to_edge_tint(const vec3f& eta, const vec3f& etak);
-// Compute the fresnel term for dielectrics.
-vec3f fresnel_dielectric(const vec3f& eta, float direction_cosine);
-// Compute the fresnel term for metals.
-vec3f fresnel_conductor(
-    const vec3f& eta, const vec3f& etak, float direction_cosine);
-// Schlick approximation of Fresnel term, optionally weighted by roughness;
-vec3f fresnel_schlick(const vec3f& specular, float direction_cosine);
-vec3f fresnel_schlick(
-    const vec3f& specular, float direction_cosine, float roughness);
-
-// Evaluates the microfacet distribution and geometric term (ggx or beckman).
-float eval_microfacetD(float roughness, const vec3f& normal,
-    const vec3f& half_vector, bool ggx = true);
-float eval_microfacetG(float roughness, const vec3f& normal,
-    const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx = true);
-vec3f sample_microfacet(
-    float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true);
-float sample_microfacet_pdf(float roughness, const vec3f& normal,
-    const vec3f& half_vector, bool ggx = true);
-
-// Evaluate and sample volume phase function.
-vec3f sample_phasefunction(float vg, const vec2f& u);
-float eval_phasefunction(float cos_theta, float vg);
-
-}  // namespace yocto
-
 #endif

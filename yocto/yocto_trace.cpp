@@ -225,7 +225,7 @@ vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
 
 // Evaluates the GGX distribution and geometric term
 float eval_microfacetD(
-    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx) {
+    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx = true) {
   auto cosine = dot(normal, half_vector);
   if (cosine <= 0) return 0;
   auto roughness_square = roughness * roughness;
@@ -241,7 +241,7 @@ float eval_microfacetD(
   }
 }
 float evaluate_microfacetG1(float roughness, const vec3f& normal,
-    const vec3f& half_vector, const vec3f& direction, bool ggx) {
+    const vec3f& half_vector, const vec3f& direction, bool ggx = true) {
   auto cosine = dot(normal, direction);
   if (dot(half_vector, direction) * cosine <= 0) return 0;
   auto roughness_square = roughness * roughness;
@@ -263,12 +263,12 @@ float evaluate_microfacetG1(float roughness, const vec3f& normal,
 }
 float eval_microfacetG(float roughness, const vec3f& normal,
     const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx) {
+    bool ggx = true) {
   return evaluate_microfacetG1(roughness, normal, half_vector, outgoing, ggx) *
          evaluate_microfacetG1(roughness, normal, half_vector, incoming, ggx);
 }
 vec3f sample_microfacet(
-    float roughness, const vec3f& normal, const vec2f& rn, bool ggx) {
+    float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true) {
   auto phi              = 2 * pif * rn.x;
   auto roughness_square = roughness * roughness;
   auto tangent_square   = 0.0f;
@@ -284,7 +284,7 @@ vec3f sample_microfacet(
   return transform_direction(basis_fromz(normal), local_half_vector);
 }
 float sample_microfacet_pdf(
-    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx) {
+    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx = true) {
   auto cosine = dot(normal, half_vector);
   if (cosine < 0) return 0;
   return eval_microfacetD(roughness, normal, half_vector, ggx) * cosine;
