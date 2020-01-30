@@ -930,9 +930,11 @@ material_point eval_material(const trace_scene& scene,
     point.refraction_pdf /= pdf_sum;
   }
 
-  if(point.refraction != zero3f) {
+  if(point.specular != zero3f && point.refraction != zero3f) {
     point.srefraction = point.specular;
     point.srefraction_pdf = point.specular_pdf;
+    point.specular = zero3f;
+    point.specular_pdf = 0;
   }
 
   return point;
@@ -2349,8 +2351,8 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
     }
   }
 
-  if(material.specular_pdf && material.refraction_pdf) {
-    cdf += material.specular_pdf;
+  if(material.srefraction_pdf) {
+    cdf += material.srefraction_pdf;
     if (rnl < cdf) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
       return reflect(outgoing, halfway);
@@ -2406,8 +2408,8 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
     }
   }
 
-  if(material.specular_pdf && material.refraction_pdf) {
-    cdf += material.specular_pdf;
+  if(material.srefraction_pdf) {
+    cdf += material.srefraction_pdf;
     if (rnl < cdf) {
       return reflect(outgoing, up_normal);
     }
@@ -2471,9 +2473,9 @@ static float sample_brdf_pdf(const material_point& material,
            abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
   }
 
-  if (material.specular_pdf && material.refraction_pdf && same_hemi) {
+  if (material.srefraction_pdf && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
-    pdf += material.specular_pdf *
+    pdf += material.srefraction_pdf *
            sample_microfacet_pdf(material.roughness, up_normal, halfway) /
            (4 * abs(dot(outgoing, halfway)));
   }
@@ -2493,7 +2495,7 @@ static float sample_delta_pdf(const material_point& material,
   if (material.coat_pdf && same_hemi) pdf += material.coat_pdf;
   if (material.transmission_pdf && !same_hemi) pdf += material.transmission_pdf;
   if (material.refraction_pdf && !same_hemi) pdf += material.refraction_pdf;
-  if (material.specular_pdf && material.refraction_pdf && same_hemi) pdf += material.specular_pdf;
+  if (material.srefraction_pdf && same_hemi) pdf += material.srefraction_pdf;
   return pdf;
 }
 
