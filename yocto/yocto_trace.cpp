@@ -135,13 +135,14 @@ inline float sample_hemisphere_cos_pdf(const vec3f& direction) {
 
 // Sample an hemispherical direction with cosine distribution.
 inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv) {
-  auto z   = sqrt(ruv.y);
-  auto r   = sqrt(1 - z * z);
-  auto phi = 2 * pif * ruv.x;
+  auto z               = sqrt(ruv.y);
+  auto r               = sqrt(1 - z * z);
+  auto phi             = 2 * pif * ruv.x;
   auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
   return transform_direction(basis_fromz(normal), local_direction);
 }
-inline float sample_hemisphere_cos_pdf(const vec3f& normal, const vec3f& direction) {
+inline float sample_hemisphere_cos_pdf(
+    const vec3f& normal, const vec3f& direction) {
   auto cosw = dot(normal, direction);
   return (cosw <= 0) ? 0 : cosw / pif;
 }
@@ -237,8 +238,8 @@ vec3f fresnel_schlick(const vec3f& specular, float direction_cosine) {
 }
 
 // Evaluates the GGX distribution and geometric term
-float eval_microfacetD(
-    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx = true) {
+float eval_microfacetD(float roughness, const vec3f& normal,
+    const vec3f& half_vector, bool ggx = true) {
   auto cosine = dot(normal, half_vector);
   if (cosine <= 0) return 0;
   auto roughness_square = roughness * roughness;
@@ -296,8 +297,8 @@ vec3f sample_microfacet(
   auto local_half_vector = vec3f{cos(phi) * radius, sin(phi) * radius, cosine};
   return transform_direction(basis_fromz(normal), local_half_vector);
 }
-float sample_microfacet_pdf(
-    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx = true) {
+float sample_microfacet_pdf(float roughness, const vec3f& normal,
+    const vec3f& half_vector, bool ggx = true) {
   auto cosine = dot(normal, half_vector);
   if (cosine < 0) return 0;
   return eval_microfacetD(roughness, normal, half_vector, ggx) * cosine;
@@ -894,8 +895,8 @@ material_point eval_material(const trace_scene& scene,
   if (point.diffuse != zero3f || point.roughness) {
     point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
   }
-  if (point.specular == zero3f && point.metal == zero3f && 
-    point.transmission == zero3f && point.refraction == zero3f) {
+  if (point.specular == zero3f && point.metal == zero3f &&
+      point.transmission == zero3f && point.refraction == zero3f) {
     point.roughness = 1;
   }
   if (point.opacity > 0.999f) point.opacity = 1;
@@ -2366,7 +2367,8 @@ static float sample_brdf_pdf(const material_point& material,
   auto pdf = 0.0f;
 
   if (material.diffuse_pdf && same_hemi) {
-    pdf += material.diffuse_pdf * sample_hemisphere_cos_pdf(up_normal, incoming);
+    pdf += material.diffuse_pdf *
+           sample_hemisphere_cos_pdf(up_normal, incoming);
   }
 
   if (material.specular_pdf && same_hemi) {
@@ -2623,13 +2625,13 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     const vec3f& origin_, const vec3f& direction_, rng_state& rng,
     const trace_params& params) {
   // initialize
-  auto radiance     = zero3f;
-  auto weight       = vec3f{1, 1, 1};
-  auto origin       = origin_;
-  auto direction    = direction_;
-  auto volume_stack = vector<pair<material_point, int>>{};
+  auto radiance      = zero3f;
+  auto weight        = vec3f{1, 1, 1};
+  auto origin        = origin_;
+  auto direction     = direction_;
+  auto volume_stack  = vector<pair<material_point, int>>{};
   auto max_roughness = 0.0f;
-  auto hit          = false;
+  auto hit           = false;
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
@@ -2666,8 +2668,8 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
           intersection.uv, normal, outgoing);
 
       // correct roughness
-      if(params.nocaustics) {
-        max_roughness = max(material.roughness, max_roughness);
+      if (params.nocaustics) {
+        max_roughness      = max(material.roughness, max_roughness);
         material.roughness = max_roughness;
       }
 
