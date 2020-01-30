@@ -1090,9 +1090,15 @@ material_point eval_material(const trace_scene& scene,
   point.metal_pdf = max(point.metal * fresnel_schlick(point.mreflectivity,
                                           abs(dot(outgoing, normal))));
   point.coat_pdf  = max(
-      point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal)));
+    point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal)));
   point.transmission_pdf = max(point.transmission);
   point.refraction_pdf   = max(point.refraction);
+  // point.diffuse_pdf  = max(point.diffuse) > 0 ? 1 : 0;
+  // point.specular_pdf = max(point.specular) > 0 ? 1 : 0;
+  // point.metal_pdf = max(point.metal) > 0 ? 1 : 0;
+  // point.coat_pdf  = max(point.coat) > 0 ? 1 : 0;
+  // point.transmission_pdf = max(point.transmission) > 0 ? 1 : 0;
+  // point.refraction_pdf   = max(point.refraction) > 0 ? 1 : 0;
   auto pdf_sum = point.diffuse_pdf + point.specular_pdf + point.metal_pdf +
                  point.coat_pdf + point.transmission_pdf + point.refraction_pdf;
   if (pdf_sum) {
