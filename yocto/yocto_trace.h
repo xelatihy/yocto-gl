@@ -526,13 +526,6 @@ float sample_microfacet_pdf(float roughness, const vec3f& normal,
 vec3f sample_phasefunction(float vg, const vec2f& u);
 float eval_phasefunction(float cos_theta, float vg);
 
-// Get complex ior from metal names (eta, etak).
-// Return zeros if not available.
-pair<vec3f, vec3f> get_conductor_eta(const string& element);
-
-// Get subsurface params
-pair<vec3f, vec3f> get_subsurface_params(const string& name);
-
 }  // namespace yocto
 
 #endif
