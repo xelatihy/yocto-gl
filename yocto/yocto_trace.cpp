@@ -133,6 +133,19 @@ inline float sample_hemisphere_cos_pdf(const vec3f& direction) {
   return (direction.z <= 0) ? 0 : direction.z / pif;
 }
 
+// Sample an hemispherical direction with cosine distribution.
+inline vec3f sample_hemisphere_cos(const vec3f& normal, const vec2f& ruv) {
+  auto z   = sqrt(ruv.y);
+  auto r   = sqrt(1 - z * z);
+  auto phi = 2 * pif * ruv.x;
+  auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+  return transform_direction(basis_fromz(normal), local_direction);
+}
+inline float sample_hemisphere_cos_pdf(const vec3f& normal, const vec3f& direction) {
+  auto cosw = dot(normal, direction);
+  return (cosw <= 0) ? 0 : cosw / pif;
+}
+
 // Sample an hemispherical direction with cosine power distribution.
 inline vec3f sample_hemisphere_cospower(float exponent, const vec2f& ruv) {
   auto z   = pow(ruv.y, 1 / (exponent + 1));
@@ -2265,7 +2278,7 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
 
   cdf += material.diffuse_pdf;
   if (rnl < cdf) {
-    return sample_hemisphere(up_normal, rn);
+    return sample_hemisphere_cos(up_normal, rn);
   }
 
   cdf += material.specular_pdf;
@@ -2353,7 +2366,7 @@ static float sample_brdf_pdf(const material_point& material,
   auto pdf = 0.0f;
 
   if (material.diffuse_pdf && same_hemi) {
-    pdf += material.diffuse_pdf * sample_hemisphere_pdf(up_normal, incoming);
+    pdf += material.diffuse_pdf * sample_hemisphere_cos_pdf(up_normal, incoming);
   }
 
   if (material.specular_pdf && same_hemi) {
