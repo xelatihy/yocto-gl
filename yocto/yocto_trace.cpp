@@ -485,8 +485,8 @@ struct material_point {
   float coat_pdf         = 0;
   float transmission_pdf = 0;
   float refraction_pdf   = 0;
-  vec3f srefraction         = {0, 0, 0};
-  float srefraction_pdf   = 0;
+  vec3f srefraction      = {0, 0, 0};
+  float srefraction_pdf  = 0;
 };
 
 // constant values
@@ -868,37 +868,54 @@ material_point eval_material(const trace_scene& scene,
 
   auto point = material_point{};
   // factors
-  auto weight    = vec3f{1, 1, 1};
-  point.emission = weight * emission;
-  point.coat     = weight * coat;
-  weight *= 1 - point.coat * coatf;
-  point.metal = weight * metallic;
-  weight *= 1 - metallic;
-  point.specular = weight * specular;
-  weight *= 1 - specular * specf;
-  point.transmission = !thin ? zero3f : weight * transmission * base;
-  point.refraction   = thin ? zero3f : weight * transmission;
-  weight *= 1 - transmission;
-  point.diffuse       = weight * base;
-  point.mreflectivity = base;
-  point.meta          = reflectivity_to_eta(base);
-  point.metak         = zero3f;
-  point.roughness     = roughness * roughness;
-  point.ior           = ior;
-  point.volemission   = zero3f;
-  point.voldensity    = (transmission && !thin)
-                         ? -log(clamp(base, 0.0001f, 1.0f)) / radius
-                         : zero3f;
-  point.volscatter    = scattering;
-  point.volanisotropy = phaseg;
-  point.opacity       = opacity;
+  if (thin) {
+    auto weight    = vec3f{1, 1, 1};
+    point.emission = weight * emission;
+    point.coat     = weight * coat;
+    weight *= 1 - point.coat * coatf;
+    point.metal = weight * metallic;
+    weight *= 1 - metallic;
+    point.specular = weight * specular;
+    weight *= 1 - specular * specf;
+    point.transmission = weight * transmission * base;
+    weight *= 1 - transmission;
+    point.diffuse       = weight * base;
+    point.mreflectivity = base;
+    point.meta          = reflectivity_to_eta(base);
+    point.metak         = zero3f;
+    point.roughness     = roughness * roughness;
+    point.ior           = ior;
+    point.opacity       = opacity;
+  } else {
+    auto weight    = vec3f{1, 1, 1};
+    point.emission = weight * emission;
+    point.metal = weight * metallic;
+    weight *= 1 - metallic;
+    point.srefraction = weight * specular;
+    weight *= 1 - specular * specf;
+    point.refraction = weight * transmission;
+    weight *= 1 - transmission;
+    point.diffuse       = weight * base;
+    point.meta          = reflectivity_to_eta(base);
+    point.metak         = zero3f;
+    point.roughness     = roughness * roughness;
+    point.ior           = ior;
+    point.volemission   = zero3f;
+    point.voldensity    = (transmission && !thin)
+                           ? -log(clamp(base, 0.0001f, 1.0f)) / radius
+                           : zero3f;
+    point.volscatter    = scattering;
+    point.volanisotropy = phaseg;
+    point.opacity       = opacity;
+  }
 
   // textures
   if (point.diffuse != zero3f || point.roughness) {
     point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
   }
   if (point.specular == zero3f && point.metal == zero3f &&
-      point.transmission == zero3f && point.refraction == zero3f) {
+      point.transmission == zero3f && point.refraction == zero3f && 
+      point.srefraction == zero3f) {
     point.roughness = 1;
   }
   if (point.opacity > 0.999f) point.opacity = 1;
@@ -913,6 +930,8 @@ material_point eval_material(const trace_scene& scene,
       point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal)));
   point.transmission_pdf = max(point.transmission);
   point.refraction_pdf   = max(point.refraction);
+  point.srefraction_pdf = max(
+      point.srefraction * fresnel_dielectric(point.ior, dot(outgoing, normal)));
   // point.diffuse_pdf  = max(point.diffuse) > 0 ? 1 : 0;
   // point.specular_pdf = max(point.specular) > 0 ? 1 : 0;
   // point.metal_pdf = max(point.metal) > 0 ? 1 : 0;
@@ -920,7 +939,8 @@ material_point eval_material(const trace_scene& scene,
   // point.transmission_pdf = max(point.transmission) > 0 ? 1 : 0;
   // point.refraction_pdf   = max(point.refraction) > 0 ? 1 : 0;
   auto pdf_sum = point.diffuse_pdf + point.specular_pdf + point.metal_pdf +
-                 point.coat_pdf + point.transmission_pdf + point.refraction_pdf;
+                 point.coat_pdf + point.transmission_pdf + point.refraction_pdf + 
+                 point.srefraction_pdf;
   if (pdf_sum) {
     point.diffuse_pdf /= pdf_sum;
     point.specular_pdf /= pdf_sum;
@@ -928,13 +948,7 @@ material_point eval_material(const trace_scene& scene,
     point.coat_pdf /= pdf_sum;
     point.transmission_pdf /= pdf_sum;
     point.refraction_pdf /= pdf_sum;
-  }
-
-  if(point.specular != zero3f && point.refraction != zero3f) {
-    point.srefraction = point.specular;
-    point.srefraction_pdf = point.specular_pdf;
-    point.specular = zero3f;
-    point.specular_pdf = 0;
+    point.srefraction_pdf /= pdf_sum;
   }
 
   return point;
@@ -2179,7 +2193,8 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     brdfcos += material.diffuse / pif * abs(dot(normal, incoming));
   }
 
-  if (material.specular != zero3f && material.refraction == zero3f && same_hemi) {
+  if (material.specular != zero3f && material.refraction == zero3f &&
+      same_hemi) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_dielectric(material.ior, dot(halfway, outgoing));
     auto D       = eval_microfacetD(material.roughness, up_normal, halfway);
@@ -2267,7 +2282,8 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
 
   auto brdfcos = zero3f;
 
-  if (material.specular != zero3f && material.refraction == zero3f && same_hemi) {
+  if (material.specular != zero3f && material.refraction == zero3f &&
+      same_hemi) {
     brdfcos += material.specular *
                fresnel_dielectric(material.ior, dot(normal, outgoing));
   }
@@ -2302,14 +2318,14 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
 
   auto cdf = 0.0f;
 
-  if(material.diffuse_pdf) {
+  if (material.diffuse_pdf) {
     cdf += material.diffuse_pdf;
     if (rnl < cdf) {
       return sample_hemisphere_cos(up_normal, rn);
     }
   }
 
-  if(material.specular_pdf && !material.refraction_pdf) {
+  if (material.specular_pdf && !material.refraction_pdf) {
     cdf += material.specular_pdf;
     if (rnl < cdf) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
@@ -2317,7 +2333,7 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
     }
   }
 
-  if(material.metal_pdf) {
+  if (material.metal_pdf) {
     cdf += material.metal_pdf;
     if (rnl < cdf) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
@@ -2325,7 +2341,7 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
     }
   }
 
-  if(material.coat_pdf) {
+  if (material.coat_pdf) {
     cdf += material.coat_pdf;
     if (rnl < cdf) {
       auto halfway = sample_microfacet(coat_roughness, up_normal, rn);
@@ -2333,7 +2349,7 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
     }
   }
 
-  if(material.transmission_pdf) {
+  if (material.transmission_pdf) {
     cdf += material.transmission_pdf;
     if (rnl < cdf) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
@@ -2342,7 +2358,7 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
     }
   }
 
-  if(material.refraction_pdf) {
+  if (material.refraction_pdf) {
     cdf += material.refraction_pdf;
     if (rnl < cdf) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
@@ -2351,7 +2367,7 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
     }
   }
 
-  if(material.srefraction_pdf) {
+  if (material.srefraction_pdf) {
     cdf += material.srefraction_pdf;
     if (rnl < cdf) {
       auto halfway = sample_microfacet(material.roughness, up_normal, rn);
@@ -2372,35 +2388,35 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
   auto cdf = 0.0f;
   cdf += material.diffuse_pdf;
 
-  if(material.specular_pdf && !material.refraction_pdf) {
+  if (material.specular_pdf && !material.refraction_pdf) {
     cdf += material.specular_pdf;
     if (rnl < cdf) {
       return reflect(outgoing, up_normal);
     }
   }
 
-  if(material.metal_pdf) {
+  if (material.metal_pdf) {
     cdf += material.metal_pdf;
     if (rnl < cdf) {
       return reflect(outgoing, up_normal);
     }
   }
 
-  if(material.coat_pdf) {
+  if (material.coat_pdf) {
     cdf += material.coat_pdf;
     if (rnl < cdf) {
       return reflect(outgoing, up_normal);
     }
   }
 
-  if(material.transmission_pdf) {
+  if (material.transmission_pdf) {
     cdf += material.transmission_pdf;
     if (rnl < cdf) {
       return -outgoing;
     }
   }
 
-  if(material.refraction_pdf) {
+  if (material.refraction_pdf) {
     cdf += material.refraction_pdf;
     if (rnl < cdf) {
       return refract_notir(outgoing, up_normal,
@@ -2408,7 +2424,7 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
     }
   }
 
-  if(material.srefraction_pdf) {
+  if (material.srefraction_pdf) {
     cdf += material.srefraction_pdf;
     if (rnl < cdf) {
       return reflect(outgoing, up_normal);
@@ -2490,7 +2506,8 @@ static float sample_delta_pdf(const material_point& material,
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
   auto pdf = 0.0f;
-  if (material.specular_pdf && !material.refraction_pdf && same_hemi) pdf += material.specular_pdf;
+  if (material.specular_pdf && !material.refraction_pdf && same_hemi)
+    pdf += material.specular_pdf;
   if (material.metal_pdf && same_hemi) pdf += material.metal_pdf;
   if (material.coat_pdf && same_hemi) pdf += material.coat_pdf;
   if (material.transmission_pdf && !same_hemi) pdf += material.transmission_pdf;
