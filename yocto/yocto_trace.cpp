@@ -476,7 +476,6 @@ struct material_point {
   float volanisotropy    = 0;
   float opacity          = 1;
   float ior              = 1;
-  vec3f mreflectivity    = {0, 0, 0};
   vec3f meta             = {0, 0, 0};
   vec3f metak            = {0, 0, 0};
   float diffuse_pdf      = 0;
@@ -880,7 +879,6 @@ material_point eval_material(const trace_scene& scene,
     point.transmission = weight * transmission * base;
     weight *= 1 - transmission;
     point.diffuse       = weight * base;
-    point.mreflectivity = base;
     point.meta          = reflectivity_to_eta(base);
     point.metak         = zero3f;
     point.roughness     = roughness * roughness;
