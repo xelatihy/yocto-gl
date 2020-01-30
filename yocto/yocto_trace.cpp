@@ -290,11 +290,6 @@ float sample_microfacet_pdf(
   return eval_microfacetD(roughness, normal, half_vector, ggx) * cosine;
 }
 
-// Phong exponent to roughness.
-float exponent_to_roughness(float exponent) {
-  return sqrtf(2 / (exponent + 2));
-}
-
 // Specular to  eta.
 vec3f reflectivity_to_eta(const vec3f& reflectivity_) {
   auto reflectivity = clamp(reflectivity_, 0.0f, 0.99f);
