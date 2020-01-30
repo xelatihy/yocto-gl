@@ -665,7 +665,6 @@ struct material_point {
   vec3f mreflectivity = {0, 0, 0};
   vec3f meta          = {0, 0, 0};
   vec3f metak         = {0, 0, 0};
-  bool  thin          = false;
 };
 
 // constant values
@@ -1064,7 +1063,6 @@ material_point eval_material(const trace_scene& scene,
   point.metak         = zero3f;
   point.roughness     = roughness * roughness;
   point.ior           = ior;
-  point.thin          = thin;
   point.volemission   = zero3f;
   point.voldensity    = (transmission && !thin)
                          ? -log(clamp(base, 0.0001f, 1.0f)) / radius
