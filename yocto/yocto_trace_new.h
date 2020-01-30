@@ -114,7 +114,7 @@ void set_material_scattering(trace_scene& scene, int idx,
     const vec3f& scattering, float phaseg, int scattering_tex = -1);
 void set_material_normalmap(trace_scene& scene, int idx, int normal_txt);
 void set_material_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
-void clear_materials(trace_scene& scene);
+void clear_materias(trace_scene& scene);
 
 // Add shape
 int  add_shape(trace_scene& scene, const vector<int>& points,
@@ -187,8 +187,8 @@ enum struct trace_sampler_type {
 enum struct trace_falsecolor_type {
   // clang-format off
   normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
-  diffuse, specular, coat, metal, transmission, refraction, roughness, 
-  material, shape, instance, element, highlight
+  diffuse, specular, transmission, roughness, material, shape, instance, 
+  element, highlight
   // clang-format on
 };
 // Strategy used to build the bvh
@@ -228,8 +228,8 @@ const auto trace_sampler_names = vector<string>{
 
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
-    "specular", "coat", "metal", "transmission", "refraction", "roughness",
-    "material", "shape", "instance", "element", "highlight"};
+    "specular", "transmission", "roughness", "material", "shape", "instance",
+    "element", "highlight"};
 const auto trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE

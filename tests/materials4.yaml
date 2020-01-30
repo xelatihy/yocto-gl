@@ -45,36 +45,39 @@ textures:
     preset: test-sky
 materials:
   - name: floor
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_tex: floor
+    base: [0.7, 0.7, 0.7]
+    base_tex: floor
   - name: volume-jade
-    specular: [0.04, 0.04, 0.04]
+    specular: 1
     roughness: 0
-    transmission: [1, 1, 1]
-    voltransmission: [0.5, 0.5, 0.5]
-    volscatter: [0.3, 0.6, 0.3]
-    refract: true
+    transmission: 1
+    base: [0.5, 0.5, 0.5]
+    scattering: [0.3, 0.6, 0.3]
+    thin: false
   - name: volume-cloud
-    transmission: [1, 1, 1]
-    voltransmission: [0.65, 0.65, 0.65]
-    volscatter: [0.9, 0.9, 0.9]
+    base: [0.65, 0.65, 0.65]
+    transmission: 1
+    scattering: [0.9, 0.9, 0.9]
+    ior: 1
   - name: volume-glass
-    specular: [0.04, 0.04, 0.04]
+    specular: 1
     roughness: 0
-    transmission: [1, 1, 1]
-    voltransmission: [1, 0.5, 0.5]
-    volscale: 0.02
-    refract: true
+    transmission: 1
+    base: [1, 0.5, 0.5]
+    radius: 0.02
+    thin: false
   - name: volume-smoke
-    transmission: [1, 1, 1]
-    voltransmission: [0.5, 0.5, 0.5]
-    volscatter: [0.2, 0.2, 0.2]
-    volanisotropy: -0.8
+    transmission: 1
+    base: [0.5, 0.5, 0.5]
+    scattering: [0.2, 0.2, 0.2]
+    phaseg: -0.8
+    ior: 1
   - name: volume-emissive
-    transmission: [1, 1, 1]
-    voltransmission: [0.95, 0.95, 0.95]
-    volemission: [15, 15, 10]
-    volscatter: [0.01, 0.01, 0.01]
+    transmission: 1
+    base: [0.95, 0.95, 0.95]
+    # volemission: [15, 15, 10]
+    scattering: [0.01, 0.01, 0.01]
+    ior: 1
   - name: largearealight1
     emission: [10, 10, 10]
   - name: largearealight2

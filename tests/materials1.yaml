@@ -45,24 +45,26 @@ textures:
     preset: test-sky
 materials:
   - name: floor
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_tex: floor
+    base: [0.7, 0.7, 0.7]
+    base_tex: floor
   - name: matte
-    diffuse: [0.7, 0.7, 0.7]
+    base: [0.7, 0.7, 0.7]
     roughness: 1
   - name: plastic-sharp
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [0.5, 0.5, 0.7]
+    specular: 1
+    base: [0.5, 0.5, 0.7]
     roughness: 0.01
   - name: plastic-rough
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [0.5, 0.7, 0.5]
+    specular: 1
+    base: [0.5, 0.7, 0.5]
     roughness: 0.2
   - name: metal-sharp
-    specular: [0.7, 0.7, 0.7]
+    base: [0.7, 0.7, 0.7]
+    metallic: 1
     roughness: 0
   - name: metal-rough
-    specular: [0.66, 0.45, 0.34]
+    base: [0.66, 0.45, 0.34]
+    metallic: 1
     roughness: 0.2
   - name: largearealight1
     emission: [10, 10, 10]

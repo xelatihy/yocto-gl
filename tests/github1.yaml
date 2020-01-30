@@ -13,50 +13,50 @@ textures:
   - uri: ::yocto::test-sky::textures/test-sky.hdr
 materials:
   - uri: materials/test-floor.yaml
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_tex: textures/test-floor.png
+    base: [0.7, 0.7, 0.7]
+    base_tex: textures/test-floor.png
   - uri: materials/test-arealight1.yaml
     emission: [20, 20, 20]
   - uri: materials/test-arealight2.yaml
     emission: [20, 20, 20]
   - uri: materials/test-metal-rough.yaml
     metallic: 1
-    diffuse: [0.66, 0.45, 0.34]
+    base: [0.66, 0.45, 0.34]
     roughness: 0.2
   - uri: materials/test-plastic-rough-bumped.yaml
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [0.5, 0.7, 0.5]
+    specular: 1
+    base: [0.5, 0.7, 0.5]
     roughness: 0.2
     normal_tex: textures/test-bumps-normal.png
   - uri: materials/test-uvgrid-coated.yaml
     coat: [0.04, 0.04, 0.04]
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [1, 1, 1]
+    specular: 1
+    base: [1, 1, 1]
     roughness: 0.2
-    diffuse_tex: textures/test-uvgrid.png
+    base_tex: textures/test-uvgrid.png
   - uri: materials/test-volume-jade.yaml
-    specular: [0.04, 0.04, 0.04]
+    specular: 1
     roughness: 0
     refraction: [1, 1, 1]
     voltransmission: [0.5, 0.5, 0.5]
     volscatter: [0.3, 0.6, 0.3]
   - uri: materials/test-volume-glass.yaml
-    specular: [0.04, 0.04, 0.04]
+    specular: 1
     roughness: 0
     refraction: [1, 1, 1]
     voltransmission: [1, 0.5, 0.5]
     volscale: 0.02
   - uri: materials/test-uvgrid.yaml
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [1, 1, 1]
+    specular: 1
+    base: [1, 1, 1]
     roughness: 0.1
-    diffuse_tex: textures/test-uvgrid.png
+    base_tex: textures/test-uvgrid.png
   - uri: materials/test-plastic-rough.yaml
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [0.5, 0.7, 0.5]
+    specular: 1
+    base: [0.5, 0.7, 0.5]
     roughness: 0.2
   - uri: materials/test-hair.yaml
-    diffuse: [0.7, 0.7, 0.7]
+    base: [0.7, 0.7, 0.7]
     roughness: 1
 shapes:
   - uri: ::yocto::test-floor::shapes/test-floor.ply

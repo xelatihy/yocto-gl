@@ -48,28 +48,31 @@ textures:
     preset: test-sky
 materials:
   - name: floor
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_tex: floor
+    base: [0.7, 0.7, 0.7]
+    base_tex: floor
   - name: metal-rough
-    specular: [0.66, 0.45, 0.34]
+    base: [0.66, 0.45, 0.34]
+    metallic: 1
     roughness: 0.2
   - name: plastic-sharp-bumped
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [0.5, 0.5, 0.7]
+    specular: 1
+    base: [0.5, 0.5, 0.7]
     roughness: 0.01
     normal_tex: bumps-normal
   - name: metal-sharp-bumped
-    specular: [0.7, 0.7, 0.7]
+    base: [0.7, 0.7, 0.7]
+    metallic: 1
     roughness: 0
     normal_tex: bumps-normal
   - name: plastic-rough-coated
-    specular: [0.04, 0.04, 0.04]
-    coat: [0.04, 0.04, 0.04]
-    diffuse: [0.5, 0.7, 0.5]
+    specular: 1
+    coat: 1
+    base: [0.5, 0.7, 0.5]
     roughness: 0.2
   - name: metal-rough-coated
-    coat: [0.04, 0.04, 0.04]
-    specular: [0.66, 0.45, 0.34]
+    coat: 1
+    base: [0.66, 0.45, 0.34]
+    metallic: 1
     roughness: 0.2
   - name: largearealight1
     emission: [10, 10, 10]

@@ -51,19 +51,21 @@ textures:
     preset: test-sky
 materials:
   - name: floor
-    diffuse: [0.7, 0.7, 0.7]
-    diffuse_tex: floor
+    base: [0.7, 0.7, 0.7]
+    base_tex: floor
+    specular: 0
   - name: uvgrid
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [1, 1, 1]
+    base: [1, 1, 1]
+    specular: 1
     roughness: 0.1
-    diffuse_tex: uvgrid
+    base_tex: uvgrid
   - name: plastic-rough
-    specular: [0.04, 0.04, 0.04]
-    diffuse: [0.5, 0.7, 0.5]
+    base: [0.5, 0.7, 0.5]
+    specular: 1
     roughness: 0.2
   - name: hair
-    diffuse: [0.7, 0.7, 0.7]
+    base: [0.7, 0.7, 0.7]
+    specular: 0
     roughness: 1
   - name: arealight1
     emission: [20, 20, 20]
