@@ -2141,9 +2141,6 @@ static vec3f eval_volemission(
   return material.volemission;
 }
 
-// Material lobes
-
-
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
 static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
