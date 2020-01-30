@@ -929,6 +929,12 @@ material_point eval_material(const trace_scene& scene,
     point.transmission_pdf /= pdf_sum;
     point.refraction_pdf /= pdf_sum;
   }
+
+  if(point.refraction != zero3f) {
+    point.srefraction = point.specular;
+    point.srefraction_pdf = point.specular_pdf;
+  }
+
   return point;
 }
 
@@ -2237,13 +2243,13 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
                dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
   }
 
-  if (material.specular != zero3f && material.refraction != zero3f && same_hemi) {
+  if (material.srefraction != zero3f && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_dielectric(material.ior, dot(halfway, outgoing));
     auto D       = eval_microfacetD(material.roughness, up_normal, halfway);
     auto G       = eval_microfacetG(
         material.roughness, up_normal, halfway, outgoing, incoming);
-    brdfcos += material.specular * F * D * G /
+    brdfcos += material.srefraction * F * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
@@ -2277,8 +2283,8 @@ static vec3f eval_delta(const material_point& material, const vec3f& normal,
   if (material.refraction != zero3f && !same_hemi) {
     brdfcos += material.refraction;
   }
-  if (material.specular != zero3f && material.refraction != zero3f && same_hemi) {
-    brdfcos += material.specular *
+  if (material.srefraction != zero3f && same_hemi) {
+    brdfcos += material.srefraction *
                fresnel_dielectric(material.ior, dot(normal, outgoing));
   }
 
