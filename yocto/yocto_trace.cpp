@@ -1081,6 +1081,10 @@ material_point eval_material(const trace_scene& scene,
   if (point.diffuse != zero3f || point.roughness) {
     point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
   }
+  if (point.specular == zero3f && point.metal == zero3f && 
+    point.transmission == zero3f && point.refraction == zero3f) {
+    point.roughness = 1;
+  }
   if (point.opacity > 0.999f) point.opacity = 1;
 
   // weights
@@ -2811,6 +2815,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
   auto origin       = origin_;
   auto direction    = direction_;
   auto volume_stack = vector<pair<material_point, int>>{};
+  auto max_roughness = 0.0f;
   auto hit          = false;
 
   // trace  path
@@ -2846,6 +2851,12 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
           intersection.uv, outgoing, trace_non_rigid_frames);
       auto material = eval_material(scene, instance, intersection.element,
           intersection.uv, normal, outgoing);
+
+      // correct roughness
+      if(params.nocaustics) {
+        max_roughness = max(material.roughness, max_roughness);
+        material.roughness = max_roughness;
+      }
 
       // handle opacity
       if (material.opacity < 1 && rand1f(rng) >= material.opacity) {

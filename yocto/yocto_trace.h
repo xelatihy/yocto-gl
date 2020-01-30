@@ -97,7 +97,7 @@ int  add_material(trace_scene& scene);
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_material_base(
-    trace_scene& scene, int idx, const vec3f& _base, int _base_txt = -1);
+    trace_scene& scene, int idx, const vec3f& base, int base_txt = -1);
 void set_material_specular(
     trace_scene& scene, int idx, float specular = 1, int specular_txt = -1);
 void set_material_ior(trace_scene& scene, int idx, float ior);
@@ -216,6 +216,7 @@ struct trace_params {
   int                   samples    = 512;
   int                   bounces    = 8;
   float                 clamp      = 10;
+  bool                  nocaustics = false;
   bool                  envhidden  = false;
   bool                  tentfilter = false;
   uint64_t              seed       = trace_default_seed;
