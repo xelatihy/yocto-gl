@@ -311,7 +311,8 @@ float exponent_to_roughness(float exponent) {
 }
 
 // Specular to  eta.
-vec3f reflectivity_to_eta(const vec3f& reflectivity) {
+vec3f reflectivity_to_eta(const vec3f& reflectivity_) {
+  auto reflectivity = clamp(reflectivity_, 0.0f, 0.99f);
   return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
 }
 
@@ -398,6 +399,7 @@ vec3f fresnel_dielectric(const vec3f& eta_, float cosw) {
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 vec3f fresnel_conductor(const vec3f& eta, const vec3f& etak, float cosw) {
+  if (cosw <= 0) return zero3f;
   if (etak == zero3f) return fresnel_dielectric(eta, cosw);
 
   cosw       = clamp(cosw, (float)-1, (float)1);
@@ -1091,8 +1093,8 @@ material_point eval_material(const trace_scene& scene,
   point.diffuse_pdf  = max(point.diffuse);
   point.specular_pdf = max(
       point.specular * fresnel_dielectric(point.ior, dot(outgoing, normal)));
-  point.metal_pdf = max(point.metal * fresnel_schlick(point.mreflectivity,
-                                          abs(dot(outgoing, normal))));
+  point.metal_pdf = max(point.metal * fresnel_conductor(point.meta, point.metak,
+                                          dot(outgoing, normal)));
   point.coat_pdf  = max(
       point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal)));
   point.transmission_pdf = max(point.transmission);
