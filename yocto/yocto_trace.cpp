@@ -890,24 +890,28 @@ static material_point eval_material(const trace_scene& scene, int instance_,
 
 // Point used for tracing
 struct trace_point {
-  vec3f position = zero3f;
-  vec3f normal = zero3f;
-  vec3f gnormal = zero3f;
-  vec2f texcoord = zero2f;
-  vec4f color = zero4f;
+  vec3f          position = zero3f;
+  vec3f          normal   = zero3f;
+  vec3f          gnormal  = zero3f;
+  vec2f          texcoord = zero2f;
+  vec4f          color    = zero4f;
   material_point material = {};
 };
 
 // Evaluate point
 static trace_point eval_point(const trace_scene& scene, int instance_,
-    int element, const vec2f& uv, const vec3f& outgoing, bool trace_non_rigid_frames) {
-  auto point = trace_point{};
+    int element, const vec2f& uv, const vec3f& outgoing,
+    bool trace_non_rigid_frames) {
+  auto point     = trace_point{};
   point.position = eval_position(scene, instance_, element, uv);
-  point.normal = eval_shading_normal_(scene, instance_, element, uv, outgoing, trace_non_rigid_frames);
-  point.gnormal = eval_element_normal_(scene, instance_, element, trace_non_rigid_frames);
+  point.normal   = eval_shading_normal_(
+      scene, instance_, element, uv, outgoing, trace_non_rigid_frames);
+  point.gnormal = eval_element_normal_(
+      scene, instance_, element, trace_non_rigid_frames);
   point.texcoord = eval_texcoord(scene, instance_, element, uv);
-  point.color = eval_color(scene, instance_, element, uv);
-  point.material = eval_material(scene, instance_, element, uv, point.normal, outgoing);
+  point.color    = eval_color(scene, instance_, element, uv);
+  point.material = eval_material(
+      scene, instance_, element, uv, point.normal, outgoing);
   return point;
 }
 
@@ -2428,14 +2432,15 @@ static float sample_volscattering_pdf(const material_point& material,
 // Sample lights wrt solid angle
 static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
     float rl, float rel, const vec2f& ruv) {
-  auto light_id = sample_uniform(scene.lights.size(), rl);
-  auto& light = scene.lights[light_id];
+  auto  light_id = sample_uniform(scene.lights.size(), rl);
+  auto& light    = scene.lights[light_id];
   if (light.instance >= 0) {
     auto& instance = scene.instances[light.instance];
     auto& shape    = scene.shapes[instance.shape];
     auto  element  = sample_discrete(light.cdf, rel);
     auto  uv       = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
-    return normalize(eval_position(scene, light.instance, element, uv) - position);
+    return normalize(
+        eval_position(scene, light.instance, element, uv) - position);
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
@@ -2462,7 +2467,7 @@ static float sample_lights_pdf(
   for (auto& light : scene.lights) {
     if (light.instance >= 0) {
       // check all intersection
-      auto light_pdf           = 0.0f;
+      auto light_pdf     = 0.0f;
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_instance_bvh(
@@ -2471,12 +2476,12 @@ static float sample_lights_pdf(
         // accumulate pdf
         auto light_position = eval_position(
             scene, isec.instance, isec.element, isec.uv);
-        auto light_normal = eval_normal(
-            scene, isec.instance, isec.element, isec.uv, trace_non_rigid_frames);
+        auto light_normal = eval_normal(scene, isec.instance, isec.element,
+            isec.uv, trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = light.cdf.back();
         light_pdf += distance_squared(light_position, position) /
-              (abs(dot(light_normal, direction)) * area);
+                     (abs(dot(light_normal, direction)) * area);
         // continue
         next_position = light_position + direction * 1e-3f;
       }
@@ -2488,14 +2493,14 @@ static float sample_lights_pdf(
         auto& emission_tex = scene.textures[environment.emission_tex];
         auto  size         = texture_size(emission_tex);
         auto  wl = transform_direction(inverse(environment.frame), direction);
-        auto  texcoord = vec2f{
-            atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+        auto  texcoord = vec2f{atan2(wl.z, wl.x) / (2 * pif),
+            acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
         if (texcoord.x < 0) texcoord.x += 1;
         auto i     = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
         auto j     = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
         auto prob  = sample_discrete_pdf(cdf, j * size.x + i) / cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
-                    sin(pif * (j + 0.5f) / size.y);
+                     sin(pif * (j + 0.5f) / size.y);
         pdf += prob / angle;
       } else {
         pdf += 1 / (4 * pif);
@@ -2545,9 +2550,9 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -direction;
-      auto [position, normal, _gnormal, _texcoord, _color, material] = eval_point(
-          scene, intersection.instance, intersection.element, intersection.uv, 
-          outgoing, trace_non_rigid_frames);
+      auto [position, normal, _gnormal, _texcoord, _color, material] =
+          eval_point(scene, intersection.instance, intersection.element,
+              intersection.uv, outgoing, trace_non_rigid_frames);
 
       // correct roughness
       if (params.nocaustics) {
@@ -2664,11 +2669,11 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     }
 
     // prepare shading point
-    auto outgoing = -direction;
-    auto incoming = outgoing;
+    auto outgoing                                                  = -direction;
+    auto incoming                                                  = outgoing;
     auto [position, normal, _gnormal, _texcoord, _color, material] = eval_point(
-        scene, intersection.instance, intersection.element, intersection.uv, outgoing,
-        trace_non_rigid_frames);
+        scene, intersection.instance, intersection.element, intersection.uv,
+        outgoing, trace_non_rigid_frames);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -2732,7 +2737,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
     }
 
     // prepare shading point
-    auto outgoing = -direction;
+    auto outgoing                                                  = -direction;
     auto [position, normal, _gnormal, _texcoord, _color, material] = eval_point(
         scene, intersection.instance, intersection.element, intersection.uv,
         outgoing, trace_non_rigid_frames);
@@ -2781,53 +2786,42 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
   auto& instance = scene.instances[intersection.instance];
 
   // prepare shading point
-  auto outgoing = -direction;
-  auto [position, normal, gnormal, texcoord, color, material] = eval_point(scene, intersection.instance,
-      intersection.element, intersection.uv, outgoing, trace_non_rigid_frames);
+  auto outgoing                                               = -direction;
+  auto [position, normal, gnormal, texcoord, color, material] = eval_point(
+      scene, intersection.instance, intersection.element, intersection.uv,
+      outgoing, trace_non_rigid_frames);
 
   // hash color
   auto hashed_color = [](int id) {
     auto hashed = std::hash<int>()(id);
-    auto rng = make_rng(trace_default_seed, hashed);
+    auto rng    = make_rng(trace_default_seed, hashed);
     return pow(0.5f + 0.5f * rand3f(rng), 2.2f);
   };
 
   switch (params.falsecolor) {
     case trace_falsecolor_type::normal: return {normal * 0.5f + 0.5f, 1};
-    case trace_falsecolor_type::frontfacing: 
-      return {dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
-                                                   : vec3f{1, 0, 0}, 1};
-    case trace_falsecolor_type::gnormal:
-      return {gnormal * 0.5f + 0.5f, 1};
+    case trace_falsecolor_type::frontfacing:
+      return {dot(normal, outgoing) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
+    case trace_falsecolor_type::gnormal: return {gnormal * 0.5f + 0.5f, 1};
     case trace_falsecolor_type::gfrontfacing:
-      return {dot(gnormal, outgoing) > 0 ? vec3f{0, 1, 0}
-                                                   : vec3f{1, 0, 0}, 1};
+      return {dot(gnormal, outgoing) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
     case trace_falsecolor_type::texcoord:
       return {{fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0}, 1};
-    case trace_falsecolor_type::color:
-      return {xyz(color), 1};
-    case trace_falsecolor_type::emission:
-      return {material.emission, 1};
-    case trace_falsecolor_type::diffuse:
-      return {material.diffuse, 1};
-    case trace_falsecolor_type::specular:
-      return {material.specular, 1};
-    case trace_falsecolor_type::coat:
-      return {material.coat, 1};
-    case trace_falsecolor_type::metal:
-      return {material.metal, 1};
-    case trace_falsecolor_type::transmission:
-      return {material.transmission, 1};
-    case trace_falsecolor_type::refraction:
-      return {material.refraction, 1};
+    case trace_falsecolor_type::color: return {xyz(color), 1};
+    case trace_falsecolor_type::emission: return {material.emission, 1};
+    case trace_falsecolor_type::diffuse: return {material.diffuse, 1};
+    case trace_falsecolor_type::specular: return {material.specular, 1};
+    case trace_falsecolor_type::coat: return {material.coat, 1};
+    case trace_falsecolor_type::metal: return {material.metal, 1};
+    case trace_falsecolor_type::transmission: return {material.transmission, 1};
+    case trace_falsecolor_type::refraction: return {material.refraction, 1};
     case trace_falsecolor_type::roughness:
       return {vec3f{material.roughness}, 1};
     case trace_falsecolor_type::material:
       return {hashed_color(instance.material), 1};
     case trace_falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
-    case trace_falsecolor_type::shape:
-      return {hashed_color(instance.shape), 1};
+    case trace_falsecolor_type::shape: return {hashed_color(instance.shape), 1};
     case trace_falsecolor_type::instance:
       return {hashed_color(intersection.instance), 1};
     case trace_falsecolor_type::highlight: {
@@ -2836,8 +2830,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
       return {emission * abs(dot(outgoing, normal)), 1};
     } break;
-    default:
-      return {zero3f, false};
+    default: return {zero3f, false};
   }
 }
 
@@ -2927,13 +2920,13 @@ void init_lights(trace_scene& scene) {
     auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
-    auto& light = scene.lights.emplace_back();
-    light.instance = idx;
+    auto& light       = scene.lights.emplace_back();
+    light.instance    = idx;
     light.environment = -1;
     if (!shape.triangles.empty()) {
       light.cdf = vector<float>(shape.triangles.size());
       for (auto idx = 0; idx < light.cdf.size(); idx++) {
-        auto& t  = shape.triangles[idx];
+        auto& t        = shape.triangles[idx];
         light.cdf[idx] = triangle_area(
             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
         if (idx) light.cdf[idx] += light.cdf[idx - 1];
@@ -2942,7 +2935,7 @@ void init_lights(trace_scene& scene) {
     if (!shape.quads.empty()) {
       light.cdf = vector<float>(shape.quads.size());
       for (auto idx = 0; idx < light.cdf.size(); idx++) {
-        auto& t  = shape.quads[idx];
+        auto& t        = shape.quads[idx];
         light.cdf[idx] = quad_area(shape.positions[t.x], shape.positions[t.y],
             shape.positions[t.z], shape.positions[t.w]);
         if (idx) light.cdf[idx] += light.cdf[idx - 1];
@@ -2952,18 +2945,18 @@ void init_lights(trace_scene& scene) {
   for (auto idx = 0; idx < scene.environments.size(); idx++) {
     auto& environment = scene.environments[idx];
     if (environment.emission == zero3f) continue;
-    auto& light = scene.lights.emplace_back();
-    light.instance = -1;
+    auto& light       = scene.lights.emplace_back();
+    light.instance    = -1;
     light.environment = idx;
-    if(environment.emission_tex >= 0) {
-      auto& texture    = scene.textures[environment.emission_tex];
-      auto  size       = texture_size(texture);
-      light.cdf = vector<float>(size.x * size.y);
+    if (environment.emission_tex >= 0) {
+      auto& texture = scene.textures[environment.emission_tex];
+      auto  size    = texture_size(texture);
+      light.cdf     = vector<float>(size.x * size.y);
       if (size != zero2i) {
         for (auto i = 0; i < light.cdf.size(); i++) {
-          auto ij       = vec2i{i % size.x, i / size.x};
-          auto th       = (ij.y + 0.5f) * pif / size.y;
-          auto value    = lookup_texture(texture, ij);
+          auto ij      = vec2i{i % size.x, i / size.x};
+          auto th      = (ij.y + 0.5f) * pif / size.y;
+          auto value   = lookup_texture(texture, ij);
           light.cdf[i] = max(xyz(value)) * sin(th);
           if (i) light.cdf[i] += light.cdf[i - 1];
         }
