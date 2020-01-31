@@ -827,8 +827,9 @@ static vec3f eval_shading_normal(const trace_scene& scene, int instance_, int el
   }
 }
 // Instance element values.
-static vec3f eval_element_normal(const trace_scene& scene,
-    const trace_instance& instance, int element, bool non_rigid_frame) {
+static vec3f eval_element_normal(const trace_scene& scene, int instance_,
+    int element, bool non_rigid_frame) {
+  auto& instance = scene.instances[instance_];
   auto normal = eval_element_normal(scene.shapes[instance.shape], element);
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
@@ -2918,12 +2919,12 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
     }
     case trace_falsecolor_type::gnormal: {
       auto normal = eval_element_normal(
-          scene, instance, intersection.element, true);
+          scene, intersection.instance, intersection.element, true);
       return {normal * 0.5f + 0.5f, 1};
     }
     case trace_falsecolor_type::gfrontfacing: {
       auto normal = eval_element_normal(
-          scene, instance, intersection.element, true);
+          scene, intersection.instance, intersection.element, true);
       auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                    : vec3f{1, 0, 0};
       return {frontfacing, 1};
