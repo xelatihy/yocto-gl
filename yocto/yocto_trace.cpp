@@ -733,15 +733,6 @@ static ray3f eval_orthographic_camera(
   }
 }
 
-static vec2i camera_resolution(const trace_scene& scene, int camera_, int resolution) {
-  auto& camera = scene.cameras[camera_];
-  if (camera.film.x > camera.film.y) {
-    return {resolution, (int)round(resolution * camera.film.y / camera.film.x)};
-  } else {
-    return {(int)round(resolution * camera.film.x / camera.film.y), resolution};
-  }
-}
-
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_camera(
@@ -3072,8 +3063,10 @@ vec4f trace_sample(trace_state& state, const trace_scene& scene,
 // Init a sequence of random number generators.
 void init_state(
     trace_state& state, const trace_scene& scene, const trace_params& params) {
-  auto image_size = camera_resolution(
-      scene, params.camera, params.resolution);
+  auto& camera = scene.cameras[params.camera];
+  auto image_size = (camera.film.x > camera.film.y) ? 
+    vec2i{params.resolution, (int)round(params.resolution * camera.film.y / camera.film.x)}:
+    vec2i{(int)round(params.resolution * camera.film.x / camera.film.y), params.resolution};
   state    = {image_size, trace_pixel{}};
   auto rng = make_rng(1301081);
   for (auto j = 0; j < state.size().y; j++) {
