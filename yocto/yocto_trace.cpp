@@ -905,8 +905,11 @@ static trace_point eval_point(const trace_scene& scene, int instance_,
   point.position = eval_shape_elem(
       shape, shape.quadspos, shape.positions, element, uv);
   point.position = transform_point(instance.frame, point.position);
-  point.normal   = eval_shading_normal_(
-      scene, instance_, element, uv, outgoing, trace_non_rigid_frames);
+  point.normal   = shape.normals.empty()
+                    ? eval_element_normal(shape, element)
+                    : normalize(eval_shape_elem(
+                          shape, shape.quadsnorm, shape.normals, element, uv));
+  point.normal   = transform_normal(instance.frame, point.normal, trace_non_rigid_frames);
   point.gnormal   = eval_element_normal(shape, element);
   point.gnormal   = transform_normal(instance.frame, point.gnormal, trace_non_rigid_frames);
   point.texcoord = shape.texcoords.empty() ? uv
@@ -915,6 +918,25 @@ static trace_point eval_point(const trace_scene& scene, int instance_,
   point.color    =  shape.colors.empty()
              ? vec4f{1, 1, 1, 1}
              : eval_shape_elem(shape, {}, shape.colors, element, uv);
+
+  // correct normal
+  if (!shape.points.empty()) {
+    point.normal = outgoing;
+  } else if (!shape.lines.empty()) {
+    point.normal = orthonormalize(outgoing, point.normal);
+  } else if (material.normal_tex < 0) {
+    if (material.thin && dot(outgoing, point.normal) < 0) point.normal = -point.normal;
+  } else {
+    auto normalmap =
+        -1 + 2 * xyz(eval_texture(scene, material.normal_tex,
+                     eval_texcoord_(scene, instance_, element, uv), true));
+    auto basis = eval_tangent_basis(shape, element, uv);
+    normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
+    auto normal = normalize(basis.first * normalmap);
+    point.normal = transform_normal(instance.frame, normal, trace_non_rigid_frames);
+    if (material.thin && dot(outgoing, point.normal) < 0) point.normal = -point.normal;
+  }
+
   point.material = eval_material_(
       scene, instance_, element, uv, point.normal, outgoing);
   return point;
