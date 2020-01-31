@@ -756,7 +756,7 @@ static vec4f eval_color(
              ? vec4f{1, 1, 1, 1}
              : eval_shape_elem(shape, {}, shape.colors, element, uv);
 }
-static vec3f eval_shading_normal(const trace_scene& scene, int instance_,
+static vec3f eval_shading_normal_(const trace_scene& scene, int instance_,
     int element, const vec2f& uv, const vec3f& outgoing, bool non_rigid_frame) {
   auto& instance = scene.instances[instance_];
   auto& shape    = scene.shapes[instance.shape];
@@ -885,6 +885,23 @@ static material_point eval_material(const trace_scene& scene, int instance_,
     point.refraction_pdf /= pdf_sum;
   }
 
+  return point;
+}
+
+// Point used for tracing
+struct trace_point {
+  vec3f position = zero3f;
+  vec3f normal = zero3f;
+  material_point material = {};
+};
+
+// Evaluate point
+static trace_point eval_point(const trace_scene& scene, int instance_,
+    int element, const vec2f& uv, const vec3f& outgoing, bool trace_non_rigid_frames) {
+  auto point = trace_point{};
+  point.position = eval_position(scene, instance_, element, uv);
+  point.normal = eval_shading_normal_(scene, instance_, element, uv, outgoing, trace_non_rigid_frames);
+  point.material = eval_material(scene, instance_, element, uv, point.normal, outgoing);
   return point;
 }
 
@@ -2522,13 +2539,9 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -direction;
-      auto position = eval_position(
-          scene, intersection.instance, intersection.element, intersection.uv);
-      auto normal   = eval_shading_normal(scene, intersection.instance,
-          intersection.element, intersection.uv, outgoing,
-          trace_non_rigid_frames);
-      auto material = eval_material(scene, intersection.instance,
-          intersection.element, intersection.uv, normal, outgoing);
+      auto [position, normal, material] = eval_point(
+          scene, intersection.instance, intersection.element, intersection.uv, 
+          outgoing, trace_non_rigid_frames);
 
       // correct roughness
       if (params.nocaustics) {
@@ -2647,13 +2660,9 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     // prepare shading point
     auto outgoing = -direction;
     auto incoming = outgoing;
-    auto position = eval_position(
-        scene, intersection.instance, intersection.element, intersection.uv);
-    auto normal   = eval_shading_normal(scene, intersection.instance,
-        intersection.element, intersection.uv, outgoing,
+    auto [position, normal, material] = eval_point(
+        scene, intersection.instance, intersection.element, intersection.uv, outgoing,
         trace_non_rigid_frames);
-    auto material = eval_material(scene, intersection.instance,
-        intersection.element, intersection.uv, normal, outgoing);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -2718,13 +2727,9 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
 
     // prepare shading point
     auto outgoing = -direction;
-    auto position = eval_position(
-        scene, intersection.instance, intersection.element, intersection.uv);
-    auto normal   = eval_shading_normal(scene, intersection.instance,
-        intersection.element, intersection.uv, outgoing,
-        trace_non_rigid_frames);
-    auto material = eval_material(scene, intersection.instance,
-        intersection.element, intersection.uv, normal, outgoing);
+    auto [position, normal, material] = eval_point(
+        scene, intersection.instance, intersection.element, intersection.uv,
+        outgoing, trace_non_rigid_frames);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -2771,12 +2776,8 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
 
   // prepare shading point
   auto outgoing = -direction;
-  // auto  position = eval_position(
-  //     scene, instance, intersection.element, intersection.uv);
-  auto normal   = eval_shading_normal(scene, intersection.instance,
+  auto [position, normal, material] = eval_point(scene, intersection.instance,
       intersection.element, intersection.uv, outgoing, trace_non_rigid_frames);
-  auto material = eval_material(scene, intersection.instance,
-      intersection.element, intersection.uv, normal, outgoing);
 
   switch (params.falsecolor) {
     case trace_falsecolor_type::normal: {
