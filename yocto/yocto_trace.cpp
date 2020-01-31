@@ -783,7 +783,7 @@ static vec3f eval_shading_normal_(const trace_scene& scene, int instance_,
   }
 }
 // Instance element values.
-static vec3f eval_element_normal(const trace_scene& scene, int instance_,
+static vec3f eval_element_normal_(const trace_scene& scene, int instance_,
     int element, bool non_rigid_frame) {
   auto& instance = scene.instances[instance_];
   auto  normal   = eval_element_normal(scene.shapes[instance.shape], element);
@@ -892,6 +892,7 @@ static material_point eval_material(const trace_scene& scene, int instance_,
 struct trace_point {
   vec3f position = zero3f;
   vec3f normal = zero3f;
+  vec3f gnormal = zero3f;
   material_point material = {};
 };
 
@@ -901,6 +902,7 @@ static trace_point eval_point(const trace_scene& scene, int instance_,
   auto point = trace_point{};
   point.position = eval_position(scene, instance_, element, uv);
   point.normal = eval_shading_normal_(scene, instance_, element, uv, outgoing, trace_non_rigid_frames);
+  point.gnormal = eval_element_normal_(scene, instance_, element, trace_non_rigid_frames);
   point.material = eval_material(scene, instance_, element, uv, point.normal, outgoing);
   return point;
 }
@@ -2539,7 +2541,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -direction;
-      auto [position, normal, material] = eval_point(
+      auto [position, normal, gnormal, material] = eval_point(
           scene, intersection.instance, intersection.element, intersection.uv, 
           outgoing, trace_non_rigid_frames);
 
@@ -2660,7 +2662,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     // prepare shading point
     auto outgoing = -direction;
     auto incoming = outgoing;
-    auto [position, normal, material] = eval_point(
+    auto [position, normal, gnormal, material] = eval_point(
         scene, intersection.instance, intersection.element, intersection.uv, outgoing,
         trace_non_rigid_frames);
 
@@ -2727,7 +2729,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
 
     // prepare shading point
     auto outgoing = -direction;
-    auto [position, normal, material] = eval_point(
+    auto [position, normal, gnormal, material] = eval_point(
         scene, intersection.instance, intersection.element, intersection.uv,
         outgoing, trace_non_rigid_frames);
 
@@ -2776,7 +2778,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
 
   // prepare shading point
   auto outgoing = -direction;
-  auto [position, normal, material] = eval_point(scene, intersection.instance,
+  auto [position, normal, gnormal, material] = eval_point(scene, intersection.instance,
       intersection.element, intersection.uv, outgoing, trace_non_rigid_frames);
 
   switch (params.falsecolor) {
@@ -2789,14 +2791,10 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
       return {frontfacing, 1};
     }
     case trace_falsecolor_type::gnormal: {
-      auto normal = eval_element_normal(
-          scene, intersection.instance, intersection.element, true);
-      return {normal * 0.5f + 0.5f, 1};
+      return {gnormal * 0.5f + 0.5f, 1};
     }
     case trace_falsecolor_type::gfrontfacing: {
-      auto normal = eval_element_normal(
-          scene, intersection.instance, intersection.element, true);
-      auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
+      auto frontfacing = dot(gnormal, outgoing) > 0 ? vec3f{0, 1, 0}
                                                    : vec3f{1, 0, 0};
       return {frontfacing, 1};
     }
