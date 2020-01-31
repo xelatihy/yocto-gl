@@ -932,29 +932,15 @@ static material_point eval_material(const trace_scene& scene, int instance_,
   return point;
 }
 
-// Environment texture coordinates from the direction.
-static vec2f eval_texcoord(
-    const trace_environment& environment, const vec3f& direction) {
-  auto wl = transform_direction(inverse(environment.frame), direction);
-  auto environment_uv = vec2f{
-      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-  if (environment_uv.x < 0) environment_uv.x += 1;
-  return environment_uv;
-}
-// Evaluate the environment direction.
-static vec3f eval_direction(
-    const trace_environment& environment, const vec2f& environment_uv) {
-  return transform_direction(environment.frame,
-      {cos(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif),
-          cos(environment_uv.y * pif),
-          sin(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif)});
-}
 // Evaluate the environment color.
 static vec3f eval_environment(const trace_scene& scene,
     const trace_environment& environment, const vec3f& direction) {
+  auto wl = transform_direction(inverse(environment.frame), direction);
+  auto texcoord = vec2f{
+      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+  if (texcoord.x < 0) texcoord.x += 1;
   return environment.emission *
-         xyz(eval_texture(scene, environment.emission_tex,
-             eval_texcoord(environment, direction)));
+         xyz(eval_texture(scene, environment.emission_tex, texcoord));
 }
 // Evaluate all environment color.
 static vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
@@ -2535,9 +2521,12 @@ static vec3f sample_light(const trace_scene& scene, const trace_light& light,
       auto& emission_tex = scene.textures[environment.emission_tex];
       auto  idx          = sample_discrete(cdf, rel);
       auto  size         = texture_size(emission_tex);
-      auto  u            = (idx % size.x + 0.5f) / size.x;
-      auto  v            = (idx / size.x + 0.5f) / size.y;
-      return eval_direction(environment, {u, v});
+      auto  uv           = vec2f{(idx % size.x + 0.5f) / size.x, 
+      (idx / size.x + 0.5f) / size.y};
+      return transform_direction(environment.frame,
+          {cos(uv.x * 2 * pif) * sin(uv.y * pif),
+              cos(uv.y * pif),
+              sin(uv.x * 2 * pif) * sin(uv.y * pif)});
     } else {
       return sample_sphere(ruv);
     }
@@ -2580,7 +2569,10 @@ static float sample_light_pdf(const trace_scene& scene,
       auto& cdf          = light.elem_cdf;
       auto& emission_tex = scene.textures[environment.emission_tex];
       auto  size         = texture_size(emission_tex);
-      auto  texcoord     = eval_texcoord(environment, direction);
+      auto wl = transform_direction(inverse(environment.frame), direction);
+      auto texcoord = vec2f{
+          atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+      if (texcoord.x < 0) texcoord.x += 1;
       auto  i            = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
       auto  j            = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
       auto  prob  = sample_discrete_pdf(cdf, j * size.x + i) / cdf.back();
