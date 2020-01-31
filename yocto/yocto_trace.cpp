@@ -833,13 +833,9 @@ static trace_point eval_point(const trace_scene& scene,
               eval_texture(scene, material.coat_tex, texcoord).x;
   auto transmission = material.transmission *
                       eval_texture(scene, material.emission_tex, texcoord).x;
-  auto thin       = material.thin || !material.transmission;
-  auto scattering = material.scattering *
-                    eval_texture(scene, material.scattering_tex, texcoord).x;
-  auto phaseg  = material.phaseg;
-  auto radius  = material.radius;
   auto opacity = material.opacity * point.color.w * base_tex.w *
                  eval_texture(scene, material.opacity_tex, texcoord).x;
+  auto thin       = material.thin || !material.transmission;
 
   // factors
   auto weight    = vec3f{1, 1, 1};
@@ -2470,21 +2466,21 @@ static float sample_delta_pdf(const trace_point& point) {
   return pdf;
 }
 
-static vec3f eval_volscattering(const volume_point& point) {
+static vec3f eval_scattering(const volume_point& point) {
   if (point.voldensity == zero3f) return zero3f;
   return point.volscatter *
          eval_phasefunction(
              dot(point.outgoing, point.incoming), point.volanisotropy);
 }
 
-static vec3f sample_volscattering(
+static vec3f sample_scattering(
     const volume_point& point, float rnl, const vec2f& rn) {
   if (point.voldensity == zero3f) return zero3f;
   auto direction = sample_phasefunction(point.volanisotropy, rn);
   return basis_fromz(-point.outgoing) * direction;
 }
 
-static float sample_volscattering_pdf(const volume_point& point) {
+static float sample_scattering_pdf(const volume_point& point) {
   if (point.voldensity == zero3f) return 0;
   return eval_phasefunction(
       dot(point.outgoing, point.incoming), point.volanisotropy);
@@ -2673,14 +2669,14 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
 
       // next direction
       if (rand1f(rng) < 0.5f) {
-        point.incoming = sample_volscattering(point, rand1f(rng), rand2f(rng));
+        point.incoming = sample_scattering(point, rand1f(rng), rand2f(rng));
       } else {
         point.incoming = sample_lights(
             scene, point.position, rand1f(rng), rand1f(rng), rand2f(rng));
       }
       weight *=
-          eval_volscattering(point) /
-          (0.5f * sample_volscattering_pdf(point) +
+          eval_scattering(point) /
+          (0.5f * sample_scattering_pdf(point) +
               0.5f * sample_lights_pdf(scene, point.position, point.incoming));
 
       // setup next iteration
