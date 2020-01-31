@@ -723,6 +723,9 @@ struct trace_point {
   vec3f          gnormal  = zero3f;
   vec2f          texcoord = zero2f;
   vec4f          color    = zero4f;
+  // directions
+  vec3f          outgoing = zero3f;
+  vec3f          incoming = zero3f;
   // material
   vec3f emission         = {0, 0, 0};
   vec3f diffuse          = {0, 0, 0};
@@ -752,7 +755,7 @@ struct trace_point {
 
 // Evaluate point
 static trace_point eval_point(const trace_scene& scene, 
-    const trace_intersection& intersection, const vec3f& outgoing,
+    const trace_intersection& intersection, const vec3f& direction,
     bool trace_non_rigid_frames) {
   // get data
   auto& instance = scene.instances[intersection.instance];
@@ -763,6 +766,8 @@ static trace_point eval_point(const trace_scene& scene,
   
   // initialize point
   auto point     = trace_point{};
+  point.outgoing = -direction;
+  point.incoming = -direction;
 
   // geometric properties
   point.position = eval_shape_elem(
@@ -784,11 +789,11 @@ static trace_point eval_point(const trace_scene& scene,
 
   // correct normal
   if (!shape.points.empty()) {
-    point.normal = outgoing;
+    point.normal = point.outgoing;
   } else if (!shape.lines.empty()) {
-    point.normal = orthonormalize(outgoing, point.normal);
+    point.normal = orthonormalize(point.outgoing, point.normal);
   } else if (material.normal_tex < 0) {
-    if (material.thin && dot(outgoing, point.normal) < 0) point.normal = -point.normal;
+    if (material.thin && dot(point.outgoing, point.normal) < 0) point.normal = -point.normal;
   } else {
     auto texcoord = shape.texcoords.empty() ? uv
                                   : eval_shape_elem(shape, shape.quadstexcoord,
@@ -799,7 +804,7 @@ static trace_point eval_point(const trace_scene& scene,
     normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
     auto normal = normalize(basis.first * normalmap);
     point.normal = transform_normal(instance.frame, normal, trace_non_rigid_frames);
-    if (material.thin && dot(outgoing, point.normal) < 0) point.normal = -point.normal;
+    if (material.thin && dot(point.outgoing, point.normal) < 0) point.normal = -point.normal;
   }
 
   // material -------
@@ -837,13 +842,13 @@ static trace_point eval_point(const trace_scene& scene,
   point.emission = weight * emission;
   point.coat     = weight * coat;
   weight *= 1 -
-            point.coat * fresnel_dielectric(coat_ior, dot(outgoing, point.normal));
+            point.coat * fresnel_dielectric(coat_ior, dot(point.outgoing, point.normal));
   point.metal = weight * metallic;
   weight *= 1 - metallic;
   point.refraction = thin ? zero3f : weight * transmission;
   weight *= 1 - (thin ? 0 : transmission);
   point.specular = weight * specular;
-  weight *= 1 - specular * fresnel_dielectric(ior, dot(outgoing, point.normal));
+  weight *= 1 - specular * fresnel_dielectric(ior, dot(point.outgoing, point.normal));
   point.transmission = weight * transmission * base;
   weight *= 1 - transmission;
   point.diffuse     = weight * base;
@@ -873,11 +878,11 @@ static trace_point eval_point(const trace_scene& scene,
   // weights
   point.diffuse_pdf  = max(point.diffuse);
   point.specular_pdf = max(
-      point.specular * fresnel_dielectric(point.ior, dot(outgoing, point.normal)));
+      point.specular * fresnel_dielectric(point.ior, dot(point.outgoing, point.normal)));
   point.metal_pdf = max(point.metal * fresnel_conductor(point.meta, point.metak,
-                                          dot(outgoing, point.normal)));
+                                          dot(point.outgoing, point.normal)));
   point.coat_pdf  = max(
-      point.coat * fresnel_dielectric(coat_ior, dot(outgoing, point.normal)));
+      point.coat * fresnel_dielectric(coat_ior, dot(point.outgoing, point.normal)));
   point.transmission_pdf = max(point.transmission);
   point.refraction_pdf   = max(point.refraction);
   auto pdf_sum = point.diffuse_pdf + point.specular_pdf + point.metal_pdf +
@@ -2526,8 +2531,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto outgoing = -ray.d;
-      auto point = eval_point(scene, intersection, outgoing, trace_non_rigid_frames);
+      auto point = eval_point(scene, intersection, ray.d, trace_non_rigid_frames);
 
       // correct roughness
       if (params.nocaustics) {
@@ -2544,31 +2548,30 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
       hit = true;
 
       // accumulate emission
-      radiance += weight * eval_emission(point, point.normal, outgoing);
+      radiance += weight * eval_emission(point, point.normal, point.outgoing);
 
       // next direction
-      auto incoming = zero3f;
       if (point.roughness) {
         if (rand1f(rng) < 0.5f) {
-          incoming = sample_brdf(
-              point, point.normal, outgoing, rand1f(rng), rand2f(rng));
+          point.incoming = sample_brdf(
+              point, point.normal, point.outgoing, rand1f(rng), rand2f(rng));
         } else {
-          incoming = sample_lights(
+          point.incoming = sample_lights(
               scene, point.position, rand1f(rng), rand1f(rng), rand2f(rng));
         }
         weight *=
-            eval_brdfcos(point, point.normal, outgoing, incoming) /
-            (0.5f * sample_brdf_pdf(point, point.normal, outgoing, incoming) +
-                0.5f * sample_lights_pdf(scene, point.position, incoming));
+            eval_brdfcos(point, point.normal, point.outgoing, point.incoming) /
+            (0.5f * sample_brdf_pdf(point, point.normal, point.outgoing, point.incoming) +
+                0.5f * sample_lights_pdf(scene, point.position, point.incoming));
       } else {
-        incoming = sample_delta(point, point.normal, outgoing, rand1f(rng));
-        weight *= eval_delta(point, point.normal, outgoing, incoming) /
-                  sample_delta_pdf(point, point.normal, outgoing, incoming);
+        point.incoming = sample_delta(point, point.normal, point.outgoing, rand1f(rng));
+        weight *= eval_delta(point, point.normal, point.outgoing, point.incoming) /
+                  sample_delta_pdf(point, point.normal, point.outgoing, point.incoming);
       }
 
       // update volume stack
       if (point.voldensity != zero3f &&
-          dot(point.normal, outgoing) * dot(point.normal, incoming) < 0) {
+          dot(point.normal, point.outgoing) * dot(point.normal, point.incoming) < 0) {
         if (volume_stack.empty()) {
           volume_stack.push_back({point, intersection.instance});
         } else {
@@ -2577,7 +2580,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
       }
 
       // setup next iteration
-      ray = {point.position, incoming};
+      ray = {point.position, point.incoming};
     } else {
       // prepare shading point
       auto outgoing = -ray.d;
@@ -2641,11 +2644,9 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     }
 
     // prepare shading point
-    auto outgoing                                                  = -ray.d;
-    auto incoming                                                  = outgoing;
     auto point = eval_point(
         scene, intersection,
-        outgoing, trace_non_rigid_frames);
+        ray.d, trace_non_rigid_frames);
 
     // handle opacity
     if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
@@ -2656,18 +2657,18 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     hit = true;
 
     // accumulate emission
-    radiance += weight * eval_emission(point, point.normal, outgoing);
+    radiance += weight * eval_emission(point, point.normal, point.outgoing);
 
     // next direction
     if (point.roughness) {
-      incoming = sample_brdf(
-          point, point.normal, outgoing, rand1f(rng), rand2f(rng));
-      weight *= eval_brdfcos(point, point.normal, outgoing, incoming) /
-                sample_brdf_pdf(point, point.normal, outgoing, incoming);
+      point.incoming = sample_brdf(
+          point, point.normal, point.outgoing, rand1f(rng), rand2f(rng));
+      weight *= eval_brdfcos(point, point.normal, point.outgoing, point.incoming) /
+                sample_brdf_pdf(point, point.normal, point.outgoing, point.incoming);
     } else {
-      incoming = sample_delta(point, point.normal, outgoing, rand1f(rng));
-      weight *= eval_delta(point, point.normal, outgoing, incoming) /
-                sample_delta_pdf(point, point.normal, outgoing, incoming);
+      point.incoming = sample_delta(point, point.normal, point.outgoing, rand1f(rng));
+      weight *= eval_delta(point, point.normal, point.outgoing, point.incoming) /
+                sample_delta_pdf(point, point.normal, point.outgoing, point.incoming);
     }
 
     // check weight
@@ -2681,7 +2682,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     }
 
     // setup next iteration
-    ray    = {point.position, incoming};
+    ray    = {point.position, point.incoming};
   }
 
   return {radiance, hit};
@@ -2707,10 +2708,9 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
     }
 
     // prepare shading point
-    auto outgoing                                                  = -ray.d;
     auto point = eval_point(
         scene, intersection,
-        outgoing, trace_non_rigid_frames);
+        ray.d, trace_non_rigid_frames);
 
     // handle opacity
     if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
@@ -2721,21 +2721,22 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
     hit = true;
 
     // accumulate emission
-    radiance += weight * eval_emission(point, point.normal, outgoing);
+    point.incoming = point.outgoing;
+    radiance += weight * eval_emission(point, point.normal, point.outgoing);
 
     // brdf * light
     radiance += weight * pif *
-                eval_brdfcos(point, point.normal, outgoing, outgoing);
+                eval_brdfcos(point, point.normal, point.outgoing, point.incoming);
 
     // continue path
     if (point.roughness) break;
-    auto incoming = sample_delta(point, point.normal, outgoing, rand1f(rng));
-    weight *= eval_delta(point, point.normal, outgoing, incoming) /
-              sample_delta_pdf(point, point.normal, outgoing, incoming);
+    point.incoming = sample_delta(point, point.normal, point.outgoing, rand1f(rng));
+    weight *= eval_delta(point, point.normal, point.outgoing, point.incoming) /
+              sample_delta_pdf(point, point.normal, point.outgoing, point.incoming);
     if (weight == zero3f || !isfinite(weight)) break;
 
     // setup next iteration
-    ray    = {point.position, incoming};
+    ray    = {point.position, point.incoming};
   }
 
   return {radiance, hit};
@@ -2754,7 +2755,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
   // prepare shading point
   auto point = eval_point(
       scene, intersection,
-      -ray.d, trace_non_rigid_frames);
+      ray.d, trace_non_rigid_frames);
 
   // hash color
   auto hashed_color = [](int id) {
