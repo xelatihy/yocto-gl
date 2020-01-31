@@ -755,7 +755,7 @@ struct trace_point {
 
 // Evaluate point
 static trace_point eval_point(const trace_scene& scene,
-    const trace_intersection& intersection, const vec3f& direction,
+    const trace_intersection& intersection, const ray3f& ray,
     bool trace_non_rigid_frames) {
   // get data
   auto& instance = scene.instances[intersection.instance];
@@ -766,8 +766,8 @@ static trace_point eval_point(const trace_scene& scene,
 
   // initialize point
   auto point     = trace_point{};
-  point.outgoing = -direction;
-  point.incoming = -direction;
+  point.outgoing = -ray.d;
+  point.incoming = -ray.d;
 
   // geometric properties
   point.position = eval_shape_elem(
@@ -2547,7 +2547,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
     if (!in_volume) {
       // prepare shading point
       auto point = eval_point(
-          scene, intersection, ray.d, trace_non_rigid_frames);
+          scene, intersection, ray, trace_non_rigid_frames);
 
       // correct roughness
       if (params.nocaustics) {
@@ -2659,7 +2659,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     }
 
     // prepare shading point
-    auto point = eval_point(scene, intersection, ray.d, trace_non_rigid_frames);
+    auto point = eval_point(scene, intersection, ray, trace_non_rigid_frames);
 
     // handle opacity
     if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
@@ -2717,7 +2717,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
     }
 
     // prepare shading point
-    auto point = eval_point(scene, intersection, ray.d, trace_non_rigid_frames);
+    auto point = eval_point(scene, intersection, ray, trace_non_rigid_frames);
 
     // handle opacity
     if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
@@ -2757,7 +2757,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
   }
 
   // prepare shading point
-  auto point = eval_point(scene, intersection, ray.d, trace_non_rigid_frames);
+  auto point = eval_point(scene, intersection, ray, trace_non_rigid_frames);
 
   // hash color
   auto hashed_color = [](int id) {
