@@ -978,8 +978,8 @@ material_point eval_material(const trace_scene& scene,
 
 // Environment texture coordinates from the direction.
 vec2f eval_texcoord(
-    const trace_environment* environment, const vec3f& direction) {
-  auto wl = transform_direction(inverse(environment->frame), direction);
+    const trace_environment& environment, const vec3f& direction) {
+  auto wl = transform_direction(inverse(environment.frame), direction);
   auto environment_uv = vec2f{
       atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
   if (environment_uv.x < 0) environment_uv.x += 1;
@@ -987,18 +987,18 @@ vec2f eval_texcoord(
 }
 // Evaluate the environment direction.
 vec3f eval_direction(
-    const trace_environment* environment, const vec2f& environment_uv) {
-  return transform_direction(environment->frame,
+    const trace_environment& environment, const vec2f& environment_uv) {
+  return transform_direction(environment.frame,
       {cos(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif),
           cos(environment_uv.y * pif),
           sin(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif)});
 }
 // Evaluate the environment color.
 vec3f eval_environment(const trace_scene& scene,
-    const trace_environment* environment, const vec3f& direction) {
-  auto emission = environment->emission;
-  if (environment->emission_tex >= 0) {
-    auto& emission_tex = scene.textures[environment->emission_tex];
+    const trace_environment& environment, const vec3f& direction) {
+  auto emission = environment.emission;
+  if (environment.emission_tex >= 0) {
+    auto& emission_tex = scene.textures[environment.emission_tex];
     emission *= xyz(
         eval_texture(emission_tex, eval_texcoord(environment, direction)));
   }
@@ -1008,7 +1008,7 @@ vec3f eval_environment(const trace_scene& scene,
 vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
   auto emission = zero3f;
   for (auto& environment : scene.environments)
-    emission += eval_environment(scene, &environment, direction);
+    emission += eval_environment(scene, environment, direction);
   return emission;
 }
 
@@ -2509,9 +2509,9 @@ static float sample_volscattering_pdf(const material_point& material,
 
 // Update environment CDF for sampling.
 static vector<float> sample_environment_cdf(
-    const trace_scene& scene, const trace_environment* environment) {
-  if (environment->emission_tex < 0) return {};
-  auto& texture    = scene.textures[environment->emission_tex];
+    const trace_scene& scene, const trace_environment& environment) {
+  if (environment.emission_tex < 0) return {};
+  auto& texture    = scene.textures[environment.emission_tex];
   auto size       = texture_size(texture);
   auto texels_cdf = vector<float>(size.x * size.y);
   if (size != zero2i) {
@@ -2573,10 +2573,10 @@ static vec3f sample_light(const trace_scene& scene, const trace_light& light,
     }
     return normalize(eval_position(scene, instance, element, uv) - p);
   } else if (light.environment >= 0) {
-    auto environment = &scene.environments[light.environment];
-    if (environment->emission_tex >= 0) {
+    auto& environment = scene.environments[light.environment];
+    if (environment.emission_tex >= 0) {
       auto& cdf          = light.elem_cdf;
-      auto&  emission_tex = scene.textures[environment->emission_tex];
+      auto&  emission_tex = scene.textures[environment.emission_tex];
       auto  idx          = sample_discrete(cdf, rel);
       auto  size         = texture_size(emission_tex);
       auto  u            = (idx % size.x + 0.5f) / size.x;
@@ -2620,10 +2620,10 @@ static float sample_light_pdf(const trace_scene& scene,
     }
     return pdf;
   } else if (light.environment >= 0) {
-    auto environment = &scene.environments[light.environment];
-    if (environment->emission_tex >= 0) {
+    auto& environment = scene.environments[light.environment];
+    if (environment.emission_tex >= 0) {
       auto& cdf          = light.elem_cdf;
-      auto&  emission_tex = scene.textures[environment->emission_tex];
+      auto&  emission_tex = scene.textures[environment.emission_tex];
       auto  size         = texture_size(emission_tex);
       auto  texcoord     = eval_texcoord(environment, direction);
       auto  i            = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
@@ -3148,8 +3148,8 @@ void init_lights(trace_scene& scene) {
     scene.lights.push_back({idx, -1, sample_shape_cdf(shape)});
   }
   for (auto idx = 0; idx < scene.environments.size(); idx++) {
-    auto environment = &scene.environments[idx];
-    if (environment->emission == zero3f) continue;
+    auto& environment = scene.environments[idx];
+    if (environment.emission == zero3f) continue;
     scene.lights.push_back(
         {-1, idx, sample_environment_cdf(scene, environment)});
   }
@@ -3520,10 +3520,10 @@ int add_environment(trace_scene& scene, const frame3f& frame,
 }
 void set_environment(trace_scene& scene, int idx, const frame3f& frame,
     const vec3f& emission, int emission_tex) {
-  auto environment          = &scene.environments[idx];
-  environment->frame        = frame;
-  environment->emission     = emission;
-  environment->emission_tex = emission_tex;
+  auto& environment          = scene.environments[idx];
+  environment.frame        = frame;
+  environment.emission     = emission;
+  environment.emission_tex = emission_tex;
 }
 void clear_environments(trace_scene& scene) { scene.environments.clear(); }
 
