@@ -696,14 +696,6 @@ static ray3f sample_camera(const trace_scene& scene, int camera,
 }
 
 // Instance values interpolated using barycentric coordinates.
-static vec3f eval_position(
-    const trace_scene& scene, int instance_, int element, const vec2f& uv) {
-  auto& instance = scene.instances[instance_];
-  auto& shape    = scene.shapes[instance.shape];
-  auto  position = eval_shape_elem(
-      shape, shape.quadspos, shape.positions, element, uv);
-  return transform_point(instance.frame, position);
-}
 static vec3f eval_normal(const trace_scene& scene, int instance_, int element,
     const vec2f& uv, bool non_rigid_frame) {
   auto& instance = scene.instances[instance_];
@@ -2496,8 +2488,9 @@ static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
     auto& shape    = scene.shapes[instance.shape];
     auto  element  = sample_discrete(light.cdf, rel);
     auto  uv       = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
-    return normalize(
-        eval_position(scene, light.instance, element, uv) - position);
+    auto lposition = transform_point(instance.frame, eval_shape_elem(
+      shape, shape.quadspos, shape.positions, element, uv));
+    return normalize(lposition - position);
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
@@ -2531,16 +2524,18 @@ static float sample_lights_pdf(
             scene, light.instance, {next_position, direction});
         if (!isec.hit) break;
         // accumulate pdf
-        auto light_position = eval_position(
-            scene, isec.instance, isec.element, isec.uv);
+        auto& instance = scene.instances[isec.instance];
+        auto& shape = scene.shapes[instance.shape];
+        auto lposition = transform_point(instance.frame, eval_shape_elem(
+          shape, shape.quadspos, shape.positions, isec.element, isec.uv));
         auto light_normal = eval_normal(scene, isec.instance, isec.element,
             isec.uv, trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = light.cdf.back();
-        light_pdf += distance_squared(light_position, position) /
+        light_pdf += distance_squared(lposition, position) /
                      (abs(dot(light_normal, direction)) * area);
         // continue
-        next_position = light_position + direction * 1e-3f;
+        next_position = lposition + direction * 1e-3f;
       }
       pdf += light_pdf;
     } else if (light.environment >= 0) {
