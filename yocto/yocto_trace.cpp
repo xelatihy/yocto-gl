@@ -893,6 +893,8 @@ struct trace_point {
   vec3f position = zero3f;
   vec3f normal = zero3f;
   vec3f gnormal = zero3f;
+  vec2f texcoord = zero2f;
+  vec4f color = zero4f;
   material_point material = {};
 };
 
@@ -903,6 +905,8 @@ static trace_point eval_point(const trace_scene& scene, int instance_,
   point.position = eval_position(scene, instance_, element, uv);
   point.normal = eval_shading_normal_(scene, instance_, element, uv, outgoing, trace_non_rigid_frames);
   point.gnormal = eval_element_normal_(scene, instance_, element, trace_non_rigid_frames);
+  point.texcoord = eval_texcoord(scene, instance_, element, uv);
+  point.color = eval_color(scene, instance_, element, uv);
   point.material = eval_material(scene, instance_, element, uv, point.normal, outgoing);
   return point;
 }
@@ -2541,7 +2545,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -direction;
-      auto [position, normal, gnormal, material] = eval_point(
+      auto [position, normal, _gnormal, _texcoord, _color, material] = eval_point(
           scene, intersection.instance, intersection.element, intersection.uv, 
           outgoing, trace_non_rigid_frames);
 
@@ -2662,7 +2666,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     // prepare shading point
     auto outgoing = -direction;
     auto incoming = outgoing;
-    auto [position, normal, gnormal, material] = eval_point(
+    auto [position, normal, _gnormal, _texcoord, _color, material] = eval_point(
         scene, intersection.instance, intersection.element, intersection.uv, outgoing,
         trace_non_rigid_frames);
 
@@ -2729,7 +2733,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
 
     // prepare shading point
     auto outgoing = -direction;
-    auto [position, normal, gnormal, material] = eval_point(
+    auto [position, normal, _gnormal, _texcoord, _color, material] = eval_point(
         scene, intersection.instance, intersection.element, intersection.uv,
         outgoing, trace_non_rigid_frames);
 
@@ -2778,89 +2782,62 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
 
   // prepare shading point
   auto outgoing = -direction;
-  auto [position, normal, gnormal, material] = eval_point(scene, intersection.instance,
+  auto [position, normal, gnormal, texcoord, color, material] = eval_point(scene, intersection.instance,
       intersection.element, intersection.uv, outgoing, trace_non_rigid_frames);
 
+  // hash color
+  auto hashed_color = [](int id) {
+    auto hashed = std::hash<int>()(id);
+    auto rng = make_rng(trace_default_seed, hashed);
+    return pow(0.5f + 0.5f * rand3f(rng), 2.2f);
+  };
+
   switch (params.falsecolor) {
-    case trace_falsecolor_type::normal: {
-      return {normal * 0.5f + 0.5f, 1};
-    }
-    case trace_falsecolor_type::frontfacing: {
-      auto frontfacing = dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
-                                                   : vec3f{1, 0, 0};
-      return {frontfacing, 1};
-    }
-    case trace_falsecolor_type::gnormal: {
+    case trace_falsecolor_type::normal: return {normal * 0.5f + 0.5f, 1};
+    case trace_falsecolor_type::frontfacing: 
+      return {dot(normal, outgoing) > 0 ? vec3f{0, 1, 0}
+                                                   : vec3f{1, 0, 0}, 1};
+    case trace_falsecolor_type::gnormal:
       return {gnormal * 0.5f + 0.5f, 1};
-    }
-    case trace_falsecolor_type::gfrontfacing: {
-      auto frontfacing = dot(gnormal, outgoing) > 0 ? vec3f{0, 1, 0}
-                                                   : vec3f{1, 0, 0};
-      return {frontfacing, 1};
-    }
-    case trace_falsecolor_type::texcoord: {
-      auto texcoord = eval_texcoord(
-          scene, intersection.instance, intersection.element, intersection.uv);
+    case trace_falsecolor_type::gfrontfacing:
+      return {dot(gnormal, outgoing) > 0 ? vec3f{0, 1, 0}
+                                                   : vec3f{1, 0, 0}, 1};
+    case trace_falsecolor_type::texcoord:
       return {{fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0}, 1};
-    }
-    case trace_falsecolor_type::color: {
-      auto color = eval_color(
-          scene, intersection.instance, intersection.element, intersection.uv);
+    case trace_falsecolor_type::color:
       return {xyz(color), 1};
-    }
-    case trace_falsecolor_type::emission: {
+    case trace_falsecolor_type::emission:
       return {material.emission, 1};
-    }
-    case trace_falsecolor_type::diffuse: {
+    case trace_falsecolor_type::diffuse:
       return {material.diffuse, 1};
-    }
-    case trace_falsecolor_type::specular: {
+    case trace_falsecolor_type::specular:
       return {material.specular, 1};
-    }
-    case trace_falsecolor_type::coat: {
+    case trace_falsecolor_type::coat:
       return {material.coat, 1};
-    }
-    case trace_falsecolor_type::metal: {
+    case trace_falsecolor_type::metal:
       return {material.metal, 1};
-    }
-    case trace_falsecolor_type::transmission: {
+    case trace_falsecolor_type::transmission:
       return {material.transmission, 1};
-    }
-    case trace_falsecolor_type::refraction: {
+    case trace_falsecolor_type::refraction:
       return {material.refraction, 1};
-    }
-    case trace_falsecolor_type::roughness: {
+    case trace_falsecolor_type::roughness:
       return {vec3f{material.roughness}, 1};
-    }
-    case trace_falsecolor_type::material: {
-      auto hashed = std::hash<int>()(instance.material);
-      auto rng_   = make_rng(trace_default_seed, hashed);
-      return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
-    }
-    case trace_falsecolor_type::element: {
-      auto hashed = std::hash<int>()(intersection.element);
-      auto rng_   = make_rng(trace_default_seed, hashed);
-      return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
-    }
-    case trace_falsecolor_type::shape: {
-      auto hashed = std::hash<int>()(instance.shape);
-      auto rng_   = make_rng(trace_default_seed, hashed);
-      return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
-    }
-    case trace_falsecolor_type::instance: {
-      auto hashed = std::hash<int>()(intersection.instance);
-      auto rng_   = make_rng(trace_default_seed, hashed);
-      return {pow(0.5f + 0.5f * rand3f(rng_), 2.2f), 1};
-    }
+    case trace_falsecolor_type::material:
+      return {hashed_color(instance.material), 1};
+    case trace_falsecolor_type::element:
+      return {hashed_color(intersection.element), 1};
+    case trace_falsecolor_type::shape:
+      return {hashed_color(instance.shape), 1};
+    case trace_falsecolor_type::instance:
+      return {hashed_color(intersection.instance), 1};
     case trace_falsecolor_type::highlight: {
       auto emission = material.emission;
       auto outgoing = -direction;
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
       return {emission * abs(dot(outgoing, normal)), 1};
-    }
-    default: {
+    } break;
+    default:
       return {zero3f, false};
-    }
   }
 }
 
