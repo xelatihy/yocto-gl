@@ -923,18 +923,8 @@ material_point eval_material(const trace_scene& scene,
       point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal)));
   point.transmission_pdf = max(point.transmission);
   point.refraction_pdf   = max(point.refraction);
-  // point.srefraction_pdf = max(
-  //     point.srefraction * fresnel_dielectric(point.ior, dot(outgoing,
-  //     normal)));
-  // point.diffuse_pdf  = max(point.diffuse) > 0 ? 1 : 0;
-  // point.specular_pdf = max(point.specular) > 0 ? 1 : 0;
-  // point.metal_pdf = max(point.metal) > 0 ? 1 : 0;
-  // point.coat_pdf  = max(point.coat) > 0 ? 1 : 0;
-  // point.transmission_pdf = max(point.transmission) > 0 ? 1 : 0;
-  // point.refraction_pdf   = max(point.refraction) > 0 ? 1 : 0;
   auto pdf_sum = point.diffuse_pdf + point.specular_pdf + point.metal_pdf +
                  point.coat_pdf + point.transmission_pdf + point.refraction_pdf;
-  // + point.srefraction_pdf;
   if (pdf_sum) {
     point.diffuse_pdf /= pdf_sum;
     point.specular_pdf /= pdf_sum;
@@ -942,7 +932,6 @@ material_point eval_material(const trace_scene& scene,
     point.coat_pdf /= pdf_sum;
     point.transmission_pdf /= pdf_sum;
     point.refraction_pdf /= pdf_sum;
-    // point.srefraction_pdf /= pdf_sum;
   }
 
   return point;
