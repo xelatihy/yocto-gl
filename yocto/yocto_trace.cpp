@@ -932,21 +932,17 @@ static material_point eval_material(const trace_scene& scene, int instance_,
   return point;
 }
 
-// Evaluate the environment color.
-static vec3f eval_environment(const trace_scene& scene,
-    const trace_environment& environment, const vec3f& direction) {
+// Evaluate all environment color.
+static vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
+  auto emission = zero3f;
+  for (auto& environment : scene.environments) {
   auto wl = transform_direction(inverse(environment.frame), direction);
   auto texcoord = vec2f{
       atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
   if (texcoord.x < 0) texcoord.x += 1;
-  return environment.emission *
+  emission += environment.emission *
          xyz(eval_texture(scene, environment.emission_tex, texcoord));
-}
-// Evaluate all environment color.
-static vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
-  auto emission = zero3f;
-  for (auto& environment : scene.environments)
-    emission += eval_environment(scene, environment, direction);
+  }
   return emission;
 }
 
