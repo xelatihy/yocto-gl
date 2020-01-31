@@ -740,109 +740,6 @@ static vec3f eval_normal(const trace_scene& scene, int instance_, int element,
                           shape, shape.quadsnorm, shape.normals, element, uv));
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
-// Instance material
-static material_point eval_material_(const trace_scene& scene, int instance_,
-    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
-  auto& instance = scene.instances[instance_];
-  auto& shape    = scene.shapes[instance.shape];
-  auto& material = scene.materials[instance.material];
-  auto texcoord = shape.texcoords.empty() ? uv
-                                 : eval_shape_elem(shape, shape.quadstexcoord,
-                                       shape.texcoords, element, uv);
-  auto color = shape.colors.empty()
-             ? vec4f{1, 1, 1, 1}
-             : eval_shape_elem(shape, {}, shape.colors, element, uv);
-
-  // initialize factors
-  auto emission = material.emission *
-                  xyz(eval_texture(scene, material.emission_tex, texcoord));
-  auto base_tex = eval_texture(scene, material.base_tex, texcoord);
-  auto base     = material.base * xyz(color) * xyz(base_tex);
-  auto specular = material.specular *
-                  eval_texture(scene, material.specular_tex, texcoord).x;
-  auto metallic = material.metallic *
-                  eval_texture(scene, material.metallic_tex, texcoord).z;
-  auto roughness =
-      material.roughness *
-      eval_texture(scene, material.roughness_tex, texcoord).x *
-      (material.gltf_textures
-              ? eval_texture(scene, material.metallic_tex, texcoord).x
-              : 1);
-  auto ior  = material.ior;
-  auto coat = material.coat *
-              eval_texture(scene, material.coat_tex, texcoord).x;
-  auto transmission = material.transmission *
-                      eval_texture(scene, material.emission_tex, texcoord).x;
-  auto thin       = material.thin || !material.transmission;
-  auto scattering = material.scattering *
-                    eval_texture(scene, material.scattering_tex, texcoord).x;
-  auto phaseg  = material.phaseg;
-  auto radius  = material.radius;
-  auto opacity = material.opacity * color.w * base_tex.w *
-                 eval_texture(scene, material.opacity_tex, texcoord).x;
-
-  auto point = material_point{};
-  // factors
-  auto weight    = vec3f{1, 1, 1};
-  point.emission = weight * emission;
-  point.coat     = weight * coat;
-  weight *= 1 -
-            point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal));
-  point.metal = weight * metallic;
-  weight *= 1 - metallic;
-  point.refraction = thin ? zero3f : weight * transmission;
-  weight *= 1 - (thin ? 0 : transmission);
-  point.specular = weight * specular;
-  weight *= 1 - specular * fresnel_dielectric(ior, dot(outgoing, normal));
-  point.transmission = weight * transmission * base;
-  weight *= 1 - transmission;
-  point.diffuse     = weight * base;
-  point.meta        = reflectivity_to_eta(base);
-  point.metak       = zero3f;
-  point.roughness   = roughness * roughness;
-  point.ior         = ior;
-  point.opacity     = opacity;
-  point.volemission = zero3f;
-  point.voldensity  = (transmission && !thin)
-                         ? -log(clamp(base, 0.0001f, 1.0f)) / radius
-                         : zero3f;
-  point.volscatter    = scattering;
-  point.volanisotropy = phaseg;
-  point.opacity       = opacity;
-
-  // textures
-  if (point.diffuse != zero3f || point.roughness) {
-    point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
-  }
-  if (point.specular == zero3f && point.metal == zero3f &&
-      point.transmission == zero3f && point.refraction == zero3f) {
-    point.roughness = 1;
-  }
-  if (point.opacity > 0.999f) point.opacity = 1;
-
-  // weights
-  point.diffuse_pdf  = max(point.diffuse);
-  point.specular_pdf = max(
-      point.specular * fresnel_dielectric(point.ior, dot(outgoing, normal)));
-  point.metal_pdf = max(point.metal * fresnel_conductor(point.meta, point.metak,
-                                          dot(outgoing, normal)));
-  point.coat_pdf  = max(
-      point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal)));
-  point.transmission_pdf = max(point.transmission);
-  point.refraction_pdf   = max(point.refraction);
-  auto pdf_sum = point.diffuse_pdf + point.specular_pdf + point.metal_pdf +
-                 point.coat_pdf + point.transmission_pdf + point.refraction_pdf;
-  if (pdf_sum) {
-    point.diffuse_pdf /= pdf_sum;
-    point.specular_pdf /= pdf_sum;
-    point.metal_pdf /= pdf_sum;
-    point.coat_pdf /= pdf_sum;
-    point.transmission_pdf /= pdf_sum;
-    point.refraction_pdf /= pdf_sum;
-  }
-
-  return point;
-}
 
 // Point used for tracing
 struct trace_point {
@@ -902,8 +799,94 @@ static trace_point eval_point(const trace_scene& scene, int instance_,
     if (material.thin && dot(outgoing, point.normal) < 0) point.normal = -point.normal;
   }
 
-  point.material = eval_material_(
-      scene, instance_, element, uv, point.normal, outgoing);
+  // material -------
+  // initialize factors
+  auto texcoord = point.texcoord;
+  auto emission = material.emission *
+                  xyz(eval_texture(scene, material.emission_tex, texcoord));
+  auto base_tex = eval_texture(scene, material.base_tex, texcoord);
+  auto base     = material.base * xyz(point.color) * xyz(base_tex);
+  auto specular = material.specular *
+                  eval_texture(scene, material.specular_tex, texcoord).x;
+  auto metallic = material.metallic *
+                  eval_texture(scene, material.metallic_tex, texcoord).z;
+  auto roughness =
+      material.roughness *
+      eval_texture(scene, material.roughness_tex, texcoord).x *
+      (material.gltf_textures
+              ? eval_texture(scene, material.metallic_tex, texcoord).x
+              : 1);
+  auto ior  = material.ior;
+  auto coat = material.coat *
+              eval_texture(scene, material.coat_tex, texcoord).x;
+  auto transmission = material.transmission *
+                      eval_texture(scene, material.emission_tex, texcoord).x;
+  auto thin       = material.thin || !material.transmission;
+  auto scattering = material.scattering *
+                    eval_texture(scene, material.scattering_tex, texcoord).x;
+  auto phaseg  = material.phaseg;
+  auto radius  = material.radius;
+  auto opacity = material.opacity * point.color.w * base_tex.w *
+                 eval_texture(scene, material.opacity_tex, texcoord).x;
+
+  // factors
+  auto weight    = vec3f{1, 1, 1};
+  point.material.emission = weight * emission;
+  point.material.coat     = weight * coat;
+  weight *= 1 -
+            point.material.coat * fresnel_dielectric(coat_ior, dot(outgoing, point.normal));
+  point.material.metal = weight * metallic;
+  weight *= 1 - metallic;
+  point.material.refraction = thin ? zero3f : weight * transmission;
+  weight *= 1 - (thin ? 0 : transmission);
+  point.material.specular = weight * specular;
+  weight *= 1 - specular * fresnel_dielectric(ior, dot(outgoing, point.normal));
+  point.material.transmission = weight * transmission * base;
+  weight *= 1 - transmission;
+  point.material.diffuse     = weight * base;
+  point.material.meta        = reflectivity_to_eta(base);
+  point.material.metak       = zero3f;
+  point.material.roughness   = roughness * roughness;
+  point.material.ior         = ior;
+  point.material.opacity     = opacity;
+  point.material.volemission = zero3f;
+  point.material.voldensity  = (transmission && !thin)
+                         ? -log(clamp(base, 0.0001f, 1.0f)) / radius
+                         : zero3f;
+  point.material.volscatter    = scattering;
+  point.material.volanisotropy = phaseg;
+  point.material.opacity       = opacity;
+
+  // textures
+  if (point.material.diffuse != zero3f || point.material.roughness) {
+    point.material.roughness = clamp(point.material.roughness, 0.03f * 0.03f, 1.0f);
+  }
+  if (point.material.specular == zero3f && point.material.metal == zero3f &&
+      point.material.transmission == zero3f && point.material.refraction == zero3f) {
+    point.material.roughness = 1;
+  }
+  if (point.material.opacity > 0.999f) point.material.opacity = 1;
+
+  // weights
+  point.material.diffuse_pdf  = max(point.material.diffuse);
+  point.material.specular_pdf = max(
+      point.material.specular * fresnel_dielectric(point.material.ior, dot(outgoing, point.normal)));
+  point.material.metal_pdf = max(point.material.metal * fresnel_conductor(point.material.meta, point.material.metak,
+                                          dot(outgoing, point.normal)));
+  point.material.coat_pdf  = max(
+      point.material.coat * fresnel_dielectric(coat_ior, dot(outgoing, point.normal)));
+  point.material.transmission_pdf = max(point.material.transmission);
+  point.material.refraction_pdf   = max(point.material.refraction);
+  auto pdf_sum = point.material.diffuse_pdf + point.material.specular_pdf + point.material.metal_pdf +
+                 point.material.coat_pdf + point.material.transmission_pdf + point.material.refraction_pdf;
+  if (pdf_sum) {
+    point.material.diffuse_pdf /= pdf_sum;
+    point.material.specular_pdf /= pdf_sum;
+    point.material.metal_pdf /= pdf_sum;
+    point.material.coat_pdf /= pdf_sum;
+    point.material.transmission_pdf /= pdf_sum;
+    point.material.refraction_pdf /= pdf_sum;
+  }
   return point;
 }
 
