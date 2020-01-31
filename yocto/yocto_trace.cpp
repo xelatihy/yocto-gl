@@ -491,7 +491,7 @@ static const auto coat_ior       = 1.5;
 static const auto coat_roughness = 0.03f * 0.03f;
 
 // Shape element normal.
-vec3f eval_element_normal(const trace_shape& shape, int element) {
+static vec3f eval_element_normal(const trace_shape& shape, int element) {
   auto norm = zero3f;
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
@@ -516,7 +516,7 @@ vec3f eval_element_normal(const trace_shape& shape, int element) {
 }
 
 // Shape element normal.
-pair<vec3f, vec3f> eval_element_tangents(
+static pair<vec3f, vec3f> eval_element_tangents(
     const trace_shape& shape, int element, const vec2f& uv) {
   if (!shape.triangles.empty()) {
     auto t = shape.triangles[element];
@@ -556,18 +556,10 @@ pair<vec3f, vec3f> eval_element_tangents(
     return {zero3f, zero3f};
   }
 }
-pair<mat3f, bool> eval_element_tangent_basis(
-    const trace_shape& shape, int element, const vec2f& uv) {
-  auto z        = eval_element_normal(shape, element);
-  auto tangents = eval_element_tangents(shape, element, uv);
-  auto x        = orthonormalize(tangents.first, z);
-  auto y        = normalize(cross(z, x));
-  return {{x, y, z}, dot(y, tangents.second) < 0};
-}
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_shape_elem(const trace_shape& shape,
+static T eval_shape_elem(const trace_shape& shape,
     const vector<vec4i>& facevarying_quads, const vector<T>& vals, int element,
     const vec2f& uv) {
   if (vals.empty()) return {};
@@ -595,7 +587,7 @@ T eval_shape_elem(const trace_shape& shape,
 }
 
 // Shape values interpolated using barycentric coordinates
-pair<mat3f, bool> eval_tangent_basis(
+static pair<mat3f, bool> eval_tangent_basis(
     const trace_shape& shape, int element, const vec2f& uv) {
   auto z = shape.normals.empty()
                ? eval_element_normal(shape, element)
@@ -615,7 +607,7 @@ pair<mat3f, bool> eval_tangent_basis(
 }
 
 // Check texture size
-vec2i texture_size(const trace_texture& texture) {
+static vec2i texture_size(const trace_texture& texture) {
   if (!texture.hdr.empty()) {
     return texture.hdr.size();
   } else if (!texture.ldr.empty()) {
@@ -626,7 +618,7 @@ vec2i texture_size(const trace_texture& texture) {
 }
 
 // Evaluate a texture
-vec4f lookup_texture(
+static vec4f lookup_texture(
     const trace_texture& texture, const vec2i& ij, bool ldr_as_linear = false) {
   if (texture.hdr.empty() && texture.ldr.empty()) return {1, 1, 1, 1};
   if (!texture.hdr.empty()) {
@@ -641,7 +633,7 @@ vec4f lookup_texture(
 }
 
 // Evaluate a texture
-vec4f eval_texture(const trace_scene& scene, int texture_, const vec2f& uv,
+static vec4f eval_texture(const trace_scene& scene, int texture_, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   // get texture
@@ -679,7 +671,7 @@ vec4f eval_texture(const trace_scene& scene, int texture_, const vec2f& uv,
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f eval_perspective_camera(
+static ray3f eval_perspective_camera(
     const trace_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
   auto distance = camera.lens;
   if (camera.focus < flt_max) {
@@ -712,7 +704,7 @@ ray3f eval_perspective_camera(
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f eval_orthographic_camera(
+static ray3f eval_orthographic_camera(
     const trace_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
   if (camera.aperture) {
     auto scale = 1 / camera.lens;
@@ -739,7 +731,7 @@ ray3f eval_orthographic_camera(
   }
 }
 
-vec2i camera_resolution(const trace_camera& camera, int resolution) {
+static vec2i camera_resolution(const trace_camera& camera, int resolution) {
   if (camera.film.x > camera.film.y) {
     return {resolution, (int)round(resolution * camera.film.y / camera.film.x)};
   } else {
@@ -749,7 +741,7 @@ vec2i camera_resolution(const trace_camera& camera, int resolution) {
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f eval_camera(
+static ray3f eval_camera(
     const trace_camera& camera, const vec2f& uv, const vec2f& luv) {
   if (camera.orthographic)
     return eval_orthographic_camera(camera, uv, luv);
@@ -758,24 +750,15 @@ ray3f eval_camera(
 }
 
 // Generates a ray from a camera.
-ray3f eval_camera(const trace_camera& camera, const vec2i& image_ij,
+static ray3f eval_camera(const trace_camera& camera, const vec2i& image_ij,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
   auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
       (image_ij.y + pixel_uv.y) / image_size.y};
   return eval_camera(camera, image_uv, lens_uv);
 }
 
-// Generates a ray from a camera.
-ray3f eval_camera(const trace_camera& camera, int idx, const vec2i& image_size,
-    const vec2f& pixel_uv, const vec2f& lens_uv) {
-  auto image_ij = vec2i{idx % image_size.x, idx / image_size.x};
-  auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
-      (image_ij.y + pixel_uv.y) / image_size.y};
-  return eval_camera(camera, image_uv, lens_uv);
-}
-
 // Instance values interpolated using barycentric coordinates.
-vec3f eval_position(
+static vec3f eval_position(
     const trace_scene& scene, int instance_, int element, const vec2f& uv) {
   auto& instance = scene.instances[instance_];
   auto& shape    = scene.shapes[instance.shape];
@@ -783,7 +766,7 @@ vec3f eval_position(
       shape, shape.quadspos, shape.positions, element, uv);
   return transform_point(instance.frame, position);
 }
-vec3f eval_normal(const trace_scene& scene, int instance_, int element,
+static vec3f eval_normal(const trace_scene& scene, int instance_, int element,
     const vec2f& uv, bool non_rigid_frame) {
   auto& instance = scene.instances[instance_];
   auto& shape    = scene.shapes[instance.shape];
@@ -793,7 +776,7 @@ vec3f eval_normal(const trace_scene& scene, int instance_, int element,
                           shape, shape.quadsnorm, shape.normals, element, uv));
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
-vec2f eval_texcoord(
+static vec2f eval_texcoord(
     const trace_scene& scene, int instance_, int element, const vec2f& uv) {
   auto& instance = scene.instances[instance_];
   auto& shape    = scene.shapes[instance.shape];
@@ -801,7 +784,7 @@ vec2f eval_texcoord(
                                  : eval_shape_elem(shape, shape.quadstexcoord,
                                        shape.texcoords, element, uv);
 }
-vec4f eval_color(
+static vec4f eval_color(
     const trace_scene& scene, int instance_, int element, const vec2f& uv) {
   auto& instance = scene.instances[instance_];
   auto& shape    = scene.shapes[instance.shape];
@@ -809,7 +792,7 @@ vec4f eval_color(
              ? vec4f{1, 1, 1, 1}
              : eval_shape_elem(shape, {}, shape.colors, element, uv);
 }
-vec3f eval_shading_normal(const trace_scene& scene, int instance_, int element,
+static vec3f eval_shading_normal(const trace_scene& scene, int instance_, int element,
     const vec2f& uv, const vec3f& outgoing, bool non_rigid_frame) {
   auto& instance = scene.instances[instance_];
   auto& shape    = scene.shapes[instance.shape];
@@ -836,13 +819,13 @@ vec3f eval_shading_normal(const trace_scene& scene, int instance_, int element,
   }
 }
 // Instance element values.
-vec3f eval_element_normal(const trace_scene& scene,
+static vec3f eval_element_normal(const trace_scene& scene,
     const trace_instance& instance, int element, bool non_rigid_frame) {
   auto normal = eval_element_normal(scene.shapes[instance.shape], element);
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
 // Instance material
-material_point eval_material(const trace_scene& scene, int instance_,
+static material_point eval_material(const trace_scene& scene, int instance_,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto& instance = scene.instances[instance_];
   auto& material = scene.materials[instance.material];
@@ -941,7 +924,7 @@ material_point eval_material(const trace_scene& scene, int instance_,
 }
 
 // Environment texture coordinates from the direction.
-vec2f eval_texcoord(
+static vec2f eval_texcoord(
     const trace_environment& environment, const vec3f& direction) {
   auto wl = transform_direction(inverse(environment.frame), direction);
   auto environment_uv = vec2f{
@@ -950,7 +933,7 @@ vec2f eval_texcoord(
   return environment_uv;
 }
 // Evaluate the environment direction.
-vec3f eval_direction(
+static vec3f eval_direction(
     const trace_environment& environment, const vec2f& environment_uv) {
   return transform_direction(environment.frame,
       {cos(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif),
@@ -958,14 +941,14 @@ vec3f eval_direction(
           sin(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif)});
 }
 // Evaluate the environment color.
-vec3f eval_environment(const trace_scene& scene,
+static vec3f eval_environment(const trace_scene& scene,
     const trace_environment& environment, const vec3f& direction) {
   return environment.emission *
          xyz(eval_texture(scene, environment.emission_tex,
              eval_texcoord(environment, direction)));
 }
 // Evaluate all environment color.
-vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
+static vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
   auto emission = zero3f;
   for (auto& environment : scene.environments)
     emission += eval_environment(scene, environment, direction);
