@@ -695,18 +695,6 @@ static ray3f sample_camera(const trace_scene& scene, int camera,
   }
 }
 
-// Instance values interpolated using barycentric coordinates.
-static vec3f eval_normal(const trace_scene& scene, int instance_, int element,
-    const vec2f& uv, bool non_rigid_frame) {
-  auto& instance = scene.instances[instance_];
-  auto& shape    = scene.shapes[instance.shape];
-  auto  normal   = shape.normals.empty()
-                    ? eval_element_normal(shape, element)
-                    : normalize(eval_shape_elem(
-                          shape, shape.quadsnorm, shape.normals, element, uv));
-  return transform_normal(instance.frame, normal, non_rigid_frame);
-}
-
 // Point used for tracing
 struct trace_point {
   // shape
@@ -2528,8 +2516,8 @@ static float sample_lights_pdf(
         auto& shape = scene.shapes[instance.shape];
         auto lposition = transform_point(instance.frame, eval_shape_elem(
           shape, shape.quadspos, shape.positions, isec.element, isec.uv));
-        auto light_normal = eval_normal(scene, isec.instance, isec.element,
-            isec.uv, trace_non_rigid_frames);
+        auto light_normal = transform_normal(instance.frame, 
+          eval_element_normal(shape, isec.element), trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = light.cdf.back();
         light_pdf += distance_squared(lposition, position) /
