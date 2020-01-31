@@ -2505,7 +2505,7 @@ static float sample_lights_pdf(
   for (auto& light : scene.lights) {
     if (light.instance >= 0) {
       // check all intersection
-      auto light_pdf     = 0.0f;
+      auto lpdf     = 0.0f;
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_instance_bvh(
@@ -2516,16 +2516,16 @@ static float sample_lights_pdf(
         auto& shape = scene.shapes[instance.shape];
         auto lposition = transform_point(instance.frame, eval_shape_elem(
           shape, shape.quadspos, shape.positions, isec.element, isec.uv));
-        auto light_normal = transform_normal(instance.frame, 
+        auto lnormal = transform_normal(instance.frame, 
           eval_element_normal(shape, isec.element), trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = light.cdf.back();
-        light_pdf += distance_squared(lposition, position) /
-                     (abs(dot(light_normal, direction)) * area);
+        lpdf += distance_squared(lposition, position) /
+                     (abs(dot(lnormal, direction)) * area);
         // continue
         next_position = lposition + direction * 1e-3f;
       }
-      pdf += light_pdf;
+      pdf += lpdf;
     } else if (light.environment >= 0) {
       auto& environment = scene.environments[light.environment];
       if (environment.emission_tex >= 0) {
