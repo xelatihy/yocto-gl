@@ -2449,77 +2449,20 @@ static float sample_volscattering_pdf(const material_point& material,
   return eval_phasefunction(dot(outgoing, incoming), material.volanisotropy);
 }
 
-// Update environment CDF for sampling.
-static vector<float> sample_environment_cdf(
-    const trace_scene& scene, const trace_environment& environment) {
-  if (environment.emission_tex < 0) return {};
-  auto& texture    = scene.textures[environment.emission_tex];
-  auto  size       = texture_size(texture);
-  auto  texels_cdf = vector<float>(size.x * size.y);
-  if (size != zero2i) {
-    for (auto i = 0; i < texels_cdf.size(); i++) {
-      auto ij       = vec2i{i % size.x, i / size.x};
-      auto th       = (ij.y + 0.5f) * pif / size.y;
-      auto value    = lookup_texture(texture, ij);
-      texels_cdf[i] = max(xyz(value)) * sin(th);
-      if (i) texels_cdf[i] += texels_cdf[i - 1];
-    }
-  } else {
-    throw std::runtime_error("empty texture");
-  }
-  return texels_cdf;
-}
-
-// Generate a distribution for sampling a shape uniformly based on area/length.
-static vector<float> sample_shape_cdf(const trace_shape& shape) {
-  if (!shape.triangles.empty()) {
-    auto cdf = vector<float>(shape.triangles.size());
-    for (auto idx = 0; idx < cdf.size(); idx++) {
-      auto& t  = shape.triangles[idx];
-      cdf[idx] = triangle_area(
-          shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-      if (idx) cdf[idx] += cdf[idx - 1];
-    }
-    return cdf;
-  } else if (!shape.quads.empty()) {
-    auto cdf = vector<float>(shape.quads.size());
-    for (auto idx = 0; idx < cdf.size(); idx++) {
-      auto& t  = shape.quads[idx];
-      cdf[idx] = quad_area(shape.positions[t.x], shape.positions[t.y],
-          shape.positions[t.z], shape.positions[t.w]);
-      if (idx) cdf[idx] += cdf[idx - 1];
-    }
-    return cdf;
-  } else {
-    throw std::runtime_error("lights only support triangles and quads");
-  }
-}
-
 // Picks a point on a light.
 static vec3f sample_light(const trace_scene& scene, const trace_light& light,
     const vec3f& p, float rel, const vec2f& ruv) {
   if (light.instance >= 0) {
     auto& instance = scene.instances[light.instance];
     auto& shape    = scene.shapes[instance.shape];
-    auto& cdf      = light.elem_cdf;
-    auto  element  = sample_discrete(cdf, rel);
-    auto  uv       = zero2f;
-    if (!shape.triangles.empty()) {
-      uv = sample_triangle(ruv);
-    } else if (!shape.quads.empty()) {
-      uv = ruv;
-    } else if (!shape.quadspos.empty()) {
-      uv = ruv;
-    } else {
-      throw std::runtime_error("lights are only triangles or quads");
-    }
+    auto  element  = sample_discrete(light.cdf, rel);
+    auto  uv       = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
     return normalize(eval_position(scene, light.instance, element, uv) - p);
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
-      auto& cdf          = light.elem_cdf;
       auto& emission_tex = scene.textures[environment.emission_tex];
-      auto  idx          = sample_discrete(cdf, rel);
+      auto  idx          = sample_discrete(light.cdf, rel);
       auto  size         = texture_size(emission_tex);
       auto  uv           = vec2f{
           (idx % size.x + 0.5f) / size.x, (idx / size.x + 0.5f) / size.y};
@@ -2541,7 +2484,7 @@ static float sample_light_pdf(const trace_scene& scene,
     auto& instance = scene.instances[light.instance];
     auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) return 0;
-    auto& cdf = light.elem_cdf;
+    auto& cdf = light.cdf;
     // check all intersection
     auto pdf           = 0.0f;
     auto next_position = position;
@@ -2565,7 +2508,7 @@ static float sample_light_pdf(const trace_scene& scene,
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
-      auto& cdf          = light.elem_cdf;
+      auto& cdf          = light.cdf;
       auto& emission_tex = scene.textures[environment.emission_tex];
       auto  size         = texture_size(emission_tex);
       auto  wl = transform_direction(inverse(environment.frame), direction);
@@ -3072,13 +3015,48 @@ void init_lights(trace_scene& scene) {
     auto& material = scene.materials[instance.material];
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
-    scene.lights.push_back({idx, -1, sample_shape_cdf(shape)});
+    auto& light = scene.lights.emplace_back();
+    light.instance = idx;
+    light.environment = -1;
+    if (!shape.triangles.empty()) {
+      light.cdf = vector<float>(shape.triangles.size());
+      for (auto idx = 0; idx < light.cdf.size(); idx++) {
+        auto& t  = shape.triangles[idx];
+        light.cdf[idx] = triangle_area(
+            shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+        if (idx) light.cdf[idx] += light.cdf[idx - 1];
+      }
+    }
+    if (!shape.quads.empty()) {
+      light.cdf = vector<float>(shape.quads.size());
+      for (auto idx = 0; idx < light.cdf.size(); idx++) {
+        auto& t  = shape.quads[idx];
+        light.cdf[idx] = quad_area(shape.positions[t.x], shape.positions[t.y],
+            shape.positions[t.z], shape.positions[t.w]);
+        if (idx) light.cdf[idx] += light.cdf[idx - 1];
+      }
+    }
   }
   for (auto idx = 0; idx < scene.environments.size(); idx++) {
     auto& environment = scene.environments[idx];
     if (environment.emission == zero3f) continue;
-    scene.lights.push_back(
-        {-1, idx, sample_environment_cdf(scene, environment)});
+    auto& light = scene.lights.emplace_back();
+    light.instance = -1;
+    light.environment = idx;
+    if(environment.emission_tex >= 0) {
+      auto& texture    = scene.textures[environment.emission_tex];
+      auto  size       = texture_size(texture);
+      light.cdf = vector<float>(size.x * size.y);
+      if (size != zero2i) {
+        for (auto i = 0; i < light.cdf.size(); i++) {
+          auto ij       = vec2i{i % size.x, i / size.x};
+          auto th       = (ij.y + 0.5f) * pif / size.y;
+          auto value    = lookup_texture(texture, ij);
+          light.cdf[i] = max(xyz(value)) * sin(th);
+          if (i) light.cdf[i] += light.cdf[i - 1];
+        }
+      }
+    }
   }
 }
 
