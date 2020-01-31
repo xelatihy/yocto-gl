@@ -2038,8 +2038,7 @@ namespace yocto {
 // Set non-rigid frames as default
 static const bool trace_non_rigid_frames = true;
 
-static vec3f eval_emission(const trace_point& point, const vec3f& normal,
-    const vec3f& outgoing) {
+static vec3f eval_emission(const trace_point& point) {
   return point.emission;
 }
 
@@ -2049,9 +2048,12 @@ static vec3f eval_volemission(
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-static vec3f eval_brdfcos(const trace_point& point, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+static vec3f eval_brdfcos(const trace_point& point) {
   if (!point.roughness) return zero3f;
+
+  auto& normal = point.normal;
+  auto& outgoing = point.outgoing;
+  auto& incoming = point.incoming;
 
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
@@ -2143,9 +2145,12 @@ static vec3f eval_brdfcos(const trace_point& point, const vec3f& normal,
   return brdfcos;
 }
 
-static vec3f eval_delta(const trace_point& point, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+static vec3f eval_delta(const trace_point& point) {
   if (point.roughness) return zero3f;
+
+  auto& normal = point.normal;
+  auto& outgoing = point.outgoing;
+  auto& incoming = point.incoming;
 
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
@@ -2180,9 +2185,11 @@ static vec3f eval_delta(const trace_point& point, const vec3f& normal,
 }
 
 // Picks a direction based on the BRDF
-static vec3f sample_brdf(const trace_point& point, const vec3f& normal,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
+static vec3f sample_brdf(const trace_point& point, float rnl, const vec2f& rn) {
   if (!point.roughness) return zero3f;
+
+  auto& normal = point.normal;
+  auto& outgoing = point.outgoing;
 
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
@@ -2248,9 +2255,11 @@ static vec3f sample_brdf(const trace_point& point, const vec3f& normal,
   return zero3f;
 }
 
-static vec3f sample_delta(const trace_point& point, const vec3f& normal,
-    const vec3f& outgoing, float rnl) {
+static vec3f sample_delta(const trace_point& point, float rnl) {
   if (point.roughness) return zero3f;
+
+  auto& normal = point.normal;
+  auto& outgoing = point.outgoing;
 
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
@@ -2305,9 +2314,12 @@ static vec3f sample_delta(const trace_point& point, const vec3f& normal,
 }
 
 // Compute the weight for sampling the BRDF
-static float sample_brdf_pdf(const trace_point& point,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+static float sample_brdf_pdf(const trace_point& point) {
   if (!point.roughness) return 0;
+
+  auto& normal = point.normal;
+  auto& outgoing = point.outgoing;
+  auto& incoming = point.incoming;
 
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
@@ -2371,9 +2383,12 @@ static float sample_brdf_pdf(const trace_point& point,
   return pdf;
 }
 
-static float sample_delta_pdf(const trace_point& point,
-    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+static float sample_delta_pdf(const trace_point& point) {
   if (point.roughness) return 0;
+
+  auto& normal = point.normal;
+  auto& outgoing = point.outgoing;
+  auto& incoming = point.incoming;
 
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
@@ -2548,25 +2563,25 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
       hit = true;
 
       // accumulate emission
-      radiance += weight * eval_emission(point, point.normal, point.outgoing);
+      radiance += weight * eval_emission(point);
 
       // next direction
       if (point.roughness) {
         if (rand1f(rng) < 0.5f) {
           point.incoming = sample_brdf(
-              point, point.normal, point.outgoing, rand1f(rng), rand2f(rng));
+              point, rand1f(rng), rand2f(rng));
         } else {
           point.incoming = sample_lights(
               scene, point.position, rand1f(rng), rand1f(rng), rand2f(rng));
         }
         weight *=
-            eval_brdfcos(point, point.normal, point.outgoing, point.incoming) /
-            (0.5f * sample_brdf_pdf(point, point.normal, point.outgoing, point.incoming) +
+            eval_brdfcos(point) /
+            (0.5f * sample_brdf_pdf(point) +
                 0.5f * sample_lights_pdf(scene, point.position, point.incoming));
       } else {
-        point.incoming = sample_delta(point, point.normal, point.outgoing, rand1f(rng));
-        weight *= eval_delta(point, point.normal, point.outgoing, point.incoming) /
-                  sample_delta_pdf(point, point.normal, point.outgoing, point.incoming);
+        point.incoming = sample_delta(point, rand1f(rng));
+        weight *= eval_delta(point) /
+                  sample_delta_pdf(point);
       }
 
       // update volume stack
@@ -2657,18 +2672,18 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     hit = true;
 
     // accumulate emission
-    radiance += weight * eval_emission(point, point.normal, point.outgoing);
+    radiance += weight * eval_emission(point);
 
     // next direction
     if (point.roughness) {
       point.incoming = sample_brdf(
-          point, point.normal, point.outgoing, rand1f(rng), rand2f(rng));
-      weight *= eval_brdfcos(point, point.normal, point.outgoing, point.incoming) /
-                sample_brdf_pdf(point, point.normal, point.outgoing, point.incoming);
+          point, rand1f(rng), rand2f(rng));
+      weight *= eval_brdfcos(point) /
+                sample_brdf_pdf(point);
     } else {
-      point.incoming = sample_delta(point, point.normal, point.outgoing, rand1f(rng));
-      weight *= eval_delta(point, point.normal, point.outgoing, point.incoming) /
-                sample_delta_pdf(point, point.normal, point.outgoing, point.incoming);
+      point.incoming = sample_delta(point, rand1f(rng));
+      weight *= eval_delta(point) /
+                sample_delta_pdf(point);
     }
 
     // check weight
@@ -2722,17 +2737,17 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
 
     // accumulate emission
     point.incoming = point.outgoing;
-    radiance += weight * eval_emission(point, point.normal, point.outgoing);
+    radiance += weight * eval_emission(point);
 
     // brdf * light
     radiance += weight * pif *
-                eval_brdfcos(point, point.normal, point.outgoing, point.incoming);
+                eval_brdfcos(point);
 
     // continue path
     if (point.roughness) break;
-    point.incoming = sample_delta(point, point.normal, point.outgoing, rand1f(rng));
-    weight *= eval_delta(point, point.normal, point.outgoing, point.incoming) /
-              sample_delta_pdf(point, point.normal, point.outgoing, point.incoming);
+    point.incoming = sample_delta(point, rand1f(rng));
+    weight *= eval_delta(point) /
+              sample_delta_pdf(point);
     if (weight == zero3f || !isfinite(weight)) break;
 
     // setup next iteration
