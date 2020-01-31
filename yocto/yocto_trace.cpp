@@ -740,11 +740,6 @@ struct trace_point {
   float ior          = 1;
   vec3f meta         = {0, 0, 0};
   vec3f metak        = {0, 0, 0};
-  // volume
-  vec3f voldensity    = {0, 0, 0};
-  vec3f volemission   = {0, 0, 0};
-  vec3f volscatter    = {0, 0, 0};
-  float volanisotropy = 0;
   // weights
   float diffuse_pdf      = 0;
   float specular_pdf     = 0;
@@ -867,13 +862,6 @@ static trace_point eval_point(const trace_scene& scene,
   point.roughness   = roughness * roughness;
   point.ior         = ior;
   point.opacity     = opacity;
-  point.volemission = zero3f;
-  point.voldensity  = (transmission && !thin)
-                         ? -log(clamp(base, 0.0001f, 1.0f)) / radius
-                         : zero3f;
-  point.volscatter    = scattering;
-  point.volanisotropy = phaseg;
-  point.opacity       = opacity;
 
   // textures
   if (point.diffuse != zero3f || point.roughness) {
@@ -907,6 +895,79 @@ static trace_point eval_point(const trace_scene& scene,
     point.refraction_pdf /= pdf_sum;
   }
   return point;
+}
+
+// Point used for tracing
+struct volume_point {
+  // shape
+  int   instance = -1;
+  vec3f position = zero3f;
+  // directions
+  vec3f outgoing = zero3f;
+  vec3f incoming = zero3f;
+  // volume
+  vec3f voldensity    = {0, 0, 0};
+  vec3f volemission   = {0, 0, 0};
+  vec3f volscatter    = {0, 0, 0};
+  float volanisotropy = 0;
+};
+
+// Evaluate point
+static volume_point eval_volume(const trace_scene& scene,
+    const trace_intersection& intersection, const ray3f& ray) {
+  // get data
+  auto& instance               = scene.instances[intersection.instance];
+  auto& shape                  = scene.shapes[instance.shape];
+  auto& material               = scene.materials[instance.material];
+  auto  element                = intersection.element;
+  auto  uv                     = intersection.uv;
+
+  // initialize point
+  auto point     = volume_point{};
+  point.instance = intersection.instance;
+  point.outgoing = -ray.d;
+  point.incoming = -ray.d;
+
+  // geometric properties
+  point.position = eval_shape_elem(
+      shape, shape.quadspos, shape.positions, element, uv);
+  point.position = transform_point(instance.frame, point.position);
+
+  // material -------
+  // initialize factors
+  auto texcoord = shape.texcoords.empty()
+                       ? uv
+                       : eval_shape_elem(shape, shape.quadstexcoord,
+                             shape.texcoords, element, uv);
+  auto color = shape.colors.empty()
+                    ? vec4f{1, 1, 1, 1}
+                    : eval_shape_elem(shape, {}, shape.colors, element, uv);
+  auto base_tex = eval_texture(scene, material.base_tex, texcoord);
+  auto base     = material.base * xyz(color) * xyz(base_tex);
+  auto transmission = material.transmission *
+                      eval_texture(scene, material.emission_tex, texcoord).x;
+  auto thin       = material.thin || !material.transmission;
+  auto scattering = material.scattering *
+                    eval_texture(scene, material.scattering_tex, texcoord).x;
+  auto phaseg  = material.phaseg;
+  auto radius  = material.radius;
+
+  // factors
+  point.volemission = zero3f;
+  point.voldensity  = (transmission && !thin)
+                         ? -log(clamp(base, 0.0001f, 1.0f)) / radius
+                         : zero3f;
+  point.volscatter    = scattering;
+  point.volanisotropy = phaseg;
+
+  return point;
+}
+
+// Check if an instance as volume scattering
+static bool has_volume(const trace_scene& scene, const trace_intersection& intersection) {
+  auto& instance               = scene.instances[intersection.instance];
+  auto& material               = scene.materials[instance.material];
+  return !material.thin && material.transmission;
 }
 
 // Evaluate all environment color.
@@ -2050,7 +2111,7 @@ static const bool trace_non_rigid_frames = true;
 
 static vec3f eval_emission(const trace_point& point) { return point.emission; }
 
-static vec3f eval_volemission(const trace_point& point) {
+static vec3f eval_volemission(const volume_point& point) {
   return point.volemission;
 }
 
@@ -2409,7 +2470,7 @@ static float sample_delta_pdf(const trace_point& point) {
   return pdf;
 }
 
-static vec3f eval_volscattering(const trace_point& point) {
+static vec3f eval_volscattering(const volume_point& point) {
   if (point.voldensity == zero3f) return zero3f;
   return point.volscatter *
          eval_phasefunction(
@@ -2417,13 +2478,13 @@ static vec3f eval_volscattering(const trace_point& point) {
 }
 
 static vec3f sample_volscattering(
-    const trace_point& point, float rnl, const vec2f& rn) {
+    const volume_point& point, float rnl, const vec2f& rn) {
   if (point.voldensity == zero3f) return zero3f;
   auto direction = sample_phasefunction(point.volanisotropy, rn);
   return basis_fromz(-point.outgoing) * direction;
 }
 
-static float sample_volscattering_pdf(const trace_point& point) {
+static float sample_volscattering_pdf(const volume_point& point) {
   if (point.voldensity == zero3f) return 0;
   return eval_phasefunction(
       dot(point.outgoing, point.incoming), point.volanisotropy);
@@ -2518,7 +2579,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
-  auto volume_stack  = vector<trace_point>{};
+  auto volume_stack  = vector<volume_point>{};
   auto max_roughness = 0.0f;
   auto hit           = false;
 
@@ -2584,12 +2645,13 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
       }
 
       // update volume stack
-      if (point.voldensity != zero3f &&
+      if (has_volume(scene, intersection) &&
           dot(point.normal, point.outgoing) *
                   dot(point.normal, point.incoming) <
               0) {
         if (volume_stack.empty()) {
-          volume_stack.push_back(point);
+          auto volpoint = eval_volume(scene, intersection, ray);
+          volume_stack.push_back(volpoint);
         } else {
           volume_stack.pop_back();
         }
