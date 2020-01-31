@@ -413,32 +413,6 @@ float eval_phasefunction(float cos_theta, float g) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Material values packed into a convenience structure.
-struct material_point {
-  vec3f emission         = {0, 0, 0};
-  vec3f diffuse          = {0, 0, 0};
-  vec3f specular         = {0, 0, 0};
-  vec3f metal            = {0, 0, 0};
-  vec3f coat             = {0, 0, 0};
-  vec3f transmission     = {0, 0, 0};
-  vec3f refraction       = {0, 0, 0};
-  float roughness        = 0;
-  vec3f voldensity       = {0, 0, 0};
-  vec3f volemission      = {0, 0, 0};
-  vec3f volscatter       = {0, 0, 0};
-  float volanisotropy    = 0;
-  float opacity          = 1;
-  float ior              = 1;
-  vec3f meta             = {0, 0, 0};
-  vec3f metak            = {0, 0, 0};
-  float diffuse_pdf      = 0;
-  float specular_pdf     = 0;
-  float metal_pdf        = 0;
-  float coat_pdf         = 0;
-  float transmission_pdf = 0;
-  float refraction_pdf   = 0;
-};
-
 // constant values
 static const auto coat_ior       = 1.5;
 static const auto coat_roughness = 0.03f * 0.03f;
@@ -743,12 +717,37 @@ static vec3f eval_normal(const trace_scene& scene, int instance_, int element,
 
 // Point used for tracing
 struct trace_point {
+  // shape
   vec3f          position = zero3f;
   vec3f          normal   = zero3f;
   vec3f          gnormal  = zero3f;
   vec2f          texcoord = zero2f;
   vec4f          color    = zero4f;
-  material_point material = {};
+  // material
+  vec3f emission         = {0, 0, 0};
+  vec3f diffuse          = {0, 0, 0};
+  vec3f specular         = {0, 0, 0};
+  vec3f metal            = {0, 0, 0};
+  vec3f coat             = {0, 0, 0};
+  vec3f transmission     = {0, 0, 0};
+  vec3f refraction       = {0, 0, 0};
+  float roughness        = 0;
+  float opacity          = 1;
+  float ior              = 1;
+  vec3f meta             = {0, 0, 0};
+  vec3f metak            = {0, 0, 0};
+  // volume
+  vec3f voldensity       = {0, 0, 0};
+  vec3f volemission      = {0, 0, 0};
+  vec3f volscatter       = {0, 0, 0};
+  float volanisotropy    = 0;
+  // weights
+  float diffuse_pdf      = 0;
+  float specular_pdf     = 0;
+  float metal_pdf        = 0;
+  float coat_pdf         = 0;
+  float transmission_pdf = 0;
+  float refraction_pdf   = 0;
 };
 
 // Evaluate point
@@ -831,61 +830,61 @@ static trace_point eval_point(const trace_scene& scene, int instance_,
 
   // factors
   auto weight    = vec3f{1, 1, 1};
-  point.material.emission = weight * emission;
-  point.material.coat     = weight * coat;
+  point.emission = weight * emission;
+  point.coat     = weight * coat;
   weight *= 1 -
-            point.material.coat * fresnel_dielectric(coat_ior, dot(outgoing, point.normal));
-  point.material.metal = weight * metallic;
+            point.coat * fresnel_dielectric(coat_ior, dot(outgoing, point.normal));
+  point.metal = weight * metallic;
   weight *= 1 - metallic;
-  point.material.refraction = thin ? zero3f : weight * transmission;
+  point.refraction = thin ? zero3f : weight * transmission;
   weight *= 1 - (thin ? 0 : transmission);
-  point.material.specular = weight * specular;
+  point.specular = weight * specular;
   weight *= 1 - specular * fresnel_dielectric(ior, dot(outgoing, point.normal));
-  point.material.transmission = weight * transmission * base;
+  point.transmission = weight * transmission * base;
   weight *= 1 - transmission;
-  point.material.diffuse     = weight * base;
-  point.material.meta        = reflectivity_to_eta(base);
-  point.material.metak       = zero3f;
-  point.material.roughness   = roughness * roughness;
-  point.material.ior         = ior;
-  point.material.opacity     = opacity;
-  point.material.volemission = zero3f;
-  point.material.voldensity  = (transmission && !thin)
+  point.diffuse     = weight * base;
+  point.meta        = reflectivity_to_eta(base);
+  point.metak       = zero3f;
+  point.roughness   = roughness * roughness;
+  point.ior         = ior;
+  point.opacity     = opacity;
+  point.volemission = zero3f;
+  point.voldensity  = (transmission && !thin)
                          ? -log(clamp(base, 0.0001f, 1.0f)) / radius
                          : zero3f;
-  point.material.volscatter    = scattering;
-  point.material.volanisotropy = phaseg;
-  point.material.opacity       = opacity;
+  point.volscatter    = scattering;
+  point.volanisotropy = phaseg;
+  point.opacity       = opacity;
 
   // textures
-  if (point.material.diffuse != zero3f || point.material.roughness) {
-    point.material.roughness = clamp(point.material.roughness, 0.03f * 0.03f, 1.0f);
+  if (point.diffuse != zero3f || point.roughness) {
+    point.roughness = clamp(point.roughness, 0.03f * 0.03f, 1.0f);
   }
-  if (point.material.specular == zero3f && point.material.metal == zero3f &&
-      point.material.transmission == zero3f && point.material.refraction == zero3f) {
-    point.material.roughness = 1;
+  if (point.specular == zero3f && point.metal == zero3f &&
+      point.transmission == zero3f && point.refraction == zero3f) {
+    point.roughness = 1;
   }
-  if (point.material.opacity > 0.999f) point.material.opacity = 1;
+  if (point.opacity > 0.999f) point.opacity = 1;
 
   // weights
-  point.material.diffuse_pdf  = max(point.material.diffuse);
-  point.material.specular_pdf = max(
-      point.material.specular * fresnel_dielectric(point.material.ior, dot(outgoing, point.normal)));
-  point.material.metal_pdf = max(point.material.metal * fresnel_conductor(point.material.meta, point.material.metak,
+  point.diffuse_pdf  = max(point.diffuse);
+  point.specular_pdf = max(
+      point.specular * fresnel_dielectric(point.ior, dot(outgoing, point.normal)));
+  point.metal_pdf = max(point.metal * fresnel_conductor(point.meta, point.metak,
                                           dot(outgoing, point.normal)));
-  point.material.coat_pdf  = max(
-      point.material.coat * fresnel_dielectric(coat_ior, dot(outgoing, point.normal)));
-  point.material.transmission_pdf = max(point.material.transmission);
-  point.material.refraction_pdf   = max(point.material.refraction);
-  auto pdf_sum = point.material.diffuse_pdf + point.material.specular_pdf + point.material.metal_pdf +
-                 point.material.coat_pdf + point.material.transmission_pdf + point.material.refraction_pdf;
+  point.coat_pdf  = max(
+      point.coat * fresnel_dielectric(coat_ior, dot(outgoing, point.normal)));
+  point.transmission_pdf = max(point.transmission);
+  point.refraction_pdf   = max(point.refraction);
+  auto pdf_sum = point.diffuse_pdf + point.specular_pdf + point.metal_pdf +
+                 point.coat_pdf + point.transmission_pdf + point.refraction_pdf;
   if (pdf_sum) {
-    point.material.diffuse_pdf /= pdf_sum;
-    point.material.specular_pdf /= pdf_sum;
-    point.material.metal_pdf /= pdf_sum;
-    point.material.coat_pdf /= pdf_sum;
-    point.material.transmission_pdf /= pdf_sum;
-    point.material.refraction_pdf /= pdf_sum;
+    point.diffuse_pdf /= pdf_sum;
+    point.specular_pdf /= pdf_sum;
+    point.metal_pdf /= pdf_sum;
+    point.coat_pdf /= pdf_sum;
+    point.transmission_pdf /= pdf_sum;
+    point.refraction_pdf /= pdf_sum;
   }
   return point;
 }
@@ -2030,104 +2029,104 @@ namespace yocto {
 // Set non-rigid frames as default
 static const bool trace_non_rigid_frames = true;
 
-static vec3f eval_emission(const material_point& material, const vec3f& normal,
+static vec3f eval_emission(const trace_point& point, const vec3f& normal,
     const vec3f& outgoing) {
-  return material.emission;
+  return point.emission;
 }
 
 static vec3f eval_volemission(
-    const material_point& material, const vec3f& outgoing) {
-  return material.volemission;
+    const trace_point& point, const vec3f& outgoing) {
+  return point.volemission;
 }
 
 // Evaluates/sample the BRDF scaled by the cosine of the incoming direction.
-static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
+static vec3f eval_brdfcos(const trace_point& point, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (!material.roughness) return zero3f;
+  if (!point.roughness) return zero3f;
 
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
   auto brdfcos = zero3f;
 
-  if (material.diffuse != zero3f && same_hemi) {
-    brdfcos += material.diffuse / pif * abs(dot(normal, incoming));
+  if (point.diffuse != zero3f && same_hemi) {
+    brdfcos += point.diffuse / pif * abs(dot(normal, incoming));
   }
 
-  if (material.specular != zero3f && material.refraction == zero3f &&
+  if (point.specular != zero3f && point.refraction == zero3f &&
       same_hemi) {
     auto halfway = normalize(incoming + outgoing);
-    auto F       = fresnel_dielectric(material.ior, dot(halfway, outgoing));
-    auto D       = eval_microfacetD(material.roughness, up_normal, halfway);
+    auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
+    auto D       = eval_microfacetD(point.roughness, up_normal, halfway);
     auto G       = eval_microfacetG(
-        material.roughness, up_normal, halfway, outgoing, incoming);
-    brdfcos += material.specular * F * D * G /
+        point.roughness, up_normal, halfway, outgoing, incoming);
+    brdfcos += point.specular * F * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
 
-  if (material.metal != zero3f && same_hemi) {
+  if (point.metal != zero3f && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_conductor(
-        material.meta, material.metak, dot(halfway, outgoing));
-    auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+        point.meta, point.metak, dot(halfway, outgoing));
+    auto D = eval_microfacetD(point.roughness, up_normal, halfway);
     auto G = eval_microfacetG(
-        material.roughness, up_normal, halfway, outgoing, incoming);
-    brdfcos += material.metal * F * D * G /
+        point.roughness, up_normal, halfway, outgoing, incoming);
+    brdfcos += point.metal * F * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
 
-  if (material.coat != zero3f && same_hemi) {
+  if (point.coat != zero3f && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
     auto F       = fresnel_dielectric(coat_ior, dot(halfway, outgoing));
     auto D       = eval_microfacetD(coat_roughness, up_normal, halfway);
     auto G       = eval_microfacetG(
-        material.roughness, up_normal, halfway, outgoing, incoming);
-    brdfcos += material.coat * F * D * G /
+        point.roughness, up_normal, halfway, outgoing, incoming);
+    brdfcos += point.coat * F * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
 
-  if (material.transmission != zero3f && !same_hemi) {
+  if (point.transmission != zero3f && !same_hemi) {
     auto ir      = reflect(-incoming, up_normal);
     auto halfway = normalize(ir + outgoing);
     // auto F       = fresnel_schlick(
-    //     material.reflectance, abs(dot(halfway, outgoing)), entering);
-    auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+    //     point.reflectance, abs(dot(halfway, outgoing)), entering);
+    auto D = eval_microfacetD(point.roughness, up_normal, halfway);
     auto G = eval_microfacetG(
-        material.roughness, up_normal, halfway, outgoing, ir);
-    brdfcos += material.transmission * D * G /
+        point.roughness, up_normal, halfway, outgoing, ir);
+    brdfcos += point.transmission * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
 
-  if (material.refraction != zero3f && !same_hemi) {
+  if (point.refraction != zero3f && !same_hemi) {
     auto halfway_vector = dot(outgoing, normal) > 0
-                              ? -(outgoing + material.ior * incoming)
-                              : (material.ior * outgoing + incoming);
+                              ? -(outgoing + point.ior * incoming)
+                              : (point.ior * outgoing + incoming);
     auto halfway = normalize(halfway_vector);
-    // auto F       = fresnel_dielectric(material.ior, dot(halfway, outgoing));
-    auto F = fresnel_dielectric(material.ior, dot(normal, outgoing));
-    auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+    // auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
+    auto F = fresnel_dielectric(point.ior, dot(normal, outgoing));
+    auto D = eval_microfacetD(point.roughness, up_normal, halfway);
     auto G = eval_microfacetG(
-        material.roughness, up_normal, halfway, outgoing, incoming);
+        point.roughness, up_normal, halfway, outgoing, incoming);
 
     auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
                      (dot(outgoing, normal) * dot(incoming, normal));
 
     // [Walter 2007] equation 21
-    brdfcos += material.refraction * abs(dot_terms) * (1 - F) * D * G /
+    brdfcos += point.refraction * abs(dot_terms) * (1 - F) * D * G /
                dot(halfway_vector, halfway_vector) * abs(dot(normal, incoming));
   }
 
-  if (material.refraction != zero3f && same_hemi) {
+  if (point.refraction != zero3f && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
-    auto F       = fresnel_dielectric(material.ior, dot(halfway, outgoing));
-    auto D       = eval_microfacetD(material.roughness, up_normal, halfway);
+    auto F       = fresnel_dielectric(point.ior, dot(halfway, outgoing));
+    auto D       = eval_microfacetD(point.roughness, up_normal, halfway);
     auto G       = eval_microfacetG(
-        material.roughness, up_normal, halfway, outgoing, incoming);
-    brdfcos += material.refraction * F * D * G /
+        point.roughness, up_normal, halfway, outgoing, incoming);
+    brdfcos += point.refraction * F * D * G /
                abs(4 * dot(normal, outgoing) * dot(normal, incoming)) *
                abs(dot(normal, incoming));
   }
@@ -2135,104 +2134,104 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
   return brdfcos;
 }
 
-static vec3f eval_delta(const material_point& material, const vec3f& normal,
+static vec3f eval_delta(const trace_point& point, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.roughness) return zero3f;
+  if (point.roughness) return zero3f;
 
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
   auto brdfcos = zero3f;
 
-  if (material.specular != zero3f && material.refraction == zero3f &&
+  if (point.specular != zero3f && point.refraction == zero3f &&
       same_hemi) {
-    brdfcos += material.specular *
-               fresnel_dielectric(material.ior, dot(normal, outgoing));
+    brdfcos += point.specular *
+               fresnel_dielectric(point.ior, dot(normal, outgoing));
   }
-  if (material.metal != zero3f && same_hemi) {
-    brdfcos += material.metal * fresnel_conductor(material.meta, material.metak,
+  if (point.metal != zero3f && same_hemi) {
+    brdfcos += point.metal * fresnel_conductor(point.meta, point.metak,
                                     dot(normal, outgoing));
   }
-  if (material.coat != zero3f && same_hemi) {
-    brdfcos += material.coat *
+  if (point.coat != zero3f && same_hemi) {
+    brdfcos += point.coat *
                fresnel_dielectric(coat_ior, dot(outgoing, normal));
   }
-  if (material.transmission != zero3f && !same_hemi) {
-    brdfcos += material.transmission;
+  if (point.transmission != zero3f && !same_hemi) {
+    brdfcos += point.transmission;
   }
-  if (material.refraction != zero3f && !same_hemi) {
-    brdfcos += material.refraction *
-               (1 - fresnel_dielectric(material.ior, dot(normal, outgoing)));
+  if (point.refraction != zero3f && !same_hemi) {
+    brdfcos += point.refraction *
+               (1 - fresnel_dielectric(point.ior, dot(normal, outgoing)));
   }
-  if (material.refraction != zero3f && same_hemi) {
-    brdfcos += material.refraction *
-               fresnel_dielectric(material.ior, dot(normal, outgoing));
+  if (point.refraction != zero3f && same_hemi) {
+    brdfcos += point.refraction *
+               fresnel_dielectric(point.ior, dot(normal, outgoing));
   }
 
   return brdfcos;
 }
 
 // Picks a direction based on the BRDF
-static vec3f sample_brdf(const material_point& material, const vec3f& normal,
+static vec3f sample_brdf(const trace_point& point, const vec3f& normal,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (!material.roughness) return zero3f;
+  if (!point.roughness) return zero3f;
 
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
   auto cdf = 0.0f;
 
-  if (material.diffuse_pdf) {
-    cdf += material.diffuse_pdf;
+  if (point.diffuse_pdf) {
+    cdf += point.diffuse_pdf;
     if (rnl < cdf) {
       return sample_hemisphere_cos(up_normal, rn);
     }
   }
 
-  if (material.specular_pdf && !material.refraction_pdf) {
-    cdf += material.specular_pdf;
+  if (point.specular_pdf && !point.refraction_pdf) {
+    cdf += point.specular_pdf;
     if (rnl < cdf) {
-      auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+      auto halfway = sample_microfacet(point.roughness, up_normal, rn);
       return reflect(outgoing, halfway);
     }
   }
 
-  if (material.metal_pdf) {
-    cdf += material.metal_pdf;
+  if (point.metal_pdf) {
+    cdf += point.metal_pdf;
     if (rnl < cdf) {
-      auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+      auto halfway = sample_microfacet(point.roughness, up_normal, rn);
       return reflect(outgoing, halfway);
     }
   }
 
-  if (material.coat_pdf) {
-    cdf += material.coat_pdf;
+  if (point.coat_pdf) {
+    cdf += point.coat_pdf;
     if (rnl < cdf) {
       auto halfway = sample_microfacet(coat_roughness, up_normal, rn);
       return reflect(outgoing, halfway);
     }
   }
 
-  if (material.transmission_pdf) {
-    cdf += material.transmission_pdf;
+  if (point.transmission_pdf) {
+    cdf += point.transmission_pdf;
     if (rnl < cdf) {
-      auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+      auto halfway = sample_microfacet(point.roughness, up_normal, rn);
       auto ir      = reflect(outgoing, halfway);
       return -reflect(ir, up_normal);
     }
   }
 
-  if (material.refraction_pdf) {
-    cdf += material.refraction_pdf;
+  if (point.refraction_pdf) {
+    cdf += point.refraction_pdf;
     if (rnl < cdf) {
-      // auto nrnl = (rnl - 1 + material.refraction_pdf) /
-      // material.refraction_pdf;
+      // auto nrnl = (rnl - 1 + point.refraction_pdf) /
+      // point.refraction_pdf;
       auto nrnl = rnl;
-      if (nrnl < fresnel_dielectric(material.ior, dot(normal, outgoing))) {
-        auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+      if (nrnl < fresnel_dielectric(point.ior, dot(normal, outgoing))) {
+        auto halfway = sample_microfacet(point.roughness, up_normal, rn);
         return reflect(outgoing, halfway);
       } else {
-        auto halfway = sample_microfacet(material.roughness, up_normal, rn);
+        auto halfway = sample_microfacet(point.roughness, up_normal, rn);
         return refract_notir(outgoing, halfway,
-            dot(normal, outgoing) > 0 ? 1 / material.ior : material.ior);
+            dot(normal, outgoing) > 0 ? 1 / point.ior : point.ior);
       }
     }
   }
@@ -2240,55 +2239,55 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
   return zero3f;
 }
 
-static vec3f sample_delta(const material_point& material, const vec3f& normal,
+static vec3f sample_delta(const trace_point& point, const vec3f& normal,
     const vec3f& outgoing, float rnl) {
-  if (material.roughness) return zero3f;
+  if (point.roughness) return zero3f;
 
   auto up_normal = dot(normal, outgoing) > 0 ? normal : -normal;
 
   // keep a weight sum to pick a lobe
   auto cdf = 0.0f;
-  cdf += material.diffuse_pdf;
+  cdf += point.diffuse_pdf;
 
-  if (material.specular_pdf && !material.refraction_pdf) {
-    cdf += material.specular_pdf;
+  if (point.specular_pdf && !point.refraction_pdf) {
+    cdf += point.specular_pdf;
     if (rnl < cdf) {
       return reflect(outgoing, up_normal);
     }
   }
 
-  if (material.metal_pdf) {
-    cdf += material.metal_pdf;
+  if (point.metal_pdf) {
+    cdf += point.metal_pdf;
     if (rnl < cdf) {
       return reflect(outgoing, up_normal);
     }
   }
 
-  if (material.coat_pdf) {
-    cdf += material.coat_pdf;
+  if (point.coat_pdf) {
+    cdf += point.coat_pdf;
     if (rnl < cdf) {
       return reflect(outgoing, up_normal);
     }
   }
 
-  if (material.transmission_pdf) {
-    cdf += material.transmission_pdf;
+  if (point.transmission_pdf) {
+    cdf += point.transmission_pdf;
     if (rnl < cdf) {
       return -outgoing;
     }
   }
 
-  if (material.refraction_pdf) {
-    cdf += material.refraction_pdf;
+  if (point.refraction_pdf) {
+    cdf += point.refraction_pdf;
     if (rnl < cdf) {
-      // auto nrnl = (rnl - 1 + material.refraction_pdf) /
-      // material.refraction_pdf;
+      // auto nrnl = (rnl - 1 + point.refraction_pdf) /
+      // point.refraction_pdf;
       auto nrnl = rnl;
-      if (nrnl < fresnel_dielectric(material.ior, dot(normal, outgoing))) {
+      if (nrnl < fresnel_dielectric(point.ior, dot(normal, outgoing))) {
         return reflect(outgoing, up_normal);
       } else {
         return refract_notir(outgoing, up_normal,
-            dot(normal, outgoing) > 0 ? 1 / material.ior : material.ior);
+            dot(normal, outgoing) > 0 ? 1 / point.ior : point.ior);
       }
     }
   }
@@ -2297,111 +2296,111 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
 }
 
 // Compute the weight for sampling the BRDF
-static float sample_brdf_pdf(const material_point& material,
+static float sample_brdf_pdf(const trace_point& point,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (!material.roughness) return 0;
+  if (!point.roughness) return 0;
 
   auto up_normal = dot(normal, outgoing) >= 0 ? normal : -normal;
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
   auto pdf = 0.0f;
 
-  if (material.diffuse_pdf && same_hemi) {
-    pdf += material.diffuse_pdf *
+  if (point.diffuse_pdf && same_hemi) {
+    pdf += point.diffuse_pdf *
            sample_hemisphere_cos_pdf(up_normal, incoming);
   }
 
-  if (material.specular_pdf && !material.refraction_pdf && same_hemi) {
+  if (point.specular_pdf && !point.refraction_pdf && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
-    pdf += material.specular_pdf *
-           sample_microfacet_pdf(material.roughness, up_normal, halfway) /
+    pdf += point.specular_pdf *
+           sample_microfacet_pdf(point.roughness, up_normal, halfway) /
            (4 * abs(dot(outgoing, halfway)));
   }
 
-  if (material.metal_pdf && same_hemi) {
+  if (point.metal_pdf && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
-    pdf += material.metal_pdf *
-           sample_microfacet_pdf(material.roughness, up_normal, halfway) /
+    pdf += point.metal_pdf *
+           sample_microfacet_pdf(point.roughness, up_normal, halfway) /
            (4 * abs(dot(outgoing, halfway)));
   }
 
-  if (material.coat_pdf && same_hemi) {
+  if (point.coat_pdf && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
-    pdf += material.coat_pdf *
+    pdf += point.coat_pdf *
            sample_microfacet_pdf(coat_roughness, up_normal, halfway) /
            (4 * abs(dot(outgoing, halfway)));
   }
 
-  if (material.transmission_pdf && !same_hemi) {
+  if (point.transmission_pdf && !same_hemi) {
     auto up_normal = dot(outgoing, normal) > 0 ? normal : -normal;
     auto ir        = reflect(-incoming, up_normal);
     auto halfway   = normalize(ir + outgoing);
-    auto d = sample_microfacet_pdf(material.roughness, up_normal, halfway);
-    pdf += material.transmission_pdf * d / (4 * abs(dot(outgoing, halfway)));
+    auto d = sample_microfacet_pdf(point.roughness, up_normal, halfway);
+    pdf += point.transmission_pdf * d / (4 * abs(dot(outgoing, halfway)));
   }
 
-  if (material.refraction_pdf && !same_hemi) {
+  if (point.refraction_pdf && !same_hemi) {
     auto halfway_vector = dot(outgoing, normal) > 0
-                              ? -(outgoing + material.ior * incoming)
-                              : (material.ior * outgoing + incoming);
+                              ? -(outgoing + point.ior * incoming)
+                              : (point.ior * outgoing + incoming);
     auto halfway = normalize(halfway_vector);
     // [Walter 2007] equation 17
-    pdf += material.refraction_pdf *
-           (1 - fresnel_dielectric(material.ior, dot(normal, outgoing))) *
-           sample_microfacet_pdf(material.roughness, up_normal, halfway) *
+    pdf += point.refraction_pdf *
+           (1 - fresnel_dielectric(point.ior, dot(normal, outgoing))) *
+           sample_microfacet_pdf(point.roughness, up_normal, halfway) *
            abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
   }
 
-  if (material.refraction_pdf && same_hemi) {
+  if (point.refraction_pdf && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
-    pdf += material.refraction_pdf *
-           fresnel_dielectric(material.ior, dot(normal, outgoing)) *
-           sample_microfacet_pdf(material.roughness, up_normal, halfway) /
+    pdf += point.refraction_pdf *
+           fresnel_dielectric(point.ior, dot(normal, outgoing)) *
+           sample_microfacet_pdf(point.roughness, up_normal, halfway) /
            (4 * abs(dot(outgoing, halfway)));
   }
 
   return pdf;
 }
 
-static float sample_delta_pdf(const material_point& material,
+static float sample_delta_pdf(const trace_point& point,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-  if (material.roughness) return 0;
+  if (point.roughness) return 0;
 
   auto same_hemi = dot(normal, outgoing) * dot(normal, incoming) > 0;
 
   auto pdf = 0.0f;
-  if (material.specular_pdf && !material.refraction_pdf && same_hemi)
-    pdf += material.specular_pdf;
-  if (material.metal_pdf && same_hemi) pdf += material.metal_pdf;
-  if (material.coat_pdf && same_hemi) pdf += material.coat_pdf;
-  if (material.transmission_pdf && !same_hemi) pdf += material.transmission_pdf;
-  if (material.refraction_pdf && !same_hemi)
-    pdf += material.refraction_pdf *
-           (1 - fresnel_dielectric(material.ior, dot(normal, outgoing)));
-  if (material.refraction_pdf && same_hemi)
-    pdf += material.refraction_pdf *
-           fresnel_dielectric(material.ior, dot(normal, outgoing));
+  if (point.specular_pdf && !point.refraction_pdf && same_hemi)
+    pdf += point.specular_pdf;
+  if (point.metal_pdf && same_hemi) pdf += point.metal_pdf;
+  if (point.coat_pdf && same_hemi) pdf += point.coat_pdf;
+  if (point.transmission_pdf && !same_hemi) pdf += point.transmission_pdf;
+  if (point.refraction_pdf && !same_hemi)
+    pdf += point.refraction_pdf *
+           (1 - fresnel_dielectric(point.ior, dot(normal, outgoing)));
+  if (point.refraction_pdf && same_hemi)
+    pdf += point.refraction_pdf *
+           fresnel_dielectric(point.ior, dot(normal, outgoing));
   return pdf;
 }
 
-static vec3f eval_volscattering(const material_point& material,
+static vec3f eval_volscattering(const trace_point& point,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.voldensity == zero3f) return zero3f;
-  return material.volscatter *
-         eval_phasefunction(dot(outgoing, incoming), material.volanisotropy);
+  if (point.voldensity == zero3f) return zero3f;
+  return point.volscatter *
+         eval_phasefunction(dot(outgoing, incoming), point.volanisotropy);
 }
 
-static vec3f sample_volscattering(const material_point& material,
+static vec3f sample_volscattering(const trace_point& point,
     const vec3f& outgoing, float rnl, const vec2f& rn) {
-  if (material.voldensity == zero3f) return zero3f;
-  auto direction = sample_phasefunction(material.volanisotropy, rn);
+  if (point.voldensity == zero3f) return zero3f;
+  auto direction = sample_phasefunction(point.volanisotropy, rn);
   return basis_fromz(-outgoing) * direction;
 }
 
-static float sample_volscattering_pdf(const material_point& material,
+static float sample_volscattering_pdf(const trace_point& point,
     const vec3f& outgoing, const vec3f& incoming) {
-  if (material.voldensity == zero3f) return 0;
-  return eval_phasefunction(dot(outgoing, incoming), material.volanisotropy);
+  if (point.voldensity == zero3f) return 0;
+  return eval_phasefunction(dot(outgoing, incoming), point.volanisotropy);
 }
 
 // Sample lights wrt solid angle
@@ -2495,7 +2494,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
   auto weight        = vec3f{1, 1, 1};
   auto origin        = origin_;
   auto direction     = direction_;
-  auto volume_stack  = vector<pair<material_point, int>>{};
+  auto volume_stack  = vector<pair<trace_point, int>>{};
   auto max_roughness = 0.0f;
   auto hit           = false;
 
@@ -2525,59 +2524,58 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     if (!in_volume) {
       // prepare shading point
       auto outgoing = -direction;
-      auto [position, normal, _gnormal, _texcoord, _color, material] =
-          eval_point(scene, intersection.instance, intersection.element,
+      auto point = eval_point(scene, intersection.instance, intersection.element,
               intersection.uv, outgoing, trace_non_rigid_frames);
 
       // correct roughness
       if (params.nocaustics) {
-        max_roughness      = max(material.roughness, max_roughness);
-        material.roughness = max_roughness;
+        max_roughness      = max(point.roughness, max_roughness);
+        point.roughness = max_roughness;
       }
 
       // handle opacity
-      if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
-        origin = position + direction * 1e-2f;
+      if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
+        origin = point.position + direction * 1e-2f;
         bounce -= 1;
         continue;
       }
       hit = true;
 
       // accumulate emission
-      radiance += weight * eval_emission(material, normal, outgoing);
+      radiance += weight * eval_emission(point, point.normal, outgoing);
 
       // next direction
       auto incoming = zero3f;
-      if (material.roughness) {
+      if (point.roughness) {
         if (rand1f(rng) < 0.5f) {
           incoming = sample_brdf(
-              material, normal, outgoing, rand1f(rng), rand2f(rng));
+              point, point.normal, outgoing, rand1f(rng), rand2f(rng));
         } else {
           incoming = sample_lights(
-              scene, position, rand1f(rng), rand1f(rng), rand2f(rng));
+              scene, point.position, rand1f(rng), rand1f(rng), rand2f(rng));
         }
         weight *=
-            eval_brdfcos(material, normal, outgoing, incoming) /
-            (0.5f * sample_brdf_pdf(material, normal, outgoing, incoming) +
-                0.5f * sample_lights_pdf(scene, position, incoming));
+            eval_brdfcos(point, point.normal, outgoing, incoming) /
+            (0.5f * sample_brdf_pdf(point, point.normal, outgoing, incoming) +
+                0.5f * sample_lights_pdf(scene, point.position, incoming));
       } else {
-        incoming = sample_delta(material, normal, outgoing, rand1f(rng));
-        weight *= eval_delta(material, normal, outgoing, incoming) /
-                  sample_delta_pdf(material, normal, outgoing, incoming);
+        incoming = sample_delta(point, point.normal, outgoing, rand1f(rng));
+        weight *= eval_delta(point, point.normal, outgoing, incoming) /
+                  sample_delta_pdf(point, point.normal, outgoing, incoming);
       }
 
       // update volume stack
-      if (material.voldensity != zero3f &&
-          dot(normal, outgoing) * dot(normal, incoming) < 0) {
+      if (point.voldensity != zero3f &&
+          dot(point.normal, outgoing) * dot(point.normal, incoming) < 0) {
         if (volume_stack.empty()) {
-          volume_stack.push_back({material, intersection.instance});
+          volume_stack.push_back({point, intersection.instance});
         } else {
           volume_stack.pop_back();
         }
       }
 
       // setup next iteration
-      origin    = position;
+      origin    = point.position;
       direction = incoming;
     } else {
       // prepare shading point
@@ -2646,31 +2644,31 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     // prepare shading point
     auto outgoing                                                  = -direction;
     auto incoming                                                  = outgoing;
-    auto [position, normal, _gnormal, _texcoord, _color, material] = eval_point(
+    auto point = eval_point(
         scene, intersection.instance, intersection.element, intersection.uv,
         outgoing, trace_non_rigid_frames);
 
     // handle opacity
-    if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
-      origin = position + direction * 1e-2f;
+    if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
+      origin = point.position + direction * 1e-2f;
       bounce -= 1;
       continue;
     }
     hit = true;
 
     // accumulate emission
-    radiance += weight * eval_emission(material, normal, outgoing);
+    radiance += weight * eval_emission(point, point.normal, outgoing);
 
     // next direction
-    if (material.roughness) {
+    if (point.roughness) {
       incoming = sample_brdf(
-          material, normal, outgoing, rand1f(rng), rand2f(rng));
-      weight *= eval_brdfcos(material, normal, outgoing, incoming) /
-                sample_brdf_pdf(material, normal, outgoing, incoming);
+          point, point.normal, outgoing, rand1f(rng), rand2f(rng));
+      weight *= eval_brdfcos(point, point.normal, outgoing, incoming) /
+                sample_brdf_pdf(point, point.normal, outgoing, incoming);
     } else {
-      incoming = sample_delta(material, normal, outgoing, rand1f(rng));
-      weight *= eval_delta(material, normal, outgoing, incoming) /
-                sample_delta_pdf(material, normal, outgoing, incoming);
+      incoming = sample_delta(point, point.normal, outgoing, rand1f(rng));
+      weight *= eval_delta(point, point.normal, outgoing, incoming) /
+                sample_delta_pdf(point, point.normal, outgoing, incoming);
     }
 
     // check weight
@@ -2684,7 +2682,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     }
 
     // setup next iteration
-    origin    = position;
+    origin    = point.position;
     direction = incoming;
   }
 
@@ -2713,34 +2711,34 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
 
     // prepare shading point
     auto outgoing                                                  = -direction;
-    auto [position, normal, _gnormal, _texcoord, _color, material] = eval_point(
+    auto point = eval_point(
         scene, intersection.instance, intersection.element, intersection.uv,
         outgoing, trace_non_rigid_frames);
 
     // handle opacity
-    if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
-      origin = position + direction * 1e-2f;
+    if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
+      origin = point.position + direction * 1e-2f;
       bounce -= 1;
       continue;
     }
     hit = true;
 
     // accumulate emission
-    radiance += weight * eval_emission(material, normal, outgoing);
+    radiance += weight * eval_emission(point, point.normal, outgoing);
 
     // brdf * light
     radiance += weight * pif *
-                eval_brdfcos(material, normal, outgoing, outgoing);
+                eval_brdfcos(point, point.normal, outgoing, outgoing);
 
     // continue path
-    if (material.roughness) break;
-    auto incoming = sample_delta(material, normal, outgoing, rand1f(rng));
-    weight *= eval_delta(material, normal, outgoing, incoming) /
-              sample_delta_pdf(material, normal, outgoing, incoming);
+    if (point.roughness) break;
+    auto incoming = sample_delta(point, point.normal, outgoing, rand1f(rng));
+    weight *= eval_delta(point, point.normal, outgoing, incoming) /
+              sample_delta_pdf(point, point.normal, outgoing, incoming);
     if (weight == zero3f || !isfinite(weight)) break;
 
     // setup next iteration
-    origin    = position;
+    origin    = point.position;
     direction = incoming;
   }
 
@@ -2779,15 +2777,15 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
     case trace_falsecolor_type::texcoord:
       return {{fmod(point.texcoord.x, 1.0f), fmod(point.texcoord.y, 1.0f), 0}, 1};
     case trace_falsecolor_type::color: return {xyz(point.color), 1};
-    case trace_falsecolor_type::emission: return {point.material.emission, 1};
-    case trace_falsecolor_type::diffuse: return {point.material.diffuse, 1};
-    case trace_falsecolor_type::specular: return {point.material.specular, 1};
-    case trace_falsecolor_type::coat: return {point.material.coat, 1};
-    case trace_falsecolor_type::metal: return {point.material.metal, 1};
-    case trace_falsecolor_type::transmission: return {point.material.transmission, 1};
-    case trace_falsecolor_type::refraction: return {point.material.refraction, 1};
+    case trace_falsecolor_type::emission: return {point.emission, 1};
+    case trace_falsecolor_type::diffuse: return {point.diffuse, 1};
+    case trace_falsecolor_type::specular: return {point.specular, 1};
+    case trace_falsecolor_type::coat: return {point.coat, 1};
+    case trace_falsecolor_type::metal: return {point.metal, 1};
+    case trace_falsecolor_type::transmission: return {point.transmission, 1};
+    case trace_falsecolor_type::refraction: return {point.refraction, 1};
     case trace_falsecolor_type::roughness:
-      return {vec3f{point.material.roughness}, 1};
+      return {vec3f{point.roughness}, 1};
     case trace_falsecolor_type::material:
       return {hashed_color(scene.instances[intersection.instance].material), 1};
     case trace_falsecolor_type::element:
@@ -2796,7 +2794,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
     case trace_falsecolor_type::instance:
       return {hashed_color(intersection.instance), 1};
     case trace_falsecolor_type::highlight: {
-      auto emission = point.material.emission;
+      auto emission = point.emission;
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
       return {emission * abs(dot(-direction, point.normal)), 1};
     } break;
