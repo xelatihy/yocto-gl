@@ -782,13 +782,6 @@ static vec3f eval_shading_normal_(const trace_scene& scene, int instance_,
     return dot(outgoing, normal) > 0 ? normal : -normal;
   }
 }
-// Instance element values.
-static vec3f eval_element_normal_(const trace_scene& scene, int instance_,
-    int element, bool non_rigid_frame) {
-  auto& instance = scene.instances[instance_];
-  auto  normal   = eval_element_normal(scene.shapes[instance.shape], element);
-  return transform_normal(instance.frame, normal, non_rigid_frame);
-}
 // Instance material
 static material_point eval_material_(const trace_scene& scene, int instance_,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
@@ -902,14 +895,26 @@ struct trace_point {
 static trace_point eval_point(const trace_scene& scene, int instance_,
     int element, const vec2f& uv, const vec3f& outgoing,
     bool trace_non_rigid_frames) {
+  // initialize point
   auto point     = trace_point{};
-  point.position = eval_position(scene, instance_, element, uv);
+  auto& instance = scene.instances[instance_];
+  auto& shape    = scene.shapes[instance.shape];
+  auto& material = scene.materials[instance.material];
+
+  // geometric properties
+  point.position = eval_shape_elem(
+      shape, shape.quadspos, shape.positions, element, uv);
+  point.position = transform_point(instance.frame, point.position);
   point.normal   = eval_shading_normal_(
       scene, instance_, element, uv, outgoing, trace_non_rigid_frames);
-  point.gnormal = eval_element_normal_(
-      scene, instance_, element, trace_non_rigid_frames);
-  point.texcoord = eval_texcoord_(scene, instance_, element, uv);
-  point.color    = eval_color_(scene, instance_, element, uv);
+  point.gnormal   = eval_element_normal(shape, element);
+  point.gnormal   = transform_normal(instance.frame, point.gnormal, trace_non_rigid_frames);
+  point.texcoord = shape.texcoords.empty() ? uv
+                                 : eval_shape_elem(shape, shape.quadstexcoord,
+                                       shape.texcoords, element, uv);
+  point.color    =  shape.colors.empty()
+             ? vec4f{1, 1, 1, 1}
+             : eval_shape_elem(shape, {}, shape.colors, element, uv);
   point.material = eval_material_(
       scene, instance_, element, uv, point.normal, outgoing);
   return point;
