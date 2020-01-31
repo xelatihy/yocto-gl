@@ -37,53 +37,6 @@
 #include <embree3/rtcore.h>
 #endif
 
-using std::make_unique;
-using std::unique_ptr;
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PARALLEL SUPPORT FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::atomic;
-using std::deque;
-using std::future;
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes the integer index.
-template <typename Func>
-inline void parallel_for(int begin, int end, Func&& func) {
-  auto             futures  = vector<std::future<void>>{};
-  auto             nthreads = std::thread::hardware_concurrency();
-  std::atomic<int> next_idx(begin);
-  for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-    futures.emplace_back(
-        std::async(std::launch::async, [&func, &next_idx, end]() {
-          while (true) {
-            auto idx = next_idx.fetch_add(1);
-            if (idx >= end) break;
-            func(idx);
-          }
-        }));
-  }
-  for (auto& f : futures) f.get();
-}
-
-// Simple parallel for used since our target platforms do not yet support
-// parallel algorithms. `Func` takes a reference to a `T`.
-template <typename T, typename Func>
-inline void parallel_foreach(vector<T>& values, Func&& func) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
-}
-template <typename T, typename Func>
-inline void parallel_foreach(const vector<T>& values, Func&& func) {
-  parallel_for(
-      0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); });
-}
-
-}  // namespace yocto
-
 // -----------------------------------------------------------------------------
 // MONETACARLO SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
@@ -3042,6 +2995,10 @@ void init_lights(trace_scene& scene) {
     }
   }
 }
+
+using std::atomic;
+using std::deque;
+using std::future;
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
