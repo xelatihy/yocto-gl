@@ -798,7 +798,7 @@ material_point eval_material(const trace_scene& scene,
     const trace_material& material, const vec2f& texcoord,
     const vec4f& shape_color, const vec3f& normal, const vec3f& outgoing) {
   // initialize factors
-  auto emission     = material.emission * xyz(shape_color);
+  auto emission     = material.emission;
   auto base         = material.base * xyz(shape_color);
   auto specular     = material.specular;
   auto metallic     = material.metallic;
@@ -860,21 +860,18 @@ material_point eval_material(const trace_scene& scene,
     coat *= eval_texture(coat_tex, texcoord).x;
   }
 
-  auto coatf = fresnel_dielectric(coat_ior, dot(outgoing, normal));
-  auto specf = fresnel_dielectric(ior, dot(outgoing, normal));
-
   auto point = material_point{};
   // factors
   auto weight    = vec3f{1, 1, 1};
   point.emission = weight * emission;
   point.coat     = weight * coat;
-  weight *= 1 - point.coat * coatf;
+  weight *= 1 - point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal));;
   point.metal = weight * metallic;
   weight *= 1 - metallic;
   point.refraction = thin ? zero3f : weight * transmission;
   weight *= 1 - (thin ? 0 : transmission);
   point.specular = weight * specular;
-  weight *= 1 - specular * specf;
+  weight *= 1 - specular * fresnel_dielectric(ior, dot(outgoing, normal));
   point.transmission = weight * transmission * base;
   weight *= 1 - transmission;
   point.diffuse   = weight * base;
