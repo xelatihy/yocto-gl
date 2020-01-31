@@ -884,7 +884,6 @@ material_point eval_material(const trace_scene& scene, int instance_,
   point.coat     = weight * coat;
   weight *= 1 -
             point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal));
-  ;
   point.metal = weight * metallic;
   weight *= 1 - metallic;
   point.refraction = thin ? zero3f : weight * transmission;
