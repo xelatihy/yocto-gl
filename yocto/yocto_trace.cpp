@@ -909,10 +909,10 @@ static trace_point eval_point(const trace_scene& scene,
 
 // Evaluate all environment color.
 static vec3f eval_environment(
-    const trace_scene& scene, const vec3f& direction) {
+    const trace_scene& scene, const ray3f& ray) {
   auto emission = zero3f;
   for (auto& environment : scene.environments) {
-    auto wl       = transform_direction(inverse(environment.frame), direction);
+    auto wl       = transform_direction(inverse(environment.frame), ray.d);
     auto texcoord = vec2f{
         atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
     if (texcoord.x < 0) texcoord.x += 1;
@@ -2526,7 +2526,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      radiance += weight * eval_environment(scene, ray.d);
+      radiance += weight * eval_environment(scene, ray);
       break;
     }
 
@@ -2654,7 +2654,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      radiance += weight * eval_environment(scene, ray.d);
+      radiance += weight * eval_environment(scene, ray);
       break;
     }
 
@@ -2712,7 +2712,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
     // intersect next point
     auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      radiance += weight * eval_environment(scene, ray.d);
+      radiance += weight * eval_environment(scene, ray);
       break;
     }
 
