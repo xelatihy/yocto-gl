@@ -755,14 +755,14 @@ struct trace_point {
 
 // Evaluate point
 static trace_point eval_point(const trace_scene& scene,
-    const trace_intersection& intersection, const ray3f& ray,
-    bool trace_non_rigid_frames) {
+    const trace_intersection& intersection, const ray3f& ray) {
   // get data
   auto& instance = scene.instances[intersection.instance];
   auto& shape    = scene.shapes[instance.shape];
   auto& material = scene.materials[instance.material];
   auto  element  = intersection.element;
   auto  uv       = intersection.uv;
+  auto trace_non_rigid_frames = true;
 
   // initialize point
   auto point     = trace_point{};
@@ -908,8 +908,7 @@ static trace_point eval_point(const trace_scene& scene,
 }
 
 // Evaluate all environment color.
-static vec3f eval_environment(
-    const trace_scene& scene, const ray3f& ray) {
+static vec3f eval_environment(const trace_scene& scene, const ray3f& ray) {
   auto emission = zero3f;
   for (auto& environment : scene.environments) {
     auto wl       = transform_direction(inverse(environment.frame), ray.d);
@@ -2546,8 +2545,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto point = eval_point(
-          scene, intersection, ray, trace_non_rigid_frames);
+      auto point = eval_point(scene, intersection, ray);
 
       // correct roughness
       if (params.nocaustics) {
@@ -2659,7 +2657,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     }
 
     // prepare shading point
-    auto point = eval_point(scene, intersection, ray, trace_non_rigid_frames);
+    auto point = eval_point(scene, intersection, ray);
 
     // handle opacity
     if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
@@ -2717,7 +2715,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
     }
 
     // prepare shading point
-    auto point = eval_point(scene, intersection, ray, trace_non_rigid_frames);
+    auto point = eval_point(scene, intersection, ray);
 
     // handle opacity
     if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
@@ -2757,7 +2755,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
   }
 
   // prepare shading point
-  auto point = eval_point(scene, intersection, ray, trace_non_rigid_frames);
+  auto point = eval_point(scene, intersection, ray);
 
   // hash color
   auto hashed_color = [](int id) {
