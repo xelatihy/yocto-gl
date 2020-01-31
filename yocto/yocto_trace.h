@@ -410,7 +410,7 @@ struct trace_environment {
 struct trace_light {
   int           instance    = -1;
   int           environment = -1;
-  vector<float> elem_cdf    = {};
+  vector<float> cdf         = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
