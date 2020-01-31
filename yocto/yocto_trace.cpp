@@ -718,6 +718,7 @@ static vec3f eval_normal(const trace_scene& scene, int instance_, int element,
 // Point used for tracing
 struct trace_point {
   // shape
+  int   instance = -1;
   vec3f position = zero3f;
   vec3f normal   = zero3f;
   vec3f gnormal  = zero3f;
@@ -757,15 +758,16 @@ struct trace_point {
 static trace_point eval_point(const trace_scene& scene,
     const trace_intersection& intersection, const ray3f& ray) {
   // get data
-  auto& instance = scene.instances[intersection.instance];
-  auto& shape    = scene.shapes[instance.shape];
-  auto& material = scene.materials[instance.material];
-  auto  element  = intersection.element;
-  auto  uv       = intersection.uv;
-  auto trace_non_rigid_frames = true;
+  auto& instance               = scene.instances[intersection.instance];
+  auto& shape                  = scene.shapes[instance.shape];
+  auto& material               = scene.materials[instance.material];
+  auto  element                = intersection.element;
+  auto  uv                     = intersection.uv;
+  auto  trace_non_rigid_frames = true;
 
   // initialize point
   auto point     = trace_point{};
+  point.instance = intersection.instance;
   point.outgoing = -ray.d;
   point.incoming = -ray.d;
 
@@ -2048,7 +2050,7 @@ static const bool trace_non_rigid_frames = true;
 
 static vec3f eval_emission(const trace_point& point) { return point.emission; }
 
-static vec3f eval_volemission(const trace_point& point, const vec3f& outgoing) {
+static vec3f eval_volemission(const trace_point& point) {
   return point.volemission;
 }
 
@@ -2407,24 +2409,24 @@ static float sample_delta_pdf(const trace_point& point) {
   return pdf;
 }
 
-static vec3f eval_volscattering(
-    const trace_point& point, const vec3f& outgoing, const vec3f& incoming) {
+static vec3f eval_volscattering(const trace_point& point) {
   if (point.voldensity == zero3f) return zero3f;
   return point.volscatter *
-         eval_phasefunction(dot(outgoing, incoming), point.volanisotropy);
+         eval_phasefunction(
+             dot(point.outgoing, point.incoming), point.volanisotropy);
 }
 
-static vec3f sample_volscattering(const trace_point& point,
-    const vec3f& outgoing, float rnl, const vec2f& rn) {
+static vec3f sample_volscattering(
+    const trace_point& point, float rnl, const vec2f& rn) {
   if (point.voldensity == zero3f) return zero3f;
   auto direction = sample_phasefunction(point.volanisotropy, rn);
-  return basis_fromz(-outgoing) * direction;
+  return basis_fromz(-point.outgoing) * direction;
 }
 
-static float sample_volscattering_pdf(
-    const trace_point& point, const vec3f& outgoing, const vec3f& incoming) {
+static float sample_volscattering_pdf(const trace_point& point) {
   if (point.voldensity == zero3f) return 0;
-  return eval_phasefunction(dot(outgoing, incoming), point.volanisotropy);
+  return eval_phasefunction(
+      dot(point.outgoing, point.incoming), point.volanisotropy);
 }
 
 // Sample lights wrt solid angle
@@ -2516,7 +2518,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
   auto ray           = ray_;
-  auto volume_stack  = vector<pair<trace_point, int>>{};
+  auto volume_stack  = vector<trace_point>{};
   auto max_roughness = 0.0f;
   auto hit           = false;
 
@@ -2532,12 +2534,12 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
     // handle transmission if inside a volume
     auto in_volume = false;
     if (!volume_stack.empty()) {
-      auto medium              = volume_stack.back().first;
+      auto& point              = volume_stack.back();
       auto [distance, channel] = sample_distance(
-          medium.voldensity, rand1f(rng), rand1f(rng));
+          point.voldensity, rand1f(rng), rand1f(rng));
       distance = min(distance, intersection.distance);
-      weight *= eval_transmission(medium.voldensity, distance) /
-                sample_distance_pdf(medium.voldensity, distance, channel);
+      weight *= eval_transmission(point.voldensity, distance) /
+                sample_distance_pdf(point.voldensity, distance, channel);
       in_volume             = distance < intersection.distance;
       intersection.distance = distance;
     }
@@ -2587,7 +2589,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
                   dot(point.normal, point.incoming) <
               0) {
         if (volume_stack.empty()) {
-          volume_stack.push_back({point, intersection.instance});
+          volume_stack.push_back(point);
         } else {
           volume_stack.pop_back();
         }
@@ -2597,31 +2599,30 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
       ray = {point.position, point.incoming};
     } else {
       // prepare shading point
-      auto outgoing = -ray.d;
-      auto position = ray.o + ray.d * intersection.distance;
-      auto material = volume_stack.back().first;
+      auto point     = volume_stack.back();
+      point.outgoing = -ray.d;
+      point.incoming = ray.o + ray.d * intersection.distance;
 
       // handle opacity
       hit = true;
 
       // accumulate emission
-      radiance += weight * eval_volemission(material, outgoing);
+      radiance += weight * eval_volemission(point);
 
       // next direction
-      auto incoming = zero3f;
       if (rand1f(rng) < 0.5f) {
-        incoming = sample_volscattering(
-            material, outgoing, rand1f(rng), rand2f(rng));
+        point.incoming = sample_volscattering(point, rand1f(rng), rand2f(rng));
       } else {
-        incoming = sample_lights(
-            scene, position, rand1f(rng), rand1f(rng), rand2f(rng));
+        point.incoming = sample_lights(
+            scene, point.position, rand1f(rng), rand1f(rng), rand2f(rng));
       }
-      weight *= eval_volscattering(material, outgoing, incoming) /
-                (0.5f * sample_volscattering_pdf(material, outgoing, incoming) +
-                    0.5f * sample_lights_pdf(scene, position, incoming));
+      weight *=
+          eval_volscattering(point) /
+          (0.5f * sample_volscattering_pdf(point) +
+              0.5f * sample_lights_pdf(scene, point.position, point.incoming));
 
       // setup next iteration
-      ray = {position, incoming};
+      ray = {point.position, point.incoming};
     }
 
     // check weight
