@@ -672,7 +672,8 @@ static vec4f eval_texture(const trace_scene& scene, int texture_, const vec2f& u
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_perspective_camera(
-    const trace_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+    const trace_scene& scene, int camera_, const vec2f& image_uv, const vec2f& lens_uv) {
+  auto& camera = scene.cameras[camera_];
   auto distance = camera.lens;
   if (camera.focus < flt_max) {
     distance = camera.lens * camera.focus / (camera.focus - camera.lens);
@@ -705,7 +706,8 @@ static ray3f eval_perspective_camera(
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_orthographic_camera(
-    const trace_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
+    const trace_scene& scene, int camera_, const vec2f& image_uv, const vec2f& lens_uv) {
+  auto& camera = scene.cameras[camera_];
   if (camera.aperture) {
     auto scale = 1 / camera.lens;
     auto q     = vec3f{camera.film.x * (0.5f - image_uv.x) * scale,
@@ -731,7 +733,8 @@ static ray3f eval_orthographic_camera(
   }
 }
 
-static vec2i camera_resolution(const trace_camera& camera, int resolution) {
+static vec2i camera_resolution(const trace_scene& scene, int camera_, int resolution) {
+  auto& camera = scene.cameras[camera_];
   if (camera.film.x > camera.film.y) {
     return {resolution, (int)round(resolution * camera.film.y / camera.film.x)};
   } else {
@@ -742,19 +745,20 @@ static vec2i camera_resolution(const trace_camera& camera, int resolution) {
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 static ray3f eval_camera(
-    const trace_camera& camera, const vec2f& uv, const vec2f& luv) {
+    const trace_scene& scene, int camera_, const vec2f& uv, const vec2f& luv) {
+  auto& camera = scene.cameras[camera_];
   if (camera.orthographic)
-    return eval_orthographic_camera(camera, uv, luv);
+    return eval_orthographic_camera(scene, camera_, uv, luv);
   else
-    return eval_perspective_camera(camera, uv, luv);
+    return eval_perspective_camera(scene, camera_, uv, luv);
 }
 
 // Generates a ray from a camera.
-static ray3f eval_camera(const trace_camera& camera, const vec2i& image_ij,
+static ray3f eval_camera(const trace_scene& scene, int camera, const vec2i& image_ij,
     const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
   auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
       (image_ij.y + pixel_uv.y) / image_size.y};
-  return eval_camera(camera, image_uv, lens_uv);
+  return eval_camera(scene, camera, image_uv, lens_uv);
 }
 
 // Instance values interpolated using barycentric coordinates.
@@ -2605,12 +2609,12 @@ static float sample_lights_pdf(
 }
 
 // Sample camera
-static ray3f sample_camera(const trace_camera& camera, const vec2i& ij,
+static ray3f sample_camera(const trace_scene& scene, int camera_, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
-  return eval_camera(camera, ij, image_size, puv, sample_disk(luv));
+  return eval_camera(scene, camera_, ij, image_size, puv, sample_disk(luv));
 }
 
-static ray3f sample_camera_tent(const trace_camera& camera, const vec2i& ij,
+static ray3f sample_camera_tent(const trace_scene& scene, int camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
   const auto width  = 2.0f;
   const auto offset = 0.5f;
@@ -2621,7 +2625,7 @@ static ray3f sample_camera_tent(const trace_camera& camera, const vec2i& ij,
               puv.y - 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
           } +
       offset;
-  return eval_camera(camera, ij, image_size, fuv, sample_disk(luv));
+  return eval_camera(scene, camera, ij, image_size, fuv, sample_disk(luv));
 }
 
 // Recursive path tracing.
@@ -3040,12 +3044,11 @@ bool is_sampler_lit(const trace_params& params) {
 // Trace a block of samples
 vec4f trace_sample(trace_state& state, const trace_scene& scene,
     const vec2i& ij, const trace_params& params) {
-  auto& camera  = scene.cameras.at(params.camera);
   auto  sampler = get_trace_sampler_func(params);
   auto& pixel   = state.at(ij);
-  auto  ray = params.tentfilter ? sample_camera_tent(camera, ij, state.size(),
+  auto  ray = params.tentfilter ? sample_camera_tent(scene, params.camera, ij, state.size(),
                                      rand2f(pixel.rng), rand2f(pixel.rng))
-                               : sample_camera(camera, ij, state.size(),
+                               : sample_camera(scene, params.camera, ij, state.size(),
                                      rand2f(pixel.rng), rand2f(pixel.rng));
   auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
   if (!hit) {
@@ -3070,7 +3073,7 @@ vec4f trace_sample(trace_state& state, const trace_scene& scene,
 void init_state(
     trace_state& state, const trace_scene& scene, const trace_params& params) {
   auto image_size = camera_resolution(
-      scene.cameras[params.camera], params.resolution);
+      scene, params.camera, params.resolution);
   state    = {image_size, trace_pixel{}};
   auto rng = make_rng(1301081);
   for (auto j = 0; j < state.size().y; j++) {
