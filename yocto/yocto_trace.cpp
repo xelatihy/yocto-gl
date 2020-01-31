@@ -633,8 +633,8 @@ static vec4f lookup_texture(
 }
 
 // Evaluate a texture
-static vec4f eval_texture(const trace_scene& scene, int texture_, const vec2f& uv,
-    bool ldr_as_linear = false, bool no_interpolation = false,
+static vec4f eval_texture(const trace_scene& scene, int texture_,
+    const vec2f& uv, bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   // get texture
   if (texture_ < 0) return {1, 1, 1, 1};
@@ -671,10 +671,10 @@ static vec4f eval_texture(const trace_scene& scene, int texture_, const vec2f& u
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-static ray3f eval_perspective_camera(
-    const trace_scene& scene, int camera_, const vec2f& image_uv, const vec2f& lens_uv) {
-  auto& camera = scene.cameras[camera_];
-  auto distance = camera.lens;
+static ray3f eval_perspective_camera(const trace_scene& scene, int camera_,
+    const vec2f& image_uv, const vec2f& lens_uv) {
+  auto& camera   = scene.cameras[camera_];
+  auto  distance = camera.lens;
   if (camera.focus < flt_max) {
     distance = camera.lens * camera.focus / (camera.focus - camera.lens);
   }
@@ -705,8 +705,8 @@ static ray3f eval_perspective_camera(
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-static ray3f eval_orthographic_camera(
-    const trace_scene& scene, int camera_, const vec2f& image_uv, const vec2f& lens_uv) {
+static ray3f eval_orthographic_camera(const trace_scene& scene, int camera_,
+    const vec2f& image_uv, const vec2f& lens_uv) {
   auto& camera = scene.cameras[camera_];
   if (camera.aperture) {
     auto scale = 1 / camera.lens;
@@ -745,10 +745,12 @@ static ray3f eval_camera(
 }
 
 // Sample camera
-static ray3f sample_camera(const trace_scene& scene, int camera, const vec2i& ij,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
-  if(!tent) {
-    auto uv = vec2f{(ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
+static ray3f sample_camera(const trace_scene& scene, int camera,
+    const vec2i& ij, const vec2i& image_size, const vec2f& puv,
+    const vec2f& luv, bool tent) {
+  if (!tent) {
+    auto uv = vec2f{
+        (ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
     return eval_camera(scene, camera, uv, sample_disk(luv));
   } else {
     const auto width  = 2.0f;
@@ -760,7 +762,8 @@ static ray3f sample_camera(const trace_scene& scene, int camera, const vec2i& ij
                 puv.y - 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
             } +
         offset;
-    auto uv = vec2f{(ij.x + fuv.x) / image_size.x, (ij.y + fuv.y) / image_size.y};
+    auto uv = vec2f{
+        (ij.x + fuv.x) / image_size.x, (ij.y + fuv.y) / image_size.y};
     return eval_camera(scene, camera, uv, sample_disk(luv));
   }
 }
@@ -800,8 +803,8 @@ static vec4f eval_color(
              ? vec4f{1, 1, 1, 1}
              : eval_shape_elem(shape, {}, shape.colors, element, uv);
 }
-static vec3f eval_shading_normal(const trace_scene& scene, int instance_, int element,
-    const vec2f& uv, const vec3f& outgoing, bool non_rigid_frame) {
+static vec3f eval_shading_normal(const trace_scene& scene, int instance_,
+    int element, const vec2f& uv, const vec3f& outgoing, bool non_rigid_frame) {
   auto& instance = scene.instances[instance_];
   auto& shape    = scene.shapes[instance.shape];
   auto& material = scene.materials[instance.material];
@@ -830,7 +833,7 @@ static vec3f eval_shading_normal(const trace_scene& scene, int instance_, int el
 static vec3f eval_element_normal(const trace_scene& scene, int instance_,
     int element, bool non_rigid_frame) {
   auto& instance = scene.instances[instance_];
-  auto normal = eval_element_normal(scene.shapes[instance.shape], element);
+  auto  normal   = eval_element_normal(scene.shapes[instance.shape], element);
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
 // Instance material
@@ -933,15 +936,16 @@ static material_point eval_material(const trace_scene& scene, int instance_,
 }
 
 // Evaluate all environment color.
-static vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
+static vec3f eval_environment(
+    const trace_scene& scene, const vec3f& direction) {
   auto emission = zero3f;
   for (auto& environment : scene.environments) {
-  auto wl = transform_direction(inverse(environment.frame), direction);
-  auto texcoord = vec2f{
-      atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-  if (texcoord.x < 0) texcoord.x += 1;
-  emission += environment.emission *
-         xyz(eval_texture(scene, environment.emission_tex, texcoord));
+    auto wl       = transform_direction(inverse(environment.frame), direction);
+    auto texcoord = vec2f{
+        atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+    if (texcoord.x < 0) texcoord.x += 1;
+    emission += environment.emission *
+                xyz(eval_texture(scene, environment.emission_tex, texcoord));
   }
   return emission;
 }
@@ -2517,11 +2521,10 @@ static vec3f sample_light(const trace_scene& scene, const trace_light& light,
       auto& emission_tex = scene.textures[environment.emission_tex];
       auto  idx          = sample_discrete(cdf, rel);
       auto  size         = texture_size(emission_tex);
-      auto  uv           = vec2f{(idx % size.x + 0.5f) / size.x, 
-      (idx / size.x + 0.5f) / size.y};
+      auto  uv           = vec2f{
+          (idx % size.x + 0.5f) / size.x, (idx / size.x + 0.5f) / size.y};
       return transform_direction(environment.frame,
-          {cos(uv.x * 2 * pif) * sin(uv.y * pif),
-              cos(uv.y * pif),
+          {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
               sin(uv.x * 2 * pif) * sin(uv.y * pif)});
     } else {
       return sample_sphere(ruv);
@@ -2565,14 +2568,14 @@ static float sample_light_pdf(const trace_scene& scene,
       auto& cdf          = light.elem_cdf;
       auto& emission_tex = scene.textures[environment.emission_tex];
       auto  size         = texture_size(emission_tex);
-      auto wl = transform_direction(inverse(environment.frame), direction);
-      auto texcoord = vec2f{
+      auto  wl = transform_direction(inverse(environment.frame), direction);
+      auto  texcoord = vec2f{
           atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
       if (texcoord.x < 0) texcoord.x += 1;
-      auto  i            = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
-      auto  j            = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
-      auto  prob  = sample_discrete_pdf(cdf, j * size.x + i) / cdf.back();
-      auto  angle = (2 * pif / size.x) * (pif / size.y) *
+      auto i     = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
+      auto j     = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
+      auto prob  = sample_discrete_pdf(cdf, j * size.x + i) / cdf.back();
+      auto angle = (2 * pif / size.x) * (pif / size.y) *
                    sin(pif * (j + 0.5f) / size.y);
       return prob / angle;
     } else {
@@ -3017,10 +3020,10 @@ bool is_sampler_lit(const trace_params& params) {
 // Trace a block of samples
 vec4f trace_sample(trace_state& state, const trace_scene& scene,
     const vec2i& ij, const trace_params& params) {
-  auto  sampler = get_trace_sampler_func(params);
-  auto& pixel   = state.at(ij);
-  auto  ray = sample_camera(scene, params.camera, ij, state.size(),
-                                     rand2f(pixel.rng), rand2f(pixel.rng), params.tentfilter);
+  auto  sampler        = get_trace_sampler_func(params);
+  auto& pixel          = state.at(ij);
+  auto  ray            = sample_camera(scene, params.camera, ij, state.size(),
+      rand2f(pixel.rng), rand2f(pixel.rng), params.tentfilter);
   auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
   if (!hit) {
     if (params.envhidden || scene.environments.empty()) {
@@ -3044,9 +3047,12 @@ vec4f trace_sample(trace_state& state, const trace_scene& scene,
 void init_state(
     trace_state& state, const trace_scene& scene, const trace_params& params) {
   auto& camera = scene.cameras[params.camera];
-  auto image_size = (camera.film.x > camera.film.y) ? 
-    vec2i{params.resolution, (int)round(params.resolution * camera.film.y / camera.film.x)}:
-    vec2i{(int)round(params.resolution * camera.film.x / camera.film.y), params.resolution};
+  auto  image_size =
+      (camera.film.x > camera.film.y)
+          ? vec2i{params.resolution,
+                (int)round(params.resolution * camera.film.y / camera.film.x)}
+          : vec2i{(int)round(params.resolution * camera.film.x / camera.film.y),
+                params.resolution};
   state    = {image_size, trace_pixel{}};
   auto rng = make_rng(1301081);
   for (auto j = 0; j < state.size().y; j++) {
