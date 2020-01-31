@@ -865,43 +865,31 @@ material_point eval_material(const trace_scene& scene,
 
   auto point = material_point{};
   // factors
-  if (thin) {
-    auto weight    = vec3f{1, 1, 1};
-    point.emission = weight * emission;
-    point.coat     = weight * coat;
-    weight *= 1 - point.coat * coatf;
-    point.metal = weight * metallic;
-    weight *= 1 - metallic;
-    point.specular = weight * specular;
-    weight *= 1 - specular * specf;
-    point.transmission = weight * transmission * base;
-    weight *= 1 - transmission;
-    point.diffuse   = weight * base;
-    point.meta      = reflectivity_to_eta(base);
-    point.metak     = zero3f;
-    point.roughness = roughness * roughness;
-    point.ior       = ior;
-    point.opacity   = opacity;
-  } else {
-    auto weight    = vec3f{1, 1, 1};
-    point.emission = weight * emission;
-    point.metal    = weight * metallic;
-    weight *= 1 - metallic;
-    point.refraction  = weight * transmission;
-    weight *= 1 - transmission;
-    point.diffuse     = weight * base;
-    point.meta        = reflectivity_to_eta(base);
-    point.metak       = zero3f;
-    point.roughness   = roughness * roughness;
-    point.ior         = ior;
-    point.volemission = zero3f;
-    point.voldensity  = (transmission && !thin)
-                           ? -log(clamp(base, 0.0001f, 1.0f)) / radius
-                           : zero3f;
-    point.volscatter    = scattering;
-    point.volanisotropy = phaseg;
-    point.opacity       = opacity;
-  }
+  auto weight    = vec3f{1, 1, 1};
+  point.emission = weight * emission;
+  point.coat     = weight * coat;
+  weight *= 1 - point.coat * coatf;
+  point.metal = weight * metallic;
+  weight *= 1 - metallic;
+  point.refraction = thin ? zero3f : weight * transmission;
+  weight *= 1 - (thin ? 0 : transmission);
+  point.specular = weight * specular;
+  weight *= 1 - specular * specf;
+  point.transmission = weight * transmission * base;
+  weight *= 1 - transmission;
+  point.diffuse   = weight * base;
+  point.meta      = reflectivity_to_eta(base);
+  point.metak     = zero3f;
+  point.roughness = roughness * roughness;
+  point.ior       = ior;
+  point.opacity   = opacity;
+  point.volemission = zero3f;
+  point.voldensity  = (transmission && !thin)
+                          ? -log(clamp(base, 0.0001f, 1.0f)) / radius
+                          : zero3f;
+  point.volscatter    = scattering;
+  point.volanisotropy = phaseg;
+  point.opacity       = opacity;
 
   // textures
   if (point.diffuse != zero3f || point.roughness) {
