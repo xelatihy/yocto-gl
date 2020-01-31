@@ -740,55 +740,18 @@ static vec3f eval_normal(const trace_scene& scene, int instance_, int element,
                           shape, shape.quadsnorm, shape.normals, element, uv));
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
-static vec2f eval_texcoord_(
-    const trace_scene& scene, int instance_, int element, const vec2f& uv) {
-  auto& instance = scene.instances[instance_];
-  auto& shape    = scene.shapes[instance.shape];
-  return shape.texcoords.empty() ? uv
-                                 : eval_shape_elem(shape, shape.quadstexcoord,
-                                       shape.texcoords, element, uv);
-}
-static vec4f eval_color_(
-    const trace_scene& scene, int instance_, int element, const vec2f& uv) {
-  auto& instance = scene.instances[instance_];
-  auto& shape    = scene.shapes[instance.shape];
-  return shape.colors.empty()
-             ? vec4f{1, 1, 1, 1}
-             : eval_shape_elem(shape, {}, shape.colors, element, uv);
-}
-static vec3f eval_shading_normal_(const trace_scene& scene, int instance_,
-    int element, const vec2f& uv, const vec3f& outgoing, bool non_rigid_frame) {
-  auto& instance = scene.instances[instance_];
-  auto& shape    = scene.shapes[instance.shape];
-  auto& material = scene.materials[instance.material];
-  if (!shape.points.empty()) {
-    return outgoing;
-  } else if (!shape.lines.empty()) {
-    auto normal = eval_normal(scene, instance_, element, uv, non_rigid_frame);
-    return orthonormalize(outgoing, normal);
-  } else if (material.normal_tex < 0) {
-    auto normal = eval_normal(scene, instance_, element, uv, non_rigid_frame);
-    if (!material.thin) return normal;
-    return dot(outgoing, normal) > 0 ? normal : -normal;
-  } else {
-    auto normalmap =
-        -1 + 2 * xyz(eval_texture(scene, material.normal_tex,
-                     eval_texcoord_(scene, instance_, element, uv), true));
-    auto basis = eval_tangent_basis(shape, element, uv);
-    normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
-    auto normal = normalize(basis.first * normalmap);
-    normal      = transform_normal(instance.frame, normal, non_rigid_frame);
-    if (!material.thin) return normal;
-    return dot(outgoing, normal) > 0 ? normal : -normal;
-  }
-}
 // Instance material
 static material_point eval_material_(const trace_scene& scene, int instance_,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto& instance = scene.instances[instance_];
+  auto& shape    = scene.shapes[instance.shape];
   auto& material = scene.materials[instance.material];
-  auto  texcoord = eval_texcoord_(scene, instance_, element, uv);
-  auto  color    = eval_color_(scene, instance_, element, uv);
+  auto texcoord = shape.texcoords.empty() ? uv
+                                 : eval_shape_elem(shape, shape.quadstexcoord,
+                                       shape.texcoords, element, uv);
+  auto color = shape.colors.empty()
+             ? vec4f{1, 1, 1, 1}
+             : eval_shape_elem(shape, {}, shape.colors, element, uv);
 
   // initialize factors
   auto emission = material.emission *
@@ -927,9 +890,11 @@ static trace_point eval_point(const trace_scene& scene, int instance_,
   } else if (material.normal_tex < 0) {
     if (material.thin && dot(outgoing, point.normal) < 0) point.normal = -point.normal;
   } else {
+    auto texcoord = shape.texcoords.empty() ? uv
+                                  : eval_shape_elem(shape, shape.quadstexcoord,
+                                        shape.texcoords, element, uv);
     auto normalmap =
-        -1 + 2 * xyz(eval_texture(scene, material.normal_tex,
-                     eval_texcoord_(scene, instance_, element, uv), true));
+        -1 + 2 * xyz(eval_texture(scene, material.normal_tex, texcoord, true));
     auto basis = eval_tangent_basis(shape, element, uv);
     normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
     auto normal = normalize(basis.first * normalmap);
