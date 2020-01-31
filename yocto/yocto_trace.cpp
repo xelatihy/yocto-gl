@@ -595,15 +595,6 @@ T eval_shape_elem(const trace_shape& shape,
 }
 
 // Shape values interpolated using barycentric coordinates
-vec2f eval_texcoord(const trace_shape& shape, int element, const vec2f& uv) {
-  if (shape.texcoords.empty()) return uv;
-  return eval_shape_elem(
-      shape, shape.quadstexcoord, shape.texcoords, element, uv);
-}
-vec4f eval_color(const trace_shape& shape, int element, const vec2f& uv) {
-  if (shape.colors.empty()) return {1, 1, 1, 1};
-  return eval_shape_elem(shape, {}, shape.colors, element, uv);
-}
 float eval_radius(const trace_shape& shape, int element, const vec2f& uv) {
   if (shape.radius.empty()) return 0.001f;
   return eval_shape_elem(shape, {}, shape.radius, element, uv);
@@ -931,6 +922,17 @@ vec3f eval_normal(const trace_scene& scene, int instance_,
       eval_shape_elem(shape, shape.quadsnorm, shape.normals, element, uv));
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
+vec2f eval_texcoord(const trace_scene& scene, int instance_, int element, const vec2f& uv) {
+  auto& instance = scene.instances[instance_];
+  auto& shape = scene.shapes[instance.shape];
+  return shape.texcoords.empty() ? uv : eval_shape_elem(
+      shape, shape.quadstexcoord, shape.texcoords, element, uv);
+}
+vec4f eval_color(const trace_scene& scene, int instance_, int element, const vec2f& uv) {
+  auto& instance = scene.instances[instance_];
+  auto& shape = scene.shapes[instance.shape];
+  return shape.colors.empty() ? vec4f{1, 1, 1, 1} : eval_shape_elem(shape, {}, shape.colors, element, uv);
+}
 vec3f eval_shading_normal(const trace_scene& scene, int instance_,
     int element, const vec2f& uv,
     const vec3f& outgoing, bool non_rigid_frame) {
@@ -949,7 +951,7 @@ vec3f eval_shading_normal(const trace_scene& scene, int instance_,
   } else {
     auto& normal_tex = scene.textures[material.normal_tex];
     auto normalmap  = -1 + 2 * xyz(eval_texture(normal_tex,
-                                  eval_texcoord(shape, element, uv), true));
+                                  eval_texcoord(scene, instance_, element, uv), true));
     auto basis      = eval_tangent_basis(shape, element, uv);
     normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
     auto normal = normalize(basis.first * normalmap);
@@ -969,10 +971,9 @@ material_point eval_material(const trace_scene& scene,
     int instance_, int element, const vec2f& uv,
     const vec3f& normal, const vec3f& outgoing) {
   auto& instance = scene.instances[instance_];
-  auto& shape     = scene.shapes[instance.shape];
   auto& material  = scene.materials[instance.material];
-  auto  texcoords = eval_texcoord(shape, element, uv);
-  auto  color     = eval_color(shape, element, uv);
+  auto  texcoords = eval_texcoord(scene, instance_, element, uv);
+  auto  color     = eval_color(scene, instance_, element, uv);
   return eval_material(scene, material, texcoords, color, normal, outgoing);
 }
 
@@ -2959,8 +2960,6 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
 
   // get scene elements
   auto& instance = scene.instances[intersection.instance];
-  auto& shape    = scene.shapes[instance.shape];
-  // auto& material = scene.materials[instance.material];
 
   // prepare shading point
   auto outgoing = -direction;
@@ -2993,12 +2992,13 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
       return {frontfacing, 1};
     }
     case trace_falsecolor_type::texcoord: {
-      auto texcoord = eval_texcoord(
-          shape, intersection.element, intersection.uv);
+      auto texcoord = eval_texcoord(scene,
+          intersection.instance, intersection.element, intersection.uv);
       return {{fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0}, 1};
     }
     case trace_falsecolor_type::color: {
-      auto color = eval_color(shape, intersection.element, intersection.uv);
+      auto color = eval_color(scene,
+          intersection.instance, intersection.element, intersection.uv);
       return {xyz(color), 1};
     }
     case trace_falsecolor_type::emission: {
