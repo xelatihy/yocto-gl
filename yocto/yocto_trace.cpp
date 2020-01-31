@@ -2782,14 +2782,10 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
     return {zero3f, false};
   }
 
-  // get scene elements
-  auto& instance = scene.instances[intersection.instance];
-
   // prepare shading point
-  auto outgoing                                               = -direction;
-  auto [position, normal, gnormal, texcoord, color, material] = eval_point(
+  auto point = eval_point(
       scene, intersection.instance, intersection.element, intersection.uv,
-      outgoing, trace_non_rigid_frames);
+      -direction, trace_non_rigid_frames);
 
   // hash color
   auto hashed_color = [](int id) {
@@ -2799,36 +2795,35 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
   };
 
   switch (params.falsecolor) {
-    case trace_falsecolor_type::normal: return {normal * 0.5f + 0.5f, 1};
+    case trace_falsecolor_type::normal: return {point.normal * 0.5f + 0.5f, 1};
     case trace_falsecolor_type::frontfacing:
-      return {dot(normal, outgoing) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
-    case trace_falsecolor_type::gnormal: return {gnormal * 0.5f + 0.5f, 1};
+      return {dot(point.normal, -direction) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
+    case trace_falsecolor_type::gnormal: return {point.gnormal * 0.5f + 0.5f, 1};
     case trace_falsecolor_type::gfrontfacing:
-      return {dot(gnormal, outgoing) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
+      return {dot(point.gnormal, -direction) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
     case trace_falsecolor_type::texcoord:
-      return {{fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0}, 1};
-    case trace_falsecolor_type::color: return {xyz(color), 1};
-    case trace_falsecolor_type::emission: return {material.emission, 1};
-    case trace_falsecolor_type::diffuse: return {material.diffuse, 1};
-    case trace_falsecolor_type::specular: return {material.specular, 1};
-    case trace_falsecolor_type::coat: return {material.coat, 1};
-    case trace_falsecolor_type::metal: return {material.metal, 1};
-    case trace_falsecolor_type::transmission: return {material.transmission, 1};
-    case trace_falsecolor_type::refraction: return {material.refraction, 1};
+      return {{fmod(point.texcoord.x, 1.0f), fmod(point.texcoord.y, 1.0f), 0}, 1};
+    case trace_falsecolor_type::color: return {xyz(point.color), 1};
+    case trace_falsecolor_type::emission: return {point.material.emission, 1};
+    case trace_falsecolor_type::diffuse: return {point.material.diffuse, 1};
+    case trace_falsecolor_type::specular: return {point.material.specular, 1};
+    case trace_falsecolor_type::coat: return {point.material.coat, 1};
+    case trace_falsecolor_type::metal: return {point.material.metal, 1};
+    case trace_falsecolor_type::transmission: return {point.material.transmission, 1};
+    case trace_falsecolor_type::refraction: return {point.material.refraction, 1};
     case trace_falsecolor_type::roughness:
-      return {vec3f{material.roughness}, 1};
+      return {vec3f{point.material.roughness}, 1};
     case trace_falsecolor_type::material:
-      return {hashed_color(instance.material), 1};
+      return {hashed_color(scene.instances[intersection.instance].material), 1};
     case trace_falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
-    case trace_falsecolor_type::shape: return {hashed_color(instance.shape), 1};
+    case trace_falsecolor_type::shape: return {hashed_color(scene.instances[intersection.instance].shape), 1};
     case trace_falsecolor_type::instance:
       return {hashed_color(intersection.instance), 1};
     case trace_falsecolor_type::highlight: {
-      auto emission = material.emission;
-      auto outgoing = -direction;
+      auto emission = point.material.emission;
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
-      return {emission * abs(dot(outgoing, normal)), 1};
+      return {emission * abs(dot(-direction, point.normal)), 1};
     } break;
     default: return {zero3f, false};
   }
