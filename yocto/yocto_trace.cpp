@@ -2491,13 +2491,12 @@ static float sample_lights_pdf(
 
 // Recursive path tracing.
 static pair<vec3f, bool> trace_path(const trace_scene& scene,
-    const vec3f& origin_, const vec3f& direction_, rng_state& rng,
+    const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
   auto radiance      = zero3f;
   auto weight        = vec3f{1, 1, 1};
-  auto origin        = origin_;
-  auto direction     = direction_;
+  auto ray        = ray_;
   auto volume_stack  = vector<pair<trace_point, int>>{};
   auto max_roughness = 0.0f;
   auto hit           = false;
@@ -2505,9 +2504,9 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, {origin, direction});
+    auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      radiance += weight * eval_environment(scene, direction);
+      radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 
@@ -2527,7 +2526,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto outgoing = -direction;
+      auto outgoing = -ray.d;
       auto point = eval_point(scene, intersection, outgoing, trace_non_rigid_frames);
 
       // correct roughness
@@ -2538,7 +2537,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
 
       // handle opacity
       if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
-        origin = point.position + direction * 1e-2f;
+        ray = {point.position + ray.d * 1e-2f, ray.d};
         bounce -= 1;
         continue;
       }
@@ -2578,12 +2577,11 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
       }
 
       // setup next iteration
-      origin    = point.position;
-      direction = incoming;
+      ray = {point.position, incoming};
     } else {
       // prepare shading point
-      auto outgoing = -direction;
-      auto position = origin + direction * intersection.distance;
+      auto outgoing = -ray.d;
+      auto position = ray.o + ray.d * intersection.distance;
       auto material = volume_stack.back().first;
 
       // handle opacity
@@ -2606,8 +2604,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
                     0.5f * sample_lights_pdf(scene, position, incoming));
 
       // setup next iteration
-      origin    = position;
-      direction = incoming;
+      ray    = {position, incoming};
     }
 
     // check weight
@@ -2626,26 +2623,25 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
 
 // Recursive path tracing.
 static pair<vec3f, bool> trace_naive(const trace_scene& scene,
-    const vec3f& origin_, const vec3f& direction_, rng_state& rng,
+    const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
   auto radiance  = zero3f;
   auto weight    = vec3f{1, 1, 1};
-  auto origin    = origin_;
-  auto direction = direction_;
+  auto ray       = ray_;
   auto hit       = false;
 
   // trace  path
   for (auto bounce = 0; bounce < params.bounces; bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, {origin, direction});
+    auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      radiance += weight * eval_environment(scene, direction);
+      radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 
     // prepare shading point
-    auto outgoing                                                  = -direction;
+    auto outgoing                                                  = -ray.d;
     auto incoming                                                  = outgoing;
     auto point = eval_point(
         scene, intersection,
@@ -2653,7 +2649,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
 
     // handle opacity
     if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
-      origin = point.position + direction * 1e-2f;
+      ray = {point.position + ray.d * 1e-2f, ray.d};
       bounce -= 1;
       continue;
     }
@@ -2685,8 +2681,7 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     }
 
     // setup next iteration
-    origin    = point.position;
-    direction = incoming;
+    ray    = {point.position, incoming};
   }
 
   return {radiance, hit};
@@ -2694,33 +2689,32 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
 
 // Eyelight for quick previewing.
 static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
-    const vec3f& origin_, const vec3f& direction_, rng_state& rng,
+    const ray3f& ray_, rng_state& rng,
     const trace_params& params) {
   // initialize
   auto radiance  = zero3f;
   auto weight    = vec3f{1, 1, 1};
-  auto origin    = origin_;
-  auto direction = direction_;
+  auto ray       = ray_;
   auto hit       = false;
 
   // trace  path
   for (auto bounce = 0; bounce < max(params.bounces, 4); bounce++) {
     // intersect next point
-    auto intersection = intersect_scene_bvh(scene, {origin, direction});
+    auto intersection = intersect_scene_bvh(scene, ray);
     if (!intersection.hit) {
-      radiance += weight * eval_environment(scene, direction);
+      radiance += weight * eval_environment(scene, ray.d);
       break;
     }
 
     // prepare shading point
-    auto outgoing                                                  = -direction;
+    auto outgoing                                                  = -ray.d;
     auto point = eval_point(
         scene, intersection,
         outgoing, trace_non_rigid_frames);
 
     // handle opacity
     if (point.opacity < 1 && rand1f(rng) >= point.opacity) {
-      origin = point.position + direction * 1e-2f;
+      ray = {point.position + ray.d * 1e-2f, ray.d};
       bounce -= 1;
       continue;
     }
@@ -2741,8 +2735,7 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
     if (weight == zero3f || !isfinite(weight)) break;
 
     // setup next iteration
-    origin    = point.position;
-    direction = incoming;
+    ray    = {point.position, incoming};
   }
 
   return {radiance, hit};
@@ -2750,10 +2743,10 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
 
 // False color rendering
 static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
-    const vec3f& origin, const vec3f& direction, rng_state& rng,
+    const ray3f& ray, rng_state& rng,
     const trace_params& params) {
   // intersect next point
-  auto intersection = intersect_scene_bvh(scene, ray3f{origin, direction});
+  auto intersection = intersect_scene_bvh(scene, ray);
   if (!intersection.hit) {
     return {zero3f, false};
   }
@@ -2761,7 +2754,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
   // prepare shading point
   auto point = eval_point(
       scene, intersection,
-      -direction, trace_non_rigid_frames);
+      -ray.d, trace_non_rigid_frames);
 
   // hash color
   auto hashed_color = [](int id) {
@@ -2773,10 +2766,10 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
   switch (params.falsecolor) {
     case trace_falsecolor_type::normal: return {point.normal * 0.5f + 0.5f, 1};
     case trace_falsecolor_type::frontfacing:
-      return {dot(point.normal, -direction) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
+      return {dot(point.normal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
     case trace_falsecolor_type::gnormal: return {point.gnormal * 0.5f + 0.5f, 1};
     case trace_falsecolor_type::gfrontfacing:
-      return {dot(point.gnormal, -direction) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
+      return {dot(point.gnormal, -ray.d) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0}, 1};
     case trace_falsecolor_type::texcoord:
       return {{fmod(point.texcoord.x, 1.0f), fmod(point.texcoord.y, 1.0f), 0}, 1};
     case trace_falsecolor_type::color: return {xyz(point.color), 1};
@@ -2799,7 +2792,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
     case trace_falsecolor_type::highlight: {
       auto emission = point.emission;
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
-      return {emission * abs(dot(-direction, point.normal)), 1};
+      return {emission * abs(dot(-ray.d, point.normal)), 1};
     } break;
     default: return {zero3f, false};
   }
@@ -2807,7 +2800,7 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
 
 // Trace a single ray from the camera using the given algorithm.
 using trace_sampler_func = pair<vec3f, bool> (*)(const trace_scene& scene,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
+    const ray3f& ray, rng_state& rng,
     const trace_params& params);
 static trace_sampler_func get_trace_sampler_func(const trace_params& params) {
   switch (params.sampler) {
@@ -2843,7 +2836,7 @@ vec4f trace_sample(trace_state& state, const trace_scene& scene,
   auto& pixel          = state.at(ij);
   auto  ray            = sample_camera(scene, params.camera, ij, state.size(),
       rand2f(pixel.rng), rand2f(pixel.rng), params.tentfilter);
-  auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
+  auto [radiance, hit] = sampler(scene, ray, pixel.rng, params);
   if (!hit) {
     if (params.envhidden || scene.environments.empty()) {
       radiance = zero3f;
