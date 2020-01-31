@@ -744,12 +744,25 @@ static ray3f eval_camera(
     return eval_perspective_camera(scene, camera_, uv, luv);
 }
 
-// Generates a ray from a camera.
-static ray3f eval_camera(const trace_scene& scene, int camera, const vec2i& image_ij,
-    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
-  auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
-      (image_ij.y + pixel_uv.y) / image_size.y};
-  return eval_camera(scene, camera, image_uv, lens_uv);
+// Sample camera
+static ray3f sample_camera(const trace_scene& scene, int camera, const vec2i& ij,
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv, bool tent) {
+  if(!tent) {
+    auto uv = vec2f{(ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
+    return eval_camera(scene, camera, uv, sample_disk(luv));
+  } else {
+    const auto width  = 2.0f;
+    const auto offset = 0.5f;
+    auto       fuv =
+        width *
+            vec2f{
+                puv.x < 0.5f ? sqrt(2 * puv.x) - 1 : 1 - sqrt(2 - 2 * puv.x),
+                puv.y - 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
+            } +
+        offset;
+    auto uv = vec2f{(ij.x + fuv.x) / image_size.x, (ij.y + fuv.y) / image_size.y};
+    return eval_camera(scene, camera, uv, sample_disk(luv));
+  }
 }
 
 // Instance values interpolated using barycentric coordinates.
@@ -2599,26 +2612,6 @@ static float sample_lights_pdf(
   return pdf;
 }
 
-// Sample camera
-static ray3f sample_camera(const trace_scene& scene, int camera_, const vec2i& ij,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
-  return eval_camera(scene, camera_, ij, image_size, puv, sample_disk(luv));
-}
-
-static ray3f sample_camera_tent(const trace_scene& scene, int camera, const vec2i& ij,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
-  const auto width  = 2.0f;
-  const auto offset = 0.5f;
-  auto       fuv =
-      width *
-          vec2f{
-              puv.x < 0.5f ? sqrt(2 * puv.x) - 1 : 1 - sqrt(2 - 2 * puv.x),
-              puv.y - 0.5f ? sqrt(2 * puv.y) - 1 : 1 - sqrt(2 - 2 * puv.y),
-          } +
-      offset;
-  return eval_camera(scene, camera, ij, image_size, fuv, sample_disk(luv));
-}
-
 // Recursive path tracing.
 static pair<vec3f, bool> trace_path(const trace_scene& scene,
     const vec3f& origin_, const vec3f& direction_, rng_state& rng,
@@ -3037,10 +3030,8 @@ vec4f trace_sample(trace_state& state, const trace_scene& scene,
     const vec2i& ij, const trace_params& params) {
   auto  sampler = get_trace_sampler_func(params);
   auto& pixel   = state.at(ij);
-  auto  ray = params.tentfilter ? sample_camera_tent(scene, params.camera, ij, state.size(),
-                                     rand2f(pixel.rng), rand2f(pixel.rng))
-                               : sample_camera(scene, params.camera, ij, state.size(),
-                                     rand2f(pixel.rng), rand2f(pixel.rng));
+  auto  ray = sample_camera(scene, params.camera, ij, state.size(),
+                                     rand2f(pixel.rng), rand2f(pixel.rng), params.tentfilter);
   auto [radiance, hit] = sampler(scene, ray.o, ray.d, pixel.rng, params);
   if (!hit) {
     if (params.envhidden || scene.environments.empty()) {
