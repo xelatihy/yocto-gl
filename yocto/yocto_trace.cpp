@@ -2449,15 +2449,17 @@ static float sample_volscattering_pdf(const material_point& material,
   return eval_phasefunction(dot(outgoing, incoming), material.volanisotropy);
 }
 
-// Picks a point on a light.
-static vec3f sample_light(const trace_scene& scene, const trace_light& light,
-    const vec3f& p, float rel, const vec2f& ruv) {
+// Sample lights wrt solid angle
+static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
+    float rl, float rel, const vec2f& ruv) {
+  auto light_id = sample_uniform(scene.lights.size(), rl);
+  auto& light = scene.lights[light_id];
   if (light.instance >= 0) {
     auto& instance = scene.instances[light.instance];
     auto& shape    = scene.shapes[instance.shape];
     auto  element  = sample_discrete(light.cdf, rel);
     auto  uv       = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
-    return normalize(eval_position(scene, light.instance, element, uv) - p);
+    return normalize(eval_position(scene, light.instance, element, uv) - position);
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
@@ -2477,71 +2479,52 @@ static vec3f sample_light(const trace_scene& scene, const trace_light& light,
   }
 }
 
-// Sample pdf for a light point.
-static float sample_light_pdf(const trace_scene& scene,
-    const trace_light& light, const vec3f& position, const vec3f& direction) {
-  if (light.instance >= 0) {
-    auto& instance = scene.instances[light.instance];
-    auto& material = scene.materials[instance.material];
-    if (material.emission == zero3f) return 0;
-    auto& cdf = light.cdf;
-    // check all intersection
-    auto pdf           = 0.0f;
-    auto next_position = position;
-    for (auto bounce = 0; bounce < 100; bounce++) {
-      auto isec = intersect_instance_bvh(
-          scene, light.instance, {next_position, direction});
-      if (!isec.hit) break;
-      // accumulate pdf
-      auto light_position = eval_position(
-          scene, isec.instance, isec.element, isec.uv);
-      auto light_normal = eval_normal(
-          scene, isec.instance, isec.element, isec.uv, trace_non_rigid_frames);
-      // prob triangle * area triangle = area triangle mesh
-      auto area = cdf.back();
-      pdf += distance_squared(light_position, position) /
-             (abs(dot(light_normal, direction)) * area);
-      // continue
-      next_position = light_position + direction * 1e-3f;
-    }
-    return pdf;
-  } else if (light.environment >= 0) {
-    auto& environment = scene.environments[light.environment];
-    if (environment.emission_tex >= 0) {
-      auto& cdf          = light.cdf;
-      auto& emission_tex = scene.textures[environment.emission_tex];
-      auto  size         = texture_size(emission_tex);
-      auto  wl = transform_direction(inverse(environment.frame), direction);
-      auto  texcoord = vec2f{
-          atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-      if (texcoord.x < 0) texcoord.x += 1;
-      auto i     = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
-      auto j     = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
-      auto prob  = sample_discrete_pdf(cdf, j * size.x + i) / cdf.back();
-      auto angle = (2 * pif / size.x) * (pif / size.y) *
-                   sin(pif * (j + 0.5f) / size.y);
-      return prob / angle;
-    } else {
-      return 1 / (4 * pif);
-    }
-  } else {
-    return 0;
-  }
-}
-
-// Sample lights wrt solid angle
-static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
-    float rl, float rel, const vec2f& ruv) {
-  auto light_id = sample_uniform(scene.lights.size(), rl);
-  return sample_light(scene, scene.lights[light_id], position, rel, ruv);
-}
-
 // Sample lights pdf
 static float sample_lights_pdf(
     const trace_scene& scene, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto& light : scene.lights) {
-    pdf += sample_light_pdf(scene, light, position, direction);
+    if (light.instance >= 0) {
+      // check all intersection
+      auto light_pdf           = 0.0f;
+      auto next_position = position;
+      for (auto bounce = 0; bounce < 100; bounce++) {
+        auto isec = intersect_instance_bvh(
+            scene, light.instance, {next_position, direction});
+        if (!isec.hit) break;
+        // accumulate pdf
+        auto light_position = eval_position(
+            scene, isec.instance, isec.element, isec.uv);
+        auto light_normal = eval_normal(
+            scene, isec.instance, isec.element, isec.uv, trace_non_rigid_frames);
+        // prob triangle * area triangle = area triangle mesh
+        auto area = light.cdf.back();
+        light_pdf += distance_squared(light_position, position) /
+              (abs(dot(light_normal, direction)) * area);
+        // continue
+        next_position = light_position + direction * 1e-3f;
+      }
+      pdf += light_pdf;
+    } else if (light.environment >= 0) {
+      auto& environment = scene.environments[light.environment];
+      if (environment.emission_tex >= 0) {
+        auto& cdf          = light.cdf;
+        auto& emission_tex = scene.textures[environment.emission_tex];
+        auto  size         = texture_size(emission_tex);
+        auto  wl = transform_direction(inverse(environment.frame), direction);
+        auto  texcoord = vec2f{
+            atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+        if (texcoord.x < 0) texcoord.x += 1;
+        auto i     = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
+        auto j     = clamp((int)(texcoord.y * size.y), 0, size.y - 1);
+        auto prob  = sample_discrete_pdf(cdf, j * size.x + i) / cdf.back();
+        auto angle = (2 * pif / size.x) * (pif / size.y) *
+                    sin(pif * (j + 0.5f) / size.y);
+        pdf += prob / angle;
+      } else {
+        pdf += 1 / (4 * pif);
+      }
+    }
   }
   pdf *= sample_uniform_pdf(scene.lights.size());
   return pdf;
