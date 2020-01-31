@@ -740,7 +740,7 @@ static vec3f eval_normal(const trace_scene& scene, int instance_, int element,
                           shape, shape.quadsnorm, shape.normals, element, uv));
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
-static vec2f eval_texcoord(
+static vec2f eval_texcoord_(
     const trace_scene& scene, int instance_, int element, const vec2f& uv) {
   auto& instance = scene.instances[instance_];
   auto& shape    = scene.shapes[instance.shape];
@@ -748,7 +748,7 @@ static vec2f eval_texcoord(
                                  : eval_shape_elem(shape, shape.quadstexcoord,
                                        shape.texcoords, element, uv);
 }
-static vec4f eval_color(
+static vec4f eval_color_(
     const trace_scene& scene, int instance_, int element, const vec2f& uv) {
   auto& instance = scene.instances[instance_];
   auto& shape    = scene.shapes[instance.shape];
@@ -773,7 +773,7 @@ static vec3f eval_shading_normal_(const trace_scene& scene, int instance_,
   } else {
     auto normalmap =
         -1 + 2 * xyz(eval_texture(scene, material.normal_tex,
-                     eval_texcoord(scene, instance_, element, uv), true));
+                     eval_texcoord_(scene, instance_, element, uv), true));
     auto basis = eval_tangent_basis(shape, element, uv);
     normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
     auto normal = normalize(basis.first * normalmap);
@@ -790,12 +790,12 @@ static vec3f eval_element_normal_(const trace_scene& scene, int instance_,
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
 // Instance material
-static material_point eval_material(const trace_scene& scene, int instance_,
+static material_point eval_material_(const trace_scene& scene, int instance_,
     int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto& instance = scene.instances[instance_];
   auto& material = scene.materials[instance.material];
-  auto  texcoord = eval_texcoord(scene, instance_, element, uv);
-  auto  color    = eval_color(scene, instance_, element, uv);
+  auto  texcoord = eval_texcoord_(scene, instance_, element, uv);
+  auto  color    = eval_color_(scene, instance_, element, uv);
 
   // initialize factors
   auto emission = material.emission *
@@ -908,9 +908,9 @@ static trace_point eval_point(const trace_scene& scene, int instance_,
       scene, instance_, element, uv, outgoing, trace_non_rigid_frames);
   point.gnormal = eval_element_normal_(
       scene, instance_, element, trace_non_rigid_frames);
-  point.texcoord = eval_texcoord(scene, instance_, element, uv);
-  point.color    = eval_color(scene, instance_, element, uv);
-  point.material = eval_material(
+  point.texcoord = eval_texcoord_(scene, instance_, element, uv);
+  point.color    = eval_color_(scene, instance_, element, uv);
+  point.material = eval_material_(
       scene, instance_, element, uv, point.normal, outgoing);
   return point;
 }
