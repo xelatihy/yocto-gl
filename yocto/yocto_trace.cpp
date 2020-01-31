@@ -2601,7 +2601,7 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
       // prepare shading point
       auto point     = volume_stack.back();
       point.outgoing = -ray.d;
-      point.incoming = ray.o + ray.d * intersection.distance;
+      point.position = ray.o + ray.d * intersection.distance;
 
       // handle opacity
       hit = true;
