@@ -597,8 +597,10 @@ T eval_shape_elem(const trace_shape& shape,
 // Shape values interpolated using barycentric coordinates
 pair<mat3f, bool> eval_tangent_basis(
     const trace_shape& shape, int element, const vec2f& uv) {
-  auto z = shape.normals.empty() ? eval_element_normal(shape, element) : normalize(
-      eval_shape_elem(shape, shape.quadsnorm, shape.normals, element, uv));
+  auto z = shape.normals.empty()
+               ? eval_element_normal(shape, element)
+               : normalize(eval_shape_elem(
+                     shape, shape.quadsnorm, shape.normals, element, uv));
   if (shape.tangents.empty()) {
     auto tangents = eval_element_tangents(shape, element, uv);
     auto x        = orthonormalize(tangents.first, z);
@@ -643,7 +645,7 @@ vec4f eval_texture(const trace_scene& scene, int texture_, const vec2f& uv,
     bool ldr_as_linear = false, bool no_interpolation = false,
     bool clamp_to_edge = false) {
   // get texture
-  if(texture_ < 0) return {1, 1, 1, 1};
+  if (texture_ < 0) return {1, 1, 1, 1};
   auto& texture = scene.textures[texture_];
 
   // get image width/height
@@ -773,35 +775,42 @@ ray3f eval_camera(const trace_camera& camera, int idx, const vec2i& image_size,
 }
 
 // Instance values interpolated using barycentric coordinates.
-vec3f eval_position(const trace_scene& scene, int instance_,
-    int element, const vec2f& uv) {
+vec3f eval_position(
+    const trace_scene& scene, int instance_, int element, const vec2f& uv) {
   auto& instance = scene.instances[instance_];
-  auto& shape = scene.shapes[instance.shape];
-  auto position = eval_shape_elem(shape, shape.quadspos, shape.positions, element, uv);
+  auto& shape    = scene.shapes[instance.shape];
+  auto  position = eval_shape_elem(
+      shape, shape.quadspos, shape.positions, element, uv);
   return transform_point(instance.frame, position);
 }
-vec3f eval_normal(const trace_scene& scene, int instance_,
-    int element, const vec2f& uv, bool non_rigid_frame) {
+vec3f eval_normal(const trace_scene& scene, int instance_, int element,
+    const vec2f& uv, bool non_rigid_frame) {
   auto& instance = scene.instances[instance_];
-  auto& shape = scene.shapes[instance.shape];
-  auto normal = shape.normals.empty() ? eval_element_normal(shape, element) : normalize(
-      eval_shape_elem(shape, shape.quadsnorm, shape.normals, element, uv));
+  auto& shape    = scene.shapes[instance.shape];
+  auto  normal   = shape.normals.empty()
+                    ? eval_element_normal(shape, element)
+                    : normalize(eval_shape_elem(
+                          shape, shape.quadsnorm, shape.normals, element, uv));
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
-vec2f eval_texcoord(const trace_scene& scene, int instance_, int element, const vec2f& uv) {
+vec2f eval_texcoord(
+    const trace_scene& scene, int instance_, int element, const vec2f& uv) {
   auto& instance = scene.instances[instance_];
-  auto& shape = scene.shapes[instance.shape];
-  return shape.texcoords.empty() ? uv : eval_shape_elem(
-      shape, shape.quadstexcoord, shape.texcoords, element, uv);
+  auto& shape    = scene.shapes[instance.shape];
+  return shape.texcoords.empty() ? uv
+                                 : eval_shape_elem(shape, shape.quadstexcoord,
+                                       shape.texcoords, element, uv);
 }
-vec4f eval_color(const trace_scene& scene, int instance_, int element, const vec2f& uv) {
+vec4f eval_color(
+    const trace_scene& scene, int instance_, int element, const vec2f& uv) {
   auto& instance = scene.instances[instance_];
-  auto& shape = scene.shapes[instance.shape];
-  return shape.colors.empty() ? vec4f{1, 1, 1, 1} : eval_shape_elem(shape, {}, shape.colors, element, uv);
+  auto& shape    = scene.shapes[instance.shape];
+  return shape.colors.empty()
+             ? vec4f{1, 1, 1, 1}
+             : eval_shape_elem(shape, {}, shape.colors, element, uv);
 }
-vec3f eval_shading_normal(const trace_scene& scene, int instance_,
-    int element, const vec2f& uv,
-    const vec3f& outgoing, bool non_rigid_frame) {
+vec3f eval_shading_normal(const trace_scene& scene, int instance_, int element,
+    const vec2f& uv, const vec3f& outgoing, bool non_rigid_frame) {
   auto& instance = scene.instances[instance_];
   auto& shape    = scene.shapes[instance.shape];
   auto& material = scene.materials[instance.material];
@@ -815,9 +824,10 @@ vec3f eval_shading_normal(const trace_scene& scene, int instance_,
     if (!material.thin) return normal;
     return dot(outgoing, normal) > 0 ? normal : -normal;
   } else {
-    auto normalmap  = -1 + 2 * xyz(eval_texture(scene, material.normal_tex,
-                                  eval_texcoord(scene, instance_, element, uv), true));
-    auto basis      = eval_tangent_basis(shape, element, uv);
+    auto normalmap =
+        -1 + 2 * xyz(eval_texture(scene, material.normal_tex,
+                     eval_texcoord(scene, instance_, element, uv), true));
+    auto basis = eval_tangent_basis(shape, element, uv);
     normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
     auto normal = normalize(basis.first * normalmap);
     normal      = transform_normal(instance.frame, normal, non_rigid_frame);
@@ -832,40 +842,49 @@ vec3f eval_element_normal(const trace_scene& scene,
   return transform_normal(instance.frame, normal, non_rigid_frame);
 }
 // Instance material
-material_point eval_material(const trace_scene& scene,
-    int instance_, int element, const vec2f& uv,
-    const vec3f& normal, const vec3f& outgoing) {
+material_point eval_material(const trace_scene& scene, int instance_,
+    int element, const vec2f& uv, const vec3f& normal, const vec3f& outgoing) {
   auto& instance = scene.instances[instance_];
-  auto& material  = scene.materials[instance.material];
-  auto  texcoord  = eval_texcoord(scene, instance_, element, uv);
-  auto  color     = eval_color(scene, instance_, element, uv);
+  auto& material = scene.materials[instance.material];
+  auto  texcoord = eval_texcoord(scene, instance_, element, uv);
+  auto  color    = eval_color(scene, instance_, element, uv);
 
   // initialize factors
-  auto emission     = material.emission * xyz(eval_texture(scene, material.emission_tex, texcoord));
-  auto base_tex     = eval_texture(scene, material.base_tex, texcoord);
-  auto base         = material.base * xyz(color) * xyz(base_tex);
-  auto specular     = material.specular * eval_texture(scene, material.specular_tex, texcoord).x;
-  auto metallic     = material.metallic * 
-    eval_texture(scene, material.metallic_tex, texcoord).z;
-  auto roughness    = material.roughness * eval_texture(scene, material.roughness_tex, texcoord).x *
-    (material.gltf_textures ? eval_texture(scene, material.metallic_tex, texcoord).x : 1);
-  auto ior          = material.ior;
-  auto coat         = material.coat * eval_texture(scene, material.coat_tex, texcoord).x;
-  auto transmission = material.transmission * eval_texture(scene, material.emission_tex, texcoord).x;
-  auto thin         = material.thin || !material.transmission;
-  auto scattering   = material.scattering * 
-    eval_texture(scene, material.scattering_tex, texcoord).x;
-  auto phaseg       = material.phaseg;
-  auto radius       = material.radius;
-  auto opacity      = material.opacity * color.w * base_tex.w * 
-    eval_texture(scene, material.opacity_tex, texcoord).x;
+  auto emission = material.emission *
+                  xyz(eval_texture(scene, material.emission_tex, texcoord));
+  auto base_tex = eval_texture(scene, material.base_tex, texcoord);
+  auto base     = material.base * xyz(color) * xyz(base_tex);
+  auto specular = material.specular *
+                  eval_texture(scene, material.specular_tex, texcoord).x;
+  auto metallic = material.metallic *
+                  eval_texture(scene, material.metallic_tex, texcoord).z;
+  auto roughness =
+      material.roughness *
+      eval_texture(scene, material.roughness_tex, texcoord).x *
+      (material.gltf_textures
+              ? eval_texture(scene, material.metallic_tex, texcoord).x
+              : 1);
+  auto ior  = material.ior;
+  auto coat = material.coat *
+              eval_texture(scene, material.coat_tex, texcoord).x;
+  auto transmission = material.transmission *
+                      eval_texture(scene, material.emission_tex, texcoord).x;
+  auto thin       = material.thin || !material.transmission;
+  auto scattering = material.scattering *
+                    eval_texture(scene, material.scattering_tex, texcoord).x;
+  auto phaseg  = material.phaseg;
+  auto radius  = material.radius;
+  auto opacity = material.opacity * color.w * base_tex.w *
+                 eval_texture(scene, material.opacity_tex, texcoord).x;
 
   auto point = material_point{};
   // factors
   auto weight    = vec3f{1, 1, 1};
   point.emission = weight * emission;
   point.coat     = weight * coat;
-  weight *= 1 - point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal));;
+  weight *= 1 -
+            point.coat * fresnel_dielectric(coat_ior, dot(outgoing, normal));
+  ;
   point.metal = weight * metallic;
   weight *= 1 - metallic;
   point.refraction = thin ? zero3f : weight * transmission;
@@ -874,16 +893,16 @@ material_point eval_material(const trace_scene& scene,
   weight *= 1 - specular * fresnel_dielectric(ior, dot(outgoing, normal));
   point.transmission = weight * transmission * base;
   weight *= 1 - transmission;
-  point.diffuse   = weight * base;
-  point.meta      = reflectivity_to_eta(base);
-  point.metak     = zero3f;
-  point.roughness = roughness * roughness;
-  point.ior       = ior;
-  point.opacity   = opacity;
+  point.diffuse     = weight * base;
+  point.meta        = reflectivity_to_eta(base);
+  point.metak       = zero3f;
+  point.roughness   = roughness * roughness;
+  point.ior         = ior;
+  point.opacity     = opacity;
   point.volemission = zero3f;
   point.voldensity  = (transmission && !thin)
-                          ? -log(clamp(base, 0.0001f, 1.0f)) / radius
-                          : zero3f;
+                         ? -log(clamp(base, 0.0001f, 1.0f)) / radius
+                         : zero3f;
   point.volscatter    = scattering;
   point.volanisotropy = phaseg;
   point.opacity       = opacity;
@@ -942,9 +961,9 @@ vec3f eval_direction(
 // Evaluate the environment color.
 vec3f eval_environment(const trace_scene& scene,
     const trace_environment& environment, const vec3f& direction) {
-  return environment.emission * xyz(
-        eval_texture(scene, environment.emission_tex, 
-        eval_texcoord(environment, direction)));
+  return environment.emission *
+         xyz(eval_texture(scene, environment.emission_tex,
+             eval_texcoord(environment, direction)));
 }
 // Evaluate all environment color.
 vec3f eval_environment(const trace_scene& scene, const vec3f& direction) {
@@ -2157,9 +2176,9 @@ static vec3f eval_brdfcos(const material_point& material, const vec3f& normal,
                               : (material.ior * outgoing + incoming);
     auto halfway = normalize(halfway_vector);
     // auto F       = fresnel_dielectric(material.ior, dot(halfway, outgoing));
-    auto F       = fresnel_dielectric(material.ior, dot(normal, outgoing));
-    auto D       = eval_microfacetD(material.roughness, up_normal, halfway);
-    auto G       = eval_microfacetG(
+    auto F = fresnel_dielectric(material.ior, dot(normal, outgoing));
+    auto D = eval_microfacetD(material.roughness, up_normal, halfway);
+    auto G = eval_microfacetG(
         material.roughness, up_normal, halfway, outgoing, incoming);
 
     auto dot_terms = (dot(outgoing, halfway) * dot(incoming, halfway)) /
@@ -2272,7 +2291,8 @@ static vec3f sample_brdf(const material_point& material, const vec3f& normal,
   if (material.refraction_pdf) {
     cdf += material.refraction_pdf;
     if (rnl < cdf) {
-      // auto nrnl = (rnl - 1 + material.refraction_pdf) / material.refraction_pdf;
+      // auto nrnl = (rnl - 1 + material.refraction_pdf) /
+      // material.refraction_pdf;
       auto nrnl = rnl;
       if (nrnl < fresnel_dielectric(material.ior, dot(normal, outgoing))) {
         auto halfway = sample_microfacet(material.roughness, up_normal, rn);
@@ -2329,7 +2349,8 @@ static vec3f sample_delta(const material_point& material, const vec3f& normal,
   if (material.refraction_pdf) {
     cdf += material.refraction_pdf;
     if (rnl < cdf) {
-      // auto nrnl = (rnl - 1 + material.refraction_pdf) / material.refraction_pdf;
+      // auto nrnl = (rnl - 1 + material.refraction_pdf) /
+      // material.refraction_pdf;
       auto nrnl = rnl;
       if (nrnl < fresnel_dielectric(material.ior, dot(normal, outgoing))) {
         return reflect(outgoing, up_normal);
@@ -2393,14 +2414,16 @@ static float sample_brdf_pdf(const material_point& material,
                               : (material.ior * outgoing + incoming);
     auto halfway = normalize(halfway_vector);
     // [Walter 2007] equation 17
-    pdf += material.refraction_pdf * (1 - fresnel_dielectric(material.ior, dot(normal, outgoing))) *
+    pdf += material.refraction_pdf *
+           (1 - fresnel_dielectric(material.ior, dot(normal, outgoing))) *
            sample_microfacet_pdf(material.roughness, up_normal, halfway) *
            abs(dot(halfway, incoming)) / dot(halfway_vector, halfway_vector);
   }
 
   if (material.refraction_pdf && same_hemi) {
     auto halfway = normalize(incoming + outgoing);
-    pdf += material.refraction_pdf * fresnel_dielectric(material.ior, dot(normal, outgoing)) *
+    pdf += material.refraction_pdf *
+           fresnel_dielectric(material.ior, dot(normal, outgoing)) *
            sample_microfacet_pdf(material.roughness, up_normal, halfway) /
            (4 * abs(dot(outgoing, halfway)));
   }
@@ -2454,8 +2477,8 @@ static vector<float> sample_environment_cdf(
     const trace_scene& scene, const trace_environment& environment) {
   if (environment.emission_tex < 0) return {};
   auto& texture    = scene.textures[environment.emission_tex];
-  auto size       = texture_size(texture);
-  auto texels_cdf = vector<float>(size.x * size.y);
+  auto  size       = texture_size(texture);
+  auto  texels_cdf = vector<float>(size.x * size.y);
   if (size != zero2i) {
     for (auto i = 0; i < texels_cdf.size(); i++) {
       auto ij       = vec2i{i % size.x, i / size.x};
@@ -2518,7 +2541,7 @@ static vec3f sample_light(const trace_scene& scene, const trace_light& light,
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
       auto& cdf          = light.elem_cdf;
-      auto&  emission_tex = scene.textures[environment.emission_tex];
+      auto& emission_tex = scene.textures[environment.emission_tex];
       auto  idx          = sample_discrete(cdf, rel);
       auto  size         = texture_size(emission_tex);
       auto  u            = (idx % size.x + 0.5f) / size.x;
@@ -2548,7 +2571,7 @@ static float sample_light_pdf(const trace_scene& scene,
           scene, light.instance, {next_position, direction});
       if (!isec.hit) break;
       // accumulate pdf
-      auto  light_position = eval_position(
+      auto light_position = eval_position(
           scene, isec.instance, isec.element, isec.uv);
       auto light_normal = eval_normal(
           scene, isec.instance, isec.element, isec.uv, trace_non_rigid_frames);
@@ -2564,7 +2587,7 @@ static float sample_light_pdf(const trace_scene& scene,
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
       auto& cdf          = light.elem_cdf;
-      auto&  emission_tex = scene.textures[environment.emission_tex];
+      auto& emission_tex = scene.textures[environment.emission_tex];
       auto  size         = texture_size(emission_tex);
       auto  texcoord     = eval_texcoord(environment, direction);
       auto  i            = clamp((int)(texcoord.x * size.x), 0, size.x - 1);
@@ -2657,13 +2680,14 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene,
     // switch between surface and volume
     if (!in_volume) {
       // prepare shading point
-      auto  outgoing = -direction;
-      auto  position = eval_position(
+      auto outgoing = -direction;
+      auto position = eval_position(
           scene, intersection.instance, intersection.element, intersection.uv);
-      auto normal   = eval_shading_normal(scene, intersection.instance, intersection.element,
-          intersection.uv, outgoing, trace_non_rigid_frames);
-      auto material = eval_material(scene, intersection.instance, intersection.element,
-          intersection.uv, normal, outgoing);
+      auto normal   = eval_shading_normal(scene, intersection.instance,
+          intersection.element, intersection.uv, outgoing,
+          trace_non_rigid_frames);
+      auto material = eval_material(scene, intersection.instance,
+          intersection.element, intersection.uv, normal, outgoing);
 
       // correct roughness
       if (params.nocaustics) {
@@ -2780,14 +2804,15 @@ static pair<vec3f, bool> trace_naive(const trace_scene& scene,
     }
 
     // prepare shading point
-    auto  outgoing = -direction;
-    auto  incoming = outgoing;
-    auto  position = eval_position(
+    auto outgoing = -direction;
+    auto incoming = outgoing;
+    auto position = eval_position(
         scene, intersection.instance, intersection.element, intersection.uv);
-    auto normal   = eval_shading_normal(scene, intersection.instance, intersection.element,
-        intersection.uv, outgoing, trace_non_rigid_frames);
-    auto material = eval_material(scene, intersection.instance, intersection.element,
-        intersection.uv, normal, outgoing);
+    auto normal   = eval_shading_normal(scene, intersection.instance,
+        intersection.element, intersection.uv, outgoing,
+        trace_non_rigid_frames);
+    auto material = eval_material(scene, intersection.instance,
+        intersection.element, intersection.uv, normal, outgoing);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -2851,13 +2876,14 @@ static pair<vec3f, bool> trace_eyelight(const trace_scene& scene,
     }
 
     // prepare shading point
-    auto  outgoing = -direction;
-    auto  position = eval_position(
+    auto outgoing = -direction;
+    auto position = eval_position(
         scene, intersection.instance, intersection.element, intersection.uv);
-    auto normal   = eval_shading_normal(scene, intersection.instance, intersection.element,
-        intersection.uv, outgoing, trace_non_rigid_frames);
-    auto material = eval_material(scene, intersection.instance, intersection.element,
-        intersection.uv, normal, outgoing);
+    auto normal   = eval_shading_normal(scene, intersection.instance,
+        intersection.element, intersection.uv, outgoing,
+        trace_non_rigid_frames);
+    auto material = eval_material(scene, intersection.instance,
+        intersection.element, intersection.uv, normal, outgoing);
 
     // handle opacity
     if (material.opacity < 1 && rand1f(rng) >= material.opacity) {
@@ -2906,10 +2932,10 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
   auto outgoing = -direction;
   // auto  position = eval_position(
   //     scene, instance, intersection.element, intersection.uv);
-  auto normal   = eval_shading_normal(scene, intersection.instance, intersection.element,
-      intersection.uv, outgoing, trace_non_rigid_frames);
-  auto material = eval_material(
-      scene, intersection.instance, intersection.element, intersection.uv, normal, outgoing);
+  auto normal   = eval_shading_normal(scene, intersection.instance,
+      intersection.element, intersection.uv, outgoing, trace_non_rigid_frames);
+  auto material = eval_material(scene, intersection.instance,
+      intersection.element, intersection.uv, normal, outgoing);
 
   switch (params.falsecolor) {
     case trace_falsecolor_type::normal: {
@@ -2933,13 +2959,13 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
       return {frontfacing, 1};
     }
     case trace_falsecolor_type::texcoord: {
-      auto texcoord = eval_texcoord(scene,
-          intersection.instance, intersection.element, intersection.uv);
+      auto texcoord = eval_texcoord(
+          scene, intersection.instance, intersection.element, intersection.uv);
       return {{fmod(texcoord.x, 1.0f), fmod(texcoord.y, 1.0f), 0}, 1};
     }
     case trace_falsecolor_type::color: {
-      auto color = eval_color(scene,
-          intersection.instance, intersection.element, intersection.uv);
+      auto color = eval_color(
+          scene, intersection.instance, intersection.element, intersection.uv);
       return {xyz(color), 1};
     }
     case trace_falsecolor_type::emission: {
@@ -3203,13 +3229,13 @@ int add_texture(trace_scene& scene, const image<vec4f>& img) {
 }
 void set_texture(trace_scene& scene, int idx, const image<vec4b>& img) {
   auto& texture = scene.textures[idx];
-  texture.ldr = img;
-  texture.hdr = {};
+  texture.ldr   = img;
+  texture.hdr   = {};
 }
 void set_texture(trace_scene& scene, int idx, const image<vec4f>& img) {
   auto& texture = scene.textures[idx];
-  texture.ldr = {};
-  texture.hdr = img;
+  texture.ldr   = {};
+  texture.hdr   = img;
 }
 void clean_textures(trace_scene& scene) { scene.textures.clear(); }
 
@@ -3457,7 +3483,7 @@ int add_environment(trace_scene& scene, const frame3f& frame,
 }
 void set_environment(trace_scene& scene, int idx, const frame3f& frame,
     const vec3f& emission, int emission_tex) {
-  auto& environment          = scene.environments[idx];
+  auto& environment        = scene.environments[idx];
   environment.frame        = frame;
   environment.emission     = emission;
   environment.emission_tex = emission_tex;
