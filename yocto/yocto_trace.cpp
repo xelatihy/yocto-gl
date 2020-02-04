@@ -695,26 +695,6 @@ static ray3f sample_camera(const trace_scene& scene, int camera,
   }
 }
 
-// Instance values interpolated using barycentric coordinates.
-static vec3f eval_position(
-    const trace_scene& scene, int instance_, int element, const vec2f& uv) {
-  auto& instance = scene.instances[instance_];
-  auto& shape    = scene.shapes[instance.shape];
-  auto  position = eval_shape_elem(
-      shape, shape.quadspos, shape.positions, element, uv);
-  return transform_point(instance.frame, position);
-}
-static vec3f eval_normal(const trace_scene& scene, int instance_, int element,
-    const vec2f& uv, bool non_rigid_frame) {
-  auto& instance = scene.instances[instance_];
-  auto& shape    = scene.shapes[instance.shape];
-  auto  normal   = shape.normals.empty()
-                    ? eval_element_normal(shape, element)
-                    : normalize(eval_shape_elem(
-                          shape, shape.quadsnorm, shape.normals, element, uv));
-  return transform_normal(instance.frame, normal, non_rigid_frame);
-}
-
 // Point used for tracing
 struct trace_point {
   // shape
@@ -833,13 +813,9 @@ static trace_point eval_point(const trace_scene& scene,
               eval_texture(scene, material.coat_tex, texcoord).x;
   auto transmission = material.transmission *
                       eval_texture(scene, material.emission_tex, texcoord).x;
-  auto thin       = material.thin || !material.transmission;
-  auto scattering = material.scattering *
-                    eval_texture(scene, material.scattering_tex, texcoord).x;
-  auto phaseg  = material.phaseg;
-  auto radius  = material.radius;
   auto opacity = material.opacity * point.color.w * base_tex.w *
                  eval_texture(scene, material.opacity_tex, texcoord).x;
+  auto thin       = material.thin || !material.transmission;
 
   // factors
   auto weight    = vec3f{1, 1, 1};
@@ -2470,21 +2446,21 @@ static float sample_delta_pdf(const trace_point& point) {
   return pdf;
 }
 
-static vec3f eval_volscattering(const volume_point& point) {
+static vec3f eval_scattering(const volume_point& point) {
   if (point.voldensity == zero3f) return zero3f;
   return point.volscatter *
          eval_phasefunction(
              dot(point.outgoing, point.incoming), point.volanisotropy);
 }
 
-static vec3f sample_volscattering(
+static vec3f sample_scattering(
     const volume_point& point, float rnl, const vec2f& rn) {
   if (point.voldensity == zero3f) return zero3f;
   auto direction = sample_phasefunction(point.volanisotropy, rn);
   return basis_fromz(-point.outgoing) * direction;
 }
 
-static float sample_volscattering_pdf(const volume_point& point) {
+static float sample_scattering_pdf(const volume_point& point) {
   if (point.voldensity == zero3f) return 0;
   return eval_phasefunction(
       dot(point.outgoing, point.incoming), point.volanisotropy);
@@ -2500,8 +2476,9 @@ static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
     auto& shape    = scene.shapes[instance.shape];
     auto  element  = sample_discrete(light.cdf, rel);
     auto  uv       = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
-    return normalize(
-        eval_position(scene, light.instance, element, uv) - position);
+    auto lposition = transform_point(instance.frame, eval_shape_elem(
+      shape, shape.quadspos, shape.positions, element, uv));
+    return normalize(lposition - position);
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
@@ -2528,25 +2505,27 @@ static float sample_lights_pdf(
   for (auto& light : scene.lights) {
     if (light.instance >= 0) {
       // check all intersection
-      auto light_pdf     = 0.0f;
+      auto lpdf     = 0.0f;
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_instance_bvh(
             scene, light.instance, {next_position, direction});
         if (!isec.hit) break;
         // accumulate pdf
-        auto light_position = eval_position(
-            scene, isec.instance, isec.element, isec.uv);
-        auto light_normal = eval_normal(scene, isec.instance, isec.element,
-            isec.uv, trace_non_rigid_frames);
+        auto& instance = scene.instances[isec.instance];
+        auto& shape = scene.shapes[instance.shape];
+        auto lposition = transform_point(instance.frame, eval_shape_elem(
+          shape, shape.quadspos, shape.positions, isec.element, isec.uv));
+        auto lnormal = transform_normal(instance.frame, 
+          eval_element_normal(shape, isec.element), trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = light.cdf.back();
-        light_pdf += distance_squared(light_position, position) /
-                     (abs(dot(light_normal, direction)) * area);
+        lpdf += distance_squared(lposition, position) /
+                     (abs(dot(lnormal, direction)) * area);
         // continue
-        next_position = light_position + direction * 1e-3f;
+        next_position = lposition + direction * 1e-3f;
       }
-      pdf += light_pdf;
+      pdf += lpdf;
     } else if (light.environment >= 0) {
       auto& environment = scene.environments[light.environment];
       if (environment.emission_tex >= 0) {
@@ -2673,14 +2652,14 @@ static pair<vec3f, bool> trace_path(const trace_scene& scene, const ray3f& ray_,
 
       // next direction
       if (rand1f(rng) < 0.5f) {
-        point.incoming = sample_volscattering(point, rand1f(rng), rand2f(rng));
+        point.incoming = sample_scattering(point, rand1f(rng), rand2f(rng));
       } else {
         point.incoming = sample_lights(
             scene, point.position, rand1f(rng), rand1f(rng), rand2f(rng));
       }
       weight *=
-          eval_volscattering(point) /
-          (0.5f * sample_volscattering_pdf(point) +
+          eval_scattering(point) /
+          (0.5f * sample_scattering_pdf(point) +
               0.5f * sample_lights_pdf(scene, point.position, point.incoming));
 
       // setup next iteration
