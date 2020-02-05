@@ -513,26 +513,6 @@ static T eval_shape_elem(const trace_shape& shape,
   }
 }
 
-// Shape values interpolated using barycentric coordinates
-static pair<mat3f, bool> eval_tangent_basis(
-    const trace_shape& shape, int element, const vec2f& uv) {
-  auto z = shape.normals.empty()
-               ? eval_element_normal(shape, element)
-               : normalize(eval_shape_elem(
-                     shape, shape.quadsnorm, shape.normals, element, uv));
-  if (shape.tangents.empty()) {
-    auto tangents = eval_element_tangents(shape, element, uv);
-    auto x        = orthonormalize(tangents.first, z);
-    auto y        = normalize(cross(z, x));
-    return {{x, y, z}, dot(y, tangents.second) < 0};
-  } else {
-    auto tangsp = eval_shape_elem(shape, {}, shape.tangents, element, uv);
-    auto x      = orthonormalize(xyz(tangsp), z);
-    auto y      = normalize(cross(z, x));
-    return {{x, y, z}, tangsp.w < 0};
-  }
-}
-
 // Check texture size
 static vec2i texture_size(const trace_texture& texture) {
   if (!texture.hdr.empty()) {
@@ -782,9 +762,27 @@ static trace_point eval_point(const trace_scene& scene,
                               shape.texcoords, element, uv);
     auto normalmap =
         -1 + 2 * xyz(eval_texture(scene, material.normal_tex, texcoord, true));
-    auto basis = eval_tangent_basis(shape, element, uv);
-    normalmap.y *= basis.second ? 1 : -1;  // flip vertical axis
-    auto normal  = normalize(basis.first * normalmap);
+  auto z = shape.normals.empty()
+               ? eval_element_normal(shape, element)
+               : normalize(eval_shape_elem(
+                     shape, shape.quadsnorm, shape.normals, element, uv));
+    auto basis = identity3x3f;
+    auto flip_v = false;
+    if (shape.tangents.empty()) {
+      auto tangents = eval_element_tangents(shape, element, uv);
+      auto x        = orthonormalize(tangents.first, z);
+      auto y        = normalize(cross(z, x));
+      basis = {x, y, z};
+      flip_v = dot(y, tangents.second) < 0;
+    } else {
+      auto tangsp = eval_shape_elem(shape, {}, shape.tangents, element, uv);
+      auto x      = orthonormalize(xyz(tangsp), z);
+      auto y      = normalize(cross(z, x));
+      basis = {x, y, z};
+      flip_v = tangsp.w < 0;
+    }
+    normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
+    auto normal  = normalize(basis * normalmap);
     point.normal = transform_normal(
         instance.frame, normal, trace_non_rigid_frames);
     if (material.thin && dot(point.outgoing, point.normal) < 0)
