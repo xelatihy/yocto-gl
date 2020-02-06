@@ -39,13 +39,10 @@ cameras:
 textures:
   - name: floor
     filename: textures/test-floor.png
-    preset: test-floor
   - name: uvgrid
     filename: textures/test-uvgrid.png
-    preset: test-uvgrid
   - name: sunsky
     filename: textures/test-sunsky.hdr
-    preset: test-sunsky
 shapes:
   - name: floor
     shape: shapes/test-floor.ply
