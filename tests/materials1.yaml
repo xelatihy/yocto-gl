@@ -56,34 +56,29 @@ shapes:
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: sphere-plastic-sharp
     shape: shapes/sphere.ply
-    preset: test-sphere
     specular: 1
     base: [0.5, 0.5, 0.7]
     roughness: 0.01
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: sphere-plastic-rough
     shape: shapes/sphere.ply
-    preset: test-sphere
     specular: 1
     base: [0.5, 0.7, 0.5]
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: sphere-matte
     shape: shapes/sphere.ply
-    preset: test-sphere
     base: [0.7, 0.7, 0.7]
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere-metal-sharp
     shape: shapes/sphere.ply
-    preset: test-sphere
     base: [0.7, 0.7, 0.7]
     metallic: 1
     roughness: 0
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: sphere-metal-rough
     shape: shapes/sphere.ply
-    preset: test-sphere
     base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2

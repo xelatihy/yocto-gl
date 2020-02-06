@@ -56,7 +56,6 @@ shapes:
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: sphere-volume-cloud
     shape: shapes/sphere.ply
-    preset: test-sphere
     base: [0.65, 0.65, 0.65]
     transmission: 1
     scattering: [0.9, 0.9, 0.9]
@@ -64,7 +63,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: sphere-volume-glass
     shape: shapes/sphere.ply
-    preset: test-sphere
     specular: 1
     roughness: 0
     transmission: 1
@@ -74,7 +72,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: sphere-volume-jade
     shape: shapes/sphere.ply
-    preset: test-sphere
     specular: 1
     roughness: 0
     transmission: 1
@@ -84,7 +81,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere-volume-emissive
     shape: shapes/sphere.ply
-    preset: test-sphere
     transmission: 1
     base: [0.95, 0.95, 0.95]
     # volemission: [15, 15, 10]
@@ -93,7 +89,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: sphere-volume-smoke
     shape: shapes/sphere.ply
-    preset: test-sphere
     transmission: 1
     base: [0.5, 0.5, 0.5]
     scattering: [0.2, 0.2, 0.2]

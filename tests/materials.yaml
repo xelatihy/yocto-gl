@@ -51,12 +51,10 @@ shapes:
     base_tex: floor
   - name: largearealight1
     shape: shapes/largearealight1.ply
-    preset: test-largearealight1
     emission: [10, 10, 10]
     lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: largearealight2
     shape: shapes/largearealight2.ply
-    preset: test-largearealight2
     emission: [10, 10, 10]
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: bunny-plastic-sharp

@@ -78,7 +78,6 @@ shapes:
   - name: sphere-volume-glass
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
     shape: shapes/sphere.ply
-    preset: test-sphere
     base: [1, 0.5, 0.5]
     roughness: 0
     specular: 1
@@ -88,7 +87,6 @@ shapes:
   - name: sphere-plastic-rough-bumped
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
     shape: shapes/sphere.ply
-    preset: test-sphere
     base: [0.5, 0.7, 0.5]
     specular: 1
     roughness: 0.2

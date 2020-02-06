@@ -57,7 +57,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: sphere-plastic-sharp
     shape: shapes/sphere.ply
-    preset: test-sphere
     specular: 1
     base: [0.5, 0.5, 0.7]
     roughness: 0.01
@@ -70,7 +69,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere-plastic-rough
     shape: shapes/sphere.ply
-    preset: test-sphere
     specular: 1
     base: [0.5, 0.7, 0.5]
     roughness: 0.2

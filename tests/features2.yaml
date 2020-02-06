@@ -62,7 +62,6 @@ shapes:
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: sphere-uvgrid
     shape: shapes/sphere.ply
-    preset: test-sphere
     base: [1, 1, 1]
     specular: 1
     roughness: 0.1
@@ -80,7 +79,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: hairball1-hair
     shape: shapes/hairball1.ply
-    preset: test-hairball1
     base: [0.7, 0.7, 0.7]
     specular: 0
     roughness: 1
@@ -103,9 +101,8 @@ shapes:
     roughness: 0.1
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: hairball-interior-hair
-    shape: shapes/hairball-interior.ply
-    preset: test-hairball-interior
+  - name: hairballi-hair
+    shape: shapes/hairballi.ply
     base: [0.7, 0.7, 0.7]
     specular: 0
     roughness: 1

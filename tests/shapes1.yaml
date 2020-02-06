@@ -50,17 +50,14 @@ shapes:
     base_tex: floor
   - name: arealight1
     shape: shapes/arealight1.ply
-    preset: test-arealight1
     emission: [20, 20, 20]
     lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: arealight2
     shape: shapes/arealight2.ply
-    preset: test-arealight2
     emission: [20, 20, 20]
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: sphere-uvgrid
     shape: shapes/sphere.ply
-    preset: test-sphere
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
