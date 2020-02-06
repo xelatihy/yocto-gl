@@ -968,6 +968,24 @@ static void load_yaml_scene(
     }
   };
 
+  // parse yaml reference
+  auto get_yaml_texture = [&scene, &tmap](const yaml_element& yelment, const string& name,
+                          int& value) {
+    auto filename = ""s;
+    get_yaml_value(yelment, name, filename);
+    if (filename == "") {
+      value = -1;
+    } else {
+      if (tmap.find(filename) == tmap.end()) {
+        auto& texture = scene.textures.emplace_back();
+        texture.name = get_basename(filename);
+        texture.filename = filename;
+        tmap[filename] = (int)scene.textures.size()-1;
+      }
+      value = tmap.at(filename);
+    }
+  };
+
   // parse yaml reference copy
   auto get_yaml_refcopy = [](const yaml_element& yelment, const string& name,
                           auto& value, const auto& values, 
@@ -1018,25 +1036,6 @@ static void load_yaml_scene(
           camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
           camera.focus = length(lookat.x - lookat.y);
         }
-      } else if (yelement.name == "textures") {
-        auto& texture = scene.textures.emplace_back();
-        get_yaml_value(yelement, "name", texture.name);
-        get_yaml_value(yelement, "filename", texture.filename);
-        if (has_yaml_value(yelement, "preset")) {
-          auto preset = ""s;
-          get_yaml_value(yelement, "preset", preset);
-          make_image_preset(texture.hdr, texture.ldr, preset);
-          if (texture.filename.empty()) {
-            texture.filename = "textures/ypreset-" + preset +
-                               (texture.hdr.empty() ? ".png" : ".hdr");
-          }
-        }
-        if (has_yaml_value(yelement, "uri")) {
-          get_yaml_value(yelement, "uri", texture.filename);
-          texture.name           = get_basename(texture.filename);
-          tmap[texture.filename] = (int)scene.textures.size() - 1;
-        }
-        tmap[texture.name] = (int)scene.textures.size() - 1;
       } else if (yelement.name == "materials") {
         auto& material = materials.emplace_back();
         auto name = ""s;
@@ -1055,16 +1054,16 @@ static void load_yaml_scene(
         get_yaml_value(yelement, "radius", material.radius);
         get_yaml_value(yelement, "opacity", material.opacity);
         get_yaml_value(yelement, "coat", material.coat);
-        get_yaml_ref(yelement, "emission_tex", material.emission_tex, tmap);
-        get_yaml_ref(yelement, "base_tex", material.base_tex, tmap);
-        get_yaml_ref(yelement, "metallic_tex", material.metallic_tex, tmap);
-        get_yaml_ref(yelement, "specular_tex", material.specular_tex, tmap);
-        get_yaml_ref(
-            yelement, "transmission_tex", material.transmission_tex, tmap);
-        get_yaml_ref(yelement, "roughness_tex", material.roughness_tex, tmap);
-        get_yaml_ref(yelement, "scattering_tex", material.scattering_tex, tmap);
-        get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap);
-        get_yaml_ref(yelement, "normal_tex", material.normal_tex, tmap);
+        get_yaml_texture(yelement, "emission_tex", material.emission_tex);
+        get_yaml_texture(yelement, "base_tex", material.base_tex);
+        get_yaml_texture(yelement, "metallic_tex", material.metallic_tex);
+        get_yaml_texture(yelement, "specular_tex", material.specular_tex);
+        get_yaml_texture(
+            yelement, "transmission_tex", material.transmission_tex);
+        get_yaml_texture(yelement, "roughness_tex", material.roughness_tex);
+        get_yaml_texture(yelement, "scattering_tex", material.scattering_tex);
+        get_yaml_texture(yelement, "normal_tex", material.normal_tex);
+        get_yaml_texture(yelement, "normal_tex", material.normal_tex);
         get_yaml_value(yelement, "gltf_textures", material.gltf_textures);
         if (has_yaml_value(yelement, "uri")) {
           get_yaml_value(yelement, "uri", name);
@@ -1107,16 +1106,16 @@ static void load_yaml_scene(
         get_yaml_value(yelement, "radius", shape.material.radius);
         get_yaml_value(yelement, "opacity", shape.material.opacity);
         get_yaml_value(yelement, "coat", shape.material.coat);
-        get_yaml_ref(yelement, "emission_tex", shape.material.emission_tex, tmap);
-        get_yaml_ref(yelement, "base_tex", shape.material.base_tex, tmap);
-        get_yaml_ref(yelement, "metallic_tex", shape.material.metallic_tex, tmap);
-        get_yaml_ref(yelement, "specular_tex", shape.material.specular_tex, tmap);
-        get_yaml_ref(
-            yelement, "transmission_tex", shape.material.transmission_tex, tmap);
-        get_yaml_ref(yelement, "roughness_tex", shape.material.roughness_tex, tmap);
-        get_yaml_ref(yelement, "scattering_tex", shape.material.scattering_tex, tmap);
-        get_yaml_ref(yelement, "normal_tex", shape.material.normal_tex, tmap);
-        get_yaml_ref(yelement, "normal_tex", shape.material.normal_tex, tmap);
+        get_yaml_texture(yelement, "emission_tex", shape.material.emission_tex);
+        get_yaml_texture(yelement, "base_tex", shape.material.base_tex);
+        get_yaml_texture(yelement, "metallic_tex", shape.material.metallic_tex);
+        get_yaml_texture(yelement, "specular_tex", shape.material.specular_tex);
+        get_yaml_texture(
+            yelement, "transmission_tex", shape.material.transmission_tex);
+        get_yaml_texture(yelement, "roughness_tex", shape.material.roughness_tex);
+        get_yaml_texture(yelement, "scattering_tex", shape.material.scattering_tex);
+        get_yaml_texture(yelement, "normal_tex", shape.material.normal_tex);
+        get_yaml_texture(yelement, "normal_tex", shape.material.normal_tex);
         get_yaml_value(yelement, "gltf_textures", shape.material.gltf_textures);
         if (has_yaml_value(yelement, "uri")) {
           get_yaml_value(yelement, "uri", shape.filename);
@@ -1169,7 +1168,7 @@ static void load_yaml_scene(
         get_yaml_value(yelement, "name", environment.name);
         get_yaml_value(yelement, "frame", environment.frame);
         get_yaml_value(yelement, "emission", environment.emission);
-        get_yaml_ref(yelement, "emission_tex", environment.emission_tex, tmap);
+        get_yaml_texture(yelement, "emission_tex", environment.emission_tex);
         if (has_yaml_value(yelement, "uri")) {
           auto uri = ""s;
           get_yaml_value(yelement, "uri", uri);
