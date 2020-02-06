@@ -43,22 +43,19 @@ textures:
     filename: textures/sky.hdr
 shapes:
   - name: floor
-    shape: shapes/test-floor.ply
-    preset: test-floor
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
     base_tex: floor
   - name: largearealight1
-    shape: shapes/test-largearealight1.ply
-    preset: test-largearealight1
+    shape: shapes/largearealight1.ply
     emission: [10, 10, 10]
     lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: largearealight2
-    shape: shapes/test-largearealight2.ply
-    preset: test-largearealight2
+    shape: shapes/largearealight2.ply
     emission: [10, 10, 10]
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
   - name: sphere-glass-sharp
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     base: [1, 1, 1]
     specular: 1
@@ -67,7 +64,7 @@ shapes:
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: sphere-glass-rough
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     specular: 1
     base: [1, 0.7, 0.7]
@@ -76,14 +73,14 @@ shapes:
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: sphere-transparent
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     base: [0.7, 0.5, 0.5]
     roughness: 1
     opacity: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere-thinglass-sharp
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     specular: 1
     base: [1, 1, 1]
@@ -92,7 +89,7 @@ shapes:
     thin: true
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: sphere-thinglass-rough
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     specular: 1
     base: [1, 0.7, 0.7]
@@ -101,7 +98,7 @@ shapes:
     thin: true
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
   - name: bunny-glass-sharp
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     base: [1, 1, 1]
     specular: 1
     transmission: 1
@@ -109,7 +106,7 @@ shapes:
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
   - name: bunny-glass-rough
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     specular: 1
     base: [1, 0.7, 0.7]
     transmission: 1
@@ -117,13 +114,13 @@ shapes:
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
   - name: bunny-transparent
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     base: [0.7, 0.5, 0.5]
     roughness: 1
     opacity: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
   - name: bunny-thinglass-sharp
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     specular: 1
     base: [1, 1, 1]
     transmission: 1
@@ -131,7 +128,7 @@ shapes:
     thin: true
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
   - name: bunny-thinglass-rough
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     specular: 1
     base: [1, 0.7, 0.7]
     transmission: 1

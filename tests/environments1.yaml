@@ -45,39 +45,38 @@ textures:
     filename: textures/sunsky.hdr
 shapes:
   - name: floor
-    shape: shapes/test-floor.ply
-    preset: test-floor
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
     base_tex: floor
   - name: bunny-uvgrid
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: sphere-plastic-sharp
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     specular: 1
     base: [0.5, 0.5, 0.7]
     roughness: 0.01
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: bunny-metal-rough
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere-plastic-rough
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     specular: 1
     base: [0.5, 0.7, 0.5]
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: bunny-metal-sharp
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     base: [0.7, 0.7, 0.7]
     metallic: 1
     roughness: 0

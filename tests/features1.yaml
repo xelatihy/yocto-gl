@@ -48,14 +48,13 @@ textures:
     filename: textures/sky.hdr
 shapes:
   - name: floor
-    shape: shapes/test-floor.ply
-    preset: test-floor
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
     base_tex: floor
     specular: 0
   - name: bunny-uvgrid-coated
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     base: [1, 1, 1]
     specular: 1
     roughness: 0.2
@@ -63,7 +62,7 @@ shapes:
     base_tex: uvgrid
   - name: bunny-volume-jade
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     base: [0.5, 0.5, 0.5]
     roughness: 0
     specular: 1
@@ -72,13 +71,13 @@ shapes:
     thin: false
   - name: bunny-metal-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
   - name: sphere-volume-glass
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     base: [1, 0.5, 0.5]
     roughness: 0
@@ -88,7 +87,7 @@ shapes:
     thin: false
   - name: sphere-plastic-rough-bumped
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     base: [0.5, 0.7, 0.5]
     specular: 1
@@ -96,13 +95,11 @@ shapes:
     normal_tex: bumps-normal
   - name: arealight1
     lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-    shape: shapes/test-arealight1.ply
-    preset: test-arealight1
+    shape: shapes/arealight1.ply
     emission: [20, 20, 20]
   - name: arealight2
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-    shape: shapes/test-arealight2.ply
-    preset: test-arealight2
+    shape: shapes/arealight2.ply
     emission: [20, 20, 20]
 environments:
   - name: sky

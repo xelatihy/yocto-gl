@@ -48,22 +48,21 @@ textures:
     filename: textures/sky.hdr
 shapes:
   - name: floor
-    shape: shapes/test-floor.ply
-    preset: test-floor
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
     base_tex: floor
   - name: arealight1
-    shape: shapes/test-arealight1.ply
+    shape: shapes/arealight1.ply
     preset: test-arealight1
     emission: [20, 20, 20]
     lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: arealight2
-    shape: shapes/test-arealight2.ply
+    shape: shapes/arealight2.ply
     preset: test-arealight2
     emission: [20, 20, 20]
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: cube-subdiv-uvgrid
-    shape: shapes/test-cube-subdiv.obj
+    shape: shapes/cube-subdiv.obj
     preset: test-cube-subdiv
     subdivisions: 4
     catmullclark: true
@@ -75,7 +74,7 @@ shapes:
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: suzanne-subdiv-plastic-sharp
-    shape: shapes/test-suzanne-subdiv.obj
+    shape: shapes/suzanne-subdiv.obj
     preset: test-suzanne-subdiv
     subdivisions: 2
     catmullclark: true
@@ -85,7 +84,7 @@ shapes:
     roughness: 0.01
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: sphere-displaced-matte
-    shape: shapes/test-sphere-displaced.obj
+    shape: shapes/sphere-displaced.obj
     preset: test-sphere-displaced
     facevarying: true
     displacement: 0.025
@@ -94,14 +93,14 @@ shapes:
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: bunny-uvgrid
-    shape: shapes/test-bunny.obj
+    shape: shapes/bunny.obj
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: teapot-uvgrid
-    shape: shapes/test-teapot.obj
+    shape: shapes/teapot.obj
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
@@ -109,14 +108,14 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 subdivs:
   - name: sphere-displaced
-    subdiv: shapes/test-sphere-displaced.obj
+    subdiv: shapes/sphere-displaced.obj
     preset: test-sphere-displaced
     shape: sphere-displaced-matte
     facevarying: true
     displacement: 0.025
     displacement_tex: bumps-displacement
   - name: cube-subdiv
-    subdiv: shapes/test-cube-subdiv.obj
+    subdiv: shapes/cube-subdiv.obj
     preset: test-cube-subdiv
     shape: cube-subdiv-uvgrid
     subdivisions: 4
@@ -124,7 +123,7 @@ subdivs:
     smooth: false
     facevarying: true
   - name: suzanne-subdiv
-    subdiv: shapes/test-suzanne-subdiv.obj
+    subdiv: shapes/suzanne-subdiv.obj
     preset: test-suzanne-subdiv
     shape: suzanne-subdiv-plastic-sharp
     subdivisions: 2

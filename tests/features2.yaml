@@ -48,23 +48,20 @@ textures:
     filename: textures/sky.hdr
 shapes:
   - name: floor
-    shape: shapes/test-floor.ply
-    preset: test-floor
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
     base_tex: floor
     specular: 0
   - name: arealight1
-    shape: shapes/test-arealight1.ply
-    preset: test-arealight1
+    shape: shapes/arealight1.ply
     emission: [20, 20, 20]
     lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: arealight2
-    shape: shapes/test-arealight2.ply
-    preset: test-arealight2
+    shape: shapes/arealight2.ply
     emission: [20, 20, 20]
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: sphere-uvgrid
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     base: [1, 1, 1]
     specular: 1
@@ -72,7 +69,7 @@ shapes:
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: suzanne-subdiv-plastic-rough
-    shape: shapes/test-suzanne-subdiv.obj
+    shape: shapes/suzanne-subdiv.obj
     preset: test-suzanne-subdiv
     subdivisions: 2
     catmullclark: true
@@ -82,14 +79,14 @@ shapes:
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: hairball1-hair
-    shape: shapes/test-hairball1.ply
+    shape: shapes/hairball1.ply
     preset: test-hairball1
     base: [0.7, 0.7, 0.7]
     specular: 0
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere-displaced-plastic-rough
-    shape: shapes/test-sphere-displaced.obj
+    shape: shapes/sphere-displaced.obj
     preset: test-sphere-displaced
     facevarying: true
     displacement: 0.025
@@ -99,7 +96,7 @@ shapes:
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: cube-uvgrid
-    shape: shapes/test-cube.ply
+    shape: shapes/cube.ply
     preset: test-cube
     base: [1, 1, 1]
     specular: 1
@@ -107,7 +104,7 @@ shapes:
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
   - name: hairball-interior-hair
-    shape: shapes/test-hairball-interior.ply
+    shape: shapes/hairball-interior.ply
     preset: test-hairball-interior
     base: [0.7, 0.7, 0.7]
     specular: 0
@@ -115,14 +112,14 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
 subdivs:
   - name: sphere-displaced
-    subdiv: shapes/test-sphere-displaced.obj
+    subdiv: shapes/sphere-displaced.obj
     preset: test-sphere-displaced
     shape: sphere-displaced-plastic-rough
     facevarying: true
     displacement: 0.025
     displacement_tex: bumps-displacement
   - name: suzanne-subdiv
-    subdiv: shapes/test-suzanne-subdiv.obj
+    subdiv: shapes/suzanne-subdiv.obj
     preset: test-suzanne-subdiv
     shape: suzanne-subdiv-plastic-rough
     subdivisions: 2

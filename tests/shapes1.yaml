@@ -45,22 +45,21 @@ textures:
     filename: textures/sky.hdr
 shapes:
   - name: floor
-    shape: shapes/test-floor.ply
-    preset: test-floor
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
     base_tex: floor
   - name: arealight1
-    shape: shapes/test-arealight1.ply
+    shape: shapes/arealight1.ply
     preset: test-arealight1
     emission: [20, 20, 20]
     lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: arealight2
-    shape: shapes/test-arealight2.ply
+    shape: shapes/arealight2.ply
     preset: test-arealight2
     emission: [20, 20, 20]
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: sphere-uvgrid
-    shape: shapes/test-sphere.ply
+    shape: shapes/sphere.ply
     preset: test-sphere
     specular: 1
     base: [1, 1, 1]
@@ -68,7 +67,7 @@ shapes:
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: uvsphere-flipcap-uvgrid
-    shape: shapes/test-uvsphere-flipcap.ply
+    shape: shapes/uvsphere-flipcap.ply
     preset: test-uvsphere-flipcap
     specular: 1
     base: [1, 1, 1]
@@ -76,7 +75,7 @@ shapes:
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: disk-uvgrid
-    shape: shapes/test-disk.ply
+    shape: shapes/disk.ply
     preset: test-disk
     specular: 1
     base: [1, 1, 1]
@@ -84,7 +83,7 @@ shapes:
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: uvcylinder-uvgrid
-    shape: shapes/test-uvcylinder.ply
+    shape: shapes/uvcylinder.ply
     preset: test-uvcylinder
     specular: 1
     base: [1, 1, 1]
@@ -92,7 +91,7 @@ shapes:
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: cube-uvgrid
-    shape: shapes/test-cube.ply
+    shape: shapes/cube.ply
     preset: test-cube
     specular: 1
     base: [1, 1, 1]
