@@ -1171,6 +1171,31 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
         get_yaml_value(yelement, "name", shape.name);
         get_yaml_value(yelement, "filename", shape.filename);
         get_yaml_refcopy(yelement, "material", shape.material, materials, mmap);
+        get_yaml_value(yelement, "emission", shape.material.emission);
+        get_yaml_value(yelement, "base", shape.material.base);
+        get_yaml_value(yelement, "metallic", shape.material.metallic);
+        get_yaml_value(yelement, "specular", shape.material.specular);
+        get_yaml_value(yelement, "roughness", shape.material.roughness);
+        get_yaml_value(yelement, "coat", shape.material.coat);
+        get_yaml_value(yelement, "transmission", shape.material.transmission);
+        get_yaml_value(yelement, "thin", shape.material.thin);
+        get_yaml_value(yelement, "ior", shape.material.ior);
+        get_yaml_value(yelement, "scattering", shape.material.scattering);
+        get_yaml_value(yelement, "phaseg", shape.material.phaseg);
+        get_yaml_value(yelement, "radius", shape.material.radius);
+        get_yaml_value(yelement, "opacity", shape.material.opacity);
+        get_yaml_value(yelement, "coat", shape.material.coat);
+        get_yaml_ref(yelement, "emission_tex", shape.material.emission_tex, tmap);
+        get_yaml_ref(yelement, "base_tex", shape.material.base_tex, tmap);
+        get_yaml_ref(yelement, "metallic_tex", shape.material.metallic_tex, tmap);
+        get_yaml_ref(yelement, "specular_tex", shape.material.specular_tex, tmap);
+        get_yaml_ref(
+            yelement, "transmission_tex", shape.material.transmission_tex, tmap);
+        get_yaml_ref(yelement, "roughness_tex", shape.material.roughness_tex, tmap);
+        get_yaml_ref(yelement, "scattering_tex", shape.material.scattering_tex, tmap);
+        get_yaml_ref(yelement, "normal_tex", shape.material.normal_tex, tmap);
+        get_yaml_ref(yelement, "normal_tex", shape.material.normal_tex, tmap);
+        get_yaml_value(yelement, "gltf_textures", shape.material.gltf_textures);
         if (has_yaml_value(yelement, "uri")) {
           get_yaml_value(yelement, "uri", shape.filename);
           shape.name           = get_basename(shape.filename);
@@ -1669,49 +1694,41 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
   }
 
   for (auto& shape : scene.shapes) {
-    auto& material = shape.material;
-    auto& yelement = yaml.elements.emplace_back();
-    yelement.name  = "materials";
-    add_yaml_value(yelement, "name", shape.name);
-    add_yaml_value(yelement, "emission", material.emission);
-    add_yaml_value(yelement, "base", material.base);
-    add_yaml_value(yelement, "specular", material.specular);
-    add_yaml_value(yelement, "metallic", material.metallic);
-    add_yaml_value(yelement, "coat", material.coat);
-    add_yaml_value(yelement, "transmission", material.transmission);
-    add_yaml_value(yelement, "roughness", material.roughness);
-    add_yaml_value(yelement, "thin", material.thin);
-    add_yaml_value(yelement, "ior", material.ior);
-    add_yaml_value(yelement, "scattering", material.scattering);
-    add_yaml_value(yelement, "phaseg", material.phaseg);
-    add_yaml_value(yelement, "radius", material.radius);
-    add_yaml_value(yelement, "opacity", material.opacity);
-    add_yaml_ref(
-        yelement, "emission_tex", material.emission_tex, scene.textures);
-    add_yaml_ref(yelement, "base_tex", material.base_tex, scene.textures);
-    add_yaml_ref(
-        yelement, "metallic_tex", material.metallic_tex, scene.textures);
-    add_yaml_ref(
-        yelement, "specular_tex", material.specular_tex, scene.textures);
-    add_yaml_ref(
-        yelement, "roughness_tex", material.roughness_tex, scene.textures);
-    add_yaml_ref(yelement, "transmission_tex", material.transmission_tex,
-        scene.textures);
-    add_yaml_ref(
-        yelement, "scattering_tex", material.scattering_tex, scene.textures);
-    add_yaml_ref(yelement, "coat_tex", material.coat_tex, scene.textures);
-    add_yaml_ref(yelement, "opacity_tex", material.opacity_tex, scene.textures);
-    add_yaml_ref(yelement, "normal_tex", material.normal_tex, scene.textures);
-    if (material.gltf_textures)
-      add_yaml_value(yelement, "gltf_textures", material.gltf_textures);
-  }
-
-  for (auto& shape : scene.shapes) {
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "shapes";
     add_yaml_value(yelement, "name", shape.name);
     add_yaml_value(yelement, "filename", shape.filename);
-    add_yaml_value(yelement, "material", shape.name);
+    add_yaml_value(yelement, "emission", shape.material.emission);
+    add_yaml_value(yelement, "base", shape.material.base);
+    add_yaml_value(yelement, "specular", shape.material.specular);
+    add_yaml_value(yelement, "metallic", shape.material.metallic);
+    add_yaml_value(yelement, "coat", shape.material.coat);
+    add_yaml_value(yelement, "transmission", shape.material.transmission);
+    add_yaml_value(yelement, "roughness", shape.material.roughness);
+    add_yaml_value(yelement, "thin", shape.material.thin);
+    add_yaml_value(yelement, "ior", shape.material.ior);
+    add_yaml_value(yelement, "scattering", shape.material.scattering);
+    add_yaml_value(yelement, "phaseg", shape.material.phaseg);
+    add_yaml_value(yelement, "radius", shape.material.radius);
+    add_yaml_value(yelement, "opacity", shape.material.opacity);
+    add_yaml_ref(
+        yelement, "emission_tex", shape.material.emission_tex, scene.textures);
+    add_yaml_ref(yelement, "base_tex", shape.material.base_tex, scene.textures);
+    add_yaml_ref(
+        yelement, "metallic_tex", shape.material.metallic_tex, scene.textures);
+    add_yaml_ref(
+        yelement, "specular_tex", shape.material.specular_tex, scene.textures);
+    add_yaml_ref(
+        yelement, "roughness_tex", shape.material.roughness_tex, scene.textures);
+    add_yaml_ref(yelement, "transmission_tex", shape.material.transmission_tex,
+        scene.textures);
+    add_yaml_ref(
+        yelement, "scattering_tex", shape.material.scattering_tex, scene.textures);
+    add_yaml_ref(yelement, "coat_tex", shape.material.coat_tex, scene.textures);
+    add_yaml_ref(yelement, "opacity_tex", shape.material.opacity_tex, scene.textures);
+    add_yaml_ref(yelement, "normal_tex", shape.material.normal_tex, scene.textures);
+    if (shape.material.gltf_textures)
+      add_yaml_value(yelement, "gltf_textures", shape.material.gltf_textures);
   }
 
   for (auto& subdiv : scene.subdivs) {
