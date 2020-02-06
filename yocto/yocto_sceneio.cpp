@@ -838,38 +838,6 @@ void save_texture(const string& filename, const sceneio_texture& texture) {
   }
 }
 
-void load_textures(
-    const string& filename, sceneio_model& scene, bool noparallel) {
-  // load images
-  if (noparallel) {
-    for (auto& texture : scene.textures) {
-      if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-      load_texture(filename, texture);
-    }
-  } else {
-    parallel_foreach(scene.textures, [filename](sceneio_texture& texture) {
-      if (!texture.hdr.empty() || !texture.ldr.empty()) return;
-      load_texture(filename, texture);
-    });
-  }
-}
-
-// helper to save textures
-void save_textures(
-    const string& filename, const sceneio_model& scene, bool noparallel) {
-  // save images
-  if (noparallel) {
-    for (auto& texture : scene.textures) {
-      save_texture(filename, texture);
-    }
-  } else {
-    parallel_foreach(
-        scene.textures, [filename](const sceneio_texture& texture) {
-          save_texture(filename, texture);
-        });
-  }
-}
-
 void load_shape(const string& filename, sceneio_shape& shape) {
   try {
     load_shape(get_dirname(filename) + shape.filename, shape.points,
@@ -887,38 +855,6 @@ void save_shape(const string& filename, const sceneio_shape& shape) {
         shape.normals, shape.texcoords, shape.colors, shape.radius);
   } catch (std::exception& e) {
     throw_dependent_error(filename, e.what());
-  }
-}
-
-// Load json meshes
-void load_shapes(
-    const string& filename, sceneio_model& scene, bool noparallel) {
-  // load shapes
-  if (noparallel) {
-    for (auto& shape : scene.shapes) {
-      if (!shape.positions.empty()) continue;
-      load_shape(filename, shape);
-    }
-  } else {
-    parallel_foreach(scene.shapes, [filename](sceneio_shape& shape) {
-      if (!shape.positions.empty()) return;
-      load_shape(filename, shape);
-    });
-  }
-}
-
-// Save json meshes
-void save_shapes(
-    const string& filename, const sceneio_model& scene, bool noparallel) {
-  // save shapes
-  if (noparallel) {
-    for (auto& shape : scene.shapes) {
-      save_shape(filename, shape);
-    }
-  } else {
-    parallel_foreach(scene.shapes, [&filename](const sceneio_shape& shape) {
-      save_shape(filename, shape);
-    });
   }
 }
 
@@ -967,21 +903,6 @@ void load_subdivs(
     parallel_foreach(scene.subdivs, [filename](sceneio_subdiv& subdiv) {
       if (!subdiv.positions.empty()) return;
       load_subdiv(filename, subdiv);
-    });
-  }
-}
-
-// Save json meshes
-void save_subdivs(
-    const string& filename, const sceneio_model& scene, bool noparallel) {
-  // save shapes
-  if (noparallel) {
-    for (auto& subdiv : scene.subdivs) {
-      save_subdiv(filename, subdiv);
-    }
-  } else {
-    parallel_foreach(scene.subdivs, [&filename](const sceneio_subdiv& subdiv) {
-      save_subdiv(filename, subdiv);
     });
   }
 }
@@ -1634,10 +1555,20 @@ static void load_yaml_scene(
   // Parse yaml
   load_yaml(filename, scene, noparallel);
 
-  // load shape and textures
-  load_shapes(filename, scene, noparallel);
+  // load shapes
+  for (auto& shape : scene.shapes) {
+    if (!shape.positions.empty()) continue;
+    load_shape(filename, shape);
+  }
+
+  // load subdivs
   load_subdivs(filename, scene, noparallel);
-  load_textures(filename, scene, noparallel);
+
+  // load textures
+  for (auto& texture : scene.textures) {
+    if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
+    load_texture(filename, texture);
+  }
 
   // fix scene
   scene.name = get_basename(filename);
@@ -1760,9 +1691,21 @@ static void save_yaml_scene(
     const string& filename, const sceneio_model& scene, bool noparallel) {
   // save yaml file
   save_yaml(filename, scene);
-  save_shapes(filename, scene, noparallel);
-  save_subdivs(filename, scene, noparallel);
-  save_textures(filename, scene, noparallel);
+
+  // save shapes
+  for (auto& shape : scene.shapes) {
+    save_shape(filename, shape);
+  }
+
+  // save subdivs
+  for (auto& subdiv : scene.subdivs) {
+    save_subdiv(filename, subdiv);
+  }
+
+  // save textures
+  for (auto& texture : scene.textures) {
+    save_texture(filename, texture);
+  }
 }
 
 }  // namespace yocto
@@ -1891,7 +1834,12 @@ static void load_obj_scene(
     const string& filename, sceneio_model& scene, bool noparallel) {
   // Parse obj
   load_obj(filename, scene);
-  load_textures(filename, scene, noparallel);
+
+  // load textures
+  for (auto& texture : scene.textures) {
+    if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
+    load_texture(filename, texture);
+  }
 
   // fix scene
   scene.name = get_basename(filename);
@@ -2014,7 +1962,11 @@ static void save_obj(
 static void save_obj_scene(const string& filename, const sceneio_model& scene,
     bool instances, bool noparallel) {
   save_obj(filename, scene, instances);
-  save_textures(filename, scene, noparallel);
+
+  // save textures
+  for (auto& texture : scene.textures) {
+    save_texture(filename, texture);
+  }
 }
 
 void print_obj_camera(const sceneio_camera& camera) {
@@ -2174,7 +2126,12 @@ static void load_gltf_scene(
     const string& filename, sceneio_model& scene, bool noparallel) {
   // load gltf
   load_gltf(filename, scene);
-  load_textures(filename, scene, noparallel);
+
+  // load textures
+  for (auto& texture : scene.textures) {
+    if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
+    load_texture(filename, texture);
+  }
 
   // fix scene
   scene.name = get_basename(filename);
@@ -2317,8 +2274,18 @@ static void load_pbrt_scene(
     const string& filename, sceneio_model& scene, bool noparallel) {
   // Parse pbrt
   load_pbrt(filename, scene, noparallel);
-  load_shapes(filename, scene, noparallel);
-  load_textures(filename, scene, noparallel);
+  
+  // load shapes
+  for (auto& shape : scene.shapes) {
+    if (!shape.positions.empty()) continue;
+    load_shape(filename, shape);
+  }
+
+  // load textures
+  for (auto& texture : scene.textures) {
+    if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
+    load_texture(filename, texture);
+  }
 
   // fix scene
   scene.name = get_basename(filename);
@@ -2406,7 +2373,9 @@ void save_pbrt_scene(
   }
 
   // save textures
-  save_textures(filename, scene, noparallel);
+  for (auto& texture : scene.textures) {
+    save_texture(filename, texture);
+  }
 }
 
 }  // namespace yocto
