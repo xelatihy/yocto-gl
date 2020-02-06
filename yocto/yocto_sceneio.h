@@ -105,7 +105,7 @@ struct sceneio_material {
   float phaseg       = 0;
   float radius       = 0.01;
   float opacity      = 1;
-  bool  thin         = false;
+  bool  thin         = true;
 
   // textures
   int  emission_tex     = -1;
