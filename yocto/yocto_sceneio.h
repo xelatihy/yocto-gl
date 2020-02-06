@@ -91,8 +91,6 @@ struct sceneio_texture {
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
 struct sceneio_material {
-  string name = "";
-
   // lobes
   vec3f emission     = {0, 0, 0};
   vec3f base         = {0, 0, 0};
@@ -132,6 +130,7 @@ struct sceneio_shape {
   // shape data
   string name     = "";
   string filename = "";
+  sceneio_material material = {};
 
   // primitives
   vector<int>   points    = {};
@@ -194,7 +193,6 @@ struct sceneio_instance {
   string  name     = "";
   frame3f frame    = identity3x4f;
   int     shape    = -1;
-  int     material = -1;
 };
 
 // Environment map.
@@ -250,7 +248,6 @@ struct sceneio_model {
   vector<sceneio_shape>       shapes       = {};
   vector<sceneio_subdiv>      subdivs      = {};
   vector<sceneio_instance>    instances    = {};
-  vector<sceneio_material>    materials    = {};
   vector<sceneio_texture>     textures     = {};
   vector<sceneio_environment> environments = {};
   vector<sceneio_node>        nodes        = {};

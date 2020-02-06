@@ -126,7 +126,7 @@ void update_lights(opengl_scene& glscene, const sceneio_model& scene) {
     if (has_max_lights(glscene)) break;
     if (instance.shape < 0) continue;
     auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
+    auto& material = shape.material;
     if (material.emission == zero3f) continue;
     auto bbox = invalidb3f;
     for (auto& p : shape.positions) bbox = merge(bbox, p);
@@ -171,7 +171,8 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
   }
 
   // materials
-  for (auto& material : scene.materials) {
+  for (auto& shape : scene.shapes) {
+    auto& material = shape.material;
     auto id = add_material(glscene);
     set_material_emission(
         glscene, id, material.emission, material.emission_tex);
@@ -212,7 +213,7 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
 
   // instances
   for (auto& instance : scene.instances) {
-    add_instance(glscene, instance.frame, instance.shape, instance.material);
+    add_instance(glscene, instance.frame, instance.shape, instance.shape);
   }
 }
 
@@ -269,9 +270,9 @@ bool draw_glwidgets_texture(
 
 bool draw_glwidgets_material(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& material = app->scene.materials[id];
+  auto& material = app->scene.shapes[id].material;
   auto  edited   = 0;
-  edited += draw_gltextinput(win, "name", material.name);
+  edited += draw_gltextinput(win, "name", app->scene.shapes[id].name);
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
   edited += draw_glcoloredit(win, "base", material.base);
   edited += draw_glslider(win, "specular", material.specular, 0, 1);
@@ -385,8 +386,6 @@ bool draw_glwidgets_instance(
   edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
   edited += draw_glcombobox(
       win, "shape", instance.shape, app->scene.shapes, true);
-  edited += draw_glcombobox(
-      win, "material", instance.material, app->scene.materials, true);
   return edited;
 }
 
@@ -513,9 +512,9 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       }
     } else if (app->selection.first == "material") {
       draw_glcombobox(
-          win, "selection##2", app->selection.second, app->scene.materials);
+          win, "selection##2", app->selection.second, app->scene.shapes);
       if (draw_glwidgets_material(win, app, app->selection.second)) {
-        auto& material = app->scene.materials[app->selection.second];
+        auto& material = app->scene.shapes[app->selection.second].material;
         set_material_emission(glscene, app->selection.second, material.emission,
             material.emission_tex);
         set_material_diffuse(glscene, app->selection.second,
@@ -580,7 +579,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       if (draw_glwidgets_instance(win, app, app->selection.second)) {
         auto& instance = app->scene.instances[app->selection.second];
         set_instance(glscene, app->selection.second, instance.frame,
-            instance.shape, instance.material);
+            instance.shape, instance.shape);
       }
     } else if (app->selection.first == "environment") {
       draw_glcombobox(

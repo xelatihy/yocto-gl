@@ -94,7 +94,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     }
   }
 
-  for (auto& iomaterial : ioscene.materials) {
+  for (auto& ioshape : ioscene.shapes) {
+    auto& iomaterial = ioshape.material;
     auto id = add_material(scene);
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
@@ -139,7 +140,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
 
   for (auto& ioinstance : ioscene.instances) {
     add_instance(
-        scene, ioinstance.frame, ioinstance.shape, ioinstance.material);
+        scene, ioinstance.frame, ioinstance.shape, ioinstance.shape);
   }
 
   for (auto& ioenvironment : ioscene.environments) {

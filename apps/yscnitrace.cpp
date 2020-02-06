@@ -112,7 +112,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
       add_texture(scene, std::move(iotexture.ldr));
     }
   }
-  for (auto& iomaterial : ioscene.materials) {
+  for (auto& ioshape : ioscene.shapes) {
+    auto& iomaterial = ioshape.material;
     auto id = add_material(scene);
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
@@ -152,7 +153,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   }
   for (auto& ioinstance : ioscene.instances) {
     add_instance(
-        scene, ioinstance.frame, ioinstance.shape, ioinstance.material);
+        scene, ioinstance.frame, ioinstance.shape, ioinstance.shape);
   }
   for (auto& ioenvironment : ioscene.environments) {
     add_environment(scene, ioenvironment.frame, ioenvironment.emission,
@@ -303,9 +304,9 @@ bool draw_glwidgets_texture(
 
 bool draw_glwidgets_material(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& material = app->ioscene.materials[id];
+  auto& material = app->ioscene.shapes[id].material;
   auto  edited   = 0;
-  edited += draw_gltextinput(win, "name", material.name);
+  edited += draw_gltextinput(win, "name", app->ioscene.shapes[id].name);
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
   edited += draw_glcoloredit(win, "base", material.base);
   edited += draw_glslider(win, "specular", material.specular, 0, 1);
@@ -411,8 +412,6 @@ bool draw_glwidgets_instance(
   edited += draw_glslider(win, "frame.o", instance.frame.o, -10, 10);
   edited += draw_glcombobox(
       win, "shape", instance.shape, app->ioscene.shapes, true);
-  edited += draw_glcombobox(
-      win, "material", instance.material, app->ioscene.materials, true);
   return edited;
 }
 
@@ -572,10 +571,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       }
     } else if (app->selection.first == "material") {
       draw_glcombobox(
-          win, "selection##2", app->selection.second, app->ioscene.materials);
+          win, "selection##2", app->selection.second, app->ioscene.shapes);
       if (draw_glwidgets_material(win, app, app->selection.second)) {
         stop_display(app);
-        auto& iomaterial = app->ioscene.materials[app->selection.second];
+        auto& iomaterial = app->ioscene.shapes[app->selection.second].material;
         set_material_emission(app->scene, app->selection.second,
             iomaterial.emission, iomaterial.emission_tex);
         set_material_base(app->scene, app->selection.second, iomaterial.base,
@@ -664,7 +663,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         stop_display(app);
         auto& ioinstance = app->ioscene.instances[app->selection.second];
         set_instance(app->scene, app->selection.second, ioinstance.frame,
-            ioinstance.shape, ioinstance.material);
+            ioinstance.shape, ioinstance.shape);
         update_bvh(app->scene, {app->selection.second}, {}, app->params);
         // TODO: maybe we should update lights for this
         reset_display(app);
