@@ -36,6 +36,10 @@ cameras:
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
+environments:
+  - name: sunsky
+    emission: [1, 1, 1]
+    emission_tex: textures/sunsky.hdr
 shapes:
   - name: floor
     shape: shapes/floor.ply
@@ -72,7 +76,3 @@ shapes:
     metallic: 1
     roughness: 0
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-environments:
-  - name: sunsky
-    emission: [1, 1, 1]
-    emission_tex: textures/sunsky.hdr
