@@ -890,23 +890,6 @@ void save_subdiv(const string& filename, const sceneio_subdiv& subdiv) {
   }
 }
 
-// Load json meshes
-void load_subdivs(
-    const string& filename, sceneio_model& scene, bool noparallel) {
-  // load shapes
-  if (noparallel) {
-    for (auto& subdiv : scene.subdivs) {
-      if (!subdiv.positions.empty()) continue;
-      load_subdiv(filename, subdiv);
-    }
-  } else {
-    parallel_foreach(scene.subdivs, [filename](sceneio_subdiv& subdiv) {
-      if (!subdiv.positions.empty()) return;
-      load_subdiv(filename, subdiv);
-    });
-  }
-}
-
 // create and cleanup names and filenames
 static string make_safe_name(
     const string& name_, const string& base, int count) {
@@ -1562,7 +1545,10 @@ static void load_yaml_scene(
   }
 
   // load subdivs
-  load_subdivs(filename, scene, noparallel);
+  for (auto& subdiv : scene.subdivs) {
+    if (!subdiv.positions.empty()) continue;
+    load_subdiv(filename, subdiv);
+  }
 
   // load textures
   for (auto& texture : scene.textures) {
@@ -2274,7 +2260,7 @@ static void load_pbrt_scene(
     const string& filename, sceneio_model& scene, bool noparallel) {
   // Parse pbrt
   load_pbrt(filename, scene, noparallel);
-  
+
   // load shapes
   for (auto& shape : scene.shapes) {
     if (!shape.positions.empty()) continue;
