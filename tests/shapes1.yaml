@@ -46,75 +46,61 @@ textures:
   - name: sky
     filename: textures/test-sky.hdr
     preset: test-sky
-materials:
+shapes:
   - name: floor
+    shape: shapes/test-floor.ply
+    preset: test-floor
     base: [0.7, 0.7, 0.7]
     base_tex: floor
-  - name: uvgrid
+  - name: arealight1
+    shape: shapes/test-arealight1.ply
+    preset: test-arealight1
+    emission: [20, 20, 20]
+    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: arealight2
+    shape: shapes/test-arealight2.ply
+    preset: test-arealight2
+    emission: [20, 20, 20]
+    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: sphere-uvgrid
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
     base_tex: uvgrid
-  - name: arealight1
-    emission: [20, 20, 20]
-  - name: arealight2
-    emission: [20, 20, 20]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: cube
-    filename: shapes/test-cube.ply
-    preset: test-cube
-  - name: disk
-    filename: shapes/test-disk.ply
-    preset: test-disk
-  - name: uvsphere-flipcap
-    filename: shapes/test-uvsphere-flipcap.ply
-    preset: test-uvsphere-flipcap
-  - name: uvcylinder
-    filename: shapes/test-uvcylinder.ply
-    preset: test-uvcylinder
-  - name: arealight1
-    filename: shapes/test-arealight1.ply
-    preset: test-arealight1
-  - name: arealight2
-    filename: shapes/test-arealight2.ply
-    preset: test-arealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: arealight1
-    shape: arealight1
-    material: arealight1
-    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: arealight2
-    shape: arealight2
-    material: arealight2
-    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_uvgrid
-    shape: sphere
-    material: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: uvsphere-flipcap_uvgrid
-    shape: uvsphere-flipcap
-    material: uvgrid
+  - name: uvsphere-flipcap-uvgrid
+    shape: shapes/test-uvsphere-flipcap.ply
+    preset: test-uvsphere-flipcap
+    specular: 1
+    base: [1, 1, 1]
+    roughness: 0.1
+    base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: disk_uvgrid
-    shape: disk
-    material: uvgrid
+  - name: disk-uvgrid
+    shape: shapes/test-disk.ply
+    preset: test-disk
+    specular: 1
+    base: [1, 1, 1]
+    roughness: 0.1
+    base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: uvcylinder_uvgrid
-    shape: uvcylinder
-    material: uvgrid
+  - name: uvcylinder-uvgrid
+    shape: shapes/test-uvcylinder.ply
+    preset: test-uvcylinder
+    specular: 1
+    base: [1, 1, 1]
+    roughness: 0.1
+    base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: cube_uvgrid
-    shape: cube
-    material: uvgrid
+  - name: cube-uvgrid
+    shape: shapes/test-cube.ply
+    preset: test-cube
+    specular: 1
+    base: [1, 1, 1]
+    roughness: 0.1
+    base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
   - name: sky

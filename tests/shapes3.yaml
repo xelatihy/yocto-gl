@@ -43,88 +43,69 @@ textures:
   - name: sky
     filename: textures/test-sky.hdr
     preset: test-sky
-materials:
-  - name: floor
-    base: [0.7, 0.7, 0.7]
-    base_tex: floor
-  - name: matte
-    base: [0.7, 0.7, 0.7]
-    roughness: 1
-  - name: hair
-    base: [0.7, 0.7, 0.7]
-    roughness: 1
-  - name: arealight1
-    emission: [20, 20, 20]
-  - name: arealight2
-    emission: [20, 20, 20]
 shapes:
   - name: floor
-    filename: shapes/test-floor.ply
+    shape: shapes/test-floor.ply
     preset: test-floor
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: hairball1
-    filename: shapes/test-hairball1.ply
-    preset: test-hairball1
-  - name: hairball2
-    filename: shapes/test-hairball2.ply
-    preset: test-hairball2
-  - name: hairball3
-    filename: shapes/test-hairball3.ply
-    preset: test-hairball3
-  - name: hairball-interior
-    filename: shapes/test-hairball-interior.ply
-    preset: test-hairball-interior
+    base: [0.7, 0.7, 0.7]
+    base_tex: floor
   - name: arealight1
-    filename: shapes/test-arealight1.ply
+    shape: shapes/test-arealight1.ply
     preset: test-arealight1
-  - name: arealight2
-    filename: shapes/test-arealight2.ply
-    preset: test-arealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: arealight1
-    shape: arealight1
-    material: arealight1
+    emission: [20, 20, 20]
     lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
   - name: arealight2
-    shape: arealight2
-    material: arealight2
+    shape: shapes/test-arealight2.ply
+    preset: test-arealight2
+    emission: [20, 20, 20]
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_matte
-    shape: sphere
-    material: matte
+  - name: sphere-matte
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
     frame: [0.5, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: hairball1_hair
-    shape: hairball1
-    material: hair
+  - name: hairball1-hair
+    shape: shapes/test-hairball1.ply
+    preset: test-hairball1
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: hairball2_hair
-    shape: hairball2
-    material: hair
+  - name: hairball2-hair
+    shape: shapes/test-hairball2.ply
+    preset: test-hairball2
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: hairball3_hair
-    shape: hairball3
-    material: hair
+  - name: hairball3-hair
+    shape: shapes/test-hairball3.ply
+    preset: test-hairball3
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere_matte
-    shape: sphere
-    material: matte
+  - name: sphere-matte
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
     frame: [0.5, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: hairball-interior_hair
-    shape: hairball-interior
-    material: hair
+  - name: hairball-interior-hair
+    shape: shapes/test-hairball-interior.ply
+    preset: test-hairball-interior
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: hairball-interior_hair
-    shape: hairball-interior
-    material: hair
+  - name: hairball-interior-hair
+    shape: shapes/test-hairball-interior.ply
+    preset: test-hairball-interior
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: hairball-interior_hair
-    shape: hairball-interior
-    material: hair
+  - name: hairball-interior-hair
+    shape: shapes/test-hairball-interior.ply
+    preset: test-hairball-interior
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
 environments:
   - name: sky

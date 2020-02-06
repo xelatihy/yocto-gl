@@ -46,63 +46,44 @@ textures:
   - name: sunsky
     filename: textures/test-sunsky.hdr
     preset: test-sunsky
-materials:
+shapes:
   - name: floor
+    shape: shapes/test-floor.ply
+    preset: test-floor
     base: [0.7, 0.7, 0.7]
     base_tex: floor
-  - name: uvgrid
+  - name: bunny-uvgrid
+    shape: shapes/test-bunny.obj
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
     base_tex: uvgrid
-  - name: plastic-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: sphere-plastic-sharp
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     specular: 1
     base: [0.5, 0.5, 0.7]
     roughness: 0.01
-  - name: plastic-rough
-    specular: 1
-    base: [0.5, 0.7, 0.5]
-    roughness: 0.2
-  - name: metal-sharp
-    base: [0.7, 0.7, 0.7]
-    metallic: 1
-    roughness: 0
-  - name: metal-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: bunny-metal-rough
+    shape: shapes/test-bunny.obj
     base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: bunny_uvgrid
-    shape: bunny
-    material: uvgrid
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere_plastic-sharp
-    shape: sphere
-    material: plastic-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: bunny_metal-rough
-    shape: bunny
-    material: metal-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere_plastic-rough
-    shape: sphere
-    material: plastic-rough
+  - name: sphere-plastic-rough
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
+    specular: 1
+    base: [0.5, 0.7, 0.5]
+    roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: bunny_metal-sharp
-    shape: bunny
-    material: metal-sharp
+  - name: bunny-metal-sharp
+    shape: shapes/test-bunny.obj
+    base: [0.7, 0.7, 0.7]
+    metallic: 1
+    roughness: 0
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 environments:
   - name: sunsky

@@ -43,99 +43,84 @@ textures:
   - name: sky
     filename: textures/test-sky.hdr
     preset: test-sky
-materials:
+shapes:
   - name: floor
+    shape: shapes/test-floor.ply
+    preset: test-floor
     base: [0.7, 0.7, 0.7]
     base_tex: floor
-  - name: matte
-    base: [0.7, 0.7, 0.7]
-    roughness: 1
-  - name: plastic-sharp
+  - name: largearealight1
+    shape: shapes/test-largearealight1.ply
+    preset: test-largearealight1
+    emission: [10, 10, 10]
+    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: largearealight2
+    shape: shapes/test-largearealight2.ply
+    preset: test-largearealight2
+    emission: [10, 10, 10]
+    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: sphere-plastic-sharp
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     specular: 1
     base: [0.5, 0.5, 0.7]
     roughness: 0.01
-  - name: plastic-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: sphere-plastic-rough
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     specular: 1
     base: [0.5, 0.7, 0.5]
     roughness: 0.2
-  - name: metal-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: sphere-matte
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: sphere-metal-sharp
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     base: [0.7, 0.7, 0.7]
     metallic: 1
     roughness: 0
-  - name: metal-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
+  - name: sphere-metal-rough
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
-  - name: largearealight1
-    emission: [10, 10, 10]
-  - name: largearealight2
-    emission: [10, 10, 10]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: largearealight1
-    filename: shapes/test-largearealight1.ply
-    preset: test-largearealight1
-  - name: largearealight2
-    filename: shapes/test-largearealight2.ply
-    preset: test-largearealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: largearealight1
-    shape: largearealight1
-    material: largearealight1
-    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: largearealight2
-    shape: largearealight2
-    material: largearealight2
-    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_plastic-sharp
-    shape: sphere
-    material: plastic-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere_plastic-rough
-    shape: sphere
-    material: plastic-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: sphere_matte
-    shape: sphere
-    material: matte
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere_metal-sharp
-    shape: sphere
-    material: metal-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere_metal-rough
-    shape: sphere
-    material: metal-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: bunny_plastic-sharp
-    shape: bunny
-    material: plastic-sharp
+  - name: bunny-plastic-sharp
+    shape: shapes/test-bunny.obj
+    specular: 1
+    base: [0.5, 0.5, 0.7]
+    roughness: 0.01
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - name: bunny_plastic-rough
-    shape: bunny
-    material: plastic-rough
+  - name: bunny-plastic-rough
+    shape: shapes/test-bunny.obj
+    specular: 1
+    base: [0.5, 0.7, 0.5]
+    roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - name: bunny_matte
-    shape: bunny
-    material: matte
+  - name: bunny-matte
+    shape: shapes/test-bunny.obj
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - name: bunny_metal-sharp
-    shape: bunny
-    material: metal-sharp
+  - name: bunny-metal-sharp
+    shape: shapes/test-bunny.obj
+    base: [0.7, 0.7, 0.7]
+    metallic: 1
+    roughness: 0
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
-  - name: bunny_metal-rough
-    shape: bunny
-    material: metal-rough
+  - name: bunny-metal-rough
+    shape: shapes/test-bunny.obj
+    base: [0.66, 0.45, 0.34]
+    metallic: 1
+    roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
 environments:
   - name: sky

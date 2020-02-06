@@ -43,111 +43,108 @@ textures:
   - name: sky
     filename: textures/test-sky.hdr
     preset: test-sky
-materials:
+shapes:
   - name: floor
+    shape: shapes/test-floor.ply
+    preset: test-floor
     base: [0.7, 0.7, 0.7]
     base_tex: floor
-  - name: volume-jade
-    specular: 1
-    roughness: 0
-    transmission: 1
-    base: [0.5, 0.5, 0.5]
-    scattering: [0.3, 0.6, 0.3]
-    thin: false
-  - name: volume-cloud
+  - name: largearealight1
+    shape: shapes/test-largearealight1.ply
+    preset: test-largearealight1
+    emission: [10, 10, 10]
+    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: largearealight2
+    shape: shapes/test-largearealight2.ply
+    preset: test-largearealight2
+    emission: [10, 10, 10]
+    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: sphere-volume-cloud
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     base: [0.65, 0.65, 0.65]
     transmission: 1
     scattering: [0.9, 0.9, 0.9]
     ior: 1
-  - name: volume-glass
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: sphere-volume-glass
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     specular: 1
     roughness: 0
     transmission: 1
     base: [1, 0.5, 0.5]
     radius: 0.02
     thin: false
-  - name: volume-smoke
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: sphere-volume-jade
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
+    specular: 1
+    roughness: 0
     transmission: 1
     base: [0.5, 0.5, 0.5]
-    scattering: [0.2, 0.2, 0.2]
-    phaseg: -0.8
-    ior: 1
-  - name: volume-emissive
+    scattering: [0.3, 0.6, 0.3]
+    thin: false
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: sphere-volume-emissive
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     transmission: 1
     base: [0.95, 0.95, 0.95]
     # volemission: [15, 15, 10]
     scattering: [0.01, 0.01, 0.01]
     ior: 1
-  - name: largearealight1
-    emission: [10, 10, 10]
-  - name: largearealight2
-    emission: [10, 10, 10]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: largearealight1
-    filename: shapes/test-largearealight1.ply
-    preset: test-largearealight1
-  - name: largearealight2
-    filename: shapes/test-largearealight2.ply
-    preset: test-largearealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: largearealight1
-    shape: largearealight1
-    material: largearealight1
-    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: largearealight2
-    shape: largearealight2
-    material: largearealight2
-    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_volume-cloud
-    shape: sphere
-    material: volume-cloud
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere_volume-glass
-    shape: sphere
-    material: volume-glass
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: sphere_volume-jade
-    shape: sphere
-    material: volume-jade
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere_volume-emissive
-    shape: sphere
-    material: volume-emissive
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere_volume-smoke
-    shape: sphere
-    material: volume-smoke
+  - name: sphere-volume-smoke
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
+    transmission: 1
+    base: [0.5, 0.5, 0.5]
+    scattering: [0.2, 0.2, 0.2]
+    phaseg: -0.8
+    ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: bunny_volume-cloud
-    shape: bunny
-    material: volume-cloud
+  - name: bunny-volume-cloud
+    shape: shapes/test-bunny.obj
+    base: [0.65, 0.65, 0.65]
+    transmission: 1
+    scattering: [0.9, 0.9, 0.9]
+    ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - name: bunny_volume-glass
-    shape: bunny
-    material: volume-glass
+  - name: bunny-volume-glass
+    shape: shapes/test-bunny.obj
+    specular: 1
+    roughness: 0
+    transmission: 1
+    base: [1, 0.5, 0.5]
+    radius: 0.02
+    thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - name: bunny_volume-jade
-    shape: bunny
-    material: volume-jade
+  - name: bunny-volume-jade
+    shape: shapes/test-bunny.obj
+    specular: 1
+    roughness: 0
+    transmission: 1
+    base: [0.5, 0.5, 0.5]
+    scattering: [0.3, 0.6, 0.3]
+    thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - name: bunny_volume-emissive
-    shape: bunny
-    material: volume-emissive
+  - name: bunny-volume-emissive
+    shape: shapes/test-bunny.obj
+    transmission: 1
+    base: [0.95, 0.95, 0.95]
+    # volemission: [15, 15, 10]
+    scattering: [0.01, 0.01, 0.01]
+    ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
-  - name: bunny_volume-smoke
-    shape: bunny
-    material: volume-smoke
+  - name: bunny-volume-smoke
+    shape: shapes/test-bunny.obj
+    transmission: 1
+    base: [0.5, 0.5, 0.5]
+    scattering: [0.2, 0.2, 0.2]
+    phaseg: -0.8
+    ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
 environments:
   - name: sky

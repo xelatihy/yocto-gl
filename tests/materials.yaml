@@ -46,218 +46,166 @@ textures:
   - name: sky
     filename: textures/test-sky.hdr
     preset: test-sky
-materials:
+shapes:
   - name: floor
+    shape: shapes/test-floor.ply
+    preset: test-floor
     base: [0.7, 0.7, 0.7]
     base_tex: floor
-  - name: matte
-    base: [0.7, 0.7, 0.7]
-    roughness: 1
-  - name: plastic-sharp
+  - name: largearealight1
+    shape: shapes/test-largearealight1.ply
+    preset: test-largearealight1
+    emission: [10, 10, 10]
+    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: largearealight2
+    shape: shapes/test-largearealight2.ply
+    preset: test-largearealight2
+    emission: [10, 10, 10]
+    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: bunny-plastic-sharp
+    shape: shapes/test-bunny.obj
     specular: 1
     base: [0.5, 0.5, 0.7]
     roughness: 0.01
-  - name: plastic-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0.2]
+  - name: bunny-plastic-rough
+    shape: shapes/test-bunny.obj
     specular: 1
     base: [0.5, 0.7, 0.5]
     roughness: 0.2
-  - name: metal-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0.2]
+  - name: bunny-matte
+    shape: shapes/test-bunny.obj
     base: [0.7, 0.7, 0.7]
-    metallic: 1
-    roughness: 0
-  - name: metal-rough
-    base: [0.66, 0.45, 0.34]
-    metallic: 1
-    roughness: 0.2
-  - name: plastic-sharp-bumped
-    specular: 1
-    base: [0.5, 0.5, 0.7]
-    roughness: 0.01
-    normal_tex: bumps-normal
-  - name: metal-sharp-bumped
-    base: [0.7, 0.7, 0.7]
-    metallic: 1
-    roughness: 0
-    normal_tex: bumps-normal
-  - name: plastic-rough-coated
-    specular: 1
-    coat: 1
-    base: [0.5, 0.7, 0.5]
-    roughness: 0.2
-  - name: metal-rough-coated
-    coat: 1
-    base: [0.66, 0.45, 0.34]
-    metallic: 1
-    roughness: 0.2
-  - name: transparent
-    base: [0.7, 0.5, 0.5]
     roughness: 1
-    opacity: 0.2
-  - name: glass-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.2]
+  - name: bunny-metal-sharp
+    shape: shapes/test-bunny.obj
+    base: [0.7, 0.7, 0.7]
+    metallic: 1
+    roughness: 0
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0.2]
+  - name: bunny-metal-rough
+    shape: shapes/test-bunny.obj
+    base: [0.66, 0.45, 0.34]
+    metallic: 1
+    roughness: 0.2
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0.2]
+  - name: bunny-glass-sharp
+    shape: shapes/test-bunny.obj
     specular: 1
     transmission: 1
     base: [1, 1, 1]
     roughness: 0
     thin: false
-  - name: glass-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: bunny-glass-rough
+    shape: shapes/test-bunny.obj
     specular: 1
     base: [1, 0.7, 0.7]
     transmission: 1
     roughness: 0.1
     thin: false
-  - name: thinglass-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: bunny-transparent
+    shape: shapes/test-bunny.obj
+    base: [0.7, 0.5, 0.5]
+    roughness: 1
+    opacity: 0.2
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: bunny-thinglass-sharp
+    shape: shapes/test-bunny.obj
     specular: 1
     base: [1, 1, 1]
     transmission: 1
     roughness: 0
     thin: true
-  - name: thinglass-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
+  - name: bunny-thinglass-rough
+    shape: shapes/test-bunny.obj
     specular: 1
     base: [1, 0.7, 0.7]
     transmission: 1
     roughness: 0.05
     thin: true
-  - name: volume-jade
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
+  - name: bunny-plastic-sharp-bumped
+    shape: shapes/test-bunny.obj
     specular: 1
+    base: [0.5, 0.5, 0.7]
+    roughness: 0.01
+    normal_tex: bumps-normal
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.2]
+  - name: bunny-plastic-rough-coated
+    shape: shapes/test-bunny.obj
+    specular: 1
+    coat: 1
+    base: [0.5, 0.7, 0.5]
+    roughness: 0.2
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.2]
+  - name: bunny-metal-sharp-bumped
+    shape: shapes/test-bunny.obj
+    base: [0.7, 0.7, 0.7]
+    metallic: 1
     roughness: 0
-    transmission: 1
-    base: [0.5, 0.5, 0.5]
-    scattering: [0.3, 0.6, 0.3]
-    thin: false
-  - name: volume-cloud
+    normal_tex: bumps-normal
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2]
+  - name: bunny-metal-rough-coated
+    shape: shapes/test-bunny.obj
+    coat: 1
+    base: [0.66, 0.45, 0.34]
+    metallic: 1
+    roughness: 0.2
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.2]
+  - name: bunny-metal-rough
+    shape: shapes/test-bunny.obj
+    base: [0.66, 0.45, 0.34]
+    metallic: 1
+    roughness: 0.2
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.2]
+  - name: bunny-volume-cloud
+    shape: shapes/test-bunny.obj
     transmission: 1
     base: [0.65, 0.65, 0.65]
     scattering: [0.9, 0.9, 0.9]
     iot: 1.001
     thin: false
-  - name: volume-glass
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
+  - name: bunny-volume-glass
+    shape: shapes/test-bunny.obj
     specular: 1
     roughness: 0
     transmission: 1
     base: [1, 0.5, 0.5]
     radius: 0.02
     thin: false
-  - name: volume-smoke
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
+  - name: bunny-volume-jade
+    shape: shapes/test-bunny.obj
+    specular: 1
+    roughness: 0
     transmission: 1
     base: [0.5, 0.5, 0.5]
-    scattering: [0.2, 0.2, 0.2]
-    phaseg: -0.8
-    ior: 1.001
+    scattering: [0.3, 0.6, 0.3]
     thin: false
-  - name: volume-emissive
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
+  - name: bunny-volume-emissive
+    shape: shapes/test-bunny.obj
     transmission: 1
     base: [0.95, 0.95, 0.95]
     # volemission: [15, 15, 10]
     scattering: [0.01, 0.01, 0.01]
     ior: 1.001
     thin: false
-  - name: largearealight1
-    emission: [10, 10, 10]
-  - name: largearealight2
-    emission: [10, 10, 10]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: largearealight1
-    filename: shapes/test-largearealight1.ply
-    preset: test-largearealight1
-  - name: largearealight2
-    filename: shapes/test-largearealight2.ply
-    preset: test-largearealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: largearealight1
-    shape: largearealight1
-    material: largearealight1
-    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: largearealight2
-    shape: largearealight2
-    material: largearealight2
-    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: bunny_plastic-sharp
-    shape: bunny
-    material: plastic-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0.2]
-  - name: bunny_plastic-rough
-    shape: bunny
-    material: plastic-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0.2]
-  - name: bunny_matte
-    shape: bunny
-    material: matte
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.2]
-  - name: bunny_metal-sharp
-    shape: bunny
-    material: metal-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0.2]
-  - name: bunny_metal-rough
-    shape: bunny
-    material: metal-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0.2]
-  - name: bunny_glass-sharp
-    shape: bunny
-    material: glass-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: bunny_glass-rough
-    shape: bunny
-    material: glass-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: bunny_transparent
-    shape: bunny
-    material: transparent
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: bunny_thinglass-sharp
-    shape: bunny
-    material: thinglass-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: bunny_thinglass-rough
-    shape: bunny
-    material: thinglass-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: bunny_plastic-sharp-bumped
-    shape: bunny
-    material: plastic-sharp-bumped
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.2]
-  - name: bunny_plastic-rough-coated
-    shape: bunny
-    material: plastic-rough-coated
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.2]
-  - name: bunny_metal-sharp-bumped
-    shape: bunny
-    material: metal-sharp-bumped
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2]
-  - name: bunny_metal-rough-coated
-    shape: bunny
-    material: metal-rough-coated
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.2]
-  - name: bunny_metal-rough
-    shape: bunny
-    material: metal-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.2]
-  - name: bunny_volume-cloud
-    shape: bunny
-    material: volume-cloud
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - name: bunny_volume-glass
-    shape: bunny
-    material: volume-glass
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - name: bunny_volume-jade
-    shape: bunny
-    material: volume-jade
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - name: bunny_volume-emissive
-    shape: bunny
-    material: volume-emissive
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
-  - name: bunny_volume-smoke
-    shape: bunny
-    material: volume-smoke
+  - name: bunny-volume-smoke
+    shape: shapes/test-bunny.obj
+    transmission: 1
+    base: [0.5, 0.5, 0.5]
+    scattering: [0.2, 0.2, 0.2]
+    phaseg: -0.8
+    ior: 1.001
+    thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
 environments:
   - name: sky

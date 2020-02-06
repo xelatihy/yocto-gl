@@ -43,108 +43,102 @@ textures:
   - name: sky
     filename: textures/test-sky.hdr
     preset: test-sky
-materials:
+shapes:
   - name: floor
+    shape: shapes/test-floor.ply
+    preset: test-floor
     base: [0.7, 0.7, 0.7]
     base_tex: floor
-  - name: transparent
-    base: [0.7, 0.5, 0.5]
-    roughness: 1
-    opacity: 0.2
-  - name: glass-sharp
+  - name: largearealight1
+    shape: shapes/test-largearealight1.ply
+    preset: test-largearealight1
+    emission: [10, 10, 10]
+    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: largearealight2
+    shape: shapes/test-largearealight2.ply
+    preset: test-largearealight2
+    emission: [10, 10, 10]
+    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: sphere-glass-sharp
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     base: [1, 1, 1]
     specular: 1
     transmission: 1
     roughness: 0
     thin: false
-  - name: glass-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: sphere-glass-rough
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     specular: 1
     base: [1, 0.7, 0.7]
-    transmission: 1 
+    transmission: 1
     roughness: 0.1
     thin: false
-  - name: thinglass-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: sphere-transparent
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
+    base: [0.7, 0.5, 0.5]
+    roughness: 1
+    opacity: 0.2
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: sphere-thinglass-sharp
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     specular: 1
     base: [1, 1, 1]
     transmission: 1
     roughness: 0
     thin: true
-  - name: thinglass-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
+  - name: sphere-thinglass-rough
+    shape: shapes/test-sphere.ply
+    preset: test-sphere
     specular: 1
     base: [1, 0.7, 0.7]
     transmission: 1
     roughness: 0.05
     thin: true
-  - name: largearealight1
-    emission: [10, 10, 10]
-  - name: largearealight2
-    emission: [10, 10, 10]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: largearealight1
-    filename: shapes/test-largearealight1.ply
-    preset: test-largearealight1
-  - name: largearealight2
-    filename: shapes/test-largearealight2.ply
-    preset: test-largearealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: largearealight1
-    shape: largearealight1
-    material: largearealight1
-    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: largearealight2
-    shape: largearealight2
-    material: largearealight2
-    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_glass-sharp
-    shape: sphere
-    material: glass-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere_glass-rough
-    shape: sphere
-    material: glass-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: sphere_transparent
-    shape: sphere
-    material: transparent
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere_thinglass-sharp
-    shape: sphere
-    material: thinglass-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere_thinglass-rough
-    shape: sphere
-    material: thinglass-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: bunny_glass-sharp
-    shape: bunny
-    material: glass-sharp
+  - name: bunny-glass-sharp
+    shape: shapes/test-bunny.obj
+    base: [1, 1, 1]
+    specular: 1
+    transmission: 1
+    roughness: 0
+    thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - name: bunny_glass-rough
-    shape: bunny
-    material: glass-rough
+  - name: bunny-glass-rough
+    shape: shapes/test-bunny.obj
+    specular: 1
+    base: [1, 0.7, 0.7]
+    transmission: 1
+    roughness: 0.1
+    thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - name: bunny_transparent
-    shape: bunny
-    material: transparent
+  - name: bunny-transparent
+    shape: shapes/test-bunny.obj
+    base: [0.7, 0.5, 0.5]
+    roughness: 1
+    opacity: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - name: bunny_thinglass-sharp
-    shape: bunny
-    material: thinglass-sharp
+  - name: bunny-thinglass-sharp
+    shape: shapes/test-bunny.obj
+    specular: 1
+    base: [1, 1, 1]
+    transmission: 1
+    roughness: 0
+    thin: true
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
-  - name: bunny_thinglass-rough
-    shape: bunny
-    material: thinglass-rough
+  - name: bunny-thinglass-rough
+    shape: shapes/test-bunny.obj
+    specular: 1
+    base: [1, 0.7, 0.7]
+    transmission: 1
+    roughness: 0.05
+    thin: true
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
 environments:
   - name: sky
