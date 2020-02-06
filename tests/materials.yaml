@@ -39,13 +39,11 @@ cameras:
 textures:
   - name: floor
     filename: textures/test-floor.png
-    preset: test-floor
   - name: bumps-normal
     filename: textures/test-bumps-normal.png
     preset: test-bumps-normal
   - name: sky
     filename: textures/test-sky.hdr
-    preset: test-sky
 shapes:
   - name: floor
     shape: shapes/test-floor.ply

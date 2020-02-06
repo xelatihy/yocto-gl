@@ -1653,7 +1653,7 @@ void load_image(const string& filename, image<vec4f>& img) {
   if (ext == ".ypreset") {
     img = make_image_preset(get_basename(filename));
     if (img.empty()) throw_preset_error(filename);
-  }
+  } else 
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
@@ -1718,8 +1718,7 @@ void load_imageb(const string& filename, image<vec4b>& img) {
   if (ext == ".ypreset") {
     img = make_image_presetb(get_basename(filename));
     if (img.empty()) throw_preset_error(filename);
-  }
-  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+  } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
       ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
