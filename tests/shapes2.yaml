@@ -38,14 +38,14 @@ cameras:
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
 textures:
   - name: floor
-    filename: textures/test-floor.png
+    filename: textures/floor.png
   - name: uvgrid
-    filename: textures/test-uvgrid.png
+    filename: textures/uvgrid.png
   - name: bumps-displacement
-    filename: textures/test-bumps-displacement.png
+    filename: textures/bumps-displacement.png
     preset: test-bumps-displacement
   - name: sky
-    filename: textures/test-sky.hdr
+    filename: textures/sky.hdr
 shapes:
   - name: floor
     shape: shapes/test-floor.ply

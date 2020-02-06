@@ -38,12 +38,12 @@ cameras:
     lookat: [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
 textures:
   - name: floor
-    filename: textures/test-floor.png
+    filename: textures/floor.png
   - name: bumps-normal
-    filename: textures/test-bumps-normal.png
+    filename: textures/bumps-normal.png
     preset: test-bumps-normal
   - name: sky
-    filename: textures/test-sky.hdr
+    filename: textures/sky.hdr
 shapes:
   - name: floor
     shape: shapes/test-floor.ply
