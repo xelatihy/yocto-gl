@@ -43,7 +43,6 @@ textures:
     filename: textures/uvgrid.png
   - name: bumps-displacement
     filename: textures/bumps-displacement.png
-    preset: test-bumps-displacement
   - name: sky
     filename: textures/sky.hdr
 shapes:

@@ -83,7 +83,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: sphere-displaced-plastic-rough
     shape: shapes/sphere-displaced.obj
-    preset: test-sphere-displaced
     facevarying: true
     displacement: 0.025
     displacement_tex: bumps-displacement
@@ -107,7 +106,6 @@ shapes:
 subdivs:
   - name: sphere-displaced
     subdiv: shapes/sphere-displaced.obj
-    preset: test-sphere-displaced
     shape: sphere-displaced-plastic-rough
     facevarying: true
     displacement: 0.025

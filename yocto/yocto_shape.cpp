@@ -3743,7 +3743,7 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
     auto ematerials = vector<int>{};
     get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
-    throw_emptyshape_error(filename);
+    if (positions.empty()) throw_emptyshape_error(filename);
   } else {
     throw_format_error(filename);
     ;
