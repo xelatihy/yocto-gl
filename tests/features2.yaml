@@ -43,7 +43,6 @@ textures:
     filename: textures/uvgrid.png
   - name: bumps-displacement
     filename: textures/bumps-displacement.png
-    preset: test-bumps-displacement
   - name: sky
     filename: textures/sky.hdr
 shapes:
@@ -69,7 +68,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: suzanne-subdiv-plastic-rough
     shape: shapes/suzanne-subdiv.obj
-    preset: test-suzanne-subdiv
     subdivisions: 2
     catmullclark: true
     smooth: true
@@ -95,7 +93,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: cube-uvgrid
     shape: shapes/cube.ply
-    preset: test-cube
     base: [1, 1, 1]
     specular: 1
     roughness: 0.1
@@ -117,7 +114,6 @@ subdivs:
     displacement_tex: bumps-displacement
   - name: suzanne-subdiv
     subdiv: shapes/suzanne-subdiv.obj
-    preset: test-suzanne-subdiv
     shape: suzanne-subdiv-plastic-rough
     subdivisions: 2
     catmullclark: true

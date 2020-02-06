@@ -41,7 +41,6 @@ textures:
     filename: textures/floor.png
   - name: bumps-normal
     filename: textures/bumps-normal.png
-    preset: test-bumps-normal
   - name: sky
     filename: textures/sky.hdr
 shapes:
