@@ -53,42 +53,42 @@ shapes:
     shape: shapes/arealight2.ply
     emission: [20, 20, 20]
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere-matte
+  - name: shapes/sphere-matte.yaml
     shape: shapes/sphere.ply
     base: [0.7, 0.7, 0.7]
     roughness: 1
     frame: [0.5, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: hairball1-hair
+  - name: shapes/hairball1-hair.yaml
     shape: shapes/hairball1.ply
     base: [0.7, 0.7, 0.7]
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: hairball2-hair
+  - name: shapes/hairball2-hair.yaml
     shape: shapes/hairball2.ply
     base: [0.7, 0.7, 0.7]
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: hairball3-hair
+  - name: shapes/hairball3-hair.yaml
     shape: shapes/hairball3.ply
     base: [0.7, 0.7, 0.7]
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere-matte
+  - name: shapes/sphere-matte.yaml
     shape: shapes/sphere.ply
     base: [0.7, 0.7, 0.7]
     roughness: 1
     frame: [0.5, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: hairballi1-hair
+  - name: shapes/hairballi1-hair.yaml
     shape: shapes/hairballi.ply
     base: [0.7, 0.7, 0.7]
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: hairballi2-hair
+  - name: shapes/hairballi2-hair.yaml
     shape: shapes/hairballi.ply
     base: [0.7, 0.7, 0.7]
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: hairballi3-hair
+  - name: shapes/hairballi3-hair.yaml
     shape: shapes/hairballi.ply
     base: [0.7, 0.7, 0.7]
     roughness: 1

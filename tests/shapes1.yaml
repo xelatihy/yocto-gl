@@ -53,35 +53,35 @@ shapes:
     shape: shapes/arealight2.ply
     emission: [20, 20, 20]
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere-uvgrid
+  - name: shapes/sphere-uvgrid.yaml
     shape: shapes/sphere.ply
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
     base_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: uvsphere-flipcap-uvgrid
+  - name: shapes/uvsphere-flipcap-uvgrid.yaml
     shape: shapes/uvsphere-flipcap.ply
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
     base_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: disk-uvgrid
+  - name: shapes/disk-uvgrid.yaml
     shape: shapes/disk.ply
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
     base_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: uvcylinder-uvgrid
+  - name: shapes/uvcylinder-uvgrid.yaml
     shape: shapes/uvcylinder.ply
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
     base_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: cube-uvgrid
+  - name: shapes/cube-uvgrid.yaml
     shape: shapes/cube.ply
     specular: 1
     base: [1, 1, 1]

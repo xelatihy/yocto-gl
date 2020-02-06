@@ -45,70 +45,70 @@ shapes:
     shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
     base_tex: textures/floor.png
-  - name: largearealight1
+  - name: shapes/largearealight1.yaml
     shape: shapes/largearealight1.ply
     emission: [10, 10, 10]
     lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: largearealight2
+  - name: shapes/largearealight2.yaml
     shape: shapes/largearealight2.ply
     emission: [10, 10, 10]
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere-plastic-sharp-bumped
+  - name: shapes/sphere-plastic-sharp-bumped.yaml
     shape: shapes/sphere.ply
     specular: 1
     base: [0.5, 0.5, 0.7]
     roughness: 0.01
     normal_tex: textures/bumps-normal.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: shapes/sphere-plastic-rough.yaml-coated
+  - name: shapes/sphere-plastic-rough-coated.yaml
     shape: shapes/sphere.ply
     specular: 1
     coat: 1
     base: [0.5, 0.7, 0.5]
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: sphere-metal-sharp-bumped
+  - name: shapes/sphere-metal-sharp-bumped.yaml
     shape: shapes/sphere.ply
     base: [0.7, 0.7, 0.7]
     metallic: 1
     roughness: 0
     normal_tex: textures/bumps-normal.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere-metal-rough-coated
+  - name: shapes/sphere-metal-rough-coated.yaml
     shape: shapes/sphere.ply
     coat: 1
     base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere-metal-rough
+  - name: shapes/sphere-metal-rough.yaml
     shape: shapes/sphere.ply
     base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: bunny-plastic-sharp-bumped
+  - name: shapes/bunny-plastic-sharp-bumped.yaml
     shape: shapes/bunny.obj
     specular: 1
     base: [0.5, 0.5, 0.7]
     roughness: 0.01
     normal_tex: textures/bumps-normal.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - name: bunny-plastic-rough-coated
+  - name: shapes/bunny-plastic-rough-coated.yaml
     shape: shapes/bunny.obj
     specular: 1
     coat: 1
     base: [0.5, 0.7, 0.5]
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - name: shapes/bunny-metal-sharp.yaml-bumped
+  - name: shapes/bunny-metal-sharp-bumped.yaml
     shape: shapes/bunny.obj
     base: [0.7, 0.7, 0.7]
     metallic: 1
     roughness: 0
     normal_tex: textures/bumps-normal.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - name: shapes/bunny-metal-rough.yaml-coated
+  - name: shapes/bunny-metal-rough-coated.yaml
     shape: shapes/bunny.obj
     coat: 1
     base: [0.66, 0.45, 0.34]

@@ -45,15 +45,15 @@ shapes:
     shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
     base_tex: textures/floor.png
-  - name: largearealight1
+  - name: shapes/largearealight1.yaml
     shape: shapes/largearealight1.ply
     emission: [10, 10, 10]
     lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: largearealight2
+  - name: shapes/largearealight2.yaml
     shape: shapes/largearealight2.ply
     emission: [10, 10, 10]
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere-glass-sharp
+  - name: shapes/sphere-glass-sharp.yaml
     shape: shapes/sphere.ply
     base: [1, 1, 1]
     specular: 1
@@ -61,7 +61,7 @@ shapes:
     roughness: 0
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere-glass-rough
+  - name: shapes/sphere-glass-rough.yaml
     shape: shapes/sphere.ply
     specular: 1
     base: [1, 0.7, 0.7]
@@ -69,13 +69,13 @@ shapes:
     roughness: 0.1
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: sphere-transparent
+  - name: shapes/sphere-transparent.yaml
     shape: shapes/sphere.ply
     base: [0.7, 0.5, 0.5]
     roughness: 1
     opacity: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere-thinglass-sharp
+  - name: shapes/sphere-thinglass-sharp.yaml
     shape: shapes/sphere.ply
     specular: 1
     base: [1, 1, 1]
@@ -83,7 +83,7 @@ shapes:
     roughness: 0
     thin: true
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere-thinglass-rough
+  - name: shapes/sphere-thinglass-rough.yaml
     shape: shapes/sphere.ply
     specular: 1
     base: [1, 0.7, 0.7]
@@ -91,7 +91,7 @@ shapes:
     roughness: 0.05
     thin: true
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: bunny-glass-sharp
+  - name: shapes/bunny-glass-sharp.yaml
     shape: shapes/bunny.obj
     base: [1, 1, 1]
     specular: 1
@@ -99,7 +99,7 @@ shapes:
     roughness: 0
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - name: bunny-glass-rough
+  - name: shapes/bunny-glass-rough.yaml
     shape: shapes/bunny.obj
     specular: 1
     base: [1, 0.7, 0.7]
@@ -107,13 +107,13 @@ shapes:
     roughness: 0.1
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - name: bunny-transparent
+  - name: shapes/bunny-transparent.yaml
     shape: shapes/bunny.obj
     base: [0.7, 0.5, 0.5]
     roughness: 1
     opacity: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - name: bunny-thinglass-sharp
+  - name: shapes/bunny-thinglass-sharp.yaml
     shape: shapes/bunny.obj
     specular: 1
     base: [1, 1, 1]
@@ -121,7 +121,7 @@ shapes:
     roughness: 0
     thin: true
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
-  - name: bunny-thinglass-rough
+  - name: shapes/bunny-thinglass-rough.yaml
     shape: shapes/bunny.obj
     specular: 1
     base: [1, 0.7, 0.7]

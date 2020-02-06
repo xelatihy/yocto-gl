@@ -45,22 +45,22 @@ shapes:
     shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
     base_tex: textures/floor.png
-  - name: largearealight1
+  - name: shapes/largearealight1.yaml
     shape: shapes/largearealight1.ply
     emission: [10, 10, 10]
     lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: largearealight2
+  - name: shapes/largearealight2.yaml
     shape: shapes/largearealight2.ply
     emission: [10, 10, 10]
     lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere-volume-cloud
+  - name: shapes/sphere-volume-cloud.yaml
     shape: shapes/sphere.ply
     base: [0.65, 0.65, 0.65]
     transmission: 1
     scattering: [0.9, 0.9, 0.9]
     ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere-volume-glass
+  - name: shapes/sphere-volume-glass.yaml
     shape: shapes/sphere.ply
     specular: 1
     roughness: 0
@@ -69,7 +69,7 @@ shapes:
     radius: 0.02
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: sphere-volume-jade
+  - name: shapes/sphere-volume-jade.yaml
     shape: shapes/sphere.ply
     specular: 1
     roughness: 0
@@ -78,7 +78,7 @@ shapes:
     scattering: [0.3, 0.6, 0.3]
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere-volume-emissive
+  - name: shapes/sphere-volume-emissive.yaml
     shape: shapes/sphere.ply
     transmission: 1
     base: [0.95, 0.95, 0.95]
@@ -86,7 +86,7 @@ shapes:
     scattering: [0.01, 0.01, 0.01]
     ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere-volume-smoke
+  - name: shapes/sphere-volume-smoke.yaml
     shape: shapes/sphere.ply
     transmission: 1
     base: [0.5, 0.5, 0.5]
@@ -94,14 +94,14 @@ shapes:
     phaseg: -0.8
     ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: bunny-volume-cloud
+  - name: shapes/bunny-volume-cloud.yaml
     shape: shapes/bunny.obj
     base: [0.65, 0.65, 0.65]
     transmission: 1
     scattering: [0.9, 0.9, 0.9]
     ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - name: bunny-volume-glass
+  - name: shapes/bunny-volume-glass.yaml
     shape: shapes/bunny.obj
     specular: 1
     roughness: 0
@@ -110,7 +110,7 @@ shapes:
     radius: 0.02
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - name: bunny-volume-jade
+  - name: shapes/bunny-volume-jade.yaml
     shape: shapes/bunny.obj
     specular: 1
     roughness: 0
@@ -119,7 +119,7 @@ shapes:
     scattering: [0.3, 0.6, 0.3]
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - name: bunny-volume-emissive
+  - name: shapes/bunny-volume-emissive.yaml
     shape: shapes/bunny.obj
     transmission: 1
     base: [0.95, 0.95, 0.95]
@@ -127,7 +127,7 @@ shapes:
     scattering: [0.01, 0.01, 0.01]
     ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
-  - name: bunny-volume-smoke
+  - name: shapes/bunny-volume-smoke.yaml
     shape: shapes/bunny.obj
     transmission: 1
     base: [0.5, 0.5, 0.5]

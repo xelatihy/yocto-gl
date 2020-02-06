@@ -54,14 +54,14 @@ shapes:
     shape: shapes/arealight2.ply
     emission: [20, 20, 20]
     lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere-uvgrid
+  - name: shapes/sphere-uvgrid.yaml
     shape: shapes/sphere.ply
     base: [1, 1, 1]
     specular: 1
     roughness: 0.1
     base_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: suzanne-subdiv-plastic-rough
+  - name: shapes/suzanne-subdiv-plastic-rough.yaml
     shape: shapes/suzanne-subdiv.obj
     subdivisions: 2
     catmullclark: true
@@ -70,13 +70,13 @@ shapes:
     specular: 1
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: hairball1-hair
+  - name: shapes/hairball1-hair.yaml
     shape: shapes/hairball1.ply
     base: [0.7, 0.7, 0.7]
     specular: 0
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere-displaced-plastic-rough
+  - name: shapes/sphere-displaced-plastic-rough.yaml
     shape: shapes/sphere-displaced.obj
     facevarying: true
     displacement: 0.025
@@ -85,29 +85,29 @@ shapes:
     specular: 1
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: cube-uvgrid
+  - name: shapes/cube-uvgrid.yaml
     shape: shapes/cube.ply
     base: [1, 1, 1]
     specular: 1
     roughness: 0.1
     base_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: hairballi-hair
+  - name: shapes/hairballi-hair.yaml
     shape: shapes/hairballi.ply
     base: [0.7, 0.7, 0.7]
     specular: 0
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
 subdivs:
-  - name: sphere-displaced
+  - name: subdivs/sphere-displaced.yaml
     subdiv: subdivs/sphere-displaced.obj
-    shape: sphere-displaced-plastic-rough
+    shape: shapes/sphere-displaced-plastic-rough.yaml
     facevarying: true
     displacement: 0.025
     displacement_tex: textures/bumps-displacement.png
-  - name: suzanne-subdiv
+  - name: subdivs/suzanne-subdiv.yaml
     subdiv: subdivs/suzanne-subdiv.obj
-    shape: suzanne-subdiv-plastic-rough
+    shape: shapes/suzanne-subdiv-plastic-rough.yaml
     subdivisions: 2
     catmullclark: true
     smooth: true
