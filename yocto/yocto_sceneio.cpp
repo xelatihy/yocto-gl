@@ -1249,10 +1249,9 @@ static void load_yaml_scene(
 static void save_yaml_scene(
     const string& filename, const sceneio_model& scene, bool noparallel) {
   // helper
-  auto add_yaml_ref = [](yaml_element& yelement, const string& name, int ref,
-                          auto& refs) {
+  auto add_yaml_texture = [&scene](yaml_element& yelement, const string& name, int ref) {
     if (ref < 0) return;
-    add_yaml_value(yelement, name, refs[ref].name);
+    add_yaml_value(yelement, name, scene.textures[ref].filename);
   };
 
   // save yaml file
@@ -1300,22 +1299,21 @@ static void save_yaml_scene(
     add_yaml_value(yelement, "phaseg", shape.material.phaseg);
     add_yaml_value(yelement, "radius", shape.material.radius);
     add_yaml_value(yelement, "opacity", shape.material.opacity);
-    add_yaml_ref(
-        yelement, "emission_tex", shape.material.emission_tex, scene.textures);
-    add_yaml_ref(yelement, "base_tex", shape.material.base_tex, scene.textures);
-    add_yaml_ref(
-        yelement, "metallic_tex", shape.material.metallic_tex, scene.textures);
-    add_yaml_ref(
-        yelement, "specular_tex", shape.material.specular_tex, scene.textures);
-    add_yaml_ref(
-        yelement, "roughness_tex", shape.material.roughness_tex, scene.textures);
-    add_yaml_ref(yelement, "transmission_tex", shape.material.transmission_tex,
-        scene.textures);
-    add_yaml_ref(
-        yelement, "scattering_tex", shape.material.scattering_tex, scene.textures);
-    add_yaml_ref(yelement, "coat_tex", shape.material.coat_tex, scene.textures);
-    add_yaml_ref(yelement, "opacity_tex", shape.material.opacity_tex, scene.textures);
-    add_yaml_ref(yelement, "normal_tex", shape.material.normal_tex, scene.textures);
+    add_yaml_texture(
+        yelement, "emission_tex", shape.material.emission_tex);
+    add_yaml_texture(yelement, "base_tex", shape.material.base_tex);
+    add_yaml_texture(
+        yelement, "metallic_tex", shape.material.metallic_tex);
+    add_yaml_texture(
+        yelement, "specular_tex", shape.material.specular_tex);
+    add_yaml_texture(
+        yelement, "roughness_tex", shape.material.roughness_tex);
+    add_yaml_texture(yelement, "transmission_tex", shape.material.transmission_tex);
+    add_yaml_texture(
+        yelement, "scattering_tex", shape.material.scattering_tex);
+    add_yaml_texture(yelement, "coat_tex", shape.material.coat_tex);
+    add_yaml_texture(yelement, "opacity_tex", shape.material.opacity_tex);
+    add_yaml_texture(yelement, "normal_tex", shape.material.normal_tex);
     if (shape.material.gltf_textures)
       add_yaml_value(yelement, "gltf_textures", shape.material.gltf_textures);
     if (!shape.instances.empty()) {
@@ -1328,18 +1326,14 @@ static void save_yaml_scene(
     yelement.name  = "subdivs";
     add_yaml_value(yelement, "name", subdiv.name);
     add_yaml_value(yelement, "filename", subdiv.filename);
-    if (subdiv.shape >= 0)
-      add_yaml_value(yelement, "shape", scene.shapes[subdiv.shape].name);
+    add_yaml_value(yelement, "shape", scene.shapes[subdiv.shape].name);
     add_yaml_value(yelement, "subdivisions", subdiv.subdivisions);
     add_yaml_value(yelement, "catmullclark", subdiv.catmullclark);
     add_yaml_value(yelement, "smooth", subdiv.smooth);
-    if (subdiv.facevarying)
-      add_yaml_value(yelement, "facevarying", subdiv.facevarying);
-    if (subdiv.displacement_tex >= 0)
-      add_yaml_value(yelement, "displacement_tex",
-          scene.textures[subdiv.displacement_tex].name);
-    if (subdiv.displacement_tex >= 0)
-      add_yaml_value(yelement, "displacement", subdiv.displacement);
+    add_yaml_value(yelement, "facevarying", subdiv.facevarying);
+    add_yaml_texture(yelement, "displacement_tex",
+        subdiv.displacement_tex);
+    add_yaml_value(yelement, "displacement", subdiv.displacement);
   }
 
   for (auto& environment : scene.environments) {
@@ -1348,9 +1342,7 @@ static void save_yaml_scene(
     add_yaml_value(yelement, "name", environment.name);
     add_yaml_value(yelement, "frame", environment.frame);
     add_yaml_value(yelement, "emission", environment.emission);
-    if (environment.emission_tex >= 0)
-      add_yaml_value(yelement, "emission_tex",
-          scene.textures[environment.emission_tex].name);
+    add_yaml_texture(yelement, "emission_tex", environment.emission_tex);
   }
 
   // save yaml
