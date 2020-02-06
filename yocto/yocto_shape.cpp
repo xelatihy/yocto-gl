@@ -3489,6 +3489,22 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   auto quadstexcoord = vector<vec4i>{};
   make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
       quadstexcoord, positions, normals, texcoords, colors, radius, type);
+  if (!quadspos.empty()) throw std::runtime_error("bad preset type");
+}
+
+// Shape presets used ofr testing.
+void make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type) {
+  auto points    = vector<int>{};
+  auto lines     = vector<vec2i>{};
+  auto triangles = vector<vec3i>{};
+  auto quads     = vector<vec4i>{};
+  auto colors    = vector<vec4f>{};
+  auto radius    = vector<float>{};
+  make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
+      quadstexcoord, positions, normals, texcoords, colors, radius, type);
+  if (quadspos.empty()) throw std::runtime_error("bad preset type");
 }
 
 }  // namespace yocto
@@ -3504,6 +3520,9 @@ static void throw_format_error(const string& filename) {
 }
 static void throw_emptyshape_error(const string& filename) {
   throw std::runtime_error{filename + ": empty shape"};
+}
+static void throw_preset_error(const string& filename) {
+  throw std::runtime_error{filename + ": unknown preset"};
 }
 
 // Utility to normalize a path
@@ -3527,12 +3546,33 @@ static inline string normalize_path(const string& filename_) {
   return filename;
 }
 
+// Get filename without directory.
+static inline string get_filename(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('/');
+  if (pos == string::npos) return filename;
+  return filename.substr(pos + 1);
+}
+
+// Get extension.
+static inline string get_noextension(const string& filename_) {
+  auto filename = normalize_path(filename_);
+  auto pos      = filename.rfind('.');
+  if (pos == string::npos) return filename;
+  return filename.substr(0, pos);
+}
+
 // Get extension (not including '.').
 static inline string get_extension(const string& filename_) {
   auto filename = normalize_path(filename_);
   auto pos      = filename.rfind('.');
   if (pos == string::npos) return "";
   return filename.substr(pos);
+}
+
+// Get filename without directory and extension.
+static inline string get_basename(const string& filename) {
+  return get_noextension(get_filename(filename));
 }
 
 // Load ply mesh
@@ -3551,7 +3591,14 @@ void load_shape(const string& filename, vector<int>& points,
   radius    = {};
 
   auto ext = get_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
+  if (ext == ".ypreset") {
+    try {
+      make_shape_preset(points, lines, triangles, quads, positions, normals,
+          texcoords, colors, radius, get_basename(filename));
+    } catch (std::exception&) {
+      throw_preset_error(filename);
+    }
+  } else if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply = ply_model{};
     load_ply(filename, ply);
@@ -3668,7 +3715,14 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
   texcoords     = {};
 
   auto ext = get_extension(filename);
-  if (ext == ".ply" || ext == ".PLY") {
+  if (ext == ".ypreset") {
+    try {
+      make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
+          texcoords, get_basename(filename));
+    } catch (std::exception&) {
+      throw_preset_error(filename);
+    }
+  } else if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     load_ply(filename, ply);
     positions = get_ply_positions(ply);
@@ -3690,7 +3744,7 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
     auto ematerials = vector<int>{};
     get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
-    throw_emptyshape_error(filename);
+    if (positions.empty()) throw_emptyshape_error(filename);
   } else {
     throw_format_error(filename);
     ;

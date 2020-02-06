@@ -1,162 +1,113 @@
 cameras:
-  - name: default
+  - name: cameras/default.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: front
+  - name: cameras/front.yaml
     lens: 0.05
     aspect: 3
     aperture: 0.0
     lookat: [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
-  - name: back
+  - name: cameras/back.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 3
     lookat: [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
-  - name: perspective-sharp
+  - name: cameras/perspective-sharp.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: perspective-dof
+  - name: cameras/perspective-dof.yaml
     lens: 0.05
     aperture: 0.025
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: orthographic-sharp
+  - name: cameras/orthographic-sharp.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: orthographic-dof
+  - name: cameras/orthographic-dof.yaml
     lens: 0.05
     aperture: 0.02
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-textures:
-  - name: floor
-    filename: textures/test-floor.png
-    preset: test-floor
-  - name: uvgrid
-    filename: textures/test-uvgrid.png
-    preset: test-uvgrid
-  - name: bumps-displacement
-    filename: textures/test-bumps-displacement.png
-    preset: test-bumps-displacement
-  - name: sky
-    filename: textures/test-sky.hdr
-    preset: test-sky
-materials:
-  - name: floor
+environments:
+  - name: environments/sky.yaml
+    emission: [0.5, 0.5, 0.5]
+    emission_tex: environments/sky.hdr
+shapes:
+  - name: shapes/floor.yaml
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    base_tex: textures/floor.png
     specular: 0
-  - name: uvgrid
+  - name: shapes/arealight1.yaml
+    shape: shapes/arealight1.ply
+    emission: [20, 20, 20]
+    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: shapes/arealight2.yaml
+    shape: shapes/arealight2.ply
+    emission: [20, 20, 20]
+    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: shapes/sphere-uvgrid.yaml
+    shape: shapes/sphere.ply
     base: [1, 1, 1]
     specular: 1
     roughness: 0.1
-    base_tex: uvgrid
-  - name: plastic-rough
+    base_tex: textures/uvgrid.png
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: shapes/suzanne-subdiv-plastic-rough.yaml
+    shape: shapes/suzanne-subdiv.obj
+    subdivisions: 2
+    catmullclark: true
+    smooth: true
     base: [0.5, 0.7, 0.5]
     specular: 1
     roughness: 0.2
-  - name: hair
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: shapes/hairball1-hair.yaml
+    shape: shapes/hairball1.ply
     base: [0.7, 0.7, 0.7]
     specular: 0
     roughness: 1
-  - name: arealight1
-    emission: [20, 20, 20]
-  - name: arealight2
-    emission: [20, 20, 20]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: cube
-    filename: shapes/test-cube.ply
-    preset: test-cube
-  - name: sphere-displaced
-    filename: shapes/test-sphere-displaced.obj
-    preset: test-sphere-displaced
-    facevarying: true
-    displacement: 0.025
-    displacement_tex: bumps-displacement
-  - name: suzanne-subdiv
-    filename: shapes/test-suzanne-subdiv.obj
-    preset: test-suzanne-subdiv
-    subdivisions: 2
-    catmullclark: true
-    smooth: true
-  - name: hairball1
-    filename: shapes/test-hairball1.ply
-    preset: test-hairball1
-  - name: hairball-interior
-    filename: shapes/test-hairball-interior.ply
-    preset: test-hairball-interior
-  - name: arealight1
-    filename: shapes/test-arealight1.ply
-    preset: test-arealight1
-  - name: arealight2
-    filename: shapes/test-arealight2.ply
-    preset: test-arealight2
-subdivs:
-  - name: sphere-displaced
-    filename: shapes/test-sphere-displaced.obj
-    preset: test-sphere-displaced
-    shape: sphere-displaced
-    facevarying: true
-    displacement: 0.025
-    displacement_tex: bumps-displacement
-  - name: suzanne-subdiv
-    filename: shapes/test-suzanne-subdiv.obj
-    preset: test-suzanne-subdiv
-    shape: suzanne-subdiv
-    subdivisions: 2
-    catmullclark: true
-    smooth: true
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: arealight1
-    shape: arealight1
-    material: arealight1
-    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: arealight2
-    shape: arealight2
-    material: arealight2
-    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_uvgrid
-    shape: sphere
-    material: uvgrid
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: suzanne-subdiv_plastic-rough
-    shape: suzanne-subdiv
-    material: plastic-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: hairball1_hair
-    shape: hairball1
-    material: hair
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere-displaced_plastic-rough
-    shape: sphere-displaced
-    material: plastic-rough
+  - name: shapes/sphere-displaced-plastic-rough.yaml
+    shape: shapes/sphere-displaced.obj
+    facevarying: true
+    displacement: 0.025
+    displacement_tex: textures/bumps-displacement.png
+    base: [0.5, 0.7, 0.5]
+    specular: 1
+    roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: cube_uvgrid
-    shape: cube
-    material: uvgrid
+  - name: shapes/cube-uvgrid.yaml
+    shape: shapes/cube.ply
+    base: [1, 1, 1]
+    specular: 1
+    roughness: 0.1
+    base_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: hairball-interior_hair
-    shape: hairball-interior
-    material: hair
+  - name: shapes/hairballi-hair.yaml
+    shape: shapes/hairballi.ply
+    base: [0.7, 0.7, 0.7]
+    specular: 0
+    roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-environments:
-  - name: sky
-    emission: [0.5, 0.5, 0.5]
-    emission_tex: sky
+subdivs:
+  - name: subdivs/sphere-displaced.yaml
+    subdiv: subdivs/sphere-displaced.obj
+    shape: shapes/sphere-displaced-plastic-rough.yaml
+    facevarying: true
+    displacement: 0.025
+    displacement_tex: textures/bumps-displacement.png
+  - name: subdivs/suzanne-subdiv.yaml
+    subdiv: subdivs/suzanne-subdiv.obj
+    shape: shapes/suzanne-subdiv-plastic-rough.yaml
+    subdivisions: 2
+    catmullclark: true
+    smooth: true

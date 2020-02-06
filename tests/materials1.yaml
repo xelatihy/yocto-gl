@@ -1,143 +1,113 @@
 cameras:
-  - name: default
+  - name: cameras/default.yaml
     lens: 0.1
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
-  - name: front
+  - name: cameras/front.yaml
     lens: 0.1
     aperture: 0.0
     aspect: 3
     lookat: [0, 1.75, 3, 0, 0.175, 0, 0, 1, 0]
-  - name: back
+  - name: cameras/back.yaml
     lens: 0.1
     aperture: 0.0
     aspect: 3
     lookat: [0, 1.5, -3.25, 0, -0.05, 0, 0, 1, 0]
-  - name: perspective-sharp
+  - name: cameras/perspective-sharp.yaml
     lens: 0.1
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
-  - name: perspective-dof
+  - name: cameras/perspective-dof.yaml
     lens: 0.1
     aperture: 0.05
     aspect: 2.4
     lookat: [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
-  - name: orthographic-sharp
+  - name: cameras/orthographic-sharp.yaml
     lens: 0.03
     aperture: 0.0
     aspect: 2.4
     orthographic: true
     lookat: [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
-  - name: orthographic-dof
+  - name: cameras/orthographic-dof.yaml
     lens: 0.03
     aperture: 0.02
     aspect: 2.4
     orthographic: true
     lookat: [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
-textures:
-  - name: floor
-    filename: textures/test-floor.png
-    preset: test-floor
-  - name: sky
-    filename: textures/test-sky.hdr
-    preset: test-sky
-materials:
-  - name: floor
+environments:
+  - name: environments/sky.yaml
+    emission: [0.5, 0.5, 0.5]
+    emission_tex: environments/sky.hdr
+shapes:
+  - name: shapes/floor.yaml
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
-    base_tex: floor
-  - name: matte
-    base: [0.7, 0.7, 0.7]
-    roughness: 1
-  - name: plastic-sharp
+    base_tex: textures/floor.png
+  - name: shapes/largearealight1.yaml
+    shape: shapes/largearealight1.ply
+    emission: [10, 10, 10]
+    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: shapes/largearealight2.yaml
+    shape: shapes/largearealight2.ply
+    emission: [10, 10, 10]
+    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: sphere-plastic-sharp
+    shape: shapes/sphere.ply
     specular: 1
     base: [0.5, 0.5, 0.7]
     roughness: 0.01
-  - name: plastic-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: shapes/sphere-plastic-rough.yaml
+    shape: shapes/sphere.ply
     specular: 1
     base: [0.5, 0.7, 0.5]
     roughness: 0.2
-  - name: metal-sharp
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: shapes/sphere-matte.yaml
+    shape: shapes/sphere.ply
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: shapes/sphere-metal-sharp.yaml
+    shape: shapes/sphere.ply
     base: [0.7, 0.7, 0.7]
     metallic: 1
     roughness: 0
-  - name: metal-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
+  - name: shapes/sphere-metal-rough.yaml
+    shape: shapes/sphere.ply
     base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
-  - name: largearealight1
-    emission: [10, 10, 10]
-  - name: largearealight2
-    emission: [10, 10, 10]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: largearealight1
-    filename: shapes/test-largearealight1.ply
-    preset: test-largearealight1
-  - name: largearealight2
-    filename: shapes/test-largearealight2.ply
-    preset: test-largearealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: largearealight1
-    shape: largearealight1
-    material: largearealight1
-    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: largearealight2
-    shape: largearealight2
-    material: largearealight2
-    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_plastic-sharp
-    shape: sphere
-    material: plastic-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere_plastic-rough
-    shape: sphere
-    material: plastic-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: sphere_matte
-    shape: sphere
-    material: matte
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere_metal-sharp
-    shape: sphere
-    material: metal-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere_metal-rough
-    shape: sphere
-    material: metal-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: bunny_plastic-sharp
-    shape: bunny
-    material: plastic-sharp
+  - name: shapes/bunny-plastic-sharp.yaml
+    shape: shapes/bunny.obj
+    specular: 1
+    base: [0.5, 0.5, 0.7]
+    roughness: 0.01
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - name: bunny_plastic-rough
-    shape: bunny
-    material: plastic-rough
+  - name: shapes/bunny-plastic-rough.yaml
+    shape: shapes/bunny.obj
+    specular: 1
+    base: [0.5, 0.7, 0.5]
+    roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - name: bunny_matte
-    shape: bunny
-    material: matte
+  - name: shapes/bunny-matte.yaml
+    shape: shapes/bunny.obj
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - name: bunny_metal-sharp
-    shape: bunny
-    material: metal-sharp
+  - name: shapes/bunny-metal-sharp.yaml
+    shape: shapes/bunny.obj
+    base: [0.7, 0.7, 0.7]
+    metallic: 1
+    roughness: 0
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
-  - name: bunny_metal-rough
-    shape: bunny
-    material: metal-rough
+  - name: shapes/bunny-metal-rough.yaml
+    shape: shapes/bunny.obj
+    base: [0.66, 0.45, 0.34]
+    metallic: 1
+    roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
-environments:
-  - name: sky
-    emission: [0.5, 0.5, 0.5]
-    emission_tex: sky

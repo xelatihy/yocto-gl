@@ -762,24 +762,24 @@ static trace_point eval_point(const trace_scene& scene,
                               shape.texcoords, element, uv);
     auto normalmap =
         -1 + 2 * xyz(eval_texture(scene, material.normal_tex, texcoord, true));
-  auto z = shape.normals.empty()
-               ? eval_element_normal(shape, element)
-               : normalize(eval_shape_elem(
-                     shape, shape.quadsnorm, shape.normals, element, uv));
-    auto basis = identity3x3f;
+    auto z = shape.normals.empty()
+                 ? eval_element_normal(shape, element)
+                 : normalize(eval_shape_elem(
+                       shape, shape.quadsnorm, shape.normals, element, uv));
+    auto basis  = identity3x3f;
     auto flip_v = false;
     if (shape.tangents.empty()) {
       auto tangents = eval_element_tangents(shape, element, uv);
       auto x        = orthonormalize(tangents.first, z);
       auto y        = normalize(cross(z, x));
-      basis = {x, y, z};
-      flip_v = dot(y, tangents.second) < 0;
+      basis         = {x, y, z};
+      flip_v        = dot(y, tangents.second) < 0;
     } else {
       auto tangsp = eval_shape_elem(shape, {}, shape.tangents, element, uv);
       auto x      = orthonormalize(xyz(tangsp), z);
       auto y      = normalize(cross(z, x));
-      basis = {x, y, z};
-      flip_v = tangsp.w < 0;
+      basis       = {x, y, z};
+      flip_v      = tangsp.w < 0;
     }
     normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
     auto normal  = normalize(basis * normalmap);
@@ -813,7 +813,7 @@ static trace_point eval_point(const trace_scene& scene,
                       eval_texture(scene, material.emission_tex, texcoord).x;
   auto opacity = material.opacity * point.color.w * base_tex.w *
                  eval_texture(scene, material.opacity_tex, texcoord).x;
-  auto thin       = material.thin || !material.transmission;
+  auto thin = material.thin || !material.transmission;
 
   // factors
   auto weight    = vec3f{1, 1, 1};
@@ -830,12 +830,12 @@ static trace_point eval_point(const trace_scene& scene,
                     fresnel_dielectric(ior, dot(point.outgoing, point.normal));
   point.transmission = weight * transmission * base;
   weight *= 1 - transmission;
-  point.diffuse     = weight * base;
-  point.meta        = reflectivity_to_eta(base);
-  point.metak       = zero3f;
-  point.roughness   = roughness * roughness;
-  point.ior         = ior;
-  point.opacity     = opacity;
+  point.diffuse   = weight * base;
+  point.meta      = reflectivity_to_eta(base);
+  point.metak     = zero3f;
+  point.roughness = roughness * roughness;
+  point.ior       = ior;
+  point.opacity   = opacity;
 
   // textures
   if (point.diffuse != zero3f || point.roughness) {
@@ -890,11 +890,11 @@ struct volume_point {
 static volume_point eval_volume(const trace_scene& scene,
     const trace_intersection& intersection, const ray3f& ray) {
   // get data
-  auto& instance               = scene.instances[intersection.instance];
-  auto& shape                  = scene.shapes[instance.shape];
-  auto& material               = scene.materials[instance.material];
-  auto  element                = intersection.element;
-  auto  uv                     = intersection.uv;
+  auto& instance = scene.instances[intersection.instance];
+  auto& shape    = scene.shapes[instance.shape];
+  auto& material = scene.materials[instance.material];
+  auto  element  = intersection.element;
+  auto  uv       = intersection.uv;
 
   // initialize point
   auto point     = volume_point{};
@@ -910,21 +910,21 @@ static volume_point eval_volume(const trace_scene& scene,
   // material -------
   // initialize factors
   auto texcoord = shape.texcoords.empty()
-                       ? uv
-                       : eval_shape_elem(shape, shape.quadstexcoord,
-                             shape.texcoords, element, uv);
+                      ? uv
+                      : eval_shape_elem(shape, shape.quadstexcoord,
+                            shape.texcoords, element, uv);
   auto color = shape.colors.empty()
-                    ? vec4f{1, 1, 1, 1}
-                    : eval_shape_elem(shape, {}, shape.colors, element, uv);
-  auto base_tex = eval_texture(scene, material.base_tex, texcoord);
-  auto base     = material.base * xyz(color) * xyz(base_tex);
+                   ? vec4f{1, 1, 1, 1}
+                   : eval_shape_elem(shape, {}, shape.colors, element, uv);
+  auto base_tex     = eval_texture(scene, material.base_tex, texcoord);
+  auto base         = material.base * xyz(color) * xyz(base_tex);
   auto transmission = material.transmission *
                       eval_texture(scene, material.emission_tex, texcoord).x;
   auto thin       = material.thin || !material.transmission;
   auto scattering = material.scattering *
                     eval_texture(scene, material.scattering_tex, texcoord).x;
-  auto phaseg  = material.phaseg;
-  auto radius  = material.radius;
+  auto phaseg = material.phaseg;
+  auto radius = material.radius;
 
   // factors
   point.volemission = zero3f;
@@ -938,9 +938,10 @@ static volume_point eval_volume(const trace_scene& scene,
 }
 
 // Check if an instance as volume scattering
-static bool has_volume(const trace_scene& scene, const trace_intersection& intersection) {
-  auto& instance               = scene.instances[intersection.instance];
-  auto& material               = scene.materials[instance.material];
+static bool has_volume(
+    const trace_scene& scene, const trace_intersection& intersection) {
+  auto& instance = scene.instances[intersection.instance];
+  auto& material = scene.materials[instance.material];
   return !material.thin && material.transmission;
 }
 
@@ -2470,12 +2471,12 @@ static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
   auto  light_id = sample_uniform(scene.lights.size(), rl);
   auto& light    = scene.lights[light_id];
   if (light.instance >= 0) {
-    auto& instance = scene.instances[light.instance];
-    auto& shape    = scene.shapes[instance.shape];
-    auto  element  = sample_discrete(light.cdf, rel);
-    auto  uv       = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
-    auto lposition = transform_point(instance.frame, eval_shape_elem(
-      shape, shape.quadspos, shape.positions, element, uv));
+    auto& instance  = scene.instances[light.instance];
+    auto& shape     = scene.shapes[instance.shape];
+    auto  element   = sample_discrete(light.cdf, rel);
+    auto  uv        = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
+    auto  lposition = transform_point(instance.frame,
+        eval_shape_elem(shape, shape.quadspos, shape.positions, element, uv));
     return normalize(lposition - position);
   } else if (light.environment >= 0) {
     auto& environment = scene.environments[light.environment];
@@ -2503,23 +2504,24 @@ static float sample_lights_pdf(
   for (auto& light : scene.lights) {
     if (light.instance >= 0) {
       // check all intersection
-      auto lpdf     = 0.0f;
+      auto lpdf          = 0.0f;
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_instance_bvh(
             scene, light.instance, {next_position, direction});
         if (!isec.hit) break;
         // accumulate pdf
-        auto& instance = scene.instances[isec.instance];
-        auto& shape = scene.shapes[instance.shape];
-        auto lposition = transform_point(instance.frame, eval_shape_elem(
-          shape, shape.quadspos, shape.positions, isec.element, isec.uv));
-        auto lnormal = transform_normal(instance.frame, 
-          eval_element_normal(shape, isec.element), trace_non_rigid_frames);
+        auto& instance  = scene.instances[isec.instance];
+        auto& shape     = scene.shapes[instance.shape];
+        auto  lposition = transform_point(
+            instance.frame, eval_shape_elem(shape, shape.quadspos,
+                                shape.positions, isec.element, isec.uv));
+        auto lnormal = transform_normal(instance.frame,
+            eval_element_normal(shape, isec.element), trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
         auto area = light.cdf.back();
         lpdf += distance_squared(lposition, position) /
-                     (abs(dot(lnormal, direction)) * area);
+                (abs(dot(lnormal, direction)) * area);
         // continue
         next_position = lposition + direction * 1e-3f;
       }
@@ -3174,6 +3176,10 @@ void set_material_gltftextures(
 void clean_materials(trace_scene& scene) { scene.materials.clear(); }
 
 // Add shape
+int add_shape(trace_scene& scene) {
+  scene.shapes.emplace_back();
+  return (int)scene.shapes.size() - 1;
+}
 int add_shape(trace_scene& scene, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,

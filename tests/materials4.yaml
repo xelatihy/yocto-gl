@@ -1,155 +1,137 @@
 cameras:
-  - name: default
+  - name: cameras/default.yaml
     lens: 0.1
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
-  - name: front
+  - name: cameras/front.yaml
     lens: 0.1
     aperture: 0.0
     aspect: 3
     lookat: [0, 1.75, 3, 0, 0.175, 0, 0, 1, 0]
-  - name: back
+  - name: cameras/back.yaml
     lens: 0.1
     aperture: 0.0
     aspect: 3
     lookat: [0, 1.5, -3.25, 0, -0.05, 0, 0, 1, 0]
-  - name: perspective-sharp
+  - name: cameras/perspective-sharp.yaml
     lens: 0.1
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
-  - name: perspective-dof
+  - name: cameras/perspective-dof.yaml
     lens: 0.1
     aperture: 0.05
     aspect: 2.4
     lookat: [-0.6, 1.5, 2.75, -0.05, 0.15, 0, 0, 1, 0]
-  - name: orthographic-sharp
+  - name: cameras/orthographic-sharp.yaml
     lens: 0.03
     aperture: 0.0
     aspect: 2.4
     orthographic: true
     lookat: [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
-  - name: orthographic-dof
+  - name: cameras/orthographic-dof.yaml
     lens: 0.03
     aperture: 0.02
     aspect: 2.4
     orthographic: true
     lookat: [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
-textures:
-  - name: floor
-    filename: textures/test-floor.png
-    preset: test-floor
-  - name: sky
-    filename: textures/test-sky.hdr
-    preset: test-sky
-materials:
-  - name: floor
+environments:
+  - name: environments/sky.yaml
+    emission: [0.5, 0.5, 0.5]
+    emission_tex: environments/sky.hdr
+shapes:
+  - name: shapes/floor.yaml
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
-    base_tex: floor
-  - name: volume-jade
-    specular: 1
-    roughness: 0
-    transmission: 1
-    base: [0.5, 0.5, 0.5]
-    scattering: [0.3, 0.6, 0.3]
-    thin: false
-  - name: volume-cloud
+    base_tex: textures/floor.png
+  - name: shapes/largearealight1.yaml
+    shape: shapes/largearealight1.ply
+    emission: [10, 10, 10]
+    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: shapes/largearealight2.yaml
+    shape: shapes/largearealight2.ply
+    emission: [10, 10, 10]
+    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
+  - name: shapes/sphere-volume-cloud.yaml
+    shape: shapes/sphere.ply
     base: [0.65, 0.65, 0.65]
     transmission: 1
     scattering: [0.9, 0.9, 0.9]
     ior: 1
-  - name: volume-glass
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: shapes/sphere-volume-glass.yaml
+    shape: shapes/sphere.ply
     specular: 1
     roughness: 0
     transmission: 1
     base: [1, 0.5, 0.5]
     radius: 0.02
     thin: false
-  - name: volume-smoke
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: shapes/sphere-volume-jade.yaml
+    shape: shapes/sphere.ply
+    specular: 1
+    roughness: 0
     transmission: 1
     base: [0.5, 0.5, 0.5]
-    scattering: [0.2, 0.2, 0.2]
-    phaseg: -0.8
-    ior: 1
-  - name: volume-emissive
+    scattering: [0.3, 0.6, 0.3]
+    thin: false
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: shapes/sphere-volume-emissive.yaml
+    shape: shapes/sphere.ply
     transmission: 1
     base: [0.95, 0.95, 0.95]
     # volemission: [15, 15, 10]
     scattering: [0.01, 0.01, 0.01]
     ior: 1
-  - name: largearealight1
-    emission: [10, 10, 10]
-  - name: largearealight2
-    emission: [10, 10, 10]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: largearealight1
-    filename: shapes/test-largearealight1.ply
-    preset: test-largearealight1
-  - name: largearealight2
-    filename: shapes/test-largearealight2.ply
-    preset: test-largearealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: largearealight1
-    shape: largearealight1
-    material: largearealight1
-    lookat: [-0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: largearealight2
-    shape: largearealight2
-    material: largearealight2
-    lookat: [0.8, 1.6, 1.6, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_volume-cloud
-    shape: sphere
-    material: volume-cloud
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere_volume-glass
-    shape: sphere
-    material: volume-glass
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: sphere_volume-jade
-    shape: sphere
-    material: volume-jade
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere_volume-emissive
-    shape: sphere
-    material: volume-emissive
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere_volume-smoke
-    shape: sphere
-    material: volume-smoke
+  - name: shapes/sphere-volume-smoke.yaml
+    shape: shapes/sphere.ply
+    transmission: 1
+    base: [0.5, 0.5, 0.5]
+    scattering: [0.2, 0.2, 0.2]
+    phaseg: -0.8
+    ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: bunny_volume-cloud
-    shape: bunny
-    material: volume-cloud
+  - name: shapes/bunny-volume-cloud.yaml
+    shape: shapes/bunny.obj
+    base: [0.65, 0.65, 0.65]
+    transmission: 1
+    scattering: [0.9, 0.9, 0.9]
+    ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.4]
-  - name: bunny_volume-glass
-    shape: bunny
-    material: volume-glass
+  - name: shapes/bunny-volume-glass.yaml
+    shape: shapes/bunny.obj
+    specular: 1
+    roughness: 0
+    transmission: 1
+    base: [1, 0.5, 0.5]
+    radius: 0.02
+    thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
-  - name: bunny_volume-jade
-    shape: bunny
-    material: volume-jade
+  - name: shapes/bunny-volume-jade.yaml
+    shape: shapes/bunny.obj
+    specular: 1
+    roughness: 0
+    transmission: 1
+    base: [0.5, 0.5, 0.5]
+    scattering: [0.3, 0.6, 0.3]
+    thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
-  - name: bunny_volume-emissive
-    shape: bunny
-    material: volume-emissive
+  - name: shapes/bunny-volume-emissive.yaml
+    shape: shapes/bunny.obj
+    transmission: 1
+    base: [0.95, 0.95, 0.95]
+    # volemission: [15, 15, 10]
+    scattering: [0.01, 0.01, 0.01]
+    ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.4]
-  - name: bunny_volume-smoke
-    shape: bunny
-    material: volume-smoke
+  - name: shapes/bunny-volume-smoke.yaml
+    shape: shapes/bunny.obj
+    transmission: 1
+    base: [0.5, 0.5, 0.5]
+    scattering: [0.2, 0.2, 0.2]
+    phaseg: -0.8
+    ior: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.4]
-environments:
-  - name: sky
-    emission: [0.5, 0.5, 0.5]
-    emission_tex: sky

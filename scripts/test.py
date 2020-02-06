@@ -1,6 +1,6 @@
 #! /usr/bin/env python3 -B
 
-import click, glob, os, json
+import click, glob, os, json, yaml
 
 @click.group()
 def cli():
@@ -642,5 +642,82 @@ def make_tests():
         ["plastic-sharp-bumped", "plastic-rough-coated", "metal-sharp-bumped", "metal-rough-coated", "metal-rough"] +
         ["volume-cloud", "volume-glass", "volume-jade", "volume-emissive", "volume-smoke"],
         mixed_lights1, zoffsets=[ 0.2, 0, -0.2, -0.4 ], inrow=False)
+
+@cli.command()
+def upgrade():
+    for filename in sorted(glob.glob('tests/*.yaml')):
+        continue
+        print(filename)
+        with open(filename) as f: yaml = f.read()
+        nyaml = ''
+        cur_type = ''
+        cur_name = ''
+        materials = {}
+        shapes = {}
+        for line in yaml.splitlines():
+            line = line.rstrip()
+            if not line:
+                nyaml += line + '\n'
+            elif line in ['materials:', 'shapes:', 'instances:']:
+                cur_type = line
+                if line == 'instances:':
+                    nyaml += 'shapes:\n'
+            elif not line.startswith('  '):
+                cur_type = ''
+                nyaml += line + '\n'
+            elif line.startswith('  ') and not cur_type:
+                nyaml += line + '\n'
+            elif line.startswith('  ') and cur_type == 'materials:':
+                if line.startswith('  - '):
+                    cur_name = line.partition(':')[2].strip()
+                    materials[cur_name] = ''
+                else:
+                    materials[cur_name] += line + '\n'
+            elif line.startswith('  ') and cur_type == 'shapes:':
+                if line.startswith('  - '):
+                    cur_name = line.partition(':')[2].strip()
+                    shapes[cur_name] = ''
+                else:
+                    shapes[cur_name] += line.replace('filename:','shape:') + '\n'
+            elif line.startswith('  ') and cur_type == 'instances:':
+                if line.startswith('  - '):
+                    nyaml += '  - name: ' + line.partition(':')[2].strip().replace('_','-') + '\n'
+                elif line.startswith('    material:'):
+                    nyaml += materials[line.partition(':')[2].strip()]
+                elif line.startswith('    shape:'):
+                    nyaml += shapes[line.partition(':')[2].strip()]
+                else:
+                    nyaml += line + '\n'
+        with open(filename, 'wt') as f:
+            f.write(nyaml)
+    for filename in sorted(glob.glob('tests/*.yaml')):
+        print(filename)
+        with open(filename) as f: yaml = f.read()
+        nyaml = ''
+        cur_type = ''
+        cur_name = ''
+        textures = {}
+        for line in yaml.splitlines():
+            line = line.rstrip()
+            if not line:
+                nyaml += line + '\n'
+            elif line in ['textures:']:
+                cur_type = line
+            elif not line.startswith('  '):
+                cur_type = ''
+                nyaml += line + '\n'
+            elif line.startswith('  ') and not cur_type:
+                if '_tex:' in line:
+                    nyaml += line.partition(':')[0] + ': ' + textures[line.partition(':')[2].strip()] + '\n'
+                else:
+                    nyaml += line + '\n'
+            elif line.startswith('  ') and cur_type == 'textures:':
+                if line.startswith('  - '):
+                    cur_name = line.partition(':')[2].strip()
+                    textures[cur_name] = ''
+                else:
+                    textures[cur_name] = line.partition(':')[2].strip()
+        with open(filename, 'wt') as f:
+            f.write(nyaml)
 
 cli()

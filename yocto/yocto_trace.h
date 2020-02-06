@@ -117,6 +117,7 @@ void set_material_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
 void clear_materials(trace_scene& scene);
 
 // Add shape
+int  add_shape(trace_scene& scene);
 int  add_shape(trace_scene& scene, const vector<int>& points,
      const vector<vec3f>& positions, const vector<vec3f>& normals,
      const vector<vec2f>& texcoords, const vector<vec4f>& colors,

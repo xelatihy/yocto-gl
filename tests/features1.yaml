@@ -1,140 +1,95 @@
 cameras:
-  - name: default
+  - name: cameras/default.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: front
+  - name: cameras/front.yaml
     lens: 0.05
     aspect: 3
     aperture: 0.0
     lookat: [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
-  - name: back
+  - name: cameras/back.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 3
     lookat: [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
-  - name: perspective-sharp
+  - name: cameras/perspective-sharp.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: perspective-dof
+  - name: cameras/perspective-dof.yaml
     lens: 0.05
     aperture: 0.025
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: orthographic-sharp
+  - name: cameras/orthographic-sharp.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: orthographic-dof
+  - name: cameras/orthographic-dof.yaml
     lens: 0.05
     aperture: 0.02
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-textures:
-  - name: floor
-    filename: textures/test-floor.png
-    preset: test-floor
-  - name: uvgrid
-    filename: textures/test-uvgrid.png
-    preset: test-uvgrid
-  - name: bumps-normal
-    filename: textures/test-bumps-normal.png
-    preset: test-bumps-normal
-  - name: sky
-    filename: textures/test-sky.hdr
-    preset: test-sky
-materials:
-  - name: floor
+environments:
+  - name: environments/sky.yaml
+    emission: [0.5, 0.5, 0.5]
+    emission_tex: environments/sky.hdr
+shapes:
+  - name: shapes/floor.yaml
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    base_tex: textures/floor.png
     specular: 0
-  - name: metal-rough
-    base: [0.66, 0.45, 0.34]
-    metallic: 1
-    roughness: 0.2
-  - name: plastic-rough-bumped
-    base: [0.5, 0.7, 0.5]
-    specular: 1
-    roughness: 0.2
-    normal_tex: bumps-normal
-  - name: uvgrid-coated
+  - name: shapes/bunny-uvgrid.yaml-coated
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+    shape: shapes/bunny.obj
     base: [1, 1, 1]
     specular: 1
     roughness: 0.2
     coat: 1
-    base_tex: uvgrid
-  - name: volume-jade
+    base_tex: textures/uvgrid.png
+  - name: shapes/bunny-volume-jade.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+    shape: shapes/bunny.obj
     base: [0.5, 0.5, 0.5]
     roughness: 0
     specular: 1
     transmission: 1
     scattering: [0.3, 0.6, 0.3]
     thin: false
-  - name: volume-glass
+  - name: shapes/bunny-metal-rough.yaml
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
+    shape: shapes/bunny.obj
+    base: [0.66, 0.45, 0.34]
+    metallic: 1
+    roughness: 0.2
+  - name: shapes/sphere-volume-glass
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+    shape: shapes/sphere.ply
     base: [1, 0.5, 0.5]
     roughness: 0
     specular: 1
     transmission: 1
     radius: 0.02
     thin: false
-  - name: arealight1
-    emission: [20, 20, 20]
-  - name: arealight2
-    emission: [20, 20, 20]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: arealight1
-    filename: shapes/test-arealight1.ply
-    preset: test-arealight1
-  - name: arealight2
-    filename: shapes/test-arealight2.ply
-    preset: test-arealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: arealight1
-    shape: arealight1
-    material: arealight1
-    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: arealight2
-    shape: arealight2
-    material: arealight2
-    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: bunny_uvgrid-coated
-    shape: bunny
-    material: uvgrid-coated
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere_volume-glass
-    shape: sphere
-    material: volume-glass
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: bunny_volume-jade
-    shape: bunny
-    material: volume-jade
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere_plastic-rough-bumped
-    shape: sphere
-    material: plastic-rough-bumped
+  - name: shapes/sphere-plastic-rough.yaml-bumped
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: bunny_metal-rough
-    shape: bunny
-    material: metal-rough
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-environments:
-  - name: sky
-    emission: [0.5, 0.5, 0.5]
-    emission_tex: sky
+    shape: shapes/sphere.ply
+    base: [0.5, 0.7, 0.5]
+    specular: 1
+    roughness: 0.2
+    normal_tex: textures/bumps-normal.png
+  - name: shapes/arealight1.yaml
+    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+    shape: shapes/arealight1.ply
+    emission: [20, 20, 20]
+  - name: shapes/arealight2.yaml
+    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+    shape: shapes/arealight2.ply
+    emission: [20, 20, 20]

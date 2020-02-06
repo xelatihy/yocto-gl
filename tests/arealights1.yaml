@@ -1,121 +1,82 @@
 cameras:
-  - name: default
+  - name: cameras/default.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: front
+  - name: cameras/front.yaml
     lens: 0.05
     aspect: 3
     aperture: 0.0
     lookat: [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
-  - name: back
+  - name: cameras/back.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 3
     lookat: [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
-  - name: perspective-sharp
+  - name: cameras/perspective-sharp.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: perspective-dof
+  - name: cameras/perspective-dof.yaml
     lens: 0.05
     aperture: 0.025
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: orthographic-sharp
+  - name: cameras/orthographic-sharp.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: orthographic-dof
+  - name: cameras/orthographic-dof.yaml
     lens: 0.05
     aperture: 0.02
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-textures:
-  - name: floor
-    filename: textures/test-floor.png
-    preset: test-floor
-  - name: uvgrid
-    filename: textures/test-uvgrid.png
-    preset: test-uvgrid
-materials:
-  - name: floor
+shapes:
+  - name: shapes/floor.yaml
+    shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
-    base_tex: floor
-  - name: uvgrid
+    base_tex: textures/floor.png
+  - name: shapes/arealight1.yaml
+    shape: shapes/arealight1.ply
+    emission: [20, 20, 20]
+    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: shapes/arealight2.yaml
+    shape: shapes/arealight2.ply
+    emission: [20, 20, 20]
+    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: shapes/bunny-uvgrid.yaml
+    shape: shapes/bunny.obj
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
-    base_tex: uvgrid
-  - name: plastic-sharp
+    base_tex: textures/uvgrid.png
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: shapes/sphere-plastic-sharp.yaml
+    shape: shapes/sphere.ply
     specular: 1
     base: [0.5, 0.5, 0.7]
     roughness: 0.01
-  - name: plastic-rough
-    specular: 1
-    base: [0.5, 0.7, 0.5]
-    roughness: 0.2
-  - name: metal-sharp
-    base: [0.7, 0.7, 0.7]
-    metallic: 1
-    roughness: 0
-  - name: metal-rough
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: shapes/bunny-metal-rough.yaml
+    shape: shapes/bunny.obj
     base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
-  - name: arealight1
-    emission: [20, 20, 20]
-  - name: arealight2
-    emission: [20, 20, 20]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: bunny
-    filename: shapes/test-bunny.obj
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: arealight1
-    filename: shapes/test-arealight1.ply
-    preset: test-arealight1
-  - name: arealight2
-    filename: shapes/test-arealight2.ply
-    preset: test-arealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: arealight1
-    shape: arealight1
-    material: arealight1
-    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: arealight2
-    shape: arealight2
-    material: arealight2
-    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: bunny_uvgrid
-    shape: bunny
-    material: uvgrid
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: sphere_plastic-sharp
-    shape: sphere
-    material: plastic-sharp
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: bunny_metal-rough
-    shape: bunny
-    material: metal-rough
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: sphere_plastic-rough
-    shape: sphere
-    material: plastic-rough
+  - name: shapes/sphere-plastic-rough.yaml
+    shape: shapes/sphere.ply
+    specular: 1
+    base: [0.5, 0.7, 0.5]
+    roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: bunny_metal-sharp
-    shape: bunny
-    material: metal-sharp
+  - name: shapes/bunny-metal-sharp.yaml
+    shape: shapes/bunny.obj
+    base: [0.7, 0.7, 0.7]
+    metallic: 1
+    roughness: 0
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]

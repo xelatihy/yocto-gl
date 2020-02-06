@@ -2,10 +2,12 @@ bin
 build
 out
 .vscode/.cmaketools.json
-*.hdr
-*.exr
-*.png
+/*.hdr
+/*.exr
+/*.png
 .vscode/ipch/
+tests/renderings/*.png
+tests/renderings/*.hdr
 tests1/
 .vs
-testsr/render.sh
+testsr/

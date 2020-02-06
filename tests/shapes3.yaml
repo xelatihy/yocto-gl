@@ -1,132 +1,95 @@
 cameras:
-  - name: default
+  - name: cameras/default.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: front
+  - name: cameras/front.yaml
     lens: 0.05
     aspect: 3
     aperture: 0.0
     lookat: [0, 0.575, 1.4, 0, 0.05, 0, 0, 1, 0]
-  - name: back
+  - name: cameras/back.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 3
     lookat: [0, 0.575, -1.4, 0, 0.05, 0, 0, 1, 0]
-  - name: perspective-sharp
+  - name: cameras/perspective-sharp.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: perspective-dof
+  - name: cameras/perspective-dof.yaml
     lens: 0.05
     aperture: 0.025
     aspect: 2.4
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: orthographic-sharp
+  - name: cameras/orthographic-sharp.yaml
     lens: 0.05
     aperture: 0.0
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-  - name: orthographic-dof
+  - name: cameras/orthographic-dof.yaml
     lens: 0.05
     aperture: 0.02
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-textures:
-  - name: floor
-    filename: textures/test-floor.png
-    preset: test-floor
-  - name: sky
-    filename: textures/test-sky.hdr
-    preset: test-sky
-materials:
-  - name: floor
-    base: [0.7, 0.7, 0.7]
-    base_tex: floor
-  - name: matte
-    base: [0.7, 0.7, 0.7]
-    roughness: 1
-  - name: hair
-    base: [0.7, 0.7, 0.7]
-    roughness: 1
-  - name: arealight1
-    emission: [20, 20, 20]
-  - name: arealight2
-    emission: [20, 20, 20]
-shapes:
-  - name: floor
-    filename: shapes/test-floor.ply
-    preset: test-floor
-  - name: sphere
-    filename: shapes/test-sphere.ply
-    preset: test-sphere
-  - name: hairball1
-    filename: shapes/test-hairball1.ply
-    preset: test-hairball1
-  - name: hairball2
-    filename: shapes/test-hairball2.ply
-    preset: test-hairball2
-  - name: hairball3
-    filename: shapes/test-hairball3.ply
-    preset: test-hairball3
-  - name: hairball-interior
-    filename: shapes/test-hairball-interior.ply
-    preset: test-hairball-interior
-  - name: arealight1
-    filename: shapes/test-arealight1.ply
-    preset: test-arealight1
-  - name: arealight2
-    filename: shapes/test-arealight2.ply
-    preset: test-arealight2
-instances:
-  - name: floor
-    shape: floor
-    material: floor
-  - name: arealight1
-    shape: arealight1
-    material: arealight1
-    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: arealight2
-    shape: arealight2
-    material: arealight2
-    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
-  - name: sphere_matte
-    shape: sphere
-    material: matte
-    frame: [0.5, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
-  - name: hairball1_hair
-    shape: hairball1
-    material: hair
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: hairball2_hair
-    shape: hairball2
-    material: hair
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: hairball3_hair
-    shape: hairball3
-    material: hair
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
-  - name: sphere_matte
-    shape: sphere
-    material: matte
-    frame: [0.5, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
-  - name: hairball-interior_hair
-    shape: hairball-interior
-    material: hair
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
-  - name: hairball-interior_hair
-    shape: hairball-interior
-    material: hair
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-  - name: hairball-interior_hair
-    shape: hairball-interior
-    material: hair
-    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
 environments:
-  - name: sky
+  - name: environments/sky.yaml
     emission: [0.5, 0.5, 0.5]
-    emission_tex: sky
+    emission_tex: environments/sky.hdr
+shapes:
+  - name: shapes/floor.yaml
+    shape: shapes/floor.ply
+    base: [0.7, 0.7, 0.7]
+    base_tex: textures/floor.png
+  - name: shapes/arealight1.yaml
+    shape: shapes/arealight1.ply
+    emission: [20, 20, 20]
+    lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: shapes/arealight2.yaml
+    shape: shapes/arealight2.ply
+    emission: [20, 20, 20]
+    lookat: [0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
+  - name: shapes/sphere-matte.yaml
+    shape: shapes/sphere.ply
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
+    frame: [0.5, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
+  - name: shapes/hairball1-hair.yaml
+    shape: shapes/hairball1.ply
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: shapes/hairball2-hair.yaml
+    shape: shapes/hairball2.ply
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: shapes/hairball3-hair.yaml
+    shape: shapes/hairball3.ply
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
+  - name: shapes/sphere-matte.yaml
+    shape: shapes/sphere.ply
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
+    frame: [0.5, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
+  - name: shapes/hairballi1-hair.yaml
+    shape: shapes/hairballi.ply
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
+  - name: shapes/hairballi2-hair.yaml
+    shape: shapes/hairballi.ply
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+  - name: shapes/hairballi3-hair.yaml
+    shape: shapes/hairballi.ply
+    base: [0.7, 0.7, 0.7]
+    roughness: 1
+    frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
