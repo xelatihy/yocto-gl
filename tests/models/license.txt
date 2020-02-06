@@ -1,0 +1,11 @@
+License for model files.
+
+1. stanford-bunny
+    - original license: http://www.graphics.stanford.edu/data/3Dscanrep/
+    - downloaded from McGuire Archive: https://casual-effects.com/data
+2. utah-teapot
+    - cc0
+    - downloaded from McGuire Archive: https://casual-effects.com/data
+2. utah-teapotr
+    - as utah-teapot
+    - rescaled to match original size
