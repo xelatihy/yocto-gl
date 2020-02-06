@@ -1169,7 +1169,10 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
       } else if (yelement.name == "shapes") {
         auto& shape = scene.shapes.emplace_back();
         get_yaml_value(yelement, "name", shape.name);
-        get_yaml_value(yelement, "filename", shape.filename);
+        get_yaml_value(yelement, "shape", shape.filename);
+        if(has_yaml_value(yelement, "filename")) {
+          get_yaml_value(yelement, "filename", shape.filename);
+        }
         get_yaml_value(yelement, "frame", shape.frame);
         if (has_yaml_value(yelement, "lookat")) {
           auto lookat = identity3x3f;
@@ -1228,7 +1231,10 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
       } else if (yelement.name == "subdivs") {
         auto& subdiv = scene.subdivs.emplace_back();
         get_yaml_value(yelement, "name", subdiv.name);
-        get_yaml_value(yelement, "filename", subdiv.filename);
+        get_yaml_value(yelement, "subdiv", subdiv.filename);
+        if(has_yaml_value(yelement, "filename")) {
+          get_yaml_value(yelement, "filename", subdiv.filename);
+        }
         get_yaml_ref(yelement, "shape", subdiv.shape, smap);
         get_yaml_value(yelement, "subdivisions", subdiv.subdivisions);
         get_yaml_value(yelement, "catmullclark", subdiv.catmullclark);
