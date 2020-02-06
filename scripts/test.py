@@ -646,7 +646,7 @@ def make_tests():
 @cli.command()
 def upgrade():
     for filename in sorted(glob.glob('tests/*.yaml')):
-        if filename == 'tests/features1.yaml': pass
+        continue
         print(filename)
         with open(filename) as f: yaml = f.read()
         nyaml = ''
@@ -688,6 +688,35 @@ def upgrade():
                     nyaml += shapes[line.partition(':')[2].strip()]
                 else:
                     nyaml += line + '\n'
+        with open(filename, 'wt') as f:
+            f.write(nyaml)
+    for filename in sorted(glob.glob('tests/*.yaml')):
+        print(filename)
+        with open(filename) as f: yaml = f.read()
+        nyaml = ''
+        cur_type = ''
+        cur_name = ''
+        textures = {}
+        for line in yaml.splitlines():
+            line = line.rstrip()
+            if not line:
+                nyaml += line + '\n'
+            elif line in ['textures:']:
+                cur_type = line
+            elif not line.startswith('  '):
+                cur_type = ''
+                nyaml += line + '\n'
+            elif line.startswith('  ') and not cur_type:
+                if '_tex:' in line:
+                    nyaml += line.partition(':')[0] + ': ' + textures[line.partition(':')[2].strip()] + '\n'
+                else:
+                    nyaml += line + '\n'
+            elif line.startswith('  ') and cur_type == 'textures:':
+                if line.startswith('  - '):
+                    cur_name = line.partition(':')[2].strip()
+                    textures[cur_name] = ''
+                else:
+                    textures[cur_name] = line.partition(':')[2].strip()
         with open(filename, 'wt') as f:
             f.write(nyaml)
 

@@ -36,20 +36,11 @@ cameras:
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-textures:
-  - name: floor
-    filename: textures/floor.png
-  - name: uvgrid
-    filename: textures/uvgrid.png
-  - name: bumps-normal
-    filename: textures/bumps-normal.png
-  - name: sky
-    filename: textures/sky.hdr
 shapes:
   - name: floor
     shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    base_tex: textures/floor.png
     specular: 0
   - name: bunny-uvgrid-coated
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
@@ -58,7 +49,7 @@ shapes:
     specular: 1
     roughness: 0.2
     coat: 1
-    base_tex: uvgrid
+    base_tex: textures/uvgrid.png
   - name: bunny-volume-jade
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
     shape: shapes/bunny.obj
@@ -89,7 +80,7 @@ shapes:
     base: [0.5, 0.7, 0.5]
     specular: 1
     roughness: 0.2
-    normal_tex: bumps-normal
+    normal_tex: textures/bumps-normal.png
   - name: arealight1
     lookat: [-0.4, 0.8, 0.8, 0, 0.1, 0, 0, 1, 0]
     shape: shapes/arealight1.ply
@@ -101,4 +92,4 @@ shapes:
 environments:
   - name: sky
     emission: [0.5, 0.5, 0.5]
-    emission_tex: sky
+    emission_tex: textures/sky.hdr

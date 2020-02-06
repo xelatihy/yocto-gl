@@ -36,16 +36,11 @@ cameras:
     aspect: 2.4
     orthographic: true
     lookat: [-0.5, 1, 2, -0.05, 0.15, 0, 0, 1, 0]
-textures:
-  - name: floor
-    filename: textures/floor.png
-  - name: sky
-    filename: textures/sky.hdr
 shapes:
   - name: floor
     shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    base_tex: textures/floor.png
   - name: largearealight1
     shape: shapes/largearealight1.ply
     emission: [10, 10, 10]
@@ -133,4 +128,4 @@ shapes:
 environments:
   - name: sky
     emission: [0.5, 0.5, 0.5]
-    emission_tex: sky
+    emission_tex: textures/sky.hdr

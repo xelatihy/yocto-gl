@@ -36,20 +36,11 @@ cameras:
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-textures:
-  - name: floor
-    filename: textures/floor.png
-  - name: uvgrid
-    filename: textures/uvgrid.png
-  - name: bumps-displacement
-    filename: textures/bumps-displacement.png
-  - name: sky
-    filename: textures/sky.hdr
 shapes:
   - name: floor
     shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    base_tex: textures/floor.png
     specular: 0
   - name: arealight1
     shape: shapes/arealight1.ply
@@ -64,7 +55,7 @@ shapes:
     base: [1, 1, 1]
     specular: 1
     roughness: 0.1
-    base_tex: uvgrid
+    base_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: suzanne-subdiv-plastic-rough
     shape: shapes/suzanne-subdiv.obj
@@ -85,7 +76,7 @@ shapes:
     shape: shapes/sphere-displaced.obj
     facevarying: true
     displacement: 0.025
-    displacement_tex: bumps-displacement
+    displacement_tex: textures/bumps-displacement.png
     base: [0.5, 0.7, 0.5]
     specular: 1
     roughness: 0.2
@@ -95,7 +86,7 @@ shapes:
     base: [1, 1, 1]
     specular: 1
     roughness: 0.1
-    base_tex: uvgrid
+    base_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
   - name: hairballi-hair
     shape: shapes/hairballi.ply
@@ -109,7 +100,7 @@ subdivs:
     shape: sphere-displaced-plastic-rough
     facevarying: true
     displacement: 0.025
-    displacement_tex: bumps-displacement
+    displacement_tex: textures/bumps-displacement.png
   - name: suzanne-subdiv
     subdiv: subdivs/suzanne-subdiv.obj
     shape: suzanne-subdiv-plastic-rough
@@ -119,4 +110,4 @@ subdivs:
 environments:
   - name: sky
     emission: [0.5, 0.5, 0.5]
-    emission_tex: sky
+    emission_tex: textures/sky.hdr

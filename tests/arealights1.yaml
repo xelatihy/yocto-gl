@@ -36,16 +36,11 @@ cameras:
     aspect: 2.4
     orthographic: true
     lookat: [-0.75, 0.4, 0.9, -0.075, 0.05, -0.05, 0, 1, 0]
-textures:
-  - name: floor
-    filename: textures/floor.png
-  - name: uvgrid
-    filename: textures/uvgrid.png
 shapes:
   - name: floor
     shape: shapes/floor.ply
     base: [0.7, 0.7, 0.7]
-    base_tex: floor
+    base_tex: textures/floor.png
   - name: arealight1
     shape: shapes/arealight1.ply
     emission: [20, 20, 20]
@@ -59,7 +54,7 @@ shapes:
     specular: 1
     base: [1, 1, 1]
     roughness: 0.1
-    base_tex: uvgrid
+    base_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: sphere-plastic-sharp
     shape: shapes/sphere.ply
