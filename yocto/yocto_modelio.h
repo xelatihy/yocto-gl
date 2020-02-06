@@ -265,13 +265,13 @@ struct obj_material {
 
   // pbrt extension values
   bool  as_pbr            = false;
-  vec3f pbr_emission          = {0, 0, 0};
+  vec3f pbr_emission      = {0, 0, 0};
   vec3f pbr_base          = {0, 0, 0};
   float pbr_specular      = 0;
   float pbr_roughness     = 0;
   float pbr_metallic      = 0;
   float pbr_sheen         = 0;
-  float pbr_coat     = 0;
+  float pbr_coat          = 0;
   float pbr_coatroughness = 0;
   float pbr_transmission  = 0;
   float pbr_ior           = 1.5;
@@ -287,7 +287,7 @@ struct obj_material {
   obj_texture_info pbr_roughness_map     = {};
   obj_texture_info pbr_metallic_map      = {};
   obj_texture_info pbr_sheen_map         = {};
-  obj_texture_info pbr_coat_map     = {};
+  obj_texture_info pbr_coat_map          = {};
   obj_texture_info pbr_coatroughness_map = {};
   obj_texture_info pbr_transmission_map  = {};
   obj_texture_info pbr_opacity_map       = {};

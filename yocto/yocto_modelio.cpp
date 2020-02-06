@@ -1485,15 +1485,11 @@ static void load_mtl(
       material.transmission = vec3f{-1};
       parse_value(fs, str, material.transmission);
       if (material.transmission.y < 0)
-        material.transmission = vec3f{
-            material.transmission.x};
-      if (fliptr)
-        material.transmission = 1 -
-                                            material.transmission;
+        material.transmission = vec3f{material.transmission.x};
+      if (fliptr) material.transmission = 1 - material.transmission;
     } else if (cmd == "Tr") {
       parse_value(fs, str, material.opacity);
-      if (fliptr)
-        material.opacity = 1 - material.opacity;
+      if (fliptr) material.opacity = 1 - material.opacity;
     } else if (cmd == "Ns") {
       parse_value(fs, str, material.exponent);
     } else if (cmd == "d") {
@@ -1600,24 +1596,24 @@ static void load_mtl(
   obj.materials.erase(obj.materials.begin());
 
   // convert values when possible
-  for(auto& material : obj.materials) {
-    if(material.as_pbr) continue;
-    material.pbr_emission = material.emission;
+  for (auto& material : obj.materials) {
+    if (material.as_pbr) continue;
+    material.pbr_emission     = material.emission;
     material.pbr_emission_map = material.emission_map;
-    material.pbr_roughness = obj_exponent_to_roughness(material.exponent);
-    material.pbr_ior = material.ior;
-    material.pbr_opacity = material.opacity;
-    material.pbr_opacity_map = material.opacity_map;
-    if(max(material.transmission) > 0.1) {
-      material.pbr_base = material.transmission;
+    material.pbr_roughness    = obj_exponent_to_roughness(material.exponent);
+    material.pbr_ior          = material.ior;
+    material.pbr_opacity      = material.opacity;
+    material.pbr_opacity_map  = material.opacity_map;
+    if (max(material.transmission) > 0.1) {
+      material.pbr_base         = material.transmission;
       material.pbr_transmission = 1;
-      material.pbr_specular = 1;
-    } else if(max(material.specular) > 0.2) {
-      material.pbr_base = material.specular;
+      material.pbr_specular     = 1;
+    } else if (max(material.specular) > 0.2) {
+      material.pbr_base     = material.specular;
       material.pbr_base_map = material.specular_map;
       material.pbr_metallic = 1;
     } else {
-      material.pbr_base = material.diffuse;
+      material.pbr_base     = material.diffuse;
       material.pbr_base_map = material.diffuse_map;
       material.pbr_specular = max(material.specular) ? 1 : 0;
     }
@@ -1896,40 +1892,40 @@ static void save_mtl(const string& filename, const obj_model& obj) {
   // write material
   for (auto& material : obj.materials) {
     format_values(fs, "newmtl {}\n", material.name);
-    if(!material.as_pbr){
-    format_values(fs, "illum {}\n", material.illum);
-    if (material.emission != zero3f)
-      format_values(fs, "Ke {}\n", material.emission);
-    if (material.ambient != zero3f)
-      format_values(fs, "Ka {}\n", material.ambient);
-    format_values(fs, "Kd {}\n", material.diffuse);
-    format_values(fs, "Ks {}\n", material.specular);
-    if (material.reflection != zero3f)
-      format_values(fs, "Kr {}\n", material.reflection);
-    if (material.transmission != zero3f)
-      format_values(fs, "Kt {}\n", material.transmission);
-    format_values(fs, "Ns {}\n", (int)material.exponent);
-    if (material.opacity != 1) format_values(fs, "d {}\n", material.opacity);
-    if (!material.emission_map.path.empty())
-      format_values(fs, "map_Ke {}\n", material.emission_map);
-    if (!material.diffuse_map.path.empty())
-      format_values(fs, "map_Kd {}\n", material.diffuse_map);
-    if (!material.specular_map.path.empty())
-      format_values(fs, "map_Ks {}\n", material.specular_map);
-    if (!material.transmission_map.path.empty())
-      format_values(fs, "map_Kt {}\n", material.transmission_map);
-    if (!material.reflection_map.path.empty())
-      format_values(fs, "map_Kr {}\n", material.reflection_map);
-    if (!material.exponent_map.path.empty())
-      format_values(fs, "map_Ns {}\n", material.exponent_map);
-    if (!material.opacity_map.path.empty())
-      format_values(fs, "map_d {}\n", material.opacity_map);
-    if (!material.bump_map.path.empty())
-      format_values(fs, "map_bump {}\n", material.bump_map);
-    if (!material.displacement_map.path.empty())
-      format_values(fs, "map_disp {}\n", material.displacement_map);
-    if (!material.normal_map.path.empty())
-      format_values(fs, "map_norm {}\n", material.normal_map);
+    if (!material.as_pbr) {
+      format_values(fs, "illum {}\n", material.illum);
+      if (material.emission != zero3f)
+        format_values(fs, "Ke {}\n", material.emission);
+      if (material.ambient != zero3f)
+        format_values(fs, "Ka {}\n", material.ambient);
+      format_values(fs, "Kd {}\n", material.diffuse);
+      format_values(fs, "Ks {}\n", material.specular);
+      if (material.reflection != zero3f)
+        format_values(fs, "Kr {}\n", material.reflection);
+      if (material.transmission != zero3f)
+        format_values(fs, "Kt {}\n", material.transmission);
+      format_values(fs, "Ns {}\n", (int)material.exponent);
+      if (material.opacity != 1) format_values(fs, "d {}\n", material.opacity);
+      if (!material.emission_map.path.empty())
+        format_values(fs, "map_Ke {}\n", material.emission_map);
+      if (!material.diffuse_map.path.empty())
+        format_values(fs, "map_Kd {}\n", material.diffuse_map);
+      if (!material.specular_map.path.empty())
+        format_values(fs, "map_Ks {}\n", material.specular_map);
+      if (!material.transmission_map.path.empty())
+        format_values(fs, "map_Kt {}\n", material.transmission_map);
+      if (!material.reflection_map.path.empty())
+        format_values(fs, "map_Kr {}\n", material.reflection_map);
+      if (!material.exponent_map.path.empty())
+        format_values(fs, "map_Ns {}\n", material.exponent_map);
+      if (!material.opacity_map.path.empty())
+        format_values(fs, "map_d {}\n", material.opacity_map);
+      if (!material.bump_map.path.empty())
+        format_values(fs, "map_bump {}\n", material.bump_map);
+      if (!material.displacement_map.path.empty())
+        format_values(fs, "map_disp {}\n", material.displacement_map);
+      if (!material.normal_map.path.empty())
+        format_values(fs, "map_norm {}\n", material.normal_map);
     } else {
       format_values(fs, "illum 2\n");
       if (material.pbr_emission != zero3f)
@@ -1943,15 +1939,15 @@ static void save_mtl(const string& filename, const obj_model& obj) {
       if (material.pbr_metallic)
         format_values(fs, "Pm {}\n", material.pbr_metallic);
       if (material.pbr_sheen) format_values(fs, "Ps {}\n", material.pbr_sheen);
-      if (material.pbr_coat)
-        format_values(fs, "Pc {}\n", material.pbr_coat);
+      if (material.pbr_coat) format_values(fs, "Pc {}\n", material.pbr_coat);
       if (material.pbr_coatroughness)
         format_values(fs, "Pcr {}\n", material.pbr_coatroughness);
       if (material.pbr_volscattering != zero3f)
         format_values(fs, "Pvs {}\n", material.pbr_volscattering);
       if (material.pbr_volanisotropy)
         format_values(fs, "Pvg {}\n", material.pbr_volanisotropy);
-      if (material.pbr_volscale) format_values(fs, "Pvr {}\n", material.pbr_volscale);
+      if (material.pbr_volscale)
+        format_values(fs, "Pvr {}\n", material.pbr_volscale);
       if (!material.pbr_emission_map.path.empty())
         format_values(fs, "map_Pe {}\n", material.pbr_emission_map);
       if (!material.pbr_base_map.path.empty())
