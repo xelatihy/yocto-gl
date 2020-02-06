@@ -249,7 +249,6 @@ vector<string> scene_stats(const sceneio_model& scene, bool verbose) {
   stats.push_back("cameras:      " + format(scene.cameras.size()));
   stats.push_back("shapes:       " + format(scene.shapes.size()));
   stats.push_back("subdivs:      " + format(scene.subdivs.size()));
-  stats.push_back("instances:    " + format(scene.instances.size()));
   stats.push_back("environments: " + format(scene.environments.size()));
   stats.push_back("textures:     " + format(scene.textures.size()));
   stats.push_back("nodes:        " + format(scene.nodes.size()));
@@ -321,7 +320,6 @@ vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
   check_names(scene.cameras, "camera");
   check_names(scene.shapes, "shape");
   check_names(scene.textures, "texture");
-  check_names(scene.instances, "instance");
   check_names(scene.environments, "environment");
   check_names(scene.nodes, "node");
   check_names(scene.animations, "animation");
@@ -340,15 +338,17 @@ namespace yocto {
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_bounds(const sceneio_model& scene) {
   auto shape_bbox = vector<bbox3f>{};
-  for (auto& shape : scene.shapes) {
-    auto& sbvh = shape_bbox.emplace_back();
-    sbvh       = invalidb3f;
-    for (auto p : shape.positions) sbvh = merge(sbvh, p);
-  }
   auto bbox = invalidb3f;
-  for (auto& instance : scene.instances) {
-    bbox = merge(
-        bbox, transform_bbox(instance.frame, shape_bbox[instance.shape]));
+  for (auto& shape : scene.shapes) {
+    auto sbvh = invalidb3f;
+    for (auto p : shape.positions) sbvh = merge(sbvh, transform_point(shape.frame, p));
+    if(shape.instances.empty()) {
+      bbox = merge(bbox, sbvh);
+    } else {
+      for(auto& frame : shape.instances) {
+        bbox = merge(bbox, transform_bbox(frame * shape.frame, sbvh));
+      }
+    }
   }
   return bbox;
 }
@@ -434,7 +434,6 @@ void trim_memory(sceneio_model& scene) {
   }
   scene.cameras.shrink_to_fit();
   scene.shapes.shrink_to_fit();
-  scene.instances.shrink_to_fit();
   scene.textures.shrink_to_fit();
   scene.environments.shrink_to_fit();
   scene.nodes.shrink_to_fit();
@@ -705,7 +704,8 @@ void update_transforms(sceneio_model& scene, sceneio_node& node,
     const frame3f& parent = identity3x4f) {
   auto frame = parent * node.local * translation_frame(node.translation) *
                rotation_frame(node.rotation) * scaling_frame(node.scale);
-  if (node.instance >= 0) scene.instances[node.instance].frame = frame;
+  if (node.shape >= 0) scene.shapes[node.shape].frame = frame;
+  if (node.instance >= 0) scene.shapes[node.shape].instances[node.instance] = frame;
   if (node.camera >= 0) scene.cameras[node.camera].frame = frame;
   if (node.environment >= 0) scene.environments[node.environment].frame = frame;
   for (auto child : node.children)
@@ -1170,6 +1170,19 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
         auto& shape = scene.shapes.emplace_back();
         get_yaml_value(yelement, "name", shape.name);
         get_yaml_value(yelement, "filename", shape.filename);
+        get_yaml_value(yelement, "frame", shape.frame);
+        if (has_yaml_value(yelement, "lookat")) {
+          auto lookat = identity3x3f;
+          get_yaml_value(yelement, "lookat", lookat);
+          shape.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+        }
+        if (has_yaml_value(yelement, "instances")) {
+          auto& group = groups.emplace_back();
+          get_yaml_value(yelement, "instances", group.filename);
+          while (igroups.size() < scene.shapes.size())
+            igroups.emplace_back() = -1;
+          igroups.back() = (int)groups.size() - 1;
+        }
         get_yaml_refcopy(yelement, "material", shape.material, materials, mmap);
         get_yaml_value(yelement, "emission", shape.material.emission);
         get_yaml_value(yelement, "base", shape.material.base);
@@ -1239,28 +1252,6 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
             subdiv.filename = "shapes/ypreset-" + preset + ".yvol";
           }
         }
-      } else if (yelement.name == "instances") {
-        auto& instance = scene.instances.emplace_back();
-        get_yaml_value(yelement, "name", instance.name);
-        get_yaml_value(yelement, "frame", instance.frame);
-        get_yaml_ref(yelement, "shape", instance.shape, smap);
-        if (has_yaml_value(yelement, "uri")) {
-          auto uri = ""s;
-          get_yaml_value(yelement, "uri", uri);
-          instance.name = get_basename(uri);
-        }
-        if (has_yaml_value(yelement, "lookat")) {
-          auto lookat = identity3x3f;
-          get_yaml_value(yelement, "lookat", lookat);
-          instance.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-        }
-        if (has_yaml_value(yelement, "instances")) {
-          auto& group = groups.emplace_back();
-          get_yaml_value(yelement, "instances", group.filename);
-          while (igroups.size() < scene.instances.size())
-            igroups.emplace_back() = -1;
-          igroups.back() = (int)groups.size() - 1;
-        }
       } else if (yelement.name == "environments") {
         auto& environment = scene.environments.emplace_back();
         get_yaml_value(yelement, "name", environment.name);
@@ -1312,18 +1303,8 @@ void load_yaml(const string& filename, sceneio_model& scene, bool noparallel) {
                 "zz", "ox", "oy", "oz"});
       });
     }
-    auto instances = scene.instances;
-    scene.instances.clear();
-    for (auto idx = 0; idx < instances.size(); idx++) {
-      auto& base  = instances[idx];
-      auto& group = groups[igroups[idx]];
-      auto  count = 0;
-      for (auto& frame : group.frames) {
-        auto& instance    = scene.instances.emplace_back();
-        instance.name     = base.name + std::to_string(count++);
-        instance.shape    = base.shape;
-        instance.frame    = frame;
-      }
+    for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+      scene.shapes[idx].instances = groups[igroups[idx]].frames;
     }
   }
 }
@@ -1698,6 +1679,7 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     yelement.name  = "shapes";
     add_yaml_value(yelement, "name", shape.name);
     add_yaml_value(yelement, "filename", shape.filename);
+    add_yaml_value(yelement, "frame", shape.frame);
     add_yaml_value(yelement, "emission", shape.material.emission);
     add_yaml_value(yelement, "base", shape.material.base);
     add_yaml_value(yelement, "specular", shape.material.specular);
@@ -1729,6 +1711,9 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
     add_yaml_ref(yelement, "normal_tex", shape.material.normal_tex, scene.textures);
     if (shape.material.gltf_textures)
       add_yaml_value(yelement, "gltf_textures", shape.material.gltf_textures);
+    if (!shape.instances.empty()) {
+      // TODO: save instances
+    }
   }
 
   for (auto& subdiv : scene.subdivs) {
@@ -1748,15 +1733,6 @@ static void save_yaml(const string& filename, const sceneio_model& scene,
           scene.textures[subdiv.displacement_tex].name);
     if (subdiv.displacement_tex >= 0)
       add_yaml_value(yelement, "displacement", subdiv.displacement);
-  }
-
-  for (auto& instance : scene.instances) {
-    auto& yelement = yaml.elements.emplace_back();
-    yelement.name  = "instances";
-    add_yaml_value(yelement, "name", instance.name);
-    add_yaml_value(yelement, "frame", instance.frame);
-    if (instance.shape >= 0)
-      add_yaml_value(yelement, "shape", scene.shapes[instance.shape].name);
   }
 
   for (auto& environment : scene.environments) {
@@ -1890,19 +1866,7 @@ static void load_obj(const string& filename, sceneio_model& scene) {
           filename, "material", oshape.materials.at(0));
     }
     shape.material = materials[material_map.at(oshape.materials.at(0))];
-    // make instances
-    if (oshape.instances.empty()) {
-      auto& instance    = scene.instances.emplace_back();
-      instance.name     = shape.name;
-      instance.shape    = (int)scene.shapes.size() - 1;
-    } else {
-      for (auto& frame : oshape.instances) {
-        auto& instance    = scene.instances.emplace_back();
-        instance.name     = shape.name;
-        instance.frame    = frame;
-        instance.shape    = (int)scene.shapes.size() - 1;
-      }
-    }
+    shape.instances = oshape.instances;
   }
 
   // convert environments
@@ -1982,48 +1946,48 @@ static void save_obj(
   }
 
   // convert shapes
-  if (instances) {
-    for (auto& shape : scene.shapes) {
+  for (auto& shape : scene.shapes) {
+    if (instances && !shape.instances.empty()) {
+      auto  positions = shape.positions, normals = shape.normals;
+      for (auto& p : positions) p = transform_point(shape.frame, p);
+      for (auto& n : normals) n = transform_normal(shape.frame, n);
       if (!shape.triangles.empty()) {
-        add_obj_triangles(obj, shape.name, shape.triangles, shape.positions,
-            shape.normals, shape.texcoords, {}, {}, true);
+        add_obj_triangles(obj, shape.name, shape.triangles, positions,
+            normals, shape.texcoords, {}, {}, true);
       } else if (!shape.quads.empty()) {
-        add_obj_quads(obj, shape.name, shape.quads, shape.positions,
-            shape.normals, shape.texcoords, {}, {}, true);
+        add_obj_quads(obj, shape.name, shape.quads, positions,
+            normals, shape.texcoords, {}, {}, true);
       } else if (!shape.lines.empty()) {
-        add_obj_lines(obj, shape.name, shape.lines, shape.positions,
-            shape.normals, shape.texcoords, {}, {}, true);
+        add_obj_lines(obj, shape.name, shape.lines, positions,
+            normals, shape.texcoords, {}, {}, true);
       } else if (!shape.points.empty()) {
-        add_obj_points(obj, shape.name, shape.points, shape.positions,
-            shape.normals, shape.texcoords, {}, {}, true);
+        add_obj_points(obj, shape.name, shape.points, positions,
+            normals, shape.texcoords, {}, {}, true);
       } else {
         throw_emptyshape_error(filename, shape.name);
       }
-    }
-    for (auto& instance : scene.instances) {
-      obj.shapes[instance.shape].instances.push_back(instance.frame);
-    }
-  } else {
-    for (auto& instance : scene.instances) {
-      auto& shape     = scene.shapes[instance.shape];
-      auto  materials = vector<string>{shape.name};
-      auto  positions = shape.positions, normals = shape.normals;
-      for (auto& p : positions) p = transform_point(instance.frame, p);
-      for (auto& n : normals) n = transform_normal(instance.frame, n);
-      if (!shape.triangles.empty()) {
-        add_obj_triangles(obj, instance.name, shape.triangles, positions,
-            normals, shape.texcoords, materials, {}, true);
-      } else if (!shape.quads.empty()) {
-        add_obj_quads(obj, instance.name, shape.quads, positions, normals,
-            shape.texcoords, materials, {}, true);
-      } else if (!shape.lines.empty()) {
-        add_obj_lines(obj, instance.name, shape.lines, positions, normals,
-            shape.texcoords, materials, {}, true);
-      } else if (!shape.points.empty()) {
-        add_obj_points(obj, instance.name, shape.points, positions, normals,
-            shape.texcoords, materials, {}, true);
-      } else {
-        throw_emptyshape_error(filename, shape.name);
+    // TODO: instances
+    } else {
+      for(auto& frame : shape.instances) {
+        auto  materials = vector<string>{shape.name};
+        auto  positions = shape.positions, normals = shape.normals;
+        for (auto& p : positions) p = transform_point(frame * shape.frame, p);
+        for (auto& n : normals) n = transform_normal(frame * shape.frame, n);
+        if (!shape.triangles.empty()) {
+          add_obj_triangles(obj, shape.name, shape.triangles, positions,
+              normals, shape.texcoords, materials, {}, true);
+        } else if (!shape.quads.empty()) {
+          add_obj_quads(obj, shape.name, shape.quads, positions, normals,
+              shape.texcoords, materials, {}, true);
+        } else if (!shape.lines.empty()) {
+          add_obj_lines(obj, shape.name, shape.lines, positions, normals,
+              shape.texcoords, materials, {}, true);
+        } else if (!shape.points.empty()) {
+          add_obj_points(obj, shape.name, shape.points, positions, normals,
+              shape.texcoords, materials, {}, true);
+        } else {
+          throw_emptyshape_error(filename, shape.name);
+        }
       }
     }
   }
@@ -2079,12 +2043,6 @@ static void load_ply_scene(
   } catch (std::exception& e) {
     throw_dependent_error(filename, e.what());
   }
-
-  // add instance
-  auto instance  = sceneio_instance{};
-  instance.name  = shape.name;
-  instance.shape = 0;
-  scene.instances.push_back(instance);
 
   // fix scene
   scene.name = get_basename(filename);
@@ -2198,12 +2156,8 @@ static void load_gltf(const string& filename, sceneio_model& scene) {
       camera.frame = gnode.frame;
     }
     if (gnode.mesh >= 0) {
-      for (auto shape : shape_indices[gnode.mesh]) {
-        auto& instance = scene.instances.emplace_back();
-        instance.name  = make_safe_name(
-            scene.shapes[shape].name, "instance", (int)scene.instances.size());
-        instance.frame    = gnode.frame;
-        instance.shape    = shape;
+      for (auto shape_id : shape_indices[gnode.mesh]) {
+        scene.shapes[shape_id].instances.push_back(gnode.frame);
       }
     }
   }
@@ -2309,6 +2263,7 @@ static void load_pbrt(
       shape.name     = make_safe_name(
           get_basename(pshape.filename), "shape", (int)scene.shapes.size());
     }
+    shape.frame = pshape.frame;
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
     shape.texcoords = pshape.texcoords;
@@ -2317,22 +2272,7 @@ static void load_pbrt(
     auto material_id  = material_map.at(pshape.material);
     auto arealight_id = arealight_map.at(pshape.arealight);
     shape.material = materials[arealight_id >= 0 ? arealight_id : material_id];
-    if (pshape.instance_frames.empty()) {
-      auto& instance    = scene.instances.emplace_back();
-      instance.name     = shape.name;
-      instance.frame    = pshape.frame;
-      instance.shape    = (int)scene.shapes.size() - 1;
-    } else {
-      auto instance_id = 0;
-      for (auto& frame : pshape.instance_frames) {
-        auto& instance    = scene.instances.emplace_back();
-        instance.name     = shape.name + (pshape.instance_frames.empty()
-                                             ? ""s
-                                             : std::to_string(instance_id++));
-        instance.frame    = frame * pshape.frame;
-        instance.shape    = (int)scene.shapes.size() - 1;
-      }
-    }
+    shape.instances = pshape.instance_frames;
   }
 
   // convert environments
@@ -2358,14 +2298,11 @@ static void load_pbrt(
     auto& shape       = scene.shapes.emplace_back();
     shape.name        = make_safe_name("", "light", (int)scene.shapes.size());
     shape.filename    = make_safe_filename("shapes/" + shape.name + ".ply");
+    shape.frame       = plight.area_frame;
     shape.triangles   = plight.area_triangles;
     shape.positions   = plight.area_positions;
     shape.normals     = plight.area_normals;
     shape.material.emission = plight.area_emission;
-    auto& instance    = scene.instances.emplace_back();
-    instance.name     = shape.name;
-    instance.frame    = plight.area_frame;
-    instance.shape    = (int)scene.shapes.size() - 1;
   }
 }
 
@@ -2425,14 +2362,14 @@ static void save_pbrt(const string& filename, const sceneio_model& scene) {
   }
 
   // convert instances
-  for (auto& instance : scene.instances) {
-    auto& shape      = scene.shapes[instance.shape];
+  for (auto& shape : scene.shapes) {
     auto& material   = shape.material;
     auto& pshape     = pbrt.shapes.emplace_back();
     pshape.filename  = replace_extension(shape.filename, ".ply");
-    pshape.frame     = instance.frame;
+    pshape.frame     = shape.frame;
     pshape.material  = shape.name;
     pshape.arealight = material.emission == zero3f ? ""s : shape.name;
+    pshape.instance_frames = shape.instances;
   }
 
   // convert environments
@@ -2550,14 +2487,6 @@ void make_cornellbox_scene(sceneio_model& scene) {
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
   light_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
   light_shp.material.emission      = {17, 12, 4};
-  scene.instances.push_back({"floor", identity3x4f, 0});
-  scene.instances.push_back({"ceiling", identity3x4f, 1});
-  scene.instances.push_back({"backwall", identity3x4f, 2});
-  scene.instances.push_back({"rightwall", identity3x4f, 3});
-  scene.instances.push_back({"leftwall", identity3x4f, 4});
-  scene.instances.push_back({"shortbox", identity3x4f, 5});
-  scene.instances.push_back({"tallbox", identity3x4f, 6});
-  scene.instances.push_back({"light", identity3x4f, 7});
 }
 
 }  // namespace yocto

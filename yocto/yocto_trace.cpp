@@ -3174,6 +3174,10 @@ void set_material_gltftextures(
 void clean_materials(trace_scene& scene) { scene.materials.clear(); }
 
 // Add shape
+int add_shape(trace_scene& scene) {
+  scene.shapes.emplace_back();
+  return (int)scene.shapes.size() - 1;
+}
 int add_shape(trace_scene& scene, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,

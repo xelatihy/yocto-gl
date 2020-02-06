@@ -82,25 +82,29 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   }
 
   for (auto& ioshape : ioscene.shapes) {
+    auto id = add_shape(scene);
     if (!ioshape.points.empty()) {
-      add_shape(scene, ioshape.points, ioshape.positions, ioshape.normals,
+      set_shape(scene, id, ioshape.points, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.lines.empty()) {
-      add_shape(scene, ioshape.lines, ioshape.positions, ioshape.normals,
+      set_shape(scene, id, ioshape.lines, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.triangles.empty()) {
-      add_shape(scene, ioshape.triangles, ioshape.positions, ioshape.normals,
+      set_shape(scene, id, ioshape.triangles, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
     } else if (!ioshape.quads.empty()) {
-      add_shape(scene, ioshape.quads, ioshape.positions, ioshape.normals,
+      set_shape(scene, id, ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
     }
+    if(ioshape.instances.empty()) {
+      add_instance(
+          scene, ioshape.frame, id, id);
+    } else {
+      for(auto& frame : ioshape.instances)
+      add_instance(
+          scene, frame * ioshape.frame, id, id);
+    }
     ioshape = {};
-  }
-
-  for (auto& ioinstance : ioscene.instances) {
-    add_instance(
-        scene, ioinstance.frame, ioinstance.shape, ioinstance.shape);
   }
 
   for (auto& ioenvironment : ioscene.environments) {
