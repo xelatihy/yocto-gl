@@ -49,29 +49,6 @@ textures:
   - name: sky
     filename: textures/test-sky.hdr
     preset: test-sky
-subdivs:
-  - name: sphere-displaced
-    filename: shapes/test-sphere-displaced.obj
-    preset: test-sphere-displaced
-    shape: sphere-displaced
-    facevarying: true
-    displacement: 0.025
-    displacement_tex: bumps-displacement
-  - name: cube-subdiv
-    filename: shapes/test-cube-subdiv.obj
-    preset: test-cube-subdiv
-    shape: cube-subdiv
-    subdivisions: 4
-    catmullclark: true
-    smooth: false
-    facevarying: true
-  - name: suzanne-subdiv
-    filename: shapes/test-suzanne-subdiv.obj
-    preset: test-suzanne-subdiv
-    shape: suzanne-subdiv
-    subdivisions: 2
-    catmullclark: true
-    smooth: true
 shapes:
   - name: floor
     shape: shapes/test-floor.ply
@@ -133,6 +110,29 @@ shapes:
     roughness: 0.1
     base_tex: uvgrid
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
+subdivs:
+  - name: sphere-displaced
+    subdiv: shapes/test-sphere-displaced.obj
+    preset: test-sphere-displaced
+    shape: sphere-displaced-matte
+    facevarying: true
+    displacement: 0.025
+    displacement_tex: bumps-displacement
+  - name: cube-subdiv
+    subdiv: shapes/test-cube-subdiv.obj
+    preset: test-cube-subdiv
+    shape: cube-subdiv-uvgrid
+    subdivisions: 4
+    catmullclark: true
+    smooth: false
+    facevarying: true
+  - name: suzanne-subdiv
+    subdiv: shapes/test-suzanne-subdiv.obj
+    preset: test-suzanne-subdiv
+    shape: suzanne-subdiv-plastic-sharp
+    subdivisions: 2
+    catmullclark: true
+    smooth: true
 environments:
   - name: sky
     emission: [0.5, 0.5, 0.5]
