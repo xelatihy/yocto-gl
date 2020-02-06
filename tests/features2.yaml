@@ -105,13 +105,13 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
 subdivs:
   - name: sphere-displaced
-    subdiv: shapes/sphere-displaced.obj
+    subdiv: subdivs/sphere-displaced.obj
     shape: sphere-displaced-plastic-rough
     facevarying: true
     displacement: 0.025
     displacement_tex: bumps-displacement
   - name: suzanne-subdiv
-    subdiv: shapes/suzanne-subdiv.obj
+    subdiv: subdivs/suzanne-subdiv.obj
     shape: suzanne-subdiv-plastic-rough
     subdivisions: 2
     catmullclark: true

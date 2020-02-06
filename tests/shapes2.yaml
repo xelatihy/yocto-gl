@@ -80,7 +80,6 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: sphere-displaced-matte
     shape: shapes/sphere-displaced.obj
-    preset: test-sphere-displaced
     facevarying: true
     displacement: 0.025
     displacement_tex: bumps-displacement
@@ -103,21 +102,20 @@ shapes:
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]
 subdivs:
   - name: sphere-displaced
-    subdiv: shapes/sphere-displaced.obj
-    preset: test-sphere-displaced
+    subdiv: subdivs/sphere-displaced.obj
     shape: sphere-displaced-matte
     facevarying: true
     displacement: 0.025
     displacement_tex: bumps-displacement
   - name: cube-subdiv
-    subdiv: shapes/cube-subdiv.obj
+    subdiv: subdivs/cube-subdiv.obj
     shape: cube-subdiv-uvgrid
     subdivisions: 4
     catmullclark: true
     smooth: false
     facevarying: true
   - name: suzanne-subdiv
-    subdiv: shapes/suzanne-subdiv.obj
+    subdiv: subdivs/suzanne-subdiv.obj
     shape: suzanne-subdiv-plastic-sharp
     subdivisions: 2
     catmullclark: true
