@@ -10,5 +10,4 @@ tests/renderings/*.png
 tests/renderings/*.hdr
 tests1/
 .vs
-testsr/render.sh
-testsr/*.png
+testsr/
