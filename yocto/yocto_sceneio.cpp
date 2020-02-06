@@ -923,24 +923,6 @@ static inline string make_safe_filename(const string& filename_) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static bool make_image_preset(
-    image<vec4f>& hdr, image<vec4b>& ldr, const string& type) {
-  if (type.find("sky") == type.npos) {
-    auto imgf = make_image_preset(type);
-    if (imgf.empty()) return false;
-    if (type.find("-normal") == type.npos &&
-        type.find("-displacement") == type.npos) {
-      ldr = rgb_to_srgbb(imgf);
-    } else {
-      ldr = float_to_byte(imgf);
-    }
-    return true;
-  } else {
-    hdr = make_image_preset(type);
-    return true;
-  }
-}
-
 // Save a scene in the builtin YAML format.
 static void load_yaml_scene(
     const string& filename, sceneio_model& scene, bool noparallel) {
@@ -1017,7 +999,6 @@ static void load_yaml_scene(
       if (yelement.name == "cameras") {
         auto& camera = scene.cameras.emplace_back();
         get_yaml_value(yelement, "name", camera.name);
-        get_yaml_value(yelement, "uri", camera.name);
         get_yaml_value(yelement, "frame", camera.frame);
         get_yaml_value(yelement, "orthographic", camera.orthographic);
         get_yaml_value(yelement, "lens", camera.lens);
@@ -1025,16 +1006,27 @@ static void load_yaml_scene(
         get_yaml_value(yelement, "film", camera.film);
         get_yaml_value(yelement, "focus", camera.focus);
         get_yaml_value(yelement, "aperture", camera.aperture);
-        if (has_yaml_value(yelement, "uri")) {
-          auto uri = ""s;
-          get_yaml_value(yelement, "uri", uri);
-          camera.name = get_basename(uri);
-        }
         if (has_yaml_value(yelement, "lookat")) {
           auto lookat = identity3x3f;
           get_yaml_value(yelement, "lookat", lookat);
           camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
           camera.focus = length(lookat.x - lookat.y);
+        }
+      } else if (yelement.name == "environments") {
+        auto& environment = scene.environments.emplace_back();
+        get_yaml_value(yelement, "name", environment.name);
+        get_yaml_value(yelement, "frame", environment.frame);
+        get_yaml_value(yelement, "emission", environment.emission);
+        get_yaml_texture(yelement, "emission_tex", environment.emission_tex);
+        if (has_yaml_value(yelement, "uri")) {
+          auto uri = ""s;
+          get_yaml_value(yelement, "uri", uri);
+          environment.name = get_basename(uri);
+        }
+        if (has_yaml_value(yelement, "lookat")) {
+          auto lookat = identity3x3f;
+          get_yaml_value(yelement, "lookat", lookat);
+          environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
       } else if (yelement.name == "materials") {
         auto& material = materials.emplace_back();
@@ -1122,16 +1114,6 @@ static void load_yaml_scene(
           shape.name           = get_basename(shape.filename);
           smap[shape.filename] = (int)scene.shapes.size() - 1;
         }
-        if (has_yaml_value(yelement, "preset")) {
-          auto preset = ""s;
-          get_yaml_value(yelement, "preset", preset);
-          make_shape_preset(shape.points, shape.lines, shape.triangles,
-              shape.quads, shape.positions, shape.normals, shape.texcoords,
-              shape.colors, shape.radius, preset);
-          if (shape.filename.empty()) {
-            shape.filename = "shapes/ypreset-" + preset + ".yvol";
-          }
-        }
         smap[shape.name] = (int)scene.shapes.size() - 1;
       } else if (yelement.name == "subdivs") {
         auto& subdiv = scene.subdivs.emplace_back();
@@ -1151,33 +1133,6 @@ static void load_yaml_scene(
         if (has_yaml_value(yelement, "uri")) {
           get_yaml_value(yelement, "uri", subdiv.filename);
           subdiv.name = get_basename(subdiv.filename);
-        }
-        if (has_yaml_value(yelement, "preset")) {
-          auto preset = ""s;
-          get_yaml_value(yelement, "preset", preset);
-          make_shape_preset(subdiv.points, subdiv.lines, subdiv.triangles,
-              subdiv.quads, subdiv.quadspos, subdiv.quadsnorm,
-              subdiv.quadstexcoord, subdiv.positions, subdiv.normals,
-              subdiv.texcoords, subdiv.colors, subdiv.radius, preset);
-          if (subdiv.filename.empty()) {
-            subdiv.filename = "shapes/ypreset-" + preset + ".yvol";
-          }
-        }
-      } else if (yelement.name == "environments") {
-        auto& environment = scene.environments.emplace_back();
-        get_yaml_value(yelement, "name", environment.name);
-        get_yaml_value(yelement, "frame", environment.frame);
-        get_yaml_value(yelement, "emission", environment.emission);
-        get_yaml_texture(yelement, "emission_tex", environment.emission_tex);
-        if (has_yaml_value(yelement, "uri")) {
-          auto uri = ""s;
-          get_yaml_value(yelement, "uri", uri);
-          environment.name = get_basename(uri);
-        }
-        if (has_yaml_value(yelement, "lookat")) {
-          auto lookat = identity3x3f;
-          get_yaml_value(yelement, "lookat", lookat);
-          environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
       }
     }
@@ -1272,11 +1227,13 @@ static void save_yaml_scene(
     add_yaml_value(yelement, "aperture", camera.aperture);
   }
 
-  for (auto& texture : scene.textures) {
+  for (auto& environment : scene.environments) {
     auto& yelement = yaml.elements.emplace_back();
-    yelement.name  = "textures";
-    add_yaml_value(yelement, "name", texture.name);
-    add_yaml_value(yelement, "filename", texture.filename);
+    yelement.name  = "environments";
+    add_yaml_value(yelement, "name", environment.name);
+    add_yaml_value(yelement, "frame", environment.frame);
+    add_yaml_value(yelement, "emission", environment.emission);
+    add_yaml_texture(yelement, "emission_tex", environment.emission_tex);
   }
 
   for (auto& shape : scene.shapes) {
@@ -1333,15 +1290,6 @@ static void save_yaml_scene(
     add_yaml_texture(yelement, "displacement_tex",
         subdiv.displacement_tex);
     add_yaml_value(yelement, "displacement", subdiv.displacement);
-  }
-
-  for (auto& environment : scene.environments) {
-    auto& yelement = yaml.elements.emplace_back();
-    yelement.name  = "environments";
-    add_yaml_value(yelement, "name", environment.name);
-    add_yaml_value(yelement, "frame", environment.frame);
-    add_yaml_value(yelement, "emission", environment.emission);
-    add_yaml_texture(yelement, "emission_tex", environment.emission_tex);
   }
 
   // save yaml
