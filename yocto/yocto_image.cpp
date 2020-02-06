@@ -1653,6 +1653,10 @@ void load_image(const string& filename, image<vec4f>& img) {
   if (ext == ".ypreset") {
     img = make_image_preset(get_basename(filename));
     if (img.empty()) throw_preset_error(filename);
+    if (get_basename(filename).find("-normal") != string::npos ||
+        get_basename(filename).find("-displacement") != string::npos) {
+      img = srgb_to_rgb(img);
+    }
   } else 
   if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
