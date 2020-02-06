@@ -3489,23 +3489,22 @@ void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
   auto quadstexcoord = vector<vec4i>{};
   make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
       quadstexcoord, positions, normals, texcoords, colors, radius, type);
-  if(!quadspos.empty()) throw std::runtime_error("bad preset type");
+  if (!quadspos.empty()) throw std::runtime_error("bad preset type");
 }
 
 // Shape presets used ofr testing.
-void make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm, 
-    vector<vec4i>& quadstexcoord, 
-    vector<vec3f>& positions,
+void make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
+    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type) {
-  auto points        = vector<int>{};
+  auto points    = vector<int>{};
   auto lines     = vector<vec2i>{};
   auto triangles = vector<vec3i>{};
-  auto quads = vector<vec4i>{};
-  auto colors = vector<vec4f>{};
-  auto radius =   vector<float>{}; 
+  auto quads     = vector<vec4i>{};
+  auto colors    = vector<vec4f>{};
+  auto radius    = vector<float>{};
   make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
       quadstexcoord, positions, normals, texcoords, colors, radius, type);
-  if(quadspos.empty()) throw std::runtime_error("bad preset type");
+  if (quadspos.empty()) throw std::runtime_error("bad preset type");
 }
 
 }  // namespace yocto
@@ -3594,8 +3593,9 @@ void load_shape(const string& filename, vector<int>& points,
   auto ext = get_extension(filename);
   if (ext == ".ypreset") {
     try {
-      make_shape_preset(points, lines, triangles, quads, positions, normals, texcoords, colors, radius, get_basename(filename));
-    } catch(std::exception&) {
+      make_shape_preset(points, lines, triangles, quads, positions, normals,
+          texcoords, colors, radius, get_basename(filename));
+    } catch (std::exception&) {
       throw_preset_error(filename);
     }
   } else if (ext == ".ply" || ext == ".PLY") {
@@ -3717,8 +3717,9 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
   auto ext = get_extension(filename);
   if (ext == ".ypreset") {
     try {
-      make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords, get_basename(filename));
-    } catch(std::exception&) {
+      make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
+          texcoords, get_basename(filename));
+    } catch (std::exception&) {
       throw_preset_error(filename);
     }
   } else if (ext == ".ply" || ext == ".PLY") {

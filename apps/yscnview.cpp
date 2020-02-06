@@ -171,7 +171,7 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
   // materials
   for (auto& shape : scene.shapes) {
     auto& material = shape.material;
-    auto id = add_material(glscene);
+    auto  id       = add_material(glscene);
     set_material_emission(
         glscene, id, material.emission, material.emission_tex);
     set_material_diffuse(glscene, id,
@@ -207,11 +207,11 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
       set_shape(glscene, id, shape.quads, shape.positions, shape.normals,
           shape.texcoords, shape.colors, shape.tangents);
     }
-    if(shape.instances.empty()) {
+    if (shape.instances.empty()) {
       add_instance(glscene, shape.frame, id, id);
     } else {
-      for(auto& frame : shape.instances)
-      add_instance(glscene, frame * shape.frame, id, id);
+      for (auto& frame : shape.instances)
+        add_instance(glscene, frame * shape.frame, id, id);
     }
   }
 }
@@ -473,10 +473,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "edit")) {
-    static auto labels  = vector<string>{"camera", "shape", "subdiv",
-        "environment", "material", "texture"};
-    auto        app     = apps->states[apps->selected];
-    auto&       glscene = app->glscene;
+    static auto labels = vector<string>{
+        "camera", "shape", "subdiv", "environment", "material", "texture"};
+    auto  app     = apps->states[apps->selected];
+    auto& glscene = app->glscene;
     if (draw_glcombobox(win, "selection##1", app->selection.first, labels))
       app->selection.second = 0;
     if (app->selection.first == "camera") {

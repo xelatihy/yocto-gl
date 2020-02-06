@@ -56,7 +56,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
 
   for (auto& ioshape : ioscene.shapes) {
     auto& iomaterial = ioshape.material;
-    auto id = add_material(scene);
+    auto  id         = add_material(scene);
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
     set_material_base(scene, id, iomaterial.base, iomaterial.base_tex);
@@ -90,19 +90,17 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
       set_shape(scene, id, ioshape.lines, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.triangles.empty()) {
-      set_shape(scene, id, ioshape.triangles, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.tangents);
+      set_shape(scene, id, ioshape.triangles, ioshape.positions,
+          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
     } else if (!ioshape.quads.empty()) {
       set_shape(scene, id, ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
     }
-    if(ioshape.instances.empty()) {
-      add_instance(
-          scene, ioshape.frame, id, id);
+    if (ioshape.instances.empty()) {
+      add_instance(scene, ioshape.frame, id, id);
     } else {
-      for(auto& frame : ioshape.instances)
-      add_instance(
-          scene, frame * ioshape.frame, id, id);
+      for (auto& frame : ioshape.instances)
+        add_instance(scene, frame * ioshape.frame, id, id);
     }
     ioshape = {};
   }

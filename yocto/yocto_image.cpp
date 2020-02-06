@@ -1657,8 +1657,7 @@ void load_image(const string& filename, image<vec4f>& img) {
         get_basename(filename).find("-displacement") != string::npos) {
       img = srgb_to_rgb(img);
     }
-  } else 
-  if (ext == ".exr" || ext == ".EXR") {
+  } else if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
@@ -1723,7 +1722,7 @@ void load_imageb(const string& filename, image<vec4b>& img) {
     img = make_image_presetb(get_basename(filename));
     if (img.empty()) throw_preset_error(filename);
   } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
-      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+             ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) throw_read_error(filename);

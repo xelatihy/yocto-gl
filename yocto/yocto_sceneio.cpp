@@ -338,14 +338,15 @@ namespace yocto {
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_bounds(const sceneio_model& scene) {
   auto shape_bbox = vector<bbox3f>{};
-  auto bbox = invalidb3f;
+  auto bbox       = invalidb3f;
   for (auto& shape : scene.shapes) {
     auto sbvh = invalidb3f;
-    for (auto p : shape.positions) sbvh = merge(sbvh, transform_point(shape.frame, p));
-    if(shape.instances.empty()) {
+    for (auto p : shape.positions)
+      sbvh = merge(sbvh, transform_point(shape.frame, p));
+    if (shape.instances.empty()) {
       bbox = merge(bbox, sbvh);
     } else {
-      for(auto& frame : shape.instances) {
+      for (auto& frame : shape.instances) {
         bbox = merge(bbox, transform_bbox(frame * shape.frame, sbvh));
       }
     }
@@ -705,7 +706,8 @@ void update_transforms(sceneio_model& scene, sceneio_node& node,
   auto frame = parent * node.local * translation_frame(node.translation) *
                rotation_frame(node.rotation) * scaling_frame(node.scale);
   if (node.shape >= 0) scene.shapes[node.shape].frame = frame;
-  if (node.instance >= 0) scene.shapes[node.shape].instances[node.instance] = frame;
+  if (node.instance >= 0)
+    scene.shapes[node.shape].instances[node.instance] = frame;
   if (node.camera >= 0) scene.cameras[node.camera].frame = frame;
   if (node.environment >= 0) scene.environments[node.environment].frame = frame;
   for (auto child : node.children)
@@ -951,18 +953,18 @@ static void load_yaml_scene(
   };
 
   // parse yaml reference
-  auto get_yaml_texture = [&scene, &tmap](const yaml_element& yelment, const string& name,
-                          int& value) {
+  auto get_yaml_texture = [&scene, &tmap](const yaml_element& yelment,
+                              const string& name, int& value) {
     auto filename = ""s;
     get_yaml_value(yelment, name, filename);
     if (filename == "") {
       value = -1;
     } else {
       if (tmap.find(filename) == tmap.end()) {
-        auto& texture = scene.textures.emplace_back();
-        texture.name = get_basename(filename);
+        auto& texture    = scene.textures.emplace_back();
+        texture.name     = get_basename(filename);
         texture.filename = filename;
-        tmap[filename] = (int)scene.textures.size()-1;
+        tmap[filename]   = (int)scene.textures.size() - 1;
       }
       value = tmap.at(filename);
     }
@@ -970,8 +972,8 @@ static void load_yaml_scene(
 
   // parse yaml reference copy
   auto get_yaml_refcopy = [](const yaml_element& yelment, const string& name,
-                          auto& value, const auto& values, 
-                          const unordered_map<string, int>& refs) {
+                              auto& value, const auto& values,
+                              const unordered_map<string, int>& refs) {
     auto ref = ""s;
     get_yaml_value(yelment, name, ref);
     if (ref == "") return;
@@ -990,7 +992,7 @@ static void load_yaml_scene(
 
   // hacked lists for backward compatibility
   auto materials = vector<sceneio_material>{};
-  auto mmap = unordered_map<string, int>{{"", -1}};
+  auto mmap      = unordered_map<string, int>{{"", -1}};
 
   // check for conversion errors
   try {
@@ -1030,7 +1032,7 @@ static void load_yaml_scene(
         }
       } else if (yelement.name == "materials") {
         auto& material = materials.emplace_back();
-        auto name = ""s;
+        auto  name     = ""s;
         get_yaml_value(yelement, "name", name);
         get_yaml_value(yelement, "emission", material.emission);
         get_yaml_value(yelement, "base", material.base);
@@ -1067,7 +1069,7 @@ static void load_yaml_scene(
         auto& shape = scene.shapes.emplace_back();
         get_yaml_value(yelement, "name", shape.name);
         get_yaml_value(yelement, "shape", shape.filename);
-        if(has_yaml_value(yelement, "filename")) {
+        if (has_yaml_value(yelement, "filename")) {
           get_yaml_value(yelement, "filename", shape.filename);
         }
         get_yaml_value(yelement, "frame", shape.frame);
@@ -1104,8 +1106,10 @@ static void load_yaml_scene(
         get_yaml_texture(yelement, "specular_tex", shape.material.specular_tex);
         get_yaml_texture(
             yelement, "transmission_tex", shape.material.transmission_tex);
-        get_yaml_texture(yelement, "roughness_tex", shape.material.roughness_tex);
-        get_yaml_texture(yelement, "scattering_tex", shape.material.scattering_tex);
+        get_yaml_texture(
+            yelement, "roughness_tex", shape.material.roughness_tex);
+        get_yaml_texture(
+            yelement, "scattering_tex", shape.material.scattering_tex);
         get_yaml_texture(yelement, "normal_tex", shape.material.normal_tex);
         get_yaml_texture(yelement, "normal_tex", shape.material.normal_tex);
         get_yaml_value(yelement, "gltf_textures", shape.material.gltf_textures);
@@ -1119,7 +1123,7 @@ static void load_yaml_scene(
         auto& subdiv = scene.subdivs.emplace_back();
         get_yaml_value(yelement, "name", subdiv.name);
         get_yaml_value(yelement, "subdiv", subdiv.filename);
-        if(has_yaml_value(yelement, "filename")) {
+        if (has_yaml_value(yelement, "filename")) {
           get_yaml_value(yelement, "filename", subdiv.filename);
         }
         get_yaml_ref(yelement, "shape", subdiv.shape, smap);
@@ -1203,7 +1207,8 @@ static void load_yaml_scene(
 static void save_yaml_scene(
     const string& filename, const sceneio_model& scene, bool noparallel) {
   // helper
-  auto add_yaml_texture = [&scene](yaml_element& yelement, const string& name, int ref) {
+  auto add_yaml_texture = [&scene](yaml_element& yelement, const string& name,
+                              int ref) {
     if (ref < 0) return;
     add_yaml_value(yelement, name, scene.textures[ref].filename);
   };
@@ -1255,18 +1260,14 @@ static void save_yaml_scene(
     add_yaml_value(yelement, "phaseg", shape.material.phaseg);
     add_yaml_value(yelement, "radius", shape.material.radius);
     add_yaml_value(yelement, "opacity", shape.material.opacity);
-    add_yaml_texture(
-        yelement, "emission_tex", shape.material.emission_tex);
+    add_yaml_texture(yelement, "emission_tex", shape.material.emission_tex);
     add_yaml_texture(yelement, "base_tex", shape.material.base_tex);
+    add_yaml_texture(yelement, "metallic_tex", shape.material.metallic_tex);
+    add_yaml_texture(yelement, "specular_tex", shape.material.specular_tex);
+    add_yaml_texture(yelement, "roughness_tex", shape.material.roughness_tex);
     add_yaml_texture(
-        yelement, "metallic_tex", shape.material.metallic_tex);
-    add_yaml_texture(
-        yelement, "specular_tex", shape.material.specular_tex);
-    add_yaml_texture(
-        yelement, "roughness_tex", shape.material.roughness_tex);
-    add_yaml_texture(yelement, "transmission_tex", shape.material.transmission_tex);
-    add_yaml_texture(
-        yelement, "scattering_tex", shape.material.scattering_tex);
+        yelement, "transmission_tex", shape.material.transmission_tex);
+    add_yaml_texture(yelement, "scattering_tex", shape.material.scattering_tex);
     add_yaml_texture(yelement, "coat_tex", shape.material.coat_tex);
     add_yaml_texture(yelement, "opacity_tex", shape.material.opacity_tex);
     add_yaml_texture(yelement, "normal_tex", shape.material.normal_tex);
@@ -1287,8 +1288,7 @@ static void save_yaml_scene(
     add_yaml_value(yelement, "catmullclark", subdiv.catmullclark);
     add_yaml_value(yelement, "smooth", subdiv.smooth);
     add_yaml_value(yelement, "facevarying", subdiv.facevarying);
-    add_yaml_texture(yelement, "displacement_tex",
-        subdiv.displacement_tex);
+    add_yaml_texture(yelement, "displacement_tex", subdiv.displacement_tex);
     add_yaml_value(yelement, "displacement", subdiv.displacement);
   }
 
@@ -1351,10 +1351,10 @@ static void load_obj(const string& filename, sceneio_model& scene) {
   };
 
   // convert materials and textures
-  auto materials = vector<sceneio_material>{};
+  auto materials    = vector<sceneio_material>{};
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& omat : obj.materials) {
-    auto& material = materials.emplace_back();
+    auto& material            = materials.emplace_back();
     material.emission         = omat.emission;
     material.base             = omat.diffuse;
     material.specular         = omat.specular != zero3f ? 1 : 0;
@@ -1391,7 +1391,7 @@ static void load_obj(const string& filename, sceneio_model& scene) {
       shape.name += std::to_string(shape_name_counts[shape.name]);
     shape.name = make_safe_name(shape.name, "shape", (int)scene.shapes.size());
     shape.filename  = make_safe_filename("shapes/" + shape.name + ".ply");
-    auto nmaterials  = vector<string>{};
+    auto nmaterials = vector<string>{};
     auto ematerials = vector<int>{};
     auto has_quads  = has_obj_quads(oshape);
     if (!oshape.faces.empty() && !has_quads) {
@@ -1417,7 +1417,7 @@ static void load_obj(const string& filename, sceneio_model& scene) {
       throw_missing_reference_error(
           filename, "material", oshape.materials.at(0));
     }
-    shape.material = materials[material_map.at(oshape.materials.at(0))];
+    shape.material  = materials[material_map.at(oshape.materials.at(0))];
     shape.instances = oshape.instances;
   }
 
@@ -1479,7 +1479,7 @@ static void save_obj(
 
   // convert materials and textures
   for (auto& shape : scene.shapes) {
-    auto& material = shape.material;
+    auto& material     = shape.material;
     auto& omaterial    = obj.materials.emplace_back();
     omaterial.name     = shape.name;
     omaterial.illum    = 2;
@@ -1505,29 +1505,29 @@ static void save_obj(
   // convert shapes
   for (auto& shape : scene.shapes) {
     if (instances && !shape.instances.empty()) {
-      auto  positions = shape.positions, normals = shape.normals;
+      auto positions = shape.positions, normals = shape.normals;
       for (auto& p : positions) p = transform_point(shape.frame, p);
       for (auto& n : normals) n = transform_normal(shape.frame, n);
       if (!shape.triangles.empty()) {
-        add_obj_triangles(obj, shape.name, shape.triangles, positions,
-            normals, shape.texcoords, {}, {}, true);
+        add_obj_triangles(obj, shape.name, shape.triangles, positions, normals,
+            shape.texcoords, {}, {}, true);
       } else if (!shape.quads.empty()) {
-        add_obj_quads(obj, shape.name, shape.quads, positions,
-            normals, shape.texcoords, {}, {}, true);
+        add_obj_quads(obj, shape.name, shape.quads, positions, normals,
+            shape.texcoords, {}, {}, true);
       } else if (!shape.lines.empty()) {
-        add_obj_lines(obj, shape.name, shape.lines, positions,
-            normals, shape.texcoords, {}, {}, true);
+        add_obj_lines(obj, shape.name, shape.lines, positions, normals,
+            shape.texcoords, {}, {}, true);
       } else if (!shape.points.empty()) {
-        add_obj_points(obj, shape.name, shape.points, positions,
-            normals, shape.texcoords, {}, {}, true);
+        add_obj_points(obj, shape.name, shape.points, positions, normals,
+            shape.texcoords, {}, {}, true);
       } else {
         throw_emptyshape_error(filename, shape.name);
       }
-    // TODO: instances
+      // TODO: instances
     } else {
-      for(auto& frame : shape.instances) {
-        auto  materials = vector<string>{shape.name};
-        auto  positions = shape.positions, normals = shape.normals;
+      for (auto& frame : shape.instances) {
+        auto materials = vector<string>{shape.name};
+        auto positions = shape.positions, normals = shape.normals;
         for (auto& p : positions) p = transform_point(frame * shape.frame, p);
         for (auto& n : normals) n = transform_normal(frame * shape.frame, n);
         if (!shape.triangles.empty()) {
@@ -1650,7 +1650,7 @@ static void load_gltf_scene(
   // convert materials
   auto materials = vector<sceneio_material>{};
   for (auto& gmaterial : gltf.materials) {
-    auto& material = materials.emplace_back();
+    auto& material        = materials.emplace_back();
     material.emission     = gmaterial.emission;
     material.emission_tex = gmaterial.emission_tex;
     if (gmaterial.has_specgloss) {
@@ -1675,7 +1675,7 @@ static void load_gltf_scene(
   for (auto& gmesh : gltf.meshes) {
     shape_indices.push_back({});
     for (auto& gprim : gmesh.primitives) {
-      auto& shape = scene.shapes.emplace_back();
+      auto& shape    = scene.shapes.emplace_back();
       shape.material = materials[gprim.material];
       shape_indices.back().push_back((int)scene.shapes.size() - 1);
       shape.name =
@@ -1788,11 +1788,11 @@ static void load_pbrt_scene(
       throw std::runtime_error("cannot find texture " + name);
     return texture_map.at(name);
   };
-  auto materials = vector<sceneio_material>{};
+  auto materials    = vector<sceneio_material>{};
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
     auto& material = materials.emplace_back();
-    material.base = pmaterial.diffuse;
+    material.base  = pmaterial.diffuse;
     // TODO: better conversion
     // material.specular     = pmaterial.specular;
     // material.transmission = pmaterial.transmission;
@@ -1806,7 +1806,7 @@ static void load_pbrt_scene(
   // convert arealights
   auto arealight_map = unordered_map<string, int>{{"", -1}};
   for (auto& parealight : pbrt.arealights) {
-    auto& material = materials.emplace_back();
+    auto& material                 = materials.emplace_back();
     material.emission              = parealight.emission;
     arealight_map[parealight.name] = (int)materials.size() - 1;
   }
@@ -1825,7 +1825,7 @@ static void load_pbrt_scene(
       shape.name     = make_safe_name(
           get_basename(pshape.filename), "shape", (int)scene.shapes.size());
     }
-    shape.frame = pshape.frame;
+    shape.frame     = pshape.frame;
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
     shape.texcoords = pshape.texcoords;
@@ -1833,7 +1833,7 @@ static void load_pbrt_scene(
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
     auto material_id  = material_map.at(pshape.material);
     auto arealight_id = arealight_map.at(pshape.arealight);
-    shape.material = materials[arealight_id >= 0 ? arealight_id : material_id];
+    shape.material  = materials[arealight_id >= 0 ? arealight_id : material_id];
     shape.instances = pshape.instance_frames;
   }
 
@@ -1857,13 +1857,13 @@ static void load_pbrt_scene(
 
   // lights
   for (auto& plight : pbrt.lights) {
-    auto& shape       = scene.shapes.emplace_back();
-    shape.name        = make_safe_name("", "light", (int)scene.shapes.size());
-    shape.filename    = make_safe_filename("shapes/" + shape.name + ".ply");
-    shape.frame       = plight.area_frame;
-    shape.triangles   = plight.area_triangles;
-    shape.positions   = plight.area_positions;
-    shape.normals     = plight.area_normals;
+    auto& shape     = scene.shapes.emplace_back();
+    shape.name      = make_safe_name("", "light", (int)scene.shapes.size());
+    shape.filename  = make_safe_filename("shapes/" + shape.name + ".ply");
+    shape.frame     = plight.area_frame;
+    shape.triangles = plight.area_triangles;
+    shape.positions = plight.area_positions;
+    shape.normals   = plight.area_normals;
     shape.material.emission = plight.area_emission;
   }
 
@@ -1913,7 +1913,7 @@ void save_pbrt_scene(
 
   // convert materials
   for (auto& shape : scene.shapes) {
-    auto& material = shape.material;
+    auto& material    = shape.material;
     auto& pmaterial   = pbrt.materials.emplace_back();
     pmaterial.name    = shape.name;
     pmaterial.diffuse = material.base;
@@ -1930,12 +1930,12 @@ void save_pbrt_scene(
 
   // convert instances
   for (auto& shape : scene.shapes) {
-    auto& material   = shape.material;
-    auto& pshape     = pbrt.shapes.emplace_back();
-    pshape.filename  = replace_extension(shape.filename, ".ply");
-    pshape.frame     = shape.frame;
-    pshape.material  = shape.name;
-    pshape.arealight = material.emission == zero3f ? ""s : shape.name;
+    auto& material         = shape.material;
+    auto& pshape           = pbrt.shapes.emplace_back();
+    pshape.filename        = replace_extension(shape.filename, ".ply");
+    pshape.frame           = shape.frame;
+    pshape.material        = shape.name;
+    pshape.arealight       = material.emission == zero3f ? ""s : shape.name;
     pshape.instance_frames = shape.instances;
   }
 
@@ -1974,48 +1974,48 @@ void save_pbrt_scene(
 namespace yocto {
 
 void make_cornellbox_scene(sceneio_model& scene) {
-  scene.name              = "cornellbox";
-  auto& camera            = scene.cameras.emplace_back();
-  camera.name             = "camera";
-  camera.frame            = frame3f{{0, 1, 3.9}};
-  camera.lens             = 0.035;
-  camera.aperture         = 0.0;
-  camera.film             = 0.024;
-  camera.aspect           = 1;
-  auto& floor_shp         = scene.shapes.emplace_back();
-  floor_shp.name          = "floor";
-  floor_shp.filename      = "shapes/floor.obj";
-  floor_shp.positions     = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
-  floor_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
-  floor_shp.material.base          = {0.725, 0.71, 0.68};
-  auto& ceiling_shp       = scene.shapes.emplace_back();
-  ceiling_shp.name        = "ceiling";
-  ceiling_shp.name        = "shapes/ceiling.obj";
-  ceiling_shp.positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
-  ceiling_shp.triangles   = {{0, 1, 2}, {2, 3, 0}};
-  ceiling_shp.material.base        = {0.725, 0.71, 0.68};
-  auto& backwall_shp      = scene.shapes.emplace_back();
-  backwall_shp.name       = "backwall";
-  backwall_shp.filename   = "shapes/backwall.obj";
-  backwall_shp.positions  = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
-  backwall_shp.triangles  = {{0, 1, 2}, {2, 3, 0}};
-  backwall_shp.material.base       = {0.725, 0.71, 0.68};
-  auto& rightwall_shp     = scene.shapes.emplace_back();
-  rightwall_shp.name      = "rightwall";
-  rightwall_shp.filename  = "shapes/rightwall.obj";
-  rightwall_shp.positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
-  rightwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
-  rightwall_shp.material.base      = {0.14, 0.45, 0.091};
-  auto& leftwall_shp      = scene.shapes.emplace_back();
-  leftwall_shp.name       = "leftwall";
-  leftwall_shp.filename   = "shapes/leftwall.obj";
-  leftwall_shp.positions  = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
-  leftwall_shp.triangles  = {{0, 1, 2}, {2, 3, 0}};
-  leftwall_shp.material.base       = {0.63, 0.065, 0.05};
-  auto& shortbox_shp      = scene.shapes.emplace_back();
-  shortbox_shp.name       = "shortbox";
-  shortbox_shp.filename   = "shapes/shortbox.obj";
-  shortbox_shp.positions  = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
+  scene.name                = "cornellbox";
+  auto& camera              = scene.cameras.emplace_back();
+  camera.name               = "camera";
+  camera.frame              = frame3f{{0, 1, 3.9}};
+  camera.lens               = 0.035;
+  camera.aperture           = 0.0;
+  camera.film               = 0.024;
+  camera.aspect             = 1;
+  auto& floor_shp           = scene.shapes.emplace_back();
+  floor_shp.name            = "floor";
+  floor_shp.filename        = "shapes/floor.obj";
+  floor_shp.positions       = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
+  floor_shp.triangles       = {{0, 1, 2}, {2, 3, 0}};
+  floor_shp.material.base   = {0.725, 0.71, 0.68};
+  auto& ceiling_shp         = scene.shapes.emplace_back();
+  ceiling_shp.name          = "ceiling";
+  ceiling_shp.name          = "shapes/ceiling.obj";
+  ceiling_shp.positions     = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
+  ceiling_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
+  ceiling_shp.material.base = {0.725, 0.71, 0.68};
+  auto& backwall_shp        = scene.shapes.emplace_back();
+  backwall_shp.name         = "backwall";
+  backwall_shp.filename     = "shapes/backwall.obj";
+  backwall_shp.positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
+  backwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
+  backwall_shp.material.base  = {0.725, 0.71, 0.68};
+  auto& rightwall_shp         = scene.shapes.emplace_back();
+  rightwall_shp.name          = "rightwall";
+  rightwall_shp.filename      = "shapes/rightwall.obj";
+  rightwall_shp.positions     = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
+  rightwall_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
+  rightwall_shp.material.base = {0.14, 0.45, 0.091};
+  auto& leftwall_shp          = scene.shapes.emplace_back();
+  leftwall_shp.name           = "leftwall";
+  leftwall_shp.filename       = "shapes/leftwall.obj";
+  leftwall_shp.positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
+  leftwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
+  leftwall_shp.material.base  = {0.63, 0.065, 0.05};
+  auto& shortbox_shp          = scene.shapes.emplace_back();
+  shortbox_shp.name           = "shortbox";
+  shortbox_shp.filename       = "shapes/shortbox.obj";
+  shortbox_shp.positions      = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
       {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
       {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
       {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
@@ -2023,14 +2023,14 @@ void make_cornellbox_scene(sceneio_model& scene) {
       {0.13, 0.0, 0.0}, {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17},
       {0.53, 0.0, 0.75}, {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0},
       {-0.05, 0.0, 0.57}};
-  shortbox_shp.triangles  = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+  shortbox_shp.triangles      = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  shortbox_shp.material.base       = {0.725, 0.71, 0.68};
-  auto& tallbox_shp       = scene.shapes.emplace_back();
-  tallbox_shp.name        = "tallbox";
-  tallbox_shp.filename    = "shapes/tallbox.obj";
-  tallbox_shp.positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
+  shortbox_shp.material.base  = {0.725, 0.71, 0.68};
+  auto& tallbox_shp           = scene.shapes.emplace_back();
+  tallbox_shp.name            = "tallbox";
+  tallbox_shp.filename        = "shapes/tallbox.obj";
+  tallbox_shp.positions       = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
       {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
       {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
       {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
@@ -2039,17 +2039,17 @@ void make_cornellbox_scene(sceneio_model& scene) {
       {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
       {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
       {-0.71, 0.0, -0.49}};
-  tallbox_shp.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+  tallbox_shp.triangles       = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  tallbox_shp.material.base        = {0.725, 0.71, 0.68};
-  auto& light_shp         = scene.shapes.emplace_back();
-  light_shp.name          = "light";
-  light_shp.filename      = "shapes/light.obj";
-  light_shp.positions     = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
+  tallbox_shp.material.base   = {0.725, 0.71, 0.68};
+  auto& light_shp             = scene.shapes.emplace_back();
+  light_shp.name              = "light";
+  light_shp.filename          = "shapes/light.obj";
+  light_shp.positions         = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
-  light_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
-  light_shp.material.emission      = {17, 12, 4};
+  light_shp.triangles         = {{0, 1, 2}, {2, 3, 0}};
+  light_shp.material.emission = {17, 12, 4};
 }
 
 }  // namespace yocto

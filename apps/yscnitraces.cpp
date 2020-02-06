@@ -130,8 +130,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
       set_shape(scene, id, ioshape.lines, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.radius);
     } else if (!ioshape.triangles.empty()) {
-      set_shape(scene, id, ioshape.triangles, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.tangents);
+      set_shape(scene, id, ioshape.triangles, ioshape.positions,
+          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
     } else if (!ioshape.quads.empty()) {
       set_shape(scene, id, ioshape.quads, ioshape.positions, ioshape.normals,
           ioshape.texcoords, ioshape.colors, ioshape.tangents);
@@ -139,8 +139,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     if (ioshape.instances.empty()) {
       add_instance(scene, ioshape.frame, id, id);
     } else {
-      for(auto& frame : ioshape.instances)
-      add_instance(scene, frame * ioshape.frame, id, id);
+      for (auto& frame : ioshape.instances)
+        add_instance(scene, frame * ioshape.frame, id, id);
     }
     ioshape = {};
   }

@@ -533,9 +533,9 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (scene_ok && begin_glheader(win, "edit")) {
-    static auto labels = vector<string>{"camera", "shape", "subdiv",
-        "environment", "material", "texture"};
-    auto        app    = apps->states[apps->selected];
+    static auto labels = vector<string>{
+        "camera", "shape", "subdiv", "environment", "material", "texture"};
+    auto app = apps->states[apps->selected];
     if (draw_glcombobox(win, "selection##1", app->selection.first, labels))
       app->selection.second = 0;
     if (app->selection.first == "camera") {

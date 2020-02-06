@@ -130,14 +130,14 @@ struct sceneio_shape {
   // shape data
   string name     = "";
   string filename = "";
-  
+
   // frame
   frame3f frame = identity3x4f;
 
   // material
   sceneio_material material = {};
 
-  // instances 
+  // instances
   vector<frame3f> instances = {};
 
   // primitives
