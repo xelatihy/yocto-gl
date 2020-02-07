@@ -536,25 +536,19 @@ struct pbrt_material {
   string             type   = "";
   vector<pbrt_value> values = {};
   // material approximation
-  vec3f  diffuse          = zero3f;
-  vec3f  specular         = zero3f;
-  vec3f  transmission     = zero3f;
-  vec2f  roughness        = zero2f;
-  vec3f  opacity          = vec3f{1};
-  vec3f  eta              = zero3f;
-  vec3f  etak             = zero3f;
-  vec3f  sspecular        = zero3f;  // specular scaled by fresnel
-  string diffuse_map      = "";
-  string specular_map     = "";
-  string transmission_map = "";
-  string roughness_map    = "";
-  string opacity_map      = "";
-  string eta_map          = "";
-  string etak_map         = "";
-  vec3f  volmeanfreepath  = vec3f{0};
-  vec3f  volscatter       = vec3f{0};
-  float  volscale         = 0.01;
-  bool   refract          = false;
+  vec3f  base            = zero3f;
+  float  specular        = 0;
+  float  metallic        = 0;
+  float  transmission    = 0;
+  float  roughness       = 0;
+  float  ior             = 1.5;
+  float  opacity         = 1;
+  string base_map        = "";
+  string opacity_map     = "";
+  bool   thin            = true;
+  vec3f  volmeanfreepath = zero3f;
+  vec3f  volscatter      = zero3f;
+  float  volscale        = 0.01;
 };
 
 // Pbrt medium
@@ -568,17 +562,16 @@ struct pbrt_medium {
 // Pbrt shape
 struct pbrt_shape {
   // shape parameters
-  string             type            = "";
-  vector<pbrt_value> values          = {};
-  frame3f            frame           = identity3x4f;
-  frame3f            frend           = identity3x4f;
-  string             material        = "";
-  string             arealight       = "";
-  string             interior        = "";
-  string             exterior        = "";
-  bool               is_instanced    = false;
-  vector<frame3f>    instance_frames = {};
-  vector<frame3f>    instance_frends = {};
+  string             type      = "";
+  vector<pbrt_value> values    = {};
+  frame3f            frame     = identity3x4f;
+  frame3f            frend     = identity3x4f;
+  string             material  = "";
+  string             arealight = "";
+  string             interior  = "";
+  string             exterior  = "";
+  vector<frame3f>    instances = {};
+  vector<frame3f>    instaends = {};
   // shape approximation
   string        filename  = "";
   vector<vec3f> positions = {};

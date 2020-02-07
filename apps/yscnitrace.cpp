@@ -295,12 +295,13 @@ bool draw_glwidgets_texture(
       to_string(texture.ldr.size().x) + " x " +
           to_string(texture.ldr.size().y));
   if (edited && old_filename != texture.filename) {
-    try {
-      load_texture(app->filename, texture);
-    } catch (std::exception& e) {
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
-    }
+    // TODO: load texture
+    // try {
+    //   load_texture(app->filename, texture);
+    // } catch (std::exception& e) {
+    //   push_glmessage(win, e.what());
+    //   log_glinfo(win, e.what());
+    // }
   }
   return edited;
 }
@@ -368,12 +369,13 @@ bool draw_glwidgets_shape(
   draw_gllabel(win, "tangsp", to_string(shape.tangents.size()));
   draw_gllabel(win, "instances", to_string(shape.instances.size()));
   if (edited && old_filename != shape.filename) {
-    try {
-      load_shape(app->filename, shape);
-    } catch (std::exception& e) {
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
-    }
+    // TODO: load
+    // try {
+    //   load_shape(app->filename, shape);
+    // } catch (std::exception& e) {
+    //   push_glmessage(win, e.what());
+    //   log_glinfo(win, e.what());
+    // }
   }
   return edited;
 }
@@ -399,12 +401,13 @@ bool draw_glwidgets_subdiv(
   draw_gllabel(win, "radius", to_string(subdiv.radius.size()));
   draw_gllabel(win, "tangsp", to_string(subdiv.tangents.size()));
   if (edited && old_filename != subdiv.filename) {
-    try {
-      load_subdiv(app->filename, subdiv);
-    } catch (std::exception& e) {
-      push_glmessage(win, e.what());
-      log_glinfo(win, e.what());
-    }
+    // TODO: load
+    // try {
+    //   load_subdiv(app->filename, subdiv);
+    // } catch (std::exception& e) {
+    //   push_glmessage(win, e.what());
+    //   log_glinfo(win, e.what());
+    // }
   }
   return edited;
 }

@@ -816,82 +816,6 @@ void save_scene(
   }
 }
 
-void load_texture(const string& filename, sceneio_texture& texture) {
-  try {
-    if (is_hdr_filename(texture.filename)) {
-      load_image(get_dirname(filename) + texture.filename, texture.hdr);
-    } else {
-      load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
-    }
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
-void save_texture(const string& filename, const sceneio_texture& texture) {
-  try {
-    if (!texture.hdr.empty()) {
-      save_image(get_dirname(filename) + texture.filename, texture.hdr);
-    } else {
-      save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
-    }
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
-void load_shape(const string& filename, sceneio_shape& shape) {
-  try {
-    load_shape(get_dirname(filename) + shape.filename, shape.points,
-        shape.lines, shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, shape.colors, shape.radius);
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
-void save_shape(const string& filename, const sceneio_shape& shape) {
-  try {
-    save_shape(get_dirname(filename) + shape.filename, shape.points,
-        shape.lines, shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, shape.colors, shape.radius);
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
-void load_subdiv(const string& filename, sceneio_subdiv& subdiv) {
-  try {
-    if (!subdiv.facevarying) {
-      load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
-          subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
-          subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
-    } else {
-      load_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
-          subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-          subdiv.normals, subdiv.texcoords);
-    }
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
-void save_subdiv(const string& filename, const sceneio_subdiv& subdiv) {
-  try {
-    if (subdiv.quadspos.empty()) {
-      save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
-          subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
-          subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
-    } else {
-      save_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
-          subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-          subdiv.normals, subdiv.texcoords);
-    }
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
 // create and cleanup names and filenames
 static string make_safe_name(const string& name_, const string& base, int count,
     const string& prefix, const string& suffix) {
@@ -924,6 +848,35 @@ static inline string make_safe_filename(const string& filename_) {
 // YAML SUPPORT
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// load instances
+static void load_instances(const string& filename, vector<frame3f>& frames) {
+  auto ext = get_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    load_ply(filename, ply);
+    frames = get_ply_values(ply, "frame",
+        array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
+            "ox", "oy", "oz"});
+  } else {
+    throw_format_error(filename);
+  }
+}
+
+// save instances
+static void save_instances(
+    const string& filename, const vector<frame3f>& frames, bool ascii = false) {
+  auto ext = get_extension(filename);
+  if (ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    add_ply_values(ply, frames, "frame",
+        array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
+            "ox", "oy", "oz"});
+    save_ply(filename, ply);
+  } else {
+    throw_format_error(filename);
+  }
+}
 
 // Save a scene in the builtin YAML format.
 static void load_yaml_scene(
@@ -981,14 +934,6 @@ static void load_yaml_scene(
       throw std::invalid_argument{"missing reference to " + ref};
     value = values[refs.at(ref)];
   };
-
-  // hacked groups for large models
-  struct sceneio_group {
-    string          filename = "";
-    vector<frame3f> frames   = {};
-  };
-  auto groups  = vector<sceneio_group>{};
-  auto igroups = vector<int>{};
 
   // hacked lists for backward compatibility
   auto materials = vector<sceneio_material>{};
@@ -1069,6 +1014,7 @@ static void load_yaml_scene(
         auto& shape = scene.shapes.emplace_back();
         get_yaml_value(yelement, "name", shape.name);
         get_yaml_value(yelement, "shape", shape.filename);
+        get_yaml_value(yelement, "instances", shape.ifilename);
         if (has_yaml_value(yelement, "filename")) {
           get_yaml_value(yelement, "filename", shape.filename);
         }
@@ -1077,13 +1023,6 @@ static void load_yaml_scene(
           auto lookat = identity3x3f;
           get_yaml_value(yelement, "lookat", lookat);
           shape.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-        }
-        if (has_yaml_value(yelement, "instances")) {
-          auto& group = groups.emplace_back();
-          get_yaml_value(yelement, "instances", group.filename);
-          while (igroups.size() < scene.shapes.size())
-            igroups.emplace_back() = -1;
-          igroups.back() = (int)groups.size() - 1;
         }
         get_yaml_refcopy(yelement, "material", shape.material, materials, mmap);
         get_yaml_value(yelement, "emission", shape.material.emission);
@@ -1145,55 +1084,58 @@ static void load_yaml_scene(
     throw std::runtime_error{filename + ": parse error [" + e.what() + "]"};
   }
 
-  // instance groups
-  if (!groups.empty()) {
-    // load groups
-    if (noparallel) {
-      for (auto& group : groups) {
-        auto ply = ply_model{};
-        try {
-          load_ply(get_dirname(filename) + group.filename, ply);
-        } catch (std::exception& e) {
-          throw_dependent_error(filename, e.what());
-        }
-        group.frames = get_ply_values(ply, "frame",
-            array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
-                "zz", "ox", "oy", "oz"});
-      }
-    } else {
-      parallel_foreach(groups, [filename](sceneio_group& group) {
-        auto ply = ply_model{};
-        try {
-          load_ply(get_dirname(filename) + group.filename, ply);
-        } catch (std::exception& e) {
-          throw_dependent_error(filename, e.what());
-        }
-        group.frames = get_ply_values(ply, "frame",
-            array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
-                "zz", "ox", "oy", "oz"});
-      });
-    }
-    for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-      scene.shapes[idx].instances = groups[igroups[idx]].frames;
-    }
-  }
-
   // load shapes
   for (auto& shape : scene.shapes) {
     if (!shape.positions.empty()) continue;
-    load_shape(filename, shape);
+    try {
+      load_shape(get_dirname(filename) + shape.filename, shape.points,
+          shape.lines, shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, shape.colors, shape.radius);
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
+  }
+
+  // load instances
+  for (auto& shape : scene.shapes) {
+    if (!shape.instances.empty() || shape.ifilename.empty()) continue;
+    try {
+      load_instances(get_dirname(filename) + shape.ifilename, shape.instances);
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // load subdivs
   for (auto& subdiv : scene.subdivs) {
     if (!subdiv.positions.empty()) continue;
-    load_subdiv(filename, subdiv);
+    try {
+      if (!subdiv.facevarying) {
+        load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+            subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
+            subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+      } else {
+        load_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
+            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+            subdiv.normals, subdiv.texcoords);
+      }
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // load textures
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-    load_texture(filename, texture);
+    try {
+      if (is_hdr_filename(texture.filename)) {
+        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // fix scene
@@ -1256,7 +1198,8 @@ static void save_yaml_scene(
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "shapes";
     add_val(yelement, "name", shape.name);
-    add_val(yelement, "filename", shape.filename);
+    add_val(yelement, "shape", shape.filename);
+    add_val(yelement, "instances", shape.ifilename);
     add_opt(yelement, "frame", shape.frame, def_shape.frame);
     add_opt(
         yelement, "emission", shape.material.emission, def_material.emission);
@@ -1268,7 +1211,6 @@ static void save_yaml_scene(
     add_opt(yelement, "coat", shape.material.coat, def_material.coat);
     add_opt(yelement, "roughness", shape.material.roughness,
         def_material.roughness);
-    add_opt(yelement, "thin", shape.material.thin, def_material.thin);
     add_opt(yelement, "ior", shape.material.ior, def_material.ior);
     add_opt(yelement, "transmission", shape.material.transmission,
         def_material.transmission);
@@ -1277,6 +1219,7 @@ static void save_yaml_scene(
     add_opt(yelement, "phaseg", shape.material.phaseg, def_material.phaseg);
     add_opt(yelement, "radius", shape.material.radius, def_material.radius);
     add_opt(yelement, "opacity", shape.material.opacity, def_material.opacity);
+    add_opt(yelement, "thin", shape.material.thin, def_material.thin);
     add_tex(yelement, "emission_tex", shape.material.emission_tex);
     add_tex(yelement, "base_tex", shape.material.base_tex);
     add_tex(yelement, "metallic_tex", shape.material.metallic_tex);
@@ -1318,17 +1261,56 @@ static void save_yaml_scene(
 
   // save shapes
   for (auto& shape : scene.shapes) {
-    save_shape(filename, shape);
+    if (shape.positions.empty()) continue;
+    try {
+      save_shape(get_dirname(filename) + shape.filename, shape.points,
+          shape.lines, shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, shape.colors, shape.radius);
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
+  }
+
+  // save shapes
+  for (auto& shape : scene.shapes) {
+    if (shape.instances.empty()) continue;
+    try {
+      save_instances(get_dirname(filename) + shape.ifilename, shape.instances);
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // save subdivs
   for (auto& subdiv : scene.subdivs) {
-    save_subdiv(filename, subdiv);
+    if (subdiv.positions.empty()) continue;
+    try {
+      if (subdiv.quadspos.empty()) {
+        save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+            subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
+            subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+      } else {
+        save_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
+            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+            subdiv.normals, subdiv.texcoords);
+      }
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // save textures
   for (auto& texture : scene.textures) {
-    save_texture(filename, texture);
+    if (texture.ldr.empty() && texture.hdr.empty()) continue;
+    try {
+      if (!texture.hdr.empty()) {
+        save_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 }
 
@@ -1339,7 +1321,10 @@ static void save_yaml_scene(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_obj(const string& filename, sceneio_model& scene) {
+// Loads an OBJ
+static void load_obj_scene(
+    const string& filename, sceneio_model& scene, bool noparallel) {
+  // Parse obj
   // load obj
   auto obj = obj_model{};
   load_obj(filename, obj, false, true, true);
@@ -1442,6 +1427,10 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     }
     shape.material  = materials[material_map.at(oshape.materials.at(0))];
     shape.instances = oshape.instances;
+    if (!shape.instances.empty()) {
+      shape.ifilename = make_safe_filename(
+          "instances/shape" + std::to_string(scene.shapes.size()) + ".ply");
+    }
   }
 
   // convert environments
@@ -1453,18 +1442,19 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     environment.emission     = oenvironment.emission;
     environment.emission_tex = get_texture(oenvironment.emission_map);
   }
-}
-
-// Loads an OBJ
-static void load_obj_scene(
-    const string& filename, sceneio_model& scene, bool noparallel) {
-  // Parse obj
-  load_obj(filename, scene);
 
   // load textures
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-    load_texture(filename, texture);
+    try {
+      if (is_hdr_filename(texture.filename)) {
+        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // fix scene
@@ -1473,8 +1463,8 @@ static void load_obj_scene(
   add_radius(scene);
 }
 
-static void save_obj(
-    const string& filename, const sceneio_model& scene, bool instances) {
+static void save_obj_scene(const string& filename, const sceneio_model& scene,
+    bool instances, bool noparallel) {
   auto obj = obj_model{};
 
   for (auto stat : scene_stats(scene)) obj.comments.push_back(stat);
@@ -1584,15 +1574,19 @@ static void save_obj(
 
   // save obj
   save_obj(filename, obj);
-}
-
-static void save_obj_scene(const string& filename, const sceneio_model& scene,
-    bool instances, bool noparallel) {
-  save_obj(filename, scene, instances);
 
   // save textures
   for (auto& texture : scene.textures) {
-    save_texture(filename, texture);
+    if (texture.ldr.empty() && texture.hdr.empty()) continue;
+    try {
+      if (!texture.hdr.empty()) {
+        save_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 }
 
@@ -1753,7 +1747,15 @@ static void load_gltf_scene(
   // load textures
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-    load_texture(filename, texture);
+    try {
+      if (is_hdr_filename(texture.filename)) {
+        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // fix scene
@@ -1817,15 +1819,17 @@ static void load_pbrt_scene(
   auto materials    = vector<sceneio_material>{};
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
-    auto& material = materials.emplace_back();
-    material.base  = pmaterial.diffuse;
-    // TODO: better conversion
-    // material.specular     = pmaterial.specular;
-    // material.transmission = pmaterial.transmission;
-    material.roughness = mean(pmaterial.roughness);
-    material.opacity   = pmaterial.opacity == vec3f{1} ? 1
-                                                     : mean(pmaterial.opacity);
-    material.base_tex            = get_texture(pmaterial.diffuse_map);
+    auto& material               = materials.emplace_back();
+    material.base                = pmaterial.base;
+    material.metallic            = pmaterial.metallic;
+    material.specular            = pmaterial.specular;
+    material.transmission        = pmaterial.transmission;
+    material.ior                 = pmaterial.ior;
+    material.roughness           = pmaterial.roughness;
+    material.opacity             = pmaterial.opacity;
+    material.thin                = pmaterial.thin;
+    material.base_tex            = get_texture(pmaterial.base_map);
+    material.opacity_tex         = get_texture(pmaterial.opacity_map);
     material_map[pmaterial.name] = (int)materials.size() - 1;
   }
 
@@ -1861,7 +1865,11 @@ static void load_pbrt_scene(
     auto material_id  = material_map.at(pshape.material);
     auto arealight_id = arealight_map.at(pshape.arealight);
     shape.material  = materials[arealight_id >= 0 ? arealight_id : material_id];
-    shape.instances = pshape.instance_frames;
+    shape.instances = pshape.instances;
+    if (!shape.instances.empty()) {
+      shape.ifilename = make_safe_filename(
+          "instances/shape" + std::to_string(scene.shapes.size()) + ".ply");
+    }
   }
 
   // convert environments
@@ -1899,13 +1907,27 @@ static void load_pbrt_scene(
   // load shapes
   for (auto& shape : scene.shapes) {
     if (!shape.positions.empty()) continue;
-    load_shape(filename, shape);
+    try {
+      load_shape(get_dirname(filename) + shape.filename, shape.points,
+          shape.lines, shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, shape.colors, shape.radius);
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // load textures
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-    load_texture(filename, texture);
+    try {
+      if (is_hdr_filename(texture.filename)) {
+        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // fix scene
@@ -1942,15 +1964,17 @@ void save_pbrt_scene(
 
   // convert materials
   for (auto& shape : scene.shapes) {
-    auto& material    = shape.material;
-    auto& pmaterial   = pbrt.materials.emplace_back();
-    pmaterial.name    = shape.name;
-    pmaterial.diffuse = material.base;
-    // TODO: better conversion
-    // pmaterial.specular     = material.specular;
-    // pmaterial.transmission = material.transmission;
-    pmaterial.roughness = {material.roughness, material.roughness};
-    pmaterial.diffuse_map =
+    auto& material         = shape.material;
+    auto& pmaterial        = pbrt.materials.emplace_back();
+    pmaterial.name         = shape.name;
+    pmaterial.base         = material.base;
+    pmaterial.metallic     = material.metallic;
+    pmaterial.specular     = material.specular;
+    pmaterial.transmission = material.transmission;
+    pmaterial.roughness    = material.roughness;
+    pmaterial.ior          = material.ior;
+    pmaterial.opacity      = material.opacity;
+    pmaterial.base_map =
         material.base_tex >= 0 ? scene.textures[material.base_tex].name : ""s;
     auto& parealight    = pbrt.arealights.emplace_back();
     parealight.name     = shape.name;
@@ -1959,13 +1983,13 @@ void save_pbrt_scene(
 
   // convert instances
   for (auto& shape : scene.shapes) {
-    auto& material         = shape.material;
-    auto& pshape           = pbrt.shapes.emplace_back();
-    pshape.filename        = replace_extension(shape.filename, ".ply");
-    pshape.frame           = shape.frame;
-    pshape.material        = shape.name;
-    pshape.arealight       = material.emission == zero3f ? ""s : shape.name;
-    pshape.instance_frames = shape.instances;
+    auto& material   = shape.material;
+    auto& pshape     = pbrt.shapes.emplace_back();
+    pshape.filename  = replace_extension(shape.filename, ".ply");
+    pshape.frame     = shape.frame;
+    pshape.material  = shape.name;
+    pshape.arealight = material.emission == zero3f ? ""s : shape.name;
+    pshape.instances = shape.instances;
   }
 
   // convert environments
@@ -1983,15 +2007,29 @@ void save_pbrt_scene(
   // save meshes
   auto dirname = get_dirname(filename);
   for (auto& shape : scene.shapes) {
-    save_shape(replace_extension(dirname + shape.filename, ".ply"),
-        shape.points, shape.lines, shape.triangles, shape.quads,
-        shape.positions, shape.normals, shape.texcoords, shape.colors,
-        shape.radius);
+    if (shape.positions.empty()) continue;
+    try {
+      save_shape(replace_extension(dirname + shape.filename, ".ply"),
+          shape.points, shape.lines, shape.triangles, shape.quads,
+          shape.positions, shape.normals, shape.texcoords, shape.colors,
+          shape.radius);
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // save textures
   for (auto& texture : scene.textures) {
-    save_texture(filename, texture);
+    if (texture.ldr.empty() && texture.hdr.empty()) continue;
+    try {
+      if (!texture.hdr.empty()) {
+        save_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 }
 

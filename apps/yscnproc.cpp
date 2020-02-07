@@ -49,15 +49,16 @@ bool mkdir(const string& dir) {
 
 void run_app(int argc, const char** argv) {
   // command line parameters
-  auto mesh_filenames   = false;
-  auto shape_directory  = "shapes/"s;
-  auto subdiv_directory = "subdivs/"s;
-  auto uniform_txt      = false;
-  auto obj_instances    = false;
-  auto validate         = false;
-  auto info             = false;
-  auto output           = "out.json"s;
-  auto filename         = "scene.json"s;
+  auto mesh_filenames     = false;
+  auto shape_directory    = "shapes/"s;
+  auto subdiv_directory   = "subdivs/"s;
+  auto instance_directory = "instances/"s;
+  auto uniform_txt        = false;
+  auto obj_instances      = false;
+  auto validate           = false;
+  auto info               = false;
+  auto output             = "out.json"s;
+  auto filename           = "scene.json"s;
 
   // parse command line
   auto cli = make_cli("yscnproc", "Process scene");
@@ -129,12 +130,19 @@ void run_app(int argc, const char** argv) {
     }
   }
 
+  // add missing mesh names if necessary
+  if (!instance_directory.empty() && instance_directory.back() != '/')
+    instance_directory += '/';
+
   // make a directory if needed
   auto dirname  = get_dirname(output);
   auto dirnames = unordered_set<string>{};
   if (!dirname.empty()) dirnames.insert(dirname);
   for (auto& shape : scene.shapes)
     dirnames.insert(dirname + get_dirname(shape.filename));
+  for (auto& shape : scene.shapes)
+    if (!shape.ifilename.empty())
+      dirnames.insert(dirname + get_dirname(shape.ifilename));
   for (auto& texture : scene.textures)
     dirnames.insert(dirname + get_dirname(texture.filename));
   for (auto& dir : dirnames) {
