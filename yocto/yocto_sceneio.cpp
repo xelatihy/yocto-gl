@@ -389,12 +389,11 @@ void add_radius(sceneio_model& scene, float radius = 0.001f) {
 // Add a sky environment
 void add_sky(sceneio_model& scene, float sun_angle) {
   auto texture     = sceneio_texture{};
-  texture.name     = "sky";
-  texture.filename = "textures/sky.hdr";
+  texture.name     = "environments/sky.hdr";
   texture.hdr      = make_sunsky({1024, 512}, sun_angle);
   scene.textures.push_back(texture);
   auto environment         = sceneio_environment{};
-  environment.name         = "sky";
+  environment.name         = "environments/sky.yaml";
   environment.emission     = {1, 1, 1};
   environment.emission_tex = (int)scene.textures.size() - 1;
   scene.environments.push_back(environment);
@@ -572,7 +571,7 @@ sceneio_subdiv displace_subdiv(
       normals = compute_normals(subdiv.triangles, subdiv.positions);
     for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
       auto disp = mean(xyz(eval_texture(displacement, subdiv.texcoords[vid])));
-      if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
+      if (!displacement.ldr.empty()) disp -= 0.5f;
       displaced.positions[vid] += normals[vid] * subdiv.displacement * disp;
     }
     if (subdiv.smooth || !subdiv.normals.empty()) {
@@ -585,7 +584,7 @@ sceneio_subdiv displace_subdiv(
       normals = compute_normals(subdiv.triangles, subdiv.positions);
     for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
       auto disp = mean(xyz(eval_texture(displacement, subdiv.texcoords[vid])));
-      if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
+      if (!is_hdr_filename(displacement.name)) disp -= 0.5f;
       displaced.positions[vid] += normals[vid] * subdiv.displacement * disp;
     }
     if (subdiv.smooth || !subdiv.normals.empty()) {
@@ -601,7 +600,7 @@ sceneio_subdiv displace_subdiv(
       for (auto i = 0; i < 4; i++) {
         auto disp = mean(
             xyz(eval_texture(displacement, subdiv.texcoords[qtxt[i]])));
-        if (!is_hdr_filename(displacement.filename)) disp -= 0.5f;
+        if (!displacement.ldr.empty()) disp -= 0.5f;
         offset[qpos[i]] += subdiv.displacement * disp;
         count[qpos[i]] += 1;
       }
@@ -906,33 +905,29 @@ static void load_yaml_scene(
   };
 
   // parse yaml reference
-  auto get_yaml_texture = [&scene, &tmap](const yaml_element& yelment,
+  auto get_texture = [&filename, &scene, &tmap](const yaml_element& yelment,
                               const string& name, int& value) {
-    auto filename = ""s;
-    get_yaml_value(yelment, name, filename);
-    if (filename == "") {
+    auto texture_filename = ""s;
+    get_yaml_value(yelment, name, texture_filename);
+    if (texture_filename == "") {
       value = -1;
     } else {
-      if (tmap.find(filename) == tmap.end()) {
+      if (tmap.find(texture_filename) == tmap.end()) {
         auto& texture    = scene.textures.emplace_back();
-        texture.name     = get_basename(filename);
-        texture.filename = filename;
-        tmap[filename]   = (int)scene.textures.size() - 1;
+        try {
+          if(is_hdr_filename(texture.name)) {
+            load_image(get_dirname(filename) + texture_filename, texture.hdr);
+          } else {
+            load_imageb(get_dirname(filename) + texture_filename, texture.ldr);
+          }
+        } catch(std::exception& e) {
+          throw_dependent_error(filename, e.what());
+        }
+        texture.name     = make_safe_filename("textures/" + get_basename(texture_filename) + (!texture.hdr.empty() ? ".hdr" : ".png"));
+        tmap[texture_filename]   = (int)scene.textures.size() - 1;
       }
-      value = tmap.at(filename);
+      value = tmap.at(texture_filename);
     }
-  };
-
-  // parse yaml reference copy
-  auto get_yaml_refcopy = [](const yaml_element& yelment, const string& name,
-                              auto& value, const auto& values,
-                              const unordered_map<string, int>& refs) {
-    auto ref = ""s;
-    get_yaml_value(yelment, name, ref);
-    if (ref == "") return;
-    if (refs.find(ref) == refs.end())
-      throw std::invalid_argument{"missing reference to " + ref};
-    value = values[refs.at(ref)];
   };
 
   // hacked lists for backward compatibility
@@ -964,52 +959,12 @@ static void load_yaml_scene(
         get_yaml_value(yelement, "name", environment.name);
         get_yaml_value(yelement, "frame", environment.frame);
         get_yaml_value(yelement, "emission", environment.emission);
-        get_yaml_texture(yelement, "emission_tex", environment.emission_tex);
-        if (has_yaml_value(yelement, "uri")) {
-          auto uri = ""s;
-          get_yaml_value(yelement, "uri", uri);
-          environment.name = get_basename(uri);
-        }
+        get_texture(yelement, "emission_tex", environment.emission_tex);
         if (has_yaml_value(yelement, "lookat")) {
           auto lookat = identity3x3f;
           get_yaml_value(yelement, "lookat", lookat);
           environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
-      } else if (yelement.name == "materials") {
-        auto& material = materials.emplace_back();
-        auto  name     = ""s;
-        get_yaml_value(yelement, "name", name);
-        get_yaml_value(yelement, "emission", material.emission);
-        get_yaml_value(yelement, "base", material.base);
-        get_yaml_value(yelement, "metallic", material.metallic);
-        get_yaml_value(yelement, "specular", material.specular);
-        get_yaml_value(yelement, "roughness", material.roughness);
-        get_yaml_value(yelement, "coat", material.coat);
-        get_yaml_value(yelement, "transmission", material.transmission);
-        get_yaml_value(yelement, "thin", material.thin);
-        get_yaml_value(yelement, "ior", material.ior);
-        get_yaml_value(yelement, "scattering", material.scattering);
-        get_yaml_value(yelement, "phaseg", material.phaseg);
-        get_yaml_value(yelement, "radius", material.radius);
-        get_yaml_value(yelement, "opacity", material.opacity);
-        get_yaml_value(yelement, "coat", material.coat);
-        get_yaml_texture(yelement, "emission_tex", material.emission_tex);
-        get_yaml_texture(yelement, "base_tex", material.base_tex);
-        get_yaml_texture(yelement, "metallic_tex", material.metallic_tex);
-        get_yaml_texture(yelement, "specular_tex", material.specular_tex);
-        get_yaml_texture(
-            yelement, "transmission_tex", material.transmission_tex);
-        get_yaml_texture(yelement, "roughness_tex", material.roughness_tex);
-        get_yaml_texture(yelement, "scattering_tex", material.scattering_tex);
-        get_yaml_texture(yelement, "normal_tex", material.normal_tex);
-        get_yaml_texture(yelement, "normal_tex", material.normal_tex);
-        get_yaml_value(yelement, "gltf_textures", material.gltf_textures);
-        if (has_yaml_value(yelement, "uri")) {
-          get_yaml_value(yelement, "uri", name);
-          mmap[name] = (int)materials.size() - 1;
-          name       = get_basename(name);
-        }
-        mmap[name] = (int)materials.size() - 1;
       } else if (yelement.name == "shapes") {
         auto& shape = scene.shapes.emplace_back();
         get_yaml_value(yelement, "name", shape.name);
@@ -1024,7 +979,6 @@ static void load_yaml_scene(
           get_yaml_value(yelement, "lookat", lookat);
           shape.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
-        get_yaml_refcopy(yelement, "material", shape.material, materials, mmap);
         get_yaml_value(yelement, "emission", shape.material.emission);
         get_yaml_value(yelement, "base", shape.material.base);
         get_yaml_value(yelement, "metallic", shape.material.metallic);
@@ -1039,24 +993,19 @@ static void load_yaml_scene(
         get_yaml_value(yelement, "radius", shape.material.radius);
         get_yaml_value(yelement, "opacity", shape.material.opacity);
         get_yaml_value(yelement, "coat", shape.material.coat);
-        get_yaml_texture(yelement, "emission_tex", shape.material.emission_tex);
-        get_yaml_texture(yelement, "base_tex", shape.material.base_tex);
-        get_yaml_texture(yelement, "metallic_tex", shape.material.metallic_tex);
-        get_yaml_texture(yelement, "specular_tex", shape.material.specular_tex);
-        get_yaml_texture(
+        get_texture(yelement, "emission_tex", shape.material.emission_tex);
+        get_texture(yelement, "base_tex", shape.material.base_tex);
+        get_texture(yelement, "metallic_tex", shape.material.metallic_tex);
+        get_texture(yelement, "specular_tex", shape.material.specular_tex);
+        get_texture(
             yelement, "transmission_tex", shape.material.transmission_tex);
-        get_yaml_texture(
+        get_texture(
             yelement, "roughness_tex", shape.material.roughness_tex);
-        get_yaml_texture(
+        get_texture(
             yelement, "scattering_tex", shape.material.scattering_tex);
-        get_yaml_texture(yelement, "normal_tex", shape.material.normal_tex);
-        get_yaml_texture(yelement, "normal_tex", shape.material.normal_tex);
+        get_texture(yelement, "normal_tex", shape.material.normal_tex);
+        get_texture(yelement, "normal_tex", shape.material.normal_tex);
         get_yaml_value(yelement, "gltf_textures", shape.material.gltf_textures);
-        if (has_yaml_value(yelement, "uri")) {
-          get_yaml_value(yelement, "uri", shape.filename);
-          shape.name           = get_basename(shape.filename);
-          smap[shape.filename] = (int)scene.shapes.size() - 1;
-        }
         smap[shape.name] = (int)scene.shapes.size() - 1;
       } else if (yelement.name == "subdivs") {
         auto& subdiv = scene.subdivs.emplace_back();
@@ -1073,13 +1022,8 @@ static void load_yaml_scene(
         get_yaml_ref(
             yelement, "displacement_tex", subdiv.displacement_tex, tmap);
         get_yaml_value(yelement, "displacement", subdiv.displacement);
-        if (has_yaml_value(yelement, "uri")) {
-          get_yaml_value(yelement, "uri", subdiv.filename);
-          subdiv.name = get_basename(subdiv.filename);
-        }
       }
     }
-
   } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": parse error [" + e.what() + "]"};
   }
@@ -1124,20 +1068,6 @@ static void load_yaml_scene(
     }
   }
 
-  // load textures
-  for (auto& texture : scene.textures) {
-    if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-    try {
-      if (is_hdr_filename(texture.filename)) {
-        load_image(get_dirname(filename) + texture.filename, texture.hdr);
-      } else {
-        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
-      }
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
-  }
-
   // fix scene
   scene.name = get_basename(filename);
   add_cameras(scene);
@@ -1160,7 +1090,7 @@ static void save_yaml_scene(
   };
   auto add_tex = [&scene](yaml_element& yelement, const string& name, int ref) {
     if (ref < 0) return;
-    add_yaml_value(yelement, name, scene.textures[ref].filename);
+    add_yaml_value(yelement, name, scene.textures[ref].name);
   };
 
   // save yaml file
@@ -1304,9 +1234,9 @@ static void save_yaml_scene(
     if (texture.ldr.empty() && texture.hdr.empty()) continue;
     try {
       if (!texture.hdr.empty()) {
-        save_image(get_dirname(filename) + texture.filename, texture.hdr);
+        save_image(get_dirname(filename) + texture.name, texture.hdr);
       } else {
-        save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+        save_imageb(get_dirname(filename) + texture.name, texture.ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -1352,7 +1282,7 @@ static void load_obj_scene(
     auto& texture          = scene.textures.emplace_back();
     texture.name           = make_safe_name(get_basename(info.path), "texture",
         (int)scene.textures.size(), "textures/", ".yaml");
-    texture.filename       = info.path;
+    texture.name       = info.path;
     texture_map[info.path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
   };
@@ -1447,10 +1377,10 @@ static void load_obj_scene(
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
     try {
-      if (is_hdr_filename(texture.filename)) {
-        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      if (is_hdr_filename(texture.name)) {
+        load_image(get_dirname(filename) + texture.name, texture.hdr);
       } else {
-        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+        load_imageb(get_dirname(filename) + texture.name, texture.ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -1486,7 +1416,7 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
   auto get_texture = [&scene](int tex) {
     if (tex < 0) return obj_texture_info{};
     auto info = obj_texture_info{};
-    info.path = scene.textures[tex].filename;
+    info.path = scene.textures[tex].name;
     return info;
   };
 
@@ -1580,9 +1510,9 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
     if (texture.ldr.empty() && texture.hdr.empty()) continue;
     try {
       if (!texture.hdr.empty()) {
-        save_image(get_dirname(filename) + texture.filename, texture.hdr);
+        save_image(get_dirname(filename) + texture.name, texture.hdr);
       } else {
-        save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+        save_imageb(get_dirname(filename) + texture.name, texture.ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -1662,7 +1592,7 @@ static void load_gltf_scene(
       texture.name = make_safe_name(get_basename(gtexture.filename), "texture",
           (int)scene.textures.size(), "textures/", ".yaml");
     }
-    texture.filename = gtexture.filename;
+    texture.name = gtexture.filename;
   }
 
   // convert materials
@@ -1748,10 +1678,10 @@ static void load_gltf_scene(
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
     try {
-      if (is_hdr_filename(texture.filename)) {
-        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      if (is_hdr_filename(texture.name)) {
+        load_image(get_dirname(filename) + texture.name, texture.hdr);
       } else {
-        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+        load_imageb(get_dirname(filename) + texture.name, texture.ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -1805,7 +1735,7 @@ static void load_pbrt_scene(
     auto& texture              = scene.textures.emplace_back();
     texture.name               = make_safe_name(ptexture.name, "texture",
         (int)scene.textures.size(), "textures/", ".yaml");
-    texture.filename           = ptexture.filename;
+    texture.name           = ptexture.filename;
     texture_map[ptexture.name] = (int)scene.textures.size() - 1;
   }
 
@@ -1884,7 +1814,7 @@ static void load_pbrt_scene(
       texture.name     = make_safe_name(get_basename(penvironment.filename),
           "environment", (int)scene.environments.size(), "environments/",
           ".yaml");
-      texture.filename = penvironment.filename;
+      texture.name = penvironment.filename;
       environment.emission_tex = (int)scene.textures.size() - 1;
     } else {
       environment.emission_tex = -1;
@@ -1920,10 +1850,10 @@ static void load_pbrt_scene(
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
     try {
-      if (is_hdr_filename(texture.filename)) {
-        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      if (is_hdr_filename(texture.name)) {
+        load_image(get_dirname(filename) + texture.name, texture.hdr);
       } else {
-        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+        load_imageb(get_dirname(filename) + texture.name, texture.ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -1959,7 +1889,7 @@ void save_pbrt_scene(
   for (auto& texture : scene.textures) {
     auto& ptexture    = pbrt.textures.emplace_back();
     ptexture.name     = texture.name;
-    ptexture.filename = texture.filename;
+    ptexture.filename = texture.name;
   }
 
   // convert materials
@@ -1997,7 +1927,7 @@ void save_pbrt_scene(
     auto& penvironment    = pbrt.environments.emplace_back();
     penvironment.emission = environment.emission;
     if (environment.emission_tex >= 0) {
-      penvironment.filename = scene.textures[environment.emission_tex].filename;
+      penvironment.filename = scene.textures[environment.emission_tex].name;
     }
   }
 
@@ -2023,9 +1953,9 @@ void save_pbrt_scene(
     if (texture.ldr.empty() && texture.hdr.empty()) continue;
     try {
       if (!texture.hdr.empty()) {
-        save_image(get_dirname(filename) + texture.filename, texture.hdr);
+        save_image(get_dirname(filename) + texture.name, texture.hdr);
       } else {
-        save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+        save_imageb(get_dirname(filename) + texture.name, texture.ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
