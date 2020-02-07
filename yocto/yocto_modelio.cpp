@@ -3094,11 +3094,12 @@ static void convert_pbrt_materials(const string& filename,
         if(max(transmission) > 0.1) {
           material.base = transmission;
           material.base_map = transmission_map;
-          material.specular = mean(specular);
+          material.specular = 1;
+          material.transmission = 1;
         } else {
           material.base = diffuse;
           material.base_map = diffuse_map;
-          material.specular = mean(specular);
+          material.specular = 1;
         }
         get_scalar(values, "opacity", material.opacity, 1);
         get_scalar(values, "eta", material.ior, 1.5);

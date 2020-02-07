@@ -1268,7 +1268,6 @@ static void save_yaml_scene(
     add_opt(yelement, "coat", shape.material.coat, def_material.coat);
     add_opt(yelement, "roughness", shape.material.roughness,
         def_material.roughness);
-    add_opt(yelement, "thin", shape.material.thin, def_material.thin);
     add_opt(yelement, "ior", shape.material.ior, def_material.ior);
     add_opt(yelement, "transmission", shape.material.transmission,
         def_material.transmission);
@@ -1277,6 +1276,7 @@ static void save_yaml_scene(
     add_opt(yelement, "phaseg", shape.material.phaseg, def_material.phaseg);
     add_opt(yelement, "radius", shape.material.radius, def_material.radius);
     add_opt(yelement, "opacity", shape.material.opacity, def_material.opacity);
+    add_opt(yelement, "thin", shape.material.thin, def_material.thin);
     add_tex(yelement, "emission_tex", shape.material.emission_tex);
     add_tex(yelement, "base_tex", shape.material.base_tex);
     add_tex(yelement, "metallic_tex", shape.material.metallic_tex);
