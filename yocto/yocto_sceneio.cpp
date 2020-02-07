@@ -1174,7 +1174,7 @@ static void save_yaml_scene(
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "subdivs";
     add_val(yelement, "name", subdiv.name);
-    add_val(yelement, "filename", subdiv.filename);
+    add_val(yelement, "subdiv", subdiv.filename);
     add_val(yelement, "shape", scene.shapes[subdiv.shape].name);
     add_opt(
         yelement, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
