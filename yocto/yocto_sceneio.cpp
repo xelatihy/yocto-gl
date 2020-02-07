@@ -1818,14 +1818,16 @@ static void load_pbrt_scene(
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
     auto& material = materials.emplace_back();
-    material.base  = pmaterial.diffuse;
-    // TODO: better conversion
-    // material.specular     = pmaterial.specular;
-    // material.transmission = pmaterial.transmission;
-    material.roughness = mean(pmaterial.roughness);
-    material.opacity   = pmaterial.opacity == vec3f{1} ? 1
-                                                     : mean(pmaterial.opacity);
-    material.base_tex            = get_texture(pmaterial.diffuse_map);
+    material.base  = pmaterial.base;
+    material.metallic     = pmaterial.metallic;
+    material.specular     = pmaterial.specular;
+    material.transmission = pmaterial.transmission;
+    material.ior = pmaterial.ior;
+    material.roughness = pmaterial.roughness;
+    material.opacity   = pmaterial.opacity;
+    material.thin      = pmaterial.thin;
+    material.base_tex            = get_texture(pmaterial.base_map);
+    material.opacity_tex            = get_texture(pmaterial.opacity_map);
     material_map[pmaterial.name] = (int)materials.size() - 1;
   }
 
@@ -1945,12 +1947,14 @@ void save_pbrt_scene(
     auto& material    = shape.material;
     auto& pmaterial   = pbrt.materials.emplace_back();
     pmaterial.name    = shape.name;
-    pmaterial.diffuse = material.base;
-    // TODO: better conversion
-    // pmaterial.specular     = material.specular;
-    // pmaterial.transmission = material.transmission;
-    pmaterial.roughness = {material.roughness, material.roughness};
-    pmaterial.diffuse_map =
+    pmaterial.base    = material.base;
+    pmaterial.metallic     = material.metallic;
+    pmaterial.specular     = material.specular;
+    pmaterial.transmission = material.transmission;
+    pmaterial.roughness = material.roughness;
+    pmaterial.ior = material.ior;
+    pmaterial.opacity = material.opacity;
+    pmaterial.base_map =
         material.base_tex >= 0 ? scene.textures[material.base_tex].name : ""s;
     auto& parealight    = pbrt.arealights.emplace_back();
     parealight.name     = shape.name;
