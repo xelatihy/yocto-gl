@@ -399,17 +399,16 @@ bool draw_glwidgets_environment(
 void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     const opengl_input& input) {
   static string load_path = "", save_path = "", error_message = "";
-  auto          scene_ok = !apps->states.empty() && apps->selected >= 0;
+  auto app = (!apps->states.empty() && apps->selected >= 0) ? apps->states[apps->selected] : nullptr;
   if (draw_glfiledialog_button(win, "load", true, "load", load_path, false,
           "./", "", "*.yaml;*.obj;*.pbrt")) {
     load_scene_async(apps, load_path);
     load_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save", scene_ok, "save", save_path, true,
+  if (draw_glfiledialog_button(win, "save", (bool)app, "save", save_path, true,
           get_dirname(save_path), get_filename(save_path),
           "*.yaml;*.obj;*.pbrt")) {
-    auto app     = apps->states[apps->selected];
     app->outname = save_path;
     try {
       save_scene(app->outname, app->ioscene);
@@ -420,10 +419,9 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glfiledialog_button(win, "save image", scene_ok, "save image",
+  if (draw_glfiledialog_button(win, "save image", (bool)app, "save image",
           save_path, true, get_dirname(save_path), get_filename(save_path),
           "*.png;*.jpg;*.tga;*.bmp;*.hdr;*.exr")) {
-    auto app     = apps->states[apps->selected];
     app->outname = save_path;
     try {
       save_image(app->imagename, app->display);
@@ -434,11 +432,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     save_path = "";
   }
   continue_glline(win);
-  if (draw_glbutton(win, "close", scene_ok)) {
-    auto it = apps->states.begin();
-    advance(it, apps->selected);
-    apps->states.erase(it);
+  if (draw_glbutton(win, "close", (bool)app)) {
+    apps->states.erase(apps->states.begin() + apps->selected);
     apps->selected = apps->states.empty() ? -1 : 0;
+    app = (!apps->states.empty() && apps->selected >= 0) ? apps->states[apps->selected] : nullptr;
   }
   continue_glline(win);
   if (draw_glbutton(win, "quit")) {
@@ -448,9 +445,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       win, "scene", apps->selected, (int)apps->states.size(),
       [apps](int idx) { return apps->states[apps->selected]->name.c_str(); },
       false);
-  if (scene_ok && begin_glheader(win, "trace")) {
+  if (app && begin_glheader(win, "trace")) {
     auto  edited  = 0;
-    auto  app     = apps->states[apps->selected];
     auto& tparams = app->params;
     edited += draw_glcombobox(
         win, "camera", tparams.camera, app->ioscene.cameras);
@@ -470,8 +466,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (edited) reset_display(app);
     end_glheader(win);
   }
-  if (scene_ok && begin_glheader(win, "inspect")) {
-    auto app = apps->states[apps->selected];
+  if (app && begin_glheader(win, "inspect")) {
     draw_gllabel(win, "scene", get_filename(app->filename));
     draw_gllabel(win, "filename", app->filename);
     draw_gllabel(win, "outname", app->outname);
@@ -504,7 +499,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (scene_ok && begin_glheader(win, "edit")) {
+  if (app && begin_glheader(win, "edit")) {
     static auto labels = vector<string>{
         "camera", "shape", "subdiv", "environment", "material", "texture"};
     auto app = apps->states[apps->selected];
