@@ -573,12 +573,11 @@ struct pbrt_shape {
   vector<frame3f>    instances = {};
   vector<frame3f>    instaends = {};
   // shape approximation
-  string        filename  = "";
+  string        filename_ = "";
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
-  float         radius    = 0;  // radius for sphere, cylinder, disk
 };
 
 // Pbrt lights
@@ -618,8 +617,8 @@ struct pbrt_environment {
   frame3f            frame  = identity3x4f;
   frame3f            frend  = identity3x4f;
   // environment approximation
-  vec3f  emission = zero3f;
-  string filename = "";
+  vec3f  emission     = zero3f;
+  string emission_map = "";
 };
 
 // Other pbrt elements
@@ -672,7 +671,8 @@ struct pbrt_model {
 
 // Load/save pbrt
 void load_pbrt(const string& filename, pbrt_model& pbrt);
-void save_pbrt(const string& filename, const pbrt_model& pbrt);
+void save_pbrt(
+    const string& filename, const pbrt_model& pbrt, bool ply_meshes = false);
 
 // type-cheked pbrt value access
 void get_pbrt_value(const pbrt_value& pbrt, string& value);

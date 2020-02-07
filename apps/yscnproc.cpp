@@ -53,7 +53,6 @@ void run_app(int argc, const char** argv) {
   auto shape_directory    = "shapes/"s;
   auto subdiv_directory   = "subdivs/"s;
   auto instance_directory = "instances/"s;
-  auto uniform_txt        = false;
   auto obj_instances      = false;
   auto validate           = false;
   auto info               = false;
@@ -68,8 +67,6 @@ void run_app(int argc, const char** argv) {
       "Shape directory when adding names.");
   add_cli_option(cli, "--subdiv-directory", subdiv_directory,
       "Subdiv directory when adding names.");
-  add_cli_option(
-      cli, "--uniform-textures", uniform_txt, "uniform texture formats");
   add_cli_option(
       cli, "--obj-instances", obj_instances, "preserve instances in obj");
   add_cli_option(cli, "--info,-i", info, "print scene info");
@@ -106,18 +103,6 @@ void run_app(int argc, const char** argv) {
     }
   }
 
-  // change texture names
-  if (uniform_txt) {
-    for (auto& texture : scene.textures) {
-      auto ext = get_extension(texture.filename);
-      if (is_hdr_filename(texture.filename)) {
-        texture.filename = replace_extension(texture.filename, ".hdr");
-      } else {
-        texture.filename = replace_extension(texture.filename, ".png");
-      }
-    }
-  }
-
   // add missing mesh names if necessary
   if (!shape_directory.empty() && shape_directory.back() != '/')
     shape_directory += '/';
@@ -144,7 +129,7 @@ void run_app(int argc, const char** argv) {
     if (!shape.ifilename.empty())
       dirnames.insert(dirname + get_dirname(shape.ifilename));
   for (auto& texture : scene.textures)
-    dirnames.insert(dirname + get_dirname(texture.filename));
+    dirnames.insert(dirname + get_dirname(texture.name));
   for (auto& dir : dirnames) {
     if (!mkdir(dir)) {
       print_fatal("cannot create directory " + output);

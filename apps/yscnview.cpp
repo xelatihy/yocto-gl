@@ -245,27 +245,15 @@ bool draw_glwidgets_camera(
 /// Visit struct elements.
 bool draw_glwidgets_texture(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& texture      = app->scene.textures[id];
-  auto  old_filename = texture.filename;
-  auto  edited       = 0;
-  edited += draw_gltextinput(win, "name", texture.name);
-  edited += draw_gltextinput(win, "filename", texture.filename);
+  auto& texture = app->scene.textures[id];
+  draw_gllabel(win, "name", texture.name);
   draw_gllabel(win, "hdr",
       to_string(texture.hdr.size().x) + " x " +
           to_string(texture.hdr.size().y));
   draw_gllabel(win, "ldr",
       to_string(texture.ldr.size().x) + " x " +
           to_string(texture.ldr.size().y));
-  if (edited && old_filename != texture.filename) {
-    // TODO: load
-    // try {
-    //   load_texture(app->filename, texture);
-    // } catch (std::exception& e) {
-    //   push_glmessage(win, e.what());
-    //   log_glinfo(win, e.what());
-    // }
-  }
-  return edited;
+  return false;
 }
 
 bool draw_glwidgets_material(

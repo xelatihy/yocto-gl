@@ -514,6 +514,9 @@ static void format_value(file_wrapper& fs, const T& value) {
     throw std::runtime_error{fs.filename + ": write error"};
 }
 
+static void throw_dependent_error(const string& filename, const string& err) {
+  throw std::runtime_error{filename + ": error in resource (" + err + ")"};
+}
 static void throw_dependent_error(file_wrapper& fs, const string& err) {
   throw std::runtime_error{fs.filename + ": error in resource (" + err + ")"};
 }
@@ -3009,27 +3012,29 @@ static void convert_pbrt_materials(const string& filename,
     vector<pbrt_material>& materials, const vector<pbrt_texture>& textures,
     bool verbose = false) {
   // add constant textures
-  auto constants = unordered_map<string, vec3f>{};
-  for (auto& texture : textures) {
-    if (!texture.filename.empty()) continue;
-    constants[texture.name] = texture.constant;
+  auto texture_map = unordered_map<string, int>{};
+  for (auto idx = 0; idx < textures.size(); idx++) {
+    texture_map[textures[idx].name] = idx;
   }
 
   // helpers
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
-                         vec3f& color, string& texture,
+                         vec3f& color, string& filename,
                          const vec3f& def) -> void {
     auto textured = pair{def, ""s};
     get_pbrt_value(values, name, textured);
     if (textured.second == "") {
-      color   = textured.first;
-      texture = "";
-    } else if (constants.find(textured.second) != constants.end()) {
-      color   = constants.at(textured.second);
-      texture = "";
+      color    = textured.first;
+      filename = "";
     } else {
-      color   = {1, 1, 1};
-      texture = textured.second;
+      auto& texture = textures[texture_map.at(textured.second)];
+      if (texture.filename.empty()) {
+        color    = texture.constant;
+        filename = "";
+      } else {
+        color    = {1, 1, 1};
+        filename = texture.filename;
+      }
     }
   };
   auto get_scalar = [&](const vector<pbrt_value>& values, const string& name,
@@ -3038,10 +3043,13 @@ static void convert_pbrt_materials(const string& filename,
     get_pbrt_value(values, name, textured);
     if (textured.second == "") {
       scalar = mean(textured.first);
-    } else if (constants.find(textured.second) != constants.end()) {
-      scalar = mean(constants.at(textured.second));
     } else {
-      scalar = def;
+      auto& texture = textures[texture_map.at(textured.second)];
+      if (texture.filename.empty()) {
+        scalar = mean(texture.constant);
+      } else {
+        scalar = def;
+      }
     }
   };
   auto get_color = [&](const vector<pbrt_value>& values, const string& name,
@@ -3050,10 +3058,13 @@ static void convert_pbrt_materials(const string& filename,
     get_pbrt_value(values, name, textured);
     if (textured.second == "") {
       color = textured.first;
-    } else if (constants.find(textured.second) != constants.end()) {
-      color = constants.at(textured.second);
     } else {
-      color = def;
+      auto& texture = textures[texture_map.at(textured.second)];
+      if (texture.filename.empty()) {
+        color = texture.constant;
+      } else {
+        color = def;
+      }
     }
   };
 
@@ -3352,8 +3363,18 @@ static void convert_pbrt_shapes(
         shape.normals.resize(shape.positions.size());
         // compute_normals(shape.normals, shape.triangles, shape.positions);
       } else if (shape.type == "plymesh") {
-        shape.filename = ""s;
-        get_pbrt_value(values, "filename", shape.filename);
+        shape.filename_ = ""s;
+        get_pbrt_value(values, "filename", shape.filename_);
+        try {
+          auto ply = ply_model{};
+          load_ply(get_dirname(filename) + shape.filename_, ply);
+          shape.positions = get_ply_positions(ply);
+          shape.normals   = get_ply_normals(ply);
+          shape.texcoords = get_ply_texcoords(ply);
+          shape.triangles = get_ply_triangles(ply);
+        } catch (std::exception& e) {
+          throw_dependent_error(filename, e.what());
+        }
       } else if (shape.type == "sphere") {
         auto radius = 1.0f;
         get_pbrt_value(values, "radius", radius);
@@ -3457,9 +3478,9 @@ static void convert_pbrt_environments(const string& filename,
         auto l = vec3f{1}, scale = vec3f{1};
         get_pbrt_value(values, "L", l);
         get_pbrt_value(values, "scale", scale);
-        light.emission = scale * l;
-        light.filename = ""s;
-        get_pbrt_value(values, "mapname", light.filename);
+        light.emission     = scale * l;
+        light.emission_map = ""s;
+        get_pbrt_value(values, "mapname", light.emission_map);
         // environment.frame =
         // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
         // * stack.back().frame;
@@ -3824,7 +3845,8 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
   }
 }
 
-void save_pbrt(const string& filename, const pbrt_model& pbrt) {
+void save_pbrt(
+    const string& filename, const pbrt_model& pbrt, bool ply_meshes) {
   auto fs = open_file(filename, "wt");
 
   // save comments
@@ -3984,7 +4006,7 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
       environment.type = "infinite";
       environment.values.push_back(make_pbrt_value("L", environment.emission));
       environment.values.push_back(
-          make_pbrt_value("mapname", environment.filename));
+          make_pbrt_value("mapname", environment.emission_map));
     }
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)environment.frame);
@@ -4008,9 +4030,9 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
   for (auto& shape_ : pbrt.shapes) {
     auto shape = shape_;
     if (shape.type == "") {
-      if (!shape.filename.empty()) {
+      if (ply_meshes) {
         shape.type = "plymesh";
-        shape.values.push_back(make_pbrt_value("filename", shape.filename));
+        shape.values.push_back(make_pbrt_value("filename", shape.filename_));
       } else {
         shape.type = "trianglemesh";
         shape.values.push_back(make_pbrt_value("indices", shape.triangles));
@@ -4021,6 +4043,18 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
               make_pbrt_value("N", shape.triangles, pbrt_value_type::normal));
         if (!shape.texcoords.empty())
           shape.values.push_back(make_pbrt_value("uv", shape.texcoords));
+      }
+    }
+    if (shape.type == "plymesh") {
+      try {
+        auto ply = ply_model{};
+        add_ply_positions(ply, shape.positions);
+        add_ply_normals(ply, shape.normals);
+        add_ply_texcoords(ply, shape.texcoords);
+        add_ply_triangles(ply, shape.triangles);
+        save_ply(get_dirname(filename) + shape.filename_, ply);
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
       }
     }
     auto object = "object" + std::to_string(object_id++);
