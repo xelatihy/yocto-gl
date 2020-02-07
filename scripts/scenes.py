@@ -172,7 +172,7 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
     modes = {
         # 'default': '--uniform-textures --mesh-filenames',
         # 'gltf': '--uniform-textures --mesh-filenames --mesh-directory gltf_meshes/'
-        'default': '--uniform-textures',
+        'default': '',
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/source/{scene}')):
