@@ -1007,20 +1007,21 @@ static void load_yaml_scene(
         get_texture(yelement, "normal_tex", shape.material.normal_tex);
         get_yaml_value(yelement, "gltf_textures", shape.material.gltf_textures);
         if (!shape.filename.empty()) {
-        try {
-          load_shape(get_dirname(filename) + shape.filename, shape.points,
-              shape.lines, shape.triangles, shape.quads, shape.positions,
-              shape.normals, shape.texcoords, shape.colors, shape.radius);
-        } catch (std::exception& e) {
-          throw_dependent_error(filename, e.what());
-        }
+          try {
+            load_shape(get_dirname(filename) + shape.filename, shape.points,
+                shape.lines, shape.triangles, shape.quads, shape.positions,
+                shape.normals, shape.texcoords, shape.colors, shape.radius);
+          } catch (std::exception& e) {
+            throw_dependent_error(filename, e.what());
+          }
         }
         if (!shape.ifilename.empty()) {
-        try {
-          load_instances(get_dirname(filename) + shape.ifilename, shape.instances);
-        } catch (std::exception& e) {
-          throw_dependent_error(filename, e.what());
-        }
+          try {
+            load_instances(
+                get_dirname(filename) + shape.ifilename, shape.instances);
+          } catch (std::exception& e) {
+            throw_dependent_error(filename, e.what());
+          }
         }
         smap[shape.name] = (int)scene.shapes.size() - 1;
       } else if (yelement.name == "subdivs") {
@@ -1038,19 +1039,20 @@ static void load_yaml_scene(
         get_texture(yelement, "displacement_tex", subdiv.displacement_tex);
         get_yaml_value(yelement, "displacement", subdiv.displacement);
         if (!subdiv.filename.empty()) {
-        try {
-          if (!subdiv.facevarying) {
-            load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
-                subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
-                subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
-          } else {
-            load_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
-                subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-                subdiv.normals, subdiv.texcoords);
+          try {
+            if (!subdiv.facevarying) {
+              load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+                  subdiv.lines, subdiv.triangles, subdiv.quads,
+                  subdiv.positions, subdiv.normals, subdiv.texcoords,
+                  subdiv.colors, subdiv.radius);
+            } else {
+              load_fvshape(get_dirname(filename) + subdiv.filename,
+                  subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+                  subdiv.positions, subdiv.normals, subdiv.texcoords);
+            }
+          } catch (std::exception& e) {
+            throw_dependent_error(filename, e.what());
           }
-        } catch (std::exception& e) {
-          throw_dependent_error(filename, e.what());
-        }
         }
       }
     }
@@ -1153,20 +1155,21 @@ static void save_yaml_scene(
     add_opt(yelement, "gltf_textures", shape.material.gltf_textures,
         def_material.gltf_textures);
     if (!shape.positions.empty() && !shape.filename.empty()) {
-    try {
-      save_shape(get_dirname(filename) + shape.filename, shape.points,
-          shape.lines, shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, shape.colors, shape.radius);
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
+      try {
+        save_shape(get_dirname(filename) + shape.filename, shape.points,
+            shape.lines, shape.triangles, shape.quads, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.radius);
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
+      }
     }
     if (!shape.instances.empty() && !shape.ifilename.empty()) {
-    try {
-      save_instances(get_dirname(filename) + shape.ifilename, shape.instances);
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
+      try {
+        save_instances(
+            get_dirname(filename) + shape.ifilename, shape.instances);
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
+      }
     }
   }
 
@@ -1188,34 +1191,34 @@ static void save_yaml_scene(
     add_opt(
         yelement, "displacement", subdiv.displacement, def_subdiv.subdivisions);
     if (!subdiv.positions.empty() && !subdiv.filename.empty()) {
-    try {
-      if (subdiv.quadspos.empty()) {
-        save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
-            subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
-            subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
-      } else {
-        save_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
-            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-            subdiv.normals, subdiv.texcoords);
+      try {
+        if (subdiv.quadspos.empty()) {
+          save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+              subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
+              subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+        } else {
+          save_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
+              subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+              subdiv.normals, subdiv.texcoords);
+        }
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
       }
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
     }
   }
 
   // save textures
   for (auto& texture : scene.textures) {
     if (!texture.ldr.empty() && !texture.hdr.empty() && !texture.name.empty()) {
-    try {
-      if (!texture.hdr.empty()) {
-        save_image(get_dirname(filename) + texture.name, texture.hdr);
-      } else {
-        save_imageb(get_dirname(filename) + texture.name, texture.ldr);
+      try {
+        if (!texture.hdr.empty()) {
+          save_image(get_dirname(filename) + texture.name, texture.hdr);
+        } else {
+          save_imageb(get_dirname(filename) + texture.name, texture.ldr);
+        }
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
       }
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
     }
   }
 
