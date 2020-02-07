@@ -454,7 +454,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && begin_glheader(win, "cameras")) {
+  if (app && !app->ioscene.cameras.empty() && begin_glheader(win, "cameras")) {
     draw_glcombobox(
         win, "camera##2", app->selected_camera, app->ioscene.cameras);
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
@@ -464,20 +464,35 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && begin_glheader(win, "textures")) {
-    draw_glcombobox(
-        win, "texture##2", app->selected_texture, app->ioscene.textures);
-    if (draw_glwidgets_texture(win, app, app->selected_texture)) {
-      auto& texture = app->ioscene.textures[app->selected_texture];
-      if (!texture.hdr.empty()) {
-        set_texture(app->glscene, app->selected_texture, texture.hdr);
-      } else if (!texture.hdr.empty()) {
-        set_texture(app->glscene, app->selected_texture, texture.ldr);
+  if (app && !app->ioscene.environments.empty() && begin_glheader(win, "environments")) {
+    draw_glcombobox(win, "environments##2", app->selected_environment,
+        app->ioscene.environments);
+    if (draw_glwidgets_environment(win, app, app->selected_environment)) {
+    }
+    end_glheader(win);
+  }
+  if (app && !app->ioscene.shapes.empty() && begin_glheader(win, "shapes")) {
+    draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene.shapes);
+    if (!draw_glwidgets_shape(win, app, app->selected_shape)) {
+      auto& shape = app->ioscene.shapes[app->selected_shape];
+      auto  idx   = app->selected_shape;
+      if (!shape.points.empty()) {
+        set_shape(app->glscene, idx, shape.points, shape.positions,
+            shape.normals, shape.texcoords, shape.colors);
+      } else if (!shape.lines.empty()) {
+        set_shape(app->glscene, idx, shape.lines, shape.positions,
+            shape.normals, shape.texcoords, shape.colors);
+      } else if (!shape.triangles.empty()) {
+        set_shape(app->glscene, idx, shape.triangles, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.tangents);
+      } else if (!shape.quads.empty()) {
+        set_shape(app->glscene, idx, shape.quads, shape.positions,
+            shape.normals, shape.texcoords, shape.colors, shape.tangents);
       }
     }
     end_glheader(win);
   }
-  if (app && begin_glheader(win, "materials")) {
+  if (app && !app->ioscene.shapes.empty() && begin_glheader(win, "materials")) {
     draw_glcombobox(
         win, "material##2", app->selected_material, app->ioscene.shapes);
     if (draw_glwidgets_material(win, app, app->selected_material)) {
@@ -500,28 +515,20 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && begin_glheader(win, "shapes")) {
-    draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene.shapes);
-    if (!draw_glwidgets_shape(win, app, app->selected_shape)) {
-      auto& shape = app->ioscene.shapes[app->selected_shape];
-      auto  idx   = app->selected_shape;
-      if (!shape.points.empty()) {
-        set_shape(app->glscene, idx, shape.points, shape.positions,
-            shape.normals, shape.texcoords, shape.colors);
-      } else if (!shape.lines.empty()) {
-        set_shape(app->glscene, idx, shape.lines, shape.positions,
-            shape.normals, shape.texcoords, shape.colors);
-      } else if (!shape.triangles.empty()) {
-        set_shape(app->glscene, idx, shape.triangles, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.tangents);
-      } else if (!shape.quads.empty()) {
-        set_shape(app->glscene, idx, shape.quads, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.tangents);
+  if (app && !app->ioscene.textures.empty() && begin_glheader(win, "textures")) {
+    draw_glcombobox(
+        win, "texture##2", app->selected_texture, app->ioscene.textures);
+    if (draw_glwidgets_texture(win, app, app->selected_texture)) {
+      auto& texture = app->ioscene.textures[app->selected_texture];
+      if (!texture.hdr.empty()) {
+        set_texture(app->glscene, app->selected_texture, texture.hdr);
+      } else if (!texture.hdr.empty()) {
+        set_texture(app->glscene, app->selected_texture, texture.ldr);
       }
     }
     end_glheader(win);
   }
-  if (app && begin_glheader(win, "subdivs")) {
+  if (app && !app->ioscene.subdivs.empty() && begin_glheader(win, "subdivs")) {
     draw_glcombobox(
         win, "subdiv##2", app->selected_subdiv, app->ioscene.subdivs);
     if (!draw_glwidgets_subdiv(win, app, app->selected_subdiv)) {
@@ -542,13 +549,6 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         set_shape(app->glscene, idx, shape.quads, shape.positions,
             shape.normals, shape.texcoords, shape.colors, shape.tangents);
       }
-    }
-    end_glheader(win);
-  }
-  if (app && begin_glheader(win, "environments")) {
-    draw_glcombobox(win, "environments##2", app->selected_environment,
-        app->ioscene.environments);
-    if (draw_glwidgets_environment(win, app, app->selected_environment)) {
     }
     end_glheader(win);
   }
