@@ -106,14 +106,6 @@ void run_app(int argc, const char** argv) {
   // add missing mesh names if necessary
   if (!shape_directory.empty() && shape_directory.back() != '/')
     shape_directory += '/';
-  if (mesh_filenames) {
-    auto sid = 0;
-    for (auto& shape : scene.shapes) {
-      shape.filename = shape_directory + "shape_" + std::to_string(sid) +
-                       ".ply";
-      sid++;
-    }
-  }
 
   // add missing mesh names if necessary
   if (!instance_directory.empty() && instance_directory.back() != '/')
@@ -124,10 +116,7 @@ void run_app(int argc, const char** argv) {
   auto dirnames = unordered_set<string>{};
   if (!dirname.empty()) dirnames.insert(dirname);
   for (auto& shape : scene.shapes)
-    dirnames.insert(dirname + get_dirname(shape.filename));
-  for (auto& shape : scene.shapes)
-    if (!shape.ifilename.empty())
-      dirnames.insert(dirname + get_dirname(shape.ifilename));
+    dirnames.insert(dirname + get_dirname(shape.name));
   for (auto& texture : scene.textures)
     dirnames.insert(dirname + get_dirname(texture.name));
   for (auto& dir : dirnames) {

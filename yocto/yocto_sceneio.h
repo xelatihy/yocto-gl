@@ -128,17 +128,11 @@ struct sceneio_material {
 struct sceneio_shape {
   // shape data
   string name      = "";
-  string filename  = "";
-  string ifilename = "";
-
-  // frame
   frame3f frame = identity3x4f;
-
-  // material
+  vector<frame3f> instances = {};
   sceneio_material material = {};
 
   // instances
-  vector<frame3f> instances = {};
 
   // primitives
   vector<int>   points    = {};
@@ -161,9 +155,6 @@ struct sceneio_shape {
 struct sceneio_subdiv {
   // shape data
   string name     = "";
-  string filename = "";
-
-  // reference to subdivided shape
   int shape = -1;
 
   // primitives
@@ -189,7 +180,6 @@ struct sceneio_subdiv {
   int  subdivisions = 0;
   bool catmullclark = false;
   bool smooth       = false;
-  bool facevarying  = false;
 
   // displacement information
   float displacement     = 0;

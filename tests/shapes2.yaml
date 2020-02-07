@@ -99,19 +99,17 @@ subdivs:
   - name: subdivs/sphere-displaced.yaml
     subdiv: subdivs/sphere-displaced.obj
     shape: shapes/sphere-displaced-matte.yaml
-    facevarying: true
     displacement: 0.025
     displacement_tex: textures/bumps-displacement.png
   - name: subdivs/cube-subdiv.yaml
-    subdiv: subdivs/cube-subdiv.obj
+    fvsubdiv: subdivs/cube-subdiv.obj
     shape: shapes/cube-subdiv-uvgrid.yaml
     subdivisions: 4
     catmullclark: true
     smooth: false
-    facevarying: true
-  - name: suzanne-subdiv
+  - name: subdivs/suzanne-subdiv.yaml
     subdiv: subdivs/suzanne-subdiv.obj
-    shape: suzanne-subdiv-plastic-sharp
+    shape: shapes/suzanne-subdiv-plastic-sharp.yaml
     subdivisions: 2
     catmullclark: true
     smooth: true

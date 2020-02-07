@@ -973,8 +973,6 @@ static void load_yaml_scene(
       } else if (yelement.name == "shapes") {
         auto& shape = scene.shapes.emplace_back();
         get_yaml_value(yelement, "name", shape.name);
-        get_yaml_value(yelement, "shape", shape.filename);
-        get_yaml_value(yelement, "instances", shape.ifilename);
         get_yaml_value(yelement, "frame", shape.frame);
         if (has_yaml_value(yelement, "lookat")) {
           auto lookat = identity3x3f;
@@ -1006,19 +1004,23 @@ static void load_yaml_scene(
         get_texture(yelement, "normal_tex", shape.material.normal_tex);
         get_texture(yelement, "normal_tex", shape.material.normal_tex);
         get_yaml_value(yelement, "gltf_textures", shape.material.gltf_textures);
-        if (!shape.filename.empty()) {
+        if (has_yaml_value(yelement, "shape")) {
+          auto path = ""s;
+          get_yaml_value(yelement, "shape", path);
           try {
-            load_shape(get_dirname(filename) + shape.filename, shape.points,
+            load_shape(get_dirname(filename) + path, shape.points,
                 shape.lines, shape.triangles, shape.quads, shape.positions,
                 shape.normals, shape.texcoords, shape.colors, shape.radius);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
         }
-        if (!shape.ifilename.empty()) {
+        if (has_yaml_value(yelement, "instances")) {
+          auto path = ""s;
+          get_yaml_value(yelement, "instances", path);
           try {
             load_instances(
-                get_dirname(filename) + shape.ifilename, shape.instances);
+                get_dirname(filename) + path, shape.instances);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1027,29 +1029,30 @@ static void load_yaml_scene(
       } else if (yelement.name == "subdivs") {
         auto& subdiv = scene.subdivs.emplace_back();
         get_yaml_value(yelement, "name", subdiv.name);
-        get_yaml_value(yelement, "subdiv", subdiv.filename);
-        if (has_yaml_value(yelement, "filename")) {
-          get_yaml_value(yelement, "filename", subdiv.filename);
-        }
         get_yaml_ref(yelement, "shape", subdiv.shape, smap);
         get_yaml_value(yelement, "subdivisions", subdiv.subdivisions);
         get_yaml_value(yelement, "catmullclark", subdiv.catmullclark);
         get_yaml_value(yelement, "smooth", subdiv.smooth);
-        get_yaml_value(yelement, "facevarying", subdiv.facevarying);
         get_texture(yelement, "displacement_tex", subdiv.displacement_tex);
         get_yaml_value(yelement, "displacement", subdiv.displacement);
-        if (!subdiv.filename.empty()) {
+        if (has_yaml_value(yelement, "subdiv")) {
+          auto path = ""s;
+          get_yaml_value(yelement, "subdiv", path);
           try {
-            if (!subdiv.facevarying) {
-              load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
-                  subdiv.lines, subdiv.triangles, subdiv.quads,
-                  subdiv.positions, subdiv.normals, subdiv.texcoords,
-                  subdiv.colors, subdiv.radius);
-            } else {
-              load_fvshape(get_dirname(filename) + subdiv.filename,
-                  subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
-                  subdiv.positions, subdiv.normals, subdiv.texcoords);
-            }
+            load_shape(get_dirname(filename) + path, subdiv.points,
+                subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
+                subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+          } catch (std::exception& e) {
+            throw_dependent_error(filename, e.what());
+          }
+        }
+        if (has_yaml_value(yelement, "fvsubdiv")) {
+          auto path = ""s;
+          get_yaml_value(yelement, "fvsubdiv", path);
+          try {
+            load_fvshape(get_dirname(filename) + path,
+                subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+                subdiv.positions, subdiv.normals, subdiv.texcoords);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1120,8 +1123,6 @@ static void save_yaml_scene(
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "shapes";
     add_val(yelement, "name", shape.name);
-    add_val(yelement, "shape", shape.filename);
-    add_val(yelement, "instances", shape.ifilename);
     add_opt(yelement, "frame", shape.frame, def_shape.frame);
     add_opt(
         yelement, "emission", shape.material.emission, def_material.emission);
@@ -1154,19 +1155,23 @@ static void save_yaml_scene(
     add_tex(yelement, "normal_tex", shape.material.normal_tex);
     add_opt(yelement, "gltf_textures", shape.material.gltf_textures,
         def_material.gltf_textures);
-    if (!shape.positions.empty() && !shape.filename.empty()) {
+    if (!shape.positions.empty()) {
+      auto path = replace_extension(shape.name, ".ply");
+      add_val(yelement, "shape", path);
       try {
-        save_shape(get_dirname(filename) + shape.filename, shape.points,
+        save_shape(get_dirname(filename) + path, shape.points,
             shape.lines, shape.triangles, shape.quads, shape.positions,
             shape.normals, shape.texcoords, shape.colors, shape.radius);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
     }
-    if (!shape.instances.empty() && !shape.ifilename.empty()) {
+    if (!shape.instances.empty()) {
+      auto path = replace_extension(shape.name, ".instances.ply");
+      add_val(yelement, "instances", path);
       try {
         save_instances(
-            get_dirname(filename) + shape.ifilename, shape.instances);
+            get_dirname(filename) + path, shape.instances);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
@@ -1178,29 +1183,33 @@ static void save_yaml_scene(
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "subdivs";
     add_val(yelement, "name", subdiv.name);
-    add_val(yelement, "subdiv", subdiv.filename);
     add_val(yelement, "shape", scene.shapes[subdiv.shape].name);
     add_opt(
         yelement, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
     add_opt(
         yelement, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
     add_opt(yelement, "smooth", subdiv.smooth, def_subdiv.smooth);
-    add_opt(
-        yelement, "facevarying", subdiv.facevarying, def_subdiv.facevarying);
     add_tex(yelement, "displacement_tex", subdiv.displacement_tex);
     add_opt(
         yelement, "displacement", subdiv.displacement, def_subdiv.subdivisions);
-    if (!subdiv.positions.empty() && !subdiv.filename.empty()) {
+    if (!subdiv.positions.empty() && subdiv.quadspos.empty()) {
+      auto path = replace_extension(subdiv.name, ".ply");
+      add_val(yelement, "subdiv", path);
       try {
-        if (subdiv.quadspos.empty()) {
-          save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+          save_shape(get_dirname(filename) + path, subdiv.points,
               subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
               subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
-        } else {
-          save_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
+      }
+    }
+    if (!subdiv.positions.empty() && !subdiv.quadspos.empty()) {
+      auto path = replace_extension(subdiv.name, ".obj");
+      add_val(yelement, "fvsubdiv", path);
+      try {
+          save_fvshape(get_dirname(filename) + path, subdiv.quadspos,
               subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
               subdiv.normals, subdiv.texcoords);
-        }
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
@@ -1209,7 +1218,7 @@ static void save_yaml_scene(
 
   // save textures
   for (auto& texture : scene.textures) {
-    if (!texture.ldr.empty() && !texture.hdr.empty() && !texture.name.empty()) {
+    if (!texture.ldr.empty() || !texture.hdr.empty()) {
       try {
         if (!texture.hdr.empty()) {
           save_image(get_dirname(filename) + texture.name, texture.hdr);
@@ -1319,9 +1328,7 @@ static void load_obj_scene(
     shape_name_counts[shape.name] += 1;
     if (shape_name_counts[shape.name] > 1)
       shape.name += std::to_string(shape_name_counts[shape.name]);
-    shape.name = make_safe_name(
-        shape.name, "shape", (int)scene.shapes.size(), "shapes/", ".yaml");
-    shape.filename  = make_safe_filename("shapes/" + shape.name + ".ply");
+    shape.name = "shapes/shape" + std::to_string((int)scene.shapes.size()) + ".yaml";
     auto nmaterials = vector<string>{};
     auto ematerials = vector<int>{};
     auto has_quads  = has_obj_quads(oshape);
@@ -1350,10 +1357,6 @@ static void load_obj_scene(
     }
     shape.material  = materials[material_map.at(oshape.materials.at(0))];
     shape.instances = oshape.instances;
-    if (!shape.instances.empty()) {
-      shape.ifilename = make_safe_filename(
-          "instances/shape" + std::to_string(scene.shapes.size()) + ".ply");
-    }
   }
 
   // convert environments
@@ -1523,8 +1526,7 @@ static void load_ply_scene(
   // load ply mesh
   scene.shapes.push_back({});
   auto& shape    = scene.shapes.back();
-  shape.name     = "shape";
-  shape.filename = get_filename(filename);
+  shape.name     = "shapes/" + get_basename(filename) + ".yaml";
   try {
     load_shape(filename, shape.points, shape.lines, shape.triangles,
         shape.quads, shape.positions, shape.normals, shape.texcoords,
@@ -1616,14 +1618,7 @@ static void load_gltf_scene(
       auto& shape    = scene.shapes.emplace_back();
       shape.material = materials[gprim.material];
       shape_indices.back().push_back((int)scene.shapes.size() - 1);
-      shape.name =
-          gmesh.name.empty()
-              ? ""s
-              : (gmesh.name + std::to_string(shape_indices.back().size()));
-      make_safe_name(
-          shape.name, "shape", (int)scene.shapes.size(), "shapes/", ".yaml");
-      shape.filename = make_safe_filename(
-          "shapes/shape" + std::to_string(scene.shapes.size()));
+      shape.name = "shapes/shape" + std::to_string((int)scene.shapes.size()) + ".yaml";
       shape.positions = gprim.positions;
       shape.normals   = gprim.normals;
       shape.texcoords = gprim.texcoords;
@@ -1754,9 +1749,7 @@ static void load_pbrt_scene(
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
     auto& shape = scene.shapes.emplace_back();
-    shape.name = "shapes/shape" + std::to_string(scene.shapes.size()) + ".yaml";
-    shape.filename = "shapes/shape" + std::to_string(scene.shapes.size()) +
-                     ".ply";
+    shape.name = "shapes/shape" + std::to_string((int)scene.shapes.size()) + ".yaml";
     shape.frame     = pshape.frame;
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
@@ -1767,10 +1760,6 @@ static void load_pbrt_scene(
     auto arealight_id = arealight_map.at(pshape.arealight);
     shape.material  = materials[arealight_id >= 0 ? arealight_id : material_id];
     shape.instances = pshape.instances;
-    if (!shape.instances.empty()) {
-      shape.ifilename = "instances/shape" +
-                        std::to_string(scene.shapes.size()) + ".ply";
-    }
   }
 
   // convert environments
@@ -1787,9 +1776,7 @@ static void load_pbrt_scene(
   // lights
   for (auto& plight : pbrt.lights) {
     auto& shape = scene.shapes.emplace_back();
-    shape.name  = make_safe_name(
-        "", "light", (int)scene.shapes.size(), "shapes/", ".yaml");
-    shape.filename  = make_safe_filename("shapes/" + shape.name + ".ply");
+    shape.name = "shapes/shape" + std::to_string((int)scene.shapes.size()) + ".yaml";
     shape.frame     = plight.area_frame;
     shape.triangles = plight.area_triangles;
     shape.positions = plight.area_positions;
@@ -1852,7 +1839,7 @@ void save_pbrt_scene(
   for (auto& shape : scene.shapes) {
     auto& material   = shape.material;
     auto& pshape     = pbrt.shapes.emplace_back();
-    pshape.filename_ = replace_extension(shape.filename, ".ply");
+    pshape.filename_ = replace_extension(shape.name, ".ply");
     pshape.frame     = shape.frame;
     pshape.material  = shape.name;
     pshape.arealight = material.emission == zero3f ? ""s : shape.name;
@@ -1876,7 +1863,7 @@ void save_pbrt_scene(
   for (auto& shape : scene.shapes) {
     if (shape.positions.empty()) continue;
     try {
-      save_shape(replace_extension(dirname + shape.filename, ".ply"),
+      save_shape(replace_extension(dirname + shape.name, ".ply"),
           shape.points, shape.lines, shape.triangles, shape.quads,
           shape.positions, shape.normals, shape.texcoords, shape.colors,
           shape.radius);
@@ -1917,38 +1904,33 @@ void make_cornellbox_scene(sceneio_model& scene) {
   camera.film               = 0.024;
   camera.aspect             = 1;
   auto& floor_shp           = scene.shapes.emplace_back();
-  floor_shp.name            = "floor";
-  floor_shp.filename        = "shapes/floor.obj";
+  floor_shp.name        = "shapes/floor.yaml";
   floor_shp.positions       = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
   floor_shp.triangles       = {{0, 1, 2}, {2, 3, 0}};
   floor_shp.material.base   = {0.725, 0.71, 0.68};
   auto& ceiling_shp         = scene.shapes.emplace_back();
   ceiling_shp.name          = "ceiling";
-  ceiling_shp.name          = "shapes/ceiling.obj";
+  ceiling_shp.name          = "shapes/ceiling.yaml";
   ceiling_shp.positions     = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
   ceiling_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
   ceiling_shp.material.base = {0.725, 0.71, 0.68};
   auto& backwall_shp        = scene.shapes.emplace_back();
-  backwall_shp.name         = "backwall";
-  backwall_shp.filename     = "shapes/backwall.obj";
+  backwall_shp.name     = "shapes/backwall.yaml";
   backwall_shp.positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
   backwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
   backwall_shp.material.base  = {0.725, 0.71, 0.68};
   auto& rightwall_shp         = scene.shapes.emplace_back();
-  rightwall_shp.name          = "rightwall";
-  rightwall_shp.filename      = "shapes/rightwall.obj";
+  rightwall_shp.name      = "shapes/rightwall.yaml";
   rightwall_shp.positions     = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
   rightwall_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
   rightwall_shp.material.base = {0.14, 0.45, 0.091};
   auto& leftwall_shp          = scene.shapes.emplace_back();
-  leftwall_shp.name           = "leftwall";
-  leftwall_shp.filename       = "shapes/leftwall.obj";
+  leftwall_shp.name       = "shapes/leftwall.yaml";
   leftwall_shp.positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
   leftwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
   leftwall_shp.material.base  = {0.63, 0.065, 0.05};
   auto& shortbox_shp          = scene.shapes.emplace_back();
-  shortbox_shp.name           = "shortbox";
-  shortbox_shp.filename       = "shapes/shortbox.obj";
+  shortbox_shp.name       = "shapes/shortbox.yaml";
   shortbox_shp.positions      = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
       {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
       {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
@@ -1962,8 +1944,7 @@ void make_cornellbox_scene(sceneio_model& scene) {
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   shortbox_shp.material.base  = {0.725, 0.71, 0.68};
   auto& tallbox_shp           = scene.shapes.emplace_back();
-  tallbox_shp.name            = "tallbox";
-  tallbox_shp.filename        = "shapes/tallbox.obj";
+  tallbox_shp.name        = "shapes/tallbox.yaml";
   tallbox_shp.positions       = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
       {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
       {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
@@ -1978,8 +1959,7 @@ void make_cornellbox_scene(sceneio_model& scene) {
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   tallbox_shp.material.base   = {0.725, 0.71, 0.68};
   auto& light_shp             = scene.shapes.emplace_back();
-  light_shp.name              = "light";
-  light_shp.filename          = "shapes/light.obj";
+  light_shp.name          = "shapes/light.yaml";
   light_shp.positions         = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
   light_shp.triangles         = {{0, 1, 2}, {2, 3, 0}};
