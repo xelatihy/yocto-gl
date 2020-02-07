@@ -975,9 +975,6 @@ static void load_yaml_scene(
         get_yaml_value(yelement, "name", shape.name);
         get_yaml_value(yelement, "shape", shape.filename);
         get_yaml_value(yelement, "instances", shape.ifilename);
-        if (has_yaml_value(yelement, "filename")) {
-          get_yaml_value(yelement, "filename", shape.filename);
-        }
         get_yaml_value(yelement, "frame", shape.frame);
         if (has_yaml_value(yelement, "lookat")) {
           auto lookat = identity3x3f;
@@ -1009,6 +1006,22 @@ static void load_yaml_scene(
         get_texture(yelement, "normal_tex", shape.material.normal_tex);
         get_texture(yelement, "normal_tex", shape.material.normal_tex);
         get_yaml_value(yelement, "gltf_textures", shape.material.gltf_textures);
+        if (!shape.filename.empty()) {
+        try {
+          load_shape(get_dirname(filename) + shape.filename, shape.points,
+              shape.lines, shape.triangles, shape.quads, shape.positions,
+              shape.normals, shape.texcoords, shape.colors, shape.radius);
+        } catch (std::exception& e) {
+          throw_dependent_error(filename, e.what());
+        }
+        }
+        if (!shape.ifilename.empty()) {
+        try {
+          load_instances(get_dirname(filename) + shape.ifilename, shape.instances);
+        } catch (std::exception& e) {
+          throw_dependent_error(filename, e.what());
+        }
+        }
         smap[shape.name] = (int)scene.shapes.size() - 1;
       } else if (yelement.name == "subdivs") {
         auto& subdiv = scene.subdivs.emplace_back();
@@ -1024,50 +1037,25 @@ static void load_yaml_scene(
         get_yaml_value(yelement, "facevarying", subdiv.facevarying);
         get_texture(yelement, "displacement_tex", subdiv.displacement_tex);
         get_yaml_value(yelement, "displacement", subdiv.displacement);
+        if (!subdiv.filename.empty()) {
+        try {
+          if (!subdiv.facevarying) {
+            load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+                subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
+                subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+          } else {
+            load_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
+                subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+                subdiv.normals, subdiv.texcoords);
+          }
+        } catch (std::exception& e) {
+          throw_dependent_error(filename, e.what());
+        }
+        }
       }
     }
   } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": parse error [" + e.what() + "]"};
-  }
-
-  // load shapes
-  for (auto& shape : scene.shapes) {
-    if (!shape.positions.empty()) continue;
-    try {
-      load_shape(get_dirname(filename) + shape.filename, shape.points,
-          shape.lines, shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, shape.colors, shape.radius);
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
-  }
-
-  // load instances
-  for (auto& shape : scene.shapes) {
-    if (!shape.instances.empty() || shape.ifilename.empty()) continue;
-    try {
-      load_instances(get_dirname(filename) + shape.ifilename, shape.instances);
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
-  }
-
-  // load subdivs
-  for (auto& subdiv : scene.subdivs) {
-    if (!subdiv.positions.empty()) continue;
-    try {
-      if (!subdiv.facevarying) {
-        load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
-            subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
-            subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
-      } else {
-        load_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
-            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-            subdiv.normals, subdiv.texcoords);
-      }
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
   }
 
   // fix scene
