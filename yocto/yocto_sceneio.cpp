@@ -1276,14 +1276,15 @@ static void load_obj_scene(
   // helper to create texture maps
   auto texture_map = unordered_map<string, int>{{"", -1}};
   auto get_texture = [&filename, &texture_map, &scene](
-                         const obj_texture_info& info) {
+                         const obj_texture_info& info, 
+                         const string& dirname = "textures/") {
     auto path = info.path;
     if (path == "") return -1;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
     auto& texture = scene.textures.emplace_back();
     try {
-      if (is_hdr_filename(texture.name)) {
+      if (is_hdr_filename(path)) {
         load_image(get_dirname(filename) + path, texture.hdr);
       } else {
         load_imageb(get_dirname(filename) + path, texture.ldr);
@@ -1291,7 +1292,7 @@ static void load_obj_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name = make_safe_filename("textures/" + get_basename(path) +
+    texture.name = make_safe_filename(dirname + get_basename(path) +
                                       (!texture.ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
@@ -1380,7 +1381,8 @@ static void load_obj_scene(
         scene.environments.size(), "environments/", ".yaml");
     environment.frame        = oenvironment.frame;
     environment.emission     = oenvironment.emission;
-    environment.emission_tex = get_texture(oenvironment.emission_map);
+    environment.emission_tex = get_texture(oenvironment.emission_map, 
+      "environments/");
   }
 
   // fix scene
@@ -1579,11 +1581,17 @@ static void load_gltf_scene(
   load_gltf(filename, gltf);
 
   // convert textures
-  for (auto& gtexture : gltf.textures) {
-    auto& texture = scene.textures.emplace_back();
+  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto get_texture = [&filename, &scene, &gltf, &texture_map](int ref, const string& dirname = "textures/") {
+    if(ref < 0) return -1;
+    auto& gtexture = gltf.textures[ref];
     auto path = gtexture.filename;
+    if (path == "") return -1;
+    auto it = texture_map.find(path);
+    if (it != texture_map.end()) return it->second;
+    auto& texture = scene.textures.emplace_back();
     try {
-      if (is_hdr_filename(texture.name)) {
+      if (is_hdr_filename(path)) {
         load_image(get_dirname(filename) + path, texture.hdr);
       } else {
         load_imageb(get_dirname(filename) + path, texture.ldr);
@@ -1591,30 +1599,30 @@ static void load_gltf_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name = make_safe_filename("textures/" + get_basename(path) + (!texture.ldr.empty() ? ".png" : ".hdr"));
-  }
+    texture.name = make_safe_filename(dirname + get_basename(path) +
+                                      (!texture.ldr.empty() ? ".png" : ".hdr"));
+    texture_map[path] = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
+  };
 
   // convert materials
   auto materials = vector<sceneio_material>{};
   for (auto& gmaterial : gltf.materials) {
     auto& material        = materials.emplace_back();
     material.emission     = gmaterial.emission;
-    material.emission_tex = gmaterial.emission_tex;
+    material.emission_tex = get_texture(gmaterial.emission_tex);
     if (gmaterial.has_specgloss) {
       material.base    = xyz(gmaterial.sg_diffuse);
       material.opacity = gmaterial.sg_diffuse.w;
-      // TODO: better specular
-      // material.specular     = gmaterial.sg_specular;
-      material.base_tex = gmaterial.sg_diffuse_tex;
-      // material.specular_tex = gmaterial.sg_specular_tex;
+      material.base_tex = get_texture(gmaterial.sg_diffuse_tex);
     } else if (gmaterial.has_metalrough) {
       material.base         = xyz(gmaterial.mr_base);
       material.opacity      = gmaterial.mr_base.w;
       material.specular     = 1;
-      material.base_tex     = gmaterial.mr_base_tex;
-      material.metallic_tex = gmaterial.mr_metallic_tex;
+      material.base_tex     = get_texture(gmaterial.mr_base_tex);
+      material.metallic_tex = get_texture(gmaterial.mr_metallic_tex);
     }
-    material.normal_tex = gmaterial.normal_tex;
+    material.normal_tex = get_texture(gmaterial.normal_tex);
   }
 
   // convert shapes
@@ -1723,14 +1731,15 @@ static void load_pbrt_scene(
 
   // convert materials
   auto texture_map = unordered_map<string, int>{{"", -1}};
-  auto get_texture = [&filename, &scene, &pbrt, &pbrt_texture_map, &texture_map](const string& name) {
+  auto get_texture = [&filename, &scene, &pbrt, &pbrt_texture_map, &texture_map](const string& name, 
+    const string& dirname = "textures/") {
     if (name == "") return -1;
     auto path = pbrt.textures[pbrt_texture_map.at(name)].filename;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
     auto& texture = scene.textures.emplace_back();
     try {
-      if (is_hdr_filename(texture.name)) {
+      if (is_hdr_filename(path)) {
         load_image(get_dirname(filename) + path, texture.hdr);
       } else {
         load_imageb(get_dirname(filename) + path, texture.ldr);
@@ -1738,7 +1747,7 @@ static void load_pbrt_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name = make_safe_filename("textures/" + get_basename(path) +
+    texture.name = make_safe_filename(dirname + get_basename(path) +
                                       (!texture.ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
