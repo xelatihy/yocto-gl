@@ -619,7 +619,7 @@ struct pbrt_environment {
   frame3f            frend  = identity3x4f;
   // environment approximation
   vec3f  emission = zero3f;
-  string filename = "";
+  string emission_map = "";
 };
 
 // Other pbrt elements

@@ -1721,20 +1721,11 @@ static void load_pbrt_scene(
     camera.focus  = pcamera.focus;
   }
 
-  // convert textures
-  auto pbrt_texture_map = unordered_map<string, int>{{"", -1}};
-  auto pbrt_textures = 0;
-  for (auto& ptexture : pbrt.textures) {
-    pbrt_texture_map[ptexture.name] = pbrt_textures;
-    pbrt_textures+=1;
-  }
-
   // convert materials
   auto texture_map = unordered_map<string, int>{{"", -1}};
-  auto get_texture = [&filename, &scene, &pbrt, &pbrt_texture_map, &texture_map](const string& name, 
+  auto get_texture = [&filename, &scene, &texture_map](const string& path, 
     const string& dirname = "textures/") {
-    if (name == "") return -1;
-    auto path = pbrt.textures[pbrt_texture_map.at(name)].filename;
+    if (path == "") return -1;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
     auto& texture = scene.textures.emplace_back();
@@ -1815,16 +1806,7 @@ static void load_pbrt_scene(
         (int)scene.environments.size(), "environments/", ".yaml");
     environment.frame    = penvironment.frame;
     environment.emission = penvironment.emission;
-    if (!penvironment.filename.empty()) {
-      auto& texture = scene.textures.emplace_back();
-      texture.name  = make_safe_name(get_basename(penvironment.filename),
-          "environment", (int)scene.environments.size(), "environments/",
-          ".yaml");
-      texture.name  = penvironment.filename;
-      environment.emission_tex = (int)scene.textures.size() - 1;
-    } else {
-      environment.emission_tex = -1;
-    }
+    environment.emission_tex = get_texture(penvironment.emission_map, "environments/");
   }
 
   // lights
@@ -1919,7 +1901,7 @@ void save_pbrt_scene(
     auto& penvironment    = pbrt.environments.emplace_back();
     penvironment.emission = environment.emission;
     if (environment.emission_tex >= 0) {
-      penvironment.filename = scene.textures[environment.emission_tex].name;
+      penvironment.emission_map = scene.textures[environment.emission_tex].name;
     }
   }
 
