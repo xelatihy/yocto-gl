@@ -127,10 +127,10 @@ struct sceneio_material {
 // each vertex data has its own topology.
 struct sceneio_shape {
   // shape data
-  string name      = "";
-  frame3f frame = identity3x4f;
-  vector<frame3f> instances = {};
-  sceneio_material material = {};
+  string           name      = "";
+  frame3f          frame     = identity3x4f;
+  vector<frame3f>  instances = {};
+  sceneio_material material  = {};
 
   // instances
 
@@ -154,8 +154,8 @@ struct sceneio_shape {
 // face-varying quads.
 struct sceneio_subdiv {
   // shape data
-  string name     = "";
-  int shape = -1;
+  string name  = "";
+  int    shape = -1;
 
   // primitives
   vector<int>   points    = {};
