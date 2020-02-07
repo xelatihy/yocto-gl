@@ -128,8 +128,8 @@ struct sceneio_material {
 // each vertex data has its own topology.
 struct sceneio_shape {
   // shape data
-  string name     = "";
-  string filename = "";
+  string name      = "";
+  string filename  = "";
   string ifilename = "";
 
   // frame

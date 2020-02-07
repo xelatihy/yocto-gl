@@ -3091,13 +3091,13 @@ static void convert_pbrt_materials(const string& filename,
         get_texture(values, "Kd", diffuse, diffuse_map, vec3f{0.25});
         get_texture(values, "Ks", specular, specular_map, vec3f{0.25});
         get_texture(values, "Kt", transmission, transmission_map, vec3f{0});
-        if(max(transmission) > 0.1) {
-          material.base = transmission;
-          material.base_map = transmission_map;
-          material.specular = 1;
+        if (max(transmission) > 0.1) {
+          material.base         = transmission;
+          material.base_map     = transmission_map;
+          material.specular     = 1;
           material.transmission = 1;
         } else {
-          material.base = diffuse;
+          material.base     = diffuse;
           material.base_map = diffuse_map;
           material.specular = 1;
         }
@@ -3911,8 +3911,7 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
         material.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
         material.values.push_back(
             make_pbrt_value("roughness", pow(material.roughness, 2)));
-        material.values.push_back(make_pbrt_value(
-            "eta", material.ior));
+        material.values.push_back(make_pbrt_value("eta", material.ior));
         material.values.push_back(make_pbrt_value("remaproughness", false));
       } else if (material.metallic > 0.1f) {
         material.type = "metal";
@@ -3931,11 +3930,11 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
               "Kd", material.base_map, pbrt_value_type::texture));
         }
         if (material.specular != 0) {
-          material.values.push_back(make_pbrt_value("Ks", vec3f{material.specular}));
+          material.values.push_back(
+              make_pbrt_value("Ks", vec3f{material.specular}));
           material.values.push_back(
               make_pbrt_value("roughness", pow(material.roughness, 2)));
-          material.values.push_back(make_pbrt_value(
-              "eta", material.ior));
+          material.values.push_back(make_pbrt_value("eta", material.ior));
           material.values.push_back(make_pbrt_value("remaproughness", false));
         }
         if (material.transmission != 0) {

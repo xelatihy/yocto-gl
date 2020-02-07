@@ -536,19 +536,19 @@ struct pbrt_material {
   string             type   = "";
   vector<pbrt_value> values = {};
   // material approximation
-  vec3f  base         = zero3f;
-  float  specular     = 0;
-  float  metallic     = 0;
-  float  transmission = 0;
-  float  roughness    = 0;
-  float  ior          = 1.5;
-  float  opacity      = 1;
-  string base_map     = "";
-  string opacity_map  = "";
-  bool   thin         = true;
-  vec3f volmeanfreepath = zero3f;
-  vec3f volscatter = zero3f;
-  float volscale = 0.01;
+  vec3f  base            = zero3f;
+  float  specular        = 0;
+  float  metallic        = 0;
+  float  transmission    = 0;
+  float  roughness       = 0;
+  float  ior             = 1.5;
+  float  opacity         = 1;
+  string base_map        = "";
+  string opacity_map     = "";
+  bool   thin            = true;
+  vec3f  volmeanfreepath = zero3f;
+  vec3f  volscatter      = zero3f;
+  float  volscale        = 0.01;
 };
 
 // Pbrt medium
