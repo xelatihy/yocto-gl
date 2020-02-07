@@ -254,11 +254,11 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->name = get_filename(app->filename) + " [" +
                     to_string(app->render.size().x) + "x" +
                     to_string(app->render.size().y) + " @ 0]";
-        app->selected_camera = app->ioscene.cameras.empty() ? -1 : 0;
-        app->selected_shape = app->ioscene.shapes.empty() ? -1 : 0;
-        app->selected_subdiv = app->ioscene.subdivs.empty() ? -1 : 0;
-        app->selected_material = app->ioscene.shapes.empty() ? -1 : 0;
-        app->selected_texture = app->ioscene.textures.empty() ? -1 : 0;
+        app->selected_camera      = app->ioscene.cameras.empty() ? -1 : 0;
+        app->selected_shape       = app->ioscene.shapes.empty() ? -1 : 0;
+        app->selected_subdiv      = app->ioscene.subdivs.empty() ? -1 : 0;
+        app->selected_material    = app->ioscene.shapes.empty() ? -1 : 0;
+        app->selected_texture     = app->ioscene.textures.empty() ? -1 : 0;
         app->selected_environment = app->ioscene.environments.empty() ? -1 : 0;
         return app;
       }));
@@ -525,7 +525,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene.textures.empty() && begin_glheader(win, "textures")) {
+  if (app && !app->ioscene.textures.empty() &&
+      begin_glheader(win, "textures")) {
     draw_glcombobox(
         win, "textures##2", app->selected_texture, app->ioscene.textures);
     if (draw_glwidgets_texture(win, app, app->selected_texture)) {
@@ -633,14 +634,17 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene.environments.empty() && begin_glheader(win, "environments")) {
-    draw_glcombobox(
-        win, "environment##2", app->selected_environment, app->ioscene.environments);
+  if (app && !app->ioscene.environments.empty() &&
+      begin_glheader(win, "environments")) {
+    draw_glcombobox(win, "environment##2", app->selected_environment,
+        app->ioscene.environments);
     if (draw_glwidgets_environment(win, app, app->selected_environment)) {
       stop_display(app);
-      auto& ioenvironment = app->ioscene.environments[app->selected_environment];
-      set_environment(app->scene, app->selected_environment, ioenvironment.frame,
-          ioenvironment.emission, ioenvironment.emission_tex);
+      auto& ioenvironment =
+          app->ioscene.environments[app->selected_environment];
+      set_environment(app->scene, app->selected_environment,
+          ioenvironment.frame, ioenvironment.emission,
+          ioenvironment.emission_tex);
       init_lights(app->scene);
       reset_display(app);
     }
