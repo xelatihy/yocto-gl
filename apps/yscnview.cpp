@@ -245,7 +245,7 @@ bool draw_glwidgets_camera(
 /// Visit struct elements.
 bool draw_glwidgets_texture(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& texture      = app->scene.textures[id];
+  auto& texture = app->scene.textures[id];
   draw_gllabel(win, "name", texture.name);
   draw_gllabel(win, "hdr",
       to_string(texture.hdr.size().x) + " x " +

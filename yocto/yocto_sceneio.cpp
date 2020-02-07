@@ -910,14 +910,15 @@ static void load_yaml_scene(
 
   // parse yaml reference
   auto texture_map = unordered_map<string, int>{{"", -1}};
-  auto get_texture = [&filename, &scene, &texture_map](const yaml_element& yelment,
-                         const string& name, int& value, const string& dirname = "textures/") {
+  auto get_texture = [&filename, &scene, &texture_map](
+                         const yaml_element& yelment, const string& name,
+                         int& value, const string& dirname = "textures/") {
     auto path = ""s;
     get_yaml_value(yelment, name, path);
     if (path == "") return -1;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) {
-      value = it->second; 
+      value = it->second;
       return it->second;
     }
     auto& texture = scene.textures.emplace_back();
@@ -930,10 +931,10 @@ static void load_yaml_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name = make_safe_filename(dirname + get_basename(path) +
+    texture.name      = make_safe_filename(dirname + get_basename(path) +
                                       (!texture.ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
-    value = (int)scene.textures.size() - 1;
+    value             = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
   };
 
@@ -962,8 +963,8 @@ static void load_yaml_scene(
         get_yaml_value(yelement, "name", environment.name);
         get_yaml_value(yelement, "frame", environment.frame);
         get_yaml_value(yelement, "emission", environment.emission);
-        get_texture(yelement, "emission_tex", environment.emission_tex, 
-          "environments/");
+        get_texture(yelement, "emission_tex", environment.emission_tex,
+            "environments/");
         if (has_yaml_value(yelement, "lookat")) {
           auto lookat = identity3x3f;
           get_yaml_value(yelement, "lookat", lookat);
@@ -1277,8 +1278,8 @@ static void load_obj_scene(
   // helper to create texture maps
   auto texture_map = unordered_map<string, int>{{"", -1}};
   auto get_texture = [&filename, &texture_map, &scene](
-                         const obj_texture_info& info, 
-                         const string& dirname = "textures/") {
+                         const obj_texture_info& info,
+                         const string&           dirname = "textures/") {
     auto path = info.path;
     if (path == "") return -1;
     auto it = texture_map.find(path);
@@ -1293,7 +1294,7 @@ static void load_obj_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name = make_safe_filename(dirname + get_basename(path) +
+    texture.name      = make_safe_filename(dirname + get_basename(path) +
                                       (!texture.ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
@@ -1382,8 +1383,8 @@ static void load_obj_scene(
         scene.environments.size(), "environments/", ".yaml");
     environment.frame        = oenvironment.frame;
     environment.emission     = oenvironment.emission;
-    environment.emission_tex = get_texture(oenvironment.emission_map, 
-      "environments/");
+    environment.emission_tex = get_texture(
+        oenvironment.emission_map, "environments/");
   }
 
   // fix scene
@@ -1583,10 +1584,11 @@ static void load_gltf_scene(
 
   // convert textures
   auto texture_map = unordered_map<string, int>{{"", -1}};
-  auto get_texture = [&filename, &scene, &gltf, &texture_map](int ref, const string& dirname = "textures/") {
-    if(ref < 0) return -1;
+  auto get_texture = [&filename, &scene, &gltf, &texture_map](
+                         int ref, const string& dirname = "textures/") {
+    if (ref < 0) return -1;
     auto& gtexture = gltf.textures[ref];
-    auto path = gtexture.filename;
+    auto  path     = gtexture.filename;
     if (path == "") return -1;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
@@ -1600,7 +1602,7 @@ static void load_gltf_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name = make_safe_filename(dirname + get_basename(path) +
+    texture.name      = make_safe_filename(dirname + get_basename(path) +
                                       (!texture.ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
@@ -1613,8 +1615,8 @@ static void load_gltf_scene(
     material.emission     = gmaterial.emission;
     material.emission_tex = get_texture(gmaterial.emission_tex);
     if (gmaterial.has_specgloss) {
-      material.base    = xyz(gmaterial.sg_diffuse);
-      material.opacity = gmaterial.sg_diffuse.w;
+      material.base     = xyz(gmaterial.sg_diffuse);
+      material.opacity  = gmaterial.sg_diffuse.w;
       material.base_tex = get_texture(gmaterial.sg_diffuse_tex);
     } else if (gmaterial.has_metalrough) {
       material.base         = xyz(gmaterial.mr_base);
@@ -1724,8 +1726,8 @@ static void load_pbrt_scene(
 
   // convert materials
   auto texture_map = unordered_map<string, int>{{"", -1}};
-  auto get_texture = [&filename, &scene, &texture_map](const string& path, 
-    const string& dirname = "textures/") {
+  auto get_texture = [&filename, &scene, &texture_map](const string& path,
+                         const string& dirname = "textures/") {
     if (path == "") return -1;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
@@ -1739,7 +1741,7 @@ static void load_pbrt_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name = make_safe_filename(dirname + get_basename(path) +
+    texture.name      = make_safe_filename(dirname + get_basename(path) +
                                       (!texture.ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
@@ -1772,8 +1774,9 @@ static void load_pbrt_scene(
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
     auto& shape = scene.shapes.emplace_back();
-    shape.name  = "shapes/shape" +std::to_string(scene.shapes.size()) + ".yaml";
-    shape.filename  = "shapes/shape" +std::to_string(scene.shapes.size()) + ".ply";
+    shape.name = "shapes/shape" + std::to_string(scene.shapes.size()) + ".yaml";
+    shape.filename = "shapes/shape" + std::to_string(scene.shapes.size()) +
+                     ".ply";
     shape.frame     = pshape.frame;
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
@@ -1785,18 +1788,20 @@ static void load_pbrt_scene(
     shape.material  = materials[arealight_id >= 0 ? arealight_id : material_id];
     shape.instances = pshape.instances;
     if (!shape.instances.empty()) {
-      shape.ifilename = "instances/shape" + std::to_string(scene.shapes.size()) + ".ply";
+      shape.ifilename = "instances/shape" +
+                        std::to_string(scene.shapes.size()) + ".ply";
     }
   }
 
   // convert environments
   for (auto& penvironment : pbrt.environments) {
-    auto& environment    = scene.environments.emplace_back();
-    environment.name     = make_safe_name("", "environment",
+    auto& environment        = scene.environments.emplace_back();
+    environment.name         = make_safe_name("", "environment",
         (int)scene.environments.size(), "environments/", ".yaml");
-    environment.frame    = penvironment.frame;
-    environment.emission = penvironment.emission;
-    environment.emission_tex = get_texture(penvironment.emission_map, "environments/");
+    environment.frame        = penvironment.frame;
+    environment.emission     = penvironment.emission;
+    environment.emission_tex = get_texture(
+        penvironment.emission_map, "environments/");
   }
 
   // lights
