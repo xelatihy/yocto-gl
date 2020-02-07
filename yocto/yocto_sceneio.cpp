@@ -1218,7 +1218,7 @@ static void save_yaml_scene(
 
   // save textures
   for (auto& texture : scene.textures) {
-    if (!texture.ldr.empty() && !texture.hdr.empty() && !texture.name.empty()) {
+    if (!texture.ldr.empty() || !texture.hdr.empty()) {
       try {
         if (!texture.hdr.empty()) {
           save_image(get_dirname(filename) + texture.name, texture.hdr);
