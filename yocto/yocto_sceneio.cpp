@@ -849,6 +849,34 @@ static inline string make_safe_filename(const string& filename_) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// load instances
+static void load_instances(const string& filename, vector<frame3f>& frames) {
+  auto ext = get_extension(filename);
+  if(ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    load_ply(filename, ply);
+    frames = get_ply_values(ply, "frame",
+        array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
+            "zz", "ox", "oy", "oz"});
+  } else {
+    throw_format_error(filename);
+  } 
+}
+
+// save instances
+static void save_instances(const string& filename, const vector<frame3f>& frames, bool ascii = false) {
+  auto ext = get_extension(filename);
+  if(ext == ".ply" || ext == ".PLY") {
+    auto ply = ply_model{};
+    add_ply_values(ply, frames, "frame",
+        array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
+            "zz", "ox", "oy", "oz"});
+    save_ply(filename, ply);
+  } else {
+    throw_format_error(filename);
+  } 
+}
+
 // Save a scene in the builtin YAML format.
 static void load_yaml_scene(
     const string& filename, sceneio_model& scene, bool noparallel) {
@@ -905,14 +933,6 @@ static void load_yaml_scene(
       throw std::invalid_argument{"missing reference to " + ref};
     value = values[refs.at(ref)];
   };
-
-  // hacked groups for large models
-  struct sceneio_group {
-    string          filename = "";
-    vector<frame3f> frames   = {};
-  };
-  auto groups  = vector<sceneio_group>{};
-  auto igroups = vector<int>{};
 
   // hacked lists for backward compatibility
   auto materials = vector<sceneio_material>{};
@@ -993,6 +1013,7 @@ static void load_yaml_scene(
         auto& shape = scene.shapes.emplace_back();
         get_yaml_value(yelement, "name", shape.name);
         get_yaml_value(yelement, "shape", shape.filename);
+        get_yaml_value(yelement, "instances", shape.ifilename);
         if (has_yaml_value(yelement, "filename")) {
           get_yaml_value(yelement, "filename", shape.filename);
         }
@@ -1001,13 +1022,6 @@ static void load_yaml_scene(
           auto lookat = identity3x3f;
           get_yaml_value(yelement, "lookat", lookat);
           shape.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-        }
-        if (has_yaml_value(yelement, "instances")) {
-          auto& group = groups.emplace_back();
-          get_yaml_value(yelement, "instances", group.filename);
-          while (igroups.size() < scene.shapes.size())
-            igroups.emplace_back() = -1;
-          igroups.back() = (int)groups.size() - 1;
         }
         get_yaml_refcopy(yelement, "material", shape.material, materials, mmap);
         get_yaml_value(yelement, "emission", shape.material.emission);
@@ -1069,39 +1083,6 @@ static void load_yaml_scene(
     throw std::runtime_error{filename + ": parse error [" + e.what() + "]"};
   }
 
-  // instance groups
-  if (!groups.empty()) {
-    // load groups
-    if (noparallel) {
-      for (auto& group : groups) {
-        auto ply = ply_model{};
-        try {
-          load_ply(get_dirname(filename) + group.filename, ply);
-        } catch (std::exception& e) {
-          throw_dependent_error(filename, e.what());
-        }
-        group.frames = get_ply_values(ply, "frame",
-            array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
-                "zz", "ox", "oy", "oz"});
-      }
-    } else {
-      parallel_foreach(groups, [filename](sceneio_group& group) {
-        auto ply = ply_model{};
-        try {
-          load_ply(get_dirname(filename) + group.filename, ply);
-        } catch (std::exception& e) {
-          throw_dependent_error(filename, e.what());
-        }
-        group.frames = get_ply_values(ply, "frame",
-            array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
-                "zz", "ox", "oy", "oz"});
-      });
-    }
-    for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-      scene.shapes[idx].instances = groups[igroups[idx]].frames;
-    }
-  }
-
   // load shapes
   for (auto& shape : scene.shapes) {
     if (!shape.positions.empty()) continue;
@@ -1109,6 +1090,16 @@ static void load_yaml_scene(
       load_shape(get_dirname(filename) + shape.filename, shape.points,
           shape.lines, shape.triangles, shape.quads, shape.positions,
           shape.normals, shape.texcoords, shape.colors, shape.radius);
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
+  }
+
+  // load instances
+  for (auto& shape : scene.shapes) {
+    if (!shape.instances.empty() || shape.ifilename.empty()) continue;
+    try {
+      load_instances(get_dirname(filename) + shape.ifilename, shape.instances);
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
@@ -1206,7 +1197,8 @@ static void save_yaml_scene(
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "shapes";
     add_val(yelement, "name", shape.name);
-    add_val(yelement, "filename", shape.filename);
+    add_val(yelement, "shape", shape.filename);
+    add_val(yelement, "instances", shape.ifilename);
     add_opt(yelement, "frame", shape.frame, def_shape.frame);
     add_opt(
         yelement, "emission", shape.material.emission, def_material.emission);
@@ -1268,6 +1260,7 @@ static void save_yaml_scene(
 
   // save shapes
   for (auto& shape : scene.shapes) {
+    if(shape.positions.empty()) continue;
     try {
       save_shape(get_dirname(filename) + shape.filename, shape.points,
           shape.lines, shape.triangles, shape.quads, shape.positions,
@@ -1277,8 +1270,19 @@ static void save_yaml_scene(
     }
   }
 
+  // save shapes
+  for (auto& shape : scene.shapes) {
+    if(shape.instances.empty()) continue;
+    try {
+      save_instances(get_dirname(filename) + shape.ifilename, shape.instances);
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
+  }
+
   // save subdivs
   for (auto& subdiv : scene.subdivs) {
+    if(subdiv.positions.empty()) continue;
     try {
       if (subdiv.quadspos.empty()) {
         save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
@@ -1296,6 +1300,7 @@ static void save_yaml_scene(
 
   // save textures
   for (auto& texture : scene.textures) {
+    if(texture.ldr.empty() && texture.hdr.empty()) continue;
     try {
       if (!texture.hdr.empty()) {
         save_image(get_dirname(filename) + texture.filename, texture.hdr);
@@ -1315,7 +1320,10 @@ static void save_yaml_scene(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static void load_obj(const string& filename, sceneio_model& scene) {
+// Loads an OBJ
+static void load_obj_scene(
+    const string& filename, sceneio_model& scene, bool noparallel) {
+  // Parse obj
   // load obj
   auto obj = obj_model{};
   load_obj(filename, obj, false, true, true);
@@ -1418,6 +1426,10 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     }
     shape.material  = materials[material_map.at(oshape.materials.at(0))];
     shape.instances = oshape.instances;
+    if(!shape.instances.empty()) {
+      shape.ifilename = make_safe_filename(
+          "instances/shape" + std::to_string(scene.shapes.size()) + ".ply");
+    }
   }
 
   // convert environments
@@ -1429,13 +1441,6 @@ static void load_obj(const string& filename, sceneio_model& scene) {
     environment.emission     = oenvironment.emission;
     environment.emission_tex = get_texture(oenvironment.emission_map);
   }
-}
-
-// Loads an OBJ
-static void load_obj_scene(
-    const string& filename, sceneio_model& scene, bool noparallel) {
-  // Parse obj
-  load_obj(filename, scene);
 
   // load textures
   for (auto& texture : scene.textures) {
@@ -1457,8 +1462,8 @@ static void load_obj_scene(
   add_radius(scene);
 }
 
-static void save_obj(
-    const string& filename, const sceneio_model& scene, bool instances) {
+static void save_obj_scene(const string& filename, const sceneio_model& scene,
+    bool instances, bool noparallel) {
   auto obj = obj_model{};
 
   for (auto stat : scene_stats(scene)) obj.comments.push_back(stat);
@@ -1568,14 +1573,10 @@ static void save_obj(
 
   // save obj
   save_obj(filename, obj);
-}
-
-static void save_obj_scene(const string& filename, const sceneio_model& scene,
-    bool instances, bool noparallel) {
-  save_obj(filename, scene, instances);
 
   // save textures
   for (auto& texture : scene.textures) {
+    if(texture.ldr.empty() && texture.hdr.empty()) continue;
     try {
       if (!texture.hdr.empty()) {
         save_image(get_dirname(filename) + texture.filename, texture.hdr);
@@ -1863,7 +1864,11 @@ static void load_pbrt_scene(
     auto material_id  = material_map.at(pshape.material);
     auto arealight_id = arealight_map.at(pshape.arealight);
     shape.material  = materials[arealight_id >= 0 ? arealight_id : material_id];
-    shape.instances = pshape.instance_frames;
+    shape.instances = pshape.instances;
+    if(!shape.instances.empty()) {
+      shape.ifilename = make_safe_filename(
+          "instances/shape" + std::to_string(scene.shapes.size()) + ".ply");
+    }
   }
 
   // convert environments
@@ -1983,7 +1988,7 @@ void save_pbrt_scene(
     pshape.frame           = shape.frame;
     pshape.material        = shape.name;
     pshape.arealight       = material.emission == zero3f ? ""s : shape.name;
-    pshape.instance_frames = shape.instances;
+    pshape.instances = shape.instances;
   }
 
   // convert environments
@@ -2001,6 +2006,7 @@ void save_pbrt_scene(
   // save meshes
   auto dirname = get_dirname(filename);
   for (auto& shape : scene.shapes) {
+    if(shape.positions.empty()) continue;
     try {
       save_shape(replace_extension(dirname + shape.filename, ".ply"),
           shape.points, shape.lines, shape.triangles, shape.quads,
@@ -2013,6 +2019,7 @@ void save_pbrt_scene(
 
   // save textures
   for (auto& texture : scene.textures) {
+    if(texture.ldr.empty() && texture.hdr.empty()) continue;
     try {
       if (!texture.hdr.empty()) {
         save_image(get_dirname(filename) + texture.filename, texture.hdr);

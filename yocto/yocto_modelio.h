@@ -570,9 +570,8 @@ struct pbrt_shape {
   string             arealight       = "";
   string             interior        = "";
   string             exterior        = "";
-  bool               is_instanced    = false;
-  vector<frame3f>    instance_frames = {};
-  vector<frame3f>    instance_frends = {};
+  vector<frame3f>    instances = {};
+  vector<frame3f>    instaends = {};
   // shape approximation
   string        filename  = "";
   vector<vec3f> positions = {};

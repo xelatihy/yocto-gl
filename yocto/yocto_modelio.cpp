@@ -1198,6 +1198,12 @@ void add_ply_values(ply_model& ply, const vector<vec4f>& values,
   add_ply_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 4);
 }
+void add_ply_values(ply_model& ply, const vector<frame3f>& values,
+    const string& element, const array<string, 12>& properties) {
+  add_ply_values(
+      ply, (float*)values.data(), values.size(), element, properties.data(), 
+      properties.size());
+}
 
 void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
     const string& element, const string& property) {
@@ -3552,8 +3558,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
         throw_parse_error(fs, "unknown object " + object);
       for (auto shape_id : objects.at(object)) {
         auto& shape = pbrt.shapes[shape_id];
-        shape.instance_frames.push_back(stack.back().transform_start);
-        shape.instance_frends.push_back(stack.back().transform_end);
+        shape.instances.push_back(stack.back().transform_start);
+        shape.instaends.push_back(stack.back().transform_end);
       }
     } else if (cmd == "ActiveTransform") {
       auto name = ""s;
@@ -3677,11 +3683,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       shape.interior  = stack.back().medium_interior;
       shape.exterior  = stack.back().medium_exterior;
       if (cur_object != "") {
-        shape.is_instanced = true;
         objects[cur_object].push_back((int)pbrt.shapes.size() - 1);
-      } else {
-        shape.instance_frames.push_back(identity3x4f);
-        shape.instance_frends.push_back(identity3x4f);
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
@@ -4023,7 +4025,7 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
       }
     }
     auto object = "object" + std::to_string(object_id++);
-    if (shape.is_instanced) format_values(fs, "ObjectBegin \"{}\"\n", object);
+    if (!shape.instances.empty()) format_values(fs, "ObjectBegin \"{}\"\n", object);
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)shape.frame);
     format_values(fs, "NamedMaterial \"{}\"\n", shape.material);
@@ -4031,8 +4033,8 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
       format_values(fs, arealights_map.at(shape.arealight));
     format_values(fs, "Shape \"{}\" {}\n", shape.type, shape.values);
     format_values(fs, "AttributeEnd\n");
-    if (shape.is_instanced) format_values(fs, "ObjectEnd\n");
-    for (auto& iframe : shape.instance_frames) {
+    if (!shape.instances.empty()) format_values(fs, "ObjectEnd\n");
+    for (auto& iframe : shape.instances) {
       format_values(fs, "AttributeBegin\n");
       format_values(fs, "Transform {}\n", (mat4f)iframe);
       format_values(fs, "ObjectInstance \"{}\"\n", object);
