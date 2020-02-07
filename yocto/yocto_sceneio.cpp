@@ -852,29 +852,30 @@ namespace yocto {
 // load instances
 static void load_instances(const string& filename, vector<frame3f>& frames) {
   auto ext = get_extension(filename);
-  if(ext == ".ply" || ext == ".PLY") {
+  if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     load_ply(filename, ply);
     frames = get_ply_values(ply, "frame",
-        array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
-            "zz", "ox", "oy", "oz"});
+        array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
+            "ox", "oy", "oz"});
   } else {
     throw_format_error(filename);
-  } 
+  }
 }
 
 // save instances
-static void save_instances(const string& filename, const vector<frame3f>& frames, bool ascii = false) {
+static void save_instances(
+    const string& filename, const vector<frame3f>& frames, bool ascii = false) {
   auto ext = get_extension(filename);
-  if(ext == ".ply" || ext == ".PLY") {
+  if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     add_ply_values(ply, frames, "frame",
-        array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy",
-            "zz", "ox", "oy", "oz"});
+        array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
+            "ox", "oy", "oz"});
     save_ply(filename, ply);
   } else {
     throw_format_error(filename);
-  } 
+  }
 }
 
 // Save a scene in the builtin YAML format.
@@ -1260,7 +1261,7 @@ static void save_yaml_scene(
 
   // save shapes
   for (auto& shape : scene.shapes) {
-    if(shape.positions.empty()) continue;
+    if (shape.positions.empty()) continue;
     try {
       save_shape(get_dirname(filename) + shape.filename, shape.points,
           shape.lines, shape.triangles, shape.quads, shape.positions,
@@ -1272,7 +1273,7 @@ static void save_yaml_scene(
 
   // save shapes
   for (auto& shape : scene.shapes) {
-    if(shape.instances.empty()) continue;
+    if (shape.instances.empty()) continue;
     try {
       save_instances(get_dirname(filename) + shape.ifilename, shape.instances);
     } catch (std::exception& e) {
@@ -1282,7 +1283,7 @@ static void save_yaml_scene(
 
   // save subdivs
   for (auto& subdiv : scene.subdivs) {
-    if(subdiv.positions.empty()) continue;
+    if (subdiv.positions.empty()) continue;
     try {
       if (subdiv.quadspos.empty()) {
         save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
@@ -1300,7 +1301,7 @@ static void save_yaml_scene(
 
   // save textures
   for (auto& texture : scene.textures) {
-    if(texture.ldr.empty() && texture.hdr.empty()) continue;
+    if (texture.ldr.empty() && texture.hdr.empty()) continue;
     try {
       if (!texture.hdr.empty()) {
         save_image(get_dirname(filename) + texture.filename, texture.hdr);
@@ -1426,7 +1427,7 @@ static void load_obj_scene(
     }
     shape.material  = materials[material_map.at(oshape.materials.at(0))];
     shape.instances = oshape.instances;
-    if(!shape.instances.empty()) {
+    if (!shape.instances.empty()) {
       shape.ifilename = make_safe_filename(
           "instances/shape" + std::to_string(scene.shapes.size()) + ".ply");
     }
@@ -1576,7 +1577,7 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
 
   // save textures
   for (auto& texture : scene.textures) {
-    if(texture.ldr.empty() && texture.hdr.empty()) continue;
+    if (texture.ldr.empty() && texture.hdr.empty()) continue;
     try {
       if (!texture.hdr.empty()) {
         save_image(get_dirname(filename) + texture.filename, texture.hdr);
@@ -1865,7 +1866,7 @@ static void load_pbrt_scene(
     auto arealight_id = arealight_map.at(pshape.arealight);
     shape.material  = materials[arealight_id >= 0 ? arealight_id : material_id];
     shape.instances = pshape.instances;
-    if(!shape.instances.empty()) {
+    if (!shape.instances.empty()) {
       shape.ifilename = make_safe_filename(
           "instances/shape" + std::to_string(scene.shapes.size()) + ".ply");
     }
@@ -1982,12 +1983,12 @@ void save_pbrt_scene(
 
   // convert instances
   for (auto& shape : scene.shapes) {
-    auto& material         = shape.material;
-    auto& pshape           = pbrt.shapes.emplace_back();
-    pshape.filename        = replace_extension(shape.filename, ".ply");
-    pshape.frame           = shape.frame;
-    pshape.material        = shape.name;
-    pshape.arealight       = material.emission == zero3f ? ""s : shape.name;
+    auto& material   = shape.material;
+    auto& pshape     = pbrt.shapes.emplace_back();
+    pshape.filename  = replace_extension(shape.filename, ".ply");
+    pshape.frame     = shape.frame;
+    pshape.material  = shape.name;
+    pshape.arealight = material.emission == zero3f ? ""s : shape.name;
     pshape.instances = shape.instances;
   }
 
@@ -2006,7 +2007,7 @@ void save_pbrt_scene(
   // save meshes
   auto dirname = get_dirname(filename);
   for (auto& shape : scene.shapes) {
-    if(shape.positions.empty()) continue;
+    if (shape.positions.empty()) continue;
     try {
       save_shape(replace_extension(dirname + shape.filename, ".ply"),
           shape.points, shape.lines, shape.triangles, shape.quads,
@@ -2019,7 +2020,7 @@ void save_pbrt_scene(
 
   // save textures
   for (auto& texture : scene.textures) {
-    if(texture.ldr.empty() && texture.hdr.empty()) continue;
+    if (texture.ldr.empty() && texture.hdr.empty()) continue;
     try {
       if (!texture.hdr.empty()) {
         save_image(get_dirname(filename) + texture.filename, texture.hdr);

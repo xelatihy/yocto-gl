@@ -1200,9 +1200,8 @@ void add_ply_values(ply_model& ply, const vector<vec4f>& values,
 }
 void add_ply_values(ply_model& ply, const vector<frame3f>& values,
     const string& element, const array<string, 12>& properties) {
-  add_ply_values(
-      ply, (float*)values.data(), values.size(), element, properties.data(), 
-      properties.size());
+  add_ply_values(ply, (float*)values.data(), values.size(), element,
+      properties.data(), properties.size());
 }
 
 void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
@@ -4025,7 +4024,8 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
       }
     }
     auto object = "object" + std::to_string(object_id++);
-    if (!shape.instances.empty()) format_values(fs, "ObjectBegin \"{}\"\n", object);
+    if (!shape.instances.empty())
+      format_values(fs, "ObjectBegin \"{}\"\n", object);
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)shape.frame);
     format_values(fs, "NamedMaterial \"{}\"\n", shape.material);

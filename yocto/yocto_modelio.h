@@ -562,14 +562,14 @@ struct pbrt_medium {
 // Pbrt shape
 struct pbrt_shape {
   // shape parameters
-  string             type            = "";
-  vector<pbrt_value> values          = {};
-  frame3f            frame           = identity3x4f;
-  frame3f            frend           = identity3x4f;
-  string             material        = "";
-  string             arealight       = "";
-  string             interior        = "";
-  string             exterior        = "";
+  string             type      = "";
+  vector<pbrt_value> values    = {};
+  frame3f            frame     = identity3x4f;
+  frame3f            frend     = identity3x4f;
+  string             material  = "";
+  string             arealight = "";
+  string             interior  = "";
+  string             exterior  = "";
   vector<frame3f>    instances = {};
   vector<frame3f>    instaends = {};
   // shape approximation
