@@ -3845,7 +3845,7 @@ static void format_value(string& str, const vector<pbrt_value>& values) {
   }
 }
 
-void save_pbrt(const string& filename, const pbrt_model& pbrt) {
+void save_pbrt(const string& filename, const pbrt_model& pbrt, bool ply_meshes) {
   auto fs = open_file(filename, "wt");
 
   // save comments
@@ -4029,8 +4029,20 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
   for (auto& shape_ : pbrt.shapes) {
     auto shape = shape_;
     if (shape.type == "") {
-      shape.type = "plymesh";
-      shape.values.push_back(make_pbrt_value("filename", shape.filename_));
+      if(ply_meshes) {
+        shape.type = "plymesh";
+        shape.values.push_back(make_pbrt_value("filename", shape.filename_));
+      } else {
+        shape.type = "trianglemesh";
+        shape.values.push_back(make_pbrt_value("indices", shape.triangles));
+        shape.values.push_back(
+            make_pbrt_value("P", shape.positions, pbrt_value_type::point));
+        if (!shape.normals.empty())
+          shape.values.push_back(
+              make_pbrt_value("N", shape.triangles, pbrt_value_type::normal));
+        if (!shape.texcoords.empty())
+          shape.values.push_back(make_pbrt_value("uv", shape.texcoords));
+      }
     }
     if(shape.type == "plymesh") {
       try {

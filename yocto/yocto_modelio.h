@@ -671,7 +671,8 @@ struct pbrt_model {
 
 // Load/save pbrt
 void load_pbrt(const string& filename, pbrt_model& pbrt);
-void save_pbrt(const string& filename, const pbrt_model& pbrt);
+void save_pbrt(const string& filename, const pbrt_model& pbrt, 
+  bool ply_meshes = false);
 
 // type-cheked pbrt value access
 void get_pbrt_value(const pbrt_value& pbrt, string& value);
