@@ -299,10 +299,8 @@ bool draw_glwidgets_material(
 bool draw_glwidgets_shape(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& shape        = app->scene.shapes[id];
-  auto  old_filename = shape.filename;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", shape.name);
-  edited += draw_gltextinput(win, "filename", shape.filename);
   edited += draw_glslider(win, "frame[0]", shape.frame.x, -1, 1);
   edited += draw_glslider(win, "frame[1]", shape.frame.y, -1, 1);
   edited += draw_glslider(win, "frame[2]", shape.frame.z, -1, 1);
@@ -317,15 +315,7 @@ bool draw_glwidgets_shape(
   draw_gllabel(win, "color", to_string(shape.colors.size()));
   draw_gllabel(win, "radius", to_string(shape.radius.size()));
   draw_gllabel(win, "tangsp", to_string(shape.tangents.size()));
-  if (edited && old_filename != shape.filename) {
-    // TODO: load
-    // try {
-    //   load_shape(app->filename, shape);
-    // } catch (std::exception& e) {
-    //   push_glmessage(win, e.what());
-    //   log_glinfo(win, e.what());
-    // }
-  }
+  // TODO: load
   return edited;
 }
 
