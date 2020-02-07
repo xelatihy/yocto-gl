@@ -1152,8 +1152,21 @@ static void save_yaml_scene(
     add_tex(yelement, "normal_tex", shape.material.normal_tex);
     add_opt(yelement, "gltf_textures", shape.material.gltf_textures,
         def_material.gltf_textures);
-    if (!shape.instances.empty()) {
-      // TODO: save instances
+    if (!shape.positions.empty() && !shape.filename.empty()) {
+    try {
+      save_shape(get_dirname(filename) + shape.filename, shape.points,
+          shape.lines, shape.triangles, shape.quads, shape.positions,
+          shape.normals, shape.texcoords, shape.colors, shape.radius);
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
+    }
+    if (!shape.instances.empty() && !shape.ifilename.empty()) {
+    try {
+      save_instances(get_dirname(filename) + shape.ifilename, shape.instances);
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
     }
   }
 
@@ -1174,36 +1187,7 @@ static void save_yaml_scene(
     add_tex(yelement, "displacement_tex", subdiv.displacement_tex);
     add_opt(
         yelement, "displacement", subdiv.displacement, def_subdiv.subdivisions);
-  }
-
-  // save yaml
-  save_yaml(filename, yaml);
-
-  // save shapes
-  for (auto& shape : scene.shapes) {
-    if (shape.positions.empty()) continue;
-    try {
-      save_shape(get_dirname(filename) + shape.filename, shape.points,
-          shape.lines, shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, shape.colors, shape.radius);
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
-  }
-
-  // save shapes
-  for (auto& shape : scene.shapes) {
-    if (shape.instances.empty()) continue;
-    try {
-      save_instances(get_dirname(filename) + shape.ifilename, shape.instances);
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
-  }
-
-  // save subdivs
-  for (auto& subdiv : scene.subdivs) {
-    if (subdiv.positions.empty()) continue;
+    if (!subdiv.positions.empty() && !subdiv.filename.empty()) {
     try {
       if (subdiv.quadspos.empty()) {
         save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
@@ -1217,11 +1201,12 @@ static void save_yaml_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
+    }
   }
 
   // save textures
   for (auto& texture : scene.textures) {
-    if (texture.ldr.empty() && texture.hdr.empty()) continue;
+    if (!texture.ldr.empty() && !texture.hdr.empty() && !texture.name.empty()) {
     try {
       if (!texture.hdr.empty()) {
         save_image(get_dirname(filename) + texture.name, texture.hdr);
@@ -1231,7 +1216,11 @@ static void save_yaml_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
+    }
   }
+
+  // save yaml
+  save_yaml(filename, yaml);
 }
 
 }  // namespace yocto
