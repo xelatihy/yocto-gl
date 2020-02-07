@@ -573,12 +573,11 @@ struct pbrt_shape {
   vector<frame3f>    instances = {};
   vector<frame3f>    instaends = {};
   // shape approximation
-  string        filename  = "";
+  string        filename_  = "";
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
   vector<vec2f> texcoords = {};
   vector<vec3i> triangles = {};
-  float         radius    = 0;  // radius for sphere, cylinder, disk
 };
 
 // Pbrt lights

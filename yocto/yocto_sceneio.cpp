@@ -934,6 +934,7 @@ static void load_yaml_scene(
                                       (!texture.ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     value = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
   };
 
   // check for conversion errors
@@ -1771,18 +1772,8 @@ static void load_pbrt_scene(
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
     auto& shape = scene.shapes.emplace_back();
-    shape.name  = make_safe_name(get_basename(shape.filename), "shape",
-        (int)scene.shapes.size(), "shapes/", ".yaml");
-    if (pshape.filename.empty()) {
-      shape.name = make_safe_name(
-          "", "shape", (int)scene.shapes.size(), "shapes/", ".yaml");
-      shape.filename = make_safe_filename(
-          "shapes/shape" + std::to_string(scene.shapes.size()) + ".ply");
-    } else {
-      shape.filename = pshape.filename;
-      shape.name     = make_safe_name(get_basename(pshape.filename), "shape",
-          (int)scene.shapes.size(), "shapes/", ".yaml");
-    }
+    shape.name  = "shapes/shape" +std::to_string(scene.shapes.size()) + ".yaml";
+    shape.filename  = "shapes/shape" +std::to_string(scene.shapes.size()) + ".ply";
     shape.frame     = pshape.frame;
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
@@ -1794,8 +1785,7 @@ static void load_pbrt_scene(
     shape.material  = materials[arealight_id >= 0 ? arealight_id : material_id];
     shape.instances = pshape.instances;
     if (!shape.instances.empty()) {
-      shape.ifilename = make_safe_filename(
-          "instances/shape" + std::to_string(scene.shapes.size()) + ".ply");
+      shape.ifilename = "instances/shape" + std::to_string(scene.shapes.size()) + ".ply";
     }
   }
 
@@ -1820,18 +1810,6 @@ static void load_pbrt_scene(
     shape.positions = plight.area_positions;
     shape.normals   = plight.area_normals;
     shape.material.emission = plight.area_emission;
-  }
-
-  // load shapes
-  for (auto& shape : scene.shapes) {
-    if (!shape.positions.empty()) continue;
-    try {
-      load_shape(get_dirname(filename) + shape.filename, shape.points,
-          shape.lines, shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, shape.colors, shape.radius);
-    } catch (std::exception& e) {
-      throw_dependent_error(filename, e.what());
-    }
   }
 
   // fix scene
@@ -1889,7 +1867,7 @@ void save_pbrt_scene(
   for (auto& shape : scene.shapes) {
     auto& material   = shape.material;
     auto& pshape     = pbrt.shapes.emplace_back();
-    pshape.filename  = replace_extension(shape.filename, ".ply");
+    pshape.filename_ = replace_extension(shape.filename, ".ply");
     pshape.frame     = shape.frame;
     pshape.material  = shape.name;
     pshape.arealight = material.emission == zero3f ? ""s : shape.name;

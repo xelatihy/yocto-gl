@@ -514,6 +514,9 @@ static void format_value(file_wrapper& fs, const T& value) {
     throw std::runtime_error{fs.filename + ": write error"};
 }
 
+static void throw_dependent_error(const string& filename, const string& err) {
+  throw std::runtime_error{filename + ": error in resource (" + err + ")"};
+}
 static void throw_dependent_error(file_wrapper& fs, const string& err) {
   throw std::runtime_error{fs.filename + ": error in resource (" + err + ")"};
 }
@@ -3360,8 +3363,18 @@ static void convert_pbrt_shapes(
         shape.normals.resize(shape.positions.size());
         // compute_normals(shape.normals, shape.triangles, shape.positions);
       } else if (shape.type == "plymesh") {
-        shape.filename = ""s;
-        get_pbrt_value(values, "filename", shape.filename);
+        shape.filename_ = ""s;
+        get_pbrt_value(values, "filename", shape.filename_);
+        try {
+          auto ply = ply_model{};
+          load_ply(get_dirname(filename) + shape.filename_, ply);
+          shape.positions = get_ply_positions(ply);
+          shape.normals = get_ply_normals(ply);
+          shape.texcoords = get_ply_texcoords(ply);
+          shape.triangles = get_ply_triangles(ply);
+        } catch(std::exception& e) {
+          throw_dependent_error(filename, e.what());
+        }
       } else if (shape.type == "sphere") {
         auto radius = 1.0f;
         get_pbrt_value(values, "radius", radius);
@@ -4016,19 +4029,19 @@ void save_pbrt(const string& filename, const pbrt_model& pbrt) {
   for (auto& shape_ : pbrt.shapes) {
     auto shape = shape_;
     if (shape.type == "") {
-      if (!shape.filename.empty()) {
-        shape.type = "plymesh";
-        shape.values.push_back(make_pbrt_value("filename", shape.filename));
-      } else {
-        shape.type = "trianglemesh";
-        shape.values.push_back(make_pbrt_value("indices", shape.triangles));
-        shape.values.push_back(
-            make_pbrt_value("P", shape.positions, pbrt_value_type::point));
-        if (!shape.normals.empty())
-          shape.values.push_back(
-              make_pbrt_value("N", shape.triangles, pbrt_value_type::normal));
-        if (!shape.texcoords.empty())
-          shape.values.push_back(make_pbrt_value("uv", shape.texcoords));
+      shape.type = "plymesh";
+      shape.values.push_back(make_pbrt_value("filename", shape.filename_));
+    }
+    if(shape.type == "plymesh") {
+      try {
+        auto ply = ply_model{};
+        add_ply_positions(ply, shape.positions);
+        add_ply_normals(ply, shape.normals);
+        add_ply_texcoords(ply, shape.texcoords);
+        add_ply_triangles(ply, shape.triangles);
+        save_ply(get_dirname(filename) + shape.filename_, ply);
+      } catch(std::exception& e) {
+        throw_dependent_error(filename, e.what());
       }
     }
     auto object = "object" + std::to_string(object_id++);
