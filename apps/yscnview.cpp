@@ -464,7 +464,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene.environments.empty() && begin_glheader(win, "environments")) {
+  if (app && !app->ioscene.environments.empty() &&
+      begin_glheader(win, "environments")) {
     draw_glcombobox(win, "environments##2", app->selected_environment,
         app->ioscene.environments);
     if (draw_glwidgets_environment(win, app, app->selected_environment)) {
@@ -515,7 +516,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     }
     end_glheader(win);
   }
-  if (app && !app->ioscene.textures.empty() && begin_glheader(win, "textures")) {
+  if (app && !app->ioscene.textures.empty() &&
+      begin_glheader(win, "textures")) {
     draw_glcombobox(
         win, "texture##2", app->selected_texture, app->ioscene.textures);
     if (draw_glwidgets_texture(win, app, app->selected_texture)) {
