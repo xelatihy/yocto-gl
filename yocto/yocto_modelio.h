@@ -264,29 +264,34 @@ struct obj_material {
   obj_texture_info displacement_map = {};
 
   // pbrt extension values
+  bool  as_pbr            = false;
+  vec3f pbr_emission      = {0, 0, 0};
+  vec3f pbr_base          = {0, 0, 0};
+  float pbr_specular      = 0;
   float pbr_roughness     = 0;
   float pbr_metallic      = 0;
   float pbr_sheen         = 0;
-  float pbr_clearcoat     = 0;
+  float pbr_coat          = 0;
   float pbr_coatroughness = 0;
+  float pbr_transmission  = 0;
+  float pbr_ior           = 1.5;
+  float pbr_opacity       = 1;
+  vec3f pbr_volscattering = zero3f;
+  float pbr_volanisotropy = 0;
+  float pbr_volscale      = 0.01;
 
   // pbr extension textures
+  obj_texture_info pbr_emission_map      = {};
+  obj_texture_info pbr_base_map          = {};
+  obj_texture_info pbr_specular_map      = {};
   obj_texture_info pbr_roughness_map     = {};
   obj_texture_info pbr_metallic_map      = {};
   obj_texture_info pbr_sheen_map         = {};
-  obj_texture_info pbr_clearcoat_map     = {};
+  obj_texture_info pbr_coat_map          = {};
   obj_texture_info pbr_coatroughness_map = {};
-
-  // volume extension colors and values
-  vec3f vol_emission     = zero3f;
-  vec3f vol_transmission = zero3f;
-  vec3f vol_meanfreepath = zero3f;
-  vec3f vol_scattering   = zero3f;
-  float vol_anisotropy   = 0;
-  float vol_scale        = 0.01;
-
-  // volument textures
-  obj_texture_info vol_scattering_map = {};
+  obj_texture_info pbr_transmission_map  = {};
+  obj_texture_info pbr_opacity_map       = {};
+  obj_texture_info pbr_volscattering_map = {};
 };
 
 // Obj camera
