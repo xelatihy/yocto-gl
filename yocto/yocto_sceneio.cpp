@@ -816,82 +816,6 @@ void save_scene(
   }
 }
 
-void load_texture(const string& filename, sceneio_texture& texture) {
-  try {
-    if (is_hdr_filename(texture.filename)) {
-      load_image(get_dirname(filename) + texture.filename, texture.hdr);
-    } else {
-      load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
-    }
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
-void save_texture(const string& filename, const sceneio_texture& texture) {
-  try {
-    if (!texture.hdr.empty()) {
-      save_image(get_dirname(filename) + texture.filename, texture.hdr);
-    } else {
-      save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
-    }
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
-void load_shape(const string& filename, sceneio_shape& shape) {
-  try {
-    load_shape(get_dirname(filename) + shape.filename, shape.points,
-        shape.lines, shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, shape.colors, shape.radius);
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
-void save_shape(const string& filename, const sceneio_shape& shape) {
-  try {
-    save_shape(get_dirname(filename) + shape.filename, shape.points,
-        shape.lines, shape.triangles, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, shape.colors, shape.radius);
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
-void load_subdiv(const string& filename, sceneio_subdiv& subdiv) {
-  try {
-    if (!subdiv.facevarying) {
-      load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
-          subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
-          subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
-    } else {
-      load_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
-          subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-          subdiv.normals, subdiv.texcoords);
-    }
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
-void save_subdiv(const string& filename, const sceneio_subdiv& subdiv) {
-  try {
-    if (subdiv.quadspos.empty()) {
-      save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
-          subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
-          subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
-    } else {
-      save_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
-          subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-          subdiv.normals, subdiv.texcoords);
-    }
-  } catch (std::exception& e) {
-    throw_dependent_error(filename, e.what());
-  }
-}
-
 // create and cleanup names and filenames
 static string make_safe_name(const string& name_, const string& base, int count,
     const string& prefix, const string& suffix) {
@@ -1181,19 +1105,45 @@ static void load_yaml_scene(
   // load shapes
   for (auto& shape : scene.shapes) {
     if (!shape.positions.empty()) continue;
-    load_shape(filename, shape);
+  try {
+    load_shape(get_dirname(filename) + shape.filename, shape.points,
+        shape.lines, shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, shape.colors, shape.radius);
+  } catch (std::exception& e) {
+    throw_dependent_error(filename, e.what());
+  }
   }
 
   // load subdivs
   for (auto& subdiv : scene.subdivs) {
     if (!subdiv.positions.empty()) continue;
-    load_subdiv(filename, subdiv);
+  try {
+    if (!subdiv.facevarying) {
+      load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+          subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
+          subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+    } else {
+      load_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
+          subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+          subdiv.normals, subdiv.texcoords);
+    }
+  } catch (std::exception& e) {
+    throw_dependent_error(filename, e.what());
+  }
   }
 
   // load textures
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-    load_texture(filename, texture);
+    try {
+      if (is_hdr_filename(texture.filename)) {
+        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch(std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // fix scene
@@ -1318,17 +1268,43 @@ static void save_yaml_scene(
 
   // save shapes
   for (auto& shape : scene.shapes) {
-    save_shape(filename, shape);
+  try {
+    save_shape(get_dirname(filename) + shape.filename, shape.points,
+        shape.lines, shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, shape.colors, shape.radius);
+  } catch (std::exception& e) {
+    throw_dependent_error(filename, e.what());
+  }
   }
 
   // save subdivs
   for (auto& subdiv : scene.subdivs) {
-    save_subdiv(filename, subdiv);
+  try {
+    if (subdiv.quadspos.empty()) {
+      save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+          subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
+          subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+    } else {
+      save_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
+          subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+          subdiv.normals, subdiv.texcoords);
+    }
+  } catch (std::exception& e) {
+    throw_dependent_error(filename, e.what());
+  }
   }
 
   // save textures
   for (auto& texture : scene.textures) {
-    save_texture(filename, texture);
+  try {
+    if (!texture.hdr.empty()) {
+      save_image(get_dirname(filename) + texture.filename, texture.hdr);
+    } else {
+      save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+    }
+  } catch (std::exception& e) {
+    throw_dependent_error(filename, e.what());
+  }
   }
 }
 
@@ -1464,7 +1440,15 @@ static void load_obj_scene(
   // load textures
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-    load_texture(filename, texture);
+    try {
+      if (is_hdr_filename(texture.filename)) {
+        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch(std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // fix scene
@@ -1592,7 +1576,15 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
 
   // save textures
   for (auto& texture : scene.textures) {
-    save_texture(filename, texture);
+  try {
+    if (!texture.hdr.empty()) {
+      save_image(get_dirname(filename) + texture.filename, texture.hdr);
+    } else {
+      save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+    }
+  } catch (std::exception& e) {
+    throw_dependent_error(filename, e.what());
+  }
   }
 }
 
@@ -1753,7 +1745,15 @@ static void load_gltf_scene(
   // load textures
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-    load_texture(filename, texture);
+    try {
+      if (is_hdr_filename(texture.filename)) {
+        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch(std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // fix scene
@@ -1901,13 +1901,27 @@ static void load_pbrt_scene(
   // load shapes
   for (auto& shape : scene.shapes) {
     if (!shape.positions.empty()) continue;
-    load_shape(filename, shape);
+  try {
+    load_shape(get_dirname(filename) + shape.filename, shape.points,
+        shape.lines, shape.triangles, shape.quads, shape.positions,
+        shape.normals, shape.texcoords, shape.colors, shape.radius);
+  } catch (std::exception& e) {
+    throw_dependent_error(filename, e.what());
+  }
   }
 
   // load textures
   for (auto& texture : scene.textures) {
     if (!texture.hdr.empty() || !texture.ldr.empty()) continue;
-    load_texture(filename, texture);
+    try {
+      if (is_hdr_filename(texture.filename)) {
+        load_image(get_dirname(filename) + texture.filename, texture.hdr);
+      } else {
+        load_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+      }
+    } catch(std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
   }
 
   // fix scene
@@ -1987,15 +2001,27 @@ void save_pbrt_scene(
   // save meshes
   auto dirname = get_dirname(filename);
   for (auto& shape : scene.shapes) {
+  try {
     save_shape(replace_extension(dirname + shape.filename, ".ply"),
         shape.points, shape.lines, shape.triangles, shape.quads,
         shape.positions, shape.normals, shape.texcoords, shape.colors,
         shape.radius);
+  } catch (std::exception& e) {
+    throw_dependent_error(filename, e.what());
+  }
   }
 
   // save textures
   for (auto& texture : scene.textures) {
-    save_texture(filename, texture);
+  try {
+    if (!texture.hdr.empty()) {
+      save_image(get_dirname(filename) + texture.filename, texture.hdr);
+    } else {
+      save_imageb(get_dirname(filename) + texture.filename, texture.ldr);
+    }
+  } catch (std::exception& e) {
+    throw_dependent_error(filename, e.what());
+  }
   }
 }
 
