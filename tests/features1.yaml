@@ -46,7 +46,7 @@ shapes:
     base: [0.7, 0.7, 0.7]
     base_tex: textures/floor.png
     specular: 0
-  - name: shapes/bunny-uvgrid.yaml-coated
+  - name: shapes/bunny-uvgrid-coated.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
     shape: shapes/bunny.obj
     base: [1, 1, 1]
@@ -69,7 +69,7 @@ shapes:
     base: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
-  - name: shapes/sphere-volume-glass
+  - name: shapes/sphere-volume-glass.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
     shape: shapes/sphere.ply
     base: [1, 0.5, 0.5]
@@ -78,7 +78,7 @@ shapes:
     transmission: 1
     radius: 0.02
     thin: false
-  - name: shapes/sphere-plastic-rough.yaml-bumped
+  - name: shapes/sphere-plastic-rough-bumped.yaml
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
     shape: shapes/sphere.ply
     base: [0.5, 0.7, 0.5]

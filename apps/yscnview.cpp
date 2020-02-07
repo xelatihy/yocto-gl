@@ -332,10 +332,8 @@ bool draw_glwidgets_shape(
 bool draw_glwidgets_subdiv(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& subdiv       = app->scene.subdivs[id];
-  auto  old_filename = subdiv.filename;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", subdiv.name);
-  edited += draw_gltextinput(win, "filename", subdiv.filename);
   draw_gllabel(win, "points", to_string(subdiv.points.size()));
   draw_gllabel(win, "lines", to_string(subdiv.lines.size()));
   draw_gllabel(win, "triangles", to_string(subdiv.triangles.size()));
@@ -352,19 +350,10 @@ bool draw_glwidgets_subdiv(
   edited += draw_glslider(win, "subdivisions", subdiv.subdivisions, 0, 10);
   edited += draw_glcheckbox(win, "catmullclark", subdiv.catmullclark);
   edited += draw_glcheckbox(win, "smooth", subdiv.smooth);
-  edited += draw_glcheckbox(win, "facevarying", subdiv.facevarying);
   edited += draw_glcombobox(win, "displacement_tex", subdiv.displacement_tex,
       app->scene.textures, true);
   edited += draw_glslider(win, "displacement", subdiv.displacement, 0, 1);
-  if (edited && old_filename != subdiv.filename) {
-    // TODO: load
-    // try {
-    //   load_subdiv(app->filename, subdiv);
-    // } catch (std::exception& e) {
-    //   push_glmessage(win, e.what());
-    //   log_glinfo(win, e.what());
-    // }
-  }
+  // TODO: load
   return edited;
 }
 

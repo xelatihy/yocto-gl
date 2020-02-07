@@ -1027,29 +1027,30 @@ static void load_yaml_scene(
       } else if (yelement.name == "subdivs") {
         auto& subdiv = scene.subdivs.emplace_back();
         get_yaml_value(yelement, "name", subdiv.name);
-        get_yaml_value(yelement, "subdiv", subdiv.filename);
-        if (has_yaml_value(yelement, "filename")) {
-          get_yaml_value(yelement, "filename", subdiv.filename);
-        }
         get_yaml_ref(yelement, "shape", subdiv.shape, smap);
         get_yaml_value(yelement, "subdivisions", subdiv.subdivisions);
         get_yaml_value(yelement, "catmullclark", subdiv.catmullclark);
         get_yaml_value(yelement, "smooth", subdiv.smooth);
-        get_yaml_value(yelement, "facevarying", subdiv.facevarying);
         get_texture(yelement, "displacement_tex", subdiv.displacement_tex);
         get_yaml_value(yelement, "displacement", subdiv.displacement);
-        if (!subdiv.filename.empty()) {
+        if (has_yaml_value(yelement, "subdiv")) {
+          auto path = ""s;
+          get_yaml_value(yelement, "subdiv", path);
           try {
-            if (!subdiv.facevarying) {
-              load_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
-                  subdiv.lines, subdiv.triangles, subdiv.quads,
-                  subdiv.positions, subdiv.normals, subdiv.texcoords,
-                  subdiv.colors, subdiv.radius);
-            } else {
-              load_fvshape(get_dirname(filename) + subdiv.filename,
-                  subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
-                  subdiv.positions, subdiv.normals, subdiv.texcoords);
-            }
+            load_shape(get_dirname(filename) + path, subdiv.points,
+                subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
+                subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+          } catch (std::exception& e) {
+            throw_dependent_error(filename, e.what());
+          }
+        }
+        if (has_yaml_value(yelement, "fvsubdiv")) {
+          auto path = ""s;
+          get_yaml_value(yelement, "fvsubdiv", path);
+          try {
+            load_fvshape(get_dirname(filename) + path,
+                subdiv.quadspos, subdiv.quadsnorm, subdiv.quadstexcoord,
+                subdiv.positions, subdiv.normals, subdiv.texcoords);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1178,29 +1179,33 @@ static void save_yaml_scene(
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "subdivs";
     add_val(yelement, "name", subdiv.name);
-    add_val(yelement, "subdiv", subdiv.filename);
     add_val(yelement, "shape", scene.shapes[subdiv.shape].name);
     add_opt(
         yelement, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
     add_opt(
         yelement, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
     add_opt(yelement, "smooth", subdiv.smooth, def_subdiv.smooth);
-    add_opt(
-        yelement, "facevarying", subdiv.facevarying, def_subdiv.facevarying);
     add_tex(yelement, "displacement_tex", subdiv.displacement_tex);
     add_opt(
         yelement, "displacement", subdiv.displacement, def_subdiv.subdivisions);
-    if (!subdiv.positions.empty() && !subdiv.filename.empty()) {
+    if (!subdiv.positions.empty() && subdiv.quadspos.empty()) {
+      auto path = replace_extension(subdiv.name, ".ply");
+      add_val(yelement, "subdiv", path);
       try {
-        if (subdiv.quadspos.empty()) {
-          save_shape(get_dirname(filename) + subdiv.filename, subdiv.points,
+          save_shape(get_dirname(filename) + path, subdiv.points,
               subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
               subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
-        } else {
-          save_fvshape(get_dirname(filename) + subdiv.filename, subdiv.quadspos,
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
+      }
+    }
+    if (!subdiv.positions.empty() && !subdiv.quadspos.empty()) {
+      auto path = replace_extension(subdiv.name, ".obj");
+      add_val(yelement, "fvsubdiv", path);
+      try {
+          save_fvshape(get_dirname(filename) + path, subdiv.quadspos,
               subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
               subdiv.normals, subdiv.texcoords);
-        }
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }

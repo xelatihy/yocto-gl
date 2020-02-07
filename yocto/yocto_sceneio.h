@@ -161,7 +161,6 @@ struct sceneio_shape {
 struct sceneio_subdiv {
   // shape data
   string name     = "";
-  string filename = "";
 
   // reference to subdivided shape
   int shape = -1;
@@ -189,7 +188,6 @@ struct sceneio_subdiv {
   int  subdivisions = 0;
   bool catmullclark = false;
   bool smooth       = false;
-  bool facevarying  = false;
 
   // displacement information
   float displacement     = 0;

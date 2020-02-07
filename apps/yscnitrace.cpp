@@ -373,10 +373,8 @@ bool draw_glwidgets_shape(
 bool draw_glwidgets_subdiv(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
   auto& subdiv       = app->ioscene.subdivs[id];
-  auto  old_filename = subdiv.filename;
   auto  edited       = 0;
   edited += draw_gltextinput(win, "name", subdiv.name);
-  edited += draw_gltextinput(win, "filename", subdiv.filename);
   draw_gllabel(win, "points", to_string(subdiv.points.size()));
   draw_gllabel(win, "lines", to_string(subdiv.lines.size()));
   draw_gllabel(win, "triangles", to_string(subdiv.triangles.size()));
@@ -390,15 +388,7 @@ bool draw_glwidgets_subdiv(
   draw_gllabel(win, "color", to_string(subdiv.colors.size()));
   draw_gllabel(win, "radius", to_string(subdiv.radius.size()));
   draw_gllabel(win, "tangsp", to_string(subdiv.tangents.size()));
-  if (edited && old_filename != subdiv.filename) {
-    // TODO: load
-    // try {
-    //   load_subdiv(app->filename, subdiv);
-    // } catch (std::exception& e) {
-    //   push_glmessage(win, e.what());
-    //   log_glinfo(win, e.what());
-    // }
-  }
+  // TODO: load
   return edited;
 }
 
