@@ -56,7 +56,6 @@ struct app_state {
   // scene
   sceneio_model ioscene    = {};
   trace_scene   scene      = {};
-  bool          add_skyenv = false;
 
   // rendering state
   trace_state  state    = {};
@@ -237,7 +236,6 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
         app->outname    = replace_extension(filename, ".edited.yaml");
         app->name       = get_filename(app->filename);
         app->params     = app->params;
-        app->add_skyenv = app->add_skyenv;
         load_scene(app->filename, app->ioscene);
         init_scene(app->scene, app->ioscene);
         init_bvh(app->scene, app->params);
@@ -699,7 +697,6 @@ void run_app(int argc, const char* argv[]) {
       "Environments are hidden in renderer");
   add_cli_option(
       cli, "--bvh", (int&)apps->params.bvh, "Bvh type", trace_bvh_names);
-  add_cli_option(cli, "--add-skyenv", apps->add_skyenv, "Add sky envmap");
   add_cli_option(cli, "scenes", filenames, "Scene filenames", true);
   parse_cli(cli, argc, argv);
 
