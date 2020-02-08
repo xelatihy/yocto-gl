@@ -268,20 +268,20 @@ void set_shape_tangents(
 void set_shape_frame(opengl_scene& scene, int idx, const frame3f& frame);
 void set_shape_instances(
     opengl_scene& scene, int idx, const vector<frame3f>& instances);
-void set_material_emission(
+void set_shape_emission(
     opengl_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
-void set_material_color(
+void set_shape_color(
     opengl_scene& scene, int idx, const vec3f& color, int color_txt = -1);
-void set_material_metallic(
+void set_shape_metallic(
     opengl_scene& scene, int idx, float metallic, int metallic_txt = -1);
-void set_material_roughness(
+void set_shape_roughness(
     opengl_scene& scene, int idx, float roughness, int roughness_txt = -1);
-void set_material_specular(
+void set_shape_specular(
     opengl_scene& scene, int idx, float specular, int specular_txt = -1);
-void set_material_opacity(
+void set_shape_opacity(
     opengl_scene& scene, int idx, float opacity, int opacity_txt = -1);
-void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt);
-void set_material_gltftextures(
+void set_shape_normalmap(opengl_scene& scene, int idx, int normal_txt);
+void set_shape_gltftextures(
     opengl_scene& scene, int idx, bool gltf_textures);
 void set_shape_hidden(opengl_scene& scene, int idx, bool hidden);
 void set_shape_highlighted(opengl_scene& scene, int idx, bool highlighted);

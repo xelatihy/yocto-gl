@@ -115,26 +115,26 @@ void set_shape_tangents(
 void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame);
 void set_shape_frames(trace_scene& scene, int idx,
     const vector<frame3f>& instances, const frame3f& local_frame);
-void set_material_emission(
+void set_shape_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
-void set_material_color(
+void set_shape_color(
     trace_scene& scene, int idx, const vec3f& color, int color_txt = -1);
-void set_material_specular(
+void set_shape_specular(
     trace_scene& scene, int idx, float specular = 1, int specular_txt = -1);
-void set_material_ior(trace_scene& scene, int idx, float ior);
-void set_material_metallic(
+void set_shape_ior(trace_scene& scene, int idx, float ior);
+void set_shape_metallic(
     trace_scene& scene, int idx, float metallic, int metallic_txt = -1);
-void set_material_transmission(trace_scene& scene, int idx, float transmission,
+void set_shape_transmission(trace_scene& scene, int idx, float transmission,
     bool thin, float trdepth, int transmission_txt = -1);
-void set_material_roughness(
+void set_shape_roughness(
     trace_scene& scene, int idx, float roughness, int roughness_txt = -1);
-void set_material_opacity(
+void set_shape_opacity(
     trace_scene& scene, int idx, float opacity, int opacity_txt = -1);
-void set_material_thin(trace_scene& scene, int idx, bool thin);
-void set_material_scattering(trace_scene& scene, int idx,
+void set_shape_thin(trace_scene& scene, int idx, bool thin);
+void set_shape_scattering(trace_scene& scene, int idx,
     const vec3f& scattering, float scanisotropy, int scattering_tex = -1);
-void set_material_normalmap(trace_scene& scene, int idx, int normal_txt);
-void set_material_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
+void set_shape_normalmap(trace_scene& scene, int idx, int normal_txt);
+void set_shape_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
 void clear_shapes(trace_scene& scene);
 
 // Add environment

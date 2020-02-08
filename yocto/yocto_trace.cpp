@@ -3197,35 +3197,35 @@ void set_shape_frames(trace_scene& scene, int idx,
       shape.frames[idx] = frames[idx] * local_frame;
   }
 }
-void set_material_emission(
+void set_shape_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt) {
   auto& shape        = scene.shapes[idx];
   shape.emission     = emission;
   shape.emission_tex = emission_txt;
 }
-void set_material_color(
+void set_shape_color(
     trace_scene& scene, int idx, const vec3f& color, int color_txt) {
   auto& shape     = scene.shapes[idx];
   shape.color     = color;
   shape.color_tex = color_txt;
 }
-void set_material_specular(
+void set_shape_specular(
     trace_scene& scene, int idx, float specular, int specular_txt) {
   auto& shape        = scene.shapes[idx];
   shape.specular     = specular;
   shape.specular_tex = specular_txt;
 }
-void set_material_metallic(
+void set_shape_metallic(
     trace_scene& scene, int idx, float metallic, int metallic_txt) {
   auto& shape        = scene.shapes[idx];
   shape.metallic     = metallic;
   shape.metallic_tex = metallic_txt;
 }
-void set_material_ior(trace_scene& scene, int idx, float ior) {
+void set_shape_ior(trace_scene& scene, int idx, float ior) {
   auto& shape = scene.shapes[idx];
   shape.ior   = ior;
 }
-void set_material_transmission(trace_scene& scene, int idx, float transmission,
+void set_shape_transmission(trace_scene& scene, int idx, float transmission,
     bool thin, float trdepth, int transmission_txt) {
   auto& shape            = scene.shapes[idx];
   shape.transmission     = transmission;
@@ -3233,34 +3233,34 @@ void set_material_transmission(trace_scene& scene, int idx, float transmission,
   shape.trdepth          = trdepth;
   shape.transmission_tex = transmission_txt;
 }
-void set_material_thin(trace_scene& scene, int idx, bool thin) {
+void set_shape_thin(trace_scene& scene, int idx, bool thin) {
   auto& shape = scene.shapes[idx];
   shape.thin  = thin;
 }
-void set_material_roughness(
+void set_shape_roughness(
     trace_scene& scene, int idx, float roughness, int roughness_txt) {
   auto& shape         = scene.shapes[idx];
   shape.roughness     = roughness;
   shape.roughness_tex = roughness_txt;
 }
-void set_material_opacity(
+void set_shape_opacity(
     trace_scene& scene, int idx, float opacity, int opacity_txt) {
   auto& shape       = scene.shapes[idx];
   shape.opacity     = opacity;
   shape.opacity_tex = opacity_txt;
 }
-void set_material_scattering(trace_scene& scene, int idx,
+void set_shape_scattering(trace_scene& scene, int idx,
     const vec3f& scattering, float scanisotropy, int scattering_tex) {
   auto& shape          = scene.shapes[idx];
   shape.scattering     = scattering;
   shape.scanisotropy   = scanisotropy;
   shape.scattering_tex = scattering_tex;
 }
-void set_material_normalmap(trace_scene& scene, int idx, int normal_txt) {
+void set_shape_normalmap(trace_scene& scene, int idx, int normal_txt) {
   auto& shape      = scene.shapes[idx];
   shape.normal_tex = normal_txt;
 }
-void set_material_gltftextures(
+void set_shape_gltftextures(
     trace_scene& scene, int idx, bool gltf_textures) {
   auto& shape         = scene.shapes[idx];
   shape.gltf_textures = gltf_textures;

@@ -1074,46 +1074,46 @@ void set_shape_highlighted(opengl_scene& scene, int idx, bool highlighted) {
   auto& shape       = scene._shapes[idx];
   shape.highlighted = highlighted;
 }
-void set_material_emission(
+void set_shape_emission(
     opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
   auto& material        = scene._shapes[idx].material;
   material.emission     = emission;
   material.emission_map = emission_txt;
 }
-void set_material_color(
+void set_shape_color(
     opengl_scene& scene, int idx, const vec3f& color, int color_txt) {
   auto& material     = scene._shapes[idx].material;
   material.color     = color;
   material.color_map = color_txt;
 }
-void set_material_specular(
+void set_shape_specular(
     opengl_scene& scene, int idx, float specular, int specular_txt) {
   auto& material        = scene._shapes[idx].material;
   material.specular     = specular;
   material.specular_map = specular_txt;
 }
-void set_material_roughness(
+void set_shape_roughness(
     opengl_scene& scene, int idx, float roughness, int roughness_txt) {
   auto& material         = scene._shapes[idx].material;
   material.roughness     = roughness;
   material.roughness_map = roughness_txt;
 }
-void set_material_opacity(
+void set_shape_opacity(
     opengl_scene& scene, int idx, float opacity, int opacity_txt) {
   auto& material   = scene._shapes[idx].material;
   material.opacity = opacity;
 }
-void set_material_metallic(
+void set_shape_metallic(
     opengl_scene& scene, int idx, float metallic, int metallic_txt) {
   auto& material        = scene._shapes[idx].material;
   material.metallic     = metallic;
   material.metallic_map = metallic_txt;
 }
-void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt) {
+void set_shape_normalmap(opengl_scene& scene, int idx, int normal_txt) {
   auto& material      = scene._shapes[idx].material;
   material.normal_map = normal_txt;
 }
-void set_material_gltftextures(
+void set_shape_gltftextures(
     opengl_scene& scene, int idx, bool gltf_textures) {
   auto& material         = scene._shapes[idx].material;
   material.gltf_textures = gltf_textures;

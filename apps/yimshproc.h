@@ -174,31 +174,31 @@ void init_opengl_scene(shared_ptr<app_state> app) {
 
   // The model.
   app->glshape_id = add_shape(app->scene);
-  set_material_color(app->scene, app->glshape_id, {1, 0.2, 0});
-  set_material_specular(app->scene, app->glshape_id, 1);
-  set_material_roughness(app->scene, app->glshape_id, 0.3);
+  set_shape_color(app->scene, app->glshape_id, {1, 0.2, 0});
+  set_shape_specular(app->scene, app->glshape_id, 1);
+  set_shape_roughness(app->scene, app->glshape_id, 0.3);
   update_glshape(app);
 
   // The points.
   app->glpoints_id = add_shape(app->scene);
-  set_material_emission(app->scene, app->glpoints_id, {1, 1, 1});
-  set_material_roughness(app->scene, app->glpoints_id, 0.0);
+  set_shape_emission(app->scene, app->glpoints_id, {1, 1, 1});
+  set_shape_roughness(app->scene, app->glpoints_id, 0.0);
 
   // The vector field.
   app->glvector_field_id = add_shape(app->scene);
-  set_material_emission(app->scene, app->glvector_field_id, {1, 1, 1});
-  set_material_roughness(app->scene, app->glvector_field_id, 0.0);
+  set_shape_emission(app->scene, app->glvector_field_id, {1, 1, 1});
+  set_shape_roughness(app->scene, app->glvector_field_id, 0.0);
 
   // The edges.
   app->gledges_id = add_shape(app->scene);
-  set_material_emission(app->scene, app->gledges_id, {1, 1, 1});
-  set_material_roughness(app->scene, app->gledges_id, 0.0);
+  set_shape_emission(app->scene, app->gledges_id, {1, 1, 1});
+  set_shape_roughness(app->scene, app->gledges_id, 0.0);
   update_gledges(app);
 
   // The polyline.
   app->glpolyline_id = add_shape(app->scene);
-  set_material_emission(app->scene, app->glpolyline_id, {1, 1, 1});
-  set_material_roughness(app->scene, app->glpolyline_id, 0.0);
+  set_shape_emission(app->scene, app->glpolyline_id, {1, 1, 1});
+  set_shape_roughness(app->scene, app->glpolyline_id, 0.0);
 
   // Hide edges.
   if (!app->show_edges) hide_edges(app);
