@@ -1369,10 +1369,16 @@ static bool intersect_scene_embree_bvh(const trace_scene& scene,
 }
 #endif
 
+// primitive used to sort bvh entries
+struct trace_bvh_primitive {
+  bbox3f bbox      = invalidb3f;
+  vec3f  center    = zero3f;
+  int    primitive = 0;
+};
+
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static pair<int, int> split_sah(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end) {
+static pair<int, int> split_sah(vector<trace_bvh_primitive>& primitives,
+    int start, int end) {
   // initialize split axis and position
   auto split_axis = 0;
   auto mid        = (start + end) / 2;
@@ -1380,7 +1386,7 @@ static pair<int, int> split_sah(vector<int>& primitives,
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, centers[primitives[i]]);
+    cbbox = merge(cbbox, primitives[i].center);
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, split_axis};
 
@@ -1399,11 +1405,11 @@ static pair<int, int> split_sah(vector<int>& primitives,
       auto left_bbox = invalidb3f, right_bbox = invalidb3f;
       auto left_nprims = 0, right_nprims = 0;
       for (auto i = start; i < end; i++) {
-        if (centers[primitives[i]][saxis] < split) {
-          left_bbox = merge(left_bbox, bboxes[primitives[i]]);
+        if (primitives[i].center[saxis] < split) {
+          left_bbox = merge(left_bbox, primitives[i].bbox);
           left_nprims += 1;
         } else {
-          right_bbox = merge(right_bbox, bboxes[primitives[i]]);
+          right_bbox = merge(right_bbox, primitives[i].bbox);
           right_nprims += 1;
         }
       }
@@ -1418,8 +1424,8 @@ static pair<int, int> split_sah(vector<int>& primitives,
   }
   // split
   mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [split_axis, middle, &centers](
-                      auto a) { return centers[a][split_axis] < middle; }) -
+                  [split_axis, middle](auto& primitive) { 
+                    return primitive.center[split_axis] < middle; }) -
               primitives.data());
 
   // if we were not able to split, just break the primitives in half
@@ -1434,9 +1440,8 @@ static pair<int, int> split_sah(vector<int>& primitives,
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-static pair<int, int> split_balanced(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end) {
+static pair<int, int> split_balanced(vector<trace_bvh_primitive>& primitives,
+    int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -1444,7 +1449,7 @@ static pair<int, int> split_balanced(vector<int>& primitives,
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, centers[primitives[i]]);
+    cbbox = merge(cbbox, primitives[i].center);
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, axis};
 
@@ -1457,8 +1462,8 @@ static pair<int, int> split_balanced(vector<int>& primitives,
   // bounding box and split along this one right in the middle
   mid = (start + end) / 2;
   std::nth_element(primitives.data() + start, primitives.data() + mid,
-      primitives.data() + end, [axis, &centers](auto a, auto b) {
-        return centers[a][axis] < centers[b][axis];
+      primitives.data() + end, [axis](auto& primitive_a, auto& primitive_b) {
+        return primitive_a.center[axis] < primitive_b.center[axis];
       });
 
   // if we were not able to split, just break the primitives in half
@@ -1473,9 +1478,8 @@ static pair<int, int> split_balanced(vector<int>& primitives,
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
-static pair<int, int> split_middle(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end) {
+static pair<int, int> split_middle(vector<trace_bvh_primitive>& primitives, 
+    int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
@@ -1483,7 +1487,7 @@ static pair<int, int> split_middle(vector<int>& primitives,
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
   for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, centers[primitives[i]]);
+    cbbox = merge(cbbox, primitives[i].center);
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, axis};
 
@@ -1494,8 +1498,8 @@ static pair<int, int> split_middle(vector<int>& primitives,
 
   // split the space in the middle along the largest axis
   mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [axis, middle = center(cbbox)[axis], &centers](
-                      auto a) { return centers[a][axis] < middle; }) -
+                  [axis, middle = center(cbbox)[axis]](
+                      auto& primitive) { return primitive.center[axis] < middle; }) -
               primitives.data());
 
   // if we were not able to split, just break the primitives in half
@@ -1509,18 +1513,17 @@ static pair<int, int> split_middle(vector<int>& primitives,
 }
 
 // Split bvh nodes according to a type
-static pair<int, int> split_nodes(vector<int>& primitives,
-    const vector<bbox3f>& bboxes, const vector<vec3f>& centers, int start,
-    int end, trace_bvh_type type) {
+static pair<int, int> split_nodes(vector<trace_bvh_primitive>& primitives,
+    int start, int end, trace_bvh_type type) {
   switch (type) {
     case trace_bvh_type::default_:
-      return split_middle(primitives, bboxes, centers, start, end);
+      return split_middle(primitives, start, end);
     case trace_bvh_type::highquality:
-      return split_sah(primitives, bboxes, centers, start, end);
+      return split_sah(primitives, start, end);
     case trace_bvh_type::middle:
-      return split_middle(primitives, bboxes, centers, start, end);
+      return split_middle(primitives, start, end);
     case trace_bvh_type::balanced:
-      return split_balanced(primitives, bboxes, centers, start, end);
+      return split_balanced(primitives, start, end);
     default: throw std::runtime_error("should not have gotten here");
   }
 }
@@ -1529,27 +1532,14 @@ static pair<int, int> split_nodes(vector<int>& primitives,
 const int bvh_max_prims = 4;
 
 // Build BVH nodes
-static void build_bvh_serial(
-    trace_bvh& bvh, vector<bbox3f>& bboxes, trace_bvh_type type) {
-  // get values
-  auto& nodes      = bvh.nodes;
-  auto& primitives = bvh.primitives;
-
+static void build_bvh_serial(vector<trace_bvh_node>& nodes,
+    vector<trace_bvh_primitive>& primitives, trace_bvh_type type) {
   // prepare to build nodes
   nodes.clear();
-  nodes.reserve(bboxes.size() * 2);
-
-  // prepare primitives
-  bvh.primitives.resize(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) bvh.primitives[idx] = idx;
-
-  // prepare centers
-  auto centers = vector<vec3f>(bboxes.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++)
-    centers[idx] = center(bboxes[idx]);
+  nodes.reserve(primitives.size() * 2);
 
   // queue up first node
-  auto queue = std::deque<vec3i>{{0, 0, (int)bboxes.size()}};
+  auto queue = std::deque<vec3i>{{0, 0, (int)primitives.size()}};
   nodes.emplace_back();
 
   // create nodes until the queue is empty
@@ -1565,13 +1555,12 @@ static void build_bvh_serial(
     // compute bounds
     node.bbox = invalidb3f;
     for (auto i = start; i < end; i++)
-      node.bbox = merge(node.bbox, bboxes[primitives[i]]);
+      node.bbox = merge(node.bbox, primitives[i].bbox);
 
     // split into two children
     if (end - start > bvh_max_prims) {
       // get split
-      auto [mid, axis] = split_nodes(
-          primitives, bboxes, centers, start, end, type);
+      auto [mid, axis] = split_nodes(primitives, start, end, type);
 
       // make an internal node
       node.internal = true;
@@ -1724,45 +1713,61 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>{};
+  auto primitives = vector<trace_bvh_primitive>{};
   if (!shape.points.empty()) {
-    bboxes = vector<bbox3f>(shape.points.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
+    for (auto idx = 0; idx < shape.points.size(); idx++) {
       auto& p     = shape.points[idx];
-      bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
+      auto& primitive = primitives.emplace_back();
+      primitive.bbox = point_bounds(shape.positions[p], shape.radius[p]);
+      primitive.center = center(primitive.bbox);
+      primitive.primitive = idx;
     }
   } else if (!shape.lines.empty()) {
-    bboxes = vector<bbox3f>(shape.lines.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
+    for (auto idx = 0; idx < shape.lines.size(); idx++) {
       auto& l     = shape.lines[idx];
-      bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
+      auto& primitive = primitives.emplace_back();
+      primitive.bbox = line_bounds(shape.positions[l.x], shape.positions[l.y],
           shape.radius[l.x], shape.radius[l.y]);
+      primitive.center = center(primitive.bbox);
+      primitive.primitive = idx;
     }
   } else if (!shape.triangles.empty()) {
-    bboxes = vector<bbox3f>(shape.triangles.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
+    for (auto idx = 0; idx < shape.triangles.size(); idx++) {
+      auto& primitive = primitives.emplace_back();
       auto& t     = shape.triangles[idx];
-      bboxes[idx] = triangle_bounds(
+      primitive.bbox = triangle_bounds(
           shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
+      primitive.center = center(primitive.bbox);
+      primitive.primitive = idx;
     }
   } else if (!shape.quads.empty()) {
-    bboxes = vector<bbox3f>(shape.quads.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
+    for (auto idx = 0; idx < shape.quads.size(); idx++) {
       auto& q     = shape.quads[idx];
-      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+      auto& primitive = primitives.emplace_back();
+      primitive.bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
+      primitive.center = center(primitive.bbox);
+      primitive.primitive = idx;
     }
   } else if (!shape.quadspos.empty()) {
-    bboxes = vector<bbox3f>(shape.quadspos.size());
-    for (auto idx = 0; idx < bboxes.size(); idx++) {
+    for (auto idx = 0; idx < shape.quadspos.size(); idx++) {
       auto& q     = shape.quadspos[idx];
-      bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+      auto& primitive = primitives.emplace_back();
+      primitive.bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
+      primitive.center = center(primitive.bbox);
+      primitive.primitive = idx;
     }
   }
 
   // build nodes
-  build_bvh_serial(shape.bvh, bboxes, params.bvh);
+  build_bvh_serial(shape.bvh.nodes, primitives, params.bvh);
+
+  // set bvh primitives
+  shape.bvh.primitives.resize(primitives.size());
+  for(auto idx = 0; idx < primitives.size(); idx++) {
+    shape.bvh.primitives[idx] = primitives[idx].primitive;
+  }
 }
 
 void init_bvh(trace_scene& scene, const trace_params& params) {
@@ -1782,25 +1787,34 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
   // create instances
   scene.bvh.instances.clear();
   scene.bvh.instances.reserve(scene.shapes.size());
-  for(auto idx = 0; idx < scene.shapes.size(); idx++) {
-    for(auto iidx = 0; iidx < scene.shapes[idx].frames.size(); iidx++) {
+  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+    for (auto iidx = 0; iidx < scene.shapes[idx].frames.size(); iidx++) {
       scene.bvh.instances.push_back({idx, iidx});
     }
   }
 
   // instance bboxes
-  auto bboxes = vector<bbox3f>(scene.bvh.instances.size());
-  for (auto idx = 0; idx < bboxes.size(); idx++) {
+  auto primitives = vector<trace_bvh_primitive>{};
+  for (auto idx = 0; idx < scene.bvh.instances.size(); idx++) {
     auto& instance = scene.bvh.instances[idx];
     auto& shape    = scene.shapes[instance.x];
     auto& frame    = shape.frames[instance.y];
-    bboxes[idx]    = shape.bvh.nodes.empty()
+    auto& primitive = primitives.emplace_back();
+    primitive.bbox    = shape.bvh.nodes.empty()
                       ? invalidb3f
                       : transform_bbox(frame, shape.bvh.nodes[0].bbox);
+    primitive.center = center(primitive.bbox);
+    primitive.primitive = idx;
   }
 
   // build nodes
-  build_bvh_serial(scene.bvh, bboxes, params.bvh);
+  build_bvh_serial(scene.bvh.nodes, primitives, params.bvh);
+
+  // set bvh primitives
+  scene.bvh.primitives.resize(primitives.size());
+  for(auto idx = 0; idx < primitives.size(); idx++) {
+    scene.bvh.primitives[idx] = primitives[idx].primitive;
+  }
 }
 
 static void update_bvh(trace_shape& shape, const trace_params& params) {
@@ -2041,10 +2055,10 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& instance_ = scene.bvh.instances[scene.bvh.primitives[idx]];
-        auto& frame = scene.shapes[instance_.x].frames[instance_.y];
-        auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
-        if (intersect_shape_bvh(scene.shapes[instance_.x], inv_ray, element,
-                uv, distance, find_any)) {
+        auto& frame     = scene.shapes[instance_.x].frames[instance_.y];
+        auto  inv_ray   = transform_ray(inverse(frame, non_rigid_frames), ray);
+        if (intersect_shape_bvh(scene.shapes[instance_.x], inv_ray, element, uv,
+                distance, find_any)) {
           hit      = true;
           shape    = instance_.x;
           instance = instance_.y;
@@ -2521,14 +2535,14 @@ static float sample_lights_pdf(
       // check all intersection
       auto  lpdf          = 0.0f;
       auto  next_position = position;
-      auto& shape     = scene.shapes[light.shape];
-      auto& frame     = shape.frames[light.instance_];
+      auto& shape         = scene.shapes[light.shape];
+      auto& frame         = shape.frames[light.instance_];
       for (auto bounce = 0; bounce < 100; bounce++) {
-        auto isec = intersect_instance_bvh(scene, light.shape,
-            light.instance_, {next_position, direction});
+        auto isec = intersect_instance_bvh(
+            scene, light.shape, light.instance_, {next_position, direction});
         if (!isec.hit) break;
         // accumulate pdf
-        auto  lposition = transform_point(
+        auto lposition = transform_point(
             frame, eval_shape_elem(shape, shape.quadspos, shape.positions,
                        isec.element, isec.uv));
         auto lnormal = transform_normal(frame,
@@ -2945,7 +2959,7 @@ void init_lights(trace_scene& scene) {
     if (!shape.triangles.empty()) {
       shape.elements_cdf = vector<float>(shape.triangles.size());
       for (auto idx = 0; idx < shape.elements_cdf.size(); idx++) {
-        auto& t        = shape.triangles[idx];
+        auto& t                 = shape.triangles[idx];
         shape.elements_cdf[idx] = triangle_area(
             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
         if (idx) shape.elements_cdf[idx] += shape.elements_cdf[idx - 1];
@@ -2954,16 +2968,16 @@ void init_lights(trace_scene& scene) {
     if (!shape.quads.empty()) {
       shape.elements_cdf = vector<float>(shape.quads.size());
       for (auto idx = 0; idx < shape.elements_cdf.size(); idx++) {
-        auto& t        = shape.quads[idx];
-        shape.elements_cdf[idx] = quad_area(shape.positions[t.x], shape.positions[t.y],
-            shape.positions[t.z], shape.positions[t.w]);
+        auto& t                 = shape.quads[idx];
+        shape.elements_cdf[idx] = quad_area(shape.positions[t.x],
+            shape.positions[t.y], shape.positions[t.z], shape.positions[t.w]);
         if (idx) shape.elements_cdf[idx] += shape.elements_cdf[idx - 1];
       }
     }
-    for(auto iidx = 0; iidx < shape.frames.size(); iidx++) {
+    for (auto iidx = 0; iidx < shape.frames.size(); iidx++) {
       auto& light       = scene.lights.emplace_back();
       light.shape       = idx;
-      light.instance_    = iidx;
+      light.instance_   = iidx;
       light.environment = -1;
     }
   }
@@ -2971,22 +2985,22 @@ void init_lights(trace_scene& scene) {
     auto& environment = scene.environments[idx];
     if (environment.emission == zero3f) continue;
     if (environment.emission_tex >= 0) {
-      auto& texture = scene.textures[environment.emission_tex];
-      auto  size    = texture_size(texture);
-      environment.texels_cdf     = vector<float>(size.x * size.y);
+      auto& texture          = scene.textures[environment.emission_tex];
+      auto  size             = texture_size(texture);
+      environment.texels_cdf = vector<float>(size.x * size.y);
       if (size != zero2i) {
         for (auto i = 0; i < environment.texels_cdf.size(); i++) {
-          auto ij      = vec2i{i % size.x, i / size.x};
-          auto th      = (ij.y + 0.5f) * pif / size.y;
-          auto value   = lookup_texture(texture, ij);
+          auto ij                   = vec2i{i % size.x, i / size.x};
+          auto th                   = (ij.y + 0.5f) * pif / size.y;
+          auto value                = lookup_texture(texture, ij);
           environment.texels_cdf[i] = max(xyz(value)) * sin(th);
           if (i) environment.texels_cdf[i] += environment.texels_cdf[i - 1];
         }
       }
     }
     auto& light       = scene.lights.emplace_back();
-    light.shape    = -1;
-    light.instance_ = -1;
+    light.shape       = -1;
+    light.instance_   = -1;
     light.environment = idx;
   }
 }
