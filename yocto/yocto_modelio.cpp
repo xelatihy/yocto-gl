@@ -2910,13 +2910,9 @@ static pbrt_camera convert_camera(const pbrt_command& command, const vector<pbrt
 }
 
 // convert pbrt textures
-static void convert_pbrt_textures(const string& filename,
-    vector<pbrt_texture>& textures, const vector<pbrt_command>& commands, unordered_map<string, int>& texture_map, 
-    bool verbose = false) {
-  for (auto& command : commands) {
-    auto index                = (int)texture_map.size();
-    texture_map[command.name] = index;
-  }
+static pbrt_texture convert_texture(
+    const pbrt_command& command, unordered_map<string, int>& texture_map,
+    const vector<pbrt_texture>& textures, bool verbose = false) {
   auto get_filename = [&textures, &texture_map](const string& name) {
     if (name.empty()) return ""s;
     auto pos = texture_map.find(name);
@@ -2924,10 +2920,8 @@ static void convert_pbrt_textures(const string& filename,
     return textures.at(pos->second).filename;
   };
 
-  for (auto& command : commands) {
-    auto& texture = textures.emplace_back();
+    auto texture = pbrt_texture{};
     texture.name = command.name;
-    try {
       if (command.type == "imagemap") {
         texture.filename = "";
         get_pbrt_value(command.values, "filename", texture.filename);
@@ -2984,10 +2978,7 @@ static void convert_pbrt_textures(const string& filename,
       } else {
         throw std::invalid_argument{"unknown texture " + command.type};
       }
-    } catch (std::invalid_argument& e) {
-      throw std::runtime_error{filename + ": conversion error"};
-    }
-  }
+      return texture;
 }
 
 // convert pbrt materials
@@ -3733,7 +3724,10 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
       pbrt.cameras.push_back(convert_camera(command, pbrt.films));
     }
     auto texture_map = unordered_map<string, int>{};
-    convert_pbrt_textures(filename, pbrt.textures, pbrt.textures_commands, texture_map);
+    for(auto& command : pbrt.textures_commands) {
+      texture_map[command.name] = (int)pbrt.textures.size();
+      pbrt.textures.push_back(convert_texture(command, texture_map, pbrt.textures));
+    }
     for(auto& command : pbrt.materials_commands) {
       pbrt.materials.push_back(convert_material(command, pbrt.textures, texture_map, pbrt.materials));
     }
