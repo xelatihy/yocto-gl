@@ -3108,14 +3108,14 @@ static void convert_pbrt_materials(const string& filename,
         get_texture(values, "Ks", specular, specular_map, vec3f{0.25});
         get_texture(values, "Kt", transmission, transmission_map, vec3f{0});
         if (max(transmission) > 0.1) {
-          material.color         = transmission;
-          material.color_map     = transmission_map;
+          material.color        = transmission;
+          material.color_map    = transmission_map;
           material.specular     = 1;
           material.transmission = 1;
         } else {
           material.color     = diffuse;
           material.color_map = diffuse_map;
-          material.specular = 1;
+          material.specular  = 1;
         }
         get_scalar(values, "opacity", material.opacity, 1);
         get_scalar(values, "eta", material.ior, 1.5);
@@ -3134,9 +3134,11 @@ static void convert_pbrt_materials(const string& filename,
         get_scalar(values, "eta", material.ior, 1.5);
         get_roughness(values, material.roughness, 0.1);
       } else if (material.type == "matte") {
-        get_texture(values, "Kd", material.color, material.color_map, vec3f{0.5});
+        get_texture(
+            values, "Kd", material.color, material.color_map, vec3f{0.5});
       } else if (material.type == "mirror") {
-        get_texture(values, "Kr", material.color, material.color_map, vec3f{0.9});
+        get_texture(
+            values, "Kr", material.color, material.color_map, vec3f{0.9});
         material.metallic  = 1;
         material.roughness = 0;
       } else if (material.type == "metal") {
@@ -3148,11 +3150,12 @@ static void convert_pbrt_materials(const string& filename,
             vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
         get_color(values, "k", etak,
             vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
-        material.color      = eta_to_reflectivity(eta, etak);
+        material.color     = eta_to_reflectivity(eta, etak);
         material.roughness = 0.01f;
         get_roughness(values, material.roughness, 0.01);
       } else if (material.type == "substrate") {
-        get_texture(values, "Kd", material.color, material.color_map, vec3f{0.5});
+        get_texture(
+            values, "Kd", material.color, material.color_map, vec3f{0.5});
         get_scalar(values, "Ks", material.specular, 0.5);
         get_scalar(values, "eta", material.ior, 1.5);
         material.roughness = 0.1f;
@@ -3163,7 +3166,7 @@ static void convert_pbrt_materials(const string& filename,
         //     vec3f{1});
         // get_texture(values, "Kt", material.transmission,
         //     material.transmission_map, vec3f{1});
-        material.color         = {1, 1, 1};
+        material.color        = {1, 1, 1};
         material.specular     = 1;
         material.transmission = 1;
         material.thin         = false;
@@ -3181,7 +3184,8 @@ static void convert_pbrt_materials(const string& filename,
         material.roughness = 1;
         if (verbose) printf("disney material not properly supported\n");
       } else if (material.type == "kdsubsurface") {
-        get_texture(values, "Kd", material.color, material.color_map, vec3f{0.5});
+        get_texture(
+            values, "Kd", material.color, material.color_map, vec3f{0.5});
         get_scalar(values, "Kr", material.specular, 1);
         get_scalar(values, "eta", material.ior, 1.5);
         material.roughness = 0;
@@ -3226,35 +3230,35 @@ static void convert_pbrt_materials(const string& filename,
         if (bsdffile.rfind("/") != string::npos)
           bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
         if (bsdffile == "paint.bsdf") {
-          material.color      = {0.6f, 0.6f, 0.6f};
+          material.color     = {0.6f, 0.6f, 0.6f};
           material.specular  = 1;
           material.ior       = 1.5;
           material.roughness = 0.2;
         } else if (bsdffile == "ceramic.bsdf") {
-          material.color      = {0.6f, 0.6f, 0.6f};
+          material.color     = {0.6f, 0.6f, 0.6f};
           material.specular  = 1;
           material.ior       = 1.5;
           material.roughness = 0.25;
         } else if (bsdffile == "leather.bsdf") {
-          material.color      = {0.6f, 0.57f, 0.48f};
+          material.color     = {0.6f, 0.57f, 0.48f};
           material.specular  = 1;
           material.ior       = 1.5;
           material.roughness = 0.3;
         } else if (bsdffile == "coated_copper.bsdf") {
-          auto eta      = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
-          auto etak     = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
+          auto eta       = vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f};
+          auto etak      = vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f};
           material.color = eta_to_reflectivity(eta, etak);
           material.metallic  = 1;
           material.roughness = 0.01;
         } else if (bsdffile == "roughglass_alpha_0.2.bsdf") {
-          material.color         = {1, 1, 1};
+          material.color        = {1, 1, 1};
           material.specular     = 1;
           material.ior          = 1.5;
           material.transmission = 1;
           material.roughness    = 0.2;
         } else if (bsdffile == "roughgold_alpha_0.2.bsdf") {
-          auto eta      = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
-          auto etak     = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
+          auto eta       = vec3f{0.1431189557f, 0.3749570432f, 1.4424785571f};
+          auto etak      = vec3f{3.9831604247f, 2.3857207478f, 1.6032152899f};
           material.color = eta_to_reflectivity(eta, etak);
           material.metallic  = 1;
           material.roughness = 0.2;

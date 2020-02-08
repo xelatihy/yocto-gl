@@ -1082,7 +1082,7 @@ void set_material_emission(
 }
 void set_material_color(
     opengl_scene& scene, int idx, const vec3f& color, int color_txt) {
-  auto& material       = scene._shapes[idx].material;
+  auto& material     = scene._shapes[idx].material;
   material.color     = color;
   material.color_map = color_txt;
 }

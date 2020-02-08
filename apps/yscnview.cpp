@@ -205,10 +205,10 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
         glscene, id, material.emission, material.emission_tex);
     set_material_color(glscene, id,
         (1 - material.transmission) * material.color, material.color_tex);
-    set_material_specular(glscene, id, (1 - material.transmission) * material.specular,
-        material.specular_tex);
-    set_material_metallic(
-        glscene, id, (1 - material.transmission) * material.metallic, material.metallic_tex);
+    set_material_specular(glscene, id,
+        (1 - material.transmission) * material.specular, material.specular_tex);
+    set_material_metallic(glscene, id,
+        (1 - material.transmission) * material.metallic, material.metallic_tex);
     set_material_roughness(
         glscene, id, material.roughness, material.roughness_tex);
     set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
@@ -494,7 +494,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
           (1 - material.transmission) * material.specular,
           material.specular_tex);
       set_material_metallic(app->glscene, app->selected_material,
-          (1 - material.transmission) * material.metallic, material.metallic_tex);
+          (1 - material.transmission) * material.metallic,
+          material.metallic_tex);
       set_material_roughness(app->glscene, app->selected_material,
           material.roughness, material.roughness_tex);
       set_material_opacity(app->glscene, app->selected_material,

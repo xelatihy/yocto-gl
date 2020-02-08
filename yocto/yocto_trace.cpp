@@ -3209,7 +3209,7 @@ void set_material_emission(
 }
 void set_material_color(
     trace_scene& scene, int idx, const vec3f& color, int color_txt) {
-  auto& material    = scene.shapes[idx].material;
+  auto& material     = scene.shapes[idx].material;
   material.color     = color;
   material.color_tex = color_txt;
 }

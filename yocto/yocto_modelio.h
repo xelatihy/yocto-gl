@@ -543,7 +543,7 @@ struct pbrt_material {
   float  roughness       = 0;
   float  ior             = 1.5;
   float  opacity         = 1;
-  string color_map        = "";
+  string color_map       = "";
   string opacity_map     = "";
   bool   thin            = true;
   vec3f  volmeanfreepath = zero3f;
