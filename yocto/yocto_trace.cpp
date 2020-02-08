@@ -1373,7 +1373,7 @@ static bool intersect_scene_embree_bvh(const trace_scene& scene,
 struct trace_bvh_primitive {
   bbox3f bbox      = invalidb3f;
   vec3f  center    = zero3f;
-  int    primitive = 0;
+  vec2i  primitive = {0, 0};
 };
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
@@ -1696,7 +1696,7 @@ static void update_bvh(trace_bvh& bvh, const vector<bbox3f>& bboxes) {
       }
     } else {
       for (auto idx = 0; idx < node.num; idx++) {
-        node.bbox = merge(node.bbox, bboxes[bvh.primitives[node.start + idx]]);
+        node.bbox = merge(node.bbox, bboxes[node.start + idx]);
       }
     }
   }
@@ -1720,7 +1720,7 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
       auto& primitive = primitives.emplace_back();
       primitive.bbox = point_bounds(shape.positions[p], shape.radius[p]);
       primitive.center = center(primitive.bbox);
-      primitive.primitive = idx;
+      primitive.primitive = {idx, 0};
     }
   } else if (!shape.lines.empty()) {
     for (auto idx = 0; idx < shape.lines.size(); idx++) {
@@ -1729,7 +1729,7 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
       primitive.bbox = line_bounds(shape.positions[l.x], shape.positions[l.y],
           shape.radius[l.x], shape.radius[l.y]);
       primitive.center = center(primitive.bbox);
-      primitive.primitive = idx;
+      primitive.primitive = {idx, 1};
     }
   } else if (!shape.triangles.empty()) {
     for (auto idx = 0; idx < shape.triangles.size(); idx++) {
@@ -1738,7 +1738,7 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
       primitive.bbox = triangle_bounds(
           shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
       primitive.center = center(primitive.bbox);
-      primitive.primitive = idx;
+      primitive.primitive = {idx, 2};
     }
   } else if (!shape.quads.empty()) {
     for (auto idx = 0; idx < shape.quads.size(); idx++) {
@@ -1747,7 +1747,7 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
       primitive.bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
       primitive.center = center(primitive.bbox);
-      primitive.primitive = idx;
+      primitive.primitive = {idx, 3};
     }
   } else if (!shape.quadspos.empty()) {
     for (auto idx = 0; idx < shape.quadspos.size(); idx++) {
@@ -1756,7 +1756,7 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
       primitive.bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
       primitive.center = center(primitive.bbox);
-      primitive.primitive = idx;
+      primitive.primitive = {idx, 4};
     }
   }
 
@@ -1784,27 +1784,21 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
   }
 #endif
 
-  // create instances
-  scene.bvh.instances.clear();
-  scene.bvh.instances.reserve(scene.shapes.size());
-  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-    for (auto iidx = 0; iidx < scene.shapes[idx].frames.size(); iidx++) {
-      scene.bvh.instances.push_back({idx, iidx});
-    }
-  }
-
   // instance bboxes
   auto primitives = vector<trace_bvh_primitive>{};
-  for (auto idx = 0; idx < scene.bvh.instances.size(); idx++) {
-    auto& instance = scene.bvh.instances[idx];
-    auto& shape    = scene.shapes[instance.x];
-    auto& frame    = shape.frames[instance.y];
-    auto& primitive = primitives.emplace_back();
-    primitive.bbox    = shape.bvh.nodes.empty()
-                      ? invalidb3f
-                      : transform_bbox(frame, shape.bvh.nodes[0].bbox);
-    primitive.center = center(primitive.bbox);
-    primitive.primitive = idx;
+  auto shape_id = 0;
+  for (auto& shape : scene.shapes) {
+    auto instance_id = 0;
+    for (auto& frame : shape.frames) {
+      auto& primitive = primitives.emplace_back();
+      primitive.bbox    = shape.bvh.nodes.empty()
+                        ? invalidb3f
+                        : transform_bbox(frame, shape.bvh.nodes[0].bbox);
+      primitive.center = center(primitive.bbox);
+      primitive.primitive = {shape_id, instance_id};
+      instance_id += 1;
+    }
+    shape_id += 1;
   }
 
   // build nodes
@@ -1825,38 +1819,37 @@ static void update_bvh(trace_shape& shape, const trace_params& params) {
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>{};
+  auto bboxes = vector<bbox3f>(shape.bvh.primitives.size());
   if (!shape.points.empty()) {
-    bboxes = vector<bbox3f>(shape.points.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& p     = shape.points[idx];
+      auto& p     = shape.points[shape.bvh.primitives[idx].x];
       bboxes[idx] = point_bounds(shape.positions[p], shape.radius[p]);
     }
   } else if (!shape.lines.empty()) {
     bboxes = vector<bbox3f>(shape.lines.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& l     = shape.lines[idx];
+      auto& l     = shape.lines[shape.bvh.primitives[idx].x];
       bboxes[idx] = line_bounds(shape.positions[l.x], shape.positions[l.y],
           shape.radius[l.x], shape.radius[l.y]);
     }
   } else if (!shape.triangles.empty()) {
     bboxes = vector<bbox3f>(shape.triangles.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& t     = shape.triangles[idx];
+      auto& t     = shape.triangles[shape.bvh.primitives[idx].x];
       bboxes[idx] = triangle_bounds(
           shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
     }
   } else if (!shape.quads.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape.quads[idx];
+      auto& q     = shape.quads[shape.bvh.primitives[idx].x];
       bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
     }
   } else if (!shape.quadspos.empty()) {
     bboxes = vector<bbox3f>(shape.quads.size());
     for (auto idx = 0; idx < bboxes.size(); idx++) {
-      auto& q     = shape.quads[idx];
+      auto& q     = shape.quads[shape.bvh.primitives[idx].x];
       bboxes[idx] = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
     }
@@ -1878,9 +1871,9 @@ void update_bvh(trace_scene& scene, const vector<int>& updated_instances,
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>(scene.bvh.instances.size());
+  auto bboxes = vector<bbox3f>(scene.bvh.primitives.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& instance = scene.bvh.instances[idx];
+    auto& instance = scene.bvh.primitives[idx];
     auto& frame    = scene.shapes[instance.x].frames[instance.y];
     auto& sbvh     = scene.shapes[instance.x].bvh;
     bboxes[idx]    = transform_bbox(frame, sbvh.nodes[0].bbox);
@@ -1943,51 +1936,51 @@ static bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray_,
       }
     } else if (!shape.points.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& p = shape.points[shape.bvh.primitives[idx]];
+        auto& p = shape.points[shape.bvh.primitives[idx].x];
         if (intersect_point(
                 ray, shape.positions[p], shape.radius[p], uv, distance)) {
           hit      = true;
-          element  = shape.bvh.primitives[idx];
+          element  = shape.bvh.primitives[idx].x;
           ray.tmax = distance;
         }
       }
     } else if (!shape.lines.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& l = shape.lines[shape.bvh.primitives[idx]];
+        auto& l = shape.lines[shape.bvh.primitives[idx].x];
         if (intersect_line(ray, shape.positions[l.x], shape.positions[l.y],
                 shape.radius[l.x], shape.radius[l.y], uv, distance)) {
           hit      = true;
-          element  = shape.bvh.primitives[idx];
+          element  = shape.bvh.primitives[idx].x;
           ray.tmax = distance;
         }
       }
     } else if (!shape.triangles.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& t = shape.triangles[shape.bvh.primitives[idx]];
+        auto& t = shape.triangles[shape.bvh.primitives[idx].x];
         if (intersect_triangle(ray, shape.positions[t.x], shape.positions[t.y],
                 shape.positions[t.z], uv, distance)) {
           hit      = true;
-          element  = shape.bvh.primitives[idx];
+          element  = shape.bvh.primitives[idx].x;
           ray.tmax = distance;
         }
       }
     } else if (!shape.quads.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& q = shape.quads[shape.bvh.primitives[idx]];
+        auto& q = shape.quads[shape.bvh.primitives[idx].x];
         if (intersect_quad(ray, shape.positions[q.x], shape.positions[q.y],
                 shape.positions[q.z], shape.positions[q.w], uv, distance)) {
           hit      = true;
-          element  = shape.bvh.primitives[idx];
+          element  = shape.bvh.primitives[idx].x;
           ray.tmax = distance;
         }
       }
     } else if (!shape.quadspos.empty()) {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& q = shape.quadspos[shape.bvh.primitives[idx]];
+        auto& q = shape.quadspos[shape.bvh.primitives[idx].x];
         if (intersect_quad(ray, shape.positions[q.x], shape.positions[q.y],
                 shape.positions[q.z], shape.positions[q.w], uv, distance)) {
           hit      = true;
-          element  = shape.bvh.primitives[idx];
+          element  = shape.bvh.primitives[idx].x;
           ray.tmax = distance;
         }
       }
@@ -2054,7 +2047,7 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& instance_ = scene.bvh.instances[scene.bvh.primitives[idx]];
+        auto& instance_ = scene.bvh.primitives[idx];
         auto& frame     = scene.shapes[instance_.x].frames[instance_.y];
         auto  inv_ray   = transform_ray(inverse(frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(scene.shapes[instance_.x], inv_ray, element, uv,

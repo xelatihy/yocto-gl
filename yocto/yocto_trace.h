@@ -265,8 +265,7 @@ struct trace_bvh_node {
 // Application data is not stored explicitly.
 struct trace_bvh {
   vector<trace_bvh_node> nodes      = {};
-  vector<int>            primitives = {};
-  vector<vec2i>          instances  = {};
+  vector<vec2i>          primitives = {};
 };
 
 // Camera based on a simple lens model. The camera is placed using a frame.
