@@ -3362,13 +3362,11 @@ static pbrt_shape convert_shape(const pbrt_shape_command& command, const string&
 }
 
 // Convert pbrt arealights
-static void convert_pbrt_arealights(const string& filename,
-    vector<pbrt_arealight>& lights, const vector<pbrt_command>& commands, 
+static pbrt_arealight convert_arealight(
+    const pbrt_command& command, 
     bool verbose = false) {
-  for (auto& command : commands) {
-    auto& light = lights.emplace_back();
+    auto light = pbrt_arealight{};
     light.name = command.name;
-    try {
       if (command.type == "diffuse") {
         auto l = vec3f{1}, scale = vec3f{1};
         get_pbrt_value(command.values, "L", l);
@@ -3377,10 +3375,7 @@ static void convert_pbrt_arealights(const string& filename,
       } else {
         throw std::invalid_argument{"unknown arealight " + command.type};
       }
-    } catch (std::invalid_argument& e) {
-      throw std::runtime_error{filename + ": conversion error"};
-    }
-  }
+    return light;
 }
 
 // Convert pbrt lights
@@ -3731,7 +3726,9 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
     for(auto& command : pbrt.shapes_commands) {
       pbrt.shapes.push_back(convert_shape(command, filename));
     }
-    convert_pbrt_arealights(filename, pbrt.arealights, pbrt.arealights_commands);
+    for(auto& command : pbrt.arealights_commands) {
+      pbrt.arealights.push_back(convert_arealight(command));
+    }
   } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
   }
@@ -3955,13 +3952,6 @@ void save_pbrt(
     format_values(fs, "AttributeEnd\n");
   }
 
-  for (auto& command : pbrt.lights_commands) {
-    format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", (mat4f)command.frame);
-    format_values(fs, "LightSource \"{}\" {}\n", command.type, command.values);
-    format_values(fs, "AttributeEnd\n");
-  }
-
   for (auto& environment : pbrt.environments) {
     auto command = pbrt_command{};
     command.frame = environment.frame;
@@ -3969,14 +3959,6 @@ void save_pbrt(
     command.values.push_back(make_pbrt_value("L", environment.emission));
     command.values.push_back(
         make_pbrt_value("mapname", environment.emission_map));
-    format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", (mat4f)command.frame);
-    format_values(
-        fs, "LightSource \"{}\" {}\n", command.type, command.values);
-    format_values(fs, "AttributeEnd\n");
-  }
-
-  for (auto& command : pbrt.environments_commands) {
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)command.frame);
     format_values(
