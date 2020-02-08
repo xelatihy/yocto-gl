@@ -832,24 +832,11 @@ void save_scene(
   }
 }
 
-// create and cleanup names and filenames
-static string make_safe_name(const string& name_, const string& base, int count,
-    const string& prefix, const string& suffix) {
-  auto name = name_;
-  if (name.empty()) name = base + std::to_string(count);
-  if (name.front() == '-') name = "_" + name;
-  if (name.front() >= '0' && name.front() <= '9') name = "_" + name;
-  for (auto& c : name) {
-    if (c == '-' || c == '_') continue;
-    if (c >= '0' && c <= '9') continue;
-    if (c >= 'a' && c <= 'z') continue;
-    if (c >= 'A' && c <= 'Z') continue;
-    c = '_';
-  }
-  std::transform(name.begin(), name.end(), name.begin(),
-      [](unsigned char c) { return std::tolower(c); });
-  return prefix + name + suffix;
+// create a name
+static string make_name(const string& prefix, size_t count, const string& ext = ".json") {
+  return prefix + "s/" + prefix + std::to_string(count) + ext;
 }
+
 static inline string make_safe_filename(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename) {
@@ -1663,8 +1650,7 @@ static void load_obj_scene(
   // convert cameras
   for (auto& ocam : obj.cameras) {
     auto& camera = scene.cameras.emplace_back();
-    camera.name  = make_safe_name(
-        ocam.name, "camera", (int)scene.cameras.size(), "cameras/", ".yaml");
+    camera.name  = make_name("camera", scene.cameras.size());
     camera.frame        = ocam.frame;
     camera.orthographic = ocam.ortho;
     camera.film         = max(ocam.width, ocam.height);
@@ -1715,8 +1701,7 @@ static void load_obj_scene(
     shape_name_counts[shape.name] += 1;
     if (shape_name_counts[shape.name] > 1)
       shape.name += std::to_string(shape_name_counts[shape.name]);
-    shape.name = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
-                 ".yaml";
+    shape.name = make_name("shape", scene.shapes.size());
     auto nmaterials = vector<string>{};
     auto ematerials = vector<int>{};
     auto has_quads  = has_obj_quads(oshape);
@@ -1772,8 +1757,7 @@ static void load_obj_scene(
   // convert environments
   for (auto& oenvironment : obj.environments) {
     auto& environment        = scene.environments.emplace_back();
-    environment.name         = make_safe_name(oenvironment.name, "environment",
-        scene.environments.size(), "environments/", ".yaml");
+    environment.name         = make_name("environment", scene.environments.size());
     environment.frame        = oenvironment.frame;
     environment.emission     = oenvironment.emission;
     environment.emission_tex = get_texture(
@@ -2048,8 +2032,7 @@ static void load_gltf_scene(
   for (auto& gnode : gltf.nodes) {
     if (gnode.camera >= 0) {
       auto& camera = scene.cameras.emplace_back(cameras[gnode.camera]);
-      camera.name  = make_safe_name(camera.name, "caemra",
-          (int)scene.cameras.size(), "cameras/", ".yaml");
+      camera.name  = make_name("caemra", scene.cameras.size());
       camera.frame = gnode.frame;
     }
     if (gnode.mesh >= 0) {
@@ -2090,8 +2073,7 @@ static void load_pbrt_scene(
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
     auto& camera = scene.cameras.emplace_back();
-    camera.name  = make_safe_name(
-        "", "camera", (int)scene.cameras.size(), "cameras/", ".yaml");
+    camera.name  = make_name("camera", scene.cameras.size());
     camera.frame  = pcamera.frame;
     camera.aspect = pcamera.aspect;
     camera.film   = 0.036;
@@ -2172,8 +2154,8 @@ static void load_pbrt_scene(
   // convert environments
   for (auto& penvironment : pbrt.environments) {
     auto& environment        = scene.environments.emplace_back();
-    environment.name         = make_safe_name("", "environment",
-        (int)scene.environments.size(), "environments/", ".yaml");
+    environment.name         = make_name("environment",
+        scene.environments.size());
     environment.frame        = penvironment.frame;
     environment.emission     = penvironment.emission;
     environment.emission_tex = get_texture(
@@ -2183,8 +2165,7 @@ static void load_pbrt_scene(
   // lights
   for (auto& plight : pbrt.lights) {
     auto& shape = scene.shapes.emplace_back();
-    shape.name  = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
-                 ".yaml";
+    shape.name  = make_name("shape" ,scene.shapes.size());
     shape.frame     = plight.area_frame;
     shape.triangles = plight.area_triangles;
     shape.positions = plight.area_positions;
