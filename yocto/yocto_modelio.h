@@ -553,14 +553,6 @@ struct pbrt_material {
   float  volscale        = 0.01;
 };
 
-// Pbrt medium
-struct pbrt_medium {
-  // medium parameters
-  string             name   = "";
-  string             type   = "";
-  vector<pbrt_value> values = {};
-};
-
 // Pbrt shape
 struct pbrt_shape {
   // shape parameters
@@ -637,7 +629,6 @@ struct pbrt_model {
   vector<pbrt_shape>       shapes       = {};
   vector<pbrt_texture>     textures     = {};
   vector<pbrt_material>    materials    = {};
-  vector<pbrt_medium>      mediums      = {};
   vector<pbrt_environment> environments = {};
   vector<pbrt_arealight>   arealights   = {};
   vector<pbrt_light>       lights       = {};
@@ -649,6 +640,7 @@ struct pbrt_model {
   vector<pbrt_command>      filters_commands      = {};
   vector<pbrt_command>     samplers_commands     = {};
   vector<pbrt_command> accelerators_commands = {};
+  vector<pbrt_command> mediums_commands = {};
 };
 
 // Load/save pbrt

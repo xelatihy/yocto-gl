@@ -3731,7 +3731,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
         pbrt.lights.pop_back();
       }
     } else if (cmd == "MakeNamedMedium") {
-      auto& medium = pbrt.mediums.emplace_back();
+      auto& medium = pbrt.mediums_commands.emplace_back();
       parse_pbrt_param(fs, str, medium.name);
       parse_pbrt_params(fs, str, medium.values);
       medium.type = "";
@@ -3986,10 +3986,9 @@ void save_pbrt(
         material.name, material.type, material.values);
   }
 
-  for (auto& medium_ : pbrt.mediums) {
-    auto medium = medium_;
+  for (auto& commands : pbrt.mediums_commands) {
     format_values(fs, "MakeNamedMedium \"{}\" \"string type\" \"{}\" {}\n",
-        medium.name, medium.type, medium.values);
+        commands.name, commands.type, commands.values);
   }
 
   for (auto& light_ : pbrt.lights) {
