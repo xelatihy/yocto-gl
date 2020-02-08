@@ -943,40 +943,6 @@ int add_shape(opengl_scene& scene) {
   scene._shapes.emplace_back();
   return (int)scene._shapes.size() - 1;
 }
-int add_shape(opengl_scene& scene, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
-  scene._shapes.emplace_back();
-  set_shape(scene, (int)scene._shapes.size() - 1, points, positions, normals,
-      texcoords, colors);
-  return (int)scene._shapes.size() - 1;
-}
-int add_shape(opengl_scene& scene, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
-  scene._shapes.emplace_back();
-  set_shape(scene, (int)scene._shapes.size() - 1, lines, positions, normals,
-      texcoords, colors);
-  return (int)scene._shapes.size() - 1;
-}
-int add_shape(opengl_scene& scene, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  scene._shapes.emplace_back();
-  set_shape(scene, (int)scene._shapes.size() - 1, triangles, positions, normals,
-      texcoords, colors, tangents);
-  return (int)scene._shapes.size() - 1;
-}
-int add_shape(opengl_scene& scene, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  scene._shapes.emplace_back();
-  set_shape(scene, (int)scene._shapes.size() - 1, quads, positions, normals,
-      texcoords, colors, tangents);
-  return (int)scene._shapes.size() - 1;
-}
 
 static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
     int size, int count, const float* values) {
