@@ -626,11 +626,6 @@ struct pbrt_model {
   // Low level commands
   vector<pbrt_command> cameras_commands      = {};
   vector<pbrt_command> films_commands        = {};
-  vector<pbrt_command> integrators_commands  = {};
-  vector<pbrt_command> filters_commands      = {};
-  vector<pbrt_command> samplers_commands     = {};
-  vector<pbrt_command> accelerators_commands = {};
-  vector<pbrt_command> mediums_commands      = {};
   vector<pbrt_command> environments_commands = {};
   vector<pbrt_command> lights_commands       = {};
   vector<pbrt_command> arealights_commands       = {};

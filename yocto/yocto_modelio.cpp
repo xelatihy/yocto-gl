@@ -3597,15 +3597,15 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
         stack.back().transform_end   = coordsys.at(name).transform_end;
       }
     } else if (cmd == "Integrator") {
-      auto& integrator = pbrt.integrators_commands.emplace_back();
+      auto integrator = pbrt_command{};
       parse_pbrt_param(fs, str, integrator.type);
       parse_pbrt_params(fs, str, integrator.values);
     } else if (cmd == "Sampler") {
-      auto& sampler = pbrt.samplers_commands.emplace_back();
+      auto sampler = pbrt_command{};
       parse_pbrt_param(fs, str, sampler.type);
       parse_pbrt_params(fs, str, sampler.values);
     } else if (cmd == "PixelFilter") {
-      auto& filter = pbrt.filters_commands.emplace_back();
+      auto filter = pbrt_command{};
       parse_pbrt_param(fs, str, filter.type);
       parse_pbrt_params(fs, str, filter.values);
     } else if (cmd == "Film") {
@@ -3613,7 +3613,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       parse_pbrt_param(fs, str, film.type);
       parse_pbrt_params(fs, str, film.values);
     } else if (cmd == "Accelerator") {
-      auto& accelerator = pbrt.accelerators_commands.emplace_back();
+      auto accelerator = pbrt_command{};
       parse_pbrt_param(fs, str, accelerator.type);
       parse_pbrt_params(fs, str, accelerator.values);
     } else if (cmd == "Camera") {
@@ -3687,7 +3687,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
         pbrt.lights_commands.pop_back();
       }
     } else if (cmd == "MakeNamedMedium") {
-      auto& medium = pbrt.mediums_commands.emplace_back();
+      auto medium = pbrt_command{};
       parse_pbrt_param(fs, str, medium.name);
       parse_pbrt_params(fs, str, medium.values);
       medium.type = "";
@@ -3867,28 +3867,6 @@ void save_pbrt(
     format_values(fs, "Film \"{}\" {}\n", command.type, command.values);
   }
 
-  for (auto& integrator_ : pbrt.integrators_commands) {
-    auto integrator = integrator_;
-    format_values(
-        fs, "Integrator \"{}\" {}\n", integrator.type, integrator.values);
-  }
-
-  for (auto& sampler_ : pbrt.samplers_commands) {
-    auto sampler = sampler_;
-    format_values(fs, "Sampler \"{}\" {}\n", sampler.type, sampler.values);
-  }
-
-  for (auto& filter_ : pbrt.filters_commands) {
-    auto filter = filter_;
-    format_values(fs, "PixelFilter \"{}\" {}\n", filter.type, filter.values);
-  }
-
-  for (auto& accelerator_ : pbrt.accelerators_commands) {
-    auto accelerator = accelerator_;
-    format_values(
-        fs, "Accelerator \"{}\" {}\n", accelerator.type, accelerator.values);
-  }
-
   format_values(fs, "\nWorldBegin\n\n");
 
   for (auto& texture : pbrt.textures) {
@@ -3967,11 +3945,6 @@ void save_pbrt(
 
   for (auto& command : pbrt.materials_commands) {
     format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
-        command.name, command.type, command.values);
-  }
-
-  for (auto& command : pbrt.mediums_commands) {
-    format_values(fs, "MakeNamedMedium \"{}\" \"string type\" \"{}\" {}\n",
         command.name, command.type, command.values);
   }
 
