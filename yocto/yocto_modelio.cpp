@@ -2911,8 +2911,8 @@ static pbrt_camera convert_camera(const pbrt_command& command, const vector<pbrt
 
 // convert pbrt textures
 static void convert_pbrt_textures(const string& filename,
-    vector<pbrt_texture>& textures, const vector<pbrt_command>& commands, bool verbose = false) {
-  auto texture_map = unordered_map<string, int>{};
+    vector<pbrt_texture>& textures, const vector<pbrt_command>& commands, unordered_map<string, int>& texture_map, 
+    bool verbose = false) {
   for (auto& command : commands) {
     auto index                = (int)texture_map.size();
     texture_map[command.name] = index;
@@ -2922,10 +2922,6 @@ static void convert_pbrt_textures(const string& filename,
     auto pos = texture_map.find(name);
     if (pos == texture_map.end()) return ""s;
     return textures[pos->second].filename;
-  };
-  auto make_placeholder = [](pbrt_texture& texture,
-                              const vec3f& color = {1, 0, 0}) {
-    texture.constant = color;
   };
 
   for (auto& command : commands) {
@@ -2939,7 +2935,7 @@ static void convert_pbrt_textures(const string& filename,
         texture.constant = vec3f{1};
         get_pbrt_value(command.values, "value", texture.constant);
       } else if (command.type == "bilerp") {
-        make_placeholder(texture, {1, 0, 0});
+        texture.constant = {1, 0, 0};
       } else if (command.type == "checkerboard") {
         // auto tex1     = get_pbrt_value(command.values, "tex1", pair{vec3f{1}, ""s});
         // auto tex2     = get_pbrt_value(command.values, "tex2", pair{vec3f{0}, ""s});
@@ -2950,13 +2946,13 @@ static void convert_pbrt_textures(const string& filename,
         // rgb1.z, 1}; params.color1 = {rgb2.x, rgb2.y, rgb2.z, 1}; params.scale
         // = 2; make_proc_image(texture.hdr, params); float_to_byte(texture.ldr,
         // texture.hdr); texture.hdr = {};
-        make_placeholder(texture, vec3f{0.5});
+        texture.constant = {0.5, 0.5, 0.5};
       } else if (command.type == "dots") {
-        make_placeholder(texture, vec3f{0.5});
+        texture.constant = {0.5, 0.5, 0.5};
       } else if (command.type == "fbm") {
-        make_placeholder(texture, vec3f{0.5});
+        texture.constant = {0.5, 0.5, 0.5};
       } else if (command.type == "marble") {
-        make_placeholder(texture, vec3f{0.5});
+        texture.constant = {0.5, 0.5, 0.5};
       } else if (command.type == "mix") {
         auto tex1 = pair{vec3f{0}, ""s}, tex2 = pair{vec3f{1}, ""s};
         get_pbrt_value(command.values, "tex1", tex1);
@@ -2966,7 +2962,7 @@ static void convert_pbrt_textures(const string& filename,
         } else if (!get_filename(tex2.second).empty()) {
           texture.filename = get_filename(tex2.second);
         } else {
-          make_placeholder(texture);
+          texture.constant = {1, 0, 0};
         }
       } else if (command.type == "scale") {
         auto tex1 = pair{vec3f{1}, ""s}, tex2 = pair{vec3f{1}, ""s};
@@ -2977,14 +2973,14 @@ static void convert_pbrt_textures(const string& filename,
         } else if (!get_filename(tex2.second).empty()) {
           texture.filename = get_filename(tex2.second);
         } else {
-          make_placeholder(texture);
+          texture.constant = {1, 0, 0};
         }
       } else if (command.type == "uv") {
-        make_placeholder(texture);
+          texture.constant = {1, 0, 0};
       } else if (command.type == "windy") {
-        make_placeholder(texture);
+          texture.constant = {1, 0, 0};
       } else if (command.type == "wrinkled") {
-        make_placeholder(texture);
+          texture.constant = {1, 0, 0};
       } else {
         throw std::invalid_argument{"unknown texture " + command.type};
       }
@@ -2997,14 +2993,8 @@ static void convert_pbrt_textures(const string& filename,
 // convert pbrt materials
 static void convert_pbrt_materials(const string& filename,
     vector<pbrt_material>& materials, const vector<pbrt_command>& commands, 
-    const vector<pbrt_texture>& textures,
+    const vector<pbrt_texture>& textures, const unordered_map<string, int>& texture_map,
     bool verbose = false) {
-  // add constant textures
-  auto texture_map = unordered_map<string, int>{};
-  for (auto idx = 0; idx < textures.size(); idx++) {
-    texture_map[textures[idx].name] = idx;
-  }
-
   // helpers
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
                          vec3f& color, string& filename,
@@ -3465,7 +3455,7 @@ static pbrt_light convert_light(const pbrt_command& command, bool verbose = fals
       return light;
 }
 
-static pbrt_environment convert_environment(const pbrt_command& command, vector<pbrt_texture>& textures,
+static pbrt_environment convert_environment(const pbrt_command& command,
     bool verbose = false) {
     auto environment = pbrt_environment{};
     environment.frame = command.frame;
@@ -3755,15 +3745,16 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
     for(auto& command : pbrt.cameras_commands) {
       pbrt.cameras.push_back(convert_camera(command, pbrt.films));
     }
-    convert_pbrt_textures(filename, pbrt.textures, pbrt.textures_commands);
-    convert_pbrt_materials(filename, pbrt.materials, pbrt.materials_commands, pbrt.textures);
+    auto texture_map = unordered_map<string, int>{};
+    convert_pbrt_textures(filename, pbrt.textures, pbrt.textures_commands, texture_map);
+    convert_pbrt_materials(filename, pbrt.materials, pbrt.materials_commands, pbrt.textures, texture_map);
     convert_pbrt_shapes(filename, pbrt.shapes, pbrt.shapes_commands);
     for(auto& command : pbrt.lights_commands) {
       pbrt.lights.push_back(convert_light(command));
     }
     convert_pbrt_arealights(filename, pbrt.arealights, pbrt.arealights_commands);
     for(auto& command : pbrt.environments_commands) {
-      pbrt.environments.push_back(convert_environment(command, pbrt.textures));
+      pbrt.environments.push_back(convert_environment(command));
     }
   } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
