@@ -303,7 +303,7 @@ struct trace_texture {
 struct trace_material {
   // lobes
   vec3f emission     = {0, 0, 0};
-  vec3f base         = {0, 0, 0};
+  vec3f color        = {0, 0, 0};
   float specular     = 0;
   float roughness    = 0;
   float metallic     = 0;
@@ -319,7 +319,7 @@ struct trace_material {
 
   // textures
   int  emission_tex     = -1;
-  int  base_tex         = -1;
+  int  color_tex        = -1;
   int  specular_tex     = -1;
   int  metallic_tex     = -1;
   int  roughness_tex    = -1;
