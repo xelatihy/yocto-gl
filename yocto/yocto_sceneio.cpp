@@ -1250,21 +1250,12 @@ namespace yocto {
 using json = nlohmann::json;
 
 // support for json conversions
-// static inline void to_json(json& j, const vec2f& value) {
-//   nlohmann::to_json(j, (const array<float, 2>&)value);
-// }
-// static inline void to_json(json& j, const vec3f& value) {
-//   nlohmann::to_json(j, (const array<float, 3>&)value);
-// }
-// static inline void to_json(json& j, const vec4f& value) {
-//   nlohmann::to_json(j, (const array<float, 4>&)value);
-// }
-// static inline void to_json(json& j, const mat3f& value) {
-//   nlohmann::to_json(j, (const array<float, 9>&)value);
-// }
-// static inline void to_json(json& j, const frame3f& value) {
-//   nlohmann::to_json(j, (const array<float, 12>&)value);
-// }
+static inline void to_json(json& j, const vec3f& value) {
+  nlohmann::to_json(j, (const array<float, 3>&)value);
+}
+static inline void to_json(json& j, const frame3f& value) {
+  nlohmann::to_json(j, (const array<float, 12>&)value);
+}
 
 static inline void from_json(const json& j, vec3f& value) {
   nlohmann::from_json(j, (array<float, 3>&)value);
@@ -1306,17 +1297,17 @@ static void load_json_scene(
   load_json(filename, js);
 
   // gets a json value
-  auto get_value = [](const json& cjs, const string& name, auto& value) {
-    if(!cjs.contains(name)) return;
-    cjs.at(name).get_to(value);
+  auto get_value = [](const json& ejs, const string& name, auto& value) {
+    if(!ejs.contains(name)) return;
+    ejs.at(name).get_to(value);
   };
 
   // parse yaml reference
-  auto get_ref = [](const json& cjs, const string& name,
+  auto get_ref = [](const json& ejs, const string& name,
                           int& value, const unordered_map<string, int>& refs) {
-    if(!cjs.contains(name)) return;
+    if(!ejs.contains(name)) return;
     auto ref = ""s;
-    cjs.at(name).get_to(ref);
+    ejs.at(name).get_to(ref);
     if (ref == "") {
       value = -1;
     } else {
@@ -1329,11 +1320,11 @@ static void load_json_scene(
   // parse yaml reference
   auto texture_map = unordered_map<string, int>{{"", -1}};
   auto get_texture = [&filename, &scene, &texture_map](
-                         const json& cjs, const string& name,
+                         const json& ejs, const string& name,
                          int& value, const string& dirname = "textures/") {
-    if(!cjs.contains(name)) return -1;
+    if(!ejs.contains(name)) return -1;
     auto path = ""s;
-    cjs.at(name).get_to(path);
+    ejs.at(name).get_to(path);
     if (path == "") return -1;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) {
@@ -1503,85 +1494,89 @@ static void load_json_scene(
 static void save_json_scene(
     const string& filename, const sceneio_model& scene, bool noparallel) {
   // helper
-  auto add_val = [](yaml_element& yelement, const string& name,
+  auto add_val = [](json& ejs, const string& name,
                      const auto& value) {
-    add_yaml_value(yelement, name, value);
+    ejs[name] = value;
   };
-  auto add_opt = [](yaml_element& yelement, const string& name,
+  auto add_opt = [](json& ejs, const string& name,
                      const auto& value, const auto& def) {
     if (value == def) return;
-    add_yaml_value(yelement, name, value);
+    ejs[name] = value;
   };
-  auto add_tex = [&scene](yaml_element& yelement, const string& name, int ref) {
+  auto add_tex = [&scene](json& ejs, const string& name, int ref) {
     if (ref < 0) return;
-    add_yaml_value(yelement, name, scene.textures[ref].name);
+    ejs[name] = scene.textures[ref].name;
   };
 
   // save yaml file
-  auto yaml = yaml_model{};
+  auto js = json::object();
 
-  for (auto stat : scene_stats(scene)) yaml.comments.push_back(stat);
+  js["asset"] = json::object();
+  js["asset"]["stats"] = json::array();
+  for (auto stat : scene_stats(scene)) {
+    js["asset"]["stats"].push_back(stat);
+  }
 
   auto def_cam = sceneio_camera{};
+  if (!scene.cameras.empty()) js["cameras"] = json::array();
   for (auto& camera : scene.cameras) {
-    auto& yelement = yaml.elements.emplace_back();
-    yelement.name  = "cameras";
-    add_val(yelement, "name", camera.name);
-    add_opt(yelement, "frame", camera.frame, def_cam.frame);
-    add_opt(yelement, "ortho", camera.orthographic, def_cam.orthographic);
-    add_opt(yelement, "lens", camera.lens, def_cam.lens);
-    add_opt(yelement, "aspect", camera.aspect, def_cam.aspect);
-    add_opt(yelement, "film", camera.film, def_cam.film);
-    add_opt(yelement, "focus", camera.focus, def_cam.focus);
-    add_opt(yelement, "aperture", camera.aperture, def_cam.aperture);
+    auto& ejs = js["cameras"].emplace_back();
+    add_val(ejs, "name", camera.name);
+    add_opt(ejs, "frame", camera.frame, def_cam.frame);
+    add_opt(ejs, "ortho", camera.orthographic, def_cam.orthographic);
+    add_opt(ejs, "lens", camera.lens, def_cam.lens);
+    add_opt(ejs, "aspect", camera.aspect, def_cam.aspect);
+    add_opt(ejs, "film", camera.film, def_cam.film);
+    add_opt(ejs, "focus", camera.focus, def_cam.focus);
+    add_opt(ejs, "aperture", camera.aperture, def_cam.aperture);
   }
 
   auto def_env = sceneio_environment{};
+  if (!scene.environments.empty()) js["environments"] = json::array();
   for (auto& environment : scene.environments) {
-    auto& yelement = yaml.elements.emplace_back();
-    yelement.name  = "environments";
-    add_val(yelement, "name", environment.name);
-    add_opt(yelement, "frame", environment.frame, def_env.frame);
-    add_opt(yelement, "emission", environment.emission, def_env.emission);
-    add_tex(yelement, "emission_tex", environment.emission_tex);
+    auto& ejs = js["environments"].emplace_back();
+    add_val(ejs, "name", environment.name);
+    add_opt(ejs, "frame", environment.frame, def_env.frame);
+    add_opt(ejs, "emission", environment.emission, def_env.emission);
+    add_tex(ejs, "emission_tex", environment.emission_tex);
   }
 
   auto def_shape = sceneio_shape{};
+  if (!scene.environments.empty()) js["shapes"] = json::array();
   for (auto& shape : scene.shapes) {
-    auto& yelement = yaml.elements.emplace_back();
-    yelement.name  = "shapes";
-    add_val(yelement, "name", shape.name);
-    add_opt(yelement, "frame", shape.frame, def_shape.frame);
-    add_opt(yelement, "emission", shape.emission, def_shape.emission);
-    add_opt(yelement, "color", shape.color, def_shape.color);
-    add_opt(yelement, "specular", shape.specular, def_shape.specular);
-    add_opt(yelement, "metallic", shape.metallic, def_shape.metallic);
-    add_opt(yelement, "coat", shape.coat, def_shape.coat);
-    add_opt(yelement, "roughness", shape.roughness, def_shape.roughness);
-    add_opt(yelement, "ior", shape.ior, def_shape.ior);
+    auto& ejs = js["shapes"].emplace_back();
+    add_val(ejs, "name", shape.name);
+    add_opt(ejs, "frame", shape.frame, def_shape.frame);
+    add_opt(ejs, "emission", shape.emission, def_shape.emission);
+    add_opt(ejs, "color", shape.color, def_shape.color);
+    add_opt(ejs, "specular", shape.specular, def_shape.specular);
+    add_opt(ejs, "metallic", shape.metallic, def_shape.metallic);
+    add_opt(ejs, "coat", shape.coat, def_shape.coat);
+    add_opt(ejs, "roughness", shape.roughness, def_shape.roughness);
+    add_opt(ejs, "ior", shape.ior, def_shape.ior);
     add_opt(
-        yelement, "transmission", shape.transmission, def_shape.transmission);
-    add_opt(yelement, "trdepth", shape.trdepth, def_shape.trdepth);
-    add_opt(yelement, "scattering", shape.scattering, def_shape.scattering);
+        ejs, "transmission", shape.transmission, def_shape.transmission);
+    add_opt(ejs, "trdepth", shape.trdepth, def_shape.trdepth);
+    add_opt(ejs, "scattering", shape.scattering, def_shape.scattering);
     add_opt(
-        yelement, "scanisotropy", shape.scanisotropy, def_shape.scanisotropy);
-    add_opt(yelement, "opacity", shape.opacity, def_shape.opacity);
-    add_opt(yelement, "thin", shape.thin, def_shape.thin);
-    add_tex(yelement, "emission_tex", shape.emission_tex);
-    add_tex(yelement, "color_tex", shape.color_tex);
-    add_tex(yelement, "metallic_tex", shape.metallic_tex);
-    add_tex(yelement, "specular_tex", shape.specular_tex);
-    add_tex(yelement, "roughness_tex", shape.roughness_tex);
-    add_tex(yelement, "transmission_tex", shape.transmission_tex);
-    add_tex(yelement, "scattering_tex", shape.scattering_tex);
-    add_tex(yelement, "coat_tex", shape.coat_tex);
-    add_tex(yelement, "opacity_tex", shape.opacity_tex);
-    add_tex(yelement, "normal_tex", shape.normal_tex);
-    add_opt(yelement, "gltf_textures", shape.gltf_textures,
+        ejs, "scanisotropy", shape.scanisotropy, def_shape.scanisotropy);
+    add_opt(ejs, "opacity", shape.opacity, def_shape.opacity);
+    add_opt(ejs, "thin", shape.thin, def_shape.thin);
+    add_tex(ejs, "emission_tex", shape.emission_tex);
+    add_tex(ejs, "color_tex", shape.color_tex);
+    add_tex(ejs, "metallic_tex", shape.metallic_tex);
+    add_tex(ejs, "specular_tex", shape.specular_tex);
+    add_tex(ejs, "roughness_tex", shape.roughness_tex);
+    add_tex(ejs, "transmission_tex", shape.transmission_tex);
+    add_tex(ejs, "scattering_tex", shape.scattering_tex);
+    add_tex(ejs, "coat_tex", shape.coat_tex);
+    add_tex(ejs, "opacity_tex", shape.opacity_tex);
+    add_tex(ejs, "normal_tex", shape.normal_tex);
+    add_opt(ejs, "gltf_textures", shape.gltf_textures,
         def_shape.gltf_textures);
     if (!shape.positions.empty()) {
       auto path = replace_extension(shape.name, ".ply");
-      add_val(yelement, "shape", path);
+      add_val(ejs, "shape", path);
       try {
         save_shape(get_dirname(filename) + path, shape.points, shape.lines,
             shape.triangles, shape.quads, shape.positions, shape.normals,
@@ -1592,7 +1587,7 @@ static void save_json_scene(
     }
     if (!shape.instances.empty()) {
       auto path = replace_extension(shape.name, ".instances.ply");
-      add_val(yelement, "instances", path);
+      add_val(ejs, "instances", path);
       try {
         save_instances(get_dirname(filename) + path, shape.instances);
       } catch (std::exception& e) {
@@ -1602,22 +1597,22 @@ static void save_json_scene(
   }
 
   auto def_subdiv = sceneio_subdiv{};
+  if (!scene.subdivs.empty()) js["subdivs"] = json::array();
   for (auto& subdiv : scene.subdivs) {
-    auto& yelement = yaml.elements.emplace_back();
-    yelement.name  = "subdivs";
-    add_val(yelement, "name", subdiv.name);
-    add_val(yelement, "shape", scene.shapes[subdiv.shape].name);
+    auto& ejs = js["subdivs"].emplace_back();
+    add_val(ejs, "name", subdiv.name);
+    add_val(ejs, "shape", scene.shapes[subdiv.shape].name);
     add_opt(
-        yelement, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
+        ejs, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
     add_opt(
-        yelement, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
-    add_opt(yelement, "smooth", subdiv.smooth, def_subdiv.smooth);
-    add_tex(yelement, "displacement_tex", subdiv.displacement_tex);
+        ejs, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
+    add_opt(ejs, "smooth", subdiv.smooth, def_subdiv.smooth);
+    add_tex(ejs, "displacement_tex", subdiv.displacement_tex);
     add_opt(
-        yelement, "displacement", subdiv.displacement, def_subdiv.subdivisions);
+        ejs, "displacement", subdiv.displacement, def_subdiv.subdivisions);
     if (!subdiv.positions.empty() && subdiv.quadspos.empty()) {
       auto path = replace_extension(subdiv.name, ".ply");
-      add_val(yelement, "subdiv", path);
+      add_val(ejs, "subdiv", path);
       try {
         save_shape(get_dirname(filename) + path, subdiv.points, subdiv.lines,
             subdiv.triangles, subdiv.quads, subdiv.positions, subdiv.normals,
@@ -1628,7 +1623,7 @@ static void save_json_scene(
     }
     if (!subdiv.positions.empty() && !subdiv.quadspos.empty()) {
       auto path = replace_extension(subdiv.name, ".obj");
-      add_val(yelement, "fvsubdiv", path);
+      add_val(ejs, "fvsubdiv", path);
       try {
         save_fvshape(get_dirname(filename) + path, subdiv.quadspos,
             subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
@@ -1655,7 +1650,7 @@ static void save_json_scene(
   }
 
   // save yaml
-  save_yaml(filename, yaml);
+  save_json(filename, js);
 }
 
 }  // namespace yocto
