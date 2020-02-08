@@ -2921,7 +2921,7 @@ static void convert_pbrt_textures(const string& filename,
     if (name.empty()) return ""s;
     auto pos = texture_map.find(name);
     if (pos == texture_map.end()) return ""s;
-    return textures[pos->second].filename;
+    return textures.at(pos->second).filename;
   };
 
   for (auto& command : commands) {
@@ -3004,7 +3004,7 @@ static pbrt_material convert_material(const pbrt_command& command,
       color    = textured.first;
       filename = "";
     } else {
-      auto& texture = textures[texture_map.at(textured.second)];
+      auto& texture = textures.at(texture_map.at(textured.second));
       if (texture.filename.empty()) {
         color    = texture.constant;
         filename = "";
@@ -3021,7 +3021,7 @@ static pbrt_material convert_material(const pbrt_command& command,
     if (textured.second == "") {
       scalar = mean(textured.first);
     } else {
-      auto& texture = textures[texture_map.at(textured.second)];
+      auto& texture = textures.at(texture_map.at(textured.second));
       if (texture.filename.empty()) {
         scalar = mean(texture.constant);
       } else {
@@ -3036,7 +3036,7 @@ static pbrt_material convert_material(const pbrt_command& command,
     if (textured.second == "") {
       color = textured.first;
     } else {
-      auto& texture = textures[texture_map.at(textured.second)];
+      auto& texture = textures.at(texture_map.at(textured.second));
       if (texture.filename.empty()) {
         color = texture.constant;
       } else {
