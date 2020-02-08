@@ -218,6 +218,7 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
       set_shape(glscene, id, shape.quads, shape.positions, shape.normals,
           shape.texcoords, shape.colors, shape.tangents);
     }
+    set_shape_material(glscene, id, id);
     if (shape.instances.empty()) {
       add_instance(glscene, shape.frame, id, id);
     } else {

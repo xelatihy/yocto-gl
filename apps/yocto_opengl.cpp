@@ -747,6 +747,7 @@ opengl_shape::~opengl_shape() {
 
 opengl_shape::opengl_shape(opengl_shape&& other) {
   if (this == &other) return;
+  std::swap(material, other.material);
   std::swap(positions_num, other.positions_num);
   std::swap(positions_id, other.positions_id);
   std::swap(normals_num, other.normals_num);
@@ -1136,6 +1137,10 @@ void set_shape_colors(
   set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
       (const float*)colors.data());
 }
+void set_shape_material(opengl_scene& scene, int idx, int material) {
+  auto& shape = scene._shapes[idx];
+  shape.material = material;
+}
 void clear_glshapes(opengl_scene& scene) {
   for (auto& shape : scene._shapes) {
     if (shape.positions_id) glDeleteBuffers(1, &shape.positions_id);
@@ -1158,7 +1163,6 @@ int add_instance(
   auto& instance    = scene._instances.emplace_back();
   instance.frame    = frame;
   instance.shape    = shape;
-  instance.material = material;
   return (int)scene._instances.size() - 1;
 }
 void set_instance(opengl_scene& scene, int idx, const frame3f& frame, int shape,
@@ -1166,7 +1170,6 @@ void set_instance(opengl_scene& scene, int idx, const frame3f& frame, int shape,
   auto& instance    = scene._instances[idx];
   instance.frame    = frame;
   instance.shape    = shape;
-  instance.material = material;
 }
 void set_glinstance_frame(opengl_scene& scene, int idx, const frame3f& frame) {
   auto& instance = scene._instances[idx];
@@ -1175,10 +1178,6 @@ void set_glinstance_frame(opengl_scene& scene, int idx, const frame3f& frame) {
 void set_glinstance_shape(opengl_scene& scene, int idx, int shape) {
   auto& instance = scene._instances[idx];
   instance.shape = shape;
-}
-void set_glinstance_material(opengl_scene& scene, int idx, int material) {
-  auto& instance    = scene._instances[idx];
-  instance.material = material;
 }
 void clear_instances(opengl_scene& scene) { scene._instances.clear(); }
 
@@ -1205,11 +1204,9 @@ bool has_max_lights(opengl_scene& scene) { return scene._lights.size() >= 16; }
 void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
     const draw_glscene_params& params) {
   if (instance.shape < 0 || instance.shape > glscene._shapes.size()) return;
-  if (instance.material < 0 || instance.material > glscene._materials.size())
-    return;
 
   auto& shape    = glscene._shapes[instance.shape];
-  auto& material = glscene._materials[instance.material];
+  auto& material = glscene._materials[instance.shape];
 
   auto instance_xform     = mat4f(instance.frame);
   auto instance_inv_xform = transpose(

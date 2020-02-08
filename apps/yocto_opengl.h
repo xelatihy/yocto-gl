@@ -115,6 +115,10 @@ struct opengl_camera {
 
 // Opengl shape
 struct opengl_shape {
+    // shape properties
+    int material = -1;
+
+    // vertex buffers
   int  positions_num = 0;
   uint positions_id  = 0;
   int  normals_num   = 0;
@@ -180,7 +184,6 @@ struct opengl_material {
 struct opengl_instance {
   frame3f frame       = identity3x4f;
   int     shape       = 0;
-  int     material    = 0;
   bool    highlighted = false;
 };
 
@@ -303,6 +306,7 @@ void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
     const vector<vec4f>& tangents = {});
 void set_shape_colors(
     opengl_scene& scene, int idx, const vector<vec4f>& colors);
+void set_shape_material(opengl_scene& scene, int idx, int material);
 void clear_shapes(opengl_scene& scene);
 
 // add instance
