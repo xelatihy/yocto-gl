@@ -39,19 +39,14 @@ void update_glshape(shared_ptr<app_state> app) {
   //    Loading a generic shape is unsafe, maybe we should load only
   //    triangle meshes here...
   auto& shape = app->shape;
-  if (!shape.points.empty()) {
-    set_shape(app->scene, app->glshape_id, shape.points, shape.positions,
-        shape.normals, shape.texcoords, shape.colors);
-  } else if (!shape.lines.empty()) {
-    set_shape(app->scene, app->glshape_id, shape.lines, shape.positions,
-        shape.normals, shape.texcoords, shape.colors);
-  } else if (!shape.triangles.empty()) {
-    set_shape(app->scene, app->glshape_id, shape.triangles, shape.positions,
-        shape.normals, shape.texcoords, shape.colors, shape.tangents);
-  } else if (!shape.quads.empty()) {
-    set_shape(app->scene, app->glshape_id, shape.quads, shape.positions,
-        shape.normals, shape.texcoords, shape.colors, shape.tangents);
-  }
+  set_shape_points(app->scene, app->glshape_id, shape.points);
+  set_shape_lines(app->scene, app->glshape_id, shape.lines);
+  set_shape_triangles(app->scene, app->glshape_id, shape.triangles);
+  set_shape_quads(app->scene, app->glshape_id, shape.quads);
+  set_shape_positions(app->scene, app->glshape_id, shape.positions);
+  set_shape_normals(app->scene, app->glshape_id, shape.normals);
+  set_shape_texcoords(app->scene, app->glshape_id, shape.texcoords);
+  set_shape_colors(app->scene, app->glshape_id, shape.colors);
 }
 
 void update_glpolyline(
@@ -59,7 +54,8 @@ void update_glpolyline(
   if (vertices.size()) {
     auto elements = vector<vec2i>(vertices.size() - 1);
     for (int i = 0; i < elements.size(); i++) elements[i] = {i, i + 1};
-    set_shape(app->scene, app->glpolyline_id, elements, vertices, {}, {});
+    set_shape_positions(app->scene, app->glpolyline_id, vertices);
+    set_shape_lines(app->scene, app->glpolyline_id, elements);
   }
 }
 
@@ -68,7 +64,8 @@ void update_glpoints(shared_ptr<app_state> app, const vector<vec3f>& points) {
     auto elements = vector<int>(points.size());
     for (int i = 0; i < elements.size(); i++) elements[i] = i;
     auto normals = vector<vec3f>(points.size(), {0, 0, 1});
-    set_shape(app->scene, app->glpoints_id, elements, points, normals, {});
+    set_shape_positions(app->scene, app->glpolyline_id, points);
+    set_shape_points(app->scene, app->glpolyline_id, elements);
   }
 }
 
@@ -113,7 +110,8 @@ void update_glvector_field(shared_ptr<app_state> app,
     elements[i] = {2 * i, 2 * i + 1};
   }
 
-  set_shape(app->scene, app->glvector_field_id, elements, positions, {}, {});
+    set_shape_positions(app->scene, app->glvector_field_id, positions);
+    set_shape_lines(app->scene, app->glvector_field_id, elements);
 }
 
 void update_gledges(shared_ptr<app_state> app) {
@@ -133,7 +131,8 @@ void update_gledges(shared_ptr<app_state> app) {
       }
     }
   }
-  set_shape(app->scene, app->gledges_id, elements, positions, {}, {});
+  set_shape_positions(app->scene, app->gledges_id, positions);
+  set_shape_lines(app->scene, app->gledges_id, elements);
 }
 
 void init_camera(shared_ptr<app_state> app,

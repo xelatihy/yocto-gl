@@ -186,19 +186,14 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
   // shapes
   for (auto& shape : scene.shapes) {
     auto id = add_shape(glscene);
-    if (!shape.points.empty()) {
-      set_shape(glscene, id, shape.points, shape.positions, shape.normals,
-          shape.texcoords, shape.colors);
-    } else if (!shape.lines.empty()) {
-      set_shape(glscene, id, shape.lines, shape.positions, shape.normals,
-          shape.texcoords, shape.colors);
-    } else if (!shape.triangles.empty()) {
-      set_shape(glscene, id, shape.triangles, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.tangents);
-    } else if (!shape.quads.empty()) {
-      set_shape(glscene, id, shape.quads, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.tangents);
-    }
+    set_shape_positions(glscene, id, shape.positions);
+    set_shape_normals(glscene, id, shape.normals);
+    set_shape_texcoords(glscene, id, shape.texcoords);
+    set_shape_colors(glscene, id, shape.colors);
+    set_shape_points(glscene, id, shape.points);
+    set_shape_lines(glscene, id, shape.lines);
+    set_shape_triangles(glscene, id, shape.triangles);
+    set_shape_quads(glscene, id, shape.quads);
     set_shape_frame(glscene, id, shape.frame);
     set_shape_instances(glscene, id, shape.instances);
     auto& material = shape.material;
@@ -468,19 +463,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (!draw_glwidgets_shape(win, app, app->selected_shape)) {
       auto& shape = app->ioscene.shapes[app->selected_shape];
       auto  idx   = app->selected_shape;
-      if (!shape.points.empty()) {
-        set_shape(app->glscene, idx, shape.points, shape.positions,
-            shape.normals, shape.texcoords, shape.colors);
-      } else if (!shape.lines.empty()) {
-        set_shape(app->glscene, idx, shape.lines, shape.positions,
-            shape.normals, shape.texcoords, shape.colors);
-      } else if (!shape.triangles.empty()) {
-        set_shape(app->glscene, idx, shape.triangles, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.tangents);
-      } else if (!shape.quads.empty()) {
-        set_shape(app->glscene, idx, shape.quads, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.tangents);
-      }
+      set_shape_positions(app->glscene, idx, shape.positions);
+      set_shape_normals(app->glscene, idx, shape.normals);
+      set_shape_texcoords(app->glscene, idx, shape.texcoords);
+      set_shape_colors(app->glscene, idx, shape.colors);
+      set_shape_points(app->glscene, idx, shape.points);
+      set_shape_lines(app->glscene, idx, shape.lines);
+      set_shape_triangles(app->glscene, idx, shape.triangles);
+      set_shape_quads(app->glscene, idx, shape.quads);
+      set_shape_frame(app->glscene, idx, shape.frame);
+      set_shape_instances(app->glscene, idx, shape.instances);
     }
     end_glheader(win);
   }
@@ -529,19 +521,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       tesselate_subdiv(app->ioscene, subdiv);
       auto& shape = app->ioscene.shapes[subdiv.shape];
       auto  idx   = app->selected_subdiv;
-      if (!shape.points.empty()) {
-        set_shape(app->glscene, idx, shape.points, shape.positions,
-            shape.normals, shape.texcoords, shape.colors);
-      } else if (!shape.lines.empty()) {
-        set_shape(app->glscene, idx, shape.lines, shape.positions,
-            shape.normals, shape.texcoords, shape.colors);
-      } else if (!shape.triangles.empty()) {
-        set_shape(app->glscene, idx, shape.triangles, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.tangents);
-      } else if (!shape.quads.empty()) {
-        set_shape(app->glscene, idx, shape.quads, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.tangents);
-      }
+      set_shape_positions(app->glscene, idx, shape.positions);
+      set_shape_normals(app->glscene, idx, shape.normals);
+      set_shape_texcoords(app->glscene, idx, shape.texcoords);
+      set_shape_colors(app->glscene, idx, shape.colors);
+      set_shape_points(app->glscene, idx, shape.points);
+      set_shape_lines(app->glscene, idx, shape.lines);
+      set_shape_triangles(app->glscene, idx, shape.triangles);
+      set_shape_quads(app->glscene, idx, shape.quads);
+      set_shape_frame(app->glscene, idx, shape.frame);
+      set_shape_instances(app->glscene, idx, shape.instances);
     }
     end_glheader(win);
   }
