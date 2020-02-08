@@ -833,7 +833,8 @@ void save_scene(
 }
 
 // create a name
-static string make_name(const string& prefix, size_t count, const string& ext = ".json") {
+static string make_name(
+    const string& prefix, size_t count, const string& ext = ".json") {
   return prefix + "s/" + prefix + std::to_string(count) + ext;
 }
 
@@ -1267,7 +1268,7 @@ static void save_json(const string& filename, const json& js) {
   auto stream = std::ofstream(filename);
   if (!stream) throw std::runtime_error{filename + ": file not found"};
   try {
-    stream << std::setw(4) << js << std::endl;
+    stream << std::setw(2) << js << std::endl;
   } catch (std::exception& e) {
     throw std::runtime_error{filename + ": error writing json"};
   }
@@ -1649,8 +1650,8 @@ static void load_obj_scene(
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
-    auto& camera = scene.cameras.emplace_back();
-    camera.name  = make_name("camera", scene.cameras.size());
+    auto& camera        = scene.cameras.emplace_back();
+    camera.name         = make_name("camera", scene.cameras.size());
     camera.frame        = ocam.frame;
     camera.orthographic = ocam.ortho;
     camera.film         = max(ocam.width, ocam.height);
@@ -1701,7 +1702,7 @@ static void load_obj_scene(
     shape_name_counts[shape.name] += 1;
     if (shape_name_counts[shape.name] > 1)
       shape.name += std::to_string(shape_name_counts[shape.name]);
-    shape.name = make_name("shape", scene.shapes.size());
+    shape.name      = make_name("shape", scene.shapes.size());
     auto nmaterials = vector<string>{};
     auto ematerials = vector<int>{};
     auto has_quads  = has_obj_quads(oshape);
@@ -1756,10 +1757,10 @@ static void load_obj_scene(
 
   // convert environments
   for (auto& oenvironment : obj.environments) {
-    auto& environment        = scene.environments.emplace_back();
-    environment.name         = make_name("environment", scene.environments.size());
-    environment.frame        = oenvironment.frame;
-    environment.emission     = oenvironment.emission;
+    auto& environment    = scene.environments.emplace_back();
+    environment.name     = make_name("environment", scene.environments.size());
+    environment.frame    = oenvironment.frame;
+    environment.emission = oenvironment.emission;
     environment.emission_tex = get_texture(
         oenvironment.emission_map, "environments/");
   }
@@ -2072,8 +2073,8 @@ static void load_pbrt_scene(
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
-    auto& camera = scene.cameras.emplace_back();
-    camera.name  = make_name("camera", scene.cameras.size());
+    auto& camera  = scene.cameras.emplace_back();
+    camera.name   = make_name("camera", scene.cameras.size());
     camera.frame  = pcamera.frame;
     camera.aspect = pcamera.aspect;
     camera.film   = 0.036;
@@ -2153,19 +2154,18 @@ static void load_pbrt_scene(
 
   // convert environments
   for (auto& penvironment : pbrt.environments) {
-    auto& environment        = scene.environments.emplace_back();
-    environment.name         = make_name("environment",
-        scene.environments.size());
-    environment.frame        = penvironment.frame;
-    environment.emission     = penvironment.emission;
+    auto& environment    = scene.environments.emplace_back();
+    environment.name     = make_name("environment", scene.environments.size());
+    environment.frame    = penvironment.frame;
+    environment.emission = penvironment.emission;
     environment.emission_tex = get_texture(
         penvironment.emission_map, "environments/");
   }
 
   // lights
   for (auto& plight : pbrt.lights) {
-    auto& shape = scene.shapes.emplace_back();
-    shape.name  = make_name("shape" ,scene.shapes.size());
+    auto& shape     = scene.shapes.emplace_back();
+    shape.name      = make_name("shape", scene.shapes.size());
     shape.frame     = plight.area_frame;
     shape.triangles = plight.area_triangles;
     shape.positions = plight.area_positions;
