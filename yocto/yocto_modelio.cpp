@@ -2873,22 +2873,22 @@ static void convert_pbrt_films(
 
 // convert pbrt elements
 static void convert_pbrt_cameras(const string& filename, vector<pbrt_camera>& cameras,
-    vector<pbrt_command>& cameras_commands, const vector<pbrt_film>& films,
+    vector<pbrt_command>& commands, const vector<pbrt_film>& films,
     bool verbose = false) {
   auto film_aspect = 1.0f;
   for (auto& film : films) {
     film_aspect = (float)film.resolution.x / (float)film.resolution.y;
   }
-  for (auto& [name, type, values, frame, frend] : cameras_commands) {
+  for (auto& command : commands) {
     auto& camera = cameras.emplace_back();
-    camera.frame = frame;
-    camera.frend = frend;
+    camera.frame = command.frame;
+    camera.frend = command.frend;
     camera.frame   = inverse((frame3f)camera.frame);
     camera.frame.z = -camera.frame.z;
     try {
-      if (type == "perspective") {
+      if (command.type == "perspective") {
         auto fov = 90.0f;
-        get_pbrt_value(values, "fov", fov);
+        get_pbrt_value(command.values, "fov", fov);
         // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
         camera.aspect = film_aspect;
         if (camera.aspect >= 1) {
@@ -2896,24 +2896,24 @@ static void convert_pbrt_cameras(const string& filename, vector<pbrt_camera>& ca
         } else {
           camera.lens = (0.036 * camera.aspect) / (2 * tan(radians(fov) / 2));
         }
-        get_pbrt_value(values, "frameaspectratio", camera.aspect);
+        get_pbrt_value(command.values, "frameaspectratio", camera.aspect);
         camera.focus = 10.0f;
-        get_pbrt_value(values, "focaldistance", camera.focus);
-      } else if (type == "realistic") {
+        get_pbrt_value(command.values, "focaldistance", camera.focus);
+      } else if (command.type == "realistic") {
         auto lensfile = ""s;
-        get_pbrt_value(values, "lensfile", lensfile);
+        get_pbrt_value(command.values, "lensfile", lensfile);
         lensfile        = lensfile.substr(0, lensfile.size() - 4);
         lensfile        = lensfile.substr(lensfile.find('.') + 1);
         lensfile        = lensfile.substr(0, lensfile.size() - 2);
         auto lens       = max(std::atof(lensfile.c_str()), 35.0f) * 0.001f;
         camera.lens     = 2 * atan(0.036f / (2 * lens));
         camera.aperture = 0.0f;
-        get_pbrt_value(values, "aperturediameter", camera.aperture);
+        get_pbrt_value(command.values, "aperturediameter", camera.aperture);
         camera.focus = 10.0f;
-        get_pbrt_value(values, "focusdistance", camera.focus);
+        get_pbrt_value(command.values, "focusdistance", camera.focus);
         camera.aspect = film_aspect;
       } else {
-        throw std::invalid_argument{"unknown camera " + type};
+        throw std::invalid_argument{"unknown camera " + command.type};
       }
     } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": conversion error"};
@@ -2923,11 +2923,11 @@ static void convert_pbrt_cameras(const string& filename, vector<pbrt_camera>& ca
 
 // convert pbrt textures
 static void convert_pbrt_textures(const string& filename,
-    vector<pbrt_texture>& textures, bool verbose = false) {
+    vector<pbrt_texture>& textures, const vector<pbrt_command>& commands, bool verbose = false) {
   auto texture_map = unordered_map<string, int>{};
-  for (auto& texture : textures) {
+  for (auto& command : commands) {
     auto index                = (int)texture_map.size();
-    texture_map[texture.name] = index;
+    texture_map[command.name] = index;
   }
   auto get_filename = [&textures, &texture_map](const string& name) {
     if (name.empty()) return ""s;
@@ -2940,20 +2940,21 @@ static void convert_pbrt_textures(const string& filename,
     texture.constant = color;
   };
 
-  for (auto& texture : textures) {
+  for (auto& command : commands) {
+    auto& texture = textures.emplace_back();
+    texture.name = command.name;
     try {
-      auto& values = texture.values;
-      if (texture.type == "imagemap") {
+      if (command.type == "imagemap") {
         texture.filename = "";
-        get_pbrt_value(values, "filename", texture.filename);
-      } else if (texture.type == "constant") {
+        get_pbrt_value(command.values, "filename", texture.filename);
+      } else if (command.type == "constant") {
         texture.constant = vec3f{1};
-        get_pbrt_value(values, "value", texture.constant);
-      } else if (texture.type == "bilerp") {
+        get_pbrt_value(command.values, "value", texture.constant);
+      } else if (command.type == "bilerp") {
         make_placeholder(texture, {1, 0, 0});
-      } else if (texture.type == "checkerboard") {
-        // auto tex1     = get_pbrt_value(values, "tex1", pair{vec3f{1}, ""s});
-        // auto tex2     = get_pbrt_value(values, "tex2", pair{vec3f{0}, ""s});
+      } else if (command.type == "checkerboard") {
+        // auto tex1     = get_pbrt_value(command.values, "tex1", pair{vec3f{1}, ""s});
+        // auto tex2     = get_pbrt_value(command.values, "tex2", pair{vec3f{0}, ""s});
         // auto rgb1     = tex1.second == "" ? tex1.first : vec3f{0.4f, 0.4f,
         // 0.4f}; auto rgb2     = tex1.second == "" ? tex2.first : vec3f{0.6f,
         // 0.6f, 0.6f}; auto params   = proc_image_params{}; params.type   =
@@ -2962,16 +2963,16 @@ static void convert_pbrt_textures(const string& filename,
         // = 2; make_proc_image(texture.hdr, params); float_to_byte(texture.ldr,
         // texture.hdr); texture.hdr = {};
         make_placeholder(texture, vec3f{0.5});
-      } else if (texture.type == "dots") {
+      } else if (command.type == "dots") {
         make_placeholder(texture, vec3f{0.5});
-      } else if (texture.type == "fbm") {
+      } else if (command.type == "fbm") {
         make_placeholder(texture, vec3f{0.5});
-      } else if (texture.type == "marble") {
+      } else if (command.type == "marble") {
         make_placeholder(texture, vec3f{0.5});
-      } else if (texture.type == "mix") {
+      } else if (command.type == "mix") {
         auto tex1 = pair{vec3f{0}, ""s}, tex2 = pair{vec3f{1}, ""s};
-        get_pbrt_value(values, "tex1", tex1);
-        get_pbrt_value(values, "tex2", tex2);
+        get_pbrt_value(command.values, "tex1", tex1);
+        get_pbrt_value(command.values, "tex2", tex2);
         if (!get_filename(tex1.second).empty()) {
           texture.filename = get_filename(tex1.second);
         } else if (!get_filename(tex2.second).empty()) {
@@ -2979,10 +2980,10 @@ static void convert_pbrt_textures(const string& filename,
         } else {
           make_placeholder(texture);
         }
-      } else if (texture.type == "scale") {
+      } else if (command.type == "scale") {
         auto tex1 = pair{vec3f{1}, ""s}, tex2 = pair{vec3f{1}, ""s};
-        get_pbrt_value(values, "tex1", tex2);
-        get_pbrt_value(values, "tex2", tex1);
+        get_pbrt_value(command.values, "tex1", tex2);
+        get_pbrt_value(command.values, "tex2", tex1);
         if (!get_filename(tex1.second).empty()) {
           texture.filename = get_filename(tex1.second);
         } else if (!get_filename(tex2.second).empty()) {
@@ -2990,14 +2991,14 @@ static void convert_pbrt_textures(const string& filename,
         } else {
           make_placeholder(texture);
         }
-      } else if (texture.type == "uv") {
+      } else if (command.type == "uv") {
         make_placeholder(texture);
-      } else if (texture.type == "windy") {
+      } else if (command.type == "windy") {
         make_placeholder(texture);
-      } else if (texture.type == "wrinkled") {
+      } else if (command.type == "wrinkled") {
         make_placeholder(texture);
       } else {
-        throw std::invalid_argument{"unknown texture " + texture.type};
+        throw std::invalid_argument{"unknown texture " + command.type};
       }
     } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": conversion error"};
@@ -3398,17 +3399,19 @@ static void convert_pbrt_shapes(
 
 // Convert pbrt arealights
 static void convert_pbrt_arealights(const string& filename,
-    vector<pbrt_arealight>& lights, bool verbose = false) {
-  for (auto& light : lights) {
+    vector<pbrt_arealight>& lights, const vector<pbrt_command>& commands, 
+    bool verbose = false) {
+  for (auto& command : commands) {
+    auto& light = lights.emplace_back();
+    light.name = command.name;
     try {
-      auto& values = light.values;
-      if (light.type == "diffuse") {
+      if (command.type == "diffuse") {
         auto l = vec3f{1}, scale = vec3f{1};
-        get_pbrt_value(values, "L", l);
-        get_pbrt_value(values, "scale", scale);
+        get_pbrt_value(command.values, "L", l);
+        get_pbrt_value(command.values, "scale", scale);
         light.emission = l * scale;
       } else {
-        throw std::invalid_argument{"unknown arealight " + light.type};
+        throw std::invalid_argument{"unknown arealight " + command.type};
       }
     } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": conversion error"};
@@ -3418,21 +3421,21 @@ static void convert_pbrt_arealights(const string& filename,
 
 // Convert pbrt lights
 static void convert_pbrt_lights(
-    const string& filename, vector<pbrt_light>& lights, const vector<pbrt_command>& lights_commands, bool verbose = false) {
-  for (auto& [name, type, values, frame, frend] : lights_commands) {
+    const string& filename, vector<pbrt_light>& lights, const vector<pbrt_command>& commands, bool verbose = false) {
+  for (auto& command : commands) {
     auto& light = lights.emplace_back();
-    light.frame = frame;
-    light.frend = frend;
+    light.frame = command.frame;
+    light.frend = command.frend;
     try {
-      if (type == "distant") {
+      if (command.type == "distant") {
         auto l = vec3f{1}, scale = vec3f{1};
-        get_pbrt_value(values, "L", l);
-        get_pbrt_value(values, "scale", scale);
+        get_pbrt_value(command.values, "L", l);
+        get_pbrt_value(command.values, "scale", scale);
         light.emission = l * scale;
         light.from     = zero3f;
         light.to       = vec3f{0, 0, 1};
-        get_pbrt_value(values, "from", light.from);
-        get_pbrt_value(values, "to", light.to);
+        get_pbrt_value(command.values, "from", light.from);
+        get_pbrt_value(command.values, "to", light.to);
         light.distant       = true;
         auto distant_dist   = 100;
         auto size           = distant_dist * sin(5 * pif / 180);
@@ -3449,14 +3452,14 @@ static void convert_pbrt_lights(
         auto texcoords = vector<vec2f>{};
         make_pbrt_quad(light.area_triangles, light.area_positions,
             light.area_normals, texcoords, {4, 2}, size);
-      } else if (type == "point" || type == "goniometric" ||
-                 type == "spot") {
+      } else if (command.type == "point" || command.type == "goniometric" ||
+                 command.type == "spot") {
         auto i = vec3f{1}, scale = vec3f{1};
-        get_pbrt_value(values, "I", i);
-        get_pbrt_value(values, "scale", scale);
+        get_pbrt_value(command.values, "I", i);
+        get_pbrt_value(command.values, "scale", scale);
         light.emission = i * scale;
         light.from     = zero3f;
-        get_pbrt_value(values, "from", light.from);
+        get_pbrt_value(command.values, "from", light.from);
         light.area_emission = light.emission;
         light.area_frame    = light.frame * translation_frame(light.from);
         light.area_frend    = light.frend * translation_frame(light.from);
@@ -3464,7 +3467,7 @@ static void convert_pbrt_lights(
         make_pbrt_sphere(light.area_triangles, light.area_positions,
             light.area_normals, texcoords, {4, 2}, 0.0025f);
       } else {
-        throw std::invalid_argument{"unknown light " + type};
+        throw std::invalid_argument{"unknown light " + command.type};
       }
     } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": conversion error"};
@@ -3473,26 +3476,26 @@ static void convert_pbrt_lights(
 }
 
 static void convert_pbrt_environments(const string& filename,
-    vector<pbrt_environment>& environments, const vector<pbrt_command>& environments_commands, vector<pbrt_texture>& textures,
+    vector<pbrt_environment>& environments, const vector<pbrt_command>& commands, vector<pbrt_texture>& textures,
     bool verbose = false) {
-  for (auto& [name, type, values, frame, frend] : environments_commands) {
+  for (auto& command : commands) {
     auto& environment = environments.emplace_back();
-    environment.frame = frame;
-    environment.frend = frend;
+    environment.frame = command.frame;
+    environment.frend = command.frend;
     environment.frame = environment.frame *
                   frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
     environment.frend = environment.frend *
                   frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
     try {
-      if (type == "infinite") {
+      if (command.type == "infinite") {
         auto l = vec3f{1}, scale = vec3f{1};
-        get_pbrt_value(values, "L", l);
-        get_pbrt_value(values, "scale", scale);
+        get_pbrt_value(command.values, "L", l);
+        get_pbrt_value(command.values, "scale", scale);
         environment.emission     = scale * l;
         environment.emission_map = ""s;
-        get_pbrt_value(values, "mapname", environment.emission_map);
+        get_pbrt_value(command.values, "mapname", environment.emission_map);
       } else {
-        throw std::invalid_argument{"unknown light " + type};
+        throw std::invalid_argument{"unknown light " + command.type};
       }
     } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": conversion error"};
@@ -3668,7 +3671,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       camera.frame = stack.back().transform_start;
       camera.frend = stack.back().transform_end;
     } else if (cmd == "Texture") {
-      auto& texture  = pbrt.textures.emplace_back();
+      auto& texture  = pbrt.textures_commands.emplace_back();
       auto  comptype = ""s;
       parse_pbrt_param(fs, str, texture.name);
       parse_pbrt_param(fs, str, comptype);
@@ -3710,7 +3713,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
-      auto&       arealight    = pbrt.arealights.emplace_back();
+      auto&       arealight    = pbrt.arealights_commands.emplace_back();
       arealight.name           = "arealight_" + std::to_string(arealight_id++);
       parse_pbrt_param(fs, str, arealight.type);
       parse_pbrt_params(fs, str, arealight.values);
@@ -3763,11 +3766,11 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   // convert objects
   convert_pbrt_films(filename, pbrt.films, pbrt.films_commands);
   convert_pbrt_cameras(filename, pbrt.cameras, pbrt.cameras_commands, pbrt.films);
-  convert_pbrt_textures(filename, pbrt.textures);
+  convert_pbrt_textures(filename, pbrt.textures, pbrt.textures_commands);
   convert_pbrt_materials(filename, pbrt.materials, pbrt.textures);
   convert_pbrt_shapes(filename, pbrt.shapes);
   convert_pbrt_lights(filename, pbrt.lights, pbrt.lights_commands);
-  convert_pbrt_arealights(filename, pbrt.arealights);
+  convert_pbrt_arealights(filename, pbrt.arealights, pbrt.arealights_commands);
   convert_pbrt_environments(filename, pbrt.environments, pbrt.environments_commands, pbrt.textures);
 }
 
@@ -3916,19 +3919,23 @@ void save_pbrt(
 
   format_values(fs, "\nWorldBegin\n\n");
 
-  for (auto& texture_ : pbrt.textures) {
-    auto texture = texture_;
-    if (texture.type == "") {
-      if (texture.filename.empty()) {
-        texture.type = "constant";
-        texture.values.push_back(make_pbrt_value("value", texture.constant));
-      } else {
-        texture.type = "imagemap";
-        texture.values.push_back(make_pbrt_value("filename", texture.filename));
-      }
+  for (auto& texture : pbrt.textures) {
+    auto command = pbrt_command{};
+    command.name = texture.name;
+    if (texture.filename.empty()) {
+      command.type = "constant";
+      command.values.push_back(make_pbrt_value("value", texture.constant));
+    } else {
+      command.type = "imagemap";
+      command.values.push_back(make_pbrt_value("filename", texture.filename));
     }
-    format_values(fs, "Texture \"{}\" \"color\" \"{}\" {}\n", texture.name,
-        texture.type, texture.values);
+    format_values(fs, "Texture \"{}\" \"color\" \"{}\" {}\n", command.name,
+        command.type, command.values);
+  }
+
+  for (auto& command : pbrt.textures_commands) {
+    format_values(fs, "Texture \"{}\" \"color\" \"{}\" {}\n", command.name,
+        command.type, command.values);
   }
 
   auto reflectivity_to_eta = [](const vec3f& reflectivity) {
@@ -4038,14 +4045,17 @@ void save_pbrt(
   }
 
   auto arealights_map = unordered_map<string, string>{};
-  for (auto& arealight_ : pbrt.arealights) {
-    auto arealight = arealight_;
-    if (arealight.type == "") {
-      arealight.type = "diffuse";
-      arealight.values.push_back(make_pbrt_value("L", arealight.emission));
-    }
-    format_values(arealights_map[arealight.name], "AreaLightSource \"{}\" {}\n",
-        arealight.type, arealight.values);
+  for (auto& arealight : pbrt.arealights) {
+    auto command = pbrt_command{};
+    command.type = "diffuse";
+    command.values.push_back(make_pbrt_value("L", arealight.emission));
+    format_values(arealights_map[command.name], "AreaLightSource \"{}\" {}\n",
+        command.type, command.values);
+  }
+
+  for (auto& command : pbrt.arealights_commands) {
+    format_values(arealights_map[command.name], "AreaLightSource \"{}\" {}\n",
+        command.type, command.values);
   }
 
   auto object_id = 0;

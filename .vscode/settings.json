@@ -74,6 +74,8 @@
     "unordered_map": "cpp",
     "unordered_set": "cpp",
     "utility": "cpp",
-    "vector": "cpp"
+    "vector": "cpp",
+    "__functional_base_03": "cpp",
+    "forward_list": "cpp"
   }
 }

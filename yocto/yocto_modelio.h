@@ -521,9 +521,6 @@ struct pbrt_camera {
 struct pbrt_texture {
   // texture parameters
   string             name   = "";
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  // texture approximation
   vec3f  constant = vec3f{1, 1, 1};
   string filename = "";
 };
@@ -591,11 +588,6 @@ struct pbrt_light {
 struct pbrt_arealight {
   // arealight parameters
   string             name   = "";
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f            frame  = identity3x4f;
-  frame3f            frend  = identity3x4f;
-  // arealight approximation
   vec3f emission = zero3f;
 };
 struct pbrt_environment {
@@ -634,6 +626,8 @@ struct pbrt_model {
   vector<pbrt_command> mediums_commands      = {};
   vector<pbrt_command> environments_commands = {};
   vector<pbrt_command> lights_commands       = {};
+  vector<pbrt_command> arealights_commands       = {};
+  vector<pbrt_command> textures_commands       = {};
 };
 
 // Load/save pbrt
