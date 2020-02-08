@@ -3393,20 +3393,20 @@ void load_shape(const string& filename, vector<int>& points,
     load_ply(filename, ply);
 
     // gets vertex
-    positions = get_ply_positions(ply);
-    normals   = get_ply_normals(ply);
-    texcoords = get_ply_texcoords(ply, flip_texcoord);
-    colors    = get_ply_colors(ply);
-    radius    = get_ply_radius(ply);
+    positions = get_positions(ply);
+    normals   = get_normals(ply);
+    texcoords = get_texcoords(ply, flip_texcoord);
+    colors    = get_colors(ply);
+    radius    = get_radius(ply);
 
     // get faces
-    if (has_ply_quads(ply)) {
-      quads = get_ply_quads(ply);
+    if (has_quads(ply)) {
+      quads = get_quads(ply);
     } else {
-      triangles = get_ply_triangles(ply);
+      triangles = get_triangles(ply);
     }
-    lines  = get_ply_lines(ply);
-    points = get_ply_points(ply);
+    lines  = get_lines(ply);
+    points = get_points(ply);
 
     if (positions.empty()) throw_emptyshape_error(filename);
   } else if (ext == ".obj" || ext == ".OBJ") {
@@ -3458,14 +3458,14 @@ void save_shape(const string& filename, const vector<int>& points,
   if (ext == ".ply" || ext == ".PLY") {
     // create ply
     auto ply = ply_model{};
-    add_ply_positions(ply, positions);
-    add_ply_normals(ply, normals);
-    add_ply_texcoords(ply, texcoords, flip_texcoord);
-    add_ply_colors(ply, colors);
-    add_ply_radius(ply, radius);
-    add_ply_faces(ply, triangles, quads);
-    add_ply_lines(ply, lines);
-    add_ply_points(ply, points);
+    add_positions(ply, positions);
+    add_normals(ply, normals);
+    add_texcoords(ply, texcoords, flip_texcoord);
+    add_colors(ply, colors);
+    add_radius(ply, radius);
+    add_faces(ply, triangles, quads);
+    add_lines(ply, lines);
+    add_points(ply, points);
     save_ply(filename, ply);
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_model{};
@@ -3507,10 +3507,10 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     load_ply(filename, ply);
-    positions = get_ply_positions(ply);
-    normals   = get_ply_normals(ply);
-    texcoords = get_ply_texcoords(ply, flip_texcoord);
-    quadspos  = get_ply_quads(ply);
+    positions = get_positions(ply);
+    normals   = get_normals(ply);
+    texcoords = get_texcoords(ply, flip_texcoord);
+    quadspos  = get_quads(ply);
     if (!normals.empty()) quadsnorm = quadspos;
     if (!texcoords.empty()) quadstexcoord = quadspos;
     if (positions.empty()) throw_emptyshape_error(filename);

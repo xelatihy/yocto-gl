@@ -894,7 +894,7 @@ void save_ply(const string& filename, const ply_model& ply) {
 }
 
 // Get ply properties
-bool has_ply_property(
+bool has_property(
     const ply_model& ply, const string& element, const string& property) {
   for (auto& elem : ply.elements) {
     if (elem.name != element) continue;
@@ -904,7 +904,7 @@ bool has_ply_property(
   }
   return false;
 }
-const ply_property& get_ply_property(
+const ply_property& get_property(
     const ply_model& ply, const string& element, const string& property) {
   for (auto& elem : ply.elements) {
     if (elem.name != element) continue;
@@ -914,7 +914,7 @@ const ply_property& get_ply_property(
   }
   throw std::runtime_error("property not found");
 }
-ply_property& get_ply_property(
+ply_property& get_property(
     ply_model& ply, const string& element, const string& property) {
   for (auto& elem : ply.elements) {
     if (elem.name != element) continue;
@@ -948,70 +948,70 @@ static vector<T> convert_ply_property(const ply_property& prop) {
   std::runtime_error("should not have gotten here");
   return {};
 }
-vector<float> get_ply_values(
+vector<float> get_values(
     const ply_model& ply, const string& element, const string& property) {
-  if (!has_ply_property(ply, element, property)) return {};
-  auto& prop = get_ply_property(ply, element, property);
+  if (!has_property(ply, element, property)) return {};
+  auto& prop = get_property(ply, element, property);
   if (prop.is_list) return {};
   return convert_ply_property<float>(prop);
 }
-vector<vec2f> get_ply_values(const ply_model& ply, const string& element,
+vector<vec2f> get_values(const ply_model& ply, const string& element,
     const string& property1, const string& property2) {
-  auto x      = get_ply_values(ply, element, property1);
-  auto y      = get_ply_values(ply, element, property2);
+  auto x      = get_values(ply, element, property1);
+  auto y      = get_values(ply, element, property2);
   auto values = vector<vec2f>(x.size());
   for (auto i = (size_t)0; i < values.size(); i++) values[i] = {x[i], y[i]};
   return values;
 }
-vector<vec3f> get_ply_values(const ply_model& ply, const string& element,
+vector<vec3f> get_values(const ply_model& ply, const string& element,
     const string& property1, const string& property2, const string& property3) {
-  auto x      = get_ply_values(ply, element, property1);
-  auto y      = get_ply_values(ply, element, property2);
-  auto z      = get_ply_values(ply, element, property3);
+  auto x      = get_values(ply, element, property1);
+  auto y      = get_values(ply, element, property2);
+  auto z      = get_values(ply, element, property3);
   auto values = vector<vec3f>(x.size());
   for (auto i = (size_t)0; i < values.size(); i++)
     values[i] = {x[i], y[i], z[i]};
   return values;
 }
-vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
+vector<vec4f> get_values(const ply_model& ply, const string& element,
     const string& property1, const string& property2, const string& property3,
     const string& property4) {
-  auto x      = get_ply_values(ply, element, property1);
-  auto y      = get_ply_values(ply, element, property2);
-  auto z      = get_ply_values(ply, element, property3);
-  auto w      = get_ply_values(ply, element, property4);
+  auto x      = get_values(ply, element, property1);
+  auto y      = get_values(ply, element, property2);
+  auto z      = get_values(ply, element, property3);
+  auto w      = get_values(ply, element, property4);
   auto values = vector<vec4f>(x.size());
   for (auto i = (size_t)0; i < values.size(); i++)
     values[i] = {x[i], y[i], z[i], w[i]};
   return values;
 }
-vector<vec4f> get_ply_values(const ply_model& ply, const string& element,
+vector<vec4f> get_values(const ply_model& ply, const string& element,
     const string& property1, const string& property2, const string& property3,
     float property4) {
-  auto x      = get_ply_values(ply, element, property1);
-  auto y      = get_ply_values(ply, element, property2);
-  auto z      = get_ply_values(ply, element, property3);
+  auto x      = get_values(ply, element, property1);
+  auto y      = get_values(ply, element, property2);
+  auto z      = get_values(ply, element, property3);
   auto w      = property4;
   auto values = vector<vec4f>(x.size());
   for (auto i = (size_t)0; i < values.size(); i++)
     values[i] = {x[i], y[i], z[i], w};
   return values;
 }
-vector<frame3f> get_ply_values(const ply_model& ply, const string& element,
+vector<frame3f> get_values(const ply_model& ply, const string& element,
     const array<string, 12>& properties) {
   auto coords = array<vector<float>, 12>{};
   for (auto idx = 0; idx < 12; idx++)
-    coords[idx] = get_ply_values(ply, element, properties[idx]);
+    coords[idx] = get_values(ply, element, properties[idx]);
   auto values = vector<frame3f>(coords[0].size());
   for (auto i = (size_t)0; i < values.size(); i++) {
     for (auto c = 0; c < 12; c++) (&values[i].x.x)[c] = coords[c][i];
   }
   return values;
 }
-vector<vector<int>> get_ply_lists(
+vector<vector<int>> get_lists(
     const ply_model& ply, const string& element, const string& property) {
-  if (!has_ply_property(ply, element, property)) return {};
-  auto& prop = get_ply_property(ply, element, property);
+  if (!has_property(ply, element, property)) return {};
+  auto& prop = get_property(ply, element, property);
   if (!prop.is_list) return {};
   auto& sizes  = prop.ldata_u8;
   auto  values = convert_ply_property<int>(prop);
@@ -1025,17 +1025,17 @@ vector<vector<int>> get_ply_lists(
   }
   return lists;
 }
-vector<byte> get_ply_list_sizes(
+vector<byte> get_list_sizes(
     const ply_model& ply, const string& element, const string& property) {
-  if (!has_ply_property(ply, element, property)) return {};
-  auto& prop = get_ply_property(ply, element, property);
+  if (!has_property(ply, element, property)) return {};
+  auto& prop = get_property(ply, element, property);
   if (!prop.is_list) return {};
   return prop.ldata_u8;
 }
-vector<int> get_ply_list_values(
+vector<int> get_list_values(
     const ply_model& ply, const string& element, const string& property) {
-  if (!has_ply_property(ply, element, property)) return {};
-  auto& prop = get_ply_property(ply, element, property);
+  if (!has_property(ply, element, property)) return {};
+  auto& prop = get_property(ply, element, property);
   if (!prop.is_list) return {};
   return convert_ply_property<int>(prop);
 }
@@ -1047,34 +1047,34 @@ static vector<vec2f> flip_ply_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get ply properties for meshes
-vector<vec3f> get_ply_positions(const ply_model& ply) {
-  return get_ply_values(ply, "vertex", "x", "y", "z");
+vector<vec3f> get_positions(const ply_model& ply) {
+  return get_values(ply, "vertex", "x", "y", "z");
 }
-vector<vec3f> get_ply_normals(const ply_model& ply) {
-  return get_ply_values(ply, "vertex", "nx", "ny", "nz");
+vector<vec3f> get_normals(const ply_model& ply) {
+  return get_values(ply, "vertex", "nx", "ny", "nz");
 }
-vector<vec2f> get_ply_texcoords(const ply_model& ply, bool flipv) {
-  auto texcoord = has_ply_property(ply, "vertex", "u")
-                      ? get_ply_values(ply, "vertex", "u", "v")
-                      : get_ply_values(ply, "vertex", "s", "t");
+vector<vec2f> get_texcoords(const ply_model& ply, bool flipv) {
+  auto texcoord = has_property(ply, "vertex", "u")
+                      ? get_values(ply, "vertex", "u", "v")
+                      : get_values(ply, "vertex", "s", "t");
   return flipv ? flip_ply_texcoord(texcoord) : texcoord;
 }
-vector<vec4f> get_ply_colors(const ply_model& ply) {
-  if (has_ply_property(ply, "vertex", "alpha")) {
-    return get_ply_values(ply, "vertex", "red", "green", "blue", "alpha");
+vector<vec4f> get_colors(const ply_model& ply) {
+  if (has_property(ply, "vertex", "alpha")) {
+    return get_values(ply, "vertex", "red", "green", "blue", "alpha");
   } else {
-    return get_ply_values(ply, "vertex", "red", "green", "blue", 1);
+    return get_values(ply, "vertex", "red", "green", "blue", 1);
   }
 }
-vector<float> get_ply_radius(const ply_model& ply) {
-  return get_ply_values(ply, "vertex", "radius");
+vector<float> get_radius(const ply_model& ply) {
+  return get_values(ply, "vertex", "radius");
 }
-vector<vector<int>> get_ply_faces(const ply_model& ply) {
-  return get_ply_lists(ply, "face", "vertex_indices");
+vector<vector<int>> get_faces(const ply_model& ply) {
+  return get_lists(ply, "face", "vertex_indices");
 }
-vector<vec3i> get_ply_triangles(const ply_model& ply) {
-  auto indices   = get_ply_list_values(ply, "face", "vertex_indices");
-  auto sizes     = get_ply_list_sizes(ply, "face", "vertex_indices");
+vector<vec3i> get_triangles(const ply_model& ply) {
+  auto indices   = get_list_values(ply, "face", "vertex_indices");
+  auto sizes     = get_list_sizes(ply, "face", "vertex_indices");
   auto triangles = vector<vec3i>{};
   triangles.reserve(sizes.size());
   auto cur = 0;
@@ -1087,9 +1087,9 @@ vector<vec3i> get_ply_triangles(const ply_model& ply) {
   }
   return triangles;
 }
-vector<vec4i> get_ply_quads(const ply_model& ply) {
-  auto indices = get_ply_list_values(ply, "face", "vertex_indices");
-  auto sizes   = get_ply_list_sizes(ply, "face", "vertex_indices");
+vector<vec4i> get_quads(const ply_model& ply) {
+  auto indices = get_list_values(ply, "face", "vertex_indices");
+  auto sizes   = get_list_sizes(ply, "face", "vertex_indices");
   auto quads   = vector<vec4i>{};
   quads.reserve(sizes.size());
   auto cur = 0;
@@ -1107,9 +1107,9 @@ vector<vec4i> get_ply_quads(const ply_model& ply) {
   }
   return quads;
 }
-vector<vec2i> get_ply_lines(const ply_model& ply) {
-  auto indices = get_ply_list_values(ply, "str", "vertex_indices");
-  auto sizes   = get_ply_list_sizes(ply, "str", "vertex_indices");
+vector<vec2i> get_lines(const ply_model& ply) {
+  auto indices = get_list_values(ply, "str", "vertex_indices");
+  auto sizes   = get_list_sizes(ply, "str", "vertex_indices");
   auto lines   = vector<vec2i>{};
   lines.reserve(sizes.size());
   auto cur = 0;
@@ -1121,18 +1121,18 @@ vector<vec2i> get_ply_lines(const ply_model& ply) {
   }
   return lines;
 }
-vector<int> get_ply_points(const ply_model& ply) {
-  return get_ply_list_values(ply, "point", "vertex_indices");
+vector<int> get_points(const ply_model& ply) {
+  return get_list_values(ply, "point", "vertex_indices");
 }
-bool has_ply_quads(const ply_model& ply) {
-  auto sizes = get_ply_list_sizes(ply, "face", "vertex_indices");
+bool has_quads(const ply_model& ply) {
+  auto sizes = get_list_sizes(ply, "face", "vertex_indices");
   for (auto size : sizes)
     if (size == 4) return true;
   return false;
 }
 
 // Add ply properties
-static void add_ply_element(
+static void add_element(
     ply_model& ply, const string& element, size_t count) {
   for (auto& elem : ply.elements) {
     if (elem.name == element) return;
@@ -1141,9 +1141,9 @@ static void add_ply_element(
   elem.name  = element;
   elem.count = count;
 }
-static void add_ply_property(ply_model& ply, const string& element,
+static void add_property(ply_model& ply, const string& element,
     const string& property, size_t count, ply_type type, bool is_list) {
-  add_ply_element(ply, element, count);
+  add_element(ply, element, count);
   for (auto& elem : ply.elements) {
     if (elem.name != element) continue;
     for (auto& prop : elem.properties) {
@@ -1164,54 +1164,54 @@ static vector<T> make_ply_vector(const T* value, size_t count, int stride) {
   return ret;
 }
 
-static void add_ply_values(ply_model& ply, const float* values, size_t count,
+static void add_values(ply_model& ply, const float* values, size_t count,
     const string& element, const string* properties, int nprops) {
   if (!values) return;
   for (auto p = 0; p < nprops; p++) {
-    add_ply_property(ply, element, properties[p], count, ply_type::f32, false);
-    auto& prop = get_ply_property(ply, element, properties[p]);
+    add_property(ply, element, properties[p], count, ply_type::f32, false);
+    auto& prop = get_property(ply, element, properties[p]);
     prop.data_f32.resize(count);
     for (auto i = 0; i < count; i++) prop.data_f32[i] = values[p + i * nprops];
   }
 }
 
-void add_ply_values(ply_model& ply, const vector<float>& values,
+void add_values(ply_model& ply, const vector<float>& values,
     const string& element, const string& property) {
   auto properties = vector{property};
-  add_ply_values(
+  add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 1);
 }
-void add_ply_values(ply_model& ply, const vector<vec2f>& values,
+void add_values(ply_model& ply, const vector<vec2f>& values,
     const string& element, const string& property1, const string& property2) {
   auto properties = vector{property1, property2};
-  add_ply_values(
+  add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 2);
 }
-void add_ply_values(ply_model& ply, const vector<vec3f>& values,
+void add_values(ply_model& ply, const vector<vec3f>& values,
     const string& element, const string& property1, const string& property2,
     const string& property3) {
   auto properties = vector{property1, property2, property3};
-  add_ply_values(
+  add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 3);
 }
-void add_ply_values(ply_model& ply, const vector<vec4f>& values,
+void add_values(ply_model& ply, const vector<vec4f>& values,
     const string& element, const string& property1, const string& property2,
     const string& property3, const string& property4) {
   auto properties = vector{property1, property2, property3, property4};
-  add_ply_values(
+  add_values(
       ply, (float*)values.data(), values.size(), element, properties.data(), 4);
 }
-void add_ply_values(ply_model& ply, const vector<frame3f>& values,
+void add_values(ply_model& ply, const vector<frame3f>& values,
     const string& element, const array<string, 12>& properties) {
-  add_ply_values(ply, (float*)values.data(), values.size(), element,
+  add_values(ply, (float*)values.data(), values.size(), element,
       properties.data(), properties.size());
 }
 
-void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
+void add_lists(ply_model& ply, const vector<vector<int>>& values,
     const string& element, const string& property) {
   if (values.empty()) return;
-  add_ply_property(ply, element, property, values.size(), ply_type::i32, true);
-  auto& prop = get_ply_property(ply, element, property);
+  add_property(ply, element, property, values.size(), ply_type::i32, true);
+  auto& prop = get_property(ply, element, property);
   prop.data_i32.reserve(values.size() * 4);
   prop.ldata_u8.reserve(values.size());
   for (auto& value : values) {
@@ -1219,72 +1219,72 @@ void add_ply_lists(ply_model& ply, const vector<vector<int>>& values,
     prop.ldata_u8.push_back((uint8_t)value.size());
   }
 }
-void add_ply_lists(ply_model& ply, const vector<byte>& sizes,
+void add_lists(ply_model& ply, const vector<byte>& sizes,
     const vector<int>& values, const string& element, const string& property) {
   if (values.empty()) return;
-  add_ply_property(ply, element, property, sizes.size(), ply_type::i32, true);
-  auto& prop    = get_ply_property(ply, element, property);
+  add_property(ply, element, property, sizes.size(), ply_type::i32, true);
+  auto& prop    = get_property(ply, element, property);
   prop.data_i32 = values;
   prop.ldata_u8 = sizes;
 }
-void add_ply_lists(ply_model& ply, const int* values, size_t count, int size,
+void add_lists(ply_model& ply, const int* values, size_t count, int size,
     const string& element, const string& property) {
   if (!values) return;
-  add_ply_property(ply, element, property, count, ply_type::i32, true);
-  auto& prop = get_ply_property(ply, element, property);
+  add_property(ply, element, property, count, ply_type::i32, true);
+  auto& prop = get_property(ply, element, property);
   prop.data_i32.assign(values, values + count * size);
   prop.ldata_u8.assign(count, size);
 }
-void add_ply_lists(ply_model& ply, const vector<int>& values,
+void add_lists(ply_model& ply, const vector<int>& values,
     const string& element, const string& property) {
-  return add_ply_lists(ply, values.data(), values.size(), 1, element, property);
+  return add_lists(ply, values.data(), values.size(), 1, element, property);
 }
-void add_ply_lists(ply_model& ply, const vector<vec2i>& values,
+void add_lists(ply_model& ply, const vector<vec2i>& values,
     const string& element, const string& property) {
-  return add_ply_lists(
+  return add_lists(
       ply, (int*)values.data(), values.size(), 2, element, property);
 }
-void add_ply_lists(ply_model& ply, const vector<vec3i>& values,
+void add_lists(ply_model& ply, const vector<vec3i>& values,
     const string& element, const string& property) {
-  return add_ply_lists(
+  return add_lists(
       ply, (int*)values.data(), values.size(), 3, element, property);
 }
-void add_ply_lists(ply_model& ply, const vector<vec4i>& values,
+void add_lists(ply_model& ply, const vector<vec4i>& values,
     const string& element, const string& property) {
-  return add_ply_lists(
+  return add_lists(
       ply, (int*)values.data(), values.size(), 4, element, property);
 }
 
 // Add ply properties for meshes
-void add_ply_positions(ply_model& ply, const vector<vec3f>& values) {
-  return add_ply_values(ply, values, "vertex", "x", "y", "z");
+void add_positions(ply_model& ply, const vector<vec3f>& values) {
+  return add_values(ply, values, "vertex", "x", "y", "z");
 }
-void add_ply_normals(ply_model& ply, const vector<vec3f>& values) {
-  return add_ply_values(ply, values, "vertex", "nx", "ny", "nz");
+void add_normals(ply_model& ply, const vector<vec3f>& values) {
+  return add_values(ply, values, "vertex", "nx", "ny", "nz");
 }
-void add_ply_texcoords(
+void add_texcoords(
     ply_model& ply, const vector<vec2f>& values, bool flipv) {
-  return add_ply_values(
+  return add_values(
       ply, flipv ? flip_ply_texcoord(values) : values, "vertex", "u", "v");
 }
-void add_ply_colors(ply_model& ply, const vector<vec4f>& values) {
-  return add_ply_values(ply, values, "vertex", "red", "green", "blue", "alpha");
+void add_colors(ply_model& ply, const vector<vec4f>& values) {
+  return add_values(ply, values, "vertex", "red", "green", "blue", "alpha");
 }
-void add_ply_radius(ply_model& ply, const vector<float>& values) {
-  return add_ply_values(ply, values, "vertex", "radius");
+void add_radius(ply_model& ply, const vector<float>& values) {
+  return add_values(ply, values, "vertex", "radius");
 }
-void add_ply_faces(ply_model& ply, const vector<vector<int>>& values) {
-  return add_ply_lists(ply, values, "face", "vertex_indices");
+void add_faces(ply_model& ply, const vector<vector<int>>& values) {
+  return add_lists(ply, values, "face", "vertex_indices");
 }
-void add_ply_faces(ply_model& ply, const vector<vec3i>& triangles,
+void add_faces(ply_model& ply, const vector<vec3i>& triangles,
     const vector<vec4i>& quads) {
   if (triangles.empty() && quads.empty()) return;
   if (quads.empty()) {
-    return add_ply_lists(ply, triangles, "face", "vertex_indices");
+    return add_lists(ply, triangles, "face", "vertex_indices");
   } else if (triangles.empty() &&
              std::all_of(quads.begin(), quads.end(),
                  [](const vec4i& q) { return q.z != q.w; })) {
-    return add_ply_lists(ply, quads, "face", "vertex_indices");
+    return add_lists(ply, quads, "face", "vertex_indices");
   } else {
     auto sizes   = vector<uint8_t>();
     auto indices = vector<int>{};
@@ -1303,20 +1303,20 @@ void add_ply_faces(ply_model& ply, const vector<vec3i>& triangles,
       indices.push_back(q.z);
       if (q.z != q.w) indices.push_back(q.w);
     }
-    return add_ply_lists(ply, sizes, indices, "face", "vertex_indices");
+    return add_lists(ply, sizes, indices, "face", "vertex_indices");
   }
 }
-void add_ply_triangles(ply_model& ply, const vector<vec3i>& values) {
-  return add_ply_faces(ply, values, {});
+void add_triangles(ply_model& ply, const vector<vec3i>& values) {
+  return add_faces(ply, values, {});
 }
-void add_ply_quads(ply_model& ply, const vector<vec4i>& values) {
-  return add_ply_faces(ply, {}, values);
+void add_quads(ply_model& ply, const vector<vec4i>& values) {
+  return add_faces(ply, {}, values);
 }
-void add_ply_lines(ply_model& ply, const vector<vec2i>& values) {
-  return add_ply_lists(ply, values, "str", "vertex_indices");
+void add_lines(ply_model& ply, const vector<vec2i>& values) {
+  return add_lists(ply, values, "str", "vertex_indices");
 }
-void add_ply_points(ply_model& ply, const vector<int>& values) {
-  return add_ply_lists(ply, values, "point", "vertex_indices");
+void add_points(ply_model& ply, const vector<int>& values) {
+  return add_lists(ply, values, "point", "vertex_indices");
 }
 
 // get ply value either ascii or binary
@@ -3372,10 +3372,10 @@ static void convert_pbrt_shapes(
         try {
           auto ply = ply_model{};
           load_ply(get_dirname(filename) + shape.filename_, ply);
-          shape.positions = get_ply_positions(ply);
-          shape.normals   = get_ply_normals(ply);
-          shape.texcoords = get_ply_texcoords(ply);
-          shape.triangles = get_ply_triangles(ply);
+          shape.positions = get_positions(ply);
+          shape.normals   = get_normals(ply);
+          shape.texcoords = get_texcoords(ply);
+          shape.triangles = get_triangles(ply);
         } catch (std::exception& e) {
           throw_dependent_error(filename, e.what());
         }
@@ -4052,10 +4052,10 @@ void save_pbrt(
     if (shape.type == "plymesh") {
       try {
         auto ply = ply_model{};
-        add_ply_positions(ply, shape.positions);
-        add_ply_normals(ply, shape.normals);
-        add_ply_texcoords(ply, shape.texcoords);
-        add_ply_triangles(ply, shape.triangles);
+        add_positions(ply, shape.positions);
+        add_normals(ply, shape.normals);
+        add_texcoords(ply, shape.texcoords);
+        add_triangles(ply, shape.triangles);
         save_ply(get_dirname(filename) + shape.filename_, ply);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());

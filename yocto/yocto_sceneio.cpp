@@ -860,7 +860,7 @@ static void load_instances(const string& filename, vector<frame3f>& frames) {
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     load_ply(filename, ply);
-    frames = get_ply_values(ply, "frame",
+    frames = get_values(ply, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
   } else {
@@ -874,7 +874,7 @@ static void save_instances(
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    add_ply_values(ply, frames, "frame",
+    add_values(ply, frames, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
     save_ply(filename, ply);
