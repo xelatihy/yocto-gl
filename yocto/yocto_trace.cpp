@@ -2480,7 +2480,7 @@ static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
     auto& instance  = scene.instances[light.instance];
     auto& shape     = scene.shapes[instance.shape];
     auto& frame     = shape.frames[instance.instance];
-    auto  element   = sample_discrete(light.cdf, rel);
+    auto  element   = sample_discrete(shape.elements_cdf, rel);
     auto  uv        = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = transform_point(frame,
         eval_shape_elem(shape, shape.quadspos, shape.positions, element, uv));
@@ -2489,7 +2489,7 @@ static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
     auto& environment = scene.environments[light.environment];
     if (environment.emission_tex >= 0) {
       auto& emission_tex = scene.textures[environment.emission_tex];
-      auto  idx          = sample_discrete(light.cdf, rel);
+      auto  idx          = sample_discrete(environment.texels_cdf, rel);
       auto  size         = texture_size(emission_tex);
       auto  uv           = vec2f{
           (idx % size.x + 0.5f) / size.x, (idx / size.x + 0.5f) / size.y};
@@ -2527,7 +2527,7 @@ static float sample_lights_pdf(
         auto lnormal = transform_normal(frame,
             eval_element_normal(shape, isec.element), trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
-        auto area = light.cdf.back();
+        auto area = shape.elements_cdf.back();
         lpdf += distance_squared(lposition, position) /
                 (abs(dot(lnormal, direction)) * area);
         // continue
@@ -2537,7 +2537,7 @@ static float sample_lights_pdf(
     } else if (light.environment >= 0) {
       auto& environment = scene.environments[light.environment];
       if (environment.emission_tex >= 0) {
-        auto& cdf          = light.cdf;
+        auto& cdf          = environment.texels_cdf;
         auto& emission_tex = scene.textures[environment.emission_tex];
         auto  size         = texture_size(emission_tex);
         auto  wl = transform_direction(inverse(environment.frame), direction);
@@ -2936,48 +2936,48 @@ void init_lights(trace_scene& scene) {
     auto& material = shape.material;
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
-    auto& light       = scene.lights.emplace_back();
-    light.instance    = idx;
-    light.environment = -1;
     if (!shape.triangles.empty()) {
-      light.cdf = vector<float>(shape.triangles.size());
-      for (auto idx = 0; idx < light.cdf.size(); idx++) {
+      shape.elements_cdf = vector<float>(shape.triangles.size());
+      for (auto idx = 0; idx < shape.elements_cdf.size(); idx++) {
         auto& t        = shape.triangles[idx];
-        light.cdf[idx] = triangle_area(
+        shape.elements_cdf[idx] = triangle_area(
             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-        if (idx) light.cdf[idx] += light.cdf[idx - 1];
+        if (idx) shape.elements_cdf[idx] += shape.elements_cdf[idx - 1];
       }
     }
     if (!shape.quads.empty()) {
-      light.cdf = vector<float>(shape.quads.size());
-      for (auto idx = 0; idx < light.cdf.size(); idx++) {
+      shape.elements_cdf = vector<float>(shape.quads.size());
+      for (auto idx = 0; idx < shape.elements_cdf.size(); idx++) {
         auto& t        = shape.quads[idx];
-        light.cdf[idx] = quad_area(shape.positions[t.x], shape.positions[t.y],
+        shape.elements_cdf[idx] = quad_area(shape.positions[t.x], shape.positions[t.y],
             shape.positions[t.z], shape.positions[t.w]);
-        if (idx) light.cdf[idx] += light.cdf[idx - 1];
+        if (idx) shape.elements_cdf[idx] += shape.elements_cdf[idx - 1];
       }
     }
+    auto& light       = scene.lights.emplace_back();
+    light.instance    = idx;
+    light.environment = -1;
   }
   for (auto idx = 0; idx < scene.environments.size(); idx++) {
     auto& environment = scene.environments[idx];
     if (environment.emission == zero3f) continue;
-    auto& light       = scene.lights.emplace_back();
-    light.instance    = -1;
-    light.environment = idx;
     if (environment.emission_tex >= 0) {
       auto& texture = scene.textures[environment.emission_tex];
       auto  size    = texture_size(texture);
-      light.cdf     = vector<float>(size.x * size.y);
+      environment.texels_cdf     = vector<float>(size.x * size.y);
       if (size != zero2i) {
-        for (auto i = 0; i < light.cdf.size(); i++) {
+        for (auto i = 0; i < environment.texels_cdf.size(); i++) {
           auto ij      = vec2i{i % size.x, i / size.x};
           auto th      = (ij.y + 0.5f) * pif / size.y;
           auto value   = lookup_texture(texture, ij);
-          light.cdf[i] = max(xyz(value)) * sin(th);
-          if (i) light.cdf[i] += light.cdf[i - 1];
+          environment.texels_cdf[i] = max(xyz(value)) * sin(th);
+          if (i) environment.texels_cdf[i] += environment.texels_cdf[i - 1];
         }
       }
     }
+    auto& light       = scene.lights.emplace_back();
+    light.instance    = -1;
+    light.environment = idx;
   }
 }
 

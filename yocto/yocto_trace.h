@@ -367,6 +367,9 @@ struct trace_shape {
 #ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh = {};
 #endif
+
+  // element cdf for sampling
+  vector<float> elements_cdf         = {};
 };
 
 // Instance of a visible shape in the scene.
@@ -380,13 +383,13 @@ struct trace_environment {
   frame3f frame        = identity3x4f;
   vec3f   emission     = {0, 0, 0};
   int     emission_tex = -1;
+  vector<float> texels_cdf         = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
 struct trace_light {
   int           instance    = -1;
   int           environment = -1;
-  vector<float> cdf         = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
