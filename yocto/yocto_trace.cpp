@@ -3339,17 +3339,17 @@ void set_instance(trace_scene& scene, int idx, const frame3f& frame, int shape,
 void clear_instances(trace_scene& scene) { scene.instances.clear(); }
 
 // Add environment
-int add_environment(trace_scene& scene, const frame3f& frame,
-    const vec3f& emission, int emission_tex) {
+int add_environment(trace_scene& scene) {
   scene.environments.emplace_back();
-  set_environment(
-      scene, (int)scene.environments.size() - 1, frame, emission, emission_tex);
   return (int)scene.environments.size() - 1;
 }
-void set_environment(trace_scene& scene, int idx, const frame3f& frame,
-    const vec3f& emission, int emission_tex) {
+void set_environment_frame(trace_scene& scene, int idx, const frame3f& frame) {
   auto& environment        = scene.environments[idx];
   environment.frame        = frame;
+}
+void set_environment_emission(trace_scene& scene, int idx, 
+    const vec3f& emission, int emission_tex) {
+  auto& environment        = scene.environments[idx];
   environment.emission     = emission;
   environment.emission_tex = emission_tex;
 }

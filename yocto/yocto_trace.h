@@ -168,10 +168,9 @@ void set_instance(
 void clear_instances(trace_scene& scene);
 
 // Add environment
-int  add_environment(trace_scene& scene, const frame3f& frame,
-     const vec3f& emission, int emission_tex = -1);
-void set_environment(trace_scene& scene, int idx, const frame3f& frame,
-    const vec3f& emission, int emission_tex = -1);
+int  add_environment(trace_scene& scene);
+void set_environment_frame(trace_scene& scene, int idx, const frame3f& frame);
+void set_environment_emission(trace_scene& scene, int idx, const vec3f& emission, int emission_map = -1);
 void clear_environments(trace_scene& scene);
 
 // Trace state

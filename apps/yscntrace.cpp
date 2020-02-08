@@ -106,7 +106,9 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   }
 
   for (auto& ioenvironment : ioscene.environments) {
-    add_environment(scene, ioenvironment.frame, ioenvironment.emission,
+    auto id = add_environment(scene);
+    set_environment_frame(scene, id, ioenvironment.frame);
+    set_environment_emission(scene, id, ioenvironment.emission,
         ioenvironment.emission_tex);
   }
 
