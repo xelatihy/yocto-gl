@@ -31,6 +31,7 @@ struct app_state {
   bvh_tree       bvh;
 
   // Internal handles
+  int camera_id = 0;
   int glshape_id, glpoints_id, glvector_field_id, gledges_id, glpolyline_id;
 };
 
@@ -165,8 +166,13 @@ void show_edges(shared_ptr<app_state> app) {
 
 void init_opengl_scene(shared_ptr<app_state> app) {
   init_glscene(app->scene);
-  add_camera(app->scene, app->camera.frame, app->camera.lens,
-      app->camera.aspect, app->camera.film, 0.001, 10000);
+  app->camera_id = add_camera(app->scene);
+  set_camera_frame(app->scene, app->camera_id, app->camera.frame);
+  set_camera_lens(app->scene, app->camera_id, app->camera.lens);
+  set_camera_aspect(app->scene, app->camera_id, app->camera.aspect);
+  set_camera_film(app->scene, app->camera_id, app->camera.film);
+  set_camera_near(app->scene, app->camera_id, 0.001);
+  set_camera_far(app->scene, app->camera_id, 10000);
 
   // The model.
   app->glshape_id = add_shape(app->scene);
@@ -295,8 +301,10 @@ void yimshproc(const string&                         input_filename,
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
-    set_camera(app->scene, 0, app->camera.frame, app->camera.lens,
-        app->camera.aspect, app->camera.film, 0.001, 10000);
+  set_camera_frame(app->scene, app->camera_id, app->camera.frame);
+  set_camera_lens(app->scene, app->camera_id, app->camera.lens);
+  set_camera_aspect(app->scene, app->camera_id, app->camera.aspect);
+  set_camera_film(app->scene, app->camera_id, app->camera.film);
   });
   set_key_glcallback(win, [app](const opengl_window& win, int key,
                               bool pressing, const opengl_input& input) {
@@ -307,7 +315,6 @@ void yimshproc(const string&                         input_filename,
         // Handle mouse and keyboard for navigation.
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
             !input.widgets_active) {
-          auto& camera = app->camera;
           auto  dolly  = 0.0f;
           auto  pan    = zero2f;
           auto  rotate = zero2f;
@@ -317,9 +324,11 @@ void yimshproc(const string&                         input_filename,
             pan = (input.mouse_pos - input.mouse_last) / 100.0f;
           rotate.y = -rotate.y;
           pan.x    = -pan.x;
-          update_turntable(camera.frame, app->camera.focus, rotate, dolly, pan);
-          set_camera(app->scene, 0, camera.frame, camera.lens, camera.aspect,
-              camera.film, 0.001, 10000);
+          update_turntable(app->camera.frame, app->camera.focus, rotate, dolly, pan);
+          set_camera_frame(app->scene, app->camera_id, app->camera.frame);
+          set_camera_lens(app->scene, app->camera_id, app->camera.lens);
+          set_camera_aspect(app->scene, app->camera_id, app->camera.aspect);
+          set_camera_film(app->scene, app->camera_id, app->camera.film);
         }
       });
 

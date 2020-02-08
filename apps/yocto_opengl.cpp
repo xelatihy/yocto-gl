@@ -824,25 +824,32 @@ bool is_initialized(const opengl_scene& glscene) {
 }
 
 // add camera
-int add_camera(opengl_scene& scene, const frame3f& frame, float lens,
-    float asepct, float film, float near, float far) {
-  auto& camera  = scene._cameras.emplace_back();
-  camera.frame  = frame;
-  camera.lens   = lens;
-  camera.asepct = asepct;
-  camera.film   = film;
-  camera.near   = near;
-  camera.far    = far;
+int add_camera(opengl_scene& scene) {
+  scene._cameras.emplace_back();
   return (int)scene._cameras.size() - 1;
 }
-void set_camera(opengl_scene& scene, int idx, const frame3f& frame, float lens,
-    float asepct, float film, float near, float far) {
+void set_camera_frame(opengl_scene& scene, int idx, const frame3f& frame) {
   auto& camera  = scene._cameras[idx];
   camera.frame  = frame;
+}
+void set_camera_lens(opengl_scene& scene, int idx, float lens) {
+  auto& camera  = scene._cameras[idx];
   camera.lens   = lens;
-  camera.asepct = asepct;
+}
+void set_camera_aspect(opengl_scene& scene, int idx, float aspect) {
+  auto& camera  = scene._cameras[idx];
+  camera.aspect = aspect;
+}
+void set_camera_film(opengl_scene& scene, int idx, float film) {
+  auto& camera  = scene._cameras[idx];
   camera.film   = film;
+}
+void set_camera_near(opengl_scene& scene, int idx, float near) {
+  auto& camera  = scene._cameras[idx];
   camera.near   = near;
+}
+void set_camera_far(opengl_scene& scene, int idx, float far) {
+  auto& camera  = scene._cameras[idx];
   camera.far    = far;
 }
 void clear_cameras(opengl_scene& scene) { scene._cameras.clear(); }

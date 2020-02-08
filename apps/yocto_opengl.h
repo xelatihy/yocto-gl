@@ -107,7 +107,7 @@ namespace yocto {
 struct opengl_camera {
   frame3f frame  = identity3x4f;
   float   lens   = 0.050;
-  float   asepct = 1.000;
+  float   aspect = 1.000;
   float   film   = 0.036;
   float   near   = 0.001;
   float   far    = 10000;
@@ -233,10 +233,13 @@ void init_glscene(opengl_scene& scene);
 bool is_initialized(opengl_scene& scene);
 
 // add camera
-int  add_camera(opengl_scene& scene, const frame3f& frame, float lens,
-     float asepct, float film, float near, float far);
-void set_camera(opengl_scene& scene, int idx, const frame3f& frame, float lens,
-    float asepct, float film, float near, float far);
+int  add_camera(opengl_scene& scene);
+void set_camera_frame(opengl_scene& scene, int idx, const frame3f& frame);
+void set_camera_lens(opengl_scene& scene, int idx, float lens);
+void set_camera_aspect(opengl_scene& scene, int idx, float aspect);
+void set_camera_film(opengl_scene& scene, int idx, float film);
+void set_camera_near(opengl_scene& scene, int idx, float near);
+void set_camera_far(opengl_scene& scene, int idx, float far);
 void clear_cameras(opengl_scene& scene);
 
 // add texture

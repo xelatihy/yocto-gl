@@ -169,8 +169,13 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
 
   // camera
   for (auto& camera : scene.cameras) {
-    add_camera(glscene, camera.frame, camera.lens, camera.aspect, camera.film,
-        0.001, 10000);
+    auto id = add_camera(glscene);
+    set_camera_frame(glscene, id, camera.frame);
+    set_camera_lens(glscene, id, camera.lens);
+    set_camera_aspect(glscene, id, camera.aspect);
+    set_camera_film(glscene, id, camera.film);
+    set_camera_near(glscene, id, 0.001);
+    set_camera_far(glscene, id, 10000);
   }
 
   // textures
@@ -449,8 +454,12 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         win, "camera##2", app->selected_camera, app->ioscene.cameras);
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
       auto& camera = app->ioscene.cameras[app->selected_camera];
-      set_camera(app->glscene, app->selected_camera, camera.frame, camera.lens,
-          camera.aspect, camera.film, 0.001, 10000);
+      set_camera_frame(app->glscene, app->selected_camera, camera.frame);
+      set_camera_lens(app->glscene, app->selected_camera, camera.lens);
+      set_camera_aspect(app->glscene, app->selected_camera, camera.aspect);
+      set_camera_film(app->glscene, app->selected_camera, camera.film);
+      set_camera_near(app->glscene, app->selected_camera, 0.001);
+      set_camera_far(app->glscene, app->selected_camera, 10000);
     }
     end_glheader(win);
   }
@@ -644,8 +653,7 @@ void run_app(int argc, const char* argv[]) {
           if (input.mouse_left && input.modifier_shift)
             pan = (input.mouse_pos - input.mouse_last) / 100.0f;
           update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-          set_camera(app->glscene, app->drawgl_prms.camera, camera.frame,
-              camera.lens, camera.aspect, camera.film, 0.001, 10000);
+          set_camera_frame(app->glscene, app->drawgl_prms.camera, camera.frame);
         }
 
         // animation
