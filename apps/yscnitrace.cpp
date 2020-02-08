@@ -106,8 +106,11 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
-    add_camera(scene, iocamera.frame, iocamera.lens, iocamera.aspect,
-        iocamera.film, iocamera.aperture, iocamera.focus);
+    auto id = add_camera(scene);
+    set_camera_frame(scene, id, iocamera.frame);
+    set_camera_lens(scene, id, iocamera.lens, iocamera.aspect,
+        iocamera.film);
+    set_camera_focus(scene, id, iocamera.aperture, iocamera.focus);
   }
   for (auto& iotexture : ioscene.textures) {
     auto id = add_texture(scene);
@@ -521,9 +524,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
       stop_display(app);
       auto& iocamera = app->ioscene.cameras[app->selected_camera];
-      set_camera(app->scene, app->selected_camera, iocamera.frame,
-          iocamera.lens, iocamera.aspect, iocamera.film, iocamera.aperture,
-          iocamera.focus);
+      set_camera_frame(app->scene, app->selected_camera, iocamera.frame);
+      set_camera_lens(app->scene, app->selected_camera, 
+          iocamera.lens, iocamera.aspect, iocamera.film);
+      set_camera_focus(app->scene, app->selected_camera, iocamera.aperture, iocamera.focus);
       reset_display(app);
     }
     end_glheader(win);
@@ -773,8 +777,10 @@ void run_app(int argc, const char* argv[]) {
       pan.x = -pan.x;
       stop_display(app);
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      set_camera(app->scene, app->params.camera, camera.frame, camera.lens,
-          camera.aspect, camera.film, camera.aperture, camera.focus);
+      set_camera_frame(app->scene, app->params.camera, camera.frame);
+      set_camera_lens(app->scene, app->params.camera, 
+       camera.lens, camera.aspect, camera.film);
+      set_camera_focus(app->scene, app->params.camera, camera.aperture, camera.focus);
       reset_display(app);
     }
 

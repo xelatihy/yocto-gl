@@ -3058,20 +3058,23 @@ image<vec4f> trace_samples(trace_state& state, const trace_scene& scene,
 namespace yocto {
 
 // Add cameras
-int add_camera(trace_scene& scene, const frame3f& frame, float lens,
-    float aspect, float film, float aperture, float focus) {
+int add_camera(trace_scene& scene) {
   scene.cameras.emplace_back();
-  set_camera(scene, (int)scene.cameras.size() - 1, frame, lens, aspect, film,
-      aperture, focus);
   return (int)scene.cameras.size() - 1;
 }
-void set_camera(trace_scene& scene, int idx, const frame3f& frame, float lens,
-    float aspect, float film, float aperture, float focus) {
+void set_camera_frame(trace_scene& scene, int idx, const frame3f& frame) {
   auto& camera = scene.cameras[idx];
   camera.frame = frame;
+}
+void set_camera_lens(trace_scene& scene, int idx, float lens,
+    float aspect, float film) {
+  auto& camera = scene.cameras[idx];
   camera.lens  = lens;
   camera.film  = aspect >= 1 ? vec2f{film, film / aspect}
                             : vec2f{film * aspect, film};
+}
+void set_camera_focus(trace_scene& scene, int idx, float aperture, float focus) {
+  auto& camera = scene.cameras[idx];
   camera.aperture = aperture;
   camera.focus    = focus;
 }

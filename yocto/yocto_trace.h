@@ -79,10 +79,12 @@ namespace yocto {
 struct trace_scene;
 
 // Add cameras
-int  add_camera(trace_scene& scene, const frame3f& frame, float lens,
-     float asepct, float film, float aperture, float focus);
-void set_camera(trace_scene& scene, int idx, const frame3f& frame, float lens,
-    float asepct, float film, float aperture, float focus);
+int  add_camera(trace_scene& scene);
+void set_camera_frame(trace_scene& scene, int idx, const frame3f& frame);
+void set_camera_lens(
+    trace_scene& scene, int idx, float lens, float aspect, float film);
+void set_camera_focus(trace_scene& scene, int idx, 
+    float aperture, float focus);
 void clear_cameras(trace_scene& scene);
 
 // Add texture
@@ -169,7 +171,8 @@ void clear_instances(trace_scene& scene);
 // Add environment
 int  add_environment(trace_scene& scene);
 void set_environment_frame(trace_scene& scene, int idx, const frame3f& frame);
-void set_environment_emission(trace_scene& scene, int idx, const vec3f& emission, int emission_map = -1);
+void set_environment_emission(
+    trace_scene& scene, int idx, const vec3f& emission, int emission_map = -1);
 void clear_environments(trace_scene& scene);
 
 // Trace state
