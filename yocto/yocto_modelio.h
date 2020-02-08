@@ -156,8 +156,8 @@ void add_lists(ply_model& ply, const vector<vector<int>>& values,
     const string& element, const string& property);
 void add_lists(ply_model& ply, const vector<byte>& sizes,
     const vector<int>& values, const string& element, const string& property);
-void add_lists(ply_model& ply, const vector<int>& values,
-    const string& element, const string& property);
+void add_lists(ply_model& ply, const vector<int>& values, const string& element,
+    const string& property);
 void add_lists(ply_model& ply, const vector<vec2i>& values,
     const string& element, const string& property);
 void add_lists(ply_model& ply, const vector<vec3i>& values,
@@ -361,21 +361,18 @@ void add_triangles(obj_model& obj, const string& name,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
     bool flip_texcoord = false);
-void add_quads(obj_model& obj, const string& name,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<string>& materials = {}, const vector<int>& ematerials = {},
-    bool flip_texcoord = false);
-void add_lines(obj_model& obj, const string& name,
-    const vector<vec2i>& lines, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<string>& materials = {}, const vector<int>& ematerials = {},
-    bool flip_texcoord = false);
-void add_points(obj_model& obj, const string& name,
-    const vector<int>& points, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texcoords,
-    const vector<string>& materials = {}, const vector<int>& ematerials = {},
-    bool flip_texcoord = false);
+void add_quads(obj_model& obj, const string& name, const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<string>& materials = {},
+    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+void add_lines(obj_model& obj, const string& name, const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<string>& materials = {},
+    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+void add_points(obj_model& obj, const string& name, const vector<int>& points,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texcoords, const vector<string>& materials = {},
+    const vector<int>& ematerials = {}, bool flip_texcoord = false);
 void add_fvquads(obj_model& obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
@@ -510,14 +507,14 @@ struct pbrt_command {
 // Pbrt camera
 struct pbrt_camera {
   // camera parameters
-  frame3f            frame  = identity3x4f;
-  frame3f            frend  = identity3x4f;
-  float width    = 0;
-  float height   = 0;
-  float lens     = 0;
-  float aspect   = 0;
-  float focus    = 0;
-  float aperture = 0;
+  frame3f frame    = identity3x4f;
+  frame3f frend    = identity3x4f;
+  float   width    = 0;
+  float   height   = 0;
+  float   lens     = 0;
+  float   aspect   = 0;
+  float   focus    = 0;
+  float   aperture = 0;
 };
 
 // Pbrt texture
@@ -577,15 +574,12 @@ struct pbrt_shape {
 // Pbrt lights
 struct pbrt_light {
   // light parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f            frame  = identity3x4f;
-  frame3f            frend  = identity3x4f;
-  // light approximation
-  vec3f emission = zero3f;
-  vec3f from     = zero3f;
-  vec3f to       = zero3f;
-  bool  distant  = false;
+  frame3f frame    = identity3x4f;
+  frame3f frend    = identity3x4f;
+  vec3f   emission = zero3f;
+  vec3f   from     = zero3f;
+  vec3f   to       = zero3f;
+  bool    distant  = false;
   // arealight approximation
   vec3f         area_emission  = zero3f;
   frame3f       area_frame     = identity3x4f;
@@ -605,12 +599,9 @@ struct pbrt_arealight {
   vec3f emission = zero3f;
 };
 struct pbrt_environment {
-  // shape parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f            frame  = identity3x4f;
-  frame3f            frend  = identity3x4f;
   // environment approximation
+  frame3f frame = identity3x4f;
+  frame3f frend    = identity3x4f;
   vec3f  emission     = zero3f;
   string emission_map = "";
 };
@@ -634,13 +625,15 @@ struct pbrt_model {
   vector<pbrt_light>       lights       = {};
   vector<pbrt_film>        films        = {};
   // Low level commands
-  vector<pbrt_command>     cameras_commands = {};
-  vector<pbrt_command>     films_commands = {};
-  vector<pbrt_command>  integrators_commands  = {};
-  vector<pbrt_command>      filters_commands      = {};
-  vector<pbrt_command>     samplers_commands     = {};
+  vector<pbrt_command> cameras_commands      = {};
+  vector<pbrt_command> films_commands        = {};
+  vector<pbrt_command> integrators_commands  = {};
+  vector<pbrt_command> filters_commands      = {};
+  vector<pbrt_command> samplers_commands     = {};
   vector<pbrt_command> accelerators_commands = {};
-  vector<pbrt_command> mediums_commands = {};
+  vector<pbrt_command> mediums_commands      = {};
+  vector<pbrt_command> environments_commands = {};
+  vector<pbrt_command> lights_commands       = {};
 };
 
 // Load/save pbrt
