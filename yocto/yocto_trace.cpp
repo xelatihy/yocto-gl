@@ -1286,16 +1286,20 @@ static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
     rtcSetSceneFlags(escene, RTC_SCENE_FLAG_COMPACT);
   if (params.bvh == trace_bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
-  for (auto instance_id = 0; instance_id < scene.instances.size();
-       instance_id++) {
-    auto& instance  = scene.instances[instance_id];
-    auto& shape     = scene.shapes[instance.shape];
-    auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
-    rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
-    rtcSetGeometryTransform(
-        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
-    rtcCommitGeometry(egeometry);
-    rtcAttachGeometryByID(escene, egeometry, instance_id);
+  auto shape_id = 0;
+  for(auto& shape : scene.shapes) {
+    auto instance_id = 0;
+    for(auto& frame : shape.frames) {
+      auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
+      rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
+      rtcSetGeometryTransform(
+          egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
+      rtcCommitGeometry(egeometry);
+      rtcAttachGeometryByID(escene, egeometry, (int)scene.embree_instances.size());
+      scene.embree_instances.push_back({shape_id, instance_id});
+      instance_id += 1;
+    }
+    shape_id += 1;
   }
   rtcCommitScene(escene);
   scene.embree_bvh = std::shared_ptr<void>{
@@ -1306,15 +1310,16 @@ static void update_embree_bvh(
     trace_scene& scene, const vector<int>& updated_instances) {
   // scene bvh
   auto escene = (RTCScene)scene.embree_bvh.get();
-  for (auto instance_id : updated_instances) {
-    auto& instance  = scene.instances[instance_id];
-    auto& shape     = scene.shapes[instance.shape];
-    auto  egeometry = rtcGetGeometry(escene, instance_id);
-    rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
-    rtcSetGeometryTransform(
-        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
-    rtcCommitGeometry(egeometry);
-  }
+  // TODO: fix embree updates
+  // for (auto instance_id : updated_instances) {
+  //   auto& instance  = scene.instances[instance_id];
+  //   auto& shape     = scene.shapes[instance.shape];
+  //   auto  egeometry = rtcGetGeometry(escene, instance_id);
+  //   rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
+  //   rtcSetGeometryTransform(
+  //       egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+  //   rtcCommitGeometry(egeometry);
+  // }
   rtcCommitScene(escene);
 }
 
@@ -1343,8 +1348,8 @@ static bool intersect_shape_embree_bvh(const trace_shape& shape,
 }
 
 static bool intersect_scene_embree_bvh(const trace_scene& scene,
-    const ray3f& ray, int& instance, int& element, vec2f& uv, float& distance,
-    bool find_any) {
+    const ray3f& ray, int& shape, int& instance, int& element, 
+    vec2f& uv, float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
   embree_ray.ray.org_y     = ray.o.y;
@@ -1361,7 +1366,8 @@ static bool intersect_scene_embree_bvh(const trace_scene& scene,
   rtcInitIntersectContext(&embree_ctx);
   rtcIntersect1((RTCScene)scene.embree_bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  instance = (int)embree_ray.hit.instID[0];
+  shape = scene.embree_instances[(int)embree_ray.hit.instID[0]].x;
+  instance = scene.embree_instances[(int)embree_ray.hit.instID[0]].y;
   element  = (int)embree_ray.hit.primID;
   uv       = {embree_ray.hit.u, embree_ray.hit.v};
   distance = embree_ray.ray.tfar;
@@ -1997,7 +2003,7 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
   // call Embree if needed
   if (scene.embree_bvh) {
     return intersect_scene_embree_bvh(
-        scene, ray_, instance, element, uv, distance, find_any);
+        scene, ray_, shape, instance, element, uv, distance, find_any);
   }
 #endif
 
