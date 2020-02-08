@@ -43,36 +43,36 @@ environments:
 shapes:
   - name: shapes/floor.yaml
     shape: shapes/floor.ply
-    base: [0.7, 0.7, 0.7]
-    base_tex: textures/floor.png
+    color: [0.7, 0.7, 0.7]
+    color_tex: textures/floor.png
   - name: shapes/bunny-uvgrid.yaml
     shape: shapes/bunny.obj
     specular: 1
-    base: [1, 1, 1]
+    color: [1, 1, 1]
     roughness: 0.1
-    base_tex: textures/uvgrid.png
+    color_tex: textures/uvgrid.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: shapes/sphere-plastic-sharp.yaml
     shape: shapes/sphere.ply
     specular: 1
-    base: [0.5, 0.5, 0.7]
+    color: [0.5, 0.5, 0.7]
     roughness: 0.01
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: shapes/bunny-metal-rough.yaml
     shape: shapes/bunny.obj
-    base: [0.66, 0.45, 0.34]
+    color: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: shapes/sphere-plastic-rough.yaml
     shape: shapes/sphere.ply
     specular: 1
-    base: [0.5, 0.7, 0.5]
+    color: [0.5, 0.7, 0.5]
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0]
   - name: shapes/bunny-metal-sharp.yaml
     shape: shapes/bunny.obj
-    base: [0.7, 0.7, 0.7]
+    color: [0.7, 0.7, 0.7]
     metallic: 1
     roughness: 0
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0]

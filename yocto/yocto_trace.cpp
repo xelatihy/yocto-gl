@@ -3207,11 +3207,11 @@ void set_material_emission(
   material.emission     = emission;
   material.emission_tex = emission_txt;
 }
-void set_material_base(
-    trace_scene& scene, int idx, const vec3f& base, int base_txt) {
+void set_material_color(
+    trace_scene& scene, int idx, const vec3f& color, int color_txt) {
   auto& material    = scene.shapes[idx].material;
-  material.base     = base;
-  material.base_tex = base_txt;
+  material.base     = color;
+  material.base_tex = color_txt;
 }
 void set_material_specular(
     trace_scene& scene, int idx, float specular, int specular_txt) {
