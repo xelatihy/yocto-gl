@@ -266,6 +266,7 @@ struct trace_bvh_node {
 struct trace_bvh {
   vector<trace_bvh_node> nodes      = {};
   vector<int>            primitives = {};
+  vector<vec2i>          instances  = {};
 };
 
 // Camera based on a simple lens model. The camera is placed using a frame.
@@ -372,12 +373,6 @@ struct trace_shape {
   vector<float> elements_cdf         = {};
 };
 
-// Instance of a visible shape in the scene.
-struct trace_instance {
-  int shape    = -1;
-  int instance = -1;
-};
-
 // Environment map.
 struct trace_environment {
   frame3f frame        = identity3x4f;
@@ -403,7 +398,6 @@ struct trace_light {
 struct trace_scene {
   vector<trace_camera>      cameras      = {};
   vector<trace_shape>       shapes       = {};
-  vector<trace_instance>    instances    = {};
   vector<trace_texture>     textures     = {};
   vector<trace_environment> environments = {};
 

@@ -1779,12 +1779,21 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
   }
 #endif
 
+  // create instances
+  scene.bvh.instances.clear();
+  scene.bvh.instances.reserve(scene.shapes.size());
+  for(auto idx = 0; idx < scene.shapes.size(); idx++) {
+    for(auto iidx = 0; iidx < scene.shapes[idx].frames.size(); iidx++) {
+      scene.bvh.instances.push_back({idx, iidx});
+    }
+  }
+
   // instance bboxes
-  auto bboxes = vector<bbox3f>(scene.instances.size());
+  auto bboxes = vector<bbox3f>(scene.bvh.instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& instance = scene.instances[idx];
-    auto& shape    = scene.shapes[instance.shape];
-    auto& frame    = shape.frames[instance.instance];
+    auto& instance = scene.bvh.instances[idx];
+    auto& shape    = scene.shapes[instance.x];
+    auto& frame    = shape.frames[instance.y];
     bboxes[idx]    = shape.bvh.nodes.empty()
                       ? invalidb3f
                       : transform_bbox(frame, shape.bvh.nodes[0].bbox);
@@ -1855,11 +1864,11 @@ void update_bvh(trace_scene& scene, const vector<int>& updated_instances,
 #endif
 
   // build primitives
-  auto bboxes = vector<bbox3f>(scene.instances.size());
+  auto bboxes = vector<bbox3f>(scene.bvh.instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
-    auto& instance = scene.instances[idx];
-    auto& frame    = scene.shapes[instance.shape].frames[instance.instance];
-    auto& sbvh     = scene.shapes[instance.shape].bvh;
+    auto& instance = scene.bvh.instances[idx];
+    auto& frame    = scene.shapes[instance.x].frames[instance.y];
+    auto& sbvh     = scene.shapes[instance.x].bvh;
     bboxes[idx]    = transform_bbox(frame, sbvh.nodes[0].bbox);
   }
 
@@ -2031,14 +2040,14 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
       }
     } else {
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
-        auto& instance_ = scene.instances[scene.bvh.primitives[idx]];
-        auto& frame = scene.shapes[instance_.shape].frames[instance_.instance];
+        auto& instance_ = scene.bvh.instances[scene.bvh.primitives[idx]];
+        auto& frame = scene.shapes[instance_.x].frames[instance_.y];
         auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
-        if (intersect_shape_bvh(scene.shapes[instance_.shape], inv_ray, element,
+        if (intersect_shape_bvh(scene.shapes[instance_.x], inv_ray, element,
                 uv, distance, find_any)) {
           hit      = true;
-          shape    = instance_.shape;
-          instance = instance_.instance;
+          shape    = instance_.x;
+          instance = instance_.y;
           ray.tmax = distance;
         }
       }
@@ -3165,30 +3174,20 @@ void set_shape_tangents(
   auto& shape    = scene.shapes[idx];
   shape.tangents = tangents;
 }
-static void set_instances(trace_scene& scene, int idx) {
-  auto& shape = scene.shapes[idx];
-  auto  pos   = scene.instances.size();
-  scene.instances.resize(scene.instances.size() + shape.frames.size());
-  for (auto i = 0; i < shape.frames.size(); i++) {
-    scene.instances[pos + i] = {idx, i};
-  }
-}
 void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame) {
   auto& shape  = scene.shapes[idx];
   shape.frames = {frame};
-  set_instances(scene, idx);
 }
 void set_shape_frames(trace_scene& scene, int idx,
-    const vector<frame3f>& instances, const frame3f& frame) {
+    const vector<frame3f>& frames, const frame3f& local_frame) {
   auto& shape = scene.shapes[idx];
-  if (instances.empty()) {
-    shape.frames = {frame};
+  if (frames.empty()) {
+    shape.frames = {local_frame};
   } else {
-    shape.frames.resize(instances.size());
-    for (auto idx = 0; idx < instances.size(); idx++)
-      shape.frames[idx] = instances[idx] * frame;
+    shape.frames.resize(frames.size());
+    for (auto idx = 0; idx < frames.size(); idx++)
+      shape.frames[idx] = frames[idx] * local_frame;
   }
-  set_instances(scene, idx);
 }
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt) {
