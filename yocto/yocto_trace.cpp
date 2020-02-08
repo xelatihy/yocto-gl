@@ -715,7 +715,7 @@ static trace_point eval_point(const trace_scene& scene,
   // get data
   auto& instance               = scene.instances[intersection.instance];
   auto& shape                  = scene.shapes[instance.shape];
-  auto& material               = scene.materials[instance.material];
+  auto& material               = shape.material;
   auto  element                = intersection.element;
   auto  uv                     = intersection.uv;
   auto  trace_non_rigid_frames = true;
@@ -892,7 +892,7 @@ static volume_point eval_volume(const trace_scene& scene,
   // get data
   auto& instance = scene.instances[intersection.instance];
   auto& shape    = scene.shapes[instance.shape];
-  auto& material = scene.materials[instance.material];
+  auto& material               = shape.material;
   auto  element  = intersection.element;
   auto  uv       = intersection.uv;
 
@@ -941,7 +941,8 @@ static volume_point eval_volume(const trace_scene& scene,
 static bool has_volume(
     const trace_scene& scene, const trace_intersection& intersection) {
   auto& instance = scene.instances[intersection.instance];
-  auto& material = scene.materials[instance.material];
+  auto& shape               = scene.shapes[instance.shape];
+  auto& material               = shape.material;
   return !material.thin && material.transmission;
 }
 
@@ -2828,8 +2829,6 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
     case trace_falsecolor_type::transmission: return {point.transmission, 1};
     case trace_falsecolor_type::refraction: return {point.refraction, 1};
     case trace_falsecolor_type::roughness: return {vec3f{point.roughness}, 1};
-    case trace_falsecolor_type::material:
-      return {hashed_color(scene.instances[intersection.instance].material), 1};
     case trace_falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
     case trace_falsecolor_type::shape:
@@ -2927,7 +2926,7 @@ void init_lights(trace_scene& scene) {
   for (auto idx = 0; idx < scene.instances.size(); idx++) {
     auto& instance = scene.instances[idx];
     auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
+    auto& material = shape.material;
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
     auto& light       = scene.lights.emplace_back();
@@ -3097,81 +3096,6 @@ void set_texture(trace_scene& scene, int idx, const image<vec4f>& img) {
 }
 void clean_textures(trace_scene& scene) { scene.textures.clear(); }
 
-// Add material
-int add_material(trace_scene& scene) {
-  scene.materials.emplace_back();
-  return (int)scene.materials.size() - 1;
-}
-void set_material_emission(
-    trace_scene& scene, int idx, const vec3f& emission, int emission_txt) {
-  auto& material        = scene.materials[idx];
-  material.emission     = emission;
-  material.emission_tex = emission_txt;
-}
-void set_material_base(
-    trace_scene& scene, int idx, const vec3f& base, int base_txt) {
-  auto& material    = scene.materials[idx];
-  material.base     = base;
-  material.base_tex = base_txt;
-}
-void set_material_specular(
-    trace_scene& scene, int idx, float specular, int specular_txt) {
-  auto& material        = scene.materials[idx];
-  material.specular     = specular;
-  material.specular_tex = specular_txt;
-}
-void set_material_metallic(
-    trace_scene& scene, int idx, float metallic, int metallic_txt) {
-  auto& material        = scene.materials[idx];
-  material.metallic     = metallic;
-  material.metallic_tex = metallic_txt;
-}
-void set_material_ior(trace_scene& scene, int idx, float ior) {
-  auto& material = scene.materials[idx];
-  material.ior   = ior;
-}
-void set_material_transmission(trace_scene& scene, int idx, float transmission,
-    bool thin, float radius, int transmission_txt) {
-  auto& material            = scene.materials[idx];
-  material.transmission     = transmission;
-  material.thin             = thin;
-  material.radius           = radius;
-  material.transmission_tex = transmission_txt;
-}
-void set_material_thin(trace_scene& scene, int idx, bool thin) {
-  auto& material = scene.materials[idx];
-  material.thin  = thin;
-}
-void set_material_roughness(
-    trace_scene& scene, int idx, float roughness, int roughness_txt) {
-  auto& material         = scene.materials[idx];
-  material.roughness     = roughness;
-  material.roughness_tex = roughness_txt;
-}
-void set_material_opacity(
-    trace_scene& scene, int idx, float opacity, int opacity_txt) {
-  auto& material       = scene.materials[idx];
-  material.opacity     = opacity;
-  material.opacity_tex = opacity_txt;
-}
-void set_material_scattering(trace_scene& scene, int idx,
-    const vec3f& scattering, float phaseg, int scattering_tex) {
-  auto& material          = scene.materials[idx];
-  material.scattering     = scattering;
-  material.phaseg         = phaseg;
-  material.scattering_tex = scattering_tex;
-}
-void set_material_normalmap(trace_scene& scene, int idx, int normal_txt) {
-  auto& material      = scene.materials[idx];
-  material.normal_tex = normal_txt;
-}
-void set_material_gltftextures(
-    trace_scene& scene, int idx, bool gltf_textures) {
-  auto& material         = scene.materials[idx];
-  material.gltf_textures = gltf_textures;
-}
-void clean_materials(trace_scene& scene) { scene.materials.clear(); }
-
 // Add shape
 int add_shape(trace_scene& scene) {
   scene.shapes.emplace_back();
@@ -3230,21 +3154,87 @@ void set_shape_tangents(trace_scene& scene, int idx,
   auto& shape         = scene.shapes[idx];
   shape.tangents      = tangents;
 }
+void set_material_emission(
+    trace_scene& scene, int idx, const vec3f& emission, int emission_txt) {
+  auto& material        = scene.shapes[idx].material;
+  material.emission     = emission;
+  material.emission_tex = emission_txt;
+}
+void set_material_base(
+    trace_scene& scene, int idx, const vec3f& base, int base_txt) {
+  auto& material        = scene.shapes[idx].material;
+  material.base     = base;
+  material.base_tex = base_txt;
+}
+void set_material_specular(
+    trace_scene& scene, int idx, float specular, int specular_txt) {
+  auto& material        = scene.shapes[idx].material;
+  material.specular     = specular;
+  material.specular_tex = specular_txt;
+}
+void set_material_metallic(
+    trace_scene& scene, int idx, float metallic, int metallic_txt) {
+  auto& material        = scene.shapes[idx].material;
+  material.metallic     = metallic;
+  material.metallic_tex = metallic_txt;
+}
+void set_material_ior(trace_scene& scene, int idx, float ior) {
+  auto& material        = scene.shapes[idx].material;
+  material.ior   = ior;
+}
+void set_material_transmission(trace_scene& scene, int idx, float transmission,
+    bool thin, float radius, int transmission_txt) {
+  auto& material        = scene.shapes[idx].material;
+  material.transmission     = transmission;
+  material.thin             = thin;
+  material.radius           = radius;
+  material.transmission_tex = transmission_txt;
+}
+void set_material_thin(trace_scene& scene, int idx, bool thin) {
+  auto& material        = scene.shapes[idx].material;
+  material.thin  = thin;
+}
+void set_material_roughness(
+    trace_scene& scene, int idx, float roughness, int roughness_txt) {
+  auto& material        = scene.shapes[idx].material;
+  material.roughness     = roughness;
+  material.roughness_tex = roughness_txt;
+}
+void set_material_opacity(
+    trace_scene& scene, int idx, float opacity, int opacity_txt) {
+  auto& material        = scene.shapes[idx].material;
+  material.opacity     = opacity;
+  material.opacity_tex = opacity_txt;
+}
+void set_material_scattering(trace_scene& scene, int idx,
+    const vec3f& scattering, float phaseg, int scattering_tex) {
+  auto& material        = scene.shapes[idx].material;
+  material.scattering     = scattering;
+  material.phaseg         = phaseg;
+  material.scattering_tex = scattering_tex;
+}
+void set_material_normalmap(trace_scene& scene, int idx, int normal_txt) {
+  auto& material        = scene.shapes[idx].material;
+  material.normal_tex = normal_txt;
+}
+void set_material_gltftextures(
+    trace_scene& scene, int idx, bool gltf_textures) {
+  auto& material        = scene.shapes[idx].material;
+  material.gltf_textures = gltf_textures;
+}
 void clean_shapes(trace_scene& scene) { scene.shapes.clear(); }
 
 // Add instance
 int add_instance(
-    trace_scene& scene, const frame3f& frame, int shape, int material) {
+    trace_scene& scene, const frame3f& frame, int shape) {
   scene.instances.emplace_back();
-  set_instance(scene, (int)scene.instances.size() - 1, frame, shape, material);
+  set_instance(scene, (int)scene.instances.size() - 1, frame, shape);
   return (int)scene.instances.size() - 1;
 }
-void set_instance(trace_scene& scene, int idx, const frame3f& frame, int shape,
-    int material) {
+void set_instance(trace_scene& scene, int idx, const frame3f& frame, int shape) {
   auto& instance    = scene.instances[idx];
   instance.frame    = frame;
   instance.shape    = shape;
-  instance.material = material;
 }
 void clear_instances(trace_scene& scene) { scene.instances.clear(); }
 

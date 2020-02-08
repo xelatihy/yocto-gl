@@ -58,28 +58,6 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     }
   }
 
-  for (auto& ioshape : ioscene.shapes) {
-    auto& iomaterial = ioshape.material;
-    auto  id         = add_material(scene);
-    set_material_emission(
-        scene, id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_base(scene, id, iomaterial.base, iomaterial.base_tex);
-    set_material_specular(
-        scene, id, iomaterial.specular, iomaterial.specular_tex);
-    set_material_ior(scene, id, iomaterial.ior);
-    set_material_metallic(
-        scene, id, iomaterial.metallic, iomaterial.metallic_tex);
-    set_material_transmission(scene, id, iomaterial.transmission,
-        iomaterial.thin, iomaterial.radius, iomaterial.transmission_tex);
-    set_material_roughness(
-        scene, id, iomaterial.roughness, iomaterial.roughness_tex);
-    set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_thin(scene, id, iomaterial.thin);
-    set_material_normalmap(scene, id, iomaterial.normal_tex);
-    set_material_scattering(scene, id, iomaterial.scattering, iomaterial.phaseg,
-        iomaterial.scattering_tex);
-  }
-
   for (auto& iosubdiv : ioscene.subdivs) {
     tesselate_subdiv(ioscene, iosubdiv);
     iosubdiv = {};
@@ -97,11 +75,29 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_shape_colors(scene, id, ioshape.colors);
     set_shape_radius(scene, id, ioshape.radius);
     set_shape_tangents(scene, id, ioshape.tangents);
+    auto& iomaterial = ioshape.material;
+    set_material_emission(
+        scene, id, iomaterial.emission, iomaterial.emission_tex);
+    set_material_base(scene, id, iomaterial.base, iomaterial.base_tex);
+    set_material_specular(
+        scene, id, iomaterial.specular, iomaterial.specular_tex);
+    set_material_ior(scene, id, iomaterial.ior);
+    set_material_metallic(
+        scene, id, iomaterial.metallic, iomaterial.metallic_tex);
+    set_material_transmission(scene, id, iomaterial.transmission,
+        iomaterial.thin, iomaterial.radius, iomaterial.transmission_tex);
+    set_material_roughness(
+        scene, id, iomaterial.roughness, iomaterial.roughness_tex);
+    set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
+    set_material_thin(scene, id, iomaterial.thin);
+    set_material_normalmap(scene, id, iomaterial.normal_tex);
+    set_material_scattering(scene, id, iomaterial.scattering, iomaterial.phaseg,
+        iomaterial.scattering_tex);
     if (ioshape.instances.empty()) {
-      add_instance(scene, ioshape.frame, id, id);
+      add_instance(scene, ioshape.frame, id);
     } else {
       for (auto& frame : ioshape.instances)
-        add_instance(scene, frame * ioshape.frame, id, id);
+        add_instance(scene, frame * ioshape.frame, id);
     }
     ioshape = {};
   }

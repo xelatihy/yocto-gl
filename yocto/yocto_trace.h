@@ -93,30 +93,6 @@ void set_texture(trace_scene& scene, int idx, const image<vec4b>& img);
 void set_texture(trace_scene& scene, int idx, const image<vec4f>& img);
 void clear_textures(trace_scene& scene);
 
-// Add material
-int  add_material(trace_scene& scene);
-void set_material_emission(
-    trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
-void set_material_base(
-    trace_scene& scene, int idx, const vec3f& base, int base_txt = -1);
-void set_material_specular(
-    trace_scene& scene, int idx, float specular = 1, int specular_txt = -1);
-void set_material_ior(trace_scene& scene, int idx, float ior);
-void set_material_metallic(
-    trace_scene& scene, int idx, float metallic, int metallic_txt = -1);
-void set_material_transmission(trace_scene& scene, int idx, float transmission,
-    bool thin, float radius, int transmission_txt = -1);
-void set_material_roughness(
-    trace_scene& scene, int idx, float roughness, int roughness_txt = -1);
-void set_material_opacity(
-    trace_scene& scene, int idx, float opacity, int opacity_txt = -1);
-void set_material_thin(trace_scene& scene, int idx, bool thin);
-void set_material_scattering(trace_scene& scene, int idx,
-    const vec3f& scattering, float phaseg, int scattering_tex = -1);
-void set_material_normalmap(trace_scene& scene, int idx, int normal_txt);
-void set_material_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
-void clear_materials(trace_scene& scene);
-
 // Add shape
 int  add_shape(trace_scene& scene);
 void set_shape_points(trace_scene& scene, int idx, const vector<int>& points);
@@ -137,13 +113,33 @@ void set_shape_radius(trace_scene& scene, int idx,
     const vector<float>& radius);
 void set_shape_tangents(trace_scene& scene, int idx,
     const vector<vec4f>& tangents);
+void set_material_emission(
+    trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
+void set_material_base(
+    trace_scene& scene, int idx, const vec3f& base, int base_txt = -1);
+void set_material_specular(
+    trace_scene& scene, int idx, float specular = 1, int specular_txt = -1);
+void set_material_ior(trace_scene& scene, int idx, float ior);
+void set_material_metallic(
+    trace_scene& scene, int idx, float metallic, int metallic_txt = -1);
+void set_material_transmission(trace_scene& scene, int idx, float transmission,
+    bool thin, float radius, int transmission_txt = -1);
+void set_material_roughness(
+    trace_scene& scene, int idx, float roughness, int roughness_txt = -1);
+void set_material_opacity(
+    trace_scene& scene, int idx, float opacity, int opacity_txt = -1);
+void set_material_thin(trace_scene& scene, int idx, bool thin);
+void set_material_scattering(trace_scene& scene, int idx,
+    const vec3f& scattering, float phaseg, int scattering_tex = -1);
+void set_material_normalmap(trace_scene& scene, int idx, int normal_txt);
+void set_material_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
 void clear_shapes(trace_scene& scene);
 
 // Add instance
 int add_instance(
-    trace_scene& scene, const frame3f& frame, int shape, int material);
+    trace_scene& scene, const frame3f& frame, int shape);
 void set_instance(
-    trace_scene& scene, int idx, const frame3f& frame, int shape, int material);
+    trace_scene& scene, int idx, const frame3f& frame, int shape);
 void clear_instances(trace_scene& scene);
 
 // Add environment
@@ -168,7 +164,7 @@ enum struct trace_falsecolor_type {
   // clang-format off
   normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
   diffuse, specular, coat, metal, transmission, refraction, roughness, 
-  material, shape, instance, element, highlight
+  shape, instance, element, highlight
   // clang-format on
 };
 // Strategy used to build the bvh
@@ -210,7 +206,7 @@ const auto trace_sampler_names = vector<string>{
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "coat", "metal", "transmission", "refraction", "roughness",
-    "material", "shape", "instance", "element", "highlight"};
+    "shape", "instance", "element", "highlight"};
 const auto trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
@@ -346,6 +342,9 @@ struct trace_material {
 // Additionally, we support faceavarying primitives where
 // each verftex data has its own topology.
 struct trace_shape {
+  // material
+  trace_material material = {};
+
   // primitives
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
@@ -376,7 +375,6 @@ struct trace_shape {
 struct trace_instance {
   frame3f frame    = identity3x4f;
   int     shape    = -1;
-  int     material = -1;
 };
 
 // Environment map.
@@ -404,7 +402,6 @@ struct trace_scene {
   vector<trace_camera>      cameras      = {};
   vector<trace_shape>       shapes       = {};
   vector<trace_instance>    instances    = {};
-  vector<trace_material>    materials    = {};
   vector<trace_texture>     textures     = {};
   vector<trace_environment> environments = {};
 
