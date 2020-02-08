@@ -3154,6 +3154,28 @@ void set_shape_tangents(trace_scene& scene, int idx,
   auto& shape         = scene.shapes[idx];
   shape.tangents      = tangents;
 }
+static void set_instances(trace_scene& scene, int idx) {
+  auto& shape = scene.shapes[idx];
+  if(shape.instances.empty()) {
+      scene.instances.push_back({shape.frame, idx});
+  } else {
+    for(auto& iframe : shape.instances) {
+      scene.instances.push_back({iframe * shape.frame, idx});
+    }
+  }
+}
+void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame) {
+  auto& shape         = scene.shapes[idx];
+  shape.frame = frame;
+  shape.instances = vector<frame3f>{identity3x4f};
+  set_instances(scene, idx);
+}
+void set_shape_instances(trace_scene& scene, int idx, const frame3f& frame, const vector<frame3f>& instances) {
+  auto& shape         = scene.shapes[idx];
+  shape.frame = frame;
+  shape.instances = instances;
+  set_instances(scene, idx);
+}
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt) {
   auto& material        = scene.shapes[idx].material;
@@ -3223,20 +3245,6 @@ void set_material_gltftextures(
   material.gltf_textures = gltf_textures;
 }
 void clean_shapes(trace_scene& scene) { scene.shapes.clear(); }
-
-// Add instance
-int add_instance(
-    trace_scene& scene, const frame3f& frame, int shape) {
-  scene.instances.emplace_back();
-  set_instance(scene, (int)scene.instances.size() - 1, frame, shape);
-  return (int)scene.instances.size() - 1;
-}
-void set_instance(trace_scene& scene, int idx, const frame3f& frame, int shape) {
-  auto& instance    = scene.instances[idx];
-  instance.frame    = frame;
-  instance.shape    = shape;
-}
-void clear_instances(trace_scene& scene) { scene.instances.clear(); }
 
 // Add environment
 int add_environment(trace_scene& scene) {

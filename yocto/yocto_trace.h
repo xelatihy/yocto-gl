@@ -113,6 +113,8 @@ void set_shape_radius(trace_scene& scene, int idx,
     const vector<float>& radius);
 void set_shape_tangents(trace_scene& scene, int idx,
     const vector<vec4f>& tangents);
+void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame);
+void set_shape_instances(trace_scene& scene, int idx, const frame3f& frame, const vector<frame3f>& instances);
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_material_base(
@@ -134,13 +136,6 @@ void set_material_scattering(trace_scene& scene, int idx,
 void set_material_normalmap(trace_scene& scene, int idx, int normal_txt);
 void set_material_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
 void clear_shapes(trace_scene& scene);
-
-// Add instance
-int add_instance(
-    trace_scene& scene, const frame3f& frame, int shape);
-void set_instance(
-    trace_scene& scene, int idx, const frame3f& frame, int shape);
-void clear_instances(trace_scene& scene);
 
 // Add environment
 int  add_environment(trace_scene& scene);
@@ -344,6 +339,10 @@ struct trace_material {
 struct trace_shape {
   // material
   trace_material material = {};
+
+  // frames
+  frame3f frame = identity3x4f;
+  vector<frame3f> instances = {};
 
   // primitives
   vector<int>   points    = {};
