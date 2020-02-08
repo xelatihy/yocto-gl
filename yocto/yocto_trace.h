@@ -83,8 +83,7 @@ int  add_camera(trace_scene& scene);
 void set_camera_frame(trace_scene& scene, int idx, const frame3f& frame);
 void set_camera_lens(
     trace_scene& scene, int idx, float lens, float aspect, float film);
-void set_camera_focus(trace_scene& scene, int idx, 
-    float aperture, float focus);
+void set_camera_focus(trace_scene& scene, int idx, float aperture, float focus);
 void clear_cameras(trace_scene& scene);
 
 // Add texture
@@ -97,24 +96,25 @@ void clear_textures(trace_scene& scene);
 int  add_shape(trace_scene& scene);
 void set_shape_points(trace_scene& scene, int idx, const vector<int>& points);
 void set_shape_lines(trace_scene& scene, int idx, const vector<vec2i>& lines);
-void set_shape_triangles(trace_scene& scene, int idx, const vector<vec3i>& triangles);
+void set_shape_triangles(
+    trace_scene& scene, int idx, const vector<vec3i>& triangles);
 void set_shape_quads(trace_scene& scene, int idx, const vector<vec4i>& quads);
-void set_shape_fvquads(trace_scene& scene, int idx, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord);
-void set_shape_positions(trace_scene& scene, int idx,
-    const vector<vec3f>& positions);
-void set_shape_normals(trace_scene& scene, int idx,
-    const vector<vec3f>& normals);
-void set_shape_texcoords(trace_scene& scene, int idx,
-    const vector<vec2f>& texcoords);
-void set_shape_colors(trace_scene& scene, int idx,
-    const vector<vec4f>& colors);
-void set_shape_radius(trace_scene& scene, int idx,
-    const vector<float>& radius);
-void set_shape_tangents(trace_scene& scene, int idx,
-    const vector<vec4f>& tangents);
+void set_shape_fvquads(trace_scene& scene, int idx,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord);
+void set_shape_positions(
+    trace_scene& scene, int idx, const vector<vec3f>& positions);
+void set_shape_normals(
+    trace_scene& scene, int idx, const vector<vec3f>& normals);
+void set_shape_texcoords(
+    trace_scene& scene, int idx, const vector<vec2f>& texcoords);
+void set_shape_colors(trace_scene& scene, int idx, const vector<vec4f>& colors);
+void set_shape_radius(trace_scene& scene, int idx, const vector<float>& radius);
+void set_shape_tangents(
+    trace_scene& scene, int idx, const vector<vec4f>& tangents);
 void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame);
-void set_shape_instances(trace_scene& scene, int idx, const frame3f& frame, const vector<frame3f>& instances);
+void set_shape_instances(trace_scene& scene, int idx, const frame3f& frame,
+    const vector<frame3f>& instances);
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_material_base(
@@ -341,7 +341,7 @@ struct trace_shape {
   trace_material material = {};
 
   // frames
-  frame3f frame = identity3x4f;
+  frame3f         frame     = identity3x4f;
   vector<frame3f> instances = {};
 
   // primitives
@@ -372,8 +372,8 @@ struct trace_shape {
 
 // Instance of a visible shape in the scene.
 struct trace_instance {
-  frame3f frame    = identity3x4f;
-  int     shape    = -1;
+  frame3f frame = identity3x4f;
+  int     shape = -1;
 };
 
 // Environment map.

@@ -450,7 +450,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
       auto& camera = app->ioscene.cameras[app->selected_camera];
       set_camera_frame(app->glscene, app->selected_camera, camera.frame);
-      set_camera_lens(app->glscene, app->selected_camera, camera.lens, camera.aspect, camera.film);
+      set_camera_lens(app->glscene, app->selected_camera, camera.lens,
+          camera.aspect, camera.film);
       set_camera_nearfar(app->glscene, app->selected_camera, 0.001, 10000);
     }
     end_glheader(win);

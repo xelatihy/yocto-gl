@@ -235,7 +235,8 @@ bool is_initialized(opengl_scene& scene);
 // add camera
 int  add_camera(opengl_scene& scene);
 void set_camera_frame(opengl_scene& scene, int idx, const frame3f& frame);
-void set_camera_lens(opengl_scene& scene, int idx, float lens, float aspect, float film);
+void set_camera_lens(
+    opengl_scene& scene, int idx, float lens, float aspect, float film);
 void set_camera_nearfar(opengl_scene& scene, int idx, float near, float far);
 void clear_cameras(opengl_scene& scene);
 

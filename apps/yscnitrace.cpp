@@ -108,8 +108,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   for (auto& iocamera : ioscene.cameras) {
     auto id = add_camera(scene);
     set_camera_frame(scene, id, iocamera.frame);
-    set_camera_lens(scene, id, iocamera.lens, iocamera.aspect,
-        iocamera.film);
+    set_camera_lens(scene, id, iocamera.lens, iocamera.aspect, iocamera.film);
     set_camera_focus(scene, id, iocamera.aperture, iocamera.focus);
   }
   for (auto& iotexture : ioscene.textures) {
@@ -158,8 +157,8 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   for (auto& ioenvironment : ioscene.environments) {
     auto id = add_environment(scene);
     set_environment_frame(scene, id, ioenvironment.frame);
-    set_environment_emission(scene, id, ioenvironment.emission,
-        ioenvironment.emission_tex);
+    set_environment_emission(
+        scene, id, ioenvironment.emission, ioenvironment.emission_tex);
   }
 }
 
@@ -514,9 +513,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       stop_display(app);
       auto& iocamera = app->ioscene.cameras[app->selected_camera];
       set_camera_frame(app->scene, app->selected_camera, iocamera.frame);
-      set_camera_lens(app->scene, app->selected_camera, 
-          iocamera.lens, iocamera.aspect, iocamera.film);
-      set_camera_focus(app->scene, app->selected_camera, iocamera.aperture, iocamera.focus);
+      set_camera_lens(app->scene, app->selected_camera, iocamera.lens,
+          iocamera.aspect, iocamera.film);
+      set_camera_focus(
+          app->scene, app->selected_camera, iocamera.aperture, iocamera.focus);
       reset_display(app);
     }
     end_glheader(win);
@@ -529,11 +529,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       stop_display(app);
       auto& ioenvironment =
           app->ioscene.environments[app->selected_environment];
-      set_environment_frame(app->scene, app->selected_environment,
-          ioenvironment.frame);
+      set_environment_frame(
+          app->scene, app->selected_environment, ioenvironment.frame);
       set_environment_emission(app->scene, app->selected_environment,
-           ioenvironment.emission,
-          ioenvironment.emission_tex);
+          ioenvironment.emission, ioenvironment.emission_tex);
       init_lights(app->scene);
       reset_display(app);
     }
@@ -753,9 +752,10 @@ void run_app(int argc, const char* argv[]) {
       stop_display(app);
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
       set_camera_frame(app->scene, app->params.camera, camera.frame);
-      set_camera_lens(app->scene, app->params.camera, 
-       camera.lens, camera.aspect, camera.film);
-      set_camera_focus(app->scene, app->params.camera, camera.aperture, camera.focus);
+      set_camera_lens(app->scene, app->params.camera, camera.lens,
+          camera.aspect, camera.film);
+      set_camera_focus(
+          app->scene, app->params.camera, camera.aperture, camera.focus);
       reset_display(app);
     }
 

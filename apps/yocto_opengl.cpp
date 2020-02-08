@@ -832,11 +832,12 @@ void set_camera_frame(opengl_scene& scene, int idx, const frame3f& frame) {
   auto& camera = scene._cameras[idx];
   camera.frame = frame;
 }
-void set_camera_lens(opengl_scene& scene, int idx, float lens, float aspect, float film) {
-  auto& camera = scene._cameras[idx];
-  camera.lens  = lens;
+void set_camera_lens(
+    opengl_scene& scene, int idx, float lens, float aspect, float film) {
+  auto& camera  = scene._cameras[idx];
+  camera.lens   = lens;
   camera.aspect = aspect;
-  camera.film  = film;
+  camera.film   = film;
 }
 void set_camera_nearfar(opengl_scene& scene, int idx, float near, float far) {
   auto& camera = scene._cameras[idx];
@@ -1124,11 +1125,12 @@ int add_light(opengl_scene& scene) {
   scene._lights.emplace_back();
   return (int)scene._lights.size() - 1;
 }
-void set_light(opengl_scene& scene, int idx, const vec3f& position, const vec3f& emission, bool directional) {
+void set_light(opengl_scene& scene, int idx, const vec3f& position,
+    const vec3f& emission, bool directional) {
   auto& light    = scene._lights[idx];
   light.position = position;
   light.emission = emission;
-  light.type  = directional ? 1 : 0;
+  light.type     = directional ? 1 : 0;
 }
 void clear_lights(opengl_scene& scene) { scene._lights.clear(); }
 bool has_max_lights(opengl_scene& scene) { return scene._lights.size() >= 16; }
