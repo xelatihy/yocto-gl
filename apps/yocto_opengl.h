@@ -128,8 +128,15 @@ struct opengl_texture {
   opengl_texture& operator=(opengl_texture&&);
 };
 
-// Opengl material
-struct opengl_material {
+// Opengl shape
+struct opengl_shape {
+  // shape properties
+  frame3f         frame       = identity3x4f;
+  vector<frame3f> instances   = {};
+  bool            hidden      = false;
+  bool            highlighted = false;
+
+  // material
   vec3f emission      = {0, 0, 0};
   vec3f color         = {0, 0, 0};
   float specular      = 0;
@@ -143,16 +150,6 @@ struct opengl_material {
   int   roughness_map = -1;
   int   normal_map    = -1;
   bool  gltf_textures = false;
-};
-
-// Opengl shape
-struct opengl_shape {
-  // shape properties
-  frame3f         frame       = identity3x4f;
-  vector<frame3f> instances   = {};
-  opengl_material material    = {};
-  bool            hidden      = false;
-  bool            highlighted = false;
 
   // vertex buffers
   int  positions_num = 0;
