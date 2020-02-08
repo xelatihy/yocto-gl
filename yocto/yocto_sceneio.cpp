@@ -45,12 +45,11 @@
 #include <climits>
 #include <cstdlib>
 #include <deque>
+#include <fstream>
 #include <future>
 #include <memory>
-#include <fstream>
 
 #include "ext/json.hpp"
-
 #include "yocto_image.h"
 #include "yocto_modelio.h"
 #include "yocto_shape.h"
@@ -1270,20 +1269,20 @@ static inline void from_json(const json& j, frame3f& value) {
 // load/save json
 static void load_json(const string& filename, json& js) {
   auto stream = std::ifstream(filename);
-  if(!stream) throw std::runtime_error{filename + ": file not found"};
+  if (!stream) throw std::runtime_error{filename + ": file not found"};
   try {
     stream >> js;
-  } catch(std::exception& e) {
-    throw std::runtime_error{filename + ": error parsing json" };
+  } catch (std::exception& e) {
+    throw std::runtime_error{filename + ": error parsing json"};
   }
 }
 static void save_json(const string& filename, const json& js) {
   auto stream = std::ofstream(filename);
-  if(!stream) throw std::runtime_error{filename + ": file not found"};
+  if (!stream) throw std::runtime_error{filename + ": file not found"};
   try {
     stream << std::setw(4) << js << std::endl;
-  } catch(std::exception& e) {
-    throw std::runtime_error{filename + ": error writing json" };
+  } catch (std::exception& e) {
+    throw std::runtime_error{filename + ": error writing json"};
   }
 }
 
@@ -1298,14 +1297,14 @@ static void load_json_scene(
 
   // gets a json value
   auto get_value = [](const json& ejs, const string& name, auto& value) {
-    if(!ejs.contains(name)) return;
+    if (!ejs.contains(name)) return;
     ejs.at(name).get_to(value);
   };
 
   // parse yaml reference
-  auto get_ref = [](const json& ejs, const string& name,
-                          int& value, const unordered_map<string, int>& refs) {
-    if(!ejs.contains(name)) return;
+  auto get_ref = [](const json& ejs, const string& name, int& value,
+                     const unordered_map<string, int>& refs) {
+    if (!ejs.contains(name)) return;
     auto ref = ""s;
     ejs.at(name).get_to(ref);
     if (ref == "") {
@@ -1319,10 +1318,10 @@ static void load_json_scene(
 
   // parse yaml reference
   auto texture_map = unordered_map<string, int>{{"", -1}};
-  auto get_texture = [&filename, &scene, &texture_map](
-                         const json& ejs, const string& name,
-                         int& value, const string& dirname = "textures/") {
-    if(!ejs.contains(name)) return -1;
+  auto get_texture = [&filename, &scene, &texture_map](const json& ejs,
+                         const string& name, int& value,
+                         const string& dirname = "textures/") {
+    if (!ejs.contains(name)) return -1;
     auto path = ""s;
     ejs.at(name).get_to(path);
     if (path == "") return -1;
@@ -1354,8 +1353,8 @@ static void load_json_scene(
   // check for conversion errors
   try {
     // cameras
-    if(js.contains("cameras")) {
-      for(auto& ejs : js.at("cameras")) {
+    if (js.contains("cameras")) {
+      for (auto& ejs : js.at("cameras")) {
         auto& camera = scene.cameras.emplace_back();
         get_value(ejs, "name", camera.name);
         get_value(ejs, "frame", camera.frame);
@@ -1373,14 +1372,14 @@ static void load_json_scene(
         }
       }
     }
-    if(js.contains("environments")) {
-      for(auto& ejs : js.at("environments")) {
+    if (js.contains("environments")) {
+      for (auto& ejs : js.at("environments")) {
         auto& environment = scene.environments.emplace_back();
         get_value(ejs, "name", environment.name);
         get_value(ejs, "frame", environment.frame);
         get_value(ejs, "emission", environment.emission);
-        get_texture(ejs, "emission_tex", environment.emission_tex,
-            "environments/");
+        get_texture(
+            ejs, "emission_tex", environment.emission_tex, "environments/");
         if (ejs.contains("lookat")) {
           auto lookat = identity3x3f;
           get_value(ejs, "lookat", lookat);
@@ -1388,8 +1387,8 @@ static void load_json_scene(
         }
       }
     }
-    if(js.contains("shapes")) {
-      for(auto& ejs : js.at("shapes")) {
+    if (js.contains("shapes")) {
+      for (auto& ejs : js.at("shapes")) {
         auto& shape = scene.shapes.emplace_back();
         get_value(ejs, "name", shape.name);
         get_value(ejs, "frame", shape.frame);
@@ -1445,8 +1444,8 @@ static void load_json_scene(
         shape_map[shape.name] = (int)scene.shapes.size() - 1;
       }
     }
-    if(js.contains("subdivs")) {
-      for(auto& ejs : js.at("subdivs")) {
+    if (js.contains("subdivs")) {
+      for (auto& ejs : js.at("subdivs")) {
         auto& subdiv = scene.subdivs.emplace_back();
         get_value(ejs, "name", subdiv.name);
         get_ref(ejs, "shape", subdiv.shape, shape_map);
@@ -1494,12 +1493,11 @@ static void load_json_scene(
 static void save_json_scene(
     const string& filename, const sceneio_model& scene, bool noparallel) {
   // helper
-  auto add_val = [](json& ejs, const string& name,
-                     const auto& value) {
+  auto add_val = [](json& ejs, const string& name, const auto& value) {
     ejs[name] = value;
   };
-  auto add_opt = [](json& ejs, const string& name,
-                     const auto& value, const auto& def) {
+  auto add_opt = [](json& ejs, const string& name, const auto& value,
+                     const auto& def) {
     if (value == def) return;
     ejs[name] = value;
   };
@@ -1511,7 +1509,7 @@ static void save_json_scene(
   // save yaml file
   auto js = json::object();
 
-  js["asset"] = json::object();
+  js["asset"]          = json::object();
   js["asset"]["stats"] = json::array();
   for (auto stat : scene_stats(scene)) {
     js["asset"]["stats"].push_back(stat);
@@ -1554,12 +1552,10 @@ static void save_json_scene(
     add_opt(ejs, "coat", shape.coat, def_shape.coat);
     add_opt(ejs, "roughness", shape.roughness, def_shape.roughness);
     add_opt(ejs, "ior", shape.ior, def_shape.ior);
-    add_opt(
-        ejs, "transmission", shape.transmission, def_shape.transmission);
+    add_opt(ejs, "transmission", shape.transmission, def_shape.transmission);
     add_opt(ejs, "trdepth", shape.trdepth, def_shape.trdepth);
     add_opt(ejs, "scattering", shape.scattering, def_shape.scattering);
-    add_opt(
-        ejs, "scanisotropy", shape.scanisotropy, def_shape.scanisotropy);
+    add_opt(ejs, "scanisotropy", shape.scanisotropy, def_shape.scanisotropy);
     add_opt(ejs, "opacity", shape.opacity, def_shape.opacity);
     add_opt(ejs, "thin", shape.thin, def_shape.thin);
     add_tex(ejs, "emission_tex", shape.emission_tex);
@@ -1572,8 +1568,7 @@ static void save_json_scene(
     add_tex(ejs, "coat_tex", shape.coat_tex);
     add_tex(ejs, "opacity_tex", shape.opacity_tex);
     add_tex(ejs, "normal_tex", shape.normal_tex);
-    add_opt(ejs, "gltf_textures", shape.gltf_textures,
-        def_shape.gltf_textures);
+    add_opt(ejs, "gltf_textures", shape.gltf_textures, def_shape.gltf_textures);
     if (!shape.positions.empty()) {
       auto path = replace_extension(shape.name, ".ply");
       add_val(ejs, "shape", path);
@@ -1602,14 +1597,11 @@ static void save_json_scene(
     auto& ejs = js["subdivs"].emplace_back();
     add_val(ejs, "name", subdiv.name);
     add_val(ejs, "shape", scene.shapes[subdiv.shape].name);
-    add_opt(
-        ejs, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
-    add_opt(
-        ejs, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
+    add_opt(ejs, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
+    add_opt(ejs, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
     add_opt(ejs, "smooth", subdiv.smooth, def_subdiv.smooth);
     add_tex(ejs, "displacement_tex", subdiv.displacement_tex);
-    add_opt(
-        ejs, "displacement", subdiv.displacement, def_subdiv.subdivisions);
+    add_opt(ejs, "displacement", subdiv.displacement, def_subdiv.subdivisions);
     if (!subdiv.positions.empty() && subdiv.quadspos.empty()) {
       auto path = replace_extension(subdiv.name, ".ply");
       add_val(ejs, "subdiv", path);
