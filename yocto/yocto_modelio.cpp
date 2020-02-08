@@ -3673,18 +3673,15 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       arealight.frend        = stack.back().transform_end;
       stack.back().arealight = arealight.name;
     } else if (cmd == "LightSource") {
-      auto& light = pbrt.lights_commands.emplace_back();
+      auto light = pbrt_command{};
       parse_pbrt_param(fs, str, light.type);
       parse_pbrt_params(fs, str, light.values);
       light.frame = stack.back().transform_start;
       light.frend = stack.back().transform_end;
       if (light.type == "infinite") {
-        auto& environment  = pbrt.environments_commands.emplace_back();
-        environment.type   = light.type;
-        environment.values = light.values;
-        environment.frame  = light.frame;
-        environment.frend  = light.frend;
-        pbrt.lights_commands.pop_back();
+        pbrt.environments.push_back(convert_environment(light));
+      } else {
+        pbrt.lights.push_back(convert_light(light));
       }
     } else if (cmd == "MakeNamedMedium") {
       auto medium = pbrt_command{};
@@ -3734,13 +3731,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
     for(auto& command : pbrt.shapes_commands) {
       pbrt.shapes.push_back(convert_shape(command, filename));
     }
-    for(auto& command : pbrt.lights_commands) {
-      pbrt.lights.push_back(convert_light(command));
-    }
     convert_pbrt_arealights(filename, pbrt.arealights, pbrt.arealights_commands);
-    for(auto& command : pbrt.environments_commands) {
-      pbrt.environments.push_back(convert_environment(command));
-    }
   } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
   }
