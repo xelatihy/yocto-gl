@@ -113,8 +113,8 @@ void set_shape_radius(trace_scene& scene, int idx, const vector<float>& radius);
 void set_shape_tangents(
     trace_scene& scene, int idx, const vector<vec4f>& tangents);
 void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame);
-void set_shape_instances(trace_scene& scene, int idx, const frame3f& frame,
-    const vector<frame3f>& instances);
+void set_shape_frames(trace_scene& scene, int idx,
+    const vector<frame3f>& instances, const frame3f& local_frame);
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_material_base(
@@ -341,8 +341,7 @@ struct trace_shape {
   trace_material material = {};
 
   // frames
-  frame3f         frame     = identity3x4f;
-  vector<frame3f> instances = {};
+  vector<frame3f> frames = {};
 
   // primitives
   vector<int>   points    = {};

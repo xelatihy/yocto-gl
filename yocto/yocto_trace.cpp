@@ -3159,25 +3159,25 @@ void set_shape_tangents(
 }
 static void set_instances(trace_scene& scene, int idx) {
   auto& shape = scene.shapes[idx];
-  if (shape.instances.empty()) {
-    scene.instances.push_back({shape.frame, idx});
-  } else {
-    for (auto& iframe : shape.instances) {
-      scene.instances.push_back({iframe * shape.frame, idx});
-    }
+  for (auto& frame : shape.frames) {
+    scene.instances.push_back({frame, idx});
   }
 }
 void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame) {
-  auto& shape     = scene.shapes[idx];
-  shape.frame     = frame;
-  shape.instances = vector<frame3f>{identity3x4f};
+  auto& shape  = scene.shapes[idx];
+  shape.frames = {frame};
   set_instances(scene, idx);
 }
-void set_shape_instances(trace_scene& scene, int idx, const frame3f& frame,
-    const vector<frame3f>& instances) {
-  auto& shape     = scene.shapes[idx];
-  shape.frame     = frame;
-  shape.instances = instances;
+void set_shape_frames(trace_scene& scene, int idx,
+    const vector<frame3f>& instances, const frame3f& frame) {
+  auto& shape = scene.shapes[idx];
+  if (instances.empty()) {
+    shape.frames     = {frame};
+  } else {
+    shape.frames.resize(instances.size());
+    for(auto idx = 0; idx < instances.size(); idx++)
+      shape.frames[idx] = instances[idx] * frame;
+  }
   set_instances(scene, idx);
 }
 void set_material_emission(
