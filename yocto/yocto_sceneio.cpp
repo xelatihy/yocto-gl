@@ -47,6 +47,7 @@
 #include <deque>
 #include <future>
 #include <memory>
+#include <fstream>
 
 #include "ext/json.hpp"
 
@@ -1246,23 +1247,76 @@ static void save_yaml_scene(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+using json = nlohmann::json;
+
+// support for json conversions
+// static inline void to_json(json& j, const vec2f& value) {
+//   nlohmann::to_json(j, (const array<float, 2>&)value);
+// }
+// static inline void to_json(json& j, const vec3f& value) {
+//   nlohmann::to_json(j, (const array<float, 3>&)value);
+// }
+// static inline void to_json(json& j, const vec4f& value) {
+//   nlohmann::to_json(j, (const array<float, 4>&)value);
+// }
+// static inline void to_json(json& j, const mat3f& value) {
+//   nlohmann::to_json(j, (const array<float, 9>&)value);
+// }
+// static inline void to_json(json& j, const frame3f& value) {
+//   nlohmann::to_json(j, (const array<float, 12>&)value);
+// }
+
+static inline void from_json(const json& j, vec3f& value) {
+  nlohmann::from_json(j, (array<float, 3>&)value);
+}
+static inline void from_json(const json& j, mat3f& value) {
+  nlohmann::from_json(j, (array<float, 9>&)value);
+}
+static inline void from_json(const json& j, frame3f& value) {
+  nlohmann::from_json(j, (array<float, 12>&)value);
+}
+
+// load/save json
+static void load_json(const string& filename, json& js) {
+  auto stream = std::ifstream(filename);
+  if(!stream) throw std::runtime_error{filename + ": file not found"};
+  try {
+    stream >> js;
+  } catch(std::exception& e) {
+    throw std::runtime_error{filename + ": error parsing json" };
+  }
+}
+static void save_json(const string& filename, const json& js) {
+  auto stream = std::ofstream(filename);
+  if(!stream) throw std::runtime_error{filename + ": file not found"};
+  try {
+    stream << std::setw(4) << js << std::endl;
+  } catch(std::exception& e) {
+    throw std::runtime_error{filename + ": error writing json" };
+  }
+}
+
 // Save a scene in the builtin JSON format.
 static void load_json_scene(
     const string& filename, sceneio_model& scene, bool noparallel) {
   scene = {};
 
   // open file
-  auto yaml = yaml_model{};
-  load_yaml(filename, yaml);
+  auto js = json{};
+  load_json(filename, js);
 
-  auto vmap = unordered_map<string, int>{{"", -1}};
-  auto smap = unordered_map<string, int>{{"", -1}};
+  // gets a json value
+  auto get_value = [](const json& cjs, const string& name, auto& value) {
+    if(!cjs.contains(name)) return;
+    cjs.at(name).get_to(value);
+  };
 
   // parse yaml reference
-  auto get_yaml_ref = [](const yaml_element& yelment, const string& name,
+  auto get_ref = [](const json& cjs, const string& name,
                           int& value, const unordered_map<string, int>& refs) {
+    if(!cjs.contains(name)) return;
     auto ref = ""s;
-    get_yaml_value(yelment, name, ref);
+    cjs.at(name).get_to(ref);
     if (ref == "") {
       value = -1;
     } else {
@@ -1275,10 +1329,11 @@ static void load_json_scene(
   // parse yaml reference
   auto texture_map = unordered_map<string, int>{{"", -1}};
   auto get_texture = [&filename, &scene, &texture_map](
-                         const yaml_element& yelment, const string& name,
+                         const json& cjs, const string& name,
                          int& value, const string& dirname = "textures/") {
+    if(!cjs.contains(name)) return -1;
     auto path = ""s;
-    get_yaml_value(yelment, name, path);
+    cjs.at(name).get_to(path);
     if (path == "") return -1;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) {
@@ -1302,74 +1357,83 @@ static void load_json_scene(
     return (int)scene.textures.size() - 1;
   };
 
+  // shape map
+  auto shape_map = unordered_map<string, int>{{"", -1}};
+
   // check for conversion errors
   try {
     // cameras
-    for (auto& yelement : yaml.elements) {
-      if (yelement.name == "cameras") {
+    if(js.contains("cameras")) {
+      for(auto& ejs : js.at("cameras")) {
         auto& camera = scene.cameras.emplace_back();
-        get_yaml_value(yelement, "name", camera.name);
-        get_yaml_value(yelement, "frame", camera.frame);
-        get_yaml_value(yelement, "orthographic", camera.orthographic);
-        get_yaml_value(yelement, "lens", camera.lens);
-        get_yaml_value(yelement, "aspect", camera.aspect);
-        get_yaml_value(yelement, "film", camera.film);
-        get_yaml_value(yelement, "focus", camera.focus);
-        get_yaml_value(yelement, "aperture", camera.aperture);
-        if (has_yaml_value(yelement, "lookat")) {
+        get_value(ejs, "name", camera.name);
+        get_value(ejs, "frame", camera.frame);
+        get_value(ejs, "orthographic", camera.orthographic);
+        get_value(ejs, "lens", camera.lens);
+        get_value(ejs, "aspect", camera.aspect);
+        get_value(ejs, "film", camera.film);
+        get_value(ejs, "focus", camera.focus);
+        get_value(ejs, "aperture", camera.aperture);
+        if (ejs.contains("lookat")) {
           auto lookat = identity3x3f;
-          get_yaml_value(yelement, "lookat", lookat);
+          get_value(ejs, "lookat", lookat);
           camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
           camera.focus = length(lookat.x - lookat.y);
         }
-      } else if (yelement.name == "environments") {
+      }
+    }
+    if(js.contains("environments")) {
+      for(auto& ejs : js.at("environments")) {
         auto& environment = scene.environments.emplace_back();
-        get_yaml_value(yelement, "name", environment.name);
-        get_yaml_value(yelement, "frame", environment.frame);
-        get_yaml_value(yelement, "emission", environment.emission);
-        get_texture(yelement, "emission_tex", environment.emission_tex,
+        get_value(ejs, "name", environment.name);
+        get_value(ejs, "frame", environment.frame);
+        get_value(ejs, "emission", environment.emission);
+        get_texture(ejs, "emission_tex", environment.emission_tex,
             "environments/");
-        if (has_yaml_value(yelement, "lookat")) {
+        if (ejs.contains("lookat")) {
           auto lookat = identity3x3f;
-          get_yaml_value(yelement, "lookat", lookat);
+          get_value(ejs, "lookat", lookat);
           environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
-      } else if (yelement.name == "shapes") {
+      }
+    }
+    if(js.contains("shapes")) {
+      for(auto& ejs : js.at("shapes")) {
         auto& shape = scene.shapes.emplace_back();
-        get_yaml_value(yelement, "name", shape.name);
-        get_yaml_value(yelement, "frame", shape.frame);
-        if (has_yaml_value(yelement, "lookat")) {
+        get_value(ejs, "name", shape.name);
+        get_value(ejs, "frame", shape.frame);
+        if (ejs.contains("lookat")) {
           auto lookat = identity3x3f;
-          get_yaml_value(yelement, "lookat", lookat);
+          get_value(ejs, "lookat", lookat);
           shape.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
-        get_yaml_value(yelement, "emission", shape.emission);
-        get_yaml_value(yelement, "color", shape.color);
-        get_yaml_value(yelement, "metallic", shape.metallic);
-        get_yaml_value(yelement, "specular", shape.specular);
-        get_yaml_value(yelement, "roughness", shape.roughness);
-        get_yaml_value(yelement, "coat", shape.coat);
-        get_yaml_value(yelement, "transmission", shape.transmission);
-        get_yaml_value(yelement, "thin", shape.thin);
-        get_yaml_value(yelement, "ior", shape.ior);
-        get_yaml_value(yelement, "trdepth", shape.trdepth);
-        get_yaml_value(yelement, "scattering", shape.scattering);
-        get_yaml_value(yelement, "scanisotropy", shape.scanisotropy);
-        get_yaml_value(yelement, "opacity", shape.opacity);
-        get_yaml_value(yelement, "coat", shape.coat);
-        get_texture(yelement, "emission_tex", shape.emission_tex);
-        get_texture(yelement, "color_tex", shape.color_tex);
-        get_texture(yelement, "metallic_tex", shape.metallic_tex);
-        get_texture(yelement, "specular_tex", shape.specular_tex);
-        get_texture(yelement, "transmission_tex", shape.transmission_tex);
-        get_texture(yelement, "roughness_tex", shape.roughness_tex);
-        get_texture(yelement, "scattering_tex", shape.scattering_tex);
-        get_texture(yelement, "normal_tex", shape.normal_tex);
-        get_texture(yelement, "normal_tex", shape.normal_tex);
-        get_yaml_value(yelement, "gltf_textures", shape.gltf_textures);
-        if (has_yaml_value(yelement, "shape")) {
+        get_value(ejs, "emission", shape.emission);
+        get_value(ejs, "color", shape.color);
+        get_value(ejs, "metallic", shape.metallic);
+        get_value(ejs, "specular", shape.specular);
+        get_value(ejs, "roughness", shape.roughness);
+        get_value(ejs, "coat", shape.coat);
+        get_value(ejs, "transmission", shape.transmission);
+        get_value(ejs, "thin", shape.thin);
+        get_value(ejs, "ior", shape.ior);
+        get_value(ejs, "trdepth", shape.trdepth);
+        get_value(ejs, "scattering", shape.scattering);
+        get_value(ejs, "scanisotropy", shape.scanisotropy);
+        get_value(ejs, "opacity", shape.opacity);
+        get_value(ejs, "coat", shape.coat);
+        get_texture(ejs, "emission_tex", shape.emission_tex);
+        get_texture(ejs, "color_tex", shape.color_tex);
+        get_texture(ejs, "metallic_tex", shape.metallic_tex);
+        get_texture(ejs, "specular_tex", shape.specular_tex);
+        get_texture(ejs, "transmission_tex", shape.transmission_tex);
+        get_texture(ejs, "roughness_tex", shape.roughness_tex);
+        get_texture(ejs, "scattering_tex", shape.scattering_tex);
+        get_texture(ejs, "normal_tex", shape.normal_tex);
+        get_texture(ejs, "normal_tex", shape.normal_tex);
+        get_value(ejs, "gltf_textures", shape.gltf_textures);
+        if (ejs.contains("shape")) {
           auto path = ""s;
-          get_yaml_value(yelement, "shape", path);
+          get_value(ejs, "shape", path);
           try {
             load_shape(get_dirname(filename) + path, shape.points, shape.lines,
                 shape.triangles, shape.quads, shape.positions, shape.normals,
@@ -1378,28 +1442,31 @@ static void load_json_scene(
             throw_dependent_error(filename, e.what());
           }
         }
-        if (has_yaml_value(yelement, "instances")) {
+        if (ejs.contains("instances")) {
           auto path = ""s;
-          get_yaml_value(yelement, "instances", path);
+          get_value(ejs, "instances", path);
           try {
             load_instances(get_dirname(filename) + path, shape.instances);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
         }
-        smap[shape.name] = (int)scene.shapes.size() - 1;
-      } else if (yelement.name == "subdivs") {
+        shape_map[shape.name] = (int)scene.shapes.size() - 1;
+      }
+    }
+    if(js.contains("subdivs")) {
+      for(auto& ejs : js.at("subdivs")) {
         auto& subdiv = scene.subdivs.emplace_back();
-        get_yaml_value(yelement, "name", subdiv.name);
-        get_yaml_ref(yelement, "shape", subdiv.shape, smap);
-        get_yaml_value(yelement, "subdivisions", subdiv.subdivisions);
-        get_yaml_value(yelement, "catmullclark", subdiv.catmullclark);
-        get_yaml_value(yelement, "smooth", subdiv.smooth);
-        get_texture(yelement, "displacement_tex", subdiv.displacement_tex);
-        get_yaml_value(yelement, "displacement", subdiv.displacement);
-        if (has_yaml_value(yelement, "subdiv")) {
+        get_value(ejs, "name", subdiv.name);
+        get_ref(ejs, "shape", subdiv.shape, shape_map);
+        get_value(ejs, "subdivisions", subdiv.subdivisions);
+        get_value(ejs, "catmullclark", subdiv.catmullclark);
+        get_value(ejs, "smooth", subdiv.smooth);
+        get_texture(ejs, "displacement_tex", subdiv.displacement_tex);
+        get_value(ejs, "displacement", subdiv.displacement);
+        if (ejs.contains("subdiv")) {
           auto path = ""s;
-          get_yaml_value(yelement, "subdiv", path);
+          get_value(ejs, "subdiv", path);
           try {
             load_shape(get_dirname(filename) + path, subdiv.points,
                 subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
@@ -1408,9 +1475,9 @@ static void load_json_scene(
             throw_dependent_error(filename, e.what());
           }
         }
-        if (has_yaml_value(yelement, "fvsubdiv")) {
+        if (ejs.contains("fvsubdiv")) {
           auto path = ""s;
-          get_yaml_value(yelement, "fvsubdiv", path);
+          get_value(ejs, "fvsubdiv", path);
           try {
             load_fvshape(get_dirname(filename) + path, subdiv.quadspos,
                 subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
