@@ -404,8 +404,8 @@ struct trace_scene {
   vector<trace_light> lights = {};
   trace_bvh           bvh    = {};
 #ifdef YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh = {};
-  vector<vec2i> embree_instances = {};
+  std::shared_ptr<void> embree_bvh       = {};
+  vector<vec2i>         embree_instances = {};
 #endif
 };
 

@@ -539,8 +539,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (app && !app->ioscene.shapes.empty() && begin_glheader(win, "shapes")) {
-    draw_glcombobox(
-        win, "shape##2", app->selected_shape, app->ioscene.shapes);
+    draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene.shapes);
     if (draw_glwidgets_shape(win, app, app->selected_shape)) {
       stop_display(app);
       auto& ioshape = app->ioscene.shapes[app->selected_shape];
@@ -554,7 +553,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       set_shape_colors(app->scene, app->selected_shape, ioshape.colors);
       set_shape_radius(app->scene, app->selected_shape, ioshape.radius);
       set_shape_tangents(app->scene, app->selected_shape, ioshape.tangents);
-      set_shape_frames(app->scene, app->selected_shape, ioshape.instances, ioshape.frame);
+      set_shape_frames(
+          app->scene, app->selected_shape, ioshape.instances, ioshape.frame);
       update_bvh(app->scene, {}, {app->selected_shape}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);

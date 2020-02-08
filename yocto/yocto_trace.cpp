@@ -1287,15 +1287,16 @@ static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
   if (params.bvh == trace_bvh_type::embree_highquality)
     rtcSetSceneBuildQuality(escene, RTC_BUILD_QUALITY_HIGH);
   auto shape_id = 0;
-  for(auto& shape : scene.shapes) {
+  for (auto& shape : scene.shapes) {
     auto instance_id = 0;
-    for(auto& frame : shape.frames) {
-      auto  egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
+    for (auto& frame : shape.frames) {
+      auto egeometry = rtcNewGeometry(edevice, RTC_GEOMETRY_TYPE_INSTANCE);
       rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
       rtcSetGeometryTransform(
           egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
       rtcCommitGeometry(egeometry);
-      rtcAttachGeometryByID(escene, egeometry, (int)scene.embree_instances.size());
+      rtcAttachGeometryByID(
+          escene, egeometry, (int)scene.embree_instances.size());
       scene.embree_instances.push_back({shape_id, instance_id});
       instance_id += 1;
     }
@@ -1309,11 +1310,11 @@ static void init_embree_bvh(trace_scene& scene, const trace_params& params) {
 static void update_embree_bvh(
     trace_scene& scene, const vector<int>& updated_instances) {
   // scene bvh
-  auto escene = (RTCScene)scene.embree_bvh.get();
+  auto escene       = (RTCScene)scene.embree_bvh.get();
   auto update_flags = vector<bool>(scene.shapes.size(), false);
-  for(auto shape_id : updated_instances) update_flags[shape_id] = true;
-  for(auto& [shape_id, instance_id] : scene.embree_instances) {
-    if(!update_flags[shape_id]) continue;
+  for (auto shape_id : updated_instances) update_flags[shape_id] = true;
+  for (auto& [shape_id, instance_id] : scene.embree_instances) {
+    if (!update_flags[shape_id]) continue;
     auto& shape     = scene.shapes[shape_id];
     auto& frame     = shape.frames[instance_id];
     auto  egeometry = rtcGetGeometry(escene, instance_id);
@@ -1350,8 +1351,8 @@ static bool intersect_shape_embree_bvh(const trace_shape& shape,
 }
 
 static bool intersect_scene_embree_bvh(const trace_scene& scene,
-    const ray3f& ray, int& shape, int& instance, int& element, 
-    vec2f& uv, float& distance, bool find_any) {
+    const ray3f& ray, int& shape, int& instance, int& element, vec2f& uv,
+    float& distance, bool find_any) {
   RTCRayHit embree_ray;
   embree_ray.ray.org_x     = ray.o.x;
   embree_ray.ray.org_y     = ray.o.y;
@@ -1368,7 +1369,7 @@ static bool intersect_scene_embree_bvh(const trace_scene& scene,
   rtcInitIntersectContext(&embree_ctx);
   rtcIntersect1((RTCScene)scene.embree_bvh.get(), &embree_ctx, &embree_ray);
   if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-  shape = scene.embree_instances[(int)embree_ray.hit.instID[0]].x;
+  shape    = scene.embree_instances[(int)embree_ray.hit.instID[0]].x;
   instance = scene.embree_instances[(int)embree_ray.hit.instID[0]].y;
   element  = (int)embree_ray.hit.primID;
   uv       = {embree_ray.hit.u, embree_ray.hit.v};
