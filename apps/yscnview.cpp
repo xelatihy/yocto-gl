@@ -179,25 +179,6 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
     }
   }
 
-  // materials
-  for (auto& shape : scene.shapes) {
-    auto& material = shape.material;
-    auto  id       = add_material(glscene);
-    set_material_emission(
-        glscene, id, material.emission, material.emission_tex);
-    set_material_diffuse(glscene, id,
-        (1 - material.transmission) * material.base, material.base_tex);
-    set_material_specular(glscene, id,
-        material.specular * eta_to_reflectivity(material.ior),
-        material.specular_tex);
-    set_material_metallic(
-        glscene, id, material.metallic, material.metallic_tex);
-    set_material_roughness(
-        glscene, id, material.roughness, material.roughness_tex);
-    set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
-    set_material_normalmap(glscene, id, material.normal_tex);
-  }
-
   for (auto& subdiv : scene.subdivs) {
     tesselate_subdiv(scene, subdiv);
   }
@@ -218,7 +199,20 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
       set_shape(glscene, id, shape.quads, shape.positions, shape.normals,
           shape.texcoords, shape.colors, shape.tangents);
     }
-    set_shape_material(glscene, id, id);
+    auto& material = shape.material;
+    set_material_emission(
+        glscene, id, material.emission, material.emission_tex);
+    set_material_diffuse(glscene, id,
+        (1 - material.transmission) * material.base, material.base_tex);
+    set_material_specular(glscene, id,
+        material.specular * eta_to_reflectivity(material.ior),
+        material.specular_tex);
+    set_material_metallic(
+        glscene, id, material.metallic, material.metallic_tex);
+    set_material_roughness(
+        glscene, id, material.roughness, material.roughness_tex);
+    set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
+    set_material_normalmap(glscene, id, material.normal_tex);
     if (shape.instances.empty()) {
       add_instance(glscene, shape.frame, id, id);
     } else {

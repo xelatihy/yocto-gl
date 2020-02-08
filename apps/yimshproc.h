@@ -169,31 +169,32 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   add_camera(app->scene, app->camera.frame, app->camera.lens,
       app->camera.aspect, app->camera.film, 0.001, 10000);
 
-  auto shape_material = add_material(app->scene);
-  set_material_diffuse(app->scene, shape_material, {1, 0.2, 0});
-  set_material_roughness(app->scene, shape_material, 0.3);
-
-  // @Issue: Right now we're missing APIs to color things easily.
-  auto lines_material = add_material(app->scene);
-  set_material_emission(app->scene, lines_material, {1, 1, 1});
-  set_material_roughness(app->scene, lines_material, 0.0);
-
   // The model.
   app->glshape_id = add_shape(app->scene);
+  set_material_diffuse(app->scene, app->glshape_id, {1, 0.2, 0});
+  set_material_roughness(app->scene, app->glshape_id, 0.3);
   update_glshape(app);
 
   // The points.
   app->glpoints_id = add_shape(app->scene);
+  set_material_emission(app->scene, app->glpoints_id, {1, 1, 1});
+  set_material_roughness(app->scene, app->glpoints_id, 0.0);
 
   // The vector field.
   app->glvector_field_id = add_shape(app->scene);
+  set_material_emission(app->scene, app->glvector_field_id, {1, 1, 1});
+  set_material_roughness(app->scene, app->glvector_field_id, 0.0);
 
   // The edges.
   app->gledges_id = add_shape(app->scene);
+  set_material_emission(app->scene, app->gledges_id, {1, 1, 1});
+  set_material_roughness(app->scene, app->gledges_id, 0.0);
   update_gledges(app);
 
   // The polyline.
   app->glpolyline_id = add_shape(app->scene);
+  set_material_emission(app->scene, app->glpolyline_id, {1, 1, 1});
+  set_material_roughness(app->scene, app->glpolyline_id, 0.0);
 
   // Add instances.
   for (int i = 0; i < 5; ++i) {

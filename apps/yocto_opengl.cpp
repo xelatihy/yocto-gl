@@ -772,6 +772,7 @@ opengl_shape::opengl_shape(opengl_shape&& other) {
 
 opengl_shape& opengl_shape::operator=(opengl_shape&& other) {
   if (this == &other) return *this;
+  std::swap(material, other.material);
   std::swap(positions_num, other.positions_num);
   std::swap(positions_id, other.positions_id);
   std::swap(normals_num, other.normals_num);
@@ -837,57 +838,6 @@ void set_camera(opengl_scene& scene, int idx, const frame3f& frame, float lens,
   camera.far    = far;
 }
 void clear_cameras(opengl_scene& scene) { scene._cameras.clear(); }
-
-// add material
-int add_material(opengl_scene& scene) {
-  scene._materials.emplace_back();
-  return (int)scene._materials.size() - 1;
-}
-void set_material_emission(
-    opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
-  auto& material        = scene._materials[idx];
-  material.emission     = emission;
-  material.emission_map = emission_txt;
-}
-void set_material_diffuse(
-    opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
-  auto& material       = scene._materials[idx];
-  material.diffuse     = diffuse;
-  material.diffuse_map = diffuse_txt;
-}
-void set_material_specular(
-    opengl_scene& scene, int idx, const vec3f& specular, int specular_txt) {
-  auto& material        = scene._materials[idx];
-  material.specular     = specular;
-  material.specular_map = specular_txt;
-}
-void set_material_roughness(
-    opengl_scene& scene, int idx, float roughness, int roughness_txt) {
-  auto& material         = scene._materials[idx];
-  material.roughness     = roughness;
-  material.roughness_map = roughness_txt;
-}
-void set_material_opacity(
-    opengl_scene& scene, int idx, float opacity, int opacity_txt) {
-  auto& material   = scene._materials[idx];
-  material.opacity = opacity;
-}
-void set_material_metallic(
-    opengl_scene& scene, int idx, float metallic, int metallic_txt) {
-  auto& material        = scene._materials[idx];
-  material.metallic     = metallic;
-  material.metallic_map = metallic_txt;
-}
-void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt) {
-  auto& material      = scene._materials[idx];
-  material.normal_map = normal_txt;
-}
-void set_material_gltftextures(
-    opengl_scene& scene, int idx, bool gltf_textures) {
-  auto& material         = scene._materials[idx];
-  material.gltf_textures = gltf_textures;
-}
-void clear_glmaterials(opengl_scene& scene) { scene._materials.clear(); }
 
 // add texture
 int add_texture(opengl_scene& scene, const image<vec4b>& img, bool as_srgb) {
@@ -1137,23 +1087,51 @@ void set_shape_colors(
   set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
       (const float*)colors.data());
 }
-void set_shape_material(opengl_scene& scene, int idx, int material) {
-  auto& shape = scene._shapes[idx];
-  shape.material = material;
+void set_material_emission(
+    opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
+  auto& material         = scene._shapes[idx].material;
+  material.emission     = emission;
+  material.emission_map = emission_txt;
+}
+void set_material_diffuse(
+    opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
+  auto& material         = scene._shapes[idx].material;
+  material.diffuse     = diffuse;
+  material.diffuse_map = diffuse_txt;
+}
+void set_material_specular(
+    opengl_scene& scene, int idx, const vec3f& specular, int specular_txt) {
+  auto& material         = scene._shapes[idx].material;
+  material.specular     = specular;
+  material.specular_map = specular_txt;
+}
+void set_material_roughness(
+    opengl_scene& scene, int idx, float roughness, int roughness_txt) {
+  auto& material         = scene._shapes[idx].material;
+  material.roughness     = roughness;
+  material.roughness_map = roughness_txt;
+}
+void set_material_opacity(
+    opengl_scene& scene, int idx, float opacity, int opacity_txt) {
+  auto& material         = scene._shapes[idx].material;
+  material.opacity = opacity;
+}
+void set_material_metallic(
+    opengl_scene& scene, int idx, float metallic, int metallic_txt) {
+  auto& material         = scene._shapes[idx].material;
+  material.metallic     = metallic;
+  material.metallic_map = metallic_txt;
+}
+void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt) {
+  auto& material         = scene._shapes[idx].material;
+  material.normal_map = normal_txt;
+}
+void set_material_gltftextures(
+    opengl_scene& scene, int idx, bool gltf_textures) {
+  auto& material         = scene._shapes[idx].material;
+  material.gltf_textures = gltf_textures;
 }
 void clear_glshapes(opengl_scene& scene) {
-  for (auto& shape : scene._shapes) {
-    if (shape.positions_id) glDeleteBuffers(1, &shape.positions_id);
-    if (shape.normals_id) glDeleteBuffers(1, &shape.normals_id);
-    if (shape.texcoords_id) glDeleteBuffers(1, &shape.texcoords_id);
-    if (shape.colors_id) glDeleteBuffers(1, &shape.colors_id);
-    if (shape.tangents_id) glDeleteBuffers(1, &shape.tangents_id);
-    if (shape.points_id) glDeleteBuffers(1, &shape.points_id);
-    if (shape.lines_id) glDeleteBuffers(1, &shape.lines_id);
-    if (shape.triangles_id) glDeleteBuffers(1, &shape.triangles_id);
-    if (shape.quads_id) glDeleteBuffers(1, &shape.quads_id);
-    if (shape.edges_id) glDeleteBuffers(1, &shape.edges_id);
-  }
   scene._shapes.clear();
 }
 
@@ -1206,7 +1184,7 @@ void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
   if (instance.shape < 0 || instance.shape > glscene._shapes.size()) return;
 
   auto& shape    = glscene._shapes[instance.shape];
-  auto& material = glscene._materials[instance.shape];
+  auto& material = shape.material;
 
   auto instance_xform     = mat4f(instance.frame);
   auto instance_inv_xform = transpose(
