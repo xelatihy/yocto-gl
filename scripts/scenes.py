@@ -9,9 +9,9 @@ def cli():
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='yaml')
+@click.option('--format','-f', default='json')
 @click.option('--mode','-m', default='path')
-def itrace(directory='mcguire',scene='*',format='yaml',mode='path'):
+def itrace(directory='mcguire',scene='*',format='json',mode='path'):
     modes = {
         'path': '--bvh highquality',
         'embree': '--bvh embree-highquality',
@@ -34,9 +34,9 @@ def itrace(directory='mcguire',scene='*',format='yaml',mode='path'):
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='yaml')
+@click.option('--format','-f', default='json')
 @click.option('--mode','-m', default='default')
-def view(directory='mcguire',scene='*',format='yaml',mode='path'):
+def view(directory='mcguire',scene='*',format='json',mode='path'):
     modes = {
         'default': '--double-sided',
         'double-sided': '--double-sided',
@@ -57,9 +57,9 @@ def view(directory='mcguire',scene='*',format='yaml',mode='path'):
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='yaml')
+@click.option('--format','-f', default='json')
 @click.option('--mode','-m', default='path')
-def trace(directory='mcguire',scene='*',format='yaml',mode='path'):
+def trace(directory='mcguire',scene='*',format='json',mode='path'):
     modes = {
         'path': '-s 64 -r 640 --bvh highquality',
         'embree': '-s 256 -r 1280 --bvh embree-highquality',
@@ -100,9 +100,9 @@ def trace(directory='mcguire',scene='*',format='yaml',mode='path'):
 @cli.command()
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
-@click.option('--format','-f', default='yaml')
+@click.option('--format','-f', default='json')
 @click.option('--mode','-m', default='linear')
-def tonemap(directory='mcguire',scene='*',format='yaml',mode='filmic'):
+def tonemap(directory='mcguire',scene='*',format='json',mode='filmic'):
     modes = {
         'linear': '-t --logo',
         'contrast1': '-t --logcontrast 0.6 --logo',
@@ -121,7 +121,7 @@ def tonemap(directory='mcguire',scene='*',format='yaml',mode='filmic'):
         print(cmd, file=sys.stderr)
         os.system(cmd)
         if directory not in ['bitterli', 'disney', 'mcguire', 'pbrt']: continue
-        authorfilename = filename.replace('images-yaml/','source/').replace('-fr.','.').replace('-hr.','.').replace('-c1.','.').replace('-c2.','.').replace('-c3.','.').replace('-c4.','.').replace('-c5.','.').replace('-c6.','.').replace('.hdr','') + '/AUTHOR.txt'
+        authorfilename = filename.replace('images-json/','source/').replace('-fr.','.').replace('-hr.','.').replace('-c1.','.').replace('-c2.','.').replace('-c3.','.').replace('-c4.','.').replace('-c5.','.').replace('-c6.','.').replace('.hdr','') + '/AUTHOR.txt'
         print(authorfilename)
         with open(authorfilename) as f: text = f.read().strip()
         img = Image.open(imagename)
@@ -165,10 +165,10 @@ def sync_images(directory='mcguire',scene='*',format='obj',mode='path',clean=Tru
 @click.option('--directory', '-d', default='mcguire')
 @click.option('--scene', '-s', default='*')
 @click.option('--format','-f', default='obj')
-@click.option('--outformat','-F', default='yaml')
+@click.option('--outformat','-F', default='json')
 @click.option('--mode','-m', default='default')
 @click.option('--clean/--no-clean','-C', default=False)
-def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='path',clean=True):
+def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='path',clean=True):
     modes = {
         # 'default': '--uniform-textures --mesh-filenames',
         # 'gltf': '--uniform-textures --mesh-filenames --mesh-directory gltf_meshes/'
@@ -189,7 +189,7 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="yaml",mode='pa
         if clean: os.system(f'rm -rf {outdirname}')
         os.system(f'mkdir -p {outdirname}')
         os.system(f'mkdir -p {outdirname}/textures')
-        if outformat == 'yaml':        
+        if outformat == 'yaml' or outformat == 'json':        
             os.system(f'mkdir -p {outdirname}/shapes')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             if format == 'pbrt':
