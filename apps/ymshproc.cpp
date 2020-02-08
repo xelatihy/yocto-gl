@@ -286,8 +286,8 @@ int main(int argc, const char** argv) {
   if (!facevarying) {
     auto ext = get_extension(filename);
     if (ext == ".ypreset") {
-        make_shape_preset(points, lines, triangles, quads, positions, normals,
-            texcoords, colors, radius, get_basename(filename));
+      make_shape_preset(points, lines, triangles, quads, positions, normals,
+          texcoords, colors, radius, get_basename(filename));
     } else {
       load_shape(filename, points, lines, triangles, quads, positions, normals,
           texcoords, colors, radius);

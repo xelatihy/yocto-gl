@@ -348,10 +348,6 @@ image<vec4f> add_logo(
 image<vec4b> add_logo(
     const image<vec4b>& img, const string& name = "logo-medium");
 
-// Make an image preset, useful for testing. See implementation for types.
-image<vec4f> make_image_preset(const string& type);
-image<vec4b> make_image_presetb(const string& type);
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

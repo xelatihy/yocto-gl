@@ -100,6 +100,124 @@ image<vec4f> filter_bilateral(
 
 }  // namespace yocto
 
+image<vec4f> make_image_preset(const string& type) {
+  auto set_region = [](image<vec4f>& img, const image<vec4f>& region,
+                        const vec2i& offset) {
+    for (auto j = 0; j < region.size().y; j++) {
+      for (auto i = 0; i < region.size().x; i++) {
+        if (!img.contains({i, j})) continue;
+        img[vec2i{i, j} + offset] = region[{i, j}];
+      }
+    }
+  };
+
+  auto size = vec2i{1024, 1024};
+  if (type.find("sky") != type.npos) size = {2048, 1024};
+  if (type.find("images2") != type.npos) size = {2048, 1024};
+  if (type == "grid") {
+    return make_grid(size);
+  } else if (type == "checker") {
+    return make_checker(size);
+  } else if (type == "bumps") {
+    return make_bumps(size);
+  } else if (type == "uvramp") {
+    return make_uvramp(size);
+  } else if (type == "gammaramp") {
+    return make_gammaramp(size);
+  } else if (type == "blackbodyramp") {
+    return make_blackbodyramp(size);
+  } else if (type == "uvgrid") {
+    return make_uvgrid(size);
+  } else if (type == "sky") {
+    return make_sunsky(
+        size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "sunsky") {
+    return make_sunsky(
+        size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "noise") {
+    return make_noisemap(size, 1);
+  } else if (type == "fbm") {
+    return make_fbmmap(size, 1);
+  } else if (type == "ridge") {
+    return make_ridgemap(size, 1);
+  } else if (type == "turbulence") {
+    return make_turbulencemap(size, 1);
+  } else if (type == "bump-normal") {
+    return srgb_to_rgb(bump_to_normal(make_bumps(size), 0.05f));
+  } else if (type == "images1") {
+    auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
+        "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
+    auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
+    for (auto i = 0; i < sub_imgs.size(); i++) {
+      sub_imgs[i] = make_image_preset(sub_types[i]);
+    }
+    auto montage_size = zero2i;
+    for (auto& sub_img : sub_imgs) {
+      montage_size.x += sub_img.size().x;
+      montage_size.y = max(montage_size.y, sub_img.size().y);
+    }
+    auto img = image<vec4f>(montage_size);
+    auto pos = 0;
+    for (auto& sub_img : sub_imgs) {
+      set_region(img, sub_img, {pos, 0});
+      pos += sub_img.size().x;
+    }
+    return img;
+  } else if (type == "images2") {
+    auto sub_types = vector<string>{"sky", "sunsky"};
+    auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
+    for (auto i = 0; i < sub_imgs.size(); i++) {
+      sub_imgs[i] = make_image_preset(sub_types[i]);
+    }
+    auto montage_size = zero2i;
+    for (auto& sub_img : sub_imgs) {
+      montage_size.x += sub_img.size().x;
+      montage_size.y = max(montage_size.y, sub_img.size().y);
+    }
+    auto img = image<vec4f>(montage_size);
+    auto pos = 0;
+    for (auto& sub_img : sub_imgs) {
+      set_region(img, sub_img, {pos, 0});
+      pos += sub_img.size().x;
+    }
+    return img;
+  } else if (type == "test-floor") {
+    return add_border(make_grid(size), 0.0025f);
+  } else if (type == "test-grid") {
+    return make_grid(size);
+  } else if (type == "test-checker") {
+    return make_checker(size);
+  } else if (type == "test-bumps") {
+    return make_bumps(size);
+  } else if (type == "test-uvramp") {
+    return make_uvramp(size);
+  } else if (type == "test-gammaramp") {
+    return make_gammaramp(size);
+  } else if (type == "test-blackbodyramp") {
+    return make_blackbodyramp(size);
+  } else if (type == "test-uvgrid") {
+    return make_uvgrid(size);
+  } else if (type == "test-sky") {
+    return make_sunsky(
+        size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "test-sunsky") {
+    return make_sunsky(
+        size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
+  } else if (type == "test-noise") {
+    return make_noisemap(size);
+  } else if (type == "test-fbm") {
+    return make_noisemap(size);
+  } else if (type == "test-bumps-normal") {
+    return bump_to_normal(make_bumps(size), 0.05f);
+  } else if (type == "test-bumps-displacement") {
+    return srgb_to_rgb(make_bumps(size));
+  } else if (type == "test-fbm-displacement") {
+    return srgb_to_rgb(make_fbmmap(size));
+  } else {
+    return {};
+  }
+}
+
 void run_app(int argc, const char* argv[]) {
   // command line parameters
   auto tonemap_on          = false;
@@ -148,7 +266,9 @@ void run_app(int argc, const char* argv[]) {
   auto error = ""s;
 
   // load
-  auto img = load_image(filename);
+  auto ext = get_extension(filename);
+  auto img = (ext == ".ypreset") ? make_image_preset(get_basename(filename))
+                                 : load_image(filename);
 
   // set alpha
   if (alpha_filename != "") {

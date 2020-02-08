@@ -1189,125 +1189,6 @@ image<vec4b> add_logo(const image<vec4b>& img, const string& type) {
   return wlogo;
 }
 
-image<vec4f> make_image_preset(const string& type) {
-  auto size = vec2i{1024, 1024};
-  if (type.find("sky") != type.npos) size = {2048, 1024};
-  if (type.find("images2") != type.npos) size = {2048, 1024};
-  if (type == "grid") {
-    return make_grid(size);
-  } else if (type == "checker") {
-    return make_checker(size);
-  } else if (type == "bumps") {
-    return make_bumps(size);
-  } else if (type == "uvramp") {
-    return make_uvramp(size);
-  } else if (type == "gammaramp") {
-    return make_gammaramp(size);
-  } else if (type == "blackbodyramp") {
-    return make_blackbodyramp(size);
-  } else if (type == "uvgrid") {
-    return make_uvgrid(size);
-  } else if (type == "sky") {
-    return make_sunsky(
-        size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "sunsky") {
-    return make_sunsky(
-        size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "noise") {
-    return make_noisemap(size, 1);
-  } else if (type == "fbm") {
-    return make_fbmmap(size, 1);
-  } else if (type == "ridge") {
-    return make_ridgemap(size, 1);
-  } else if (type == "turbulence") {
-    return make_turbulencemap(size, 1);
-  } else if (type == "bump-normal") {
-    return bump_to_normal(make_bumps(size), 0.05f);
-  } else if (type == "images1") {
-    auto sub_types = vector<string>{"grid", "uvgrid", "checker", "gammaramp",
-        "bumps", "bump-normal", "noise", "fbm", "blackbodyramp"};
-    auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
-    for (auto i = 0; i < sub_imgs.size(); i++) {
-      sub_imgs[i] = make_image_preset(sub_types[i]);
-    }
-    auto montage_size = zero2i;
-    for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.size().x;
-      montage_size.y = max(montage_size.y, sub_img.size().y);
-    }
-    auto img = image<vec4f>(montage_size);
-    auto pos = 0;
-    for (auto& sub_img : sub_imgs) {
-      set_region(img, sub_img, {pos, 0});
-      pos += sub_img.size().x;
-    }
-    return img;
-  } else if (type == "images2") {
-    auto sub_types = vector<string>{"sky", "sunsky"};
-    auto sub_imgs  = vector<image<vec4f>>(sub_types.size());
-    for (auto i = 0; i < sub_imgs.size(); i++) {
-      sub_imgs[i] = make_image_preset(sub_types[i]);
-    }
-    auto montage_size = zero2i;
-    for (auto& sub_img : sub_imgs) {
-      montage_size.x += sub_img.size().x;
-      montage_size.y = max(montage_size.y, sub_img.size().y);
-    }
-    auto img = image<vec4f>(montage_size);
-    auto pos = 0;
-    for (auto& sub_img : sub_imgs) {
-      set_region(img, sub_img, {pos, 0});
-      pos += sub_img.size().x;
-    }
-    return img;
-  } else if (type == "test-floor") {
-    return add_border(make_grid(size), 0.0025f);
-  } else if (type == "test-grid") {
-    return make_grid(size);
-  } else if (type == "test-checker") {
-    return make_checker(size);
-  } else if (type == "test-bumps") {
-    return make_bumps(size);
-  } else if (type == "test-uvramp") {
-    return make_uvramp(size);
-  } else if (type == "test-gammaramp") {
-    return make_gammaramp(size);
-  } else if (type == "test-blackbodyramp") {
-    return make_blackbodyramp(size);
-  } else if (type == "test-uvgrid") {
-    return make_uvgrid(size);
-  } else if (type == "test-sky") {
-    return make_sunsky(
-        size, pif / 4, 3.0f, false, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "test-sunsky") {
-    return make_sunsky(
-        size, pif / 4, 3.0f, true, 1.0f, 1.0f, vec3f{0.7f, 0.7f, 0.7f});
-  } else if (type == "test-noise") {
-    return make_noisemap(size);
-  } else if (type == "test-fbm") {
-    return make_noisemap(size);
-  } else if (type == "test-bumps-normal") {
-    return bump_to_normal(make_bumps(size), 0.05f);
-  } else if (type == "test-bumps-displacement") {
-    return make_bumps(size);
-  } else if (type == "test-fbm-displacement") {
-    return make_fbmmap(size);
-  } else {
-    return {};
-  }
-}
-
-image<vec4b> make_image_presetb(const string& type) {
-  auto imgf = make_image_preset(type);
-  if (imgf.empty()) return {};
-  if (type.find("-normal") == type.npos &&
-      type.find("-displacement") == type.npos) {
-    return rgb_to_srgbb(imgf);
-  } else {
-    return float_to_byte(imgf);
-  }
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1650,14 +1531,7 @@ image<vec4f> load_image(const string& filename) {
 // Loads an hdr image.
 void load_image(const string& filename, image<vec4f>& img) {
   auto ext = get_extension(filename);
-  if (ext == ".ypreset") {
-    img = make_image_preset(get_basename(filename));
-    if (img.empty()) throw_preset_error(filename);
-    if (get_basename(filename).find("-normal") != string::npos ||
-        get_basename(filename).find("-displacement") != string::npos) {
-      img = srgb_to_rgb(img);
-    }
-  } else if (ext == ".exr" || ext == ".EXR") {
+  if (ext == ".exr" || ext == ".EXR") {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
@@ -1718,11 +1592,8 @@ image<vec4b> load_imageb(const string& filename) {
 // Loads an ldr image.
 void load_imageb(const string& filename, image<vec4b>& img) {
   auto ext = get_extension(filename);
-  if (ext == ".ypreset") {
-    img = make_image_presetb(get_basename(filename));
-    if (img.empty()) throw_preset_error(filename);
-  } else if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
-             ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
+  if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" ||
+      ext == ".tga" || ext == ".TGA" || ext == ".bmp" || ext == ".BMP") {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) throw_read_error(filename);
