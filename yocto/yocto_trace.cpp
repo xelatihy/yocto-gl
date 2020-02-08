@@ -1377,16 +1377,15 @@ struct trace_bvh_primitive {
 };
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
-static pair<int, int> split_sah(vector<trace_bvh_primitive>& primitives,
-    int start, int end) {
+static pair<int, int> split_sah(
+    vector<trace_bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto split_axis = 0;
   auto mid        = (start + end) / 2;
 
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
-  for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, primitives[i].center);
+  for (auto i = start; i < end; i++) cbbox = merge(cbbox, primitives[i].center);
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, split_axis};
 
@@ -1424,8 +1423,9 @@ static pair<int, int> split_sah(vector<trace_bvh_primitive>& primitives,
   }
   // split
   mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [split_axis, middle](auto& primitive) { 
-                    return primitive.center[split_axis] < middle; }) -
+                  [split_axis, middle](auto& primitive) {
+                    return primitive.center[split_axis] < middle;
+                  }) -
               primitives.data());
 
   // if we were not able to split, just break the primitives in half
@@ -1440,16 +1440,15 @@ static pair<int, int> split_sah(vector<trace_bvh_primitive>& primitives,
 
 // Splits a BVH node using the balance heuristic. Returns split position and
 // axis.
-static pair<int, int> split_balanced(vector<trace_bvh_primitive>& primitives,
-    int start, int end) {
+static pair<int, int> split_balanced(
+    vector<trace_bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
 
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
-  for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, primitives[i].center);
+  for (auto i = start; i < end; i++) cbbox = merge(cbbox, primitives[i].center);
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, axis};
 
@@ -1478,16 +1477,15 @@ static pair<int, int> split_balanced(vector<trace_bvh_primitive>& primitives,
 
 // Splits a BVH node using the middle heutirtic. Returns split position and
 // axis.
-static pair<int, int> split_middle(vector<trace_bvh_primitive>& primitives, 
-    int start, int end) {
+static pair<int, int> split_middle(
+    vector<trace_bvh_primitive>& primitives, int start, int end) {
   // initialize split axis and position
   auto axis = 0;
   auto mid  = (start + end) / 2;
 
   // compute primintive bounds and size
   auto cbbox = invalidb3f;
-  for (auto i = start; i < end; i++)
-    cbbox = merge(cbbox, primitives[i].center);
+  for (auto i = start; i < end; i++) cbbox = merge(cbbox, primitives[i].center);
   auto csize = cbbox.max - cbbox.min;
   if (csize == zero3f) return {mid, axis};
 
@@ -1498,8 +1496,9 @@ static pair<int, int> split_middle(vector<trace_bvh_primitive>& primitives,
 
   // split the space in the middle along the largest axis
   mid = (int)(std::partition(primitives.data() + start, primitives.data() + end,
-                  [axis, middle = center(cbbox)[axis]](
-                      auto& primitive) { return primitive.center[axis] < middle; }) -
+                  [axis, middle = center(cbbox)[axis]](auto& primitive) {
+                    return primitive.center[axis] < middle;
+                  }) -
               primitives.data());
 
   // if we were not able to split, just break the primitives in half
@@ -1516,12 +1515,9 @@ static pair<int, int> split_middle(vector<trace_bvh_primitive>& primitives,
 static pair<int, int> split_nodes(vector<trace_bvh_primitive>& primitives,
     int start, int end, trace_bvh_type type) {
   switch (type) {
-    case trace_bvh_type::default_:
-      return split_middle(primitives, start, end);
-    case trace_bvh_type::highquality:
-      return split_sah(primitives, start, end);
-    case trace_bvh_type::middle:
-      return split_middle(primitives, start, end);
+    case trace_bvh_type::default_: return split_middle(primitives, start, end);
+    case trace_bvh_type::highquality: return split_sah(primitives, start, end);
+    case trace_bvh_type::middle: return split_middle(primitives, start, end);
     case trace_bvh_type::balanced:
       return split_balanced(primitives, start, end);
     default: throw std::runtime_error("should not have gotten here");
@@ -1716,17 +1712,17 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
   auto primitives = vector<trace_bvh_primitive>{};
   if (!shape.points.empty()) {
     for (auto idx = 0; idx < shape.points.size(); idx++) {
-      auto& p     = shape.points[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = point_bounds(shape.positions[p], shape.radius[p]);
-      primitive.center = center(primitive.bbox);
+      auto& p             = shape.points[idx];
+      auto& primitive     = primitives.emplace_back();
+      primitive.bbox      = point_bounds(shape.positions[p], shape.radius[p]);
+      primitive.center    = center(primitive.bbox);
       primitive.primitive = {idx, 0};
     }
   } else if (!shape.lines.empty()) {
     for (auto idx = 0; idx < shape.lines.size(); idx++) {
-      auto& l     = shape.lines[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = line_bounds(shape.positions[l.x], shape.positions[l.y],
+      auto& l          = shape.lines[idx];
+      auto& primitive  = primitives.emplace_back();
+      primitive.bbox   = line_bounds(shape.positions[l.x], shape.positions[l.y],
           shape.radius[l.x], shape.radius[l.y]);
       primitive.center = center(primitive.bbox);
       primitive.primitive = {idx, 1};
@@ -1734,26 +1730,26 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
   } else if (!shape.triangles.empty()) {
     for (auto idx = 0; idx < shape.triangles.size(); idx++) {
       auto& primitive = primitives.emplace_back();
-      auto& t     = shape.triangles[idx];
-      primitive.bbox = triangle_bounds(
+      auto& t         = shape.triangles[idx];
+      primitive.bbox  = triangle_bounds(
           shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-      primitive.center = center(primitive.bbox);
+      primitive.center    = center(primitive.bbox);
       primitive.primitive = {idx, 2};
     }
   } else if (!shape.quads.empty()) {
     for (auto idx = 0; idx < shape.quads.size(); idx++) {
-      auto& q     = shape.quads[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+      auto& q          = shape.quads[idx];
+      auto& primitive  = primitives.emplace_back();
+      primitive.bbox   = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
       primitive.center = center(primitive.bbox);
       primitive.primitive = {idx, 3};
     }
   } else if (!shape.quadspos.empty()) {
     for (auto idx = 0; idx < shape.quadspos.size(); idx++) {
-      auto& q     = shape.quadspos[idx];
-      auto& primitive = primitives.emplace_back();
-      primitive.bbox = quad_bounds(shape.positions[q.x], shape.positions[q.y],
+      auto& q          = shape.quadspos[idx];
+      auto& primitive  = primitives.emplace_back();
+      primitive.bbox   = quad_bounds(shape.positions[q.x], shape.positions[q.y],
           shape.positions[q.z], shape.positions[q.w]);
       primitive.center = center(primitive.bbox);
       primitive.primitive = {idx, 4};
@@ -1765,7 +1761,7 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
 
   // set bvh primitives
   shape.bvh.primitives.reserve(primitives.size());
-  for(auto& primitive : primitives) {
+  for (auto& primitive : primitives) {
     shape.bvh.primitives.push_back(primitive.primitive);
   }
 }
@@ -1786,15 +1782,15 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
 
   // instance bboxes
   auto primitives = vector<trace_bvh_primitive>{};
-  auto shape_id = 0;
+  auto shape_id   = 0;
   for (auto& shape : scene.shapes) {
     auto instance_id = 0;
     for (auto& frame : shape.frames) {
       auto& primitive = primitives.emplace_back();
-      primitive.bbox    = shape.bvh.nodes.empty()
-                        ? invalidb3f
-                        : transform_bbox(frame, shape.bvh.nodes[0].bbox);
-      primitive.center = center(primitive.bbox);
+      primitive.bbox  = shape.bvh.nodes.empty()
+                           ? invalidb3f
+                           : transform_bbox(frame, shape.bvh.nodes[0].bbox);
+      primitive.center    = center(primitive.bbox);
       primitive.primitive = {shape_id, instance_id};
       instance_id += 1;
     }
@@ -1806,7 +1802,7 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
 
   // set bvh primitives
   scene.bvh.primitives.reserve(primitives.size());
-  for(auto& primitive : primitives) {
+  for (auto& primitive : primitives) {
     scene.bvh.primitives.push_back(primitive.primitive);
   }
 }

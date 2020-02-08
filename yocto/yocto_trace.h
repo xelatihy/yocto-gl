@@ -369,22 +369,22 @@ struct trace_shape {
 #endif
 
   // element cdf for sampling
-  vector<float> elements_cdf         = {};
+  vector<float> elements_cdf = {};
 };
 
 // Environment map.
 struct trace_environment {
-  frame3f frame        = identity3x4f;
-  vec3f   emission     = {0, 0, 0};
-  int     emission_tex = -1;
-  vector<float> texels_cdf         = {};
+  frame3f       frame        = identity3x4f;
+  vec3f         emission     = {0, 0, 0};
+  int           emission_tex = -1;
+  vector<float> texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
 struct trace_light {
-  int           shape    = -1;
-  int           instance_    = -1;
-  int           environment = -1;
+  int shape       = -1;
+  int instance_   = -1;
+  int environment = -1;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
