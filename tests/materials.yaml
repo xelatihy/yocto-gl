@@ -43,8 +43,8 @@ environments:
 shapes:
   - name: shapes/floor.yaml
     shape: shapes/floor.ply
-    base: [0.7, 0.7, 0.7]
-    base_tex: textures/floor.png
+    color: [0.7, 0.7, 0.7]
+    color_tex: textures/floor.png
   - name: shapes/largearealight1.yaml
     shape: shapes/largearealight1.ply
     emission: [10, 10, 10]
@@ -56,29 +56,29 @@ shapes:
   - name: shapes/bunny-plastic-sharp.yaml
     shape: shapes/bunny.obj
     specular: 1
-    base: [0.5, 0.5, 0.7]
+    color: [0.5, 0.5, 0.7]
     roughness: 0.01
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0.2]
   - name: shapes/bunny-plastic-rough.yaml
     shape: shapes/bunny.obj
     specular: 1
-    base: [0.5, 0.7, 0.5]
+    color: [0.5, 0.7, 0.5]
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0.2]
   - name: shapes/bunny-matte.yaml
     shape: shapes/bunny.obj
-    base: [0.7, 0.7, 0.7]
+    color: [0.7, 0.7, 0.7]
     roughness: 1
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.2]
   - name: shapes/bunny-metal-sharp.yaml
     shape: shapes/bunny.obj
-    base: [0.7, 0.7, 0.7]
+    color: [0.7, 0.7, 0.7]
     metallic: 1
     roughness: 0
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, 0.2]
   - name: shapes/bunny-metal-rough.yaml
     shape: shapes/bunny.obj
-    base: [0.66, 0.45, 0.34]
+    color: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0.2]
@@ -86,28 +86,28 @@ shapes:
     shape: shapes/bunny.obj
     specular: 1
     transmission: 1
-    base: [1, 1, 1]
+    color: [1, 1, 1]
     roughness: 0
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0]
   - name: shapes/bunny-glass-rough.yaml
     shape: shapes/bunny.obj
     specular: 1
-    base: [1, 0.7, 0.7]
+    color: [1, 0.7, 0.7]
     transmission: 1
     roughness: 0.1
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, 0]
   - name: shapes/bunny-transparent.yaml
     shape: shapes/bunny.obj
-    base: [0.7, 0.5, 0.5]
+    color: [0.7, 0.5, 0.5]
     roughness: 1
     opacity: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
   - name: shapes/bunny-thinglass-sharp.yaml
     shape: shapes/bunny.obj
     specular: 1
-    base: [1, 1, 1]
+    color: [1, 1, 1]
     transmission: 1
     roughness: 0
     thin: true
@@ -115,7 +115,7 @@ shapes:
   - name: shapes/bunny-thinglass-rough.yaml
     shape: shapes/bunny.obj
     specular: 1
-    base: [1, 0.7, 0.7]
+    color: [1, 0.7, 0.7]
     transmission: 1
     roughness: 0.05
     thin: true
@@ -123,7 +123,7 @@ shapes:
   - name: shapes/bunny-plastic-sharp-bumped.yaml
     shape: shapes/bunny.obj
     specular: 1
-    base: [0.5, 0.5, 0.7]
+    color: [0.5, 0.5, 0.7]
     roughness: 0.01
     normal_tex: textures/bumps-normal.png
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, -0.2]
@@ -131,12 +131,12 @@ shapes:
     shape: shapes/bunny.obj
     specular: 1
     coat: 1
-    base: [0.5, 0.7, 0.5]
+    color: [0.5, 0.7, 0.5]
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.2]
   - name: shapes/bunny-metal-sharp-bumped.yaml
     shape: shapes/bunny.obj
-    base: [0.7, 0.7, 0.7]
+    color: [0.7, 0.7, 0.7]
     metallic: 1
     roughness: 0
     normal_tex: textures/bumps-normal.png
@@ -144,20 +144,20 @@ shapes:
   - name: shapes/bunny-metal-rough.yaml-coated
     shape: shapes/bunny.obj
     coat: 1
-    base: [0.66, 0.45, 0.34]
+    color: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0, -0.2]
   - name: shapes/bunny-metal-rough.yaml
     shape: shapes/bunny.obj
-    base: [0.66, 0.45, 0.34]
+    color: [0.66, 0.45, 0.34]
     metallic: 1
     roughness: 0.2
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, -0.2]
   - name: shapes/bunny-volume-cloud.yaml
     shape: shapes/bunny.obj
     transmission: 1
-    base: [0.65, 0.65, 0.65]
+    color: [0.65, 0.65, 0.65]
     scattering: [0.9, 0.9, 0.9]
     iot: 1.001
     thin: false
@@ -167,7 +167,7 @@ shapes:
     specular: 1
     roughness: 0
     transmission: 1
-    base: [1, 0.5, 0.5]
+    color: [1, 0.5, 0.5]
     radius: 0.02
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0, -0.4]
@@ -176,14 +176,14 @@ shapes:
     specular: 1
     roughness: 0
     transmission: 1
-    base: [0.5, 0.5, 0.5]
+    color: [0.5, 0.5, 0.5]
     scattering: [0.3, 0.6, 0.3]
     thin: false
     frame: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4]
   - name: shapes/bunny-volume-emissive.yaml
     shape: shapes/bunny.obj
     transmission: 1
-    base: [0.95, 0.95, 0.95]
+    color: [0.95, 0.95, 0.95]
     # volemission: [15, 15, 10]
     scattering: [0.01, 0.01, 0.01]
     ior: 1.001
@@ -192,7 +192,7 @@ shapes:
   - name: shapes/bunny-volume-smoke.yaml
     shape: shapes/bunny.obj
     transmission: 1
-    base: [0.5, 0.5, 0.5]
+    color: [0.5, 0.5, 0.5]
     scattering: [0.2, 0.2, 0.2]
     phaseg: -0.8
     ior: 1.001

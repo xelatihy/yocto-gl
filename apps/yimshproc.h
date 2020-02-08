@@ -174,7 +174,8 @@ void init_opengl_scene(shared_ptr<app_state> app) {
 
   // The model.
   app->glshape_id = add_shape(app->scene);
-  set_material_diffuse(app->scene, app->glshape_id, {1, 0.2, 0});
+  set_material_color(app->scene, app->glshape_id, {1, 0.2, 0});
+  set_material_specular(app->scene, app->glshape_id, 1);
   set_material_roughness(app->scene, app->glshape_id, 0.3);
   update_glshape(app);
 

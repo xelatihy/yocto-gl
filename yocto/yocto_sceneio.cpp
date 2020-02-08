@@ -980,7 +980,7 @@ static void load_yaml_scene(
           shape.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
         get_yaml_value(yelement, "emission", shape.material.emission);
-        get_yaml_value(yelement, "base", shape.material.base);
+        get_yaml_value(yelement, "color", shape.material.color);
         get_yaml_value(yelement, "metallic", shape.material.metallic);
         get_yaml_value(yelement, "specular", shape.material.specular);
         get_yaml_value(yelement, "roughness", shape.material.roughness);
@@ -994,7 +994,7 @@ static void load_yaml_scene(
         get_yaml_value(yelement, "opacity", shape.material.opacity);
         get_yaml_value(yelement, "coat", shape.material.coat);
         get_texture(yelement, "emission_tex", shape.material.emission_tex);
-        get_texture(yelement, "base_tex", shape.material.base_tex);
+        get_texture(yelement, "color_tex", shape.material.color_tex);
         get_texture(yelement, "metallic_tex", shape.material.metallic_tex);
         get_texture(yelement, "specular_tex", shape.material.specular_tex);
         get_texture(
@@ -1125,7 +1125,7 @@ static void save_yaml_scene(
     add_opt(yelement, "frame", shape.frame, def_shape.frame);
     add_opt(
         yelement, "emission", shape.material.emission, def_material.emission);
-    add_opt(yelement, "base", shape.material.base, def_material.base);
+    add_opt(yelement, "color", shape.material.color, def_material.color);
     add_opt(
         yelement, "specular", shape.material.specular, def_material.specular);
     add_opt(
@@ -1143,7 +1143,7 @@ static void save_yaml_scene(
     add_opt(yelement, "opacity", shape.material.opacity, def_material.opacity);
     add_opt(yelement, "thin", shape.material.thin, def_material.thin);
     add_tex(yelement, "emission_tex", shape.material.emission_tex);
-    add_tex(yelement, "base_tex", shape.material.base_tex);
+    add_tex(yelement, "color_tex", shape.material.color_tex);
     add_tex(yelement, "metallic_tex", shape.material.metallic_tex);
     add_tex(yelement, "specular_tex", shape.material.specular_tex);
     add_tex(yelement, "roughness_tex", shape.material.roughness_tex);
@@ -1293,7 +1293,7 @@ static void load_obj_scene(
   for (auto& omat : obj.materials) {
     auto& material            = materials.emplace_back();
     material.emission         = omat.pbr_emission;
-    material.base             = omat.pbr_base;
+    material.color            = omat.pbr_base;
     material.specular         = omat.pbr_specular;
     material.roughness        = omat.pbr_roughness;
     material.ior              = omat.pbr_ior;
@@ -1306,7 +1306,7 @@ static void load_obj_scene(
     material.opacity          = omat.pbr_opacity;
     material.thin             = true;
     material.emission_tex     = get_texture(omat.pbr_emission_map);
-    material.base_tex         = get_texture(omat.pbr_base_map);
+    material.color_tex        = get_texture(omat.pbr_base_map);
     material.specular_tex     = get_texture(omat.pbr_specular_map);
     material.metallic_tex     = get_texture(omat.pbr_metallic_map);
     material.roughness_tex    = get_texture(omat.pbr_roughness_map);
@@ -1410,7 +1410,7 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
     omaterial.illum                = 2;
     omaterial.as_pbr               = true;
     omaterial.pbr_emission         = material.emission;
-    omaterial.pbr_base             = material.base;
+    omaterial.pbr_base             = material.color;
     omaterial.pbr_specular         = material.specular;
     omaterial.pbr_roughness        = material.roughness;
     omaterial.pbr_metallic         = material.metallic;
@@ -1418,7 +1418,7 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
     omaterial.pbr_transmission     = material.transmission;
     omaterial.pbr_opacity          = material.opacity;
     omaterial.pbr_emission_map     = get_texture(material.emission_tex);
-    omaterial.pbr_base_map         = get_texture(material.base_tex);
+    omaterial.pbr_base_map         = get_texture(material.color_tex);
     omaterial.pbr_specular_map     = get_texture(material.specular_tex);
     omaterial.pbr_metallic_map     = get_texture(material.metallic_tex);
     omaterial.pbr_roughness_map    = get_texture(material.roughness_tex);
@@ -1595,16 +1595,16 @@ static void load_gltf_scene(
     auto& material        = materials.emplace_back();
     material.emission     = gmaterial.emission;
     material.emission_tex = get_texture(gmaterial.emission_tex);
-    if (gmaterial.has_specgloss) {
-      material.base     = xyz(gmaterial.sg_diffuse);
-      material.opacity  = gmaterial.sg_diffuse.w;
-      material.base_tex = get_texture(gmaterial.sg_diffuse_tex);
-    } else if (gmaterial.has_metalrough) {
-      material.base         = xyz(gmaterial.mr_base);
+    if (gmaterial.has_metalrough) {
+      material.color        = xyz(gmaterial.mr_base);
       material.opacity      = gmaterial.mr_base.w;
       material.specular     = 1;
-      material.base_tex     = get_texture(gmaterial.mr_base_tex);
+      material.color_tex    = get_texture(gmaterial.mr_base_tex);
       material.metallic_tex = get_texture(gmaterial.mr_metallic_tex);
+    } else if (gmaterial.has_specgloss) {
+      material.color     = xyz(gmaterial.sg_diffuse);
+      material.opacity   = gmaterial.sg_diffuse.w;
+      material.color_tex = get_texture(gmaterial.sg_diffuse_tex);
     }
     material.normal_tex = get_texture(gmaterial.normal_tex);
   }
@@ -1725,7 +1725,7 @@ static void load_pbrt_scene(
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
     auto& material               = materials.emplace_back();
-    material.base                = pmaterial.base;
+    material.color               = pmaterial.color;
     material.metallic            = pmaterial.metallic;
     material.specular            = pmaterial.specular;
     material.transmission        = pmaterial.transmission;
@@ -1733,7 +1733,7 @@ static void load_pbrt_scene(
     material.roughness           = pmaterial.roughness;
     material.opacity             = pmaterial.opacity;
     material.thin                = pmaterial.thin;
-    material.base_tex            = get_texture(pmaterial.base_map);
+    material.color_tex           = get_texture(pmaterial.color_map);
     material.opacity_tex         = get_texture(pmaterial.opacity_map);
     material_map[pmaterial.name] = (int)materials.size() - 1;
   }
@@ -1823,15 +1823,15 @@ void save_pbrt_scene(
     auto& material         = shape.material;
     auto& pmaterial        = pbrt.materials.emplace_back();
     pmaterial.name         = shape.name;
-    pmaterial.base         = material.base;
+    pmaterial.color        = material.color;
     pmaterial.metallic     = material.metallic;
     pmaterial.specular     = material.specular;
     pmaterial.transmission = material.transmission;
     pmaterial.roughness    = material.roughness;
     pmaterial.ior          = material.ior;
     pmaterial.opacity      = material.opacity;
-    pmaterial.base_map =
-        material.base_tex >= 0 ? scene.textures[material.base_tex].name : ""s;
+    pmaterial.color_map =
+        material.color_tex >= 0 ? scene.textures[material.color_tex].name : ""s;
     auto& parealight    = pbrt.arealights.emplace_back();
     parealight.name     = shape.name;
     parealight.emission = material.emission;
@@ -1896,40 +1896,40 @@ void save_pbrt_scene(
 namespace yocto {
 
 void make_cornellbox_scene(sceneio_model& scene) {
-  scene.name                = "cornellbox";
-  auto& camera              = scene.cameras.emplace_back();
-  camera.name               = "camera";
-  camera.frame              = frame3f{{0, 1, 3.9}};
-  camera.lens               = 0.035;
-  camera.aperture           = 0.0;
-  camera.film               = 0.024;
-  camera.aspect             = 1;
-  auto& floor_shp           = scene.shapes.emplace_back();
-  floor_shp.name            = "shapes/floor.yaml";
-  floor_shp.positions       = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
-  floor_shp.triangles       = {{0, 1, 2}, {2, 3, 0}};
-  floor_shp.material.base   = {0.725, 0.71, 0.68};
-  auto& ceiling_shp         = scene.shapes.emplace_back();
-  ceiling_shp.name          = "ceiling";
-  ceiling_shp.name          = "shapes/ceiling.yaml";
-  ceiling_shp.positions     = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
-  ceiling_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
-  ceiling_shp.material.base = {0.725, 0.71, 0.68};
-  auto& backwall_shp        = scene.shapes.emplace_back();
-  backwall_shp.name         = "shapes/backwall.yaml";
+  scene.name                 = "cornellbox";
+  auto& camera               = scene.cameras.emplace_back();
+  camera.name                = "camera";
+  camera.frame               = frame3f{{0, 1, 3.9}};
+  camera.lens                = 0.035;
+  camera.aperture            = 0.0;
+  camera.film                = 0.024;
+  camera.aspect              = 1;
+  auto& floor_shp            = scene.shapes.emplace_back();
+  floor_shp.name             = "shapes/floor.yaml";
+  floor_shp.positions        = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
+  floor_shp.triangles        = {{0, 1, 2}, {2, 3, 0}};
+  floor_shp.material.color   = {0.725, 0.71, 0.68};
+  auto& ceiling_shp          = scene.shapes.emplace_back();
+  ceiling_shp.name           = "ceiling";
+  ceiling_shp.name           = "shapes/ceiling.yaml";
+  ceiling_shp.positions      = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
+  ceiling_shp.triangles      = {{0, 1, 2}, {2, 3, 0}};
+  ceiling_shp.material.color = {0.725, 0.71, 0.68};
+  auto& backwall_shp         = scene.shapes.emplace_back();
+  backwall_shp.name          = "shapes/backwall.yaml";
   backwall_shp.positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
   backwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
-  backwall_shp.material.base  = {0.725, 0.71, 0.68};
-  auto& rightwall_shp         = scene.shapes.emplace_back();
-  rightwall_shp.name          = "shapes/rightwall.yaml";
-  rightwall_shp.positions     = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
-  rightwall_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
-  rightwall_shp.material.base = {0.14, 0.45, 0.091};
-  auto& leftwall_shp          = scene.shapes.emplace_back();
-  leftwall_shp.name           = "shapes/leftwall.yaml";
+  backwall_shp.material.color  = {0.725, 0.71, 0.68};
+  auto& rightwall_shp          = scene.shapes.emplace_back();
+  rightwall_shp.name           = "shapes/rightwall.yaml";
+  rightwall_shp.positions      = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
+  rightwall_shp.triangles      = {{0, 1, 2}, {2, 3, 0}};
+  rightwall_shp.material.color = {0.14, 0.45, 0.091};
+  auto& leftwall_shp           = scene.shapes.emplace_back();
+  leftwall_shp.name            = "shapes/leftwall.yaml";
   leftwall_shp.positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
   leftwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
-  leftwall_shp.material.base  = {0.63, 0.065, 0.05};
+  leftwall_shp.material.color = {0.63, 0.065, 0.05};
   auto& shortbox_shp          = scene.shapes.emplace_back();
   shortbox_shp.name           = "shapes/shortbox.yaml";
   shortbox_shp.positions      = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
@@ -1943,7 +1943,7 @@ void make_cornellbox_scene(sceneio_model& scene) {
   shortbox_shp.triangles      = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  shortbox_shp.material.base  = {0.725, 0.71, 0.68};
+  shortbox_shp.material.color = {0.725, 0.71, 0.68};
   auto& tallbox_shp           = scene.shapes.emplace_back();
   tallbox_shp.name            = "shapes/tallbox.yaml";
   tallbox_shp.positions       = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
@@ -1958,7 +1958,7 @@ void make_cornellbox_scene(sceneio_model& scene) {
   tallbox_shp.triangles       = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  tallbox_shp.material.base   = {0.725, 0.71, 0.68};
+  tallbox_shp.material.color  = {0.725, 0.71, 0.68};
   auto& light_shp             = scene.shapes.emplace_back();
   light_shp.name              = "shapes/light.yaml";
   light_shp.positions         = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},

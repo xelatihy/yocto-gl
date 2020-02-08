@@ -614,8 +614,8 @@ vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
     vec3 tangu = normalize((shape_xform * vec4(normalize(tangsp.xyz),0)).xyz);
     vec3 tangv = normalize(cross(norm, tangu));
     if(tangsp.w < 0) tangv = -tangv;
-    vec3 texture = 2 * texture(mat_norm_txt,texcoord).xyz - 1;
-    texture.y = -texture.y;
+    vec3 texture = 2 * pow(texture(mat_norm_txt,texcoord).xyz, vec3(1/2.2)) - 1;
+    // texture.y = -texture.y;
     return normalize( tangu * texture.x + tangv * texture.y + norm * texture.z );
 }
 
@@ -1080,14 +1080,14 @@ void set_material_emission(
   material.emission     = emission;
   material.emission_map = emission_txt;
 }
-void set_material_diffuse(
-    opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
-  auto& material       = scene._shapes[idx].material;
-  material.diffuse     = diffuse;
-  material.diffuse_map = diffuse_txt;
+void set_material_color(
+    opengl_scene& scene, int idx, const vec3f& color, int color_txt) {
+  auto& material     = scene._shapes[idx].material;
+  material.color     = color;
+  material.color_map = color_txt;
 }
 void set_material_specular(
-    opengl_scene& scene, int idx, const vec3f& specular, int specular_txt) {
+    opengl_scene& scene, int idx, float specular, int specular_txt) {
   auto& material        = scene._shapes[idx].material;
   material.specular     = specular;
   material.specular_map = specular_txt;
@@ -1166,7 +1166,7 @@ void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
   glUniform3f(glGetUniformLocation(glscene.program_id, "mat_ke"),
       material.emission.x, material.emission.y, material.emission.z);
   glUniform3f(glGetUniformLocation(glscene.program_id, "mat_kd"),
-      material.diffuse.x, material.diffuse.y, material.diffuse.z);
+      material.color.x, material.color.y, material.color.z);
   glUniform3f(glGetUniformLocation(glscene.program_id, "mat_ks"),
       material.metallic, material.metallic, material.metallic);
   glUniform1f(
@@ -1184,10 +1184,10 @@ void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
   } else {
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt_on"), 0);
   }
-  if (material.diffuse_map >= 0) {
-    auto& diffuse_map = glscene._textures.at(material.diffuse_map);
+  if (material.color_map >= 0) {
+    auto& color_map = glscene._textures.at(material.color_map);
     glActiveTexture(GL_TEXTURE0 + 1);
-    glBindTexture(GL_TEXTURE_2D, diffuse_map.texture_id);
+    glBindTexture(GL_TEXTURE_2D, color_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt"), 1);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt_on"), 1);
   } else {

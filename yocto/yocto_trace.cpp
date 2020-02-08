@@ -794,8 +794,8 @@ static trace_point eval_point(const trace_scene& scene,
   auto texcoord = point.texcoord;
   auto emission = material.emission *
                   xyz(eval_texture(scene, material.emission_tex, texcoord));
-  auto base_tex = eval_texture(scene, material.base_tex, texcoord);
-  auto base     = material.base * xyz(point.color) * xyz(base_tex);
+  auto base_tex = eval_texture(scene, material.color_tex, texcoord);
+  auto base     = material.color * xyz(point.color) * xyz(base_tex);
   auto specular = material.specular *
                   eval_texture(scene, material.specular_tex, texcoord).x;
   auto metallic = material.metallic *
@@ -918,8 +918,8 @@ static volume_point eval_volume(const trace_scene& scene,
   auto color = shape.colors.empty()
                    ? vec4f{1, 1, 1, 1}
                    : eval_shape_elem(shape, {}, shape.colors, element, uv);
-  auto base_tex     = eval_texture(scene, material.base_tex, texcoord);
-  auto base         = material.base * xyz(color) * xyz(base_tex);
+  auto base_tex     = eval_texture(scene, material.color_tex, texcoord);
+  auto base         = material.color * xyz(color) * xyz(base_tex);
   auto transmission = material.transmission *
                       eval_texture(scene, material.emission_tex, texcoord).x;
   auto thin       = material.thin || !material.transmission;
@@ -3207,11 +3207,11 @@ void set_material_emission(
   material.emission     = emission;
   material.emission_tex = emission_txt;
 }
-void set_material_base(
-    trace_scene& scene, int idx, const vec3f& base, int base_txt) {
-  auto& material    = scene.shapes[idx].material;
-  material.base     = base;
-  material.base_tex = base_txt;
+void set_material_color(
+    trace_scene& scene, int idx, const vec3f& color, int color_txt) {
+  auto& material     = scene.shapes[idx].material;
+  material.color     = color;
+  material.color_tex = color_txt;
 }
 void set_material_specular(
     trace_scene& scene, int idx, float specular, int specular_txt) {

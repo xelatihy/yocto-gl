@@ -117,8 +117,8 @@ void set_shape_frames(trace_scene& scene, int idx,
     const vector<frame3f>& instances, const frame3f& local_frame);
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
-void set_material_base(
-    trace_scene& scene, int idx, const vec3f& base, int base_txt = -1);
+void set_material_color(
+    trace_scene& scene, int idx, const vec3f& color, int color_txt = -1);
 void set_material_specular(
     trace_scene& scene, int idx, float specular = 1, int specular_txt = -1);
 void set_material_ior(trace_scene& scene, int idx, float ior);
@@ -303,7 +303,7 @@ struct trace_texture {
 struct trace_material {
   // lobes
   vec3f emission     = {0, 0, 0};
-  vec3f base         = {0, 0, 0};
+  vec3f color        = {0, 0, 0};
   float specular     = 0;
   float roughness    = 0;
   float metallic     = 0;
@@ -319,7 +319,7 @@ struct trace_material {
 
   // textures
   int  emission_tex     = -1;
-  int  base_tex         = -1;
+  int  color_tex        = -1;
   int  specular_tex     = -1;
   int  metallic_tex     = -1;
   int  roughness_tex    = -1;

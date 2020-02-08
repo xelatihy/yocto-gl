@@ -78,7 +78,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     auto& iomaterial = ioshape.material;
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_base(scene, id, iomaterial.base, iomaterial.base_tex);
+    set_material_color(scene, id, iomaterial.color, iomaterial.color_tex);
     set_material_specular(
         scene, id, iomaterial.specular, iomaterial.specular_tex);
     set_material_ior(scene, id, iomaterial.ior);

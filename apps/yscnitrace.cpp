@@ -138,7 +138,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     auto& iomaterial = ioshape.material;
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_base(scene, id, iomaterial.base, iomaterial.base_tex);
+    set_material_color(scene, id, iomaterial.color, iomaterial.color_tex);
     set_material_specular(
         scene, id, iomaterial.specular, iomaterial.specular_tex);
     set_material_ior(scene, id, iomaterial.ior);
@@ -305,7 +305,7 @@ bool draw_glwidgets_material(
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", app->ioscene.shapes[id].name);
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
-  edited += draw_glcoloredit(win, "base", material.base);
+  edited += draw_glcoloredit(win, "color", material.color);
   edited += draw_glslider(win, "specular", material.specular, 0, 1);
   edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
@@ -320,7 +320,7 @@ bool draw_glwidgets_material(
   edited += draw_glcombobox(
       win, "emission_tex", material.emission_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "base_tex", material.base_tex, app->ioscene.textures, true);
+      win, "color_tex", material.color_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
       win, "metallic_tex", material.metallic_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
@@ -569,8 +569,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       auto& iomaterial = app->ioscene.shapes[app->selected_material].material;
       set_material_emission(app->scene, app->selected_shape,
           iomaterial.emission, iomaterial.emission_tex);
-      set_material_base(app->scene, app->selected_material, iomaterial.base,
-          iomaterial.base_tex);
+      set_material_color(app->scene, app->selected_material, iomaterial.color,
+          iomaterial.color_tex);
       set_material_specular(app->scene, app->selected_material,
           iomaterial.specular, iomaterial.specular_tex);
       set_material_ior(app->scene, app->selected_material, iomaterial.ior);

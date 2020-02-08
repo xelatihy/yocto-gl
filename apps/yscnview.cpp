@@ -203,13 +203,12 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
     auto& material = shape.material;
     set_material_emission(
         glscene, id, material.emission, material.emission_tex);
-    set_material_diffuse(glscene, id,
-        (1 - material.transmission) * material.base, material.base_tex);
+    set_material_color(glscene, id,
+        (1 - material.transmission) * material.color, material.color_tex);
     set_material_specular(glscene, id,
-        material.specular * eta_to_reflectivity(material.ior),
-        material.specular_tex);
-    set_material_metallic(
-        glscene, id, material.metallic, material.metallic_tex);
+        (1 - material.transmission) * material.specular, material.specular_tex);
+    set_material_metallic(glscene, id,
+        (1 - material.transmission) * material.metallic, material.metallic_tex);
     set_material_roughness(
         glscene, id, material.roughness, material.roughness_tex);
     set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
@@ -263,7 +262,7 @@ bool draw_glwidgets_material(
   auto  edited   = 0;
   edited += draw_gltextinput(win, "name", app->ioscene.shapes[id].name);
   edited += draw_glhdrcoloredit(win, "emission", material.emission);
-  edited += draw_glcoloredit(win, "base", material.base);
+  edited += draw_glcoloredit(win, "color", material.color);
   edited += draw_glslider(win, "specular", material.specular, 0, 1);
   edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
   edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
@@ -278,7 +277,7 @@ bool draw_glwidgets_material(
   edited += draw_glcombobox(
       win, "emission_tex", material.emission_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "base_tex", material.base_tex, app->ioscene.textures, true);
+      win, "color_tex", material.color_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
       win, "metallic_tex", material.metallic_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
@@ -489,13 +488,14 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       auto& material = app->ioscene.shapes[app->selected_material].material;
       set_material_emission(app->glscene, app->selected_material,
           material.emission, material.emission_tex);
-      set_material_diffuse(app->glscene, app->selected_material,
-          (1 - material.transmission) * material.base, material.base_tex);
+      set_material_color(app->glscene, app->selected_material,
+          (1 - material.transmission) * material.color, material.color_tex);
       set_material_specular(app->glscene, app->selected_material,
-          material.specular * eta_to_reflectivity(material.ior),
+          (1 - material.transmission) * material.specular,
           material.specular_tex);
       set_material_metallic(app->glscene, app->selected_material,
-          material.metallic, material.metallic_tex);
+          (1 - material.transmission) * material.metallic,
+          material.metallic_tex);
       set_material_roughness(app->glscene, app->selected_material,
           material.roughness, material.roughness_tex);
       set_material_opacity(app->glscene, app->selected_material,
