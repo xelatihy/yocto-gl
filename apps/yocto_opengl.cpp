@@ -752,7 +752,6 @@ opengl_shape::opengl_shape(opengl_shape&& other) {
   std::swap(material, other.material);
   std::swap(hidden, other.hidden);
   std::swap(highlighted, other.highlighted);
-  std::swap(material, other.material);
   std::swap(positions_num, other.positions_num);
   std::swap(positions_id, other.positions_id);
   std::swap(normals_num, other.normals_num);
@@ -777,7 +776,11 @@ opengl_shape::opengl_shape(opengl_shape&& other) {
 
 opengl_shape& opengl_shape::operator=(opengl_shape&& other) {
   if (this == &other) return *this;
+  std::swap(frame, other.frame);
+  std::swap(instances, other.instances);
   std::swap(material, other.material);
+  std::swap(hidden, other.hidden);
+  std::swap(highlighted, other.highlighted);
   std::swap(positions_num, other.positions_num);
   std::swap(positions_id, other.positions_id);
   std::swap(normals_num, other.normals_num);
