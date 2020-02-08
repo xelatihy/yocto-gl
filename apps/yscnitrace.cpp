@@ -558,11 +558,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
   }
   if (app && !app->ioscene.shapes.empty() && begin_glheader(win, "materials")) {
     draw_glcombobox(
-        win, "material##2", app->selected_shape, app->ioscene.shapes);
+        win, "material##2", app->selected_material, app->ioscene.shapes);
     if (draw_glwidgets_material(win, app, app->selected_material)) {
       stop_display(app);
       auto& ioshape = app->ioscene.shapes[app->selected_material];
-      set_material_emission(app->scene, app->selected_shape, ioshape.emission,
+      set_material_emission(app->scene, app->selected_material, ioshape.emission,
           ioshape.emission_tex);
       set_material_color(
           app->scene, app->selected_material, ioshape.color, ioshape.color_tex);
