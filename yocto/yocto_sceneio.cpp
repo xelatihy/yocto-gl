@@ -1779,7 +1779,7 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
   // convert cameras
   for (auto& camera : scene.cameras) {
     auto& ocamera    = obj.cameras.emplace_back();
-    ocamera.name     = camera.name;
+    ocamera.name     = get_basename(camera.name);
     ocamera.frame    = camera.frame;
     ocamera.ortho    = camera.orthographic;
     ocamera.width    = camera.film;
@@ -1800,7 +1800,7 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
   // convert materials and textures
   for (auto& shape : scene.shapes) {
     auto& omaterial                = obj.materials.emplace_back();
-    omaterial.name                 = shape.name;
+    omaterial.name                 = get_basename(shape.name);
     omaterial.illum                = 2;
     omaterial.as_pbr               = true;
     omaterial.pbr_emission         = shape.emission;
