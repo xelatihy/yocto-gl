@@ -146,19 +146,16 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   }
   for (auto& ioshape : ioscene.shapes) {
     auto id = add_shape(scene);
-    if (!ioshape.points.empty()) {
-      set_shape(scene, id, ioshape.points, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.radius);
-    } else if (!ioshape.lines.empty()) {
-      set_shape(scene, id, ioshape.lines, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.radius);
-    } else if (!ioshape.triangles.empty()) {
-      set_shape(scene, id, ioshape.triangles, ioshape.positions,
-          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
-    } else if (!ioshape.quads.empty()) {
-      set_shape(scene, id, ioshape.quads, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.tangents);
-    }
+    set_shape_points(scene, id, ioshape.points);
+    set_shape_lines(scene, id, ioshape.lines);
+    set_shape_triangles(scene, id, ioshape.triangles);
+    set_shape_quads(scene, id, ioshape.quads);
+    set_shape_positions(scene, id, ioshape.positions);
+    set_shape_normals(scene, id, ioshape.normals);
+    set_shape_texcoords(scene, id, ioshape.texcoords);
+    set_shape_colors(scene, id, ioshape.colors);
+    set_shape_radius(scene, id, ioshape.radius);
+    set_shape_tangents(scene, id, ioshape.tangents);
     if (ioshape.instances.empty()) {
       add_instance(scene, ioshape.frame, id, id);
     } else {
@@ -556,23 +553,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_shape(win, app, app->selected_shape)) {
       stop_display(app);
       auto& ioshape = app->ioscene.shapes[app->selected_shape];
-      if (!ioshape.points.empty()) {
-        set_shape(app->scene, app->selected_shape, ioshape.points,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.radius);
-      } else if (!ioshape.lines.empty()) {
-        set_shape(app->scene, app->selected_shape, ioshape.lines,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.radius);
-      } else if (!ioshape.triangles.empty()) {
-        set_shape(app->scene, app->selected_shape, ioshape.triangles,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.tangents);
-      } else if (!ioshape.quads.empty()) {
-        set_shape(app->scene, app->selected_shape, ioshape.quads,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.tangents);
-      }
+      set_shape_points(app->scene, app->selected_shape, ioshape.points);
+      set_shape_lines(app->scene, app->selected_shape, ioshape.lines);
+      set_shape_triangles(app->scene, app->selected_shape, ioshape.triangles);
+      set_shape_quads(app->scene, app->selected_shape, ioshape.quads);
+      set_shape_positions(app->scene, app->selected_shape, ioshape.positions);
+      set_shape_normals(app->scene, app->selected_shape, ioshape.normals);
+      set_shape_texcoords(app->scene, app->selected_shape, ioshape.texcoords);
+      set_shape_colors(app->scene, app->selected_shape, ioshape.colors);
+      set_shape_radius(app->scene, app->selected_shape, ioshape.radius);
+      set_shape_tangents(app->scene, app->selected_shape, ioshape.tangents);
       update_bvh(app->scene, {}, {app->selected_shape}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);
@@ -636,23 +626,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       auto& iosubdiv = app->ioscene.subdivs[app->selected_subdiv];
       tesselate_subdiv(app->ioscene, iosubdiv);
       auto& ioshape = app->ioscene.shapes[iosubdiv.shape];
-      if (!ioshape.points.empty()) {
-        set_shape(app->scene, app->selected_subdiv, ioshape.points,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.radius);
-      } else if (!iosubdiv.lines.empty()) {
-        set_shape(app->scene, app->selected_subdiv, ioshape.lines,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.radius);
-      } else if (!ioshape.triangles.empty()) {
-        set_shape(app->scene, app->selected_subdiv, ioshape.triangles,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.tangents);
-      } else if (!ioshape.quads.empty()) {
-        set_shape(app->scene, app->selected_subdiv, ioshape.quads,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.tangents);
-      }
+      set_shape_points(app->scene, app->selected_shape, ioshape.points);
+      set_shape_lines(app->scene, app->selected_shape, ioshape.lines);
+      set_shape_triangles(app->scene, app->selected_shape, ioshape.triangles);
+      set_shape_quads(app->scene, app->selected_shape, ioshape.quads);
+      set_shape_positions(app->scene, app->selected_shape, ioshape.positions);
+      set_shape_normals(app->scene, app->selected_shape, ioshape.normals);
+      set_shape_texcoords(app->scene, app->selected_shape, ioshape.texcoords);
+      set_shape_colors(app->scene, app->selected_shape, ioshape.colors);
+      set_shape_radius(app->scene, app->selected_shape, ioshape.radius);
+      set_shape_tangents(app->scene, app->selected_shape, ioshape.tangents);
       update_bvh(app->scene, {}, {app->selected_subdiv}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);

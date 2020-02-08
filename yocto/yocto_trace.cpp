@@ -3177,100 +3177,58 @@ int add_shape(trace_scene& scene) {
   scene.shapes.emplace_back();
   return (int)scene.shapes.size() - 1;
 }
-void set_shape(trace_scene& scene, int idx, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius) {
+void set_shape_points(trace_scene& scene, int idx, const vector<int>& points) {
   auto& shape         = scene.shapes[idx];
   shape.points        = points;
-  shape.lines         = {};
-  shape.triangles     = {};
-  shape.quads         = {};
-  shape.quadspos      = {};
-  shape.quadsnorm     = {};
-  shape.quadstexcoord = {};
-  shape.positions     = positions;
-  shape.normals       = normals;
-  shape.texcoords     = texcoords;
-  shape.colors        = colors;
-  shape.radius        = radius;
-  shape.tangents      = {};
 }
-void set_shape(trace_scene& scene, int idx, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius) {
+void set_shape_lines(trace_scene& scene, int idx, const vector<vec2i>& lines) {
   auto& shape         = scene.shapes[idx];
-  shape.points        = {};
   shape.lines         = lines;
-  shape.triangles     = {};
-  shape.quads         = {};
-  shape.quadspos      = {};
-  shape.quadsnorm     = {};
-  shape.quadstexcoord = {};
-  shape.positions     = positions;
-  shape.normals       = normals;
-  shape.texcoords     = texcoords;
-  shape.colors        = colors;
-  shape.radius        = radius;
-  shape.tangents      = {};
 }
-void set_shape(trace_scene& scene, int idx, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
+void set_shape_triangles(trace_scene& scene, int idx, const vector<vec3i>& triangles) {
   auto& shape         = scene.shapes[idx];
-  shape.points        = {};
-  shape.lines         = {};
   shape.triangles     = triangles;
-  shape.quads         = {};
-  shape.quadspos      = {};
-  shape.quadsnorm     = {};
-  shape.quadstexcoord = {};
-  shape.positions     = positions;
-  shape.normals       = normals;
-  shape.texcoords     = texcoords;
-  shape.colors        = colors;
-  shape.radius        = {};
-  shape.tangents      = tangents;
 }
-void set_shape(trace_scene& scene, int idx, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
+void set_shape_quads(trace_scene& scene, int idx, const vector<vec4i>& quads) {
   auto& shape         = scene.shapes[idx];
-  shape.points        = {};
-  shape.lines         = {};
-  shape.triangles     = {};
   shape.quads         = quads;
-  shape.quadspos      = {};
-  shape.quadsnorm     = {};
-  shape.quadstexcoord = {};
-  shape.positions     = positions;
-  shape.normals       = normals;
-  shape.texcoords     = texcoords;
-  shape.colors        = colors;
-  shape.radius        = {};
-  shape.tangents      = tangents;
 }
-void set_shape(trace_scene& scene, int idx, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords) {
+void set_shape_fvquads(trace_scene& scene, int idx, const vector<vec4i>& quadspos,
+    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord) {
   auto& shape         = scene.shapes[idx];
-  shape.points        = {};
-  shape.lines         = {};
-  shape.triangles     = {};
-  shape.quads         = {};
   shape.quadspos      = quadspos;
   shape.quadsnorm     = quadsnorm;
   shape.quadstexcoord = quadstexcoord;
+}
+void set_shape_positions(trace_scene& scene, int idx, 
+    const vector<vec3f>& positions) {
+  auto& shape         = scene.shapes[idx];
   shape.positions     = positions;
+}
+void set_shape_normals(trace_scene& scene, int idx, 
+    const vector<vec3f>& normals) {
+  auto& shape         = scene.shapes[idx];
   shape.normals       = normals;
+}
+void set_shape_texcoords(trace_scene& scene, int idx, 
+    const vector<vec2f>& texcoords) {
+  auto& shape         = scene.shapes[idx];
   shape.texcoords     = texcoords;
-  shape.colors        = {};
-  shape.radius        = {};
-  shape.tangents      = {};
+}
+void set_shape_colors(trace_scene& scene, int idx, 
+    const vector<vec4f>& colors) {
+  auto& shape         = scene.shapes[idx];
+  shape.colors        = colors;
+}
+void set_shape_radius(trace_scene& scene, int idx, 
+    const vector<float>& radius) {
+  auto& shape         = scene.shapes[idx];
+  shape.radius        = radius;
+}
+void set_shape_tangents(trace_scene& scene, int idx, 
+    const vector<vec4f>& tangents) {
+  auto& shape         = scene.shapes[idx];
+  shape.tangents      = tangents;
 }
 void clean_shapes(trace_scene& scene) { scene.shapes.clear(); }
 
