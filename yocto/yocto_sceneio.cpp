@@ -45,9 +45,11 @@
 #include <climits>
 #include <cstdlib>
 #include <deque>
+#include <fstream>
 #include <future>
 #include <memory>
 
+#include "ext/json.hpp"
 #include "yocto_image.h"
 #include "yocto_modelio.h"
 #include "yocto_shape.h"
@@ -760,6 +762,12 @@ static void load_yaml_scene(
 static void save_yaml_scene(
     const string& filename, const sceneio_model& scene, bool noparallel);
 
+// Load/save a scene in the builtin JSON format.
+static void load_json_scene(
+    const string& filename, sceneio_model& scene, bool noparallel);
+static void save_json_scene(
+    const string& filename, const sceneio_model& scene, bool noparallel);
+
 // Load/save a scene from/to OBJ.
 static void load_obj_scene(
     const string& filename, sceneio_model& scene, bool noparallel);
@@ -789,6 +797,8 @@ void load_scene(const string& filename, sceneio_model& scene, bool noparallel) {
   auto ext = get_extension(filename);
   if (ext == ".yaml" || ext == ".YAML") {
     return load_yaml_scene(filename, scene, noparallel);
+  } else if (ext == ".json" || ext == ".JSON") {
+    return load_json_scene(filename, scene, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
     return load_obj_scene(filename, scene, noparallel);
   } else if (ext == ".gltf" || ext == ".GLTF") {
@@ -809,6 +819,8 @@ void save_scene(
   auto ext = get_extension(filename);
   if (ext == ".yaml" || ext == ".YAML") {
     return save_yaml_scene(filename, scene, noparallel);
+  } else if (ext == ".json" || ext == ".JSON") {
+    return save_json_scene(filename, scene, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
     return save_obj_scene(filename, scene, false, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
@@ -820,24 +832,12 @@ void save_scene(
   }
 }
 
-// create and cleanup names and filenames
-static string make_safe_name(const string& name_, const string& base, int count,
-    const string& prefix, const string& suffix) {
-  auto name = name_;
-  if (name.empty()) name = base + std::to_string(count);
-  if (name.front() == '-') name = "_" + name;
-  if (name.front() >= '0' && name.front() <= '9') name = "_" + name;
-  for (auto& c : name) {
-    if (c == '-' || c == '_') continue;
-    if (c >= '0' && c <= '9') continue;
-    if (c >= 'a' && c <= 'z') continue;
-    if (c >= 'A' && c <= 'Z') continue;
-    c = '_';
-  }
-  std::transform(name.begin(), name.end(), name.begin(),
-      [](unsigned char c) { return std::tolower(c); });
-  return prefix + name + suffix;
+// create a name
+static string make_name(
+    const string& prefix, size_t count, const string& ext = ".json") {
+  return prefix + "s/" + prefix + std::to_string(count) + ext;
 }
+
 static inline string make_safe_filename(const string& filename_) {
   auto filename = filename_;
   for (auto& c : filename) {
@@ -1230,6 +1230,412 @@ static void save_yaml_scene(
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// JSON SUPPORT
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using json = nlohmann::json;
+
+// support for json conversions
+static inline void to_json(json& j, const vec3f& value) {
+  nlohmann::to_json(j, (const array<float, 3>&)value);
+}
+static inline void to_json(json& j, const frame3f& value) {
+  nlohmann::to_json(j, (const array<float, 12>&)value);
+}
+
+static inline void from_json(const json& j, vec3f& value) {
+  nlohmann::from_json(j, (array<float, 3>&)value);
+}
+static inline void from_json(const json& j, mat3f& value) {
+  nlohmann::from_json(j, (array<float, 9>&)value);
+}
+static inline void from_json(const json& j, frame3f& value) {
+  nlohmann::from_json(j, (array<float, 12>&)value);
+}
+
+// load/save json
+static void load_json(const string& filename, json& js) {
+  auto stream = std::ifstream(filename);
+  if (!stream) throw std::runtime_error{filename + ": file not found"};
+  try {
+    stream >> js;
+  } catch (std::exception& e) {
+    throw std::runtime_error{filename + ": error parsing json"};
+  }
+}
+static void save_json(const string& filename, const json& js) {
+  auto stream = std::ofstream(filename);
+  if (!stream) throw std::runtime_error{filename + ": file not found"};
+  try {
+    stream << std::setw(2) << js << std::endl;
+  } catch (std::exception& e) {
+    throw std::runtime_error{filename + ": error writing json"};
+  }
+}
+
+// Save a scene in the builtin JSON format.
+static void load_json_scene(
+    const string& filename, sceneio_model& scene, bool noparallel) {
+  scene = {};
+
+  // open file
+  auto js = json{};
+  load_json(filename, js);
+
+  // gets a json value
+  auto get_value = [](const json& ejs, const string& name, auto& value) {
+    if (!ejs.contains(name)) return;
+    ejs.at(name).get_to(value);
+  };
+
+  // parse yaml reference
+  auto get_ref = [](const json& ejs, const string& name, int& value,
+                     const unordered_map<string, int>& refs) {
+    if (!ejs.contains(name)) return;
+    auto ref = ""s;
+    ejs.at(name).get_to(ref);
+    if (ref == "") {
+      value = -1;
+    } else {
+      if (refs.find(ref) == refs.end())
+        throw std::invalid_argument{"missing reference to " + ref};
+      value = refs.at(ref);
+    }
+  };
+
+  // parse yaml reference
+  auto texture_map = unordered_map<string, int>{{"", -1}};
+  auto get_texture = [&filename, &scene, &texture_map](const json& ejs,
+                         const string& name, int& value,
+                         const string& dirname = "textures/") {
+    if (!ejs.contains(name)) return -1;
+    auto path = ""s;
+    ejs.at(name).get_to(path);
+    if (path == "") return -1;
+    auto it = texture_map.find(path);
+    if (it != texture_map.end()) {
+      value = it->second;
+      return it->second;
+    }
+    auto& texture = scene.textures.emplace_back();
+    try {
+      if (is_hdr_filename(path)) {
+        load_image(get_dirname(filename) + path, texture.hdr);
+      } else {
+        load_imageb(get_dirname(filename) + path, texture.ldr);
+      }
+    } catch (std::exception& e) {
+      throw_dependent_error(filename, e.what());
+    }
+    texture.name      = make_safe_filename(dirname + get_basename(path) +
+                                      (!texture.ldr.empty() ? ".png" : ".hdr"));
+    texture_map[path] = (int)scene.textures.size() - 1;
+    value             = (int)scene.textures.size() - 1;
+    return (int)scene.textures.size() - 1;
+  };
+
+  // shape map
+  auto shape_map = unordered_map<string, int>{{"", -1}};
+
+  // check for conversion errors
+  try {
+    // cameras
+    if (js.contains("cameras")) {
+      for (auto& ejs : js.at("cameras")) {
+        auto& camera = scene.cameras.emplace_back();
+        get_value(ejs, "name", camera.name);
+        get_value(ejs, "frame", camera.frame);
+        get_value(ejs, "orthographic", camera.orthographic);
+        get_value(ejs, "lens", camera.lens);
+        get_value(ejs, "aspect", camera.aspect);
+        get_value(ejs, "film", camera.film);
+        get_value(ejs, "focus", camera.focus);
+        get_value(ejs, "aperture", camera.aperture);
+        if (ejs.contains("lookat")) {
+          auto lookat = identity3x3f;
+          get_value(ejs, "lookat", lookat);
+          camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+          camera.focus = length(lookat.x - lookat.y);
+        }
+      }
+    }
+    if (js.contains("environments")) {
+      for (auto& ejs : js.at("environments")) {
+        auto& environment = scene.environments.emplace_back();
+        get_value(ejs, "name", environment.name);
+        get_value(ejs, "frame", environment.frame);
+        get_value(ejs, "emission", environment.emission);
+        get_texture(
+            ejs, "emission_tex", environment.emission_tex, "environments/");
+        if (ejs.contains("lookat")) {
+          auto lookat = identity3x3f;
+          get_value(ejs, "lookat", lookat);
+          environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+        }
+      }
+    }
+    if (js.contains("shapes")) {
+      for (auto& ejs : js.at("shapes")) {
+        auto& shape = scene.shapes.emplace_back();
+        get_value(ejs, "name", shape.name);
+        get_value(ejs, "frame", shape.frame);
+        if (ejs.contains("lookat")) {
+          auto lookat = identity3x3f;
+          get_value(ejs, "lookat", lookat);
+          shape.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+        }
+        get_value(ejs, "emission", shape.emission);
+        get_value(ejs, "color", shape.color);
+        get_value(ejs, "metallic", shape.metallic);
+        get_value(ejs, "specular", shape.specular);
+        get_value(ejs, "roughness", shape.roughness);
+        get_value(ejs, "coat", shape.coat);
+        get_value(ejs, "transmission", shape.transmission);
+        get_value(ejs, "thin", shape.thin);
+        get_value(ejs, "ior", shape.ior);
+        get_value(ejs, "trdepth", shape.trdepth);
+        get_value(ejs, "scattering", shape.scattering);
+        get_value(ejs, "scanisotropy", shape.scanisotropy);
+        get_value(ejs, "opacity", shape.opacity);
+        get_value(ejs, "coat", shape.coat);
+        get_texture(ejs, "emission_tex", shape.emission_tex);
+        get_texture(ejs, "color_tex", shape.color_tex);
+        get_texture(ejs, "metallic_tex", shape.metallic_tex);
+        get_texture(ejs, "specular_tex", shape.specular_tex);
+        get_texture(ejs, "transmission_tex", shape.transmission_tex);
+        get_texture(ejs, "roughness_tex", shape.roughness_tex);
+        get_texture(ejs, "scattering_tex", shape.scattering_tex);
+        get_texture(ejs, "normal_tex", shape.normal_tex);
+        get_texture(ejs, "normal_tex", shape.normal_tex);
+        get_value(ejs, "gltf_textures", shape.gltf_textures);
+        if (ejs.contains("shape")) {
+          auto path = ""s;
+          get_value(ejs, "shape", path);
+          try {
+            load_shape(get_dirname(filename) + path, shape.points, shape.lines,
+                shape.triangles, shape.quads, shape.positions, shape.normals,
+                shape.texcoords, shape.colors, shape.radius);
+          } catch (std::exception& e) {
+            throw_dependent_error(filename, e.what());
+          }
+        }
+        if (ejs.contains("instances")) {
+          auto path = ""s;
+          get_value(ejs, "instances", path);
+          try {
+            load_instances(get_dirname(filename) + path, shape.instances);
+          } catch (std::exception& e) {
+            throw_dependent_error(filename, e.what());
+          }
+        }
+        shape_map[shape.name] = (int)scene.shapes.size() - 1;
+      }
+    }
+    if (js.contains("subdivs")) {
+      for (auto& ejs : js.at("subdivs")) {
+        auto& subdiv = scene.subdivs.emplace_back();
+        get_value(ejs, "name", subdiv.name);
+        get_ref(ejs, "shape", subdiv.shape, shape_map);
+        get_value(ejs, "subdivisions", subdiv.subdivisions);
+        get_value(ejs, "catmullclark", subdiv.catmullclark);
+        get_value(ejs, "smooth", subdiv.smooth);
+        get_texture(ejs, "displacement_tex", subdiv.displacement_tex);
+        get_value(ejs, "displacement", subdiv.displacement);
+        if (ejs.contains("subdiv")) {
+          auto path = ""s;
+          get_value(ejs, "subdiv", path);
+          try {
+            load_shape(get_dirname(filename) + path, subdiv.points,
+                subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
+                subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+          } catch (std::exception& e) {
+            throw_dependent_error(filename, e.what());
+          }
+        }
+        if (ejs.contains("fvsubdiv")) {
+          auto path = ""s;
+          get_value(ejs, "fvsubdiv", path);
+          try {
+            load_fvshape(get_dirname(filename) + path, subdiv.quadspos,
+                subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+                subdiv.normals, subdiv.texcoords);
+          } catch (std::exception& e) {
+            throw_dependent_error(filename, e.what());
+          }
+        }
+      }
+    }
+  } catch (std::invalid_argument& e) {
+    throw std::runtime_error{filename + ": parse error [" + e.what() + "]"};
+  }
+
+  // fix scene
+  scene.name = get_basename(filename);
+  add_cameras(scene);
+  add_radius(scene);
+  trim_memory(scene);
+}
+
+// Save a scene in the builtin JSON format.
+static void save_json_scene(
+    const string& filename, const sceneio_model& scene, bool noparallel) {
+  // helper
+  auto add_val = [](json& ejs, const string& name, const auto& value) {
+    ejs[name] = value;
+  };
+  auto add_opt = [](json& ejs, const string& name, const auto& value,
+                     const auto& def) {
+    if (value == def) return;
+    ejs[name] = value;
+  };
+  auto add_tex = [&scene](json& ejs, const string& name, int ref) {
+    if (ref < 0) return;
+    ejs[name] = scene.textures[ref].name;
+  };
+
+  // save yaml file
+  auto js = json::object();
+
+  js["asset"]          = json::object();
+  js["asset"]["stats"] = json::array();
+  for (auto stat : scene_stats(scene)) {
+    js["asset"]["stats"].push_back(stat);
+  }
+
+  auto def_cam = sceneio_camera{};
+  if (!scene.cameras.empty()) js["cameras"] = json::array();
+  for (auto& camera : scene.cameras) {
+    auto& ejs = js["cameras"].emplace_back();
+    add_val(ejs, "name", camera.name);
+    add_opt(ejs, "frame", camera.frame, def_cam.frame);
+    add_opt(ejs, "ortho", camera.orthographic, def_cam.orthographic);
+    add_opt(ejs, "lens", camera.lens, def_cam.lens);
+    add_opt(ejs, "aspect", camera.aspect, def_cam.aspect);
+    add_opt(ejs, "film", camera.film, def_cam.film);
+    add_opt(ejs, "focus", camera.focus, def_cam.focus);
+    add_opt(ejs, "aperture", camera.aperture, def_cam.aperture);
+  }
+
+  auto def_env = sceneio_environment{};
+  if (!scene.environments.empty()) js["environments"] = json::array();
+  for (auto& environment : scene.environments) {
+    auto& ejs = js["environments"].emplace_back();
+    add_val(ejs, "name", environment.name);
+    add_opt(ejs, "frame", environment.frame, def_env.frame);
+    add_opt(ejs, "emission", environment.emission, def_env.emission);
+    add_tex(ejs, "emission_tex", environment.emission_tex);
+  }
+
+  auto def_shape = sceneio_shape{};
+  if (!scene.environments.empty()) js["shapes"] = json::array();
+  for (auto& shape : scene.shapes) {
+    auto& ejs = js["shapes"].emplace_back();
+    add_val(ejs, "name", shape.name);
+    add_opt(ejs, "frame", shape.frame, def_shape.frame);
+    add_opt(ejs, "emission", shape.emission, def_shape.emission);
+    add_opt(ejs, "color", shape.color, def_shape.color);
+    add_opt(ejs, "specular", shape.specular, def_shape.specular);
+    add_opt(ejs, "metallic", shape.metallic, def_shape.metallic);
+    add_opt(ejs, "coat", shape.coat, def_shape.coat);
+    add_opt(ejs, "roughness", shape.roughness, def_shape.roughness);
+    add_opt(ejs, "ior", shape.ior, def_shape.ior);
+    add_opt(ejs, "transmission", shape.transmission, def_shape.transmission);
+    add_opt(ejs, "trdepth", shape.trdepth, def_shape.trdepth);
+    add_opt(ejs, "scattering", shape.scattering, def_shape.scattering);
+    add_opt(ejs, "scanisotropy", shape.scanisotropy, def_shape.scanisotropy);
+    add_opt(ejs, "opacity", shape.opacity, def_shape.opacity);
+    add_opt(ejs, "thin", shape.thin, def_shape.thin);
+    add_tex(ejs, "emission_tex", shape.emission_tex);
+    add_tex(ejs, "color_tex", shape.color_tex);
+    add_tex(ejs, "metallic_tex", shape.metallic_tex);
+    add_tex(ejs, "specular_tex", shape.specular_tex);
+    add_tex(ejs, "roughness_tex", shape.roughness_tex);
+    add_tex(ejs, "transmission_tex", shape.transmission_tex);
+    add_tex(ejs, "scattering_tex", shape.scattering_tex);
+    add_tex(ejs, "coat_tex", shape.coat_tex);
+    add_tex(ejs, "opacity_tex", shape.opacity_tex);
+    add_tex(ejs, "normal_tex", shape.normal_tex);
+    add_opt(ejs, "gltf_textures", shape.gltf_textures, def_shape.gltf_textures);
+    if (!shape.positions.empty()) {
+      auto path = replace_extension(shape.name, ".ply");
+      add_val(ejs, "shape", path);
+      try {
+        save_shape(get_dirname(filename) + path, shape.points, shape.lines,
+            shape.triangles, shape.quads, shape.positions, shape.normals,
+            shape.texcoords, shape.colors, shape.radius);
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
+      }
+    }
+    if (!shape.instances.empty()) {
+      auto path = replace_extension(shape.name, ".instances.ply");
+      add_val(ejs, "instances", path);
+      try {
+        save_instances(get_dirname(filename) + path, shape.instances);
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
+      }
+    }
+  }
+
+  auto def_subdiv = sceneio_subdiv{};
+  if (!scene.subdivs.empty()) js["subdivs"] = json::array();
+  for (auto& subdiv : scene.subdivs) {
+    auto& ejs = js["subdivs"].emplace_back();
+    add_val(ejs, "name", subdiv.name);
+    add_val(ejs, "shape", scene.shapes[subdiv.shape].name);
+    add_opt(ejs, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
+    add_opt(ejs, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
+    add_opt(ejs, "smooth", subdiv.smooth, def_subdiv.smooth);
+    add_tex(ejs, "displacement_tex", subdiv.displacement_tex);
+    add_opt(ejs, "displacement", subdiv.displacement, def_subdiv.subdivisions);
+    if (!subdiv.positions.empty() && subdiv.quadspos.empty()) {
+      auto path = replace_extension(subdiv.name, ".ply");
+      add_val(ejs, "subdiv", path);
+      try {
+        save_shape(get_dirname(filename) + path, subdiv.points, subdiv.lines,
+            subdiv.triangles, subdiv.quads, subdiv.positions, subdiv.normals,
+            subdiv.texcoords, subdiv.colors, subdiv.radius);
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
+      }
+    }
+    if (!subdiv.positions.empty() && !subdiv.quadspos.empty()) {
+      auto path = replace_extension(subdiv.name, ".obj");
+      add_val(ejs, "fvsubdiv", path);
+      try {
+        save_fvshape(get_dirname(filename) + path, subdiv.quadspos,
+            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
+            subdiv.normals, subdiv.texcoords);
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
+      }
+    }
+  }
+
+  // save textures
+  for (auto& texture : scene.textures) {
+    if (!texture.ldr.empty() || !texture.hdr.empty()) {
+      try {
+        if (!texture.hdr.empty()) {
+          save_image(get_dirname(filename) + texture.name, texture.hdr);
+        } else {
+          save_imageb(get_dirname(filename) + texture.name, texture.ldr);
+        }
+      } catch (std::exception& e) {
+        throw_dependent_error(filename, e.what());
+      }
+    }
+  }
+
+  // save yaml
+  save_json(filename, js);
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -1244,9 +1650,8 @@ static void load_obj_scene(
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
-    auto& camera = scene.cameras.emplace_back();
-    camera.name  = make_safe_name(
-        ocam.name, "camera", (int)scene.cameras.size(), "cameras/", ".yaml");
+    auto& camera        = scene.cameras.emplace_back();
+    camera.name         = make_name("camera", scene.cameras.size());
     camera.frame        = ocam.frame;
     camera.orthographic = ocam.ortho;
     camera.film         = max(ocam.width, ocam.height);
@@ -1297,8 +1702,7 @@ static void load_obj_scene(
     shape_name_counts[shape.name] += 1;
     if (shape_name_counts[shape.name] > 1)
       shape.name += std::to_string(shape_name_counts[shape.name]);
-    shape.name = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
-                 ".yaml";
+    shape.name      = make_name("shape", scene.shapes.size());
     auto nmaterials = vector<string>{};
     auto ematerials = vector<int>{};
     auto has_quads  = has_obj_quads(oshape);
@@ -1353,11 +1757,10 @@ static void load_obj_scene(
 
   // convert environments
   for (auto& oenvironment : obj.environments) {
-    auto& environment        = scene.environments.emplace_back();
-    environment.name         = make_safe_name(oenvironment.name, "environment",
-        scene.environments.size(), "environments/", ".yaml");
-    environment.frame        = oenvironment.frame;
-    environment.emission     = oenvironment.emission;
+    auto& environment    = scene.environments.emplace_back();
+    environment.name     = make_name("environment", scene.environments.size());
+    environment.frame    = oenvironment.frame;
+    environment.emission = oenvironment.emission;
     environment.emission_tex = get_texture(
         oenvironment.emission_map, "environments/");
   }
@@ -1377,7 +1780,7 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
   // convert cameras
   for (auto& camera : scene.cameras) {
     auto& ocamera    = obj.cameras.emplace_back();
-    ocamera.name     = camera.name;
+    ocamera.name     = get_basename(camera.name);
     ocamera.frame    = camera.frame;
     ocamera.ortho    = camera.orthographic;
     ocamera.width    = camera.film;
@@ -1398,7 +1801,7 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
   // convert materials and textures
   for (auto& shape : scene.shapes) {
     auto& omaterial                = obj.materials.emplace_back();
-    omaterial.name                 = shape.name;
+    omaterial.name                 = get_basename(shape.name);
     omaterial.illum                = 2;
     omaterial.as_pbr               = true;
     omaterial.pbr_emission         = shape.emission;
@@ -1470,7 +1873,7 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
   // convert environments
   for (auto& environment : scene.environments) {
     auto& oenvironment        = obj.environments.emplace_back();
-    oenvironment.name         = environment.name;
+    oenvironment.name         = get_basename(environment.name);
     oenvironment.frame        = environment.frame;
     oenvironment.emission     = environment.emission;
     oenvironment.emission_map = get_texture(environment.emission_tex);
@@ -1630,8 +2033,7 @@ static void load_gltf_scene(
   for (auto& gnode : gltf.nodes) {
     if (gnode.camera >= 0) {
       auto& camera = scene.cameras.emplace_back(cameras[gnode.camera]);
-      camera.name  = make_safe_name(camera.name, "caemra",
-          (int)scene.cameras.size(), "cameras/", ".yaml");
+      camera.name  = make_name("caemra", scene.cameras.size());
       camera.frame = gnode.frame;
     }
     if (gnode.mesh >= 0) {
@@ -1671,9 +2073,8 @@ static void load_pbrt_scene(
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
-    auto& camera = scene.cameras.emplace_back();
-    camera.name  = make_safe_name(
-        "", "camera", (int)scene.cameras.size(), "cameras/", ".yaml");
+    auto& camera  = scene.cameras.emplace_back();
+    camera.name   = make_name("camera", scene.cameras.size());
     camera.frame  = pcamera.frame;
     camera.aspect = pcamera.aspect;
     camera.film   = 0.036;
@@ -1753,20 +2154,18 @@ static void load_pbrt_scene(
 
   // convert environments
   for (auto& penvironment : pbrt.environments) {
-    auto& environment        = scene.environments.emplace_back();
-    environment.name         = make_safe_name("", "environment",
-        (int)scene.environments.size(), "environments/", ".yaml");
-    environment.frame        = penvironment.frame;
-    environment.emission     = penvironment.emission;
+    auto& environment    = scene.environments.emplace_back();
+    environment.name     = make_name("environment", scene.environments.size());
+    environment.frame    = penvironment.frame;
+    environment.emission = penvironment.emission;
     environment.emission_tex = get_texture(
         penvironment.emission_map, "environments/");
   }
 
   // lights
   for (auto& plight : pbrt.lights) {
-    auto& shape = scene.shapes.emplace_back();
-    shape.name  = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
-                 ".yaml";
+    auto& shape     = scene.shapes.emplace_back();
+    shape.name      = make_name("shape", scene.shapes.size());
     shape.frame     = plight.area_frame;
     shape.triangles = plight.area_triangles;
     shape.positions = plight.area_positions;
