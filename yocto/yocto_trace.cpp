@@ -2476,10 +2476,9 @@ static vec3f sample_lights(const trace_scene& scene, const vec3f& position,
     float rl, float rel, const vec2f& ruv) {
   auto  light_id = sample_uniform(scene.lights.size(), rl);
   auto& light    = scene.lights[light_id];
-  if (light.instance >= 0) {
-    auto& instance  = scene.instances[light.instance];
-    auto& shape     = scene.shapes[instance.shape];
-    auto& frame     = shape.frames[instance.instance];
+  if (light.shape >= 0) {
+    auto& shape     = scene.shapes[light.shape];
+    auto& frame     = shape.frames[light.instance_];
     auto  element   = sample_discrete(shape.elements_cdf, rel);
     auto  uv        = (!shape.triangles.empty()) ? sample_triangle(ruv) : ruv;
     auto  lposition = transform_point(frame,
@@ -2509,18 +2508,17 @@ static float sample_lights_pdf(
     const trace_scene& scene, const vec3f& position, const vec3f& direction) {
   auto pdf = 0.0f;
   for (auto& light : scene.lights) {
-    if (light.instance >= 0) {
+    if (light.shape >= 0) {
       // check all intersection
-      auto& instance      = scene.instances[light.instance];
       auto  lpdf          = 0.0f;
       auto  next_position = position;
+      auto& shape     = scene.shapes[light.shape];
+      auto& frame     = shape.frames[light.instance_];
       for (auto bounce = 0; bounce < 100; bounce++) {
-        auto isec = intersect_instance_bvh(scene, instance.shape,
-            instance.instance, {next_position, direction});
+        auto isec = intersect_instance_bvh(scene, light.shape,
+            light.instance_, {next_position, direction});
         if (!isec.hit) break;
         // accumulate pdf
-        auto& shape     = scene.shapes[instance.shape];
-        auto& frame     = shape.frames[instance.instance];
         auto  lposition = transform_point(
             frame, eval_shape_elem(shape, shape.quadspos, shape.positions,
                        isec.element, isec.uv));
@@ -2930,9 +2928,8 @@ void init_state(
 // Init trace lights
 void init_lights(trace_scene& scene) {
   scene.lights.clear();
-  for (auto idx = 0; idx < scene.instances.size(); idx++) {
-    auto& instance = scene.instances[idx];
-    auto& shape    = scene.shapes[instance.shape];
+  for (auto idx = 0; idx < scene.shapes.size(); idx++) {
+    auto& shape    = scene.shapes[idx];
     auto& material = shape.material;
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
@@ -2954,9 +2951,12 @@ void init_lights(trace_scene& scene) {
         if (idx) shape.elements_cdf[idx] += shape.elements_cdf[idx - 1];
       }
     }
-    auto& light       = scene.lights.emplace_back();
-    light.instance    = idx;
-    light.environment = -1;
+    for(auto iidx = 0; iidx < shape.frames.size(); iidx++) {
+      auto& light       = scene.lights.emplace_back();
+      light.shape       = idx;
+      light.instance_    = iidx;
+      light.environment = -1;
+    }
   }
   for (auto idx = 0; idx < scene.environments.size(); idx++) {
     auto& environment = scene.environments[idx];
@@ -2976,7 +2976,8 @@ void init_lights(trace_scene& scene) {
       }
     }
     auto& light       = scene.lights.emplace_back();
-    light.instance    = -1;
+    light.shape    = -1;
+    light.instance_ = -1;
     light.environment = idx;
   }
 }

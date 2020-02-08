@@ -388,7 +388,8 @@ struct trace_environment {
 
 // Trace lights used during rendering. These are created automatically.
 struct trace_light {
-  int           instance    = -1;
+  int           shape    = -1;
+  int           instance_    = -1;
   int           environment = -1;
 };
 
