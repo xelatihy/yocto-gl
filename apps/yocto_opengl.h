@@ -282,10 +282,12 @@ void set_shape_highlighted(opengl_scene& scene, int idx, bool highlighted);
 void clear_shapes(opengl_scene& scene);
 
 // add light
-int add_light(opengl_scene& scene, const vec3f& position, const vec3f& emission,
-    bool directional);
-void set_light(opengl_scene& scene, int idx, const vec3f& position,
-    const vec3f& emission, bool directional);
+int add_light(opengl_scene& scene);
+void set_light_position(opengl_scene& scene, int idx, const vec3f& position);
+void set_light_emission(opengl_scene& scene, int idx, 
+    const vec3f& emission);
+void set_light_directional(opengl_scene& scene, int idx, bool directional);
+void set_light(opengl_scene& scene, int idx, const vec3f& position, const vec3f& emission, bool directional);
 void clear_lights(opengl_scene& scene);
 bool has_max_lights(opengl_scene& scene);
 

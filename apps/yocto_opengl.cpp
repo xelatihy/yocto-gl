@@ -849,7 +849,7 @@ void clear_cameras(opengl_scene& scene) { scene._cameras.clear(); }
 
 // add texture
 int add_texture(opengl_scene& scene) {
-  auto& texture = scene._textures.emplace_back();
+  scene._textures.emplace_back();
   return (int)scene._textures.size()-1;
 }
 
@@ -1117,19 +1117,20 @@ void set_material_gltftextures(
 void clear_glshapes(opengl_scene& scene) { scene._shapes.clear(); }
 
 // add light
-int add_light(opengl_scene& scene, const vec3f& position, const vec3f& emission,
-    bool directional) {
-  auto& light    = scene._lights.emplace_back();
-  light.position = position;
-  light.emission = emission;
-  light.type     = directional ? 1 : 0;
+int add_light(opengl_scene& scene) {
+  scene._lights.emplace_back();
   return (int)scene._lights.size() - 1;
 }
-void set_light(opengl_scene& scene, int idx, const vec3f& position,
-    const vec3f& emission, bool directional) {
+void set_light_position(opengl_scene& scene, int idx, const vec3f& position) {
   auto& light    = scene._lights[idx];
   light.position = position;
+}
+void set_light_emission(opengl_scene& scene, int idx, const vec3f& emission) {
+  auto& light    = scene._lights[idx];
   light.emission = emission;
+}
+void set_light_directional(opengl_scene& scene, int idx, bool directional) {
+  auto& light    = scene._lights[idx];
   light.type     = directional ? 1 : 0;
 }
 void clear_lights(opengl_scene& scene) { scene._lights.clear(); }
