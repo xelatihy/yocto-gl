@@ -614,8 +614,8 @@ vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
     vec3 tangu = normalize((shape_xform * vec4(normalize(tangsp.xyz),0)).xyz);
     vec3 tangv = normalize(cross(norm, tangu));
     if(tangsp.w < 0) tangv = -tangv;
-    vec3 texture = 2 * texture(mat_norm_txt,texcoord).xyz - 1;
-    texture.y = -texture.y;
+    vec3 texture = 2 * pow(texture(mat_norm_txt,texcoord).xyz, vec3(1/2.2)) - 1;
+    // texture.y = -texture.y;
     return normalize( tangu * texture.x + tangv * texture.y + norm * texture.z );
 }
 
