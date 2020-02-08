@@ -800,14 +800,11 @@ static trace_point eval_point(const trace_scene& scene,
   auto metallic = shape.metallic *
                   eval_texture(scene, shape.metallic_tex, texcoord).z;
   auto roughness =
-      shape.roughness *
-      eval_texture(scene, shape.roughness_tex, texcoord).x *
-      (shape.gltf_textures
-              ? eval_texture(scene, shape.metallic_tex, texcoord).x
-              : 1);
+      shape.roughness * eval_texture(scene, shape.roughness_tex, texcoord).x *
+      (shape.gltf_textures ? eval_texture(scene, shape.metallic_tex, texcoord).x
+                           : 1);
   auto ior  = shape.ior;
-  auto coat = shape.coat *
-              eval_texture(scene, shape.coat_tex, texcoord).x;
+  auto coat = shape.coat * eval_texture(scene, shape.coat_tex, texcoord).x;
   auto transmission = shape.transmission *
                       eval_texture(scene, shape.emission_tex, texcoord).x;
   auto opacity = shape.opacity * point.color.w * base_tex.w *
@@ -890,10 +887,10 @@ struct volume_point {
 static volume_point eval_volume(const trace_scene& scene,
     const trace_intersection& intersection, const ray3f& ray) {
   // get data
-  auto& shape    = scene.shapes[intersection.shape];
-  auto& frame    = shape.frames[intersection.instance_];
-  auto  element  = intersection.element;
-  auto  uv       = intersection.uv;
+  auto& shape   = scene.shapes[intersection.shape];
+  auto& frame   = shape.frames[intersection.instance_];
+  auto  element = intersection.element;
+  auto  uv      = intersection.uv;
 
   // initialize point
   auto point      = volume_point{};
@@ -924,7 +921,7 @@ static volume_point eval_volume(const trace_scene& scene,
   auto scattering = shape.scattering *
                     eval_texture(scene, shape.scattering_tex, texcoord).x;
   auto scanisotropy = shape.scanisotropy;
-  auto trdepth = shape.trdepth;
+  auto trdepth      = shape.trdepth;
 
   // factors
   point.volemission = zero3f;
@@ -940,7 +937,7 @@ static volume_point eval_volume(const trace_scene& scene,
 // Check if an instance as volume scattering
 static bool has_volume(
     const trace_scene& scene, const trace_intersection& intersection) {
-  auto& shape    = scene.shapes[intersection.shape];
+  auto& shape = scene.shapes[intersection.shape];
   return !shape.thin && shape.transmission;
 }
 
@@ -2947,7 +2944,7 @@ void init_state(
 void init_lights(trace_scene& scene) {
   scene.lights.clear();
   for (auto idx = 0; idx < scene.shapes.size(); idx++) {
-    auto& shape    = scene.shapes[idx];
+    auto& shape = scene.shapes[idx];
     if (shape.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
     if (!shape.triangles.empty()) {
@@ -3249,8 +3246,8 @@ void set_shape_opacity(
   shape.opacity     = opacity;
   shape.opacity_tex = opacity_txt;
 }
-void set_shape_scattering(trace_scene& scene, int idx,
-    const vec3f& scattering, float scanisotropy, int scattering_tex) {
+void set_shape_scattering(trace_scene& scene, int idx, const vec3f& scattering,
+    float scanisotropy, int scattering_tex) {
   auto& shape          = scene.shapes[idx];
   shape.scattering     = scattering;
   shape.scanisotropy   = scanisotropy;
@@ -3260,8 +3257,7 @@ void set_shape_normalmap(trace_scene& scene, int idx, int normal_txt) {
   auto& shape      = scene.shapes[idx];
   shape.normal_tex = normal_txt;
 }
-void set_shape_gltftextures(
-    trace_scene& scene, int idx, bool gltf_textures) {
+void set_shape_gltftextures(trace_scene& scene, int idx, bool gltf_textures) {
   auto& shape         = scene.shapes[idx];
   shape.gltf_textures = gltf_textures;
 }

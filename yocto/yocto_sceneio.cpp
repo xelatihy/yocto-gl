@@ -1707,14 +1707,14 @@ static void load_pbrt_scene(
   // material map
   auto material_map = unordered_map<string, int>{{"", -1}};
   for (auto& pmaterial : pbrt.materials) {
-    auto idx                     = (int)material_map.size()-1;
+    auto idx                     = (int)material_map.size() - 1;
     material_map[pmaterial.name] = idx;
   }
 
   // arealight map
   auto arealight_map = unordered_map<string, int>{{"", -1}};
   for (auto& parealight : pbrt.arealights) {
-    auto idx                       = (int)arealight_map.size()-1;
+    auto idx                       = (int)arealight_map.size() - 1;
     arealight_map[parealight.name] = idx;
   }
 

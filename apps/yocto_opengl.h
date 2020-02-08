@@ -278,8 +278,7 @@ void set_shape_specular(
 void set_shape_opacity(
     opengl_scene& scene, int idx, float opacity, int opacity_txt = -1);
 void set_shape_normalmap(opengl_scene& scene, int idx, int normal_txt);
-void set_shape_gltftextures(
-    opengl_scene& scene, int idx, bool gltf_textures);
+void set_shape_gltftextures(opengl_scene& scene, int idx, bool gltf_textures);
 void set_shape_hidden(opengl_scene& scene, int idx, bool hidden);
 void set_shape_highlighted(opengl_scene& scene, int idx, bool highlighted);
 void clear_shapes(opengl_scene& scene);

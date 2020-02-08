@@ -131,8 +131,8 @@ void set_shape_roughness(
 void set_shape_opacity(
     trace_scene& scene, int idx, float opacity, int opacity_txt = -1);
 void set_shape_thin(trace_scene& scene, int idx, bool thin);
-void set_shape_scattering(trace_scene& scene, int idx,
-    const vec3f& scattering, float scanisotropy, int scattering_tex = -1);
+void set_shape_scattering(trace_scene& scene, int idx, const vec3f& scattering,
+    float scanisotropy, int scattering_tex = -1);
 void set_shape_normalmap(trace_scene& scene, int idx, int normal_txt);
 void set_shape_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
 void clear_shapes(trace_scene& scene);

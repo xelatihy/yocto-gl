@@ -202,10 +202,10 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
     set_shape_emission(glscene, id, shape.emission, shape.emission_tex);
     set_shape_color(
         glscene, id, (1 - shape.transmission) * shape.color, shape.color_tex);
-    set_shape_specular(glscene, id,
-        (1 - shape.transmission) * shape.specular, shape.specular_tex);
-    set_shape_metallic(glscene, id,
-        (1 - shape.transmission) * shape.metallic, shape.metallic_tex);
+    set_shape_specular(glscene, id, (1 - shape.transmission) * shape.specular,
+        shape.specular_tex);
+    set_shape_metallic(glscene, id, (1 - shape.transmission) * shape.metallic,
+        shape.metallic_tex);
     set_shape_roughness(glscene, id, shape.roughness, shape.roughness_tex);
     set_shape_opacity(glscene, id, shape.opacity, shape.opacity_tex);
     set_shape_normalmap(glscene, id, shape.normal_tex);
@@ -482,16 +482,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         win, "material##2", app->selected_material, app->ioscene.shapes);
     if (draw_glwidgets_material(win, app, app->selected_material)) {
       auto& shape = app->ioscene.shapes[app->selected_material];
-      set_shape_emission(app->glscene, app->selected_material,
-          shape.emission, shape.emission_tex);
+      set_shape_emission(app->glscene, app->selected_material, shape.emission,
+          shape.emission_tex);
       set_shape_color(app->glscene, app->selected_material,
           (1 - shape.transmission) * shape.color, shape.color_tex);
       set_shape_specular(app->glscene, app->selected_material,
           (1 - shape.transmission) * shape.specular, shape.specular_tex);
       set_shape_metallic(app->glscene, app->selected_material,
           (1 - shape.transmission) * shape.metallic, shape.metallic_tex);
-      set_shape_roughness(app->glscene, app->selected_material,
-          shape.roughness, shape.roughness_tex);
+      set_shape_roughness(app->glscene, app->selected_material, shape.roughness,
+          shape.roughness_tex);
       set_shape_opacity(app->glscene, app->selected_material, shape.opacity,
           shape.opacity_tex);
       set_shape_normalmap(

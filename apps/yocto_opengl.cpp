@@ -751,19 +751,19 @@ opengl_shape::opengl_shape(opengl_shape&& other) {
   std::swap(instances, other.instances);
   std::swap(hidden, other.hidden);
   std::swap(highlighted, other.highlighted);
-  std::swap(emission, other.emission) ;
-  std::swap(color, other.color) ;
-  std::swap(specular, other.specular) ;
-  std::swap(metallic, other.metallic) ;
-  std::swap(roughness, other.roughness) ;
-  std::swap(opacity, other.opacity) ;
-  std::swap(emission_map, other.emission_map) ;
-  std::swap(color_map, other.color_map) ;
-  std::swap(specular_map, other.specular_map) ;
-  std::swap(metallic_map, other.metallic_map) ;
-  std::swap(roughness_map, other.roughness_map) ;
-  std::swap(normal_map, other.normal_map) ;
-  std::swap(gltf_textures, other.gltf_textures) ;
+  std::swap(emission, other.emission);
+  std::swap(color, other.color);
+  std::swap(specular, other.specular);
+  std::swap(metallic, other.metallic);
+  std::swap(roughness, other.roughness);
+  std::swap(opacity, other.opacity);
+  std::swap(emission_map, other.emission_map);
+  std::swap(color_map, other.color_map);
+  std::swap(specular_map, other.specular_map);
+  std::swap(metallic_map, other.metallic_map);
+  std::swap(roughness_map, other.roughness_map);
+  std::swap(normal_map, other.normal_map);
+  std::swap(gltf_textures, other.gltf_textures);
   std::swap(positions_num, other.positions_num);
   std::swap(positions_id, other.positions_id);
   std::swap(normals_num, other.normals_num);
@@ -792,19 +792,19 @@ opengl_shape& opengl_shape::operator=(opengl_shape&& other) {
   std::swap(instances, other.instances);
   std::swap(hidden, other.hidden);
   std::swap(highlighted, other.highlighted);
-  std::swap(emission, other.emission) ;
-  std::swap(color, other.color) ;
-  std::swap(specular, other.specular) ;
-  std::swap(metallic, other.metallic) ;
-  std::swap(roughness, other.roughness) ;
-  std::swap(opacity, other.opacity) ;
-  std::swap(emission_map, other.emission_map) ;
-  std::swap(color_map, other.color_map) ;
-  std::swap(specular_map, other.specular_map) ;
-  std::swap(metallic_map, other.metallic_map) ;
-  std::swap(roughness_map, other.roughness_map) ;
-  std::swap(normal_map, other.normal_map) ;
-  std::swap(gltf_textures, other.gltf_textures) ;
+  std::swap(emission, other.emission);
+  std::swap(color, other.color);
+  std::swap(specular, other.specular);
+  std::swap(metallic, other.metallic);
+  std::swap(roughness, other.roughness);
+  std::swap(opacity, other.opacity);
+  std::swap(emission_map, other.emission_map);
+  std::swap(color_map, other.color_map);
+  std::swap(specular_map, other.specular_map);
+  std::swap(metallic_map, other.metallic_map);
+  std::swap(roughness_map, other.roughness_map);
+  std::swap(normal_map, other.normal_map);
+  std::swap(gltf_textures, other.gltf_textures);
   std::swap(positions_num, other.positions_num);
   std::swap(positions_id, other.positions_id);
   std::swap(normals_num, other.normals_num);
@@ -1137,8 +1137,7 @@ void set_shape_normalmap(opengl_scene& scene, int idx, int normal_txt) {
   auto& shape      = scene._shapes[idx];
   shape.normal_map = normal_txt;
 }
-void set_shape_gltftextures(
-    opengl_scene& scene, int idx, bool gltf_textures) {
+void set_shape_gltftextures(opengl_scene& scene, int idx, bool gltf_textures) {
   auto& shape         = scene._shapes[idx];
   shape.gltf_textures = gltf_textures;
 }
@@ -1187,8 +1186,8 @@ void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
   glUniform1i(glGetUniformLocation(glscene.program_id, "mat_type"), mtype);
   glUniform3f(glGetUniformLocation(glscene.program_id, "mat_ke"),
       shape.emission.x, shape.emission.y, shape.emission.z);
-  glUniform3f(glGetUniformLocation(glscene.program_id, "mat_kd"),
-      shape.color.x, shape.color.y, shape.color.z);
+  glUniform3f(glGetUniformLocation(glscene.program_id, "mat_kd"), shape.color.x,
+      shape.color.y, shape.color.z);
   glUniform3f(glGetUniformLocation(glscene.program_id, "mat_ks"),
       shape.metallic, shape.metallic, shape.metallic);
   glUniform1f(

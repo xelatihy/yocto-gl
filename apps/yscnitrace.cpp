@@ -566,16 +566,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
           ioshape.emission_tex);
       set_shape_color(
           app->scene, app->selected_material, ioshape.color, ioshape.color_tex);
-      set_shape_specular(app->scene, app->selected_material,
-          ioshape.specular, ioshape.specular_tex);
+      set_shape_specular(app->scene, app->selected_material, ioshape.specular,
+          ioshape.specular_tex);
       set_shape_ior(app->scene, app->selected_material, ioshape.ior);
-      set_shape_metallic(app->scene, app->selected_material,
-          ioshape.metallic, ioshape.metallic_tex);
+      set_shape_metallic(app->scene, app->selected_material, ioshape.metallic,
+          ioshape.metallic_tex);
       set_shape_transmission(app->scene, app->selected_material,
           ioshape.transmission, ioshape.thin, ioshape.trdepth,
           ioshape.transmission_tex);
-      set_shape_roughness(app->scene, app->selected_material,
-          ioshape.roughness, ioshape.roughness_tex);
+      set_shape_roughness(app->scene, app->selected_material, ioshape.roughness,
+          ioshape.roughness_tex);
       set_shape_opacity(app->scene, app->selected_material, ioshape.opacity,
           ioshape.opacity_tex);
       set_shape_thin(app->scene, app->selected_material, ioshape.thin);
