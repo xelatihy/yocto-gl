@@ -135,8 +135,7 @@ void update_lights(opengl_scene& glscene, const sceneio_model& scene) {
   clear_lights(glscene);
   for (auto& shape : scene.shapes) {
     if (has_max_lights(glscene)) break;
-    auto& material = shape.material;
-    if (material.emission == zero3f) continue;
+    if (shape.emission == zero3f) continue;
     auto bbox = invalidb3f;
     for (auto& p : shape.positions) bbox = merge(bbox, p);
     auto pos  = (bbox.max + bbox.min) / 2;
@@ -155,7 +154,7 @@ void update_lights(opengl_scene& glscene, const sceneio_model& scene) {
     } else {
       area += shape.positions.size();
     }
-    auto ke  = material.emission * area;
+    auto ke  = shape.emission * area;
     auto lid = add_light(glscene);
     set_light(glscene, lid, transform_point(shape.frame, pos), ke, false);
   }
@@ -200,19 +199,16 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
     set_shape_quads(glscene, id, shape.quads);
     set_shape_frame(glscene, id, shape.frame);
     set_shape_instances(glscene, id, shape.instances);
-    auto& material = shape.material;
-    set_material_emission(
-        glscene, id, material.emission, material.emission_tex);
-    set_material_color(glscene, id,
-        (1 - material.transmission) * material.color, material.color_tex);
-    set_material_specular(glscene, id,
-        (1 - material.transmission) * material.specular, material.specular_tex);
-    set_material_metallic(glscene, id,
-        (1 - material.transmission) * material.metallic, material.metallic_tex);
-    set_material_roughness(
-        glscene, id, material.roughness, material.roughness_tex);
-    set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
-    set_material_normalmap(glscene, id, material.normal_tex);
+    set_shape_emission(glscene, id, shape.emission, shape.emission_tex);
+    set_shape_color(
+        glscene, id, (1 - shape.transmission) * shape.color, shape.color_tex);
+    set_shape_specular(glscene, id, (1 - shape.transmission) * shape.specular,
+        shape.specular_tex);
+    set_shape_metallic(glscene, id, (1 - shape.transmission) * shape.metallic,
+        shape.metallic_tex);
+    set_shape_roughness(glscene, id, shape.roughness, shape.roughness_tex);
+    set_shape_opacity(glscene, id, shape.opacity, shape.opacity_tex);
+    set_shape_normalmap(glscene, id, shape.normal_tex);
   }
 }
 
@@ -258,41 +254,41 @@ bool draw_glwidgets_texture(
 
 bool draw_glwidgets_material(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& material = app->ioscene.shapes[id].material;
-  auto  edited   = 0;
+  auto& shape  = app->ioscene.shapes[id];
+  auto  edited = 0;
   edited += draw_gltextinput(win, "name", app->ioscene.shapes[id].name);
-  edited += draw_glhdrcoloredit(win, "emission", material.emission);
-  edited += draw_glcoloredit(win, "color", material.color);
-  edited += draw_glslider(win, "specular", material.specular, 0, 1);
-  edited += draw_glslider(win, "metallic", material.metallic, 0, 1);
-  edited += draw_glslider(win, "roughness", material.roughness, 0, 1);
-  edited += draw_glslider(win, "coat", material.coat, 0, 1);
-  edited += draw_glslider(win, "transmission", material.transmission, 0, 1);
-  edited += draw_glcoloredit(win, "spectint", material.spectint);
-  edited += draw_glcheckbox(win, "thin", material.thin);
-  edited += draw_glcoloredit(win, "scattering", material.scattering);
-  edited += draw_glslider(win, "radius", material.radius, 0, 1);
-  edited += draw_glslider(win, "phaseg", material.phaseg, -1, 1);
-  edited += draw_glslider(win, "opacity", material.opacity, 0, 1);
+  edited += draw_glhdrcoloredit(win, "emission", shape.emission);
+  edited += draw_glcoloredit(win, "color", shape.color);
+  edited += draw_glslider(win, "specular", shape.specular, 0, 1);
+  edited += draw_glslider(win, "metallic", shape.metallic, 0, 1);
+  edited += draw_glslider(win, "roughness", shape.roughness, 0, 1);
+  edited += draw_glslider(win, "coat", shape.coat, 0, 1);
+  edited += draw_glslider(win, "transmission", shape.transmission, 0, 1);
+  edited += draw_glcoloredit(win, "spectint", shape.spectint);
+  edited += draw_glcheckbox(win, "thin", shape.thin);
+  edited += draw_glcoloredit(win, "scattering", shape.scattering);
+  edited += draw_glslider(win, "trdepth", shape.trdepth, 0, 1);
+  edited += draw_glslider(win, "scanisotropy", shape.scanisotropy, -1, 1);
+  edited += draw_glslider(win, "opacity", shape.opacity, 0, 1);
   edited += draw_glcombobox(
-      win, "emission_tex", material.emission_tex, app->ioscene.textures, true);
+      win, "emission_tex", shape.emission_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "color_tex", material.color_tex, app->ioscene.textures, true);
+      win, "color_tex", shape.color_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "metallic_tex", material.metallic_tex, app->ioscene.textures, true);
+      win, "metallic_tex", shape.metallic_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "specular_tex", material.specular_tex, app->ioscene.textures, true);
-  edited += draw_glcombobox(win, "transmission_tex", material.transmission_tex,
-      app->ioscene.textures, true);
-  edited += draw_glcombobox(win, "scattering_tex", material.scattering_tex,
-      app->ioscene.textures, true);
-  edited += draw_glcombobox(win, "roughness_tex", material.roughness_tex,
+      win, "specular_tex", shape.specular_tex, app->ioscene.textures, true);
+  edited += draw_glcombobox(win, "transmission_tex", shape.transmission_tex,
       app->ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "spectint_tex", material.spectint_tex, app->ioscene.textures, true);
+      win, "scattering_tex", shape.scattering_tex, app->ioscene.textures, true);
   edited += draw_glcombobox(
-      win, "normal_tex", material.normal_tex, app->ioscene.textures, true);
-  edited += draw_glcheckbox(win, "glTF textures", material.gltf_textures);
+      win, "roughness_tex", shape.roughness_tex, app->ioscene.textures, true);
+  edited += draw_glcombobox(
+      win, "spectint_tex", shape.spectint_tex, app->ioscene.textures, true);
+  edited += draw_glcombobox(
+      win, "normal_tex", shape.normal_tex, app->ioscene.textures, true);
+  edited += draw_glcheckbox(win, "glTF textures", shape.gltf_textures);
   return edited;
 }
 
@@ -485,23 +481,21 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "material##2", app->selected_material, app->ioscene.shapes);
     if (draw_glwidgets_material(win, app, app->selected_material)) {
-      auto& material = app->ioscene.shapes[app->selected_material].material;
-      set_material_emission(app->glscene, app->selected_material,
-          material.emission, material.emission_tex);
-      set_material_color(app->glscene, app->selected_material,
-          (1 - material.transmission) * material.color, material.color_tex);
-      set_material_specular(app->glscene, app->selected_material,
-          (1 - material.transmission) * material.specular,
-          material.specular_tex);
-      set_material_metallic(app->glscene, app->selected_material,
-          (1 - material.transmission) * material.metallic,
-          material.metallic_tex);
-      set_material_roughness(app->glscene, app->selected_material,
-          material.roughness, material.roughness_tex);
-      set_material_opacity(app->glscene, app->selected_material,
-          material.opacity, material.opacity_tex);
-      set_material_normalmap(
-          app->glscene, app->selected_material, material.normal_tex);
+      auto& shape = app->ioscene.shapes[app->selected_material];
+      set_shape_emission(app->glscene, app->selected_material, shape.emission,
+          shape.emission_tex);
+      set_shape_color(app->glscene, app->selected_material,
+          (1 - shape.transmission) * shape.color, shape.color_tex);
+      set_shape_specular(app->glscene, app->selected_material,
+          (1 - shape.transmission) * shape.specular, shape.specular_tex);
+      set_shape_metallic(app->glscene, app->selected_material,
+          (1 - shape.transmission) * shape.metallic, shape.metallic_tex);
+      set_shape_roughness(app->glscene, app->selected_material, shape.roughness,
+          shape.roughness_tex);
+      set_shape_opacity(app->glscene, app->selected_material, shape.opacity,
+          shape.opacity_tex);
+      set_shape_normalmap(
+          app->glscene, app->selected_material, shape.normal_tex);
     }
     end_glheader(win);
   }

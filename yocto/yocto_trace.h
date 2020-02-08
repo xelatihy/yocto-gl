@@ -115,26 +115,26 @@ void set_shape_tangents(
 void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame);
 void set_shape_frames(trace_scene& scene, int idx,
     const vector<frame3f>& instances, const frame3f& local_frame);
-void set_material_emission(
+void set_shape_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
-void set_material_color(
+void set_shape_color(
     trace_scene& scene, int idx, const vec3f& color, int color_txt = -1);
-void set_material_specular(
+void set_shape_specular(
     trace_scene& scene, int idx, float specular = 1, int specular_txt = -1);
-void set_material_ior(trace_scene& scene, int idx, float ior);
-void set_material_metallic(
+void set_shape_ior(trace_scene& scene, int idx, float ior);
+void set_shape_metallic(
     trace_scene& scene, int idx, float metallic, int metallic_txt = -1);
-void set_material_transmission(trace_scene& scene, int idx, float transmission,
-    bool thin, float radius, int transmission_txt = -1);
-void set_material_roughness(
+void set_shape_transmission(trace_scene& scene, int idx, float transmission,
+    bool thin, float trdepth, int transmission_txt = -1);
+void set_shape_roughness(
     trace_scene& scene, int idx, float roughness, int roughness_txt = -1);
-void set_material_opacity(
+void set_shape_opacity(
     trace_scene& scene, int idx, float opacity, int opacity_txt = -1);
-void set_material_thin(trace_scene& scene, int idx, bool thin);
-void set_material_scattering(trace_scene& scene, int idx,
-    const vec3f& scattering, float phaseg, int scattering_tex = -1);
-void set_material_normalmap(trace_scene& scene, int idx, int normal_txt);
-void set_material_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
+void set_shape_thin(trace_scene& scene, int idx, bool thin);
+void set_shape_scattering(trace_scene& scene, int idx, const vec3f& scattering,
+    float scanisotropy, int scattering_tex = -1);
+void set_shape_normalmap(trace_scene& scene, int idx, int normal_txt);
+void set_shape_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
 void clear_shapes(trace_scene& scene);
 
 // Add environment
@@ -296,50 +296,15 @@ struct trace_texture {
   image<vec4b> ldr = {};
 };
 
-// Material for surfaces, lines and triangles.
-// For surfaces, uses a microfacet model with thin sheet transmission.
-// The model is based on OBJ, but contains glTF compatibility.
-// For the documentation on the values, please see the OBJ format.
-struct trace_material {
-  // lobes
-  vec3f emission     = {0, 0, 0};
-  vec3f color        = {0, 0, 0};
-  float specular     = 0;
-  float roughness    = 0;
-  float metallic     = 0;
-  float ior          = 1.5;
-  vec3f spectint     = {1, 1, 1};
-  float coat         = 0;
-  float transmission = 0;
-  vec3f scattering   = {0, 0, 0};
-  float phaseg       = 0;
-  float radius       = 0.01;
-  float opacity      = 1;
-  bool  thin         = false;
-
-  // textures
-  int  emission_tex     = -1;
-  int  color_tex        = -1;
-  int  specular_tex     = -1;
-  int  metallic_tex     = -1;
-  int  roughness_tex    = -1;
-  int  transmission_tex = -1;
-  int  spectint_tex     = -1;
-  int  scattering_tex   = -1;
-  int  coat_tex         = -1;
-  int  opacity_tex      = -1;
-  int  normal_tex       = -1;
-  bool gltf_textures    = false;  // glTF packed textures
-};
-
 // Shape data represented as an indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
 // Additionally, we support faceavarying primitives where
 // each verftex data has its own topology.
+// Material for surfaces, lines and triangles.
+// For surfaces, uses a microfacet model with thin sheet transmission.
+// The model is based on OBJ, but contains glTF compatibility.
+// For the documentation on the values, please see the OBJ format.
 struct trace_shape {
-  // material
-  trace_material material = {};
-
   // frames
   vector<frame3f> frames = {};
 
@@ -361,6 +326,36 @@ struct trace_shape {
   vector<vec4f> colors    = {};
   vector<float> radius    = {};
   vector<vec4f> tangents  = {};
+
+  // material
+  vec3f emission     = {0, 0, 0};
+  vec3f color        = {0, 0, 0};
+  float specular     = 0;
+  float roughness    = 0;
+  float metallic     = 0;
+  float ior          = 1.5;
+  vec3f spectint     = {1, 1, 1};
+  float coat         = 0;
+  float transmission = 0;
+  vec3f scattering   = {0, 0, 0};
+  float scanisotropy = 0;
+  float trdepth      = 0.01;
+  float opacity      = 1;
+  bool  thin         = false;
+
+  // textures
+  int  emission_tex     = -1;
+  int  color_tex        = -1;
+  int  specular_tex     = -1;
+  int  metallic_tex     = -1;
+  int  roughness_tex    = -1;
+  int  transmission_tex = -1;
+  int  spectint_tex     = -1;
+  int  scattering_tex   = -1;
+  int  coat_tex         = -1;
+  int  opacity_tex      = -1;
+  int  normal_tex       = -1;
+  bool gltf_textures    = false;  // glTF packed textures
 
   // computed properties
   trace_bvh bvh = {};

@@ -749,9 +749,21 @@ opengl_shape::opengl_shape(opengl_shape&& other) {
   if (this == &other) return;
   std::swap(frame, other.frame);
   std::swap(instances, other.instances);
-  std::swap(material, other.material);
   std::swap(hidden, other.hidden);
   std::swap(highlighted, other.highlighted);
+  std::swap(emission, other.emission);
+  std::swap(color, other.color);
+  std::swap(specular, other.specular);
+  std::swap(metallic, other.metallic);
+  std::swap(roughness, other.roughness);
+  std::swap(opacity, other.opacity);
+  std::swap(emission_map, other.emission_map);
+  std::swap(color_map, other.color_map);
+  std::swap(specular_map, other.specular_map);
+  std::swap(metallic_map, other.metallic_map);
+  std::swap(roughness_map, other.roughness_map);
+  std::swap(normal_map, other.normal_map);
+  std::swap(gltf_textures, other.gltf_textures);
   std::swap(positions_num, other.positions_num);
   std::swap(positions_id, other.positions_id);
   std::swap(normals_num, other.normals_num);
@@ -778,9 +790,21 @@ opengl_shape& opengl_shape::operator=(opengl_shape&& other) {
   if (this == &other) return *this;
   std::swap(frame, other.frame);
   std::swap(instances, other.instances);
-  std::swap(material, other.material);
   std::swap(hidden, other.hidden);
   std::swap(highlighted, other.highlighted);
+  std::swap(emission, other.emission);
+  std::swap(color, other.color);
+  std::swap(specular, other.specular);
+  std::swap(metallic, other.metallic);
+  std::swap(roughness, other.roughness);
+  std::swap(opacity, other.opacity);
+  std::swap(emission_map, other.emission_map);
+  std::swap(color_map, other.color_map);
+  std::swap(specular_map, other.specular_map);
+  std::swap(metallic_map, other.metallic_map);
+  std::swap(roughness_map, other.roughness_map);
+  std::swap(normal_map, other.normal_map);
+  std::swap(gltf_textures, other.gltf_textures);
   std::swap(positions_num, other.positions_num);
   std::swap(positions_id, other.positions_id);
   std::swap(normals_num, other.normals_num);
@@ -1074,49 +1098,48 @@ void set_shape_highlighted(opengl_scene& scene, int idx, bool highlighted) {
   auto& shape       = scene._shapes[idx];
   shape.highlighted = highlighted;
 }
-void set_material_emission(
+void set_shape_emission(
     opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
-  auto& material        = scene._shapes[idx].material;
-  material.emission     = emission;
-  material.emission_map = emission_txt;
+  auto& shape        = scene._shapes[idx];
+  shape.emission     = emission;
+  shape.emission_map = emission_txt;
 }
-void set_material_color(
+void set_shape_color(
     opengl_scene& scene, int idx, const vec3f& color, int color_txt) {
-  auto& material     = scene._shapes[idx].material;
-  material.color     = color;
-  material.color_map = color_txt;
+  auto& shape     = scene._shapes[idx];
+  shape.color     = color;
+  shape.color_map = color_txt;
 }
-void set_material_specular(
+void set_shape_specular(
     opengl_scene& scene, int idx, float specular, int specular_txt) {
-  auto& material        = scene._shapes[idx].material;
-  material.specular     = specular;
-  material.specular_map = specular_txt;
+  auto& shape        = scene._shapes[idx];
+  shape.specular     = specular;
+  shape.specular_map = specular_txt;
 }
-void set_material_roughness(
+void set_shape_roughness(
     opengl_scene& scene, int idx, float roughness, int roughness_txt) {
-  auto& material         = scene._shapes[idx].material;
-  material.roughness     = roughness;
-  material.roughness_map = roughness_txt;
+  auto& shape         = scene._shapes[idx];
+  shape.roughness     = roughness;
+  shape.roughness_map = roughness_txt;
 }
-void set_material_opacity(
+void set_shape_opacity(
     opengl_scene& scene, int idx, float opacity, int opacity_txt) {
-  auto& material   = scene._shapes[idx].material;
-  material.opacity = opacity;
+  auto& shape   = scene._shapes[idx];
+  shape.opacity = opacity;
 }
-void set_material_metallic(
+void set_shape_metallic(
     opengl_scene& scene, int idx, float metallic, int metallic_txt) {
-  auto& material        = scene._shapes[idx].material;
-  material.metallic     = metallic;
-  material.metallic_map = metallic_txt;
+  auto& shape        = scene._shapes[idx];
+  shape.metallic     = metallic;
+  shape.metallic_map = metallic_txt;
 }
-void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt) {
-  auto& material      = scene._shapes[idx].material;
-  material.normal_map = normal_txt;
+void set_shape_normalmap(opengl_scene& scene, int idx, int normal_txt) {
+  auto& shape      = scene._shapes[idx];
+  shape.normal_map = normal_txt;
 }
-void set_material_gltftextures(
-    opengl_scene& scene, int idx, bool gltf_textures) {
-  auto& material         = scene._shapes[idx].material;
-  material.gltf_textures = gltf_textures;
+void set_shape_gltftextures(opengl_scene& scene, int idx, bool gltf_textures) {
+  auto& shape         = scene._shapes[idx];
+  shape.gltf_textures = gltf_textures;
 }
 void clear_glshapes(opengl_scene& scene) { scene._shapes.clear(); }
 
@@ -1140,8 +1163,6 @@ void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
     const draw_glscene_params& params) {
   if (shape.hidden) return;
 
-  auto& material = shape.material;
-
   auto instance_xform     = mat4f(shape.frame);
   auto instance_inv_xform = transpose(
       mat4f(inverse(shape.frame, params.non_rigid_frames)));
@@ -1161,22 +1182,22 @@ void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
   }
 
   auto mtype = 2;
-  if (material.gltf_textures) mtype = 3;
+  if (shape.gltf_textures) mtype = 3;
   glUniform1i(glGetUniformLocation(glscene.program_id, "mat_type"), mtype);
   glUniform3f(glGetUniformLocation(glscene.program_id, "mat_ke"),
-      material.emission.x, material.emission.y, material.emission.z);
-  glUniform3f(glGetUniformLocation(glscene.program_id, "mat_kd"),
-      material.color.x, material.color.y, material.color.z);
+      shape.emission.x, shape.emission.y, shape.emission.z);
+  glUniform3f(glGetUniformLocation(glscene.program_id, "mat_kd"), shape.color.x,
+      shape.color.y, shape.color.z);
   glUniform3f(glGetUniformLocation(glscene.program_id, "mat_ks"),
-      material.metallic, material.metallic, material.metallic);
+      shape.metallic, shape.metallic, shape.metallic);
   glUniform1f(
-      glGetUniformLocation(glscene.program_id, "mat_rs"), material.roughness);
+      glGetUniformLocation(glscene.program_id, "mat_rs"), shape.roughness);
   glUniform1f(
-      glGetUniformLocation(glscene.program_id, "mat_op"), material.opacity);
+      glGetUniformLocation(glscene.program_id, "mat_op"), shape.opacity);
   glUniform1i(glGetUniformLocation(glscene.program_id, "mat_double_sided"),
       (int)params.double_sided);
-  if (material.emission_map >= 0) {
-    auto& emission_map = glscene._textures.at(material.emission_map);
+  if (shape.emission_map >= 0) {
+    auto& emission_map = glscene._textures.at(shape.emission_map);
     glActiveTexture(GL_TEXTURE0 + 0);
     glBindTexture(GL_TEXTURE_2D, emission_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt"), 0);
@@ -1184,8 +1205,8 @@ void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
   } else {
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ke_txt_on"), 0);
   }
-  if (material.color_map >= 0) {
-    auto& color_map = glscene._textures.at(material.color_map);
+  if (shape.color_map >= 0) {
+    auto& color_map = glscene._textures.at(shape.color_map);
     glActiveTexture(GL_TEXTURE0 + 1);
     glBindTexture(GL_TEXTURE_2D, color_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt"), 1);
@@ -1193,8 +1214,8 @@ void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
   } else {
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_kd_txt_on"), 0);
   }
-  if (material.metallic_map >= 0) {
-    auto& specular_map = glscene._textures.at(material.specular_map);
+  if (shape.metallic_map >= 0) {
+    auto& specular_map = glscene._textures.at(shape.specular_map);
     glActiveTexture(GL_TEXTURE0 + 2);
     glBindTexture(GL_TEXTURE_2D, specular_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt"), 2);
@@ -1202,8 +1223,8 @@ void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
   } else {
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_ks_txt_on"), 0);
   }
-  if (material.roughness_map >= 0) {
-    auto& roughness_map = glscene._textures.at(material.roughness_map);
+  if (shape.roughness_map >= 0) {
+    auto& roughness_map = glscene._textures.at(shape.roughness_map);
     glActiveTexture(GL_TEXTURE0 + 3);
     glBindTexture(GL_TEXTURE_2D, roughness_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt"), 3);
@@ -1211,8 +1232,8 @@ void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
   } else {
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_rs_txt_on"), 0);
   }
-  if (material.normal_map >= 0) {
-    auto& normal_map = glscene._textures.at(material.normal_map);
+  if (shape.normal_map >= 0) {
+    auto& normal_map = glscene._textures.at(shape.normal_map);
     glActiveTexture(GL_TEXTURE0 + 4);
     glBindTexture(GL_TEXTURE_2D, normal_map.texture_id);
     glUniform1i(glGetUniformLocation(glscene.program_id, "mat_norm_txt"), 4);
@@ -1304,7 +1325,7 @@ void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
         check_glerror();
         set_gluniform(glscene.program, "mtype"), 0);
         glUniform3f(glGetUniformLocation(glscene.program, "ke"), 0, 0, 0);
-        set_gluniform(glscene.program, "op"), material.op);
+        set_gluniform(glscene.program, "op"), shape.op);
         set_gluniform(glscene.program, "shp_normal_offset"), 0.01f);
         check_glerror();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);

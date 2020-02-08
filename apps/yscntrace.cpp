@@ -75,24 +75,19 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_shape_radius(scene, id, ioshape.radius);
     set_shape_tangents(scene, id, ioshape.tangents);
     set_shape_frames(scene, id, ioshape.instances, ioshape.frame);
-    auto& iomaterial = ioshape.material;
-    set_material_emission(
-        scene, id, iomaterial.emission, iomaterial.emission_tex);
-    set_material_color(scene, id, iomaterial.color, iomaterial.color_tex);
-    set_material_specular(
-        scene, id, iomaterial.specular, iomaterial.specular_tex);
-    set_material_ior(scene, id, iomaterial.ior);
-    set_material_metallic(
-        scene, id, iomaterial.metallic, iomaterial.metallic_tex);
-    set_material_transmission(scene, id, iomaterial.transmission,
-        iomaterial.thin, iomaterial.radius, iomaterial.transmission_tex);
-    set_material_roughness(
-        scene, id, iomaterial.roughness, iomaterial.roughness_tex);
-    set_material_opacity(scene, id, iomaterial.opacity, iomaterial.opacity_tex);
-    set_material_thin(scene, id, iomaterial.thin);
-    set_material_normalmap(scene, id, iomaterial.normal_tex);
-    set_material_scattering(scene, id, iomaterial.scattering, iomaterial.phaseg,
-        iomaterial.scattering_tex);
+    set_shape_emission(scene, id, ioshape.emission, ioshape.emission_tex);
+    set_shape_color(scene, id, ioshape.color, ioshape.color_tex);
+    set_shape_specular(scene, id, ioshape.specular, ioshape.specular_tex);
+    set_shape_ior(scene, id, ioshape.ior);
+    set_shape_metallic(scene, id, ioshape.metallic, ioshape.metallic_tex);
+    set_shape_transmission(scene, id, ioshape.transmission, ioshape.thin,
+        ioshape.trdepth, ioshape.transmission_tex);
+    set_shape_roughness(scene, id, ioshape.roughness, ioshape.roughness_tex);
+    set_shape_opacity(scene, id, ioshape.opacity, ioshape.opacity_tex);
+    set_shape_thin(scene, id, ioshape.thin);
+    set_shape_normalmap(scene, id, ioshape.normal_tex);
+    set_shape_scattering(scene, id, ioshape.scattering, ioshape.scanisotropy,
+        ioshape.scattering_tex);
     ioshape = {};
   }
 

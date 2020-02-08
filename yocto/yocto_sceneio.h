@@ -85,12 +85,35 @@ struct sceneio_texture {
   image<vec4b> ldr  = {};
 };
 
+// Shape data represented as indexed meshes of elements.
+// May contain either points, lines, triangles and quads.
+// Additionally, we support face-varying primitives where
+// each vertex data has its own topology.
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on OBJ, but contains glTF compatibility.
 // For the documentation on the values, please see the OBJ format.
-struct sceneio_material {
-  // lobes
+struct sceneio_shape {
+  // shape data
+  string          name      = "";
+  frame3f         frame     = identity3x4f;
+  vector<frame3f> instances = {};
+
+  // primitives
+  vector<int>   points    = {};
+  vector<vec2i> lines     = {};
+  vector<vec3i> triangles = {};
+  vector<vec4i> quads     = {};
+
+  // vertex data
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec4f> colors    = {};
+  vector<float> radius    = {};
+  vector<vec4f> tangents  = {};
+
+  // material
   vec3f emission     = {0, 0, 0};
   vec3f color        = {0, 0, 0};
   float specular     = 0;
@@ -101,8 +124,8 @@ struct sceneio_material {
   float coat         = 0;
   float transmission = 0;
   vec3f scattering   = {0, 0, 0};
-  float phaseg       = 0;
-  float radius       = 0.01;
+  float scanisotropy = 0;
+  float trdepth      = 0.01;
   float opacity      = 1;
   bool  thin         = true;
 
@@ -119,34 +142,6 @@ struct sceneio_material {
   int  opacity_tex      = -1;
   int  normal_tex       = -1;
   bool gltf_textures    = false;  // glTF packed textures
-};
-
-// Shape data represented as indexed meshes of elements.
-// May contain either points, lines, triangles and quads.
-// Additionally, we support face-varying primitives where
-// each vertex data has its own topology.
-struct sceneio_shape {
-  // shape data
-  string           name      = "";
-  frame3f          frame     = identity3x4f;
-  vector<frame3f>  instances = {};
-  sceneio_material material  = {};
-
-  // instances
-
-  // primitives
-  vector<int>   points    = {};
-  vector<vec2i> lines     = {};
-  vector<vec3i> triangles = {};
-  vector<vec4i> quads     = {};
-
-  // vertex data
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec4f> colors    = {};
-  vector<float> radius    = {};
-  vector<vec4f> tangents  = {};
 };
 
 // Subdiv data represented as indexed meshes of elements.
