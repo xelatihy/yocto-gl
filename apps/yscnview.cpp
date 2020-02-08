@@ -155,8 +155,11 @@ void update_lights(opengl_scene& glscene, const sceneio_model& scene) {
     } else {
       area += shape.positions.size();
     }
-    auto ke = material.emission * area;
-    add_light(glscene, transform_point(shape.frame, pos), ke, false);
+    auto ke  = material.emission * area;
+    auto lid = add_light(glscene);
+    set_light_position(glscene, lid, transform_point(shape.frame, pos));
+    set_light_emission(glscene, lid, ke);
+    set_light_directional(glscene, lid, false);
   }
 }
 
@@ -166,23 +169,43 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
 
   // camera
   for (auto& camera : scene.cameras) {
-    add_camera(glscene, camera.frame, camera.lens, camera.aspect, camera.film,
-        0.001, 10000);
+    auto id = add_camera(glscene);
+    set_camera_frame(glscene, id, camera.frame);
+    set_camera_lens(glscene, id, camera.lens);
+    set_camera_aspect(glscene, id, camera.aspect);
+    set_camera_film(glscene, id, camera.film);
+    set_camera_near(glscene, id, 0.001);
+    set_camera_far(glscene, id, 10000);
   }
 
   // textures
   for (auto& texture : scene.textures) {
+    auto id = add_texture(glscene);
     if (!texture.hdr.empty()) {
-      add_texture(glscene, texture.hdr);
+      set_texture(glscene, id, texture.hdr);
     } else if (!texture.ldr.empty()) {
-      add_texture(glscene, texture.ldr);
+      set_texture(glscene, id, texture.ldr);
     }
   }
 
-  // materials
+  for (auto& subdiv : scene.subdivs) {
+    tesselate_subdiv(scene, subdiv);
+  }
+
+  // shapes
   for (auto& shape : scene.shapes) {
+    auto id = add_shape(glscene);
+    set_shape_positions(glscene, id, shape.positions);
+    set_shape_normals(glscene, id, shape.normals);
+    set_shape_texcoords(glscene, id, shape.texcoords);
+    set_shape_colors(glscene, id, shape.colors);
+    set_shape_points(glscene, id, shape.points);
+    set_shape_lines(glscene, id, shape.lines);
+    set_shape_triangles(glscene, id, shape.triangles);
+    set_shape_quads(glscene, id, shape.quads);
+    set_shape_frame(glscene, id, shape.frame);
+    set_shape_instances(glscene, id, shape.instances);
     auto& material = shape.material;
-    auto  id       = add_material(glscene);
     set_material_emission(
         glscene, id, material.emission, material.emission_tex);
     set_material_diffuse(glscene, id,
@@ -196,34 +219,6 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
         glscene, id, material.roughness, material.roughness_tex);
     set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
     set_material_normalmap(glscene, id, material.normal_tex);
-  }
-
-  for (auto& subdiv : scene.subdivs) {
-    tesselate_subdiv(scene, subdiv);
-  }
-
-  // shapes
-  for (auto& shape : scene.shapes) {
-    auto id = add_shape(glscene);
-    if (!shape.points.empty()) {
-      set_shape(glscene, id, shape.points, shape.positions, shape.normals,
-          shape.texcoords, shape.colors);
-    } else if (!shape.lines.empty()) {
-      set_shape(glscene, id, shape.lines, shape.positions, shape.normals,
-          shape.texcoords, shape.colors);
-    } else if (!shape.triangles.empty()) {
-      set_shape(glscene, id, shape.triangles, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.tangents);
-    } else if (!shape.quads.empty()) {
-      set_shape(glscene, id, shape.quads, shape.positions, shape.normals,
-          shape.texcoords, shape.colors, shape.tangents);
-    }
-    if (shape.instances.empty()) {
-      add_instance(glscene, shape.frame, id, id);
-    } else {
-      for (auto& frame : shape.instances)
-        add_instance(glscene, frame * shape.frame, id, id);
-    }
   }
 }
 
@@ -459,8 +454,12 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         win, "camera##2", app->selected_camera, app->ioscene.cameras);
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
       auto& camera = app->ioscene.cameras[app->selected_camera];
-      set_camera(app->glscene, app->selected_camera, camera.frame, camera.lens,
-          camera.aspect, camera.film, 0.001, 10000);
+      set_camera_frame(app->glscene, app->selected_camera, camera.frame);
+      set_camera_lens(app->glscene, app->selected_camera, camera.lens);
+      set_camera_aspect(app->glscene, app->selected_camera, camera.aspect);
+      set_camera_film(app->glscene, app->selected_camera, camera.film);
+      set_camera_near(app->glscene, app->selected_camera, 0.001);
+      set_camera_far(app->glscene, app->selected_camera, 10000);
     }
     end_glheader(win);
   }
@@ -477,19 +476,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (!draw_glwidgets_shape(win, app, app->selected_shape)) {
       auto& shape = app->ioscene.shapes[app->selected_shape];
       auto  idx   = app->selected_shape;
-      if (!shape.points.empty()) {
-        set_shape(app->glscene, idx, shape.points, shape.positions,
-            shape.normals, shape.texcoords, shape.colors);
-      } else if (!shape.lines.empty()) {
-        set_shape(app->glscene, idx, shape.lines, shape.positions,
-            shape.normals, shape.texcoords, shape.colors);
-      } else if (!shape.triangles.empty()) {
-        set_shape(app->glscene, idx, shape.triangles, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.tangents);
-      } else if (!shape.quads.empty()) {
-        set_shape(app->glscene, idx, shape.quads, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.tangents);
-      }
+      set_shape_positions(app->glscene, idx, shape.positions);
+      set_shape_normals(app->glscene, idx, shape.normals);
+      set_shape_texcoords(app->glscene, idx, shape.texcoords);
+      set_shape_colors(app->glscene, idx, shape.colors);
+      set_shape_points(app->glscene, idx, shape.points);
+      set_shape_lines(app->glscene, idx, shape.lines);
+      set_shape_triangles(app->glscene, idx, shape.triangles);
+      set_shape_quads(app->glscene, idx, shape.quads);
+      set_shape_frame(app->glscene, idx, shape.frame);
+      set_shape_instances(app->glscene, idx, shape.instances);
     }
     end_glheader(win);
   }
@@ -538,19 +534,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       tesselate_subdiv(app->ioscene, subdiv);
       auto& shape = app->ioscene.shapes[subdiv.shape];
       auto  idx   = app->selected_subdiv;
-      if (!shape.points.empty()) {
-        set_shape(app->glscene, idx, shape.points, shape.positions,
-            shape.normals, shape.texcoords, shape.colors);
-      } else if (!shape.lines.empty()) {
-        set_shape(app->glscene, idx, shape.lines, shape.positions,
-            shape.normals, shape.texcoords, shape.colors);
-      } else if (!shape.triangles.empty()) {
-        set_shape(app->glscene, idx, shape.triangles, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.tangents);
-      } else if (!shape.quads.empty()) {
-        set_shape(app->glscene, idx, shape.quads, shape.positions,
-            shape.normals, shape.texcoords, shape.colors, shape.tangents);
-      }
+      set_shape_positions(app->glscene, idx, shape.positions);
+      set_shape_normals(app->glscene, idx, shape.normals);
+      set_shape_texcoords(app->glscene, idx, shape.texcoords);
+      set_shape_colors(app->glscene, idx, shape.colors);
+      set_shape_points(app->glscene, idx, shape.points);
+      set_shape_lines(app->glscene, idx, shape.lines);
+      set_shape_triangles(app->glscene, idx, shape.triangles);
+      set_shape_quads(app->glscene, idx, shape.quads);
+      set_shape_frame(app->glscene, idx, shape.frame);
+      set_shape_instances(app->glscene, idx, shape.instances);
     }
     end_glheader(win);
   }
@@ -660,8 +653,7 @@ void run_app(int argc, const char* argv[]) {
           if (input.mouse_left && input.modifier_shift)
             pan = (input.mouse_pos - input.mouse_last) / 100.0f;
           update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-          set_camera(app->glscene, app->drawgl_prms.camera, camera.frame,
-              camera.lens, camera.aspect, camera.film, 0.001, 10000);
+          set_camera_frame(app->glscene, app->drawgl_prms.camera, camera.frame);
         }
 
         // animation

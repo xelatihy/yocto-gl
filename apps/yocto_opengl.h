@@ -107,41 +107,10 @@ namespace yocto {
 struct opengl_camera {
   frame3f frame  = identity3x4f;
   float   lens   = 0.050;
-  float   asepct = 1.000;
+  float   aspect = 1.000;
   float   film   = 0.036;
   float   near   = 0.001;
   float   far    = 10000;
-};
-
-// Opengl shape
-struct opengl_shape {
-  int  positions_num = 0;
-  uint positions_id  = 0;
-  int  normals_num   = 0;
-  uint normals_id    = 0;
-  int  texcoords_num = 0;
-  uint texcoords_id  = 0;
-  int  colors_num    = 0;
-  uint colors_id     = 0;
-  int  tangents_num  = 0;
-  uint tangents_id   = 0;
-  int  points_num    = 0;
-  uint points_id     = 0;
-  int  lines_num     = 0;
-  uint lines_id      = 0;
-  int  triangles_num = 0;
-  uint triangles_id  = 0;
-  int  quads_num     = 0;
-  uint quads_id      = 0;
-  int  edges_num     = 0;
-  uint edges_id      = 0;
-
-  opengl_shape() {}
-  opengl_shape(const opengl_shape&) = delete;
-  opengl_shape& operator=(const opengl_shape&) = delete;
-  ~opengl_shape();
-  opengl_shape(opengl_shape&&);
-  opengl_shape& operator=(opengl_shape&&);
 };
 
 // OpenGL texture
@@ -176,12 +145,43 @@ struct opengl_material {
   bool  gltf_textures = false;
 };
 
-// Opengl instance group
-struct opengl_instance {
-  frame3f frame       = identity3x4f;
-  int     shape       = 0;
-  int     material    = 0;
-  bool    highlighted = false;
+// Opengl shape
+struct opengl_shape {
+  // shape properties
+  frame3f         frame       = identity3x4f;
+  vector<frame3f> instances   = {};
+  opengl_material material    = {};
+  bool            hidden      = false;
+  bool            highlighted = false;
+
+  // vertex buffers
+  int  positions_num = 0;
+  uint positions_id  = 0;
+  int  normals_num   = 0;
+  uint normals_id    = 0;
+  int  texcoords_num = 0;
+  uint texcoords_id  = 0;
+  int  colors_num    = 0;
+  uint colors_id     = 0;
+  int  tangents_num  = 0;
+  uint tangents_id   = 0;
+  int  points_num    = 0;
+  uint points_id     = 0;
+  int  lines_num     = 0;
+  uint lines_id      = 0;
+  int  triangles_num = 0;
+  uint triangles_id  = 0;
+  int  quads_num     = 0;
+  uint quads_id      = 0;
+  int  edges_num     = 0;
+  uint edges_id      = 0;
+
+  opengl_shape() {}
+  opengl_shape(const opengl_shape&) = delete;
+  opengl_shape& operator=(const opengl_shape&) = delete;
+  ~opengl_shape();
+  opengl_shape(opengl_shape&&);
+  opengl_shape& operator=(opengl_shape&&);
 };
 
 // Opengl light
@@ -198,12 +198,10 @@ struct opengl_scene {
   opengl_scene& operator=(const opengl_scene&) = delete;
   ~opengl_scene();
 
-  vector<opengl_camera>   _cameras   = {};
-  vector<opengl_instance> _instances = {};
-  vector<opengl_shape>    _shapes    = {};
-  vector<opengl_material> _materials = {};
-  vector<opengl_texture>  _textures  = {};
-  vector<opengl_light>    _lights    = {};
+  vector<opengl_camera>  _cameras  = {};
+  vector<opengl_shape>   _shapes   = {};
+  vector<opengl_texture> _textures = {};
+  vector<opengl_light>   _lights   = {};
 
   // OpenGL state
   uint program_id  = 0;
@@ -235,25 +233,43 @@ void init_glscene(opengl_scene& scene);
 bool is_initialized(opengl_scene& scene);
 
 // add camera
-int  add_camera(opengl_scene& scene, const frame3f& frame, float lens,
-     float asepct, float film, float near, float far);
-void set_camera(opengl_scene& scene, int idx, const frame3f& frame, float lens,
-    float asepct, float film, float near, float far);
+int  add_camera(opengl_scene& scene);
+void set_camera_frame(opengl_scene& scene, int idx, const frame3f& frame);
+void set_camera_lens(opengl_scene& scene, int idx, float lens);
+void set_camera_aspect(opengl_scene& scene, int idx, float aspect);
+void set_camera_film(opengl_scene& scene, int idx, float film);
+void set_camera_near(opengl_scene& scene, int idx, float near);
+void set_camera_far(opengl_scene& scene, int idx, float far);
 void clear_cameras(opengl_scene& scene);
 
 // add texture
-int add_texture(
-    opengl_scene& scene, const image<vec4b>& img, bool as_srgb = true);
-int add_texture(
-    opengl_scene& scene, const image<vec4f>& img, bool as_float = false);
+int  add_texture(opengl_scene& scene);
 void set_texture(
     opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb = true);
 void set_texture(opengl_scene& scene, int idx, const image<vec4f>& img,
     bool as_float = false);
 void clear_textures(opengl_scene& scene);
 
-// add material
-int  add_material(opengl_scene& scene);
+// add shape
+int  add_shape(opengl_scene& scene);
+void set_shape_points(opengl_scene& scene, int idx, const vector<int>& points);
+void set_shape_lines(opengl_scene& scene, int idx, const vector<vec2i>& lines);
+void set_shape_triangles(
+    opengl_scene& scene, int idx, const vector<vec3i>& triangles);
+void set_shape_quads(opengl_scene& scene, int idx, const vector<vec4i>& quads);
+void set_shape_positions(
+    opengl_scene& scene, int idx, const vector<vec3f>& positions);
+void set_shape_normals(
+    opengl_scene& scene, int idx, const vector<vec3f>& normals);
+void set_shape_texcoords(
+    opengl_scene& scene, int idx, const vector<vec2f>& texcoords);
+void set_shape_colors(
+    opengl_scene& scene, int idx, const vector<vec4f>& colors);
+void set_shape_tangents(
+    opengl_scene& scene, int idx, const vector<vec4f>& tangents);
+void set_shape_frame(opengl_scene& scene, int idx, const frame3f& frame);
+void set_shape_instances(
+    opengl_scene& scene, int idx, const vector<frame3f>& instances);
 void set_material_emission(
     opengl_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_material_diffuse(
@@ -269,52 +285,15 @@ void set_material_metallic(
 void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt);
 void set_material_gltftextures(
     opengl_scene& scene, int idx, bool gltf_textures);
-void clear_materias(opengl_scene& scene);
-
-// add shape
-int  add_shape(opengl_scene& scene);
-int  add_shape(opengl_scene& scene, const vector<int>& points,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
-int  add_shape(opengl_scene& scene, const vector<vec2i>& lines,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
-int  add_shape(opengl_scene& scene, const vector<vec3i>& triangles,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
-     const vector<vec4f>& tangents = {});
-int  add_shape(opengl_scene& scene, const vector<vec4i>& quads,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
-     const vector<vec4f>& tangents = {});
-void set_shape(opengl_scene& scene, int idx, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
-void set_shape(opengl_scene& scene, int idx, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
-void set_shape(opengl_scene& scene, int idx, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
-    const vector<vec4f>& tangents = {});
-void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
-    const vector<vec4f>& tangents = {});
-void set_shape_colors(
-    opengl_scene& scene, int idx, const vector<vec4f>& colors);
+void set_shape_hidden(opengl_scene& scene, int idx, bool hidden);
+void set_shape_highlighted(opengl_scene& scene, int idx, bool highlighted);
 void clear_shapes(opengl_scene& scene);
 
-// add instance
-int add_instance(
-    opengl_scene& scene, const frame3f& frame, int shape, int material);
-void set_instance(opengl_scene& scene, int idx, const frame3f& frame, int shape,
-    int material);
-void clear_instances(opengl_scene& scene);
-
 // add light
-int add_light(opengl_scene& scene, const vec3f& position, const vec3f& emission,
-    bool directional);
+int  add_light(opengl_scene& scene);
+void set_light_position(opengl_scene& scene, int idx, const vec3f& position);
+void set_light_emission(opengl_scene& scene, int idx, const vec3f& emission);
+void set_light_directional(opengl_scene& scene, int idx, bool directional);
 void set_light(opengl_scene& scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional);
 void clear_lights(opengl_scene& scene);

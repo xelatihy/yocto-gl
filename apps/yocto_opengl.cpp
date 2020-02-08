@@ -747,6 +747,11 @@ opengl_shape::~opengl_shape() {
 
 opengl_shape::opengl_shape(opengl_shape&& other) {
   if (this == &other) return;
+  std::swap(frame, other.frame);
+  std::swap(instances, other.instances);
+  std::swap(material, other.material);
+  std::swap(hidden, other.hidden);
+  std::swap(highlighted, other.highlighted);
   std::swap(positions_num, other.positions_num);
   std::swap(positions_id, other.positions_id);
   std::swap(normals_num, other.normals_num);
@@ -771,6 +776,11 @@ opengl_shape::opengl_shape(opengl_shape&& other) {
 
 opengl_shape& opengl_shape::operator=(opengl_shape&& other) {
   if (this == &other) return *this;
+  std::swap(frame, other.frame);
+  std::swap(instances, other.instances);
+  std::swap(material, other.material);
+  std::swap(hidden, other.hidden);
+  std::swap(highlighted, other.highlighted);
   std::swap(positions_num, other.positions_num);
   std::swap(positions_id, other.positions_id);
   std::swap(normals_num, other.normals_num);
@@ -814,81 +824,42 @@ bool is_initialized(const opengl_scene& glscene) {
 }
 
 // add camera
-int add_camera(opengl_scene& scene, const frame3f& frame, float lens,
-    float asepct, float film, float near, float far) {
-  auto& camera  = scene._cameras.emplace_back();
-  camera.frame  = frame;
-  camera.lens   = lens;
-  camera.asepct = asepct;
-  camera.film   = film;
-  camera.near   = near;
-  camera.far    = far;
+int add_camera(opengl_scene& scene) {
+  scene._cameras.emplace_back();
   return (int)scene._cameras.size() - 1;
 }
-void set_camera(opengl_scene& scene, int idx, const frame3f& frame, float lens,
-    float asepct, float film, float near, float far) {
+void set_camera_frame(opengl_scene& scene, int idx, const frame3f& frame) {
+  auto& camera = scene._cameras[idx];
+  camera.frame = frame;
+}
+void set_camera_lens(opengl_scene& scene, int idx, float lens) {
+  auto& camera = scene._cameras[idx];
+  camera.lens  = lens;
+}
+void set_camera_aspect(opengl_scene& scene, int idx, float aspect) {
   auto& camera  = scene._cameras[idx];
-  camera.frame  = frame;
-  camera.lens   = lens;
-  camera.asepct = asepct;
-  camera.film   = film;
-  camera.near   = near;
-  camera.far    = far;
+  camera.aspect = aspect;
+}
+void set_camera_film(opengl_scene& scene, int idx, float film) {
+  auto& camera = scene._cameras[idx];
+  camera.film  = film;
+}
+void set_camera_near(opengl_scene& scene, int idx, float near) {
+  auto& camera = scene._cameras[idx];
+  camera.near  = near;
+}
+void set_camera_far(opengl_scene& scene, int idx, float far) {
+  auto& camera = scene._cameras[idx];
+  camera.far   = far;
 }
 void clear_cameras(opengl_scene& scene) { scene._cameras.clear(); }
 
-// add material
-int add_material(opengl_scene& scene) {
-  scene._materials.emplace_back();
-  return (int)scene._materials.size() - 1;
-}
-void set_material_emission(
-    opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
-  auto& material        = scene._materials[idx];
-  material.emission     = emission;
-  material.emission_map = emission_txt;
-}
-void set_material_diffuse(
-    opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
-  auto& material       = scene._materials[idx];
-  material.diffuse     = diffuse;
-  material.diffuse_map = diffuse_txt;
-}
-void set_material_specular(
-    opengl_scene& scene, int idx, const vec3f& specular, int specular_txt) {
-  auto& material        = scene._materials[idx];
-  material.specular     = specular;
-  material.specular_map = specular_txt;
-}
-void set_material_roughness(
-    opengl_scene& scene, int idx, float roughness, int roughness_txt) {
-  auto& material         = scene._materials[idx];
-  material.roughness     = roughness;
-  material.roughness_map = roughness_txt;
-}
-void set_material_opacity(
-    opengl_scene& scene, int idx, float opacity, int opacity_txt) {
-  auto& material   = scene._materials[idx];
-  material.opacity = opacity;
-}
-void set_material_metallic(
-    opengl_scene& scene, int idx, float metallic, int metallic_txt) {
-  auto& material        = scene._materials[idx];
-  material.metallic     = metallic;
-  material.metallic_map = metallic_txt;
-}
-void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt) {
-  auto& material      = scene._materials[idx];
-  material.normal_map = normal_txt;
-}
-void set_material_gltftextures(
-    opengl_scene& scene, int idx, bool gltf_textures) {
-  auto& material         = scene._materials[idx];
-  material.gltf_textures = gltf_textures;
-}
-void clear_glmaterials(opengl_scene& scene) { scene._materials.clear(); }
-
 // add texture
+int add_texture(opengl_scene& scene) {
+  scene._textures.emplace_back();
+  return (int)scene._textures.size() - 1;
+}
+
 int add_texture(opengl_scene& scene, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
   auto& texture = scene._textures.emplace_back();
@@ -927,6 +898,12 @@ void set_texture(
     opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
   auto& texture = scene._textures[idx];
+  if (img.empty()) {
+    glDeleteTextures(1, &texture.texture_id);
+    texture.texture_id = 0;
+    return;
+  }
+  if (!texture.texture_id) glGenTextures(1, &texture.texture_id);
   if (texture.size != img.size() || texture.is_srgb != as_srgb ||
       texture.is_float == true) {
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
@@ -951,6 +928,12 @@ void set_texture(
     opengl_scene& scene, int idx, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
   auto& texture = scene._textures[idx];
+  if (img.empty()) {
+    glDeleteTextures(1, &texture.texture_id);
+    texture.texture_id = 0;
+    return;
+  }
+  if (!texture.texture_id) glGenTextures(1, &texture.texture_id);
   if (texture.size != img.size() || texture.is_float != as_float ||
       texture.is_srgb == true) {
     glGenTextures(1, &texture.texture_id);
@@ -982,40 +965,6 @@ void clear_textures(opengl_scene& scene) {
 // add shape
 int add_shape(opengl_scene& scene) {
   scene._shapes.emplace_back();
-  return (int)scene._shapes.size() - 1;
-}
-int add_shape(opengl_scene& scene, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
-  scene._shapes.emplace_back();
-  set_shape(scene, (int)scene._shapes.size() - 1, points, positions, normals,
-      texcoords, colors);
-  return (int)scene._shapes.size() - 1;
-}
-int add_shape(opengl_scene& scene, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
-  scene._shapes.emplace_back();
-  set_shape(scene, (int)scene._shapes.size() - 1, lines, positions, normals,
-      texcoords, colors);
-  return (int)scene._shapes.size() - 1;
-}
-int add_shape(opengl_scene& scene, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  scene._shapes.emplace_back();
-  set_shape(scene, (int)scene._shapes.size() - 1, triangles, positions, normals,
-      texcoords, colors, tangents);
-  return (int)scene._shapes.size() - 1;
-}
-int add_shape(opengl_scene& scene, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  scene._shapes.emplace_back();
-  set_shape(scene, (int)scene._shapes.size() - 1, quads, positions, normals,
-      texcoords, colors, tangents);
   return (int)scene._shapes.size() - 1;
 }
 
@@ -1058,77 +1007,50 @@ static void set_glshape_buffer(uint& array_id, int& array_num, bool element,
   }
 }
 
-void set_shape(opengl_scene& scene, int idx, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
+void set_shape_points(opengl_scene& scene, int idx, const vector<int>& points) {
   auto& shape = scene._shapes[idx];
-  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
-      positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
-      3, (const float*)normals.data());
-  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
-      texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
-      (const float*)colors.data());
   set_glshape_buffer(shape.points_id, shape.points_num, true, points.size(), 1,
       (const int*)points.data());
 }
-void set_shape(opengl_scene& scene, int idx, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors) {
+void set_shape_lines(opengl_scene& scene, int idx, const vector<vec2i>& lines) {
   auto& shape = scene._shapes[idx];
-  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
-      positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
-      3, (const float*)normals.data());
-  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
-      texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
-      (const float*)colors.data());
   set_glshape_buffer(shape.lines_id, shape.lines_num, true, lines.size(), 2,
       (const int*)lines.data());
 }
-void set_shape(opengl_scene& scene, int idx, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
+void set_shape_triangles(
+    opengl_scene& scene, int idx, const vector<vec3i>& triangles) {
   auto& shape = scene._shapes[idx];
-  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
-      positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
-      3, (const float*)normals.data());
-  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
-      texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
-      (const float*)colors.data());
-  set_glshape_buffer(shape.tangents_id, shape.tangents_num, false,
-      tangents.size(), 4, (const float*)tangents.data());
   set_glshape_buffer(shape.triangles_id, shape.triangles_num, true,
       triangles.size(), 3, (const int*)triangles.data());
 }
-void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  auto& shape = scene._shapes[idx];
-  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
-      positions.size(), 3, (const float*)positions.data());
-  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
-      3, (const float*)normals.data());
-  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
-      texcoords.size(), 2, (const float*)texcoords.data());
-  set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
-      (const float*)colors.data());
-  set_glshape_buffer(shape.tangents_id, shape.tangents_num, false,
-      tangents.size(), 4, (const float*)tangents.data());
-  auto triangles = vector<vec3i>{};
+void set_shape_quads(opengl_scene& scene, int idx, const vector<vec4i>& quads) {
+  auto& shape     = scene._shapes[idx];
+  auto  triangles = vector<vec3i>{};
   triangles.reserve(quads.size() * 2);
   for (auto& q : quads) {
     triangles.push_back({q.x, q.y, q.w});
     if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
   }
-  set_glshape_buffer(shape.triangles_id, shape.triangles_num, true,
-      triangles.size(), 3, (const int*)triangles.data());
+  set_glshape_buffer(shape.quads_id, shape.quads_num, true, triangles.size(), 3,
+      (const int*)triangles.data());
+}
+void set_shape_positions(
+    opengl_scene& scene, int idx, const vector<vec3f>& positions) {
+  auto& shape = scene._shapes[idx];
+  set_glshape_buffer(shape.positions_id, shape.positions_num, false,
+      positions.size(), 3, (const float*)positions.data());
+}
+void set_shape_normals(
+    opengl_scene& scene, int idx, const vector<vec3f>& normals) {
+  auto& shape = scene._shapes[idx];
+  set_glshape_buffer(shape.normals_id, shape.normals_num, false, normals.size(),
+      3, (const float*)normals.data());
+}
+void set_shape_texcoords(
+    opengl_scene& scene, int idx, const vector<vec2f>& texcoords) {
+  auto& shape = scene._shapes[idx];
+  set_glshape_buffer(shape.texcoords_id, shape.texcoords_num, false,
+      texcoords.size(), 2, (const float*)texcoords.data());
 }
 void set_shape_colors(
     opengl_scene& scene, int idx, const vector<vec4f>& colors) {
@@ -1136,84 +1058,106 @@ void set_shape_colors(
   set_glshape_buffer(shape.colors_id, shape.colors_num, false, colors.size(), 4,
       (const float*)colors.data());
 }
-void clear_glshapes(opengl_scene& scene) {
-  for (auto& shape : scene._shapes) {
-    if (shape.positions_id) glDeleteBuffers(1, &shape.positions_id);
-    if (shape.normals_id) glDeleteBuffers(1, &shape.normals_id);
-    if (shape.texcoords_id) glDeleteBuffers(1, &shape.texcoords_id);
-    if (shape.colors_id) glDeleteBuffers(1, &shape.colors_id);
-    if (shape.tangents_id) glDeleteBuffers(1, &shape.tangents_id);
-    if (shape.points_id) glDeleteBuffers(1, &shape.points_id);
-    if (shape.lines_id) glDeleteBuffers(1, &shape.lines_id);
-    if (shape.triangles_id) glDeleteBuffers(1, &shape.triangles_id);
-    if (shape.quads_id) glDeleteBuffers(1, &shape.quads_id);
-    if (shape.edges_id) glDeleteBuffers(1, &shape.edges_id);
-  }
-  scene._shapes.clear();
+void set_shape_tangents(
+    opengl_scene& scene, int idx, const vector<vec4f>& tangents) {
+  auto& shape = scene._shapes[idx];
+  set_glshape_buffer(shape.tangents_id, shape.tangents_num, false,
+      tangents.size(), 4, (const float*)tangents.data());
 }
 
-// add instance
-int add_instance(
-    opengl_scene& scene, const frame3f& frame, int shape, int material) {
-  auto& instance    = scene._instances.emplace_back();
-  instance.frame    = frame;
-  instance.shape    = shape;
-  instance.material = material;
-  return (int)scene._instances.size() - 1;
+void set_shape_frame(opengl_scene& scene, int idx, const frame3f& frame) {
+  auto& shape = scene._shapes[idx];
+  shape.frame = frame;
 }
-void set_instance(opengl_scene& scene, int idx, const frame3f& frame, int shape,
-    int material) {
-  auto& instance    = scene._instances[idx];
-  instance.frame    = frame;
-  instance.shape    = shape;
-  instance.material = material;
+void set_shape_instances(
+    opengl_scene& scene, int idx, const vector<frame3f>& instances) {
+  auto& shape     = scene._shapes[idx];
+  shape.instances = instances;
 }
-void set_glinstance_frame(opengl_scene& scene, int idx, const frame3f& frame) {
-  auto& instance = scene._instances[idx];
-  instance.frame = frame;
+void set_shape_hidden(opengl_scene& scene, int idx, bool hidden) {
+  auto& shape  = scene._shapes[idx];
+  shape.hidden = hidden;
 }
-void set_glinstance_shape(opengl_scene& scene, int idx, int shape) {
-  auto& instance = scene._instances[idx];
-  instance.shape = shape;
+void set_shape_highlighted(opengl_scene& scene, int idx, bool highlighted) {
+  auto& shape       = scene._shapes[idx];
+  shape.highlighted = highlighted;
 }
-void set_glinstance_material(opengl_scene& scene, int idx, int material) {
-  auto& instance    = scene._instances[idx];
-  instance.material = material;
+void set_material_emission(
+    opengl_scene& scene, int idx, const vec3f& emission, int emission_txt) {
+  auto& material        = scene._shapes[idx].material;
+  material.emission     = emission;
+  material.emission_map = emission_txt;
 }
-void clear_instances(opengl_scene& scene) { scene._instances.clear(); }
+void set_material_diffuse(
+    opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt) {
+  auto& material       = scene._shapes[idx].material;
+  material.diffuse     = diffuse;
+  material.diffuse_map = diffuse_txt;
+}
+void set_material_specular(
+    opengl_scene& scene, int idx, const vec3f& specular, int specular_txt) {
+  auto& material        = scene._shapes[idx].material;
+  material.specular     = specular;
+  material.specular_map = specular_txt;
+}
+void set_material_roughness(
+    opengl_scene& scene, int idx, float roughness, int roughness_txt) {
+  auto& material         = scene._shapes[idx].material;
+  material.roughness     = roughness;
+  material.roughness_map = roughness_txt;
+}
+void set_material_opacity(
+    opengl_scene& scene, int idx, float opacity, int opacity_txt) {
+  auto& material   = scene._shapes[idx].material;
+  material.opacity = opacity;
+}
+void set_material_metallic(
+    opengl_scene& scene, int idx, float metallic, int metallic_txt) {
+  auto& material        = scene._shapes[idx].material;
+  material.metallic     = metallic;
+  material.metallic_map = metallic_txt;
+}
+void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt) {
+  auto& material      = scene._shapes[idx].material;
+  material.normal_map = normal_txt;
+}
+void set_material_gltftextures(
+    opengl_scene& scene, int idx, bool gltf_textures) {
+  auto& material         = scene._shapes[idx].material;
+  material.gltf_textures = gltf_textures;
+}
+void clear_glshapes(opengl_scene& scene) { scene._shapes.clear(); }
 
 // add light
-int add_light(opengl_scene& scene, const vec3f& position, const vec3f& emission,
-    bool directional) {
-  auto& light    = scene._lights.emplace_back();
-  light.position = position;
-  light.emission = emission;
-  light.type     = directional ? 1 : 0;
+int add_light(opengl_scene& scene) {
+  scene._lights.emplace_back();
   return (int)scene._lights.size() - 1;
 }
-void set_light(opengl_scene& scene, int idx, const vec3f& position,
-    const vec3f& emission, bool directional) {
+void set_light_position(opengl_scene& scene, int idx, const vec3f& position) {
   auto& light    = scene._lights[idx];
   light.position = position;
+}
+void set_light_emission(opengl_scene& scene, int idx, const vec3f& emission) {
+  auto& light    = scene._lights[idx];
   light.emission = emission;
-  light.type     = directional ? 1 : 0;
+}
+void set_light_directional(opengl_scene& scene, int idx, bool directional) {
+  auto& light = scene._lights[idx];
+  light.type  = directional ? 1 : 0;
 }
 void clear_lights(opengl_scene& scene) { scene._lights.clear(); }
 bool has_max_lights(opengl_scene& scene) { return scene._lights.size() >= 16; }
 
 // Draw a shape
-void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
+void draw_glshape(opengl_scene& glscene, opengl_shape& shape,
     const draw_glscene_params& params) {
-  if (instance.shape < 0 || instance.shape > glscene._shapes.size()) return;
-  if (instance.material < 0 || instance.material > glscene._materials.size())
-    return;
+  if (shape.hidden) return;
 
-  auto& shape    = glscene._shapes[instance.shape];
-  auto& material = glscene._materials[instance.material];
+  auto& material = shape.material;
 
-  auto instance_xform     = mat4f(instance.frame);
+  auto instance_xform     = mat4f(shape.frame);
   auto instance_inv_xform = transpose(
-      mat4f(inverse(instance.frame, params.non_rigid_frames)));
+      mat4f(inverse(shape.frame, params.non_rigid_frames)));
   glUniformMatrix4fv(glGetUniformLocation(glscene.program_id, "shape_xform"), 1,
       false, &instance_xform.x.x);
   glUniformMatrix4fv(
@@ -1221,7 +1165,7 @@ void draw_glinstance(opengl_scene& glscene, opengl_instance& instance,
       false, &instance_inv_xform.x.x);
   glUniform1f(
       glGetUniformLocation(glscene.program_id, "shape_normal_offset"), 0.0f);
-  if (instance.highlighted) {
+  if (shape.highlighted) {
     glUniform4f(
         glGetUniformLocation(glscene.program_id, "highlight"), 1, 1, 0, 1);
   } else {
@@ -1439,8 +1383,8 @@ void draw_glscene(opengl_scene& glscene, const vec4i& viewport,
   }
 
   if (params.wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  for (auto& instance : glscene._instances) {
-    draw_glinstance(glscene, instance, params);
+  for (auto& shape : glscene._shapes) {
+    draw_glshape(glscene, shape, params);
   }
 
   glUseProgram(0);
