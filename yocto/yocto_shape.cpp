@@ -3327,186 +3327,6 @@ void make_shell(vector<vec4i>& quads, vector<vec3f>& positions,
       inner_positions, inner_normals, inner_texturecoords);
 }
 
-// Shape presets used ofr testing.
-void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec4i>& quadspos,
-    vector<vec4i>& quadsnorm, vector<vec4i>& quadstexcoord,
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
-    vector<vec4f>& colors, vector<float>& radius, const string& type) {
-  if (type == "default-quad") {
-    make_rect(quads, positions, normals, texcoords);
-  } else if (type == "default-cube") {
-    make_box(quads, positions, normals, texcoords);
-  } else if (type == "default-cube-rounded") {
-    make_rounded_box(quads, positions, normals, texcoords);
-  } else if (type == "default-sphere") {
-    make_sphere(quads, positions, normals, texcoords);
-  } else if (type == "default-disk") {
-    make_disk(quads, positions, normals, texcoords);
-  } else if (type == "default-disk-bulged") {
-    make_bulged_disk(quads, positions, normals, texcoords);
-  } else if (type == "default-quad-bulged") {
-    make_bulged_rect(quads, positions, normals, texcoords);
-  } else if (type == "default-uvsphere") {
-    make_uvsphere(quads, positions, normals, texcoords);
-  } else if (type == "default-uvsphere-flipcap") {
-    make_capped_uvsphere(quads, positions, normals, texcoords);
-  } else if (type == "default-uvdisk") {
-    make_uvdisk(quads, positions, normals, texcoords);
-  } else if (type == "default-uvcylinder") {
-    make_uvcylinder(quads, positions, normals, texcoords);
-  } else if (type == "default-uvcylinder-rounded") {
-    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32});
-  } else if (type == "default-geosphere") {
-    make_geosphere(triangles, positions);
-  } else if (type == "default-floor") {
-    make_floor(quads, positions, normals, texcoords);
-  } else if (type == "default-floor-bent") {
-    make_bent_floor(quads, positions, normals, texcoords);
-  } else if (type == "default-matball") {
-    make_sphere(quads, positions, normals, texcoords);
-  } else if (type == "default-hairball") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
-    make_sphere(
-        base_quads, base_positions, base_normals, base_texcoords, pow2(5), 0.8);
-    make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
-        {0.2, 0.2}, {0.002, 0.001});
-  } else if (type == "default-hairball-interior") {
-    make_sphere(quads, positions, normals, texcoords, pow2(5), 0.8);
-  } else if (type == "default-suzanne") {
-    make_monkey(quads, positions);
-  } else if (type == "default-cube-facevarying") {
-    make_fvbox(
-        quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
-  } else if (type == "default-sphere-facevarying") {
-    make_fvsphere(
-        quadspos, quadsnorm, quadstexcoord, positions, normals, texcoords);
-  } else if (type == "test-cube") {
-    make_rounded_box(quads, positions, normals, texcoords, {32, 32, 32},
-        {0.075f, 0.075f, 0.075f}, {1, 1, 1}, 0.3 * 0.075f);
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-uvsphere") {
-    make_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075);
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-uvsphere-flipcap") {
-    make_capped_uvsphere(quads, positions, normals, texcoords, {32, 32}, 0.075,
-        {1, 1}, 0.3 * 0.075);
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-sphere") {
-    make_sphere(quads, positions, normals, texcoords, 32, 0.075f, 1);
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-sphere-displaced") {
-    make_sphere(quads, positions, normals, texcoords, 128, 0.075f, 1);
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-disk") {
-    make_disk(quads, positions, normals, texcoords, 32, 0.075f, 1);
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-uvcylinder") {
-    make_rounded_uvcylinder(quads, positions, normals, texcoords, {32, 32, 32},
-        {0.075, 0.075}, {1, 1, 1}, 0.3 * 0.075);
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-floor") {
-    make_floor(quads, positions, normals, texcoords, {1, 1}, {2, 2}, {20, 20});
-  } else if (type == "test-matball") {
-    make_sphere(quads, positions, normals, texcoords, 32, 0.075);
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-hairball1") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
-        0.075f * 0.8f, 1);
-    for (auto& p : base_positions) p += {0, 0.075, 0};
-    make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
-        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f},
-        {0.03, 100});
-  } else if (type == "test-hairball2") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
-        0.075f * 0.8f, 1);
-    for (auto& p : base_positions) p += {0, 0.075, 0};
-    make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
-        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f});
-  } else if (type == "test-hairball3") {
-    auto base_triangles = vector<vec3i>{};
-    auto base_quads     = vector<vec4i>{};
-    auto base_positions = vector<vec3f>{};
-    auto base_normals   = vector<vec3f>{};
-    auto base_texcoords = vector<vec2f>{};
-    make_sphere(base_quads, base_positions, base_normals, base_texcoords, 32,
-        0.075f * 0.8f, 1);
-    for (auto& p : base_positions) p += {0, 0.075, 0};
-    make_hair(lines, positions, normals, texcoords, radius, base_triangles,
-        base_quads, base_positions, base_normals, base_texcoords, {4, 65536},
-        {0.1f * 0.15f, 0.1f * 0.15f}, {0.001f * 0.15f, 0.0005f * 0.15f}, {0, 0},
-        {0.5, 128});
-  } else if (type == "test-hairball-interior") {
-    make_sphere(quads, positions, normals, texcoords, 32, 0.075f * 0.8f, 1);
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-suzanne-subdiv") {
-    make_monkey(quads, positions, 0.075f * 0.8f);
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-cube-subdiv") {
-    // make_cube(quads, positions, normals, texcoords, 0.075f);
-    make_fvcube(quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, 0.075f);
-    // make_fvbox(quadspos, quadsnorm, quadstexcoord, positions, normals,
-    //      texcoords, {1, 1, 1}, {0.075f, 0.075f, 0.075f});
-    for (auto& p : positions) p += {0, 0.075, 0};
-  } else if (type == "test-arealight1") {
-    make_rect(quads, positions, normals, texcoords, {1, 1}, {0.2, 0.2});
-  } else if (type == "test-arealight2") {
-    make_rect(quads, positions, normals, texcoords, {1, 1}, {0.2, 0.2});
-  } else if (type == "test-largearealight1") {
-    make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4});
-  } else if (type == "test-largearealight2") {
-    make_rect(quads, positions, normals, texcoords, {1, 1}, {0.4, 0.4});
-  } else {
-    throw std::invalid_argument("unknown shape preset " + type);
-  }
-}
-
-// Shape presets used ofr testing.
-void make_shape_preset(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, vector<vec4f>& colors,
-    vector<float>& radius, const string& type) {
-  auto quadspos      = vector<vec4i>{};
-  auto quadsnorm     = vector<vec4i>{};
-  auto quadstexcoord = vector<vec4i>{};
-  make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-      quadstexcoord, positions, normals, texcoords, colors, radius, type);
-  if (!quadspos.empty()) throw std::runtime_error("bad preset type");
-}
-
-// Shape presets used ofr testing.
-void make_shape_preset(vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
-    vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texcoords, const string& type) {
-  auto points    = vector<int>{};
-  auto lines     = vector<vec2i>{};
-  auto triangles = vector<vec3i>{};
-  auto quads     = vector<vec4i>{};
-  auto colors    = vector<vec4f>{};
-  auto radius    = vector<float>{};
-  make_shape_preset(points, lines, triangles, quads, quadspos, quadsnorm,
-      quadstexcoord, positions, normals, texcoords, colors, radius, type);
-  if (quadspos.empty()) throw std::runtime_error("bad preset type");
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -3591,14 +3411,7 @@ void load_shape(const string& filename, vector<int>& points,
   radius    = {};
 
   auto ext = get_extension(filename);
-  if (ext == ".ypreset") {
-    try {
-      make_shape_preset(points, lines, triangles, quads, positions, normals,
-          texcoords, colors, radius, get_basename(filename));
-    } catch (std::exception&) {
-      throw_preset_error(filename);
-    }
-  } else if (ext == ".ply" || ext == ".PLY") {
+  if (ext == ".ply" || ext == ".PLY") {
     // open ply
     auto ply = ply_model{};
     load_ply(filename, ply);
@@ -3715,14 +3528,7 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
   texcoords     = {};
 
   auto ext = get_extension(filename);
-  if (ext == ".ypreset") {
-    try {
-      make_shape_preset(quadspos, quadsnorm, quadstexcoord, positions, normals,
-          texcoords, get_basename(filename));
-    } catch (std::exception&) {
-      throw_preset_error(filename);
-    }
-  } else if (ext == ".ply" || ext == ".PLY") {
+  if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     load_ply(filename, ply);
     positions = get_ply_positions(ply);
