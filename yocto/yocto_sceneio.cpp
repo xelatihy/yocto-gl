@@ -1872,7 +1872,7 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
   // convert environments
   for (auto& environment : scene.environments) {
     auto& oenvironment        = obj.environments.emplace_back();
-    oenvironment.name         = environment.name;
+    oenvironment.name         = get_basename(environment.name);
     oenvironment.frame        = environment.frame;
     oenvironment.emission     = environment.emission;
     oenvironment.emission_map = get_texture(environment.emission_tex);
