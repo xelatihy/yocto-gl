@@ -110,10 +110,11 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
         iocamera.film, iocamera.aperture, iocamera.focus);
   }
   for (auto& iotexture : ioscene.textures) {
+    auto id = add_texture(scene);
     if (!iotexture.hdr.empty()) {
-      add_texture(scene, std::move(iotexture.hdr));
+      set_texture(scene, id, std::move(iotexture.hdr));
     } else if (!iotexture.ldr.empty()) {
-      add_texture(scene, std::move(iotexture.ldr));
+      set_texture(scene, id, std::move(iotexture.ldr));
     }
   }
   for (auto& ioshape : ioscene.shapes) {

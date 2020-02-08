@@ -3078,14 +3078,8 @@ void set_camera(trace_scene& scene, int idx, const frame3f& frame, float lens,
 void clean_cameras(trace_scene& scene) { scene.cameras.clear(); }
 
 // Add texture
-int add_texture(trace_scene& scene, const image<vec4b>& img) {
+int add_texture(trace_scene& scene) {
   scene.textures.emplace_back();
-  set_texture(scene, (int)scene.textures.size() - 1, img);
-  return (int)scene.textures.size() - 1;
-}
-int add_texture(trace_scene& scene, const image<vec4f>& img) {
-  scene.textures.emplace_back();
-  set_texture(scene, (int)scene.textures.size() - 1, img);
   return (int)scene.textures.size() - 1;
 }
 void set_texture(trace_scene& scene, int idx, const image<vec4b>& img) {

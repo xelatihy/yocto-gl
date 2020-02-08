@@ -86,8 +86,7 @@ void set_camera(trace_scene& scene, int idx, const frame3f& frame, float lens,
 void clear_cameras(trace_scene& scene);
 
 // Add texture
-int  add_texture(trace_scene& scene, const image<vec4b>& img);
-int  add_texture(trace_scene& scene, const image<vec4f>& img);
+int  add_texture(trace_scene& scene);
 void set_texture(trace_scene& scene, int idx, const image<vec4b>& img);
 void set_texture(trace_scene& scene, int idx, const image<vec4f>& img);
 void clear_textures(trace_scene& scene);
