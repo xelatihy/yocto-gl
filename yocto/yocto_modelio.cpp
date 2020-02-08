@@ -1603,12 +1603,21 @@ static void load_mtl(
   // remove placeholder material
   obj.materials.erase(obj.materials.begin());
 
+  // convert between roughness and exponent
+  auto exponent_to_roughness = [](float exponent) {
+    auto roughness = exponent;
+    roughness      = pow(2 / (roughness + 2), 1 / 4.0f);
+    if (roughness < 0.01f) roughness = 0;
+    if (roughness > 0.99f) roughness = 1;
+    return roughness;
+  };
+
   // convert values when possible
   for (auto& material : obj.materials) {
     if (material.as_pbr) continue;
     material.pbr_emission     = material.emission;
     material.pbr_emission_map = material.emission_map;
-    material.pbr_roughness    = obj_exponent_to_roughness(material.exponent);
+    material.pbr_roughness    = exponent_to_roughness(material.exponent);
     material.pbr_ior          = material.ior;
     material.pbr_opacity      = material.opacity;
     material.pbr_opacity_map  = material.opacity_map;
@@ -2093,21 +2102,8 @@ void save_obj(const string& filename, const obj_model& obj) {
   }
 }
 
-// convert between roughness and exponent
-float obj_exponent_to_roughness(float exponent) {
-  auto roughness = exponent;
-  roughness      = pow(2 / (roughness + 2), 1 / 4.0f);
-  if (roughness < 0.01f) roughness = 0;
-  if (roughness > 0.99f) roughness = 1;
-  return roughness;
-}
-float obj_roughness_to_exponent(float roughness) {
-  return (int)clamp(
-      2 / pow(clamp(roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2, 0.0f, 1.0e9f);
-}
-
 // Get obj vertices
-static void get_obj_vertices(const obj_shape& shape, vector<vec3f>& positions,
+static void get_vertices(const obj_shape& shape, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<int>& vindex,
     bool flipv) {
   auto vmap = unordered_map<obj_vertex, int>{};
@@ -2140,13 +2136,13 @@ static vector<vec2f> flip_obj_texcoord(const vector<vec2f>& texcoord) {
 }
 
 // Get obj shape
-void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
+void get_triangles(const obj_model& obj, const obj_shape& shape,
     vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
   if (shape.faces.empty()) return;
   auto vindex = vector<int>{};
-  get_obj_vertices(shape, positions, normals, texcoords, vindex, flipv);
+  get_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape.materials;
   triangles.reserve(shape.faces.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
@@ -2160,13 +2156,13 @@ void get_obj_triangles(const obj_model& obj, const obj_shape& shape,
     cur += face.size;
   }
 }
-void get_obj_quads(const obj_model& obj, const obj_shape& shape,
+void get_quads(const obj_model& obj, const obj_shape& shape,
     vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
   if (shape.faces.empty()) return;
   auto vindex = vector<int>{};
-  get_obj_vertices(shape, positions, normals, texcoords, vindex, flipv);
+  get_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape.materials;
   quads.reserve(shape.faces.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
@@ -2186,13 +2182,13 @@ void get_obj_quads(const obj_model& obj, const obj_shape& shape,
     cur += face.size;
   }
 }
-void get_obj_lines(const obj_model& obj, const obj_shape& shape,
+void get_lines(const obj_model& obj, const obj_shape& shape,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
   if (shape.lines.empty()) return;
   auto vindex = vector<int>{};
-  get_obj_vertices(shape, positions, normals, texcoords, vindex, flipv);
+  get_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape.materials;
   lines.reserve(shape.lines.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
@@ -2205,13 +2201,13 @@ void get_obj_lines(const obj_model& obj, const obj_shape& shape,
     cur += str.size;
   }
 }
-void get_obj_points(const obj_model& obj, const obj_shape& shape,
+void get_points(const obj_model& obj, const obj_shape& shape,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, vector<string>& materials,
     vector<int>& ematerials, bool flipv) {
   if (shape.points.empty()) return;
   auto vindex = vector<int>{};
-  get_obj_vertices(shape, positions, normals, texcoords, vindex, flipv);
+  get_vertices(shape, positions, normals, texcoords, vindex, flipv);
   materials = shape.materials;
   points.reserve(shape.points.size());
   if (!materials.empty()) ematerials.reserve(shape.faces.size());
@@ -2224,7 +2220,7 @@ void get_obj_points(const obj_model& obj, const obj_shape& shape,
     cur += point.size;
   }
 }
-void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
+void get_fvquads(const obj_model& obj, const obj_shape& shape,
     vector<vec4i>& quadspos, vector<vec4i>& quadsnorm,
     vector<vec4i>& quadstexcoord, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texcoords, vector<string>& materials,
@@ -2281,14 +2277,14 @@ void get_obj_fvquads(const obj_model& obj, const obj_shape& shape,
   }
 }
 
-bool has_obj_quads(const obj_shape& shape) {
+bool has_quads(const obj_shape& shape) {
   for (auto& face : shape.faces)
     if (face.size == 4) return true;
   return false;
 }
 
 // Add obj shape
-void add_obj_triangles(obj_model& obj, const string& name,
+void add_triangles(obj_model& obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
@@ -2313,7 +2309,7 @@ void add_obj_triangles(obj_model& obj, const string& name,
         {3, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_quads(obj_model& obj, const string& name,
+void add_quads(obj_model& obj, const string& name,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
@@ -2339,7 +2335,7 @@ void add_obj_quads(obj_model& obj, const string& name,
         ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_lines(obj_model& obj, const string& name,
+void add_lines(obj_model& obj, const string& name,
     const vector<vec2i>& lines, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
@@ -2364,7 +2360,7 @@ void add_obj_lines(obj_model& obj, const string& name,
         {2, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_points(obj_model& obj, const string& name,
+void add_points(obj_model& obj, const string& name,
     const vector<int>& points, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
@@ -2387,7 +2383,7 @@ void add_obj_points(obj_model& obj, const string& name,
         {1, ematerials.empty() ? (uint8_t)0 : (uint8_t)ematerials[idx]});
   }
 }
-void add_obj_fvquads(obj_model& obj, const string& name,
+void add_fvquads(obj_model& obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,

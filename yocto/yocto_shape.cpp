@@ -3424,18 +3424,18 @@ void load_shape(const string& filename, vector<int>& points,
     // decide what to do and get properties
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
-    auto has_quads  = has_obj_quads(shape);
-    if (!shape.faces.empty() && !has_quads) {
-      get_obj_triangles(obj, shape, triangles, positions, normals, texcoords,
+    auto has_quads_  = has_quads(shape);
+    if (!shape.faces.empty() && !has_quads_) {
+      get_triangles(obj, shape, triangles, positions, normals, texcoords,
           materials, ematerials, flip_texcoord);
-    } else if (!shape.faces.empty() && has_quads) {
-      get_obj_quads(obj, shape, quads, positions, normals, texcoords, materials,
+    } else if (!shape.faces.empty() && has_quads_) {
+      get_quads(obj, shape, quads, positions, normals, texcoords, materials,
           ematerials, flip_texcoord);
     } else if (!shape.lines.empty()) {
-      get_obj_lines(obj, shape, lines, positions, normals, texcoords, materials,
+      get_lines(obj, shape, lines, positions, normals, texcoords, materials,
           ematerials, flip_texcoord);
     } else if (!shape.points.empty()) {
-      get_obj_points(obj, shape, points, positions, normals, texcoords,
+      get_points(obj, shape, points, positions, normals, texcoords,
           materials, ematerials, flip_texcoord);
     } else {
       throw_emptyshape_error(filename);
@@ -3470,16 +3470,16 @@ void save_shape(const string& filename, const vector<int>& points,
   } else if (ext == ".obj" || ext == ".OBJ") {
     auto obj = obj_model{};
     if (!triangles.empty()) {
-      add_obj_triangles(obj, "", triangles, positions, normals, texcoords, {},
+      add_triangles(obj, "", triangles, positions, normals, texcoords, {},
           {}, flip_texcoord);
     } else if (!quads.empty()) {
-      add_obj_quads(
+      add_quads(
           obj, "", quads, positions, normals, texcoords, {}, {}, flip_texcoord);
     } else if (!lines.empty()) {
-      add_obj_lines(
+      add_lines(
           obj, "", lines, positions, normals, texcoords, {}, {}, flip_texcoord);
     } else if (!points.empty()) {
-      add_obj_points(obj, "", points, positions, normals, texcoords, {}, {},
+      add_points(obj, "", points, positions, normals, texcoords, {}, {},
           flip_texcoord);
     } else {
       throw_emptyshape_error(filename);
@@ -3524,7 +3524,7 @@ void load_fvshape(const string& filename, vector<vec4i>& quadspos,
     if (shape.faces.empty()) throw_emptyshape_error(filename);
     auto materials  = vector<string>{};
     auto ematerials = vector<int>{};
-    get_obj_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
+    get_fvquads(obj, shape, quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, materials, ematerials, flip_texcoord);
     if (positions.empty()) throw_emptyshape_error(filename);
   } else {
@@ -3550,7 +3550,7 @@ void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
     auto obj = obj_model{};
 
     // Add obj data
-    add_obj_fvquads(obj, "", quadspos, quadsnorm, quadstexcoord, positions,
+    add_fvquads(obj, "", quadspos, quadsnorm, quadstexcoord, positions,
         normals, texcoords, {}, {}, flip_texcoord);
 
     // Save

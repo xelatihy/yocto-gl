@@ -1706,18 +1706,18 @@ static void load_obj_scene(
     shape.name      = make_name("shape", scene.shapes.size());
     auto nmaterials = vector<string>{};
     auto ematerials = vector<int>{};
-    auto has_quads  = has_obj_quads(oshape);
-    if (!oshape.faces.empty() && !has_quads) {
-      get_obj_triangles(obj, oshape, shape.triangles, shape.positions,
+    auto has_quads_  = has_quads(oshape);
+    if (!oshape.faces.empty() && !has_quads_) {
+      get_triangles(obj, oshape, shape.triangles, shape.positions,
           shape.normals, shape.texcoords, nmaterials, ematerials, true);
-    } else if (!oshape.faces.empty() && has_quads) {
-      get_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
+    } else if (!oshape.faces.empty() && has_quads_) {
+      get_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
           shape.texcoords, nmaterials, ematerials, true);
     } else if (!oshape.lines.empty()) {
-      get_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
+      get_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
           shape.texcoords, nmaterials, ematerials, true);
     } else if (!oshape.points.empty()) {
-      get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals,
+      get_points(obj, oshape, shape.points, shape.positions, shape.normals,
           shape.texcoords, nmaterials, ematerials, true);
     } else {
       throw_emptyshape_error(filename, oshape.name);
@@ -1831,16 +1831,16 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
       for (auto& p : positions) p = transform_point(shape.frame, p);
       for (auto& n : normals) n = transform_normal(shape.frame, n);
       if (!shape.triangles.empty()) {
-        add_obj_triangles(obj, shape.name, shape.triangles, positions, normals,
+        add_triangles(obj, shape.name, shape.triangles, positions, normals,
             shape.texcoords, {}, {}, true);
       } else if (!shape.quads.empty()) {
-        add_obj_quads(obj, shape.name, shape.quads, positions, normals,
+        add_quads(obj, shape.name, shape.quads, positions, normals,
             shape.texcoords, {}, {}, true);
       } else if (!shape.lines.empty()) {
-        add_obj_lines(obj, shape.name, shape.lines, positions, normals,
+        add_lines(obj, shape.name, shape.lines, positions, normals,
             shape.texcoords, {}, {}, true);
       } else if (!shape.points.empty()) {
-        add_obj_points(obj, shape.name, shape.points, positions, normals,
+        add_points(obj, shape.name, shape.points, positions, normals,
             shape.texcoords, {}, {}, true);
       } else {
         throw_emptyshape_error(filename, shape.name);
@@ -1853,16 +1853,16 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
         for (auto& p : positions) p = transform_point(frame * shape.frame, p);
         for (auto& n : normals) n = transform_normal(frame * shape.frame, n);
         if (!shape.triangles.empty()) {
-          add_obj_triangles(obj, shape.name, shape.triangles, positions,
+          add_triangles(obj, shape.name, shape.triangles, positions,
               normals, shape.texcoords, materials, {}, true);
         } else if (!shape.quads.empty()) {
-          add_obj_quads(obj, shape.name, shape.quads, positions, normals,
+          add_quads(obj, shape.name, shape.quads, positions, normals,
               shape.texcoords, materials, {}, true);
         } else if (!shape.lines.empty()) {
-          add_obj_lines(obj, shape.name, shape.lines, positions, normals,
+          add_lines(obj, shape.name, shape.lines, positions, normals,
               shape.texcoords, materials, {}, true);
         } else if (!shape.points.empty()) {
-          add_obj_points(obj, shape.name, shape.points, positions, normals,
+          add_points(obj, shape.name, shape.points, positions, normals,
               shape.texcoords, materials, {}, true);
         } else {
           throw_emptyshape_error(filename, shape.name);
