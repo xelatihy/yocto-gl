@@ -148,7 +148,11 @@ struct opengl_material {
 // Opengl shape
 struct opengl_shape {
     // shape properties
+  frame3f frame       = identity3x4f;
+  vector<frame3f> instances       = {};
     opengl_material material = {};
+    bool hidden = false;
+    bool highlighted = false;
 
     // vertex buffers
   int  positions_num = 0;
@@ -256,20 +260,6 @@ void clear_textures(opengl_scene& scene);
 
 // add shape
 int  add_shape(opengl_scene& scene);
-int  add_shape(opengl_scene& scene, const vector<int>& points,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
-int  add_shape(opengl_scene& scene, const vector<vec2i>& lines,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
-int  add_shape(opengl_scene& scene, const vector<vec3i>& triangles,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
-     const vector<vec4f>& tangents = {});
-int  add_shape(opengl_scene& scene, const vector<vec4i>& quads,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {},
-     const vector<vec4f>& tangents = {});
 void set_shape(opengl_scene& scene, int idx, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors = {});
@@ -286,6 +276,8 @@ void set_shape(opengl_scene& scene, int idx, const vector<vec4i>& quads,
     const vector<vec4f>& tangents = {});
 void set_shape_colors(
     opengl_scene& scene, int idx, const vector<vec4f>& colors);
+void set_shape_frame(opengl_scene& scene, int idx, const frame3f& frame);
+void set_shape_instances(opengl_scene& scene, int idx, const vector<frame3f>& instances);
 void set_material_emission(
     opengl_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_material_diffuse(
