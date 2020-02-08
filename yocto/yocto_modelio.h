@@ -682,6 +682,29 @@ pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& value,
 pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
     pbrt_value_type type = pbrt_value_type::integer);
 
+// Low-level commands
+struct pbrt_commands {
+  vector<string>       comments     = {};
+  vector<pbrt_command> cameras      = {};
+  vector<pbrt_command> films        = {};
+  vector<pbrt_command> integrators  = {};
+  vector<pbrt_command> filters      = {};
+  vector<pbrt_command> samplers     = {};
+  vector<pbrt_command> accelerators = {};
+  vector<pbrt_command> mediums      = {};
+  vector<pbrt_command> environments = {};
+  vector<pbrt_command> lights       = {};
+  vector<pbrt_command> arealights       = {};
+  vector<pbrt_command> textures       = {};
+  vector<pbrt_command> materials       = {};
+  vector<pbrt_shape_command> shapes       = {};
+};
+
+// Low level parser
+void load_pbrt(const string& filename, pbrt_commands& pbrt);
+void save_pbrt(const string& filename, const pbrt_commands& pbrt);
+
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
