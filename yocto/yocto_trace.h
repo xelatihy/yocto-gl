@@ -113,8 +113,8 @@ void set_shape_radius(trace_scene& scene, int idx, const vector<float>& radius);
 void set_shape_tangents(
     trace_scene& scene, int idx, const vector<vec4f>& tangents);
 void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame);
-void set_shape_instances(trace_scene& scene, int idx, const frame3f& frame,
-    const vector<frame3f>& instances);
+void set_shape_frames(trace_scene& scene, int idx,
+    const vector<frame3f>& instances, const frame3f& local_frame);
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_material_base(
@@ -265,7 +265,7 @@ struct trace_bvh_node {
 // Application data is not stored explicitly.
 struct trace_bvh {
   vector<trace_bvh_node> nodes      = {};
-  vector<int>            primitives = {};
+  vector<vec2i>          primitives = {};
 };
 
 // Camera based on a simple lens model. The camera is placed using a frame.
@@ -341,8 +341,7 @@ struct trace_shape {
   trace_material material = {};
 
   // frames
-  frame3f         frame     = identity3x4f;
-  vector<frame3f> instances = {};
+  vector<frame3f> frames = {};
 
   // primitives
   vector<int>   points    = {};
@@ -368,26 +367,24 @@ struct trace_shape {
 #ifdef YOCTO_EMBREE
   std::shared_ptr<void> embree_bvh = {};
 #endif
-};
 
-// Instance of a visible shape in the scene.
-struct trace_instance {
-  frame3f frame = identity3x4f;
-  int     shape = -1;
+  // element cdf for sampling
+  vector<float> elements_cdf = {};
 };
 
 // Environment map.
 struct trace_environment {
-  frame3f frame        = identity3x4f;
-  vec3f   emission     = {0, 0, 0};
-  int     emission_tex = -1;
+  frame3f       frame        = identity3x4f;
+  vec3f         emission     = {0, 0, 0};
+  int           emission_tex = -1;
+  vector<float> texels_cdf   = {};
 };
 
 // Trace lights used during rendering. These are created automatically.
 struct trace_light {
-  int           instance    = -1;
-  int           environment = -1;
-  vector<float> cdf         = {};
+  int shape       = -1;
+  int instance_   = -1;
+  int environment = -1;
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -400,7 +397,6 @@ struct trace_light {
 struct trace_scene {
   vector<trace_camera>      cameras      = {};
   vector<trace_shape>       shapes       = {};
-  vector<trace_instance>    instances    = {};
   vector<trace_texture>     textures     = {};
   vector<trace_environment> environments = {};
 
@@ -408,7 +404,8 @@ struct trace_scene {
   vector<trace_light> lights = {};
   trace_bvh           bvh    = {};
 #ifdef YOCTO_EMBREE
-  std::shared_ptr<void> embree_bvh = {};
+  std::shared_ptr<void> embree_bvh       = {};
+  vector<vec2i>         embree_instances = {};
 #endif
 };
 
@@ -444,11 +441,12 @@ namespace yocto {
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
 struct trace_intersection {
-  int   instance = -1;
-  int   element  = -1;
-  vec2f uv       = {0, 0};
-  float distance = 0;
-  bool  hit      = false;
+  int   shape     = -1;
+  int   instance_ = -1;
+  int   element   = -1;
+  vec2f uv        = {0, 0};
+  float distance  = 0;
+  bool  hit       = false;
 };
 
 // Intersect ray with a bvh returning either the first or any intersection
@@ -456,7 +454,7 @@ struct trace_intersection {
 // the shape element index and the element barycentric coordinates.
 trace_intersection intersect_scene_bvh(const trace_scene& scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_scene& scene,
+trace_intersection intersect_instance_bvh(const trace_scene& scene, int shape,
     int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 

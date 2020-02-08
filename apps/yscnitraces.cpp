@@ -114,7 +114,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_shape_colors(scene, id, ioshape.colors);
     set_shape_radius(scene, id, ioshape.radius);
     set_shape_tangents(scene, id, ioshape.tangents);
-    set_shape_instances(scene, id, ioshape.frame, ioshape.instances);
+    set_shape_frames(scene, id, ioshape.instances, ioshape.frame);
     auto& iomaterial = ioshape.material;
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);

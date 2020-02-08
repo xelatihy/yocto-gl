@@ -134,7 +134,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_shape_colors(scene, id, ioshape.colors);
     set_shape_radius(scene, id, ioshape.radius);
     set_shape_tangents(scene, id, ioshape.tangents);
-    set_shape_instances(scene, id, ioshape.frame, ioshape.instances);
+    set_shape_frames(scene, id, ioshape.instances, ioshape.frame);
     auto& iomaterial = ioshape.material;
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
@@ -539,8 +539,7 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     end_glheader(win);
   }
   if (app && !app->ioscene.shapes.empty() && begin_glheader(win, "shapes")) {
-    draw_glcombobox(
-        win, "selection##2", app->selected_shape, app->ioscene.shapes);
+    draw_glcombobox(win, "shape##2", app->selected_shape, app->ioscene.shapes);
     if (draw_glwidgets_shape(win, app, app->selected_shape)) {
       stop_display(app);
       auto& ioshape = app->ioscene.shapes[app->selected_shape];
@@ -554,6 +553,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       set_shape_colors(app->scene, app->selected_shape, ioshape.colors);
       set_shape_radius(app->scene, app->selected_shape, ioshape.radius);
       set_shape_tangents(app->scene, app->selected_shape, ioshape.tangents);
+      set_shape_frames(
+          app->scene, app->selected_shape, ioshape.instances, ioshape.frame);
       update_bvh(app->scene, {}, {app->selected_shape}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);
@@ -772,7 +773,7 @@ void run_app(int argc, const char* argv[]) {
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
-          app->selected_shape = isec.instance;
+          app->selected_shape = isec.shape;
         }
       }
     }
