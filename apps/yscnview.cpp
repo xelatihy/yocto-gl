@@ -203,13 +203,12 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
     auto& material = shape.material;
     set_material_emission(
         glscene, id, material.emission, material.emission_tex);
-    set_material_diffuse(glscene, id,
+    set_material_color(glscene, id,
         (1 - material.transmission) * material.color, material.color_tex);
-    set_material_specular(glscene, id,
-        material.specular * eta_to_reflectivity(material.ior),
+    set_material_specular(glscene, id, (1 - material.transmission) * material.specular,
         material.specular_tex);
     set_material_metallic(
-        glscene, id, material.metallic, material.metallic_tex);
+        glscene, id, (1 - material.transmission) * material.metallic, material.metallic_tex);
     set_material_roughness(
         glscene, id, material.roughness, material.roughness_tex);
     set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
@@ -489,13 +488,13 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       auto& material = app->ioscene.shapes[app->selected_material].material;
       set_material_emission(app->glscene, app->selected_material,
           material.emission, material.emission_tex);
-      set_material_diffuse(app->glscene, app->selected_material,
+      set_material_color(app->glscene, app->selected_material,
           (1 - material.transmission) * material.color, material.color_tex);
       set_material_specular(app->glscene, app->selected_material,
-          material.specular * eta_to_reflectivity(material.ior),
+          (1 - material.transmission) * material.specular,
           material.specular_tex);
       set_material_metallic(app->glscene, app->selected_material,
-          material.metallic, material.metallic_tex);
+          (1 - material.transmission) * material.metallic, material.metallic_tex);
       set_material_roughness(app->glscene, app->selected_material,
           material.roughness, material.roughness_tex);
       set_material_opacity(app->glscene, app->selected_material,

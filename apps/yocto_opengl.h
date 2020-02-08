@@ -131,13 +131,13 @@ struct opengl_texture {
 // Opengl material
 struct opengl_material {
   vec3f emission      = {0, 0, 0};
-  vec3f diffuse       = {0, 0, 0};
-  vec3f specular      = {0, 0, 0};
+  vec3f color         = {0, 0, 0};
+  float specular      = 0;
   float metallic      = 0;
   float roughness     = 0;
   float opacity       = 1;
   int   emission_map  = -1;
-  int   diffuse_map   = -1;
+  int   color_map     = -1;
   int   specular_map  = -1;
   int   metallic_map  = -1;
   int   roughness_map = -1;
@@ -270,16 +270,16 @@ void set_shape_instances(
     opengl_scene& scene, int idx, const vector<frame3f>& instances);
 void set_material_emission(
     opengl_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
-void set_material_diffuse(
-    opengl_scene& scene, int idx, const vec3f& diffuse, int diffuse_txt = -1);
-void set_material_specular(
-    opengl_scene& scene, int idx, const vec3f& specular, int specular_txt = -1);
-void set_material_roughness(
-    opengl_scene& scene, int idx, float roughness, int roughness_txt = -1);
-void set_material_opacity(
-    opengl_scene& scene, int idx, float opacity, int opacity_txt = -1);
+void set_material_color(
+    opengl_scene& scene, int idx, const vec3f& color, int color_txt = -1);
 void set_material_metallic(
     opengl_scene& scene, int idx, float metallic, int metallic_txt = -1);
+void set_material_roughness(
+    opengl_scene& scene, int idx, float roughness, int roughness_txt = -1);
+void set_material_specular(
+    opengl_scene& scene, int idx, float specular, int specular_txt = -1);
+void set_material_opacity(
+    opengl_scene& scene, int idx, float opacity, int opacity_txt = -1);
 void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt);
 void set_material_gltftextures(
     opengl_scene& scene, int idx, bool gltf_textures);
