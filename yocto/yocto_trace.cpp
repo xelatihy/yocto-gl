@@ -1310,16 +1310,18 @@ static void update_embree_bvh(
     trace_scene& scene, const vector<int>& updated_instances) {
   // scene bvh
   auto escene = (RTCScene)scene.embree_bvh.get();
-  // TODO: fix embree updates
-  // for (auto instance_id : updated_instances) {
-  //   auto& instance  = scene.instances[instance_id];
-  //   auto& shape     = scene.shapes[instance.shape];
-  //   auto  egeometry = rtcGetGeometry(escene, instance_id);
-  //   rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
-  //   rtcSetGeometryTransform(
-  //       egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
-  //   rtcCommitGeometry(egeometry);
-  // }
+  auto update_flags = vector<bool>(scene.shapes.size(), false);
+  for(auto shape_id : updated_instances) update_flags[shape_id] = true;
+  for(auto& [shape_id, instance_id] : scene.embree_instances) {
+    if(!update_flags[shape_id]) continue;
+    auto& shape     = scene.shapes[shape_id];
+    auto& frame     = shape.frames[instance_id];
+    auto  egeometry = rtcGetGeometry(escene, instance_id);
+    rtcSetGeometryInstancedScene(egeometry, (RTCScene)shape.embree_bvh.get());
+    rtcSetGeometryTransform(
+        egeometry, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &frame);
+    rtcCommitGeometry(egeometry);
+  }
   rtcCommitScene(escene);
 }
 
