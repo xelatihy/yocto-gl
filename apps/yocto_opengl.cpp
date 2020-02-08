@@ -848,6 +848,11 @@ void set_camera(opengl_scene& scene, int idx, const frame3f& frame, float lens,
 void clear_cameras(opengl_scene& scene) { scene._cameras.clear(); }
 
 // add texture
+int add_texture(opengl_scene& scene) {
+  auto& texture = scene._textures.emplace_back();
+  return (int)scene._textures.size()-1;
+}
+
 int add_texture(opengl_scene& scene, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
   auto& texture = scene._textures.emplace_back();
@@ -886,6 +891,12 @@ void set_texture(
     opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb) {
   assert(glGetError() == GL_NO_ERROR);
   auto& texture = scene._textures[idx];
+  if(img.empty()) {
+    glDeleteTextures(1, &texture.texture_id);
+    texture.texture_id = 0;
+    return;
+  }
+  if(!texture.texture_id)   glGenTextures(1, &texture.texture_id);
   if (texture.size != img.size() || texture.is_srgb != as_srgb ||
       texture.is_float == true) {
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
@@ -910,6 +921,12 @@ void set_texture(
     opengl_scene& scene, int idx, const image<vec4f>& img, bool as_float) {
   assert(glGetError() == GL_NO_ERROR);
   auto& texture = scene._textures[idx];
+  if(img.empty()) {
+    glDeleteTextures(1, &texture.texture_id);
+    texture.texture_id = 0;
+    return;
+  }
+  if(!texture.texture_id)   glGenTextures(1, &texture.texture_id);
   if (texture.size != img.size() || texture.is_float != as_float ||
       texture.is_srgb == true) {
     glGenTextures(1, &texture.texture_id);

@@ -240,10 +240,7 @@ void set_camera(opengl_scene& scene, int idx, const frame3f& frame, float lens,
 void clear_cameras(opengl_scene& scene);
 
 // add texture
-int add_texture(
-    opengl_scene& scene, const image<vec4b>& img, bool as_srgb = true);
-int add_texture(
-    opengl_scene& scene, const image<vec4f>& img, bool as_float = false);
+int add_texture(opengl_scene& scene);
 void set_texture(
     opengl_scene& scene, int idx, const image<vec4b>& img, bool as_srgb = true);
 void set_texture(opengl_scene& scene, int idx, const image<vec4f>& img,
