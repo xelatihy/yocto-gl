@@ -624,11 +624,6 @@ struct pbrt_environment {
 };
 
 // Other pbrt elements
-struct pbrt_integrator {
-  // integrator parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
-};
 struct pbrt_film {
   // film parameters
   string             type   = "";
@@ -636,21 +631,6 @@ struct pbrt_film {
   // film approximation
   string filename   = "";
   vec2i  resolution = zero2i;
-};
-struct pbrt_filter {
-  // filter parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
-};
-struct pbrt_accelerator {
-  // accelerator parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
-};
-struct pbrt_sampler {
-  // sampler parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
 };
 
 // Pbrt model
@@ -664,13 +644,13 @@ struct pbrt_model {
   vector<pbrt_environment> environments = {};
   vector<pbrt_arealight>   arealights   = {};
   vector<pbrt_light>       lights       = {};
-  vector<pbrt_integrator>  integrators  = {};
   vector<pbrt_film>        films        = {};
-  vector<pbrt_filter>      filters      = {};
-  vector<pbrt_sampler>     samplers     = {};
-  vector<pbrt_accelerator> accelerators = {};
   // Low level commands
-  vector<pbrt_command>     camera_commands = {};
+  vector<pbrt_command>     cameras_commands = {};
+  vector<pbrt_command>  integrators_commands  = {};
+  vector<pbrt_command>      filters_commands      = {};
+  vector<pbrt_command>     samplers_commands     = {};
+  vector<pbrt_command> accelerators_commands = {};
 };
 
 // Load/save pbrt

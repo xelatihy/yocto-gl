@@ -3641,15 +3641,15 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
         stack.back().transform_end   = coordsys.at(name).transform_end;
       }
     } else if (cmd == "Integrator") {
-      auto& integrator = pbrt.integrators.emplace_back();
+      auto& integrator = pbrt.integrators_commands.emplace_back();
       parse_pbrt_param(fs, str, integrator.type);
       parse_pbrt_params(fs, str, integrator.values);
     } else if (cmd == "Sampler") {
-      auto& sampler = pbrt.samplers.emplace_back();
+      auto& sampler = pbrt.samplers_commands.emplace_back();
       parse_pbrt_param(fs, str, sampler.type);
       parse_pbrt_params(fs, str, sampler.values);
     } else if (cmd == "PixelFilter") {
-      auto& filter = pbrt.filters.emplace_back();
+      auto& filter = pbrt.filters_commands.emplace_back();
       parse_pbrt_param(fs, str, filter.type);
       parse_pbrt_params(fs, str, filter.values);
     } else if (cmd == "Film") {
@@ -3657,11 +3657,11 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       parse_pbrt_param(fs, str, film.type);
       parse_pbrt_params(fs, str, film.values);
     } else if (cmd == "Accelerator") {
-      auto& accelerator = pbrt.accelerators.emplace_back();
+      auto& accelerator = pbrt.accelerators_commands.emplace_back();
       parse_pbrt_param(fs, str, accelerator.type);
       parse_pbrt_params(fs, str, accelerator.values);
     } else if (cmd == "Camera") {
-      auto& camera = pbrt.camera_commands.emplace_back();
+      auto& camera = pbrt.cameras_commands.emplace_back();
       parse_pbrt_param(fs, str, camera.type);
       parse_pbrt_params(fs, str, camera.values);
       camera.frame = stack.back().transform_start;
@@ -3761,7 +3761,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
 
   // convert objects
   convert_pbrt_films(filename, pbrt.films);
-  convert_pbrt_cameras(filename, pbrt.cameras, pbrt.camera_commands, pbrt.films);
+  convert_pbrt_cameras(filename, pbrt.cameras, pbrt.cameras_commands, pbrt.films);
   convert_pbrt_textures(filename, pbrt.textures);
   convert_pbrt_materials(filename, pbrt.materials, pbrt.textures);
   convert_pbrt_shapes(filename, pbrt.shapes);
@@ -3882,23 +3882,29 @@ void save_pbrt(
     format_values(fs, "Film \"{}\" {}\n", film.type, film.values);
   }
 
-  for (auto& integrator_ : pbrt.integrators) {
+  for (auto& camera : pbrt.cameras_commands) {
+    format_values(fs, "LookAt {} {} {}\n", camera.frame.o,
+        camera.frame.o - camera.frame.z, camera.frame.y);
+    format_values(fs, "Camera \"{}\" {}\n", camera.type, camera.values);
+  }
+
+  for (auto& integrator_ : pbrt.integrators_commands) {
     auto integrator = integrator_;
     format_values(
         fs, "Integrator \"{}\" {}\n", integrator.type, integrator.values);
   }
 
-  for (auto& sampler_ : pbrt.samplers) {
+  for (auto& sampler_ : pbrt.samplers_commands) {
     auto sampler = sampler_;
     format_values(fs, "Sampler \"{}\" {}\n", sampler.type, sampler.values);
   }
 
-  for (auto& filter_ : pbrt.filters) {
+  for (auto& filter_ : pbrt.filters_commands) {
     auto filter = filter_;
     format_values(fs, "PixelFilter \"{}\" {}\n", filter.type, filter.values);
   }
 
-  for (auto& accelerator_ : pbrt.accelerators) {
+  for (auto& accelerator_ : pbrt.accelerators_commands) {
     auto accelerator = accelerator_;
     format_values(
         fs, "Accelerator \"{}\" {}\n", accelerator.type, accelerator.values);
