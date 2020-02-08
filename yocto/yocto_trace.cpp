@@ -3159,8 +3159,10 @@ void set_shape_tangents(
 }
 static void set_instances(trace_scene& scene, int idx) {
   auto& shape = scene.shapes[idx];
-  for (auto& frame : shape.frames) {
-    scene.instances.push_back({frame, idx});
+  auto pos = scene.instances.size();
+  scene.instances.resize(scene.instances.size() + shape.frames.size());
+  for (auto i = 0; i < shape.frames.size(); i++) {
+    scene.instances[pos+i] = {shape.frames[i], idx, i};
   }
 }
 void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame) {

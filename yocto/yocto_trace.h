@@ -373,6 +373,7 @@ struct trace_shape {
 struct trace_instance {
   frame3f frame = identity3x4f;
   int     shape = -1;
+  int     instance = -1;
 };
 
 // Environment map.
