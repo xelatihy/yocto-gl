@@ -48,6 +48,7 @@
 #include <fstream>
 #include <future>
 #include <memory>
+#include <iomanip>
 
 #include "ext/json.hpp"
 #include "yocto_image.h"
