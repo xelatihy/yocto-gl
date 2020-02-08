@@ -155,7 +155,7 @@ void update_lights(opengl_scene& glscene, const sceneio_model& scene) {
     } else {
       area += shape.positions.size();
     }
-    auto ke = material.emission * area;
+    auto ke  = material.emission * area;
     auto lid = add_light(glscene);
     set_light_position(glscene, lid, transform_point(shape.frame, pos));
     set_light_emission(glscene, lid, ke);

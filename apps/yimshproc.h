@@ -111,8 +111,8 @@ void update_glvector_field(shared_ptr<app_state> app,
     elements[i] = {2 * i, 2 * i + 1};
   }
 
-    set_shape_positions(app->scene, app->glvector_field_id, positions);
-    set_shape_lines(app->scene, app->glvector_field_id, elements);
+  set_shape_positions(app->scene, app->glvector_field_id, positions);
+  set_shape_lines(app->scene, app->glvector_field_id, elements);
 }
 
 void update_gledges(shared_ptr<app_state> app) {
@@ -301,10 +301,10 @@ void yimshproc(const string&                         input_filename,
     float zoom = yoffset > 0 ? 0.1 : -0.1;
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
-  set_camera_frame(app->scene, app->camera_id, app->camera.frame);
-  set_camera_lens(app->scene, app->camera_id, app->camera.lens);
-  set_camera_aspect(app->scene, app->camera_id, app->camera.aspect);
-  set_camera_film(app->scene, app->camera_id, app->camera.film);
+    set_camera_frame(app->scene, app->camera_id, app->camera.frame);
+    set_camera_lens(app->scene, app->camera_id, app->camera.lens);
+    set_camera_aspect(app->scene, app->camera_id, app->camera.aspect);
+    set_camera_film(app->scene, app->camera_id, app->camera.film);
   });
   set_key_glcallback(win, [app](const opengl_window& win, int key,
                               bool pressing, const opengl_input& input) {
@@ -315,16 +315,17 @@ void yimshproc(const string&                         input_filename,
         // Handle mouse and keyboard for navigation.
         if ((input.mouse_left || input.mouse_right) && !input.modifier_alt &&
             !input.widgets_active) {
-          auto  dolly  = 0.0f;
-          auto  pan    = zero2f;
-          auto  rotate = zero2f;
+          auto dolly  = 0.0f;
+          auto pan    = zero2f;
+          auto rotate = zero2f;
           if (input.mouse_left && !input.modifier_shift)
             rotate = (input.mouse_pos - input.mouse_last) / 100.0f;
           if (input.mouse_left && input.modifier_shift)
             pan = (input.mouse_pos - input.mouse_last) / 100.0f;
           rotate.y = -rotate.y;
           pan.x    = -pan.x;
-          update_turntable(app->camera.frame, app->camera.focus, rotate, dolly, pan);
+          update_turntable(
+              app->camera.frame, app->camera.focus, rotate, dolly, pan);
           set_camera_frame(app->scene, app->camera_id, app->camera.frame);
           set_camera_lens(app->scene, app->camera_id, app->camera.lens);
           set_camera_aspect(app->scene, app->camera_id, app->camera.aspect);
