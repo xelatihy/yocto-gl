@@ -678,13 +678,13 @@ static ray3f sample_camera(const trace_scene& scene, int camera,
 // Point used for tracing
 struct trace_point {
   // shape
-  int   shape = -1;
+  int   shape     = -1;
   int   instance_ = -1;
-  vec3f position = zero3f;
-  vec3f normal   = zero3f;
-  vec3f gnormal  = zero3f;
-  vec2f texcoord = zero2f;
-  vec4f color    = zero4f;
+  vec3f position  = zero3f;
+  vec3f normal    = zero3f;
+  vec3f gnormal   = zero3f;
+  vec2f texcoord  = zero2f;
+  vec4f color     = zero4f;
   // directions
   vec3f outgoing = zero3f;
   vec3f incoming = zero3f;
@@ -722,11 +722,11 @@ static trace_point eval_point(const trace_scene& scene,
   auto  trace_non_rigid_frames = true;
 
   // initialize point
-  auto point     = trace_point{};
-  point.shape    = intersection.shape;
-  point.instance_    = intersection.instance_;
-  point.outgoing = -ray.d;
-  point.incoming = -ray.d;
+  auto point      = trace_point{};
+  point.shape     = intersection.shape;
+  point.instance_ = intersection.instance_;
+  point.outgoing  = -ray.d;
+  point.incoming  = -ray.d;
 
   // geometric properties
   point.position = eval_shape_elem(
@@ -736,8 +736,7 @@ static trace_point eval_point(const trace_scene& scene,
                      ? eval_element_normal(shape, element)
                      : normalize(eval_shape_elem(
                            shape, shape.quadsnorm, shape.normals, element, uv));
-  point.normal = transform_normal(
-      frame, point.normal, trace_non_rigid_frames);
+  point.normal  = transform_normal(frame, point.normal, trace_non_rigid_frames);
   point.gnormal = eval_element_normal(shape, element);
   point.gnormal = transform_normal(
       frame, point.gnormal, trace_non_rigid_frames);
@@ -785,8 +784,7 @@ static trace_point eval_point(const trace_scene& scene,
     }
     normalmap.y *= flip_v ? 1 : -1;  // flip vertical axis
     auto normal  = normalize(basis * normalmap);
-    point.normal = transform_normal(
-        frame, normal, trace_non_rigid_frames);
+    point.normal = transform_normal(frame, normal, trace_non_rigid_frames);
     if (material.thin && dot(point.outgoing, point.normal) < 0)
       point.normal = -point.normal;
   }
@@ -876,9 +874,9 @@ static trace_point eval_point(const trace_scene& scene,
 // Point used for tracing
 struct volume_point {
   // shape
-  int shape = -1;
+  int   shape     = -1;
   int   instance_ = -1;
-  vec3f position = zero3f;
+  vec3f position  = zero3f;
   // directions
   vec3f outgoing = zero3f;
   vec3f incoming = zero3f;
@@ -900,11 +898,11 @@ static volume_point eval_volume(const trace_scene& scene,
   auto  uv       = intersection.uv;
 
   // initialize point
-  auto point     = volume_point{};
-  point.shape    = intersection.shape;
+  auto point      = volume_point{};
+  point.shape     = intersection.shape;
   point.instance_ = intersection.instance_;
-  point.outgoing = -ray.d;
-  point.incoming = -ray.d;
+  point.outgoing  = -ray.d;
+  point.incoming  = -ray.d;
 
   // geometric properties
   point.position = eval_shape_elem(
@@ -1860,7 +1858,7 @@ void update_bvh(trace_scene& scene, const vector<int>& updated_instances,
   auto bboxes = vector<bbox3f>(scene.instances.size());
   for (auto idx = 0; idx < bboxes.size(); idx++) {
     auto& instance = scene.instances[idx];
-    auto& frame = scene.shapes[instance.shape].frames[instance.instance];
+    auto& frame    = scene.shapes[instance.shape].frames[instance.instance];
     auto& sbvh     = scene.shapes[instance.shape].bvh;
     bboxes[idx]    = transform_bbox(frame, sbvh.nodes[0].bbox);
   }
@@ -1981,8 +1979,8 @@ static bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray_,
 
 // Intersect ray with a bvh.
 static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
-    int& shape, int& instance, int& element, vec2f& uv, float& distance, bool find_any,
-    bool non_rigid_frames) {
+    int& shape, int& instance, int& element, vec2f& uv, float& distance,
+    bool find_any, bool non_rigid_frames) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
   if (scene.embree_bvh) {
@@ -2035,12 +2033,11 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
       for (auto idx = node.start; idx < node.start + node.num; idx++) {
         auto& instance_ = scene.instances[scene.bvh.primitives[idx]];
         auto& frame = scene.shapes[instance_.shape].frames[instance_.instance];
-        auto  inv_ray   = transform_ray(
-            inverse(frame, non_rigid_frames), ray);
+        auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
         if (intersect_shape_bvh(scene.shapes[instance_.shape], inv_ray, element,
                 uv, distance, find_any)) {
           hit      = true;
-          shape = instance_.shape;
+          shape    = instance_.shape;
           instance = instance_.instance;
           ray.tmax = distance;
         }
@@ -2055,11 +2052,11 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh.
-static bool intersect_instance_bvh(const trace_scene& scene, int shape, int instance,
-    const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
-    bool non_rigid_frames) {
-  auto& frame = scene.shapes[shape].frames[instance];
-  auto inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
+static bool intersect_instance_bvh(const trace_scene& scene, int shape,
+    int instance, const ray3f& ray, int& element, vec2f& uv, float& distance,
+    bool find_any, bool non_rigid_frames) {
+  auto& frame   = scene.shapes[shape].frames[instance];
+  auto  inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
   return intersect_shape_bvh(
       scene.shapes[shape], inv_ray, element, uv, distance, find_any);
 }
@@ -2067,19 +2064,18 @@ static bool intersect_instance_bvh(const trace_scene& scene, int shape, int inst
 trace_intersection intersect_scene_bvh(const trace_scene& scene,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = trace_intersection{};
-  intersection.hit  = intersect_scene_bvh(scene, ray, intersection.shape, 
-      intersection.instance_,
-      intersection.element, intersection.uv, intersection.distance, find_any,
-      non_rigid_frames);
+  intersection.hit  = intersect_scene_bvh(scene, ray, intersection.shape,
+      intersection.instance_, intersection.element, intersection.uv,
+      intersection.distance, find_any, non_rigid_frames);
   return intersection;
 }
 trace_intersection intersect_instance_bvh(const trace_scene& scene, int shape,
     int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
-  auto intersection     = trace_intersection{};
-  intersection.hit      = intersect_instance_bvh(scene, shape, instance, ray,
+  auto intersection      = trace_intersection{};
+  intersection.hit       = intersect_instance_bvh(scene, shape, instance, ray,
       intersection.element, intersection.uv, intersection.distance, find_any,
       non_rigid_frames);
-  intersection.shape = shape;
+  intersection.shape     = shape;
   intersection.instance_ = instance;
   return intersection;
 }
@@ -2515,20 +2511,19 @@ static float sample_lights_pdf(
   for (auto& light : scene.lights) {
     if (light.instance >= 0) {
       // check all intersection
-      auto& instance = scene.instances[light.instance];
-      auto lpdf          = 0.0f;
-      auto next_position = position;
+      auto& instance      = scene.instances[light.instance];
+      auto  lpdf          = 0.0f;
+      auto  next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
-        auto isec = intersect_instance_bvh(
-            scene, instance.shape, instance.instance, 
-            {next_position, direction});
+        auto isec = intersect_instance_bvh(scene, instance.shape,
+            instance.instance, {next_position, direction});
         if (!isec.hit) break;
         // accumulate pdf
         auto& shape     = scene.shapes[instance.shape];
         auto& frame     = shape.frames[instance.instance];
         auto  lposition = transform_point(
-            frame, eval_shape_elem(shape, shape.quadspos,
-                                shape.positions, isec.element, isec.uv));
+            frame, eval_shape_elem(shape, shape.quadspos, shape.positions,
+                       isec.element, isec.uv));
         auto lnormal = transform_normal(frame,
             eval_element_normal(shape, isec.element), trace_non_rigid_frames);
         // prob triangle * area triangle = area triangle mesh
@@ -3171,10 +3166,10 @@ void set_shape_tangents(
 }
 static void set_instances(trace_scene& scene, int idx) {
   auto& shape = scene.shapes[idx];
-  auto pos = scene.instances.size();
+  auto  pos   = scene.instances.size();
   scene.instances.resize(scene.instances.size() + shape.frames.size());
   for (auto i = 0; i < shape.frames.size(); i++) {
-    scene.instances[pos+i] = {idx, i};
+    scene.instances[pos + i] = {idx, i};
   }
 }
 void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame) {
@@ -3186,10 +3181,10 @@ void set_shape_frames(trace_scene& scene, int idx,
     const vector<frame3f>& instances, const frame3f& frame) {
   auto& shape = scene.shapes[idx];
   if (instances.empty()) {
-    shape.frames     = {frame};
+    shape.frames = {frame};
   } else {
     shape.frames.resize(instances.size());
-    for(auto idx = 0; idx < instances.size(); idx++)
+    for (auto idx = 0; idx < instances.size(); idx++)
       shape.frames[idx] = instances[idx] * frame;
   }
   set_instances(scene, idx);

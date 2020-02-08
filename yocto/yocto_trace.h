@@ -443,12 +443,12 @@ namespace yocto {
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
 struct trace_intersection {
-  int   shape    = -1;
-  int   instance_    = -1;
-  int   element  = -1;
-  vec2f uv       = {0, 0};
-  float distance = 0;
-  bool  hit      = false;
+  int   shape     = -1;
+  int   instance_ = -1;
+  int   element   = -1;
+  vec2f uv        = {0, 0};
+  float distance  = 0;
+  bool  hit       = false;
 };
 
 // Intersect ray with a bvh returning either the first or any intersection
@@ -456,8 +456,8 @@ struct trace_intersection {
 // the shape element index and the element barycentric coordinates.
 trace_intersection intersect_scene_bvh(const trace_scene& scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
-trace_intersection intersect_instance_bvh(const trace_scene& scene,
-    int shape, int instance, const ray3f& ray, bool find_any = false,
+trace_intersection intersect_instance_bvh(const trace_scene& scene, int shape,
+    int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
 }  // namespace yocto
