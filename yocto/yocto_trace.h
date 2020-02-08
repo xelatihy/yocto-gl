@@ -371,7 +371,6 @@ struct trace_shape {
 
 // Instance of a visible shape in the scene.
 struct trace_instance {
-  frame3f frame = identity3x4f;
   int     shape = -1;
   int     instance = -1;
 };
