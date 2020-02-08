@@ -184,13 +184,6 @@ struct opengl_shape {
   opengl_shape& operator=(opengl_shape&&);
 };
 
-// Opengl instance group
-struct opengl_instance {
-  frame3f frame       = identity3x4f;
-  int     shape       = 0;
-  bool    highlighted = false;
-};
-
 // Opengl light
 struct opengl_light {
   vec3f position = {0, 0, 0};
@@ -206,7 +199,6 @@ struct opengl_scene {
   ~opengl_scene();
 
   vector<opengl_camera>   _cameras   = {};
-  vector<opengl_instance> _instances = {};
   vector<opengl_shape>    _shapes    = {};
   vector<opengl_texture>  _textures  = {};
   vector<opengl_light>    _lights    = {};
@@ -293,14 +285,9 @@ void set_material_metallic(
 void set_material_normalmap(opengl_scene& scene, int idx, int normal_txt);
 void set_material_gltftextures(
     opengl_scene& scene, int idx, bool gltf_textures);
+void set_shape_hidden(opengl_scene& scene, int idx, bool hidden);
+void set_shape_highlighted(opengl_scene& scene, int idx, bool highlighted);
 void clear_shapes(opengl_scene& scene);
-
-// add instance
-int add_instance(
-    opengl_scene& scene, const frame3f& frame, int shape, int material);
-void set_instance(opengl_scene& scene, int idx, const frame3f& frame, int shape,
-    int material);
-void clear_instances(opengl_scene& scene);
 
 // add light
 int add_light(opengl_scene& scene, const vec3f& position, const vec3f& emission,

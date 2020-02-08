@@ -157,11 +157,11 @@ void init_bvh(shared_ptr<app_state> app) {
 
 void hide_edges(shared_ptr<app_state> app) {
   app->show_edges = false;
-  set_instance(app->scene, app->gledges_id, identity3x4f, -1, 1);
+  set_shape_hidden(app->scene, app->gledges_id, true);
 }
 void show_edges(shared_ptr<app_state> app) {
   app->show_edges = true;
-  set_instance(app->scene, app->gledges_id, identity3x4f, app->gledges_id, 1);
+  set_shape_hidden(app->scene, app->gledges_id, false);
 }
 
 void init_opengl_scene(shared_ptr<app_state> app) {
@@ -195,11 +195,6 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   app->glpolyline_id = add_shape(app->scene);
   set_material_emission(app->scene, app->glpolyline_id, {1, 1, 1});
   set_material_roughness(app->scene, app->glpolyline_id, 0.0);
-
-  // Add instances.
-  for (int i = 0; i < 5; ++i) {
-    add_instance(app->scene, identity3x4f, i, i ? 1 : 0);
-  }
 
   // Hide edges.
   if (!app->show_edges) hide_edges(app);

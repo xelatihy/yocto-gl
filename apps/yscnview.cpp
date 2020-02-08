@@ -199,6 +199,8 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
       set_shape(glscene, id, shape.quads, shape.positions, shape.normals,
           shape.texcoords, shape.colors, shape.tangents);
     }
+    set_shape_frame(glscene, id, shape.frame);
+    set_shape_instances(glscene, id, shape.instances);
     auto& material = shape.material;
     set_material_emission(
         glscene, id, material.emission, material.emission_tex);
@@ -213,12 +215,6 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
         glscene, id, material.roughness, material.roughness_tex);
     set_material_opacity(glscene, id, material.opacity, material.opacity_tex);
     set_material_normalmap(glscene, id, material.normal_tex);
-    if (shape.instances.empty()) {
-      add_instance(glscene, shape.frame, id, id);
-    } else {
-      for (auto& frame : shape.instances)
-        add_instance(glscene, frame * shape.frame, id, id);
-    }
   }
 }
 
