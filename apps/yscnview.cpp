@@ -157,9 +157,7 @@ void update_lights(opengl_scene& glscene, const sceneio_model& scene) {
     }
     auto ke  = material.emission * area;
     auto lid = add_light(glscene);
-    set_light_position(glscene, lid, transform_point(shape.frame, pos));
-    set_light_emission(glscene, lid, ke);
-    set_light_directional(glscene, lid, false);
+    set_light(glscene, lid, transform_point(shape.frame, pos), ke, false);
   }
 }
 
@@ -171,11 +169,8 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
   for (auto& camera : scene.cameras) {
     auto id = add_camera(glscene);
     set_camera_frame(glscene, id, camera.frame);
-    set_camera_lens(glscene, id, camera.lens);
-    set_camera_aspect(glscene, id, camera.aspect);
-    set_camera_film(glscene, id, camera.film);
-    set_camera_near(glscene, id, 0.001);
-    set_camera_far(glscene, id, 10000);
+    set_camera_lens(glscene, id, camera.lens, camera.aspect, camera.film);
+    set_camera_nearfar(glscene, id, 0.001, 10000);
   }
 
   // textures
@@ -455,11 +450,9 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
       auto& camera = app->ioscene.cameras[app->selected_camera];
       set_camera_frame(app->glscene, app->selected_camera, camera.frame);
-      set_camera_lens(app->glscene, app->selected_camera, camera.lens);
-      set_camera_aspect(app->glscene, app->selected_camera, camera.aspect);
-      set_camera_film(app->glscene, app->selected_camera, camera.film);
-      set_camera_near(app->glscene, app->selected_camera, 0.001);
-      set_camera_far(app->glscene, app->selected_camera, 10000);
+      set_camera_lens(app->glscene, app->selected_camera, camera.lens,
+          camera.aspect, camera.film);
+      set_camera_nearfar(app->glscene, app->selected_camera, 0.001, 10000);
     }
     end_glheader(win);
   }

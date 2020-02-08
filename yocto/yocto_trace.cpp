@@ -715,7 +715,7 @@ static trace_point eval_point(const trace_scene& scene,
   // get data
   auto& instance               = scene.instances[intersection.instance];
   auto& shape                  = scene.shapes[instance.shape];
-  auto& material               = scene.materials[instance.material];
+  auto& material               = shape.material;
   auto  element                = intersection.element;
   auto  uv                     = intersection.uv;
   auto  trace_non_rigid_frames = true;
@@ -892,7 +892,7 @@ static volume_point eval_volume(const trace_scene& scene,
   // get data
   auto& instance = scene.instances[intersection.instance];
   auto& shape    = scene.shapes[instance.shape];
-  auto& material = scene.materials[instance.material];
+  auto& material = shape.material;
   auto  element  = intersection.element;
   auto  uv       = intersection.uv;
 
@@ -941,7 +941,8 @@ static volume_point eval_volume(const trace_scene& scene,
 static bool has_volume(
     const trace_scene& scene, const trace_intersection& intersection) {
   auto& instance = scene.instances[intersection.instance];
-  auto& material = scene.materials[instance.material];
+  auto& shape    = scene.shapes[instance.shape];
+  auto& material = shape.material;
   return !material.thin && material.transmission;
 }
 
@@ -2828,8 +2829,6 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
     case trace_falsecolor_type::transmission: return {point.transmission, 1};
     case trace_falsecolor_type::refraction: return {point.refraction, 1};
     case trace_falsecolor_type::roughness: return {vec3f{point.roughness}, 1};
-    case trace_falsecolor_type::material:
-      return {hashed_color(scene.instances[intersection.instance].material), 1};
     case trace_falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
     case trace_falsecolor_type::shape:
@@ -2927,7 +2926,7 @@ void init_lights(trace_scene& scene) {
   for (auto idx = 0; idx < scene.instances.size(); idx++) {
     auto& instance = scene.instances[idx];
     auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[instance.material];
+    auto& material = shape.material;
     if (material.emission == zero3f) continue;
     if (shape.triangles.empty() && shape.quads.empty()) continue;
     auto& light       = scene.lights.emplace_back();
@@ -3058,34 +3057,32 @@ image<vec4f> trace_samples(trace_state& state, const trace_scene& scene,
 namespace yocto {
 
 // Add cameras
-int add_camera(trace_scene& scene, const frame3f& frame, float lens,
-    float aspect, float film, float aperture, float focus) {
+int add_camera(trace_scene& scene) {
   scene.cameras.emplace_back();
-  set_camera(scene, (int)scene.cameras.size() - 1, frame, lens, aspect, film,
-      aperture, focus);
   return (int)scene.cameras.size() - 1;
 }
-void set_camera(trace_scene& scene, int idx, const frame3f& frame, float lens,
-    float aspect, float film, float aperture, float focus) {
+void set_camera_frame(trace_scene& scene, int idx, const frame3f& frame) {
   auto& camera = scene.cameras[idx];
   camera.frame = frame;
+}
+void set_camera_lens(
+    trace_scene& scene, int idx, float lens, float aspect, float film) {
+  auto& camera = scene.cameras[idx];
   camera.lens  = lens;
   camera.film  = aspect >= 1 ? vec2f{film, film / aspect}
                             : vec2f{film * aspect, film};
+}
+void set_camera_focus(
+    trace_scene& scene, int idx, float aperture, float focus) {
+  auto& camera    = scene.cameras[idx];
   camera.aperture = aperture;
   camera.focus    = focus;
 }
 void clean_cameras(trace_scene& scene) { scene.cameras.clear(); }
 
 // Add texture
-int add_texture(trace_scene& scene, const image<vec4b>& img) {
+int add_texture(trace_scene& scene) {
   scene.textures.emplace_back();
-  set_texture(scene, (int)scene.textures.size() - 1, img);
-  return (int)scene.textures.size() - 1;
-}
-int add_texture(trace_scene& scene, const image<vec4f>& img) {
-  scene.textures.emplace_back();
-  set_texture(scene, (int)scene.textures.size() - 1, img);
   return (int)scene.textures.size() - 1;
 }
 void set_texture(trace_scene& scene, int idx, const image<vec4b>& img) {
@@ -3100,256 +3097,171 @@ void set_texture(trace_scene& scene, int idx, const image<vec4f>& img) {
 }
 void clean_textures(trace_scene& scene) { scene.textures.clear(); }
 
-// Add material
-int add_material(trace_scene& scene) {
-  scene.materials.emplace_back();
-  return (int)scene.materials.size() - 1;
+// Add shape
+int add_shape(trace_scene& scene) {
+  scene.shapes.emplace_back();
+  return (int)scene.shapes.size() - 1;
+}
+void set_shape_points(trace_scene& scene, int idx, const vector<int>& points) {
+  auto& shape  = scene.shapes[idx];
+  shape.points = points;
+}
+void set_shape_lines(trace_scene& scene, int idx, const vector<vec2i>& lines) {
+  auto& shape = scene.shapes[idx];
+  shape.lines = lines;
+}
+void set_shape_triangles(
+    trace_scene& scene, int idx, const vector<vec3i>& triangles) {
+  auto& shape     = scene.shapes[idx];
+  shape.triangles = triangles;
+}
+void set_shape_quads(trace_scene& scene, int idx, const vector<vec4i>& quads) {
+  auto& shape = scene.shapes[idx];
+  shape.quads = quads;
+}
+void set_shape_fvquads(trace_scene& scene, int idx,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord) {
+  auto& shape         = scene.shapes[idx];
+  shape.quadspos      = quadspos;
+  shape.quadsnorm     = quadsnorm;
+  shape.quadstexcoord = quadstexcoord;
+}
+void set_shape_positions(
+    trace_scene& scene, int idx, const vector<vec3f>& positions) {
+  auto& shape     = scene.shapes[idx];
+  shape.positions = positions;
+}
+void set_shape_normals(
+    trace_scene& scene, int idx, const vector<vec3f>& normals) {
+  auto& shape   = scene.shapes[idx];
+  shape.normals = normals;
+}
+void set_shape_texcoords(
+    trace_scene& scene, int idx, const vector<vec2f>& texcoords) {
+  auto& shape     = scene.shapes[idx];
+  shape.texcoords = texcoords;
+}
+void set_shape_colors(
+    trace_scene& scene, int idx, const vector<vec4f>& colors) {
+  auto& shape  = scene.shapes[idx];
+  shape.colors = colors;
+}
+void set_shape_radius(
+    trace_scene& scene, int idx, const vector<float>& radius) {
+  auto& shape  = scene.shapes[idx];
+  shape.radius = radius;
+}
+void set_shape_tangents(
+    trace_scene& scene, int idx, const vector<vec4f>& tangents) {
+  auto& shape    = scene.shapes[idx];
+  shape.tangents = tangents;
+}
+static void set_instances(trace_scene& scene, int idx) {
+  auto& shape = scene.shapes[idx];
+  if (shape.instances.empty()) {
+    scene.instances.push_back({shape.frame, idx});
+  } else {
+    for (auto& iframe : shape.instances) {
+      scene.instances.push_back({iframe * shape.frame, idx});
+    }
+  }
+}
+void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame) {
+  auto& shape     = scene.shapes[idx];
+  shape.frame     = frame;
+  shape.instances = vector<frame3f>{identity3x4f};
+  set_instances(scene, idx);
+}
+void set_shape_instances(trace_scene& scene, int idx, const frame3f& frame,
+    const vector<frame3f>& instances) {
+  auto& shape     = scene.shapes[idx];
+  shape.frame     = frame;
+  shape.instances = instances;
+  set_instances(scene, idx);
 }
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt) {
-  auto& material        = scene.materials[idx];
+  auto& material        = scene.shapes[idx].material;
   material.emission     = emission;
   material.emission_tex = emission_txt;
 }
 void set_material_base(
     trace_scene& scene, int idx, const vec3f& base, int base_txt) {
-  auto& material    = scene.materials[idx];
+  auto& material    = scene.shapes[idx].material;
   material.base     = base;
   material.base_tex = base_txt;
 }
 void set_material_specular(
     trace_scene& scene, int idx, float specular, int specular_txt) {
-  auto& material        = scene.materials[idx];
+  auto& material        = scene.shapes[idx].material;
   material.specular     = specular;
   material.specular_tex = specular_txt;
 }
 void set_material_metallic(
     trace_scene& scene, int idx, float metallic, int metallic_txt) {
-  auto& material        = scene.materials[idx];
+  auto& material        = scene.shapes[idx].material;
   material.metallic     = metallic;
   material.metallic_tex = metallic_txt;
 }
 void set_material_ior(trace_scene& scene, int idx, float ior) {
-  auto& material = scene.materials[idx];
+  auto& material = scene.shapes[idx].material;
   material.ior   = ior;
 }
 void set_material_transmission(trace_scene& scene, int idx, float transmission,
     bool thin, float radius, int transmission_txt) {
-  auto& material            = scene.materials[idx];
+  auto& material            = scene.shapes[idx].material;
   material.transmission     = transmission;
   material.thin             = thin;
   material.radius           = radius;
   material.transmission_tex = transmission_txt;
 }
 void set_material_thin(trace_scene& scene, int idx, bool thin) {
-  auto& material = scene.materials[idx];
+  auto& material = scene.shapes[idx].material;
   material.thin  = thin;
 }
 void set_material_roughness(
     trace_scene& scene, int idx, float roughness, int roughness_txt) {
-  auto& material         = scene.materials[idx];
+  auto& material         = scene.shapes[idx].material;
   material.roughness     = roughness;
   material.roughness_tex = roughness_txt;
 }
 void set_material_opacity(
     trace_scene& scene, int idx, float opacity, int opacity_txt) {
-  auto& material       = scene.materials[idx];
+  auto& material       = scene.shapes[idx].material;
   material.opacity     = opacity;
   material.opacity_tex = opacity_txt;
 }
 void set_material_scattering(trace_scene& scene, int idx,
     const vec3f& scattering, float phaseg, int scattering_tex) {
-  auto& material          = scene.materials[idx];
+  auto& material          = scene.shapes[idx].material;
   material.scattering     = scattering;
   material.phaseg         = phaseg;
   material.scattering_tex = scattering_tex;
 }
 void set_material_normalmap(trace_scene& scene, int idx, int normal_txt) {
-  auto& material      = scene.materials[idx];
+  auto& material      = scene.shapes[idx].material;
   material.normal_tex = normal_txt;
 }
 void set_material_gltftextures(
     trace_scene& scene, int idx, bool gltf_textures) {
-  auto& material         = scene.materials[idx];
+  auto& material         = scene.shapes[idx].material;
   material.gltf_textures = gltf_textures;
-}
-void clean_materials(trace_scene& scene) { scene.materials.clear(); }
-
-// Add shape
-int add_shape(trace_scene& scene) {
-  scene.shapes.emplace_back();
-  return (int)scene.shapes.size() - 1;
-}
-int add_shape(trace_scene& scene, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius) {
-  scene.shapes.emplace_back();
-  set_shape(scene, (int)scene.shapes.size() - 1, points, positions, normals,
-      texcoords, colors, radius);
-  return (int)scene.shapes.size() - 1;
-}
-int add_shape(trace_scene& scene, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius) {
-  scene.shapes.emplace_back();
-  set_shape(scene, (int)scene.shapes.size() - 1, lines, positions, normals,
-      texcoords, colors, radius);
-  return (int)scene.shapes.size() - 1;
-}
-int add_shape(trace_scene& scene, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  scene.shapes.emplace_back();
-  set_shape(scene, (int)scene.shapes.size() - 1, triangles, positions, normals,
-      texcoords, colors, tangents);
-  return (int)scene.shapes.size() - 1;
-}
-int add_shape(trace_scene& scene, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  scene.shapes.emplace_back();
-  set_shape(scene, (int)scene.shapes.size() - 1, quads, positions, normals,
-      texcoords, colors, tangents);
-  return (int)scene.shapes.size() - 1;
-}
-int add_shape(trace_scene& scene, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords) {
-  scene.shapes.emplace_back();
-  set_shape(scene, (int)scene.shapes.size() - 1, quadspos, quadsnorm,
-      quadstexcoord, positions, normals, texcoords);
-  return (int)scene.shapes.size() - 1;
-}
-void set_shape(trace_scene& scene, int idx, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius) {
-  auto& shape         = scene.shapes[idx];
-  shape.points        = points;
-  shape.lines         = {};
-  shape.triangles     = {};
-  shape.quads         = {};
-  shape.quadspos      = {};
-  shape.quadsnorm     = {};
-  shape.quadstexcoord = {};
-  shape.positions     = positions;
-  shape.normals       = normals;
-  shape.texcoords     = texcoords;
-  shape.colors        = colors;
-  shape.radius        = radius;
-  shape.tangents      = {};
-}
-void set_shape(trace_scene& scene, int idx, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius) {
-  auto& shape         = scene.shapes[idx];
-  shape.points        = {};
-  shape.lines         = lines;
-  shape.triangles     = {};
-  shape.quads         = {};
-  shape.quadspos      = {};
-  shape.quadsnorm     = {};
-  shape.quadstexcoord = {};
-  shape.positions     = positions;
-  shape.normals       = normals;
-  shape.texcoords     = texcoords;
-  shape.colors        = colors;
-  shape.radius        = radius;
-  shape.tangents      = {};
-}
-void set_shape(trace_scene& scene, int idx, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  auto& shape         = scene.shapes[idx];
-  shape.points        = {};
-  shape.lines         = {};
-  shape.triangles     = triangles;
-  shape.quads         = {};
-  shape.quadspos      = {};
-  shape.quadsnorm     = {};
-  shape.quadstexcoord = {};
-  shape.positions     = positions;
-  shape.normals       = normals;
-  shape.texcoords     = texcoords;
-  shape.colors        = colors;
-  shape.radius        = {};
-  shape.tangents      = tangents;
-}
-void set_shape(trace_scene& scene, int idx, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  auto& shape         = scene.shapes[idx];
-  shape.points        = {};
-  shape.lines         = {};
-  shape.triangles     = {};
-  shape.quads         = quads;
-  shape.quadspos      = {};
-  shape.quadsnorm     = {};
-  shape.quadstexcoord = {};
-  shape.positions     = positions;
-  shape.normals       = normals;
-  shape.texcoords     = texcoords;
-  shape.colors        = colors;
-  shape.radius        = {};
-  shape.tangents      = tangents;
-}
-void set_shape(trace_scene& scene, int idx, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords) {
-  auto& shape         = scene.shapes[idx];
-  shape.points        = {};
-  shape.lines         = {};
-  shape.triangles     = {};
-  shape.quads         = {};
-  shape.quadspos      = quadspos;
-  shape.quadsnorm     = quadsnorm;
-  shape.quadstexcoord = quadstexcoord;
-  shape.positions     = positions;
-  shape.normals       = normals;
-  shape.texcoords     = texcoords;
-  shape.colors        = {};
-  shape.radius        = {};
-  shape.tangents      = {};
 }
 void clean_shapes(trace_scene& scene) { scene.shapes.clear(); }
 
-// Add instance
-int add_instance(
-    trace_scene& scene, const frame3f& frame, int shape, int material) {
-  scene.instances.emplace_back();
-  set_instance(scene, (int)scene.instances.size() - 1, frame, shape, material);
-  return (int)scene.instances.size() - 1;
-}
-void set_instance(trace_scene& scene, int idx, const frame3f& frame, int shape,
-    int material) {
-  auto& instance    = scene.instances[idx];
-  instance.frame    = frame;
-  instance.shape    = shape;
-  instance.material = material;
-}
-void clear_instances(trace_scene& scene) { scene.instances.clear(); }
-
 // Add environment
-int add_environment(trace_scene& scene, const frame3f& frame,
-    const vec3f& emission, int emission_tex) {
+int add_environment(trace_scene& scene) {
   scene.environments.emplace_back();
-  set_environment(
-      scene, (int)scene.environments.size() - 1, frame, emission, emission_tex);
   return (int)scene.environments.size() - 1;
 }
-void set_environment(trace_scene& scene, int idx, const frame3f& frame,
-    const vec3f& emission, int emission_tex) {
+void set_environment_frame(trace_scene& scene, int idx, const frame3f& frame) {
+  auto& environment = scene.environments[idx];
+  environment.frame = frame;
+}
+void set_environment_emission(
+    trace_scene& scene, int idx, const vec3f& emission, int emission_tex) {
   auto& environment        = scene.environments[idx];
-  environment.frame        = frame;
   environment.emission     = emission;
   environment.emission_tex = emission_tex;
 }

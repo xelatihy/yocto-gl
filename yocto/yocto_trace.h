@@ -79,21 +79,42 @@ namespace yocto {
 struct trace_scene;
 
 // Add cameras
-int  add_camera(trace_scene& scene, const frame3f& frame, float lens,
-     float asepct, float film, float aperture, float focus);
-void set_camera(trace_scene& scene, int idx, const frame3f& frame, float lens,
-    float asepct, float film, float aperture, float focus);
+int  add_camera(trace_scene& scene);
+void set_camera_frame(trace_scene& scene, int idx, const frame3f& frame);
+void set_camera_lens(
+    trace_scene& scene, int idx, float lens, float aspect, float film);
+void set_camera_focus(trace_scene& scene, int idx, float aperture, float focus);
 void clear_cameras(trace_scene& scene);
 
 // Add texture
-int  add_texture(trace_scene& scene, const image<vec4b>& img);
-int  add_texture(trace_scene& scene, const image<vec4f>& img);
+int  add_texture(trace_scene& scene);
 void set_texture(trace_scene& scene, int idx, const image<vec4b>& img);
 void set_texture(trace_scene& scene, int idx, const image<vec4f>& img);
 void clear_textures(trace_scene& scene);
 
-// Add material
-int  add_material(trace_scene& scene);
+// Add shape
+int  add_shape(trace_scene& scene);
+void set_shape_points(trace_scene& scene, int idx, const vector<int>& points);
+void set_shape_lines(trace_scene& scene, int idx, const vector<vec2i>& lines);
+void set_shape_triangles(
+    trace_scene& scene, int idx, const vector<vec3i>& triangles);
+void set_shape_quads(trace_scene& scene, int idx, const vector<vec4i>& quads);
+void set_shape_fvquads(trace_scene& scene, int idx,
+    const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
+    const vector<vec4i>& quadstexcoord);
+void set_shape_positions(
+    trace_scene& scene, int idx, const vector<vec3f>& positions);
+void set_shape_normals(
+    trace_scene& scene, int idx, const vector<vec3f>& normals);
+void set_shape_texcoords(
+    trace_scene& scene, int idx, const vector<vec2f>& texcoords);
+void set_shape_colors(trace_scene& scene, int idx, const vector<vec4f>& colors);
+void set_shape_radius(trace_scene& scene, int idx, const vector<float>& radius);
+void set_shape_tangents(
+    trace_scene& scene, int idx, const vector<vec4f>& tangents);
+void set_shape_frame(trace_scene& scene, int idx, const frame3f& frame);
+void set_shape_instances(trace_scene& scene, int idx, const frame3f& frame,
+    const vector<frame3f>& instances);
 void set_material_emission(
     trace_scene& scene, int idx, const vec3f& emission, int emission_txt = -1);
 void set_material_base(
@@ -114,64 +135,13 @@ void set_material_scattering(trace_scene& scene, int idx,
     const vec3f& scattering, float phaseg, int scattering_tex = -1);
 void set_material_normalmap(trace_scene& scene, int idx, int normal_txt);
 void set_material_gltftextures(trace_scene& scene, int idx, bool gltf_textures);
-void clear_materials(trace_scene& scene);
-
-// Add shape
-int  add_shape(trace_scene& scene);
-int  add_shape(trace_scene& scene, const vector<int>& points,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-     const vector<float>& radius);
-int  add_shape(trace_scene& scene, const vector<vec2i>& lines,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-     const vector<float>& radius);
-int  add_shape(trace_scene& scene, const vector<vec3i>& triangles,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-     const vector<vec4f>& tangents);
-int  add_shape(trace_scene& scene, const vector<vec4i>& quads,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-     const vector<vec4f>& tangents);
-int  add_shape(trace_scene& scene, const vector<vec4i>& quadspos,
-     const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-     const vector<vec3f>& positions, const vector<vec3f>& normals,
-     const vector<vec2f>& texcoords);
-void set_shape(trace_scene& scene, int idx, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius);
-void set_shape(trace_scene& scene, int idx, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius);
-void set_shape(trace_scene& scene, int idx, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents);
-void set_shape(trace_scene& scene, int idx, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents);
-void set_shape(trace_scene& scene, int idx, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords);
 void clear_shapes(trace_scene& scene);
 
-// Add instance
-int add_instance(
-    trace_scene& scene, const frame3f& frame, int shape, int material);
-void set_instance(
-    trace_scene& scene, int idx, const frame3f& frame, int shape, int material);
-void clear_instances(trace_scene& scene);
-
 // Add environment
-int  add_environment(trace_scene& scene, const frame3f& frame,
-     const vec3f& emission, int emission_tex = -1);
-void set_environment(trace_scene& scene, int idx, const frame3f& frame,
-    const vec3f& emission, int emission_tex = -1);
+int  add_environment(trace_scene& scene);
+void set_environment_frame(trace_scene& scene, int idx, const frame3f& frame);
+void set_environment_emission(
+    trace_scene& scene, int idx, const vec3f& emission, int emission_map = -1);
 void clear_environments(trace_scene& scene);
 
 // Trace state
@@ -189,7 +159,7 @@ enum struct trace_falsecolor_type {
   // clang-format off
   normal, frontfacing, gnormal, gfrontfacing, texcoord, color, emission,    
   diffuse, specular, coat, metal, transmission, refraction, roughness, 
-  material, shape, instance, element, highlight
+  shape, instance, element, highlight
   // clang-format on
 };
 // Strategy used to build the bvh
@@ -231,7 +201,7 @@ const auto trace_sampler_names = vector<string>{
 const auto trace_falsecolor_names = vector<string>{"normal", "frontfacing",
     "gnormal", "gfrontfacing", "texcoord", "color", "emission", "diffuse",
     "specular", "coat", "metal", "transmission", "refraction", "roughness",
-    "material", "shape", "instance", "element", "highlight"};
+    "shape", "instance", "element", "highlight"};
 const auto trace_bvh_names        = vector<string>{
     "default", "highquality", "middle", "balanced",
 #ifdef YOCTO_EMBREE
@@ -367,6 +337,13 @@ struct trace_material {
 // Additionally, we support faceavarying primitives where
 // each verftex data has its own topology.
 struct trace_shape {
+  // material
+  trace_material material = {};
+
+  // frames
+  frame3f         frame     = identity3x4f;
+  vector<frame3f> instances = {};
+
   // primitives
   vector<int>   points    = {};
   vector<vec2i> lines     = {};
@@ -395,9 +372,8 @@ struct trace_shape {
 
 // Instance of a visible shape in the scene.
 struct trace_instance {
-  frame3f frame    = identity3x4f;
-  int     shape    = -1;
-  int     material = -1;
+  frame3f frame = identity3x4f;
+  int     shape = -1;
 };
 
 // Environment map.
@@ -425,7 +401,6 @@ struct trace_scene {
   vector<trace_camera>      cameras      = {};
   vector<trace_shape>       shapes       = {};
   vector<trace_instance>    instances    = {};
-  vector<trace_material>    materials    = {};
   vector<trace_texture>     textures     = {};
   vector<trace_environment> environments = {};
 

@@ -168,11 +168,9 @@ void init_opengl_scene(shared_ptr<app_state> app) {
   init_glscene(app->scene);
   app->camera_id = add_camera(app->scene);
   set_camera_frame(app->scene, app->camera_id, app->camera.frame);
-  set_camera_lens(app->scene, app->camera_id, app->camera.lens);
-  set_camera_aspect(app->scene, app->camera_id, app->camera.aspect);
-  set_camera_film(app->scene, app->camera_id, app->camera.film);
-  set_camera_near(app->scene, app->camera_id, 0.001);
-  set_camera_far(app->scene, app->camera_id, 10000);
+  set_camera_lens(app->scene, app->camera_id, app->camera.lens,
+      app->camera.aspect, app->camera.film);
+  set_camera_nearfar(app->scene, app->camera_id, 0.001, 10000);
 
   // The model.
   app->glshape_id = add_shape(app->scene);
@@ -206,17 +204,11 @@ void init_opengl_scene(shared_ptr<app_state> app) {
 
   // Add lights.
   auto l0 = add_light(app->scene);
-  set_light_position(app->scene, l0, {5, 5, 5});
-  set_light_emission(app->scene, l0, {30, 30, 30});
-  set_light_directional(app->scene, l0, false);
+  set_light(app->scene, l0, {5, 5, 5}, {30, 30, 30}, false);
   auto l1 = add_light(app->scene);
-  set_light_position(app->scene, l1, {-5, 5, 5});
-  set_light_emission(app->scene, l1, {30, 30, 30});
-  set_light_directional(app->scene, l1, false);
+  set_light(app->scene, l1, {-5, 5, 5}, {30, 30, 30}, false);
   auto l2 = add_light(app->scene);
-  set_light_position(app->scene, l2, {0, 5, -5});
-  set_light_emission(app->scene, l2, {30, 30, 30});
-  set_light_directional(app->scene, l2, false);
+  set_light(app->scene, l2, {0, 5, -5}, {30, 30, 30}, false);
 }
 
 void clear(shared_ptr<app_state> app) {
@@ -302,9 +294,8 @@ void yimshproc(const string&                         input_filename,
     update_turntable(
         app->camera.frame, app->camera.focus, zero2f, zoom, zero2f);
     set_camera_frame(app->scene, app->camera_id, app->camera.frame);
-    set_camera_lens(app->scene, app->camera_id, app->camera.lens);
-    set_camera_aspect(app->scene, app->camera_id, app->camera.aspect);
-    set_camera_film(app->scene, app->camera_id, app->camera.film);
+    set_camera_lens(app->scene, app->camera_id, app->camera.lens,
+        app->camera.aspect, app->camera.film);
   });
   set_key_glcallback(win, [app](const opengl_window& win, int key,
                               bool pressing, const opengl_input& input) {
@@ -327,9 +318,8 @@ void yimshproc(const string&                         input_filename,
           update_turntable(
               app->camera.frame, app->camera.focus, rotate, dolly, pan);
           set_camera_frame(app->scene, app->camera_id, app->camera.frame);
-          set_camera_lens(app->scene, app->camera_id, app->camera.lens);
-          set_camera_aspect(app->scene, app->camera_id, app->camera.aspect);
-          set_camera_film(app->scene, app->camera_id, app->camera.film);
+          set_camera_lens(app->scene, app->camera_id, app->camera.lens,
+              app->camera.aspect, app->camera.film);
         }
       });
 

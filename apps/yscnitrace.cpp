@@ -106,19 +106,36 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   scene = trace_scene{};
 
   for (auto& iocamera : ioscene.cameras) {
-    add_camera(scene, iocamera.frame, iocamera.lens, iocamera.aspect,
-        iocamera.film, iocamera.aperture, iocamera.focus);
+    auto id = add_camera(scene);
+    set_camera_frame(scene, id, iocamera.frame);
+    set_camera_lens(scene, id, iocamera.lens, iocamera.aspect, iocamera.film);
+    set_camera_focus(scene, id, iocamera.aperture, iocamera.focus);
   }
   for (auto& iotexture : ioscene.textures) {
+    auto id = add_texture(scene);
     if (!iotexture.hdr.empty()) {
-      add_texture(scene, std::move(iotexture.hdr));
+      set_texture(scene, id, std::move(iotexture.hdr));
     } else if (!iotexture.ldr.empty()) {
-      add_texture(scene, std::move(iotexture.ldr));
+      set_texture(scene, id, std::move(iotexture.ldr));
     }
   }
+  for (auto& iosubdiv : ioscene.subdivs) {
+    tesselate_subdiv(ioscene, iosubdiv);
+  }
   for (auto& ioshape : ioscene.shapes) {
+    auto id = add_shape(scene);
+    set_shape_points(scene, id, ioshape.points);
+    set_shape_lines(scene, id, ioshape.lines);
+    set_shape_triangles(scene, id, ioshape.triangles);
+    set_shape_quads(scene, id, ioshape.quads);
+    set_shape_positions(scene, id, ioshape.positions);
+    set_shape_normals(scene, id, ioshape.normals);
+    set_shape_texcoords(scene, id, ioshape.texcoords);
+    set_shape_colors(scene, id, ioshape.colors);
+    set_shape_radius(scene, id, ioshape.radius);
+    set_shape_tangents(scene, id, ioshape.tangents);
+    set_shape_instances(scene, id, ioshape.frame, ioshape.instances);
     auto& iomaterial = ioshape.material;
-    auto  id         = add_material(scene);
     set_material_emission(
         scene, id, iomaterial.emission, iomaterial.emission_tex);
     set_material_base(scene, id, iomaterial.base, iomaterial.base_tex);
@@ -137,34 +154,11 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_material_scattering(scene, id, iomaterial.scattering, iomaterial.phaseg,
         iomaterial.scattering_tex);
   }
-  for (auto& iosubdiv : ioscene.subdivs) {
-    tesselate_subdiv(ioscene, iosubdiv);
-  }
-  for (auto& ioshape : ioscene.shapes) {
-    auto id = add_shape(scene);
-    if (!ioshape.points.empty()) {
-      set_shape(scene, id, ioshape.points, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.radius);
-    } else if (!ioshape.lines.empty()) {
-      set_shape(scene, id, ioshape.lines, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.radius);
-    } else if (!ioshape.triangles.empty()) {
-      set_shape(scene, id, ioshape.triangles, ioshape.positions,
-          ioshape.normals, ioshape.texcoords, ioshape.colors, ioshape.tangents);
-    } else if (!ioshape.quads.empty()) {
-      set_shape(scene, id, ioshape.quads, ioshape.positions, ioshape.normals,
-          ioshape.texcoords, ioshape.colors, ioshape.tangents);
-    }
-    if (ioshape.instances.empty()) {
-      add_instance(scene, ioshape.frame, id, id);
-    } else {
-      for (auto& frame : ioshape.instances)
-        add_instance(scene, frame * ioshape.frame, id, id);
-    }
-  }
   for (auto& ioenvironment : ioscene.environments) {
-    add_environment(scene, ioenvironment.frame, ioenvironment.emission,
-        ioenvironment.emission_tex);
+    auto id = add_environment(scene);
+    set_environment_frame(scene, id, ioenvironment.frame);
+    set_environment_emission(
+        scene, id, ioenvironment.emission, ioenvironment.emission_tex);
   }
 }
 
@@ -518,9 +512,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
       stop_display(app);
       auto& iocamera = app->ioscene.cameras[app->selected_camera];
-      set_camera(app->scene, app->selected_camera, iocamera.frame,
-          iocamera.lens, iocamera.aspect, iocamera.film, iocamera.aperture,
-          iocamera.focus);
+      set_camera_frame(app->scene, app->selected_camera, iocamera.frame);
+      set_camera_lens(app->scene, app->selected_camera, iocamera.lens,
+          iocamera.aspect, iocamera.film);
+      set_camera_focus(
+          app->scene, app->selected_camera, iocamera.aperture, iocamera.focus);
       reset_display(app);
     }
     end_glheader(win);
@@ -533,9 +529,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       stop_display(app);
       auto& ioenvironment =
           app->ioscene.environments[app->selected_environment];
-      set_environment(app->scene, app->selected_environment,
-          ioenvironment.frame, ioenvironment.emission,
-          ioenvironment.emission_tex);
+      set_environment_frame(
+          app->scene, app->selected_environment, ioenvironment.frame);
+      set_environment_emission(app->scene, app->selected_environment,
+          ioenvironment.emission, ioenvironment.emission_tex);
       init_lights(app->scene);
       reset_display(app);
     }
@@ -547,23 +544,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_shape(win, app, app->selected_shape)) {
       stop_display(app);
       auto& ioshape = app->ioscene.shapes[app->selected_shape];
-      if (!ioshape.points.empty()) {
-        set_shape(app->scene, app->selected_shape, ioshape.points,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.radius);
-      } else if (!ioshape.lines.empty()) {
-        set_shape(app->scene, app->selected_shape, ioshape.lines,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.radius);
-      } else if (!ioshape.triangles.empty()) {
-        set_shape(app->scene, app->selected_shape, ioshape.triangles,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.tangents);
-      } else if (!ioshape.quads.empty()) {
-        set_shape(app->scene, app->selected_shape, ioshape.quads,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.tangents);
-      }
+      set_shape_points(app->scene, app->selected_shape, ioshape.points);
+      set_shape_lines(app->scene, app->selected_shape, ioshape.lines);
+      set_shape_triangles(app->scene, app->selected_shape, ioshape.triangles);
+      set_shape_quads(app->scene, app->selected_shape, ioshape.quads);
+      set_shape_positions(app->scene, app->selected_shape, ioshape.positions);
+      set_shape_normals(app->scene, app->selected_shape, ioshape.normals);
+      set_shape_texcoords(app->scene, app->selected_shape, ioshape.texcoords);
+      set_shape_colors(app->scene, app->selected_shape, ioshape.colors);
+      set_shape_radius(app->scene, app->selected_shape, ioshape.radius);
+      set_shape_tangents(app->scene, app->selected_shape, ioshape.tangents);
       update_bvh(app->scene, {}, {app->selected_shape}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);
@@ -627,23 +617,16 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       auto& iosubdiv = app->ioscene.subdivs[app->selected_subdiv];
       tesselate_subdiv(app->ioscene, iosubdiv);
       auto& ioshape = app->ioscene.shapes[iosubdiv.shape];
-      if (!ioshape.points.empty()) {
-        set_shape(app->scene, app->selected_subdiv, ioshape.points,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.radius);
-      } else if (!iosubdiv.lines.empty()) {
-        set_shape(app->scene, app->selected_subdiv, ioshape.lines,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.radius);
-      } else if (!ioshape.triangles.empty()) {
-        set_shape(app->scene, app->selected_subdiv, ioshape.triangles,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.tangents);
-      } else if (!ioshape.quads.empty()) {
-        set_shape(app->scene, app->selected_subdiv, ioshape.quads,
-            ioshape.positions, ioshape.normals, ioshape.texcoords,
-            ioshape.colors, ioshape.tangents);
-      }
+      set_shape_points(app->scene, app->selected_shape, ioshape.points);
+      set_shape_lines(app->scene, app->selected_shape, ioshape.lines);
+      set_shape_triangles(app->scene, app->selected_shape, ioshape.triangles);
+      set_shape_quads(app->scene, app->selected_shape, ioshape.quads);
+      set_shape_positions(app->scene, app->selected_shape, ioshape.positions);
+      set_shape_normals(app->scene, app->selected_shape, ioshape.normals);
+      set_shape_texcoords(app->scene, app->selected_shape, ioshape.texcoords);
+      set_shape_colors(app->scene, app->selected_shape, ioshape.colors);
+      set_shape_radius(app->scene, app->selected_shape, ioshape.radius);
+      set_shape_tangents(app->scene, app->selected_shape, ioshape.tangents);
       update_bvh(app->scene, {}, {app->selected_subdiv}, app->params);
       // TODO: maybe we should update lights for this
       reset_display(app);
@@ -768,8 +751,11 @@ void run_app(int argc, const char* argv[]) {
       pan.x = -pan.x;
       stop_display(app);
       update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      set_camera(app->scene, app->params.camera, camera.frame, camera.lens,
-          camera.aspect, camera.film, camera.aperture, camera.focus);
+      set_camera_frame(app->scene, app->params.camera, camera.frame);
+      set_camera_lens(app->scene, app->params.camera, camera.lens,
+          camera.aspect, camera.film);
+      set_camera_focus(
+          app->scene, app->params.camera, camera.aperture, camera.focus);
       reset_display(app);
     }
 

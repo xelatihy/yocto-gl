@@ -235,11 +235,9 @@ bool is_initialized(opengl_scene& scene);
 // add camera
 int  add_camera(opengl_scene& scene);
 void set_camera_frame(opengl_scene& scene, int idx, const frame3f& frame);
-void set_camera_lens(opengl_scene& scene, int idx, float lens);
-void set_camera_aspect(opengl_scene& scene, int idx, float aspect);
-void set_camera_film(opengl_scene& scene, int idx, float film);
-void set_camera_near(opengl_scene& scene, int idx, float near);
-void set_camera_far(opengl_scene& scene, int idx, float far);
+void set_camera_lens(
+    opengl_scene& scene, int idx, float lens, float aspect, float film);
+void set_camera_nearfar(opengl_scene& scene, int idx, float near, float far);
 void clear_cameras(opengl_scene& scene);
 
 // add texture
@@ -291,9 +289,6 @@ void clear_shapes(opengl_scene& scene);
 
 // add light
 int  add_light(opengl_scene& scene);
-void set_light_position(opengl_scene& scene, int idx, const vec3f& position);
-void set_light_emission(opengl_scene& scene, int idx, const vec3f& emission);
-void set_light_directional(opengl_scene& scene, int idx, bool directional);
 void set_light(opengl_scene& scene, int idx, const vec3f& position,
     const vec3f& emission, bool directional);
 void clear_lights(opengl_scene& scene);
