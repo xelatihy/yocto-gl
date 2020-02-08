@@ -529,9 +529,6 @@ struct pbrt_texture {
 struct pbrt_material {
   // material parameters
   string             name   = "";
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  // material approximation
   vec3f  color           = zero3f;
   float  specular        = 0;
   float  metallic        = 0;
@@ -628,6 +625,8 @@ struct pbrt_model {
   vector<pbrt_command> lights_commands       = {};
   vector<pbrt_command> arealights_commands       = {};
   vector<pbrt_command> textures_commands       = {};
+  vector<pbrt_command> materials_commands       = {};
+  vector<pbrt_command> shapes_commands       = {};
 };
 
 // Load/save pbrt

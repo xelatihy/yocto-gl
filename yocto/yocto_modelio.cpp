@@ -3008,7 +3008,8 @@ static void convert_pbrt_textures(const string& filename,
 
 // convert pbrt materials
 static void convert_pbrt_materials(const string& filename,
-    vector<pbrt_material>& materials, const vector<pbrt_texture>& textures,
+    vector<pbrt_material>& materials, const vector<pbrt_command>& commands, 
+    const vector<pbrt_texture>& textures,
     bool verbose = false) {
   // add constant textures
   auto texture_map = unordered_map<string, int>{};
@@ -3098,14 +3099,15 @@ static void convert_pbrt_materials(const string& filename,
 
   try {
     // convert materials
-    for (auto& material : materials) {
-      auto& values = material.values;
-      if (material.type == "uber") {
+    for (auto& command : commands) {
+      auto& material = materials.emplace_back();
+      material.name = command.name;
+      if (command.type == "uber") {
         auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
         auto diffuse_map = ""s, specular_map = ""s, transmission_map = ""s;
-        get_texture(values, "Kd", diffuse, diffuse_map, vec3f{0.25});
-        get_texture(values, "Ks", specular, specular_map, vec3f{0.25});
-        get_texture(values, "Kt", transmission, transmission_map, vec3f{0});
+        get_texture(command.values, "Kd", diffuse, diffuse_map, vec3f{0.25});
+        get_texture(command.values, "Ks", specular, specular_map, vec3f{0.25});
+        get_texture(command.values, "Kt", transmission, transmission_map, vec3f{0});
         if (max(transmission) > 0.1) {
           material.color        = transmission;
           material.color_map    = transmission_map;
@@ -3116,103 +3118,103 @@ static void convert_pbrt_materials(const string& filename,
           material.color_map = diffuse_map;
           material.specular  = 1;
         }
-        get_scalar(values, "opacity", material.opacity, 1);
-        get_scalar(values, "eta", material.ior, 1.5);
-        get_roughness(values, material.roughness, 0.1f);
-      } else if (material.type == "plastic") {
+        get_scalar(command.values, "opacity", material.opacity, 1);
+        get_scalar(command.values, "eta", material.ior, 1.5);
+        get_roughness(command.values, material.roughness, 0.1f);
+      } else if (command.type == "plastic") {
         get_texture(
-            values, "Kd", material.color, material.color_map, vec3f{0.25});
-        get_scalar(values, "Ks", material.specular, 0.25);
-        get_scalar(values, "eta", material.ior, 1.5);
+            command.values, "Kd", material.color, material.color_map, vec3f{0.25});
+        get_scalar(command.values, "Ks", material.specular, 0.25);
+        get_scalar(command.values, "eta", material.ior, 1.5);
         material.roughness = 0.1f;
-        get_roughness(values, material.roughness, 0.1);
-      } else if (material.type == "translucent") {
+        get_roughness(command.values, material.roughness, 0.1);
+      } else if (command.type == "translucent") {
         get_texture(
-            values, "Kd", material.color, material.color_map, vec3f{0.25});
-        get_scalar(values, "Ks", material.specular, 0.25);
-        get_scalar(values, "eta", material.ior, 1.5);
-        get_roughness(values, material.roughness, 0.1);
-      } else if (material.type == "matte") {
+            command.values, "Kd", material.color, material.color_map, vec3f{0.25});
+        get_scalar(command.values, "Ks", material.specular, 0.25);
+        get_scalar(command.values, "eta", material.ior, 1.5);
+        get_roughness(command.values, material.roughness, 0.1);
+      } else if (command.type == "matte") {
         get_texture(
-            values, "Kd", material.color, material.color_map, vec3f{0.5});
-      } else if (material.type == "mirror") {
+            command.values, "Kd", material.color, material.color_map, vec3f{0.5});
+      } else if (command.type == "mirror") {
         get_texture(
-            values, "Kr", material.color, material.color_map, vec3f{0.9});
+            command.values, "Kr", material.color, material.color_map, vec3f{0.9});
         material.metallic  = 1;
         material.roughness = 0;
-      } else if (material.type == "metal") {
+      } else if (command.type == "metal") {
         // get_texture(
         //     values, "Kr", material.specular, material.specular_map,
         //     vec3f{1});
         auto eta = zero3f, etak = zero3f;
-        get_color(values, "eta", eta,
+        get_color(command.values, "eta", eta,
             vec3f{0.2004376970f, 0.9240334304f, 1.1022119527f});
-        get_color(values, "k", etak,
+        get_color(command.values, "k", etak,
             vec3f{3.9129485033f, 2.4528477015f, 2.1421879552f});
         material.color     = eta_to_reflectivity(eta, etak);
         material.roughness = 0.01f;
-        get_roughness(values, material.roughness, 0.01);
-      } else if (material.type == "substrate") {
+        get_roughness(command.values, material.roughness, 0.01);
+      } else if (command.type == "substrate") {
         get_texture(
-            values, "Kd", material.color, material.color_map, vec3f{0.5});
-        get_scalar(values, "Ks", material.specular, 0.5);
-        get_scalar(values, "eta", material.ior, 1.5);
+            command.values, "Kd", material.color, material.color_map, vec3f{0.5});
+        get_scalar(command.values, "Ks", material.specular, 0.5);
+        get_scalar(command.values, "eta", material.ior, 1.5);
         material.roughness = 0.1f;
-        get_roughness(values, material.roughness, 0.1);
-      } else if (material.type == "glass") {
+        get_roughness(command.values, material.roughness, 0.1);
+      } else if (command.type == "glass") {
         // get_texture(
         //     values, "Kr", material.specular, material.specular_map,
         //     vec3f{1});
-        // get_texture(values, "Kt", material.transmission,
+        // get_texture(command.values, "Kt", material.transmission,
         //     material.transmission_map, vec3f{1});
         material.color        = {1, 1, 1};
         material.specular     = 1;
         material.transmission = 1;
         material.thin         = false;
-        get_scalar(values, "eta", material.ior, 1.5);
+        get_scalar(command.values, "eta", material.ior, 1.5);
         material.roughness = 0;
-        get_roughness(values, material.roughness, 0);
-      } else if (material.type == "hair") {
+        get_roughness(command.values, material.roughness, 0);
+      } else if (command.type == "hair") {
         get_texture(
-            values, "color", material.color, material.color_map, vec3f{0});
+            command.values, "color", material.color, material.color_map, vec3f{0});
         material.roughness = 1;
         if (verbose) printf("hair material not properly supported\n");
-      } else if (material.type == "disney") {
+      } else if (command.type == "disney") {
         get_texture(
-            values, "color", material.color, material.color_map, vec3f{0.5});
+            command.values, "color", material.color, material.color_map, vec3f{0.5});
         material.roughness = 1;
         if (verbose) printf("disney material not properly supported\n");
-      } else if (material.type == "kdsubsurface") {
+      } else if (command.type == "kdsubsurface") {
         get_texture(
-            values, "Kd", material.color, material.color_map, vec3f{0.5});
-        get_scalar(values, "Kr", material.specular, 1);
-        get_scalar(values, "eta", material.ior, 1.5);
+            command.values, "Kd", material.color, material.color_map, vec3f{0.5});
+        get_scalar(command.values, "Kr", material.specular, 1);
+        get_scalar(command.values, "eta", material.ior, 1.5);
         material.roughness = 0;
-        get_roughness(values, material.roughness, 0);
+        get_roughness(command.values, material.roughness, 0);
         if (verbose) printf("kdsubsurface material not properly supported\n");
-      } else if (material.type == "subsurface") {
-        get_scalar(values, "Kr", material.specular, 1);
-        get_scalar(values, "Kt", material.transmission, 1);
+      } else if (command.type == "subsurface") {
+        get_scalar(command.values, "Kr", material.specular, 1);
+        get_scalar(command.values, "Kt", material.transmission, 1);
         material.color = {1, 1, 1};
-        get_scalar(values, "eta", material.ior, 1.5);
+        get_scalar(command.values, "eta", material.ior, 1.5);
         material.roughness = 0;
-        get_roughness(values, material.roughness, 0);
+        get_roughness(command.values, material.roughness, 0);
         auto scale = 1.0f;
-        get_pbrt_value(values, "scale", scale);
+        get_pbrt_value(command.values, "scale", scale);
         material.volscale = 1 / scale;
         auto sigma_a = zero3f, sigma_s = zero3f;
         auto sigma_a_tex = ""s, sigma_s_tex = ""s;
         get_texture(
-            values, "sigma_a", sigma_a, sigma_a_tex, vec3f{0011, .0024, .014});
-        get_texture(values, "sigma_prime_s", sigma_s, sigma_s_tex,
+            command.values, "sigma_a", sigma_a, sigma_a_tex, vec3f{0011, .0024, .014});
+        get_texture(command.values, "sigma_prime_s", sigma_s, sigma_s_tex,
             vec3f{2.55, 3.12, 3.77});
         material.volmeanfreepath = 1 / (sigma_a + sigma_s);
         material.volscatter      = sigma_s / (sigma_a + sigma_s);
         if (verbose) printf("subsurface material not properly supported\n");
-      } else if (material.type == "mix") {
+      } else if (command.type == "mix") {
         auto namedmaterial1 = ""s, namedmaterial2 = ""s;
-        get_pbrt_value(values, "namedmaterial1", namedmaterial1);
-        get_pbrt_value(values, "namedmaterial2", namedmaterial2);
+        get_pbrt_value(command.values, "namedmaterial1", namedmaterial1);
+        get_pbrt_value(command.values, "namedmaterial2", namedmaterial2);
         auto matname = (!namedmaterial1.empty()) ? namedmaterial1
                                                  : namedmaterial2;
         auto matit = std::find_if(materials.begin(), materials.end(),
@@ -3223,9 +3225,9 @@ static void convert_pbrt_materials(const string& filename,
         material        = *matit;
         material.name   = saved_name;
         if (verbose) printf("mix material not properly supported\n");
-      } else if (material.type == "fourier") {
+      } else if (command.type == "fourier") {
         auto bsdffile = ""s;
-        get_pbrt_value(values, "bsdffile", bsdffile);
+        get_pbrt_value(command.values, "bsdffile", bsdffile);
         if (bsdffile.rfind("/") != string::npos)
           bsdffile = bsdffile.substr(bsdffile.rfind("/") + 1);
         if (bsdffile == "paint.bsdf") {
@@ -3265,7 +3267,7 @@ static void convert_pbrt_materials(const string& filename,
           throw std::invalid_argument{"unknown bsdffile " + bsdffile};
         }
       } else {
-        throw std::invalid_argument{"unknown material type " + material.type};
+        throw std::invalid_argument{"unknown material type " + command.type};
       }
     }
   } catch (std::invalid_argument& e) {
@@ -3679,7 +3681,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       parse_pbrt_params(fs, str, texture.values);
     } else if (cmd == "Material") {
       static auto material_id = 0;
-      auto&       material    = pbrt.materials.emplace_back();
+      auto&       material    = pbrt.materials_commands.emplace_back();
       material.name           = "material_" + std::to_string(material_id++);
       parse_pbrt_param(fs, str, material.type);
       parse_pbrt_params(fs, str, material.values);
@@ -3690,7 +3692,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
         stack.back().material = material.name;
       }
     } else if (cmd == "MakeNamedMaterial") {
-      auto& material = pbrt.materials.emplace_back();
+      auto& material = pbrt.materials_commands.emplace_back();
       parse_pbrt_param(fs, str, material.name);
       parse_pbrt_params(fs, str, material.values);
       material.type = "";
@@ -3767,7 +3769,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   convert_pbrt_films(filename, pbrt.films, pbrt.films_commands);
   convert_pbrt_cameras(filename, pbrt.cameras, pbrt.cameras_commands, pbrt.films);
   convert_pbrt_textures(filename, pbrt.textures, pbrt.textures_commands);
-  convert_pbrt_materials(filename, pbrt.materials, pbrt.textures);
+  convert_pbrt_materials(filename, pbrt.materials, pbrt.materials_commands, pbrt.textures);
   convert_pbrt_shapes(filename, pbrt.shapes);
   convert_pbrt_lights(filename, pbrt.lights, pbrt.lights_commands);
   convert_pbrt_arealights(filename, pbrt.arealights, pbrt.arealights_commands);
@@ -3941,57 +3943,61 @@ void save_pbrt(
   auto reflectivity_to_eta = [](const vec3f& reflectivity) {
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
   };
-  for (auto& material_ : pbrt.materials) {
-    auto material = material_;
-    if (material.type == "") {
+  for (auto& material : pbrt.materials) {
+    auto command = pbrt_command{};
+    command.name = material.name;
       if (material.specular != 0 && material.transmission != 0 &&
           !material.thin) {
-        material.type = "glass";
-        material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
-        material.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
-        material.values.push_back(
+        command.type = "glass";
+        command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
+        command.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
+        command.values.push_back(
             make_pbrt_value("roughness", pow(material.roughness, 2)));
-        material.values.push_back(make_pbrt_value("eta", material.ior));
-        material.values.push_back(make_pbrt_value("remaproughness", false));
+        command.values.push_back(make_pbrt_value("eta", material.ior));
+        command.values.push_back(make_pbrt_value("remaproughness", false));
       } else if (material.metallic > 0.1f) {
-        material.type = "metal";
-        material.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
-        material.values.push_back(
+        command.type = "metal";
+        command.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
+        command.values.push_back(
             make_pbrt_value("roughness", pow(material.roughness, 2)));
-        material.values.push_back(
+        command.values.push_back(
             make_pbrt_value("eta", reflectivity_to_eta(material.color)));
-        material.values.push_back(make_pbrt_value("remaproughness", false));
+        command.values.push_back(make_pbrt_value("remaproughness", false));
       } else {
-        material.type = "uber";
+        command.type = "uber";
         if (material.color_map.empty()) {
-          material.values.push_back(make_pbrt_value("Kd", material.color));
+          command.values.push_back(make_pbrt_value("Kd", material.color));
         } else if (material.color != zero3f) {
-          material.values.push_back(make_pbrt_value(
+          command.values.push_back(make_pbrt_value(
               "Kd", material.color_map, pbrt_value_type::texture));
         }
         if (material.specular != 0) {
-          material.values.push_back(
+          command.values.push_back(
               make_pbrt_value("Ks", vec3f{material.specular}));
-          material.values.push_back(
+          command.values.push_back(
               make_pbrt_value("roughness", pow(material.roughness, 2)));
-          material.values.push_back(make_pbrt_value("eta", material.ior));
-          material.values.push_back(make_pbrt_value("remaproughness", false));
+          command.values.push_back(make_pbrt_value("eta", material.ior));
+          command.values.push_back(make_pbrt_value("remaproughness", false));
         }
         if (material.transmission != 0) {
-          material.values.push_back(
+          command.values.push_back(
               make_pbrt_value("Kt", vec3f{material.transmission}));
         }
         if (!material.opacity_map.empty()) {
-          material.values.push_back(make_pbrt_value(
+          command.values.push_back(make_pbrt_value(
               "opacity", material.opacity_map, pbrt_value_type::texture));
         } else if (material.opacity != 1) {
-          material.values.push_back(
+          command.values.push_back(
               make_pbrt_value("opacity", material.opacity));
         }
       }
-    }
     format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
-        material.name, material.type, material.values);
+        command.name, command.type, command.values);
+  }
+
+  for (auto& command : pbrt.materials_commands) {
+    format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
+        command.name, command.type, command.values);
   }
 
   for (auto& command : pbrt.mediums_commands) {
