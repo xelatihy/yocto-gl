@@ -1,0 +1,350 @@
+{
+  "cameras": [
+    {
+      "name": "cameras/default.yaml",
+      "lens": 0.05,
+      "aperture": 0.0,
+      "aspect": 2.4,
+      "lookat": [
+        -0.75,
+        0.4,
+        0.9,
+        -0.075,
+        0.05,
+        -0.05,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "cameras/front.yaml",
+      "lens": 0.05,
+      "aspect": 3,
+      "aperture": 0.0,
+      "lookat": [
+        0,
+        0.575,
+        1.4,
+        0,
+        0.05,
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "cameras/back.yaml",
+      "lens": 0.05,
+      "aperture": 0.0,
+      "aspect": 3,
+      "lookat": [
+        0,
+        0.575,
+        -1.4,
+        0,
+        0.05,
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "cameras/perspective-sharp.yaml",
+      "lens": 0.05,
+      "aperture": 0.0,
+      "aspect": 2.4,
+      "lookat": [
+        -0.75,
+        0.4,
+        0.9,
+        -0.075,
+        0.05,
+        -0.05,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "cameras/perspective-dof.yaml",
+      "lens": 0.05,
+      "aperture": 0.025,
+      "aspect": 2.4,
+      "lookat": [
+        -0.75,
+        0.4,
+        0.9,
+        -0.075,
+        0.05,
+        -0.05,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "cameras/orthographic-sharp.yaml",
+      "lens": 0.05,
+      "aperture": 0.0,
+      "aspect": 2.4,
+      "orthographic": true,
+      "lookat": [
+        -0.75,
+        0.4,
+        0.9,
+        -0.075,
+        0.05,
+        -0.05,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "cameras/orthographic-dof.yaml",
+      "lens": 0.05,
+      "aperture": 0.02,
+      "aspect": 2.4,
+      "orthographic": true,
+      "lookat": [
+        -0.75,
+        0.4,
+        0.9,
+        -0.075,
+        0.05,
+        -0.05,
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "environments": [
+    {
+      "name": "environments/sky.yaml",
+      "emission": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "emission_tex": "environments/sky.hdr"
+    }
+  ],
+  "shapes": [
+    {
+      "name": "shapes/floor.yaml",
+      "shape": "shapes/floor.ply",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "color_tex": "textures/floor.png"
+    },
+    {
+      "name": "shapes/arealight1.yaml",
+      "shape": "shapes/arealight1.ply",
+      "emission": [
+        20,
+        20,
+        20
+      ],
+      "lookat": [
+        -0.4,
+        0.8,
+        0.8,
+        0,
+        0.1,
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "shapes/arealight2.yaml",
+      "shape": "shapes/arealight2.ply",
+      "emission": [
+        20,
+        20,
+        20
+      ],
+      "lookat": [
+        0.4,
+        0.8,
+        0.8,
+        0,
+        0.1,
+        0,
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "shapes/cube-subdiv-uvgrid.yaml",
+      "shape": "shapes/cube-subdiv.obj",
+      "subdivisions": 4,
+      "catmullclark": true,
+      "smooth": false,
+      "facevarying": true,
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png",
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        -0.4,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "shapes/suzanne-subdiv-plastic-sharp.yaml",
+      "shape": "shapes/suzanne-subdiv.obj",
+      "subdivisions": 2,
+      "catmullclark": true,
+      "smooth": true,
+      "specular": 1,
+      "color": [
+        0.5,
+        0.5,
+        0.7
+      ],
+      "roughness": 0.01,
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        -0.2,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "shapes/sphere-displaced-matte.yaml",
+      "shape": "shapes/sphere-displaced.obj",
+      "facevarying": true,
+      "displacement": 0.025,
+      "displacement_tex": "textures/bumps-displacement.png",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "roughness": 1,
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "shapes/bunny-uvgrid.yaml",
+      "shape": "shapes/bunny.obj",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png",
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0.2,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "shapes/teapot-uvgrid.yaml",
+      "shape": "shapes/teapot.obj",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png",
+      "frame": [
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0.4,
+        0,
+        0
+      ]
+    }
+  ],
+  "subdivs": [
+    {
+      "name": "subdivs/sphere-displaced.yaml",
+      "subdiv": "subdivs/sphere-displaced.obj",
+      "shape": "shapes/sphere-displaced-matte.yaml",
+      "displacement": 0.025,
+      "displacement_tex": "textures/bumps-displacement.png"
+    },
+    {
+      "name": "subdivs/cube-subdiv.yaml",
+      "fvsubdiv": "subdivs/cube-subdiv.obj",
+      "shape": "shapes/cube-subdiv-uvgrid.yaml",
+      "subdivisions": 4,
+      "catmullclark": true,
+      "smooth": false
+    },
+    {
+      "name": "subdivs/suzanne-subdiv.yaml",
+      "subdiv": "subdivs/suzanne-subdiv.obj",
+      "shape": "shapes/suzanne-subdiv-plastic-sharp.yaml",
+      "subdivisions": 2,
+      "catmullclark": true,
+      "smooth": true
+    }
+  ]
+}
