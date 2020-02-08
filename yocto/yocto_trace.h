@@ -371,8 +371,8 @@ struct trace_shape {
 
 // Instance of a visible shape in the scene.
 struct trace_instance {
-  int     shape = -1;
-  int     instance = -1;
+  int shape    = -1;
+  int instance = -1;
 };
 
 // Environment map.
@@ -443,7 +443,8 @@ namespace yocto {
 // the shape element id, the shape element uv and intersection distance.
 // Results values are set only if hit is true.
 struct trace_intersection {
-  int   instance = -1;
+  int   shape    = -1;
+  int   instance_    = -1;
   int   element  = -1;
   vec2f uv       = {0, 0};
   float distance = 0;
@@ -456,7 +457,7 @@ struct trace_intersection {
 trace_intersection intersect_scene_bvh(const trace_scene& scene,
     const ray3f& ray, bool find_any = false, bool non_rigid_frames = true);
 trace_intersection intersect_instance_bvh(const trace_scene& scene,
-    int instance, const ray3f& ray, bool find_any = false,
+    int shape, int instance, const ray3f& ray, bool find_any = false,
     bool non_rigid_frames = true);
 
 }  // namespace yocto

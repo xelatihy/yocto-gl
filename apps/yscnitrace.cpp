@@ -772,7 +772,7 @@ void run_app(int argc, const char* argv[]) {
             vec2f{ij.x + 0.5f, ij.y + 0.5f} / vec2f{(float)app->render.size().x,
                                                   (float)app->render.size().y});
         if (auto isec = intersect_scene_bvh(app->scene, ray); isec.hit) {
-          app->selected_shape = isec.instance;
+          app->selected_shape = isec.shape;
         }
       }
     }

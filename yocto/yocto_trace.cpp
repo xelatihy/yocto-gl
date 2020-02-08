@@ -678,7 +678,8 @@ static ray3f sample_camera(const trace_scene& scene, int camera,
 // Point used for tracing
 struct trace_point {
   // shape
-  int   instance = -1;
+  int   shape = -1;
+  int   instance_ = -1;
   vec3f position = zero3f;
   vec3f normal   = zero3f;
   vec3f gnormal  = zero3f;
@@ -713,9 +714,8 @@ struct trace_point {
 static trace_point eval_point(const trace_scene& scene,
     const trace_intersection& intersection, const ray3f& ray) {
   // get data
-  auto& instance               = scene.instances[intersection.instance];
-  auto& shape                  = scene.shapes[instance.shape];
-  auto& frame                  = shape.frames[instance.instance];
+  auto& shape                  = scene.shapes[intersection.shape];
+  auto& frame                  = shape.frames[intersection.instance_];
   auto& material               = shape.material;
   auto  element                = intersection.element;
   auto  uv                     = intersection.uv;
@@ -723,7 +723,8 @@ static trace_point eval_point(const trace_scene& scene,
 
   // initialize point
   auto point     = trace_point{};
-  point.instance = intersection.instance;
+  point.shape    = intersection.shape;
+  point.instance_    = intersection.instance_;
   point.outgoing = -ray.d;
   point.incoming = -ray.d;
 
@@ -875,7 +876,8 @@ static trace_point eval_point(const trace_scene& scene,
 // Point used for tracing
 struct volume_point {
   // shape
-  int   instance = -1;
+  int shape = -1;
+  int   instance_ = -1;
   vec3f position = zero3f;
   // directions
   vec3f outgoing = zero3f;
@@ -891,16 +893,16 @@ struct volume_point {
 static volume_point eval_volume(const trace_scene& scene,
     const trace_intersection& intersection, const ray3f& ray) {
   // get data
-  auto& instance = scene.instances[intersection.instance];
-  auto& shape    = scene.shapes[instance.shape];
-  auto& frame    = shape.frames[instance.instance];
+  auto& shape    = scene.shapes[intersection.shape];
+  auto& frame    = shape.frames[intersection.instance_];
   auto& material = shape.material;
   auto  element  = intersection.element;
   auto  uv       = intersection.uv;
 
   // initialize point
   auto point     = volume_point{};
-  point.instance = intersection.instance;
+  point.shape    = intersection.shape;
+  point.instance_ = intersection.instance_;
   point.outgoing = -ray.d;
   point.incoming = -ray.d;
 
@@ -942,8 +944,7 @@ static volume_point eval_volume(const trace_scene& scene,
 // Check if an instance as volume scattering
 static bool has_volume(
     const trace_scene& scene, const trace_intersection& intersection) {
-  auto& instance = scene.instances[intersection.instance];
-  auto& shape    = scene.shapes[instance.shape];
+  auto& shape    = scene.shapes[intersection.shape];
   auto& material = shape.material;
   return !material.thin && material.transmission;
 }
@@ -1980,7 +1981,7 @@ static bool intersect_shape_bvh(const trace_shape& shape, const ray3f& ray_,
 
 // Intersect ray with a bvh.
 static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
-    int& instance, int& element, vec2f& uv, float& distance, bool find_any,
+    int& shape, int& instance, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
 #ifdef YOCTO_EMBREE
   // call Embree if needed
@@ -2039,7 +2040,8 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
         if (intersect_shape_bvh(scene.shapes[instance_.shape], inv_ray, element,
                 uv, distance, find_any)) {
           hit      = true;
-          instance = scene.bvh.primitives[idx];
+          shape = instance_.shape;
+          instance = instance_.instance;
           ray.tmax = distance;
         }
       }
@@ -2053,31 +2055,32 @@ static bool intersect_scene_bvh(const trace_scene& scene, const ray3f& ray_,
 }
 
 // Intersect ray with a bvh.
-static bool intersect_instance_bvh(const trace_scene& scene, int instance,
+static bool intersect_instance_bvh(const trace_scene& scene, int shape, int instance,
     const ray3f& ray, int& element, vec2f& uv, float& distance, bool find_any,
     bool non_rigid_frames) {
-  auto& instance_ = scene.instances[instance];
-  auto& frame = scene.shapes[instance_.shape].frames[instance_.instance];
+  auto& frame = scene.shapes[shape].frames[instance];
   auto inv_ray = transform_ray(inverse(frame, non_rigid_frames), ray);
   return intersect_shape_bvh(
-      scene.shapes[instance_.shape], inv_ray, element, uv, distance, find_any);
+      scene.shapes[shape], inv_ray, element, uv, distance, find_any);
 }
 
 trace_intersection intersect_scene_bvh(const trace_scene& scene,
     const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection = trace_intersection{};
-  intersection.hit  = intersect_scene_bvh(scene, ray, intersection.instance,
+  intersection.hit  = intersect_scene_bvh(scene, ray, intersection.shape, 
+      intersection.instance_,
       intersection.element, intersection.uv, intersection.distance, find_any,
       non_rigid_frames);
   return intersection;
 }
-trace_intersection intersect_instance_bvh(const trace_scene& scene,
+trace_intersection intersect_instance_bvh(const trace_scene& scene, int shape,
     int instance, const ray3f& ray, bool find_any, bool non_rigid_frames) {
   auto intersection     = trace_intersection{};
-  intersection.hit      = intersect_instance_bvh(scene, instance, ray,
+  intersection.hit      = intersect_instance_bvh(scene, shape, instance, ray,
       intersection.element, intersection.uv, intersection.distance, find_any,
       non_rigid_frames);
-  intersection.instance = instance;
+  intersection.shape = shape;
+  intersection.instance_ = instance;
   return intersection;
 }
 
@@ -2512,14 +2515,15 @@ static float sample_lights_pdf(
   for (auto& light : scene.lights) {
     if (light.instance >= 0) {
       // check all intersection
+      auto& instance = scene.instances[light.instance];
       auto lpdf          = 0.0f;
       auto next_position = position;
       for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_instance_bvh(
-            scene, light.instance, {next_position, direction});
+            scene, instance.shape, instance.instance, 
+            {next_position, direction});
         if (!isec.hit) break;
         // accumulate pdf
-        auto& instance  = scene.instances[isec.instance];
         auto& shape     = scene.shapes[instance.shape];
         auto& frame     = shape.frames[instance.instance];
         auto  lposition = transform_point(
@@ -2840,9 +2844,9 @@ static pair<vec3f, bool> trace_falsecolor(const trace_scene& scene,
     case trace_falsecolor_type::element:
       return {hashed_color(intersection.element), 1};
     case trace_falsecolor_type::shape:
-      return {hashed_color(scene.instances[intersection.instance].shape), 1};
+      return {hashed_color(intersection.shape), 1};
     case trace_falsecolor_type::instance:
-      return {hashed_color(intersection.instance), 1};
+      return {hashed_color(intersection.instance_), 1};
     case trace_falsecolor_type::highlight: {
       auto emission = point.emission;
       if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
