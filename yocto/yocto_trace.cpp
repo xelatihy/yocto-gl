@@ -3177,51 +3177,6 @@ int add_shape(trace_scene& scene) {
   scene.shapes.emplace_back();
   return (int)scene.shapes.size() - 1;
 }
-int add_shape(trace_scene& scene, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius) {
-  scene.shapes.emplace_back();
-  set_shape(scene, (int)scene.shapes.size() - 1, points, positions, normals,
-      texcoords, colors, radius);
-  return (int)scene.shapes.size() - 1;
-}
-int add_shape(trace_scene& scene, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<float>& radius) {
-  scene.shapes.emplace_back();
-  set_shape(scene, (int)scene.shapes.size() - 1, lines, positions, normals,
-      texcoords, colors, radius);
-  return (int)scene.shapes.size() - 1;
-}
-int add_shape(trace_scene& scene, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  scene.shapes.emplace_back();
-  set_shape(scene, (int)scene.shapes.size() - 1, triangles, positions, normals,
-      texcoords, colors, tangents);
-  return (int)scene.shapes.size() - 1;
-}
-int add_shape(trace_scene& scene, const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords, const vector<vec4f>& colors,
-    const vector<vec4f>& tangents) {
-  scene.shapes.emplace_back();
-  set_shape(scene, (int)scene.shapes.size() - 1, quads, positions, normals,
-      texcoords, colors, tangents);
-  return (int)scene.shapes.size() - 1;
-}
-int add_shape(trace_scene& scene, const vector<vec4i>& quadspos,
-    const vector<vec4i>& quadsnorm, const vector<vec4i>& quadstexcoord,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texcoords) {
-  scene.shapes.emplace_back();
-  set_shape(scene, (int)scene.shapes.size() - 1, quadspos, quadsnorm,
-      quadstexcoord, positions, normals, texcoords);
-  return (int)scene.shapes.size() - 1;
-}
 void set_shape(trace_scene& scene, int idx, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<vec4f>& colors,
