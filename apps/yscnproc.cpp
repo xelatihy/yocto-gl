@@ -96,7 +96,7 @@ void run_app(int argc, const char** argv) {
   }
 
   // tesselate if needed
-  if (get_extension(output) != ".yaml") {
+  if (get_extension(output) != ".yaml" && get_extension(output) != ".json") {
     for (auto& iosubdiv : scene.subdivs) {
       tesselate_subdiv(scene, iosubdiv);
       iosubdiv = {};
