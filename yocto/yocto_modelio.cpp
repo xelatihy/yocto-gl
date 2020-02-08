@@ -3544,7 +3544,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       if (objects.find(object) == objects.end())
         throw_parse_error(fs, "unknown object " + object);
       for (auto shape_id : objects.at(object)) {
-        auto& shape = pbrt.shapes[shape_id];
+        auto& shape = pbrt.shapes_commands[shape_id];
         shape.instances.push_back(stack.back().transform_start);
         shape.instaends.push_back(stack.back().transform_end);
       }
@@ -3670,7 +3670,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       shape.interior  = stack.back().medium_interior;
       shape.exterior  = stack.back().medium_exterior;
       if (cur_object != "") {
-        objects[cur_object].push_back((int)pbrt.shapes.size() - 1);
+        objects[cur_object].push_back((int)pbrt.shapes_commands.size() - 1);
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
@@ -3693,7 +3693,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
         environment.values = light.values;
         environment.frame  = light.frame;
         environment.frend  = light.frend;
-        pbrt.lights.pop_back();
+        pbrt.lights_commands.pop_back();
       }
     } else if (cmd == "MakeNamedMedium") {
       auto& medium = pbrt.mediums_commands.emplace_back();
