@@ -504,6 +504,21 @@ struct pbrt_command {
   frame3f            frend  = identity3x4f;
 };
 
+// Pbrt shape
+struct pbrt_shape_command {
+  // shape parameters
+  string             type      = "";
+  vector<pbrt_value> values    = {};
+  frame3f            frame     = identity3x4f;
+  frame3f            frend     = identity3x4f;
+  string             material  = "";
+  string             arealight = "";
+  string             interior  = "";
+  string             exterior  = "";
+  vector<frame3f>    instances = {};
+  vector<frame3f>    instaends = {};
+};
+
 // Pbrt camera
 struct pbrt_camera {
   // camera parameters
@@ -547,17 +562,12 @@ struct pbrt_material {
 // Pbrt shape
 struct pbrt_shape {
   // shape parameters
-  string             type      = "";
-  vector<pbrt_value> values    = {};
   frame3f            frame     = identity3x4f;
   frame3f            frend     = identity3x4f;
   string             material  = "";
   string             arealight = "";
-  string             interior  = "";
-  string             exterior  = "";
   vector<frame3f>    instances = {};
   vector<frame3f>    instaends = {};
-  // shape approximation
   string        filename_ = "";
   vector<vec3f> positions = {};
   vector<vec3f> normals   = {};
@@ -626,7 +636,7 @@ struct pbrt_model {
   vector<pbrt_command> arealights_commands       = {};
   vector<pbrt_command> textures_commands       = {};
   vector<pbrt_command> materials_commands       = {};
-  vector<pbrt_command> shapes_commands       = {};
+  vector<pbrt_shape_command> shapes_commands       = {};
 };
 
 // Load/save pbrt

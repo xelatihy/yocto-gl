@@ -3346,30 +3346,36 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 
 // Convert pbrt shapes
 static void convert_pbrt_shapes(
-    const string& filename, vector<pbrt_shape>& shapes, bool verbose = false) {
-  for (auto& shape : shapes) {
+    const string& filename, vector<pbrt_shape>& shapes, const vector<pbrt_shape_command>& commands, bool verbose = false) {
+  for (auto& command : commands) {
+    auto& shape = shapes.emplace_back();
+    shape.frame     = command.frame;
+    shape.frend     = command.frend;
+    shape.material  = command.material;
+    shape.arealight = command.arealight;
+    shape.instances = command.instances;
+    shape.instaends = command.instaends;
     try {
-      auto& values = shape.values;
-      if (shape.type == "trianglemesh") {
+      if (command.type == "trianglemesh") {
         shape.positions = {};
         shape.normals   = {};
         shape.texcoords = {};
         shape.triangles = {};
-        get_pbrt_value(values, "P", shape.positions);
-        get_pbrt_value(values, "N", shape.normals);
-        get_pbrt_value(values, "uv", shape.texcoords);
+        get_pbrt_value(command.values, "P", shape.positions);
+        get_pbrt_value(command.values, "N", shape.normals);
+        get_pbrt_value(command.values, "uv", shape.texcoords);
         for (auto& uv : shape.texcoords) uv.y = (1 - uv.y);
-        get_pbrt_value(values, "indices", shape.triangles);
-      } else if (shape.type == "loopsubdiv") {
+        get_pbrt_value(command.values, "indices", shape.triangles);
+      } else if (command.type == "loopsubdiv") {
         shape.positions = {};
         shape.triangles = {};
-        get_pbrt_value(values, "P", shape.positions);
-        get_pbrt_value(values, "indices", shape.triangles);
+        get_pbrt_value(command.values, "P", shape.positions);
+        get_pbrt_value(command.values, "indices", shape.triangles);
         shape.normals.resize(shape.positions.size());
         // compute_normals(shape.normals, shape.triangles, shape.positions);
-      } else if (shape.type == "plymesh") {
+      } else if (command.type == "plymesh") {
         shape.filename_ = ""s;
-        get_pbrt_value(values, "filename", shape.filename_);
+        get_pbrt_value(command.values, "filename", shape.filename_);
         try {
           auto ply = ply_model{};
           load_ply(get_dirname(filename) + shape.filename_, ply);
@@ -3380,18 +3386,18 @@ static void convert_pbrt_shapes(
         } catch (std::exception& e) {
           throw_dependent_error(filename, e.what());
         }
-      } else if (shape.type == "sphere") {
+      } else if (command.type == "sphere") {
         auto radius = 1.0f;
-        get_pbrt_value(values, "radius", radius);
+        get_pbrt_value(command.values, "radius", radius);
         make_pbrt_sphere(shape.triangles, shape.positions, shape.normals,
             shape.texcoords, {32, 16}, radius);
-      } else if (shape.type == "disk") {
+      } else if (command.type == "disk") {
         auto radius = 1.0f;
-        get_pbrt_value(values, "radius", radius);
+        get_pbrt_value(command.values, "radius", radius);
         make_pbrt_disk(shape.triangles, shape.positions, shape.normals,
             shape.texcoords, {32, 1}, radius);
       } else {
-        throw std::invalid_argument{"unknown shape " + shape.type};
+        throw std::invalid_argument{"unknown shape " + command.type};
       }
     } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": conversion error"};
@@ -3701,7 +3707,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
     } else if (cmd == "NamedMaterial") {
       parse_pbrt_param(fs, str, stack.back().material);
     } else if (cmd == "Shape") {
-      auto& shape = pbrt.shapes.emplace_back();
+      auto& shape = pbrt.shapes_commands.emplace_back();
       parse_pbrt_param(fs, str, shape.type);
       parse_pbrt_params(fs, str, shape.values);
       shape.frame     = stack.back().transform_start;
@@ -3770,7 +3776,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   convert_pbrt_cameras(filename, pbrt.cameras, pbrt.cameras_commands, pbrt.films);
   convert_pbrt_textures(filename, pbrt.textures, pbrt.textures_commands);
   convert_pbrt_materials(filename, pbrt.materials, pbrt.materials_commands, pbrt.textures);
-  convert_pbrt_shapes(filename, pbrt.shapes);
+  convert_pbrt_shapes(filename, pbrt.shapes, pbrt.shapes_commands);
   convert_pbrt_lights(filename, pbrt.lights, pbrt.lights_commands);
   convert_pbrt_arealights(filename, pbrt.arealights, pbrt.arealights_commands);
   convert_pbrt_environments(filename, pbrt.environments, pbrt.environments_commands, pbrt.textures);
@@ -4065,25 +4071,25 @@ void save_pbrt(
   }
 
   auto object_id = 0;
-  for (auto& shape_ : pbrt.shapes) {
-    auto shape = shape_;
-    if (shape.type == "") {
-      if (ply_meshes) {
-        shape.type = "plymesh";
-        shape.values.push_back(make_pbrt_value("filename", shape.filename_));
-      } else {
-        shape.type = "trianglemesh";
-        shape.values.push_back(make_pbrt_value("indices", shape.triangles));
-        shape.values.push_back(
-            make_pbrt_value("P", shape.positions, pbrt_value_type::point));
-        if (!shape.normals.empty())
-          shape.values.push_back(
-              make_pbrt_value("N", shape.triangles, pbrt_value_type::normal));
-        if (!shape.texcoords.empty())
-          shape.values.push_back(make_pbrt_value("uv", shape.texcoords));
-      }
+  for (auto& shape : pbrt.shapes) {
+    auto command = pbrt_shape_command{};
+    command.frame = shape.frame;
+    command.instances = shape.instances;
+    if (ply_meshes) {
+      command.type = "plymesh";
+      command.values.push_back(make_pbrt_value("filename", shape.filename_));
+    } else {
+      command.type = "trianglemesh";
+      command.values.push_back(make_pbrt_value("indices", shape.triangles));
+      command.values.push_back(
+          make_pbrt_value("P", shape.positions, pbrt_value_type::point));
+      if (!shape.normals.empty())
+        command.values.push_back(
+            make_pbrt_value("N", shape.triangles, pbrt_value_type::normal));
+      if (!shape.texcoords.empty())
+        command.values.push_back(make_pbrt_value("uv", shape.texcoords));
     }
-    if (shape.type == "plymesh") {
+    if (ply_meshes) {
       try {
         auto ply = ply_model{};
         add_positions(ply, shape.positions);
@@ -4103,10 +4109,30 @@ void save_pbrt(
     format_values(fs, "NamedMaterial \"{}\"\n", shape.material);
     if (shape.arealight != "")
       format_values(fs, arealights_map.at(shape.arealight));
-    format_values(fs, "Shape \"{}\" {}\n", shape.type, shape.values);
+    format_values(fs, "Shape \"{}\" {}\n", command.type, command.values);
     format_values(fs, "AttributeEnd\n");
     if (!shape.instances.empty()) format_values(fs, "ObjectEnd\n");
     for (auto& iframe : shape.instances) {
+      format_values(fs, "AttributeBegin\n");
+      format_values(fs, "Transform {}\n", (mat4f)iframe);
+      format_values(fs, "ObjectInstance \"{}\"\n", object);
+      format_values(fs, "AttributeEnd\n");
+    }
+  }
+
+  for (auto& command : pbrt.shapes_commands) {
+    auto object = "object" + std::to_string(object_id++);
+    if (!command.instances.empty())
+      format_values(fs, "ObjectBegin \"{}\"\n", object);
+    format_values(fs, "AttributeBegin\n");
+    format_values(fs, "Transform {}\n", (mat4f)command.frame);
+    format_values(fs, "NamedMaterial \"{}\"\n", command.material);
+    if (command.arealight != "")
+      format_values(fs, arealights_map.at(command.arealight));
+    format_values(fs, "Shape \"{}\" {}\n", command.type, command.values);
+    format_values(fs, "AttributeEnd\n");
+    if (!command.instances.empty()) format_values(fs, "ObjectEnd\n");
+    for (auto& iframe : command.instances) {
       format_values(fs, "AttributeBegin\n");
       format_values(fs, "Transform {}\n", (mat4f)iframe);
       format_values(fs, "ObjectInstance \"{}\"\n", object);
