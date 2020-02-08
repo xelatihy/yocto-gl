@@ -1764,9 +1764,9 @@ static void init_bvh(trace_shape& shape, const trace_params& params) {
   build_bvh_serial(shape.bvh.nodes, primitives, params.bvh);
 
   // set bvh primitives
-  shape.bvh.primitives.resize(primitives.size());
-  for(auto idx = 0; idx < primitives.size(); idx++) {
-    shape.bvh.primitives[idx] = primitives[idx].primitive;
+  shape.bvh.primitives.reserve(primitives.size());
+  for(auto& primitive : primitives) {
+    shape.bvh.primitives.push_back(primitive.primitive);
   }
 }
 
@@ -1811,9 +1811,9 @@ void init_bvh(trace_scene& scene, const trace_params& params) {
   build_bvh_serial(scene.bvh.nodes, primitives, params.bvh);
 
   // set bvh primitives
-  scene.bvh.primitives.resize(primitives.size());
-  for(auto idx = 0; idx < primitives.size(); idx++) {
-    scene.bvh.primitives[idx] = primitives[idx].primitive;
+  scene.bvh.primitives.reserve(primitives.size());
+  for(auto& primitive : primitives) {
+    scene.bvh.primitives.push_back(primitive.primitive);
   }
 }
 
