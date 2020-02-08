@@ -2991,10 +2991,9 @@ static void convert_pbrt_textures(const string& filename,
 }
 
 // convert pbrt materials
-static void convert_pbrt_materials(const string& filename,
-    vector<pbrt_material>& materials, const vector<pbrt_command>& commands, 
+static pbrt_material convert_material(const pbrt_command& command, 
     const vector<pbrt_texture>& textures, const unordered_map<string, int>& texture_map,
-    bool verbose = false) {
+    const vector<pbrt_material>& materials, bool verbose = false) {
   // helpers
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
                          vec3f& color, string& filename,
@@ -3075,10 +3074,7 @@ static void convert_pbrt_materials(const string& filename,
            ((eta + 1) * (eta + 1) + etak * etak);
   };
 
-  try {
-    // convert materials
-    for (auto& command : commands) {
-      auto& material = materials.emplace_back();
+      auto material = pbrt_material{};
       material.name = command.name;
       if (command.type == "uber") {
         auto diffuse = zero3f, specular = zero3f, transmission = zero3f;
@@ -3247,10 +3243,7 @@ static void convert_pbrt_materials(const string& filename,
       } else {
         throw std::invalid_argument{"unknown material type " + command.type};
       }
-    }
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": conversion error"};
-  }
+      return material;
 }
 
 // Make a triangle shape from a quad grid
@@ -3323,17 +3316,14 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 }
 
 // Convert pbrt shapes
-static void convert_pbrt_shapes(
-    const string& filename, vector<pbrt_shape>& shapes, const vector<pbrt_shape_command>& commands, bool verbose = false) {
-  for (auto& command : commands) {
-    auto& shape = shapes.emplace_back();
+static pbrt_shape convert_shape(const pbrt_shape_command& command, const string& filename, bool verbose = false) {
+    auto shape = pbrt_shape{};
     shape.frame     = command.frame;
     shape.frend     = command.frend;
     shape.material  = command.material;
     shape.arealight = command.arealight;
     shape.instances = command.instances;
     shape.instaends = command.instaends;
-    try {
       if (command.type == "trianglemesh") {
         shape.positions = {};
         shape.normals   = {};
@@ -3377,10 +3367,7 @@ static void convert_pbrt_shapes(
       } else {
         throw std::invalid_argument{"unknown shape " + command.type};
       }
-    } catch (std::invalid_argument& e) {
-      throw std::runtime_error{filename + ": conversion error"};
-    }
-  }
+      return shape;
 }
 
 // Convert pbrt arealights
@@ -3747,8 +3734,12 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
     }
     auto texture_map = unordered_map<string, int>{};
     convert_pbrt_textures(filename, pbrt.textures, pbrt.textures_commands, texture_map);
-    convert_pbrt_materials(filename, pbrt.materials, pbrt.materials_commands, pbrt.textures, texture_map);
-    convert_pbrt_shapes(filename, pbrt.shapes, pbrt.shapes_commands);
+    for(auto& command : pbrt.materials_commands) {
+      pbrt.materials.push_back(convert_material(command, pbrt.textures, texture_map, pbrt.materials));
+    }
+    for(auto& command : pbrt.shapes_commands) {
+      pbrt.shapes.push_back(convert_shape(command, filename));
+    }
     for(auto& command : pbrt.lights_commands) {
       pbrt.lights.push_back(convert_light(command));
     }
