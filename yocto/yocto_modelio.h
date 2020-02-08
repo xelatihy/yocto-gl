@@ -625,9 +625,6 @@ struct pbrt_environment {
 
 // Other pbrt elements
 struct pbrt_film {
-  // film parameters
-  string             type   = "";
-  vector<pbrt_value> values = {};
   // film approximation
   string filename   = "";
   vec2i  resolution = zero2i;
@@ -647,6 +644,7 @@ struct pbrt_model {
   vector<pbrt_film>        films        = {};
   // Low level commands
   vector<pbrt_command>     cameras_commands = {};
+  vector<pbrt_command>     films_commands = {};
   vector<pbrt_command>  integrators_commands  = {};
   vector<pbrt_command>      filters_commands      = {};
   vector<pbrt_command>     samplers_commands     = {};

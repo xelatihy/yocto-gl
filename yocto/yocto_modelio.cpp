@@ -2852,18 +2852,18 @@ static void parse_pbrt_params(
 
 // convert pbrt films
 static void convert_pbrt_films(
-    const string& filename, vector<pbrt_film>& films, bool verbose = false) {
-  for (auto& film : films) {
+    const string& filename, vector<pbrt_film>& films, vector<pbrt_command>& films_commands, bool verbose = false) {
+  for (auto& [name, type, values, frame, frend] : films_commands) {
+    auto& film = films.emplace_back();
     try {
-      auto& values = film.values;
-      if (film.type == "image") {
+      if (type == "image") {
         film.resolution = {512, 512};
         get_pbrt_value(values, "xresolution", film.resolution.x);
         get_pbrt_value(values, "yresolution", film.resolution.y);
         film.filename = "out.png"s;
         get_pbrt_value(values, "filename", film.filename);
       } else {
-        throw std::invalid_argument{"unknown film " + film.type};
+        throw std::invalid_argument{"unknown film " + type};
       }
     } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": conversion error"};
@@ -2873,13 +2873,13 @@ static void convert_pbrt_films(
 
 // convert pbrt elements
 static void convert_pbrt_cameras(const string& filename, vector<pbrt_camera>& cameras,
-    vector<pbrt_command>& camera_commands, const vector<pbrt_film>& films,
+    vector<pbrt_command>& cameras_commands, const vector<pbrt_film>& films,
     bool verbose = false) {
   auto film_aspect = 1.0f;
   for (auto& film : films) {
     film_aspect = (float)film.resolution.x / (float)film.resolution.y;
   }
-  for (auto& [name, type, values, frame, frend] : camera_commands) {
+  for (auto& [name, type, values, frame, frend] : cameras_commands) {
     auto& camera = cameras.emplace_back();
     try {
       camera.frame = frame;
@@ -3653,7 +3653,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       parse_pbrt_param(fs, str, filter.type);
       parse_pbrt_params(fs, str, filter.values);
     } else if (cmd == "Film") {
-      auto& film = pbrt.films.emplace_back();
+      auto& film = pbrt.films_commands.emplace_back();
       parse_pbrt_param(fs, str, film.type);
       parse_pbrt_params(fs, str, film.values);
     } else if (cmd == "Accelerator") {
@@ -3760,7 +3760,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   load_pbrt(filename, pbrt, ctx);
 
   // convert objects
-  convert_pbrt_films(filename, pbrt.films);
+  convert_pbrt_films(filename, pbrt.films, pbrt.films_commands);
   convert_pbrt_cameras(filename, pbrt.cameras, pbrt.cameras_commands, pbrt.films);
   convert_pbrt_textures(filename, pbrt.textures);
   convert_pbrt_materials(filename, pbrt.materials, pbrt.textures);
@@ -3864,28 +3864,31 @@ void save_pbrt(
   for (auto& camera : pbrt.cameras) {
     auto commands = pbrt_command{};
     commands.type = "perspective";
+    commands.frame = camera.frame;
     commands.values.push_back(make_pbrt_value(
           "fov", 2 * tan(0.036f / (2 * camera.lens)) * 180 / pif));
-    format_values(fs, "LookAt {} {} {}\n", camera.frame.o,
-        camera.frame.o - camera.frame.z, camera.frame.y);
+    format_values(fs, "LookAt {} {} {}\n", commands.frame.o,
+        commands.frame.o - commands.frame.z, commands.frame.y);
     format_values(fs, "Camera \"{}\" {}\n", commands.type, commands.values);
   }
 
-  for (auto& film_ : pbrt.films) {
-    auto film = film_;
-    if (film.type == "") {
-      film.type = "image";
-      film.values.push_back(make_pbrt_value("xresolution", film.resolution.x));
-      film.values.push_back(make_pbrt_value("yresolution", film.resolution.y));
-      film.values.push_back(make_pbrt_value("filename", film.filename));
-    }
-    format_values(fs, "Film \"{}\" {}\n", film.type, film.values);
+  for (auto& commands : pbrt.cameras_commands) {
+    format_values(fs, "LookAt {} {} {}\n", commands.frame.o,
+        commands.frame.o - commands.frame.z, commands.frame.y);
+    format_values(fs, "Camera \"{}\" {}\n", commands.type, commands.values);
   }
 
-  for (auto& camera : pbrt.cameras_commands) {
-    format_values(fs, "LookAt {} {} {}\n", camera.frame.o,
-        camera.frame.o - camera.frame.z, camera.frame.y);
-    format_values(fs, "Camera \"{}\" {}\n", camera.type, camera.values);
+  for (auto& film : pbrt.films) {
+    auto commands = pbrt_command{};
+    commands.type = "image";
+    commands.values.push_back(make_pbrt_value("xresolution", film.resolution.x));
+    commands.values.push_back(make_pbrt_value("yresolution", film.resolution.y));
+    commands.values.push_back(make_pbrt_value("filename", film.filename));
+    format_values(fs, "Film \"{}\" {}\n", commands.type, commands.values);
+  }
+
+  for (auto& commands : pbrt.films_commands) {
+    format_values(fs, "Film \"{}\" {}\n", commands.type, commands.values);
   }
 
   for (auto& integrator_ : pbrt.integrators_commands) {
