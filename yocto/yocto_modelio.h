@@ -498,14 +498,20 @@ struct pbrt_value {
   vector<int>     vector1i = {};
 };
 
-// Pbrt camera
-struct pbrt_camera {
-  // camera parameters
+// Pbrt command
+struct pbrt_command {
+  string             name   = "";
   string             type   = "";
   vector<pbrt_value> values = {};
   frame3f            frame  = identity3x4f;
   frame3f            frend  = identity3x4f;
-  // camera approximation
+};
+
+// Pbrt camera
+struct pbrt_camera {
+  // camera parameters
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
   float width    = 0;
   float height   = 0;
   float lens     = 0;
@@ -663,6 +669,8 @@ struct pbrt_model {
   vector<pbrt_filter>      filters      = {};
   vector<pbrt_sampler>     samplers     = {};
   vector<pbrt_accelerator> accelerators = {};
+  // Low level commands
+  vector<pbrt_command>     camera_commands = {};
 };
 
 // Load/save pbrt

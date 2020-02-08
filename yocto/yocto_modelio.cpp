@@ -2872,19 +2872,21 @@ static void convert_pbrt_films(
 }
 
 // convert pbrt elements
-static void convert_pbrt_cameras(const string& filename,
-    vector<pbrt_camera>& cameras, const vector<pbrt_film>& films,
+static void convert_pbrt_cameras(const string& filename, vector<pbrt_camera>& cameras,
+    vector<pbrt_command>& camera_commands, const vector<pbrt_film>& films,
     bool verbose = false) {
   auto film_aspect = 1.0f;
   for (auto& film : films) {
     film_aspect = (float)film.resolution.x / (float)film.resolution.y;
   }
-  for (auto& camera : cameras) {
+  for (auto& [name, type, values, frame, frend] : camera_commands) {
+    auto& camera = cameras.emplace_back();
     try {
-      auto& values   = camera.values;
+      camera.frame = frame;
+      camera.frend = frend;
       camera.frame   = inverse((frame3f)camera.frame);
       camera.frame.z = -camera.frame.z;
-      if (camera.type == "perspective") {
+      if (type == "perspective") {
         auto fov = 90.0f;
         get_pbrt_value(values, "fov", fov);
         // auto lensradius = get_pbrt_value(values, "lensradius", 0.0f);
@@ -2897,7 +2899,7 @@ static void convert_pbrt_cameras(const string& filename,
         get_pbrt_value(values, "frameaspectratio", camera.aspect);
         camera.focus = 10.0f;
         get_pbrt_value(values, "focaldistance", camera.focus);
-      } else if (camera.type == "realistic") {
+      } else if (type == "realistic") {
         auto lensfile = ""s;
         get_pbrt_value(values, "lensfile", lensfile);
         lensfile        = lensfile.substr(0, lensfile.size() - 4);
@@ -2911,7 +2913,7 @@ static void convert_pbrt_cameras(const string& filename,
         get_pbrt_value(values, "focusdistance", camera.focus);
         camera.aspect = film_aspect;
       } else {
-        throw std::invalid_argument{"unknown camera " + camera.type};
+        throw std::invalid_argument{"unknown camera " + type};
       }
     } catch (std::invalid_argument& e) {
       throw std::runtime_error{filename + ": conversion error"};
@@ -3659,7 +3661,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       parse_pbrt_param(fs, str, accelerator.type);
       parse_pbrt_params(fs, str, accelerator.values);
     } else if (cmd == "Camera") {
-      auto& camera = pbrt.cameras.emplace_back();
+      auto& camera = pbrt.camera_commands.emplace_back();
       parse_pbrt_param(fs, str, camera.type);
       parse_pbrt_params(fs, str, camera.values);
       camera.frame = stack.back().transform_start;
@@ -3759,7 +3761,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
 
   // convert objects
   convert_pbrt_films(filename, pbrt.films);
-  convert_pbrt_cameras(filename, pbrt.cameras, pbrt.films);
+  convert_pbrt_cameras(filename, pbrt.cameras, pbrt.camera_commands, pbrt.films);
   convert_pbrt_textures(filename, pbrt.textures);
   convert_pbrt_materials(filename, pbrt.materials, pbrt.textures);
   convert_pbrt_shapes(filename, pbrt.shapes);
@@ -3859,16 +3861,14 @@ void save_pbrt(
   }
   format_values(fs, "\n");
 
-  for (auto& camera_ : pbrt.cameras) {
-    auto camera = camera_;
-    if (camera.type == "") {
-      camera.type = "perspective";
-      camera.values.push_back(make_pbrt_value(
+  for (auto& camera : pbrt.cameras) {
+    auto commands = pbrt_command{};
+    commands.type = "perspective";
+    commands.values.push_back(make_pbrt_value(
           "fov", 2 * tan(0.036f / (2 * camera.lens)) * 180 / pif));
-    }
     format_values(fs, "LookAt {} {} {}\n", camera.frame.o,
         camera.frame.o - camera.frame.z, camera.frame.y);
-    format_values(fs, "Camera \"{}\" {}\n", camera.type, camera.values);
+    format_values(fs, "Camera \"{}\" {}\n", commands.type, commands.values);
   }
 
   for (auto& film_ : pbrt.films) {
