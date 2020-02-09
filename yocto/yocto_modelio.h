@@ -623,10 +623,6 @@ struct pbrt_model {
   vector<pbrt_arealight>   arealights   = {};
   vector<pbrt_light>       lights       = {};
   vector<pbrt_film>        films        = {};
-  // Low level commands
-  vector<pbrt_command> textures_commands       = {};
-  vector<pbrt_command> materials_commands       = {};
-  vector<pbrt_shape_command> shapes_commands       = {};
 };
 
 // Load/save pbrt

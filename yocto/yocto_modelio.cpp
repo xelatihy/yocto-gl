@@ -3472,7 +3472,7 @@ struct pbrt_context {
 };
 
 // load pbrt
-void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
+void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx, unordered_map<string, int>& texture_map) {
   auto fs = open_file(filename, "rt");
 
   // parser state
@@ -3530,7 +3530,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       if (objects.find(object) == objects.end())
         throw_parse_error(fs, "unknown object " + object);
       for (auto shape_id : objects.at(object)) {
-        auto& shape = pbrt.shapes_commands[shape_id];
+        auto& shape = pbrt.shapes[shape_id];
         shape.instances.push_back(stack.back().transform_start);
         shape.instaends.push_back(stack.back().transform_end);
       }
@@ -3625,18 +3625,20 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       camera.frend = stack.back().transform_end;
       pbrt.cameras.push_back(convert_camera(camera, pbrt.films));
     } else if (cmd == "Texture") {
-      auto& texture  = pbrt.textures_commands.emplace_back();
+      auto texture  = pbrt_command{};
       auto  comptype = ""s;
       parse_pbrt_param(fs, str, texture.name);
       parse_pbrt_param(fs, str, comptype);
       parse_pbrt_param(fs, str, texture.type);
       parse_pbrt_params(fs, str, texture.values);
+      pbrt.textures.push_back(convert_texture(texture, texture_map, pbrt.textures));
     } else if (cmd == "Material") {
       static auto material_id = 0;
-      auto&       material    = pbrt.materials_commands.emplace_back();
+      auto       material    = pbrt_command{};
       material.name           = "material_" + std::to_string(material_id++);
       parse_pbrt_param(fs, str, material.type);
       parse_pbrt_params(fs, str, material.values);
+      pbrt.materials.push_back(convert_material(material, pbrt.textures, texture_map, pbrt.materials));
       if (material.type == "") {
         stack.back().material = "";
         pbrt.materials.pop_back();
@@ -3644,16 +3646,17 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
         stack.back().material = material.name;
       }
     } else if (cmd == "MakeNamedMaterial") {
-      auto& material = pbrt.materials_commands.emplace_back();
+      auto material = pbrt_command{};
       parse_pbrt_param(fs, str, material.name);
       parse_pbrt_params(fs, str, material.values);
       material.type = "";
       for (auto& value : material.values)
         if (value.name == "type") material.type = value.value1s;
+      pbrt.materials.push_back(convert_material(material, pbrt.textures, texture_map, pbrt.materials));
     } else if (cmd == "NamedMaterial") {
       parse_pbrt_param(fs, str, stack.back().material);
     } else if (cmd == "Shape") {
-      auto& shape = pbrt.shapes_commands.emplace_back();
+      auto shape = pbrt_shape_command{};
       parse_pbrt_param(fs, str, shape.type);
       parse_pbrt_params(fs, str, shape.values);
       shape.frame     = stack.back().transform_start;
@@ -3662,8 +3665,9 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       shape.arealight = stack.back().arealight;
       shape.interior  = stack.back().medium_interior;
       shape.exterior  = stack.back().medium_exterior;
+      pbrt.shapes.push_back(convert_shape(shape, filename));
       if (cur_object != "") {
-        objects[cur_object].push_back((int)pbrt.shapes_commands.size() - 1);
+        objects[cur_object].push_back((int)pbrt.shapes.size() - 1);
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
@@ -3700,7 +3704,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       auto includename = ""s;
       parse_pbrt_param(fs, str, includename);
       try {
-        load_pbrt(get_dirname(filename) + includename, pbrt, ctx);
+        load_pbrt(get_dirname(filename) + includename, pbrt, ctx, texture_map);
       } catch (std::exception& e) {
         throw_dependent_error(fs, e.what());
       }
@@ -3713,24 +3717,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
 // load pbrt
 void load_pbrt(const string& filename, pbrt_model& pbrt) {
   auto ctx = pbrt_context{};
-  load_pbrt(filename, pbrt, ctx);
-
-  // convert objects
-  try {
-    auto texture_map = unordered_map<string, int>{};
-    for(auto& command : pbrt.textures_commands) {
-      texture_map[command.name] = (int)pbrt.textures.size();
-      pbrt.textures.push_back(convert_texture(command, texture_map, pbrt.textures));
-    }
-    for(auto& command : pbrt.materials_commands) {
-      pbrt.materials.push_back(convert_material(command, pbrt.textures, texture_map, pbrt.materials));
-    }
-    for(auto& command : pbrt.shapes_commands) {
-      pbrt.shapes.push_back(convert_shape(command, filename));
-    }
-  } catch (std::invalid_argument& e) {
-    throw std::runtime_error{filename + ": conversion error"};
-  }
+  auto texture_map = unordered_map<string, int>{};
+  load_pbrt(filename, pbrt, ctx, texture_map);
 }
 
 static void format_value(string& str, const pbrt_value& value) {
@@ -3860,11 +3848,6 @@ void save_pbrt(
         command.type, command.values);
   }
 
-  for (auto& command : pbrt.textures_commands) {
-    format_values(fs, "Texture \"{}\" \"color\" \"{}\" {}\n", command.name,
-        command.type, command.values);
-  }
-
   auto reflectivity_to_eta = [](const vec3f& reflectivity) {
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));
   };
@@ -3916,11 +3899,6 @@ void save_pbrt(
               make_pbrt_value("opacity", material.opacity));
         }
       }
-    format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
-        command.name, command.type, command.values);
-  }
-
-  for (auto& command : pbrt.materials_commands) {
     format_values(fs, "MakeNamedMaterial \"{}\" \"string type\" \"{}\" {}\n",
         command.name, command.type, command.values);
   }
@@ -4007,26 +3985,6 @@ void save_pbrt(
     format_values(fs, "AttributeEnd\n");
     if (!shape.instances.empty()) format_values(fs, "ObjectEnd\n");
     for (auto& iframe : shape.instances) {
-      format_values(fs, "AttributeBegin\n");
-      format_values(fs, "Transform {}\n", (mat4f)iframe);
-      format_values(fs, "ObjectInstance \"{}\"\n", object);
-      format_values(fs, "AttributeEnd\n");
-    }
-  }
-
-  for (auto& command : pbrt.shapes_commands) {
-    auto object = "object" + std::to_string(object_id++);
-    if (!command.instances.empty())
-      format_values(fs, "ObjectBegin \"{}\"\n", object);
-    format_values(fs, "AttributeBegin\n");
-    format_values(fs, "Transform {}\n", (mat4f)command.frame);
-    format_values(fs, "NamedMaterial \"{}\"\n", command.material);
-    if (command.arealight != "")
-      format_values(fs, arealights_map.at(command.arealight));
-    format_values(fs, "Shape \"{}\" {}\n", command.type, command.values);
-    format_values(fs, "AttributeEnd\n");
-    if (!command.instances.empty()) format_values(fs, "ObjectEnd\n");
-    for (auto& iframe : command.instances) {
       format_values(fs, "AttributeBegin\n");
       format_values(fs, "Transform {}\n", (mat4f)iframe);
       format_values(fs, "ObjectInstance \"{}\"\n", object);
