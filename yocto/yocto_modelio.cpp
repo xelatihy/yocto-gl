@@ -3299,12 +3299,14 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 
 // Convert pbrt shapes
 static pbrt_shape convert_shape(const pbrt_shape_command& command,
+    unordered_map<string, pbrt_arealight>& arealight_map,
+    unordered_map<string, pbrt_material>& material_map,
     const string& filename, bool verbose = false) {
   auto shape      = pbrt_shape{};
   shape.frame     = command.frame;
   shape.frend     = command.frend;
-  shape.material  = command.material;
-  shape.arealight = command.arealight;
+  shape.arealight  = arealight_map.at(command.arealight);
+  shape.material = material_map.at(command.material);
   shape.instances = command.instances;
   shape.instaends = command.instaends;
   if (command.type == "trianglemesh") {
@@ -3466,7 +3468,10 @@ struct pbrt_context {
 
 // load pbrt
 void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
-    unordered_map<string, pbrt_texture>& texture_map) {
+    unordered_map<string, pbrt_arealight>& arealight_map,
+    unordered_map<string, pbrt_material>& material_map,
+    unordered_map<string, pbrt_texture>& texture_map    
+    ) {
   auto fs = open_file(filename, "rt");
 
   // parser state
@@ -3638,6 +3643,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
         stack.back().material = material.name;
         pbrt.materials.push_back(convert_material(
             material, texture_map, pbrt.materials));
+        material_map[material.name] = pbrt.materials.back();
       }
     } else if (cmd == "MakeNamedMaterial") {
       auto material = pbrt_command{};
@@ -3648,6 +3654,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
         if (value.name == "type") material.type = value.value1s;
       pbrt.materials.push_back(convert_material(
           material, texture_map, pbrt.materials));
+      material_map[material.name] = pbrt.materials.back();
     } else if (cmd == "NamedMaterial") {
       parse_pbrt_param(fs, str, stack.back().material);
     } else if (cmd == "Shape") {
@@ -3660,7 +3667,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       shape.arealight = stack.back().arealight;
       shape.interior  = stack.back().medium_interior;
       shape.exterior  = stack.back().medium_exterior;
-      pbrt.shapes.push_back(convert_shape(shape, filename));
+      pbrt.shapes.push_back(convert_shape(shape, arealight_map, material_map, filename));
       if (cur_object != "") {
         objects[cur_object].push_back((int)pbrt.shapes.size() - 1);
       }
@@ -3673,7 +3680,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       arealight.frame        = stack.back().transform_start;
       arealight.frend        = stack.back().transform_end;
       stack.back().arealight = arealight.name;
-      pbrt.arealights.push_back(convert_arealight(arealight));
+      arealight_map[arealight.name] = convert_arealight(arealight);
     } else if (cmd == "LightSource") {
       auto light = pbrt_command{};
       parse_pbrt_param(fs, str, light.type);
@@ -3699,7 +3706,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       auto includename = ""s;
       parse_pbrt_param(fs, str, includename);
       try {
-        load_pbrt(get_dirname(filename) + includename, pbrt, ctx, texture_map);
+        load_pbrt(get_dirname(filename) + includename, pbrt, ctx, arealight_map, material_map, texture_map);
       } catch (std::exception& e) {
         throw_dependent_error(fs, e.what());
       }
@@ -3712,8 +3719,10 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
 // load pbrt
 void load_pbrt(const string& filename, pbrt_model& pbrt) {
   auto ctx         = pbrt_context{};
-  auto texture_map = unordered_map<string, pbrt_texture>{};
-  load_pbrt(filename, pbrt, ctx, texture_map);
+  auto arealight_map = unordered_map<string, pbrt_arealight>{{"", {}}};
+  auto material_map = unordered_map<string, pbrt_material>{{"", {}}};
+  auto texture_map = unordered_map<string, pbrt_texture>{{"", {}}};
+  load_pbrt(filename, pbrt, ctx, arealight_map, material_map, texture_map);
 }
 
 static void format_value(string& str, const pbrt_value& value) {
@@ -3912,15 +3921,6 @@ void save_pbrt(
     format_values(fs, "AttributeEnd\n");
   }
 
-  auto arealights_map = unordered_map<string, string>{};
-  for (auto& arealight : pbrt.arealights) {
-    auto command = pbrt_command{};
-    command.type = "diffuse";
-    command.values.push_back(make_pbrt_value("L", arealight.emission));
-    format_values(arealights_map[command.name], "AreaLightSource \"{}\" {}\n",
-        command.type, command.values);
-  }
-
   auto object_id = 0;
   for (auto& shape : pbrt.shapes) {
     auto command      = pbrt_shape_command{};
@@ -3940,6 +3940,57 @@ void save_pbrt(
       if (!shape.texcoords.empty())
         command.values.push_back(make_pbrt_value("uv", shape.texcoords));
     }
+    auto acommand = pbrt_command{};
+    if(shape.arealight.emission != zero3f) {
+      acommand.type = "diffuse";
+      acommand.values.push_back(make_pbrt_value("L", shape.arealight.emission));
+    }
+    auto& material = shape.material;
+    auto mcommand = pbrt_command{};
+    if (material.specular != 0 && material.transmission != 0 &&
+        !material.thin) {
+      mcommand.type = "glass";
+      mcommand.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
+      mcommand.values.push_back(make_pbrt_value("Kt", vec3f{1, 1, 1}));
+      mcommand.values.push_back(
+          make_pbrt_value("roughness", pow(material.roughness, 2)));
+      mcommand.values.push_back(make_pbrt_value("eta", material.ior));
+      mcommand.values.push_back(make_pbrt_value("remaproughness", false));
+    } else if (material.metallic > 0.1f) {
+      mcommand.type = "metal";
+      mcommand.values.push_back(make_pbrt_value("Kr", vec3f{1, 1, 1}));
+      mcommand.values.push_back(
+          make_pbrt_value("roughness", pow(material.roughness, 2)));
+      mcommand.values.push_back(
+          make_pbrt_value("eta", reflectivity_to_eta(material.color)));
+      mcommand.values.push_back(make_pbrt_value("remaproughness", false));
+    } else {
+      mcommand.type = "uber";
+      if (material.color_map.empty()) {
+        mcommand.values.push_back(make_pbrt_value("Kd", material.color));
+      } else if (material.color != zero3f) {
+        mcommand.values.push_back(make_pbrt_value(
+            "Kd", material.color_map, pbrt_value_type::texture));
+      }
+      if (material.specular != 0) {
+        mcommand.values.push_back(
+            make_pbrt_value("Ks", vec3f{material.specular}));
+        mcommand.values.push_back(
+            make_pbrt_value("roughness", pow(material.roughness, 2)));
+        mcommand.values.push_back(make_pbrt_value("eta", material.ior));
+        mcommand.values.push_back(make_pbrt_value("remaproughness", false));
+      }
+      if (material.transmission != 0) {
+        mcommand.values.push_back(
+            make_pbrt_value("Kt", vec3f{material.transmission}));
+      }
+      if (!material.opacity_map.empty()) {
+        mcommand.values.push_back(make_pbrt_value(
+            "opacity", material.opacity_map, pbrt_value_type::texture));
+      } else if (material.opacity != 1) {
+        mcommand.values.push_back(make_pbrt_value("opacity", material.opacity));
+      }
+    }
     if (ply_meshes) {
       try {
         auto ply = ply_model{};
@@ -3957,9 +4008,12 @@ void save_pbrt(
       format_values(fs, "ObjectBegin \"{}\"\n", object);
     format_values(fs, "AttributeBegin\n");
     format_values(fs, "Transform {}\n", (mat4f)shape.frame);
-    format_values(fs, "NamedMaterial \"{}\"\n", shape.material);
-    if (shape.arealight != "")
-      format_values(fs, arealights_map.at(shape.arealight));
+    if(shape.arealight.emission != zero3f) {
+      format_values(fs, "AreaLightSource \"{}\" {}\n",
+          acommand.type, acommand.values);
+    }
+    format_values(fs, "Material \"string type\" \"{}\" {}\n",
+        mcommand.type, mcommand.values);
     format_values(fs, "Shape \"{}\" {}\n", command.type, command.values);
     format_values(fs, "AttributeEnd\n");
     if (!shape.instances.empty()) format_values(fs, "ObjectEnd\n");

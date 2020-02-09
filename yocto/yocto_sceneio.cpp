@@ -2106,20 +2106,6 @@ static void load_pbrt_scene(
     return (int)scene.textures.size() - 1;
   };
 
-  // material map
-  auto material_map = unordered_map<string, int>{{"", -1}};
-  for (auto& pmaterial : pbrt.materials) {
-    auto idx                     = (int)material_map.size() - 1;
-    material_map[pmaterial.name] = idx;
-  }
-
-  // arealight map
-  auto arealight_map = unordered_map<string, int>{{"", -1}};
-  for (auto& parealight : pbrt.arealights) {
-    auto idx                       = (int)arealight_map.size() - 1;
-    arealight_map[parealight.name] = idx;
-  }
-
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
     auto& shape = scene.shapes.emplace_back();
@@ -2131,25 +2117,19 @@ static void load_pbrt_scene(
     shape.texcoords = pshape.texcoords;
     shape.triangles = pshape.triangles;
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
-    auto material_id  = material_map.at(pshape.material);
-    auto arealight_id = arealight_map.at(pshape.arealight);
-    if (arealight_id >= 0) {
-      auto& parealight = pbrt.arealights[arealight_id];
-      shape.emission   = parealight.emission;
-    }
-    if (material_id >= 0) {
-      auto& pmaterial    = pbrt.materials[material_id];
-      shape.color        = pmaterial.color;
-      shape.metallic     = pmaterial.metallic;
-      shape.specular     = pmaterial.specular;
-      shape.transmission = pmaterial.transmission;
-      shape.ior          = pmaterial.ior;
-      shape.roughness    = pmaterial.roughness;
-      shape.opacity      = pmaterial.opacity;
-      shape.thin         = pmaterial.thin;
-      shape.color_tex    = get_texture(pmaterial.color_map);
-      shape.opacity_tex  = get_texture(pmaterial.opacity_map);
-    }
+    auto& parealight = pshape.arealight;
+    shape.emission   = parealight.emission;
+    auto& pmaterial    = pshape.material;
+    shape.color        = pmaterial.color;
+    shape.metallic     = pmaterial.metallic;
+    shape.specular     = pmaterial.specular;
+    shape.transmission = pmaterial.transmission;
+    shape.ior          = pmaterial.ior;
+    shape.roughness    = pmaterial.roughness;
+    shape.opacity      = pmaterial.opacity;
+    shape.thin         = pmaterial.thin;
+    shape.color_tex    = get_texture(pmaterial.color_map);
+    shape.opacity_tex  = get_texture(pmaterial.opacity_map);
     shape.instances = pshape.instances;
   }
 
@@ -2199,11 +2179,14 @@ void save_pbrt_scene(
   pfilm.filename   = "out.png";
   pfilm.resolution = {1280, (int)(1280 / pcamera.aspect)};
 
-  // TODO: textures
-
-  // convert materials
+  // convert instances
   for (auto& shape : scene.shapes) {
-    auto& pmaterial        = pbrt.materials.emplace_back();
+    auto& pshape     = pbrt.shapes.emplace_back();
+    pshape.filename_ = replace_extension(shape.name, ".ply");
+    pshape.frame     = shape.frame;
+    pshape.frend     = shape.frame;
+    pshape.instances = shape.instances;
+    auto& pmaterial = pshape.material;
     pmaterial.name         = shape.name;
     pmaterial.color        = shape.color;
     pmaterial.metallic     = shape.metallic;
@@ -2214,19 +2197,9 @@ void save_pbrt_scene(
     pmaterial.opacity      = shape.opacity;
     pmaterial.color_map =
         shape.color_tex >= 0 ? scene.textures[shape.color_tex].name : ""s;
-    auto& parealight    = pbrt.arealights.emplace_back();
+    auto& parealight    = pshape.arealight;
     parealight.name     = shape.name;
     parealight.emission = shape.emission;
-  }
-
-  // convert instances
-  for (auto& shape : scene.shapes) {
-    auto& pshape     = pbrt.shapes.emplace_back();
-    pshape.filename_ = replace_extension(shape.name, ".ply");
-    pshape.frame     = shape.frame;
-    pshape.material  = shape.name;
-    pshape.arealight = shape.emission == zero3f ? ""s : shape.name;
-    pshape.instances = shape.instances;
   }
 
   // convert environments

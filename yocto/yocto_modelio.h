@@ -557,20 +557,29 @@ struct pbrt_material {
   float  volscale        = 0.01;
 };
 
+// Pbrt area light
+struct pbrt_arealight {
+  // arealight parameters
+  string name     = "";
+  vec3f  emission = zero3f;
+};
+
 // Pbrt shape
 struct pbrt_shape {
-  // shape parameters
+  // frames
   frame3f         frame     = identity3x4f;
   frame3f         frend     = identity3x4f;
-  string          material  = "";
-  string          arealight = "";
   vector<frame3f> instances = {};
   vector<frame3f> instaends = {};
+  // shape
   string          filename_ = "";
   vector<vec3f>   positions = {};
   vector<vec3f>   normals   = {};
   vector<vec2f>   texcoords = {};
   vector<vec3i>   triangles = {};
+  // material
+  pbrt_arealight arealight = {};
+  pbrt_material material = {};
 };
 
 // Pbrt lights
@@ -589,11 +598,6 @@ struct pbrt_light {
   vector<vec3i> area_triangles = {};
   vector<vec3f> area_positions = {};
   vector<vec3f> area_normals   = {};
-};
-struct pbrt_arealight {
-  // arealight parameters
-  string name     = "";
-  vec3f  emission = zero3f;
 };
 struct pbrt_environment {
   // environment approximation
@@ -617,7 +621,6 @@ struct pbrt_model {
   vector<pbrt_shape>       shapes       = {};
   vector<pbrt_material>    materials    = {};
   vector<pbrt_environment> environments = {};
-  vector<pbrt_arealight>   arealights   = {};
   vector<pbrt_light>       lights       = {};
   vector<pbrt_film>        films        = {};
 };
