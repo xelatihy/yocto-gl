@@ -2199,12 +2199,7 @@ void save_pbrt_scene(
   pfilm.filename   = "out.png";
   pfilm.resolution = {1280, (int)(1280 / pcamera.aspect)};
 
-  // convert textures
-  for (auto& texture : scene.textures) {
-    auto& ptexture    = pbrt.textures.emplace_back();
-    ptexture.name     = texture.name;
-    ptexture.filename = texture.name;
-  }
+  // TODO: textures
 
   // convert materials
   for (auto& shape : scene.shapes) {

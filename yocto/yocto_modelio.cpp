@@ -2907,13 +2907,13 @@ static pbrt_camera convert_camera(const pbrt_command& command,
 
 // convert pbrt textures
 static pbrt_texture convert_texture(const pbrt_command& command,
-    unordered_map<string, int>&                         texture_map,
-    const vector<pbrt_texture>& textures, bool verbose = false) {
-  auto get_filename = [&textures, &texture_map](const string& name) {
+    unordered_map<string, pbrt_texture>& texture_map,
+    bool verbose = false) {
+  auto get_filename = [&texture_map](const string& name) {
     if (name.empty()) return ""s;
     auto pos = texture_map.find(name);
     if (pos == texture_map.end()) return ""s;
-    return textures.at(pos->second).filename;
+    return pos->second.filename;
   };
 
   auto texture = pbrt_texture{};
@@ -2979,8 +2979,7 @@ static pbrt_texture convert_texture(const pbrt_command& command,
 
 // convert pbrt materials
 static pbrt_material convert_material(const pbrt_command& command,
-    const vector<pbrt_texture>&                           textures,
-    const unordered_map<string, int>&                     texture_map,
+    const unordered_map<string, pbrt_texture>&                     texture_map,
     const vector<pbrt_material>& materials, bool verbose = false) {
   // helpers
   auto get_texture = [&](const vector<pbrt_value>& values, const string& name,
@@ -2992,7 +2991,7 @@ static pbrt_material convert_material(const pbrt_command& command,
       color    = textured.first;
       filename = "";
     } else {
-      auto& texture = textures.at(texture_map.at(textured.second));
+      auto& texture = texture_map.at(textured.second);
       if (texture.filename.empty()) {
         color    = texture.constant;
         filename = "";
@@ -3009,7 +3008,7 @@ static pbrt_material convert_material(const pbrt_command& command,
     if (textured.second == "") {
       scalar = mean(textured.first);
     } else {
-      auto& texture = textures.at(texture_map.at(textured.second));
+      auto& texture = texture_map.at(textured.second);
       if (texture.filename.empty()) {
         scalar = mean(texture.constant);
       } else {
@@ -3024,7 +3023,7 @@ static pbrt_material convert_material(const pbrt_command& command,
     if (textured.second == "") {
       color = textured.first;
     } else {
-      auto& texture = textures.at(texture_map.at(textured.second));
+      auto& texture = texture_map.at(textured.second);
       if (texture.filename.empty()) {
         color = texture.constant;
       } else {
@@ -3470,7 +3469,7 @@ struct pbrt_context {
 
 // load pbrt
 void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
-    unordered_map<string, int>& texture_map) {
+    unordered_map<string, pbrt_texture>& texture_map) {
   auto fs = open_file(filename, "rt");
 
   // parser state
@@ -3629,9 +3628,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       parse_pbrt_param(fs, str, comptype);
       parse_pbrt_param(fs, str, texture.type);
       parse_pbrt_params(fs, str, texture.values);
-      texture_map[texture.name] = (int)pbrt.textures.size();
-      pbrt.textures.push_back(
-          convert_texture(texture, texture_map, pbrt.textures));
+      texture_map[texture.name] = convert_texture(texture, texture_map);
     } else if (cmd == "Material") {
       static auto material_id = 0;
       auto        material    = pbrt_command{};
@@ -3639,7 +3636,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       parse_pbrt_param(fs, str, material.type);
       parse_pbrt_params(fs, str, material.values);
       pbrt.materials.push_back(convert_material(
-          material, pbrt.textures, texture_map, pbrt.materials));
+          material, texture_map, pbrt.materials));
       if (material.type == "") {
         stack.back().material = "";
         pbrt.materials.pop_back();
@@ -3654,7 +3651,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       for (auto& value : material.values)
         if (value.name == "type") material.type = value.value1s;
       pbrt.materials.push_back(convert_material(
-          material, pbrt.textures, texture_map, pbrt.materials));
+          material, texture_map, pbrt.materials));
     } else if (cmd == "NamedMaterial") {
       parse_pbrt_param(fs, str, stack.back().material);
     } else if (cmd == "Shape") {
@@ -3719,7 +3716,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
 // load pbrt
 void load_pbrt(const string& filename, pbrt_model& pbrt) {
   auto ctx         = pbrt_context{};
-  auto texture_map = unordered_map<string, int>{};
+  auto texture_map = unordered_map<string, pbrt_texture>{};
   load_pbrt(filename, pbrt, ctx, texture_map);
 }
 
@@ -3835,20 +3832,6 @@ void save_pbrt(
   }
 
   format_values(fs, "\nWorldBegin\n\n");
-
-  for (auto& texture : pbrt.textures) {
-    auto command = pbrt_command{};
-    command.name = texture.name;
-    if (texture.filename.empty()) {
-      command.type = "constant";
-      command.values.push_back(make_pbrt_value("value", texture.constant));
-    } else {
-      command.type = "imagemap";
-      command.values.push_back(make_pbrt_value("filename", texture.filename));
-    }
-    format_values(fs, "Texture \"{}\" \"color\" \"{}\" {}\n", command.name,
-        command.type, command.values);
-  }
 
   auto reflectivity_to_eta = [](const vec3f& reflectivity) {
     return (1 + sqrt(reflectivity)) / (1 - sqrt(reflectivity));

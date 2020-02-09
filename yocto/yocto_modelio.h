@@ -617,7 +617,6 @@ struct pbrt_model {
   vector<string>           comments     = {};
   vector<pbrt_camera>      cameras      = {};
   vector<pbrt_shape>       shapes       = {};
-  vector<pbrt_texture>     textures     = {};
   vector<pbrt_material>    materials    = {};
   vector<pbrt_environment> environments = {};
   vector<pbrt_arealight>   arealights   = {};
