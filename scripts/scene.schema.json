@@ -1,0 +1,250 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://yocto-gl.com/scene.schema.json",
+  "title": "Yocto/GL Scene Format",
+  "description": "The scene format used by Yocto/GL",
+  "type": "object",
+  "properties": {
+    "cameras": {
+      "description": "List of cameras",
+      "type": "array",
+      "items": {
+        "description": "Camera",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
+          "frame": {
+            "description": "Frame",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "lens": {
+            "description": "Lens",
+            "type": "number"
+          },
+          "aspect": {
+            "description": "Aspect ratio",
+            "type": "number"
+          },
+          "focus": {
+            "description": "Focus distance",
+            "type": "number"
+          },
+          "aperture": {
+            "description": "Lens aperture",
+            "type": "number"
+          },
+          "ortho": {
+            "description": "Whether the camera is orthographic",
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "environments": {
+      "description": "List of environments",
+      "type": "array",
+      "items": {
+        "description": "Environment",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
+          "frame": {
+            "description": "Frame",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "emission": {
+            "description": "Emission",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "emission_map": {
+            "description": "Environment map file name",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "shapes": {
+      "description": "List of shapes",
+      "type": "array",
+      "items": {
+        "description": "Shape",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
+          "frame": {
+            "description": "Frame",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "shape": {
+            "description": "Geometry filename",
+            "type": "string"
+          },
+          "instances": {
+            "description": "Instances filename",
+            "type": "string"
+          },
+          "emission": {
+            "description": "Emission",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "color": {
+            "description": "Color",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "specular": {
+            "description": "Specular",
+            "type": "number"
+          },
+          "roughness": {
+            "description": "Roughness",
+            "type": "number"
+          },
+          "metallic": {
+            "description": "Metallic",
+            "type": "number"
+          },
+          "ior": {
+            "description": "Ior",
+            "type": "number"
+          },
+          "spectint": {
+            "description": "Specular tint",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "coat": {
+            "description": "Coat",
+            "type": "number"
+          },
+          "transmission": {
+            "description": "Transmission",
+            "type": "number"
+          },
+          "scattering": {
+            "description": "Volume scattering",
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "scanisotropy": {
+            "description": "Scattering anisotropy",
+            "type": "number"
+          },
+          "trdepth": {
+            "description": "Transmission depth",
+            "type": "number"
+          },
+          "opacity": {
+            "description": "Opacity",
+            "type": "number"
+          },
+          "thin": {
+            "description": "Thin",
+            "type": "boolean"
+          },        
+          "emission_tex": {
+            "description": "Emission map",
+            "type": "string"
+          },
+          "color_tex": {
+            "description": "Color",
+            "type": "string"
+          },
+          "specular_tex": {
+            "description": "Specular",
+            "type": "string"
+          },
+          "roughness_tex": {
+            "description": "Roughness",
+            "type": "string"
+          },
+          "metallic_tex": {
+            "description": "Metallic",
+            "type": "string"
+          },
+          "ior_tex": {
+            "description": "Ior",
+            "type": "string"
+          },
+          "spectint_tex": {
+            "description": "Specular tint",
+            "type": "string"
+          },
+          "coat_tex": {
+            "description": "Coat",
+            "type": "string"
+          },
+          "transmission_tex": {
+            "description": "Transmission",
+            "type": "string"
+          },
+          "scattering_tex": {
+            "description": "Volume scattering",
+            "type": "string"
+          },
+          "opacity_tex": {
+            "description": "Opacity map",
+            "type": "string"
+          },
+          "gltf_textures": {
+            "description": "glTF Textures",
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "subdivs": {
+      "description": "List of subdivs",
+      "type": "array",
+      "items": {
+        "description": "Subdiv",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Name",
+            "type": "string"
+          },
+          "subdiv": {
+            "description": "Geometry filename",
+            "type": "string"
+          },
+          "shape": {
+            "description": "Shape name as a reference",
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
+
