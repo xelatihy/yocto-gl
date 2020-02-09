@@ -624,9 +624,6 @@ struct pbrt_model {
   vector<pbrt_light>       lights       = {};
   vector<pbrt_film>        films        = {};
   // Low level commands
-  vector<pbrt_command> cameras_commands      = {};
-  vector<pbrt_command> films_commands        = {};
-  vector<pbrt_command> arealights_commands       = {};
   vector<pbrt_command> textures_commands       = {};
   vector<pbrt_command> materials_commands       = {};
   vector<pbrt_shape_command> shapes_commands       = {};

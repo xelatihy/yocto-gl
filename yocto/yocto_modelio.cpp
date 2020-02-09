@@ -3604,19 +3604,26 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       parse_pbrt_param(fs, str, filter.type);
       parse_pbrt_params(fs, str, filter.values);
     } else if (cmd == "Film") {
-      auto& film = pbrt.films_commands.emplace_back();
+      auto film = pbrt_command{};
       parse_pbrt_param(fs, str, film.type);
       parse_pbrt_params(fs, str, film.values);
+      pbrt.films.push_back(convert_film(film));
+      for(auto& camera : pbrt.cameras) {
+        auto resolution = pbrt.films.back().resolution;
+        auto aspect = (float)resolution.x / (float)resolution.y;
+        if(!camera.aspect) camera.aspect = aspect;
+      }
     } else if (cmd == "Accelerator") {
       auto accelerator = pbrt_command{};
       parse_pbrt_param(fs, str, accelerator.type);
       parse_pbrt_params(fs, str, accelerator.values);
     } else if (cmd == "Camera") {
-      auto& camera = pbrt.cameras_commands.emplace_back();
+      auto camera = pbrt_command{};
       parse_pbrt_param(fs, str, camera.type);
       parse_pbrt_params(fs, str, camera.values);
       camera.frame = stack.back().transform_start;
       camera.frend = stack.back().transform_end;
+      pbrt.cameras.push_back(convert_camera(camera, pbrt.films));
     } else if (cmd == "Texture") {
       auto& texture  = pbrt.textures_commands.emplace_back();
       auto  comptype = ""s;
@@ -3660,13 +3667,14 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx) {
       }
     } else if (cmd == "AreaLightSource") {
       static auto arealight_id = 0;
-      auto&       arealight    = pbrt.arealights_commands.emplace_back();
+      auto       arealight    = pbrt_command{};
       arealight.name           = "arealight_" + std::to_string(arealight_id++);
       parse_pbrt_param(fs, str, arealight.type);
       parse_pbrt_params(fs, str, arealight.values);
       arealight.frame        = stack.back().transform_start;
       arealight.frend        = stack.back().transform_end;
       stack.back().arealight = arealight.name;
+      pbrt.arealights.push_back(convert_arealight(arealight));
     } else if (cmd == "LightSource") {
       auto light = pbrt_command{};
       parse_pbrt_param(fs, str, light.type);
@@ -3709,12 +3717,6 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
 
   // convert objects
   try {
-    for(auto& command : pbrt.films_commands) {
-      pbrt.films.push_back(convert_film(command));
-    }
-    for(auto& command : pbrt.cameras_commands) {
-      pbrt.cameras.push_back(convert_camera(command, pbrt.films));
-    }
     auto texture_map = unordered_map<string, int>{};
     for(auto& command : pbrt.textures_commands) {
       texture_map[command.name] = (int)pbrt.textures.size();
@@ -3725,9 +3727,6 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
     }
     for(auto& command : pbrt.shapes_commands) {
       pbrt.shapes.push_back(convert_shape(command, filename));
-    }
-    for(auto& command : pbrt.arealights_commands) {
-      pbrt.arealights.push_back(convert_arealight(command));
     }
   } catch (std::invalid_argument& e) {
     throw std::runtime_error{filename + ": conversion error"};
@@ -3836,22 +3835,12 @@ void save_pbrt(
     format_values(fs, "Camera \"{}\" {}\n", command.type, command.values);
   }
 
-  for (auto& command : pbrt.cameras_commands) {
-    format_values(fs, "LookAt {} {} {}\n", command.frame.o,
-        command.frame.o - command.frame.z, command.frame.y);
-    format_values(fs, "Camera \"{}\" {}\n", command.type, command.values);
-  }
-
   for (auto& film : pbrt.films) {
     auto command = pbrt_command{};
     command.type = "image";
     command.values.push_back(make_pbrt_value("xresolution", film.resolution.x));
     command.values.push_back(make_pbrt_value("yresolution", film.resolution.y));
     command.values.push_back(make_pbrt_value("filename", film.filename));
-    format_values(fs, "Film \"{}\" {}\n", command.type, command.values);
-  }
-
-  for (auto& command : pbrt.films_commands) {
     format_values(fs, "Film \"{}\" {}\n", command.type, command.values);
   }
 
@@ -3971,11 +3960,6 @@ void save_pbrt(
     auto command = pbrt_command{};
     command.type = "diffuse";
     command.values.push_back(make_pbrt_value("L", arealight.emission));
-    format_values(arealights_map[command.name], "AreaLightSource \"{}\" {}\n",
-        command.type, command.values);
-  }
-
-  for (auto& command : pbrt.arealights_commands) {
     format_values(arealights_map[command.name], "AreaLightSource \"{}\" {}\n",
         command.type, command.values);
   }
