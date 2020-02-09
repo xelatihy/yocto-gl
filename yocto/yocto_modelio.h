@@ -474,13 +474,13 @@ namespace yocto {
 // Pbrt camera
 struct pbrt_camera {
   // camera parameters
-  frame3f frame    = identity3x4f;
-  frame3f frend    = identity3x4f;
+  frame3f frame      = identity3x4f;
+  frame3f frend      = identity3x4f;
   vec2i   resolution = {0, 0};
-  float   lens     = 0;
-  float   aspect   = 0;
-  float   focus    = 0;
-  float   aperture = 0;
+  float   lens       = 0;
+  float   aspect     = 0;
+  float   focus      = 0;
+  float   aperture   = 0;
 };
 
 // Pbrt shape
@@ -491,11 +491,11 @@ struct pbrt_shape {
   vector<frame3f> instances = {};
   vector<frame3f> instaends = {};
   // shape
-  string          filename_ = "";
-  vector<vec3f>   positions = {};
-  vector<vec3f>   normals   = {};
-  vector<vec2f>   texcoords = {};
-  vector<vec3i>   triangles = {};
+  string        filename_ = "";
+  vector<vec3f> positions = {};
+  vector<vec3f> normals   = {};
+  vector<vec2f> texcoords = {};
+  vector<vec3i> triangles = {};
   // material
   vec3f  emission        = zero3f;
   vec3f  color           = zero3f;

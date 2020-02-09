@@ -2911,9 +2911,8 @@ static pbrt_camera convert_camera(const pbrt_command& command,
   camera.frame      = inverse((frame3f)camera.frame);
   camera.frame.z    = -camera.frame.z;
   camera.resolution = resolution;
-  auto film_aspect  = (resolution == zero2i)
-                         ? 1
-                         : (float)resolution.x / (float)resolution.y;
+  auto film_aspect =
+      (resolution == zero2i) ? 1 : (float)resolution.x / (float)resolution.y;
   if (command.type == "perspective") {
     auto fov = 90.0f;
     get_pbrt_value(command.values, "fov", fov);
@@ -3344,10 +3343,8 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 // Convert pbrt shapes
 static pbrt_shape convert_shape(const pbrt_shape_command& command,
     unordered_map<string, pbrt_arealight>&                arealight_map,
-    unordered_map<string, pbrt_material>& material_map,
-                                const string& filename,
-                                const string& ply_dirname,
-    bool verbose = false) {
+    unordered_map<string, pbrt_material>& material_map, const string& filename,
+    const string& ply_dirname, bool verbose = false) {
   auto shape            = pbrt_shape{};
   shape.frame           = command.frame;
   shape.frend           = command.frend;
@@ -3519,10 +3516,10 @@ struct pbrt_stack_element {
 
 // pbrt parsing context
 struct pbrt_context {
-  vector<pbrt_stack_element>                stack       = {};
-  unordered_map<string, pbrt_stack_element> coordsys    = {};
-  unordered_map<string, vector<int>>        objects     = {};
-  string                                    cur_object  = "";
+  vector<pbrt_stack_element>                stack           = {};
+  unordered_map<string, pbrt_stack_element> coordsys        = {};
+  unordered_map<string, vector<int>>        objects         = {};
+  string                                    cur_object      = "";
   vec2i                                     film_resolution = {512, 512};
 };
 
@@ -3531,7 +3528,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
     unordered_map<string, pbrt_arealight>& arealight_map,
     unordered_map<string, pbrt_material>&  material_map,
     unordered_map<string, pbrt_texture>&   texture_map,
-    const string& ply_dirname) {
+    const string&                          ply_dirname) {
   auto fs = open_file(filename, "rt");
 
   // helpers
@@ -3641,8 +3638,9 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       auto name = ""s;
       parse_pbrt_param(fs, str, name);
       if (ctx.coordsys.find(name) != ctx.coordsys.end()) {
-        ctx.stack.back().transform_start = ctx.coordsys.at(name).transform_start;
-        ctx.stack.back().transform_end   = ctx.coordsys.at(name).transform_end;
+        ctx.stack.back().transform_start =
+            ctx.coordsys.at(name).transform_start;
+        ctx.stack.back().transform_end = ctx.coordsys.at(name).transform_end;
       }
     } else if (cmd == "Integrator") {
       auto integrator = pbrt_command{};
@@ -3660,7 +3658,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       auto film = pbrt_command{};
       parse_pbrt_param(fs, str, film.type);
       parse_pbrt_params(fs, str, film.values);
-      auto cfilm = convert_film(film);
+      auto cfilm          = convert_film(film);
       ctx.film_resolution = cfilm.resolution;
     } else if (cmd == "Accelerator") {
       auto accelerator = pbrt_command{};
@@ -3691,7 +3689,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
         ctx.stack.back().material = "";
         // pbrt.materials.pop_back();
       } else {
-        ctx.stack.back().material       = material.name;
+        ctx.stack.back().material   = material.name;
         material_map[material.name] = convert_material(
             material, material_map, texture_map);
       }
@@ -3716,8 +3714,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       shape.arealight = ctx.stack.back().arealight;
       shape.interior  = ctx.stack.back().medium_interior;
       shape.exterior  = ctx.stack.back().medium_exterior;
-      pbrt.shapes.push_back(
-          convert_shape(shape, arealight_map, material_map, filename, ply_dirname));
+      pbrt.shapes.push_back(convert_shape(
+          shape, arealight_map, material_map, filename, ply_dirname));
       if (ctx.cur_object != "") {
         ctx.objects[ctx.cur_object].push_back((int)pbrt.shapes.size() - 1);
       }
@@ -3774,7 +3772,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   auto material_map  = unordered_map<string, pbrt_material>{{"", {}}};
   auto texture_map   = unordered_map<string, pbrt_texture>{{"", {}}};
   load_pbrt(filename, pbrt, ctx, arealight_map, material_map, texture_map,
-            get_dirname(filename));
+      get_dirname(filename));
 }
 
 static void format_value(string& str, const pbrt_value& value) {
@@ -3871,8 +3869,10 @@ void save_pbrt(
   for (auto& camera : pbrt.cameras) {
     auto command = pbrt_command{};
     command.type = "image";
-    command.values.push_back(make_pbrt_value("xresolution", camera.resolution.x));
-    command.values.push_back(make_pbrt_value("yresolution", camera.resolution.y));
+    command.values.push_back(
+        make_pbrt_value("xresolution", camera.resolution.x));
+    command.values.push_back(
+        make_pbrt_value("yresolution", camera.resolution.y));
     command.values.push_back(make_pbrt_value("filename", "image.exr"s));
     format_values(fs, "Film \"{}\" {}\n", command.type, command.values);
   }

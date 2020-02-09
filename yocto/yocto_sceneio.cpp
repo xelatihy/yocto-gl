@@ -2118,7 +2118,7 @@ static void load_pbrt_scene(
     shape.texcoords = pshape.texcoords;
     shape.triangles = pshape.triangles;
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
-    shape.emission   = pshape.emission;
+    shape.emission     = pshape.emission;
     shape.color        = pshape.color;
     shape.metallic     = pshape.metallic;
     shape.specular     = pshape.specular;
@@ -2168,20 +2168,20 @@ void save_pbrt_scene(
   for (auto stat : scene_stats(scene)) pbrt.comments.push_back(stat);
 
   // convert camera
-  auto& camera     = scene.cameras.front();
-  auto& pcamera    = pbrt.cameras.emplace_back();
-  pcamera.frame    = camera.frame;
-  pcamera.lens     = camera.lens;
-  pcamera.aspect   = camera.aspect;
+  auto& camera       = scene.cameras.front();
+  auto& pcamera      = pbrt.cameras.emplace_back();
+  pcamera.frame      = camera.frame;
+  pcamera.lens       = camera.lens;
+  pcamera.aspect     = camera.aspect;
   pcamera.resolution = {1280, (int)(1280 / pcamera.aspect)};
 
   // convert instances
   for (auto& shape : scene.shapes) {
-    auto& pshape     = pbrt.shapes.emplace_back();
-    pshape.filename_ = replace_extension(shape.name, ".ply");
-    pshape.frame     = shape.frame;
-    pshape.frend     = shape.frame;
-    pshape.instances = shape.instances;
+    auto& pshape        = pbrt.shapes.emplace_back();
+    pshape.filename_    = replace_extension(shape.name, ".ply");
+    pshape.frame        = shape.frame;
+    pshape.frend        = shape.frame;
+    pshape.instances    = shape.instances;
     pshape.color        = shape.color;
     pshape.metallic     = shape.metallic;
     pshape.specular     = shape.specular;
