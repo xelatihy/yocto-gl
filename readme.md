@@ -61,7 +61,7 @@ included in the [project site](https://xelatihy.github.io/yocto-gl/).
 Yocto/GL follows a "data-oriented programming model" that makes data explicit.
 Data is stored in simple structs and accessed with free functions or directly.
 All data is public, so we make no attempt at encapsulation.
-All objects is Yocto/GL have value semantic and we do not use pointers
+All objects in Yocto/GL have semantic value and we do not use pointers
 in data structure but indices. This means that everything can be trivially
 serialized and there is no need for memory management.
 
