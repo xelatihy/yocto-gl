@@ -471,54 +471,6 @@ inline void add_yaml_value(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Pbrt value type
-enum struct pbrt_value_type {
-  // clang-format off
-  real, integer, boolean, string, point, normal, vector, texture, color, 
-  point2, vector2, spectrum
-  // clang-format on
-};
-
-// Pbrt value
-struct pbrt_value {
-  string          name     = "";
-  pbrt_value_type type     = pbrt_value_type::real;
-  int             value1i  = 0;
-  float           value1f  = 0;
-  vec2f           value2f  = {0, 0};
-  vec3f           value3f  = {0, 0, 0};
-  bool            value1b  = false;
-  string          value1s  = "";
-  vector<float>   vector1f = {};
-  vector<vec2f>   vector2f = {};
-  vector<vec3f>   vector3f = {};
-  vector<int>     vector1i = {};
-};
-
-// Pbrt command
-struct pbrt_command {
-  string             name   = "";
-  string             type   = "";
-  vector<pbrt_value> values = {};
-  frame3f            frame  = identity3x4f;
-  frame3f            frend  = identity3x4f;
-};
-
-// Pbrt shape
-struct pbrt_shape_command {
-  // shape parameters
-  string             type      = "";
-  vector<pbrt_value> values    = {};
-  frame3f            frame     = identity3x4f;
-  frame3f            frend     = identity3x4f;
-  string             material  = "";
-  string             arealight = "";
-  string             interior  = "";
-  string             exterior  = "";
-  vector<frame3f>    instances = {};
-  vector<frame3f>    instaends = {};
-};
-
 // Pbrt camera
 struct pbrt_camera {
   // camera parameters
@@ -607,6 +559,76 @@ void load_pbrt(const string& filename, pbrt_model& pbrt);
 void save_pbrt(
     const string& filename, const pbrt_model& pbrt, bool ply_meshes = false);
 
+// Pbrt value type
+enum struct pbrt_value_type {
+  // clang-format off
+  real, integer, boolean, string, point, normal, vector, texture, color, 
+  point2, vector2, spectrum
+  // clang-format on
+};
+
+// Pbrt value
+struct pbrt_value {
+  string          name     = "";
+  pbrt_value_type type     = pbrt_value_type::real;
+  int             value1i  = 0;
+  float           value1f  = 0;
+  vec2f           value2f  = {0, 0};
+  vec3f           value3f  = {0, 0, 0};
+  bool            value1b  = false;
+  string          value1s  = "";
+  vector<float>   vector1f = {};
+  vector<vec2f>   vector2f = {};
+  vector<vec3f>   vector3f = {};
+  vector<int>     vector1i = {};
+};
+
+// Pbrt command
+struct pbrt_command {
+  string             name   = "";
+  string             type   = "";
+  vector<pbrt_value> values = {};
+  frame3f            frame  = identity3x4f;
+  frame3f            frend  = identity3x4f;
+};
+
+// Pbrt shape
+struct pbrt_shape_command {
+  // shape parameters
+  string             type      = "";
+  vector<pbrt_value> values    = {};
+  frame3f            frame     = identity3x4f;
+  frame3f            frend     = identity3x4f;
+  string             material  = "";
+  string             arealight = "";
+  string             interior  = "";
+  string             exterior  = "";
+  vector<frame3f>    instances = {};
+  vector<frame3f>    instaends = {};
+};
+
+// Low-level commands
+struct pbrt_commands {
+  vector<string>             comments     = {};
+  vector<pbrt_command>       cameras      = {};
+  vector<pbrt_command>       films        = {};
+  vector<pbrt_command>       integrators  = {};
+  vector<pbrt_command>       filters      = {};
+  vector<pbrt_command>       samplers     = {};
+  vector<pbrt_command>       accelerators = {};
+  vector<pbrt_command>       mediums      = {};
+  vector<pbrt_command>       environments = {};
+  vector<pbrt_command>       lights       = {};
+  vector<pbrt_command>       arealights   = {};
+  vector<pbrt_command>       textures     = {};
+  vector<pbrt_command>       materials    = {};
+  vector<pbrt_shape_command> shapes       = {};
+};
+
+// Low level parser
+void load_pbrt(const string& filename, pbrt_commands& pbrt);
+void save_pbrt(const string& filename, const pbrt_commands& pbrt);
+
 // type-cheked pbrt value access
 void get_pbrt_value(const pbrt_value& pbrt, string& value);
 void get_pbrt_value(const pbrt_value& pbrt, bool& value);
@@ -644,28 +666,6 @@ pbrt_value make_pbrt_value(const string& name, const vector<vec3f>& value,
     pbrt_value_type type = pbrt_value_type::point);
 pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
     pbrt_value_type type = pbrt_value_type::integer);
-
-// Low-level commands
-struct pbrt_commands {
-  vector<string>             comments     = {};
-  vector<pbrt_command>       cameras      = {};
-  vector<pbrt_command>       films        = {};
-  vector<pbrt_command>       integrators  = {};
-  vector<pbrt_command>       filters      = {};
-  vector<pbrt_command>       samplers     = {};
-  vector<pbrt_command>       accelerators = {};
-  vector<pbrt_command>       mediums      = {};
-  vector<pbrt_command>       environments = {};
-  vector<pbrt_command>       lights       = {};
-  vector<pbrt_command>       arealights   = {};
-  vector<pbrt_command>       textures     = {};
-  vector<pbrt_command>       materials    = {};
-  vector<pbrt_shape_command> shapes       = {};
-};
-
-// Low level parser
-void load_pbrt(const string& filename, pbrt_commands& pbrt);
-void save_pbrt(const string& filename, const pbrt_commands& pbrt);
 
 }  // namespace yocto
 
