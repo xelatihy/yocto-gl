@@ -3471,15 +3471,15 @@ void save_shape(const string& filename, const vector<int>& points,
     auto obj = obj_model{};
     if (!triangles.empty()) {
       add_triangles(obj, "", triangles, positions, normals, texcoords, {}, {},
-          flip_texcoord);
+          {}, flip_texcoord);
     } else if (!quads.empty()) {
-      add_quads(
-          obj, "", quads, positions, normals, texcoords, {}, {}, flip_texcoord);
+      add_quads(obj, "", quads, positions, normals, texcoords, {}, {}, {},
+          flip_texcoord);
     } else if (!lines.empty()) {
-      add_lines(
-          obj, "", lines, positions, normals, texcoords, {}, {}, flip_texcoord);
+      add_lines(obj, "", lines, positions, normals, texcoords, {}, {}, {},
+          flip_texcoord);
     } else if (!points.empty()) {
-      add_points(obj, "", points, positions, normals, texcoords, {}, {},
+      add_points(obj, "", points, positions, normals, texcoords, {}, {}, {},
           flip_texcoord);
     } else {
       throw_emptyshape_error(filename);
@@ -3551,7 +3551,7 @@ void save_fvshape(const string& filename, const vector<vec4i>& quadspos,
 
     // Add obj data
     add_fvquads(obj, "", quadspos, quadsnorm, quadstexcoord, positions, normals,
-        texcoords, {}, {}, flip_texcoord);
+        texcoords, {}, {}, {}, flip_texcoord);
 
     // Save
     save_obj(filename, obj);

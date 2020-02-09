@@ -772,8 +772,8 @@ static void save_json_scene(
 // Load/save a scene from/to OBJ.
 static void load_obj_scene(
     const string& filename, sceneio_model& scene, bool noparallel);
-static void save_obj_scene(const string& filename, const sceneio_model& scene,
-    bool instances, bool noparallel);
+static void save_obj_scene(
+    const string& filename, const sceneio_model& scene, bool noparallel);
 
 // Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
 static void load_ply_scene(
@@ -823,7 +823,7 @@ void save_scene(
   } else if (ext == ".json" || ext == ".JSON") {
     return save_json_scene(filename, scene, noparallel);
   } else if (ext == ".obj" || ext == ".OBJ") {
-    return save_obj_scene(filename, scene, false, noparallel);
+    return save_obj_scene(filename, scene, noparallel);
   } else if (ext == ".pbrt" || ext == ".PBRT") {
     return save_pbrt_scene(filename, scene, noparallel);
   } else if (ext == ".ply" || ext == ".PLY") {
@@ -1772,8 +1772,8 @@ static void load_obj_scene(
   add_radius(scene);
 }
 
-static void save_obj_scene(const string& filename, const sceneio_model& scene,
-    bool instances, bool noparallel) {
+static void save_obj_scene(
+    const string& filename, const sceneio_model& scene, bool noparallel) {
   auto obj = obj_model{};
 
   for (auto stat : scene_stats(scene)) obj.comments.push_back(stat);
@@ -1826,48 +1826,23 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
 
   // convert shapes
   for (auto& shape : scene.shapes) {
-    if (instances && !shape.instances.empty()) {
-      auto positions = shape.positions, normals = shape.normals;
-      for (auto& p : positions) p = transform_point(shape.frame, p);
-      for (auto& n : normals) n = transform_normal(shape.frame, n);
-      if (!shape.triangles.empty()) {
-        add_triangles(obj, shape.name, shape.triangles, positions, normals,
-            shape.texcoords, {}, {}, true);
-      } else if (!shape.quads.empty()) {
-        add_quads(obj, shape.name, shape.quads, positions, normals,
-            shape.texcoords, {}, {}, true);
-      } else if (!shape.lines.empty()) {
-        add_lines(obj, shape.name, shape.lines, positions, normals,
-            shape.texcoords, {}, {}, true);
-      } else if (!shape.points.empty()) {
-        add_points(obj, shape.name, shape.points, positions, normals,
-            shape.texcoords, {}, {}, true);
-      } else {
-        throw_emptyshape_error(filename, shape.name);
-      }
-      // TODO: instances
+    auto positions = shape.positions, normals = shape.normals;
+    for (auto& p : positions) p = transform_point(shape.frame, p);
+    for (auto& n : normals) n = transform_normal(shape.frame, n);
+    if (!shape.triangles.empty()) {
+      add_triangles(obj, shape.name, shape.triangles, positions, normals,
+          shape.texcoords, {}, {}, shape.instances, true);
+    } else if (!shape.quads.empty()) {
+      add_quads(obj, shape.name, shape.quads, positions, normals,
+          shape.texcoords, {}, {}, shape.instances, true);
+    } else if (!shape.lines.empty()) {
+      add_lines(obj, shape.name, shape.lines, positions, normals,
+          shape.texcoords, {}, {}, shape.instances, true);
+    } else if (!shape.points.empty()) {
+      add_points(obj, shape.name, shape.points, positions, normals,
+          shape.texcoords, {}, {}, shape.instances, true);
     } else {
-      for (auto& frame : shape.instances) {
-        auto materials = vector<string>{shape.name};
-        auto positions = shape.positions, normals = shape.normals;
-        for (auto& p : positions) p = transform_point(frame * shape.frame, p);
-        for (auto& n : normals) n = transform_normal(frame * shape.frame, n);
-        if (!shape.triangles.empty()) {
-          add_triangles(obj, shape.name, shape.triangles, positions, normals,
-              shape.texcoords, materials, {}, true);
-        } else if (!shape.quads.empty()) {
-          add_quads(obj, shape.name, shape.quads, positions, normals,
-              shape.texcoords, materials, {}, true);
-        } else if (!shape.lines.empty()) {
-          add_lines(obj, shape.name, shape.lines, positions, normals,
-              shape.texcoords, materials, {}, true);
-        } else if (!shape.points.empty()) {
-          add_points(obj, shape.name, shape.points, positions, normals,
-              shape.texcoords, materials, {}, true);
-        } else {
-          throw_emptyshape_error(filename, shape.name);
-        }
-      }
+      throw_emptyshape_error(filename, shape.name);
     }
   }
 

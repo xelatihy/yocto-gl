@@ -360,25 +360,28 @@ void add_triangles(obj_model& obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
-    bool flip_texcoord = false);
+    const vector<frame3f>& instances = {}, bool flip_texcoord = false);
 void add_quads(obj_model& obj, const string& name, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<string>& materials = {},
-    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+    const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
+    bool flip_texcoord = false);
 void add_lines(obj_model& obj, const string& name, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<string>& materials = {},
-    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+    const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
+    bool flip_texcoord = false);
 void add_points(obj_model& obj, const string& name, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<string>& materials = {},
-    const vector<int>& ematerials = {}, bool flip_texcoord = false);
+    const vector<int>& ematerials = {}, const vector<frame3f>& instances = {},
+    bool flip_texcoord = false);
 void add_fvquads(obj_model& obj, const string& name,
     const vector<vec4i>& quadspos, const vector<vec4i>& quadsnorm,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials = {}, const vector<int>& ematerials = {},
-    bool flip_texcoord = false);
+    const vector<frame3f>& instances = {}, bool flip_texcoord = false);
 
 }  // namespace yocto
 

@@ -2286,13 +2286,14 @@ void add_triangles(obj_model& obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
-    bool flipv) {
+    const vector<frame3f>& instances, bool flipv) {
   auto& shape     = obj.shapes.emplace_back();
   shape.name      = name;
   shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape.instances = instances;
   shape.vertices.reserve(triangles.size() * 3);
   for (auto idx = 0; idx < triangles.size(); idx++) {
     auto& triangle = triangles[idx];
@@ -2310,13 +2311,15 @@ void add_triangles(obj_model& obj, const string& name,
 void add_quads(obj_model& obj, const string& name, const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<string>& materials,
-    const vector<int>& ematerials, bool flipv) {
+    const vector<int>& ematerials, const vector<frame3f>& instances,
+    bool flipv) {
   auto& shape     = obj.shapes.emplace_back();
   shape.name      = name;
   shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape.instances = instances;
   shape.vertices.reserve(quads.size() * 4);
   for (auto idx = 0; idx < quads.size(); idx++) {
     auto& quad = quads[idx];
@@ -2335,13 +2338,15 @@ void add_quads(obj_model& obj, const string& name, const vector<vec4i>& quads,
 void add_lines(obj_model& obj, const string& name, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<string>& materials,
-    const vector<int>& ematerials, bool flipv) {
+    const vector<int>& ematerials, const vector<frame3f>& instances,
+    bool flipv) {
   auto& shape     = obj.shapes.emplace_back();
   shape.name      = name;
   shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape.instances = instances;
   shape.vertices.reserve(lines.size() * 2);
   for (auto idx = 0; idx < lines.size(); idx++) {
     auto& str = lines[idx];
@@ -2359,13 +2364,15 @@ void add_lines(obj_model& obj, const string& name, const vector<vec2i>& lines,
 void add_points(obj_model& obj, const string& name, const vector<int>& points,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texcoords, const vector<string>& materials,
-    const vector<int>& ematerials, bool flipv) {
+    const vector<int>& ematerials, const vector<frame3f>& instances,
+    bool flipv) {
   auto& shape     = obj.shapes.emplace_back();
   shape.name      = name;
   shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape.instances = instances;
   shape.vertices.reserve(points.size());
   for (auto idx = 0; idx < points.size(); idx++) {
     auto& point = points[idx];
@@ -2383,13 +2390,14 @@ void add_fvquads(obj_model& obj, const string& name,
     const vector<vec4i>& quadstexcoord, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texcoords,
     const vector<string>& materials, const vector<int>& ematerials,
-    bool flipv) {
+    const vector<frame3f>& instances, bool flipv) {
   auto& shape     = obj.shapes.emplace_back();
   shape.name      = name;
   shape.materials = materials;
   shape.positions = positions;
   shape.normals   = normals;
   shape.texcoords = flipv ? flip_obj_texcoord(texcoords) : texcoords;
+  shape.instances = instances;
   shape.vertices.reserve(quadspos.size() * 4);
   for (auto idx = 0; idx < quadspos.size(); idx++) {
     auto nv = quadspos[idx].z == quadspos[idx].w ? 3 : 4;
