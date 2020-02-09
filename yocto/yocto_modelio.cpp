@@ -3631,13 +3631,13 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       material.name           = "material_" + std::to_string(material_id++);
       parse_pbrt_param(fs, str, material.type);
       parse_pbrt_params(fs, str, material.values);
-      pbrt.materials.push_back(convert_material(
-          material, texture_map, pbrt.materials));
       if (material.type == "") {
         stack.back().material = "";
-        pbrt.materials.pop_back();
+        // pbrt.materials.pop_back();
       } else {
         stack.back().material = material.name;
+        pbrt.materials.push_back(convert_material(
+            material, texture_map, pbrt.materials));
       }
     } else if (cmd == "MakeNamedMaterial") {
       auto material = pbrt_command{};
