@@ -578,8 +578,20 @@ struct pbrt_shape {
   vector<vec2f>   texcoords = {};
   vector<vec3i>   triangles = {};
   // material
-  pbrt_arealight arealight = {};
-  pbrt_material material = {};
+  vec3f emission = zero3f;
+  vec3f  color           = zero3f;
+  float  specular        = 0;
+  float  metallic        = 0;
+  float  transmission    = 0;
+  float  roughness       = 0;
+  float  ior             = 1.5;
+  float  opacity         = 1;
+  string color_map       = "";
+  string opacity_map     = "";
+  bool   thin            = true;
+  vec3f  volmeanfreepath = zero3f;
+  vec3f  volscatter      = zero3f;
+  float  volscale        = 0.01;
 };
 
 // Pbrt lights
@@ -619,7 +631,6 @@ struct pbrt_model {
   vector<string>           comments     = {};
   vector<pbrt_camera>      cameras      = {};
   vector<pbrt_shape>       shapes       = {};
-  vector<pbrt_material>    materials    = {};
   vector<pbrt_environment> environments = {};
   vector<pbrt_light>       lights       = {};
   vector<pbrt_film>        films        = {};

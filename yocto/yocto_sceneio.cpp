@@ -2112,25 +2112,23 @@ static void load_pbrt_scene(
     shape.name  = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
                  ".yaml";
     shape.frame     = pshape.frame;
+    shape.instances = pshape.instances;
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
     shape.texcoords = pshape.texcoords;
     shape.triangles = pshape.triangles;
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
-    auto& parealight = pshape.arealight;
-    shape.emission   = parealight.emission;
-    auto& pmaterial    = pshape.material;
-    shape.color        = pmaterial.color;
-    shape.metallic     = pmaterial.metallic;
-    shape.specular     = pmaterial.specular;
-    shape.transmission = pmaterial.transmission;
-    shape.ior          = pmaterial.ior;
-    shape.roughness    = pmaterial.roughness;
-    shape.opacity      = pmaterial.opacity;
-    shape.thin         = pmaterial.thin;
-    shape.color_tex    = get_texture(pmaterial.color_map);
-    shape.opacity_tex  = get_texture(pmaterial.opacity_map);
-    shape.instances = pshape.instances;
+    shape.emission   = pshape.emission;
+    shape.color        = pshape.color;
+    shape.metallic     = pshape.metallic;
+    shape.specular     = pshape.specular;
+    shape.transmission = pshape.transmission;
+    shape.ior          = pshape.ior;
+    shape.roughness    = pshape.roughness;
+    shape.opacity      = pshape.opacity;
+    shape.thin         = pshape.thin;
+    shape.color_tex    = get_texture(pshape.color_map);
+    shape.opacity_tex  = get_texture(pshape.opacity_map);
   }
 
   // convert environments
@@ -2186,20 +2184,16 @@ void save_pbrt_scene(
     pshape.frame     = shape.frame;
     pshape.frend     = shape.frame;
     pshape.instances = shape.instances;
-    auto& pmaterial = pshape.material;
-    pmaterial.name         = shape.name;
-    pmaterial.color        = shape.color;
-    pmaterial.metallic     = shape.metallic;
-    pmaterial.specular     = shape.specular;
-    pmaterial.transmission = shape.transmission;
-    pmaterial.roughness    = shape.roughness;
-    pmaterial.ior          = shape.ior;
-    pmaterial.opacity      = shape.opacity;
-    pmaterial.color_map =
+    pshape.color        = shape.color;
+    pshape.metallic     = shape.metallic;
+    pshape.specular     = shape.specular;
+    pshape.transmission = shape.transmission;
+    pshape.roughness    = shape.roughness;
+    pshape.ior          = shape.ior;
+    pshape.opacity      = shape.opacity;
+    pshape.color_map =
         shape.color_tex >= 0 ? scene.textures[shape.color_tex].name : ""s;
-    auto& parealight    = pshape.arealight;
-    parealight.name     = shape.name;
-    parealight.emission = shape.emission;
+    pshape.emission = shape.emission;
   }
 
   // convert environments
