@@ -2845,6 +2845,40 @@ static void parse_pbrt_params(
   }
 }
 
+// Pbrt texture
+struct pbrt_texture {
+  // texture parameters
+  string name     = "";
+  vec3f  constant = vec3f{1, 1, 1};
+  string filename = "";
+};
+
+// Pbrt material
+struct pbrt_material {
+  // material parameters
+  string name            = "";
+  vec3f  color           = zero3f;
+  float  specular        = 0;
+  float  metallic        = 0;
+  float  transmission    = 0;
+  float  roughness       = 0;
+  float  ior             = 1.5;
+  float  opacity         = 1;
+  string color_map       = "";
+  string opacity_map     = "";
+  bool   thin            = true;
+  vec3f  volmeanfreepath = zero3f;
+  vec3f  volscatter      = zero3f;
+  float  volscale        = 0.01;
+};
+
+// Pbrt area light
+struct pbrt_arealight {
+  // arealight parameters
+  string name     = "";
+  vec3f  emission = zero3f;
+};
+
 // convert pbrt films
 static pbrt_film convert_film(
     const pbrt_command& command, bool verbose = false) {
