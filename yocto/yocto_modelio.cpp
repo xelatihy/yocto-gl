@@ -2863,11 +2863,7 @@ static pbrt_film convert_film(
 
 // convert pbrt elements
 static pbrt_camera convert_camera(const pbrt_command& command,
-    const vector<pbrt_film>& films, bool verbose = false) {
-  auto film_aspect = 1.0f;
-  for (auto& film : films) {
-    film_aspect = (float)film.resolution.x / (float)film.resolution.y;
-  }
+    float film_aspect, bool verbose = false) {
   auto camera    = pbrt_camera{};
   camera.frame   = command.frame;
   camera.frend   = command.frend;
@@ -3465,6 +3461,7 @@ struct pbrt_context {
   unordered_map<string, pbrt_stack_element> coordsys   = {};
   unordered_map<string, vector<int>>        objects    = {};
   string                                    cur_object = "";
+  float film_aspect = 1;
 };
 
 // load pbrt
@@ -3605,11 +3602,10 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       parse_pbrt_param(fs, str, film.type);
       parse_pbrt_params(fs, str, film.values);
       pbrt.films.push_back(convert_film(film));
-      for (auto& camera : pbrt.cameras) {
-        auto resolution = pbrt.films.back().resolution;
-        auto aspect     = (float)resolution.x / (float)resolution.y;
-        if (!camera.aspect) camera.aspect = aspect;
-      }
+      auto resolution = pbrt.films.back().resolution;
+      auto aspect     = (float)resolution.x / (float)resolution.y;
+      ctx.film_aspect = aspect;
+      for (auto& camera : pbrt.cameras) camera.aspect = aspect;
     } else if (cmd == "Accelerator") {
       auto accelerator = pbrt_command{};
       parse_pbrt_param(fs, str, accelerator.type);
@@ -3620,7 +3616,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       parse_pbrt_params(fs, str, camera.values);
       camera.frame = stack.back().transform_start;
       camera.frend = stack.back().transform_end;
-      pbrt.cameras.push_back(convert_camera(camera, pbrt.films));
+      pbrt.cameras.push_back(convert_camera(camera, ctx.film_aspect));
     } else if (cmd == "Texture") {
       auto texture  = pbrt_command{};
       auto comptype = ""s;

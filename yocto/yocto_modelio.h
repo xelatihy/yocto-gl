@@ -524,8 +524,6 @@ struct pbrt_camera {
   // camera parameters
   frame3f frame    = identity3x4f;
   frame3f frend    = identity3x4f;
-  float   width    = 0;
-  float   height   = 0;
   float   lens     = 0;
   float   aspect   = 0;
   float   focus    = 0;
