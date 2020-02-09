@@ -3344,7 +3344,9 @@ static void make_pbrt_quad(vector<vec3i>& triangles, vector<vec3f>& positions,
 // Convert pbrt shapes
 static pbrt_shape convert_shape(const pbrt_shape_command& command,
     unordered_map<string, pbrt_arealight>&                arealight_map,
-    unordered_map<string, pbrt_material>& material_map, const string& filename,
+    unordered_map<string, pbrt_material>& material_map,
+                                const string& filename,
+                                const string& ply_dirname,
     bool verbose = false) {
   auto shape            = pbrt_shape{};
   shape.frame           = command.frame;
@@ -3389,7 +3391,7 @@ static pbrt_shape convert_shape(const pbrt_shape_command& command,
     get_pbrt_value(command.values, "filename", shape.filename_);
     try {
       auto ply = ply_model{};
-      load_ply(get_dirname(filename) + shape.filename_, ply);
+      load_ply(ply_dirname + shape.filename_, ply);
       shape.positions = get_positions(ply);
       shape.normals   = get_normals(ply);
       shape.texcoords = get_texcoords(ply);
@@ -3528,7 +3530,8 @@ struct pbrt_context {
 void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
     unordered_map<string, pbrt_arealight>& arealight_map,
     unordered_map<string, pbrt_material>&  material_map,
-    unordered_map<string, pbrt_texture>&   texture_map) {
+    unordered_map<string, pbrt_texture>&   texture_map,
+    const string& ply_dirname) {
   auto fs = open_file(filename, "rt");
 
   // helpers
@@ -3714,7 +3717,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       shape.interior  = ctx.stack.back().medium_interior;
       shape.exterior  = ctx.stack.back().medium_exterior;
       pbrt.shapes.push_back(
-          convert_shape(shape, arealight_map, material_map, filename));
+          convert_shape(shape, arealight_map, material_map, filename, ply_dirname));
       if (ctx.cur_object != "") {
         ctx.objects[ctx.cur_object].push_back((int)pbrt.shapes.size() - 1);
       }
@@ -3754,7 +3757,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       parse_pbrt_param(fs, str, includename);
       try {
         load_pbrt(get_dirname(filename) + includename, pbrt, ctx, arealight_map,
-            material_map, texture_map);
+            material_map, texture_map, ply_dirname);
       } catch (std::exception& e) {
         throw_dependent_error(fs, e.what());
       }
@@ -3770,7 +3773,8 @@ void load_pbrt(const string& filename, pbrt_model& pbrt) {
   auto arealight_map = unordered_map<string, pbrt_arealight>{{"", {}}};
   auto material_map  = unordered_map<string, pbrt_material>{{"", {}}};
   auto texture_map   = unordered_map<string, pbrt_texture>{{"", {}}};
-  load_pbrt(filename, pbrt, ctx, arealight_map, material_map, texture_map);
+  load_pbrt(filename, pbrt, ctx, arealight_map, material_map, texture_map,
+            get_dirname(filename));
 }
 
 static void format_value(string& str, const pbrt_value& value) {
