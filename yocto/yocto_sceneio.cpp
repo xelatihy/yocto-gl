@@ -2173,9 +2173,7 @@ void save_pbrt_scene(
   pcamera.frame    = camera.frame;
   pcamera.lens     = camera.lens;
   pcamera.aspect   = camera.aspect;
-  auto& pfilm      = pbrt.films.emplace_back();
-  pfilm.filename   = "out.png";
-  pfilm.resolution = {1280, (int)(1280 / pcamera.aspect)};
+  pcamera.resolution = {1280, (int)(1280 / pcamera.aspect)};
 
   // convert instances
   for (auto& shape : scene.shapes) {

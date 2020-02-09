@@ -476,6 +476,7 @@ struct pbrt_camera {
   // camera parameters
   frame3f frame    = identity3x4f;
   frame3f frend    = identity3x4f;
+  vec2i   resolution = {0, 0};
   float   lens     = 0;
   float   aspect   = 0;
   float   focus    = 0;
@@ -496,7 +497,7 @@ struct pbrt_shape {
   vector<vec2f>   texcoords = {};
   vector<vec3i>   triangles = {};
   // material
-  vec3f emission = zero3f;
+  vec3f  emission        = zero3f;
   vec3f  color           = zero3f;
   float  specular        = 0;
   float  metallic        = 0;
@@ -537,13 +538,6 @@ struct pbrt_environment {
   string  emission_map = "";
 };
 
-// Other pbrt elements
-struct pbrt_film {
-  // film approximation
-  string filename   = "";
-  vec2i  resolution = zero2i;
-};
-
 // Pbrt model
 struct pbrt_model {
   vector<string>           comments     = {};
@@ -551,7 +545,6 @@ struct pbrt_model {
   vector<pbrt_shape>       shapes       = {};
   vector<pbrt_environment> environments = {};
   vector<pbrt_light>       lights       = {};
-  vector<pbrt_film>        films        = {};
 };
 
 // Load/save pbrt
