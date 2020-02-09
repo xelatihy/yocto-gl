@@ -47,8 +47,8 @@
 #include <deque>
 #include <fstream>
 #include <future>
-#include <memory>
 #include <iomanip>
+#include <memory>
 
 #include "ext/json.hpp"
 #include "yocto_image.h"
@@ -1706,7 +1706,7 @@ static void load_obj_scene(
     shape.name      = make_name("shape", scene.shapes.size());
     auto nmaterials = vector<string>{};
     auto ematerials = vector<int>{};
-    auto has_quads_  = has_quads(oshape);
+    auto has_quads_ = has_quads(oshape);
     if (!oshape.faces.empty() && !has_quads_) {
       get_triangles(obj, oshape, shape.triangles, shape.positions,
           shape.normals, shape.texcoords, nmaterials, ematerials, true);
@@ -1853,8 +1853,8 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
         for (auto& p : positions) p = transform_point(frame * shape.frame, p);
         for (auto& n : normals) n = transform_normal(frame * shape.frame, n);
         if (!shape.triangles.empty()) {
-          add_triangles(obj, shape.name, shape.triangles, positions,
-              normals, shape.texcoords, materials, {}, true);
+          add_triangles(obj, shape.name, shape.triangles, positions, normals,
+              shape.texcoords, materials, {}, true);
         } else if (!shape.quads.empty()) {
           add_quads(obj, shape.name, shape.quads, positions, normals,
               shape.texcoords, materials, {}, true);

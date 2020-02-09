@@ -535,7 +535,7 @@ struct pbrt_camera {
 // Pbrt texture
 struct pbrt_texture {
   // texture parameters
-  string             name   = "";
+  string name     = "";
   vec3f  constant = vec3f{1, 1, 1};
   string filename = "";
 };
@@ -543,7 +543,7 @@ struct pbrt_texture {
 // Pbrt material
 struct pbrt_material {
   // material parameters
-  string             name   = "";
+  string name            = "";
   vec3f  color           = zero3f;
   float  specular        = 0;
   float  metallic        = 0;
@@ -562,17 +562,17 @@ struct pbrt_material {
 // Pbrt shape
 struct pbrt_shape {
   // shape parameters
-  frame3f            frame     = identity3x4f;
-  frame3f            frend     = identity3x4f;
-  string             material  = "";
-  string             arealight = "";
-  vector<frame3f>    instances = {};
-  vector<frame3f>    instaends = {};
-  string        filename_ = "";
-  vector<vec3f> positions = {};
-  vector<vec3f> normals   = {};
-  vector<vec2f> texcoords = {};
-  vector<vec3i> triangles = {};
+  frame3f         frame     = identity3x4f;
+  frame3f         frend     = identity3x4f;
+  string          material  = "";
+  string          arealight = "";
+  vector<frame3f> instances = {};
+  vector<frame3f> instaends = {};
+  string          filename_ = "";
+  vector<vec3f>   positions = {};
+  vector<vec3f>   normals   = {};
+  vector<vec2f>   texcoords = {};
+  vector<vec3i>   triangles = {};
 };
 
 // Pbrt lights
@@ -594,15 +594,15 @@ struct pbrt_light {
 };
 struct pbrt_arealight {
   // arealight parameters
-  string             name   = "";
-  vec3f emission = zero3f;
+  string name     = "";
+  vec3f  emission = zero3f;
 };
 struct pbrt_environment {
   // environment approximation
-  frame3f frame = identity3x4f;
-  frame3f frend    = identity3x4f;
-  vec3f  emission     = zero3f;
-  string emission_map = "";
+  frame3f frame        = identity3x4f;
+  frame3f frend        = identity3x4f;
+  vec3f   emission     = zero3f;
+  string  emission_map = "";
 };
 
 // Other pbrt elements
@@ -670,26 +670,25 @@ pbrt_value make_pbrt_value(const string& name, const vector<vec3i>& value,
 
 // Low-level commands
 struct pbrt_commands {
-  vector<string>       comments     = {};
-  vector<pbrt_command> cameras      = {};
-  vector<pbrt_command> films        = {};
-  vector<pbrt_command> integrators  = {};
-  vector<pbrt_command> filters      = {};
-  vector<pbrt_command> samplers     = {};
-  vector<pbrt_command> accelerators = {};
-  vector<pbrt_command> mediums      = {};
-  vector<pbrt_command> environments = {};
-  vector<pbrt_command> lights       = {};
-  vector<pbrt_command> arealights       = {};
-  vector<pbrt_command> textures       = {};
-  vector<pbrt_command> materials       = {};
+  vector<string>             comments     = {};
+  vector<pbrt_command>       cameras      = {};
+  vector<pbrt_command>       films        = {};
+  vector<pbrt_command>       integrators  = {};
+  vector<pbrt_command>       filters      = {};
+  vector<pbrt_command>       samplers     = {};
+  vector<pbrt_command>       accelerators = {};
+  vector<pbrt_command>       mediums      = {};
+  vector<pbrt_command>       environments = {};
+  vector<pbrt_command>       lights       = {};
+  vector<pbrt_command>       arealights   = {};
+  vector<pbrt_command>       textures     = {};
+  vector<pbrt_command>       materials    = {};
   vector<pbrt_shape_command> shapes       = {};
 };
 
 // Low level parser
 void load_pbrt(const string& filename, pbrt_commands& pbrt);
 void save_pbrt(const string& filename, const pbrt_commands& pbrt);
-
 
 }  // namespace yocto
 
