@@ -47,8 +47,8 @@
 #include <deque>
 #include <fstream>
 #include <future>
-#include <memory>
 #include <iomanip>
+#include <memory>
 
 #include "ext/json.hpp"
 #include "yocto_image.h"
@@ -860,7 +860,7 @@ static void load_instances(const string& filename, vector<frame3f>& frames) {
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
     load_ply(filename, ply);
-    frames = get_ply_values(ply, "frame",
+    frames = get_values(ply, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
   } else {
@@ -874,7 +874,7 @@ static void save_instances(
   auto ext = get_extension(filename);
   if (ext == ".ply" || ext == ".PLY") {
     auto ply = ply_model{};
-    add_ply_values(ply, frames, "frame",
+    add_values(ply, frames, "frame",
         array<string, 12>{"xx", "xy", "xz", "yx", "yy", "yz", "zx", "zy", "zz",
             "ox", "oy", "oz"});
     save_ply(filename, ply);
@@ -1706,18 +1706,18 @@ static void load_obj_scene(
     shape.name      = make_name("shape", scene.shapes.size());
     auto nmaterials = vector<string>{};
     auto ematerials = vector<int>{};
-    auto has_quads  = has_obj_quads(oshape);
-    if (!oshape.faces.empty() && !has_quads) {
-      get_obj_triangles(obj, oshape, shape.triangles, shape.positions,
+    auto has_quads_ = has_quads(oshape);
+    if (!oshape.faces.empty() && !has_quads_) {
+      get_triangles(obj, oshape, shape.triangles, shape.positions,
           shape.normals, shape.texcoords, nmaterials, ematerials, true);
-    } else if (!oshape.faces.empty() && has_quads) {
-      get_obj_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
+    } else if (!oshape.faces.empty() && has_quads_) {
+      get_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
           shape.texcoords, nmaterials, ematerials, true);
     } else if (!oshape.lines.empty()) {
-      get_obj_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
+      get_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
           shape.texcoords, nmaterials, ematerials, true);
     } else if (!oshape.points.empty()) {
-      get_obj_points(obj, oshape, shape.points, shape.positions, shape.normals,
+      get_points(obj, oshape, shape.points, shape.positions, shape.normals,
           shape.texcoords, nmaterials, ematerials, true);
     } else {
       throw_emptyshape_error(filename, oshape.name);
@@ -1831,16 +1831,16 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
       for (auto& p : positions) p = transform_point(shape.frame, p);
       for (auto& n : normals) n = transform_normal(shape.frame, n);
       if (!shape.triangles.empty()) {
-        add_obj_triangles(obj, shape.name, shape.triangles, positions, normals,
+        add_triangles(obj, shape.name, shape.triangles, positions, normals,
             shape.texcoords, {}, {}, true);
       } else if (!shape.quads.empty()) {
-        add_obj_quads(obj, shape.name, shape.quads, positions, normals,
+        add_quads(obj, shape.name, shape.quads, positions, normals,
             shape.texcoords, {}, {}, true);
       } else if (!shape.lines.empty()) {
-        add_obj_lines(obj, shape.name, shape.lines, positions, normals,
+        add_lines(obj, shape.name, shape.lines, positions, normals,
             shape.texcoords, {}, {}, true);
       } else if (!shape.points.empty()) {
-        add_obj_points(obj, shape.name, shape.points, positions, normals,
+        add_points(obj, shape.name, shape.points, positions, normals,
             shape.texcoords, {}, {}, true);
       } else {
         throw_emptyshape_error(filename, shape.name);
@@ -1853,16 +1853,16 @@ static void save_obj_scene(const string& filename, const sceneio_model& scene,
         for (auto& p : positions) p = transform_point(frame * shape.frame, p);
         for (auto& n : normals) n = transform_normal(frame * shape.frame, n);
         if (!shape.triangles.empty()) {
-          add_obj_triangles(obj, shape.name, shape.triangles, positions,
-              normals, shape.texcoords, materials, {}, true);
+          add_triangles(obj, shape.name, shape.triangles, positions, normals,
+              shape.texcoords, materials, {}, true);
         } else if (!shape.quads.empty()) {
-          add_obj_quads(obj, shape.name, shape.quads, positions, normals,
+          add_quads(obj, shape.name, shape.quads, positions, normals,
               shape.texcoords, materials, {}, true);
         } else if (!shape.lines.empty()) {
-          add_obj_lines(obj, shape.name, shape.lines, positions, normals,
+          add_lines(obj, shape.name, shape.lines, positions, normals,
               shape.texcoords, materials, {}, true);
         } else if (!shape.points.empty()) {
-          add_obj_points(obj, shape.name, shape.points, positions, normals,
+          add_points(obj, shape.name, shape.points, positions, normals,
               shape.texcoords, materials, {}, true);
         } else {
           throw_emptyshape_error(filename, shape.name);
@@ -2106,51 +2106,29 @@ static void load_pbrt_scene(
     return (int)scene.textures.size() - 1;
   };
 
-  // material map
-  auto material_map = unordered_map<string, int>{{"", -1}};
-  for (auto& pmaterial : pbrt.materials) {
-    auto idx                     = (int)material_map.size() - 1;
-    material_map[pmaterial.name] = idx;
-  }
-
-  // arealight map
-  auto arealight_map = unordered_map<string, int>{{"", -1}};
-  for (auto& parealight : pbrt.arealights) {
-    auto idx                       = (int)arealight_map.size() - 1;
-    arealight_map[parealight.name] = idx;
-  }
-
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
     auto& shape = scene.shapes.emplace_back();
     shape.name  = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
                  ".yaml";
     shape.frame     = pshape.frame;
+    shape.instances = pshape.instances;
     shape.positions = pshape.positions;
     shape.normals   = pshape.normals;
     shape.texcoords = pshape.texcoords;
     shape.triangles = pshape.triangles;
     for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
-    auto material_id  = material_map.at(pshape.material);
-    auto arealight_id = arealight_map.at(pshape.arealight);
-    if (arealight_id >= 0) {
-      auto& parealight = pbrt.arealights[arealight_id];
-      shape.emission   = parealight.emission;
-    }
-    if (material_id >= 0) {
-      auto& pmaterial    = pbrt.materials[material_id];
-      shape.color        = pmaterial.color;
-      shape.metallic     = pmaterial.metallic;
-      shape.specular     = pmaterial.specular;
-      shape.transmission = pmaterial.transmission;
-      shape.ior          = pmaterial.ior;
-      shape.roughness    = pmaterial.roughness;
-      shape.opacity      = pmaterial.opacity;
-      shape.thin         = pmaterial.thin;
-      shape.color_tex    = get_texture(pmaterial.color_map);
-      shape.opacity_tex  = get_texture(pmaterial.opacity_map);
-    }
-    shape.instances = pshape.instances;
+    shape.emission     = pshape.emission;
+    shape.color        = pshape.color;
+    shape.metallic     = pshape.metallic;
+    shape.specular     = pshape.specular;
+    shape.transmission = pshape.transmission;
+    shape.ior          = pshape.ior;
+    shape.roughness    = pshape.roughness;
+    shape.opacity      = pshape.opacity;
+    shape.thin         = pshape.thin;
+    shape.color_tex    = get_texture(pshape.color_map);
+    shape.opacity_tex  = get_texture(pshape.opacity_map);
   }
 
   // convert environments
@@ -2190,48 +2168,30 @@ void save_pbrt_scene(
   for (auto stat : scene_stats(scene)) pbrt.comments.push_back(stat);
 
   // convert camera
-  auto& camera     = scene.cameras.front();
-  auto& pcamera    = pbrt.cameras.emplace_back();
-  pcamera.frame    = camera.frame;
-  pcamera.lens     = camera.lens;
-  pcamera.aspect   = camera.aspect;
-  auto& pfilm      = pbrt.films.emplace_back();
-  pfilm.filename   = "out.png";
-  pfilm.resolution = {1280, (int)(1280 / pcamera.aspect)};
-
-  // convert textures
-  for (auto& texture : scene.textures) {
-    auto& ptexture    = pbrt.textures.emplace_back();
-    ptexture.name     = texture.name;
-    ptexture.filename = texture.name;
-  }
-
-  // convert materials
-  for (auto& shape : scene.shapes) {
-    auto& pmaterial        = pbrt.materials.emplace_back();
-    pmaterial.name         = shape.name;
-    pmaterial.color        = shape.color;
-    pmaterial.metallic     = shape.metallic;
-    pmaterial.specular     = shape.specular;
-    pmaterial.transmission = shape.transmission;
-    pmaterial.roughness    = shape.roughness;
-    pmaterial.ior          = shape.ior;
-    pmaterial.opacity      = shape.opacity;
-    pmaterial.color_map =
-        shape.color_tex >= 0 ? scene.textures[shape.color_tex].name : ""s;
-    auto& parealight    = pbrt.arealights.emplace_back();
-    parealight.name     = shape.name;
-    parealight.emission = shape.emission;
-  }
+  auto& camera       = scene.cameras.front();
+  auto& pcamera      = pbrt.cameras.emplace_back();
+  pcamera.frame      = camera.frame;
+  pcamera.lens       = camera.lens;
+  pcamera.aspect     = camera.aspect;
+  pcamera.resolution = {1280, (int)(1280 / pcamera.aspect)};
 
   // convert instances
   for (auto& shape : scene.shapes) {
-    auto& pshape     = pbrt.shapes.emplace_back();
-    pshape.filename_ = replace_extension(shape.name, ".ply");
-    pshape.frame     = shape.frame;
-    pshape.material  = shape.name;
-    pshape.arealight = shape.emission == zero3f ? ""s : shape.name;
-    pshape.instances = shape.instances;
+    auto& pshape        = pbrt.shapes.emplace_back();
+    pshape.filename_    = replace_extension(shape.name, ".ply");
+    pshape.frame        = shape.frame;
+    pshape.frend        = shape.frame;
+    pshape.instances    = shape.instances;
+    pshape.color        = shape.color;
+    pshape.metallic     = shape.metallic;
+    pshape.specular     = shape.specular;
+    pshape.transmission = shape.transmission;
+    pshape.roughness    = shape.roughness;
+    pshape.ior          = shape.ior;
+    pshape.opacity      = shape.opacity;
+    pshape.color_map =
+        shape.color_tex >= 0 ? scene.textures[shape.color_tex].name : ""s;
+    pshape.emission = shape.emission;
   }
 
   // convert environments
