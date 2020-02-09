@@ -3629,6 +3629,7 @@ void load_pbrt(const string& filename, pbrt_model& pbrt, pbrt_context& ctx,
       parse_pbrt_param(fs, str, comptype);
       parse_pbrt_param(fs, str, texture.type);
       parse_pbrt_params(fs, str, texture.values);
+      texture_map[texture.name] = (int)pbrt.textures.size();
       pbrt.textures.push_back(
           convert_texture(texture, texture_map, pbrt.textures));
     } else if (cmd == "Material") {
