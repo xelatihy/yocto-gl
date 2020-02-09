@@ -13,7 +13,7 @@ def cli():
 @click.option('--mode','-m', default='path')
 def itrace(directory='mcguire',scene='*',format='json',mode='path'):
     modes = {
-        'path': '--bvh highquality',
+        'path': '',
         'embree': '--bvh embree-highquality',
         'embree-compact': '--bvh embree-compact',
         'eyelight': '-t eyelight --bvh highquality',
@@ -61,10 +61,10 @@ def view(directory='mcguire',scene='*',format='json',mode='path'):
 @click.option('--mode','-m', default='path')
 def trace(directory='mcguire',scene='*',format='json',mode='path'):
     modes = {
-        'path': '-s 64 -r 640 --bvh highquality',
+        'path': '-s 64 -r 640',
         'embree': '-s 256 -r 1280 --bvh embree-highquality',
         'embree-compact': '-s 256 -r 1280 --bvh embree-compact',
-        'eyelight': '-s 16 -r 1280 -t eyelight --bvh-high-quality',
+        'eyelight': '-s 16 -r 1280 -t eyelight',
         'embree-face': '-s 256 -r 640 --bvh embree-highquality',
         'final': '-s 4096 -r 1280 --bvh embree-highquality',
         'final-compact': '-s 4096 -r 1280 --bvh embree-compact',
