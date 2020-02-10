@@ -348,13 +348,13 @@ namespace yocto {
 
 // cleanp
 sceneio_model::~sceneio_model() {
-  for(auto camera : cameras) delete camera;
-  for(auto environment : environments) delete environment;
-  for(auto shape : shapes) delete shape;
-  for(auto subdiv : subdivs) delete subdiv;
-  for(auto texture : textures) delete texture;
-  for(auto node : nodes) delete node;
-  for(auto animation : animations) delete animation;
+  for (auto camera : cameras) delete camera;
+  for (auto environment : environments) delete environment;
+  for (auto shape : shapes) delete shape;
+  for (auto subdiv : subdivs) delete subdiv;
+  for (auto texture : textures) delete texture;
+  for (auto node : nodes) delete node;
+  for (auto animation : animations) delete animation;
 }
 
 // add element
@@ -396,24 +396,24 @@ bbox3f compute_bounds(const sceneio_model& scene) {
 // Add missing cameras.
 void add_cameras(sceneio_model& scene) {
   if (!scene.cameras.empty()) return;
-  auto camera = add_camera(scene);
-  camera->name  = "cameras/default.yaml";
+  auto camera  = add_camera(scene);
+  camera->name = "cameras/default.yaml";
   // TODO: error in camera.lens and camera.film
   camera->orthographic = false;
   camera->film         = 0.036;
   camera->aperture     = 0;
   camera->lens         = 0.050;
-  auto bbox           = compute_bounds(scene);
-  auto center         = (bbox.max + bbox.min) / 2;
-  auto bbox_radius    = length(bbox.max - bbox.min) / 2;
-  auto camera_dir     = camera->frame.o - center;
+  auto bbox            = compute_bounds(scene);
+  auto center          = (bbox.max + bbox.min) / 2;
+  auto bbox_radius     = length(bbox.max - bbox.min) / 2;
+  auto camera_dir      = camera->frame.o - center;
   if (camera_dir == zero3f) camera_dir = {0, 0, 1};
   auto camera_dist = bbox_radius / camera->film;
   auto from        = camera_dir * (camera_dist * 1) + center;
   auto to          = center;
   auto up          = vec3f{0, 1, 0};
-  camera->frame     = lookat_frame(from, to, up);
-  camera->focus     = length(from - to);
+  camera->frame    = lookat_frame(from, to, up);
+  camera->focus    = length(from - to);
 }
 
 // Add missing radius.
@@ -427,10 +427,10 @@ void add_radius(sceneio_model& scene, float radius = 0.001f) {
 
 // Add a sky environment
 void add_sky(sceneio_model& scene, float sun_angle) {
-  auto texture = add_texture(scene);
-  texture->name = "environments/sky.hdr";
-  texture->hdr  = make_sunsky({1024, 512}, sun_angle);
-  auto environment         = add_environment(scene);
+  auto texture              = add_texture(scene);
+  texture->name             = "environments/sky.hdr";
+  texture->hdr              = make_sunsky({1024, 512}, sun_angle);
+  auto environment          = add_environment(scene);
   environment->name         = "environments/sky.yaml";
   environment->emission     = {1, 1, 1};
   environment->emission_tex = texture;
@@ -544,8 +544,9 @@ void subdivide_subdiv(sceneio_subdiv* tesselated, const sceneio_subdiv* shape) {
   } else if (!shape->quadspos.empty() && !shape->catmullclark) {
     std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_quads(
         tesselated->quadsnorm, tesselated->normals, shape->subdivisions);
-    std::tie(tesselated->quadstexcoord, tesselated->texcoords) = subdivide_quads(
-        tesselated->quadstexcoord, tesselated->texcoords, shape->subdivisions);
+    std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
+        subdivide_quads(tesselated->quadstexcoord, tesselated->texcoords,
+            shape->subdivisions);
     std::tie(tesselated->quadspos, tesselated->positions) = subdivide_quads(
         tesselated->quadspos, tesselated->positions, shape->subdivisions);
     if (tesselated->smooth) {
@@ -557,8 +558,9 @@ void subdivide_subdiv(sceneio_subdiv* tesselated, const sceneio_subdiv* shape) {
     std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
         subdivide_catmullclark(tesselated->quadstexcoord, tesselated->texcoords,
             shape->subdivisions, true);
-    std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_catmullclark(
-        tesselated->quadsnorm, tesselated->normals, shape->subdivisions, true);
+    std::tie(tesselated->quadsnorm, tesselated->normals) =
+        subdivide_catmullclark(tesselated->quadsnorm, tesselated->normals,
+            shape->subdivisions, true);
     std::tie(tesselated->quadspos, tesselated->positions) =
         subdivide_catmullclark(
             tesselated->quadspos, tesselated->positions, shape->subdivisions);
@@ -575,8 +577,8 @@ void subdivide_subdiv(sceneio_subdiv* tesselated, const sceneio_subdiv* shape) {
   }
 }
 // Apply displacement to a shape
-void displace_subdiv(sceneio_subdiv* displaced,
-    const sceneio_model& scene, const sceneio_subdiv* subdiv) {
+void displace_subdiv(sceneio_subdiv* displaced, const sceneio_model& scene,
+    const sceneio_subdiv* subdiv) {
   // Evaluate a texture
   auto eval_texture = [](const sceneio_texture* texture,
                           const vec2f&          texcoord) -> vec4f {
@@ -623,7 +625,8 @@ void displace_subdiv(sceneio_subdiv* displaced,
       displaced->positions[vid] += normals[vid] * subdiv->displacement * disp;
     }
     if (subdiv->smooth || !subdiv->normals.empty()) {
-      displaced->normals = compute_normals(displaced->quads, displaced->positions);
+      displaced->normals = compute_normals(
+          displaced->quads, displaced->positions);
     }
   } else if (!subdiv->quadspos.empty()) {
     // facevarying case
@@ -663,15 +666,15 @@ void tesselate_subdiv(
         displaced->texcoords) = split_facevarying(displaced->quadspos,
         displaced->quadsnorm, displaced->quadstexcoord, displaced->positions,
         displaced->normals, displaced->texcoords);
-    displaced->quadspos = {};
-    displaced->quadsnorm = {};
-    displaced->quadstexcoord = {};
+    displaced->quadspos       = {};
+    displaced->quadsnorm      = {};
+    displaced->quadstexcoord  = {};
   }
   if (!displaced->quads.empty() && no_quads) {
     displaced->triangles = quads_to_triangles(displaced->quads);
     displaced->quads     = {};
   }
-  auto shape     = displaced->shape;
+  auto shape       = displaced->shape;
   shape->points    = displaced->points;
   shape->lines     = displaced->lines;
   shape->triangles = displaced->triangles;
@@ -695,10 +698,12 @@ void update_transforms(sceneio_model& scene, sceneio_animation* animation,
         value = keyframe_step(animation->times, animation->translations, time);
         break;
       case sceneio_animation::interpolation_type::linear:
-        value = keyframe_linear(animation->times, animation->translations, time);
+        value = keyframe_linear(
+            animation->times, animation->translations, time);
         break;
       case sceneio_animation::interpolation_type::bezier:
-        value = keyframe_bezier(animation->times, animation->translations, time);
+        value = keyframe_bezier(
+            animation->times, animation->translations, time);
         break;
       default: throw std::runtime_error("should not have been here");
     }
@@ -718,7 +723,8 @@ void update_transforms(sceneio_model& scene, sceneio_animation* animation,
         value = keyframe_bezier(animation->times, animation->rotations, time);
         break;
     }
-    for (auto target : animation->targets) scene.nodes[target]->rotation = value;
+    for (auto target : animation->targets)
+      scene.nodes[target]->rotation = value;
   }
   if (!animation->scales.empty()) {
     auto value = vec3f{1, 1, 1};
@@ -746,7 +752,8 @@ void update_transforms(sceneio_model& scene, sceneio_node* node,
   if (node->instance >= 0)
     scene.shapes[node->shape]->instances[node->instance] = frame;
   if (node->camera >= 0) scene.cameras[node->camera]->frame = frame;
-  if (node->environment >= 0) scene.environments[node->environment]->frame = frame;
+  if (node->environment >= 0)
+    scene.environments[node->environment]->frame = frame;
   for (auto child : node->children)
     update_transforms(scene, scene.nodes[child], frame);
 }
@@ -759,7 +766,8 @@ void update_transforms(
   for (auto node : scene.nodes) node->children.clear();
   for (auto node_id = 0; node_id < scene.nodes.size(); node_id++) {
     auto& node = scene.nodes[node_id];
-    if (node->parent >= 0) scene.nodes[node->parent]->children.push_back(node_id);
+    if (node->parent >= 0)
+      scene.nodes[node->parent]->children.push_back(node_id);
   }
   for (auto& node : scene.nodes)
     if (node->parent < 0) update_transforms(scene, node);
@@ -927,7 +935,8 @@ static void load_yaml_scene(
 
   // parse yaml reference
   auto get_yaml_shape = [](const yaml_element& yelment, const string& name,
-                          sceneio_shape*& value, const unordered_map<string, sceneio_shape*>& refs) {
+                            sceneio_shape*&                              value,
+                            const unordered_map<string, sceneio_shape*>& refs) {
     auto ref = ""s;
     get_yaml_value(yelment, name, ref);
     if (ref == "") {
@@ -941,9 +950,10 @@ static void load_yaml_scene(
 
   // parse yaml reference
   auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_texture = [&filename, &scene, &texture_map](
-                         const yaml_element& yelment, const string& name,
-                         sceneio_texture*& value, const string& dirname = "textures/") -> sceneio_texture* {
+  auto get_texture =
+      [&filename, &scene, &texture_map](const yaml_element& yelment,
+          const string& name, sceneio_texture*& value,
+          const string& dirname = "textures/") -> sceneio_texture* {
     auto path = ""s;
     get_yaml_value(yelment, name, path);
     if (path == "") return nullptr;
@@ -962,8 +972,9 @@ static void load_yaml_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture->name      = make_safe_filename(dirname + get_basename(path) +
-                                      (!texture->ldr.empty() ? ".png" : ".hdr"));
+    texture->name = make_safe_filename(
+        dirname + get_basename(path) +
+        (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = texture;
     value             = texture;
     return texture;
@@ -1038,9 +1049,9 @@ static void load_yaml_scene(
           auto path = ""s;
           get_yaml_value(yelement, "shape", path);
           try {
-            load_shape(get_dirname(filename) + path, shape->points, shape->lines,
-                shape->triangles, shape->quads, shape->positions, shape->normals,
-                shape->texcoords, shape->colors, shape->radius);
+            load_shape(get_dirname(filename) + path, shape->points,
+                shape->lines, shape->triangles, shape->quads, shape->positions,
+                shape->normals, shape->texcoords, shape->colors, shape->radius);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1069,8 +1080,9 @@ static void load_yaml_scene(
           get_yaml_value(yelement, "subdiv", path);
           try {
             load_shape(get_dirname(filename) + path, subdiv->points,
-                subdiv->lines, subdiv->triangles, subdiv->quads, subdiv->positions,
-                subdiv->normals, subdiv->texcoords, subdiv->colors, subdiv->radius);
+                subdiv->lines, subdiv->triangles, subdiv->quads,
+                subdiv->positions, subdiv->normals, subdiv->texcoords,
+                subdiv->colors, subdiv->radius);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1112,7 +1124,8 @@ static void save_yaml_scene(
     if (value == def) return;
     add_yaml_value(yelement, name, value);
   };
-  auto add_tex = [](yaml_element& yelement, const string& name, const sceneio_texture* texture) {
+  auto add_tex = [](yaml_element& yelement, const string& name,
+                     const sceneio_texture* texture) {
     if (!texture) return;
     add_yaml_value(yelement, name, texture->name);
   };
@@ -1207,21 +1220,21 @@ static void save_yaml_scene(
     yelement.name  = "subdivs";
     add_val(yelement, "name", subdiv->name);
     add_val(yelement, "shape", subdiv->shape->name);
-    add_opt(
-        yelement, "subdivisions", subdiv->subdivisions, def_subdiv.subdivisions);
-    add_opt(
-        yelement, "catmullclark", subdiv->catmullclark, def_subdiv.catmullclark);
+    add_opt(yelement, "subdivisions", subdiv->subdivisions,
+        def_subdiv.subdivisions);
+    add_opt(yelement, "catmullclark", subdiv->catmullclark,
+        def_subdiv.catmullclark);
     add_opt(yelement, "smooth", subdiv->smooth, def_subdiv.smooth);
     add_tex(yelement, "displacement_tex", subdiv->displacement_tex);
-    add_opt(
-        yelement, "displacement", subdiv->displacement, def_subdiv.subdivisions);
+    add_opt(yelement, "displacement", subdiv->displacement,
+        def_subdiv.subdivisions);
     if (!subdiv->positions.empty() && subdiv->quadspos.empty()) {
       auto path = replace_extension(subdiv->name, ".ply");
       add_val(yelement, "subdiv", path);
       try {
         save_shape(get_dirname(filename) + path, subdiv->points, subdiv->lines,
-            subdiv->triangles, subdiv->quads, subdiv->positions, subdiv->normals,
-            subdiv->texcoords, subdiv->colors, subdiv->radius);
+            subdiv->triangles, subdiv->quads, subdiv->positions,
+            subdiv->normals, subdiv->texcoords, subdiv->colors, subdiv->radius);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
@@ -1337,9 +1350,10 @@ static void load_json_scene(
 
   // parse yaml reference
   auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_texture = [&filename, &scene, &texture_map](const json& ejs,
-                         const string& name, sceneio_texture*& value,
-                         const string& dirname = "textures/") -> sceneio_texture* {
+  auto get_texture =
+      [&filename, &scene, &texture_map](const json& ejs, const string& name,
+          sceneio_texture*& value,
+          const string&     dirname = "textures/") -> sceneio_texture* {
     if (!ejs.contains(name)) return nullptr;
     auto path = ""s;
     ejs.at(name).get_to(path);
@@ -1359,8 +1373,9 @@ static void load_json_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture->name      = make_safe_filename(dirname + get_basename(path) +
-                                      (!texture->ldr.empty() ? ".png" : ".hdr"));
+    texture->name = make_safe_filename(
+        dirname + get_basename(path) +
+        (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = texture;
     value             = texture;
     return texture;
@@ -1444,9 +1459,9 @@ static void load_json_scene(
           auto path = ""s;
           get_value(ejs, "shape", path);
           try {
-            load_shape(get_dirname(filename) + path, shape->points, shape->lines,
-                shape->triangles, shape->quads, shape->positions, shape->normals,
-                shape->texcoords, shape->colors, shape->radius);
+            load_shape(get_dirname(filename) + path, shape->points,
+                shape->lines, shape->triangles, shape->quads, shape->positions,
+                shape->normals, shape->texcoords, shape->colors, shape->radius);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1478,8 +1493,9 @@ static void load_json_scene(
           get_value(ejs, "subdiv", path);
           try {
             load_shape(get_dirname(filename) + path, subdiv->points,
-                subdiv->lines, subdiv->triangles, subdiv->quads, subdiv->positions,
-                subdiv->normals, subdiv->texcoords, subdiv->colors, subdiv->radius);
+                subdiv->lines, subdiv->triangles, subdiv->quads,
+                subdiv->positions, subdiv->normals, subdiv->texcoords,
+                subdiv->colors, subdiv->radius);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1520,7 +1536,8 @@ static void save_json_scene(
     if (value == def) return;
     ejs[name] = value;
   };
-  auto add_tex = [](json& ejs, const string& name, const sceneio_texture* texture) {
+  auto add_tex = [](json& ejs, const string& name,
+                     const sceneio_texture* texture) {
     if (!texture) return;
     ejs[name] = texture->name;
   };
@@ -1587,7 +1604,8 @@ static void save_json_scene(
     add_tex(ejs, "coat_tex", shape->coat_tex);
     add_tex(ejs, "opacity_tex", shape->opacity_tex);
     add_tex(ejs, "normal_tex", shape->normal_tex);
-    add_opt(ejs, "gltf_textures", shape->gltf_textures, def_shape.gltf_textures);
+    add_opt(
+        ejs, "gltf_textures", shape->gltf_textures, def_shape.gltf_textures);
     if (!shape->positions.empty()) {
       auto path = replace_extension(shape->name, ".ply");
       add_val(ejs, "shape", path);
@@ -1626,8 +1644,8 @@ static void save_json_scene(
       add_val(ejs, "subdiv", path);
       try {
         save_shape(get_dirname(filename) + path, subdiv->points, subdiv->lines,
-            subdiv->triangles, subdiv->quads, subdiv->positions, subdiv->normals,
-            subdiv->texcoords, subdiv->colors, subdiv->radius);
+            subdiv->triangles, subdiv->quads, subdiv->positions,
+            subdiv->normals, subdiv->texcoords, subdiv->colors, subdiv->radius);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
@@ -1681,7 +1699,7 @@ static void load_obj_scene(
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
-    auto camera         = add_camera(scene);
+    auto camera          = add_camera(scene);
     camera->name         = make_name("camera", scene.cameras.size());
     camera->frame        = ocam.frame;
     camera->orthographic = ocam.ortho;
@@ -1694,9 +1712,9 @@ static void load_obj_scene(
 
   // helper to create texture maps
   auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_texture = [&filename, &texture_map, &scene](
-                         const obj_texture_info& info,
-                         const string&           dirname = "textures/") -> sceneio_texture* {
+  auto get_texture =
+      [&filename, &texture_map, &scene](const obj_texture_info& info,
+          const string& dirname = "textures/") -> sceneio_texture* {
     auto path = info.path;
     if (path == "") return nullptr;
     auto it = texture_map.find(path);
@@ -1711,8 +1729,9 @@ static void load_obj_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture->name      = make_safe_filename(dirname + get_basename(path) +
-                                      (!texture->ldr.empty() ? ".png" : ".hdr"));
+    texture->name = make_safe_filename(
+        dirname + get_basename(path) +
+        (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = texture;
     return texture;
   };
@@ -1731,8 +1750,8 @@ static void load_obj_scene(
     if (materials.empty()) materials.push_back("");
     for (auto material_idx = 0; material_idx < materials.size();
          material_idx++) {
-      auto shape     = add_shape(scene);
-      shape->name      = make_name("shape", scene.shapes.size());
+      auto shape      = add_shape(scene);
+      shape->name     = make_name("shape", scene.shapes.size());
       auto nmaterials = vector<string>{};
       auto ematerials = vector<int>{};
       auto has_quads_ = has_quads(oshape);
@@ -1784,7 +1803,7 @@ static void load_obj_scene(
 
   // convert environments
   for (auto& oenvironment : obj.environments) {
-    auto environment    = add_environment(scene);
+    auto environment      = add_environment(scene);
     environment->name     = make_name("environment", scene.environments.size());
     environment->frame    = oenvironment.frame;
     environment->emission = oenvironment.emission;
@@ -1902,10 +1921,11 @@ static void save_obj_scene(
 void print_obj_camera(const sceneio_camera* camera) {
   printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
       camera->name.c_str(), (int)camera->orthographic, camera->film,
-      camera->film / camera->aspect, camera->lens, camera->focus, camera->aperture,
-      camera->frame.x.x, camera->frame.x.y, camera->frame.x.z, camera->frame.y.x,
-      camera->frame.y.y, camera->frame.y.z, camera->frame.z.x, camera->frame.z.y,
-      camera->frame.z.z, camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
+      camera->film / camera->aspect, camera->lens, camera->focus,
+      camera->aperture, camera->frame.x.x, camera->frame.x.y, camera->frame.x.z,
+      camera->frame.y.x, camera->frame.y.y, camera->frame.y.z,
+      camera->frame.z.x, camera->frame.z.y, camera->frame.z.z,
+      camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
 }
 
 }  // namespace yocto
@@ -1920,8 +1940,8 @@ static void load_ply_scene(
   scene = {};
 
   // load ply mesh
-  auto shape = add_shape(scene);
-  shape->name  = "shapes/" + get_basename(filename) + ".yaml";
+  auto shape  = add_shape(scene);
+  shape->name = "shapes/" + get_basename(filename) + ".yaml";
   try {
     load_shape(filename, shape->points, shape->lines, shape->triangles,
         shape->quads, shape->positions, shape->normals, shape->texcoords,
@@ -1940,9 +1960,9 @@ static void save_ply_scene(
     const string& filename, const sceneio_model& scene, bool noparallel) {
   if (scene.shapes.empty()) throw_emptyshape_error(filename, "");
   auto shape = scene.shapes.front();
-  save_shape(filename, shape->points, shape->lines, shape->triangles, shape->quads,
-      shape->positions, shape->normals, shape->texcoords, shape->colors,
-      shape->radius);
+  save_shape(filename, shape->points, shape->lines, shape->triangles,
+      shape->quads, shape->positions, shape->normals, shape->texcoords,
+      shape->colors, shape->radius);
 }
 
 }  // namespace yocto
@@ -1961,8 +1981,9 @@ static void load_gltf_scene(
 
   // convert textures
   auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_texture = [&filename, &scene, &gltf, &texture_map](
-                         int ref, const string& dirname = "textures/") -> sceneio_texture* {
+  auto get_texture =
+      [&filename, &scene, &gltf, &texture_map](
+          int ref, const string& dirname = "textures/") -> sceneio_texture* {
     if (ref < 0) return nullptr;
     auto& gtexture = gltf.textures[ref];
     auto  path     = gtexture.filename;
@@ -1979,8 +2000,9 @@ static void load_gltf_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture->name      = make_safe_filename(dirname + get_basename(path) +
-                                      (!texture->ldr.empty() ? ".png" : ".hdr"));
+    texture->name = make_safe_filename(
+        dirname + get_basename(path) +
+        (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = texture;
     return texture;
   };
@@ -1993,7 +2015,7 @@ static void load_gltf_scene(
       auto shape = add_shape(scene);
       shape_indices.back().push_back((int)scene.shapes.size() - 1);
       shape->name = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
-                   ".yaml";
+                    ".yaml";
       shape->positions    = gprim.positions;
       shape->normals      = gprim.normals;
       shape->texcoords    = gprim.texcoords;
@@ -2003,7 +2025,7 @@ static void load_gltf_scene(
       shape->triangles    = gprim.triangles;
       shape->lines        = gprim.lines;
       shape->points       = gprim.points;
-      auto& gmaterial    = gltf.materials[gprim.material];
+      auto& gmaterial     = gltf.materials[gprim.material];
       shape->emission     = gmaterial.emission;
       shape->emission_tex = get_texture(gmaterial.emission_tex);
       if (gmaterial.has_metalrough) {
@@ -2020,21 +2042,21 @@ static void load_gltf_scene(
   // convert cameras
   auto cameras = vector<sceneio_camera>{};
   for (auto& gcamera : gltf.cameras) {
-    auto camera   = &cameras.emplace_back();
+    auto camera    = &cameras.emplace_back();
     camera->name   = gcamera.name;
     camera->aspect = gcamera.aspect;
     camera->film   = 0.036;
     camera->lens   = gcamera.aspect >= 1
-                      ? (2 * camera->aspect * tan(gcamera.yfov / 2))
-                      : (2 * tan(gcamera.yfov / 2));
+                       ? (2 * camera->aspect * tan(gcamera.yfov / 2))
+                       : (2 * tan(gcamera.yfov / 2));
     camera->focus = 10;
   }
 
   // convert scene nodes
   for (auto& gnode : gltf.nodes) {
     if (gnode.camera >= 0) {
-      auto camera = add_camera(scene);
-      *camera = cameras[gnode.camera];
+      auto camera   = add_camera(scene);
+      *camera       = cameras[gnode.camera];
       camera->name  = make_name("caemra", scene.cameras.size());
       camera->frame = gnode.frame;
     }
@@ -2075,7 +2097,7 @@ static void load_pbrt_scene(
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
-    auto camera  = add_camera(scene);
+    auto camera    = add_camera(scene);
     camera->name   = make_name("camera", scene.cameras.size());
     camera->frame  = pcamera.frame;
     camera->aspect = pcamera.aspect;
@@ -2086,8 +2108,9 @@ static void load_pbrt_scene(
 
   // convert materials
   auto texture_map = unordered_map<string, sceneio_texture*>{{"", nullptr}};
-  auto get_texture = [&filename, &scene, &texture_map](const string& path,
-                         const string& dirname = "textures/") -> sceneio_texture* {
+  auto get_texture =
+      [&filename, &scene, &texture_map](const string& path,
+          const string& dirname = "textures/") -> sceneio_texture* {
     if (path == "") return nullptr;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
@@ -2101,17 +2124,18 @@ static void load_pbrt_scene(
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture->name      = make_safe_filename(dirname + get_basename(path) +
-                                      (!texture->ldr.empty() ? ".png" : ".hdr"));
+    texture->name = make_safe_filename(
+        dirname + get_basename(path) +
+        (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = texture;
     return texture;
   };
 
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
-    auto shape = add_shape(scene);
-    shape->name  = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
-                 ".yaml";
+    auto shape  = add_shape(scene);
+    shape->name = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
+                  ".yaml";
     shape->frame     = pshape.frame;
     shape->instances = pshape.instances;
     shape->positions = pshape.positions;
@@ -2134,7 +2158,7 @@ static void load_pbrt_scene(
 
   // convert environments
   for (auto& penvironment : pbrt.environments) {
-    auto environment    = add_environment(scene);
+    auto environment      = add_environment(scene);
     environment->name     = make_name("environment", scene.environments.size());
     environment->frame    = penvironment.frame;
     environment->emission = penvironment.emission;
@@ -2144,7 +2168,7 @@ static void load_pbrt_scene(
 
   // lights
   for (auto& plight : pbrt.lights) {
-    auto shape     = add_shape(scene);
+    auto shape       = add_shape(scene);
     shape->name      = make_name("shape", scene.shapes.size());
     shape->frame     = plight.area_frame;
     shape->triangles = plight.area_triangles;
@@ -2169,7 +2193,7 @@ void save_pbrt_scene(
   for (auto stat : scene_stats(scene)) pbrt.comments.push_back(stat);
 
   // convert camera
-  auto camera       = scene.cameras.front();
+  auto  camera       = scene.cameras.front();
   auto& pcamera      = pbrt.cameras.emplace_back();
   pcamera.frame      = camera->frame;
   pcamera.lens       = camera->lens;
@@ -2190,8 +2214,8 @@ void save_pbrt_scene(
     pshape.roughness    = shape->roughness;
     pshape.ior          = shape->ior;
     pshape.opacity      = shape->opacity;
-    pshape.color_map = shape->color_tex ? shape->color_tex->name : ""s;
-    pshape.emission = shape->emission;
+    pshape.color_map    = shape->color_tex ? shape->color_tex->name : ""s;
+    pshape.emission     = shape->emission;
   }
 
   // convert environments
@@ -2211,9 +2235,10 @@ void save_pbrt_scene(
   for (auto shape : scene.shapes) {
     if (shape->positions.empty()) continue;
     try {
-      save_shape(replace_extension(dirname + shape->name, ".ply"), shape->points,
-          shape->lines, shape->triangles, shape->quads, shape->positions,
-          shape->normals, shape->texcoords, shape->colors, shape->radius);
+      save_shape(replace_extension(dirname + shape->name, ".ply"),
+          shape->points, shape->lines, shape->triangles, shape->quads,
+          shape->positions, shape->normals, shape->texcoords, shape->colors,
+          shape->radius);
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
@@ -2242,41 +2267,41 @@ void save_pbrt_scene(
 namespace yocto {
 
 void make_cornellbox_scene(sceneio_model& scene) {
-  scene.name              = "cornellbox";
-  auto camera            = add_camera(scene);
+  scene.name               = "cornellbox";
+  auto camera              = add_camera(scene);
   camera->name             = "camera";
   camera->frame            = frame3f{{0, 1, 3.9}};
   camera->lens             = 0.035;
   camera->aperture         = 0.0;
   camera->film             = 0.024;
   camera->aspect           = 1;
-  auto floor_shp         = add_shape(scene);
+  auto floor_shp           = add_shape(scene);
   floor_shp->name          = "shapes/floor.yaml";
   floor_shp->positions     = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
   floor_shp->triangles     = {{0, 1, 2}, {2, 3, 0}};
   floor_shp->color         = {0.725, 0.71, 0.68};
-  auto ceiling_shp       = add_shape(scene);
+  auto ceiling_shp         = add_shape(scene);
   ceiling_shp->name        = "ceiling";
   ceiling_shp->name        = "shapes/ceiling.yaml";
   ceiling_shp->positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
   ceiling_shp->triangles   = {{0, 1, 2}, {2, 3, 0}};
   ceiling_shp->color       = {0.725, 0.71, 0.68};
-  auto backwall_shp      = add_shape(scene);
+  auto backwall_shp        = add_shape(scene);
   backwall_shp->name       = "shapes/backwall.yaml";
   backwall_shp->positions  = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
   backwall_shp->triangles  = {{0, 1, 2}, {2, 3, 0}};
   backwall_shp->color      = {0.725, 0.71, 0.68};
-  auto rightwall_shp     = add_shape(scene);
+  auto rightwall_shp       = add_shape(scene);
   rightwall_shp->name      = "shapes/rightwall.yaml";
   rightwall_shp->positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
   rightwall_shp->triangles = {{0, 1, 2}, {2, 3, 0}};
   rightwall_shp->color     = {0.14, 0.45, 0.091};
-  auto leftwall_shp      = add_shape(scene);
+  auto leftwall_shp        = add_shape(scene);
   leftwall_shp->name       = "shapes/leftwall.yaml";
   leftwall_shp->positions  = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
   leftwall_shp->triangles  = {{0, 1, 2}, {2, 3, 0}};
   leftwall_shp->color      = {0.63, 0.065, 0.05};
-  auto shortbox_shp      = add_shape(scene);
+  auto shortbox_shp        = add_shape(scene);
   shortbox_shp->name       = "shapes/shortbox.yaml";
   shortbox_shp->positions  = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
       {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
@@ -2290,7 +2315,7 @@ void make_cornellbox_scene(sceneio_model& scene) {
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   shortbox_shp->color      = {0.725, 0.71, 0.68};
-  auto tallbox_shp       = add_shape(scene);
+  auto tallbox_shp         = add_shape(scene);
   tallbox_shp->name        = "shapes/tallbox.yaml";
   tallbox_shp->positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
       {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
@@ -2305,7 +2330,7 @@ void make_cornellbox_scene(sceneio_model& scene) {
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
   tallbox_shp->color       = {0.725, 0.71, 0.68};
-  auto light_shp         = add_shape(scene);
+  auto light_shp           = add_shape(scene);
   light_shp->name          = "shapes/light.yaml";
   light_shp->positions     = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};

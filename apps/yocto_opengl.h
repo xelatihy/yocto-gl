@@ -479,17 +479,18 @@ inline bool draw_glcombobox(const opengl_window& win, const char* lbl, int& idx,
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_glcombobox(const opengl_window& win, const char* lbl, T*& value,
-    const vector<T*>& vals, bool include_null = false) {
-    auto idx = -1;
-    for(auto pos = 0; pos < vals.size(); pos++) if(vals[pos] == value) idx = pos;
+inline bool draw_glcombobox(const opengl_window& win, const char* lbl,
+    T*& value, const vector<T*>& vals, bool include_null = false) {
+  auto idx = -1;
+  for (auto pos = 0; pos < vals.size(); pos++)
+    if (vals[pos] == value) idx = pos;
   auto edited = draw_glcombobox(
       win, lbl, idx, (int)vals.size(),
       [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
-  if(edited) {
-      value = idx >= 0 ? vals[idx] : nullptr;
+  if (edited) {
+    value = idx >= 0 ? vals[idx] : nullptr;
   }
-    return edited;
+  return edited;
 }
 
 void draw_glhistogram(
