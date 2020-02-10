@@ -1647,7 +1647,7 @@ static void load_obj_scene(
   // Parse obj
   // load obj
   auto obj = obj_model{};
-  load_obj(filename, obj, false, true, true);
+  load_obj(filename, obj, false, true, false);
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
@@ -1697,63 +1697,59 @@ static void load_obj_scene(
   // convert shapes
   auto shape_name_counts = unordered_map<string, int>{};
   for (auto& oshape : obj.shapes) {
-    auto& shape = scene.shapes.emplace_back();
-    shape.name  = oshape.name;
-    if (shape.name == "") shape.name = "shape";
-    shape_name_counts[shape.name] += 1;
-    if (shape_name_counts[shape.name] > 1)
-      shape.name += std::to_string(shape_name_counts[shape.name]);
-    shape.name      = make_name("shape", scene.shapes.size());
-    auto nmaterials = vector<string>{};
-    auto ematerials = vector<int>{};
-    auto has_quads_ = has_quads(oshape);
-    if (!oshape.faces.empty() && !has_quads_) {
-      get_triangles(obj, oshape, shape.triangles, shape.positions,
-          shape.normals, shape.texcoords, nmaterials, ematerials, true);
-    } else if (!oshape.faces.empty() && has_quads_) {
-      get_quads(obj, oshape, shape.quads, shape.positions, shape.normals,
-          shape.texcoords, nmaterials, ematerials, true);
-    } else if (!oshape.lines.empty()) {
-      get_lines(obj, oshape, shape.lines, shape.positions, shape.normals,
-          shape.texcoords, nmaterials, ematerials, true);
-    } else if (!oshape.points.empty()) {
-      get_points(obj, oshape, shape.points, shape.positions, shape.normals,
-          shape.texcoords, nmaterials, ematerials, true);
-    } else {
-      throw_emptyshape_error(filename, oshape.name);
+    auto materials = get_materials(obj, oshape);
+    if (materials.empty()) materials.push_back("");
+    for (auto material_idx = 0; material_idx < materials.size();
+         material_idx++) {
+      auto& shape     = scene.shapes.emplace_back();
+      shape.name      = make_name("shape", scene.shapes.size());
+      auto nmaterials = vector<string>{};
+      auto ematerials = vector<int>{};
+      auto has_quads_ = has_quads(oshape);
+      if (!oshape.faces.empty() && !has_quads_) {
+        get_triangles(obj, oshape, material_idx, shape.triangles,
+            shape.positions, shape.normals, shape.texcoords, true);
+      } else if (!oshape.faces.empty() && has_quads_) {
+        get_quads(obj, oshape, material_idx, shape.quads, shape.positions,
+            shape.normals, shape.texcoords, true);
+      } else if (!oshape.lines.empty()) {
+        get_lines(obj, oshape, material_idx, shape.lines, shape.positions,
+            shape.normals, shape.texcoords, true);
+      } else if (!oshape.points.empty()) {
+        get_points(obj, oshape, material_idx, shape.points, shape.positions,
+            shape.normals, shape.texcoords, true);
+      } else {
+        throw_emptyshape_error(filename, oshape.name);
+      }
+      shape.instances = oshape.instances;
+      if (material_map.find(materials[material_idx]) == material_map.end()) {
+        throw_missing_reference_error(
+            filename, "material", oshape.materials.at(0));
+      }
+      auto& omat = obj.materials.at(material_map.at(materials[material_idx]));
+      shape.emission         = omat.pbr_emission;
+      shape.color            = omat.pbr_base;
+      shape.specular         = omat.pbr_specular;
+      shape.roughness        = omat.pbr_roughness;
+      shape.ior              = omat.pbr_ior;
+      shape.metallic         = omat.pbr_metallic;
+      shape.coat             = omat.pbr_coat;
+      shape.transmission     = omat.pbr_transmission;
+      shape.scattering       = omat.pbr_volscattering;
+      shape.scanisotropy     = omat.pbr_volanisotropy;
+      shape.trdepth          = omat.pbr_volscale;
+      shape.opacity          = omat.pbr_opacity;
+      shape.thin             = true;
+      shape.emission_tex     = get_texture(omat.pbr_emission_map);
+      shape.color_tex        = get_texture(omat.pbr_base_map);
+      shape.specular_tex     = get_texture(omat.pbr_specular_map);
+      shape.metallic_tex     = get_texture(omat.pbr_metallic_map);
+      shape.roughness_tex    = get_texture(omat.pbr_roughness_map);
+      shape.transmission_tex = get_texture(omat.pbr_transmission_map);
+      shape.coat_tex         = get_texture(omat.pbr_coat_map);
+      shape.opacity_tex      = get_texture(omat.pbr_opacity_map);
+      shape.normal_tex       = get_texture(omat.normal_map);
     }
-    shape.instances = oshape.instances;
-    // get material
-    if (oshape.materials.size() != 1) {
-      throw_missing_reference_error(filename, "material for", oshape.name);
-    }
-    if (material_map.find(oshape.materials.at(0)) == material_map.end()) {
-      throw_missing_reference_error(
-          filename, "material", oshape.materials.at(0));
-    }
-    auto& omat      = obj.materials.at(material_map.at(oshape.materials.at(0)));
-    shape.emission  = omat.pbr_emission;
-    shape.color     = omat.pbr_base;
-    shape.specular  = omat.pbr_specular;
-    shape.roughness = omat.pbr_roughness;
-    shape.ior       = omat.pbr_ior;
-    shape.metallic  = omat.pbr_metallic;
-    shape.coat      = omat.pbr_coat;
-    shape.transmission     = omat.pbr_transmission;
-    shape.scattering       = omat.pbr_volscattering;
-    shape.scanisotropy     = omat.pbr_volanisotropy;
-    shape.trdepth          = omat.pbr_volscale;
-    shape.opacity          = omat.pbr_opacity;
-    shape.thin             = true;
-    shape.emission_tex     = get_texture(omat.pbr_emission_map);
-    shape.color_tex        = get_texture(omat.pbr_base_map);
-    shape.specular_tex     = get_texture(omat.pbr_specular_map);
-    shape.metallic_tex     = get_texture(omat.pbr_metallic_map);
-    shape.roughness_tex    = get_texture(omat.pbr_roughness_map);
-    shape.transmission_tex = get_texture(omat.pbr_transmission_map);
-    shape.coat_tex         = get_texture(omat.pbr_coat_map);
-    shape.opacity_tex      = get_texture(omat.pbr_opacity_map);
-    shape.normal_tex       = get_texture(omat.normal_map);
   }
 
   // convert environments

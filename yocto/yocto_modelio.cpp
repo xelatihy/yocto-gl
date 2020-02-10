@@ -2281,6 +2281,138 @@ bool has_quads(const obj_shape& shape) {
   return false;
 }
 
+// Get obj vertices
+static void get_vertices(const obj_shape& shape, int material,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
+    vector<int>& vindex, bool flipv) {
+  auto used_vertices = vector<bool>(shape.vertices.size(), false);
+  auto count         = 0;
+  for (auto& elem : shape.faces) {
+    if (elem.material == material) {
+      for (auto vid = count; vid < count + elem.size; vid++)
+        used_vertices[vid] = true;
+    }
+    count += elem.size;
+  }
+  for (auto& elem : shape.lines) {
+    if (elem.material == material) {
+      for (auto vid = count; vid < count + elem.size; vid++)
+        used_vertices[vid] = true;
+    }
+    count += elem.size;
+  }
+  auto vmap = unordered_map<obj_vertex, int>{};
+  vmap.reserve(shape.vertices.size());
+  vindex.resize(shape.vertices.size());
+  for (auto vid = 0; vid < shape.vertices.size(); vid++) {
+    if (!used_vertices[vid]) {
+      vindex[vid] = -1;
+      continue;
+    }
+    auto& vert = shape.vertices[vid];
+    auto  it   = vmap.find(vert);
+    if (it != vmap.end()) {
+      vindex[vid] = it->second;
+      continue;
+    }
+    auto nverts = (int)positions.size();
+    vindex[vid] = nverts;
+    vmap.insert(it, {vert, nverts});
+    if (!shape.positions.empty() && vert.position)
+      positions.push_back(shape.positions[vert.position - 1]);
+    if (!shape.normals.empty() && vert.normal)
+      normals.push_back(shape.normals[vert.normal - 1]);
+    if (!shape.texcoords.empty() && vert.texcoord)
+      texcoords.push_back(shape.texcoords[vert.texcoord - 1]);
+  }
+  if (flipv) {
+    for (auto& texcoord : texcoords) texcoord.y = 1 - texcoord.y;
+  }
+}
+
+// Get obj shape
+void get_triangles(const obj_model& obj, const obj_shape& shape, int material,
+    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flipv) {
+  if (shape.faces.empty()) return;
+  auto vindex = vector<int>{};
+  get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
+  triangles.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& elem : shape.faces) {
+    if (elem.material == material) {
+      for (auto c = 2; c < elem.size; c++) {
+        triangles.push_back(
+            {vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c]});
+      }
+    }
+    cur += elem.size;
+  }
+  triangles.shrink_to_fit();
+}
+void get_quads(const obj_model& obj, const obj_shape& shape, int material,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flipv) {
+  if (shape.faces.empty()) return;
+  auto vindex = vector<int>{};
+  get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
+  quads.reserve(shape.faces.size());
+  auto cur = 0;
+  for (auto& elem : shape.faces) {
+    if (elem.material == material) {
+      if (elem.size == 4) {
+        quads.push_back({vindex[cur + 0], vindex[cur + 1], vindex[cur + 2],
+            vindex[cur + 3]});
+      } else {
+        for (auto c = 2; c < elem.size; c++) {
+          quads.push_back({vindex[cur + 0], vindex[cur + c - 1],
+              vindex[cur + c], vindex[cur + c]});
+        }
+      }
+    }
+    cur += elem.size;
+  }
+  quads.shrink_to_fit();
+}
+void get_lines(const obj_model& obj, const obj_shape& shape, int material,
+    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flipv) {
+  if (shape.lines.empty()) return;
+  auto vindex = vector<int>{};
+  get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
+  lines.reserve(shape.lines.size());
+  auto cur = 0;
+  for (auto& elem : shape.lines) {
+    if (elem.material == material) {
+      for (auto c = 1; c < elem.size; c++) {
+        lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
+      }
+    }
+    cur += elem.size;
+  }
+  lines.shrink_to_fit();
+}
+void get_points(const obj_model& obj, const obj_shape& shape, int material,
+    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flipv) {
+  if (shape.points.empty()) return;
+  auto vindex = vector<int>{};
+  get_vertices(shape, material, positions, normals, texcoords, vindex, flipv);
+  points.reserve(shape.points.size());
+  auto cur = 0;
+  for (auto& elem : shape.points) {
+    if (elem.material == material) {
+      for (auto c = 0; c < elem.size; c++) {
+        points.push_back({vindex[cur + 0]});
+      }
+    }
+    cur += elem.size;
+  }
+}
+vector<string> get_materials(const obj_model& obj, const obj_shape& shape) {
+  return shape.materials;
+}
+
 // Add obj shape
 void add_triangles(obj_model& obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,

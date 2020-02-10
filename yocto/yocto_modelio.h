@@ -355,6 +355,21 @@ void get_fvquads(const obj_model& obj, const obj_shape& shape,
     vector<int>& ematerials, bool flip_texcoord = false);
 bool has_quads(const obj_shape& shape);
 
+// Get obj shape by extracting the elements beloing to only one material.
+void get_triangles(const obj_model& obj, const obj_shape& shape, int material,
+    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
+void get_quads(const obj_model& obj, const obj_shape& shape, int material,
+    vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
+void get_lines(const obj_model& obj, const obj_shape& shape, int material,
+    vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
+void get_points(const obj_model& obj, const obj_shape& shape, int material,
+    vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
+vector<string> get_materials(const obj_model& obj, const obj_shape& shape);
+
 // Add obj shape
 void add_triangles(obj_model& obj, const string& name,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
