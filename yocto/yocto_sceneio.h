@@ -91,7 +91,7 @@ struct sceneio_texture {
 // For the documentation on the values, please see the OBJ format.
 struct sceneio_material {
   // material data
-  string          name      = "";
+  string name = "";
 
   // material
   vec3f emission     = {0, 0, 0};
@@ -130,10 +130,10 @@ struct sceneio_material {
 // each vertex data has its own topology.
 struct sceneio_shape {
   // shape data
-  string          name      = "";
-  frame3f         frame     = identity3x4f;
-  vector<frame3f> instances = {};
-  sceneio_material* material = nullptr;
+  string            name      = "";
+  frame3f           frame     = identity3x4f;
+  vector<frame3f>   instances = {};
+  sceneio_material* material  = nullptr;
 
   // primitives
   vector<int>   points    = {};
@@ -190,16 +190,16 @@ struct sceneio_subdiv {
 // Instance data.
 struct sceneio_instance {
   // instance data
-  string name = "";
+  string          name   = "";
   vector<frame3f> frames = {};
 };
 
 // Object.
 struct sceneio_object {
   // object data
-  string name = "";
-  frame3f frame = identity3x4f;
-  sceneio_shape* shape = nullptr;
+  string            name     = "";
+  frame3f           frame    = identity3x4f;
+  sceneio_shape*    shape    = nullptr;
   sceneio_material* material = nullptr;
   sceneio_instance* instance = nullptr;
 };
@@ -255,13 +255,13 @@ struct sceneio_animation {
 struct sceneio_model {
   string                       name         = "";
   vector<sceneio_camera*>      cameras      = {};
-  vector<sceneio_object*>      objects     = {};
+  vector<sceneio_object*>      objects      = {};
   vector<sceneio_environment*> environments = {};
   vector<sceneio_shape*>       shapes       = {};
   vector<sceneio_subdiv*>      subdivs      = {};
   vector<sceneio_texture*>     textures     = {};
-  vector<sceneio_material*>    materials     = {};
-  vector<sceneio_instance*>    instances     = {};
+  vector<sceneio_material*>    materials    = {};
+  vector<sceneio_instance*>    instances    = {};
   vector<sceneio_node*>        nodes        = {};
   vector<sceneio_animation*>   animations   = {};
 

@@ -376,13 +376,13 @@ sceneio_subdiv* add_subdiv(sceneio_model* scene) {
 sceneio_texture* add_texture(sceneio_model* scene) {
   return scene->textures.emplace_back(new sceneio_texture{});
 }
-sceneio_object*      add_object(sceneio_model* scene) {
+sceneio_object* add_object(sceneio_model* scene) {
   return scene->objects.emplace_back(new sceneio_object{});
 }
-sceneio_instance*    add_instance(sceneio_model* scene) {
+sceneio_instance* add_instance(sceneio_model* scene) {
   return scene->instances.emplace_back(new sceneio_instance{});
 }
-sceneio_material*    add_material(sceneio_model* scene) {
+sceneio_material* add_material(sceneio_model* scene) {
   return scene->materials.emplace_back(new sceneio_material{});
 }
 
@@ -1033,8 +1033,8 @@ static void load_yaml_scene(
           get_yaml_value(yelement, "lookat", lookat);
           shape->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
-        auto material = add_material(scene);
-        material->name = shape->name;
+        auto material   = add_material(scene);
+        material->name  = shape->name;
         shape->material = material;
         get_yaml_value(yelement, "emission", material->emission);
         get_yaml_value(yelement, "color", material->color);
@@ -1174,7 +1174,7 @@ static void save_yaml_scene(
     add_tex(yelement, "emission_tex", environment->emission_tex);
   }
 
-  auto def_shape = sceneio_shape{};
+  auto def_shape    = sceneio_shape{};
   auto def_material = sceneio_material{};
   for (auto shape : scene->shapes) {
     auto& yelement = yaml.elements.emplace_back();
@@ -1189,12 +1189,13 @@ static void save_yaml_scene(
     add_opt(yelement, "coat", material->coat, def_material.coat);
     add_opt(yelement, "roughness", material->roughness, def_material.roughness);
     add_opt(yelement, "ior", material->ior, def_material.ior);
-    add_opt(
-        yelement, "transmission", material->transmission, def_material.transmission);
+    add_opt(yelement, "transmission", material->transmission,
+        def_material.transmission);
     add_opt(yelement, "trdepth", material->trdepth, def_material.trdepth);
-    add_opt(yelement, "scattering", material->scattering, def_material.scattering);
     add_opt(
-        yelement, "scanisotropy", material->scanisotropy, def_material.scanisotropy);
+        yelement, "scattering", material->scattering, def_material.scattering);
+    add_opt(yelement, "scanisotropy", material->scanisotropy,
+        def_material.scanisotropy);
     add_opt(yelement, "opacity", material->opacity, def_material.opacity);
     add_opt(yelement, "thin", material->thin, def_material.thin);
     add_tex(yelement, "emission_tex", material->emission_tex);
@@ -1448,8 +1449,8 @@ static void load_json_scene(
           get_value(ejs, "lookat", lookat);
           shape->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
-        auto material = add_material(scene);
-        material->name = shape->name;
+        auto material   = add_material(scene);
+        material->name  = shape->name;
         shape->material = material;
         get_value(ejs, "emission", material->emission);
         get_value(ejs, "color", material->color);
@@ -1595,7 +1596,7 @@ static void save_json_scene(
     add_tex(ejs, "emission_tex", environment->emission_tex);
   }
 
-  auto def_shape = sceneio_shape{};
+  auto def_shape    = sceneio_shape{};
   auto def_material = sceneio_material{};
   if (!scene->environments.empty()) js["shapes"] = json::array();
   for (auto shape : scene->shapes) {
@@ -1610,10 +1611,12 @@ static void save_json_scene(
     add_opt(ejs, "coat", material->coat, def_material.coat);
     add_opt(ejs, "roughness", material->roughness, def_material.roughness);
     add_opt(ejs, "ior", material->ior, def_material.ior);
-    add_opt(ejs, "transmission", material->transmission, def_material.transmission);
+    add_opt(
+        ejs, "transmission", material->transmission, def_material.transmission);
     add_opt(ejs, "trdepth", material->trdepth, def_material.trdepth);
     add_opt(ejs, "scattering", material->scattering, def_material.scattering);
-    add_opt(ejs, "scanisotropy", material->scanisotropy, def_material.scanisotropy);
+    add_opt(
+        ejs, "scanisotropy", material->scanisotropy, def_material.scanisotropy);
     add_opt(ejs, "opacity", material->opacity, def_material.opacity);
     add_opt(ejs, "thin", material->thin, def_material.thin);
     add_tex(ejs, "emission_tex", material->emission_tex);
@@ -1626,8 +1629,8 @@ static void save_json_scene(
     add_tex(ejs, "coat_tex", material->coat_tex);
     add_tex(ejs, "opacity_tex", material->opacity_tex);
     add_tex(ejs, "normal_tex", material->normal_tex);
-    add_opt(
-        ejs, "gltf_textures", material->gltf_textures, def_material.gltf_textures);
+    add_opt(ejs, "gltf_textures", material->gltf_textures,
+        def_material.gltf_textures);
     if (!shape->positions.empty()) {
       auto path = replace_extension(shape->name, ".ply");
       add_val(ejs, "shape", path);
@@ -1797,8 +1800,8 @@ static void load_obj_scene(
         throw_missing_reference_error(
             filename, "material", oshape.materials.at(0));
       }
-      auto material = add_material(scene);
-      material->name = shape->name;
+      auto material   = add_material(scene);
+      material->name  = shape->name;
       shape->material = material;
       auto& omat = obj.materials.at(material_map.at(materials[material_idx]));
       material->emission         = omat.pbr_emission;
@@ -1875,7 +1878,7 @@ static void save_obj_scene(
     omaterial.name                 = get_basename(shape->name);
     omaterial.illum                = 2;
     omaterial.as_pbr               = true;
-    auto material = shape->material;
+    auto material                  = shape->material;
     omaterial.pbr_emission         = material->emission;
     omaterial.pbr_base             = material->color;
     omaterial.pbr_specular         = material->specular;
@@ -2042,18 +2045,18 @@ static void load_gltf_scene(
       shape_indices.back().push_back((int)scene->shapes.size() - 1);
       shape->name = "shapes/shape" + std::to_string((int)scene->shapes.size()) +
                     ".yaml";
-      shape->positions    = gprim.positions;
-      shape->normals      = gprim.normals;
-      shape->texcoords    = gprim.texcoords;
-      shape->colors       = gprim.colors;
-      shape->radius       = gprim.radius;
-      shape->tangents     = gprim.tangents;
-      shape->triangles    = gprim.triangles;
-      shape->lines        = gprim.lines;
-      shape->points       = gprim.points;
-      auto& gmaterial     = gltf.materials[gprim.material];
-      auto material = add_material(scene);
-      shape->material = material;
+      shape->positions       = gprim.positions;
+      shape->normals         = gprim.normals;
+      shape->texcoords       = gprim.texcoords;
+      shape->colors          = gprim.colors;
+      shape->radius          = gprim.radius;
+      shape->tangents        = gprim.tangents;
+      shape->triangles       = gprim.triangles;
+      shape->lines           = gprim.lines;
+      shape->points          = gprim.points;
+      auto& gmaterial        = gltf.materials[gprim.material];
+      auto  material         = add_material(scene);
+      shape->material        = material;
       material->emission     = gmaterial.emission;
       material->emission_tex = get_texture(gmaterial.emission_tex);
       if (gmaterial.has_metalrough) {
@@ -2171,9 +2174,9 @@ static void load_pbrt_scene(
     shape->texcoords = pshape.texcoords;
     shape->triangles = pshape.triangles;
     for (auto& uv : shape->texcoords) uv.y = 1 - uv.y;
-    auto material = add_material(scene);
-    material->name = shape->name;
-    shape->material = material;
+    auto material          = add_material(scene);
+    material->name         = shape->name;
+    shape->material        = material;
     material->emission     = pshape.emission;
     material->color        = pshape.color;
     material->metallic     = pshape.metallic;
@@ -2199,16 +2202,16 @@ static void load_pbrt_scene(
 
   // lights
   for (auto& plight : pbrt.lights) {
-    auto shape       = add_shape(scene);
-    shape->name      = make_name("shape", scene->shapes.size());
-    shape->frame     = plight.area_frame;
-    shape->triangles = plight.area_triangles;
-    shape->positions = plight.area_positions;
-    shape->normals   = plight.area_normals;
-    auto material = add_material(scene);
-    shape->material = material;
-    material->name = make_name("material", scene->shapes.size());
-    material->emission  = plight.area_emission;
+    auto shape         = add_shape(scene);
+    shape->name        = make_name("shape", scene->shapes.size());
+    shape->frame       = plight.area_frame;
+    shape->triangles   = plight.area_triangles;
+    shape->positions   = plight.area_positions;
+    shape->normals     = plight.area_normals;
+    auto material      = add_material(scene);
+    shape->material    = material;
+    material->name     = make_name("material", scene->shapes.size());
+    material->emission = plight.area_emission;
   }
 
   // fix scene
@@ -2241,7 +2244,7 @@ void save_pbrt_scene(
     pshape.frame        = shape->frame;
     pshape.frend        = shape->frame;
     pshape.instances    = shape->instances;
-    auto material = shape->material;
+    auto material       = shape->material;
     pshape.color        = material->color;
     pshape.metallic     = material->metallic;
     pshape.specular     = material->specular;
@@ -2302,53 +2305,53 @@ void save_pbrt_scene(
 namespace yocto {
 
 void make_cornellbox_scene(sceneio_model* scene) {
-  scene->name              = "cornellbox";
-  auto camera              = add_camera(scene);
-  camera->name             = "camera";
-  camera->frame            = frame3f{{0, 1, 3.9}};
-  camera->lens             = 0.035;
-  camera->aperture         = 0.0;
-  camera->film             = 0.024;
-  camera->aspect           = 1;
-  auto floor_shp           = add_shape(scene);
-  floor_shp->name          = "shapes/floor.json";
-  floor_shp->positions     = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
-  floor_shp->triangles     = {{0, 1, 2}, {2, 3, 0}};
-  floor_shp->material = add_material(scene);
-  floor_shp->material->name = "materials/floor.json";
-  floor_shp->material->color         = {0.725, 0.71, 0.68};
-  auto ceiling_shp         = add_shape(scene);
-  ceiling_shp->name        = "ceiling";
-  ceiling_shp->name        = "shapes/ceiling.json";
-  ceiling_shp->positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
-  ceiling_shp->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  ceiling_shp->material = add_material(scene);
-  ceiling_shp->material->name = "materials/ceiling.json";
-  ceiling_shp->material->color       = {0.725, 0.71, 0.68};
-  auto backwall_shp        = add_shape(scene);
-  backwall_shp->name       = "shapes/backwall.json";
-  backwall_shp->positions  = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
-  backwall_shp->triangles  = {{0, 1, 2}, {2, 3, 0}};
-  backwall_shp->material = add_material(scene);
-  backwall_shp->material->name = "materials/backwall.json";
-  backwall_shp->material->color      = {0.725, 0.71, 0.68};
-  auto rightwall_shp       = add_shape(scene);
-  rightwall_shp->name      = "shapes/rightwall.json";
+  scene->name                = "cornellbox";
+  auto camera                = add_camera(scene);
+  camera->name               = "camera";
+  camera->frame              = frame3f{{0, 1, 3.9}};
+  camera->lens               = 0.035;
+  camera->aperture           = 0.0;
+  camera->film               = 0.024;
+  camera->aspect             = 1;
+  auto floor_shp             = add_shape(scene);
+  floor_shp->name            = "shapes/floor.json";
+  floor_shp->positions       = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
+  floor_shp->triangles       = {{0, 1, 2}, {2, 3, 0}};
+  floor_shp->material        = add_material(scene);
+  floor_shp->material->name  = "materials/floor.json";
+  floor_shp->material->color = {0.725, 0.71, 0.68};
+  auto ceiling_shp           = add_shape(scene);
+  ceiling_shp->name          = "ceiling";
+  ceiling_shp->name          = "shapes/ceiling.json";
+  ceiling_shp->positions     = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
+  ceiling_shp->triangles     = {{0, 1, 2}, {2, 3, 0}};
+  ceiling_shp->material      = add_material(scene);
+  ceiling_shp->material->name  = "materials/ceiling.json";
+  ceiling_shp->material->color = {0.725, 0.71, 0.68};
+  auto backwall_shp            = add_shape(scene);
+  backwall_shp->name           = "shapes/backwall.json";
+  backwall_shp->positions = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
+  backwall_shp->triangles = {{0, 1, 2}, {2, 3, 0}};
+  backwall_shp->material  = add_material(scene);
+  backwall_shp->material->name  = "materials/backwall.json";
+  backwall_shp->material->color = {0.725, 0.71, 0.68};
+  auto rightwall_shp            = add_shape(scene);
+  rightwall_shp->name           = "shapes/rightwall.json";
   rightwall_shp->positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
   rightwall_shp->triangles = {{0, 1, 2}, {2, 3, 0}};
-  rightwall_shp->material = add_material(scene);
-  rightwall_shp->material->name = "materials/rightwall.json";
-  rightwall_shp->material->color     = {0.14, 0.45, 0.091};
-  auto leftwall_shp        = add_shape(scene);
-  leftwall_shp->name       = "shapes/leftwall.json";
-  leftwall_shp->positions  = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
-  leftwall_shp->triangles  = {{0, 1, 2}, {2, 3, 0}};
-  leftwall_shp->material = add_material(scene);
-  leftwall_shp->material->name = "materials/leftwall.json";
-  leftwall_shp->material->color      = {0.63, 0.065, 0.05};
-  auto shortbox_shp        = add_shape(scene);
-  shortbox_shp->name       = "shapes/shortbox.json";
-  shortbox_shp->positions  = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
+  rightwall_shp->material  = add_material(scene);
+  rightwall_shp->material->name  = "materials/rightwall.json";
+  rightwall_shp->material->color = {0.14, 0.45, 0.091};
+  auto leftwall_shp              = add_shape(scene);
+  leftwall_shp->name             = "shapes/leftwall.json";
+  leftwall_shp->positions = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
+  leftwall_shp->triangles = {{0, 1, 2}, {2, 3, 0}};
+  leftwall_shp->material  = add_material(scene);
+  leftwall_shp->material->name  = "materials/leftwall.json";
+  leftwall_shp->material->color = {0.63, 0.065, 0.05};
+  auto shortbox_shp             = add_shape(scene);
+  shortbox_shp->name            = "shapes/shortbox.json";
+  shortbox_shp->positions       = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
       {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
       {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
       {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
@@ -2356,15 +2359,15 @@ void make_cornellbox_scene(sceneio_model* scene) {
       {0.13, 0.0, 0.0}, {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17},
       {0.53, 0.0, 0.75}, {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0},
       {-0.05, 0.0, 0.57}};
-  shortbox_shp->triangles  = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+  shortbox_shp->triangles       = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  shortbox_shp->material = add_material(scene);
-  shortbox_shp->material->name = "materials/shortbox.json";
-  shortbox_shp->material->color      = {0.725, 0.71, 0.68};
-  auto tallbox_shp         = add_shape(scene);
-  tallbox_shp->name        = "shapes/tallbox.json";
-  tallbox_shp->positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
+  shortbox_shp->material        = add_material(scene);
+  shortbox_shp->material->name  = "materials/shortbox.json";
+  shortbox_shp->material->color = {0.725, 0.71, 0.68};
+  auto tallbox_shp              = add_shape(scene);
+  tallbox_shp->name             = "shapes/tallbox.json";
+  tallbox_shp->positions        = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
       {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
       {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
       {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
@@ -2373,20 +2376,20 @@ void make_cornellbox_scene(sceneio_model* scene) {
       {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
       {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
       {-0.71, 0.0, -0.49}};
-  tallbox_shp->triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+  tallbox_shp->triangles        = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  tallbox_shp->material = add_material(scene);
-  tallbox_shp->material->name = "materials/tallbox.json";
-  tallbox_shp->material->color       = {0.725, 0.71, 0.68};
-  auto light_shp           = add_shape(scene);
-  light_shp->name          = "shapes/light.json";
-  light_shp->positions     = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
+  tallbox_shp->material         = add_material(scene);
+  tallbox_shp->material->name   = "materials/tallbox.json";
+  tallbox_shp->material->color  = {0.725, 0.71, 0.68};
+  auto light_shp                = add_shape(scene);
+  light_shp->name               = "shapes/light.json";
+  light_shp->positions          = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
-  light_shp->triangles     = {{0, 1, 2}, {2, 3, 0}};
-  light_shp->material = add_material(scene);
-  light_shp->material->name = "materials/light.json";
-  light_shp->material->emission      = {17, 12, 4};
+  light_shp->triangles          = {{0, 1, 2}, {2, 3, 0}};
+  light_shp->material           = add_material(scene);
+  light_shp->material->name     = "materials/light.json";
+  light_shp->material->emission = {17, 12, 4};
 }
 
 }  // namespace yocto
