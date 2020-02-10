@@ -350,6 +350,9 @@ namespace yocto {
 sceneio_model::~sceneio_model() {
   for (auto camera : cameras) delete camera;
   for (auto environment : environments) delete environment;
+  for (auto object : objects) delete object;
+  for (auto material : materials) delete material;
+  for (auto instance : instances) delete instance;
   for (auto shape : shapes) delete shape;
   for (auto subdiv : subdivs) delete subdiv;
   for (auto texture : textures) delete texture;
@@ -372,6 +375,15 @@ sceneio_subdiv* add_subdiv(sceneio_model* scene) {
 }
 sceneio_texture* add_texture(sceneio_model* scene) {
   return scene->textures.emplace_back(new sceneio_texture{});
+}
+sceneio_object*      add_object(sceneio_model* scene) {
+  return scene->objects.emplace_back(new sceneio_object{});
+}
+sceneio_instance*    add_instance(sceneio_model* scene) {
+  return scene->instances.emplace_back(new sceneio_instance{});
+}
+sceneio_material*    add_material(sceneio_model* scene) {
+  return scene->materials.emplace_back(new sceneio_material{});
 }
 
 // Updates the scene and scene's instances bounding boxes
@@ -1021,30 +1033,33 @@ static void load_yaml_scene(
           get_yaml_value(yelement, "lookat", lookat);
           shape->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
-        get_yaml_value(yelement, "emission", shape->emission);
-        get_yaml_value(yelement, "color", shape->color);
-        get_yaml_value(yelement, "metallic", shape->metallic);
-        get_yaml_value(yelement, "specular", shape->specular);
-        get_yaml_value(yelement, "roughness", shape->roughness);
-        get_yaml_value(yelement, "coat", shape->coat);
-        get_yaml_value(yelement, "transmission", shape->transmission);
-        get_yaml_value(yelement, "thin", shape->thin);
-        get_yaml_value(yelement, "ior", shape->ior);
-        get_yaml_value(yelement, "trdepth", shape->trdepth);
-        get_yaml_value(yelement, "scattering", shape->scattering);
-        get_yaml_value(yelement, "scanisotropy", shape->scanisotropy);
-        get_yaml_value(yelement, "opacity", shape->opacity);
-        get_yaml_value(yelement, "coat", shape->coat);
-        get_texture(yelement, "emission_tex", shape->emission_tex);
-        get_texture(yelement, "color_tex", shape->color_tex);
-        get_texture(yelement, "metallic_tex", shape->metallic_tex);
-        get_texture(yelement, "specular_tex", shape->specular_tex);
-        get_texture(yelement, "transmission_tex", shape->transmission_tex);
-        get_texture(yelement, "roughness_tex", shape->roughness_tex);
-        get_texture(yelement, "scattering_tex", shape->scattering_tex);
-        get_texture(yelement, "normal_tex", shape->normal_tex);
-        get_texture(yelement, "normal_tex", shape->normal_tex);
-        get_yaml_value(yelement, "gltf_textures", shape->gltf_textures);
+        auto material = add_material(scene);
+        material->name = shape->name;
+        shape->material = material;
+        get_yaml_value(yelement, "emission", material->emission);
+        get_yaml_value(yelement, "color", material->color);
+        get_yaml_value(yelement, "metallic", material->metallic);
+        get_yaml_value(yelement, "specular", material->specular);
+        get_yaml_value(yelement, "roughness", material->roughness);
+        get_yaml_value(yelement, "coat", material->coat);
+        get_yaml_value(yelement, "transmission", material->transmission);
+        get_yaml_value(yelement, "thin", material->thin);
+        get_yaml_value(yelement, "ior", material->ior);
+        get_yaml_value(yelement, "trdepth", material->trdepth);
+        get_yaml_value(yelement, "scattering", material->scattering);
+        get_yaml_value(yelement, "scanisotropy", material->scanisotropy);
+        get_yaml_value(yelement, "opacity", material->opacity);
+        get_yaml_value(yelement, "coat", material->coat);
+        get_texture(yelement, "emission_tex", material->emission_tex);
+        get_texture(yelement, "color_tex", material->color_tex);
+        get_texture(yelement, "metallic_tex", material->metallic_tex);
+        get_texture(yelement, "specular_tex", material->specular_tex);
+        get_texture(yelement, "transmission_tex", material->transmission_tex);
+        get_texture(yelement, "roughness_tex", material->roughness_tex);
+        get_texture(yelement, "scattering_tex", material->scattering_tex);
+        get_texture(yelement, "normal_tex", material->normal_tex);
+        get_texture(yelement, "normal_tex", material->normal_tex);
+        get_yaml_value(yelement, "gltf_textures", material->gltf_textures);
         if (has_yaml_value(yelement, "shape")) {
           auto path = ""s;
           get_yaml_value(yelement, "shape", path);
@@ -1160,38 +1175,40 @@ static void save_yaml_scene(
   }
 
   auto def_shape = sceneio_shape{};
+  auto def_material = sceneio_material{};
   for (auto shape : scene->shapes) {
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "shapes";
     add_val(yelement, "name", shape->name);
     add_opt(yelement, "frame", shape->frame, def_shape.frame);
-    add_opt(yelement, "emission", shape->emission, def_shape.emission);
-    add_opt(yelement, "color", shape->color, def_shape.color);
-    add_opt(yelement, "specular", shape->specular, def_shape.specular);
-    add_opt(yelement, "metallic", shape->metallic, def_shape.metallic);
-    add_opt(yelement, "coat", shape->coat, def_shape.coat);
-    add_opt(yelement, "roughness", shape->roughness, def_shape.roughness);
-    add_opt(yelement, "ior", shape->ior, def_shape.ior);
+    auto material = shape->material;
+    add_opt(yelement, "emission", material->emission, def_material.emission);
+    add_opt(yelement, "color", material->color, def_material.color);
+    add_opt(yelement, "specular", material->specular, def_material.specular);
+    add_opt(yelement, "metallic", material->metallic, def_material.metallic);
+    add_opt(yelement, "coat", material->coat, def_material.coat);
+    add_opt(yelement, "roughness", material->roughness, def_material.roughness);
+    add_opt(yelement, "ior", material->ior, def_material.ior);
     add_opt(
-        yelement, "transmission", shape->transmission, def_shape.transmission);
-    add_opt(yelement, "trdepth", shape->trdepth, def_shape.trdepth);
-    add_opt(yelement, "scattering", shape->scattering, def_shape.scattering);
+        yelement, "transmission", material->transmission, def_material.transmission);
+    add_opt(yelement, "trdepth", material->trdepth, def_material.trdepth);
+    add_opt(yelement, "scattering", material->scattering, def_material.scattering);
     add_opt(
-        yelement, "scanisotropy", shape->scanisotropy, def_shape.scanisotropy);
-    add_opt(yelement, "opacity", shape->opacity, def_shape.opacity);
-    add_opt(yelement, "thin", shape->thin, def_shape.thin);
-    add_tex(yelement, "emission_tex", shape->emission_tex);
-    add_tex(yelement, "color_tex", shape->color_tex);
-    add_tex(yelement, "metallic_tex", shape->metallic_tex);
-    add_tex(yelement, "specular_tex", shape->specular_tex);
-    add_tex(yelement, "roughness_tex", shape->roughness_tex);
-    add_tex(yelement, "transmission_tex", shape->transmission_tex);
-    add_tex(yelement, "scattering_tex", shape->scattering_tex);
-    add_tex(yelement, "coat_tex", shape->coat_tex);
-    add_tex(yelement, "opacity_tex", shape->opacity_tex);
-    add_tex(yelement, "normal_tex", shape->normal_tex);
-    add_opt(yelement, "gltf_textures", shape->gltf_textures,
-        def_shape.gltf_textures);
+        yelement, "scanisotropy", material->scanisotropy, def_material.scanisotropy);
+    add_opt(yelement, "opacity", material->opacity, def_material.opacity);
+    add_opt(yelement, "thin", material->thin, def_material.thin);
+    add_tex(yelement, "emission_tex", material->emission_tex);
+    add_tex(yelement, "color_tex", material->color_tex);
+    add_tex(yelement, "metallic_tex", material->metallic_tex);
+    add_tex(yelement, "specular_tex", material->specular_tex);
+    add_tex(yelement, "roughness_tex", material->roughness_tex);
+    add_tex(yelement, "transmission_tex", material->transmission_tex);
+    add_tex(yelement, "scattering_tex", material->scattering_tex);
+    add_tex(yelement, "coat_tex", material->coat_tex);
+    add_tex(yelement, "opacity_tex", material->opacity_tex);
+    add_tex(yelement, "normal_tex", material->normal_tex);
+    add_opt(yelement, "gltf_textures", material->gltf_textures,
+        def_material.gltf_textures);
     if (!shape->positions.empty()) {
       auto path = replace_extension(shape->name, ".ply");
       add_val(yelement, "shape", path);
@@ -1431,30 +1448,33 @@ static void load_json_scene(
           get_value(ejs, "lookat", lookat);
           shape->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
-        get_value(ejs, "emission", shape->emission);
-        get_value(ejs, "color", shape->color);
-        get_value(ejs, "metallic", shape->metallic);
-        get_value(ejs, "specular", shape->specular);
-        get_value(ejs, "roughness", shape->roughness);
-        get_value(ejs, "coat", shape->coat);
-        get_value(ejs, "transmission", shape->transmission);
-        get_value(ejs, "thin", shape->thin);
-        get_value(ejs, "ior", shape->ior);
-        get_value(ejs, "trdepth", shape->trdepth);
-        get_value(ejs, "scattering", shape->scattering);
-        get_value(ejs, "scanisotropy", shape->scanisotropy);
-        get_value(ejs, "opacity", shape->opacity);
-        get_value(ejs, "coat", shape->coat);
-        get_texture(ejs, "emission_tex", shape->emission_tex);
-        get_texture(ejs, "color_tex", shape->color_tex);
-        get_texture(ejs, "metallic_tex", shape->metallic_tex);
-        get_texture(ejs, "specular_tex", shape->specular_tex);
-        get_texture(ejs, "transmission_tex", shape->transmission_tex);
-        get_texture(ejs, "roughness_tex", shape->roughness_tex);
-        get_texture(ejs, "scattering_tex", shape->scattering_tex);
-        get_texture(ejs, "normal_tex", shape->normal_tex);
-        get_texture(ejs, "normal_tex", shape->normal_tex);
-        get_value(ejs, "gltf_textures", shape->gltf_textures);
+        auto material = add_material(scene);
+        material->name = shape->name;
+        shape->material = material;
+        get_value(ejs, "emission", material->emission);
+        get_value(ejs, "color", material->color);
+        get_value(ejs, "metallic", material->metallic);
+        get_value(ejs, "specular", material->specular);
+        get_value(ejs, "roughness", material->roughness);
+        get_value(ejs, "coat", material->coat);
+        get_value(ejs, "transmission", material->transmission);
+        get_value(ejs, "thin", material->thin);
+        get_value(ejs, "ior", material->ior);
+        get_value(ejs, "trdepth", material->trdepth);
+        get_value(ejs, "scattering", material->scattering);
+        get_value(ejs, "scanisotropy", material->scanisotropy);
+        get_value(ejs, "opacity", material->opacity);
+        get_value(ejs, "coat", material->coat);
+        get_texture(ejs, "emission_tex", material->emission_tex);
+        get_texture(ejs, "color_tex", material->color_tex);
+        get_texture(ejs, "metallic_tex", material->metallic_tex);
+        get_texture(ejs, "specular_tex", material->specular_tex);
+        get_texture(ejs, "transmission_tex", material->transmission_tex);
+        get_texture(ejs, "roughness_tex", material->roughness_tex);
+        get_texture(ejs, "scattering_tex", material->scattering_tex);
+        get_texture(ejs, "normal_tex", material->normal_tex);
+        get_texture(ejs, "normal_tex", material->normal_tex);
+        get_value(ejs, "gltf_textures", material->gltf_textures);
         if (ejs.contains("shape")) {
           auto path = ""s;
           get_value(ejs, "shape", path);
@@ -1576,36 +1596,38 @@ static void save_json_scene(
   }
 
   auto def_shape = sceneio_shape{};
+  auto def_material = sceneio_material{};
   if (!scene->environments.empty()) js["shapes"] = json::array();
   for (auto shape : scene->shapes) {
     auto& ejs = js["shapes"].emplace_back();
     add_val(ejs, "name", shape->name);
     add_opt(ejs, "frame", shape->frame, def_shape.frame);
-    add_opt(ejs, "emission", shape->emission, def_shape.emission);
-    add_opt(ejs, "color", shape->color, def_shape.color);
-    add_opt(ejs, "specular", shape->specular, def_shape.specular);
-    add_opt(ejs, "metallic", shape->metallic, def_shape.metallic);
-    add_opt(ejs, "coat", shape->coat, def_shape.coat);
-    add_opt(ejs, "roughness", shape->roughness, def_shape.roughness);
-    add_opt(ejs, "ior", shape->ior, def_shape.ior);
-    add_opt(ejs, "transmission", shape->transmission, def_shape.transmission);
-    add_opt(ejs, "trdepth", shape->trdepth, def_shape.trdepth);
-    add_opt(ejs, "scattering", shape->scattering, def_shape.scattering);
-    add_opt(ejs, "scanisotropy", shape->scanisotropy, def_shape.scanisotropy);
-    add_opt(ejs, "opacity", shape->opacity, def_shape.opacity);
-    add_opt(ejs, "thin", shape->thin, def_shape.thin);
-    add_tex(ejs, "emission_tex", shape->emission_tex);
-    add_tex(ejs, "color_tex", shape->color_tex);
-    add_tex(ejs, "metallic_tex", shape->metallic_tex);
-    add_tex(ejs, "specular_tex", shape->specular_tex);
-    add_tex(ejs, "roughness_tex", shape->roughness_tex);
-    add_tex(ejs, "transmission_tex", shape->transmission_tex);
-    add_tex(ejs, "scattering_tex", shape->scattering_tex);
-    add_tex(ejs, "coat_tex", shape->coat_tex);
-    add_tex(ejs, "opacity_tex", shape->opacity_tex);
-    add_tex(ejs, "normal_tex", shape->normal_tex);
+    auto material = shape->material;
+    add_opt(ejs, "emission", material->emission, def_material.emission);
+    add_opt(ejs, "color", material->color, def_material.color);
+    add_opt(ejs, "specular", material->specular, def_material.specular);
+    add_opt(ejs, "metallic", material->metallic, def_material.metallic);
+    add_opt(ejs, "coat", material->coat, def_material.coat);
+    add_opt(ejs, "roughness", material->roughness, def_material.roughness);
+    add_opt(ejs, "ior", material->ior, def_material.ior);
+    add_opt(ejs, "transmission", material->transmission, def_material.transmission);
+    add_opt(ejs, "trdepth", material->trdepth, def_material.trdepth);
+    add_opt(ejs, "scattering", material->scattering, def_material.scattering);
+    add_opt(ejs, "scanisotropy", material->scanisotropy, def_material.scanisotropy);
+    add_opt(ejs, "opacity", material->opacity, def_material.opacity);
+    add_opt(ejs, "thin", material->thin, def_material.thin);
+    add_tex(ejs, "emission_tex", material->emission_tex);
+    add_tex(ejs, "color_tex", material->color_tex);
+    add_tex(ejs, "metallic_tex", material->metallic_tex);
+    add_tex(ejs, "specular_tex", material->specular_tex);
+    add_tex(ejs, "roughness_tex", material->roughness_tex);
+    add_tex(ejs, "transmission_tex", material->transmission_tex);
+    add_tex(ejs, "scattering_tex", material->scattering_tex);
+    add_tex(ejs, "coat_tex", material->coat_tex);
+    add_tex(ejs, "opacity_tex", material->opacity_tex);
+    add_tex(ejs, "normal_tex", material->normal_tex);
     add_opt(
-        ejs, "gltf_textures", shape->gltf_textures, def_shape.gltf_textures);
+        ejs, "gltf_textures", material->gltf_textures, def_material.gltf_textures);
     if (!shape->positions.empty()) {
       auto path = replace_extension(shape->name, ".ply");
       add_val(ejs, "shape", path);
@@ -1775,29 +1797,32 @@ static void load_obj_scene(
         throw_missing_reference_error(
             filename, "material", oshape.materials.at(0));
       }
+      auto material = add_material(scene);
+      material->name = shape->name;
+      shape->material = material;
       auto& omat = obj.materials.at(material_map.at(materials[material_idx]));
-      shape->emission         = omat.pbr_emission;
-      shape->color            = omat.pbr_base;
-      shape->specular         = omat.pbr_specular;
-      shape->roughness        = omat.pbr_roughness;
-      shape->ior              = omat.pbr_ior;
-      shape->metallic         = omat.pbr_metallic;
-      shape->coat             = omat.pbr_coat;
-      shape->transmission     = omat.pbr_transmission;
-      shape->scattering       = omat.pbr_volscattering;
-      shape->scanisotropy     = omat.pbr_volanisotropy;
-      shape->trdepth          = omat.pbr_volscale;
-      shape->opacity          = omat.pbr_opacity;
-      shape->thin             = true;
-      shape->emission_tex     = get_texture(omat.pbr_emission_map);
-      shape->color_tex        = get_texture(omat.pbr_base_map);
-      shape->specular_tex     = get_texture(omat.pbr_specular_map);
-      shape->metallic_tex     = get_texture(omat.pbr_metallic_map);
-      shape->roughness_tex    = get_texture(omat.pbr_roughness_map);
-      shape->transmission_tex = get_texture(omat.pbr_transmission_map);
-      shape->coat_tex         = get_texture(omat.pbr_coat_map);
-      shape->opacity_tex      = get_texture(omat.pbr_opacity_map);
-      shape->normal_tex       = get_texture(omat.normal_map);
+      material->emission         = omat.pbr_emission;
+      material->color            = omat.pbr_base;
+      material->specular         = omat.pbr_specular;
+      material->roughness        = omat.pbr_roughness;
+      material->ior              = omat.pbr_ior;
+      material->metallic         = omat.pbr_metallic;
+      material->coat             = omat.pbr_coat;
+      material->transmission     = omat.pbr_transmission;
+      material->scattering       = omat.pbr_volscattering;
+      material->scanisotropy     = omat.pbr_volanisotropy;
+      material->trdepth          = omat.pbr_volscale;
+      material->opacity          = omat.pbr_opacity;
+      material->thin             = true;
+      material->emission_tex     = get_texture(omat.pbr_emission_map);
+      material->color_tex        = get_texture(omat.pbr_base_map);
+      material->specular_tex     = get_texture(omat.pbr_specular_map);
+      material->metallic_tex     = get_texture(omat.pbr_metallic_map);
+      material->roughness_tex    = get_texture(omat.pbr_roughness_map);
+      material->transmission_tex = get_texture(omat.pbr_transmission_map);
+      material->coat_tex         = get_texture(omat.pbr_coat_map);
+      material->opacity_tex      = get_texture(omat.pbr_opacity_map);
+      material->normal_tex       = get_texture(omat.normal_map);
     }
   }
 
@@ -1845,28 +1870,29 @@ static void save_obj_scene(
   };
 
   // convert materials and textures
-  for (auto& shape : scene->shapes) {
+  for (auto shape : scene->shapes) {
     auto& omaterial                = obj.materials.emplace_back();
     omaterial.name                 = get_basename(shape->name);
     omaterial.illum                = 2;
     omaterial.as_pbr               = true;
-    omaterial.pbr_emission         = shape->emission;
-    omaterial.pbr_base             = shape->color;
-    omaterial.pbr_specular         = shape->specular;
-    omaterial.pbr_roughness        = shape->roughness;
-    omaterial.pbr_metallic         = shape->metallic;
-    omaterial.pbr_coat             = shape->coat;
-    omaterial.pbr_transmission     = shape->transmission;
-    omaterial.pbr_opacity          = shape->opacity;
-    omaterial.pbr_emission_map     = get_texture(shape->emission_tex);
-    omaterial.pbr_base_map         = get_texture(shape->color_tex);
-    omaterial.pbr_specular_map     = get_texture(shape->specular_tex);
-    omaterial.pbr_metallic_map     = get_texture(shape->metallic_tex);
-    omaterial.pbr_roughness_map    = get_texture(shape->roughness_tex);
-    omaterial.pbr_transmission_map = get_texture(shape->transmission_tex);
-    omaterial.pbr_coat_map         = get_texture(shape->coat_tex);
-    omaterial.pbr_opacity_map      = get_texture(shape->opacity_tex);
-    omaterial.normal_map           = get_texture(shape->normal_tex);
+    auto material = shape->material;
+    omaterial.pbr_emission         = material->emission;
+    omaterial.pbr_base             = material->color;
+    omaterial.pbr_specular         = material->specular;
+    omaterial.pbr_roughness        = material->roughness;
+    omaterial.pbr_metallic         = material->metallic;
+    omaterial.pbr_coat             = material->coat;
+    omaterial.pbr_transmission     = material->transmission;
+    omaterial.pbr_opacity          = material->opacity;
+    omaterial.pbr_emission_map     = get_texture(material->emission_tex);
+    omaterial.pbr_base_map         = get_texture(material->color_tex);
+    omaterial.pbr_specular_map     = get_texture(material->specular_tex);
+    omaterial.pbr_metallic_map     = get_texture(material->metallic_tex);
+    omaterial.pbr_roughness_map    = get_texture(material->roughness_tex);
+    omaterial.pbr_transmission_map = get_texture(material->transmission_tex);
+    omaterial.pbr_coat_map         = get_texture(material->coat_tex);
+    omaterial.pbr_opacity_map      = get_texture(material->opacity_tex);
+    omaterial.normal_map           = get_texture(material->normal_tex);
   }
 
   // convert shapes
@@ -2026,16 +2052,18 @@ static void load_gltf_scene(
       shape->lines        = gprim.lines;
       shape->points       = gprim.points;
       auto& gmaterial     = gltf.materials[gprim.material];
-      shape->emission     = gmaterial.emission;
-      shape->emission_tex = get_texture(gmaterial.emission_tex);
+      auto material = add_material(scene);
+      shape->material = material;
+      material->emission     = gmaterial.emission;
+      material->emission_tex = get_texture(gmaterial.emission_tex);
       if (gmaterial.has_metalrough) {
-        shape->color        = xyz(gmaterial.mr_base);
-        shape->opacity      = gmaterial.mr_base.w;
-        shape->specular     = 1;
-        shape->color_tex    = get_texture(gmaterial.mr_base_tex);
-        shape->metallic_tex = get_texture(gmaterial.mr_metallic_tex);
+        material->color        = xyz(gmaterial.mr_base);
+        material->opacity      = gmaterial.mr_base.w;
+        material->specular     = 1;
+        material->color_tex    = get_texture(gmaterial.mr_base_tex);
+        material->metallic_tex = get_texture(gmaterial.mr_metallic_tex);
       }
-      shape->normal_tex = get_texture(gmaterial.normal_tex);
+      material->normal_tex = get_texture(gmaterial.normal_tex);
     }
   }
 
@@ -2143,17 +2171,20 @@ static void load_pbrt_scene(
     shape->texcoords = pshape.texcoords;
     shape->triangles = pshape.triangles;
     for (auto& uv : shape->texcoords) uv.y = 1 - uv.y;
-    shape->emission     = pshape.emission;
-    shape->color        = pshape.color;
-    shape->metallic     = pshape.metallic;
-    shape->specular     = pshape.specular;
-    shape->transmission = pshape.transmission;
-    shape->ior          = pshape.ior;
-    shape->roughness    = pshape.roughness;
-    shape->opacity      = pshape.opacity;
-    shape->thin         = pshape.thin;
-    shape->color_tex    = get_texture(pshape.color_map);
-    shape->opacity_tex  = get_texture(pshape.opacity_map);
+    auto material = add_material(scene);
+    material->name = shape->name;
+    shape->material = material;
+    material->emission     = pshape.emission;
+    material->color        = pshape.color;
+    material->metallic     = pshape.metallic;
+    material->specular     = pshape.specular;
+    material->transmission = pshape.transmission;
+    material->ior          = pshape.ior;
+    material->roughness    = pshape.roughness;
+    material->opacity      = pshape.opacity;
+    material->thin         = pshape.thin;
+    material->color_tex    = get_texture(pshape.color_map);
+    material->opacity_tex  = get_texture(pshape.opacity_map);
   }
 
   // convert environments
@@ -2174,7 +2205,10 @@ static void load_pbrt_scene(
     shape->triangles = plight.area_triangles;
     shape->positions = plight.area_positions;
     shape->normals   = plight.area_normals;
-    shape->emission  = plight.area_emission;
+    auto material = add_material(scene);
+    shape->material = material;
+    material->name = make_name("material", scene->shapes.size());
+    material->emission  = plight.area_emission;
   }
 
   // fix scene
@@ -2201,21 +2235,22 @@ void save_pbrt_scene(
   pcamera.resolution = {1280, (int)(1280 / pcamera.aspect)};
 
   // convert instances
-  for (auto& shape : scene->shapes) {
+  for (auto shape : scene->shapes) {
     auto& pshape        = pbrt.shapes.emplace_back();
     pshape.filename_    = replace_extension(shape->name, ".ply");
     pshape.frame        = shape->frame;
     pshape.frend        = shape->frame;
     pshape.instances    = shape->instances;
-    pshape.color        = shape->color;
-    pshape.metallic     = shape->metallic;
-    pshape.specular     = shape->specular;
-    pshape.transmission = shape->transmission;
-    pshape.roughness    = shape->roughness;
-    pshape.ior          = shape->ior;
-    pshape.opacity      = shape->opacity;
-    pshape.color_map    = shape->color_tex ? shape->color_tex->name : ""s;
-    pshape.emission     = shape->emission;
+    auto material = shape->material;
+    pshape.color        = material->color;
+    pshape.metallic     = material->metallic;
+    pshape.specular     = material->specular;
+    pshape.transmission = material->transmission;
+    pshape.roughness    = material->roughness;
+    pshape.ior          = material->ior;
+    pshape.opacity      = material->opacity;
+    pshape.color_map    = material->color_tex ? material->color_tex->name : ""s;
+    pshape.emission     = material->emission;
   }
 
   // convert environments
@@ -2276,33 +2311,43 @@ void make_cornellbox_scene(sceneio_model* scene) {
   camera->film             = 0.024;
   camera->aspect           = 1;
   auto floor_shp           = add_shape(scene);
-  floor_shp->name          = "shapes/floor.yaml";
+  floor_shp->name          = "shapes/floor.json";
   floor_shp->positions     = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
   floor_shp->triangles     = {{0, 1, 2}, {2, 3, 0}};
-  floor_shp->color         = {0.725, 0.71, 0.68};
+  floor_shp->material = add_material(scene);
+  floor_shp->material->name = "materials/floor.json";
+  floor_shp->material->color         = {0.725, 0.71, 0.68};
   auto ceiling_shp         = add_shape(scene);
   ceiling_shp->name        = "ceiling";
-  ceiling_shp->name        = "shapes/ceiling.yaml";
+  ceiling_shp->name        = "shapes/ceiling.json";
   ceiling_shp->positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
   ceiling_shp->triangles   = {{0, 1, 2}, {2, 3, 0}};
-  ceiling_shp->color       = {0.725, 0.71, 0.68};
+  ceiling_shp->material = add_material(scene);
+  ceiling_shp->material->name = "materials/ceiling.json";
+  ceiling_shp->material->color       = {0.725, 0.71, 0.68};
   auto backwall_shp        = add_shape(scene);
-  backwall_shp->name       = "shapes/backwall.yaml";
+  backwall_shp->name       = "shapes/backwall.json";
   backwall_shp->positions  = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
   backwall_shp->triangles  = {{0, 1, 2}, {2, 3, 0}};
-  backwall_shp->color      = {0.725, 0.71, 0.68};
+  backwall_shp->material = add_material(scene);
+  backwall_shp->material->name = "materials/backwall.json";
+  backwall_shp->material->color      = {0.725, 0.71, 0.68};
   auto rightwall_shp       = add_shape(scene);
-  rightwall_shp->name      = "shapes/rightwall.yaml";
+  rightwall_shp->name      = "shapes/rightwall.json";
   rightwall_shp->positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
   rightwall_shp->triangles = {{0, 1, 2}, {2, 3, 0}};
-  rightwall_shp->color     = {0.14, 0.45, 0.091};
+  rightwall_shp->material = add_material(scene);
+  rightwall_shp->material->name = "materials/rightwall.json";
+  rightwall_shp->material->color     = {0.14, 0.45, 0.091};
   auto leftwall_shp        = add_shape(scene);
-  leftwall_shp->name       = "shapes/leftwall.yaml";
+  leftwall_shp->name       = "shapes/leftwall.json";
   leftwall_shp->positions  = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
   leftwall_shp->triangles  = {{0, 1, 2}, {2, 3, 0}};
-  leftwall_shp->color      = {0.63, 0.065, 0.05};
+  leftwall_shp->material = add_material(scene);
+  leftwall_shp->material->name = "materials/leftwall.json";
+  leftwall_shp->material->color      = {0.63, 0.065, 0.05};
   auto shortbox_shp        = add_shape(scene);
-  shortbox_shp->name       = "shapes/shortbox.yaml";
+  shortbox_shp->name       = "shapes/shortbox.json";
   shortbox_shp->positions  = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
       {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
       {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
@@ -2314,9 +2359,11 @@ void make_cornellbox_scene(sceneio_model* scene) {
   shortbox_shp->triangles  = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  shortbox_shp->color      = {0.725, 0.71, 0.68};
+  shortbox_shp->material = add_material(scene);
+  shortbox_shp->material->name = "materials/shortbox.json";
+  shortbox_shp->material->color      = {0.725, 0.71, 0.68};
   auto tallbox_shp         = add_shape(scene);
-  tallbox_shp->name        = "shapes/tallbox.yaml";
+  tallbox_shp->name        = "shapes/tallbox.json";
   tallbox_shp->positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
       {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
       {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
@@ -2329,13 +2376,17 @@ void make_cornellbox_scene(sceneio_model* scene) {
   tallbox_shp->triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  tallbox_shp->color       = {0.725, 0.71, 0.68};
+  tallbox_shp->material = add_material(scene);
+  tallbox_shp->material->name = "materials/tallbox.json";
+  tallbox_shp->material->color       = {0.725, 0.71, 0.68};
   auto light_shp           = add_shape(scene);
-  light_shp->name          = "shapes/light.yaml";
+  light_shp->name          = "shapes/light.json";
   light_shp->positions     = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
   light_shp->triangles     = {{0, 1, 2}, {2, 3, 0}};
-  light_shp->emission      = {17, 12, 4};
+  light_shp->material = add_material(scene);
+  light_shp->material->name = "materials/light.json";
+  light_shp->material->emission      = {17, 12, 4};
 }
 
 }  // namespace yocto

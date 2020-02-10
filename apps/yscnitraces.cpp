@@ -119,25 +119,26 @@ void init_scene(trace_scene& scene, sceneio_model* ioscene) {
     set_shape_radius(scene, id, ioshape->radius);
     set_shape_tangents(scene, id, ioshape->tangents);
     set_shape_frames(scene, id, ioshape->instances, ioshape->frame);
+    auto iomaterial = ioshape->material;
     set_shape_emission(
-        scene, id, ioshape->emission, texture_map.at(ioshape->emission_tex));
+        scene, id, iomaterial->emission, texture_map.at(iomaterial->emission_tex));
     set_shape_color(
-        scene, id, ioshape->color, texture_map.at(ioshape->color_tex));
+        scene, id, iomaterial->color, texture_map.at(iomaterial->color_tex));
     set_shape_specular(
-        scene, id, ioshape->specular, texture_map.at(ioshape->specular_tex));
-    set_shape_ior(scene, id, ioshape->ior);
+        scene, id, iomaterial->specular, texture_map.at(iomaterial->specular_tex));
+    set_shape_ior(scene, id, iomaterial->ior);
     set_shape_metallic(
-        scene, id, ioshape->metallic, texture_map.at(ioshape->metallic_tex));
-    set_shape_transmission(scene, id, ioshape->transmission, ioshape->thin,
-        ioshape->trdepth, texture_map.at(ioshape->transmission_tex));
+        scene, id, iomaterial->metallic, texture_map.at(iomaterial->metallic_tex));
+    set_shape_transmission(scene, id, iomaterial->transmission, iomaterial->thin,
+        iomaterial->trdepth, texture_map.at(iomaterial->transmission_tex));
     set_shape_roughness(
-        scene, id, ioshape->roughness, texture_map.at(ioshape->roughness_tex));
+        scene, id, iomaterial->roughness, texture_map.at(iomaterial->roughness_tex));
     set_shape_opacity(
-        scene, id, ioshape->opacity, texture_map.at(ioshape->opacity_tex));
-    set_shape_thin(scene, id, ioshape->thin);
-    set_shape_normalmap(scene, id, texture_map.at(ioshape->normal_tex));
-    set_shape_scattering(scene, id, ioshape->scattering, ioshape->scanisotropy,
-        texture_map.at(ioshape->scattering_tex));
+        scene, id, iomaterial->opacity, texture_map.at(iomaterial->opacity_tex));
+    set_shape_thin(scene, id, iomaterial->thin);
+    set_shape_normalmap(scene, id, texture_map.at(iomaterial->normal_tex));
+    set_shape_scattering(scene, id, iomaterial->scattering, iomaterial->scanisotropy,
+        texture_map.at(iomaterial->scattering_tex));
     ioshape = {};
   }
 
