@@ -1148,8 +1148,6 @@ static void save_yaml_scene(
   // save yaml file
   auto yaml = yaml_model{};
 
-  for (auto stat : scene_stats(scene)) yaml.comments.push_back(stat);
-
   auto def_cam = sceneio_camera{};
   for (auto& camera : scene->cameras) {
     auto& yelement = yaml.elements.emplace_back();
@@ -1607,10 +1605,6 @@ static void save_json_scene(
   auto js = json::object();
 
   js["asset"]          = json::object();
-  js["asset"]["stats"] = json::array();
-  for (auto stat : scene_stats(scene)) {
-    js["asset"]["stats"].push_back(stat);
-  }
 
   auto def_cam = sceneio_camera{};
   if (!scene->cameras.empty()) js["cameras"] = json::array();
@@ -1894,8 +1888,6 @@ static void load_obj_scene(
 static void save_obj_scene(
     const string& filename, const sceneio_model* scene, bool noparallel) {
   auto obj = obj_model{};
-
-  for (auto stat : scene_stats(scene)) obj.comments.push_back(stat);
 
   // convert cameras
   for (auto& camera : scene->cameras) {
@@ -2271,9 +2263,6 @@ void save_pbrt_scene(
     const string& filename, const sceneio_model* scene, bool noparallel) {
   // save pbrt
   auto pbrt = pbrt_model{};
-
-  // embed data
-  for (auto stat : scene_stats(scene)) pbrt.comments.push_back(stat);
 
   // convert camera
   auto  camera       = scene->cameras.front();
