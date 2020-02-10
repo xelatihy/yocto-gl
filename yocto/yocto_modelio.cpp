@@ -2282,20 +2282,22 @@ bool has_quads(const obj_shape& shape) {
 }
 
 // Get obj vertices
-static void get_vertices(const obj_shape& shape, int material, 
-    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords, 
+static void get_vertices(const obj_shape& shape, int material,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texcoords,
     vector<int>& vindex, bool flipv) {
   auto used_vertices = vector<bool>(shape.vertices.size(), false);
-  auto count = 0;
-  for(auto& elem : shape.faces) {
-    if(elem.material == material) {
-        for(auto vid = count; vid < count + elem.size; vid++) used_vertices[vid] = true;
+  auto count         = 0;
+  for (auto& elem : shape.faces) {
+    if (elem.material == material) {
+      for (auto vid = count; vid < count + elem.size; vid++)
+        used_vertices[vid] = true;
     }
     count += elem.size;
   }
-  for(auto& elem : shape.lines) {
-    if(elem.material == material) {
-        for(auto vid = count; vid < count + elem.size; vid++) used_vertices[vid] = true;
+  for (auto& elem : shape.lines) {
+    if (elem.material == material) {
+      for (auto vid = count; vid < count + elem.size; vid++)
+        used_vertices[vid] = true;
     }
     count += elem.size;
   }
@@ -2303,12 +2305,12 @@ static void get_vertices(const obj_shape& shape, int material,
   vmap.reserve(shape.vertices.size());
   vindex.resize(shape.vertices.size());
   for (auto vid = 0; vid < shape.vertices.size(); vid++) {
-    if(!used_vertices[vid]) {
+    if (!used_vertices[vid]) {
       vindex[vid] = -1;
       continue;
     }
     auto& vert = shape.vertices[vid];
-    auto it = vmap.find(vert);
+    auto  it   = vmap.find(vert);
     if (it != vmap.end()) {
       vindex[vid] = it->second;
       continue;
@@ -2338,11 +2340,11 @@ void get_triangles(const obj_model& obj, const obj_shape& shape, int material,
   triangles.reserve(shape.faces.size());
   auto cur = 0;
   for (auto& elem : shape.faces) {
-    if(elem.material == material) {
-        for (auto c = 2; c < elem.size; c++) {
-          triangles.push_back(
-              {vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c]});
-        }
+    if (elem.material == material) {
+      for (auto c = 2; c < elem.size; c++) {
+        triangles.push_back(
+            {vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c]});
+      }
     }
     cur += elem.size;
   }
@@ -2357,16 +2359,16 @@ void get_quads(const obj_model& obj, const obj_shape& shape, int material,
   quads.reserve(shape.faces.size());
   auto cur = 0;
   for (auto& elem : shape.faces) {
-    if(elem.material == material) {
-        if (elem.size == 4) {
-          quads.push_back(
-              {vindex[cur + 0], vindex[cur + 1], vindex[cur + 2], vindex[cur + 3]});
-        } else {
-          for (auto c = 2; c < elem.size; c++) {
-            quads.push_back({vindex[cur + 0], vindex[cur + c - 1], vindex[cur + c],
-                vindex[cur + c]});
-          }
+    if (elem.material == material) {
+      if (elem.size == 4) {
+        quads.push_back({vindex[cur + 0], vindex[cur + 1], vindex[cur + 2],
+            vindex[cur + 3]});
+      } else {
+        for (auto c = 2; c < elem.size; c++) {
+          quads.push_back({vindex[cur + 0], vindex[cur + c - 1],
+              vindex[cur + c], vindex[cur + c]});
         }
+      }
     }
     cur += elem.size;
   }
@@ -2381,10 +2383,10 @@ void get_lines(const obj_model& obj, const obj_shape& shape, int material,
   lines.reserve(shape.lines.size());
   auto cur = 0;
   for (auto& elem : shape.lines) {
-    if(elem.material == material) {
-        for (auto c = 1; c < elem.size; c++) {
-          lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
-        }
+    if (elem.material == material) {
+      for (auto c = 1; c < elem.size; c++) {
+        lines.push_back({vindex[cur + c - 1], vindex[cur + c]});
+      }
     }
     cur += elem.size;
   }
@@ -2399,10 +2401,10 @@ void get_points(const obj_model& obj, const obj_shape& shape, int material,
   points.reserve(shape.points.size());
   auto cur = 0;
   for (auto& elem : shape.points) {
-    if(elem.material == material) {
-        for (auto c = 0; c < elem.size; c++) {
-          points.push_back({vindex[cur + 0]});
-        }
+    if (elem.material == material) {
+      for (auto c = 0; c < elem.size; c++) {
+        points.push_back({vindex[cur + 0]});
+      }
     }
     cur += elem.size;
   }

@@ -364,7 +364,7 @@ void get_quads(const obj_model& obj, const obj_shape& shape, int material,
     vector<vec2f>& texcoords, bool flip_texcoord = false);
 void get_lines(const obj_model& obj, const obj_shape& shape, int material,
     vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texcoords,bool flip_texcoord = false);
+    vector<vec2f>& texcoords, bool flip_texcoord = false);
 void get_points(const obj_model& obj, const obj_shape& shape, int material,
     vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texcoords, bool flip_texcoord = false);

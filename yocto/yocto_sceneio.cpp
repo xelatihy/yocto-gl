@@ -1698,25 +1698,26 @@ static void load_obj_scene(
   auto shape_name_counts = unordered_map<string, int>{};
   for (auto& oshape : obj.shapes) {
     auto materials = get_materials(obj, oshape);
-    if(materials.empty()) materials.push_back("");
-    for(auto material_idx = 0; material_idx < materials.size(); material_idx++) {
-      auto& shape = scene.shapes.emplace_back();
+    if (materials.empty()) materials.push_back("");
+    for (auto material_idx = 0; material_idx < materials.size();
+         material_idx++) {
+      auto& shape     = scene.shapes.emplace_back();
       shape.name      = make_name("shape", scene.shapes.size());
       auto nmaterials = vector<string>{};
       auto ematerials = vector<int>{};
       auto has_quads_ = has_quads(oshape);
       if (!oshape.faces.empty() && !has_quads_) {
-        get_triangles(obj, oshape, material_idx, shape.triangles, 
-          shape.positions, shape.normals, shape.texcoords, true);
+        get_triangles(obj, oshape, material_idx, shape.triangles,
+            shape.positions, shape.normals, shape.texcoords, true);
       } else if (!oshape.faces.empty() && has_quads_) {
-        get_quads(obj, oshape, material_idx, shape.quads, shape.positions, 
-          shape.normals, shape.texcoords, true);
+        get_quads(obj, oshape, material_idx, shape.quads, shape.positions,
+            shape.normals, shape.texcoords, true);
       } else if (!oshape.lines.empty()) {
-        get_lines(obj, oshape, material_idx, shape.lines, shape.positions, 
-          shape.normals, shape.texcoords, true);
+        get_lines(obj, oshape, material_idx, shape.lines, shape.positions,
+            shape.normals, shape.texcoords, true);
       } else if (!oshape.points.empty()) {
-        get_points(obj, oshape, material_idx, shape.points, shape.positions, 
-          shape.normals, shape.texcoords, true);
+        get_points(obj, oshape, material_idx, shape.points, shape.positions,
+            shape.normals, shape.texcoords, true);
       } else {
         throw_emptyshape_error(filename, oshape.name);
       }
@@ -1725,14 +1726,14 @@ static void load_obj_scene(
         throw_missing_reference_error(
             filename, "material", oshape.materials.at(0));
       }
-      auto& omat      = obj.materials.at(material_map.at(materials[material_idx]));
-      shape.emission  = omat.pbr_emission;
-      shape.color     = omat.pbr_base;
-      shape.specular  = omat.pbr_specular;
-      shape.roughness = omat.pbr_roughness;
-      shape.ior       = omat.pbr_ior;
-      shape.metallic  = omat.pbr_metallic;
-      shape.coat      = omat.pbr_coat;
+      auto& omat = obj.materials.at(material_map.at(materials[material_idx]));
+      shape.emission         = omat.pbr_emission;
+      shape.color            = omat.pbr_base;
+      shape.specular         = omat.pbr_specular;
+      shape.roughness        = omat.pbr_roughness;
+      shape.ior              = omat.pbr_ior;
+      shape.metallic         = omat.pbr_metallic;
+      shape.coat             = omat.pbr_coat;
       shape.transmission     = omat.pbr_transmission;
       shape.scattering       = omat.pbr_volscattering;
       shape.scanisotropy     = omat.pbr_volanisotropy;
