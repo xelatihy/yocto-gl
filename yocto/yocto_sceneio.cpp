@@ -1597,6 +1597,11 @@ static void save_json_scene(
     if (!texture) return;
     ejs[name] = texture->name;
   };
+  auto add_ref = [](json& ejs, const string& name,
+                     auto ref) {
+    if (!ref) return;
+    ejs[name] = ref->name;
+  };
 
   // save yaml file
   auto js = json::object();
@@ -1631,14 +1636,11 @@ static void save_json_scene(
     add_tex(ejs, "emission_tex", environment->emission_tex);
   }
 
-  auto def_shape    = sceneio_shape{};
   auto def_material = sceneio_material{};
-  if (!scene->environments.empty()) js["shapes"] = json::array();
-  for (auto shape : scene->shapes) {
-    auto& ejs = js["shapes"].emplace_back();
-    add_val(ejs, "name", shape->name);
-    add_opt(ejs, "frame", shape->frame, def_shape.frame);
-    auto material = shape->material;
+  if (!scene->materials.empty()) js["materials"] = json::array();
+  for (auto material : scene->materials) {
+    auto& ejs = js["materials"].emplace_back();
+    add_val(ejs, "name", material->name);
     add_opt(ejs, "emission", material->emission, def_material.emission);
     add_opt(ejs, "color", material->color, def_material.color);
     add_opt(ejs, "specular", material->specular, def_material.specular);
@@ -1666,6 +1668,15 @@ static void save_json_scene(
     add_tex(ejs, "normal_tex", material->normal_tex);
     add_opt(ejs, "gltf_textures", material->gltf_textures,
         def_material.gltf_textures);
+  }
+
+  auto def_shape    = sceneio_shape{};
+  if (!scene->environments.empty()) js["shapes"] = json::array();
+  for (auto shape : scene->shapes) {
+    auto& ejs = js["shapes"].emplace_back();
+    add_val(ejs, "name", shape->name);
+    add_opt(ejs, "frame", shape->frame, def_shape.frame);
+    add_ref(ejs, "material", shape->material);
     if (!shape->positions.empty()) {
       auto path = replace_extension(shape->name, ".ply");
       add_val(ejs, "shape", path);
