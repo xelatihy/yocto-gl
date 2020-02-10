@@ -1699,7 +1699,7 @@ static void load_objx(const string& filename, obj_model& obj) {
 
 // Read obj
 void load_obj(const string& filename, obj_model& obj, bool geom_only,
-    bool split_elements, bool split_materials) {
+    bool split_elements, bool split_materials, bool ignore_groups) {
   // open file
   auto fs = open_file(filename, "rt");
 
@@ -1794,7 +1794,7 @@ void load_obj(const string& filename, obj_model& obj, bool geom_only,
         skip_whitespace(str);
       }
     } else if (cmd == "o" || cmd == "g") {
-      if (geom_only) continue;
+      if (geom_only || ignore_groups) continue;
       parse_value_or_empty(str, cmd == "o" ? oname : gname);
       if (!obj.shapes.back().vertices.empty()) {
         obj.shapes.emplace_back();

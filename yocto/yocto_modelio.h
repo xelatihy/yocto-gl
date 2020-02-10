@@ -325,7 +325,8 @@ struct obj_model {
 
 // Load and save obj
 void load_obj(const string& filename, obj_model& obj, bool geom_only = false,
-    bool split_elements = true, bool split_materials = false);
+    bool split_elements = true, bool split_materials = false, 
+    bool ignore_groups = false);
 void save_obj(const string& filename, const obj_model& obj);
 
 // Get obj shape. Obj is a facevarying format, so vertices might be duplicated.
