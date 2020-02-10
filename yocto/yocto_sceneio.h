@@ -234,7 +234,7 @@ struct sceneio_model {
   vector<sceneio_camera*>      cameras      = {};
   vector<sceneio_shape>       shapes       = {};
   vector<sceneio_subdiv>      subdivs      = {};
-  vector<sceneio_texture>     textures     = {};
+  vector<sceneio_texture*>     textures     = {};
   vector<sceneio_environment*> environments = {};
   vector<sceneio_node>        nodes        = {};
   vector<sceneio_animation>   animations   = {};
@@ -246,6 +246,7 @@ struct sceneio_model {
 // add element to a scene
 sceneio_camera* add_camera(sceneio_model& scene);
 sceneio_environment* add_environment(sceneio_model& scene);
+sceneio_texture* add_texture(sceneio_model& scene);
 
 }  // namespace yocto
 

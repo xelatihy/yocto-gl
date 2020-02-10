@@ -111,12 +111,12 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_camera_lens(scene, id, iocamera->lens, iocamera->aspect, iocamera->film);
     set_camera_focus(scene, id, iocamera->aperture, iocamera->focus);
   }
-  for (auto& iotexture : ioscene.textures) {
+  for (auto iotexture : ioscene.textures) {
     auto id = add_texture(scene);
-    if (!iotexture.hdr.empty()) {
-      set_texture(scene, id, std::move(iotexture.hdr));
-    } else if (!iotexture.ldr.empty()) {
-      set_texture(scene, id, std::move(iotexture.ldr));
+    if (!iotexture->hdr.empty()) {
+      set_texture(scene, id, std::move(iotexture->hdr));
+    } else if (!iotexture->ldr.empty()) {
+      set_texture(scene, id, std::move(iotexture->ldr));
     }
   }
   for (auto& iosubdiv : ioscene.subdivs) {
@@ -281,15 +281,15 @@ bool draw_glwidgets_camera(
 
 bool draw_glwidgets_texture(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& texture = app->ioscene.textures[id];
+  auto iotexture = app->ioscene.textures[id];
   auto  edited  = 0;
-  edited += draw_gltextinput(win, "name", texture.name);
+  edited += draw_gltextinput(win, "name", iotexture->name);
   draw_gllabel(win, "hdr",
-      to_string(texture.hdr.size().x) + " x " +
-          to_string(texture.hdr.size().y));
+      to_string(iotexture->hdr.size().x) + " x " +
+          to_string(iotexture->hdr.size().y));
   draw_gllabel(win, "ldr",
-      to_string(texture.ldr.size().x) + " x " +
-          to_string(texture.ldr.size().y));
+      to_string(iotexture->ldr.size().x) + " x " +
+          to_string(iotexture->ldr.size().y));
   // TODO: load texture
   return edited;
 }
@@ -594,11 +594,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
         win, "textures##2", app->selected_texture, app->ioscene.textures);
     if (draw_glwidgets_texture(win, app, app->selected_texture)) {
       stop_display(app);
-      auto& iotexture = app->ioscene.textures[app->selected_texture];
-      if (!iotexture.hdr.empty()) {
-        set_texture(app->scene, app->selected_texture, iotexture.hdr);
-      } else if (!iotexture.ldr.empty()) {
-        set_texture(app->scene, app->selected_texture, iotexture.ldr);
+      auto iotexture = app->ioscene.textures[app->selected_texture];
+      if (!iotexture->hdr.empty()) {
+        set_texture(app->scene, app->selected_texture, iotexture->hdr);
+      } else if (!iotexture->ldr.empty()) {
+        set_texture(app->scene, app->selected_texture, iotexture->ldr);
       }
       // TODO: maybe we should update lights for this
       reset_display(app);

@@ -289,12 +289,12 @@ vector<string> scene_stats(const sceneio_model& scene, bool verbose) {
                   format(accumulate(scene.subdivs,
                       [](auto& shape) { return shape.quadspos.size(); })));
   stats.push_back(
-      "texels4b:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.ldr.size().x * (size_t)texture.ldr.size().x;
+      "texels4b:     " + format(accumulate(scene.textures, [](auto texture) {
+        return (size_t)texture->ldr.size().x * (size_t)texture->ldr.size().x;
       })));
   stats.push_back(
-      "texels4f:     " + format(accumulate(scene.textures, [](auto& texture) {
-        return (size_t)texture.hdr.size().x * (size_t)texture.hdr.size().y;
+      "texels4f:     " + format(accumulate(scene.textures, [](auto texture) {
+        return (size_t)texture->hdr.size().x * (size_t)texture->hdr.size().y;
       })));
   stats.push_back("center:       " + format3(center(bbox)));
   stats.push_back("size:         " + format3(size(bbox)));
@@ -329,10 +329,10 @@ vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
       }
     }
   };
-  auto check_empty_textures = [&errs](const vector<sceneio_texture>& vals) {
-    for (auto& value : vals) {
-      if (value.hdr.empty() && value.ldr.empty()) {
-        errs.push_back("empty texture " + value.name);
+  auto check_empty_textures = [&errs](const vector<sceneio_texture*>& vals) {
+    for (auto value : vals) {
+      if (value->hdr.empty() && value->ldr.empty()) {
+        errs.push_back("empty texture " + value->name);
       }
     }
   };
@@ -341,7 +341,7 @@ vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
   check_names(scene.shapes, "shape");
   // check_names(scene.shapes, "instance");
   // check_names(scene.shapes, "object");
-  check_names(scene.textures, "texture");
+  check_names_(scene.textures, "texture");
   check_names_(scene.environments, "environment");
   check_names(scene.nodes, "node");
   check_names(scene.animations, "animation");
@@ -369,6 +369,9 @@ sceneio_camera* add_camera(sceneio_model& scene) {
 }
 sceneio_environment* add_environment(sceneio_model& scene) {
   return scene.environments.emplace_back(new sceneio_environment{});
+}
+sceneio_texture* add_texture(sceneio_model& scene) {
+  return scene.textures.emplace_back(new sceneio_texture{});
 }
 
 // Updates the scene and scene's instances bounding boxes
@@ -424,10 +427,9 @@ void add_radius(sceneio_model& scene, float radius = 0.001f) {
 
 // Add a sky environment
 void add_sky(sceneio_model& scene, float sun_angle) {
-  auto texture = sceneio_texture{};
-  texture.name = "environments/sky.hdr";
-  texture.hdr  = make_sunsky({1024, 512}, sun_angle);
-  scene.textures.push_back(texture);
+  auto texture = add_texture(scene);
+  texture->name = "environments/sky.hdr";
+  texture->hdr  = make_sunsky({1024, 512}, sun_angle);
   auto environment         = add_environment(scene);
   environment->name         = "environments/sky.yaml";
   environment->emission     = {1, 1, 1};
@@ -463,9 +465,9 @@ void trim_memory(sceneio_model& scene) {
     subdiv.radius.shrink_to_fit();
     subdiv.tangents.shrink_to_fit();
   }
-  for (auto& texture : scene.textures) {
-    texture.ldr.shrink_to_fit();
-    texture.hdr.shrink_to_fit();
+  for (auto texture : scene.textures) {
+    texture->ldr.shrink_to_fit();
+    texture->hdr.shrink_to_fit();
   }
   scene.cameras.shrink_to_fit();
   scene.shapes.shrink_to_fit();
@@ -577,19 +579,19 @@ sceneio_subdiv subdivide_subdiv(const sceneio_subdiv& shape) {
 sceneio_subdiv displace_subdiv(
     const sceneio_model& scene, const sceneio_subdiv& subdiv) {
   // Evaluate a texture
-  auto eval_texture = [](const sceneio_texture& texture,
+  auto eval_texture = [](const sceneio_texture* texture,
                           const vec2f&          texcoord) -> vec4f {
-    if (!texture.hdr.empty()) {
-      return eval_image(texture.hdr, texcoord, false, false);
-    } else if (!texture.ldr.empty()) {
-      return eval_image(texture.ldr, texcoord, true, false, false);
+    if (!texture->hdr.empty()) {
+      return eval_image(texture->hdr, texcoord, false, false);
+    } else if (!texture->ldr.empty()) {
+      return eval_image(texture->ldr, texcoord, true, false, false);
     } else {
       return {1, 1, 1, 1};
     }
   };
 
   if (!subdiv.displacement || subdiv.displacement_tex < 0) return subdiv;
-  auto& displacement = scene.textures[subdiv.displacement_tex];
+  auto displacement = scene.textures[subdiv.displacement_tex];
   if (subdiv.texcoords.empty()) {
     throw std::runtime_error("missing texture coordinates");
     return {};
@@ -606,7 +608,7 @@ sceneio_subdiv displace_subdiv(
       normals = compute_normals(subdiv.triangles, subdiv.positions);
     for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
       auto disp = mean(xyz(eval_texture(displacement, subdiv.texcoords[vid])));
-      if (!displacement.ldr.empty()) disp -= 0.5f;
+      if (!displacement->ldr.empty()) disp -= 0.5f;
       displaced.positions[vid] += normals[vid] * subdiv.displacement * disp;
     }
     if (subdiv.smooth || !subdiv.normals.empty()) {
@@ -619,7 +621,7 @@ sceneio_subdiv displace_subdiv(
       normals = compute_normals(subdiv.triangles, subdiv.positions);
     for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
       auto disp = mean(xyz(eval_texture(displacement, subdiv.texcoords[vid])));
-      if (!is_hdr_filename(displacement.name)) disp -= 0.5f;
+      if (!is_hdr_filename(displacement->name)) disp -= 0.5f;
       displaced.positions[vid] += normals[vid] * subdiv.displacement * disp;
     }
     if (subdiv.smooth || !subdiv.normals.empty()) {
@@ -635,7 +637,7 @@ sceneio_subdiv displace_subdiv(
       for (auto i = 0; i < 4; i++) {
         auto disp = mean(
             xyz(eval_texture(displacement, subdiv.texcoords[qtxt[i]])));
-        if (!displacement.ldr.empty()) disp -= 0.5f;
+        if (!displacement->ldr.empty()) disp -= 0.5f;
         offset[qpos[i]] += subdiv.displacement * disp;
         count[qpos[i]] += 1;
       }
@@ -949,18 +951,18 @@ static void load_yaml_scene(
       value = it->second;
       return it->second;
     }
-    auto& texture = scene.textures.emplace_back();
+    auto texture = add_texture(scene);
     try {
       if (is_hdr_filename(path)) {
-        load_image(get_dirname(filename) + path, texture.hdr);
+        load_image(get_dirname(filename) + path, texture->hdr);
       } else {
-        load_imageb(get_dirname(filename) + path, texture.ldr);
+        load_imageb(get_dirname(filename) + path, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name      = make_safe_filename(dirname + get_basename(path) +
-                                      (!texture.ldr.empty() ? ".png" : ".hdr"));
+    texture->name      = make_safe_filename(dirname + get_basename(path) +
+                                      (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     value             = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
@@ -1111,7 +1113,7 @@ static void save_yaml_scene(
   };
   auto add_tex = [&scene](yaml_element& yelement, const string& name, int ref) {
     if (ref < 0) return;
-    add_yaml_value(yelement, name, scene.textures[ref].name);
+    add_yaml_value(yelement, name, scene.textures[ref]->name);
   };
 
   // save yaml file
@@ -1237,13 +1239,13 @@ static void save_yaml_scene(
   }
 
   // save textures
-  for (auto& texture : scene.textures) {
-    if (!texture.ldr.empty() || !texture.hdr.empty()) {
+  for (auto texture : scene.textures) {
+    if (!texture->ldr.empty() || !texture->hdr.empty()) {
       try {
-        if (!texture.hdr.empty()) {
-          save_image(get_dirname(filename) + texture.name, texture.hdr);
+        if (!texture->hdr.empty()) {
+          save_image(get_dirname(filename) + texture->name, texture->hdr);
         } else {
-          save_imageb(get_dirname(filename) + texture.name, texture.ldr);
+          save_imageb(get_dirname(filename) + texture->name, texture->ldr);
         }
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
@@ -1346,18 +1348,18 @@ static void load_json_scene(
       value = it->second;
       return it->second;
     }
-    auto& texture = scene.textures.emplace_back();
+    auto texture = add_texture(scene);
     try {
       if (is_hdr_filename(path)) {
-        load_image(get_dirname(filename) + path, texture.hdr);
+        load_image(get_dirname(filename) + path, texture->hdr);
       } else {
-        load_imageb(get_dirname(filename) + path, texture.ldr);
+        load_imageb(get_dirname(filename) + path, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name      = make_safe_filename(dirname + get_basename(path) +
-                                      (!texture.ldr.empty() ? ".png" : ".hdr"));
+    texture->name      = make_safe_filename(dirname + get_basename(path) +
+                                      (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     value             = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
@@ -1519,7 +1521,7 @@ static void save_json_scene(
   };
   auto add_tex = [&scene](json& ejs, const string& name, int ref) {
     if (ref < 0) return;
-    ejs[name] = scene.textures[ref].name;
+    ejs[name] = scene.textures[ref]->name;
   };
 
   // save yaml file
@@ -1643,13 +1645,13 @@ static void save_json_scene(
   }
 
   // save textures
-  for (auto& texture : scene.textures) {
-    if (!texture.ldr.empty() || !texture.hdr.empty()) {
+  for (auto texture : scene.textures) {
+    if (!texture->ldr.empty() || !texture->hdr.empty()) {
       try {
-        if (!texture.hdr.empty()) {
-          save_image(get_dirname(filename) + texture.name, texture.hdr);
+        if (!texture->hdr.empty()) {
+          save_image(get_dirname(filename) + texture->name, texture->hdr);
         } else {
-          save_imageb(get_dirname(filename) + texture.name, texture.ldr);
+          save_imageb(get_dirname(filename) + texture->name, texture->ldr);
         }
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
@@ -1698,18 +1700,18 @@ static void load_obj_scene(
     if (path == "") return -1;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
-    auto& texture = scene.textures.emplace_back();
+    auto texture = add_texture(scene);
     try {
       if (is_hdr_filename(path)) {
-        load_image(get_dirname(filename) + path, texture.hdr);
+        load_image(get_dirname(filename) + path, texture->hdr);
       } else {
-        load_imageb(get_dirname(filename) + path, texture.ldr);
+        load_imageb(get_dirname(filename) + path, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name      = make_safe_filename(dirname + get_basename(path) +
-                                      (!texture.ldr.empty() ? ".png" : ".hdr"));
+    texture->name      = make_safe_filename(dirname + get_basename(path) +
+                                      (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
   };
@@ -1818,7 +1820,7 @@ static void save_obj_scene(
   auto get_texture = [&scene](int tex) {
     if (tex < 0) return obj_texture_info{};
     auto info = obj_texture_info{};
-    info.path = scene.textures[tex].name;
+    info.path = scene.textures[tex]->name;
     return info;
   };
 
@@ -1882,13 +1884,13 @@ static void save_obj_scene(
   save_obj(filename, obj);
 
   // save textures
-  for (auto& texture : scene.textures) {
-    if (texture.ldr.empty() && texture.hdr.empty()) continue;
+  for (auto texture : scene.textures) {
+    if (texture->ldr.empty() && texture->hdr.empty()) continue;
     try {
-      if (!texture.hdr.empty()) {
-        save_image(get_dirname(filename) + texture.name, texture.hdr);
+      if (!texture->hdr.empty()) {
+        save_image(get_dirname(filename) + texture->name, texture->hdr);
       } else {
-        save_imageb(get_dirname(filename) + texture.name, texture.ldr);
+        save_imageb(get_dirname(filename) + texture->name, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
@@ -1967,18 +1969,18 @@ static void load_gltf_scene(
     if (path == "") return -1;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
-    auto& texture = scene.textures.emplace_back();
+    auto texture = add_texture(scene);
     try {
       if (is_hdr_filename(path)) {
-        load_image(get_dirname(filename) + path, texture.hdr);
+        load_image(get_dirname(filename) + path, texture->hdr);
       } else {
-        load_imageb(get_dirname(filename) + path, texture.ldr);
+        load_imageb(get_dirname(filename) + path, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name      = make_safe_filename(dirname + get_basename(path) +
-                                      (!texture.ldr.empty() ? ".png" : ".hdr"));
+    texture->name      = make_safe_filename(dirname + get_basename(path) +
+                                      (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
   };
@@ -2089,18 +2091,18 @@ static void load_pbrt_scene(
     if (path == "") return -1;
     auto it = texture_map.find(path);
     if (it != texture_map.end()) return it->second;
-    auto& texture = scene.textures.emplace_back();
+    auto texture = add_texture(scene);
     try {
       if (is_hdr_filename(path)) {
-        load_image(get_dirname(filename) + path, texture.hdr);
+        load_image(get_dirname(filename) + path, texture->hdr);
       } else {
-        load_imageb(get_dirname(filename) + path, texture.ldr);
+        load_imageb(get_dirname(filename) + path, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
-    texture.name      = make_safe_filename(dirname + get_basename(path) +
-                                      (!texture.ldr.empty() ? ".png" : ".hdr"));
+    texture->name      = make_safe_filename(dirname + get_basename(path) +
+                                      (!texture->ldr.empty() ? ".png" : ".hdr"));
     texture_map[path] = (int)scene.textures.size() - 1;
     return (int)scene.textures.size() - 1;
   };
@@ -2189,7 +2191,7 @@ void save_pbrt_scene(
     pshape.ior          = shape.ior;
     pshape.opacity      = shape.opacity;
     pshape.color_map =
-        shape.color_tex >= 0 ? scene.textures[shape.color_tex].name : ""s;
+        shape.color_tex >= 0 ? scene.textures[shape.color_tex]->name : ""s;
     pshape.emission = shape.emission;
   }
 
@@ -2198,7 +2200,7 @@ void save_pbrt_scene(
     auto& penvironment    = pbrt.environments.emplace_back();
     penvironment.emission = environment->emission;
     if (environment->emission_tex >= 0) {
-      penvironment.emission_map = scene.textures[environment->emission_tex].name;
+      penvironment.emission_map = scene.textures[environment->emission_tex]->name;
     }
   }
 
@@ -2219,13 +2221,13 @@ void save_pbrt_scene(
   }
 
   // save textures
-  for (auto& texture : scene.textures) {
-    if (texture.ldr.empty() && texture.hdr.empty()) continue;
+  for (auto texture : scene.textures) {
+    if (texture->ldr.empty() && texture->hdr.empty()) continue;
     try {
-      if (!texture.hdr.empty()) {
-        save_image(get_dirname(filename) + texture.name, texture.hdr);
+      if (!texture->hdr.empty()) {
+        save_image(get_dirname(filename) + texture->name, texture->hdr);
       } else {
-        save_imageb(get_dirname(filename) + texture.name, texture.ldr);
+        save_imageb(get_dirname(filename) + texture->name, texture->ldr);
       }
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());

@@ -173,12 +173,12 @@ void init_scene(opengl_scene& glscene, sceneio_model& ioscene) {
   }
 
   // textures
-  for (auto& texture : ioscene.textures) {
+  for (auto iotexture : ioscene.textures) {
     auto id = add_texture(glscene);
-    if (!texture.hdr.empty()) {
-      set_texture(glscene, id, texture.hdr);
-    } else if (!texture.ldr.empty()) {
-      set_texture(glscene, id, texture.ldr);
+    if (!iotexture->hdr.empty()) {
+      set_texture(glscene, id, iotexture->hdr);
+    } else if (!iotexture->ldr.empty()) {
+      set_texture(glscene, id, iotexture->ldr);
     }
   }
 
@@ -241,14 +241,14 @@ bool draw_glwidgets_camera(
 /// Visit struct elements.
 bool draw_glwidgets_texture(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& texture = app->ioscene.textures[id];
-  draw_gllabel(win, "name", texture.name);
+  auto iotexture = app->ioscene.textures[id];
+  draw_gllabel(win, "name", iotexture->name);
   draw_gllabel(win, "hdr",
-      to_string(texture.hdr.size().x) + " x " +
-          to_string(texture.hdr.size().y));
+      to_string(iotexture->hdr.size().x) + " x " +
+          to_string(iotexture->hdr.size().y));
   draw_gllabel(win, "ldr",
-      to_string(texture.ldr.size().x) + " x " +
-          to_string(texture.ldr.size().y));
+      to_string(iotexture->ldr.size().x) + " x " +
+          to_string(iotexture->ldr.size().y));
   return false;
 }
 
@@ -504,11 +504,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "texture##2", app->selected_texture, app->ioscene.textures);
     if (draw_glwidgets_texture(win, app, app->selected_texture)) {
-      auto& texture = app->ioscene.textures[app->selected_texture];
-      if (!texture.hdr.empty()) {
-        set_texture(app->glscene, app->selected_texture, texture.hdr);
-      } else if (!texture.hdr.empty()) {
-        set_texture(app->glscene, app->selected_texture, texture.ldr);
+      auto iotexture = app->ioscene.textures[app->selected_texture];
+      if (!iotexture->hdr.empty()) {
+        set_texture(app->glscene, app->selected_texture, iotexture->hdr);
+      } else if (!iotexture->hdr.empty()) {
+        set_texture(app->glscene, app->selected_texture, iotexture->ldr);
       }
     }
     end_glheader(win);
