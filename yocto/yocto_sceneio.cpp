@@ -1647,7 +1647,7 @@ static void load_obj_scene(
   // Parse obj
   // load obj
   auto obj = obj_model{};
-  load_obj(filename, obj, false, true, false, true);
+  load_obj(filename, obj, false, true, false);
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
