@@ -137,21 +137,11 @@
     {
       "name": "shapes/floor.yaml",
       "shape": "shapes/floor.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "color_tex": "textures/floor.png"
+      "material": "materials/floor.yaml"
     },
     {
       "name": "shapes/largearealight1.yaml",
       "shape": "shapes/largearealight1.ply",
-      "emission": [
-        10,
-        10,
-        10
-      ],
       "lookat": [
         -0.8,
         1.6,
@@ -162,16 +152,12 @@
         0,
         1,
         0
-      ]
+      ],
+      "material": "materials/largearealight1.yaml"
     },
     {
       "name": "shapes/largearealight2.yaml",
       "shape": "shapes/largearealight2.ply",
-      "emission": [
-        10,
-        10,
-        10
-      ],
       "lookat": [
         0.8,
         1.6,
@@ -182,20 +168,12 @@
         0,
         1,
         0
-      ]
+      ],
+      "material": "materials/largearealight2.yaml"
     },
     {
       "name": "shapes/sphere-glass-sharp.yaml",
       "shape": "shapes/sphere.ply",
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "specular": 1,
-      "transmission": 1,
-      "roughness": 0,
-      "thin": false,
       "frame": [
         1,
         0,
@@ -209,20 +187,12 @@
         -0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-glass-sharp.yaml"
     },
     {
       "name": "shapes/sphere-glass-rough.yaml",
       "shape": "shapes/sphere.ply",
-      "specular": 1,
-      "color": [
-        1,
-        0.7,
-        0.7
-      ],
-      "transmission": 1,
-      "roughness": 0.1,
-      "thin": false,
       "frame": [
         1,
         0,
@@ -236,18 +206,12 @@
         -0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-glass-rough.yaml"
     },
     {
       "name": "shapes/sphere-transparent.yaml",
       "shape": "shapes/sphere.ply",
-      "color": [
-        0.7,
-        0.5,
-        0.5
-      ],
-      "roughness": 1,
-      "opacity": 0.2,
       "frame": [
         1,
         0,
@@ -261,20 +225,12 @@
         0,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-transparent.yaml"
     },
     {
       "name": "shapes/sphere-thinglass-sharp.yaml",
       "shape": "shapes/sphere.ply",
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "transmission": 1,
-      "roughness": 0,
-      "thin": true,
       "frame": [
         1,
         0,
@@ -288,20 +244,12 @@
         0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-thinglass-sharp.yaml"
     },
     {
       "name": "shapes/sphere-thinglass-rough.yaml",
       "shape": "shapes/sphere.ply",
-      "specular": 1,
-      "color": [
-        1,
-        0.7,
-        0.7
-      ],
-      "transmission": 1,
-      "roughness": 0.05,
-      "thin": true,
       "frame": [
         1,
         0,
@@ -315,20 +263,12 @@
         0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-thinglass-rough.yaml"
     },
     {
       "name": "shapes/bunny-glass-sharp.yaml",
       "shape": "shapes/bunny.obj",
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "specular": 1,
-      "transmission": 1,
-      "roughness": 0,
-      "thin": false,
       "frame": [
         1,
         0,
@@ -342,20 +282,12 @@
         -0.4,
         0,
         -0.4
-      ]
+      ],
+      "material": "materials/bunny-glass-sharp.yaml"
     },
     {
       "name": "shapes/bunny-glass-rough.yaml",
       "shape": "shapes/bunny.obj",
-      "specular": 1,
-      "color": [
-        1,
-        0.7,
-        0.7
-      ],
-      "transmission": 1,
-      "roughness": 0.1,
-      "thin": false,
       "frame": [
         1,
         0,
@@ -369,18 +301,12 @@
         -0.2,
         0,
         -0.4
-      ]
+      ],
+      "material": "materials/bunny-glass-rough.yaml"
     },
     {
       "name": "shapes/bunny-transparent.yaml",
       "shape": "shapes/bunny.obj",
-      "color": [
-        0.7,
-        0.5,
-        0.5
-      ],
-      "roughness": 1,
-      "opacity": 0.2,
       "frame": [
         1,
         0,
@@ -394,20 +320,12 @@
         0,
         0,
         -0.4
-      ]
+      ],
+      "material": "materials/bunny-transparent.yaml"
     },
     {
       "name": "shapes/bunny-thinglass-sharp.yaml",
       "shape": "shapes/bunny.obj",
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "transmission": 1,
-      "roughness": 0,
-      "thin": true,
       "frame": [
         1,
         0,
@@ -421,20 +339,12 @@
         0.2,
         0,
         -0.4
-      ]
+      ],
+      "material": "materials/bunny-thinglass-sharp.yaml"
     },
     {
       "name": "shapes/bunny-thinglass-rough.yaml",
       "shape": "shapes/bunny.obj",
-      "specular": 1,
-      "color": [
-        1,
-        0.7,
-        0.7
-      ],
-      "transmission": 1,
-      "roughness": 0.05,
-      "thin": true,
       "frame": [
         1,
         0,
@@ -448,7 +358,151 @@
         0.4,
         0,
         -0.4
+      ],
+      "material": "materials/bunny-thinglass-rough.yaml"
+    }
+  ],
+  "materials": [
+    {
+      "name": "materials/floor.yaml",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "color_tex": "textures/floor.png"
+    },
+    {
+      "name": "materials/largearealight1.yaml",
+      "emission": [
+        10,
+        10,
+        10
       ]
+    },
+    {
+      "name": "materials/largearealight2.yaml",
+      "emission": [
+        10,
+        10,
+        10
+      ]
+    },
+    {
+      "name": "materials/sphere-glass-sharp.yaml",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "specular": 1,
+      "transmission": 1,
+      "roughness": 0,
+      "thin": false
+    },
+    {
+      "name": "materials/sphere-glass-rough.yaml",
+      "specular": 1,
+      "color": [
+        1,
+        0.7,
+        0.7
+      ],
+      "transmission": 1,
+      "roughness": 0.1,
+      "thin": false
+    },
+    {
+      "name": "materials/sphere-transparent.yaml",
+      "color": [
+        0.7,
+        0.5,
+        0.5
+      ],
+      "roughness": 1,
+      "opacity": 0.2
+    },
+    {
+      "name": "materials/sphere-thinglass-sharp.yaml",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "transmission": 1,
+      "roughness": 0,
+      "thin": true
+    },
+    {
+      "name": "materials/sphere-thinglass-rough.yaml",
+      "specular": 1,
+      "color": [
+        1,
+        0.7,
+        0.7
+      ],
+      "transmission": 1,
+      "roughness": 0.05,
+      "thin": true
+    },
+    {
+      "name": "materials/bunny-glass-sharp.yaml",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "specular": 1,
+      "transmission": 1,
+      "roughness": 0,
+      "thin": false
+    },
+    {
+      "name": "materials/bunny-glass-rough.yaml",
+      "specular": 1,
+      "color": [
+        1,
+        0.7,
+        0.7
+      ],
+      "transmission": 1,
+      "roughness": 0.1,
+      "thin": false
+    },
+    {
+      "name": "materials/bunny-transparent.yaml",
+      "color": [
+        0.7,
+        0.5,
+        0.5
+      ],
+      "roughness": 1,
+      "opacity": 0.2
+    },
+    {
+      "name": "materials/bunny-thinglass-sharp.yaml",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "transmission": 1,
+      "roughness": 0,
+      "thin": true
+    },
+    {
+      "name": "materials/bunny-thinglass-rough.yaml",
+      "specular": 1,
+      "color": [
+        1,
+        0.7,
+        0.7
+      ],
+      "transmission": 1,
+      "roughness": 0.05,
+      "thin": true
     }
   ]
 }

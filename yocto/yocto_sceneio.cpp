@@ -1399,8 +1399,9 @@ static void load_json_scene(
     return texture;
   };
 
-  // shape map
+  // material map
   auto shape_map = unordered_map<string, sceneio_shape*>{{"", nullptr}};
+  auto material_map = unordered_map<string, sceneio_material*>{{"", nullptr}};
 
   // check for conversion errors
   try {
@@ -1439,19 +1440,10 @@ static void load_json_scene(
         }
       }
     }
-    if (js.contains("shapes")) {
-      for (auto& ejs : js.at("shapes")) {
-        auto shape = add_shape(scene);
-        get_value(ejs, "name", shape->name);
-        get_value(ejs, "frame", shape->frame);
-        if (ejs.contains("lookat")) {
-          auto lookat = identity3x3f;
-          get_value(ejs, "lookat", lookat);
-          shape->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
-        }
+    if (js.contains("materials")) {
+      for(auto& ejs : js.at("materials")) {
         auto material   = add_material(scene);
-        material->name  = shape->name;
-        shape->material = material;
+        get_value(ejs, "name", material->name);
         get_value(ejs, "emission", material->emission);
         get_value(ejs, "color", material->color);
         get_value(ejs, "metallic", material->metallic);
@@ -1476,6 +1468,49 @@ static void load_json_scene(
         get_texture(ejs, "normal_tex", material->normal_tex);
         get_texture(ejs, "normal_tex", material->normal_tex);
         get_value(ejs, "gltf_textures", material->gltf_textures);
+        material_map[material->name] = material;
+      }
+    }
+    if (js.contains("shapes")) {
+      for (auto& ejs : js.at("shapes")) {
+        auto shape = add_shape(scene);
+        get_value(ejs, "name", shape->name);
+        get_value(ejs, "frame", shape->frame);
+        if (ejs.contains("lookat")) {
+          auto lookat = identity3x3f;
+          get_value(ejs, "lookat", lookat);
+          shape->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+        }
+        get_ref(ejs, "material", shape->material, material_map);
+        if(!shape->material) {
+          auto material   = add_material(scene);
+          material->name  = shape->name;
+          shape->material = material;
+        }
+        get_value(ejs, "emission", shape->material->emission);
+        get_value(ejs, "color", shape->material->color);
+        get_value(ejs, "metallic", shape->material->metallic);
+        get_value(ejs, "specular", shape->material->specular);
+        get_value(ejs, "roughness", shape->material->roughness);
+        get_value(ejs, "coat", shape->material->coat);
+        get_value(ejs, "transmission", shape->material->transmission);
+        get_value(ejs, "thin", shape->material->thin);
+        get_value(ejs, "ior", shape->material->ior);
+        get_value(ejs, "trdepth", shape->material->trdepth);
+        get_value(ejs, "scattering", shape->material->scattering);
+        get_value(ejs, "scanisotropy", shape->material->scanisotropy);
+        get_value(ejs, "opacity", shape->material->opacity);
+        get_value(ejs, "coat", shape->material->coat);
+        get_texture(ejs, "emission_tex", shape->material->emission_tex);
+        get_texture(ejs, "color_tex", shape->material->color_tex);
+        get_texture(ejs, "metallic_tex", shape->material->metallic_tex);
+        get_texture(ejs, "specular_tex", shape->material->specular_tex);
+        get_texture(ejs, "transmission_tex", shape->material->transmission_tex);
+        get_texture(ejs, "roughness_tex", shape->material->roughness_tex);
+        get_texture(ejs, "scattering_tex", shape->material->scattering_tex);
+        get_texture(ejs, "normal_tex", shape->material->normal_tex);
+        get_texture(ejs, "normal_tex", shape->material->normal_tex);
+        get_value(ejs, "gltf_textures", shape->material->gltf_textures);
         if (ejs.contains("shape")) {
           auto path = ""s;
           get_value(ejs, "shape", path);

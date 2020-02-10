@@ -137,24 +137,11 @@
     {
       "name": "shapes/floor.yaml",
       "shape": "shapes/floor.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "color_tex": "textures/floor.png"
+      "material": "materials/floor.yaml"
     },
     {
       "name": "shapes/bunny-uvgrid.yaml",
       "shape": "shapes/bunny.obj",
-      "specular": 1,
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -168,18 +155,12 @@
         -0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/bunny-uvgrid.yaml"
     },
     {
       "name": "shapes/sphere-plastic-sharp.yaml",
       "shape": "shapes/sphere.ply",
-      "specular": 1,
-      "color": [
-        0.5,
-        0.5,
-        0.7
-      ],
-      "roughness": 0.01,
       "frame": [
         1,
         0,
@@ -193,18 +174,12 @@
         -0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-plastic-sharp.yaml"
     },
     {
       "name": "shapes/bunny-metal-rough.yaml",
       "shape": "shapes/bunny.obj",
-      "color": [
-        0.66,
-        0.45,
-        0.34
-      ],
-      "metallic": 1,
-      "roughness": 0.2,
       "frame": [
         1,
         0,
@@ -218,18 +193,12 @@
         0,
         0,
         0
-      ]
+      ],
+      "material": "materials/bunny-metal-rough.yaml"
     },
     {
       "name": "shapes/sphere-plastic-rough.yaml",
       "shape": "shapes/sphere.ply",
-      "specular": 1,
-      "color": [
-        0.5,
-        0.7,
-        0.5
-      ],
-      "roughness": 0.2,
       "frame": [
         1,
         0,
@@ -243,18 +212,12 @@
         0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-plastic-rough.yaml"
     },
     {
       "name": "shapes/bunny-metal-sharp.yaml",
       "shape": "shapes/bunny.obj",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "metallic": 1,
-      "roughness": 0,
       "frame": [
         1,
         0,
@@ -268,7 +231,70 @@
         0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/bunny-metal-sharp.yaml"
+    }
+  ],
+  "materials": [
+    {
+      "name": "materials/floor.yaml",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "color_tex": "textures/floor.png"
+    },
+    {
+      "name": "materials/bunny-uvgrid.yaml",
+      "specular": 1,
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/sphere-plastic-sharp.yaml",
+      "specular": 1,
+      "color": [
+        0.5,
+        0.5,
+        0.7
+      ],
+      "roughness": 0.01
+    },
+    {
+      "name": "materials/bunny-metal-rough.yaml",
+      "color": [
+        0.66,
+        0.45,
+        0.34
+      ],
+      "metallic": 1,
+      "roughness": 0.2
+    },
+    {
+      "name": "materials/sphere-plastic-rough.yaml",
+      "specular": 1,
+      "color": [
+        0.5,
+        0.7,
+        0.5
+      ],
+      "roughness": 0.2
+    },
+    {
+      "name": "materials/bunny-metal-sharp.yaml",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "metallic": 1,
+      "roughness": 0
     }
   ]
 }

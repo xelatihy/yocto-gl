@@ -137,13 +137,7 @@
     {
       "name": "shapes/floor.yaml",
       "shape": "shapes/floor.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "color_tex": "textures/floor.png",
-      "specular": 0
+      "material": "materials/floor.yaml"
     },
     {
       "name": "shapes/bunny-uvgrid-coated.yaml",
@@ -162,15 +156,7 @@
         0
       ],
       "shape": "shapes/bunny.obj",
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "specular": 1,
-      "roughness": 0.2,
-      "coat": 1,
-      "color_tex": "textures/uvgrid.png"
+      "material": "materials/bunny-uvgrid-coated.yaml"
     },
     {
       "name": "shapes/bunny-volume-jade.yaml",
@@ -189,20 +175,7 @@
         0
       ],
       "shape": "shapes/bunny.obj",
-      "color": [
-        0.5,
-        0.5,
-        0.5
-      ],
-      "roughness": 0,
-      "specular": 1,
-      "transmission": 1,
-      "scattering": [
-        0.3,
-        0.6,
-        0.3
-      ],
-      "thin": false
+      "material": "materials/bunny-volume-jade.yaml"
     },
     {
       "name": "shapes/bunny-metal-rough.yaml",
@@ -221,13 +194,7 @@
         0
       ],
       "shape": "shapes/bunny.obj",
-      "color": [
-        0.66,
-        0.45,
-        0.34
-      ],
-      "metallic": 1,
-      "roughness": 0.2
+      "material": "materials/bunny-metal-rough.yaml"
     },
     {
       "name": "shapes/sphere-volume-glass.yaml",
@@ -246,16 +213,7 @@
         0
       ],
       "shape": "shapes/sphere.ply",
-      "color": [
-        1,
-        0.5,
-        0.5
-      ],
-      "roughness": 0,
-      "specular": 1,
-      "transmission": 1,
-      "radius": 0.02,
-      "thin": false
+      "material": "materials/sphere-volume-glass.yaml"
     },
     {
       "name": "shapes/sphere-plastic-rough-bumped.yaml",
@@ -274,14 +232,7 @@
         0
       ],
       "shape": "shapes/sphere.ply",
-      "color": [
-        0.5,
-        0.7,
-        0.5
-      ],
-      "specular": 1,
-      "roughness": 0.2,
-      "normal_tex": "textures/bumps-normal.png"
+      "material": "materials/sphere-plastic-rough-bumped.yaml"
     },
     {
       "name": "shapes/arealight1.yaml",
@@ -297,11 +248,7 @@
         0
       ],
       "shape": "shapes/arealight1.ply",
-      "emission": [
-        20,
-        20,
-        20
-      ]
+      "material": "materials/arealight1.yaml"
     },
     {
       "name": "shapes/arealight2.yaml",
@@ -317,6 +264,93 @@
         0
       ],
       "shape": "shapes/arealight2.ply",
+      "material": "materials/arealight2.yaml"
+    }
+  ],
+  "materials": [
+    {
+      "name": "materials/floor.yaml",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "color_tex": "textures/floor.png",
+      "specular": 0
+    },
+    {
+      "name": "materials/bunny-uvgrid-coated.yaml",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "specular": 1,
+      "roughness": 0.2,
+      "coat": 1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/bunny-volume-jade.yaml",
+      "color": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "roughness": 0,
+      "specular": 1,
+      "transmission": 1,
+      "scattering": [
+        0.3,
+        0.6,
+        0.3
+      ],
+      "thin": false
+    },
+    {
+      "name": "materials/bunny-metal-rough.yaml",
+      "color": [
+        0.66,
+        0.45,
+        0.34
+      ],
+      "metallic": 1,
+      "roughness": 0.2
+    },
+    {
+      "name": "materials/sphere-volume-glass.yaml",
+      "color": [
+        1,
+        0.5,
+        0.5
+      ],
+      "roughness": 0,
+      "specular": 1,
+      "transmission": 1,
+      "radius": 0.02,
+      "thin": false
+    },
+    {
+      "name": "materials/sphere-plastic-rough-bumped.yaml",
+      "color": [
+        0.5,
+        0.7,
+        0.5
+      ],
+      "specular": 1,
+      "roughness": 0.2,
+      "normal_tex": "textures/bumps-normal.png"
+    },
+    {
+      "name": "materials/arealight1.yaml",
+      "emission": [
+        20,
+        20,
+        20
+      ]
+    },
+    {
+      "name": "materials/arealight2.yaml",
       "emission": [
         20,
         20,

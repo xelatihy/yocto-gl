@@ -137,22 +137,11 @@
     {
       "name": "shapes/floor.yaml",
       "shape": "shapes/floor.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "color_tex": "textures/floor.png",
-      "specular": 0
+      "material": "materials/floor.yaml"
     },
     {
       "name": "shapes/arealight1.yaml",
       "shape": "shapes/arealight1.ply",
-      "emission": [
-        20,
-        20,
-        20
-      ],
       "lookat": [
         -0.4,
         0.8,
@@ -163,16 +152,12 @@
         0,
         1,
         0
-      ]
+      ],
+      "material": "materials/arealight1.yaml"
     },
     {
       "name": "shapes/arealight2.yaml",
       "shape": "shapes/arealight2.ply",
-      "emission": [
-        20,
-        20,
-        20
-      ],
       "lookat": [
         0.4,
         0.8,
@@ -183,19 +168,12 @@
         0,
         1,
         0
-      ]
+      ],
+      "material": "materials/arealight2.yaml"
     },
     {
       "name": "shapes/sphere-uvgrid.yaml",
       "shape": "shapes/sphere.ply",
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "specular": 1,
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -209,21 +187,12 @@
         -0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-uvgrid.yaml"
     },
     {
       "name": "shapes/suzanne-subdiv-plastic-rough.yaml",
       "shape": "shapes/suzanne-subdiv.obj",
-      "subdivisions": 2,
-      "catmullclark": true,
-      "smooth": true,
-      "color": [
-        0.5,
-        0.7,
-        0.5
-      ],
-      "specular": 1,
-      "roughness": 0.2,
       "frame": [
         1,
         0,
@@ -237,18 +206,12 @@
         -0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/suzanne-subdiv-plastic-rough.yaml"
     },
     {
       "name": "shapes/hairball1-hair.yaml",
       "shape": "shapes/hairball1.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "specular": 0,
-      "roughness": 1,
       "frame": [
         1,
         0,
@@ -262,21 +225,12 @@
         0,
         0,
         0
-      ]
+      ],
+      "material": "materials/hairball1-hair.yaml"
     },
     {
       "name": "shapes/sphere-displaced-plastic-rough.yaml",
       "shape": "shapes/sphere-displaced.obj",
-      "facevarying": true,
-      "displacement": 0.025,
-      "displacement_tex": "textures/bumps-displacement.png",
-      "color": [
-        0.5,
-        0.7,
-        0.5
-      ],
-      "specular": 1,
-      "roughness": 0.2,
       "frame": [
         1,
         0,
@@ -290,19 +244,12 @@
         0.2,
         0,
         0
-      ]
+      ],
+      "material": "materials/sphere-displaced-plastic-rough.yaml"
     },
     {
       "name": "shapes/cube-uvgrid.yaml",
       "shape": "shapes/cube.ply",
-      "color": [
-        1,
-        1,
-        1
-      ],
-      "specular": 1,
-      "roughness": 0.1,
-      "color_tex": "textures/uvgrid.png",
       "frame": [
         1,
         0,
@@ -316,18 +263,12 @@
         0.4,
         0,
         0
-      ]
+      ],
+      "material": "materials/cube-uvgrid.yaml"
     },
     {
       "name": "shapes/hairballi-hair.yaml",
       "shape": "shapes/hairballi.ply",
-      "color": [
-        0.7,
-        0.7,
-        0.7
-      ],
-      "specular": 0,
-      "roughness": 1,
       "frame": [
         1,
         0,
@@ -341,7 +282,8 @@
         0,
         0,
         0
-      ]
+      ],
+      "material": "materials/hairballi-hair.yaml"
     }
   ],
   "subdivs": [
@@ -360,6 +302,102 @@
       "subdivisions": 2,
       "catmullclark": true,
       "smooth": true
+    }
+  ],
+  "materials": [
+    {
+      "name": "materials/floor.yaml",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "color_tex": "textures/floor.png",
+      "specular": 0
+    },
+    {
+      "name": "materials/arealight1.yaml",
+      "emission": [
+        20,
+        20,
+        20
+      ]
+    },
+    {
+      "name": "materials/arealight2.yaml",
+      "emission": [
+        20,
+        20,
+        20
+      ]
+    },
+    {
+      "name": "materials/sphere-uvgrid.yaml",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "specular": 1,
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/suzanne-subdiv-plastic-rough.yaml",
+      "subdivisions": 2,
+      "catmullclark": true,
+      "smooth": true,
+      "color": [
+        0.5,
+        0.7,
+        0.5
+      ],
+      "specular": 1,
+      "roughness": 0.2
+    },
+    {
+      "name": "materials/hairball1-hair.yaml",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "specular": 0,
+      "roughness": 1
+    },
+    {
+      "name": "materials/sphere-displaced-plastic-rough.yaml",
+      "facevarying": true,
+      "displacement": 0.025,
+      "displacement_tex": "textures/bumps-displacement.png",
+      "color": [
+        0.5,
+        0.7,
+        0.5
+      ],
+      "specular": 1,
+      "roughness": 0.2
+    },
+    {
+      "name": "materials/cube-uvgrid.yaml",
+      "color": [
+        1,
+        1,
+        1
+      ],
+      "specular": 1,
+      "roughness": 0.1,
+      "color_tex": "textures/uvgrid.png"
+    },
+    {
+      "name": "materials/hairballi-hair.yaml",
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "specular": 0,
+      "roughness": 1
     }
   ]
 }
