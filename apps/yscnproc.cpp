@@ -33,7 +33,9 @@
 using namespace yocto;
 
 #include <unordered_set>
+#include <memory>
 using std::unordered_set;
+using std::make_shared;
 
 bool mkdir(const string& dir) {
   if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -57,7 +59,7 @@ void run_app(int argc, const char** argv) {
   auto validate           = false;
   auto info               = false;
   auto output             = "out.json"s;
-  auto filename           = "scene.json"s;
+  auto filename           = "scene->json"s;
 
   // parse command line
   auto cli = make_cli("yscnproc", "Process scene");
@@ -76,15 +78,15 @@ void run_app(int argc, const char** argv) {
   parse_cli(cli, argc, argv);
 
   // load scene
-  auto scene      = sceneio_model{};
+  auto scene      = make_shared<sceneio_model>();
   auto load_timer = print_timed("loading scene");
-  load_scene(filename, scene);
+  load_scene(filename, scene.get());
   print_elapsed(load_timer);
 
   // validate scene
   if (validate) {
     auto validate_timer = print_timed("validating scene");
-    auto errors         = scene_validation(scene);
+    auto errors         = scene_validation(scene.get());
     print_elapsed(validate_timer);
     for (auto& error : errors) print_info(error);
   }
@@ -92,13 +94,13 @@ void run_app(int argc, const char** argv) {
   // print info
   if (info) {
     print_info("scene stats ------------");
-    for (auto stat : scene_stats(scene)) print_info(stat);
+    for (auto stat : scene_stats(scene.get())) print_info(stat);
   }
 
   // tesselate if needed
   if (get_extension(output) != ".yaml" && get_extension(output) != ".json") {
-    for (auto& iosubdiv : scene.subdivs) {
-      tesselate_subdiv(scene, iosubdiv);
+    for (auto& iosubdiv : scene->subdivs) {
+      tesselate_subdiv(scene.get(), iosubdiv);
       iosubdiv = {};
     }
   }
@@ -115,9 +117,9 @@ void run_app(int argc, const char** argv) {
   auto dirname  = get_dirname(output);
   auto dirnames = unordered_set<string>{};
   if (!dirname.empty()) dirnames.insert(dirname);
-  for (auto& shape : scene.shapes)
+  for (auto& shape : scene->shapes)
     dirnames.insert(dirname + get_dirname(shape->name));
-  for (auto texture : scene.textures)
+  for (auto texture : scene->textures)
     dirnames.insert(dirname + get_dirname(texture->name));
   for (auto& dir : dirnames) {
     if (!mkdir(dir)) {
@@ -127,7 +129,7 @@ void run_app(int argc, const char** argv) {
 
   // save scene
   auto save_timer = print_timed("saving scene");
-  save_scene(output, scene, obj_instances);
+  save_scene(output, scene.get(), obj_instances);
   print_elapsed(save_timer);
 }
 

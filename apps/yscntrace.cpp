@@ -34,14 +34,13 @@
 using namespace yocto;
 
 #include <memory>
-using std::make_unique;
-using std::unique_ptr;
+using std::make_shared;
 
 // construct a scene from io
-void init_scene(trace_scene& scene, sceneio_model& ioscene) {
+void init_scene(trace_scene& scene, sceneio_model* ioscene) {
   scene = trace_scene{};
 
-  for (auto iocamera : ioscene.cameras) {
+  for (auto iocamera : ioscene->cameras) {
     auto id = add_camera(scene);
     set_camera_frame(scene, id, iocamera->frame);
     set_camera_lens(
@@ -51,7 +50,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
 
   auto texture_map     = unordered_map<sceneio_texture*, int>{};
   texture_map[nullptr] = -1;
-  for (auto iotexture : ioscene.textures) {
+  for (auto iotexture : ioscene->textures) {
     auto id = add_texture(scene);
     if (!iotexture->hdr.empty()) {
       set_texture(scene, id, std::move(iotexture->hdr));
@@ -61,11 +60,11 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     texture_map[iotexture] = id;
   }
 
-  for (auto iosubdiv : ioscene.subdivs) {
+  for (auto iosubdiv : ioscene->subdivs) {
     tesselate_subdiv(ioscene, iosubdiv);
   }
 
-  for (auto ioshape : ioscene.shapes) {
+  for (auto ioshape : ioscene->shapes) {
     auto id = add_shape(scene);
     set_shape_points(scene, id, ioshape->points);
     set_shape_lines(scene, id, ioshape->lines);
@@ -99,7 +98,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
         texture_map.at(ioshape->scattering_tex));
   }
 
-  for (auto ioenvironment : ioscene.environments) {
+  for (auto ioenvironment : ioscene->environments) {
     auto id = add_environment(scene);
     set_environment_frame(scene, id, ioenvironment->frame);
     set_environment_emission(scene, id, ioenvironment->emission,
@@ -145,15 +144,15 @@ void run_app(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene    = sceneio_model{};
+  auto ioscene    = make_shared<sceneio_model>();
   auto load_timer = print_timed("loading scene");
-  load_scene(filename, ioscene);
+  load_scene(filename, ioscene.get());
   print_elapsed(load_timer);
 
   // add components
   if (validate) {
     auto validate_timer = print_timed("validating");
-    auto errors         = scene_validation(ioscene);
+    auto errors         = scene_validation(ioscene.get());
     for (auto& error : errors) print_info(error);
     print_elapsed(validate_timer);
   }
@@ -161,8 +160,11 @@ void run_app(int argc, const char* argv[]) {
   // convert scene
   auto convert_timer = print_timed("converting");
   auto scene         = trace_scene{};
-  init_scene(scene, ioscene);
+  init_scene(scene, ioscene.get());
   print_elapsed(convert_timer);
+
+  // cleanup
+  ioscene = nullptr;
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");

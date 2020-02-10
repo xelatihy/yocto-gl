@@ -244,13 +244,13 @@ struct sceneio_model {
 };
 
 // add element to a scene
-sceneio_camera*      add_camera(sceneio_model& scene);
-sceneio_environment* add_environment(sceneio_model& scene);
-sceneio_shape*       add_shape(sceneio_model& scene);
-sceneio_subdiv*      add_subdiv(sceneio_model& scene);
-sceneio_texture*     add_texture(sceneio_model& scene);
-sceneio_node*        add_node(sceneio_model& scene);
-sceneio_animation*   add_animation(sceneio_model& scene);
+sceneio_camera*      add_camera(sceneio_model* scene);
+sceneio_environment* add_environment(sceneio_model* scene);
+sceneio_shape*       add_shape(sceneio_model* scene);
+sceneio_subdiv*      add_subdiv(sceneio_model* scene);
+sceneio_texture*     add_texture(sceneio_model* scene);
+sceneio_node*        add_node(sceneio_model* scene);
+sceneio_animation*   add_animation(sceneio_model* scene);
 
 }  // namespace yocto
 
@@ -262,8 +262,8 @@ namespace yocto {
 
 // Load/save a scene in the supported formats. Throws on error.
 void load_scene(
-    const string& filename, sceneio_model& scene, bool noparallel = false);
-void save_scene(const string& filename, const sceneio_model& scene,
+    const string& filename, sceneio_model* scene, bool noparallel = false);
+void save_scene(const string& filename, const sceneio_model* scene,
     bool noparallel = false);
 
 }  // namespace yocto
@@ -274,13 +274,13 @@ void save_scene(const string& filename, const sceneio_model& scene,
 namespace yocto {
 
 // Return scene statistics as list of strings.
-vector<string> scene_stats(const sceneio_model& scene, bool verbose = false);
+vector<string> scene_stats(const sceneio_model* scene, bool verbose = false);
 // Return validation errors as list of strings.
 vector<string> scene_validation(
-    const sceneio_model& scene, bool notextures = false);
+    const sceneio_model* scene, bool notextures = false);
 
 // Return an approximate scene bounding box.
-bbox3f compute_bounds(const sceneio_model& scene);
+bbox3f compute_bounds(const sceneio_model* scene);
 
 }  // namespace yocto
 
@@ -291,12 +291,12 @@ namespace yocto {
 
 // Apply subdivision and displacement rules.
 void tesselate_subdiv(
-    sceneio_model& scene, const sceneio_subdiv* subdiv, bool no_quads = false);
+    sceneio_model* scene, const sceneio_subdiv* subdiv, bool no_quads = false);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.
 void update_transforms(
-    sceneio_model& scene, float time = 0, const string& anim_group = "");
+    sceneio_model* scene, float time = 0, const string& anim_group = "");
 
 // TODO: remove
 inline vec3f eta_to_reflectivity(float eta) {

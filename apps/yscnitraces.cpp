@@ -78,10 +78,10 @@ struct app_state {
 };
 
 // construct a scene from io
-void init_scene(trace_scene& scene, sceneio_model& ioscene) {
+void init_scene(trace_scene& scene, sceneio_model* ioscene) {
   scene = trace_scene{};
 
-  for (auto iocamera : ioscene.cameras) {
+  for (auto iocamera : ioscene->cameras) {
     auto id = add_camera(scene);
     set_camera_frame(scene, id, iocamera->frame);
     set_camera_lens(
@@ -91,7 +91,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
 
   auto texture_map     = unordered_map<sceneio_texture*, int>{};
   texture_map[nullptr] = -1;
-  for (auto iotexture : ioscene.textures) {
+  for (auto iotexture : ioscene->textures) {
     auto id = add_texture(scene);
     if (!iotexture->hdr.empty()) {
       set_texture(scene, id, std::move(iotexture->hdr));
@@ -101,12 +101,12 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     texture_map[iotexture] = id;
   }
 
-  for (auto& iosubdiv : ioscene.subdivs) {
+  for (auto iosubdiv : ioscene->subdivs) {
     tesselate_subdiv(ioscene, iosubdiv);
     iosubdiv = {};
   }
 
-  for (auto& ioshape : ioscene.shapes) {
+  for (auto ioshape : ioscene->shapes) {
     auto id = add_shape(scene);
     set_shape_points(scene, id, ioshape->points);
     set_shape_lines(scene, id, ioshape->lines);
@@ -141,7 +141,7 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     ioshape = {};
   }
 
-  for (auto ioenvironment : ioscene.environments) {
+  for (auto ioenvironment : ioscene->environments) {
     auto id = add_environment(scene);
     set_environment_frame(scene, id, ioenvironment->frame);
     set_environment_emission(scene, id, ioenvironment->emission,
@@ -238,15 +238,18 @@ void run_app(int argc, const char* argv[]) {
   parse_cli(cli, argc, argv);
 
   // scene loading
-  auto ioscene    = sceneio_model{};
+  auto ioscene    = make_shared<sceneio_model>();
   auto load_timer = print_timed("loading scene");
-  load_scene(app->filename, ioscene);
+  load_scene(app->filename, ioscene.get());
   print_elapsed(load_timer);
 
   // conversion
   auto convert_timer = print_timed("converting");
-  init_scene(app->scene, ioscene);
+  init_scene(app->scene, ioscene.get());
   print_elapsed(convert_timer);
+
+  // cleanup
+  ioscene = nullptr;
 
   // build bvh
   auto bvh_timer = print_timed("building bvh");
