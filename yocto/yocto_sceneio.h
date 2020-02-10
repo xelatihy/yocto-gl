@@ -232,8 +232,8 @@ struct sceneio_animation {
 struct sceneio_model {
   string                      name         = "";
   vector<sceneio_camera*>      cameras      = {};
-  vector<sceneio_shape>       shapes       = {};
-  vector<sceneio_subdiv>      subdivs      = {};
+  vector<sceneio_shape*>       shapes       = {};
+  vector<sceneio_subdiv*>      subdivs      = {};
   vector<sceneio_texture*>     textures     = {};
   vector<sceneio_environment*> environments = {};
   vector<sceneio_node*>        nodes        = {};
@@ -246,6 +246,8 @@ struct sceneio_model {
 // add element to a scene
 sceneio_camera* add_camera(sceneio_model& scene);
 sceneio_environment* add_environment(sceneio_model& scene);
+sceneio_shape* add_shape(sceneio_model& scene);
+sceneio_subdiv* add_subdiv(sceneio_model& scene);
 sceneio_texture* add_texture(sceneio_model& scene);
 sceneio_node* add_node(sceneio_model& scene);
 sceneio_animation* add_animation(sceneio_model& scene);
@@ -289,7 +291,7 @@ namespace yocto {
 
 // Apply subdivision and displacement rules.
 void tesselate_subdiv(
-    sceneio_model& scene, const sceneio_subdiv& subdiv, bool no_quads = false);
+    sceneio_model& scene, const sceneio_subdiv* subdiv, bool no_quads = false);
 
 // Update node transforms. Eventually this will be deprecated as we do not
 // support animation in this manner long term.

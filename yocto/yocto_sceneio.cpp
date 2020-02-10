@@ -263,31 +263,31 @@ vector<string> scene_stats(const sceneio_model& scene, bool verbose) {
   stats.push_back("animations:   " + format(scene.animations.size()));
   stats.push_back(
       "points:       " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.points.size(); })));
+                             [](auto shape) { return shape->points.size(); })));
   stats.push_back(
       "lines:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.lines.size(); })));
+                             [](auto shape) { return shape->lines.size(); })));
   stats.push_back("triangles:    " +
                   format(accumulate(scene.shapes,
-                      [](auto& shape) { return shape.triangles.size(); })));
+                      [](auto shape) { return shape->triangles.size(); })));
   stats.push_back(
       "quads:        " + format(accumulate(scene.shapes,
-                             [](auto& shape) { return shape.quads.size(); })));
+                             [](auto shape) { return shape->quads.size(); })));
   stats.push_back(
       "spoints:      " + format(accumulate(scene.subdivs,
-                             [](auto& shape) { return shape.points.size(); })));
+                             [](auto shape) { return shape->points.size(); })));
   stats.push_back(
       "slines:       " + format(accumulate(scene.subdivs,
-                             [](auto& shape) { return shape.lines.size(); })));
+                             [](auto shape) { return shape->lines.size(); })));
   stats.push_back("striangles:   " +
                   format(accumulate(scene.subdivs,
-                      [](auto& shape) { return shape.triangles.size(); })));
+                      [](auto shape) { return shape->triangles.size(); })));
   stats.push_back(
       "squads:       " + format(accumulate(scene.subdivs,
-                             [](auto& shape) { return shape.quads.size(); })));
+                             [](auto shape) { return shape->quads.size(); })));
   stats.push_back("sfvquads:     " +
                   format(accumulate(scene.subdivs,
-                      [](auto& shape) { return shape.quadspos.size(); })));
+                      [](auto shape) { return shape->quadspos.size(); })));
   stats.push_back(
       "texels4b:     " + format(accumulate(scene.textures, [](auto texture) {
         return (size_t)texture->ldr.size().x * (size_t)texture->ldr.size().x;
@@ -308,18 +308,6 @@ vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
   auto check_names = [&errs](const auto& vals, const string& base) {
     auto used = unordered_map<string, int>();
     used.reserve(vals.size());
-    for (auto& value : vals) used[value.name] += 1;
-    for (auto& [name, used] : used) {
-      if (name == "") {
-        errs.push_back("empty " + base + " name");
-      } else if (used > 1) {
-        errs.push_back("duplicated " + base + " name " + name);
-      }
-    }
-  };
-  auto check_names_ = [&errs](const auto& vals, const string& base) {
-    auto used = unordered_map<string, int>();
-    used.reserve(vals.size());
     for (auto& value : vals) used[value->name] += 1;
     for (auto& [name, used] : used) {
       if (name == "") {
@@ -337,15 +325,15 @@ vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
     }
   };
 
-  check_names_(scene.cameras, "camera");
+  check_names(scene.cameras, "camera");
   check_names(scene.shapes, "shape");
   check_names(scene.subdivs, "subdiv");
   // check_names(scene.shapes, "instance");
   // check_names(scene.shapes, "object");
-  check_names_(scene.textures, "texture");
-  check_names_(scene.environments, "environment");
-  check_names_(scene.nodes, "node");
-  check_names_(scene.animations, "animation");
+  check_names(scene.textures, "texture");
+  check_names(scene.environments, "environment");
+  check_names(scene.nodes, "node");
+  check_names(scene.animations, "animation");
   if (!notextures) check_empty_textures(scene.textures);
 
   return errs;
@@ -362,6 +350,8 @@ namespace yocto {
 sceneio_model::~sceneio_model() {
   for(auto camera : cameras) delete camera;
   for(auto environment : environments) delete environment;
+  for(auto shape : shapes) delete shape;
+  for(auto subdiv : subdivs) delete subdiv;
   for(auto texture : textures) delete texture;
   for(auto node : nodes) delete node;
   for(auto animation : animations) delete animation;
@@ -374,6 +364,12 @@ sceneio_camera* add_camera(sceneio_model& scene) {
 sceneio_environment* add_environment(sceneio_model& scene) {
   return scene.environments.emplace_back(new sceneio_environment{});
 }
+sceneio_shape* add_shape(sceneio_model& scene) {
+  return scene.shapes.emplace_back(new sceneio_shape{});
+}
+sceneio_subdiv* add_subdiv(sceneio_model& scene) {
+  return scene.subdivs.emplace_back(new sceneio_subdiv{});
+}
 sceneio_texture* add_texture(sceneio_model& scene) {
   return scene.textures.emplace_back(new sceneio_texture{});
 }
@@ -382,15 +378,15 @@ sceneio_texture* add_texture(sceneio_model& scene) {
 bbox3f compute_bounds(const sceneio_model& scene) {
   auto shape_bbox = vector<bbox3f>{};
   auto bbox       = invalidb3f;
-  for (auto& shape : scene.shapes) {
+  for (auto shape : scene.shapes) {
     auto sbvh = invalidb3f;
-    for (auto p : shape.positions)
-      sbvh = merge(sbvh, transform_point(shape.frame, p));
-    if (shape.instances.empty()) {
+    for (auto p : shape->positions)
+      sbvh = merge(sbvh, transform_point(shape->frame, p));
+    if (shape->instances.empty()) {
       bbox = merge(bbox, sbvh);
     } else {
-      for (auto& frame : shape.instances) {
-        bbox = merge(bbox, transform_bbox(frame * shape.frame, sbvh));
+      for (auto& frame : shape->instances) {
+        bbox = merge(bbox, transform_bbox(frame * shape->frame, sbvh));
       }
     }
   }
@@ -422,10 +418,10 @@ void add_cameras(sceneio_model& scene) {
 
 // Add missing radius.
 void add_radius(sceneio_model& scene, float radius = 0.001f) {
-  for (auto& shape : scene.shapes) {
-    if (shape.points.empty() && shape.lines.empty()) continue;
-    if (!shape.radius.empty()) continue;
-    shape.radius.assign(shape.positions.size(), radius);
+  for (auto shape : scene.shapes) {
+    if (shape->points.empty() && shape->lines.empty()) continue;
+    if (!shape->radius.empty()) continue;
+    shape->radius.assign(shape->positions.size(), radius);
   }
 }
 
@@ -442,32 +438,32 @@ void add_sky(sceneio_model& scene, float sun_angle) {
 
 // Reduce memory usage
 void trim_memory(sceneio_model& scene) {
-  for (auto& shape : scene.shapes) {
-    shape.points.shrink_to_fit();
-    shape.lines.shrink_to_fit();
-    shape.triangles.shrink_to_fit();
-    shape.quads.shrink_to_fit();
-    shape.positions.shrink_to_fit();
-    shape.normals.shrink_to_fit();
-    shape.texcoords.shrink_to_fit();
-    shape.colors.shrink_to_fit();
-    shape.radius.shrink_to_fit();
-    shape.tangents.shrink_to_fit();
+  for (auto shape : scene.shapes) {
+    shape->points.shrink_to_fit();
+    shape->lines.shrink_to_fit();
+    shape->triangles.shrink_to_fit();
+    shape->quads.shrink_to_fit();
+    shape->positions.shrink_to_fit();
+    shape->normals.shrink_to_fit();
+    shape->texcoords.shrink_to_fit();
+    shape->colors.shrink_to_fit();
+    shape->radius.shrink_to_fit();
+    shape->tangents.shrink_to_fit();
   }
-  for (auto& subdiv : scene.subdivs) {
-    subdiv.points.shrink_to_fit();
-    subdiv.lines.shrink_to_fit();
-    subdiv.triangles.shrink_to_fit();
-    subdiv.quads.shrink_to_fit();
-    subdiv.quadspos.shrink_to_fit();
-    subdiv.quadsnorm.shrink_to_fit();
-    subdiv.quadstexcoord.shrink_to_fit();
-    subdiv.positions.shrink_to_fit();
-    subdiv.normals.shrink_to_fit();
-    subdiv.texcoords.shrink_to_fit();
-    subdiv.colors.shrink_to_fit();
-    subdiv.radius.shrink_to_fit();
-    subdiv.tangents.shrink_to_fit();
+  for (auto subdiv : scene.subdivs) {
+    subdiv->points.shrink_to_fit();
+    subdiv->lines.shrink_to_fit();
+    subdiv->triangles.shrink_to_fit();
+    subdiv->quads.shrink_to_fit();
+    subdiv->quadspos.shrink_to_fit();
+    subdiv->quadsnorm.shrink_to_fit();
+    subdiv->quadstexcoord.shrink_to_fit();
+    subdiv->positions.shrink_to_fit();
+    subdiv->normals.shrink_to_fit();
+    subdiv->texcoords.shrink_to_fit();
+    subdiv->colors.shrink_to_fit();
+    subdiv->radius.shrink_to_fit();
+    subdiv->tangents.shrink_to_fit();
   }
   for (auto texture : scene.textures) {
     texture->ldr.shrink_to_fit();
@@ -482,106 +478,105 @@ void trim_memory(sceneio_model& scene) {
 }
 
 // Apply subdivision and displacement rules.
-sceneio_subdiv subdivide_subdiv(const sceneio_subdiv& shape) {
+void subdivide_subdiv(sceneio_subdiv* tesselated, const sceneio_subdiv* shape) {
   using std::ignore;
-  if (!shape.subdivisions) return shape;
-  auto tesselated         = shape;
-  tesselated.subdivisions = 0;
-  if (!shape.points.empty()) {
+  *tesselated = *shape;
+  if (!shape->subdivisions) return;
+  tesselated->subdivisions = 0;
+  if (!shape->points.empty()) {
     throw std::runtime_error("point subdivision not supported");
-  } else if (!shape.lines.empty()) {
-    tie(ignore, tesselated.normals) = subdivide_lines(
-        tesselated.lines, tesselated.normals, shape.subdivisions);
-    tie(ignore, tesselated.texcoords) = subdivide_lines(
-        tesselated.lines, tesselated.texcoords, shape.subdivisions);
-    tie(ignore, tesselated.colors) = subdivide_lines(
-        tesselated.lines, tesselated.colors, shape.subdivisions);
-    tie(ignore, tesselated.radius) = subdivide_lines(
-        tesselated.lines, tesselated.radius, shape.subdivisions);
-    tie(tesselated.lines, tesselated.positions) = subdivide_lines(
-        tesselated.lines, tesselated.positions, shape.subdivisions);
-    if (shape.smooth)
-      tesselated.normals = compute_tangents(
-          tesselated.lines, tesselated.positions);
-  } else if (!shape.triangles.empty()) {
-    tie(ignore, tesselated.normals) = subdivide_triangles(
-        tesselated.triangles, tesselated.normals, shape.subdivisions);
-    tie(ignore, tesselated.texcoords) = subdivide_triangles(
-        tesselated.triangles, tesselated.texcoords, shape.subdivisions);
-    tie(ignore, tesselated.colors) = subdivide_triangles(
-        tesselated.triangles, tesselated.colors, shape.subdivisions);
-    tie(ignore, tesselated.radius) = subdivide_triangles(
-        tesselated.triangles, tesselated.radius, shape.subdivisions);
-    tie(tesselated.triangles, tesselated.positions) = subdivide_triangles(
-        tesselated.triangles, tesselated.positions, shape.subdivisions);
-    if (shape.smooth)
-      tesselated.normals = compute_normals(
-          tesselated.triangles, tesselated.positions);
-  } else if (!shape.quads.empty() && !shape.catmullclark) {
-    tie(ignore, tesselated.normals) = subdivide_quads(
-        tesselated.quads, tesselated.normals, shape.subdivisions);
-    tie(ignore, tesselated.texcoords) = subdivide_quads(
-        tesselated.quads, tesselated.texcoords, shape.subdivisions);
-    tie(ignore, tesselated.colors) = subdivide_quads(
-        tesselated.quads, tesselated.colors, shape.subdivisions);
-    tie(ignore, tesselated.radius) = subdivide_quads(
-        tesselated.quads, tesselated.radius, shape.subdivisions);
-    tie(tesselated.quads, tesselated.positions) = subdivide_quads(
-        tesselated.quads, tesselated.positions, shape.subdivisions);
-    if (tesselated.smooth)
-      tesselated.normals = compute_normals(
-          tesselated.quads, tesselated.positions);
-  } else if (!shape.quads.empty() && shape.catmullclark) {
-    tie(ignore, tesselated.normals) = subdivide_catmullclark(
-        tesselated.quads, tesselated.normals, shape.subdivisions);
-    tie(ignore, tesselated.texcoords) = subdivide_catmullclark(
-        tesselated.quads, tesselated.texcoords, shape.subdivisions);
-    tie(ignore, tesselated.colors) = subdivide_catmullclark(
-        tesselated.quads, tesselated.colors, shape.subdivisions);
-    tie(ignore, tesselated.radius) = subdivide_catmullclark(
-        tesselated.quads, tesselated.radius, shape.subdivisions);
-    tie(tesselated.quads, tesselated.positions) = subdivide_catmullclark(
-        tesselated.quads, tesselated.positions, shape.subdivisions);
-    if (tesselated.smooth)
-      tesselated.normals = compute_normals(
-          tesselated.quads, tesselated.positions);
-  } else if (!shape.quadspos.empty() && !shape.catmullclark) {
-    std::tie(tesselated.quadsnorm, tesselated.normals) = subdivide_quads(
-        tesselated.quadsnorm, tesselated.normals, shape.subdivisions);
-    std::tie(tesselated.quadstexcoord, tesselated.texcoords) = subdivide_quads(
-        tesselated.quadstexcoord, tesselated.texcoords, shape.subdivisions);
-    std::tie(tesselated.quadspos, tesselated.positions) = subdivide_quads(
-        tesselated.quadspos, tesselated.positions, shape.subdivisions);
-    if (tesselated.smooth) {
-      tesselated.normals = compute_normals(
-          tesselated.quadspos, tesselated.positions);
-      tesselated.quadsnorm = tesselated.quadspos;
+  } else if (!shape->lines.empty()) {
+    tie(ignore, tesselated->normals) = subdivide_lines(
+        tesselated->lines, tesselated->normals, shape->subdivisions);
+    tie(ignore, tesselated->texcoords) = subdivide_lines(
+        tesselated->lines, tesselated->texcoords, shape->subdivisions);
+    tie(ignore, tesselated->colors) = subdivide_lines(
+        tesselated->lines, tesselated->colors, shape->subdivisions);
+    tie(ignore, tesselated->radius) = subdivide_lines(
+        tesselated->lines, tesselated->radius, shape->subdivisions);
+    tie(tesselated->lines, tesselated->positions) = subdivide_lines(
+        tesselated->lines, tesselated->positions, shape->subdivisions);
+    if (shape->smooth)
+      tesselated->normals = compute_tangents(
+          tesselated->lines, tesselated->positions);
+  } else if (!shape->triangles.empty()) {
+    tie(ignore, tesselated->normals) = subdivide_triangles(
+        tesselated->triangles, tesselated->normals, shape->subdivisions);
+    tie(ignore, tesselated->texcoords) = subdivide_triangles(
+        tesselated->triangles, tesselated->texcoords, shape->subdivisions);
+    tie(ignore, tesselated->colors) = subdivide_triangles(
+        tesselated->triangles, tesselated->colors, shape->subdivisions);
+    tie(ignore, tesselated->radius) = subdivide_triangles(
+        tesselated->triangles, tesselated->radius, shape->subdivisions);
+    tie(tesselated->triangles, tesselated->positions) = subdivide_triangles(
+        tesselated->triangles, tesselated->positions, shape->subdivisions);
+    if (shape->smooth)
+      tesselated->normals = compute_normals(
+          tesselated->triangles, tesselated->positions);
+  } else if (!shape->quads.empty() && !shape->catmullclark) {
+    tie(ignore, tesselated->normals) = subdivide_quads(
+        tesselated->quads, tesselated->normals, shape->subdivisions);
+    tie(ignore, tesselated->texcoords) = subdivide_quads(
+        tesselated->quads, tesselated->texcoords, shape->subdivisions);
+    tie(ignore, tesselated->colors) = subdivide_quads(
+        tesselated->quads, tesselated->colors, shape->subdivisions);
+    tie(ignore, tesselated->radius) = subdivide_quads(
+        tesselated->quads, tesselated->radius, shape->subdivisions);
+    tie(tesselated->quads, tesselated->positions) = subdivide_quads(
+        tesselated->quads, tesselated->positions, shape->subdivisions);
+    if (tesselated->smooth)
+      tesselated->normals = compute_normals(
+          tesselated->quads, tesselated->positions);
+  } else if (!shape->quads.empty() && shape->catmullclark) {
+    tie(ignore, tesselated->normals) = subdivide_catmullclark(
+        tesselated->quads, tesselated->normals, shape->subdivisions);
+    tie(ignore, tesselated->texcoords) = subdivide_catmullclark(
+        tesselated->quads, tesselated->texcoords, shape->subdivisions);
+    tie(ignore, tesselated->colors) = subdivide_catmullclark(
+        tesselated->quads, tesselated->colors, shape->subdivisions);
+    tie(ignore, tesselated->radius) = subdivide_catmullclark(
+        tesselated->quads, tesselated->radius, shape->subdivisions);
+    tie(tesselated->quads, tesselated->positions) = subdivide_catmullclark(
+        tesselated->quads, tesselated->positions, shape->subdivisions);
+    if (tesselated->smooth)
+      tesselated->normals = compute_normals(
+          tesselated->quads, tesselated->positions);
+  } else if (!shape->quadspos.empty() && !shape->catmullclark) {
+    std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_quads(
+        tesselated->quadsnorm, tesselated->normals, shape->subdivisions);
+    std::tie(tesselated->quadstexcoord, tesselated->texcoords) = subdivide_quads(
+        tesselated->quadstexcoord, tesselated->texcoords, shape->subdivisions);
+    std::tie(tesselated->quadspos, tesselated->positions) = subdivide_quads(
+        tesselated->quadspos, tesselated->positions, shape->subdivisions);
+    if (tesselated->smooth) {
+      tesselated->normals = compute_normals(
+          tesselated->quadspos, tesselated->positions);
+      tesselated->quadsnorm = tesselated->quadspos;
     }
-  } else if (!shape.quadspos.empty() && shape.catmullclark) {
-    std::tie(tesselated.quadstexcoord, tesselated.texcoords) =
-        subdivide_catmullclark(tesselated.quadstexcoord, tesselated.texcoords,
-            shape.subdivisions, true);
-    std::tie(tesselated.quadsnorm, tesselated.normals) = subdivide_catmullclark(
-        tesselated.quadsnorm, tesselated.normals, shape.subdivisions, true);
-    std::tie(tesselated.quadspos, tesselated.positions) =
+  } else if (!shape->quadspos.empty() && shape->catmullclark) {
+    std::tie(tesselated->quadstexcoord, tesselated->texcoords) =
+        subdivide_catmullclark(tesselated->quadstexcoord, tesselated->texcoords,
+            shape->subdivisions, true);
+    std::tie(tesselated->quadsnorm, tesselated->normals) = subdivide_catmullclark(
+        tesselated->quadsnorm, tesselated->normals, shape->subdivisions, true);
+    std::tie(tesselated->quadspos, tesselated->positions) =
         subdivide_catmullclark(
-            tesselated.quadspos, tesselated.positions, shape.subdivisions);
-    if (shape.smooth) {
-      tesselated.normals = compute_normals(
-          tesselated.quadspos, tesselated.positions);
-      tesselated.quadsnorm = tesselated.quadspos;
+            tesselated->quadspos, tesselated->positions, shape->subdivisions);
+    if (shape->smooth) {
+      tesselated->normals = compute_normals(
+          tesselated->quadspos, tesselated->positions);
+      tesselated->quadsnorm = tesselated->quadspos;
     } else {
-      tesselated.normals   = {};
-      tesselated.quadsnorm = {};
+      tesselated->normals   = {};
+      tesselated->quadsnorm = {};
     }
   } else {
     throw std::runtime_error("empty shape");
   }
-  return tesselated;
 }
 // Apply displacement to a shape
-sceneio_subdiv displace_subdiv(
-    const sceneio_model& scene, const sceneio_subdiv& subdiv) {
+void displace_subdiv(sceneio_subdiv* displaced,
+    const sceneio_model& scene, const sceneio_subdiv* subdiv) {
   // Evaluate a texture
   auto eval_texture = [](const sceneio_texture* texture,
                           const vec2f&          texcoord) -> vec4f {
@@ -594,96 +589,98 @@ sceneio_subdiv displace_subdiv(
     }
   };
 
-  if (!subdiv.displacement || subdiv.displacement_tex < 0) return subdiv;
-  auto displacement = scene.textures[subdiv.displacement_tex];
-  if (subdiv.texcoords.empty()) {
-    throw std::runtime_error("missing texture coordinates");
-    return {};
-  }
+  *displaced = *subdiv;
 
-  auto displaced             = subdiv;
-  displaced.displacement     = 0;
-  displaced.displacement_tex = -1;
+  if (!subdiv->displacement || subdiv->displacement_tex < 0) return;
+  auto displacement = scene.textures[subdiv->displacement_tex];
+  if (subdiv->texcoords.empty())
+    throw std::runtime_error("missing texture coordinates");
+
+  displaced->displacement     = 0;
+  displaced->displacement_tex = -1;
 
   // simple case
-  if (!subdiv.triangles.empty()) {
-    auto normals = subdiv.normals;
+  if (!subdiv->triangles.empty()) {
+    auto normals = subdiv->normals;
     if (normals.empty())
-      normals = compute_normals(subdiv.triangles, subdiv.positions);
-    for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
-      auto disp = mean(xyz(eval_texture(displacement, subdiv.texcoords[vid])));
+      normals = compute_normals(subdiv->triangles, subdiv->positions);
+    for (auto vid = 0; vid < subdiv->positions.size(); vid++) {
+      auto disp = mean(xyz(eval_texture(displacement, subdiv->texcoords[vid])));
       if (!displacement->ldr.empty()) disp -= 0.5f;
-      displaced.positions[vid] += normals[vid] * subdiv.displacement * disp;
+      displaced->positions[vid] += normals[vid] * subdiv->displacement * disp;
     }
-    if (subdiv.smooth || !subdiv.normals.empty()) {
-      displaced.normals = compute_normals(
-          displaced.triangles, displaced.positions);
+    if (subdiv->smooth || !subdiv->normals.empty()) {
+      displaced->normals = compute_normals(
+          displaced->triangles, displaced->positions);
     }
-  } else if (!subdiv.quads.empty()) {
-    auto normals = subdiv.normals;
+  } else if (!subdiv->quads.empty()) {
+    auto normals = subdiv->normals;
     if (normals.empty())
-      normals = compute_normals(subdiv.triangles, subdiv.positions);
-    for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
-      auto disp = mean(xyz(eval_texture(displacement, subdiv.texcoords[vid])));
+      normals = compute_normals(subdiv->triangles, subdiv->positions);
+    for (auto vid = 0; vid < subdiv->positions.size(); vid++) {
+      auto disp = mean(xyz(eval_texture(displacement, subdiv->texcoords[vid])));
       if (!is_hdr_filename(displacement->name)) disp -= 0.5f;
-      displaced.positions[vid] += normals[vid] * subdiv.displacement * disp;
+      displaced->positions[vid] += normals[vid] * subdiv->displacement * disp;
     }
-    if (subdiv.smooth || !subdiv.normals.empty()) {
-      displaced.normals = compute_normals(displaced.quads, displaced.positions);
+    if (subdiv->smooth || !subdiv->normals.empty()) {
+      displaced->normals = compute_normals(displaced->quads, displaced->positions);
     }
-  } else if (!subdiv.quadspos.empty()) {
+  } else if (!subdiv->quadspos.empty()) {
     // facevarying case
-    auto offset = vector<float>(subdiv.positions.size(), 0);
-    auto count  = vector<int>(subdiv.positions.size(), 0);
-    for (auto fid = 0; fid < subdiv.quadspos.size(); fid++) {
-      auto qpos = subdiv.quadspos[fid];
-      auto qtxt = subdiv.quadstexcoord[fid];
+    auto offset = vector<float>(subdiv->positions.size(), 0);
+    auto count  = vector<int>(subdiv->positions.size(), 0);
+    for (auto fid = 0; fid < subdiv->quadspos.size(); fid++) {
+      auto qpos = subdiv->quadspos[fid];
+      auto qtxt = subdiv->quadstexcoord[fid];
       for (auto i = 0; i < 4; i++) {
         auto disp = mean(
-            xyz(eval_texture(displacement, subdiv.texcoords[qtxt[i]])));
+            xyz(eval_texture(displacement, subdiv->texcoords[qtxt[i]])));
         if (!displacement->ldr.empty()) disp -= 0.5f;
-        offset[qpos[i]] += subdiv.displacement * disp;
+        offset[qpos[i]] += subdiv->displacement * disp;
         count[qpos[i]] += 1;
       }
     }
-    auto normals = compute_normals(subdiv.quadspos, subdiv.positions);
-    for (auto vid = 0; vid < subdiv.positions.size(); vid++) {
-      displaced.positions[vid] += normals[vid] * offset[vid] / count[vid];
+    auto normals = compute_normals(subdiv->quadspos, subdiv->positions);
+    for (auto vid = 0; vid < subdiv->positions.size(); vid++) {
+      displaced->positions[vid] += normals[vid] * offset[vid] / count[vid];
     }
-    if (subdiv.smooth || !subdiv.normals.empty()) {
-      displaced.quadsnorm = subdiv.quadspos;
-      displaced.normals   = compute_normals(
-          displaced.quadspos, displaced.positions);
+    if (subdiv->smooth || !subdiv->normals.empty()) {
+      displaced->quadsnorm = subdiv->quadspos;
+      displaced->normals   = compute_normals(
+          displaced->quadspos, displaced->positions);
     }
   }
-  return displaced;
 }
 
 void tesselate_subdiv(
-    sceneio_model& scene, const sceneio_subdiv& subdiv, bool no_quads) {
-  auto tesselated = subdiv;
-  if (tesselated.subdivisions) tesselated = subdivide_subdiv(tesselated);
-  if (tesselated.displacement) tesselated = displace_subdiv(scene, tesselated);
-  if (!subdiv.quadspos.empty()) {
-    std::tie(tesselated.quads, tesselated.positions, tesselated.normals,
-        tesselated.texcoords) = split_facevarying(tesselated.quadspos,
-        tesselated.quadsnorm, tesselated.quadstexcoord, tesselated.positions,
-        tesselated.normals, tesselated.texcoords);
+    sceneio_model& scene, const sceneio_subdiv* subdiv, bool no_quads) {
+  auto tesselated_ = sceneio_subdiv{}, displaced_ = sceneio_subdiv{};
+  auto tesselated = &tesselated_, displaced = &displaced_;
+  subdivide_subdiv(tesselated, subdiv);
+  displace_subdiv(displaced, scene, tesselated);
+  if (!subdiv->quadspos.empty()) {
+    std::tie(displaced->quads, displaced->positions, displaced->normals,
+        displaced->texcoords) = split_facevarying(displaced->quadspos,
+        displaced->quadsnorm, displaced->quadstexcoord, displaced->positions,
+        displaced->normals, displaced->texcoords);
+    displaced->quadspos = {};
+    displaced->quadsnorm = {};
+    displaced->quadstexcoord = {};
   }
-  if (!tesselated.quads.empty() && no_quads) {
-    tesselated.triangles = quads_to_triangles(tesselated.quads);
-    tesselated.quads     = {};
+  if (!displaced->quads.empty() && no_quads) {
+    displaced->triangles = quads_to_triangles(displaced->quads);
+    displaced->quads     = {};
   }
-  auto& shape     = scene.shapes[tesselated.shape];
-  shape.points    = tesselated.points;
-  shape.lines     = tesselated.lines;
-  shape.triangles = tesselated.triangles;
-  shape.quads     = tesselated.quads;
-  shape.positions = tesselated.positions;
-  shape.normals   = tesselated.normals;
-  shape.texcoords = tesselated.texcoords;
-  shape.colors    = tesselated.colors;
-  shape.radius    = tesselated.radius;
+  auto shape     = scene.shapes[displaced->shape];
+  shape->points    = displaced->points;
+  shape->lines     = displaced->lines;
+  shape->triangles = displaced->triangles;
+  shape->quads     = displaced->quads;
+  shape->positions = displaced->positions;
+  shape->normals   = displaced->normals;
+  shape->texcoords = displaced->texcoords;
+  shape->colors    = displaced->colors;
+  shape->radius    = displaced->radius;
 }
 
 // Update animation transforms
@@ -745,9 +742,9 @@ void update_transforms(sceneio_model& scene, sceneio_node* node,
     const frame3f& parent = identity3x4f) {
   auto frame = parent * node->local * translation_frame(node->translation) *
                rotation_frame(node->rotation) * scaling_frame(node->scale);
-  if (node->shape >= 0) scene.shapes[node->shape].frame = frame;
+  if (node->shape >= 0) scene.shapes[node->shape]->frame = frame;
   if (node->instance >= 0)
-    scene.shapes[node->shape].instances[node->instance] = frame;
+    scene.shapes[node->shape]->instances[node->instance] = frame;
   if (node->camera >= 0) scene.cameras[node->camera]->frame = frame;
   if (node->environment >= 0) scene.environments[node->environment]->frame = frame;
   for (auto child : node->children)
@@ -1005,45 +1002,45 @@ static void load_yaml_scene(
           environment->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
       } else if (yelement.name == "shapes") {
-        auto& shape = scene.shapes.emplace_back();
-        get_yaml_value(yelement, "name", shape.name);
-        get_yaml_value(yelement, "frame", shape.frame);
+        auto shape = add_shape(scene);
+        get_yaml_value(yelement, "name", shape->name);
+        get_yaml_value(yelement, "frame", shape->frame);
         if (has_yaml_value(yelement, "lookat")) {
           auto lookat = identity3x3f;
           get_yaml_value(yelement, "lookat", lookat);
-          shape.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+          shape->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
-        get_yaml_value(yelement, "emission", shape.emission);
-        get_yaml_value(yelement, "color", shape.color);
-        get_yaml_value(yelement, "metallic", shape.metallic);
-        get_yaml_value(yelement, "specular", shape.specular);
-        get_yaml_value(yelement, "roughness", shape.roughness);
-        get_yaml_value(yelement, "coat", shape.coat);
-        get_yaml_value(yelement, "transmission", shape.transmission);
-        get_yaml_value(yelement, "thin", shape.thin);
-        get_yaml_value(yelement, "ior", shape.ior);
-        get_yaml_value(yelement, "trdepth", shape.trdepth);
-        get_yaml_value(yelement, "scattering", shape.scattering);
-        get_yaml_value(yelement, "scanisotropy", shape.scanisotropy);
-        get_yaml_value(yelement, "opacity", shape.opacity);
-        get_yaml_value(yelement, "coat", shape.coat);
-        get_texture(yelement, "emission_tex", shape.emission_tex);
-        get_texture(yelement, "color_tex", shape.color_tex);
-        get_texture(yelement, "metallic_tex", shape.metallic_tex);
-        get_texture(yelement, "specular_tex", shape.specular_tex);
-        get_texture(yelement, "transmission_tex", shape.transmission_tex);
-        get_texture(yelement, "roughness_tex", shape.roughness_tex);
-        get_texture(yelement, "scattering_tex", shape.scattering_tex);
-        get_texture(yelement, "normal_tex", shape.normal_tex);
-        get_texture(yelement, "normal_tex", shape.normal_tex);
-        get_yaml_value(yelement, "gltf_textures", shape.gltf_textures);
+        get_yaml_value(yelement, "emission", shape->emission);
+        get_yaml_value(yelement, "color", shape->color);
+        get_yaml_value(yelement, "metallic", shape->metallic);
+        get_yaml_value(yelement, "specular", shape->specular);
+        get_yaml_value(yelement, "roughness", shape->roughness);
+        get_yaml_value(yelement, "coat", shape->coat);
+        get_yaml_value(yelement, "transmission", shape->transmission);
+        get_yaml_value(yelement, "thin", shape->thin);
+        get_yaml_value(yelement, "ior", shape->ior);
+        get_yaml_value(yelement, "trdepth", shape->trdepth);
+        get_yaml_value(yelement, "scattering", shape->scattering);
+        get_yaml_value(yelement, "scanisotropy", shape->scanisotropy);
+        get_yaml_value(yelement, "opacity", shape->opacity);
+        get_yaml_value(yelement, "coat", shape->coat);
+        get_texture(yelement, "emission_tex", shape->emission_tex);
+        get_texture(yelement, "color_tex", shape->color_tex);
+        get_texture(yelement, "metallic_tex", shape->metallic_tex);
+        get_texture(yelement, "specular_tex", shape->specular_tex);
+        get_texture(yelement, "transmission_tex", shape->transmission_tex);
+        get_texture(yelement, "roughness_tex", shape->roughness_tex);
+        get_texture(yelement, "scattering_tex", shape->scattering_tex);
+        get_texture(yelement, "normal_tex", shape->normal_tex);
+        get_texture(yelement, "normal_tex", shape->normal_tex);
+        get_yaml_value(yelement, "gltf_textures", shape->gltf_textures);
         if (has_yaml_value(yelement, "shape")) {
           auto path = ""s;
           get_yaml_value(yelement, "shape", path);
           try {
-            load_shape(get_dirname(filename) + path, shape.points, shape.lines,
-                shape.triangles, shape.quads, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius);
+            load_shape(get_dirname(filename) + path, shape->points, shape->lines,
+                shape->triangles, shape->quads, shape->positions, shape->normals,
+                shape->texcoords, shape->colors, shape->radius);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1052,28 +1049,28 @@ static void load_yaml_scene(
           auto path = ""s;
           get_yaml_value(yelement, "instances", path);
           try {
-            load_instances(get_dirname(filename) + path, shape.instances);
+            load_instances(get_dirname(filename) + path, shape->instances);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
         }
-        smap[shape.name] = (int)scene.shapes.size() - 1;
+        smap[shape->name] = (int)scene.shapes.size() - 1;
       } else if (yelement.name == "subdivs") {
-        auto& subdiv = scene.subdivs.emplace_back();
-        get_yaml_value(yelement, "name", subdiv.name);
-        get_yaml_ref(yelement, "shape", subdiv.shape, smap);
-        get_yaml_value(yelement, "subdivisions", subdiv.subdivisions);
-        get_yaml_value(yelement, "catmullclark", subdiv.catmullclark);
-        get_yaml_value(yelement, "smooth", subdiv.smooth);
-        get_texture(yelement, "displacement_tex", subdiv.displacement_tex);
-        get_yaml_value(yelement, "displacement", subdiv.displacement);
+        auto subdiv = add_subdiv(scene);
+        get_yaml_value(yelement, "name", subdiv->name);
+        get_yaml_ref(yelement, "shape", subdiv->shape, smap);
+        get_yaml_value(yelement, "subdivisions", subdiv->subdivisions);
+        get_yaml_value(yelement, "catmullclark", subdiv->catmullclark);
+        get_yaml_value(yelement, "smooth", subdiv->smooth);
+        get_texture(yelement, "displacement_tex", subdiv->displacement_tex);
+        get_yaml_value(yelement, "displacement", subdiv->displacement);
         if (has_yaml_value(yelement, "subdiv")) {
           auto path = ""s;
           get_yaml_value(yelement, "subdiv", path);
           try {
-            load_shape(get_dirname(filename) + path, subdiv.points,
-                subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
-                subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+            load_shape(get_dirname(filename) + path, subdiv->points,
+                subdiv->lines, subdiv->triangles, subdiv->quads, subdiv->positions,
+                subdiv->normals, subdiv->texcoords, subdiv->colors, subdiv->radius);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1082,9 +1079,9 @@ static void load_yaml_scene(
           auto path = ""s;
           get_yaml_value(yelement, "fvsubdiv", path);
           try {
-            load_fvshape(get_dirname(filename) + path, subdiv.quadspos,
-                subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-                subdiv.normals, subdiv.texcoords);
+            load_fvshape(get_dirname(filename) + path, subdiv->quadspos,
+                subdiv->quadsnorm, subdiv->quadstexcoord, subdiv->positions,
+                subdiv->normals, subdiv->texcoords);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1150,54 +1147,54 @@ static void save_yaml_scene(
   }
 
   auto def_shape = sceneio_shape{};
-  for (auto& shape : scene.shapes) {
+  for (auto shape : scene.shapes) {
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "shapes";
-    add_val(yelement, "name", shape.name);
-    add_opt(yelement, "frame", shape.frame, def_shape.frame);
-    add_opt(yelement, "emission", shape.emission, def_shape.emission);
-    add_opt(yelement, "color", shape.color, def_shape.color);
-    add_opt(yelement, "specular", shape.specular, def_shape.specular);
-    add_opt(yelement, "metallic", shape.metallic, def_shape.metallic);
-    add_opt(yelement, "coat", shape.coat, def_shape.coat);
-    add_opt(yelement, "roughness", shape.roughness, def_shape.roughness);
-    add_opt(yelement, "ior", shape.ior, def_shape.ior);
+    add_val(yelement, "name", shape->name);
+    add_opt(yelement, "frame", shape->frame, def_shape.frame);
+    add_opt(yelement, "emission", shape->emission, def_shape.emission);
+    add_opt(yelement, "color", shape->color, def_shape.color);
+    add_opt(yelement, "specular", shape->specular, def_shape.specular);
+    add_opt(yelement, "metallic", shape->metallic, def_shape.metallic);
+    add_opt(yelement, "coat", shape->coat, def_shape.coat);
+    add_opt(yelement, "roughness", shape->roughness, def_shape.roughness);
+    add_opt(yelement, "ior", shape->ior, def_shape.ior);
     add_opt(
-        yelement, "transmission", shape.transmission, def_shape.transmission);
-    add_opt(yelement, "trdepth", shape.trdepth, def_shape.trdepth);
-    add_opt(yelement, "scattering", shape.scattering, def_shape.scattering);
+        yelement, "transmission", shape->transmission, def_shape.transmission);
+    add_opt(yelement, "trdepth", shape->trdepth, def_shape.trdepth);
+    add_opt(yelement, "scattering", shape->scattering, def_shape.scattering);
     add_opt(
-        yelement, "scanisotropy", shape.scanisotropy, def_shape.scanisotropy);
-    add_opt(yelement, "opacity", shape.opacity, def_shape.opacity);
-    add_opt(yelement, "thin", shape.thin, def_shape.thin);
-    add_tex(yelement, "emission_tex", shape.emission_tex);
-    add_tex(yelement, "color_tex", shape.color_tex);
-    add_tex(yelement, "metallic_tex", shape.metallic_tex);
-    add_tex(yelement, "specular_tex", shape.specular_tex);
-    add_tex(yelement, "roughness_tex", shape.roughness_tex);
-    add_tex(yelement, "transmission_tex", shape.transmission_tex);
-    add_tex(yelement, "scattering_tex", shape.scattering_tex);
-    add_tex(yelement, "coat_tex", shape.coat_tex);
-    add_tex(yelement, "opacity_tex", shape.opacity_tex);
-    add_tex(yelement, "normal_tex", shape.normal_tex);
-    add_opt(yelement, "gltf_textures", shape.gltf_textures,
+        yelement, "scanisotropy", shape->scanisotropy, def_shape.scanisotropy);
+    add_opt(yelement, "opacity", shape->opacity, def_shape.opacity);
+    add_opt(yelement, "thin", shape->thin, def_shape.thin);
+    add_tex(yelement, "emission_tex", shape->emission_tex);
+    add_tex(yelement, "color_tex", shape->color_tex);
+    add_tex(yelement, "metallic_tex", shape->metallic_tex);
+    add_tex(yelement, "specular_tex", shape->specular_tex);
+    add_tex(yelement, "roughness_tex", shape->roughness_tex);
+    add_tex(yelement, "transmission_tex", shape->transmission_tex);
+    add_tex(yelement, "scattering_tex", shape->scattering_tex);
+    add_tex(yelement, "coat_tex", shape->coat_tex);
+    add_tex(yelement, "opacity_tex", shape->opacity_tex);
+    add_tex(yelement, "normal_tex", shape->normal_tex);
+    add_opt(yelement, "gltf_textures", shape->gltf_textures,
         def_shape.gltf_textures);
-    if (!shape.positions.empty()) {
-      auto path = replace_extension(shape.name, ".ply");
+    if (!shape->positions.empty()) {
+      auto path = replace_extension(shape->name, ".ply");
       add_val(yelement, "shape", path);
       try {
-        save_shape(get_dirname(filename) + path, shape.points, shape.lines,
-            shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+        save_shape(get_dirname(filename) + path, shape->points, shape->lines,
+            shape->triangles, shape->quads, shape->positions, shape->normals,
+            shape->texcoords, shape->colors, shape->radius);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
     }
-    if (!shape.instances.empty()) {
-      auto path = replace_extension(shape.name, ".instances.ply");
+    if (!shape->instances.empty()) {
+      auto path = replace_extension(shape->name, ".instances.ply");
       add_val(yelement, "instances", path);
       try {
-        save_instances(get_dirname(filename) + path, shape.instances);
+        save_instances(get_dirname(filename) + path, shape->instances);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
@@ -1205,37 +1202,37 @@ static void save_yaml_scene(
   }
 
   auto def_subdiv = sceneio_subdiv{};
-  for (auto& subdiv : scene.subdivs) {
+  for (auto subdiv : scene.subdivs) {
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "subdivs";
-    add_val(yelement, "name", subdiv.name);
-    add_val(yelement, "shape", scene.shapes[subdiv.shape].name);
+    add_val(yelement, "name", subdiv->name);
+    add_val(yelement, "shape", scene.shapes[subdiv->shape]->name);
     add_opt(
-        yelement, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
+        yelement, "subdivisions", subdiv->subdivisions, def_subdiv.subdivisions);
     add_opt(
-        yelement, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
-    add_opt(yelement, "smooth", subdiv.smooth, def_subdiv.smooth);
-    add_tex(yelement, "displacement_tex", subdiv.displacement_tex);
+        yelement, "catmullclark", subdiv->catmullclark, def_subdiv.catmullclark);
+    add_opt(yelement, "smooth", subdiv->smooth, def_subdiv.smooth);
+    add_tex(yelement, "displacement_tex", subdiv->displacement_tex);
     add_opt(
-        yelement, "displacement", subdiv.displacement, def_subdiv.subdivisions);
-    if (!subdiv.positions.empty() && subdiv.quadspos.empty()) {
-      auto path = replace_extension(subdiv.name, ".ply");
+        yelement, "displacement", subdiv->displacement, def_subdiv.subdivisions);
+    if (!subdiv->positions.empty() && subdiv->quadspos.empty()) {
+      auto path = replace_extension(subdiv->name, ".ply");
       add_val(yelement, "subdiv", path);
       try {
-        save_shape(get_dirname(filename) + path, subdiv.points, subdiv.lines,
-            subdiv.triangles, subdiv.quads, subdiv.positions, subdiv.normals,
-            subdiv.texcoords, subdiv.colors, subdiv.radius);
+        save_shape(get_dirname(filename) + path, subdiv->points, subdiv->lines,
+            subdiv->triangles, subdiv->quads, subdiv->positions, subdiv->normals,
+            subdiv->texcoords, subdiv->colors, subdiv->radius);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
     }
-    if (!subdiv.positions.empty() && !subdiv.quadspos.empty()) {
-      auto path = replace_extension(subdiv.name, ".obj");
+    if (!subdiv->positions.empty() && !subdiv->quadspos.empty()) {
+      auto path = replace_extension(subdiv->name, ".obj");
       add_val(yelement, "fvsubdiv", path);
       try {
-        save_fvshape(get_dirname(filename) + path, subdiv.quadspos,
-            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-            subdiv.normals, subdiv.texcoords);
+        save_fvshape(get_dirname(filename) + path, subdiv->quadspos,
+            subdiv->quadsnorm, subdiv->quadstexcoord, subdiv->positions,
+            subdiv->normals, subdiv->texcoords);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
@@ -1411,45 +1408,45 @@ static void load_json_scene(
     }
     if (js.contains("shapes")) {
       for (auto& ejs : js.at("shapes")) {
-        auto& shape = scene.shapes.emplace_back();
-        get_value(ejs, "name", shape.name);
-        get_value(ejs, "frame", shape.frame);
+        auto shape = add_shape(scene);
+        get_value(ejs, "name", shape->name);
+        get_value(ejs, "frame", shape->frame);
         if (ejs.contains("lookat")) {
           auto lookat = identity3x3f;
           get_value(ejs, "lookat", lookat);
-          shape.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+          shape->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
-        get_value(ejs, "emission", shape.emission);
-        get_value(ejs, "color", shape.color);
-        get_value(ejs, "metallic", shape.metallic);
-        get_value(ejs, "specular", shape.specular);
-        get_value(ejs, "roughness", shape.roughness);
-        get_value(ejs, "coat", shape.coat);
-        get_value(ejs, "transmission", shape.transmission);
-        get_value(ejs, "thin", shape.thin);
-        get_value(ejs, "ior", shape.ior);
-        get_value(ejs, "trdepth", shape.trdepth);
-        get_value(ejs, "scattering", shape.scattering);
-        get_value(ejs, "scanisotropy", shape.scanisotropy);
-        get_value(ejs, "opacity", shape.opacity);
-        get_value(ejs, "coat", shape.coat);
-        get_texture(ejs, "emission_tex", shape.emission_tex);
-        get_texture(ejs, "color_tex", shape.color_tex);
-        get_texture(ejs, "metallic_tex", shape.metallic_tex);
-        get_texture(ejs, "specular_tex", shape.specular_tex);
-        get_texture(ejs, "transmission_tex", shape.transmission_tex);
-        get_texture(ejs, "roughness_tex", shape.roughness_tex);
-        get_texture(ejs, "scattering_tex", shape.scattering_tex);
-        get_texture(ejs, "normal_tex", shape.normal_tex);
-        get_texture(ejs, "normal_tex", shape.normal_tex);
-        get_value(ejs, "gltf_textures", shape.gltf_textures);
+        get_value(ejs, "emission", shape->emission);
+        get_value(ejs, "color", shape->color);
+        get_value(ejs, "metallic", shape->metallic);
+        get_value(ejs, "specular", shape->specular);
+        get_value(ejs, "roughness", shape->roughness);
+        get_value(ejs, "coat", shape->coat);
+        get_value(ejs, "transmission", shape->transmission);
+        get_value(ejs, "thin", shape->thin);
+        get_value(ejs, "ior", shape->ior);
+        get_value(ejs, "trdepth", shape->trdepth);
+        get_value(ejs, "scattering", shape->scattering);
+        get_value(ejs, "scanisotropy", shape->scanisotropy);
+        get_value(ejs, "opacity", shape->opacity);
+        get_value(ejs, "coat", shape->coat);
+        get_texture(ejs, "emission_tex", shape->emission_tex);
+        get_texture(ejs, "color_tex", shape->color_tex);
+        get_texture(ejs, "metallic_tex", shape->metallic_tex);
+        get_texture(ejs, "specular_tex", shape->specular_tex);
+        get_texture(ejs, "transmission_tex", shape->transmission_tex);
+        get_texture(ejs, "roughness_tex", shape->roughness_tex);
+        get_texture(ejs, "scattering_tex", shape->scattering_tex);
+        get_texture(ejs, "normal_tex", shape->normal_tex);
+        get_texture(ejs, "normal_tex", shape->normal_tex);
+        get_value(ejs, "gltf_textures", shape->gltf_textures);
         if (ejs.contains("shape")) {
           auto path = ""s;
           get_value(ejs, "shape", path);
           try {
-            load_shape(get_dirname(filename) + path, shape.points, shape.lines,
-                shape.triangles, shape.quads, shape.positions, shape.normals,
-                shape.texcoords, shape.colors, shape.radius);
+            load_shape(get_dirname(filename) + path, shape->points, shape->lines,
+                shape->triangles, shape->quads, shape->positions, shape->normals,
+                shape->texcoords, shape->colors, shape->radius);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1458,31 +1455,31 @@ static void load_json_scene(
           auto path = ""s;
           get_value(ejs, "instances", path);
           try {
-            load_instances(get_dirname(filename) + path, shape.instances);
+            load_instances(get_dirname(filename) + path, shape->instances);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
         }
-        shape_map[shape.name] = (int)scene.shapes.size() - 1;
+        shape_map[shape->name] = (int)scene.shapes.size() - 1;
       }
     }
     if (js.contains("subdivs")) {
       for (auto& ejs : js.at("subdivs")) {
-        auto& subdiv = scene.subdivs.emplace_back();
-        get_value(ejs, "name", subdiv.name);
-        get_ref(ejs, "shape", subdiv.shape, shape_map);
-        get_value(ejs, "subdivisions", subdiv.subdivisions);
-        get_value(ejs, "catmullclark", subdiv.catmullclark);
-        get_value(ejs, "smooth", subdiv.smooth);
-        get_texture(ejs, "displacement_tex", subdiv.displacement_tex);
-        get_value(ejs, "displacement", subdiv.displacement);
+        auto subdiv = add_subdiv(scene);
+        get_value(ejs, "name", subdiv->name);
+        get_ref(ejs, "shape", subdiv->shape, shape_map);
+        get_value(ejs, "subdivisions", subdiv->subdivisions);
+        get_value(ejs, "catmullclark", subdiv->catmullclark);
+        get_value(ejs, "smooth", subdiv->smooth);
+        get_texture(ejs, "displacement_tex", subdiv->displacement_tex);
+        get_value(ejs, "displacement", subdiv->displacement);
         if (ejs.contains("subdiv")) {
           auto path = ""s;
           get_value(ejs, "subdiv", path);
           try {
-            load_shape(get_dirname(filename) + path, subdiv.points,
-                subdiv.lines, subdiv.triangles, subdiv.quads, subdiv.positions,
-                subdiv.normals, subdiv.texcoords, subdiv.colors, subdiv.radius);
+            load_shape(get_dirname(filename) + path, subdiv->points,
+                subdiv->lines, subdiv->triangles, subdiv->quads, subdiv->positions,
+                subdiv->normals, subdiv->texcoords, subdiv->colors, subdiv->radius);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1491,9 +1488,9 @@ static void load_json_scene(
           auto path = ""s;
           get_value(ejs, "fvsubdiv", path);
           try {
-            load_fvshape(get_dirname(filename) + path, subdiv.quadspos,
-                subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-                subdiv.normals, subdiv.texcoords);
+            load_fvshape(get_dirname(filename) + path, subdiv->quadspos,
+                subdiv->quadsnorm, subdiv->quadstexcoord, subdiv->positions,
+                subdiv->normals, subdiv->texcoords);
           } catch (std::exception& e) {
             throw_dependent_error(filename, e.what());
           }
@@ -1563,50 +1560,50 @@ static void save_json_scene(
 
   auto def_shape = sceneio_shape{};
   if (!scene.environments.empty()) js["shapes"] = json::array();
-  for (auto& shape : scene.shapes) {
+  for (auto shape : scene.shapes) {
     auto& ejs = js["shapes"].emplace_back();
-    add_val(ejs, "name", shape.name);
-    add_opt(ejs, "frame", shape.frame, def_shape.frame);
-    add_opt(ejs, "emission", shape.emission, def_shape.emission);
-    add_opt(ejs, "color", shape.color, def_shape.color);
-    add_opt(ejs, "specular", shape.specular, def_shape.specular);
-    add_opt(ejs, "metallic", shape.metallic, def_shape.metallic);
-    add_opt(ejs, "coat", shape.coat, def_shape.coat);
-    add_opt(ejs, "roughness", shape.roughness, def_shape.roughness);
-    add_opt(ejs, "ior", shape.ior, def_shape.ior);
-    add_opt(ejs, "transmission", shape.transmission, def_shape.transmission);
-    add_opt(ejs, "trdepth", shape.trdepth, def_shape.trdepth);
-    add_opt(ejs, "scattering", shape.scattering, def_shape.scattering);
-    add_opt(ejs, "scanisotropy", shape.scanisotropy, def_shape.scanisotropy);
-    add_opt(ejs, "opacity", shape.opacity, def_shape.opacity);
-    add_opt(ejs, "thin", shape.thin, def_shape.thin);
-    add_tex(ejs, "emission_tex", shape.emission_tex);
-    add_tex(ejs, "color_tex", shape.color_tex);
-    add_tex(ejs, "metallic_tex", shape.metallic_tex);
-    add_tex(ejs, "specular_tex", shape.specular_tex);
-    add_tex(ejs, "roughness_tex", shape.roughness_tex);
-    add_tex(ejs, "transmission_tex", shape.transmission_tex);
-    add_tex(ejs, "scattering_tex", shape.scattering_tex);
-    add_tex(ejs, "coat_tex", shape.coat_tex);
-    add_tex(ejs, "opacity_tex", shape.opacity_tex);
-    add_tex(ejs, "normal_tex", shape.normal_tex);
-    add_opt(ejs, "gltf_textures", shape.gltf_textures, def_shape.gltf_textures);
-    if (!shape.positions.empty()) {
-      auto path = replace_extension(shape.name, ".ply");
+    add_val(ejs, "name", shape->name);
+    add_opt(ejs, "frame", shape->frame, def_shape.frame);
+    add_opt(ejs, "emission", shape->emission, def_shape.emission);
+    add_opt(ejs, "color", shape->color, def_shape.color);
+    add_opt(ejs, "specular", shape->specular, def_shape.specular);
+    add_opt(ejs, "metallic", shape->metallic, def_shape.metallic);
+    add_opt(ejs, "coat", shape->coat, def_shape.coat);
+    add_opt(ejs, "roughness", shape->roughness, def_shape.roughness);
+    add_opt(ejs, "ior", shape->ior, def_shape.ior);
+    add_opt(ejs, "transmission", shape->transmission, def_shape.transmission);
+    add_opt(ejs, "trdepth", shape->trdepth, def_shape.trdepth);
+    add_opt(ejs, "scattering", shape->scattering, def_shape.scattering);
+    add_opt(ejs, "scanisotropy", shape->scanisotropy, def_shape.scanisotropy);
+    add_opt(ejs, "opacity", shape->opacity, def_shape.opacity);
+    add_opt(ejs, "thin", shape->thin, def_shape.thin);
+    add_tex(ejs, "emission_tex", shape->emission_tex);
+    add_tex(ejs, "color_tex", shape->color_tex);
+    add_tex(ejs, "metallic_tex", shape->metallic_tex);
+    add_tex(ejs, "specular_tex", shape->specular_tex);
+    add_tex(ejs, "roughness_tex", shape->roughness_tex);
+    add_tex(ejs, "transmission_tex", shape->transmission_tex);
+    add_tex(ejs, "scattering_tex", shape->scattering_tex);
+    add_tex(ejs, "coat_tex", shape->coat_tex);
+    add_tex(ejs, "opacity_tex", shape->opacity_tex);
+    add_tex(ejs, "normal_tex", shape->normal_tex);
+    add_opt(ejs, "gltf_textures", shape->gltf_textures, def_shape.gltf_textures);
+    if (!shape->positions.empty()) {
+      auto path = replace_extension(shape->name, ".ply");
       add_val(ejs, "shape", path);
       try {
-        save_shape(get_dirname(filename) + path, shape.points, shape.lines,
-            shape.triangles, shape.quads, shape.positions, shape.normals,
-            shape.texcoords, shape.colors, shape.radius);
+        save_shape(get_dirname(filename) + path, shape->points, shape->lines,
+            shape->triangles, shape->quads, shape->positions, shape->normals,
+            shape->texcoords, shape->colors, shape->radius);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
     }
-    if (!shape.instances.empty()) {
-      auto path = replace_extension(shape.name, ".instances.ply");
+    if (!shape->instances.empty()) {
+      auto path = replace_extension(shape->name, ".instances.ply");
       add_val(ejs, "instances", path);
       try {
-        save_instances(get_dirname(filename) + path, shape.instances);
+        save_instances(get_dirname(filename) + path, shape->instances);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
@@ -1615,33 +1612,33 @@ static void save_json_scene(
 
   auto def_subdiv = sceneio_subdiv{};
   if (!scene.subdivs.empty()) js["subdivs"] = json::array();
-  for (auto& subdiv : scene.subdivs) {
+  for (auto subdiv : scene.subdivs) {
     auto& ejs = js["subdivs"].emplace_back();
-    add_val(ejs, "name", subdiv.name);
-    add_val(ejs, "shape", scene.shapes[subdiv.shape].name);
-    add_opt(ejs, "subdivisions", subdiv.subdivisions, def_subdiv.subdivisions);
-    add_opt(ejs, "catmullclark", subdiv.catmullclark, def_subdiv.catmullclark);
-    add_opt(ejs, "smooth", subdiv.smooth, def_subdiv.smooth);
-    add_tex(ejs, "displacement_tex", subdiv.displacement_tex);
-    add_opt(ejs, "displacement", subdiv.displacement, def_subdiv.subdivisions);
-    if (!subdiv.positions.empty() && subdiv.quadspos.empty()) {
-      auto path = replace_extension(subdiv.name, ".ply");
+    add_val(ejs, "name", subdiv->name);
+    add_val(ejs, "shape", scene.shapes[subdiv->shape]->name);
+    add_opt(ejs, "subdivisions", subdiv->subdivisions, def_subdiv.subdivisions);
+    add_opt(ejs, "catmullclark", subdiv->catmullclark, def_subdiv.catmullclark);
+    add_opt(ejs, "smooth", subdiv->smooth, def_subdiv.smooth);
+    add_tex(ejs, "displacement_tex", subdiv->displacement_tex);
+    add_opt(ejs, "displacement", subdiv->displacement, def_subdiv.subdivisions);
+    if (!subdiv->positions.empty() && subdiv->quadspos.empty()) {
+      auto path = replace_extension(subdiv->name, ".ply");
       add_val(ejs, "subdiv", path);
       try {
-        save_shape(get_dirname(filename) + path, subdiv.points, subdiv.lines,
-            subdiv.triangles, subdiv.quads, subdiv.positions, subdiv.normals,
-            subdiv.texcoords, subdiv.colors, subdiv.radius);
+        save_shape(get_dirname(filename) + path, subdiv->points, subdiv->lines,
+            subdiv->triangles, subdiv->quads, subdiv->positions, subdiv->normals,
+            subdiv->texcoords, subdiv->colors, subdiv->radius);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
     }
-    if (!subdiv.positions.empty() && !subdiv.quadspos.empty()) {
-      auto path = replace_extension(subdiv.name, ".obj");
+    if (!subdiv->positions.empty() && !subdiv->quadspos.empty()) {
+      auto path = replace_extension(subdiv->name, ".obj");
       add_val(ejs, "fvsubdiv", path);
       try {
-        save_fvshape(get_dirname(filename) + path, subdiv.quadspos,
-            subdiv.quadsnorm, subdiv.quadstexcoord, subdiv.positions,
-            subdiv.normals, subdiv.texcoords);
+        save_fvshape(get_dirname(filename) + path, subdiv->quadspos,
+            subdiv->quadsnorm, subdiv->quadstexcoord, subdiv->positions,
+            subdiv->normals, subdiv->texcoords);
       } catch (std::exception& e) {
         throw_dependent_error(filename, e.what());
       }
@@ -1734,54 +1731,54 @@ static void load_obj_scene(
     if (materials.empty()) materials.push_back("");
     for (auto material_idx = 0; material_idx < materials.size();
          material_idx++) {
-      auto& shape     = scene.shapes.emplace_back();
-      shape.name      = make_name("shape", scene.shapes.size());
+      auto shape     = add_shape(scene);
+      shape->name      = make_name("shape", scene.shapes.size());
       auto nmaterials = vector<string>{};
       auto ematerials = vector<int>{};
       auto has_quads_ = has_quads(oshape);
       if (!oshape.faces.empty() && !has_quads_) {
-        get_triangles(obj, oshape, material_idx, shape.triangles,
-            shape.positions, shape.normals, shape.texcoords, true);
+        get_triangles(obj, oshape, material_idx, shape->triangles,
+            shape->positions, shape->normals, shape->texcoords, true);
       } else if (!oshape.faces.empty() && has_quads_) {
-        get_quads(obj, oshape, material_idx, shape.quads, shape.positions,
-            shape.normals, shape.texcoords, true);
+        get_quads(obj, oshape, material_idx, shape->quads, shape->positions,
+            shape->normals, shape->texcoords, true);
       } else if (!oshape.lines.empty()) {
-        get_lines(obj, oshape, material_idx, shape.lines, shape.positions,
-            shape.normals, shape.texcoords, true);
+        get_lines(obj, oshape, material_idx, shape->lines, shape->positions,
+            shape->normals, shape->texcoords, true);
       } else if (!oshape.points.empty()) {
-        get_points(obj, oshape, material_idx, shape.points, shape.positions,
-            shape.normals, shape.texcoords, true);
+        get_points(obj, oshape, material_idx, shape->points, shape->positions,
+            shape->normals, shape->texcoords, true);
       } else {
         throw_emptyshape_error(filename, oshape.name);
       }
-      shape.instances = oshape.instances;
+      shape->instances = oshape.instances;
       if (material_map.find(materials[material_idx]) == material_map.end()) {
         throw_missing_reference_error(
             filename, "material", oshape.materials.at(0));
       }
       auto& omat = obj.materials.at(material_map.at(materials[material_idx]));
-      shape.emission         = omat.pbr_emission;
-      shape.color            = omat.pbr_base;
-      shape.specular         = omat.pbr_specular;
-      shape.roughness        = omat.pbr_roughness;
-      shape.ior              = omat.pbr_ior;
-      shape.metallic         = omat.pbr_metallic;
-      shape.coat             = omat.pbr_coat;
-      shape.transmission     = omat.pbr_transmission;
-      shape.scattering       = omat.pbr_volscattering;
-      shape.scanisotropy     = omat.pbr_volanisotropy;
-      shape.trdepth          = omat.pbr_volscale;
-      shape.opacity          = omat.pbr_opacity;
-      shape.thin             = true;
-      shape.emission_tex     = get_texture(omat.pbr_emission_map);
-      shape.color_tex        = get_texture(omat.pbr_base_map);
-      shape.specular_tex     = get_texture(omat.pbr_specular_map);
-      shape.metallic_tex     = get_texture(omat.pbr_metallic_map);
-      shape.roughness_tex    = get_texture(omat.pbr_roughness_map);
-      shape.transmission_tex = get_texture(omat.pbr_transmission_map);
-      shape.coat_tex         = get_texture(omat.pbr_coat_map);
-      shape.opacity_tex      = get_texture(omat.pbr_opacity_map);
-      shape.normal_tex       = get_texture(omat.normal_map);
+      shape->emission         = omat.pbr_emission;
+      shape->color            = omat.pbr_base;
+      shape->specular         = omat.pbr_specular;
+      shape->roughness        = omat.pbr_roughness;
+      shape->ior              = omat.pbr_ior;
+      shape->metallic         = omat.pbr_metallic;
+      shape->coat             = omat.pbr_coat;
+      shape->transmission     = omat.pbr_transmission;
+      shape->scattering       = omat.pbr_volscattering;
+      shape->scanisotropy     = omat.pbr_volanisotropy;
+      shape->trdepth          = omat.pbr_volscale;
+      shape->opacity          = omat.pbr_opacity;
+      shape->thin             = true;
+      shape->emission_tex     = get_texture(omat.pbr_emission_map);
+      shape->color_tex        = get_texture(omat.pbr_base_map);
+      shape->specular_tex     = get_texture(omat.pbr_specular_map);
+      shape->metallic_tex     = get_texture(omat.pbr_metallic_map);
+      shape->roughness_tex    = get_texture(omat.pbr_roughness_map);
+      shape->transmission_tex = get_texture(omat.pbr_transmission_map);
+      shape->coat_tex         = get_texture(omat.pbr_coat_map);
+      shape->opacity_tex      = get_texture(omat.pbr_opacity_map);
+      shape->normal_tex       = get_texture(omat.normal_map);
     }
   }
 
@@ -1831,47 +1828,47 @@ static void save_obj_scene(
   // convert materials and textures
   for (auto& shape : scene.shapes) {
     auto& omaterial                = obj.materials.emplace_back();
-    omaterial.name                 = get_basename(shape.name);
+    omaterial.name                 = get_basename(shape->name);
     omaterial.illum                = 2;
     omaterial.as_pbr               = true;
-    omaterial.pbr_emission         = shape.emission;
-    omaterial.pbr_base             = shape.color;
-    omaterial.pbr_specular         = shape.specular;
-    omaterial.pbr_roughness        = shape.roughness;
-    omaterial.pbr_metallic         = shape.metallic;
-    omaterial.pbr_coat             = shape.coat;
-    omaterial.pbr_transmission     = shape.transmission;
-    omaterial.pbr_opacity          = shape.opacity;
-    omaterial.pbr_emission_map     = get_texture(shape.emission_tex);
-    omaterial.pbr_base_map         = get_texture(shape.color_tex);
-    omaterial.pbr_specular_map     = get_texture(shape.specular_tex);
-    omaterial.pbr_metallic_map     = get_texture(shape.metallic_tex);
-    omaterial.pbr_roughness_map    = get_texture(shape.roughness_tex);
-    omaterial.pbr_transmission_map = get_texture(shape.transmission_tex);
-    omaterial.pbr_coat_map         = get_texture(shape.coat_tex);
-    omaterial.pbr_opacity_map      = get_texture(shape.opacity_tex);
-    omaterial.normal_map           = get_texture(shape.normal_tex);
+    omaterial.pbr_emission         = shape->emission;
+    omaterial.pbr_base             = shape->color;
+    omaterial.pbr_specular         = shape->specular;
+    omaterial.pbr_roughness        = shape->roughness;
+    omaterial.pbr_metallic         = shape->metallic;
+    omaterial.pbr_coat             = shape->coat;
+    omaterial.pbr_transmission     = shape->transmission;
+    omaterial.pbr_opacity          = shape->opacity;
+    omaterial.pbr_emission_map     = get_texture(shape->emission_tex);
+    omaterial.pbr_base_map         = get_texture(shape->color_tex);
+    omaterial.pbr_specular_map     = get_texture(shape->specular_tex);
+    omaterial.pbr_metallic_map     = get_texture(shape->metallic_tex);
+    omaterial.pbr_roughness_map    = get_texture(shape->roughness_tex);
+    omaterial.pbr_transmission_map = get_texture(shape->transmission_tex);
+    omaterial.pbr_coat_map         = get_texture(shape->coat_tex);
+    omaterial.pbr_opacity_map      = get_texture(shape->opacity_tex);
+    omaterial.normal_map           = get_texture(shape->normal_tex);
   }
 
   // convert shapes
-  for (auto& shape : scene.shapes) {
-    auto positions = shape.positions, normals = shape.normals;
-    for (auto& p : positions) p = transform_point(shape.frame, p);
-    for (auto& n : normals) n = transform_normal(shape.frame, n);
-    if (!shape.triangles.empty()) {
-      add_triangles(obj, shape.name, shape.triangles, positions, normals,
-          shape.texcoords, {}, {}, shape.instances, true);
-    } else if (!shape.quads.empty()) {
-      add_quads(obj, shape.name, shape.quads, positions, normals,
-          shape.texcoords, {}, {}, shape.instances, true);
-    } else if (!shape.lines.empty()) {
-      add_lines(obj, shape.name, shape.lines, positions, normals,
-          shape.texcoords, {}, {}, shape.instances, true);
-    } else if (!shape.points.empty()) {
-      add_points(obj, shape.name, shape.points, positions, normals,
-          shape.texcoords, {}, {}, shape.instances, true);
+  for (auto shape : scene.shapes) {
+    auto positions = shape->positions, normals = shape->normals;
+    for (auto& p : positions) p = transform_point(shape->frame, p);
+    for (auto& n : normals) n = transform_normal(shape->frame, n);
+    if (!shape->triangles.empty()) {
+      add_triangles(obj, shape->name, shape->triangles, positions, normals,
+          shape->texcoords, {}, {}, shape->instances, true);
+    } else if (!shape->quads.empty()) {
+      add_quads(obj, shape->name, shape->quads, positions, normals,
+          shape->texcoords, {}, {}, shape->instances, true);
+    } else if (!shape->lines.empty()) {
+      add_lines(obj, shape->name, shape->lines, positions, normals,
+          shape->texcoords, {}, {}, shape->instances, true);
+    } else if (!shape->points.empty()) {
+      add_points(obj, shape->name, shape->points, positions, normals,
+          shape->texcoords, {}, {}, shape->instances, true);
     } else {
-      throw_emptyshape_error(filename, shape.name);
+      throw_emptyshape_error(filename, shape->name);
     }
   }
 
@@ -1923,13 +1920,12 @@ static void load_ply_scene(
   scene = {};
 
   // load ply mesh
-  scene.shapes.push_back({});
-  auto& shape = scene.shapes.back();
-  shape.name  = "shapes/" + get_basename(filename) + ".yaml";
+  auto shape = add_shape(scene);
+  shape->name  = "shapes/" + get_basename(filename) + ".yaml";
   try {
-    load_shape(filename, shape.points, shape.lines, shape.triangles,
-        shape.quads, shape.positions, shape.normals, shape.texcoords,
-        shape.colors, shape.radius);
+    load_shape(filename, shape->points, shape->lines, shape->triangles,
+        shape->quads, shape->positions, shape->normals, shape->texcoords,
+        shape->colors, shape->radius);
   } catch (std::exception& e) {
     throw_dependent_error(filename, e.what());
   }
@@ -1943,10 +1939,10 @@ static void load_ply_scene(
 static void save_ply_scene(
     const string& filename, const sceneio_model& scene, bool noparallel) {
   if (scene.shapes.empty()) throw_emptyshape_error(filename, "");
-  auto& shape = scene.shapes.front();
-  save_shape(filename, shape.points, shape.lines, shape.triangles, shape.quads,
-      shape.positions, shape.normals, shape.texcoords, shape.colors,
-      shape.radius);
+  auto shape = scene.shapes.front();
+  save_shape(filename, shape->points, shape->lines, shape->triangles, shape->quads,
+      shape->positions, shape->normals, shape->texcoords, shape->colors,
+      shape->radius);
 }
 
 }  // namespace yocto
@@ -1994,30 +1990,30 @@ static void load_gltf_scene(
   for (auto& gmesh : gltf.meshes) {
     shape_indices.push_back({});
     for (auto& gprim : gmesh.primitives) {
-      auto& shape = scene.shapes.emplace_back();
+      auto shape = add_shape(scene);
       shape_indices.back().push_back((int)scene.shapes.size() - 1);
-      shape.name = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
+      shape->name = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
                    ".yaml";
-      shape.positions    = gprim.positions;
-      shape.normals      = gprim.normals;
-      shape.texcoords    = gprim.texcoords;
-      shape.colors       = gprim.colors;
-      shape.radius       = gprim.radius;
-      shape.tangents     = gprim.tangents;
-      shape.triangles    = gprim.triangles;
-      shape.lines        = gprim.lines;
-      shape.points       = gprim.points;
+      shape->positions    = gprim.positions;
+      shape->normals      = gprim.normals;
+      shape->texcoords    = gprim.texcoords;
+      shape->colors       = gprim.colors;
+      shape->radius       = gprim.radius;
+      shape->tangents     = gprim.tangents;
+      shape->triangles    = gprim.triangles;
+      shape->lines        = gprim.lines;
+      shape->points       = gprim.points;
       auto& gmaterial    = gltf.materials[gprim.material];
-      shape.emission     = gmaterial.emission;
-      shape.emission_tex = get_texture(gmaterial.emission_tex);
+      shape->emission     = gmaterial.emission;
+      shape->emission_tex = get_texture(gmaterial.emission_tex);
       if (gmaterial.has_metalrough) {
-        shape.color        = xyz(gmaterial.mr_base);
-        shape.opacity      = gmaterial.mr_base.w;
-        shape.specular     = 1;
-        shape.color_tex    = get_texture(gmaterial.mr_base_tex);
-        shape.metallic_tex = get_texture(gmaterial.mr_metallic_tex);
+        shape->color        = xyz(gmaterial.mr_base);
+        shape->opacity      = gmaterial.mr_base.w;
+        shape->specular     = 1;
+        shape->color_tex    = get_texture(gmaterial.mr_base_tex);
+        shape->metallic_tex = get_texture(gmaterial.mr_metallic_tex);
       }
-      shape.normal_tex = get_texture(gmaterial.normal_tex);
+      shape->normal_tex = get_texture(gmaterial.normal_tex);
     }
   }
 
@@ -2044,7 +2040,7 @@ static void load_gltf_scene(
     }
     if (gnode.mesh >= 0) {
       for (auto shape_id : shape_indices[gnode.mesh]) {
-        scene.shapes[shape_id].instances.push_back(gnode.frame);
+        scene.shapes[shape_id]->instances.push_back(gnode.frame);
       }
     }
   }
@@ -2113,27 +2109,27 @@ static void load_pbrt_scene(
 
   // convert shapes
   for (auto& pshape : pbrt.shapes) {
-    auto& shape = scene.shapes.emplace_back();
-    shape.name  = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
+    auto shape = add_shape(scene);
+    shape->name  = "shapes/shape" + std::to_string((int)scene.shapes.size()) +
                  ".yaml";
-    shape.frame     = pshape.frame;
-    shape.instances = pshape.instances;
-    shape.positions = pshape.positions;
-    shape.normals   = pshape.normals;
-    shape.texcoords = pshape.texcoords;
-    shape.triangles = pshape.triangles;
-    for (auto& uv : shape.texcoords) uv.y = 1 - uv.y;
-    shape.emission     = pshape.emission;
-    shape.color        = pshape.color;
-    shape.metallic     = pshape.metallic;
-    shape.specular     = pshape.specular;
-    shape.transmission = pshape.transmission;
-    shape.ior          = pshape.ior;
-    shape.roughness    = pshape.roughness;
-    shape.opacity      = pshape.opacity;
-    shape.thin         = pshape.thin;
-    shape.color_tex    = get_texture(pshape.color_map);
-    shape.opacity_tex  = get_texture(pshape.opacity_map);
+    shape->frame     = pshape.frame;
+    shape->instances = pshape.instances;
+    shape->positions = pshape.positions;
+    shape->normals   = pshape.normals;
+    shape->texcoords = pshape.texcoords;
+    shape->triangles = pshape.triangles;
+    for (auto& uv : shape->texcoords) uv.y = 1 - uv.y;
+    shape->emission     = pshape.emission;
+    shape->color        = pshape.color;
+    shape->metallic     = pshape.metallic;
+    shape->specular     = pshape.specular;
+    shape->transmission = pshape.transmission;
+    shape->ior          = pshape.ior;
+    shape->roughness    = pshape.roughness;
+    shape->opacity      = pshape.opacity;
+    shape->thin         = pshape.thin;
+    shape->color_tex    = get_texture(pshape.color_map);
+    shape->opacity_tex  = get_texture(pshape.opacity_map);
   }
 
   // convert environments
@@ -2148,13 +2144,13 @@ static void load_pbrt_scene(
 
   // lights
   for (auto& plight : pbrt.lights) {
-    auto& shape     = scene.shapes.emplace_back();
-    shape.name      = make_name("shape", scene.shapes.size());
-    shape.frame     = plight.area_frame;
-    shape.triangles = plight.area_triangles;
-    shape.positions = plight.area_positions;
-    shape.normals   = plight.area_normals;
-    shape.emission  = plight.area_emission;
+    auto shape     = add_shape(scene);
+    shape->name      = make_name("shape", scene.shapes.size());
+    shape->frame     = plight.area_frame;
+    shape->triangles = plight.area_triangles;
+    shape->positions = plight.area_positions;
+    shape->normals   = plight.area_normals;
+    shape->emission  = plight.area_emission;
   }
 
   // fix scene
@@ -2183,20 +2179,20 @@ void save_pbrt_scene(
   // convert instances
   for (auto& shape : scene.shapes) {
     auto& pshape        = pbrt.shapes.emplace_back();
-    pshape.filename_    = replace_extension(shape.name, ".ply");
-    pshape.frame        = shape.frame;
-    pshape.frend        = shape.frame;
-    pshape.instances    = shape.instances;
-    pshape.color        = shape.color;
-    pshape.metallic     = shape.metallic;
-    pshape.specular     = shape.specular;
-    pshape.transmission = shape.transmission;
-    pshape.roughness    = shape.roughness;
-    pshape.ior          = shape.ior;
-    pshape.opacity      = shape.opacity;
+    pshape.filename_    = replace_extension(shape->name, ".ply");
+    pshape.frame        = shape->frame;
+    pshape.frend        = shape->frame;
+    pshape.instances    = shape->instances;
+    pshape.color        = shape->color;
+    pshape.metallic     = shape->metallic;
+    pshape.specular     = shape->specular;
+    pshape.transmission = shape->transmission;
+    pshape.roughness    = shape->roughness;
+    pshape.ior          = shape->ior;
+    pshape.opacity      = shape->opacity;
     pshape.color_map =
-        shape.color_tex >= 0 ? scene.textures[shape.color_tex]->name : ""s;
-    pshape.emission = shape.emission;
+        shape->color_tex >= 0 ? scene.textures[shape->color_tex]->name : ""s;
+    pshape.emission = shape->emission;
   }
 
   // convert environments
@@ -2213,12 +2209,12 @@ void save_pbrt_scene(
 
   // save meshes
   auto dirname = get_dirname(filename);
-  for (auto& shape : scene.shapes) {
-    if (shape.positions.empty()) continue;
+  for (auto shape : scene.shapes) {
+    if (shape->positions.empty()) continue;
     try {
-      save_shape(replace_extension(dirname + shape.name, ".ply"), shape.points,
-          shape.lines, shape.triangles, shape.quads, shape.positions,
-          shape.normals, shape.texcoords, shape.colors, shape.radius);
+      save_shape(replace_extension(dirname + shape->name, ".ply"), shape->points,
+          shape->lines, shape->triangles, shape->quads, shape->positions,
+          shape->normals, shape->texcoords, shape->colors, shape->radius);
     } catch (std::exception& e) {
       throw_dependent_error(filename, e.what());
     }
@@ -2255,35 +2251,35 @@ void make_cornellbox_scene(sceneio_model& scene) {
   camera->aperture         = 0.0;
   camera->film             = 0.024;
   camera->aspect           = 1;
-  auto& floor_shp         = scene.shapes.emplace_back();
-  floor_shp.name          = "shapes/floor.yaml";
-  floor_shp.positions     = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
-  floor_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
-  floor_shp.color         = {0.725, 0.71, 0.68};
-  auto& ceiling_shp       = scene.shapes.emplace_back();
-  ceiling_shp.name        = "ceiling";
-  ceiling_shp.name        = "shapes/ceiling.yaml";
-  ceiling_shp.positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
-  ceiling_shp.triangles   = {{0, 1, 2}, {2, 3, 0}};
-  ceiling_shp.color       = {0.725, 0.71, 0.68};
-  auto& backwall_shp      = scene.shapes.emplace_back();
-  backwall_shp.name       = "shapes/backwall.yaml";
-  backwall_shp.positions  = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
-  backwall_shp.triangles  = {{0, 1, 2}, {2, 3, 0}};
-  backwall_shp.color      = {0.725, 0.71, 0.68};
-  auto& rightwall_shp     = scene.shapes.emplace_back();
-  rightwall_shp.name      = "shapes/rightwall.yaml";
-  rightwall_shp.positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
-  rightwall_shp.triangles = {{0, 1, 2}, {2, 3, 0}};
-  rightwall_shp.color     = {0.14, 0.45, 0.091};
-  auto& leftwall_shp      = scene.shapes.emplace_back();
-  leftwall_shp.name       = "shapes/leftwall.yaml";
-  leftwall_shp.positions  = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
-  leftwall_shp.triangles  = {{0, 1, 2}, {2, 3, 0}};
-  leftwall_shp.color      = {0.63, 0.065, 0.05};
-  auto& shortbox_shp      = scene.shapes.emplace_back();
-  shortbox_shp.name       = "shapes/shortbox.yaml";
-  shortbox_shp.positions  = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
+  auto floor_shp         = add_shape(scene);
+  floor_shp->name          = "shapes/floor.yaml";
+  floor_shp->positions     = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};
+  floor_shp->triangles     = {{0, 1, 2}, {2, 3, 0}};
+  floor_shp->color         = {0.725, 0.71, 0.68};
+  auto ceiling_shp       = add_shape(scene);
+  ceiling_shp->name        = "ceiling";
+  ceiling_shp->name        = "shapes/ceiling.yaml";
+  ceiling_shp->positions   = {{-1, 2, 1}, {-1, 2, -1}, {1, 2, -1}, {1, 2, 1}};
+  ceiling_shp->triangles   = {{0, 1, 2}, {2, 3, 0}};
+  ceiling_shp->color       = {0.725, 0.71, 0.68};
+  auto backwall_shp      = add_shape(scene);
+  backwall_shp->name       = "shapes/backwall.yaml";
+  backwall_shp->positions  = {{-1, 0, -1}, {1, 0, -1}, {1, 2, -1}, {-1, 2, -1}};
+  backwall_shp->triangles  = {{0, 1, 2}, {2, 3, 0}};
+  backwall_shp->color      = {0.725, 0.71, 0.68};
+  auto rightwall_shp     = add_shape(scene);
+  rightwall_shp->name      = "shapes/rightwall.yaml";
+  rightwall_shp->positions = {{1, 0, -1}, {1, 0, 1}, {1, 2, 1}, {1, 2, -1}};
+  rightwall_shp->triangles = {{0, 1, 2}, {2, 3, 0}};
+  rightwall_shp->color     = {0.14, 0.45, 0.091};
+  auto leftwall_shp      = add_shape(scene);
+  leftwall_shp->name       = "shapes/leftwall.yaml";
+  leftwall_shp->positions  = {{-1, 0, 1}, {-1, 0, -1}, {-1, 2, -1}, {-1, 2, 1}};
+  leftwall_shp->triangles  = {{0, 1, 2}, {2, 3, 0}};
+  leftwall_shp->color      = {0.63, 0.065, 0.05};
+  auto shortbox_shp      = add_shape(scene);
+  shortbox_shp->name       = "shapes/shortbox.yaml";
+  shortbox_shp->positions  = {{0.53, 0.6, 0.75}, {0.7, 0.6, 0.17},
       {0.13, 0.6, 0.0}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
       {-0.05, 0.6, 0.57}, {0.13, 0.6, 0.0}, {0.13, 0.0, 0.0}, {0.53, 0.0, 0.75},
       {0.53, 0.6, 0.75}, {-0.05, 0.6, 0.57}, {-0.05, 0.0, 0.57},
@@ -2291,13 +2287,13 @@ void make_cornellbox_scene(sceneio_model& scene) {
       {0.13, 0.0, 0.0}, {0.13, 0.6, 0.0}, {0.7, 0.6, 0.17}, {0.7, 0.0, 0.17},
       {0.53, 0.0, 0.75}, {0.7, 0.0, 0.17}, {0.13, 0.0, 0.0},
       {-0.05, 0.0, 0.57}};
-  shortbox_shp.triangles  = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+  shortbox_shp->triangles  = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  shortbox_shp.color      = {0.725, 0.71, 0.68};
-  auto& tallbox_shp       = scene.shapes.emplace_back();
-  tallbox_shp.name        = "shapes/tallbox.yaml";
-  tallbox_shp.positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
+  shortbox_shp->color      = {0.725, 0.71, 0.68};
+  auto tallbox_shp       = add_shape(scene);
+  tallbox_shp->name        = "shapes/tallbox.yaml";
+  tallbox_shp->positions   = {{-0.53, 1.2, 0.09}, {0.04, 1.2, -0.09},
       {-0.14, 1.2, -0.67}, {-0.71, 1.2, -0.49}, {-0.53, 0.0, 0.09},
       {-0.53, 1.2, 0.09}, {-0.71, 1.2, -0.49}, {-0.71, 0.0, -0.49},
       {-0.71, 0.0, -0.49}, {-0.71, 1.2, -0.49}, {-0.14, 1.2, -0.67},
@@ -2306,16 +2302,16 @@ void make_cornellbox_scene(sceneio_model& scene) {
       {0.04, 1.2, -0.09}, {-0.53, 1.2, 0.09}, {-0.53, 0.0, 0.09},
       {-0.53, 0.0, 0.09}, {0.04, 0.0, -0.09}, {-0.14, 0.0, -0.67},
       {-0.71, 0.0, -0.49}};
-  tallbox_shp.triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
+  tallbox_shp->triangles   = {{0, 1, 2}, {2, 3, 0}, {4, 5, 6}, {6, 7, 4},
       {8, 9, 10}, {10, 11, 8}, {12, 13, 14}, {14, 15, 12}, {16, 17, 18},
       {18, 19, 16}, {20, 21, 22}, {22, 23, 20}};
-  tallbox_shp.color       = {0.725, 0.71, 0.68};
-  auto& light_shp         = scene.shapes.emplace_back();
-  light_shp.name          = "shapes/light.yaml";
-  light_shp.positions     = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
+  tallbox_shp->color       = {0.725, 0.71, 0.68};
+  auto light_shp         = add_shape(scene);
+  light_shp->name          = "shapes/light.yaml";
+  light_shp->positions     = {{-0.25, 1.99, 0.25}, {-0.25, 1.99, -0.25},
       {0.25, 1.99, -0.25}, {0.25, 1.99, 0.25}};
-  light_shp.triangles     = {{0, 1, 2}, {2, 3, 0}};
-  light_shp.emission      = {17, 12, 4};
+  light_shp->triangles     = {{0, 1, 2}, {2, 3, 0}};
+  light_shp->emission      = {17, 12, 4};
 }
 
 }  // namespace yocto

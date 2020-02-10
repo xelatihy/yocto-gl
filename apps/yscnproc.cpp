@@ -116,7 +116,7 @@ void run_app(int argc, const char** argv) {
   auto dirnames = unordered_set<string>{};
   if (!dirname.empty()) dirnames.insert(dirname);
   for (auto& shape : scene.shapes)
-    dirnames.insert(dirname + get_dirname(shape.name));
+    dirnames.insert(dirname + get_dirname(shape->name));
   for (auto texture : scene.textures)
     dirnames.insert(dirname + get_dirname(texture->name));
   for (auto& dir : dirnames) {

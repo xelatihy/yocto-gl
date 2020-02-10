@@ -104,30 +104,30 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
 
   for (auto& ioshape : ioscene.shapes) {
     auto id = add_shape(scene);
-    set_shape_points(scene, id, ioshape.points);
-    set_shape_lines(scene, id, ioshape.lines);
-    set_shape_triangles(scene, id, ioshape.triangles);
-    set_shape_quads(scene, id, ioshape.quads);
-    set_shape_positions(scene, id, ioshape.positions);
-    set_shape_normals(scene, id, ioshape.normals);
-    set_shape_texcoords(scene, id, ioshape.texcoords);
-    set_shape_colors(scene, id, ioshape.colors);
-    set_shape_radius(scene, id, ioshape.radius);
-    set_shape_tangents(scene, id, ioshape.tangents);
-    set_shape_frames(scene, id, ioshape.instances, ioshape.frame);
-    set_shape_emission(scene, id, ioshape.emission, ioshape.emission_tex);
-    set_shape_color(scene, id, ioshape.color, ioshape.color_tex);
-    set_shape_specular(scene, id, ioshape.specular, ioshape.specular_tex);
-    set_shape_ior(scene, id, ioshape.ior);
-    set_shape_metallic(scene, id, ioshape.metallic, ioshape.metallic_tex);
-    set_shape_transmission(scene, id, ioshape.transmission, ioshape.thin,
-        ioshape.trdepth, ioshape.transmission_tex);
-    set_shape_roughness(scene, id, ioshape.roughness, ioshape.roughness_tex);
-    set_shape_opacity(scene, id, ioshape.opacity, ioshape.opacity_tex);
-    set_shape_thin(scene, id, ioshape.thin);
-    set_shape_normalmap(scene, id, ioshape.normal_tex);
-    set_shape_scattering(scene, id, ioshape.scattering, ioshape.scanisotropy,
-        ioshape.scattering_tex);
+    set_shape_points(scene, id, ioshape->points);
+    set_shape_lines(scene, id, ioshape->lines);
+    set_shape_triangles(scene, id, ioshape->triangles);
+    set_shape_quads(scene, id, ioshape->quads);
+    set_shape_positions(scene, id, ioshape->positions);
+    set_shape_normals(scene, id, ioshape->normals);
+    set_shape_texcoords(scene, id, ioshape->texcoords);
+    set_shape_colors(scene, id, ioshape->colors);
+    set_shape_radius(scene, id, ioshape->radius);
+    set_shape_tangents(scene, id, ioshape->tangents);
+    set_shape_frames(scene, id, ioshape->instances, ioshape->frame);
+    set_shape_emission(scene, id, ioshape->emission, ioshape->emission_tex);
+    set_shape_color(scene, id, ioshape->color, ioshape->color_tex);
+    set_shape_specular(scene, id, ioshape->specular, ioshape->specular_tex);
+    set_shape_ior(scene, id, ioshape->ior);
+    set_shape_metallic(scene, id, ioshape->metallic, ioshape->metallic_tex);
+    set_shape_transmission(scene, id, ioshape->transmission, ioshape->thin,
+        ioshape->trdepth, ioshape->transmission_tex);
+    set_shape_roughness(scene, id, ioshape->roughness, ioshape->roughness_tex);
+    set_shape_opacity(scene, id, ioshape->opacity, ioshape->opacity_tex);
+    set_shape_thin(scene, id, ioshape->thin);
+    set_shape_normalmap(scene, id, ioshape->normal_tex);
+    set_shape_scattering(scene, id, ioshape->scattering, ioshape->scanisotropy,
+        ioshape->scattering_tex);
     ioshape = {};
   }
 
