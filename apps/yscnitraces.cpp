@@ -81,11 +81,11 @@ struct app_state {
 void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   scene = trace_scene{};
 
-  for (auto& iocamera : ioscene.cameras) {
+  for (auto iocamera : ioscene.cameras) {
     auto id = add_camera(scene);
-    set_camera_frame(scene, id, iocamera.frame);
-    set_camera_lens(scene, id, iocamera.lens, iocamera.aspect, iocamera.film);
-    set_camera_focus(scene, id, iocamera.aperture, iocamera.focus);
+    set_camera_frame(scene, id, iocamera->frame);
+    set_camera_lens(scene, id, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_camera_focus(scene, id, iocamera->aperture, iocamera->focus);
   }
 
   for (auto& iotexture : ioscene.textures) {
@@ -131,11 +131,11 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     ioshape = {};
   }
 
-  for (auto& ioenvironment : ioscene.environments) {
+  for (auto ioenvironment : ioscene.environments) {
     auto id = add_environment(scene);
-    set_environment_frame(scene, id, ioenvironment.frame);
+    set_environment_frame(scene, id, ioenvironment->frame);
     set_environment_emission(
-        scene, id, ioenvironment.emission, ioenvironment.emission_tex);
+        scene, id, ioenvironment->emission, ioenvironment->emission_tex);
   }
 
   ioscene = {};

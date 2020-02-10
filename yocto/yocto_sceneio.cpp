@@ -317,6 +317,18 @@ vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
       }
     }
   };
+  auto check_names_ = [&errs](const auto& vals, const string& base) {
+    auto used = unordered_map<string, int>();
+    used.reserve(vals.size());
+    for (auto& value : vals) used[value->name] += 1;
+    for (auto& [name, used] : used) {
+      if (name == "") {
+        errs.push_back("empty " + base + " name");
+      } else if (used > 1) {
+        errs.push_back("duplicated " + base + " name " + name);
+      }
+    }
+  };
   auto check_empty_textures = [&errs](const vector<sceneio_texture>& vals) {
     for (auto& value : vals) {
       if (value.hdr.empty() && value.ldr.empty()) {
@@ -325,10 +337,12 @@ vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
     }
   };
 
-  check_names(scene.cameras, "camera");
+  check_names_(scene.cameras, "camera");
   check_names(scene.shapes, "shape");
+  // check_names(scene.shapes, "instance");
+  // check_names(scene.shapes, "object");
   check_names(scene.textures, "texture");
-  check_names(scene.environments, "environment");
+  check_names_(scene.environments, "environment");
   check_names(scene.nodes, "node");
   check_names(scene.animations, "animation");
   if (!notextures) check_empty_textures(scene.textures);
@@ -342,6 +356,20 @@ vector<string> scene_validation(const sceneio_model& scene, bool notextures) {
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// cleanp
+sceneio_model::~sceneio_model() {
+  for(auto camera : cameras) delete camera;
+  for(auto environment : environments) delete environment;
+}
+
+// add element
+sceneio_camera* add_camera(sceneio_model& scene) {
+  return scene.cameras.emplace_back(new sceneio_camera{});
+}
+sceneio_environment* add_environment(sceneio_model& scene) {
+  return scene.environments.emplace_back(new sceneio_environment{});
+}
 
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_bounds(const sceneio_model& scene) {
@@ -365,24 +393,24 @@ bbox3f compute_bounds(const sceneio_model& scene) {
 // Add missing cameras.
 void add_cameras(sceneio_model& scene) {
   if (!scene.cameras.empty()) return;
-  auto& camera = scene.cameras.emplace_back();
-  camera.name  = "cameras/default.yaml";
+  auto camera = add_camera(scene);
+  camera->name  = "cameras/default.yaml";
   // TODO: error in camera.lens and camera.film
-  camera.orthographic = false;
-  camera.film         = 0.036;
-  camera.aperture     = 0;
-  camera.lens         = 0.050;
+  camera->orthographic = false;
+  camera->film         = 0.036;
+  camera->aperture     = 0;
+  camera->lens         = 0.050;
   auto bbox           = compute_bounds(scene);
   auto center         = (bbox.max + bbox.min) / 2;
   auto bbox_radius    = length(bbox.max - bbox.min) / 2;
-  auto camera_dir     = camera.frame.o - center;
+  auto camera_dir     = camera->frame.o - center;
   if (camera_dir == zero3f) camera_dir = {0, 0, 1};
-  auto camera_dist = bbox_radius / camera.film;
+  auto camera_dist = bbox_radius / camera->film;
   auto from        = camera_dir * (camera_dist * 1) + center;
   auto to          = center;
   auto up          = vec3f{0, 1, 0};
-  camera.frame     = lookat_frame(from, to, up);
-  camera.focus     = length(from - to);
+  camera->frame     = lookat_frame(from, to, up);
+  camera->focus     = length(from - to);
 }
 
 // Add missing radius.
@@ -400,11 +428,10 @@ void add_sky(sceneio_model& scene, float sun_angle) {
   texture.name = "environments/sky.hdr";
   texture.hdr  = make_sunsky({1024, 512}, sun_angle);
   scene.textures.push_back(texture);
-  auto environment         = sceneio_environment{};
-  environment.name         = "environments/sky.yaml";
-  environment.emission     = {1, 1, 1};
-  environment.emission_tex = (int)scene.textures.size() - 1;
-  scene.environments.push_back(environment);
+  auto environment         = add_environment(scene);
+  environment->name         = "environments/sky.yaml";
+  environment->emission     = {1, 1, 1};
+  environment->emission_tex = (int)scene.textures.size() - 1;
 }
 
 // Reduce memory usage
@@ -715,8 +742,8 @@ void update_transforms(sceneio_model& scene, sceneio_node& node,
   if (node.shape >= 0) scene.shapes[node.shape].frame = frame;
   if (node.instance >= 0)
     scene.shapes[node.shape].instances[node.instance] = frame;
-  if (node.camera >= 0) scene.cameras[node.camera].frame = frame;
-  if (node.environment >= 0) scene.environments[node.environment].frame = frame;
+  if (node.camera >= 0) scene.cameras[node.camera]->frame = frame;
+  if (node.environment >= 0) scene.environments[node.environment]->frame = frame;
   for (auto child : node.children)
     update_transforms(scene, scene.nodes[child], frame);
 }
@@ -944,32 +971,32 @@ static void load_yaml_scene(
     // cameras
     for (auto& yelement : yaml.elements) {
       if (yelement.name == "cameras") {
-        auto& camera = scene.cameras.emplace_back();
-        get_yaml_value(yelement, "name", camera.name);
-        get_yaml_value(yelement, "frame", camera.frame);
-        get_yaml_value(yelement, "orthographic", camera.orthographic);
-        get_yaml_value(yelement, "lens", camera.lens);
-        get_yaml_value(yelement, "aspect", camera.aspect);
-        get_yaml_value(yelement, "film", camera.film);
-        get_yaml_value(yelement, "focus", camera.focus);
-        get_yaml_value(yelement, "aperture", camera.aperture);
+        auto camera = add_camera(scene);
+        get_yaml_value(yelement, "name", camera->name);
+        get_yaml_value(yelement, "frame", camera->frame);
+        get_yaml_value(yelement, "orthographic", camera->orthographic);
+        get_yaml_value(yelement, "lens", camera->lens);
+        get_yaml_value(yelement, "aspect", camera->aspect);
+        get_yaml_value(yelement, "film", camera->film);
+        get_yaml_value(yelement, "focus", camera->focus);
+        get_yaml_value(yelement, "aperture", camera->aperture);
         if (has_yaml_value(yelement, "lookat")) {
           auto lookat = identity3x3f;
           get_yaml_value(yelement, "lookat", lookat);
-          camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
-          camera.focus = length(lookat.x - lookat.y);
+          camera->frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+          camera->focus = length(lookat.x - lookat.y);
         }
       } else if (yelement.name == "environments") {
-        auto& environment = scene.environments.emplace_back();
-        get_yaml_value(yelement, "name", environment.name);
-        get_yaml_value(yelement, "frame", environment.frame);
-        get_yaml_value(yelement, "emission", environment.emission);
-        get_texture(yelement, "emission_tex", environment.emission_tex,
+        auto environment = add_environment(scene);
+        get_yaml_value(yelement, "name", environment->name);
+        get_yaml_value(yelement, "frame", environment->frame);
+        get_yaml_value(yelement, "emission", environment->emission);
+        get_texture(yelement, "emission_tex", environment->emission_tex,
             "environments/");
         if (has_yaml_value(yelement, "lookat")) {
           auto lookat = identity3x3f;
           get_yaml_value(yelement, "lookat", lookat);
-          environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+          environment->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
       } else if (yelement.name == "shapes") {
         auto& shape = scene.shapes.emplace_back();
@@ -1096,24 +1123,24 @@ static void save_yaml_scene(
   for (auto& camera : scene.cameras) {
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "cameras";
-    add_val(yelement, "name", camera.name);
-    add_opt(yelement, "frame", camera.frame, def_cam.frame);
-    add_opt(yelement, "ortho", camera.orthographic, def_cam.orthographic);
-    add_opt(yelement, "lens", camera.lens, def_cam.lens);
-    add_opt(yelement, "aspect", camera.aspect, def_cam.aspect);
-    add_opt(yelement, "film", camera.film, def_cam.film);
-    add_opt(yelement, "focus", camera.focus, def_cam.focus);
-    add_opt(yelement, "aperture", camera.aperture, def_cam.aperture);
+    add_val(yelement, "name", camera->name);
+    add_opt(yelement, "frame", camera->frame, def_cam.frame);
+    add_opt(yelement, "ortho", camera->orthographic, def_cam.orthographic);
+    add_opt(yelement, "lens", camera->lens, def_cam.lens);
+    add_opt(yelement, "aspect", camera->aspect, def_cam.aspect);
+    add_opt(yelement, "film", camera->film, def_cam.film);
+    add_opt(yelement, "focus", camera->focus, def_cam.focus);
+    add_opt(yelement, "aperture", camera->aperture, def_cam.aperture);
   }
 
   auto def_env = sceneio_environment{};
-  for (auto& environment : scene.environments) {
+  for (auto environment : scene.environments) {
     auto& yelement = yaml.elements.emplace_back();
     yelement.name  = "environments";
-    add_val(yelement, "name", environment.name);
-    add_opt(yelement, "frame", environment.frame, def_env.frame);
-    add_opt(yelement, "emission", environment.emission, def_env.emission);
-    add_tex(yelement, "emission_tex", environment.emission_tex);
+    add_val(yelement, "name", environment->name);
+    add_opt(yelement, "frame", environment->frame, def_env.frame);
+    add_opt(yelement, "emission", environment->emission, def_env.emission);
+    add_tex(yelement, "emission_tex", environment->emission_tex);
   }
 
   auto def_shape = sceneio_shape{};
@@ -1344,35 +1371,35 @@ static void load_json_scene(
     // cameras
     if (js.contains("cameras")) {
       for (auto& ejs : js.at("cameras")) {
-        auto& camera = scene.cameras.emplace_back();
-        get_value(ejs, "name", camera.name);
-        get_value(ejs, "frame", camera.frame);
-        get_value(ejs, "orthographic", camera.orthographic);
-        get_value(ejs, "lens", camera.lens);
-        get_value(ejs, "aspect", camera.aspect);
-        get_value(ejs, "film", camera.film);
-        get_value(ejs, "focus", camera.focus);
-        get_value(ejs, "aperture", camera.aperture);
+        auto camera = add_camera(scene);
+        get_value(ejs, "name", camera->name);
+        get_value(ejs, "frame", camera->frame);
+        get_value(ejs, "orthographic", camera->orthographic);
+        get_value(ejs, "lens", camera->lens);
+        get_value(ejs, "aspect", camera->aspect);
+        get_value(ejs, "film", camera->film);
+        get_value(ejs, "focus", camera->focus);
+        get_value(ejs, "aperture", camera->aperture);
         if (ejs.contains("lookat")) {
           auto lookat = identity3x3f;
           get_value(ejs, "lookat", lookat);
-          camera.frame = lookat_frame(lookat.x, lookat.y, lookat.z);
-          camera.focus = length(lookat.x - lookat.y);
+          camera->frame = lookat_frame(lookat.x, lookat.y, lookat.z);
+          camera->focus = length(lookat.x - lookat.y);
         }
       }
     }
     if (js.contains("environments")) {
       for (auto& ejs : js.at("environments")) {
-        auto& environment = scene.environments.emplace_back();
-        get_value(ejs, "name", environment.name);
-        get_value(ejs, "frame", environment.frame);
-        get_value(ejs, "emission", environment.emission);
+        auto environment = add_environment(scene);
+        get_value(ejs, "name", environment->name);
+        get_value(ejs, "frame", environment->frame);
+        get_value(ejs, "emission", environment->emission);
         get_texture(
-            ejs, "emission_tex", environment.emission_tex, "environments/");
+            ejs, "emission_tex", environment->emission_tex, "environments/");
         if (ejs.contains("lookat")) {
           auto lookat = identity3x3f;
           get_value(ejs, "lookat", lookat);
-          environment.frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
+          environment->frame = lookat_frame(lookat.x, lookat.y, lookat.z, true);
         }
       }
     }
@@ -1508,24 +1535,24 @@ static void save_json_scene(
   if (!scene.cameras.empty()) js["cameras"] = json::array();
   for (auto& camera : scene.cameras) {
     auto& ejs = js["cameras"].emplace_back();
-    add_val(ejs, "name", camera.name);
-    add_opt(ejs, "frame", camera.frame, def_cam.frame);
-    add_opt(ejs, "ortho", camera.orthographic, def_cam.orthographic);
-    add_opt(ejs, "lens", camera.lens, def_cam.lens);
-    add_opt(ejs, "aspect", camera.aspect, def_cam.aspect);
-    add_opt(ejs, "film", camera.film, def_cam.film);
-    add_opt(ejs, "focus", camera.focus, def_cam.focus);
-    add_opt(ejs, "aperture", camera.aperture, def_cam.aperture);
+    add_val(ejs, "name", camera->name);
+    add_opt(ejs, "frame", camera->frame, def_cam.frame);
+    add_opt(ejs, "ortho", camera->orthographic, def_cam.orthographic);
+    add_opt(ejs, "lens", camera->lens, def_cam.lens);
+    add_opt(ejs, "aspect", camera->aspect, def_cam.aspect);
+    add_opt(ejs, "film", camera->film, def_cam.film);
+    add_opt(ejs, "focus", camera->focus, def_cam.focus);
+    add_opt(ejs, "aperture", camera->aperture, def_cam.aperture);
   }
 
   auto def_env = sceneio_environment{};
   if (!scene.environments.empty()) js["environments"] = json::array();
-  for (auto& environment : scene.environments) {
+  for (auto environment : scene.environments) {
     auto& ejs = js["environments"].emplace_back();
-    add_val(ejs, "name", environment.name);
-    add_opt(ejs, "frame", environment.frame, def_env.frame);
-    add_opt(ejs, "emission", environment.emission, def_env.emission);
-    add_tex(ejs, "emission_tex", environment.emission_tex);
+    add_val(ejs, "name", environment->name);
+    add_opt(ejs, "frame", environment->frame, def_env.frame);
+    add_opt(ejs, "emission", environment->emission, def_env.emission);
+    add_tex(ejs, "emission_tex", environment->emission_tex);
   }
 
   auto def_shape = sceneio_shape{};
@@ -1651,15 +1678,15 @@ static void load_obj_scene(
 
   // convert cameras
   for (auto& ocam : obj.cameras) {
-    auto& camera        = scene.cameras.emplace_back();
-    camera.name         = make_name("camera", scene.cameras.size());
-    camera.frame        = ocam.frame;
-    camera.orthographic = ocam.ortho;
-    camera.film         = max(ocam.width, ocam.height);
-    camera.aspect       = ocam.width / ocam.height;
-    camera.focus        = ocam.focus;
-    camera.lens         = ocam.lens;
-    camera.aperture     = ocam.aperture;
+    auto camera         = add_camera(scene);
+    camera->name         = make_name("camera", scene.cameras.size());
+    camera->frame        = ocam.frame;
+    camera->orthographic = ocam.ortho;
+    camera->film         = max(ocam.width, ocam.height);
+    camera->aspect       = ocam.width / ocam.height;
+    camera->focus        = ocam.focus;
+    camera->lens         = ocam.lens;
+    camera->aperture     = ocam.aperture;
   }
 
   // helper to create texture maps
@@ -1754,11 +1781,11 @@ static void load_obj_scene(
 
   // convert environments
   for (auto& oenvironment : obj.environments) {
-    auto& environment    = scene.environments.emplace_back();
-    environment.name     = make_name("environment", scene.environments.size());
-    environment.frame    = oenvironment.frame;
-    environment.emission = oenvironment.emission;
-    environment.emission_tex = get_texture(
+    auto environment    = add_environment(scene);
+    environment->name     = make_name("environment", scene.environments.size());
+    environment->frame    = oenvironment.frame;
+    environment->emission = oenvironment.emission;
+    environment->emission_tex = get_texture(
         oenvironment.emission_map, "environments/");
   }
 
@@ -1777,14 +1804,14 @@ static void save_obj_scene(
   // convert cameras
   for (auto& camera : scene.cameras) {
     auto& ocamera    = obj.cameras.emplace_back();
-    ocamera.name     = get_basename(camera.name);
-    ocamera.frame    = camera.frame;
-    ocamera.ortho    = camera.orthographic;
-    ocamera.width    = camera.film;
-    ocamera.height   = camera.film / camera.aspect;
-    ocamera.focus    = camera.focus;
-    ocamera.lens     = camera.lens;
-    ocamera.aperture = camera.aperture;
+    ocamera.name     = get_basename(camera->name);
+    ocamera.frame    = camera->frame;
+    ocamera.ortho    = camera->orthographic;
+    ocamera.width    = camera->film;
+    ocamera.height   = camera->film / camera->aspect;
+    ocamera.focus    = camera->focus;
+    ocamera.lens     = camera->lens;
+    ocamera.aperture = camera->aperture;
   }
 
   // textures
@@ -1843,12 +1870,12 @@ static void save_obj_scene(
   }
 
   // convert environments
-  for (auto& environment : scene.environments) {
+  for (auto environment : scene.environments) {
     auto& oenvironment        = obj.environments.emplace_back();
-    oenvironment.name         = get_basename(environment.name);
-    oenvironment.frame        = environment.frame;
-    oenvironment.emission     = environment.emission;
-    oenvironment.emission_map = get_texture(environment.emission_tex);
+    oenvironment.name         = get_basename(environment->name);
+    oenvironment.frame        = environment->frame;
+    oenvironment.emission     = environment->emission;
+    oenvironment.emission_map = get_texture(environment->emission_tex);
   }
 
   // save obj
@@ -1869,13 +1896,13 @@ static void save_obj_scene(
   }
 }
 
-void print_obj_camera(const sceneio_camera& camera) {
+void print_obj_camera(const sceneio_camera* camera) {
   printf("c %s %d %g %g %g %g %g %g %g %g %g %g%g %g %g %g %g %g %g\n",
-      camera.name.c_str(), (int)camera.orthographic, camera.film,
-      camera.film / camera.aspect, camera.lens, camera.focus, camera.aperture,
-      camera.frame.x.x, camera.frame.x.y, camera.frame.x.z, camera.frame.y.x,
-      camera.frame.y.y, camera.frame.y.z, camera.frame.z.x, camera.frame.z.y,
-      camera.frame.z.z, camera.frame.o.x, camera.frame.o.y, camera.frame.o.z);
+      camera->name.c_str(), (int)camera->orthographic, camera->film,
+      camera->film / camera->aspect, camera->lens, camera->focus, camera->aperture,
+      camera->frame.x.x, camera->frame.x.y, camera->frame.x.z, camera->frame.y.x,
+      camera->frame.y.y, camera->frame.y.z, camera->frame.z.x, camera->frame.z.y,
+      camera->frame.z.z, camera->frame.o.x, camera->frame.o.y, camera->frame.o.z);
 }
 
 }  // namespace yocto
@@ -1991,22 +2018,23 @@ static void load_gltf_scene(
   // convert cameras
   auto cameras = vector<sceneio_camera>{};
   for (auto& gcamera : gltf.cameras) {
-    auto& camera  = cameras.emplace_back();
-    camera.name   = gcamera.name;
-    camera.aspect = gcamera.aspect;
-    camera.film   = 0.036;
-    camera.lens   = gcamera.aspect >= 1
-                      ? (2 * camera.aspect * tan(gcamera.yfov / 2))
+    auto camera   = &cameras.emplace_back();
+    camera->name   = gcamera.name;
+    camera->aspect = gcamera.aspect;
+    camera->film   = 0.036;
+    camera->lens   = gcamera.aspect >= 1
+                      ? (2 * camera->aspect * tan(gcamera.yfov / 2))
                       : (2 * tan(gcamera.yfov / 2));
-    camera.focus = 10;
+    camera->focus = 10;
   }
 
   // convert scene nodes
   for (auto& gnode : gltf.nodes) {
     if (gnode.camera >= 0) {
-      auto& camera = scene.cameras.emplace_back(cameras[gnode.camera]);
-      camera.name  = make_name("caemra", scene.cameras.size());
-      camera.frame = gnode.frame;
+      auto camera = add_camera(scene);
+      *camera = cameras[gnode.camera];
+      camera->name  = make_name("caemra", scene.cameras.size());
+      camera->frame = gnode.frame;
     }
     if (gnode.mesh >= 0) {
       for (auto shape_id : shape_indices[gnode.mesh]) {
@@ -2022,10 +2050,10 @@ static void load_gltf_scene(
 
   // fix cameras
   auto bbox = compute_bounds(scene);
-  for (auto& camera : scene.cameras) {
+  for (auto camera : scene.cameras) {
     auto center   = (bbox.min + bbox.max) / 2;
-    auto distance = dot(-camera.frame.z, center - camera.frame.o);
-    if (distance > 0) camera.focus = distance;
+    auto distance = dot(-camera->frame.z, center - camera->frame.o);
+    if (distance > 0) camera->focus = distance;
   }
 }
 
@@ -2045,13 +2073,13 @@ static void load_pbrt_scene(
 
   // convert cameras
   for (auto& pcamera : pbrt.cameras) {
-    auto& camera  = scene.cameras.emplace_back();
-    camera.name   = make_name("camera", scene.cameras.size());
-    camera.frame  = pcamera.frame;
-    camera.aspect = pcamera.aspect;
-    camera.film   = 0.036;
-    camera.lens   = pcamera.lens;
-    camera.focus  = pcamera.focus;
+    auto camera  = add_camera(scene);
+    camera->name   = make_name("camera", scene.cameras.size());
+    camera->frame  = pcamera.frame;
+    camera->aspect = pcamera.aspect;
+    camera->film   = 0.036;
+    camera->lens   = pcamera.lens;
+    camera->focus  = pcamera.focus;
   }
 
   // convert materials
@@ -2104,11 +2132,11 @@ static void load_pbrt_scene(
 
   // convert environments
   for (auto& penvironment : pbrt.environments) {
-    auto& environment    = scene.environments.emplace_back();
-    environment.name     = make_name("environment", scene.environments.size());
-    environment.frame    = penvironment.frame;
-    environment.emission = penvironment.emission;
-    environment.emission_tex = get_texture(
+    auto environment    = add_environment(scene);
+    environment->name     = make_name("environment", scene.environments.size());
+    environment->frame    = penvironment.frame;
+    environment->emission = penvironment.emission;
+    environment->emission_tex = get_texture(
         penvironment.emission_map, "environments/");
   }
 
@@ -2139,11 +2167,11 @@ void save_pbrt_scene(
   for (auto stat : scene_stats(scene)) pbrt.comments.push_back(stat);
 
   // convert camera
-  auto& camera       = scene.cameras.front();
+  auto camera       = scene.cameras.front();
   auto& pcamera      = pbrt.cameras.emplace_back();
-  pcamera.frame      = camera.frame;
-  pcamera.lens       = camera.lens;
-  pcamera.aspect     = camera.aspect;
+  pcamera.frame      = camera->frame;
+  pcamera.lens       = camera->lens;
+  pcamera.aspect     = camera->aspect;
   pcamera.resolution = {1280, (int)(1280 / pcamera.aspect)};
 
   // convert instances
@@ -2166,11 +2194,11 @@ void save_pbrt_scene(
   }
 
   // convert environments
-  for (auto& environment : scene.environments) {
+  for (auto environment : scene.environments) {
     auto& penvironment    = pbrt.environments.emplace_back();
-    penvironment.emission = environment.emission;
-    if (environment.emission_tex >= 0) {
-      penvironment.emission_map = scene.textures[environment.emission_tex].name;
+    penvironment.emission = environment->emission;
+    if (environment->emission_tex >= 0) {
+      penvironment.emission_map = scene.textures[environment->emission_tex].name;
     }
   }
 
@@ -2214,13 +2242,13 @@ namespace yocto {
 
 void make_cornellbox_scene(sceneio_model& scene) {
   scene.name              = "cornellbox";
-  auto& camera            = scene.cameras.emplace_back();
-  camera.name             = "camera";
-  camera.frame            = frame3f{{0, 1, 3.9}};
-  camera.lens             = 0.035;
-  camera.aperture         = 0.0;
-  camera.film             = 0.024;
-  camera.aspect           = 1;
+  auto camera            = add_camera(scene);
+  camera->name             = "camera";
+  camera->frame            = frame3f{{0, 1, 3.9}};
+  camera->lens             = 0.035;
+  camera->aperture         = 0.0;
+  camera->film             = 0.024;
+  camera->aspect           = 1;
   auto& floor_shp         = scene.shapes.emplace_back();
   floor_shp.name          = "shapes/floor.yaml";
   floor_shp.positions     = {{-1, 0, 1}, {1, 0, 1}, {1, 0, -1}, {-1, 0, -1}};

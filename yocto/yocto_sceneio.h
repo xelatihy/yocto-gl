@@ -231,14 +231,21 @@ struct sceneio_animation {
 // updates node transformations only if defined.
 struct sceneio_model {
   string                      name         = "";
-  vector<sceneio_camera>      cameras      = {};
+  vector<sceneio_camera*>      cameras      = {};
   vector<sceneio_shape>       shapes       = {};
   vector<sceneio_subdiv>      subdivs      = {};
   vector<sceneio_texture>     textures     = {};
-  vector<sceneio_environment> environments = {};
+  vector<sceneio_environment*> environments = {};
   vector<sceneio_node>        nodes        = {};
   vector<sceneio_animation>   animations   = {};
+
+  // cleanp
+  ~sceneio_model();
 };
+
+// add element to a scene
+sceneio_camera* add_camera(sceneio_model& scene);
+sceneio_environment* add_environment(sceneio_model& scene);
 
 }  // namespace yocto
 

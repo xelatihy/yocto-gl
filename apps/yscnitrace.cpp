@@ -38,7 +38,7 @@ using namespace yocto;
 using namespace std;
 
 namespace yocto {
-void print_obj_camera(const sceneio_camera& camera);
+void print_obj_camera(const sceneio_camera* camera);
 };  // namespace yocto
 
 // Application scene
@@ -105,11 +105,11 @@ struct app_states {
 void init_scene(trace_scene& scene, sceneio_model& ioscene) {
   scene = trace_scene{};
 
-  for (auto& iocamera : ioscene.cameras) {
+  for (auto iocamera : ioscene.cameras) {
     auto id = add_camera(scene);
-    set_camera_frame(scene, id, iocamera.frame);
-    set_camera_lens(scene, id, iocamera.lens, iocamera.aspect, iocamera.film);
-    set_camera_focus(scene, id, iocamera.aperture, iocamera.focus);
+    set_camera_frame(scene, id, iocamera->frame);
+    set_camera_lens(scene, id, iocamera->lens, iocamera->aspect, iocamera->film);
+    set_camera_focus(scene, id, iocamera->aperture, iocamera->focus);
   }
   for (auto& iotexture : ioscene.textures) {
     auto id = add_texture(scene);
@@ -149,11 +149,11 @@ void init_scene(trace_scene& scene, sceneio_model& ioscene) {
     set_shape_scattering(scene, id, ioshape.scattering, ioshape.scanisotropy,
         ioshape.scattering_tex);
   }
-  for (auto& ioenvironment : ioscene.environments) {
+  for (auto ioenvironment : ioscene.environments) {
     auto id = add_environment(scene);
-    set_environment_frame(scene, id, ioenvironment.frame);
+    set_environment_frame(scene, id, ioenvironment->frame);
     set_environment_emission(
-        scene, id, ioenvironment.emission, ioenvironment.emission_tex);
+        scene, id, ioenvironment->emission, ioenvironment->emission_tex);
   }
 }
 
@@ -255,25 +255,25 @@ void load_scene_async(shared_ptr<app_states> apps, const string& filename) {
 
 bool draw_glwidgets_camera(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& camera = app->ioscene.cameras[id];
+  auto iocamera = app->ioscene.cameras[id];
   auto  edited = 0;
-  edited += (int)draw_gltextinput(win, "name", camera.name);
-  edited += (int)draw_glslider(win, "frame.x", camera.frame.x, -1, 1);
-  edited += (int)draw_glslider(win, "frame.y", camera.frame.y, -1, 1);
-  edited += (int)draw_glslider(win, "frame.z", camera.frame.z, -1, 1);
-  edited += (int)draw_glslider(win, "frame.o", camera.frame.o, -10, 10);
-  edited += (int)draw_glcheckbox(win, "ortho", camera.orthographic);
-  edited += (int)draw_glslider(win, "lens", camera.lens, 0.01f, 1);
-  edited += (int)draw_glslider(win, "film", camera.film, 0.01f, 0.1f);
-  edited += (int)draw_glslider(win, "focus", camera.focus, 0.01f, 1000);
-  edited += (int)draw_glslider(win, "aperture", camera.aperture, 0, 5);
-  auto from         = camera.frame.o,
-       to           = camera.frame.o - camera.focus * camera.frame.z;
+  edited += (int)draw_gltextinput(win, "name", iocamera->name);
+  edited += (int)draw_glslider(win, "frame.x", iocamera->frame.x, -1, 1);
+  edited += (int)draw_glslider(win, "frame.y", iocamera->frame.y, -1, 1);
+  edited += (int)draw_glslider(win, "frame.z", iocamera->frame.z, -1, 1);
+  edited += (int)draw_glslider(win, "frame.o", iocamera->frame.o, -10, 10);
+  edited += (int)draw_glcheckbox(win, "ortho", iocamera->orthographic);
+  edited += (int)draw_glslider(win, "lens", iocamera->lens, 0.01f, 1);
+  edited += (int)draw_glslider(win, "film", iocamera->film, 0.01f, 0.1f);
+  edited += (int)draw_glslider(win, "focus", iocamera->focus, 0.01f, 1000);
+  edited += (int)draw_glslider(win, "aperture", iocamera->aperture, 0, 5);
+  auto from         = iocamera->frame.o,
+       to           = iocamera->frame.o - iocamera->focus * iocamera->frame.z;
   auto from_changed = draw_glslider(win, "!!from", from, -10, 10);
   auto to_changed   = draw_glslider(win, "!!to", to, -10, 10);
   if (from_changed || to_changed) {
-    camera.frame = lookat_frame(from, to, {0, 1, 0});
-    camera.focus = length(from - to);
+    iocamera->frame = lookat_frame(from, to, {0, 1, 0});
+    iocamera->focus = length(from - to);
     edited += 1;
   }
   return edited;
@@ -381,15 +381,15 @@ bool draw_glwidgets_subdiv(
 
 bool draw_glwidgets_environment(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& environment = app->ioscene.environments[id];
+  auto ioenvironment = app->ioscene.environments[id];
   auto  edited      = 0;
-  edited += draw_gltextinput(win, "name", environment.name);
-  edited += draw_glslider(win, "frame.x", environment.frame.x, -1, 1);
-  edited += draw_glslider(win, "frame.y", environment.frame.y, -1, 1);
-  edited += draw_glslider(win, "frame.z", environment.frame.z, -1, 1);
-  edited += draw_glslider(win, "frame.o", environment.frame.o, -10, 10);
-  edited += draw_glhdrcoloredit(win, "emission", environment.emission);
-  edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
+  edited += draw_gltextinput(win, "name", ioenvironment->name);
+  edited += draw_glslider(win, "frame.x", ioenvironment->frame.x, -1, 1);
+  edited += draw_glslider(win, "frame.y", ioenvironment->frame.y, -1, 1);
+  edited += draw_glslider(win, "frame.z", ioenvironment->frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.o", ioenvironment->frame.o, -10, 10);
+  edited += draw_glhdrcoloredit(win, "emission", ioenvironment->emission);
+  edited += draw_glcombobox(win, "emission texture", ioenvironment->emission_tex,
       app->ioscene.textures, true);
   return edited;
 }
@@ -481,8 +481,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcheckbox(win, "zoom to fit", app->glparams.fit);
     continue_glline(win);
     if (draw_glbutton(win, "print cams")) {
-      for (auto& camera : app->ioscene.cameras) {
-        print_obj_camera(camera);
+      for (auto iocamera : app->ioscene.cameras) {
+        print_obj_camera(iocamera);
       }
     }
     continue_glline(win);
@@ -507,11 +507,11 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
       stop_display(app);
       auto& iocamera = app->ioscene.cameras[app->selected_camera];
-      set_camera_frame(app->scene, app->selected_camera, iocamera.frame);
-      set_camera_lens(app->scene, app->selected_camera, iocamera.lens,
-          iocamera.aspect, iocamera.film);
+      set_camera_frame(app->scene, app->selected_camera, iocamera->frame);
+      set_camera_lens(app->scene, app->selected_camera, iocamera->lens,
+          iocamera->aspect, iocamera->film);
       set_camera_focus(
-          app->scene, app->selected_camera, iocamera.aperture, iocamera.focus);
+          app->scene, app->selected_camera, iocamera->aperture, iocamera->focus);
       reset_display(app);
     }
     end_glheader(win);
@@ -525,9 +525,9 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
       auto& ioenvironment =
           app->ioscene.environments[app->selected_environment];
       set_environment_frame(
-          app->scene, app->selected_environment, ioenvironment.frame);
+          app->scene, app->selected_environment, ioenvironment->frame);
       set_environment_emission(app->scene, app->selected_environment,
-          ioenvironment.emission, ioenvironment.emission_tex);
+          ioenvironment->emission, ioenvironment->emission_tex);
       init_lights(app->scene);
       reset_display(app);
     }
@@ -734,7 +734,7 @@ void run_app(int argc, const char* argv[]) {
     if (scene_ok && (input.mouse_left || input.mouse_right) &&
         !input.modifier_alt && !input.widgets_active) {
       auto  app    = apps->states[apps->selected];
-      auto& camera = app->ioscene.cameras.at(app->params.camera);
+      auto  iocamera = app->ioscene.cameras.at(app->params.camera);
       auto  dolly  = 0.0f;
       auto  pan    = zero2f;
       auto  rotate = zero2f;
@@ -743,15 +743,15 @@ void run_app(int argc, const char* argv[]) {
       if (input.mouse_right)
         dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
       if (input.mouse_left && input.modifier_shift)
-        pan = (input.mouse_pos - input.mouse_last) * camera.focus / 200.0f;
+        pan = (input.mouse_pos - input.mouse_last) * iocamera->focus / 200.0f;
       pan.x = -pan.x;
       stop_display(app);
-      update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-      set_camera_frame(app->scene, app->params.camera, camera.frame);
-      set_camera_lens(app->scene, app->params.camera, camera.lens,
-          camera.aspect, camera.film);
+      update_turntable(iocamera->frame, iocamera->focus, rotate, dolly, pan);
+      set_camera_frame(app->scene, app->params.camera, iocamera->frame);
+      set_camera_lens(app->scene, app->params.camera, iocamera->lens,
+          iocamera->aspect, iocamera->film);
       set_camera_focus(
-          app->scene, app->params.camera, camera.aperture, camera.focus);
+          app->scene, app->params.camera, iocamera->aperture, iocamera->focus);
       reset_display(app);
     }
 

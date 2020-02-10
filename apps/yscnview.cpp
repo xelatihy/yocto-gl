@@ -44,7 +44,7 @@ using namespace std;
 #endif
 
 namespace yocto {
-void print_obj_camera(const sceneio_camera& camera);
+void print_obj_camera(const sceneio_camera* camera);
 };
 
 // Application state
@@ -160,20 +160,20 @@ void update_lights(opengl_scene& glscene, const sceneio_model& scene) {
   }
 }
 
-void init_scene(opengl_scene& glscene, sceneio_model& scene) {
+void init_scene(opengl_scene& glscene, sceneio_model& ioscene) {
   // load program
   init_glscene(glscene);
 
   // camera
-  for (auto& camera : scene.cameras) {
+  for (auto iocamera : ioscene.cameras) {
     auto id = add_camera(glscene);
-    set_camera_frame(glscene, id, camera.frame);
-    set_camera_lens(glscene, id, camera.lens, camera.aspect, camera.film);
+    set_camera_frame(glscene, id, iocamera->frame);
+    set_camera_lens(glscene, id, iocamera->lens, iocamera->aspect, iocamera->film);
     set_camera_nearfar(glscene, id, 0.001, 10000);
   }
 
   // textures
-  for (auto& texture : scene.textures) {
+  for (auto& texture : ioscene.textures) {
     auto id = add_texture(glscene);
     if (!texture.hdr.empty()) {
       set_texture(glscene, id, texture.hdr);
@@ -182,12 +182,12 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
     }
   }
 
-  for (auto& subdiv : scene.subdivs) {
-    tesselate_subdiv(scene, subdiv);
+  for (auto& subdiv : ioscene.subdivs) {
+    tesselate_subdiv(ioscene, subdiv);
   }
 
   // shapes
-  for (auto& shape : scene.shapes) {
+  for (auto& shape : ioscene.shapes) {
     auto id = add_shape(glscene);
     set_shape_positions(glscene, id, shape.positions);
     set_shape_normals(glscene, id, shape.normals);
@@ -214,25 +214,25 @@ void init_scene(opengl_scene& glscene, sceneio_model& scene) {
 
 bool draw_glwidgets_camera(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& camera = app->ioscene.cameras[id];
+  auto iocamera = app->ioscene.cameras[id];
   auto  edited = 0;
-  edited += (int)draw_gltextinput(win, "name", camera.name);
-  edited += (int)draw_glslider(win, "frame.x", camera.frame.x, -1, 1);
-  edited += (int)draw_glslider(win, "frame.y", camera.frame.y, -1, 1);
-  edited += (int)draw_glslider(win, "frame.z", camera.frame.z, -1, 1);
-  edited += (int)draw_glslider(win, "frame.o", camera.frame.o, -10, 10);
-  edited += (int)draw_glcheckbox(win, "ortho", camera.orthographic);
-  edited += (int)draw_glslider(win, "lens", camera.lens, 0.01f, 1);
-  edited += (int)draw_glslider(win, "film", camera.film, 0.01f, 0.1f);
-  edited += (int)draw_glslider(win, "focus", camera.focus, 0.01f, 1000);
-  edited += (int)draw_glslider(win, "aperture", camera.aperture, 0, 5);
-  auto from         = camera.frame.o,
-       to           = camera.frame.o - camera.focus * camera.frame.z;
+  edited += (int)draw_gltextinput(win, "name", iocamera->name);
+  edited += (int)draw_glslider(win, "frame.x", iocamera->frame.x, -1, 1);
+  edited += (int)draw_glslider(win, "frame.y", iocamera->frame.y, -1, 1);
+  edited += (int)draw_glslider(win, "frame.z", iocamera->frame.z, -1, 1);
+  edited += (int)draw_glslider(win, "frame.o", iocamera->frame.o, -10, 10);
+  edited += (int)draw_glcheckbox(win, "ortho", iocamera->orthographic);
+  edited += (int)draw_glslider(win, "lens", iocamera->lens, 0.01f, 1);
+  edited += (int)draw_glslider(win, "film", iocamera->film, 0.01f, 0.1f);
+  edited += (int)draw_glslider(win, "focus", iocamera->focus, 0.01f, 1000);
+  edited += (int)draw_glslider(win, "aperture", iocamera->aperture, 0, 5);
+  auto from         = iocamera->frame.o,
+       to           = iocamera->frame.o - iocamera->focus * iocamera->frame.z;
   auto from_changed = draw_glslider(win, "!!from", from, -10, 10);
   auto to_changed   = draw_glslider(win, "!!to", to, -10, 10);
   if (from_changed || to_changed) {
-    camera.frame = lookat_frame(from, to, {0, 1, 0});
-    camera.focus = length(from - to);
+    iocamera->frame = lookat_frame(from, to, {0, 1, 0});
+    iocamera->focus = length(from - to);
     edited += 1;
   }
   return edited;
@@ -345,15 +345,15 @@ bool draw_glwidgets_subdiv(
 
 bool draw_glwidgets_environment(
     const opengl_window& win, shared_ptr<app_state> app, int id) {
-  auto& environment = app->ioscene.environments[id];
+  auto ioenvironment = app->ioscene.environments[id];
   auto  edited      = 0;
-  edited += draw_gltextinput(win, "name", environment.name);
-  edited += draw_glslider(win, "frame[0]", environment.frame.x, -1, 1);
-  edited += draw_glslider(win, "frame[1]", environment.frame.y, -1, 1);
-  edited += draw_glslider(win, "frame[2]", environment.frame.z, -1, 1);
-  edited += draw_glslider(win, "frame.o", environment.frame.o, -10, 10);
-  edited += draw_glhdrcoloredit(win, "emission", environment.emission);
-  edited += draw_glcombobox(win, "emission texture", environment.emission_tex,
+  edited += draw_gltextinput(win, "name", ioenvironment->name);
+  edited += draw_glslider(win, "frame[0]", ioenvironment->frame.x, -1, 1);
+  edited += draw_glslider(win, "frame[1]", ioenvironment->frame.y, -1, 1);
+  edited += draw_glslider(win, "frame[2]", ioenvironment->frame.z, -1, 1);
+  edited += draw_glslider(win, "frame.o", ioenvironment->frame.o, -10, 10);
+  edited += draw_glhdrcoloredit(win, "emission", ioenvironment->emission);
+  edited += draw_glcombobox(win, "emission texture", ioenvironment->emission_tex,
       app->ioscene.textures, true);
   return edited;
 }
@@ -429,8 +429,8 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_gllabel(win, "imagename", app->imagename);
     continue_glline(win);
     if (draw_glbutton(win, "print cams")) {
-      for (auto& camera : app->ioscene.cameras) {
-        print_obj_camera(camera);
+      for (auto iocamera : app->ioscene.cameras) {
+        print_obj_camera(iocamera);
       }
     }
     continue_glline(win);
@@ -443,10 +443,10 @@ void draw_glwidgets(const opengl_window& win, shared_ptr<app_states> apps,
     draw_glcombobox(
         win, "camera##2", app->selected_camera, app->ioscene.cameras);
     if (draw_glwidgets_camera(win, app, app->selected_camera)) {
-      auto& camera = app->ioscene.cameras[app->selected_camera];
-      set_camera_frame(app->glscene, app->selected_camera, camera.frame);
-      set_camera_lens(app->glscene, app->selected_camera, camera.lens,
-          camera.aspect, camera.film);
+      auto iocamera = app->ioscene.cameras[app->selected_camera];
+      set_camera_frame(app->glscene, app->selected_camera, iocamera->frame);
+      set_camera_lens(app->glscene, app->selected_camera, iocamera->lens,
+          iocamera->aspect, iocamera->film);
       set_camera_nearfar(app->glscene, app->selected_camera, 0.001, 10000);
     }
     end_glheader(win);
@@ -629,7 +629,7 @@ void run_app(int argc, const char* argv[]) {
         if (scene_ok && (input.mouse_left || input.mouse_right) &&
             !input.modifier_alt && !input.widgets_active) {
           auto  app    = apps->states[apps->selected];
-          auto& camera = app->ioscene.cameras.at(app->drawgl_prms.camera);
+          auto  iocamera = app->ioscene.cameras.at(app->drawgl_prms.camera);
           auto  dolly  = 0.0f;
           auto  pan    = zero2f;
           auto  rotate = zero2f;
@@ -639,8 +639,8 @@ void run_app(int argc, const char* argv[]) {
             dolly = (input.mouse_pos.x - input.mouse_last.x) / 100.0f;
           if (input.mouse_left && input.modifier_shift)
             pan = (input.mouse_pos - input.mouse_last) / 100.0f;
-          update_turntable(camera.frame, camera.focus, rotate, dolly, pan);
-          set_camera_frame(app->glscene, app->drawgl_prms.camera, camera.frame);
+          update_turntable(iocamera->frame, iocamera->focus, rotate, dolly, pan);
+          set_camera_frame(app->glscene, app->drawgl_prms.camera, iocamera->frame);
         }
 
         // animation
